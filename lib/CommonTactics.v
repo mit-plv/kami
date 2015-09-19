@@ -7,6 +7,12 @@ Ltac isNew P :=
     | _ => idtac
   end.
 
+Ltac sassumption :=
+  match goal with
+    | [H: ?P' |- ?P] =>
+      progress replace P with P' by reflexivity; assumption
+  end.
+
 Ltac inv H := inversion H; subst; clear H.
 
 Lemma opt_discr: forall {A} v, Some v <> (@None A).

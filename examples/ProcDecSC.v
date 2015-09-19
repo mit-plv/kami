@@ -74,11 +74,7 @@ Section ProcDecSC.
           | [ |- regRel _ _] =>
             unfold regRel; repeat esplit
           | [ |- find ?k ?m = ?rhs] =>
-            find_eq;
-              match goal with
-                | [H: ?P' |- ?P] =>
-                  progress replace P with P' by reflexivity; assumption
-              end
+            find_eq; sassumption
         end.
 
     Definition cmMap: CallsT -> CallsT := id.
