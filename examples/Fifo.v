@@ -138,6 +138,7 @@ Section Fifo.
 
 End Fifo.
 
+Hint Unfold eltReg enqPReg deqPReg emptyReg fullReg.
 Hint Unfold fifoRules notFullBody notEmptyBody enqBody deqBody firstEltBody.
 Hint Unfold fifo simpleFifo : ModuleDefs.
 

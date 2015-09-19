@@ -1,9 +1,9 @@
 Require Import Ascii String List Eqdep.
 Require Import Logic.FunctionalExtensionality.
 
-Ltac notHyp P :=
+Ltac isNew P :=
   match goal with
-    | [ _: P |- _] => fail 1
+    | [ _: ?P' |- _] => assert (P = P') by reflexivity; fail 1
     | _ => idtac
   end.
 

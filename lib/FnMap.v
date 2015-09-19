@@ -42,23 +42,71 @@ Section Domains.
     filter (fun s => if in_dec string_dec s l2 then false else true) l1.
 
   Lemma listSub_In_1:
-    forall s l1 l2, In s (listSub l1 l2) -> In s l1 /\ ~ In s l2.
+    forall s l1 l2, In s (listSub l1 l2) <-> In s l1 /\ ~ In s l2.
   Proof.
-    intros; unfold listSub in H; apply filter_In in H; dest; split; auto.
-    destruct (in_dec _ s l2); intuition.
+    intros; split; intros.
+    - unfold listSub in H; apply filter_In in H; dest; split; auto.
+      destruct (in_dec _ s l2); intuition.
+    - dest; unfold listSub; apply filter_In; split; auto.
+      destruct (in_dec _ s l2); intuition.
   Qed.
 
   Lemma listSub_In_2:
-    forall s l1 l2, ~ In s (listSub l1 l2) -> (~ In s l1 \/ In s l2).
+    forall s l1 l2, ~ In s (listSub l1 l2) <-> (~ In s l1 \/ In s l2).
   Proof.
-    intros; destruct (in_dec string_dec s l1).
-    - right; destruct (in_dec string_dec s l2); [assumption|].
-      elim H; apply filter_In; split; [assumption|].
-      destruct (in_dec string_dec s l2); intuition.
-    - left; assumption.
+    intros; split; intros.
+    - destruct (in_dec string_dec s l1).
+      + right; destruct (in_dec string_dec s l2); [assumption|].
+        elim H; apply filter_In; split; [assumption|].
+        destruct (in_dec string_dec s l2); intuition.
+      + left; assumption.
+    - intro Hx; apply listSub_In_1 in Hx; dest; destruct H.
+      + elim H; assumption.
+      + elim H1; assumption.
   Qed.
 
 End Domains.
+
+Ltac in_tac_ex :=
+  repeat
+    match goal with
+      | [ |- In _ (_ ++ _) ] =>
+        (apply in_or_app; (left; in_tac_ex; fail || right; in_tac_ex; fail))
+      | [ |- In _ (listSub _ _) ] => (apply listSub_In_1; split)
+      | [ |- ~ In _ (listSub _ _) ] =>
+        (apply listSub_In_2; (left; in_tac_ex; fail || right; in_tac_ex; fail))
+      | [ |- In _ _ ] => in_tac
+      | [ |- ~ In _ _ ] => (let Hx := fresh "Hx" in intro Hx)
+      | [H: In _ (_ ++ _) |- _] => (apply in_app_or in H; destruct H)
+      | [H: In _ (listSub _ _) |- _] => (apply listSub_In_1 in H; dest)
+      | [H: ~ In _ (listSub _ _) |- _] => (apply listSub_In_2 in H; destruct H)
+      | [H: In _ _ |- _] => (try (in_tac_H; vdiscriminate; fail); clear H)
+      | [H: ~ In _ _ |- _] => (try (elim H; clear H; in_tac_ex; fail); clear H)
+    end.
+
+Ltac ssimpl H :=
+  repeat rewrite string_dec_eq in H;
+  repeat rewrite string_dec_neq in H by discriminate;
+  repeat rewrite string_eq_append in H by reflexivity;
+  repeat
+    (match type of H with
+       | context [in_dec string_dec ?s ?l] =>
+         let Hin := fresh "Hin" in
+         destruct (in_dec string_dec s l) as [Hin|Hin] in H;
+       try (clear -Hin; exfalso; in_tac_ex; fail)
+     end).
+
+Ltac ssimpl_G :=
+  repeat rewrite string_dec_eq;
+  repeat rewrite string_dec_neq by discriminate;
+  repeat rewrite string_eq_append by reflexivity;
+  repeat
+    (match goal with
+       | [ |- context [in_dec string_dec ?s ?l] ] =>
+         let Hin := fresh "Hin" in
+         destruct (in_dec string_dec s l) as [Hin|Hin];
+       try (clear -Hin; exfalso; in_tac_ex; fail)
+     end).
 
 (* a value of type `Map A` is a map from strings to values of `A` *)
 Section Map.
@@ -493,54 +541,24 @@ Ltac map_simpl_G :=
             || (rewrite find_add_2 by reflexivity)
             || (rewrite find_empty)).
 
-Ltac find_tac H :=
+Ltac map_compute H :=
+  map_simpl H;
   repeat autounfold with MapDefs in H;
-  repeat rewrite string_dec_eq in H;
-  repeat rewrite string_dec_neq in H by discriminate;
-  repeat rewrite string_eq_append in H by reflexivity;
-  repeat
-    (match type of H with
-       | context [in_dec string_dec ?s ?l] =>
-         let Hin := fresh "Hin" in
-         let Hnin := fresh "Hnin" in
-         destruct (in_dec string_dec s l) as [Hin|Hnin] in H;
-       repeat
-         match goal with
-           | [H: In _ (listSub _ _) |- _] => (apply listSub_In_1 in H; dest)
-           | [H: ~ In _ (listSub _ _) |- _] => (apply listSub_In_2 in H; destruct H)
-           | [H: In _ _ |- _] => (try (in_tac_H; vdiscriminate; fail); clear H)
-           | [H: ~ In _ _ |- _] => (try (elim H; clear; in_tac; fail); clear H)
-         end
-     end).
-
-Ltac find_tac_G :=
+  repeat autounfold with ModulesDefs in H;
+  repeat autounfold in H; ssimpl H.
+Ltac map_compute_G :=
+  map_simpl_G;
   repeat autounfold with MapDefs;
-  repeat rewrite string_dec_eq;
-  repeat rewrite string_dec_neq by discriminate;
-  repeat rewrite string_eq_append by reflexivity;
-  repeat
-    (match goal with
-       | [ |- context [in_dec string_dec ?s ?l] ] =>
-         let Hin := fresh "Hin" in
-         let Hnin := fresh "Hnin" in
-         destruct (in_dec string_dec s l) as [Hin|Hnin];
-       repeat
-         match goal with
-           | [H: In _ (listSub _ _) |- _] =>
-             (apply listSub_In_1 in H; dest)
-           | [H: ~ In _ (listSub _ _) |- _] =>
-             (apply listSub_In_2 in H; destruct H)
-           | [H: In _ _ |- _] =>
-             (try (in_tac_H; vdiscriminate; fail); clear H)
-           | [H: ~ In _ _ |- _] =>
-             (try (elim H; clear; in_tac; fail); clear H)
-         end
-     end).
+  repeat autounfold with ModuleDefs;
+  repeat autounfold; ssimpl_G.
 
-Ltac find_eq := try reflexivity; map_simpl_G; find_tac_G; try reflexivity.
+Ltac find_eq :=
+  try reflexivity; (* already structurally equal? *)
+  map_compute_G;
+  try reflexivity. (* final check *)
 
 Ltac map_eq :=
-  try reflexivity; (* Are two values equal by computation? *)
+  try reflexivity; (* already equal? *)
   map_simpl_G;
   try reflexivity;
   let k := fresh "k" in
@@ -551,8 +569,7 @@ Ltac map_eq :=
       | [ |- context [k] ] =>
         match goal with
           | [ |- context [add ?k' _ _] ] => (* Find all "add"s in two maps and do case analyses *)
-            notHyp (k' <> k);
-              destruct (string_dec k' k); [subst; find_eq|]
+            isNew (k' <> k); destruct (string_dec k' k); [subst; find_eq|]
         end
     end; (* Possible to have some unproven equalities between two values *)
   map_simpl_G;
@@ -594,7 +611,7 @@ Ltac inDomain_tac :=
         | [ |- context [k] ] =>
           match goal with
             | [ |- context [add ?k' _ _] ] =>
-              notHyp (k' <> k);
+              isNew (k' <> k);
                 let e := fresh "e" in
                 destruct (string_dec k' k) as [e|];
                   [subst; elim n; in_tac|]

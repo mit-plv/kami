@@ -242,6 +242,8 @@ Section GetCms.
 
 End GetCms.
 
+Hint Unfold getCmsMod getDmsMod.
+
 (* maps register names to the values which they currently hold *)
 Definition RegsT := @Map (Typed type).
 
@@ -793,14 +795,14 @@ Ltac pred_dest meth :=
     match goal with
       | [H: forall m: string, In m _ -> InMap m _ -> find m _ = find m _ |- _] =>
         let Hin := type of (H meth) in
-        notHyp Hin;
-          let Hs := fresh "Hs" in pose proof (H meth) as Hs
+        isNew Hin; let Hs := fresh "Hs" in pose proof (H meth) as Hs
     end;
   repeat
     match goal with
       | [H: In ?m ?l -> InMap ?m _ -> find ?m _ = find ?m _ |- _] =>
         (let Hp := fresh "Hp" in
-         assert (Hp: In m l) by in_tac; specialize (H Hp); clear Hp)
+         assert (Hp: In m l) by (repeat autounfold; repeat autounfold with ModuleDefs; in_tac_ex);
+         specialize (H Hp); clear Hp)
           || (clear H)
     end;
   repeat
@@ -809,10 +811,10 @@ Ltac pred_dest meth :=
       | [H: (Some _ = None -> False) -> _ |- _] => specialize (H (opt_discr _))
       | [H: (Some _ <> None) -> _ |- _] => specialize (H (opt_discr _))
       | [H: (None <> None) -> _ |- _] => clear H
-      | [H: find _ _ = Some _ |- _] => repeat autounfold in H; find_tac H
-      | [H: find _ _ = None |- _] => repeat autounfold in H; find_tac H
-      | [H: find _ _ <> _ -> _ |- _] => repeat autounfold in H; find_tac H
-      | [H: find _ _ <> _ |- _] => repeat autounfold in H; find_tac H
+      | [H: find _ _ = Some _ |- _] => repeat autounfold in H; map_compute H
+      | [H: find _ _ = None |- _] => repeat autounfold in H; map_compute H
+      | [H: find _ _ <> _ -> _ |- _] => repeat autounfold in H; map_compute H
+      | [H: find _ _ <> _ |- _] => repeat autounfold in H; map_compute H
       | [H1: find _ _ <> _ -> _, H2: find _ _ <> _ |- _] =>
         progress (specialize (H1 H2))
     end.

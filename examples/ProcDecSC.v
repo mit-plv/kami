@@ -70,13 +70,15 @@ Section ProcDecSC.
       repeat
         match goal with
           | [H: regRel _ _ |- _] =>
-            unfold regRel in H; dest; subst
+            unfold regRel in H; dest; invariant_tac; basic_dest; subst
           | [ |- regRel _ _] =>
             unfold regRel; repeat esplit
-          | [H: find ?k _ = Some _ |- find ?k _ = _] =>
-            repeat autounfold with MapDefs; simpl;
-            repeat autounfold with MapDefs in H; simpl in H;
-            rewrite H; reflexivity
+          | [ |- find ?k ?m = ?rhs] =>
+            find_eq;
+              match goal with
+                | [H: ?P' |- ?P] =>
+                  progress replace P with P' by reflexivity; assumption
+              end
         end.
 
     Definition cmMap: CallsT -> CallsT := id.
@@ -93,23 +95,22 @@ Section ProcDecSC.
       fun r =>
         if string_eq r ("reqLd"__ i) then ("voidRule"__ i)
         else if string_eq r ("reqSt"__ i) then ("voidRule"__ i)
-             else if string_eq r ("repLd"__ i) then ("voidRule"__ i)
-                  else if string_eq r ("repSt"__ i) then ("voidRule"__ i)
-                       else if string_eq r ("execHt"__ i) then ("execHt"__ i)
-                            else if string_eq r ("execNm"__ i) then ("execNm"__ i)
-                                 else if string_eq r ("Mid"__ i -n- "processLd") then ("execLd"__ i)
-                                      else if string_eq r ("Mid"__ i -n- "processSt")
-                                           then ("execSt"__ i)
-                                           else ("voidRule"__ i).
+        else if string_eq r ("repLd"__ i) then ("voidRule"__ i)
+        else if string_eq r ("repSt"__ i) then ("voidRule"__ i)
+        else if string_eq r ("execHt"__ i) then ("execHt"__ i)
+        else if string_eq r ("execNm"__ i) then ("execNm"__ i)
+        else if string_eq r ("Mid"__ i -n- "processLd") then ("execLd"__ i)
+        else if string_eq r ("Mid"__ i -n- "processSt") then ("execSt"__ i)
+        else ("voidRule"__ i).
     Hint Unfold ruleMap.
 
-    Definition f := f _ _ Ht2t.      
+    Definition f := f _ _ Ht2t.
 
     Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
     Proof.
       apply transMap with (regRel:=regRel) (ruleMap:=ruleMap).
       { repeat (eexists; split); simpl; find_eq. }
-          
+
       intros.
       (* collect invariants before inversions *)
       pose proof (proc_reqLd_prop H H0) as HreqLdInv.
@@ -127,367 +128,358 @@ Section ProcDecSC.
       inv Hlts2.
       inv Hlts0.
 
-      admit.
+      destConcatLabel; destRuleRep; repeat combRule.
 
-      (* Joonwon: Below proof is broken while I change the statement to a parametrized one,
-       * I'm working on it now.
-       *)
+      - (** processLd *)
+        invertActionRep.
+        invertSemMod HSemMod. (* mid *)
+        invertSemMod Hltsmod1. (* proc *)
 
-      (* destConcatLabel; destRuleRep; repeat combRule. *)
+        invertSemMod Hltsmod;
+          [|invertSemMod HSemMod; invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "enq")].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0.
+        invertActionRep. (* outs *)
 
-      (* - (** processLd *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod HSemMod. (* mid *) *)
-      (*   invertSemMod Hltsmod1. (* proc *) *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Ins"__ i -n- "deq")].
+        invertSemMod HSemMod0.
+        invertActionRep. (* ins *)
 
-      (*   invertSemMod Hltsmod; *)
-      (*     [|invertSemMod HSemMod; invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "enq")]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. *)
-      (*   invertActionRep. (* outs *) *)
+        (* Need to get the values for old registers and defined/called method labels *)
+        filt_dest; regRel_tac.
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Ins"__ i -n- "deq")]. *)
-      (*   invertSemMod HSemMod0. *)
-      (*   invertActionRep. (* ins *) *)
-
-      (*   (* Need to get the values for old registers and defined/called method labels *) *)
-      (*   filt_dest. *)
-      (*   regRel_tac. *)
-
-      (*   (* Handling invariants for "processLd" *) *)
-      (*   specialize (HprocessLdInv eq_refl); dest. *)
-      (*   invariant_tac; basic_dest; subst. *)
+        (* Handling invariants for "processLd" *)
+        specialize (HprocessLdInv eq_refl); dest.
+        invariant_tac; basic_dest; subst.
         
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor. *)
-      (*     { unfold ruleMap. *)
-      (*       repeat rewrite string_dec_eq. *)
-      (*       repeat rewrite string_dec_neq by discriminate. *)
-      (*       in_tac. *)
-      (*     } *)
-      (*     { econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; *)
-      (*         [simpl; destruct (weq _ _); [reflexivity|intuition]|]. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*     } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*     { callIffDef_dest; filt_dest. *)
-      (*       pred_dest ("Outs"__ i -n- "enq"). *)
-      (*       pred_dest ("Ins"__ i -n- "deq"). *)
-      (*       pred_dest ("exec"__ i). *)
-      (*       invariant_tac; basic_dest. *)
-      (*       map_eq. *)
+        { econstructor; eauto.
+          econstructor.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor; eauto.
+            econstructor; eauto.
+            econstructor;
+              [simpl; destruct (weq _ _); [reflexivity|intuition]|].
+            econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+          }
+          { eauto. }
+          { eauto. }
+          { eauto. }
+          { eauto. }
+          { callIffDef_dest; filt_dest.
+            pred_dest ("Outs"__ i -n- "enq").
+            pred_dest ("Ins"__ i -n- "deq").
+            pred_dest ("exec"__ i).
+            invariant_tac; basic_dest.
+            map_eq.
 
-      (*       simpl; repeat f_equal; boundedMapTac. (* ??? *) *)
-      (*       simpl; repeat f_equal; boundedMapTac. *)
-      (*     } *)
-      (*   } *)
-      (*   { regRel_tac; simpl. *)
-      (*     callIffDef_dest; filt_dest. *)
-      (*     pred_dest ("Outs"__ i -n- "enq"). *)
-      (*     pred_dest ("Ins"__ i -n- "deq"). *)
-      (*     pred_dest ("exec"__ i). *)
-      (*     repeat (invariant_tac; basic_dest); subst. *)
+            simpl; repeat f_equal; boundedMapTac.
+          }
+        }
+        { regRel_tac.
+          callIffDef_dest; filt_dest.
+          pred_dest ("Outs"__ i -n- "enq").
+          pred_dest ("Ins"__ i -n- "deq").
+          pred_dest ("exec"__ i).
+          repeat (invariant_tac; basic_dest); subst.
+          map_eq.
 
-      (*     find_if_inside; [|elim n; assumption]. *)
-      (*     map_eq. *)
+          repeat f_equal; apply functional_extensionality; intro w.
+          find_if_inside.
+          { find_if_inside.
+            { destruct (weq _ _).
+              { unfold IndexBound_tail; simpl.
+                reflexivity.
+              }
+              { elim n0.
+                rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5).
+                reflexivity.
+              }
+            }
+            { elim n0; subst; intuition. }
+          }
+          { find_if_inside; [elim n0; subst; intuition|reflexivity]. }
+        }
 
-      (*     repeat f_equal; apply functional_extensionality; intro w. *)
-      (*     find_if_inside. *)
-      (*     { find_if_inside. *)
-      (*       { destruct (weq _ _). *)
-      (*         { unfold IndexBound_tail; simpl. *)
-      (*           reflexivity. *)
-      (*         } *)
-      (*         { elim n0. *)
-      (*           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5). *)
-      (*           reflexivity. *)
-      (*         } *)
-      (*       } *)
-      (*       { elim n0; subst; intuition. } *)
-      (*     } *)
-      (*     { find_if_inside; [elim n0; subst; intuition|reflexivity]. } *)
-      (*   } *)
+      - (** processSt *)
+        invertActionRep.
+        invertSemMod HSemMod. (* mid *)
+        invertSemMod Hltsmod1. (* proc *)
 
-      (* - (** processSt *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod HSemMod. (* mid *) *)
-      (*   invertSemMod Hltsmod1. (* proc *) *)
+        invertSemMod Hltsmod;
+          [|invertSemMod HSemMod; invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "enq")].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0.
+        invertActionRep. (* outs *)
 
-      (*   invertSemMod Hltsmod; *)
-      (*     [|invertSemMod HSemMod; invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "enq")]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. *)
-      (*   invertActionRep. (* outs *) *)
-
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Ins"__ i -n- "deq")]. *)
-      (*   invertSemMod HSemMod0. *)
-      (*   invertActionRep. (* ins *) *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Ins"__ i -n- "deq")].
+        invertSemMod HSemMod0.
+        invertActionRep. (* ins *)
         
-      (*   (* Need to get the values for old registers and defined/called method labels *) *)
-      (*   filt_dest; regRel_tac. *)
+        (* Need to get the values for old registers and defined/called method labels *)
+        filt_dest; regRel_tac.
 
-      (*   (* Handling invariants for "processSt" *) *)
-      (*   specialize (HprocessStInv eq_refl); dest. *)
-      (*   invariant_tac; basic_dest; subst. *)
+        (* Handling invariants for "processSt" *)
+        specialize (HprocessStInv eq_refl); dest.
+        invariant_tac; basic_dest; subst.
         
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; *)
-      (*         [simpl; destruct (weq _ _); [reflexivity|intuition]|]. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*     } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*     { callIffDef_dest; filt_dest. *)
-      (*       pred_dest ("Outs"__ i -n- "enq"). *)
-      (*       pred_dest ("Ins"__ i -n- "deq"). *)
-      (*       pred_dest ("exec"__ i). *)
-      (*       invariant_tac; basic_dest. *)
-      (*       map_eq. *)
-      (*       simpl; repeat f_equal. *)
-      (*       boundedMapTac. *)
-      (*     } *)
-      (*   } *)
-      (*   { regRel_tac; simpl. *)
-      (*     callIffDef_dest; filt_dest. *)
-      (*     pred_dest ("Outs"__ i -n- "enq"). *)
-      (*     pred_dest ("Ins"__ i -n- "deq"). *)
-      (*     pred_dest ("exec"__ i). *)
-      (*     repeat (invariant_tac; basic_dest); subst. *)
+        { econstructor; eauto.
+          econstructor.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor; eauto.
+            econstructor; eauto.
+            econstructor;
+              [simpl; destruct (weq _ _); [reflexivity|intuition]|].
+            econstructor; eauto.
+            econstructor; eauto.
+          }
+          { eauto. }
+          { eauto. }
+          { eauto. }
+          { eauto. }
+          { callIffDef_dest; filt_dest.
+            pred_dest ("Outs"__ i -n- "enq").
+            pred_dest ("Ins"__ i -n- "deq").
+            pred_dest ("exec"__ i).
+            invariant_tac; basic_dest.
+            map_eq.
 
-      (*     find_if_inside; [simpl in H24; rewrite H24 in e; discriminate|]. *)
-      (*     map_eq. *)
-      (*   } *)
+            simpl; repeat f_equal; boundedMapTac.
+          }
+        }
+        { regRel_tac.
+          callIffDef_dest; filt_dest.
+          pred_dest ("Outs"__ i -n- "enq").
+          pred_dest ("Ins"__ i -n- "deq").
+          pred_dest ("exec"__ i).
+          repeat (invariant_tac; basic_dest); subst.
+          map_eq.
+        }
 
-      (* - (** reqLd *) *)
-      (*   invertActionRep. *)
+      - (** reqLd *)
+        invertActionRep.
 
-      (*   invertSemMod HSemMod. (* proc *) *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
+        invertSemMod HSemMod. (* proc *)
+        invertSemMod Hltsmod1. (* mid *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* outs *)
 
-      (*   invertSemMod Hltsmod0; [|invertSemMod HSemMod; invertSemMod HSemMod0; *)
-      (*                            fconn_tac ("Ins"__ i -n- "enq")]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* ins *) *)
-      (*   filt_dest; invertActionRep. *)
+        invertSemMod Hltsmod0;
+          [|invertSemMod HSemMod; invertSemMod HSemMod0; fconn_tac ("Ins"__ i -n- "enq")].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* ins *)
+        filt_dest; invertActionRep.
 
-      (*   (* Handling invariants for "reqLd" *) *)
-      (*   specialize (HreqLdInv eq_refl); dest. *)
-      (*   invariant_tac; basic_dest; subst. *)
+        (* Handling invariants for "reqLd" *)
+        specialize (HreqLdInv eq_refl); dest.
+        invariant_tac; basic_dest; subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor. reflexivity. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac; invariant_tac; basic_dest; subst. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor. reflexivity. }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac.
+          map_eq.
+        }
 
-      (* - (** reqSt *) *)
-      (*   invertActionRep. *)
+      - (** reqSt *)
+        invertActionRep.
 
-      (*   invertSemMod HSemMod. (* proc *) *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
+        invertSemMod HSemMod. (* proc *)
+        invertSemMod Hltsmod1. (* mid *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* outs *)
 
-      (*   invertSemMod Hltsmod0; [|invertSemMod HSemMod; invertSemMod HSemMod0; *)
-      (*                            fconn_tac ("Ins"__ i -n- "enq")]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* ins *) *)
-      (*   filt_dest; invertActionRep. *)
+        invertSemMod Hltsmod0; [|invertSemMod HSemMod; invertSemMod HSemMod0;
+                                 fconn_tac ("Ins"__ i -n- "enq")].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* ins *)
+        filt_dest; invertActionRep.
 
-      (*   (* Handling invariants for "reqSt" *) *)
-      (*   specialize (HreqStInv eq_refl); dest. *)
-      (*   invariant_tac; basic_dest; subst. *)
+        (* Handling invariants for "reqSt" *)
+        specialize (HreqStInv eq_refl); dest.
+        invariant_tac; basic_dest; subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor. reflexivity. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac; invariant_tac; basic_dest; subst. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor. reflexivity. }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac; map_eq. }
 
-      (* - (** repLd *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
-      (*   invertSemMod HSemMod. (* proc *) *)
+      - (** repLd *)
+        invertActionRep.
+        invertSemMod Hltsmod1. (* mid *)
+        invertSemMod HSemMod. (* proc *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "deq")]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
-      (*   invertActionRep. *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "deq")].
+        invertSemMod HSemMod0. (* outs *)
+        invertActionRep.
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0.
 
-      (*   filt_dest; regRel_tac. *)
-      (*   specialize (HrepLdInv eq_refl); dest. *)
-      (*   repeat (invariant_tac; basic_dest); subst. *)
+        filt_dest; regRel_tac.
+        specialize (HrepLdInv eq_refl); dest.
+        repeat (invariant_tac; basic_dest); subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor. reflexivity. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac. *)
-      (*     conn_tac ("Outs"__ i -n- "deq"). *)
-      (*     rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor. reflexivity. }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac.
+          conn_tac ("Outs"__ i -n- "deq").
+          rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
+          map_eq.
+        }
 
-      (* - (** repSt *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
-      (*   invertSemMod HSemMod. (* proc *) *)
+      - (** repSt *)
+        invertActionRep.
+        invertSemMod Hltsmod1. (* mid *)
+        invertSemMod HSemMod. (* proc *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "deq")]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
-      (*   invertActionRep. *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [|invertSemMod HSemMod0; fconn_tac ("Outs"__ i -n- "deq")].
+        invertSemMod HSemMod0. (* outs *)
+        invertActionRep.
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0.
 
-      (*   filt_dest; regRel_tac. *)
-      (*   specialize (HrepStInv eq_refl); dest. *)
-      (*   repeat (invariant_tac; basic_dest); subst. *)
+        filt_dest; regRel_tac.
+        specialize (HrepStInv eq_refl); dest.
+        repeat (invariant_tac; basic_dest); subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor. reflexivity. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac. *)
-      (*     conn_tac ("Outs"__ i -n- "deq"). *)
-      (*     rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor. reflexivity. }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac.
+          conn_tac ("Outs"__ i -n- "deq").
+          rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
+          map_eq.
+        }
 
-      (* - (** execHt *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
-      (*   invertSemMod HSemMod. (* proc *) *)
+      - (** execHt *)
+        invertActionRep.
+        invertSemMod Hltsmod1. (* mid *)
+        invertSemMod HSemMod. (* proc *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* outs *)
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* ins *) *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* ins *)
 
-      (*   filt_dest; regRel_tac. *)
-      (*   specialize (HexecHtInv eq_refl); dest. *)
-      (*   repeat (invariant_tac; basic_dest); subst. *)
+        filt_dest; regRel_tac.
+        specialize (HexecHtInv eq_refl); dest.
+        repeat (invariant_tac; basic_dest); subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*     } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+          }
+          { eauto. }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac.
+          map_eq.
+        }
 
-      (* - (** execNm *) *)
-      (*   invertActionRep. *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
-      (*   invertSemMod HSemMod. (* proc *) *)
+      - (** execNm *)
+        invertActionRep.
+        invertSemMod Hltsmod1. (* mid *)
+        invertSemMod HSemMod. (* proc *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* outs *)
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* ins *) *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* ins *)
 
-      (*   filt_dest; regRel_tac. *)
-      (*   specialize (HexecNmInv eq_refl); dest. *)
-      (*   repeat (invariant_tac; basic_dest); subst. *)
+        filt_dest; regRel_tac.
+        specialize (HexecNmInv eq_refl); dest.
+        repeat (invariant_tac; basic_dest); subst.
 
-      (*   eexists; split. *)
+        eexists; split.
 
-      (*   { econstructor; eauto. *)
-      (*     econstructor; eauto. *)
-      (*     { econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*       econstructor; eauto. *)
-      (*     } *)
-      (*     { eauto. } *)
-      (*     { eauto. } *)
-      (*   } *)
-      (*   { regRel_tac. *)
-      (*     map_eq. *)
-      (*   } *)
+        { econstructor; eauto.
+          econstructor; eauto.
+          { repeat autounfold; ssimpl_G; in_tac. }
+          { econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+            econstructor; eauto.
+          }
+          { eauto. }
+          { eauto. }
+        }
+        { regRel_tac.
+          map_eq.
+        }
         
-      (* - (** Nothing?!? *) *)
-      (*   invertSemMod Hltsmod1. (* mid *) *)
-      (*   invertSemMod Hltsmod2. (* proc *) *)
+      - (** Nothing?!? *)
+        invertSemMod Hltsmod1. (* mid *)
+        invertSemMod Hltsmod2. (* proc *)
 
-      (*   invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* outs *) *)
+        invertSemMod Hltsmod; [fconn_tac ("Outs"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Outs"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* outs *)
 
-      (*   invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|]. *)
-      (*   invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
-      (*   invertSemMod HSemMod0. (* ins *) *)
+        invertSemMod Hltsmod0; [fconn_tac ("Ins"__ i -n- "enq")|].
+        invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|].
+        invertSemMod HSemMod0. (* ins *)
 
-      (*   filt_dest. *)
-      (*   eexists; split. *)
+        filt_dest.
+        eexists; split.
 
-      (*   { econstructor; eauto. } *)
-      (*   { map_simpl_G; assumption. } *)
+        { econstructor; eauto. }
+        { map_simpl_G; assumption. }
 
     Qed.
 
