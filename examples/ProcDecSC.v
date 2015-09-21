@@ -123,11 +123,9 @@ Section ProcDecSC.
       inv H0.
       inv Hlts2.
       inv Hlts0.
-
-      destConcatLabel; destRuleRep; repeat combRule.
+      destConcatLabel; destRuleRep; repeat combRule; invertActionRep.
 
       - (** processLd *)
-        invertActionRep.
         invertSemMod HSemMod. (* mid *)
         invertSemMod Hltsmod1. (* proc *)
 
@@ -202,7 +200,6 @@ Section ProcDecSC.
         }
 
       - (** processSt *)
-        invertActionRep.
         invertSemMod HSemMod. (* mid *)
         invertSemMod Hltsmod1. (* proc *)
 
@@ -260,8 +257,6 @@ Section ProcDecSC.
         }
 
       - (** reqLd *)
-        invertActionRep.
-
         invertSemMod HSemMod. (* proc *)
         invertSemMod Hltsmod1. (* mid *)
 
@@ -293,8 +288,6 @@ Section ProcDecSC.
         }
 
       - (** reqSt *)
-        invertActionRep.
-
         invertSemMod HSemMod. (* proc *)
         invertSemMod Hltsmod1. (* mid *)
 
@@ -324,7 +317,6 @@ Section ProcDecSC.
         { regRel_tac; map_eq. }
 
       - (** repLd *)
-        invertActionRep.
         invertSemMod Hltsmod1. (* mid *)
         invertSemMod HSemMod. (* proc *)
 
@@ -357,7 +349,6 @@ Section ProcDecSC.
         }
 
       - (** repSt *)
-        invertActionRep.
         invertSemMod Hltsmod1. (* mid *)
         invertSemMod HSemMod. (* proc *)
 
@@ -390,7 +381,6 @@ Section ProcDecSC.
         }
 
       - (** execHt *)
-        invertActionRep.
         invertSemMod Hltsmod1. (* mid *)
         invertSemMod HSemMod. (* proc *)
 
@@ -425,7 +415,6 @@ Section ProcDecSC.
         }
 
       - (** execNm *)
-        invertActionRep.
         invertSemMod Hltsmod1. (* mid *)
         invertSemMod HSemMod. (* proc *)
 
@@ -459,7 +448,7 @@ Section ProcDecSC.
           map_eq.
         }
         
-      - (** Nothing?!? *)
+      - (** None *)
         invertSemMod Hltsmod1. (* mid *)
         invertSemMod Hltsmod2. (* proc *)
 

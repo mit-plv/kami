@@ -496,6 +496,46 @@ Definition CombineRm (rm1 rm2 crm: option string) :=
           | _, _ => None
         end.
 
+Lemma combineRm_prop_1:
+  forall r1 rm2 cr (Hcrm: CombineRm (Some r1) rm2 (Some cr)),
+    r1 = cr.
+Proof.
+  intros; unfold CombineRm in Hcrm; dest.
+  destruct rm2; inv H0; reflexivity.
+Qed.
+
+Lemma combineRm_prop_2:
+  forall rm1 r2 cr (Hcrm: CombineRm rm1 (Some r2) (Some cr)),
+    r2 = cr.
+Proof.
+  intros; unfold CombineRm in Hcrm; dest.
+  destruct rm1; inv H0; reflexivity.
+Qed.
+
+Lemma combineRm_prop_3:
+  forall rm1 crm (Hcrm: CombineRm rm1 None crm),
+    rm1 = crm.
+Proof.
+  intros; unfold CombineRm in Hcrm; dest.
+  destruct rm1; inv H0; reflexivity.
+Qed.
+
+Lemma combineRm_prop_4:
+  forall rm2 crm (Hcrm: CombineRm None rm2 crm),
+    rm2 = crm.
+Proof.
+  intros; unfold CombineRm in Hcrm; dest.
+  destruct rm2; inv H0; reflexivity.
+Qed.
+
+Lemma combineRm_prop_5:
+  forall rm1 rm2 (Hcrm: CombineRm rm1 rm2 None),
+    rm1 = None /\ rm2 = None.
+Proof.
+  intros; unfold CombineRm in Hcrm; dest.
+  destruct rm1, rm2; intuition; inv H1.
+Qed.
+
 Definition CallIffDef (l1 l2: RuleLabelT) :=
   (forall m, In m (cms l2) -> InMap m (dmMap l1) -> find m (dmMap l1) = find m (cmMap l2)) /\
   (forall m, In m (dms l1) -> InMap m (cmMap l2) -> find m (dmMap l1) = find m (cmMap l2)) /\
@@ -549,6 +589,27 @@ Inductive LtsStep:
                            (Build_RuleLabelT crm (getDmsMod (ConcatMod m1 m2)) cdmMap
                                              (getCmsMod (ConcatMod m1 m2)) ccmMap)):
     LtsStep (ConcatMod m1 m2) crm colds cnews cdmMap ccmMap.
+
+Lemma ltsStep_rule:
+  forall m rm r or nr dmMap cmMap
+         (Hstep: LtsStep m rm or nr dmMap cmMap)
+         (Hrm: rm = Some r),
+    In r (map (@attrName _) (getRules m)).
+Proof.
+  intros; subst.
+  dependent induction Hstep.
+  - invertSemMod Hltsmod.
+    apply in_map_iff; simpl; eexists; split; [|eassumption]; reflexivity.
+  - simpl; destConcatLabel.
+    unfold CombineRm in Hcrm; dest.
+    destruct rm1, rm2.
+    + destruct H; discriminate.
+    + inv H0; specialize (IHHstep1 s eq_refl).
+      rewrite map_app; apply in_or_app; left; assumption.
+    + inv H0; specialize (IHHstep2 s eq_refl).
+      rewrite map_app; apply in_or_app; right; assumption.
+    + inv H0.
+Qed.
 
 Ltac constr_concatMod :=
   repeat autounfold with ModuleDefs;
@@ -707,6 +768,42 @@ Section WellFormed.
 End WellFormed.
 
 (** Tactics for dealing with semantics *)
+
+Ltac invStep Hstep :=
+  repeat autounfold with ModuleDefs in Hstep;
+  repeat
+    match goal with
+      | [Horig: LtsStep (ConcatMod _ _) None _ _ _ _ |- _] =>
+        inv Horig; destConcatLabel;
+        match goal with
+          | [Hcrm: CombineRm _ _ None |- _] =>
+            pose proof (combineRm_prop_5 Hcrm); dest; subst
+        end
+      | [Horig: LtsStep (ConcatMod _ _) (Some ?r) _ _ _ _ |- _] =>
+        inv Horig; destConcatLabel;
+        match goal with
+          | [Hcrm: CombineRm _ _ _, H: LtsStep ?m ?rm _ _ _ _ |- _] =>
+            let Hin := fresh "Hin" in
+            assert (Hin: ~ In r (map (@attrName _) (getRules m))) by in_tac_ex;
+              assert (rm = None) by
+                (destruct rm; [exfalso; elim Hin|reflexivity];
+                 eapply ltsStep_rule; [eassumption|];
+                 (rewrite (combineRm_prop_1 Hcrm) || rewrite (combineRm_prop_2 Hcrm));
+                 reflexivity);
+              clear Hin; subst;
+              (rewrite (combineRm_prop_3 Hcrm) in * || rewrite (combineRm_prop_4 Hcrm) in *);
+              clear Hcrm
+        end
+    end;
+  repeat
+    match goal with
+      | [H: LtsStep (Mod _ _ _) _ _ _ _ _ |- _] => inv H
+    end.
+
+Ltac invStepFirst :=
+  match goal with
+    | [H: LtsStep _ _ _ _ _ _ |- _] => invStep H
+  end.
 
 Ltac destRule Hlts :=
   match type of Hlts with
