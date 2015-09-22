@@ -376,34 +376,6 @@ Section Invariants.
   (*   destruct x1; intuition. *)
   (* Qed. *)
 
-  Lemma proc_repLd_prop:
-    forall (Hclos: LtsStepClosure pdecfi or l)
-           (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
-           (Hrm: rm = Some ("repLd"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := false |} /\
-      exists outsv deqPv,
-        find ("Outs"__ i -n- "elt") or =
-        Some {| objType := Vector (atomK addrSize (Bit valSize)) O; objVal := outsv |} /\
-        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := deqPv |} /\
-        outsv deqPv ``"type" = evalConstT memLd.
-  Proof.
-    admit.
-  Qed.
-  
-  Lemma proc_repSt_prop:
-    forall (Hclos: LtsStepClosure pdecfi or l)
-           (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
-           (Hrm: rm = Some ("repSt"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := false |} /\
-      exists outsv deqPv,
-        find ("Outs"__ i -n- "elt") or =
-        Some {| objType := Vector (atomK addrSize (Bit valSize)) O; objVal := outsv |} /\
-        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := deqPv |} /\
-        outsv deqPv ``"type" = evalConstT memSt.
-  Proof.
-    admit.
-  Qed.
-
   Lemma mid_processLd_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)

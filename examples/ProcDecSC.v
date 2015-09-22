@@ -111,8 +111,6 @@ Section ProcDecSC.
       (* collect invariants before inversions *)
       pose proof (proc_reqLd_prop H H0) as HreqLdInv.
       pose proof (proc_reqSt_prop H H0) as HreqStInv.
-      pose proof (proc_repLd_prop H H0) as HrepLdInv.
-      pose proof (proc_repSt_prop H H0) as HrepStInv.
       pose proof (proc_execHt_prop H H0) as HexecHtInv.
       pose proof (proc_execNm_prop H H0) as HexecNmInv.
       pose proof (mid_processLd_prop H H0) as HprocessLdInv.
@@ -181,6 +179,7 @@ Section ProcDecSC.
           pred_dest ("Outs"__ i -n- "enq").
           repeat (invariant_tac; basic_dest); subst.
 
+          (* invariant *)
           match goal with
             | [ |- context [if (weq ?w1 ?w2) then _ else _] ] =>
               replace w1 with w2 by
@@ -190,6 +189,7 @@ Section ProcDecSC.
           end.
           map_eq.
 
+          (* invariant *)
           simpl.
           repeat f_equal; apply functional_extensionality; intro w.
           find_if_inside.
@@ -257,6 +257,7 @@ Section ProcDecSC.
           pred_dest ("exec"__ i).
           repeat (invariant_tac; basic_dest); subst.
 
+          (* invariant *)
           match goal with
             | [ |- context [if (weq ?w1 _) then _ else _] ] =>
               progress replace w1 with (evalConstT memSt) by
@@ -340,7 +341,6 @@ Section ProcDecSC.
         invertSemMod HSemMod0.
 
         filt_dest; regRel_tac.
-        specialize (HrepLdInv eq_refl); dest.
         repeat (invariant_tac; basic_dest); subst.
 
         eexists; split.
@@ -354,7 +354,14 @@ Section ProcDecSC.
         }
         { regRel_tac.
           conn_tac ("Outs"__ i -n- "deq").
+
+          (* invariant *)
+          simpl in H8; apply negb_true_iff in H8; subst.
+          assert (x3 x5 ``"type" = WO~0~0)
+            by (clear -H6; simpl in H6; destruct (weq _ _); [assumption|inv H6]).
+          rewrite H0 in H15; simpl in H15; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
+          
           map_eq.
         }
 
@@ -372,7 +379,6 @@ Section ProcDecSC.
         invertSemMod HSemMod0.
 
         filt_dest; regRel_tac.
-        specialize (HrepStInv eq_refl); dest.
         repeat (invariant_tac; basic_dest); subst.
 
         eexists; split.
@@ -386,7 +392,14 @@ Section ProcDecSC.
         }
         { regRel_tac.
           conn_tac ("Outs"__ i -n- "deq").
+
+          (* invariant *)
+          simpl in H8; apply negb_true_iff in H8; subst.
+          assert (x3 x5 ``"type" = WO~0~1)
+            by (clear -H6; simpl in H6; destruct (weq _ _); [assumption|inv H6]).
+          rewrite H0 in H15; simpl in H15; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
+          
           map_eq.
         }
 
