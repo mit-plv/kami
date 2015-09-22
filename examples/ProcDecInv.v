@@ -54,14 +54,8 @@ Section Invariants.
   (*   repeat split; auto. *)
   (* Qed. *)
 
-  Variables or nr: RegsT.
-  Variable l: list RuleLabelT.
-  Variables (rm: option string) (dmMap cmMap: CallsT).
-
   Lemma procRef_inv_1:
-    forall (Hclos: LtsStepClosure pdecfi or l)
-           (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
-           (Hrm: rm <> None),
+    forall or l (Hclos: LtsStepClosure pdecfi or l),
     exists stallv iemptyv oemptyv,
       find ("stall"__ i) or = Some {| objType := Bool; objVal := stallv |} /\
       find ("Ins"__ i -n- "empty") or = Some {| objType := Bool; objVal := iemptyv |} /\
@@ -70,33 +64,20 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros. *)
-  (*   generalize dependent nr; generalize dependent rm; *)
-  (*   generalize dependent dmMap; generalize dependent cmMap. *)
-  (*   dependent induction Hclos; intros; subst. *)
-  (*   { repeat eexists. *)
-  (*     { simpl. find_eq. } *)
-  (*     { simpl. find_eq. } *)
-  (*     { simpl. find_eq. } *)
-  (*     { apply xor_1; intuition. } *)
+  (*   intros; dependent induction Hclos; intros; subst. *)
+  (*   { repeat eexists; try (simpl; find_eq; fail). *)
+  (*     apply xor_1; intuition. *)
   (*   } *)
 
   (*   specialize (IHHclos eq_refl). *)
-  (*   destruct rm0. *)
-      
-  (*   - assert (Hsn: Some s <> None) by discriminate. *)
-  (*     specialize (IHHclos _ _ _ Hsn _ Hlts); clear Hsn. *)
-  (*     destruct rm1; [|elim Hrm; reflexivity]. *)
+  (*   destruct rm. *)
 
-  (*     inv Hlts. *)
-  (*     inv Hlts2. *)
-  (*     inv Hlts0. *)
+  (*   - inv Hlts; inv Hlts2; inv Hlts0. *)
   (*     destConcatLabel. *)
   (*     map_simpl H; map_simpl H0; map_simpl H1. *)
   (*     destRule Hlts1; destRule Hlts2; destRule Hlts3; destRule Hlts4; repeat combRule. *)
 
   (*     + (** reqLd *) *)
-  (*       inv H3. *)
   (*       invertActionRep. *)
 
   (*       invertSemMod HSemMod. (* proc *) *)
@@ -117,12 +98,9 @@ Section Invariants.
   (*       assert (x0 = true /\ x1 = true) *)
   (*         by (clear -H2; destruct x0; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq. } *)
-  (*       { find_eq. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { simpl; apply xor_2; intuition. } *)
-        
+  (*       repeat eexists; eauto. *)
+  (*       simpl; apply xor_2; intuition. *)
+
   (*     + (** reqSt *) *)
   (*       invertActionRep. *)
 
@@ -144,11 +122,8 @@ Section Invariants.
   (*       assert (x0 = true /\ x1 = true) *)
   (*         by (clear -H2; destruct x0; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq. } *)
-  (*       { find_eq. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { simpl; apply xor_2; intuition. } *)
+  (*       repeat eexists; eauto. *)
+  (*       simpl; apply xor_2; intuition. *)
         
   (*     + (** repLd *) *)
   (*       invertActionRep. *)
@@ -168,14 +143,10 @@ Section Invariants.
   (*       invariant_tac; basic_dest. *)
   (*       assert (x = true /\ x0 = true) *)
   (*         by (clear -H2; destruct x; destruct x0; inv H2; dest; intuition); dest; subst. *)
-
-  (*       repeat eexists. *)
-  (*       { find_eq. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq. } *)
-  (*       { rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
-  (*         simpl; apply xor_1; intuition. *)
-  (*       } *)
+        
+  (*       repeat eexists; eauto. *)
+  (*       rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
+  (*       simpl; apply xor_1; intuition. *)
 
   (*     + (* repSt *) *)
   (*       invertActionRep. *)
@@ -196,13 +167,9 @@ Section Invariants.
   (*       assert (x = true /\ x0 = true) *)
   (*         by (clear -H2; destruct x; destruct x0; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq. } *)
-  (*       { rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
-  (*         simpl; apply xor_1; intuition. *)
-  (*       } *)
+  (*       repeat eexists; eauto. *)
+  (*       rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
+  (*       simpl; apply xor_1; intuition. *)
         
   (*     + (** execHt *) *)
   (*       invertActionRep. *)
@@ -219,11 +186,7 @@ Section Invariants.
 
   (*       invariant_tac; basic_dest. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { assumption. } *)
+  (*       repeat eexists; eauto. *)
 
   (*     + (** execNm *) *)
   (*       invertActionRep. *)
@@ -240,11 +203,7 @@ Section Invariants.
 
   (*       invariant_tac; basic_dest. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq; sassumption. } *)
-  (*       { assumption. } *)
+  (*       repeat eexists; eauto. *)
 
   (*     + (** processLd *) *)
   (*       invertActionRep. *)
@@ -268,13 +227,9 @@ Section Invariants.
   (*       assert (x = true /\ x1 = true) *)
   (*         by (clear -H2; destruct x; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq. } *)
-  (*       { find_eq. } *)
-  (*       { rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
-  (*         simpl; apply xor_3; intuition. *)
-  (*       } *)
+  (*       repeat eexists; eauto. *)
+  (*       rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
+  (*       simpl; apply xor_3; intuition. *)
 
   (*     + (** processSt *) *)
   (*       invertActionRep. *)
@@ -298,23 +253,21 @@ Section Invariants.
   (*       assert (x = true /\ x1 = true) *)
   (*         by (clear -H2; destruct x; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists. *)
-  (*       { find_eq; sassumption. } *)
-  (*       { find_eq. } *)
-  (*       { find_eq. } *)
-  (*       { rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
-  (*         simpl; apply xor_3; intuition. *)
-  (*       } *)
+  (*       repeat eexists; eauto. *)
+  (*       rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
+  (*       simpl; apply xor_3; intuition. *)
 
   (*     + inv H3. *)
         
   (*   - (* should be an empty step *) *)
   (*     pose proof (pdecfi_none Hlts); dest; subst. *)
-  (*     map_simpl Hstep. *)
-  (*     eapply IHHclos; eauto. *)
+  (*     map_simpl_G. *)
+  (*     repeat eexists; eauto. *)
       
   (* Qed. *)
 
+  Variables (l: list RuleLabelT) (or nr: RegsT) (dmMap cmMap: CallsT) (rm: option string).
+  
   Lemma proc_reqLd_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
@@ -323,8 +276,7 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; pose proof (procRef_inv_1 Hclos Hstep) as Hinv; subst. *)
-  (*   specialize (Hinv (opt_discr _)); dest. *)
+  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
   (*   rewrite H1; repeat f_equal. *)
 
   (*   assert (x = false); subst. *)
@@ -351,6 +303,24 @@ Section Invariants.
   Proof.
     admit.
   Qed.
+  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H1; repeat f_equal. *)
+
+  (*   assert (x = false); subst. *)
+  (*   { clear -Hstep H. *)
+  (*     invStep Hstep. *)
+  (*     invertSemMod Hltsmod2. *)
+  (*     in_tac_H; vdiscriminate; inv H1. *)
+  (*     invertActionRep. *)
+  (*     map_simpl H; clear -H H0 H3. *)
+  (*     simpl in H3; destruct x0; intuition. *)
+  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     basic_dest; reflexivity. *)
+  (*   } *)
+
+  (*   clear -H2; inv H2; dest; intuition. *)
+  (*   destruct x1; intuition. *)
+  (* Qed. *)
 
   Lemma proc_execHt_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
@@ -360,6 +330,24 @@ Section Invariants.
   Proof.
     admit.
   Qed.
+  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H1; repeat f_equal. *)
+
+  (*   assert (x = false); subst. *)
+  (*   { clear -Hstep H. *)
+  (*     invStep Hstep. *)
+  (*     invertSemMod Hltsmod2. *)
+  (*     in_tac_H; vdiscriminate; inv H0. *)
+  (*     invertActionRep. *)
+  (*     map_simpl H; clear -H H0 H3. *)
+  (*     simpl in H3; destruct x0; intuition. *)
+  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     basic_dest; reflexivity. *)
+  (*   } *)
+
+  (*   clear -H2; inv H2; dest; intuition. *)
+  (*   destruct x1; intuition. *)
+  (* Qed. *)
 
   Lemma proc_execNm_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
@@ -369,17 +357,35 @@ Section Invariants.
   Proof.
     admit.
   Qed.
+  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H1; repeat f_equal. *)
+
+  (*   assert (x = false); subst. *)
+  (*   { clear -Hstep H. *)
+  (*     invStep Hstep. *)
+  (*     invertSemMod Hltsmod2. *)
+  (*     in_tac_H; vdiscriminate; inv H1. *)
+  (*     invertActionRep. *)
+  (*     map_simpl H; clear -H H0 H3. *)
+  (*     simpl in H3; destruct x0; intuition. *)
+  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     basic_dest; reflexivity. *)
+  (*   } *)
+
+  (*   clear -H2; inv H2; dest; intuition. *)
+  (*   destruct x1; intuition. *)
+  (* Qed. *)
 
   Lemma proc_repLd_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("repLd"__ i)),
       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := false |} /\
-      exists pcv stv,
-        find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
-        find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
-                                     objVal := stv |} /\
-        dec stv pcv ``"opcode" = evalConstT opLd.
+      exists outsv deqPv,
+        find ("Outs"__ i -n- "elt") or =
+        Some {| objType := Vector (atomK addrSize (Bit valSize)) O; objVal := outsv |} /\
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := deqPv |} /\
+        outsv deqPv ``"type" = evalConstT memLd.
   Proof.
     admit.
   Qed.
@@ -389,11 +395,11 @@ Section Invariants.
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("repSt"__ i)),
       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := false |} /\
-      exists pcv stv,
-        find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
-        find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
-                                     objVal := stv |} /\
-        dec stv pcv ``"opcode" = evalConstT opSt.
+      exists outsv deqPv,
+        find ("Outs"__ i -n- "elt") or =
+        Some {| objType := Vector (atomK addrSize (Bit valSize)) O; objVal := outsv |} /\
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := deqPv |} /\
+        outsv deqPv ``"type" = evalConstT memSt.
   Proof.
     admit.
   Qed.
@@ -403,18 +409,23 @@ Section Invariants.
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("Mid"__ i -n- "processLd")),
       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |} /\
-      exists pcv stv insv deqPv,
+      exists pcv stv insv ideqPv oenqPv odeqPv,
         find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
         find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
                                      objVal := stv |} /\
         find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
                                                 objVal := insv |} /\
         find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O;
-                                                 objVal := deqPv |} /\
+                                                 objVal := ideqPv |} /\
+        find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O;
+                                                  objVal := oenqPv |} /\
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
+                                                  objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opLd /\
-        insv deqPv ``"type" = evalConstT memLd /\
-        insv deqPv ``"addr" = dec stv pcv ``"addr" /\
-        insv deqPv ``"value" = evalConstT (getDefaultConst (Bit valSize)).
+        insv ideqPv ``"type" = evalConstT memLd /\
+        insv ideqPv ``"addr" = dec stv pcv ``"addr" /\
+        insv ideqPv ``"value" = evalConstT (getDefaultConst (Bit valSize)) /\
+        oenqPv = odeqPv.
   Proof.
     admit.
   Qed.
@@ -424,18 +435,23 @@ Section Invariants.
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("Mid"__ i -n- "processSt")),
       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |} /\
-      exists pcv stv insv deqPv,
+      exists pcv stv insv ideqPv oenqPv odeqPv,
         find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
         find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
                                      objVal := stv |} /\
         find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
                                                 objVal := insv |} /\
         find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O;
-                                                 objVal := deqPv |} /\
+                                                 objVal := ideqPv |} /\
+        find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O;
+                                                  objVal := oenqPv |} /\
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
+                                                  objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opSt /\
-        insv deqPv ``"type" = evalConstT memSt /\
-        insv deqPv ``"addr" = dec stv pcv ``"addr" /\
-        insv deqPv ``"value" = dec stv pcv ``"value".
+        insv ideqPv ``"type" = evalConstT memSt /\
+        insv ideqPv ``"addr" = dec stv pcv ``"addr" /\
+        insv ideqPv ``"value" = dec stv pcv ``"value" /\
+        oenqPv = odeqPv.
   Proof.
     admit.
   Qed.

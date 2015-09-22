@@ -50,7 +50,7 @@ Section ProcDecSC.
                 add ("pc"__ i) {| objVal := pcv |}
                     (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
                                        objVal := rfv |} empty)).
-      - pose proof (dec rfv pcv ``"opcode") as opc; unfold GetAttrType in opc; simpl in opc.
+      - pose proof (outv deqPv ``"type") as opc; unfold GetAttrType in opc; simpl in opc.
         destruct (weq opc (evalConstT opLd)).
         + refine (sr =
                   add ("pc"__ i) {| objVal := fst (exec rfv pcv (dec rfv pcv)) |}
@@ -176,23 +176,26 @@ Section ProcDecSC.
         }
         { regRel_tac.
           callIffDef_dest; filt_dest.
-          pred_dest ("Outs"__ i -n- "enq").
           pred_dest ("Ins"__ i -n- "deq").
           pred_dest ("exec"__ i).
+          pred_dest ("Outs"__ i -n- "enq").
           repeat (invariant_tac; basic_dest); subst.
+
+          match goal with
+            | [ |- context [if (weq ?w1 ?w2) then _ else _] ] =>
+              replace w1 with w2 by
+                  (simpl; rewrite (rewrite_weq eq_refl);
+                   clear -H5; simpl in H5; destruct (weq _ _); intuition);
+                rewrite (rewrite_weq eq_refl)
+          end.
           map_eq.
 
+          simpl.
           repeat f_equal; apply functional_extensionality; intro w.
           find_if_inside.
           { find_if_inside.
-            { destruct (weq _ _).
-              { unfold IndexBound_tail; simpl.
-                reflexivity.
-              }
-              { elim n0.
-                rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5).
-                reflexivity.
-              }
+            { rewrite (rewrite_weq eq_refl).
+              reflexivity.
             }
             { elim n0; subst; intuition. }
           }
@@ -253,6 +256,13 @@ Section ProcDecSC.
           pred_dest ("Ins"__ i -n- "deq").
           pred_dest ("exec"__ i).
           repeat (invariant_tac; basic_dest); subst.
+
+          match goal with
+            | [ |- context [if (weq ?w1 _) then _ else _] ] =>
+              progress replace w1 with (evalConstT memSt) by
+                  (simpl; rewrite (rewrite_weq eq_refl);
+                   clear -H5; simpl in H5; destruct (weq _ _); intuition)
+          end.
           map_eq.
         }
 

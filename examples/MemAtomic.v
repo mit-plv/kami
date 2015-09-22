@@ -26,6 +26,7 @@ Section Middleman.
     vcall req <- (attrName getReqSig) :@: (attrType getReqSig) #(Cd _) #;
     vassert (V req @> "type" #[] == C memLd) #;
     vcall rep <- (attrName execSig) :@: (attrType execSig) #(V req) #;
+    vassert (V rep @> "type" #[] == C memLd) #;
     vcall (attrName setRepSig) :@: (attrType setRepSig) #(V rep) #;
     vret (Cd _) #;.
     
@@ -33,6 +34,7 @@ Section Middleman.
     vcall req <- (attrName getReqSig) :@: (attrType getReqSig) #(Cd _) #;
     vassert (V req @> "type" #[] == C memSt) #;
     vcall rep <- (attrName execSig) :@: (attrType execSig) #(V req) #;
+    vassert (V rep @> "type" #[] == C memSt) #;
     vcall (attrName setRepSig) :@: (attrType setRepSig) #(V rep) #;
     vret (Cd _) #;.
 
