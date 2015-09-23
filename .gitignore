@@ -2,3 +2,6 @@
 *.v.d
 *.glob
 Makefile.coq
+*.aux
+*~
+.coq-native

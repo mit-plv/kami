@@ -943,14 +943,6 @@ Ltac fconn_tac meth := exfalso; conn_tac meth.
 
 (** * Notation corner! *)
 
-Notation "'Method' () : retT := c" :=
-  (fun _ : type Void => c%kami : Action type retT)
-  (at level 0).
-
-Notation "'Method' ( name : dom ) : retT := c" :=
-  (fun name : type dom => c%kami : Action type retT)
-  (at level 0, name at level 0).
-
 (* Notations: action *)
 
 Coercion attrName : Attribute >-> string.
@@ -988,3 +980,44 @@ Notation "'Assert' expr ; cont " :=
 Notation "'Ret' expr" :=
   (Return expr) (at level 12) : kami_scope.
 Notation Retv := (Return (Const _ (k := Bit 0) Default)).
+
+(* * Modules *)
+
+Inductive InModule :=
+| RegisterInModule (_ : RegInitT)
+| RuleInModule (_ : Attribute (Action type (Bit 0)))
+| MethodInModule (_ : DefMethT type).
+
+Fixpoint makeModule' (ls : list InModule) a b c :=
+  match ls with
+    | nil => (a, b, c)
+    | RegisterInModule r :: ls => makeModule' ls (r :: a) b c 
+    | RuleInModule r :: ls => makeModule' ls a (r :: b) c 
+    | MethodInModule r :: ls => makeModule' ls a b (r :: c)
+  end.
+
+Fixpoint makeModule (ls : list InModule) :=
+  let '(a, b, c) := makeModule' ls nil nil nil in
+  Mod a b c.
+
+Notation "'Register' name : type <- init" :=
+  (RegisterInModule (Build_Attribute name (Build_Typed ConstT type init)))
+  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
+
+Notation "'Method' name () : retT := c" :=
+  (MethodInModule (Build_Attribute name (Build_Typed (fun a : SignatureT => type (arg a) -> Action type (ret a)) {| arg := Void; ret := retT |}
+     (fun _ : type Void => c%kami : Action type retT))))
+  (at level 0, name at level 0) : kami_method_scope.
+
+Notation "'Method' name ( param : dom ) : retT := c" :=
+  (MethodInModule (Build_Attribute name (Build_Typed (fun a : SignatureT => type (arg a) -> Action type (ret a)) {| arg := dom; ret := retT |}
+     (fun param : type dom => c%kami : Action type retT))))
+  (at level 0, name at level 0, param at level 0) : kami_method_scope.
+
+Delimit Scope kami_method_scope with method.
+
+Notation "{{ m1 'with' .. 'with' mN }}" := (makeModule (cons m1%method .. (cons mN%method nil) ..)) (only parsing) : kami_module_scope.
+
+Delimit Scope kami_module_scope with module.
+
+Notation "'MODULE' ms" := ms%module (at level 0).

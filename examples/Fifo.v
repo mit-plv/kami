@@ -13,87 +13,88 @@ Section Fifo.
 
   Notation "^ s" := (fifoName -n- s) (at level 0).
 
-  Definition eltReg := Register ^"elt" : Vector dType sz <- Default.
-  Definition enqPReg := Register ^"enqP" : Bit sz <- Default.
-  Definition deqPReg := Register ^"deqP" : Bit sz <- Default.
-  Definition emptyReg := Register ^"empty" : Bool <- true.
-  Definition fullReg := Register ^"full" : Bool <- Default.
-
-  Definition fifoRegs := [eltReg; enqPReg; deqPReg; emptyReg; fullReg].
-
   Definition max_index : ConstT (Bit sz) := ^~ $1.
 
-  Definition notFullSig := MethodSig ^"notFull"() : Bool.
-  Definition notEmptySig := MethodSig ^"notEmpty"() : Bool.
-  Definition enqSig := MethodSig ^"enq"(dType) : Void.
-  Definition deqSig := MethodSig ^"deq"() : dType.
-  Definition firstEltSig := MethodSig ^"notFull"() : dType.
+  Definition fifo := MODULE {{
+    Register ^"elt" : Vector dType sz <- Default
+    with Register ^"enqP" : Bit sz <- Default
+    with Register ^"deqP" : Bit sz <- Default
+    with Register ^"empty" : Bool <- true
+    with Register ^"full" : Bool <- Default
 
-  Definition notFullBody := Method() : Bool :=
-    Read isFull <- fullReg;
-    Ret !#isFull.
+    with Method ^"notFull"() : Bool :=
+      Read isFull <- ^"full";
+      Ret !#isFull
 
-  Definition notEmptyBody := Method() : Bool :=
-    Read isEmpty <- emptyReg;
-    Ret !#isEmpty.
+    with Method ^"notEmpty"() : Bool :=
+      Read isEmpty <- ^"empty";
+      Ret !#isEmpty
 
-  Definition enqBody := Method(d : dType) : Void :=
-    Read isFull <- fullReg;
-    Assert !#isFull;
-    Read elt <- eltReg;
-    Read enqP <- enqPReg;
-    Read deqP <- deqPReg;
-    Write eltReg <- #elt@[#enqP <- #d];
-    Write emptyReg <- $$false;
-    Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
-    Write fullReg <- (#deqP == #next_enqP);
-    Write enqPReg <- #next_enqP;
-    Retv.
+    with Method ^"enq"(d : dType) : Void :=
+      Read isFull <- ^"full";
+      Assert !#isFull;
+      Read elt <- ^"elt";
+      Read enqP <- ^"enqP";
+      Read deqP <- ^"deqP";
+      Write ^"elt" <- #elt@[#enqP <- #d];
+      Write ^"empty" <- $$false;
+      Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
+      Write ^"full" <- (#deqP == #next_enqP);
+      Write ^"enqP" <- #next_enqP;
+      Retv
 
-  Definition deqBody := Method() : dType :=
-    Read isEmpty <- emptyReg;
-    Assert !#isEmpty;
-    Read elt <- eltReg;
-    Read enqP <- enqPReg;
-    Read deqP <- deqPReg;
-    Write fullReg <- $$false;
-    Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
-    Write emptyReg <- (#enqP == #next_deqP);
-    Write deqPReg <- #next_deqP;
-    Ret #elt@[#deqP].
+    with Method ^"deq"() : dType :=
+      Read isEmpty <- ^"empty";
+      Assert !#isEmpty;
+      Read elt <- ^"elt";
+      Read enqP <- ^"enqP";
+      Read deqP <- ^"deqP";
+      Write ^"full" <- $$false;
+      Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
+      Write ^"empty" <- (#enqP == #next_deqP);
+      Write ^"deqP" <- #next_deqP;
+      Ret #elt@[#deqP]
 
-  Definition firstEltBody := Method() : dType :=
-    Read isEmpty <- emptyReg;
-    Assert !#isEmpty;
-    Read elt : Vector dType sz <- eltReg;
-    Read deqP <- deqPReg;
-    Ret #elt@[#deqP].
+    with Method ^"firstElt"() : dType :=
+      Read isEmpty <- ^"empty";
+      Assert !#isEmpty;
+      Read elt : Vector dType sz <- ^"elt";
+      Read deqP <- ^"deqP";
+      Ret #elt@[#deqP]
+  }}.
 
-  Definition fifoRules : list (Attribute (Action type (Bit 0)))
-    := nil.
+  Definition simpleFifo := MODULE {{
+    Register ^"elt" : Vector dType sz <- Default
+    with Register ^"enqP" : Bit sz <- Default
+    with Register ^"deqP" : Bit sz <- Default
+    with Register ^"empty" : Bool <- true
+    with Register ^"full" : Bool <- Default
 
-  Definition fifoDefMeths : list (DefMethT type) :=
-    (Build_Attribute (attrName notFullSig)
-                     (Build_Typed _ (attrType notFullSig) notFullBody))
-      :: (Build_Attribute (attrName notEmptySig)
-                          (Build_Typed _ (attrType notEmptySig) notEmptyBody))
-      :: (Build_Attribute (attrName enqSig)
-                          (Build_Typed _ (attrType enqSig) enqBody))
-      :: (Build_Attribute (attrName deqSig)
-                          (Build_Typed _ (attrType deqSig) deqBody))
-      :: (Build_Attribute (attrName firstEltSig)
-                          (Build_Typed _ (attrType firstEltSig) firstEltBody))
-      :: nil.
+    with Method ^"enq"(d : dType) : Void :=
+      Read isFull <- ^"full";
+      Assert !#isFull;
+      Read elt <- ^"elt";
+      Read enqP <- ^"enqP";
+      Read deqP <- ^"deqP";
+      Write ^"elt" <- #elt@[#enqP <- #d];
+      Write ^"empty" <- $$false;
+      Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
+      Write ^"full" <- (#deqP == #next_enqP);
+      Write ^"enqP" <- #next_enqP;
+      Retv
 
-  Definition simpleFifoDefMeths : list (DefMethT type) :=
-    (Build_Attribute (attrName enqSig)
-                     (Build_Typed _ (attrType enqSig) enqBody))
-      :: (Build_Attribute (attrName deqSig)
-                          (Build_Typed _ (attrType deqSig) deqBody))
-      :: nil.
-                              
-  Definition fifo := Mod fifoRegs fifoRules fifoDefMeths.
-  Definition simpleFifo := Mod fifoRegs fifoRules simpleFifoDefMeths.
+    with Method ^"deq"() : dType :=
+      Read isEmpty <- ^"empty";
+      Assert !#isEmpty;
+      Read elt <- ^"elt";
+      Read enqP <- ^"enqP";
+      Read deqP <- ^"deqP";
+      Write ^"full" <- $$false;
+      Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
+      Write ^"empty" <- (#enqP == #next_deqP);
+      Write ^"deqP" <- #next_deqP;
+      Ret #elt@[#deqP]
+  }}.
 
   Section Spec.
     Lemma regsInDomain_simpleFifo: RegsInDomain simpleFifo.
@@ -102,11 +103,8 @@ Section Fifo.
       destruct rm; [inv Hltsmod; inv HInRule|].
       invertSemModRep; invertActionRep; inDomain_tac.
     Qed.
-
   End Spec.
 
 End Fifo.
 
-Hint Unfold eltReg enqPReg deqPReg emptyReg fullReg.
-Hint Unfold fifoRules notFullBody notEmptyBody enqBody deqBody firstEltBody.
 Hint Unfold fifo simpleFifo : ModuleDefs.

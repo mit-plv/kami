@@ -178,9 +178,6 @@ End Phoas.
 Hint Unfold getRules getRegInits.
 
 (* Notations: registers and methods declaration *)
-Notation "'Register' name : type <- init" :=
-  (Build_Attribute name (Build_Typed ConstT type init))
-  (at level 0, name at level 0, type at level 0, init at level 0).
 Notation Default := (getDefaultConst _).
 Definition Void := Bit 0.
 Notation "'MethodSig' name () : retT" :=
