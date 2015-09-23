@@ -984,20 +984,46 @@ Notation Retv := (Return (Const _ (k := Bit 0) Default)).
 (* * Modules *)
 
 Inductive InModule :=
+| NilInModule
 | RegisterInModule (_ : RegInitT)
 | RuleInModule (_ : Attribute (Action type (Bit 0)))
-| MethodInModule (_ : DefMethT type).
+| MethodInModule (_ : DefMethT type)
+| ConcatInModule (_ _ : InModule)
+| NumberedInModule (f : nat -> InModule) (n : nat).
 
-Fixpoint makeModule' (ls : list InModule) a b c :=
-  match ls with
-    | nil => (a, b, c)
-    | RegisterInModule r :: ls => makeModule' ls (r :: a) b c 
-    | RuleInModule r :: ls => makeModule' ls a (r :: b) c 
-    | MethodInModule r :: ls => makeModule' ls a b (r :: c)
+Section numbered.
+  Variable makeModule' : InModule
+                         -> list RegInitT
+                            * list (Attribute (Action type (Bit 0)))
+                            * list (DefMethT type).
+
+  Variable f : nat -> InModule.
+
+  Fixpoint numbered (n : nat) :=
+    match n with
+      | O => (nil, nil, nil)
+      | S n' =>
+        let '(a, b, c) := makeModule' (f n') in
+        let '(a', b', c') := numbered n' in
+        (a ++ a', b ++ b', c ++ c')
+    end.
+End numbered.
+
+Fixpoint makeModule' (im : InModule) := 
+  match im with
+    | NilInModule => (nil, nil, nil)
+    | RegisterInModule r => (r :: nil, nil, nil)
+    | RuleInModule r => (nil, r :: nil, nil)
+    | MethodInModule r => (nil, nil, r :: nil)
+    | ConcatInModule im1 im2 =>
+      let '(a1, b1, c1) := makeModule' im1 in
+      let '(a2, b2, c2) := makeModule' im2 in
+      (a1 ++ a2, b1 ++ b2, c1 ++ c2)
+    | NumberedInModule f n => numbered makeModule' f n
   end.
 
-Fixpoint makeModule (ls : list InModule) :=
-  let '(a, b, c) := makeModule' ls nil nil nil in
+Fixpoint makeModule (im : InModule) :=
+  let '(a, b, c) := makeModule' im in
   Mod a b c.
 
 Notation "'Register' name : type <- init" :=
@@ -1016,7 +1042,11 @@ Notation "'Method' name ( param : dom ) : retT := c" :=
 
 Delimit Scope kami_method_scope with method.
 
-Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (cons m1%method .. (cons mN%method nil) ..)) (at level 0, only parsing).
+Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
+  (NumberedInModule (fun n => ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..) count)
+  (at level 0, count at level 0, n at level 0) : kami_method_scope.
+
+Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
 
 Definition icons' (na : {a : Attribute Kind & Expr type (attrType a)})
            {attrs} (tl : ilist (fun a : Attribute Kind => Expr type (attrType a)) attrs)

@@ -45,57 +45,26 @@ Section MemInst.
   Definition memInst := MODULE {
     Register "mem" : Vector dType addrSize <- Default
 
-    with Method "exec"(a : atomK) : atomK :=
-      If (#a@."type" == $$memLd) then
-        Read memv <- "mem";
-        Let ldval <- #memv@[#a@."addr"];
-        Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
-             :: atomK)
-      else
-        Read memv <- "mem";
-        Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
-        Ret #a
-      as na;
-      Ret #na
+    with Repeat n as i {
+      Method ("exec"__ i)(a : atomK) : atomK :=
+        If (#a@."type" == $$memLd) then
+          Read memv <- "mem";
+          Let ldval <- #memv@[#a@."addr"];
+          Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
+               :: atomK)
+        else
+          Read memv <- "mem";
+          Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
+          Ret #a
+        as na;
+        Ret #na
+    }
   }.
-
- (* Definition memExecSig (i: nat): Attribute SignatureT :=
-    Method Value#(atomK) ("exec"__ i) #(atomK);.
-  Definition memExec (i: nat)
-  : type (arg (attrType (memExecSig i))) ->
-    Action type (ret (attrType (memExecSig i))) :=
-    fun a =>
-      vif (V a @> "type" #[] == C memLd)
-      vthen (
-        vread memv <- (attrName memReg) #;
-        vlet ldval <- (V memv) @[V a @> "addr" #[]] #;
-        vret (buildAtom (V a @> "type" #[]) (V a @> "addr" #[]) (V ldval)) #;
-      )
-      velse (
-        vread memv <- (attrName memReg) #;
-        (attrName memReg) <= ((V memv) @[ (V a @> "addr" #[]) <- (V a @> "value" #[]) ]) #;
-        vret (V a) #;
-      ) #;
-      (fun na => vret (V na) #;).
-
-  Definition memRules: list (Attribute (Action type (Bit 0))) := nil.
-
-  Fixpoint memDefMeths (i: nat) : list (DefMethT type) :=
-    match i with
-      | O => (Build_Attribute (attrName (memExecSig O))
-                              (Build_Typed _ (attrType (memExecSig O)) (memExec O))) :: nil
-      | S i' => (Build_Attribute (attrName (memExecSig i))
-                                 (Build_Typed _ (attrType (memExecSig i)) (memExec i)))
-                                 :: (memDefMeths i')
-    end.
-
-  Definition memInst := Mod memRegs memRules (memDefMeths n).*)
-
 End MemInst.
 
-(*Hint Unfold memReg memExecSig.
 Hint Unfold memInst: ModuleDefs.
 
+(*
 (* The module definition for Pinst *)
 Section ProcInst.
   Variable i : nat.
