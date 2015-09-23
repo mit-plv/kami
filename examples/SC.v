@@ -64,19 +64,11 @@ End MemInst.
 
 Hint Unfold memInst: ModuleDefs.
 
-(*
 (* The module definition for Pinst *)
 Section ProcInst.
   Variable i : nat.
   Variables opIdx addrSize valSize rfIdx : nat.
-  
-  (* Registers *)
-  Definition pcReg : RegInitT := Reg#(Bit addrSize) ("pc"__ i) <- mkRegU;.
-  Definition rfReg : RegInitT := Reg#(Vector (Bit valSize) rfIdx) ("rf"__ i) <- mkRegU;.
 
-  Definition procRegs : list RegInitT :=
-    pcReg :: rfReg :: nil.
-    
   (* External abstract ISA: dec and exec *)
   Variable dec: DecT opIdx addrSize valSize rfIdx.
   Variable exec: ExecT opIdx addrSize valSize rfIdx.
@@ -86,81 +78,63 @@ Section ProcInst.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
-  (* Module interface *)
-  Definition procDms : list (DefMethT type) := nil.
+  Notation "^ s" := (s __ i) (at level 0).
 
   Definition memAtomK := atomK addrSize (Bit valSize).
 
-  Definition execCm : Attribute SignatureT :=
-    Method Value#(memAtomK) ("exec"__ i) #(memAtomK);.
-  Definition haltCm : Attribute SignatureT :=
-    Method Value#(Bit 0) ("HALT"__ i) #(Bit 0);.
+  Definition execCm := MethodSig ^"exec"(memAtomK) : memAtomK.
+  Definition haltCm := MethodSig ^"HALT"(Bit 0) : Bit 0.
 
-  (* Rules *)
-  Definition nextPc ppc st: Action type (Bit 0) :=
-    (attrName pcReg) <= (V (getNextPc ppc st)) #;
-    vret (Cd (Bit 0)) #;.
+  Definition nextPc ppc st := ACTION {
+    Write ^"pc" <- $$(getNextPc ppc st);
+    Retv
+  }.
 
-  Definition buildAtomP t a v: Expr type (atomK addrSize (Bit valSize)) :=
-    ST (icons (Build_Attribute "type" _) t
-              (icons (Build_Attribute "addr" _) a
-                     (icons (Build_Attribute "value" _) v
-                            (inil _)))).
-     
-  Definition procExecLd : Action type (Bit 0) :=
-    vread ppc <- (attrName pcReg) #;
-    vread st <- (attrName rfReg) #;
-    vassert ( V (dec st ppc) @> "opcode" #[] == C opLd ) #;
-    vcall ldRep <- (attrName execCm) :@: (attrType execCm)
-    #(buildAtomP (C memLd) (V (dec st ppc) @> "addr" #[]) (Cd _)) #;
-    (attrName rfReg) <= (V st) @[ (V (dec st ppc)) @> "reg" #[] <- (V ldRep @> "value" #[]) ] #;
-    (nextPc ppc st).
+  Definition procInst := MODULE {
+    Register ^"pc" : Bit addrSize <- Default
+    with Register ^"rf" : Vector (Bit valSize) rfIdx <- Default
 
-  Definition procExecSt :=
-    vread ppc <- (attrName pcReg) #;
-    vread st <- (attrName rfReg) #;
-    vassert ( V (dec st ppc) @> "opcode" #[] == C opSt ) #;
-    vcall (attrName execCm) :@: (attrType execCm)
-    #(buildAtomP (C memSt) (V (dec st ppc) @> "addr" #[])
-                 (V (dec st ppc) @> "value" #[])) #;
-    (nextPc ppc st).
+    with Rule ^"execLd" :=
+      Read ppc <- ^"pc";
+      Read st <- ^"rf";
+      Assert #(dec st ppc)@."opcode" == $$opLd;
+      Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
+                                     "addr" ::= #(dec st ppc)@."addr";
+                                    "value" ::= $$Default });
+      Write ^"rf" <- #st@[#(dec st ppc)@."reg" <- #ldRep@."value"];
+      nextPc ppc st
 
-  Definition procExecHt :=
-    vread ppc <- (attrName pcReg) #;
-    vread st <- (attrName rfReg) #;
-    vassert ( V (dec st ppc) @> "opcode" #[] == C opHt ) #;
-    vcall (attrName haltCm) :@: (attrType haltCm) #(Cd _) #;
-    vret (Cd (Bit 0)) #;.
+    with Rule ^"execSt" :=
+      Read ppc <- ^"pc";
+      Read st <- ^"rf";
+      Assert #(dec st ppc)@."opcode" == $$opSt;
+      Call execCm(STRUCT {  "type" ::= $$memSt;
+                            "addr" ::= #(dec st ppc)@."addr";
+                           "value" ::= #(dec st ppc)@."value" });
+      nextPc ppc st
 
-  Definition procExecNm :=
-    vread ppc <- (attrName pcReg) #;
-    vread st <- (attrName rfReg) #;
-    vassert (Not ((V (dec st ppc) @> "opcode" #[] == C opLd) OR
-                  (V (dec st ppc) @> "opcode" #[] == C opSt) OR
-                  (V (dec st ppc) @> "opcode" #[] == C opHt))) #;
-    (attrName rfReg) <= V (getNextState ppc st) #;
-    (nextPc ppc st).
+    with Rule ^"execHt" :=
+      Read ppc <- ^"pc";
+      Read st <- ^"rf";
+      Assert #(dec st ppc)@."opcode" == $$opHt;
+      Call haltCm();
+      Retv
 
-  Definition procVoidRule : Action type (Bit 0) :=
-    vret (Cd _) #;.
+    with Rule ^"execNm" :=
+      Read ppc <- ^"pc";
+      Read st <- ^"rf";
+      Assert !(#(dec st ppc)@."opcode" == $$opLd
+             || #(dec st ppc)@."opcode" == $$opSt
+             || #(dec st ppc)@."opcode" == $$opHt);
+      Write ^"rf" <- #(getNextState ppc st);
+      nextPc ppc st
 
-  Definition procRules : list (Attribute (Action type (Bit 0))) :=
-    (Build_Attribute ("execLd"__ i) procExecLd)
-      ::(Build_Attribute ("execSt"__ i) procExecSt)
-      ::(Build_Attribute ("execHt"__ i) procExecHt)
-      ::(Build_Attribute ("execNm"__ i) procExecNm)
-      ::(Build_Attribute ("voidRule"__ i) procVoidRule)
-      ::nil.
-
-  Definition procDefMeths : list (DefMethT type) := nil.
-
-  Definition procInst := Mod procRegs procRules procDefMeths.
-
+    with Rule ^"voidRule" :=
+      Retv
+  }.
 End ProcInst.
 
-Hint Unfold pcReg rfReg.
-Hint Unfold execCm haltCm getNextPc getNextState nextPc procRules
-     procExecLd procExecSt procExecHt procExecNm.
+Hint Unfold execCm haltCm getNextPc getNextState nextPc.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -201,17 +175,7 @@ Section Facts.
   Lemma regsInDomain_pinsti:
     RegsInDomain (pinsti opIdx _ _ _ dec exec opLd opSt opHt i).
   Proof.
-    unfold RegsInDomain; intros; inv H.
-    destruct rm; [|inv Hltsmod; inDomain_tac].
-    inv Hltsmod; inv HSemMod.
-    in_tac_H.
-    - inv H; invertActionRep; inDomain_tac.
-    - inv H0; invertActionRep; inDomain_tac.
-    - inv H; invertActionRep; inDomain_tac.
-    - inv H0; invertActionRep; inDomain_tac.
-    - inv H; invertActionRep; inDomain_tac.
+    regsInDomain_tac.
   Qed.
 
 End Facts.
-
-*)

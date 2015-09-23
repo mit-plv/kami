@@ -182,10 +182,10 @@ Notation Default := (getDefaultConst _).
 Definition Void := Bit 0.
 Notation "'MethodSig' name () : retT" :=
   (Build_Attribute name {| arg := Void; ret := retT |})
-  (at level 0, name at level 0).
+  (at level 0, name at level 0, retT at level 200).
 Notation "'MethodSig' name ( argT ) : retT" :=
   (Build_Attribute name {| arg := argT; ret := retT |})
-  (at level 0, name at level 0).
+  (at level 0, name at level 0, argT at level 200, retT at level 200).
 
 (* Notations: expression *)
 Notation "# v" := (Var _ _ v) (at level 0) : kami_scope.
@@ -193,7 +193,7 @@ Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.
 Infix "+" := (BinBit (Add _)) : kami_scope.
-Infix "==" := Eq (at level 70, no associativity) : kami_scope.
+Infix "==" := Eq (at level 30, no associativity) : kami_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_scope.
 Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_scope.
@@ -207,6 +207,12 @@ Notation "$ n" := (natToWord _ n) (at level 0).
 Delimit Scope kami_scope with kami.
 
 Notation "name :: ty" := (Build_Attribute name ty) : kami_struct_scope.
+
+Ltac deattr := repeat match goal with
+                      | [ H : Build_Attribute _ _ = Build_Attribute _ _ |- _ ] =>
+                        injection H; clear H; intros; try subst
+                      end.
+
 Delimit Scope kami_struct_scope with struct.
 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=

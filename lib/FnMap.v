@@ -592,7 +592,7 @@ Ltac map_eq :=
           try reflexivity (* None = None ? *)
     end.
 
-Ltac inDomain_tac :=
+Ltac inDomain_tac_old :=
   (* provable by existing utility lemmas? *)
   try (apply restrict_InDomain || apply complement_InDomain; auto);
   (* well if not... *)
@@ -634,6 +634,40 @@ Ltac inDomain_tac :=
               end;
             try reflexivity (* None = None ? *)
       end.
+
+Lemma InMap_empty : forall A k, InMap k (empty (A := A))
+                                -> False.
+Proof.
+  clear; unfold InMap, find, empty; intuition idtac.
+Qed.
+
+Lemma InMap_add : forall A k k' v m, InMap k (add (A := A) k' v m)
+                                      -> k = k'
+                                         \/ InMap k m.
+Proof.
+  clear; unfold InMap, find, add, unionL; intuition idtac.
+  destruct (string_dec k' k); subst.
+  auto.
+  rewrite string_dec_neq in * by assumption; auto.
+Qed.
+
+Lemma InMap_union : forall A k m1 m2, InMap k (union (A := A) m1 m2)
+                                      -> InMap k m1
+                                         \/ InMap k m2.
+Proof.
+  clear; unfold InMap, find, union, unionL; intuition idtac.
+  destruct (m1 k); intuition congruence.
+Qed.
+
+Ltac inDomain_tac := hnf; simpl; intros;
+                     repeat match goal with
+                            | [ H : InMap _ (union _ _) |- _ ] =>
+                              apply InMap_union in H; destruct H
+                            | [ H : InMap _ (add _ _ _) |- _ ] =>
+                              apply InMap_add in H; destruct H; subst
+                            | [ H : InMap _ empty |- _ ] =>
+                              apply InMap_empty in H; destruct H
+                            end; simpl; intuition idtac.
 
 Hint Extern 1 (find _ _ = _) => find_eq.
 Hint Extern 1 (_ = find _ _) => find_eq.

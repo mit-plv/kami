@@ -38,7 +38,7 @@ Ltac in_tac :=
 Ltac in_tac_H :=
   repeat
     match goal with
-      | [H: In _ _ |- _] => inv H
+      | [H: In _ _ |- _] => simpl in H; intuition idtac
     end.
 
 Ltac exact_refl :=
@@ -117,8 +117,12 @@ Fixpoint string_of_nat (n: nat) :=
     | S n' => append "a"%string (string_of_nat n')
   end.
 
-Notation "str '__' idx" :=
-  (append (append str ("_"%string)) (string_of_nat idx)) (at level 0).
+Definition withIndex str idx := 
+  append (append str ("_"%string)) (string_of_nat idx).
+
+Global Opaque withIndex.
+
+Notation "str '__' idx" := (withIndex str idx) (at level 0).
 
 Axiom cheat: forall t, t.
 

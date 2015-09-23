@@ -254,6 +254,10 @@ Definition SignT k := (type (arg k) * type (ret k))%type.
 Definition CallsT := @Map (Typed SignT).
 
 Section Semantics.
+  Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
+    fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
+      mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
+
   Fixpoint evalExpr exprT (e: Expr type exprT): type exprT :=
     match e in Expr _ exprT return type exprT with
       | Var _ v => v
@@ -273,10 +277,7 @@ Section Semantics.
           mapAttrEq2 type fld
             ((evalExpr val) (getNewIdx2 type fld))
       | BuildVector _ k vec => evalVec (mapVec (@evalExpr _) vec)
-      | BuildStruct attrs ils =>
-          fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
-            mapAttrEq1 type attrs i (ith_Bounded _ (imap _ (fun _ ba => evalExpr ba) ils)
-                                                 (getNewIdx1 type attrs i))
+      | BuildStruct attrs ils => mkStruct (imap _ (fun _ ba => evalExpr ba) ils)
       | UpdateVector _ _ fn i v =>
           fun w => if weq w (evalExpr i) then evalExpr v else (evalExpr fn) w
     end.
@@ -441,11 +442,13 @@ Section Semantics.
 
 End Semantics.
 
-Ltac invertAction H :=
-  ((destruct (inversionSemAction H))
-     || (let Hia := fresh "Hia" in
-         pose proof (inversionSemAction H) as Hia; simpl in Hia));
-  clear H; dest; subst.
+Ltac cheap_firstorder :=
+  repeat match goal with
+         | [ H : ex _ |- _ ] => destruct H
+         | [ H : _ /\ _ |- _ ] => destruct H
+         end.
+
+Ltac invertAction H := apply inversionSemAction in H; simpl in H; cheap_firstorder; try subst.
 Ltac invertActionFirst :=
   match goal with
     | [H: SemAction _ _ _ _ _ |- _] => invertAction H
@@ -940,6 +943,13 @@ Ltac conn_tac meth :=
   callIffDef_dest; filt_dest; pred_dest meth; repeat (invariant_tac; basic_dest).
 Ltac fconn_tac meth := exfalso; conn_tac meth.
 
+Ltac regsInDomain_tac :=
+  hnf; intros;
+  repeat match goal with
+         | [ H : LtsStep _ _ _ _ _ _ |- _ ] => inv H
+         | [ H : SemMod _ _ _ _ _ _ _ |- _ ] => inv H
+         end; in_tac_H; (deattr; simpl in *; repeat invertActionRep; inDomain_tac).
+
 
 (** * Notation corner! *)
 
@@ -947,12 +957,18 @@ Ltac fconn_tac meth := exfalso; conn_tac meth.
 
 Coercion attrName : Attribute >-> string.
 
-Notation "'Call' meth : sign ( arg ) ; cont " :=
-  (MCall (type := type) meth sign arg (fun _ => cont))
-    (at level 12, right associativity, meth at level 0, sign at level 0) : kami_scope.
-Notation "'Call' name <- meth : sign ( arg ) ; cont " :=
-  (MCall (type := type) meth sign arg (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0, sign at level 0) : kami_scope.
+Notation "'Call' meth ( arg ) ; cont " :=
+  (MCall (type := type) (attrName meth) (attrType meth) arg (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_scope.
+Notation "'Call' name <- meth ( arg ) ; cont " :=
+  (MCall (type := type) (attrName meth) (attrType meth) arg (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
+Notation "'Call' meth () ; cont " :=
+  (MCall (type := type) (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_scope.
+Notation "'Call' name <- meth () ; cont " :=
+  (MCall (type := type) (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
 Notation "'Let' name <- expr ; cont " :=
   (Let_ (type := type) expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
@@ -1040,6 +1056,10 @@ Notation "'Method' name ( param : dom ) : retT := c" :=
      (fun param : type dom => c%kami : Action type retT))))
   (at level 0, name at level 0, param at level 0) : kami_method_scope.
 
+Notation "'Rule' name := c" :=
+  (RuleInModule (Build_Attribute name (c%kami : Action type Void)))
+  (at level 0, name at level 0) : kami_method_scope.
+
 Delimit Scope kami_method_scope with method.
 
 Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
@@ -1062,3 +1082,14 @@ Notation "'STRUCT' { s1 ; .. ; sN }" :=
   : kami_scope.
 
 Notation "e :: t" := (e : Expr type t) : kami_scope.
+
+Definition firstAction {T} (ls : list (Action type T)) : Action type T :=
+  match ls with
+  | a :: _ => a
+  | _ => Return (Const _ Default)
+  end.
+
+Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons a1%kami .. (cons aN%kami nil) ..))
+  (at level 0, only parsing, a at level 200).
+
+Global Opaque mkStruct.

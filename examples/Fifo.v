@@ -99,9 +99,7 @@ Section Fifo.
   Section Spec.
     Lemma regsInDomain_simpleFifo: RegsInDomain simpleFifo.
     Proof.
-      unfold RegsInDomain; intros; inv H.
-      destruct rm; [inv Hltsmod; inv HInRule|].
-      invertSemModRep; invertActionRep; inDomain_tac.
+      regsInDomain_tac.
     Qed.
   End Spec.
 
