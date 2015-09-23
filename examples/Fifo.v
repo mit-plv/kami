@@ -11,94 +11,63 @@ Section Fifo.
   Variable sz: nat.
   Variable dType: Kind.
 
-  Definition eltReg : RegInitT := Reg#(Vector dType sz) (fifoName -n- "elt") <- mkRegU;.
-  Definition enqPReg : RegInitT := Reg#(Bit sz) (fifoName -n- "enqP") <- mkRegU;.
-  Definition deqPReg : RegInitT := Reg#(Bit sz) (fifoName -n- "deqP") <- mkRegU;.
-  Definition emptyReg : RegInitT := Reg#(Bool) (fifoName -n- "empty") <- mkReg(ConstBool true);.
-  Definition fullReg : RegInitT := Reg#(Bool) (fifoName -n- "full") <- mkRegU;.
+  Notation "^ s" := (fifoName -n- s) (at level 0).
 
-  Definition fifoRegs : list RegInitT :=
-    eltReg::enqPReg::deqPReg::emptyReg::fullReg::nil.
+  Definition eltReg := Register ^"elt" : Vector dType sz <- Default.
+  Definition enqPReg := Register ^"enqP" : Bit sz <- Default.
+  Definition deqPReg := Register ^"deqP" : Bit sz <- Default.
+  Definition emptyReg := Register ^"empty" : Bool <- true.
+  Definition fullReg := Register ^"full" : Bool <- Default.
 
-  Definition max_index := ConstBit (wnegN (natToWord sz 1)).
+  Definition fifoRegs := [eltReg; enqPReg; deqPReg; emptyReg; fullReg].
 
-  Definition notFullSig : Attribute SignatureT :=
-    Method Value#(Bool) (fifoName -n- "notFull") #(Bit 0) ;.
-  Definition notEmptySig : Attribute SignatureT :=
-    Method Value#(Bool) (fifoName -n- "notEmpty") #(Bit 0) ;.
-  Definition enqSig : Attribute SignatureT :=
-    Method Value#(Bit 0) (fifoName -n- "enq") #(dType) ;.
-  Definition deqSig : Attribute SignatureT :=
-    Method Value#(dType) (fifoName -n- "deq") #(Bit 0) ;.
-  Definition firstEltSig : Attribute SignatureT :=
-    Method Value#(dType) (fifoName -n- "notFull") #(Bit 0) ;.
+  Definition max_index : ConstT (Bit sz) := ^~ $1.
 
-  Definition notFullBody
-  : type (arg (attrType notFullSig)) ->
-    Action type (ret (attrType notFullSig)) :=
-    fun _ =>
-      vread isFull <- (attrName fullReg) #;
-      vret (Not (V isFull)) #;.
+  Definition notFullSig := MethodSig ^"notFull"() : Bool.
+  Definition notEmptySig := MethodSig ^"notEmpty"() : Bool.
+  Definition enqSig := MethodSig ^"enq"(dType) : Void.
+  Definition deqSig := MethodSig ^"deq"() : dType.
+  Definition firstEltSig := MethodSig ^"notFull"() : dType.
 
-  Definition notEmptyBody
-  : type (arg (attrType notEmptySig)) ->
-    Action type (ret (attrType notEmptySig)) :=
-    fun _ =>
-      vread isEmpty <- (attrName emptyReg) #;
-      vret (Not (V isEmpty)) #;.
+  Definition notFullBody := Method() : Bool :=
+    Read isFull <- fullReg;
+    Ret !#isFull.
 
-  Definition retVoid : Action type (Bit 0) :=
-    vret (Cd (Bit 0)) #;.
+  Definition notEmptyBody := Method() : Bool :=
+    Read isEmpty <- emptyReg;
+    Ret !#isEmpty.
 
-  Definition enqBody
-  : type (arg (attrType enqSig)) ->
-    Action type (ret (attrType enqSig)) :=
-    fun d =>
-      vread isFull <- (attrName fullReg) #;
-      vassert (Not (V isFull)) #;
-      vread elt <- (attrName eltReg) #;
-      vread enqP <- (attrName enqPReg) #;
-      vread deqP <- (attrName deqPReg) #;
-      (attrName eltReg) <= ((V elt) @[(V enqP) <- (V d)]) #;
-      (attrName emptyReg) <= (C (ConstBool false)) #;
-      vlet next_enqP <- (ITE (V enqP == (C max_index))
-                             (C (ConstBit (wzero sz)))
-                             (BinBit (Add _)
-                                     (V enqP)
-                                     (C (ConstBit (natToWord sz 1))))) #;
-      (attrName fullReg) <= (V deqP == V next_enqP) #;
-      (attrName enqPReg) <= (V next_enqP) #;
-      retVoid.
+  Definition enqBody := Method(d : dType) : Void :=
+    Read isFull <- fullReg;
+    Assert !#isFull;
+    Read elt <- eltReg;
+    Read enqP <- enqPReg;
+    Read deqP <- deqPReg;
+    Write eltReg <- #elt@[#enqP <- #d];
+    Write emptyReg <- $$false;
+    Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
+    Write fullReg <- (#deqP == #next_enqP);
+    Write enqPReg <- #next_enqP;
+    Retv.
 
-  Definition deqBody
-  : type (arg (attrType deqSig)) ->
-    Action type (ret (attrType deqSig)) :=
-    fun _ =>
-      vread isEmpty <- (attrName emptyReg) #;
-      vassert (Not (V isEmpty)) #;
-      vread elt <- (attrName eltReg) #;
-      vread enqP <- (attrName enqPReg) #;
-      vread deqP <- (attrName deqPReg) #;
-      (attrName fullReg) <= (C (ConstBool false)) #;
-      vlet next_deqP <- (ITE (V deqP == C max_index)
-                             (C (ConstBit (wzero sz)))
-                             (BinBit (Add _)
-                                     (V enqP)
-                                     (C (ConstBit (natToWord sz 1))))) #;
-      (attrName emptyReg) <= (V enqP == V next_deqP) #;
-      (attrName deqPReg) <= (V next_deqP) #;
-      vret (V elt)@[V deqP] #;.
+  Definition deqBody := Method() : dType :=
+    Read isEmpty <- emptyReg;
+    Assert !#isEmpty;
+    Read elt <- eltReg;
+    Read enqP <- enqPReg;
+    Read deqP <- deqPReg;
+    Write fullReg <- $$false;
+    Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
+    Write emptyReg <- (#enqP == #next_deqP);
+    Write deqPReg <- #next_deqP;
+    Ret #elt@[#deqP].
 
-  Definition firstEltBody
-  : type (arg (attrType firstEltSig)) ->
-    Action type (ret (attrType firstEltSig)) :=
-    fun _ =>
-      vread isEmpty <- (attrName emptyReg) #;
-      vassert (Not (V isEmpty)) #;
-      vread elt :@: (objType (attrType eltReg)) <- (attrName eltReg) #;
-      vread deqP <- (attrName deqPReg) #;
-      vassert (Not (V isEmpty)) #;
-      vret (V elt)@[V deqP] #;.
+  Definition firstEltBody := Method() : dType :=
+    Read isEmpty <- emptyReg;
+    Assert !#isEmpty;
+    Read elt : Vector dType sz <- eltReg;
+    Read deqP <- deqPReg;
+    Ret #elt@[#deqP].
 
   Definition fifoRules : list (Attribute (Action type (Bit 0)))
     := nil.
@@ -141,4 +110,3 @@ End Fifo.
 Hint Unfold eltReg enqPReg deqPReg emptyReg fullReg.
 Hint Unfold fifoRules notFullBody notEmptyBody enqBody deqBody firstEltBody.
 Hint Unfold fifo simpleFifo : ModuleDefs.
-

@@ -47,6 +47,9 @@ Inductive ConstT: Kind -> Type :=
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
 | ConstStruct attrs: ilist (fun a => ConstT (attrType a)) attrs -> ConstT (Struct attrs).
 
+Coercion ConstBool : bool >-> ConstT.
+Coercion ConstBit : word >-> ConstT.
+
 Fixpoint getDefaultConst (k: Kind): ConstT k :=
   match k with
     | Bool => ConstBool false
@@ -132,7 +135,7 @@ Section Phoas.
       Expr (arg s) ->
       (type (ret s) -> Action lretT) ->
       Action lretT
-  | Let lretT': Expr lretT' -> (type lretT' -> Action lretT) -> Action lretT
+  | Let_ lretT': Expr lretT' -> (type lretT' -> Action lretT) -> Action lretT
   | ReadReg (r: string):
       forall k, (type k -> Action lretT) -> Action lretT
   | WriteReg (r: string) k:
@@ -142,7 +145,7 @@ Section Phoas.
                            Action k ->
                            (type k -> Action lretT) ->
                            Action lretT
-  | Assert: Expr Bool -> Action lretT -> Action lretT
+  | Assert_: Expr Bool -> Action lretT -> Action lretT
   | Return: Expr lretT -> Action lretT.
 
   Definition RegInitT := Attribute (Typed ConstT).
@@ -175,69 +178,37 @@ End Phoas.
 Hint Unfold getRules getRegInits.
 
 (* Notations: registers and methods declaration *)
-Notation "'Reg#(' type ) name <- 'mkReg(' init ) ;" :=
-  (Build_Attribute name (Build_Typed _ type init))
-    (format "'Reg#('  '/' type  '/' ')'  '/' name  '/' <-  'mkReg('  '/' init  '/' ) ;").
-Notation "'Reg#(' type ) name <- 'mkRegU' ;" :=
-  (Build_Attribute name (Build_Typed _ type (getDefaultConst _)))
-    (format "'Reg#('  '/' type  '/' ')'  '/' name  '/' <-  'mkRegU' ;").
-Notation "'Method' 'Value#(' retT ) name '#(' argT ) ;" :=
+Notation "'Register' name : type <- init" :=
+  (Build_Attribute name (Build_Typed ConstT type init))
+  (at level 0, name at level 0, type at level 0, init at level 0).
+Notation Default := (getDefaultConst _).
+Definition Void := Bit 0.
+Notation "'MethodSig' name () : retT" :=
+  (Build_Attribute name {| arg := Void; ret := retT |})
+  (at level 0, name at level 0).
+Notation "'MethodSig' name ( argT ) : retT" :=
   (Build_Attribute name {| arg := argT; ret := retT |})
-    (format "'Method'  'Value#('  '/' retT  '/' )  '/' name  '/' '#('  '/' argT  '/' ) ;").
-
-(* Notations: action *)
-Notation "'vcall' meth :@: sign '#(' arg ) '#;' cont " :=
-  (MCall meth sign arg (fun _ => cont))
-    (at level 12, right associativity,
-     format "'vcall'  '/' meth  '/' :@:  '/' sign  '/' '#('  '/' arg  '/' )  '#;' '//' cont").
-Notation "'vcall' name <- meth :@: sign '#(' arg ) '#;' cont " :=
-  (MCall meth sign arg (fun name => cont))
-    (at level 12, right associativity,
-     format "'vcall'  '/' name  <-  '/' meth  '/' :@:  '/' sign  '/' '#('  '/' arg  '/' )  '#;' '//' cont ").
-Notation "'vlet' name <- expr '#;' cont " :=
-  (Let expr (fun name => cont))
-    (at level 12, right associativity,
-     format "'vlet'  '/' name  '/' <-  '/' expr  '#;' '//' cont ").
-Notation "'vread' name <- reg '#;' cont " :=
-  (ReadReg reg _ (fun name => cont))
-    (at level 12, right associativity,
-     format "'vread'  name  '/' <-  '/' reg  '#;' '//' cont").
-Notation "'vread' name :@: kind <- reg '#;' cont " :=
-  (ReadReg reg kind (fun name => cont))
-    (at level 12, right associativity,
-     format "'vread'  name  '/' :@:  '/' kind  '/' <-  '/' reg  '#;' '//' cont"). 
-Notation "reg <= expr '#;' cont " :=
-  (WriteReg reg expr cont)
-    (at level 12, right associativity,
-     format "reg  '/' <=  '/' expr  '#;' '//' cont ").
-Notation "reg <= expr :@: kind '#;' cont " :=
-  (@WriteReg _ _ reg kind expr cont)
-    (at level 12, right associativity,
-     format "reg  '/' <=  '/' expr  '/' :@:  '/' kind  '/' '#;' '//' cont ").
-Notation "'vif' cexpr 'vthen' tact 'velse' fact '#;' cont " :=
-  (IfElse cexpr tact fact cont)
-    (at level 12, right associativity,
-     format "'vif'  cexpr  '/' 'vthen'  tact  '/' 'velse'  fact  '#;' '//' cont ").
-Notation "'vassert' expr '#;' cont " :=
-  (Assert expr cont)
-    (at level 12, right associativity,
-     format "'vassert'  expr  '#;' '//' cont ").
-Notation "'vret' expr '#;' " :=
-  (Return expr) (at level 12, format "'vret'  expr  '#;'").
+  (at level 0, name at level 0).
 
 (* Notations: expression *)
-Notation "'V' v" := (Var _ _ v) (at level 10).
-Notation "'C' c" := (Const _ c) (at level 10).
-Notation "'Cd' t" := (Const _ (getDefaultConst t)) (at level 10).
-Notation "'Not' e" := (UniBool Neg e) (at level 10).
-Infix "AND" := (BinBool And) (at level 10).
-Infix "OR" := (BinBool Or) (at level 10).
-Infix "==" := Eq (at level 10).
-Notation "v '@[' idx ] " := (ReadIndex idx v) (at level 10).
-Notation "s '@>' fd #[] " := (ReadField ``(fd) s) (at level 10).
+Notation "# v" := (Var _ _ v) (at level 0) : kami_scope.
+Coercion Const : ConstT >-> Expr.
+Notation "!" := (UniBool Neg) : kami_scope.
+Infix "&&" := (BinBool And) : kami_scope.
+Infix "||" := (BinBool Or) : kami_scope.
+Infix "+" := (BinBit (Add _)) : kami_scope.
+Infix "==" := Eq (at level 70, no associativity) : kami_scope.
+Notation "v '@[' idx ] " := (ReadIndex idx v) (at level 10) : kami_scope.
+Notation "s '@>' fd #[] " := (ReadField ``(fd) s) (at level 10) : kami_scope.
 Notation "s '@>' fd '#[' attrs ] " :=
-  (ReadField (attrs:=attrs) ``(fd) s) (at level 10).
-Notation "'VEC' v" := (BuildVector v) (at level 10).
-Notation "'ST' il" := (BuildStruct il) (at level 10).
-Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10).
+  (ReadField (attrs:=attrs) ``(fd) s) (at level 10) : kami_scope.
+Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_scope.
+Notation "'ST' il" := (BuildStruct il) (at level 10) : kami_scope.
+Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10) : kami_scope.
+Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_scope.
+Notation "$$ e" := (Const _ e) (at level 0) : kami_scope.
+Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_scope.
+Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..).
+Notation "$ n" := (natToWord _ n) (at level 0).
 
+Delimit Scope kami_scope with kami.

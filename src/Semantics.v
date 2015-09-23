@@ -202,13 +202,13 @@ Section GetCms.
   Fixpoint getCmsA {k} (a: Action type k): list string :=
     match a with
       | MCall m _ _ c => m :: (getCmsA (c (evalConstT (getDefaultConst _))))
-      | Let _ _ c => getCmsA (c (evalConstT (getDefaultConst _)))
+      | Let_ _ _ c => getCmsA (c (evalConstT (getDefaultConst _)))
       | ReadReg _ _ c => getCmsA (c (evalConstT (getDefaultConst _)))
       | WriteReg _ _ _ c => getCmsA c
       | IfElse _ _ aT aF c =>
         (getCmsA aT) ++ (getCmsA aF)
                      ++ (getCmsA (c (evalConstT (getDefaultConst _))))
-      | Assert _ c => getCmsA c
+      | Assert_ _ c => getCmsA c
       | Return _ => nil
     end.
 
@@ -304,7 +304,7 @@ Section Semantics.
       k (e: Expr type k) retK (fret: type retK)
       (cont: type k -> Action type retK) newRegs calls
       (HSemAction: SemAction (cont (evalExpr e)) newRegs calls fret):
-      SemAction (Let e cont) newRegs calls fret
+      SemAction (Let_ e cont) newRegs calls fret
   | SemReadReg
       (r: string) regT regV
       retK (fret: type retK) (cont: type regT -> Action type retK)
@@ -353,7 +353,7 @@ Section Semantics.
       (cont: Action type k2) newRegs2 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
-      SemAction (Assert p cont) newRegs2 calls2 r2
+      SemAction (Assert_ p cont) newRegs2 calls2 r2
   | SemReturn
       k (e: Expr type k) evale
       (HEvalE: evale = evalExpr e):
@@ -367,7 +367,7 @@ Section Semantics.
         exists mret pcalls,
           SemAction (c mret) news pcalls retC /\
           calls = add m {| objVal := (evalExpr e, mret) |} pcalls
-      | Let _ e cont =>
+      | Let_ _ e cont =>
         SemAction (cont (evalExpr e)) news calls retC
       | ReadReg r k c =>
         exists rv,
@@ -391,7 +391,7 @@ Section Semantics.
               news = union news1 news2 /\
               calls = union calls1 calls2
           end
-      | Assert e c =>
+      | Assert_ e c =>
         SemAction c news calls retC /\
         evalExpr e = true
       | Return e =>
@@ -940,3 +940,51 @@ Ltac conn_tac meth :=
   callIffDef_dest; filt_dest; pred_dest meth; repeat (invariant_tac; basic_dest).
 Ltac fconn_tac meth := exfalso; conn_tac meth.
 
+
+(** * Notation corner! *)
+
+Notation "'Method' () : retT := c" :=
+  (fun _ : type Void => c%kami : Action type retT)
+  (at level 0).
+
+Notation "'Method' ( name : dom ) : retT := c" :=
+  (fun name : type dom => c%kami : Action type retT)
+  (at level 0, name at level 0).
+
+(* Notations: action *)
+
+Coercion attrName : Attribute >-> string.
+
+Notation "'Call' meth : sign ( arg ) ; cont " :=
+  (MCall (type := type) meth sign arg (fun _ => cont))
+    (at level 12, right associativity, meth at level 0, sign at level 0) : kami_scope.
+Notation "'Call' name <- meth : sign ( arg ) ; cont " :=
+  (MCall (type := type) meth sign arg (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0, sign at level 0) : kami_scope.
+Notation "'Let' name <- expr ; cont " :=
+  (Let_ (type := type) expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Let' name : t <- expr ; cont " :=
+  (Let_ (type := type) (lretT' := t) expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Read' name <- reg ; cont" :=
+  (ReadReg (type := type) reg _ (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Read' name : kind <- reg ; cont " :=
+  (ReadReg (type := type) reg kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Write' reg <- expr ; cont " :=
+  (WriteReg (type := type) reg expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_scope.
+Notation "'Write' reg <- expr : kind ; cont " :=
+  (@WriteReg type _ reg kind expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_scope.
+Notation "'If' cexpr { tact } 'else' { fact } ; cont " :=
+  (IfElse cexpr tact fact cont)
+    (at level 12, right associativity, cexpr at level 0) : kami_scope.
+Notation "'Assert' expr ; cont " :=
+  (Assert_ expr cont)
+    (at level 12, right associativity) : kami_scope.
+Notation "'Ret' expr" :=
+  (Return expr) (at level 12) : kami_scope.
+Notation Retv := (Return (Const _ (k := Bit 0) Default)).
