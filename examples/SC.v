@@ -89,7 +89,7 @@ Section MemInst.
 
 End MemInst.
 
-Hint Unfold memReg memExecSig.
+Hint Unfold memReg memRegs memExecSig.
 Hint Unfold memInst: ModuleDefs.
 
 (* The module definition for Pinst *)
@@ -185,7 +185,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold pcReg rfReg.
+Hint Unfold pcReg rfReg procRegs.
 Hint Unfold execCm haltCm getNextPc getNextState nextPc procRules
      procExecLd procExecSt procExecHt procExecNm.
 Hint Unfold procInst : ModuleDefs.

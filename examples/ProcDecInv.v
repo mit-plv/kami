@@ -394,7 +394,6 @@ Section Invariants.
         find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
                                                   objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opLd /\
-        insv ideqPv ``"type" = evalConstT memLd /\
         insv ideqPv ``"addr" = dec stv pcv ``"addr" /\
         insv ideqPv ``"value" = evalConstT (getDefaultConst (Bit valSize)) /\
         oenqPv = odeqPv.
@@ -420,7 +419,6 @@ Section Invariants.
         find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
                                                   objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opSt /\
-        insv ideqPv ``"type" = evalConstT memSt /\
         insv ideqPv ``"addr" = dec stv pcv ``"addr" /\
         insv ideqPv ``"value" = dec stv pcv ``"value" /\
         oenqPv = odeqPv.

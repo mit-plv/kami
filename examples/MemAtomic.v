@@ -59,7 +59,7 @@ Section Middleman.
 
 End Middleman.
 
-Hint Unfold getReqSig setRepSig execSig.
+Hint Unfold midRegs getReqSig setRepSig execSig.
 Hint Unfold mid : ModuleDefs.
 
 Section MemAtomic.

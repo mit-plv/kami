@@ -102,10 +102,12 @@ Section ProcDecSC.
 
     Definition f := f _ _ Ht2t.
 
+    Ltac fconn_tac meth := admit.
+
     Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
     Proof.
-      apply transMap with (regRel:=regRel) (ruleMap:=ruleMap).
-      { repeat (eexists; split); simpl; find_eq. }
+      apply transMap with (regRel:=regRel) (ruleMap:=ruleMap);
+      [repeat (eexists; split); simpl; find_eq|].
 
       intros.
       (* collect invariants before inversions *)
@@ -169,6 +171,8 @@ Section ProcDecSC.
             invariant_tac; basic_dest.
             map_eq.
 
+            (* invariant *)
+            simpl in H4; destruct (weq _ _) in H4; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }
@@ -247,6 +251,8 @@ Section ProcDecSC.
             invariant_tac; basic_dest.
             map_eq.
 
+            (* invariant *)
+            simpl in H4; destruct (weq _ _) in H4; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }

@@ -147,8 +147,8 @@ Section ProcDec.
 
 End ProcDec.
 
-Hint Unfold procRules getNextPc continuePcSt nextPc reqLd reqSt repLd repSt execHt execNm
-     memReqSig memRepSig haltSig.
+Hint Unfold procRegs procRules getNextPc continuePcSt nextPc
+     reqLd reqSt repLd repSt execHt execNm memReqSig memRepSig haltSig.
 Hint Unfold procDec : ModuleDefs.
 
 Section ProcDecM.
