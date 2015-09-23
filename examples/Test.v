@@ -6,50 +6,25 @@ Set Implicit Arguments.
 
 Parameter i: nat.
 
-Section ModuleA.
+Definition fbCm := MethodSig ("fb"__ i)() : Bool.
 
-  Definition regA : RegInitT := Reg#(Bool) "a" <- mkRegU;.
-  Definition regsA : list RegInitT := regA::nil.
+Definition ma := MODULE {
+  Register "a" : Bool <- Default
 
-  Definition ruleA: Action type (Bit 0) :=
-    vcall vb <- ("fb"__ i) :@: {| arg := Bit 0; ret := Bool |} #(Cd _) #;
-    ("a" <= (V vb) #;
-    vret (Cd _) #;).
-  
-  Definition rulesA : list (Attribute (Action type (Bit 0)))
-    := (Build_Attribute "ra" ruleA)::nil.
+  with Rule "ra" :=
+    Call vb <- fbCm();
+    Write "a" <- #vb;
+    Retv
+}.
 
-  Definition defMethsA : list (DefMethT type) := nil.
-                              
-  Definition ma := Mod regsA rulesA defMethsA.
+Definition mb := MODULE {
+  Register "b" : Bool <- true
 
-End ModuleA.
-
-Section ModuleB.
-
-  Definition regB : RegInitT := Reg#(Bool) "b" <- mkReg(ConstBool true);.
-  Definition regsB : list RegInitT := regB::nil.
-
-  Definition methBSig : Attribute SignatureT :=
-    Method Value#(Bool) ("fb"__ i) #(Bit 0);.
-
-  Definition methB
-  : type (arg (attrType methBSig)) -> Action type (ret (attrType methBSig)) :=
-    fun _ =>
-      "b" <= (C (ConstBool true)) #;
-      vread rb <- "b" #;
-      vret (V rb) #;.
-  
-  Definition rulesB : list (Attribute (Action type (Bit 0))) := nil.
-
-  Definition defMethsB : list (DefMethT type) :=
-    (Build_Attribute (attrName methBSig)
-                     (Build_Typed _ (attrType methBSig) methB))
-      ::nil.
-                              
-  Definition mb := Mod regsB rulesB defMethsB.
-
-End ModuleB.
+  with Method ("fb"__ i)() : Bool :=
+    Write "b" <- $$true;
+    Read rb <- "b";
+    Ret #rb
+}.
 
 Section Tests.
 
@@ -83,4 +58,3 @@ Section Tests.
   Qed.
 
 End Tests.
-

@@ -659,6 +659,22 @@ Proof.
   destruct (m1 k); intuition congruence.
 Qed.
 
+Lemma InMap_restrict : forall A k m ls, InMap k (restrict (A := A) m ls)
+                                      -> InMap k m
+                                         /\ In k ls.
+Proof.
+  clear; unfold InMap, find, restrict; intuition idtac;
+  destruct (in_dec string_dec k ls); intuition.
+Qed.
+
+Lemma InMap_complement : forall A k m ls, InMap k (complement (A := A) m ls)
+                                          -> InMap k m
+                                             /\ ~In k ls.
+Proof.
+  clear; unfold InMap, find, complement; intuition idtac;
+  destruct (in_dec string_dec k ls); intuition.
+Qed.
+
 Ltac inDomain_tac := hnf; simpl; intros;
                      repeat match goal with
                             | [ H : InMap _ (union _ _) |- _ ] =>
@@ -667,7 +683,11 @@ Ltac inDomain_tac := hnf; simpl; intros;
                               apply InMap_add in H; destruct H; subst
                             | [ H : InMap _ empty |- _ ] =>
                               apply InMap_empty in H; destruct H
-                            end; simpl; intuition idtac.
+                            | [ H : InMap _ (restrict _ _) |- _ ] =>
+                              apply InMap_restrict in H; destruct H
+                            | [ H : InMap _ (complement _ _) |- _ ] =>
+                              apply InMap_complement in H; destruct H
+                            end; simpl in *; intuition idtac.
 
 Hint Extern 1 (find _ _ = _) => find_eq.
 Hint Extern 1 (_ = find _ _) => find_eq.
