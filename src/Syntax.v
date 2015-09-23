@@ -189,19 +189,15 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 
 (* Notations: expression *)
 Notation "# v" := (Var _ _ v) (at level 0) : kami_scope.
-Coercion Const : ConstT >-> Expr.
 Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.
 Infix "+" := (BinBit (Add _)) : kami_scope.
 Infix "==" := Eq (at level 70, no associativity) : kami_scope.
-Notation "v '@[' idx ] " := (ReadIndex idx v) (at level 10) : kami_scope.
-Notation "s '@>' fd #[] " := (ReadField ``(fd) s) (at level 10) : kami_scope.
-Notation "s '@>' fd '#[' attrs ] " :=
-  (ReadField (attrs:=attrs) ``(fd) s) (at level 10) : kami_scope.
+Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_scope.
+Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_scope.
-Notation "'ST' il" := (BuildStruct il) (at level 10) : kami_scope.
-Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10) : kami_scope.
+Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_scope.
 Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_scope.
 Notation "$$ e" := (Const _ e) (at level 0) : kami_scope.
 Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_scope.
@@ -209,3 +205,9 @@ Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..).
 Notation "$ n" := (natToWord _ n) (at level 0).
 
 Delimit Scope kami_scope with kami.
+
+Notation "name :: ty" := (Build_Attribute name ty) : kami_struct_scope.
+Delimit Scope kami_struct_scope with struct.
+
+Notation "'STRUCT' { s1 ; .. ; sN }" :=
+  (Struct (cons s1%struct .. (cons sN%struct nil) ..)).

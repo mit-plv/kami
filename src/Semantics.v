@@ -971,9 +971,9 @@ Notation "'Write' reg <- expr ; cont " :=
 Notation "'Write' reg <- expr : kind ; cont " :=
   (@WriteReg type _ reg kind expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'If' cexpr { tact } 'else' { fact } ; cont " :=
-  (IfElse cexpr tact fact cont)
-    (at level 12, right associativity, cexpr at level 0) : kami_scope.
+Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
+  (IfElse cexpr tact fact (fun name => cont))
+    (at level 13, right associativity, name at level 0, cexpr at level 0, tact at next level, fact at next level) : kami_scope.
 Notation "'Assert' expr ; cont " :=
   (Assert_ expr cont)
     (at level 12, right associativity) : kami_scope.
@@ -1016,8 +1016,19 @@ Notation "'Method' name ( param : dom ) : retT := c" :=
 
 Delimit Scope kami_method_scope with method.
 
-Notation "{{ m1 'with' .. 'with' mN }}" := (makeModule (cons m1%method .. (cons mN%method nil) ..)) (only parsing) : kami_module_scope.
+Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (cons m1%method .. (cons mN%method nil) ..)) (at level 0, only parsing).
 
-Delimit Scope kami_module_scope with module.
+Definition icons' (na : {a : Attribute Kind & Expr type (attrType a)})
+           {attrs} (tl : ilist (fun a : Attribute Kind => Expr type (attrType a)) attrs)
+  : ilist (fun a : Attribute Kind => Expr type (attrType a)) (projT1 na :: attrs) :=
+  icons (projT1 na) (projT2 na) tl.
 
-Notation "'MODULE' ms" := ms%module (at level 0).
+Notation "name ::= value" := (existT (fun a : Attribute Kind => Expr type (attrType a))
+                                     (Build_Attribute name _) value) (at level 50) : init_scope.
+Delimit Scope init_scope with init.
+
+Notation "'STRUCT' { s1 ; .. ; sN }" :=
+  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
+  : kami_scope.
+
+Notation "e :: t" := (e : Expr type t) : kami_scope.

@@ -15,7 +15,7 @@ Section Fifo.
 
   Definition max_index : ConstT (Bit sz) := ^~ $1.
 
-  Definition fifo := MODULE {{
+  Definition fifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default
     with Register ^"enqP" : Bit sz <- Default
     with Register ^"deqP" : Bit sz <- Default
@@ -61,9 +61,9 @@ Section Fifo.
       Read elt : Vector dType sz <- ^"elt";
       Read deqP <- ^"deqP";
       Ret #elt@[#deqP]
-  }}.
+  }.
 
-  Definition simpleFifo := MODULE {{
+  Definition simpleFifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default
     with Register ^"enqP" : Bit sz <- Default
     with Register ^"deqP" : Bit sz <- Default
@@ -94,7 +94,7 @@ Section Fifo.
       Write ^"empty" <- (#enqP == #next_deqP);
       Write ^"deqP" <- #next_deqP;
       Ret #elt@[#deqP]
-  }}.
+  }.
 
   Section Spec.
     Lemma regsInDomain_simpleFifo: RegsInDomain simpleFifo.

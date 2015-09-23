@@ -14,18 +14,17 @@ Section DecExec.
   Definition StateK := Vector (Bit valSize) rfIdx.
   Definition StateT := type StateK.
 
-  Definition DecInstA := (Build_Attribute "opcode" (Bit opIdx))
-                           :: (Build_Attribute "reg" (Bit rfIdx))
-                           :: (Build_Attribute "addr" (Bit addrSize))
-                           :: (Build_Attribute "value" (Bit valSize))
-                           :: nil.
-  Definition DecInstK := Struct DecInstA.
+  Definition DecInstK := STRUCT {
+    "opcode" :: Bit opIdx;
+    "reg" :: Bit rfIdx;
+    "addr" :: Bit addrSize;
+    "value" :: Bit valSize
+  }.
   Definition DecInstT := type DecInstK.
 
   Definition DecT := StateT -> type (Bit addrSize) -> DecInstT.
   Definition ExecT := StateT -> type (Bit addrSize) -> DecInstT ->
-                      (type (Bit addrSize) * StateT)%type.
-
+                      type (Bit addrSize) * StateT.
 End DecExec.
 
 (* The module definition for Minst with n ports *)
@@ -34,28 +33,33 @@ Section MemInst.
   Variable addrSize : nat.
   Variable dType : Kind.
 
-  (* Registers *)
-  Definition memReg : RegInitT := Reg#(Vector dType addrSize) "mem" <- mkRegU;.
-  Definition memRegs : list RegInitT := memReg :: nil.
+  Definition atomK := STRUCT {
+    "type" :: Bit 2;
+    "addr" :: Bit addrSize;
+    "value" :: dType
+  }.
 
-  (* Method signatures *)
-  Definition memLd : ConstT (Bit 2) := ConstBit (WO~0~0).
-  Definition memSt : ConstT (Bit 2) := ConstBit (WO~0~1).
+  Definition memLd : ConstT (Bit 2) := WO~0~0.
+  Definition memSt : ConstT (Bit 2) := WO~0~1.
 
-  Definition atomA : list (Attribute Kind) :=
-    {| attrName := "type"; attrType := Bit 2 |}
-      :: {| attrName := "addr"; attrType := Bit addrSize |}
-      :: {| attrName := "value"; attrType := dType |}
-      :: nil.
-  Definition atomK : Kind := Struct atomA.
+  Definition memInst := MODULE {
+    Register "mem" : Vector dType addrSize <- Default
 
-  Definition buildAtom t a v: Expr type atomK :=
-    ST (icons (Build_Attribute "type" _) t
-              (icons (Build_Attribute "addr" _) a
-                     (icons (Build_Attribute "value" _) v
-                            (inil _)))).
+    with Method "exec"(a : atomK) : atomK :=
+      If (#a@."type" == $$memLd) then
+        Read memv <- "mem";
+        Let ldval <- #memv@[#a@."addr"];
+        Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
+             :: atomK)
+      else
+        Read memv <- "mem";
+        Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
+        Ret #a
+      as na;
+      Ret #na
+  }.
 
-  Definition memExecSig (i: nat): Attribute SignatureT :=
+ (* Definition memExecSig (i: nat): Attribute SignatureT :=
     Method Value#(atomK) ("exec"__ i) #(atomK);.
   Definition memExec (i: nat)
   : type (arg (attrType (memExecSig i))) ->
@@ -85,11 +89,11 @@ Section MemInst.
                                  :: (memDefMeths i')
     end.
 
-  Definition memInst := Mod memRegs memRules (memDefMeths n).
+  Definition memInst := Mod memRegs memRules (memDefMeths n).*)
 
 End MemInst.
 
-Hint Unfold memReg memExecSig.
+(*Hint Unfold memReg memExecSig.
 Hint Unfold memInst: ModuleDefs.
 
 (* The module definition for Pinst *)
@@ -241,3 +245,4 @@ Section Facts.
 
 End Facts.
 
+*)
