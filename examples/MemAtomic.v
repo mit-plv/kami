@@ -11,55 +11,38 @@ Section Middleman.
   Variable addrSize: nat.
   Variable dType: Kind.
 
-  Definition midRegs : list RegInitT := nil.
+  Definition getReq := MethodSig (inName -n- "deq")() : atomK addrSize dType.
+  Definition setRep := MethodSig (outName -n- "enq")(atomK addrSize dType) : Void.
+  Definition exec := MethodSig ("exec"__ memi)(atomK addrSize dType) : atomK addrSize dType.
 
-  Definition midDms : list (DefMethT type) := nil.
+  Definition mid := MODULE {
+    Rule (midName -n- "processLd") :=
+      Call req <- getReq();
+      Assert #req@."type" == $$memLd;
+      Call rep <- exec(#req);
+      Assert #rep@."type" == $$memLd;
+      Call setRep(#rep);
+      Retv
 
-  Definition getReqSig : Attribute SignatureT :=
-    Method Value#(atomK addrSize dType) (inName -n- "deq") #(Bit 0);.
-  Definition setRepSig : Attribute SignatureT :=
-    Method Value#(Bit 0) (outName -n- "enq") #(atomK addrSize dType);.
-  Definition execSig : Attribute SignatureT :=
-    Method Value#(atomK addrSize dType) ("exec"__ memi) #(atomK addrSize dType);.
-
-  Definition processLd: Action type (Bit 0) :=
-    vcall req <- (attrName getReqSig) :@: (attrType getReqSig) #(Cd _) #;
-    vassert (V req @> "type" #[] == C memLd) #;
-    vcall rep <- (attrName execSig) :@: (attrType execSig) #(V req) #;
-    vassert (V rep @> "type" #[] == C memLd) #;
-    vcall (attrName setRepSig) :@: (attrType setRepSig) #(V rep) #;
-    vret (Cd _) #;.
-    
-  Definition processSt: Action type (Bit 0) :=
-    vcall req <- (attrName getReqSig) :@: (attrType getReqSig) #(Cd _) #;
-    vassert (V req @> "type" #[] == C memSt) #;
-    vcall rep <- (attrName execSig) :@: (attrType execSig) #(V req) #;
-    vassert (V rep @> "type" #[] == C memSt) #;
-    vcall (attrName setRepSig) :@: (attrType setRepSig) #(V rep) #;
-    vret (Cd _) #;.
-
-  Definition midRules :=
-    (Build_Attribute (midName -n- "processLd") processLd)
-      :: (Build_Attribute (midName -n- "processSt") processSt)
-      :: nil.
-
-  Definition midDefMeths : list (DefMethT type) := nil.
-
-  Definition mid := Mod midRegs midRules midDefMeths.
+    with Rule (midName -n- "processSt") :=
+      Call req <- getReq();
+      Assert #req@."type" == $$memSt;
+      Call rep <- exec(#req);
+      Assert #rep@."type" == $$memSt;
+      Call setRep(#rep);
+      Retv
+  }.
 
   Section Facts.
     Lemma regsInDomain_mid: RegsInDomain mid.
     Proof.
-      unfold RegsInDomain; intros.
-      destRule H; try (inv HSemMod); invertActionRep; inDomain_tac.
-      inv Hltsmod; reflexivity.
+      regsInDomain_tac.
     Qed.
-
   End Facts.
 
 End Middleman.
 
-Hint Unfold getReqSig setRepSig execSig.
+Hint Unfold getReq setRep exec.
 Hint Unfold mid : ModuleDefs.
 
 Section MemAtomic.
@@ -87,7 +70,9 @@ Section MemAtomic.
 
   Section Facts.
     Lemma regsInDomain_ioi i: RegsInDomain (ioi i).
-    Proof. apply concatMod_RegsInDomain; apply regsInDomain_simpleFifo. Qed.
+    Proof.
+      apply concatMod_RegsInDomain; apply regsInDomain_simpleFifo.
+    Qed.
 
     Lemma regsInDomain_iomi i: RegsInDomain (iomi i).
     Proof.
@@ -100,4 +85,3 @@ Section MemAtomic.
 End MemAtomic.
 
 Hint Unfold minst insi outsi ioi midi iomi ioms memAtomic : ModuleDefs.
-
