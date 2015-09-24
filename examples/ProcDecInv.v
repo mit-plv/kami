@@ -54,19 +54,55 @@ Section Invariants.
   (*   repeat split; auto. *)
   (* Qed. *)
 
-  Lemma procRef_inv_1:
+  Definition procDec_inv_1 stallv iemptyv oemptyv :=
+    Xor3 (stallv = false) (iemptyv = false) (oemptyv = false).
+
+  Definition procDec_inv_2 (oenqPv odeqPv: type (Bit O)) :=
+    oenqPv = odeqPv.
+
+  Definition procDec_inv_3
+             (stv: type (Vector (Bit valSize) rfIdx))
+             (pcv: type (Bit addrSize))
+             (iemptyv: type Bool)
+             (insv: type (Vector (atomK addrSize (Bit valSize)) O))
+             (ideqPv: type (Bit O)) :=
+    iemptyv = false ->
+    dec stv pcv ``"opcode" = insv ideqPv ``"type" /\
+    insv ideqPv ``"addr" = dec stv pcv ``"addr" /\    
+    insv ideqPv ``"value" = if (weq (dec stv pcv ``"opcode") (evalConstT opLd)) then
+                              evalConstT (getDefaultConst (Bit valSize))
+                            else
+                              dec stv pcv ``"value".
+
+  Ltac fconn_tac meth := admit.
+
+  Lemma procDec_inv:
     forall or l (Hclos: LtsStepClosure pdecfi or l),
-    exists stallv iemptyv oemptyv,
+    exists pcv stv stallv iemptyv insv ideqPv oemptyv oenqPv odeqPv,
+      find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
+      find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx; objVal := stv |} /\
       find ("stall"__ i) or = Some {| objType := Bool; objVal := stallv |} /\
       find ("Ins"__ i -n- "empty") or = Some {| objType := Bool; objVal := iemptyv |} /\
+      find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
+                                              objVal := insv |} /\
+      find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := ideqPv |} /\
       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := oemptyv |} /\
-      (Xor3 (stallv = false) (iemptyv = false) (oemptyv = false)).
+      find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O; objVal := oenqPv |} /\
+      find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := odeqPv |} /\
+      procDec_inv_1 stallv iemptyv oemptyv /\
+      procDec_inv_2 oenqPv odeqPv /\
+      procDec_inv_3 stv pcv iemptyv insv ideqPv.
   Proof.
     admit.
   Qed.
   (*   intros; dependent induction Hclos; intros; subst. *)
-  (*   { repeat eexists; try (simpl; find_eq; fail). *)
-  (*     apply xor_1; intuition. *)
+  (*   { do 9 eexists. *)
+  (*     do 9 (split; [simpl; find_eq|]). *)
+  (*     split. *)
+  (*     { apply xor_1; intuition. } *)
+  (*     { split; [reflexivity|]. *)
+  (*       unfold procDec_inv_3; intros; inv H. *)
+  (*     } *)
   (*   } *)
 
   (*   specialize (IHHclos eq_refl). *)
@@ -93,13 +129,23 @@ Section Invariants.
   (*       invertSemMod HSemMod0. (* ins *) *)
   (*       filt_dest; invertActionRep. *)
 
-  (*       simpl in H6; destruct x2; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x0 = true /\ x1 = true) *)
-  (*         by (clear -H2; destruct x0; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists; eauto. *)
-  (*       simpl; apply xor_2; intuition. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H15; destruct x8; [discriminate|]. *)
+  (*         assert (x5 = true) *)
+  (*           by (clear -H8; destruct x2; destruct x5; inv H8; dest; intuition); subst. *)
+  (*         apply xor_2; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x6); rewrite (shatter_word_0 x7); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
 
   (*     + (** reqSt *) *)
   (*       invertActionRep. *)
@@ -117,13 +163,23 @@ Section Invariants.
   (*       invertSemMod HSemMod0. (* ins *) *)
   (*       filt_dest; invertActionRep. *)
 
-  (*       simpl in H7; destruct x2; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x0 = true /\ x1 = true) *)
-  (*         by (clear -H2; destruct x0; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists; eauto. *)
-  (*       simpl; apply xor_2; intuition. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H15; destruct x8; [discriminate|]. *)
+  (*         assert (x2 = true /\ x5 = true) *)
+  (*           by (clear -H8; destruct x2; destruct x5; inv H8; dest; intuition); dest; subst. *)
+  (*         apply xor_2; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x6); rewrite (shatter_word_0 x7); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
         
   (*     + (** repLd *) *)
   (*       invertActionRep. *)
@@ -139,15 +195,25 @@ Section Invariants.
   (*       invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
   (*       invertSemMod HSemMod0. *)
 
-  (*       simpl in H10; destruct x3; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x = true /\ x0 = true) *)
-  (*         by (clear -H2; destruct x; destruct x0; inv H2; dest; intuition); dest; subst. *)
-        
-  (*       repeat eexists; eauto. *)
-  (*       rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
-  (*       simpl; apply xor_1; intuition. *)
 
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H18; destruct x9; [discriminate|]. *)
+  (*         assert (x1 = true /\ x2 = true) *)
+  (*           by (clear -H8; destruct x1; destruct x2; inv H8; dest; intuition); dest; subst. *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); simpl. *)
+  (*         simpl; apply xor_1; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
+          
   (*     + (* repSt *) *)
   (*       invertActionRep. *)
   (*       invertSemMod Hltsmod0. (* mid *) *)
@@ -162,14 +228,24 @@ Section Invariants.
   (*       invertSemMod HSemMod; [fconn_tac ("Ins"__ i -n- "deq")|]. *)
   (*       invertSemMod HSemMod0. *)
 
-  (*       simpl in H10; destruct x3; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x = true /\ x0 = true) *)
-  (*         by (clear -H2; destruct x; destruct x0; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists; eauto. *)
-  (*       rewrite (shatter_word_0 x7); rewrite (shatter_word_0 x8); simpl. *)
-  (*       simpl; apply xor_1; intuition. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H18; destruct x9; [discriminate|]. *)
+  (*         assert (x1 = true /\ x2 = true) *)
+  (*           by (clear -H8; destruct x1; destruct x2; inv H8; dest; intuition); dest; subst. *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); simpl. *)
+  (*         simpl; apply xor_1; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
         
   (*     + (** execHt *) *)
   (*       invertActionRep. *)
@@ -186,7 +262,18 @@ Section Invariants.
 
   (*       invariant_tac; basic_dest. *)
 
-  (*       repeat eexists; eauto. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         assumption. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x6); rewrite (shatter_word_0 x7); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
 
   (*     + (** execNm *) *)
   (*       invertActionRep. *)
@@ -203,7 +290,18 @@ Section Invariants.
 
   (*       invariant_tac; basic_dest. *)
 
-  (*       repeat eexists; eauto. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+
+  (*       * (* invariant 1 *) *)
+  (*         assumption. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x6); rewrite (shatter_word_0 x7); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
 
   (*     + (** processLd *) *)
   (*       invertActionRep. *)
@@ -221,15 +319,26 @@ Section Invariants.
   (*       invertSemMod HSemMod0. *)
   (*       invertActionRep. (* ins *) *)
 
-  (*       simpl in H8; destruct x5; [discriminate|]. *)
-  (*       simpl in H13; destruct x9; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x = true /\ x1 = true) *)
-  (*         by (clear -H2; destruct x; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists; eauto. *)
-  (*       rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
-  (*       simpl; apply xor_3; intuition. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
+        
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H17; destruct x11; [discriminate|]. *)
+  (*         simpl in H22; destruct x15; [discriminate|]. *)
+  (*         assert (x1 = true /\ x5 = true) *)
+  (*           by (clear -H8; destruct x1; destruct x5; inv H8; dest; intuition); dest; subst. *)
+          
+  (*         rewrite (shatter_word_0 x17); rewrite (shatter_word_0 x18); simpl. *)
+  (*         simpl; apply xor_3; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
 
   (*     + (** processSt *) *)
   (*       invertActionRep. *)
@@ -247,22 +356,36 @@ Section Invariants.
   (*       invertSemMod HSemMod0. *)
   (*       invertActionRep. (* ins *) *)
 
-  (*       simpl in H8; destruct x5; [discriminate|]. *)
-  (*       simpl in H13; destruct x9; [discriminate|]. *)
   (*       invariant_tac; basic_dest. *)
-  (*       assert (x = true /\ x1 = true) *)
-  (*         by (clear -H2; destruct x; destruct x1; inv H2; dest; intuition); dest; subst. *)
 
-  (*       repeat eexists; eauto. *)
-  (*       rewrite (shatter_word_0 x11); rewrite (shatter_word_0 x12); simpl. *)
-  (*       simpl; apply xor_3; intuition. *)
+  (*       do 9 eexists. *)
+  (*       do 9 (split; [find_eq; sassumption|]). *)
+  (*       split; [|split]. *)
 
-  (*     + inv H3. *)
+  (*       * (* invariant 1 *) *)
+  (*         simpl in H17; destruct x11; [discriminate|]. *)
+  (*         simpl in H22; destruct x15; [discriminate|]. *)
+  (*         assert (x1 = true /\ x5 = true) *)
+  (*           by (clear -H8; destruct x1; destruct x5; inv H8; dest; intuition); dest; subst. *)
+          
+  (*         rewrite (shatter_word_0 x17); rewrite (shatter_word_0 x18); simpl. *)
+  (*         simpl; apply xor_3; intuition. *)
+
+  (*       * (* invariant 2 *) *)
+  (*         rewrite (shatter_word_0 x13); rewrite (shatter_word_0 x14); reflexivity. *)
+
+  (*       * (* invariant 3 *) *)
+  (*         admit. *)
+
+  (*     + inv H11. *)
         
   (*   - (* should be an empty step *) *)
   (*     pose proof (pdecfi_none Hlts); dest; subst. *)
   (*     map_simpl_G. *)
-  (*     repeat eexists; eauto. *)
+
+  (*     do 9 eexists. *)
+  (*     do 9 (split; [find_eq; sassumption|]). *)
+  (*     split; [|split]; assumption. *)
       
   (* Qed. *)
 
@@ -276,23 +399,23 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
-  (*   rewrite H1; repeat f_equal. *)
+  (*   intros; pose proof (procDec_inv Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H5; repeat f_equal. *)
 
-  (*   assert (x = false); subst. *)
-  (*   { clear -Hstep H. *)
+  (*   assert (x1 = false); subst. *)
+  (*   { clear -Hstep H1. *)
   (*     invStep Hstep. *)
   (*     invertSemMod Hltsmod2. *)
-  (*     in_tac_H; vdiscriminate; inv H0. *)
+  (*     in_tac_H; vdiscriminate; inv H. *)
   (*     invertActionRep. *)
-  (*     map_simpl H; clear -H H0 H3. *)
-  (*     simpl in H3; destruct x0; intuition. *)
-  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     map_simpl H1. clear -H H1 H2. *)
+  (*     destruct x; intuition. *)
+  (*     simpl in H, H1; rewrite H in H1. *)
   (*     basic_dest; reflexivity. *)
   (*   } *)
 
-  (*   clear -H2; inv H2; dest; intuition. *)
-  (*   destruct x1; intuition. *)
+  (*   clear -H8; inv H8; dest; intuition. *)
+  (*   destruct x5; intuition. *)
   (* Qed. *)
 
   Lemma proc_reqSt_prop:
@@ -303,23 +426,23 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
-  (*   rewrite H1; repeat f_equal. *)
+  (*   intros; pose proof (procDec_inv Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H5; repeat f_equal. *)
 
-  (*   assert (x = false); subst. *)
-  (*   { clear -Hstep H. *)
+  (*   assert (x1 = false); subst. *)
+  (*   { clear -Hstep H1. *)
   (*     invStep Hstep. *)
   (*     invertSemMod Hltsmod2. *)
-  (*     in_tac_H; vdiscriminate; inv H1. *)
+  (*     in_tac_H; vdiscriminate; inv H0. *)
   (*     invertActionRep. *)
-  (*     map_simpl H; clear -H H0 H3. *)
-  (*     simpl in H3; destruct x0; intuition. *)
-  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     map_simpl H1. clear -H H1 H2. *)
+  (*     simpl in H2; destruct x; intuition. *)
+  (*     simpl in H, H1; rewrite H in H1. *)
   (*     basic_dest; reflexivity. *)
   (*   } *)
 
-  (*   clear -H2; inv H2; dest; intuition. *)
-  (*   destruct x1; intuition. *)
+  (*   clear -H8; inv H8; dest; intuition. *)
+  (*   destruct x5; intuition. *)
   (* Qed. *)
 
   Lemma proc_execHt_prop:
@@ -330,23 +453,23 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
-  (*   rewrite H1; repeat f_equal. *)
+  (*   intros; pose proof (procDec_inv Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H5; repeat f_equal. *)
 
-  (*   assert (x = false); subst. *)
-  (*   { clear -Hstep H. *)
+  (*   assert (x1 = false); subst. *)
+  (*   { clear -Hstep H1. *)
   (*     invStep Hstep. *)
   (*     invertSemMod Hltsmod2. *)
-  (*     in_tac_H; vdiscriminate; inv H0. *)
+  (*     in_tac_H; vdiscriminate; inv H. *)
   (*     invertActionRep. *)
-  (*     map_simpl H; clear -H H0 H3. *)
-  (*     simpl in H3; destruct x0; intuition. *)
-  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     map_simpl H1. clear -H H1 H2. *)
+  (*     simpl in H2; destruct x; intuition. *)
+  (*     simpl in H, H1; rewrite H in H1. *)
   (*     basic_dest; reflexivity. *)
   (*   } *)
 
-  (*   clear -H2; inv H2; dest; intuition. *)
-  (*   destruct x1; intuition. *)
+  (*   clear -H8; inv H8; dest; intuition. *)
+  (*   destruct x5; intuition. *)
   (* Qed. *)
 
   Lemma proc_execNm_prop:
@@ -357,23 +480,23 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; pose proof (procRef_inv_1 Hclos) as Hinv; dest; subst. *)
-  (*   rewrite H1; repeat f_equal. *)
+  (*   intros; pose proof (procDec_inv Hclos) as Hinv; dest; subst. *)
+  (*   rewrite H5; repeat f_equal. *)
 
-  (*   assert (x = false); subst. *)
-  (*   { clear -Hstep H. *)
+  (*   assert (x1 = false); subst. *)
+  (*   { clear -Hstep H1. *)
   (*     invStep Hstep. *)
   (*     invertSemMod Hltsmod2. *)
-  (*     in_tac_H; vdiscriminate; inv H1. *)
+  (*     in_tac_H; vdiscriminate; inv H0. *)
   (*     invertActionRep. *)
-  (*     map_simpl H; clear -H H0 H3. *)
-  (*     simpl in H3; destruct x0; intuition. *)
-  (*     simpl in H, H0; rewrite H in H0. *)
+  (*     map_simpl H1. clear -H H1 H2. *)
+  (*     simpl in H2; destruct x; intuition. *)
+  (*     simpl in H, H1; rewrite H in H1. *)
   (*     basic_dest; reflexivity. *)
   (*   } *)
 
-  (*   clear -H2; inv H2; dest; intuition. *)
-  (*   destruct x1; intuition. *)
+  (*   clear -H8; inv H8; dest; intuition. *)
+  (*   destruct x5; intuition. *)
   (* Qed. *)
 
   Lemma mid_processLd_prop:
@@ -400,6 +523,25 @@ Section Invariants.
   Proof.
     admit.
   Qed.
+  (*   intros; pose proof (procDec_inv Hclos) as Hinv; dest; subst. *)
+
+  (*   assert (x2 = false /\ x3 x4 ``("type") = evalConstT opLd); dest; subst. *)
+  (*   { clear -Hstep H2. *)
+  (*     admit. *)
+  (*   } *)
+
+  (*   split. *)
+
+  (*   - rewrite H5; repeat f_equal. *)
+  (*     clear -H8; inv H8; dest; intuition. *)
+  (*     destruct x5; intuition. *)
+
+  (*   - do 6 eexists. *)
+  (*     do 6 (split; [sassumption|]). *)
+  (*     specialize (H10 eq_refl); dest. *)
+  (*     repeat split; auto. *)
+  (*     + rewrite H12 in H10; assumption. *)
+  (* Qed. *)
 
   Lemma mid_processSt_prop:
     forall (Hclos: LtsStepClosure pdecfi or l)
