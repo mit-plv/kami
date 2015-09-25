@@ -772,41 +772,42 @@ End WellFormed.
 
 (** Tactics for dealing with semantics *)
 
-Ltac invStep Hstep :=
-  repeat autounfold with ModuleDefs in Hstep;
+Ltac invStep :=
   repeat
     match goal with
-      | [Horig: LtsStep (ConcatMod _ _) None _ _ _ _ |- _] =>
-        inv Horig; destConcatLabel;
-        match goal with
-          | [Hcrm: CombineRm _ _ None |- _] =>
-            pose proof (combineRm_prop_5 Hcrm); dest; subst
-        end
-      | [Horig: LtsStep (ConcatMod _ _) (Some ?r) _ _ _ _ |- _] =>
-        inv Horig; destConcatLabel;
-        match goal with
-          | [Hcrm: CombineRm _ _ _, H: LtsStep ?m ?rm _ _ _ _ |- _] =>
-            let Hin := fresh "Hin" in
-            assert (Hin: ~ In r (map (@attrName _) (getRules m))) by in_tac_ex;
-              assert (rm = None) by
-                (destruct rm; [exfalso; elim Hin|reflexivity];
-                 eapply ltsStep_rule; [eassumption|];
-                 (rewrite (combineRm_prop_1 Hcrm) || rewrite (combineRm_prop_2 Hcrm));
-                 reflexivity);
-              clear Hin; subst;
-              (rewrite (combineRm_prop_3 Hcrm) in * || rewrite (combineRm_prop_4 Hcrm) in *);
-              clear Hcrm
-        end
+      | [Horig: LtsStep ?m None _ _ _ _ |- _] =>
+        let Ha := fresh "Ha" in
+        assert (Ha: exists lm rm, m = ConcatMod lm rm) by (repeat eexists);
+          clear Ha; inv Horig; destConcatLabel;
+          match goal with
+            | [Hcrm: CombineRm _ _ None |- _] =>
+              pose proof (combineRm_prop_5 Hcrm); dest; subst
+          end
+      | [Horig: LtsStep ?m (Some ?r) _ _ _ _ |- _] =>
+        let Ha := fresh "Ha" in
+        assert (Ha: exists lm rm, m = ConcatMod lm rm) by (repeat eexists);
+          clear Ha; inv Horig; destConcatLabel;
+          match goal with
+            | [Hcrm: CombineRm _ _ _, H: LtsStep ?m ?rm _ _ _ _ |- _] =>
+              let Hin := fresh "Hin" in
+              assert (Hin: ~ In r (map (@attrName _) (getRules m))) by in_tac_ex;
+                assert (rm = None) by
+                  (destruct rm; [exfalso; elim Hin|reflexivity];
+                   eapply ltsStep_rule; [eassumption|];
+                   (rewrite (combineRm_prop_1 Hcrm) || rewrite (combineRm_prop_2 Hcrm));
+                   reflexivity);
+                clear Hin; subst;
+                (rewrite (combineRm_prop_3 Hcrm) in * || rewrite (combineRm_prop_4 Hcrm) in *);
+                clear Hcrm
+          end
     end;
   repeat
     match goal with
-      | [H: LtsStep (Mod _ _ _) _ _ _ _ _ |- _] => inv H
+      | [H: LtsStep ?m _ _ _ _ _ |- _] =>
+        let Ha := fresh "Ha" in
+        assert (Ha: exists m1 m2 m3, m = Mod m1 m2 m3) by (repeat eexists);
+          clear Ha; inv H
     end.
-
-Ltac invStepFirst :=
-  match goal with
-    | [H: LtsStep _ _ _ _ _ _ |- _] => invStep H
-  end.
 
 Ltac destRule Hlts :=
   match type of Hlts with

@@ -89,7 +89,7 @@ Section ProcDec.
 
   Definition execNm :=
     (Read stall <- ^"stall";
-     Assert #stall;
+     Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
      Assert !(#(dec st ppc)@."opcode" == $$opLd

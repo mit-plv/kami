@@ -542,12 +542,12 @@ Ltac map_simpl_G :=
             || (rewrite find_empty)).
 
 Ltac map_compute H :=
-  map_simpl H;
+  (* map_simpl H; *)
   repeat autounfold with MapDefs in H;
   repeat autounfold with ModulesDefs in H;
   repeat autounfold in H; ssimpl H.
 Ltac map_compute_G :=
-  map_simpl_G;
+  (* map_simpl_G; *)
   repeat autounfold with MapDefs;
   repeat autounfold with ModuleDefs;
   repeat autounfold; ssimpl_G.
