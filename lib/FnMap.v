@@ -692,7 +692,7 @@ Ltac inDomain_tac := hnf; simpl; intros;
 Hint Extern 1 (find _ _ = _) => find_eq.
 Hint Extern 1 (_ = find _ _) => find_eq.
 Hint Extern 1 (_ = _: (@Map _)) => map_eq.
-Hint Extern 1 (InDomain _ _) => inDomain_tac.
+Hint Extern 1 (InDomain _ _) => inDomain_tac_old.
 Hint Extern 1 (Disj _ empty) => apply Disj_empty_2.
 Hint Extern 1 (Disj empty _) => apply Disj_empty_1.
 

@@ -38,7 +38,7 @@ Ltac in_tac :=
 Ltac in_tac_H :=
   repeat
     match goal with
-      | [H: In _ _ |- _] => simpl in H; intuition idtac
+      | [H: In _ _ |- _] => inv H (* simpl in H; intuition idtac *)
     end.
 
 Ltac exact_refl :=

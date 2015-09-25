@@ -37,71 +37,78 @@ Section ProcDec.
     Retv
   }.
 
+  Definition reqLd :=
+    (Read stall <- ^"stall";
+     Assert !#stall;
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert #(dec st ppc)@."opcode" == $$opLd;
+     Call memReq(STRUCT {  "type" ::= $$memLd;
+                           "addr" ::= #(dec st ppc)@."addr";
+                           "value" ::= $$Default });
+     Write ^"stall" <- $$true;
+     Retv)%kami.
+
+  Definition reqSt :=
+    (Read stall <- ^"stall";
+     Assert !#stall;
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert #(dec st ppc)@."opcode" == $$opSt;
+     Call memReq(STRUCT {  "type" ::= $$opSt;
+                           "addr" ::= #(dec st ppc)@."addr";
+                           "value" ::= #(dec st ppc)@."value" });
+     Write ^"stall" <- $$true;
+     Retv)%kami.
+
+  Definition repLd :=
+    (Call val <- memRep();
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert #val@."type" == $$opLd;
+     Write ^"rf" <- #st@[#(dec st ppc)@."reg" <- #val@."value"];
+     Write ^"stall" <- $$false;
+     nextPc ppc st)%kami.
+
+  Definition repSt :=
+    (Call val <- memRep();
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert #val@."type" == $$opSt;
+     Write ^"stall" <- $$false;
+     nextPc ppc st)%kami.
+
+  Definition execHt :=
+    (Read stall <- ^"stall";
+     Assert !#stall;
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert #(dec st ppc)@."opcode" == $$opHt;
+     Call halt();
+     Retv)%kami.
+
+  Definition execNm :=
+    (Read stall <- ^"stall";
+     Assert #stall;
+     Read ppc <- ^"pc";
+     Read st <- ^"rf";
+     Assert !(#(dec st ppc)@."opcode" == $$opLd
+           || #(dec st ppc)@."opcode" == $$opSt
+           || #(dec st ppc)@."opcode" == $$opHt);
+     Write ^"rf" <- #(getNextState ppc st);
+     nextPc ppc st)%kami.
+
   Definition procDec := MODULE {
     Register ^"pc" : Bit addrSize <- Default
     with Register ^"rf" : Vector (Bit valSize) rfIdx <- Default
     with Register ^"stall" : Bool <- false
 
-    with Rule ^"reqLd" :=
-      Read stall <- ^"stall";
-      Assert !#stall;
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opLd;
-      Call memReq(STRUCT {  "type" ::= $$memLd;
-                            "addr" ::= #(dec st ppc)@."addr";
-                           "value" ::= $$Default });
-      Write ^"stall" <- $$true;
-      Retv
-
-    with Rule ^"reqSt" :=
-      Read stall <- ^"stall";
-      Assert !#stall;
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opSt;
-      Call memReq(STRUCT {  "type" ::= $$opSt;
-                            "addr" ::= #(dec st ppc)@."addr";
-                           "value" ::= #(dec st ppc)@."value" });
-      Write ^"stall" <- $$true;
-      Retv
-
-    with Rule ^"repLd" :=
-      Call val <- memRep();
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert #val@."type" == $$opLd;
-      Write ^"rf" <- #st@[#(dec st ppc)@."reg" <- #val@."value"];
-      Write ^"stall" <- $$false;
-      nextPc ppc st
-
-    with Rule ^"repSt" :=
-      Call val <- memRep();
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert #val@."type" == $$opSt;
-      Write ^"stall" <- $$false;
-      nextPc ppc st
-
-    with Rule ^"execHt" :=
-      Read stall <- ^"stall";
-      Assert !#stall;
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opHt;
-      Call halt();
-      Retv
-
-    with Rule ^"execNm" :=
-      Read stall <- ^"stall";
-      Assert #stall;
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
-      Assert !(#(dec st ppc)@."opcode" == $$opLd
-             || #(dec st ppc)@."opcode" == $$opSt
-             || #(dec st ppc)@."opcode" == $$opHt);
-      Write ^"rf" <- #(getNextState ppc st);
-      nextPc ppc st
+    with Rule ^"reqLd" := reqLd
+    with Rule ^"reqSt" := reqSt
+    with Rule ^"repLd" := repLd
+    with Rule ^"repSt" := repSt
+    with Rule ^"execHt" := execHt
+    with Rule ^"execNm" := execNm
   }.
 End ProcDec.
 

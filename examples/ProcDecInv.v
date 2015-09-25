@@ -37,7 +37,25 @@ Section Invariants.
   Proof.
     admit.
   Qed.
-  (*   intros; invStep Hstep. *)
+  (*   intros. *)
+
+  (*   (* invStep Hstep *) *)
+  (*   repeat *)
+  (*     match goal with *)
+  (*       | [H: LtsStep ?m _ _ _ _ _ |- _] => *)
+  (*         assert (exists lm rm, m = ConcatMod lm rm) by (repeat eexists); *)
+  (*           inv H; destConcatLabel; *)
+  (*           match goal with *)
+  (*             | [Hcrm: CombineRm _ _ None |- _] => *)
+  (*               pose proof (combineRm_prop_5 Hcrm); dest; subst *)
+  (*           end *)
+  (*     end. *)
+  (*   repeat *)
+  (*     match goal with *)
+  (*       | [H: LtsStep ?m _ _ _ _ _ |- _] => *)
+  (*         assert (exists m1 m2 m3, m = Mod m1 m2 m3) by (repeat eexists); *)
+  (*           inv H *)
+  (*     end. *)
 
   (*   invertSemMod Hltsmod2. (* proc *) *)
   (*   invertSemMod Hltsmod1. (* mid *) *)

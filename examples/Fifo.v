@@ -15,6 +15,31 @@ Section Fifo.
 
   Definition max_index : ConstT (Bit sz) := ^~ $1.
 
+  Definition enq (d: type dType) : Action type Void :=
+    (Read isFull <- ^"full";
+     Assert !#isFull;
+     Read elt <- ^"elt";
+     Read enqP <- ^"enqP";
+     Read deqP <- ^"deqP";
+     Write ^"elt" <- #elt@[#enqP <- #d];
+     Write ^"empty" <- $$false;
+     Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
+     Write ^"full" <- (#deqP == #next_enqP);
+     Write ^"enqP" <- #next_enqP;
+     Retv)%kami.
+
+  Definition deq : Action type dType :=
+    (Read isEmpty <- ^"empty";
+     Assert !#isEmpty;
+     Read elt <- ^"elt";
+     Read enqP <- ^"enqP";
+     Read deqP <- ^"deqP";
+     Write ^"full" <- $$false;
+     Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
+     Write ^"empty" <- (#enqP == #next_deqP);
+     Write ^"deqP" <- #next_deqP;
+     Ret #elt@[#deqP])%kami.
+
   Definition fifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default
     with Register ^"enqP" : Bit sz <- Default
@@ -30,30 +55,8 @@ Section Fifo.
       Read isEmpty <- ^"empty";
       Ret !#isEmpty
 
-    with Method ^"enq"(d : dType) : Void :=
-      Read isFull <- ^"full";
-      Assert !#isFull;
-      Read elt <- ^"elt";
-      Read enqP <- ^"enqP";
-      Read deqP <- ^"deqP";
-      Write ^"elt" <- #elt@[#enqP <- #d];
-      Write ^"empty" <- $$false;
-      Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
-      Write ^"full" <- (#deqP == #next_enqP);
-      Write ^"enqP" <- #next_enqP;
-      Retv
-
-    with Method ^"deq"() : dType :=
-      Read isEmpty <- ^"empty";
-      Assert !#isEmpty;
-      Read elt <- ^"elt";
-      Read enqP <- ^"enqP";
-      Read deqP <- ^"deqP";
-      Write ^"full" <- $$false;
-      Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
-      Write ^"empty" <- (#enqP == #next_deqP);
-      Write ^"deqP" <- #next_deqP;
-      Ret #elt@[#deqP]
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
 
     with Method ^"firstElt"() : dType :=
       Read isEmpty <- ^"empty";
@@ -70,30 +73,8 @@ Section Fifo.
     with Register ^"empty" : Bool <- true
     with Register ^"full" : Bool <- Default
 
-    with Method ^"enq"(d : dType) : Void :=
-      Read isFull <- ^"full";
-      Assert !#isFull;
-      Read elt <- ^"elt";
-      Read enqP <- ^"enqP";
-      Read deqP <- ^"deqP";
-      Write ^"elt" <- #elt@[#enqP <- #d];
-      Write ^"empty" <- $$false;
-      Let next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
-      Write ^"full" <- (#deqP == #next_enqP);
-      Write ^"enqP" <- #next_enqP;
-      Retv
-
-    with Method ^"deq"() : dType :=
-      Read isEmpty <- ^"empty";
-      Assert !#isEmpty;
-      Read elt <- ^"elt";
-      Read enqP <- ^"enqP";
-      Read deqP <- ^"deqP";
-      Write ^"full" <- $$false;
-      Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
-      Write ^"empty" <- (#enqP == #next_deqP);
-      Write ^"deqP" <- #next_deqP;
-      Ret #elt@[#deqP]
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
   }.
 
   Section Spec.

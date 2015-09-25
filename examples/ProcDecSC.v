@@ -102,8 +102,6 @@ Section ProcDecSC.
 
     Definition f := f _ _ Ht2t.
 
-    Ltac fconn_tac meth := admit.
-
     Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
     Proof.
       apply transMap with (regRel:=regRel) (ruleMap:=ruleMap);
@@ -154,8 +152,7 @@ Section ProcDecSC.
           { repeat autounfold; ssimpl_G; in_tac. }
           { econstructor; eauto.
             econstructor; eauto.
-            econstructor;
-              [simpl; destruct (weq _ _); [reflexivity|intuition]|].
+            econstructor; [simpl; find_if_inside; [reflexivity|intuition]|].
             econstructor; eauto.
             econstructor; eauto.
             econstructor; eauto.
@@ -172,7 +169,7 @@ Section ProcDecSC.
             map_eq.
 
             (* invariant *)
-            simpl in H4; destruct (weq _ _) in H4; [|discriminate].
+            simpl in H3; destruct (weq _ _) in H3; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }
@@ -184,26 +181,10 @@ Section ProcDecSC.
           repeat (invariant_tac; basic_dest); subst.
 
           (* invariant *)
-          match goal with
-            | [ |- context [if (weq ?w1 ?w2) then _ else _] ] =>
-              replace w1 with w2 by
-                  (simpl; rewrite (rewrite_weq eq_refl);
-                   clear -H5; simpl in H5; destruct (weq _ _); intuition);
-                rewrite (rewrite_weq eq_refl)
-          end.
+          rewrite (rewrite_weq eq_refl).
+          destruct (weq _ _) in H4; [|discriminate].
+          find_if_inside; [|elim n; assumption].
           map_eq.
-
-          (* invariant *)
-          simpl.
-          repeat f_equal; apply functional_extensionality; intro w.
-          find_if_inside.
-          { find_if_inside.
-            { rewrite (rewrite_weq eq_refl).
-              reflexivity.
-            }
-            { elim n0; subst; intuition. }
-          }
-          { find_if_inside; [elim n0; subst; intuition|reflexivity]. }
         }
 
       - (** processSt *)
@@ -235,8 +216,7 @@ Section ProcDecSC.
           { repeat autounfold; ssimpl_G; in_tac. }
           { econstructor; eauto.
             econstructor; eauto.
-            econstructor;
-              [simpl; destruct (weq _ _); [reflexivity|intuition]|].
+            econstructor; [simpl; find_if_inside; [reflexivity|intuition]|].
             econstructor; eauto.
             econstructor; eauto.
           }
@@ -252,7 +232,7 @@ Section ProcDecSC.
             map_eq.
 
             (* invariant *)
-            simpl in H4; destruct (weq _ _) in H4; [|discriminate].
+            simpl in H3; destruct (weq _ _) in H3; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }
@@ -264,11 +244,11 @@ Section ProcDecSC.
           repeat (invariant_tac; basic_dest); subst.
 
           (* invariant *)
+          rewrite (rewrite_weq eq_refl).
+          destruct (weq _ _) in H4; [|discriminate].
           match goal with
-            | [ |- context [if (weq ?w1 _) then _ else _] ] =>
-              progress replace w1 with (evalConstT memSt) by
-                  (simpl; rewrite (rewrite_weq eq_refl);
-                   clear -H5; simpl in H5; destruct (weq _ _); intuition)
+            | [ |- context [weq ?w (evalConstT opLd)] ] =>
+              replace w with WO~0~1 by assumption
           end.
           map_eq.
         }
@@ -362,10 +342,10 @@ Section ProcDecSC.
           conn_tac ("Outs"__ i -n- "deq").
 
           (* invariant *)
-          simpl in H8; apply negb_true_iff in H8; subst.
+          simpl in H7; apply negb_true_iff in H7; subst.
           assert (x3 x5 ``"type" = WO~0~0)
-            by (clear -H6; simpl in H6; destruct (weq _ _); [assumption|inv H6]).
-          rewrite H0 in H15; simpl in H15; subst.
+            by (clear -H5; simpl in H5; destruct (weq _ _); [assumption|inv H5]).
+          destruct (weq _ _) in H15; [|elim n; assumption]; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
           
           map_eq.
@@ -400,10 +380,12 @@ Section ProcDecSC.
           conn_tac ("Outs"__ i -n- "deq").
 
           (* invariant *)
-          simpl in H8; apply negb_true_iff in H8; subst.
-          assert (x3 x5 ``"type" = WO~0~1)
-            by (clear -H6; simpl in H6; destruct (weq _ _); [assumption|inv H6]).
-          rewrite H0 in H15; simpl in H15; subst.
+          simpl in H7; apply negb_true_iff in H7; subst.
+          destruct (weq _ _) in H5; [|discriminate].
+          match type of H15 with
+            | context [weq ?w (evalConstT opLd)] =>
+              progress replace w with WO~0~1 in H15 by assumption
+          end; simpl in H15; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
           
           map_eq.

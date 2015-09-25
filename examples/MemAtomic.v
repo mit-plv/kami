@@ -15,22 +15,25 @@ Section Middleman.
   Definition setRep := MethodSig (outName -n- "enq")(atomK addrSize dType) : Void.
   Definition exec := MethodSig ("exec"__ memi)(atomK addrSize dType) : atomK addrSize dType.
 
-  Definition mid := MODULE {
-    Rule (midName -n- "processLd") :=
-      Call req <- getReq();
-      Assert #req@."type" == $$memLd;
-      Call rep <- exec(#req);
-      Assert #rep@."type" == $$memLd;
-      Call setRep(#rep);
-      Retv
+  Definition processLd :=
+    (Call req <- getReq();
+     Assert #req@."type" == $$memLd;
+     Call rep <- exec(#req);
+     Assert #rep@."type" == $$memLd;
+     Call setRep(#rep);
+     Retv)%kami.
 
-    with Rule (midName -n- "processSt") :=
-      Call req <- getReq();
-      Assert #req@."type" == $$memSt;
-      Call rep <- exec(#req);
-      Assert #rep@."type" == $$memSt;
-      Call setRep(#rep);
-      Retv
+  Definition processSt :=
+    (Call req <- getReq();
+     Assert #req@."type" == $$memSt;
+     Call rep <- exec(#req);
+     Assert #rep@."type" == $$memSt;
+     Call setRep(#rep);
+     Retv)%kami.
+
+  Definition mid := MODULE {
+    Rule (midName -n- "processLd") := processLd
+    with Rule (midName -n- "processSt") := processSt
   }.
 
   Section Facts.
