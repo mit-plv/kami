@@ -185,17 +185,18 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Sub n => @wminus n
   end.
 
+Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
+  fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
+    mapAttrEq1 type attrs i
+               (ith_Bounded _ ils (getNewIdx1 type attrs i)).
+
 (* evaluate any constant operation *)
 Fixpoint evalConstT k (e: ConstT k): type k :=
   match e in ConstT k return type k with
     | ConstBool b => b
     | ConstBit n w => w
     | ConstVector k' n v => evalVec (mapVec (@evalConstT k') v)
-    | ConstStruct attrs ils =>
-        fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
-          mapAttrEq1 type attrs i
-                     (ith_Bounded _ (imap _ (fun _ ba => evalConstT ba) ils)
-                                  (getNewIdx1 type attrs i))
+    | ConstStruct attrs ils => evalConstStruct (imap _ (fun _ ba => evalConstT ba) ils)
   end.
 
 Section GetCms.

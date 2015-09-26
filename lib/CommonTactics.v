@@ -120,6 +120,12 @@ Fixpoint string_of_nat (n: nat) :=
 Definition withIndex str idx := 
   append (append str ("_"%string)) (string_of_nat idx).
 
+Theorem withIndex_eq : withIndex = fun str idx =>
+  append (append str ("_"%string)) (string_of_nat idx).
+Proof.
+  reflexivity.
+Qed.
+
 Global Opaque withIndex.
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).
