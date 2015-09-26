@@ -118,3 +118,164 @@ Proof.
   repeat rewrite union_empty_1 in H0.
   auto.
 Qed.
+
+(* Considering method calls only.  We later build a version that considers trying a rule first, too. *)
+Fixpoint SymSemMod_methods (dms : list (DefMethT type)) (rs rs' : RegsT) (dmeth cmeth : CallsT)
+         (kf : RegsT -> CallsT -> CallsT -> Prop) : Prop :=
+  match dms with
+  | nil => kf rs' dmeth cmeth
+  | meth :: dms' =>
+    SymSemMod_methods dms' rs rs' dmeth cmeth kf
+    /\ find (attrName meth) dmeth = None
+    /\ forall argV, SymSemAction (objVal (attrType meth) argV) rs rs' cmeth
+                                 (fun rs'' cmeth' retV =>
+                                    SymSemMod_methods dms' rs rs'' dmeth[attrName meth |-> (argV, retV)] cmeth' kf)
+  end.
+
+(* Here's the version that also considers trying a rule first. *)
+Fixpoint SymSemMod (dms : list (DefMethT type)) (rules : list (Attribute (Action type (Bit 0)))) (rs rs' : RegsT) (dmeth cmeth : CallsT)
+         (kf : option string -> RegsT -> CallsT -> CallsT -> Prop) : Prop :=
+  match rules with
+  | nil => kf None rs' dmeth cmeth
+           /\ SymSemMod_methods dms rs rs' dmeth cmeth (kf None)
+  | rule :: rules' =>
+    SymSemMod dms rules' rs rs' dmeth cmeth kf
+    /\ SymSemAction (attrType rule) rs rs' cmeth
+                    (fun rs'' cmeth' _ =>
+                       SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule))))
+  end.
+
+Fixpoint SymLtsStep (ms : Modules type) (rs : RegsT)
+         (kf : option string -> RegsT -> CallsT -> CallsT -> Prop) : Prop :=
+  match ms with
+  | Mod regInits rules meths =>
+    SymSemMod meths rules rs empty empty empty kf
+  | ConcatMod m1 m2 =>
+    (forall x, In x (map (@attrName _) (getRegInits m1))
+               -> In x (map (@attrName _) (getRegInits m2))
+               -> False)
+    /\ SymLtsStep m1 (restrict rs (map (@attrName _) (getRegInits m1)))
+    (fun rm rs1 dmeth1 cmeth1 =>
+       SymLtsStep m2 (restrict rs (map (@attrName _) (getRegInits m2)))
+                  (fun rm' rs2 dmeth2 cmeth2 =>
+                     match match rm, rm' with Some _, Some _ => None | Some _, _ => Some rm | _, _ => Some rm' end with
+                     | None => True
+                     | Some rm'' =>
+                       kf rm'' (disjUnion rs1 rs2 (map (@attrName _) (getRegInits m1)))
+                          (disjUnion (complement dmeth1 (getCmsMod m2))
+                                     (complement dmeth2 (getCmsMod m1))
+                                     (listSub (getDmsMod m1) (getCmsMod m2)))
+                          (disjUnion (complement cmeth1 (getDmsMod m2))
+                                     (complement cmeth2 (getDmsMod m1))
+                                     (listSub (getCmsMod m1) (getDmsMod m2)))
+                     end))
+  end.
+
+Theorem SymSemMod_methods_sound : forall rules rs rm rs' meths dmeth cmeth,
+  SemMod rules rs rm rs' meths dmeth cmeth
+  -> forall rs'' dmeth' cmeth' kf, SymSemMod_methods meths rs rs'' dmeth' cmeth' kf
+    -> rm = None
+    -> kf (union rs'' rs') (union dmeth' dmeth) (union cmeth' cmeth).
+Proof.
+  induction 1; simpl; intuition subst; try discriminate.
+
+  repeat rewrite union_empty_2; auto.
+
+  eapply SymSemAction_sound' in HAction.
+  2: eauto.
+  simpl in *.
+  apply IHSemMod in HAction; auto.
+  repeat rewrite union_assoc.
+  rewrite union_add by assumption.
+  assumption.
+
+  apply IHSemMod in H2; auto.
+Qed.
+
+Lemma SysSemMod_base : forall dms rules rs rs' dmeth cmeth kf,
+  SymSemMod dms rules rs rs' dmeth cmeth kf
+  -> kf None rs' dmeth cmeth.
+Proof.
+  induction rules; simpl; intuition.
+  apply IHrules in H0; auto.
+Qed.
+
+Lemma SysSemMod_ind : forall dms rule rules rs rs' dmeth cmeth kf,
+  SymSemMod dms rules rs rs' dmeth cmeth kf
+  -> In rule rules
+  -> SymSemAction (attrType rule) rs rs' cmeth
+                  (fun rs'' cmeth' _ => SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule)))).
+Proof.
+  induction rules; simpl; intuition (subst; auto).
+Qed.
+
+Theorem SymSemMod_sound : forall rules rs rm rs' meths dmeth cmeth,
+  SemMod rules rs rm rs' meths dmeth cmeth
+  -> forall rs'' dmeth' cmeth' kf, SymSemMod meths rules rs rs'' dmeth' cmeth' kf
+    -> kf rm (union rs'' rs') (union dmeth' dmeth) (union cmeth' cmeth).
+Proof.
+  induction 1; simpl; intuition subst.
+
+  repeat rewrite union_empty_2.
+  eapply SysSemMod_base; eauto.
+
+  eapply SysSemMod_ind in H0; eauto.
+  simpl in *.
+  eapply SymSemAction_sound' in H0; eauto.
+  eapply SymSemMod_methods_sound in H0; eauto.
+  repeat rewrite union_assoc.
+  assumption.
+
+  admit.
+
+  admit.
+Qed.
+
+Lemma restrict_disjUnion_1 : forall A (m1 m2 : @Map A) ls,
+  InDomain m1 ls
+  -> restrict (disjUnion m1 m2 ls) ls = m1.
+Proof.
+  unfold InDomain, InMap, restrict, disjUnion, find; intros.
+  extensionality k.
+  specialize (H k).
+  destruct (in_dec string_dec k ls); auto.
+  destruct (m1 k); intuition congruence.
+Qed.
+
+Lemma restrict_disjUnion_2 : forall A (m1 m2 : @Map A) ls1 ls2,
+  InDomain m2 ls2
+  -> (forall x, In x ls1 -> find x m2 = None)
+  -> (forall x, In x ls1 -> In x ls2 -> False)
+  -> restrict (disjUnion m1 m2 ls1) ls2 = m2.
+Proof.
+  unfold InDomain, InMap, restrict, disjUnion, find; intros.
+  extensionality k.
+  specialize (H k); specialize (H0 k).
+  destruct (in_dec string_dec k ls2), (in_dec string_dec k ls1); intuition auto.
+  exfalso; eauto.
+  destruct (m2 k); intuition congruence.
+Qed.
+
+Theorem SymLtsStep_sound : forall ms rm rs rs' dmeth cmeth,
+  LtsStep ms rm rs rs' dmeth cmeth
+  -> forall kf, SymLtsStep ms rs kf
+    -> kf rm rs' dmeth cmeth.
+Proof.
+  induction 1; simpl; intros.
+
+  eapply SymSemMod_sound in H; eauto.
+  repeat rewrite union_empty_1 in H; assumption.
+
+  hnf in HMerge; simpl in *; intuition subst.
+  rewrite restrict_disjUnion_1 in H5 by assumption.
+  apply IHLtsStep1 in H5.
+  rewrite restrict_disjUnion_2 in H5; auto.
+  2: intros; specialize (HOldRegs2 x); unfold InMap in HOldRegs2; destruct (find x olds2); auto;
+  exfalso; eapply H4; eauto; intuition congruence.
+  apply IHLtsStep2 in H5.
+  hnf in H3; simpl in H3; subst.
+  hnf in H7; simpl in H7; subst.
+  hnf in H2; intuition subst.
+  destruct rm2; auto.
+  destruct rm1; auto.
+Qed.

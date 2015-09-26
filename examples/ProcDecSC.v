@@ -105,6 +105,9 @@ Section ProcDecSC.
       pose proof (mid_processSt_prop H H0) as HprocessStInv.
       pose proof (regsDomain (regsInDomain_pinsti _ _ _ _ _ _ _ _ _ _) H2) as HscRegs.
 
+
+
+
       (* inversions for combined module step *)
       inv H0.
       inv Hlts2.
