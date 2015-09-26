@@ -103,6 +103,14 @@ Infix "-n-" := appendName (at level 20, left associativity).
 Infix "-a-" := appendAttr (at level 21, right associativity).
 Infix "-m-" := mapAppendAttr (at level 22, right associativity).
 
+Lemma appendName_neq: forall p s1 s2, s1 = s2 <-> p -n- s1 = p -n- s2.
+Proof.
+  intros; split; intros.
+  - subst; reflexivity.
+  - induction p; [inv H; reflexivity|].
+    apply IHp; inv H; assumption.
+Qed.
+
 Section BoundedProp.
   Definition boundedPropIdx (A: Type) (l: list A) (P: BoundedIndex l -> Prop)
              (i: nat): Prop.
@@ -511,13 +519,6 @@ Section ConcatIdx.
                                           (S (ibound b)) = Some (bindex b) |} |}.
   Defined.
 
-  Lemma extendToRight_GetAttrType:
-    forall (ll rl: list (Attribute t)) (idx: BoundedIndexFull ll),
-      GetAttrType idx = GetAttrType (extendToRight rl idx).
-  Proof.
-    admit.
-  Qed.
-
   Fixpoint extendToLeft (ll rl: list (Attribute t)) (idx: BoundedIndexFull rl):
     BoundedIndexFull (ll ++ rl).
   Proof.
@@ -529,13 +530,6 @@ Section ConcatIdx.
                     (boundi b): nth_error (map (@attrName _) ((a :: ll) ++ rl))
                                           (S (ibound b)) = Some (bindex b) |} |}.
   Defined.
-
-  Lemma extendToLeft_GetAttrType:
-    forall (ll rl: list (Attribute t)) (idx: BoundedIndexFull rl),
-      GetAttrType idx = GetAttrType (extendToLeft ll idx).
-  Proof.
-    admit.
-  Qed.
 
   Fixpoint concatIdx (ll rl: list (Attribute t))
            (lMap: forall b: BoundedIndexFull ll, t2 (GetAttrType b))
@@ -589,20 +583,6 @@ Section ConcatIdxProp.
     apply IHll.
   Qed.
 
-  Lemma extendToRight_value:
-    forall (t: Type) (t2: t -> Type)
-           (ll rl: list (Attribute t))
-           (lm: forall b: BoundedIndexFull ll, t2 (GetAttrType b))
-           (rm: forall b: BoundedIndexFull rl, t2 (GetAttrType b))
-           i,
-      concatIdx t2 lm rm (extendToRight rl i) =
-      match (extendToRight_GetAttrType rl i) with
-        | eq_refl => lm i
-      end.
-  Proof.
-    admit.
-  Qed.
-
   Lemma extendToLeft_length:
     forall (t: Type) (ll rl: list (Attribute t)) i,
       ~ (ibound (extendToLeft (rl:=rl) ll i) < Datatypes.length ll)%nat.
@@ -610,20 +590,6 @@ Section ConcatIdxProp.
     induction ll; intros; [simpl; omega|].
     simpl; pose (IHll rl i).
     omega.
-  Qed.
-
-  Lemma extendToLeft_value:
-    forall (t: Type) (t2: t -> Type)
-           (ll rl: list (Attribute t))
-           (lm: forall b: BoundedIndexFull ll, t2 (GetAttrType b))
-           (rm: forall b: BoundedIndexFull rl, t2 (GetAttrType b))
-           i,
-      concatIdx t2 lm rm (extendToLeft ll i) =
-      match (extendToLeft_GetAttrType ll i) with
-        | eq_refl => rm i
-      end.
-  Proof.
-    admit.
   Qed.
   
 End ConcatIdxProp.
@@ -690,14 +656,6 @@ Section FiltIdx.
                                                 = Some s |} |} Hfilt).
   Defined.
 
-  Lemma getFiltIdx_GetAttrType:
-    forall (ls : list (Attribute t)) (idx : BoundedIndexFull ls)
-           (Hfilt: filt (nth_Bounded _ ls idx) = true),
-      GetAttrType idx = GetAttrType (getFiltIdx idx Hfilt).
-  Proof.
-    admit.
-  Qed.
-
   Fixpoint getUnFiltIdx (ls : list (Attribute t)) (idx : BoundedIndexFull (filter filt ls)):
     BoundedIndexFull ls.
   Proof.
@@ -721,13 +679,6 @@ Section FiltIdx.
                {| boundi := (boundi b): nth_error (map (@attrName _) (a :: ls))
                                                   (S (ibound b)) = Some (bindex b) |} |}.
   Defined.
-
-  Lemma getUnFiltIdx_GetAttrType:
-    forall (ls : list (Attribute t)) (idx : BoundedIndexFull (filter filt ls)),
-      GetAttrType idx = GetAttrType (getUnFiltIdx ls idx).
-  Proof.
-    admit.
-  Qed.
 
   Fixpoint filtIdx (ls: list (Attribute t))
            (fn: forall b: BoundedIndexFull ls, t2 (GetAttrType b))
@@ -769,26 +720,6 @@ Section FiltIdx.
   Defined.
 
 End FiltIdx.
-
-Section FiltIdxProp.
-  Variable t: Type.
-  Variable t2: t -> Type.
-  Variable filt: Attribute t -> bool.
-
-  Lemma filtIdx_value:
-    forall (ls: list (Attribute t))
-           (m: forall b: BoundedIndexFull ls, t2 (GetAttrType b))
-           (idx: BoundedIndexFull ls)
-           (Hfilt: filt (nth_Bounded _ ls idx) = true),
-      filtIdx _ _ m (getFiltIdx _ _ Hfilt) =
-      match (getFiltIdx_GetAttrType _ _ Hfilt) with
-        | eq_refl => m idx
-      end.
-  Proof.
-    admit.
-  Qed.
-
-End FiltIdxProp.
 
 Section MapAttr.
   Variable Kind: Type.
