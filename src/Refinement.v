@@ -121,6 +121,10 @@ Notation "ma '<<=[' f ']' mb" :=
 Notation "ma '<<==' mb" :=
   (traceRefines ma mb idTrs) (at level 100, format "ma  <<==  mb").
 
+Notation "ma '<<==>>' mb" :=
+  (traceRefines ma mb idTrs /\ traceRefines mb ma idTrs)
+    (at level 100, format "ma  <<==>>  mb").
+
 Notation "{ dmMap , cmMap }" :=
   (fun x => (first x, dmMap (second x), cmMap (third x))).
 
@@ -218,6 +222,11 @@ Section Props.
   Qed.
 
   Lemma tr_comb: (M <<== N) -> (O <<== P) -> ((ConcatMod M O) <<== (ConcatMod N P)).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma tr_assoc: (ConcatMod (ConcatMod M N) O) <<==>> (ConcatMod M (ConcatMod N O)).
   Proof.
     admit.
   Qed.
