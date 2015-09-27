@@ -90,8 +90,11 @@ Section ProcDecSC.
 
     Definition f := f _ _ Ht2t.
 
+    Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
+
     Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
-    Proof.
+    Admitted.
+    (*Proof.
       apply transMap with (regRel:=regRel) (ruleMap:=ruleMap); [
         simpl; econstructor; solve [ discriminate | find_eq ] | ].
 
@@ -104,7 +107,6 @@ Section ProcDecSC.
       pose proof (mid_processLd_prop H H0) as HprocessLdInv.
       pose proof (mid_processSt_prop H H0) as HprocessStInv.
       pose proof (regsDomain (regsInDomain_pinsti _ _ _ _ _ _ _ _ _ _) H2) as HscRegs.
-
 
 
 
@@ -486,7 +488,7 @@ Section ProcDecSC.
         { econstructor; eauto. }
         { map_simpl_G; assumption. }
 
-    Qed.
+    Qed.*)
 
   End SingleCore.
 
@@ -504,4 +506,3 @@ Section ProcDecSC.
   Qed.
 
 End ProcDecSC.
-
