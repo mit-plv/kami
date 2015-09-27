@@ -63,3 +63,122 @@ Proof.
            | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto ] | intuition idtac ]
            end.
 Qed.
+
+Definition larry := MethodSig "larry"(Bit 3) : Bit 3.
+Definition curly := MethodSig "curly"(Bit 3) : Bit 3.
+
+Theorem stooges : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
+                                                               Register "a" : Bit 3 <- Default
+                                                               with Register "b" : Bit 3 <- Default
+                                                               with Register "c" : Bit 3 <- Default
+
+                                                               with Method "larry"(x : Bit 3) : Bit 3 :=
+                                                                 Read a : Bit 3 <- "a";
+                                                                 Write "b" <- #x;
+                                                                 Ret (#x + #a)
+
+                                                               with Method "curly"(x : Bit 3) : Bit 3 :=
+                                                                 Read b : Bit 3 <- "b";
+                                                                 Write "a" <- #x;
+                                                                 Ret (#x + #b)
+
+                                                               with Rule "add" :=
+                                                                 Read a : Bit 3 <- "a";
+                                                                 Read b : Bit 3 <- "b";
+                                                                 Write "b" <- #a + #b;
+                                                                 Retv
+
+                                                               with Rule "distraction" :=
+                                                                 Read c : Bit 3 <- "c";
+                                                                 Write "c" <- #c + #c;
+                                                                 Retv
+                                                          })
+                                                          (MODULE {
+                                                               Method "moe"(x : Bit 3) : Bit 3 :=
+                                                                 Call l <- larry(#x);
+                                                                 Call c <- curly(#l);
+                                                                 Ret #c
+                                                          }))
+                                               rm o n dm cm
+                                       -> forall a b c,
+                                         (a : type (Bit 3)) === o.["a"]
+                                         -> (b : type (Bit 3)) === o.["b"]
+                                         -> (c : type (Bit 3)) === o.["c"]
+                                         -> match find "moe" dm with
+                                            | None => True
+                                            | Some r =>
+                                              exists w, r = {| objType := Build_SignatureT (Bit 3) (Bit 3);
+                                                               objVal := (w, w ^+ a ^+ b) |}
+                                            end.
+Proof.
+  intros.
+  SymEval;
+    repeat (match goal with
+            | [ |- context[if ?argV then _ else _] ] => destruct argV
+            | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto ] | intuition idtac ]
+            end; SymEval_simpl; eauto).
+Qed.
+
+Definition rand := MethodSig "rand"() : Bool.
+
+Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
+                                                             Register "a" : Bit 3 <- Default
+                                                             with Register "b" : Bit 3 <- Default
+                                                             with Register "larryReceived" : Bit 3 <- Default
+
+                                                             with Method "larry"(x : Bit 3) : Bit 3 :=
+                                                               Read a : Bit 3 <- "a";
+                                                               Write "b" <- #x;
+                                                               Write "larryReceived" <- #x;
+                                                               Ret (#x + #a)
+
+                                                             with Method "curly"(x : Bit 3) : Bit 3 :=
+                                                               Read b : Bit 3 <- "b";
+                                                               Write "a" <- #x;
+                                                               Ret (#x + #b)
+
+                                                             with Rule "add" :=
+                                                               Read a : Bit 3 <- "a";
+                                                               Read b : Bit 3 <- "b";
+                                                               Write "b" <- #a + #b;
+                                                               Retv
+                                                        })
+                                                        (MODULE {
+                                                             Method "moe"(x : Bit 3) : Bit 3 :=
+                                                               Call b <- rand();
+                                                               If #b then
+                                                                 Call l <- larry(#x);
+                                                                 Ret #l
+                                                               else
+                                                                 Call c <- curly(#x);
+                                                                 Ret #c
+                                                               as v;
+                                                               Ret #v
+                                             }))
+                                             rm o n dm cm
+                                     -> forall a b,
+                                       (a : type (Bit 3)) === o.["a"]
+                                       -> (b : type (Bit 3)) === o.["b"]
+                                       -> match find "moe" dm with
+                                          | None => True
+                                          | Some r =>
+                                            exists w, (r = {| objType := Build_SignatureT (Bit 3) (Bit 3);
+                                                              objVal := (w, w ^+ a) |}
+                                                       \/ r = {| objType := Build_SignatureT (Bit 3) (Bit 3);
+                                                                 objVal := (w, w ^+ b) |})
+                                                      /\ (_=== n.["b"]
+                                                          \/ (w : type (Bit 3)) === n.["b"]
+                                                          \/ (a ^+ b : type (Bit 3)) === n.["b"]
+                                                          \/ exists w', w' <> w
+                                                                        /\ (w' : type (Bit 3)) === n.["larryReceived"]
+                                                                        /\ (w' : type (Bit 3)) === n.["b"])
+                                          end.
+Proof.
+  intros.
+  SymEval;
+    repeat (match goal with
+            | [ |- context[if ?argV then _ else _] ] => destruct argV
+            | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto ] | intuition idtac ]
+            end; SymEval_simpl; eauto 7).
+  destruct (weq argV argV0); subst; eexists; split; eauto 6.
+Qed.
