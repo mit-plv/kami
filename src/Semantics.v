@@ -319,7 +319,6 @@ Section Semantics.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: Action type retK) newRegs calls anewRegs
-      (HNoDups : find r newRegs = None)
       (HANewRegs: anewRegs = add r {| objVal := (evalExpr e) |} newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
