@@ -728,7 +728,7 @@ Section WellFormed.
   Variable r: RegsT.
   Variable l: list RuleLabelT.
 
-  Theorem SplitLtsStepClosure:
+  Theorem ltsStepClosure_split:
     LtsStepClosure (ConcatMod m1 m2) r l ->
     exists r1 r2 l1 l2,
       LtsStepClosure m1 r1 l1 /\
