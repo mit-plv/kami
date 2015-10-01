@@ -54,7 +54,6 @@ Section Tests.
       + eauto.
       + eauto.
       + eauto.
-      + eauto.
   Qed.
 
 End Tests.

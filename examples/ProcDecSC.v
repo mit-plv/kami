@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FnMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.SymEval.
+Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInv.
 
 Require Import FunctionalExtensionality.
@@ -24,38 +24,49 @@ Section ProcDecSC.
 
     Hint Unfold pdecfi pinsti.
     
-    Inductive regRel (ir sr : RegsT) : Prop :=
-    | RegRel : forall (pcv : type (Bit addrSize))
-                      (rfv: type (Vector (Bit valSize) rfIdx))
-                      (stv: type Bool)
-                      (outv: type (Vector (atomK addrSize (Bit valSize)) O))
-                      (deqPv: type (Bit O))
-                      (emptyv: type Bool),
-                      pcv === ir.["pc"__ i]
-                      -> rfv === ir.["rf"__ i]
-                      -> stv === ir.["stall"__ i]
-                      -> outv === ir.["Outs"__ i -n- "elt"]
-                      -> deqPv === ir.["Outs"__ i -n- "deqP"]
-                      -> emptyv === ir.["Outs"__ i -n- "empty"]
-                      -> (emptyv = true
-                          -> sr = empty["rf"__ i |-> rfv]
-                                       ["pc"__ i |-> pcv])
-                      -> (emptyv = false
-                          -> outv deqPv ``"type" = evalConstT opLd
-                          -> sr = empty["rf"__ i |--> {| objType := Vector (Bit valSize) rfIdx;
-                                                         objVal := rfv~{dec rfv pcv ``"reg"
-                                                                        |-> outv deqPv ``"value"} |}]
-                                       ["pc"__ i |-> fst (exec rfv pcv (dec rfv pcv))])
-                      -> (emptyv = false
-                          -> outv deqPv ``"type" <> evalConstT opLd
-                          -> sr = empty["rf"__ i |--> {| objType := Vector (Bit valSize) rfIdx;
-                                                         objVal := rfv |}]
-                                       ["pc"__ i |-> fst (exec rfv pcv (dec rfv pcv))])
-                      -> regRel ir sr.
+    Definition regRel: RegsT -> RegsT -> Prop.
+    Proof.
+      intros ir sr.
+      refine (exists pcv: type (Bit addrSize),
+                find ("pc"__ i) ir = Some {| objVal := pcv |} /\
+                _).
+      refine (exists rfv: type (Vector (Bit valSize) rfIdx),
+                find ("rf"__ i) ir = Some {| objVal := rfv |} /\
+                _).
+      refine (exists stv: type Bool,
+                find ("stall"__ i) ir = Some {| objVal := stv |} /\
+                _).
+      refine (exists outv: type (Vector (atomK addrSize (Bit valSize)) O),
+                find ("Outs"__ i -n- "elt") ir = Some {| objVal := outv |} /\
+                _).
+      refine (exists deqPv: type (Bit O),
+                find ("Outs"__ i -n- "deqP") ir = Some {| objVal := deqPv |} /\
+                _).
+      refine (exists emptyv: type Bool,
+                find ("Outs"__ i -n- "empty") ir = Some {| objVal := emptyv |} /\
+                _).
+      destruct emptyv.
+      - refine (sr =
+                add ("pc"__ i) {| objVal := pcv |}
+                    (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
+                                       objVal := rfv |} empty)).
+      - pose proof (outv deqPv ``"type") as opc; unfold GetAttrType in opc; simpl in opc.
+        destruct (weq opc (evalConstT opLd)).
+        + refine (sr =
+                  add ("pc"__ i) {| objVal := fst (exec rfv pcv (dec rfv pcv)) |}
+                      (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
+                                         objVal := _ |} empty)).
+          exact (fun a => if weq a (dec rfv pcv ``"reg")
+                          then outv deqPv ``"value"
+                          else rfv a).
+        + refine (sr =
+                  add ("pc"__ i) {| objVal := fst (exec rfv pcv (dec rfv pcv)) |}
+                      (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
+                                         objVal := rfv |} empty)).
+    Defined.
+    Hint Unfold regRel.
 
-    Hint Constructors regRel.
-
-    (*Ltac regRel_tac :=
+    Ltac regRel_tac :=
       repeat
         match goal with
           | [H: regRel _ _ |- _] =>
@@ -64,7 +75,7 @@ Section ProcDecSC.
             unfold regRel; repeat esplit
           | [ |- find ?k ?m = ?rhs] =>
             find_eq; sassumption
-        end.*)
+        end.
 
     Definition cmMap: CallsT -> CallsT := id.
     Definition dmMap: CallsT -> CallsT := id.
@@ -87,16 +98,14 @@ Section ProcDecSC.
         else if string_eq r ("Mid"__ i -n- "processLd") then ("execLd"__ i)
         else if string_eq r ("Mid"__ i -n- "processSt") then ("execSt"__ i)
         else ("voidRule"__ i).
+    Hint Unfold ruleMap.
 
     Definition f := f _ _ Ht2t.
 
-    Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
-
     Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
-    Admitted.
-    (*Proof.
-      apply transMap with (regRel:=regRel) (ruleMap:=ruleMap); [
-        simpl; econstructor; solve [ discriminate | find_eq ] | ].
+    Proof.
+      apply transMap with (regRel:=regRel) (ruleMap:=ruleMap);
+      [repeat (eexists; split); simpl; find_eq|].
 
       intros.
       (* collect invariants before inversions *)
@@ -108,31 +117,11 @@ Section ProcDecSC.
       pose proof (mid_processSt_prop H H0) as HprocessStInv.
       pose proof (regsDomain (regsInDomain_pinsti _ _ _ _ _ _ _ _ _ _) H2) as HscRegs.
 
-
-
       (* inversions for combined module step *)
       inv H0.
       inv Hlts2.
       inv Hlts0.
-      destConcatLabel.
-
-      simpl map in *.
-      inversion H1; clear H1.
-
-      repeat match goal with
-      | [ _ : context[find ?k (disjUnion ?m1 ?m2 ?ls)] |- _ ] =>
-        match ls with
-        | context[k] => rewrite (disjUnion_In_1 k m1 m2 ls) in * by (clear; simpl; tauto)
-        | _ => rewrite (disjUnion_In_2 k m1 m2 ls) in * by (clear; rewrite withIndex_eq; simpl; intuition discriminate)
-        end
-      end.
-
-      destRuleRep; repeat combRule.
-
-      match goal with
-      | [ H : SemAction _ _ ?a ?b ?c |- _ ] =>
-        pattern a, b, c; apply (SymSemAction_sound H); simpl
-      end.
+      destConcatLabel; destRuleRep; repeat combRule; invertActionRep.
 
       - (** processLd *)
         invertSemMod HSemMod. (* mid *)
@@ -488,7 +477,7 @@ Section ProcDecSC.
         { econstructor; eauto. }
         { map_simpl_G; assumption. }
 
-    Qed.*)
+    Qed.
 
   End SingleCore.
 
@@ -506,3 +495,4 @@ Section ProcDecSC.
   Qed.
 
 End ProcDecSC.
+
