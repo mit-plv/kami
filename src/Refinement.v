@@ -63,6 +63,7 @@ Section Filter.
     intros.
     dependent induction H; reflexivity.
   Qed.
+  
 End Filter.
 
 (* a label satisfies `isTau` if the transition
@@ -105,12 +106,12 @@ Section TraceRefines.
   (* impl = implementation
      spec = specification *)
   Definition traceRefines impl spec (f : LabelT -> LabelT) :=
-    forall simp limp filtL,
-      LtsStepClosure impl simp limp ->
-      Filter isTau filtL (map f (map mapRules limp)) ->
-      exists sspec lspec,
-        LtsStepClosure spec sspec lspec /\
-        Filter isTau filtL (map mapRules lspec).
+    forall simp limp
+           (Hclos: LtsStepClosure impl simp limp)
+           filtL (Hfilt: Filter isTau filtL (map f (map mapRules limp))),
+    exists sspec lspec,
+      LtsStepClosure spec sspec lspec /\
+      Filter isTau filtL (map mapRules lspec).
 End TraceRefines.
 
 (* `ma` refines `mb` with respect to `f` *) 
@@ -120,6 +121,10 @@ Notation "ma '<<=[' f ']' mb" :=
 (* `ma` refines `mb` with respect to the identity transformation *)
 Notation "ma '<<==' mb" :=
   (traceRefines ma mb idTrs) (at level 100, format "ma  <<==  mb").
+
+Notation "ma '<<==>>' mb" :=
+  (traceRefines ma mb idTrs /\ traceRefines mb ma idTrs)
+    (at level 100, format "ma  <<==>>  mb").
 
 Notation "{ dmMap , cmMap }" :=
   (fun x => (first x, dmMap (second x), cmMap (third x))).
@@ -190,7 +195,8 @@ Section Relation.
                  (match rm with
                     | Some rmImp' => Some (ruleMap rmImp')
                     | None => None
-                  end) (getDmsMod spec) (dmmap dNew) (getCmsMod spec) (cmmap cNew)) :: lspec); constructor;
+                  end) (getDmsMod spec) (dmmap dNew) (getCmsMod spec) (cmmap cNew)) :: lspec);
+      constructor;
       ((apply (lcLtsStep HclosSpec specStep); intuition)
          ||
          (constructor;
@@ -201,7 +207,7 @@ Section Relation.
   Theorem transMap: imp <<=[f] spec.
   Proof.
     unfold traceRefines; intros.
-    destruct (fSimulation H H0) as [rb [lcb [Hclosb [HfactR HfactL]]]].
+    destruct (fSimulation Hclos Hfilt) as [rb [lcb [Hclosb [HfactR HfactL]]]].
     eauto.
   Qed.
 End Relation.
@@ -209,15 +215,27 @@ End Relation.
 Section Props.
   Variables M N O P: Modules type.
 
+  Hypotheses (HwfM: RegsInDomain M)
+             (HwfO: RegsInDomain O)
+             (HdisjRegs:
+                forall r : string,
+                  ~ (In r (map (attrName (Kind:=Typed ConstT)) (getRegInits M)) /\
+                     In r (map (attrName (Kind:=Typed ConstT)) (getRegInits O)))).
+
   Lemma tr_refl: M <<== M.
   Proof.
     unfold traceRefines. intros.
     exists simp. exists limp. split.
-      - apply H.
-      - rewrite map_id in H0; apply H0.
+    - assumption.
+    - rewrite map_id in Hfilt; assumption.
   Qed.
 
   Lemma tr_comb: (M <<== N) -> (O <<== P) -> ((ConcatMod M O) <<== (ConcatMod N P)).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma tr_assoc: (ConcatMod (ConcatMod M N) O) <<==>> (ConcatMod M (ConcatMod N O)).
   Proof.
     admit.
   Qed.

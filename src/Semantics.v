@@ -541,10 +541,8 @@ Proof.
 Qed.
 
 Definition CallIffDef (l1 l2: RuleLabelT) :=
-  (forall m, In m (cms l2) -> InMap m (dmMap l1) -> find m (dmMap l1) = find m (cmMap l2)) /\
-  (forall m, In m (dms l1) -> InMap m (cmMap l2) -> find m (dmMap l1) = find m (cmMap l2)) /\
-  (forall m, In m (cms l1) -> InMap m (dmMap l2) -> find m (dmMap l2) = find m (cmMap l1)) /\
-  (forall m, In m (dms l2) -> InMap m (cmMap l1) -> find m (dmMap l2) = find m (cmMap l1)).
+  (forall m, In m (cms l1) -> In m (dms l2) -> find m (cmMap l1) = find m (dmMap l2)) /\
+  (forall m, In m (cms l2) -> In m (dms l1) -> find m (dmMap l1) = find m (cmMap l2)).
 
 Definition FiltDm (l1 l2 l: RuleLabelT) :=
   dmMap l = disjUnion (complement (dmMap l1) (cms l2))
@@ -729,7 +727,7 @@ Section WellFormed.
   Variable r: RegsT.
   Variable l: list RuleLabelT.
 
-  Theorem SplitLtsStepClosure:
+  Theorem ltsStepClosure_split:
     LtsStepClosure (ConcatMod m1 m2) r l ->
     exists r1 r2 l1 l2,
       LtsStepClosure m1 r1 l1 /\
@@ -888,37 +886,27 @@ Ltac basic_dest :=
 Ltac pred_dest meth :=
   repeat
     match goal with
-      | [H: forall m: string, In m nil -> InMap m _ -> find m _ = find m _ |- _] =>
-        clear H
-      | [H: forall m: string, In m _ -> InMap m empty -> find m _ = find m _ |- _] =>
+      | [H: forall m: string, In m nil -> _ |- _] =>
         clear H
     end;
   repeat
     match goal with
-      | [H: forall m: string, In m _ -> InMap m _ -> find m _ = find m _ |- _] =>
+      | [H: forall m: string, In m _ -> _ |- _] =>
         let Hin := type of (H meth) in
         isNew Hin; let Hs := fresh "Hs" in pose proof (H meth) as Hs
     end;
   repeat
     match goal with
-      | [H: In ?m ?l -> InMap ?m _ -> find ?m _ = find ?m _ |- _] =>
+      | [H: In ?m ?l -> _ |- _] =>
         (let Hp := fresh "Hp" in
-         assert (Hp: In m l) by (repeat autounfold; repeat autounfold with ModuleDefs; in_tac_ex);
+         assert (Hp: In m l)
+           by (repeat autounfold; repeat autounfold with ModuleDefs; in_tac_ex);
          specialize (H Hp); clear Hp)
           || (clear H)
     end;
   repeat
     match goal with
-      | [H: InMap ?m _ -> find ?m _ = find ?m _ |- _] => unfold InMap in H
-      | [H: (Some _ = None -> False) -> _ |- _] => specialize (H (opt_discr _))
-      | [H: (Some _ <> None) -> _ |- _] => specialize (H (opt_discr _))
-      | [H: (None <> None) -> _ |- _] => clear H
-      | [H: find _ _ = Some _ |- _] => repeat autounfold in H; map_compute H
-      | [H: find _ _ = None |- _] => repeat autounfold in H; map_compute H
-      | [H: find _ _ <> _ -> _ |- _] => repeat autounfold in H; map_compute H
-      | [H: find _ _ <> _ |- _] => repeat autounfold in H; map_compute H
-      | [H1: find _ _ <> _ -> _, H2: find _ _ <> _ |- _] =>
-        progress (specialize (H1 H2))
+      | [H: find _ _ = _ |- _] => repeat autounfold in H; repeat (map_compute H)
     end.
 
 Ltac invariant_tac :=
