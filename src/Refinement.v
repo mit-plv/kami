@@ -157,9 +157,8 @@ Section Relation.
   forall rmImp oImp lImp nImp dmImp cmImp,
     LtsStepClosure imp oImp lImp ->
     LtsStep imp rmImp oImp nImp dmImp cmImp ->
-    forall oSpec lSpec,
+    forall oSpec,
       regRel oImp oSpec ->
-      LtsStepClosure spec oSpec lSpec ->
       exists nSpec,
         LtsStep spec
                 match rmImp with
@@ -189,7 +188,7 @@ Section Relation.
     - subst; specialize (IHHclosImp initMap allRMap);
       dependent destruction Hfilt; repeat (unfold mapRules, first, second, third in *);
       destruct (IHHclosImp _ Hfilt) as [sspec [lspec [HclosSpec [Hregs Hfilts]]]]; clear IHHclosImp;
-      destruct (allRMap HclosImp Hlts Hregs HclosSpec) as [nSpec [specStep regRelSpec]]; clear allRMap;
+      destruct (allRMap HclosImp Hlts Hregs) as [nSpec [specStep regRelSpec]]; clear allRMap;
       exists (update sspec nSpec);
       exists ((Build_RuleLabelT
                  (match rm with

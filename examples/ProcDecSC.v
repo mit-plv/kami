@@ -115,7 +115,6 @@ Section ProcDecSC.
       pose proof (proc_execNm_prop H H0) as HexecNmInv.
       pose proof (mid_processLd_prop H H0) as HprocessLdInv.
       pose proof (mid_processSt_prop H H0) as HprocessStInv.
-      pose proof (regsDomain (regsInDomain_pinsti _ _ _ _ _ _ _ _ _ _) H2) as HscRegs.
 
       (* inversions for combined module step *)
       inv H0.
@@ -169,7 +168,7 @@ Section ProcDecSC.
             map_eq.
 
             (* invariant *)
-            simpl in H3; destruct (weq _ _) in H3; [|discriminate].
+            simpl in H2; destruct (weq _ _) in H2; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }
@@ -182,7 +181,7 @@ Section ProcDecSC.
 
           (* invariant *)
           rewrite (rewrite_weq eq_refl).
-          destruct (weq _ _) in H4; [|discriminate].
+          destruct (weq _ _) in H3; [|discriminate].
           find_if_inside; [|elim n; assumption].
           map_eq.
         }
@@ -232,7 +231,7 @@ Section ProcDecSC.
             map_eq.
 
             (* invariant *)
-            simpl in H3; destruct (weq _ _) in H3; [|discriminate].
+            simpl in H2; destruct (weq _ _) in H2; [|discriminate].
             simpl; repeat f_equal; boundedMapTac.
           }
         }
@@ -245,7 +244,7 @@ Section ProcDecSC.
 
           (* invariant *)
           rewrite (rewrite_weq eq_refl).
-          destruct (weq _ _) in H4; [|discriminate].
+          destruct (weq _ _) in H3; [|discriminate].
           match goal with
             | [ |- context [weq ?w (evalConstT opLd)] ] =>
               replace w with WO~0~1 by assumption
@@ -342,10 +341,10 @@ Section ProcDecSC.
           conn_tac ("Outs"__ i -n- "deq").
 
           (* invariant *)
-          simpl in H7; apply negb_true_iff in H7; subst.
+          simpl in H6; apply negb_true_iff in H6; subst.
           assert (x3 x5 ``"type" = WO~0~0)
-            by (clear -H5; simpl in H5; destruct (weq _ _); [assumption|inv H5]).
-          destruct (weq _ _) in H15; [|elim n; assumption]; subst.
+            by (clear -H4; simpl in H4; destruct (weq _ _); [assumption|inv H4]).
+          destruct (weq _ _) in H14; [|elim n; assumption]; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
           
           map_eq.
@@ -380,12 +379,12 @@ Section ProcDecSC.
           conn_tac ("Outs"__ i -n- "deq").
 
           (* invariant *)
-          simpl in H7; apply negb_true_iff in H7; subst.
-          destruct (weq _ _) in H5; [|discriminate].
-          match type of H15 with
+          simpl in H6; apply negb_true_iff in H6; subst.
+          destruct (weq _ _) in H4; [|discriminate].
+          match type of H14 with
             | context [weq ?w (evalConstT opLd)] =>
-              progress replace w with WO~0~1 in H15 by assumption
-          end; simpl in H15; subst.
+              progress replace w with WO~0~1 in H14 by assumption
+          end; simpl in H14; subst.
           rewrite (shatter_word_0 x4); rewrite (shatter_word_0 x5); simpl.
           
           map_eq.
