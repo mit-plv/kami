@@ -659,6 +659,14 @@ Proof.
   destruct (m1 k); intuition congruence.
 Qed.
 
+Lemma InMap_disjUnion: forall A k m1 m2 d1, InMap k (disjUnion (A := A) m1 m2 d1)
+                                            -> InMap k m1
+                                               \/ InMap k m2.
+Proof.
+  clear; repeat autounfold with MapDefs; intros.
+  destruct (in_dec string_dec k d1); intuition idtac.
+Qed.
+
 Lemma InMap_restrict : forall A k m ls, InMap k (restrict (A := A) m ls)
                                       -> InMap k m
                                          /\ In k ls.

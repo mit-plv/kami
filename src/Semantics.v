@@ -443,6 +443,13 @@ Section Semantics.
 
 End Semantics.
 
+Lemma SemMod_empty:
+  forall rules or dms, SemMod rules or None empty dms empty empty.
+Proof.
+  induction dms; intros; [econstructor; auto|].
+  eapply SemSkipMeth; eauto.
+Qed.
+
 Ltac cheap_firstorder :=
   repeat match goal with
          | [ H : ex _ |- _ ] => destruct H
