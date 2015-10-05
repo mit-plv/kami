@@ -174,91 +174,6 @@ Section Map.
   Lemma Equal_val: forall (m1 m2: Map) k, m1 = m2 -> m1 k = m2 k.
   Proof. intros; subst; reflexivity. Qed.
 
-  Lemma InDomainUpd (m1 m2: Map) (d: list string):
-    InDomain m1 d -> InDomain m2 d -> InDomain (update m1 m2) d.
-  Proof.
-    unfold InDomain, InMap, update, unionL, find in *; simpl in *; intros.
-    specialize (H k); specialize (H0 k); case_eq (m2 k); intros.
-    + rewrite H2 in H1.
-      rewrite <- H2 in H1.
-      intuition.
-    + rewrite H2 in H1.
-      intuition.
-  Qed.
-
-  Lemma DisjUnionEq' (m1 m2 n1 n2: Map):
-    forall d1 d2: list string,
-      (forall k, ~ (In k d1 /\ In k d2)) ->
-      InDomain m1 d1 -> InDomain m2 d2 -> InDomain n1 d1 -> InDomain n2 d2 ->
-      disjUnion m1 m2 d1 = disjUnion n1 n2 d1 ->
-      forall x, m1 x = n1 x /\ m2 x = n2 x.
-  Proof.
-    unfold InDomain, InMap, find, disjUnion; intros.
-    specialize (H x); specialize (H0 x); specialize (H1 x); specialize (H2 x); specialize (H3 x).
-    apply Equal_val with (k:=x) in H4.
-    destruct (in_dec string_dec x d1).
-    - split; auto.
-      destruct (m2 x); destruct (n2 x).
-      + specialize (H1 (opt_discr _)); elim H; intuition.
-      + specialize (H1 (opt_discr _)); elim H; intuition.
-      + specialize (H3 (opt_discr _)); elim H; intuition.
-      + reflexivity.
-    - split; auto.
-      destruct (m1 x); destruct (n1 x).
-      + specialize (H2 (opt_discr _)); elim H; intuition.
-      + specialize (H0 (opt_discr _)); elim H; intuition.
-      + specialize (H2 (opt_discr _)); elim H; intuition.
-      + reflexivity.
-  Qed.
-
-  Lemma DisjUnionEq (m1 m2 n1 n2: Map):
-    forall d1 d2: list string,
-      (forall k, ~ (In k d1 /\ In k d2)) ->
-      InDomain m1 d1 -> InDomain m2 d2 -> InDomain n1 d1 -> InDomain n2 d2 ->
-      disjUnion m1 m2 d1 = disjUnion n1 n2 d1 ->
-      m1 = n1 /\ m2 = n2.
-  Proof.
-    intros.
-    pose proof (DisjUnionEq' H H0 H1 H2 H3 H4).
-    constructor; apply functional_extensionality_dep; intros; specialize (H5 x); intuition.
-  Qed.
-
-  Lemma UnionAssoc: forall m1 m2 m3, unionL m1 (unionL m2 m3) = unionL (unionL m1 m2) m3.
-  Proof.
-    intros.
-    apply functional_extensionality_dep; intros.
-    unfold union, unionL.
-    destruct (m1 x), (m2 x); intuition.
-  Qed.
-
-  Lemma UnionComm m1 m2 d1 d2:
-    (forall k, ~ (In k d1 /\ In k d2)) ->
-    InDomain m1 d1 -> InDomain m2 d2 ->
-    unionL m1 m2 = unionL m2 m1.
-  Proof.
-    intros.
-    apply functional_extensionality_dep; intros.
-    unfold unionL, InDomain, InMap in *.
-    specialize (H x).
-    case_eq (m1 x); case_eq (m2 x); intros.
-    - assert (K1: m1 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
-      assert (K2: m2 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
-      specialize (H0 _ K1).
-      specialize (H1 _ K2).
-      intuition.
-    - intuition.
-    - intuition.
-    - intuition.
-  Qed.
-
-  Lemma UpdRewrite o1 n1 o2 n2 d:
-    disjUnion (update o1 n1) (update o2 n2) d = update (disjUnion o1 o2 d) (disjUnion n1 n2 d).
-  Proof.
-    intros.
-    apply Equal_eq; intro k.
-    unfold find, disjUnion, update, unionL.
-    destruct (in_dec string_dec k d); intuition.
-  Qed.
 End Map.
 
 Hint Unfold empty unionL unionR add union disjUnion
@@ -493,6 +408,179 @@ Section Facts.
     repeat autounfold with MapDefs; intros; right; reflexivity.
   Qed.
 
+  Lemma Disj_unionL_unionR: forall {A} (m1 m2: @Map A), Disj m1 m2 -> unionL m1 m2 = unionR m1 m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    apply Equal_eq; repeat autounfold with MapDefs; intros.
+    specialize (H k).
+    destruct (m1 k); destruct (m2 k); intuition; inv H0.
+  Qed.
+
+  Lemma Disj_union_unionR: forall {A} (m1 m2: @Map A), Disj m1 m2 -> union m1 m2 = unionR m1 m2.
+  Proof. intros; apply Disj_unionL_unionR; auto. Qed.
+
+  Lemma Sub_unionL: forall {A} (m1 m2: @Map A), Sub m1 (unionL m1 m2).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    destruct (m1 k); intuition.
+  Qed.
+
+  Lemma Sub_unionR: forall {A} (m1 m2: @Map A), Sub m2 (unionR m1 m2).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    destruct (m2 k); intuition.
+  Qed.
+
+  Lemma Sub_union: forall {A} (m1 m2: @Map A), Sub m1 (union m1 m2).
+  Proof. intros; apply Sub_unionL. Qed.
+
+  Lemma Sub_disjUnion: forall {A} (m1 m2: @Map A) d1, Sub (restrict m1 d1) (disjUnion m1 m2 d1).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k d1); intuition.
+  Qed.
+
+  Lemma InDomain_update:
+    forall {A} (m1 m2: @Map A) (d: list string),
+      InDomain m1 d -> InDomain m2 d -> InDomain (update m1 m2) d.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); specialize (H0 k); case_eq (m2 k); intros.
+    + rewrite H2 in H1.
+      rewrite <- H2 in H1.
+      intuition.
+    + rewrite H2 in H1.
+      intuition.
+  Qed.
+
+  Lemma disjUnion_div':
+    forall {A} (m1 m2 n1 n2: @Map A) (d1 d2: list string),
+      (forall k, ~ (In k d1 /\ In k d2)) ->
+      InDomain m1 d1 -> InDomain m2 d2 -> InDomain n1 d1 -> InDomain n2 d2 ->
+      disjUnion m1 m2 d1 = disjUnion n1 n2 d1 ->
+      forall x, m1 x = n1 x /\ m2 x = n2 x.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H x); specialize (H0 x); specialize (H1 x); specialize (H2 x); specialize (H3 x).
+    apply Equal_val with (k:=x) in H4.
+    destruct (in_dec string_dec x d1).
+    - split; auto.
+      destruct (m2 x); destruct (n2 x).
+      + specialize (H1 (opt_discr _)); elim H; intuition.
+      + specialize (H1 (opt_discr _)); elim H; intuition.
+      + specialize (H3 (opt_discr _)); elim H; intuition.
+      + reflexivity.
+    - split; auto.
+      destruct (m1 x); destruct (n1 x).
+      + specialize (H2 (opt_discr _)); elim H; intuition.
+      + specialize (H0 (opt_discr _)); elim H; intuition.
+      + specialize (H2 (opt_discr _)); elim H; intuition.
+      + reflexivity.
+  Qed.
+
+  Lemma disjUnion_div:
+    forall {A} (m1 m2 n1 n2: @Map A) (d1 d2: list string),
+      (forall k, ~ (In k d1 /\ In k d2)) ->
+      InDomain m1 d1 -> InDomain m2 d2 -> InDomain n1 d1 -> InDomain n2 d2 ->
+      disjUnion m1 m2 d1 = disjUnion n1 n2 d1 ->
+      m1 = n1 /\ m2 = n2.
+  Proof.
+    intros.
+    pose proof (disjUnion_div' H H0 H1 H2 H3 H4).
+    constructor; apply functional_extensionality_dep; intros; specialize (H5 x); intuition.
+  Qed.
+
+  Lemma unionL_assoc:
+    forall {A} (m1 m2 m3: @Map A), unionL m1 (unionL m2 m3) = unionL (unionL m1 m2) m3.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    apply Equal_eq; repeat autounfold with MapDefs; intro.
+    destruct (m1 k), (m2 k); intuition.
+  Qed.
+
+  Lemma union_assoc:
+    forall {A} (m1 m2 m3: @Map A), union m1 (union m2 m3) = union (union m1 m2) m3.
+  Proof. intros; apply unionL_assoc. Qed.
+
+  Lemma union_comm:
+    forall {A} (m1 m2: @Map A) d1 d2,
+      (forall k, ~ (In k d1 /\ In k d2)) ->
+      InDomain m1 d1 -> InDomain m2 d2 ->
+      unionL m1 m2 = unionL m2 m1.
+  Proof.
+    intros.
+    apply functional_extensionality_dep; intros.
+    unfold unionL, InDomain, InMap in *.
+    specialize (H x).
+    case_eq (m1 x); case_eq (m2 x); intros.
+    - assert (K1: m1 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
+      assert (K2: m2 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
+      specialize (H0 _ K1).
+      specialize (H1 _ K2).
+      intuition.
+    - intuition.
+    - intuition.
+    - intuition.
+  Qed.
+
+  Lemma disjUnion_update_comm:
+    forall {A} (o1 n1 o2 n2: @Map A) d,
+      disjUnion (update o1 n1) (update o2 n2) d = update (disjUnion o1 o2 d) (disjUnion n1 n2 d).
+  Proof.
+    intros.
+    apply Equal_eq; intro k.
+    unfold find, disjUnion, update, unionL.
+    destruct (in_dec string_dec k d); intuition.
+  Qed.
+
+  Lemma InMap_empty : forall A k, InMap k (empty (A := A))
+                                  -> False.
+  Proof.
+    clear; unfold InMap, find, empty; intuition idtac.
+  Qed.
+
+  Lemma InMap_add : forall A k k' v m, InMap k (add (A := A) k' v m)
+                                       -> k = k'
+                                          \/ InMap k m.
+  Proof.
+    clear; unfold InMap, find, add, unionL; intuition idtac.
+    destruct (string_dec k' k); subst.
+    auto.
+    rewrite string_dec_neq in * by assumption; auto.
+  Qed.
+
+  Lemma InMap_union : forall A k m1 m2, InMap k (union (A := A) m1 m2)
+                                        -> InMap k m1
+                                           \/ InMap k m2.
+  Proof.
+    clear; unfold InMap, find, union, unionL; intuition idtac.
+    destruct (m1 k); intuition congruence.
+  Qed.
+
+  Lemma InMap_disjUnion: forall A k m1 m2 d1, InMap k (disjUnion (A := A) m1 m2 d1)
+                                              -> InMap k m1
+                                                 \/ InMap k m2.
+  Proof.
+    clear; repeat autounfold with MapDefs; intros.
+    destruct (in_dec string_dec k d1); intuition idtac.
+  Qed.
+
+  Lemma InMap_restrict : forall A k m ls, InMap k (restrict (A := A) m ls)
+                                          -> InMap k m
+                                             /\ In k ls.
+  Proof.
+    clear; unfold InMap, find, restrict; intuition idtac;
+    destruct (in_dec string_dec k ls); intuition.
+  Qed.
+
+  Lemma InMap_complement : forall A k m ls, InMap k (complement (A := A) m ls)
+                                            -> InMap k m
+                                               /\ ~In k ls.
+  Proof.
+    clear; unfold InMap, find, complement; intuition idtac;
+    destruct (in_dec string_dec k ls); intuition.
+  Qed.
+
 End Facts.
 
 Ltac map_simpl H :=
@@ -634,54 +722,6 @@ Ltac inDomain_tac_old :=
               end;
             try reflexivity (* None = None ? *)
       end.
-
-Lemma InMap_empty : forall A k, InMap k (empty (A := A))
-                                -> False.
-Proof.
-  clear; unfold InMap, find, empty; intuition idtac.
-Qed.
-
-Lemma InMap_add : forall A k k' v m, InMap k (add (A := A) k' v m)
-                                      -> k = k'
-                                         \/ InMap k m.
-Proof.
-  clear; unfold InMap, find, add, unionL; intuition idtac.
-  destruct (string_dec k' k); subst.
-  auto.
-  rewrite string_dec_neq in * by assumption; auto.
-Qed.
-
-Lemma InMap_union : forall A k m1 m2, InMap k (union (A := A) m1 m2)
-                                      -> InMap k m1
-                                         \/ InMap k m2.
-Proof.
-  clear; unfold InMap, find, union, unionL; intuition idtac.
-  destruct (m1 k); intuition congruence.
-Qed.
-
-Lemma InMap_disjUnion: forall A k m1 m2 d1, InMap k (disjUnion (A := A) m1 m2 d1)
-                                            -> InMap k m1
-                                               \/ InMap k m2.
-Proof.
-  clear; repeat autounfold with MapDefs; intros.
-  destruct (in_dec string_dec k d1); intuition idtac.
-Qed.
-
-Lemma InMap_restrict : forall A k m ls, InMap k (restrict (A := A) m ls)
-                                      -> InMap k m
-                                         /\ In k ls.
-Proof.
-  clear; unfold InMap, find, restrict; intuition idtac;
-  destruct (in_dec string_dec k ls); intuition.
-Qed.
-
-Lemma InMap_complement : forall A k m ls, InMap k (complement (A := A) m ls)
-                                          -> InMap k m
-                                             /\ ~In k ls.
-Proof.
-  clear; unfold InMap, find, complement; intuition idtac;
-  destruct (in_dec string_dec k ls); intuition.
-Qed.
 
 Ltac inDomain_tac := hnf; simpl; intros;
                      repeat match goal with

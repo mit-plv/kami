@@ -718,7 +718,7 @@ Section Domain.
         destruct (string_dec attrName k); intuition.
     - pose proof (@newRegsDomain _ _ _ _ _ Hlts).
       rewrite Hrs.
-      apply InDomainUpd; intuition.
+      apply InDomain_update; intuition.
   Qed.
 End Domain.
 
@@ -761,18 +761,18 @@ Section WellFormed.
       exists ((Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2) :: l2).
       pose proof (regsDomain newRegsDomainM1 step1) as regs1.
       pose proof (regsDomain newRegsDomainM2 step2) as regs2.
-      pose proof (DisjUnionEq disjRegs regs1 regs2 HOldRegs1 HOldRegs2 Holds) as [H1 H2].
+      pose proof (disjUnion_div disjRegs regs1 regs2 HOldRegs1 HOldRegs2 Holds) as [H1 H2].
       subst.
       constructor.
       + apply (lcLtsStep (or' := update olds1 news1) step1 Hlts1 eq_refl).
       + constructor.
         * apply (lcLtsStep (or' := update olds2 news2) step2 Hlts2 eq_refl).
-        * { constructor.
-            - pose proof newRegsDomainM1 Hlts1 as H1.
-              pose proof newRegsDomainM2 Hlts2 as H2.
-              apply UpdRewrite.
-            - constructor; intuition.
+        * constructor.
+          { pose proof newRegsDomainM1 Hlts1 as H1.
+            pose proof newRegsDomainM2 Hlts2 as H2.
+            apply disjUnion_update_comm.
           }
+          { constructor; intuition. }
   Qed.
 End WellFormed.
 

@@ -125,7 +125,8 @@ Section Phoas.
   Fixpoint noCallsDms (dms: list (DefMethT type)) :=
     match dms with
       | nil => true
-      | {| attrType := {| objVal := dm |} |} :: dms' => (noCalls (dm (getDefault _))) && (noCallsDms dms')
+      | {| attrType := {| objVal := dm |} |} :: dms' =>
+        (noCalls (dm (getDefault _))) && (noCallsDms dms')
     end.
 
   Fixpoint noCallsMod (m: Modules type) :=
@@ -137,6 +138,64 @@ Section Phoas.
 End Phoas.
 
 Require Import Semantics.
+
+Section Preliminaries.
+
+  Lemma action_olds_ext:
+    forall retK olds1 olds2 a news calls (retV: type retK),
+      FnMap.Sub olds1 olds2 ->
+      SemAction olds1 a news calls retV ->
+      SemAction olds2 a news calls retV.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma appendAction_prop:
+    forall retK1 retK2 a1 a2 olds1 olds2 news1 news2 calls1 calls2
+           (retV1: type retK1) (retV2: type retK2),
+      Disj olds1 olds2 ->
+      SemAction olds1 a1 news1 calls1 retV1 ->
+      SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
+      SemAction (union olds1 olds2) (appendAction a1 a2)
+                (union news1 news2) (union calls1 calls2) retV2.
+  Proof.
+    induction a1; intros.
+
+    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H3 H2); econstructor; eauto.
+      repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
+      rewrite H1; reflexivity.
+    - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+
+    - invertAction H1.
+      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
+      + eapply SemIfElseTrue.
+        * eauto.
+        * eapply action_olds_ext.
+          { instantiate (1:= olds1); apply Sub_union. }
+          { exact H1. }
+        * eapply H; eauto.
+        * rewrite union_assoc; reflexivity.
+        * rewrite union_assoc; reflexivity.
+      + eapply SemIfElseFalse.
+        * eauto.
+        * eapply action_olds_ext.
+          { instantiate (1:= olds1); apply Sub_union. }
+          { exact H1. }
+        * eapply H; eauto.
+        * rewrite union_assoc; reflexivity.
+        * rewrite union_assoc; reflexivity.
+
+    - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+    - invertAction H0; map_simpl_G; econstructor.
+      eapply action_olds_ext; eauto.
+      rewrite Disj_union_unionR; auto.
+      apply Sub_unionR.
+      
+  Qed.
+
+End Preliminaries.
 
 Section Facts.
   Variables (regs1 regs2: list RegInitT)
@@ -182,6 +241,16 @@ Section Facts.
                              (listSub (getCmsR r1 ++ getCmsM dms1)
                                       (map (@attrName _) dms2))).
           instantiate (1:= retV).
+
+          
+
+          unfold FiltDm in Hfd; simpl in Hfd.
+          clear Hfc.
+          
+
+          
+
+            
           admit.
         * instantiate (2:= empty); instantiate (1:= empty).
           apply SemMod_empty.
