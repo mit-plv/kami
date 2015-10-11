@@ -450,6 +450,47 @@ Proof.
   eapply SemSkipMeth; eauto.
 Qed.
 
+Lemma SemMod_empty_inv:
+  forall rules or nr dms cmMap,
+    SemMod rules or None nr dms empty cmMap ->
+    nr = empty /\ cmMap = empty.
+Proof.
+  induction dms; intros; [inv H; intuition|].
+  inv H.
+  - apply Equal_val with (k := attrName a) in HDefs.
+    map_compute HDefs; discriminate.
+  - apply IHdms; auto.
+Qed.
+
+Lemma SemMod_dmMap_InDomain:
+  forall rules dms or rm nr dmMap cmMap,
+    SemMod rules or rm nr dms dmMap cmMap ->
+    InDomain dmMap (map (@attrName _) dms).
+Proof.
+  induction dms; intros.
+  - simpl; inv H; [intuition|].
+    inv HSemMod; intuition.
+  - simpl; destruct rm.
+    + inv H; inv HSemMod.
+      * specialize (IHdms _ _ _ _ _ HSemMod0).
+        unfold InDomain; intros.
+        apply InMap_add in H; destruct H.
+        { subst; left; reflexivity. }
+        { right; specialize (IHdms _ H); assumption. }
+      * specialize (IHdms _ _ _ _ _ HSemMod0).
+        unfold InDomain; intros.
+        right; specialize (IHdms _ H); assumption.
+    + inv H.
+      * specialize (IHdms _ _ _ _ _ HSemMod).
+        unfold InDomain; intros.
+        apply InMap_add in H; destruct H.
+        { subst; left; reflexivity. }
+        { right; specialize (IHdms _ H); assumption. }
+      * specialize (IHdms _ _ _ _ _ HSemMod).
+        unfold InDomain; intros.
+        right; specialize (IHdms _ H); assumption.
+Qed.      
+
 Ltac cheap_firstorder :=
   repeat match goal with
          | [ H : ex _ |- _ ] => destruct H
@@ -868,6 +909,12 @@ Ltac filt_dest :=
 
 Lemma opt_some_eq: forall {A} (v1 v2: A), Some v1 = Some v2 -> v1 = v2.
 Proof. intros; inv H; reflexivity. Qed.
+
+Lemma typed_type_eq:
+  forall {A} (a1 a2: A) (B: A -> Type) (v1: B a1) (v2: B a2),
+    {| objType := a1; objVal := v1 |} = {| objType := a2; objVal := v2 |} ->
+    exists (Heq: a1 = a2), match Heq with eq_refl => v1 end = v2.
+Proof. intros; inv H; exists eq_refl; reflexivity. Qed.
 
 Lemma typed_eq:
   forall {A} (a: A) (B: A -> Type) (v1 v2: B a),

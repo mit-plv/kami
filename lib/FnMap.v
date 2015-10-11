@@ -167,6 +167,7 @@ Section Map.
   Definition Sub (m1 m2: Map) := forall k, InMap k m1 -> m1 k = m2 k.
 
   Definition InDomain (m: Map) (d: list string) := forall k, InMap k m -> In k d.
+  Definition DomainOf (m: Map) (d: list string) := forall k, InMap k m <-> In k d.
 
   Lemma Equal_eq: forall m1 m2, Equal m1 m2 -> m1 = m2.
   Proof. intros; apply functional_extensionality; assumption. Qed.
@@ -398,14 +399,27 @@ Section Facts.
     destruct (in_dec string_dec k d1); intuition.
   Qed.
 
+  Lemma Disj_comm: forall {A} (m1 m2: @Map A), Disj m1 m2 -> Disj m2 m1.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H; intuition idtac.
+  Qed.
+
   Lemma Disj_empty_1: forall {A} (m: @Map A), Disj empty m.
   Proof.
     repeat autounfold with MapDefs; intros; left; reflexivity.
   Qed.
 
   Lemma Disj_empty_2: forall {A} (m: @Map A), Disj m empty.
+  Proof. intros; apply Disj_comm; apply Disj_empty_1. Qed.
+
+  Lemma Disj_find_union:
+    forall {A} (m1 m2: @Map A) k v,
+      Disj m1 m2 -> find k m2 = Some v -> find k (union m1 m2) = Some v.
   Proof.
-    repeat autounfold with MapDefs; intros; right; reflexivity.
+    repeat autounfold with MapDefs; intros; rewrite H0.
+    specialize (H k); destruct H; [rewrite H; reflexivity|].
+    rewrite H in H0; discriminate.
   Qed.
 
   Lemma Disj_unionL_unionR: forall {A} (m1 m2: @Map A), Disj m1 m2 -> unionL m1 m2 = unionR m1 m2.
@@ -418,6 +432,36 @@ Section Facts.
 
   Lemma Disj_union_unionR: forall {A} (m1 m2: @Map A), Disj m1 m2 -> union m1 m2 = unionR m1 m2.
   Proof. intros; apply Disj_unionL_unionR; auto. Qed.
+
+  Lemma Disj_add_1: forall {A} (m1 m2: @Map A) k v, Disj (add k v m1) m2 -> Disj m1 m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k0); destruct H; [|auto].
+    unfold string_eq in H; destruct (string_dec _ _); auto.
+    inv H.
+  Qed.
+
+  Lemma Disj_add_2: forall {A} (m1 m2: @Map A) k v, Disj m1 (add k v m2) -> Disj m1 m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k0); destruct H; [auto|].
+    unfold string_eq in H; destruct (string_dec _ _); auto.
+    inv H.
+  Qed.
+
+  Lemma Disj_union_1: forall {A} (m1 m2 m3: @Map A), Disj m1 (union m2 m3) -> Disj m1 m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H; [left; assumption|].
+    destruct (m2 k); [inv H|right; reflexivity].
+  Qed.
+
+  Lemma Disj_union_2: forall {A} (m1 m2 m3: @Map A), Disj m1 (union m2 m3) -> Disj m1 m3.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H; [left; assumption|].
+    destruct (m2 k); [inv H|right; assumption].
+  Qed.
 
   Lemma Sub_unionL: forall {A} (m1 m2: @Map A), Sub m1 (unionL m1 m2).
   Proof.
