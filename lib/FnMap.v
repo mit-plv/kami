@@ -364,6 +364,16 @@ Section Facts.
     subst; intuition.
   Qed.
 
+  Lemma complement_union:
+    forall {A} (m1 m2: @Map A) l,
+      complement (union m1 m2) l = union (complement m1 l) (complement m2 l).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k l); [reflexivity|].
+    destruct (m1 k); intuition.
+  Qed.
+
   Lemma restrict_complement: forall {A} (m: @Map A) (l: list string),
                                disjUnion (restrict m l) (complement m l) l = m.
   Proof.
