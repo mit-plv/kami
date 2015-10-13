@@ -2,6 +2,8 @@ Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FnMap.
 Require Import Syntax.
 
+Require Import FunctionalExtensionality.
+
 Set Implicit Arguments.
 
 Ltac destruct_existT :=
@@ -35,6 +37,15 @@ Section Phoas.
       | Assert_ ae cont => Assert_ ae (appendAction cont a2)
       | Return e => Let_ e a2
     end.
+  
+  Lemma appendAction_assoc:
+    forall {retT1 retT2 retT3}
+           (a1: Action type retT1) (a2: type retT1 -> Action type retT2)
+           (a3: type retT2 -> Action type retT3),
+      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
+  Proof.
+    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
+  Qed.
 
   Fixpoint inlineDm {retT} (a: Action type retT)
            (dm: DefMethT type): Action type retT :=
@@ -129,69 +140,6 @@ Section PhoasTT.
       | _ => unit
     end.
 
-  (* Well-formedness w.r.t. method calls *)
-  Section Wfm.
-    Fixpoint nodupString (l: list string): bool :=
-      match l with
-        | nil => true
-        | hd :: tl => if in_dec string_dec hd tl then false else nodupString tl
-      end.
-
-    Fixpoint collectCalls (calls: list (list string)) {retT} (a: Action typeTT retT)
-    : list (list string) :=
-      match a with
-        | MCall name _ _ cont =>
-          collectCalls (map (fun l => name :: l) calls) (cont tt)
-        | Let_ _ ar cont => collectCalls calls (cont tt)
-        | ReadReg reg k cont => collectCalls calls (cont tt)
-        | WriteReg reg _ e cont => collectCalls calls cont
-        | IfElse ce _ ta fa cont =>
-          app (collectCalls (collectCalls calls ta) (cont tt))
-              (collectCalls (collectCalls calls fa) (cont tt))
-        | Assert_ _ cont => collectCalls calls cont
-        | Return _ => calls
-      end.
-
-    Definition wfmAction {retT} (a: Action typeTT retT) :=
-      forallb (fun l => nodupString l) (collectCalls ((@nil string) :: nil) a).
-
-    Inductive WfmAction: list string -> forall {retT}, Action typeTT retT -> Prop :=
-    | WfmMCall:
-        forall ll name sig ar {retT} cont t (Hnin: ~ In name ll),
-          WfmAction (name :: ll) (cont t) ->
-          WfmAction ll (MCall (lretT:= retT) name sig ar cont)
-    | WfmLet:
-        forall ll {argT retT} ar cont t,
-          WfmAction ll (cont t) ->
-          WfmAction ll (Let_ (lretT':= argT) (lretT:= retT) ar cont)
-    | WfmReadReg:
-        forall ll {retT} reg k cont t,
-          WfmAction ll (cont t) ->
-          WfmAction ll (ReadReg (lretT:= retT) reg k cont)
-    | WfmWriteReg:
-        forall ll {writeT retT} reg e cont,
-          WfmAction ll cont ->
-          WfmAction ll (WriteReg (k:= writeT) (lretT:= retT) reg e cont)
-    | WfmIfElse:
-        forall ll {retT1 retT2} ce ta fa cont,
-          WfmAction ll (appendAction (retT1:= retT1) (retT2:= retT2) ta cont) ->
-          WfmAction ll (appendAction (retT1:= retT1) (retT2:= retT2) fa cont) ->
-          WfmAction ll (IfElse ce ta fa cont)
-    | WfmAssert:
-        forall ll {retT} e cont,
-          WfmAction ll cont ->
-          WfmAction ll (Assert_ (lretT:= retT) e cont)
-    | WfmReturn:
-        forall ll {retT} (e: Expr typeTT retT), WfmAction ll (Return e).
-
-    Lemma wfmAction_WfmAction:
-      forall {retT} (a: Action typeTT retT), wfmAction a = true -> WfmAction nil a.
-    Proof.
-      admit.
-    Qed.
-
-  End Wfm.
-
   Section NoCalls.
     (* Necessary condition for inlining correctness *)
     Fixpoint noCalls {retT} (a: Action typeTT retT) :=
@@ -230,187 +178,381 @@ End PhoasTT.
 
 Require Import Semantics.
 
-Inductive WfmActionSem: list string -> forall {retT}, Action type retT -> list string -> Prop :=
-| WfmMCallSem:
-    forall ll rl name sig ar {retT} cont (Hnin: ~ In name ll),
-      (forall t, WfmActionSem (name :: ll) (cont t) rl) ->
-      WfmActionSem ll (MCall (lretT:= retT) name sig ar cont) rl
-| WfmLetSem:
-    forall ll rl {argT retT} ar cont,
-      (forall t, WfmActionSem ll (cont t) rl) ->
-      WfmActionSem ll (Let_ (lretT':= argT) (lretT:= retT) ar cont) rl
-| WfmReadRegSem:
-    forall ll rl {retT} reg k cont,
-      (forall t, WfmActionSem ll (cont t) rl) ->
-      WfmActionSem ll (ReadReg (lretT:= retT) reg k cont) rl
-| WfmWriteRegSem:
-    forall ll rl {writeT retT} reg e cont,
-      WfmActionSem ll cont rl ->
-      WfmActionSem ll (WriteReg (k:= writeT) (lretT:= retT) reg e cont) rl
-| WfmIfElseSem:
-    forall ll trl frl rl {retT1 retT2} ce ta fa cont,
-      WfmActionSem (retT:= retT1) ll ta trl ->
-      WfmActionSem (retT:= retT1) ll fa frl ->
-      (forall t, WfmActionSem (retT:= retT2) (trl ++ frl) (cont t) rl) ->
-      (* WfmActionSem ll (appendAction (retT1:= retT1) (retT2:= retT2) ta cont) -> *)
-      (* WfmActionSem ll (appendAction (retT1:= retT1) (retT2:= retT2) fa cont) -> *)
-      WfmActionSem ll (IfElse ce ta fa cont) rl
-| WfmAssertSem:
-    forall ll rl {retT} e cont,
-      WfmActionSem ll cont rl ->
-      WfmActionSem ll (Assert_ (lretT:= retT) e cont) rl
-| WfmReturnSem:
-    forall ll rl {retT} (e: Expr type retT), ll = rl -> WfmActionSem ll (Return e) rl.
+Lemma action_olds_ext:
+  forall retK a olds1 olds2 news calls (retV: type retK),
+    FnMap.Sub olds1 olds2 ->
+    SemAction olds1 a news calls retV ->
+    SemAction olds2 a news calls retV.
+Proof.
+  induction a; intros.
+  - invertAction H1; econstructor; eauto.
+  - invertAction H1; econstructor; eauto.
+  - invertAction H1; econstructor; eauto.
+    repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
+    rewrite <-H1; symmetry; apply H0; unfold InMap, find; rewrite H1; discriminate.
+  - invertAction H0; econstructor; eauto.
+  - invertAction H1.
+    remember (evalExpr e) as cv; destruct cv; dest.
+    + eapply SemIfElseTrue; eauto.
+    + eapply SemIfElseFalse; eauto.
+  - invertAction H0; econstructor; eauto.
+  - invertAction H0; econstructor; eauto.
+Qed.
 
-Definition WfmActionSem' {retT} (a: Action type retT) := exists rl, WfmActionSem nil a rl.
+Lemma appendAction_SemAction_1:
+  forall retK1 retK2 a1 a2 olds1 olds2 news1 news2 calls1 calls2
+         (retV1: type retK1) (retV2: type retK2),
+    Disj olds1 olds2 ->
+    SemAction olds1 a1 news1 calls1 retV1 ->
+    SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
+    SemAction (union olds1 olds2) (appendAction a1 a2)
+              (union news1 news2) (union calls1 calls2) retV2.
+Proof.
+  induction a1; intros.
+
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H3 H2); econstructor; eauto.
+    repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
+    rewrite H1; reflexivity.
+  - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+
+  - invertAction H1.
+    simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
+    + eapply SemIfElseTrue.
+      * eauto.
+      * eapply action_olds_ext.
+        { instantiate (1:= olds1); apply Sub_union. }
+        { exact H1. }
+      * eapply H; eauto.
+      * rewrite union_assoc; reflexivity.
+      * rewrite union_assoc; reflexivity.
+    + eapply SemIfElseFalse.
+      * eauto.
+      * eapply action_olds_ext.
+        { instantiate (1:= olds1); apply Sub_union. }
+        { exact H1. }
+      * eapply H; eauto.
+      * rewrite union_assoc; reflexivity.
+      * rewrite union_assoc; reflexivity.
+
+  - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+  - invertAction H0; map_simpl_G; econstructor.
+    eapply action_olds_ext; eauto.
+    rewrite Disj_union_unionR; auto.
+    apply Sub_unionR.
+    
+Qed.
+
+Lemma appendAction_SemAction_2:
+  forall retK1 retK2 a1 a2 olds1 olds2 news1 news2 calls1 calls2
+         (retV1: type retK1) (retV2: type retK2),
+    FnMap.Sub olds1 olds2 ->
+    SemAction olds1 a1 news1 calls1 retV1 ->
+    SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
+    SemAction olds2 (appendAction a1 a2) (union news1 news2) (union calls1 calls2) retV2.
+Proof.
+  induction a1; intros.
+
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
+  - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H3 H2); econstructor; eauto.
+    specialize (H0 r); unfold InMap in H0; rewrite H1 in H0; specialize (H0 (opt_discr _)).
+    rewrite <-H1; unfold find; auto.
+  - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+
+  - invertAction H1.
+    simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
+    + eapply SemIfElseTrue.
+      * eauto.
+      * eapply action_olds_ext; eauto.
+      * eapply H; eauto.
+      * rewrite union_assoc; reflexivity.
+      * rewrite union_assoc; reflexivity.
+    + eapply SemIfElseFalse.
+      * eauto.
+      * eapply action_olds_ext; eauto.
+      * eapply H; eauto.
+      * rewrite union_assoc; reflexivity.
+      * rewrite union_assoc; reflexivity.
+
+  - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
+  - invertAction H0; map_simpl_G; econstructor; eauto.
+Qed.
+
+Inductive WfmActionSem: list string -> forall {retT}, Action type retT -> Prop :=
+| WfmMCallSem:
+    forall ll name sig ar {retT} cont (Hnin: ~ In name ll),
+      (forall t, WfmActionSem (name :: ll) (cont t)) ->
+      WfmActionSem ll (MCall (lretT:= retT) name sig ar cont)
+| WfmLetSem:
+    forall ll {argT retT} ar cont,
+      (forall t, WfmActionSem ll (cont t)) ->
+      WfmActionSem ll (Let_ (lretT':= argT) (lretT:= retT) ar cont)
+| WfmReadRegSem:
+    forall ll {retT} reg k cont,
+      (forall t, WfmActionSem ll (cont t)) ->
+      WfmActionSem ll (ReadReg (lretT:= retT) reg k cont)
+| WfmWriteRegSem:
+    forall ll {writeT retT} reg e cont,
+      WfmActionSem ll cont ->
+      WfmActionSem ll (WriteReg (k:= writeT) (lretT:= retT) reg e cont)
+| WfmIfElseSem:
+    forall ll {retT1 retT2} ce ta fa cont,
+      WfmActionSem ll (appendAction (retT1:= retT1) (retT2:= retT2) ta cont) ->
+      WfmActionSem ll (appendAction (retT1:= retT1) (retT2:= retT2) fa cont) ->
+      WfmActionSem ll (IfElse ce ta fa cont)
+| WfmAssertSem:
+    forall ll {retT} e cont,
+      WfmActionSem ll cont ->
+      WfmActionSem ll (Assert_ (lretT:= retT) e cont)
+| WfmReturnSem:
+    forall ll {retT} (e: Expr type retT), WfmActionSem ll (Return e).
+
+Hint Constructors WfmActionSem.
 
 Lemma WfmActionSem_init_sub:
-  forall {retK} (a: Action type retK) ll1 ll2 rl1
-         (Hwfm: WfmActionSem ll1 a rl1)
+  forall {retK} (a: Action type retK) ll1
+         (Hwfm: WfmActionSem ll1 a) ll2
          (Hin: forall k, In k ll2 -> In k ll1),
-  exists rl2, WfmActionSem ll2 a rl2.
+    WfmActionSem ll2 a.
 Proof.
-  admit.
+  induction 1; intros; simpl; intuition.
+
+  econstructor; eauto; intros.
+  apply H0; eauto.
+  intros; inv H1; intuition.
 Qed.
+
+Lemma WfmActionSem_append_1':
+  forall {retT2} a3 ll,
+    WfmActionSem ll a3 ->
+    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+      a3 = appendAction a1 a2 -> WfmActionSem ll a1.
+Proof.
+  induction 1; intros.
+
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    econstructor; eauto.
+  - destruct a1; simpl in *; try discriminate.
+    + inv H1; destruct_existT; econstructor; eauto.
+    + inv H1; destruct_existT; econstructor.
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    econstructor; eauto.
+  - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+    econstructor; eauto.
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    constructor.
+    + eapply IHWfmActionSem1; eauto; apply appendAction_assoc.
+    + eapply IHWfmActionSem2; eauto; apply appendAction_assoc.
+  - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+    econstructor; eauto.
+  - destruct a1; simpl in *; try discriminate.
+Qed.
+
+Lemma WfmActionSem_append_1:
+  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+    WfmActionSem ll (appendAction a1 a2) ->
+    WfmActionSem ll a1.
+Proof. intros; eapply WfmActionSem_append_1'; eauto. Qed.
+
+Lemma WfmActionSem_append_2':
+  forall {retT2} a3 ll,
+    WfmActionSem ll a3 ->
+    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+      a3 = appendAction a1 a2 ->
+      forall t, WfmActionSem ll (a2 t).
+Proof.
+  induction 1; intros.
+
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    apply WfmActionSem_init_sub with (ll1:= meth :: ll); [|intros; right; assumption].
+    eapply H0; eauto.
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    + eapply H0; eauto.
+    + apply H.
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    eapply H0; eauto.
+  - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+    eapply IHWfmActionSem; eauto.
+  - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+    eapply IHWfmActionSem1; eauto.
+    apply appendAction_assoc.
+  - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+    eapply IHWfmActionSem; eauto.
+  - destruct a1; simpl in *; try discriminate.
+
+    Grab Existential Variables.
+    { exact (evalConstT (getDefaultConst _)). }    
+    { exact (evalConstT (getDefaultConst _)). }    
+    { exact (evalConstT (getDefaultConst _)). }    
+Qed.
+
+Lemma WfmActionSem_append_2:
+  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+    WfmActionSem ll (appendAction a1 a2) ->
+    forall t, WfmActionSem ll (a2 t).
+Proof. intros; eapply WfmActionSem_append_2'; eauto. Qed.
+
+Lemma WfmActionSem_cmMap:
+  forall {retK} olds (a: Action type retK) news calls retV ll
+         (Hsem: SemAction olds a news calls retV)
+         (Hwfm: WfmActionSem ll a)
+         lb (Hin: In lb ll),
+    find lb calls = None.
+Proof.
+  induction 1; intros; simpl; subst; intuition idtac; inv Hwfm; destruct_existT.
+
+  - rewrite find_add_2.
+    { apply IHHsem; eauto.
+      specialize (H2 mret); eapply WfmActionSem_init_sub; eauto.
+      intros; right; assumption.
+    }
+    { unfold string_eq; destruct (string_dec _ _); [subst; elim Hnin; assumption|intuition]. }
+  - eapply IHHsem; eauto.
+  - eapply IHHsem; eauto.
+  - eapply IHHsem; eauto.
+  - assert (find lb calls1 = None).
+    { eapply IHHsem1; eauto.
+      eapply WfmActionSem_append_1; eauto.
+    }
+    assert (find lb calls2 = None).
+    { eapply IHHsem2; eauto.
+      eapply WfmActionSem_append_2; eauto.
+    }
+    repeat autounfold with MapDefs in *.
+    rewrite H, H0; reflexivity.
+  - assert (find lb calls1 = None).
+    { eapply IHHsem1; eauto.
+      eapply WfmActionSem_append_1; eauto.
+    }
+    assert (find lb calls2 = None).
+    { eapply IHHsem2; eauto.
+      eapply WfmActionSem_append_2; eauto.
+    }
+    repeat autounfold with MapDefs in *.
+    rewrite H, H0; reflexivity.
+  - eapply IHHsem; eauto.
+Qed.
+
+Lemma WfmActionSem_append_3':
+  forall {retT2} a3 ll,
+    WfmActionSem ll a3 ->
+    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+      a3 = appendAction a1 a2 ->
+      forall olds1 olds2 news1 news2 calls1 calls2 retV1 retV2,
+      SemAction olds1 a1 news1 calls1 retV1 ->
+      SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
+      forall lb, find lb calls1 = None \/ find lb calls2 = None.
+Proof.
+  induction 1; intros; simpl; intuition idtac; destruct a1; simpl in *; try discriminate.
+  
+  - inv H1; destruct_existT.
+    invertAction H2; specialize (H x).
+    specialize (H0 _ _ _ _ eq_refl _ _ _ _ _ _ _ _ H1 H3 lb).
+    destruct H0; [|right; assumption].
+    destruct (string_dec lb meth); [subst; right|left].
+    + pose proof (WfmActionSem_append_2 _ _ H retV1).
+      eapply WfmActionSem_cmMap; eauto.
+    + rewrite find_add_2; [assumption|unfold string_eq; destruct (string_dec _ _); intuition].
+
+  - inv H1; destruct_existT; invertAction H2; eapply H0; eauto.
+  - inv H1; destruct_existT; invertAction H2; left; reflexivity.
+  - inv H1; destruct_existT; invertAction H2; eapply H0; eauto.
+  - inv H0; destruct_existT; invertAction H1; eapply IHWfmActionSem; eauto.
+  - inv H1; destruct_existT.
+    invertAction H2.
+    destruct (evalExpr e); dest; subst.
+    + specialize (@IHWfmActionSem1 _ (appendAction a1_1 a) a2 (appendAction_assoc _ _ _)).
+      eapply IHWfmActionSem1; eauto.
+      instantiate (1:= union x x1); instantiate (1:= olds1).
+      eapply appendAction_SemAction_2; eauto.
+      intuition.
+    + specialize (@IHWfmActionSem2 _ (appendAction a1_2 a) a2 (appendAction_assoc _ _ _)).
+      eapply IHWfmActionSem2; eauto.
+      instantiate (1:= union x x1); instantiate (1:= olds1).
+      eapply appendAction_SemAction_2; eauto.
+      intuition.
+    
+  - inv H0; destruct_existT; invertAction H1; eapply IHWfmActionSem; eauto.
+Qed.
+
+Lemma WfmActionSem_append_3:
+  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+    WfmActionSem ll (appendAction a1 a2) ->
+    forall olds1 olds2 news1 news2 calls1 calls2 retV1 retV2,
+      SemAction olds1 a1 news1 calls1 retV1 ->
+      SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
+      forall lb, find lb calls1 = None \/ find lb calls2 = None.
+Proof. intros; eapply WfmActionSem_append_3'; eauto. Qed.
 
 Lemma WfmActionSem_init:
-  forall {retK} (a: Action type retK) ll rl
-         (Hwfm: WfmActionSem ll a rl),
-    WfmActionSem' a.
-Proof.
-  intros; eapply WfmActionSem_init_sub; eauto; intros; inv H.
-Qed.
+  forall {retK} (a: Action type retK) ll
+         (Hwfm: WfmActionSem ll a),
+    WfmActionSem nil a.
+Proof. intros; eapply WfmActionSem_init_sub; eauto; intros; inv H. Qed.
 
 Lemma WfmActionSem_MCall:
-  forall {retK} olds a news calls (retV: type retK) dmn rl
+  forall {retK} olds a news calls (retV: type retK) dmn
          (Hsem: SemAction olds a news calls retV)
-         (Hwfm: WfmActionSem [dmn] a rl),
+         (Hwfm: WfmActionSem [dmn] a),
     complement calls [dmn] = calls.
 Proof.
-  induction a; intros; invertAction Hsem; inv Hwfm; destruct_existT.
+  induction 1; intros; inv Hwfm; destruct_existT.
 
   - rewrite complement_add_2 by assumption; f_equal.
-    specialize (H8 x).
-    pose proof (WfmActionSem_init_sub [dmn] H8).
-    assert (forall k : string, In k [dmn] -> In k [meth; dmn]).
-    { intros. inv H2; [|inv H3]; right; left; reflexivity. }
-    specialize (H1 H2); dest.
-    eapply H; eauto.
-  - eapply H; eauto.
-  - eapply H; eauto.
-  - eapply IHa; eauto.
-  - admit.
-  - eapply IHa; eauto.
+    apply IHHsem.
+    specialize (H2 mret).
+    apply (WfmActionSem_init_sub H2 [dmn]).
+    intros; inv H; intuition.
+  - eapply IHHsem; eauto.
+  - eapply IHHsem; eauto.
+  - eapply IHHsem; eauto.
+  - rewrite complement_union; f_equal.
+    + eapply IHHsem1; eauto.
+      eapply WfmActionSem_append_1; eauto.
+    + eapply IHHsem2; eauto.
+      eapply WfmActionSem_append_2; eauto.
+  - rewrite complement_union; f_equal.
+    + eapply IHHsem1; eauto.
+      eapply WfmActionSem_append_1; eauto.
+    + eapply IHHsem2; eauto.
+      eapply WfmActionSem_append_2; eauto.
+  - eapply IHHsem; eauto.
   - map_simpl_G; reflexivity.
 Qed.
 
-Lemma WfmActionSem_collect:
-  forall {retK} olds (a: Action type retK) news calls retV dmn lbl rl
+Lemma inlineDm_not_called:
+  forall {retK} olds (a: Action type retK) news calls retV dm
          (Hsem: SemAction olds a news calls retV)
-         (Hwfm: WfmActionSem nil a rl)
-         (Hcol: find dmn calls = Some lbl),
-    In dmn rl.
-Proof.
-  admit.
-Qed.
-
-Lemma WfmActionSem_not_called:
-  forall {retK} olds (a: Action type retK) news calls retV dmn ll rl
-         (Hsem: SemAction olds a news calls retV)
-         (Hwfm: WfmActionSem ll a rl)
-         (Hcol: In dmn ll),
-    complement calls [dmn] = calls.
-Proof.
-  admit.
-Qed.
-
-Lemma WfmActionSem_called_inlineDm_1:
-  forall {retK} olds (a: Action type retK) news calls retV dm ll rl
-         (Hsem: SemAction olds a news calls retV)
-         (Hwfm: WfmActionSem ll a rl)
-         (Hcol: In (attrName dm) ll),
-    SemAction olds (inlineDm a dm) news calls retV.
-Proof.
-  admit.
-Qed.
-
-Lemma WfmActionSem_called_inlineDm_2:
-  forall {retK} olds (a: Action type retK) news calls retV dm ll rl
-         (Hsem: SemAction olds a news calls retV)
-         (Hwfm: WfmActionSem ll a rl)
          (Hcol: find (attrName dm) calls = None),
     SemAction olds (inlineDm a dm) news calls retV.
 Proof.
-  admit.
+  induction 1; intros; simpl; subst; intuition idtac.
+
+  - destruct (string_dec meth dm); [subst; map_simpl Hcol; discriminate|].
+    econstructor; eauto.
+    rewrite find_add_2 in Hcol;
+      [|unfold string_eq; destruct (string_dec _ _); intuition].
+    apply IHHsem; auto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply SemIfElseTrue; eauto.
+    + eapply IHHsem1.
+      repeat autounfold with MapDefs in *; destruct (calls1 dm); intuition.
+    + eapply IHHsem2.
+      repeat autounfold with MapDefs in *; destruct (calls1 dm); [discriminate|assumption].
+  - eapply SemIfElseFalse; eauto.
+    + eapply IHHsem1.
+      repeat autounfold with MapDefs in *; destruct (calls1 dm); intuition.
+    + eapply IHHsem2.
+      repeat autounfold with MapDefs in *; destruct (calls1 dm); [discriminate|assumption].
+  - econstructor; eauto.
+  - econstructor; eauto.
 Qed.
 
 Section Preliminaries.
-
-  Lemma action_olds_ext:
-    forall retK a olds1 olds2 news calls (retV: type retK),
-      FnMap.Sub olds1 olds2 ->
-      SemAction olds1 a news calls retV ->
-      SemAction olds2 a news calls retV.
-  Proof.
-    induction a; intros.
-    - invertAction H1; econstructor; eauto.
-    - invertAction H1; econstructor; eauto.
-    - invertAction H1; econstructor; eauto.
-      repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
-      rewrite <-H1; symmetry; apply H0; unfold InMap, find; rewrite H1; discriminate.
-    - invertAction H0; econstructor; eauto.
-    - invertAction H1.
-      remember (evalExpr e) as cv; destruct cv; dest.
-      + eapply SemIfElseTrue; eauto.
-      + eapply SemIfElseFalse; eauto.
-    - invertAction H0; econstructor; eauto.
-    - invertAction H0; econstructor; eauto.
-  Qed.
-
-  Lemma appendAction_prop:
-    forall retK1 retK2 a1 a2 olds1 olds2 news1 news2 calls1 calls2
-           (retV1: type retK1) (retV2: type retK2),
-      Disj olds1 olds2 ->
-      SemAction olds1 a1 news1 calls1 retV1 ->
-      SemAction olds2 (a2 retV1) news2 calls2 retV2 ->
-      SemAction (union olds1 olds2) (appendAction a1 a2)
-                (union news1 news2) (union calls1 calls2) retV2.
-  Proof.
-    induction a1; intros.
-
-    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
-    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H1 H2); econstructor; eauto.
-    - invertAction H1; specialize (H _ _ _ _ _ _ _ _ _ _ H0 H3 H2); econstructor; eauto.
-      repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
-      rewrite H1; reflexivity.
-    - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
-
-    - invertAction H1.
-      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
-      + eapply SemIfElseTrue.
-        * eauto.
-        * eapply action_olds_ext.
-          { instantiate (1:= olds1); apply Sub_union. }
-          { exact H1. }
-        * eapply H; eauto.
-        * rewrite union_assoc; reflexivity.
-        * rewrite union_assoc; reflexivity.
-      + eapply SemIfElseFalse.
-        * eauto.
-        * eapply action_olds_ext.
-          { instantiate (1:= olds1); apply Sub_union. }
-          { exact H1. }
-        * eapply H; eauto.
-        * rewrite union_assoc; reflexivity.
-        * rewrite union_assoc; reflexivity.
-
-    - invertAction H0; specialize (IHa1 _ _ _ _ _ _ _ _ _ H H0 H1); econstructor; eauto.
-    - invertAction H0; map_simpl_G; econstructor.
-      eapply action_olds_ext; eauto.
-      rewrite Disj_union_unionR; auto.
-      apply Sub_unionR.
-      
-  Qed.
 
   Lemma SemMod_singleton:
     forall rules olds news dm dmMap cmMap,
@@ -447,7 +589,7 @@ Section Preliminaries.
            (retV2: type retK2),
       Disj olds1 olds2 -> Disj news1 news2 -> Disj cmMap1 cmMap2 ->
       
-      WfmActionSem' a2 ->
+      WfmActionSem nil a2 ->
       SemAction olds2 a2 news2 cmMap2 retV2 ->
       
       find (attrName dm) cmMap2 = find (attrName dm) dmMap1 -> (* labels match *)
@@ -481,12 +623,12 @@ Section Preliminaries.
         simpl in *; rewrite <-Eqdep.EqdepTheory.eq_rect_eq; clear e0.
 
         econstructor; eauto.
-        apply appendAction_prop with (retV1:= x0); auto.
+        apply appendAction_SemAction_1 with (retV1:= x0); auto.
         map_simpl_G.
 
-        inv H2; inv H; destruct_existT.
-        specialize (H12 x0).
-        pose proof (WfmActionSem_MCall H5 H12); rewrite H.
+        inv H2; destruct_existT.
+        specialize (H8 x0).
+        pose proof (WfmActionSem_MCall H5 H8); rewrite H.
         assumption.
 
       + rewrite find_add_2 in H4
@@ -521,26 +663,19 @@ Section Preliminaries.
           }
 
         * apply H; auto.
-          { inv H2; inv H6; destruct_existT.
-            specialize (H14 x1).
+          { inv H2; destruct_existT.
+            specialize (H10 x1).
             eapply WfmActionSem_init; eauto.
           }
           { eapply Disj_add_2; eauto. }
 
-    - invertAction H5; inv H2; inv H6; destruct_existT.
-      simpl. econstructor; eauto.
-      eapply H; eauto.
-      eexists; apply H13.
-
-    - invertAction H5; inv H2; inv H8; destruct_existT.
+    - invertAction H5; inv H2; destruct_existT.
       simpl; econstructor; eauto.
-      + apply Disj_find_union; eauto.
-      + eapply H; eauto.
-        eexists; apply H14.
-
-    - invertAction H3; inv H2; inv H5; destruct_existT.
+    - invertAction H5; inv H2; destruct_existT.
       simpl; econstructor; eauto.
-
+      apply Disj_find_union; eauto.
+    - invertAction H3; inv H2; destruct_existT.
+      simpl; econstructor; eauto.
       + instantiate (1:= union news1 x1).
         apply Equal_eq; repeat autounfold with MapDefs; intros.
         specialize (H0 k0); destruct H0.
@@ -552,10 +687,9 @@ Section Preliminaries.
           }
           { unfold string_eq; destruct (string_dec _ _); reflexivity. }
       + apply IHa2; auto.
-        * eexists; apply H13.
-        * eapply Disj_add_2; eauto.
+        eapply Disj_add_2; eauto.
 
-    - invertAction H5; inv H2; inv H6; destruct_existT.
+    - invertAction H5; inv H2; destruct_existT.
       remember (evalExpr e) as cv; destruct cv; dest; subst.
 
       + remember (find dmn x2) as dmv1.
@@ -565,13 +699,11 @@ Section Preliminaries.
           { repeat autounfold with MapDefs in *.
             rewrite <-Heqdmv1 in H4; inv H4; reflexivity.
           }
-
-          pose proof (WfmActionSem_collect _ H2 H15 (eq_sym Heqdmv1)).
           simpl; eapply SemIfElseTrue.
 
           { auto. }
           { eapply IHa2_1. 
-            { eexists; exact H15. }
+            { eapply WfmActionSem_append_1; eauto. }
             { instantiate (1:= x2); eapply Disj_union_1; eauto. }
             { auto. }
             { instantiate (1:= x1); eapply Disj_union_1; eauto. }
@@ -579,18 +711,26 @@ Section Preliminaries.
             { exact H2. }
           }
           { instantiate (1:= x4); instantiate (1:= x3).
-            specialize (H17 x5).
-            assert (In dmn (trl ++ frl)) by (apply in_or_app; left; assumption).
-            apply WfmActionSem_called_inlineDm_1 with (ll:= trl ++ frl) (rl:= x6); auto.
-            eapply action_olds_ext; eauto.
-            rewrite Disj_union_unionR by assumption.
-            apply Sub_unionR.
+            apply inlineDm_not_called.
+            { eapply action_olds_ext; eauto.
+              rewrite Disj_union_unionR by assumption.
+              apply Sub_unionR.
+            }
+            { pose proof (WfmActionSem_append_3 _ H11 H2 H5 dmn).
+              destruct H6; [|assumption].
+              rewrite H6 in Heqdmv1; discriminate.
+            }
           }
           { apply union_assoc. }
-          { specialize (H17 x5).
-            assert (In dmn (trl ++ frl)) by (apply in_or_app; left; assumption).
-            pose proof (WfmActionSem_not_called _ H5 H17 H8).
-            rewrite complement_union; rewrite H9.
+          { pose proof (WfmActionSem_append_3 _ H11 H2 H5 dmn).
+            destruct H6; [rewrite H6 in Heqdmv1; discriminate|].
+            assert (complement x4 [dmn] = x4).
+            { clear -H6.
+              apply Equal_eq; repeat autounfold with MapDefs in *; intros.
+              destruct (in_dec _ _ _); intuition idtac.
+              inv i; [auto|inv H].
+            }
+            rewrite complement_union; rewrite H8.
             apply union_assoc.
           }
 
@@ -598,13 +738,15 @@ Section Preliminaries.
 
           { auto. }
           { instantiate (1:= x5); instantiate (1:= x2); instantiate (1:= x1).
-            apply WfmActionSem_called_inlineDm_2 with (ll:= nil) (rl:= trl); auto.
-            eapply action_olds_ext; eauto.
-            rewrite Disj_union_unionR by assumption.
-            apply Sub_unionR.
+            apply inlineDm_not_called.
+            { eapply action_olds_ext; eauto.
+              rewrite Disj_union_unionR by assumption.
+              apply Sub_unionR.
+            }
+            { auto. }
           }
           { apply H.
-            { eapply WfmActionSem_init; eauto. }
+            { eapply WfmActionSem_append_2; eauto. }
             { instantiate (1:= x4); eapply Disj_union_2; eauto. }
             { repeat autounfold with MapDefs in *.
               rewrite <-Heqdmv1 in H4; assumption.
@@ -639,13 +781,11 @@ Section Preliminaries.
           { repeat autounfold with MapDefs in *.
             rewrite <-Heqdmv1 in H4; inv H4; reflexivity.
           }
-
-          pose proof (WfmActionSem_collect _ H2 H16 (eq_sym Heqdmv1)).
           simpl; eapply SemIfElseFalse.
 
           { auto. }
-          { eapply IHa2_2.
-            { eexists; exact H16. }
+          { eapply IHa2_2. 
+            { eapply WfmActionSem_append_1; eauto. }
             { instantiate (1:= x2); eapply Disj_union_1; eauto. }
             { auto. }
             { instantiate (1:= x1); eapply Disj_union_1; eauto. }
@@ -653,18 +793,26 @@ Section Preliminaries.
             { exact H2. }
           }
           { instantiate (1:= x4); instantiate (1:= x3).
-            specialize (H17 x5).
-            assert (In dmn (trl ++ frl)) by (apply in_or_app; right; assumption).
-            apply WfmActionSem_called_inlineDm_1 with (ll:= trl ++ frl) (rl:= x6); auto.
-            eapply action_olds_ext; eauto.
-            rewrite Disj_union_unionR by assumption.
-            apply Sub_unionR.
+            apply inlineDm_not_called.
+            { eapply action_olds_ext; eauto.
+              rewrite Disj_union_unionR by assumption.
+              apply Sub_unionR.
+            }
+            { pose proof (WfmActionSem_append_3 _ H15 H2 H5 dmn).
+              destruct H6; [|assumption].
+              rewrite H6 in Heqdmv1; discriminate.
+            }
           }
           { apply union_assoc. }
-          { specialize (H17 x5).
-            assert (In dmn (trl ++ frl)) by (apply in_or_app; right; assumption).
-            pose proof (WfmActionSem_not_called _ H5 H17 H8).
-            rewrite complement_union; rewrite H9.
+          { pose proof (WfmActionSem_append_3 _ H15 H2 H5 dmn).
+            destruct H6; [rewrite H6 in Heqdmv1; discriminate|].
+            assert (complement x4 [dmn] = x4).
+            { clear -H6.
+              apply Equal_eq; repeat autounfold with MapDefs in *; intros.
+              destruct (in_dec _ _ _); intuition idtac.
+              inv i; [auto|inv H].
+            }
+            rewrite complement_union; rewrite H8.
             apply union_assoc.
           }
 
@@ -672,13 +820,15 @@ Section Preliminaries.
 
           { auto. }
           { instantiate (1:= x5); instantiate (1:= x2); instantiate (1:= x1).
-            apply WfmActionSem_called_inlineDm_2 with (ll:= nil) (rl:= frl); auto.
-            eapply action_olds_ext; eauto.
-            rewrite Disj_union_unionR by assumption.
-            apply Sub_unionR.
+            apply inlineDm_not_called.
+            { eapply action_olds_ext; eauto.
+              rewrite Disj_union_unionR by assumption.
+              apply Sub_unionR.
+            }
+            { auto. }
           }
           { apply H.
-            { eapply WfmActionSem_init; eauto. }
+            { eapply WfmActionSem_append_2; eauto. }
             { instantiate (1:= x4); eapply Disj_union_2; eauto. }
             { repeat autounfold with MapDefs in *.
               rewrite <-Heqdmv1 in H4; assumption.
@@ -706,10 +856,8 @@ Section Preliminaries.
             rewrite <-H9 at 2; apply complement_union.
           }
 
-    - invertAction H3; inv H2; inv H6; destruct_existT.
+    - invertAction H3; inv H2; destruct_existT.
       simpl; econstructor; eauto.
-      eapply IHa2; eauto; eexists; exact H12.
-
     - invertAction H3; simpl; map_simpl_G.
       map_simpl H4; inv H4.
 
@@ -747,46 +895,10 @@ Section Facts.
 
   Lemma inline_correct_rule:
     forall r or nr cmMap,
-      noCallsMod getDefault im = true ->
+      (* noCallsMod getDefault im = true -> *)
       LtsStep cm (Some r) or nr empty cmMap -> LtsStep im (Some r) or nr empty cmMap.
   Proof.
-    intros; unfold im, inlineMod; simpl.
-    inv H0; destConcatLabel.
-    unfold CombineRm in Hcrm; dest.
-    inv H0; [destruct rm2; inv H1|destruct rm1; inv H1].
-
-    - inv Hlts1; inv Hlts2; constructor.
-      + unfold InDomain in *; intros.
-        rewrite map_app; apply in_or_app.
-        apply InMap_disjUnion in H0; destruct H0.
-        * specialize (HOldRegs _ H0); left; assumption.
-        * specialize (HOldRegs0 _ H0); right; assumption.
-      + inv Hltsmod0.
-        eapply SemAddRule.
-        * assert (Hin: In (s :: ruleBody)%struct (r1 ++ r2)) by
-              (apply in_or_app; right; assumption); clear HInRule.
-          pose proof (inlineToRules_In countdown _ _ (dms1 ++ dms2) Hin).
-          exact H0.
-        * instantiate (3:= disjUnion news1 (union news news0)
-                                     (map (attrName (Kind:=Typed ConstT)) (getRegInits m1))).
-          instantiate (2:= disjUnion
-                             (complement cmMap1 (map (@attrName _) dms2))
-                             (complement (union calls cm2)
-                                         (map (@attrName _) dms1))
-                             (listSub (getCmsR r1 ++ getCmsM dms1)
-                                      (map (@attrName _) dms2))).
-          instantiate (1:= retV).
-          admit.
-        * instantiate (2:= empty); instantiate (1:= empty).
-          apply SemMod_empty.
-        * eauto.
-        * eauto.
-        * rewrite union_empty_2; reflexivity.
-        * unfold FiltCm in Hfc; simpl in Hfc; subst.
-          rewrite union_empty_2; reflexivity.
-
-    - admit.
-
+    admit.
   Qed.
 
 End Facts.

@@ -494,6 +494,14 @@ Section Facts.
     destruct (in_dec _ k d1); intuition.
   Qed.
 
+  Lemma Sub_merge: forall {A} (m1 m2: @Map A), Sub m1 m2 -> union m1 m2 = m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    apply Equal_eq; repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct (m1 k); intuition.
+    apply H; discriminate.
+  Qed.
+
   Lemma InDomain_update:
     forall {A} (m1 m2: @Map A) (d: list string),
       InDomain m1 d -> InDomain m2 d -> InDomain (update m1 m2) d.
