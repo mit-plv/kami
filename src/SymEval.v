@@ -66,7 +66,7 @@ Proof.
   destruct (a k); auto.
 Qed.
 
-Lemma double_find : forall T (v1 v2 : type T) m k,
+Lemma double_find : forall T (v1 v2 : fullType type T) m k,
   v1 === m.[k]
   -> v2 === m.[k]
   -> v1 = v2.

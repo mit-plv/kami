@@ -199,12 +199,26 @@ Fixpoint evalConstT k (e: ConstT k): type k :=
     | ConstStruct attrs ils => evalConstStruct (imap _ (fun _ ba => evalConstT ba) ils)
   end.
 
+Definition evalConstFullT k (e: ConstFullT k) :=
+  match e in ConstFullT k return fullType type k with
+    | SyntaxConst k' c' => evalConstT c'
+    | NativeConst t c c' => c'
+  end.
+
+Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c.
+
+Definition defaultConstFullT k: fullType type k :=
+  match k as k' return fullType type k' with
+    | SyntaxKind k => evalConstT (getDefaultConst _)
+    | NativeKind t c => c
+  end.
+
 Section GetCms.
   Fixpoint getCmsA {k} (a: Action type k): list string :=
     match a with
       | MCall m _ _ c => m :: (getCmsA (c (evalConstT (getDefaultConst _))))
-      | Let_ _ _ c => getCmsA (c (evalConstT (getDefaultConst _)))
-      | ReadReg _ _ c => getCmsA (c (evalConstT (getDefaultConst _)))
+      | Let_ fk e c => getCmsA (c (defaultConstFullT fk))
+      | ReadReg _ fk c => getCmsA (c (defaultConstFullT fk))
       | WriteReg _ _ _ c => getCmsA c
       | IfElse _ _ aT aF c =>
         (getCmsA aT) ++ (getCmsA aF)
@@ -246,7 +260,7 @@ End GetCms.
 Hint Unfold getCmsMod getDmsMod.
 
 (* maps register names to the values which they currently hold *)
-Definition RegsT := @Map (Typed type).
+Definition RegsT := @Map (Typed (fullType type)).
 
 (* a pair of the value sent to a method call and the value it returned *)
 Definition SignT k := (type (arg k) * type (ret k))%type.
@@ -259,8 +273,8 @@ Section Semantics.
     fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
       mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
-  Fixpoint evalExpr exprT (e: Expr type exprT): type exprT :=
-    match e in Expr _ exprT return type exprT with
+  Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
+    match e in Expr _ exprT return fullType type exprT with
       | Var _ v => v
       | Const _ v => evalConstT v
       | UniBool op e1 => (evalUniBool op) (evalExpr e1)
@@ -294,7 +308,7 @@ Section Semantics.
   Inductive SemAction:
     forall k, Action type k -> RegsT -> CallsT -> type k -> Prop :=
   | SemMCall
-      meth s (marg: Expr type (arg s))
+      meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
       (cont: type (ret s) -> Action type retK)
@@ -304,12 +318,12 @@ Section Semantics.
       SemAction (MCall meth s marg cont) newRegs acalls fret
   | SemLet
       k (e: Expr type k) retK (fret: type retK)
-      (cont: type k -> Action type retK) newRegs calls
+      (cont: fullType type k -> Action type retK) newRegs calls
       (HSemAction: SemAction (cont (evalExpr e)) newRegs calls fret):
       SemAction (Let_ e cont) newRegs calls fret
   | SemReadReg
-      (r: string) regT regV
-      retK (fret: type retK) (cont: type regT -> Action type retK)
+      (r: string) regT (regV: fullType type regT)
+      retK (fret: type retK) (cont: fullType type regT -> Action type retK)
       newRegs calls
       (HRegVal: find r oldRegs = Some {| objType := regT; objVal := regV |})
       (HSemAction: SemAction (cont regV) newRegs calls fret):
@@ -323,7 +337,7 @@ Section Semantics.
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
   | SemIfElseTrue
-      (p: Expr type Bool) k1
+      (p: Expr type (SyntaxKind Bool)) k1
       (a: Action type k1)
       (a': Action type k1)
       (r1: type k1)
@@ -337,7 +351,7 @@ Section Semantics.
       (HUCalls: ucalls = union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemIfElseFalse
-      (p: Expr type Bool) k1
+      (p: Expr type (SyntaxKind Bool)) k1
       (a: Action type k1)
       (a': Action type k1)
       (r1: type k1)
@@ -351,13 +365,13 @@ Section Semantics.
       (HUCalls: ucalls = union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemAssertTrue
-      (p: Expr type Bool) k2
+      (p: Expr type (SyntaxKind Bool)) k2
       (cont: Action type k2) newRegs2 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
       SemAction (Assert_ p cont) newRegs2 calls2 r2
   | SemReturn
-      k (e: Expr type k) evale
+      k (e: Expr type (SyntaxKind k)) evale
       (HEvalE: evale = evalExpr e):
       SemAction (Return e) empty empty evale.
 
@@ -696,7 +710,7 @@ match goal with
     end
 end.
 
-Definition initRegs (init: list RegInitT): RegsT := makeMap type evalConstT init.
+Definition initRegs (init: list RegInitT): RegsT := makeMap (fullType type) evalConstFullT init.
 Hint Unfold initRegs.
 
 (* m = module
@@ -789,7 +803,7 @@ Section WellFormed.
     - exists (initRegs (getRegInits m1)).
              exists (initRegs (getRegInits m2)).
              unfold initRegs in *.
-             rewrite (disjUnionProp (f1 := ConstT) type evalConstT
+             rewrite (disjUnionProp (f1 := ConstFullT) (fullType type) evalConstFullT
                                     (getRegInits m1) (getRegInits m2)) in *.
              exists nil; exists nil.
              repeat (constructor || intuition).
@@ -1087,7 +1101,7 @@ Fixpoint makeModule (im : InModule) :=
   Mod a b c.
 
 Notation "'Register' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (Build_Typed ConstT type init)))
+  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT type init)))
   (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
 
 Notation "'Method' name () : retT := c" :=
@@ -1112,9 +1126,9 @@ Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
 
 Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
 
-Definition icons' (na : {a : Attribute Kind & Expr type (attrType a)})
-           {attrs} (tl : ilist (fun a : Attribute Kind => Expr type (attrType a)) attrs)
-  : ilist (fun a : Attribute Kind => Expr type (attrType a)) (projT1 na :: attrs) :=
+Definition icons' (na : {a : Attribute FullKind & Expr type (attrType a)})
+           {attrs} (tl : ilist (fun a : Attribute FullKind => Expr type (attrType a)) attrs)
+  : ilist (fun a : Attribute FullKind => Expr type (attrType a)) (projT1 na :: attrs) :=
   icons (projT1 na) (projT2 na) tl.
 
 Notation "name ::= value" := (existT (fun a : Attribute Kind => Expr type (attrType a))

@@ -16,7 +16,7 @@ Section Phoas.
   Variable type: Kind -> Type.
 
   Definition inlineArg {argT retT} (a: Expr type argT)
-             (m: type argT -> Action type retT): Action type retT :=
+             (m: fullType type argT -> Action type retT): Action type retT :=
     Let_ a m.
 
   Fixpoint getMethod (n: string) (dms: list (DefMethT type)) :=
@@ -135,18 +135,27 @@ End Phoas.
 
 Section PhoasTT.
 
-  Definition typeTT (k: Kind): Type :=
+  Definition typeTT (k: Kind): Type := unit.
+
+  Definition fullTypeTT (k: FullKind): Type :=
     match k with
-      | _ => unit
+      | SyntaxKind k' => typeTT k'
+      | NativeKind t c => t
     end.
 
+  Definition getTT (k: FullKind): fullTypeTT k :=
+    match k with
+      | SyntaxKind _ => tt
+      | NativeKind t c => c
+    end.
+  
   Section NoCalls.
     (* Necessary condition for inlining correctness *)
     Fixpoint noCalls {retT} (a: Action typeTT retT) :=
       match a with
         | MCall _ _ _ _ => false
-        | Let_ _ ar cont => noCalls (cont tt)
-        | ReadReg reg k cont => noCalls (cont tt)
+        | Let_ _ ar cont => noCalls (cont (getTT _))
+        | ReadReg reg k cont => noCalls (cont (getTT _))
         | WriteReg reg _ e cont => noCalls cont
         | IfElse ce _ ta fa cont => (noCalls ta) && (noCalls fa) && (noCalls (cont tt))
         | Assert_ ae cont => noCalls cont
@@ -307,7 +316,7 @@ Inductive WfmActionSem: list string -> forall {retT}, Action type retT -> Prop :
       WfmActionSem ll cont ->
       WfmActionSem ll (Assert_ (lretT:= retT) e cont)
 | WfmReturnSem:
-    forall ll {retT} (e: Expr type retT), WfmActionSem ll (Return e).
+    forall ll {retT} (e: Expr type (SyntaxKind retT)), WfmActionSem ll (Return e).
 
 Hint Constructors WfmActionSem.
 
@@ -383,8 +392,8 @@ Proof.
   - destruct a1; simpl in *; try discriminate.
 
     Grab Existential Variables.
-    { exact (evalConstT (getDefaultConst _)). }    
-    { exact (evalConstT (getDefaultConst _)). }    
+    { exact (defaultConstFullT _). }    
+    { exact (defaultConstFullT _). }    
     { exact (evalConstT (getDefaultConst _)). }    
 Qed.
 

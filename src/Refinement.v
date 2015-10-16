@@ -218,8 +218,8 @@ Section Props.
              (HwfO: RegsInDomain O)
              (HdisjRegs:
                 forall r : string,
-                  ~ (In r (map (attrName (Kind:=Typed ConstT)) (getRegInits M)) /\
-                     In r (map (attrName (Kind:=Typed ConstT)) (getRegInits O)))).
+                  ~ (In r (map (attrName (Kind:=Typed ConstFullT)) (getRegInits M)) /\
+                     In r (map (attrName (Kind:=Typed ConstFullT)) (getRegInits O)))).
 
   Lemma tr_refl: M <<== M.
   Proof.

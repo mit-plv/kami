@@ -7,11 +7,11 @@ Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
 Theorem call_me : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Method "foo"() : Bit 1 :=
                                                                  Call x <- bar($1);
-                                                                 Ret #x
+                                                                 Ret (Var type (SyntaxKind Bool) x)
                                                           })
                                                           (MODULE {
                                                                Method "bar"(x : Bit 1) : Bit 1 :=
-                                                                 Ret #x
+                                                                 Ret (Const _ Default)
                                                           }))
                                                rm o n dm cm
                                        -> forall r : Typed SignT, find "foo" dm = Some r
@@ -23,19 +23,21 @@ Proof.
   eauto.
 Qed.
 
+
 Definition inc := MethodSig "inc"() : Void.
 Definition inc2 := MethodSig "inc2"() : Void.
 
 Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
-                                                                     Register "r" : Bit 2 <- Default
+                                                                     Register "r" : SyntaxKind (Bit 2) <-
+                                                                                               (makeConst Default)
 
                                                                      with Method "inc"() : Void :=
-                                                                       Read r : Bit 2 <- "r";
+                                                                       Read r : SyntaxKind (Bit 2) <- "r";
                                                                        Write "r" <- #r + $1;
                                                                        Retv
 
                                                                      with Method "inc2"() : Void :=
-                                                                       Read r : Bit 2 <- "r";
+                                                                       Read r : SyntaxKind (Bit 2) <- "r";
                                                                        Write "r" <- #r + $2;
                                                                        Retv
                                                                 })
