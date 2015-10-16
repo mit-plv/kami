@@ -258,6 +258,12 @@ Section Facts.
     intro k; destruct (m k); reflexivity.
   Qed.
 
+  Lemma union_idempotent: forall {A} (m: @Map A), union m m = m.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (m k); auto.
+  Qed.
+
   Lemma disjUnion_empty_1: forall {A} (m: @Map A), disjUnion empty m nil = m.
   Proof.
     intros; repeat autounfold with MapDefs; reflexivity.
@@ -308,6 +314,14 @@ Section Facts.
   Proof.
     intros; apply Equal_eq; intro k; repeat autounfold with MapDefs.
     destruct (in_dec string_dec k l); reflexivity.
+  Qed.
+
+  Lemma restrict_union:
+    forall {A} (m1 m2: @Map A) l,
+      restrict (union m1 m2) l = union (restrict m1 l) (restrict m2 l).
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs.
+    destruct (in_dec _ k l); intuition.
   Qed.
 
   Lemma restrict_in: forall {A} k (m: @Map A) (l: list string),
@@ -380,6 +394,42 @@ Section Facts.
     intros; repeat autounfold with MapDefs.
     apply Equal_eq; repeat autounfold with MapDefs; intros.
     destruct (in_dec string_dec k l); intuition.
+  Qed.
+
+  Lemma restrict_complement_nil:
+    forall {A} (m: @Map A) (l: list string),
+      restrict m l = m -> complement m l = empty.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    apply @Equal_val with (k := k) in H.
+    destruct (in_dec _ k l); intuition.
+  Qed.
+
+  Lemma restrict_complement_itself:
+    forall {A} (m: @Map A) (l: list string),
+      restrict m l = empty -> complement m l = m.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    apply @Equal_val with (k := k) in H.
+    destruct (in_dec _ k l); intuition.
+  Qed.
+
+  Lemma complement_restrict_nil:
+    forall {A} (m: @Map A) (l: list string),
+      complement m l = m -> restrict m l = empty.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    apply @Equal_val with (k := k) in H.
+    destruct (in_dec _ k l); intuition.
+  Qed.
+
+  Lemma complement_restrict_itself:
+    forall {A} (m: @Map A) (l: list string),
+      complement m l = empty -> restrict m l = m.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    apply @Equal_val with (k := k) in H.
+    destruct (in_dec _ k l); intuition.
   Qed.
 
   Lemma complement_InDomain:
@@ -459,6 +509,16 @@ Section Facts.
     inv H.
   Qed.
 
+  Lemma Disj_union: forall {A} (m1 m2 m3: @Map A),
+                      Disj m1 m2 -> Disj m1 m3 -> Disj m1 (union m2 m3).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); specialize (H0 k).
+    destruct H; [left; assumption|].
+    destruct H0; [left; assumption|].
+    right; rewrite H; assumption.
+  Qed.
+
   Lemma Disj_union_1: forall {A} (m1 m2 m3: @Map A), Disj m1 (union m2 m3) -> Disj m1 m2.
   Proof.
     repeat autounfold with MapDefs; intros.
@@ -471,6 +531,14 @@ Section Facts.
     repeat autounfold with MapDefs; intros.
     specialize (H k); destruct H; [left; assumption|].
     destruct (m2 k); [inv H|right; assumption].
+  Qed.
+
+
+  Lemma Disj_complement: forall {A} (m1 m2: @Map A) l, Disj m1 m2 -> Disj m1 (complement m2 l).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H; [left; assumption|].
+    right; destruct (in_dec _ _ _); intuition.
   Qed.
 
   Lemma Sub_unionL: forall {A} (m1 m2: @Map A), Sub m1 (unionL m1 m2).
@@ -565,24 +633,11 @@ Section Facts.
   Proof. intros; apply unionL_assoc. Qed.
 
   Lemma union_comm:
-    forall {A} (m1 m2: @Map A) d1 d2,
-      (forall k, ~ (In k d1 /\ In k d2)) ->
-      InDomain m1 d1 -> InDomain m2 d2 ->
-      unionL m1 m2 = unionL m2 m1.
+    forall {A} (m1 m2: @Map A), Disj m1 m2 -> union m1 m2 = union m2 m1.
   Proof.
-    intros.
-    apply functional_extensionality_dep; intros.
-    unfold unionL, InDomain, InMap in *.
-    specialize (H x).
-    case_eq (m1 x); case_eq (m2 x); intros.
-    - assert (K1: m1 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
-      assert (K2: m2 x <> None) by (unfold not; intros H'; rewrite H' in *; discriminate).
-      specialize (H0 _ K1).
-      specialize (H1 _ K2).
-      intuition.
-    - intuition.
-    - intuition.
-    - intuition.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    specialize (H k); unfold find in H.
+    destruct (m1 k), (m2 k); intuition; inv H0.
   Qed.
 
   Lemma disjUnion_update_comm:

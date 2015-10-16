@@ -489,7 +489,36 @@ Proof.
       * specialize (IHdms _ _ _ _ _ HSemMod).
         unfold InDomain; intros.
         right; specialize (IHdms _ H); assumption.
-Qed.      
+Qed.
+
+Lemma SemMod_dms_ext:
+  forall dms2 rules dms1 or rm nr dmMap cmMap,
+    SemMod rules or rm nr dms1 dmMap cmMap ->
+    (forall k, In k dms1 -> In k dms2) ->
+    SemMod rules or rm nr dms2 dmMap cmMap.
+Proof.
+  admit.
+Qed.
+
+Lemma SemMod_merge_meths:
+  forall rules dms or nr1 nr2 dmMap1 dmMap2 cmMap1 cmMap2,
+    SemMod rules or None nr1 dms dmMap1 cmMap1 ->
+    SemMod rules or None nr2 dms dmMap2 cmMap2 ->
+    Disj nr1 nr2 -> Disj dmMap1 dmMap2 -> Disj cmMap1 cmMap2 ->
+    SemMod rules or None (union nr1 nr2) dms (union dmMap1 dmMap2) (union cmMap1 cmMap2).
+Proof.
+  admit.
+Qed.
+
+Lemma SemMod_merge_rule:
+  forall rules dms or r nr1 nr2 dmMap1 dmMap2 cmMap1 cmMap2,
+    SemMod rules or (Some r) nr1 dms dmMap1 cmMap1 ->
+    SemMod rules or None nr2 dms dmMap2 cmMap2 ->
+    Disj nr1 nr2 -> Disj dmMap1 dmMap2 -> Disj cmMap1 cmMap2 ->
+    SemMod rules or (Some r) (union nr1 nr2) dms (union dmMap1 dmMap2) (union cmMap1 cmMap2).
+Proof.
+  admit.
+Qed.
 
 Ltac cheap_firstorder :=
   repeat match goal with
