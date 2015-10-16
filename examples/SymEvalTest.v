@@ -150,7 +150,7 @@ Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Call b <- rand();
                                                                If (Var _ (SyntaxKind _) b) then
                                                                  Call l <- larry(Var _ (SyntaxKind _) x);
-                                                                 Ret (Var _ (SyntaxKind _) x)
+                                                                 Ret (Var _ (SyntaxKind _) l)
                                                                else
                                                                  Call c <- curly(Var _ (SyntaxKind _) x);
                                                                  Ret (Var _ (SyntaxKind _) c)
@@ -179,8 +179,8 @@ Proof.
   intros.
   SymEval;
     repeat (match goal with
-            | [ |- context[if ?argV then _ else _] ] => destruct argV
-            | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto ] | intuition idtac ]
-            end; SymEval_simpl; eauto 7).
+              | [ |- context[if ?v then _ else _] ] => destruct v
+              | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto 10 ] | intuition idtac ]
+            end; SymEval_simpl; eauto 10).
   destruct (weq argV argV0); subst; eexists; split; eauto 6.
 Qed.
