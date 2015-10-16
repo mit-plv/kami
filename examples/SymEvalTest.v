@@ -7,11 +7,11 @@ Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
 Theorem call_me : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Method "foo"() : Bit 1 :=
                                                                  Call x <- bar($1);
-                                                                 Ret (Var type (SyntaxKind Bool) x)
+                                                                 Ret (Var type (SyntaxKind (Bit 1)) x)
                                                           })
                                                           (MODULE {
                                                                Method "bar"(x : Bit 1) : Bit 1 :=
-                                                                 Ret (Const _ Default)
+                                                                 Ret (Var type (SyntaxKind (Bit 1)) x)
                                                           }))
                                                rm o n dm cm
                                        -> forall r : Typed SignT, find "foo" dm = Some r
