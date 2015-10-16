@@ -16,7 +16,7 @@ Section Phoas.
   Variable type: Kind -> Type.
 
   Definition inlineArg {argT retT} (a: Expr type argT)
-             (m: type argT -> Action type retT): Action type retT :=
+             (m: fullType type argT -> Action type retT): Action type retT :=
     Let_ a m.
 
   Fixpoint getMethod (n: string) (dms: list (DefMethT type)) :=
@@ -135,18 +135,27 @@ End Phoas.
 
 Section PhoasTT.
 
-  Definition typeTT (k: Kind): Type :=
+  Definition typeTT (k: Kind): Type := unit.
+
+  Definition fullTypeTT (k: FullKind): Type :=
     match k with
-      | _ => unit
+      | SyntaxKind k' => typeTT k'
+      | NativeKind t c => t
     end.
 
+  Definition getTT (k: FullKind): fullTypeTT k :=
+    match k with
+      | SyntaxKind _ => tt
+      | NativeKind t c => c
+    end.
+  
   Section NoCalls.
     (* Necessary condition for inlining correctness *)
     Fixpoint noCalls {retT} (a: Action typeTT retT) :=
       match a with
         | MCall _ _ _ _ => false
-        | Let_ _ ar cont => noCalls (cont tt)
-        | ReadReg reg k cont => noCalls (cont tt)
+        | Let_ _ ar cont => noCalls (cont (getTT _))
+        | ReadReg reg k cont => noCalls (cont (getTT _))
         | WriteReg reg _ e cont => noCalls cont
         | IfElse ce _ ta fa cont => (noCalls ta) && (noCalls fa) && (noCalls (cont tt))
         | Assert_ ae cont => noCalls cont
@@ -307,7 +316,7 @@ Inductive WfmAction: list string -> forall {retT}, Action type retT -> Prop :=
       WfmAction ll cont ->
       WfmAction ll (Assert_ (lretT:= retT) e cont)
 | WfmReturn:
-    forall ll {retT} (e: Expr type retT), WfmAction ll (Return e).
+    forall ll {retT} (e: Expr type (SyntaxKind retT)), WfmAction ll (Return e).
 
 Hint Constructors WfmAction.
 
@@ -383,8 +392,8 @@ Proof.
   - destruct a1; simpl in *; try discriminate.
 
     Grab Existential Variables.
-    { exact (evalConstT (getDefaultConst _)). }    
-    { exact (evalConstT (getDefaultConst _)). }    
+    { exact (defaultConstFullT _). }    
+    { exact (defaultConstFullT _). }    
     { exact (evalConstT (getDefaultConst _)). }    
 Qed.
 
@@ -1107,32 +1116,6 @@ Section Preliminaries.
         
   Qed.
 
-  (* problem: SemMod varies for each countdown step *)
-  Lemma inlineDmsRep_prop:
-    forall dms countdown olds1 olds2 retK2 a2 rules news1 news2 dmMap1 cmMap1 cmMap2
-           (retV2: type retK2),
-      (Disj olds1 olds2 \/ FnMap.Sub olds1 olds2) ->
-      Disj news1 news2 -> Disj cmMap1 cmMap2 ->
-      WfmAction nil a2 ->
-      WfmDms dms -> SoundInlineDmsRep a2 dms countdown ->
-
-      SemAction olds2 a2 news2 cmMap2 retV2 ->
-      dmMap1 = restrict cmMap2 (map (@attrName _) dms) ->
-      SemMod rules olds1 None news1 dms dmMap1 cmMap1 ->
-      SemAction (union olds1 olds2) (inlineDmsRep a2 dms countdown)
-                (union news1 news2) (union cmMap1 (complement cmMap2 (map (@attrName _) dms)))
-                retV2.
-  Proof.
-    induction countdown; intros;
-    [simpl; inv H4; destruct_existT; eapply inlineDms_prop; eauto|].
-
-    simpl; eapply IHcountdown; try assumption.
-
-    - 
-      
-
-  (* TODO: extend *)
-
 End Preliminaries.
 
 Section Facts.
@@ -1157,5 +1140,3 @@ Section Facts.
   Qed.
 
 End Facts.
-    
-    

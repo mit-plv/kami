@@ -23,6 +23,7 @@ Proof.
   eauto.
 Qed.
 
+
 Definition inc := MethodSig "inc"() : Void.
 Definition inc2 := MethodSig "inc2"() : Void.
 
@@ -41,7 +42,7 @@ Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                 })
                                                                 (MODULE {
                                                                      Method "either"(b : Bool) : Void :=
-                                                                       If (#b) then
+                                                                       If #b then
                                                                          Call inc();
                                                                          Retv
                                                                        else
@@ -51,10 +52,10 @@ Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                        Retv
                                                                 }))
                                                rm o n dm cm
-                                       -> ($0 : type (Bit 2)) === o.["r"]
+                                       -> ($0 : SyntaxType (Bit 2)) === o.["r"]
                                        -> _=== n.["r"]
-                                          \/ ($1 : type (Bit 2)) === n.["r"]
-                                          \/ ($2 : type (Bit 2)) === n.["r"].
+                                          \/ ($1 : SyntaxType (Bit 2)) === n.["r"]
+                                          \/ ($2 : SyntaxType (Bit 2)) === n.["r"].
 Proof.
   intros.
   SymEval;
@@ -97,13 +98,13 @@ Theorem stooges : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Method "moe"(x : Bit 3) : Bit 3 :=
                                                                  Call l <- larry(#x);
                                                                  Call c <- curly(#l);
-                                                                 Ret #c
+                                                                 Ret (#c)
                                                           }))
                                                rm o n dm cm
                                        -> forall a b c,
-                                         (a : type (Bit 3)) === o.["a"]
-                                         -> (b : type (Bit 3)) === o.["b"]
-                                         -> (c : type (Bit 3)) === o.["c"]
+                                         (a : SyntaxType (Bit 3)) === o.["a"]
+                                         -> (b : SyntaxType (Bit 3)) === o.["b"]
+                                         -> (c : SyntaxType (Bit 3)) === o.["c"]
                                          -> match find "moe" dm with
                                             | None => True
                                             | Some r =>
@@ -128,8 +129,8 @@ Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
 
                                                              with Method "larry"(x : Bit 3) : Bit 3 :=
                                                                Read a : Bit 3 <- "a";
-                                                               Write "b" <- #x;
-                                                               Write "larryReceived" <- #x;
+                                                               Write "b" <- (#x);
+                                                               Write "larryReceived" <- (#x);
                                                                Ret (#x + #a)
 
                                                              with Method "curly"(x : Bit 3) : Bit 3 :=
@@ -148,17 +149,17 @@ Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Call b <- rand();
                                                                If #b then
                                                                  Call l <- larry(#x);
-                                                                 Ret #l
+                                                                 Ret (#l)
                                                                else
                                                                  Call c <- curly(#x);
-                                                                 Ret #c
+                                                                 Ret (#c)
                                                                as v;
-                                                               Ret #v
+                                                               Ret (#v)
                                              }))
                                              rm o n dm cm
                                      -> forall a b,
-                                       (a : type (Bit 3)) === o.["a"]
-                                       -> (b : type (Bit 3)) === o.["b"]
+                                       (a : SyntaxType (Bit 3)) === o.["a"]
+                                       -> (b : SyntaxType (Bit 3)) === o.["b"]
                                        -> match find "moe" dm with
                                           | None => True
                                           | Some r =>
@@ -167,18 +168,18 @@ Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                        \/ r = {| objType := Build_SignatureT (Bit 3) (Bit 3);
                                                                  objVal := (w, w ^+ b) |})
                                                       /\ (_=== n.["b"]
-                                                          \/ (w : type (Bit 3)) === n.["b"]
-                                                          \/ (a ^+ b : type (Bit 3)) === n.["b"]
+                                                          \/ (w : SyntaxType (Bit 3)) === n.["b"]
+                                                          \/ (a ^+ b : SyntaxType (Bit 3)) === n.["b"]
                                                           \/ exists w', w' <> w
-                                                                        /\ (w' : type (Bit 3)) === n.["larryReceived"]
-                                                                        /\ (w' : type (Bit 3)) === n.["b"])
+                                                                        /\ (w' : SyntaxType (Bit 3)) === n.["larryReceived"]
+                                                                        /\ (w' : SyntaxType (Bit 3)) === n.["b"])
                                           end.
 Proof.
   intros.
   SymEval;
     repeat (match goal with
-            | [ |- context[if ?argV then _ else _] ] => destruct argV
-            | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto ] | intuition idtac ]
-            end; SymEval_simpl; eauto 7).
+              | [ |- context[if ?v then _ else _] ] => destruct v
+              | [ |- exists x, _ = _ /\ _ ] => eexists; split; [ solve [ eauto 10 ] | intuition idtac ]
+            end; SymEval_simpl; eauto 10).
   destruct (weq argV argV0); subst; eexists; split; eauto 6.
 Qed.

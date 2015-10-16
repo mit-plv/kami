@@ -77,16 +77,16 @@ Section Invariants.
   Lemma procDec_inv:
     forall or l (Hclos: LtsStepClosure pdecfi or l),
     exists pcv stv stallv iemptyv insv ideqPv oemptyv oenqPv odeqPv,
-      (find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
-       find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx; objVal := stv |} /\
-       find ("stall"__ i) or = Some {| objType := Bool; objVal := stallv |} /\
-       find ("Ins"__ i -n- "empty") or = Some {| objType := Bool; objVal := iemptyv |} /\
-       find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
+      (find ("pc"__ i) or = Some {| objType := SyntaxKind (Bit addrSize); objVal := pcv |} /\
+       find ("rf"__ i) or = Some {| objType := SyntaxKind (Vector (Bit valSize) rfIdx); objVal := stv |} /\
+       find ("stall"__ i) or = Some {| objType := SyntaxKind Bool; objVal := stallv |} /\
+       find ("Ins"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := iemptyv |} /\
+       find ("Ins"__ i -n- "elt") or = Some {| objType := SyntaxKind (Vector (atomK addrSize (Bit valSize)) O);
                                                objVal := insv |} /\
-       find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := ideqPv |} /\
-       find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := oemptyv |} /\
-       find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O; objVal := oenqPv |} /\
-       find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O; objVal := odeqPv |}) /\
+       find ("Ins"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O); objVal := ideqPv |} /\
+       find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := oemptyv |} /\
+       find ("Outs"__ i -n- "enqP") or = Some {| objType := SyntaxKind (Bit O); objVal := oenqPv |} /\
+       find ("Outs"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O); objVal := odeqPv |}) /\
 
       (procDec_inv_1 stallv iemptyv oemptyv /\
        procDec_inv_2 oenqPv odeqPv /\
@@ -418,7 +418,7 @@ Section Invariants.
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("reqLd"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |}.
+      find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := true |}.
   Proof.
     admit.
   Qed.
@@ -445,7 +445,7 @@ Section Invariants.
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("reqSt"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |}.
+      find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := true |}.
   Proof.
     admit.
   Qed.
@@ -472,7 +472,7 @@ Section Invariants.
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("execHt"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |}.
+      find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := true |}.
   Proof.
     admit.
   Qed.
@@ -499,7 +499,7 @@ Section Invariants.
     forall (Hclos: LtsStepClosure pdecfi or l)
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("execNm"__ i)),
-      find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := true |}.
+      find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool; objVal := true |}.
   Proof.
     admit.
   Qed.
@@ -527,17 +527,19 @@ Section Invariants.
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("Mid"__ i -n- "processLd")),
       exists pcv stv insv ideqPv oemptyv oenqPv odeqPv,
-        find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
-        find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
+        find ("pc"__ i) or = Some {| objType := SyntaxKind (Bit addrSize); objVal := pcv |} /\
+        find ("rf"__ i) or = Some {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
                                      objVal := stv |} /\
-        find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
-                                                objVal := insv |} /\
-        find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O;
+        find ("Ins"__ i -n- "elt") or =
+        Some {| objType := SyntaxKind (Vector (atomK addrSize (Bit valSize)) O);
+                objVal := insv |} /\
+        find ("Ins"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O);
                                                  objVal := ideqPv |} /\
-        find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := oemptyv |} /\
-        find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O;
+        find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool;
+                                                   objVal := oemptyv |} /\
+        find ("Outs"__ i -n- "enqP") or = Some {| objType := SyntaxKind (Bit O);
                                                   objVal := oenqPv |} /\
-        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O);
                                                   objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opLd /\
         insv ideqPv ``"addr" = dec stv pcv ``"addr" /\
@@ -602,17 +604,19 @@ Section Invariants.
            (Hstep: LtsStep pdecfi rm or nr dmMap cmMap)
            (Hrm: rm = Some ("Mid"__ i -n- "processSt")),
       exists pcv stv insv ideqPv oemptyv oenqPv odeqPv,
-        find ("pc"__ i) or = Some {| objType := Bit addrSize; objVal := pcv |} /\
-        find ("rf"__ i) or = Some {| objType := Vector (Bit valSize) rfIdx;
+        find ("pc"__ i) or = Some {| objType := SyntaxKind (Bit addrSize); objVal := pcv |} /\
+        find ("rf"__ i) or = Some {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
                                      objVal := stv |} /\
-        find ("Ins"__ i -n- "elt") or = Some {| objType := Vector (atomK addrSize (Bit valSize)) O;
-                                                objVal := insv |} /\
-        find ("Ins"__ i -n- "deqP") or = Some {| objType := Bit O;
+        find ("Ins"__ i -n- "elt") or =
+        Some {| objType := SyntaxKind (Vector (atomK addrSize (Bit valSize)) O);
+                objVal := insv |} /\
+        find ("Ins"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O);
                                                  objVal := ideqPv |} /\
-        find ("Outs"__ i -n- "empty") or = Some {| objType := Bool; objVal := oemptyv |} /\
-        find ("Outs"__ i -n- "enqP") or = Some {| objType := Bit O;
+        find ("Outs"__ i -n- "empty") or = Some {| objType := SyntaxKind Bool;
+                                                   objVal := oemptyv |} /\
+        find ("Outs"__ i -n- "enqP") or = Some {| objType := SyntaxKind (Bit O);
                                                   objVal := oenqPv |} /\
-        find ("Outs"__ i -n- "deqP") or = Some {| objType := Bit O;
+        find ("Outs"__ i -n- "deqP") or = Some {| objType := SyntaxKind (Bit O);
                                                   objVal := odeqPv |} /\
         dec stv pcv ``"opcode" = evalConstT opSt /\
         insv ideqPv ``"addr" = dec stv pcv ``"addr" /\

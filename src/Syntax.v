@@ -3,22 +3,6 @@ Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word.
 
 Set Implicit Arguments.
 
-Inductive Kind: Type :=
-| Bool: Kind
-| Bit: nat -> Kind
-| Vector: Kind -> nat -> Kind
-| Struct: list (Attribute Kind) -> Kind.
-
-Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
-Proof.
-  decide equality.
-  clear decKind; decide equality.
-  clear decKind; decide equality.
-  decide equality.
-  decide equality.
-  apply (string_dec).
-Defined.
-
 Fixpoint getDefaultConstBit n: word n :=
   match n with
     | 0 => WO
@@ -41,11 +25,35 @@ Section Vec.
     end.
 End Vec.
 
+Inductive Kind: Type :=
+| Bool    : Kind
+| Bit     : nat -> Kind
+| Vector  : Kind -> nat -> Kind
+| Struct  : list (Attribute Kind) -> Kind.
+
+Inductive FullKind: Type :=
+| SyntaxKind: Kind -> FullKind
+| NativeKind (t: Type) (c: t) : FullKind.
+
+Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
+Proof.
+  decide equality.
+  clear decKind; decide equality.
+  clear decKind; decide equality.
+  decide equality.
+  decide equality.
+  apply (string_dec).
+Defined.
+
 Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
 | ConstStruct attrs: ilist (fun a => ConstT (attrType a)) attrs -> ConstT (Struct attrs).
+
+Inductive ConstFullT: FullKind -> Type :=
+| SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
+| NativeConst t (c c': t): ConstFullT (NativeKind c).
 
 Coercion ConstBool : bool >-> ConstT.
 Coercion ConstBit : word >-> ConstT.
@@ -112,43 +120,48 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 
 Section Phoas.
   Variable type: Kind -> Type.
-
-  Inductive Expr: Kind -> Type :=
-  | Var k: type k -> Expr k
-  | Const k: ConstT k -> Expr k
-  | UniBool: UniBoolOp -> Expr Bool -> Expr Bool
-  | BinBool: BinBoolOp -> Expr Bool -> Expr Bool -> Expr Bool
-  | UniBit n1 n2: UniBitOp n1 n2 -> Expr (Bit n1) -> Expr (Bit n2)
-  | BinBit n1 n2 n3: BinBitOp n1 n2 n3 -> Expr (Bit n1) -> Expr (Bit n2) ->
-                     Expr (Bit n3)
-  | ITE k: Expr Bool -> Expr k -> Expr k -> Expr k
-  | Eq k: Expr k -> Expr k -> Expr Bool
-  | ReadIndex i k: Expr (Bit i) -> Expr (Vector k i) -> Expr k
+  Definition fullType k := match k with
+                             | SyntaxKind k' => type k'
+                             | NativeKind t c => t
+                           end.
+  
+  Inductive Expr: FullKind -> Type :=
+  | Var k: fullType k -> Expr k
+  | Const k: ConstT k -> Expr (SyntaxKind k)
+  | UniBool: UniBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
+  | BinBool: BinBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
+  | UniBit n1 n2: UniBitOp n1 n2 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2))
+  | BinBit n1 n2 n3: BinBitOp n1 n2 n3 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
+                     Expr (SyntaxKind (Bit n3))
+  | ITE k: Expr (SyntaxKind Bool) -> Expr k -> Expr k -> Expr k
+  | Eq k: Expr (SyntaxKind k) -> Expr (SyntaxKind k) -> Expr (SyntaxKind Bool)
+  | ReadIndex i k: Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
   | ReadField attrs (attr: BoundedIndexFull attrs):
-      Expr (Struct attrs) -> Expr (GetAttrType attr)
-  | BuildVector n k: Vec (Expr n) k -> Expr (Vector n k)
-  | BuildStruct attrs: ilist (fun a => Expr (attrType a)) attrs -> Expr (Struct attrs)
-  | UpdateVector i k: Expr (Vector k i) -> Expr (Bit i) -> Expr k -> Expr (Vector k i).
+      Expr (SyntaxKind (Struct attrs)) -> Expr (SyntaxKind (GetAttrType attr))
+  | BuildVector n k: Vec (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Vector n k))
+  | BuildStruct attrs: ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))
+  | UpdateVector i k: Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k)
+                      -> Expr (SyntaxKind (Vector k i)).
 
   Inductive Action (lretT: Kind) : Type :=
   | MCall (meth: string) s:
-      Expr (arg s) ->
+      Expr (SyntaxKind (arg s)) ->
       (type (ret s) -> Action lretT) ->
       Action lretT
-  | Let_ lretT': Expr lretT' -> (type lretT' -> Action lretT) -> Action lretT
+  | Let_ lretT': Expr lretT' -> (fullType lretT' -> Action lretT) -> Action lretT
   | ReadReg (r: string):
-      forall k, (type k -> Action lretT) -> Action lretT
+      forall k, (fullType k -> Action lretT) -> Action lretT
   | WriteReg (r: string) k:
       Expr k -> Action lretT -> Action lretT
-  | IfElse: Expr Bool -> forall k,
-                           Action k ->
-                           Action k ->
-                           (type k -> Action lretT) ->
-                           Action lretT
-  | Assert_: Expr Bool -> Action lretT -> Action lretT
-  | Return: Expr lretT -> Action lretT.
+  | IfElse: Expr (SyntaxKind Bool) -> forall k,
+                                        Action k ->
+                                        Action k ->
+                                        (type k -> Action lretT) ->
+                                        Action lretT
+  | Assert_: Expr (SyntaxKind Bool) -> Action lretT -> Action lretT
+  | Return: Expr (SyntaxKind lretT) -> Action lretT.
 
-  Definition RegInitT := Attribute (Typed ConstT).
+  Definition RegInitT := Attribute (Typed ConstFullT).
   Definition DefMethT := Attribute (Typed (fun (a: SignatureT) =>
                                              type (arg a) ->
                                              Action (ret a))).
@@ -177,6 +190,7 @@ End Phoas.
 
 Hint Unfold getRules getRegInits.
 
+
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).
 Definition Void := Bit 0.
@@ -188,7 +202,7 @@ Notation "'MethodSig' name ( argT ) : retT" :=
   (at level 0, name at level 0, argT at level 200, retT at level 200).
 
 (* Notations: expression *)
-Notation "# v" := (Var _ _ v) (at level 0) : kami_scope.
+Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
 Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.

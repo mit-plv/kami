@@ -35,7 +35,7 @@ Section Fifo.
      Read enqP <- ^"enqP";
      Read deqP <- ^"deqP";
      Write ^"full" <- $$false;
-     Let next_deqP : Bit sz <- IF #deqP == $$max_index then $0 else #enqP + $1;
+     Let next_deqP <- (IF #deqP == $$max_index then $0 else #enqP + $1) :: Bit sz;
      Write ^"empty" <- (#enqP == #next_deqP);
      Write ^"deqP" <- #next_deqP;
      Ret #elt@[#deqP])%kami.
