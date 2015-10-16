@@ -27,42 +27,41 @@ Section ProcDecSC.
     Definition regRel: RegsT -> RegsT -> Prop.
     Proof.
       intros ir sr.
-      refine (exists pcv: type (Bit addrSize),
+      refine (exists pcv: SyntaxType (Bit addrSize),
                 find ("pc"__ i) ir = Some {| objVal := pcv |} /\
                 _).
-      refine (exists rfv: type (Vector (Bit valSize) rfIdx),
+      refine (exists rfv: SyntaxType (Vector (Bit valSize) rfIdx),
                 find ("rf"__ i) ir = Some {| objVal := rfv |} /\
                 _).
-      refine (exists stv: type Bool,
+      refine (exists stv: SyntaxType Bool,
                 find ("stall"__ i) ir = Some {| objVal := stv |} /\
                 _).
-      refine (exists outv: type (Vector (atomK addrSize (Bit valSize)) O),
+      refine (exists outv: SyntaxType (Vector (atomK addrSize (Bit valSize)) O),
                 find ("Outs"__ i -n- "elt") ir = Some {| objVal := outv |} /\
                 _).
-      refine (exists deqPv: type (Bit O),
+      refine (exists deqPv: SyntaxType (Bit O),
                 find ("Outs"__ i -n- "deqP") ir = Some {| objVal := deqPv |} /\
                 _).
-      refine (exists emptyv: type Bool,
+      refine (exists emptyv: SyntaxType Bool,
                 find ("Outs"__ i -n- "empty") ir = Some {| objVal := emptyv |} /\
                 _).
       destruct emptyv.
       - refine (sr =
                 add ("pc"__ i) {| objVal := pcv |}
-                    (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
+                    (add ("rf"__ i) {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
                                        objVal := rfv |} empty)).
       - pose proof (outv deqPv ``"type") as opc; unfold GetAttrType in opc; simpl in opc.
         destruct (weq opc (evalConstT opLd)).
         + refine (sr =
                   add ("pc"__ i) {| objVal := fst (exec rfv pcv (dec rfv pcv)) |}
-                      (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
+                      (add ("rf"__ i) {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
                                          objVal := _ |} empty)).
           exact (fun a => if weq a (dec rfv pcv ``"reg")
                           then outv deqPv ``"value"
                           else rfv a).
         + refine (sr =
                   add ("pc"__ i) {| objVal := fst (exec rfv pcv (dec rfv pcv)) |}
-                      (add ("rf"__ i) {| objType := Vector (Bit valSize) rfIdx;
-                                         objVal := rfv |} empty)).
+                      (add ("rf"__ i) {| objVal := rfv |} empty)).
     Defined.
     Hint Unfold regRel.
 

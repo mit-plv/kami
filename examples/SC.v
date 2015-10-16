@@ -11,20 +11,20 @@ Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
 Section DecExec.
   Variables opIdx addrSize valSize rfIdx: nat.
 
-  Definition StateK := Vector (Bit valSize) rfIdx.
-  Definition StateT := type StateK.
+  Definition StateK := SyntaxKind (Vector (Bit valSize) rfIdx).
+  Definition StateT := fullType type StateK.
 
-  Definition DecInstK := STRUCT {
+  Definition DecInstK := SyntaxKind (STRUCT {
     "opcode" :: Bit opIdx;
     "reg" :: Bit rfIdx;
     "addr" :: Bit addrSize;
     "value" :: Bit valSize
-  }.
-  Definition DecInstT := type DecInstK.
+  }).
+  Definition DecInstT := fullType type DecInstK.
 
-  Definition DecT := StateT -> type (Bit addrSize) -> DecInstT.
-  Definition ExecT := StateT -> type (Bit addrSize) -> DecInstT ->
-                      type (Bit addrSize) * StateT.
+  Definition DecT := StateT -> fullType type (SyntaxKind (Bit addrSize)) -> DecInstT.
+  Definition ExecT := StateT -> fullType type (SyntaxKind (Bit addrSize)) -> DecInstT ->
+                      fullType type (SyntaxKind (Bit addrSize)) * StateT.
 End DecExec.
 
 (* The module definition for Minst with n ports *)

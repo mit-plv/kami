@@ -7,11 +7,11 @@ Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
 Theorem call_me : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                Method "foo"() : Bit 1 :=
                                                                  Call x <- bar($1);
-                                                                 Ret (Var _ (SyntaxKind (Bit 1)) x)
+                                                                 Ret #x
                                                           })
                                                           (MODULE {
                                                                Method "bar"(x : Bit 1) : Bit 1 :=
-                                                                 Ret (Var type (SyntaxKind (Bit 1)) x)
+                                                                 Ret #x
                                                           }))
                                                rm o n dm cm
                                        -> forall r : Typed SignT, find "foo" dm = Some r
@@ -28,22 +28,21 @@ Definition inc := MethodSig "inc"() : Void.
 Definition inc2 := MethodSig "inc2"() : Void.
 
 Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
-                                                                     Register "r" : SyntaxKind (Bit 2) <-
-                                                                                               (makeConst Default)
+                                                                     Register "r" : Bit 2 <- Default
 
                                                                      with Method "inc"() : Void :=
-                                                                       Read r : SyntaxKind (Bit 2) <- "r";
+                                                                       Read r : Bit 2 <- "r";
                                                                        Write "r" <- #r + $1;
                                                                        Retv
 
                                                                      with Method "inc2"() : Void :=
-                                                                       Read r : SyntaxKind (Bit 2) <- "r";
+                                                                       Read r : Bit 2 <- "r";
                                                                        Write "r" <- #r + $2;
                                                                        Retv
                                                                 })
                                                                 (MODULE {
                                                                      Method "either"(b : Bool) : Void :=
-                                                                       If (Var _ (SyntaxKind Bool) b) then
+                                                                       If #b then
                                                                          Call inc();
                                                                          Retv
                                                                        else
@@ -53,10 +52,10 @@ Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                        Retv
                                                                 }))
                                                rm o n dm cm
-                                       -> ($0 : (fullType type) (SyntaxKind (Bit 2))) === o.["r"]
+                                       -> ($0 : SyntaxType (Bit 2)) === o.["r"]
                                        -> _=== n.["r"]
-                                          \/ ($1 : (fullType type) (SyntaxKind (Bit 2))) === n.["r"]
-                                          \/ ($2 : (fullType type) (SyntaxKind (Bit 2))) === n.["r"].
+                                          \/ ($1 : SyntaxType (Bit 2)) === n.["r"]
+                                          \/ ($2 : SyntaxType (Bit 2)) === n.["r"].
 Proof.
   intros.
   SymEval;
@@ -70,42 +69,42 @@ Definition larry := MethodSig "larry"(Bit 3) : Bit 3.
 Definition curly := MethodSig "curly"(Bit 3) : Bit 3.
 
 Theorem stooges : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
-                                                               Register "a" : SyntaxKind (Bit 3) <- (makeConst Default)
-                                                               with Register "b" : SyntaxKind (Bit 3) <- (makeConst Default)
-                                                               with Register "c" : SyntaxKind (Bit 3) <- (makeConst Default)
+                                                               Register "a" : Bit 3 <- Default
+                                                               with Register "b" : Bit 3 <- Default
+                                                               with Register "c" : Bit 3 <- Default
 
                                                                with Method "larry"(x : Bit 3) : Bit 3 :=
-                                                                 Read a : SyntaxKind (Bit 3) <- "a";
-                                                                 Write "b" <- (Var _ (SyntaxKind (Bit 3)) x);
-                                                                 Ret ((Var _ (SyntaxKind (Bit 3)) x) + #a)
+                                                                 Read a : Bit 3 <- "a";
+                                                                 Write "b" <- #x;
+                                                                 Ret (#x + #a)
 
                                                                with Method "curly"(x : Bit 3) : Bit 3 :=
-                                                                 Read b : SyntaxKind (Bit 3) <- "b";
-                                                                 Write "a" <- (Var _ (SyntaxKind (Bit 3)) x);
-                                                                 Ret ((Var _ (SyntaxKind (Bit 3)) x) + #b)
+                                                                 Read b : Bit 3 <- "b";
+                                                                 Write "a" <- #x;
+                                                                 Ret (#x + #b)
 
                                                                with Rule "add" :=
-                                                                 Read a : SyntaxKind (Bit 3) <- "a";
-                                                                 Read b : SyntaxKind (Bit 3) <- "b";
+                                                                 Read a : Bit 3 <- "a";
+                                                                 Read b : Bit 3 <- "b";
                                                                  Write "b" <- #a + #b;
                                                                  Retv
 
                                                                with Rule "distraction" :=
-                                                                 Read c : SyntaxKind (Bit 3) <- "c";
+                                                                 Read c : Bit 3 <- "c";
                                                                  Write "c" <- #c + #c;
                                                                  Retv
                                                           })
                                                           (MODULE {
                                                                Method "moe"(x : Bit 3) : Bit 3 :=
-                                                                 Call l <- larry(Var _ (SyntaxKind (Bit 3)) x);
-                                                                 Call c <- curly(Var _ (SyntaxKind _) l);
-                                                                 Ret (Var _ (SyntaxKind _) c)
+                                                                 Call l <- larry(#x);
+                                                                 Call c <- curly(#l);
+                                                                 Ret (#c)
                                                           }))
                                                rm o n dm cm
                                        -> forall a b c,
-                                         (a : fullType type (SyntaxKind (Bit 3))) === o.["a"]
-                                         -> (b : fullType type (SyntaxKind (Bit 3))) === o.["b"]
-                                         -> (c : fullType type (SyntaxKind (Bit 3))) === o.["c"]
+                                         (a : SyntaxType (Bit 3)) === o.["a"]
+                                         -> (b : SyntaxType (Bit 3)) === o.["b"]
+                                         -> (c : SyntaxType (Bit 3)) === o.["c"]
                                          -> match find "moe" dm with
                                             | None => True
                                             | Some r =>
@@ -124,43 +123,43 @@ Qed.
 Definition rand := MethodSig "rand"() : Bool.
 
 Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
-                                                             Register "a" : SyntaxKind (Bit 3) <- (makeConst Default)
-                                                             with Register "b" : SyntaxKind (Bit 3) <- (makeConst Default)
-                                                             with Register "larryReceived" : SyntaxKind (Bit 3) <- (makeConst Default)
+                                                             Register "a" : Bit 3 <- Default
+                                                             with Register "b" : Bit 3 <- Default
+                                                             with Register "larryReceived" : Bit 3 <- Default
 
                                                              with Method "larry"(x : Bit 3) : Bit 3 :=
-                                                               Read a : SyntaxKind (Bit 3) <- "a";
-                                                               Write "b" <- (Var _ (SyntaxKind _) x);
-                                                               Write "larryReceived" <- (Var _ (SyntaxKind _) x);
-                                                               Ret ((Var _ (SyntaxKind _) x) + #a)
+                                                               Read a : Bit 3 <- "a";
+                                                               Write "b" <- (#x);
+                                                               Write "larryReceived" <- (#x);
+                                                               Ret (#x + #a)
 
                                                              with Method "curly"(x : Bit 3) : Bit 3 :=
-                                                               Read b : SyntaxKind (Bit 3) <- "b";
-                                                               Write "a" <- (Var _ (SyntaxKind _) x);
-                                                               Ret ((Var _ (SyntaxKind _) x) + #b)
+                                                               Read b : Bit 3 <- "b";
+                                                               Write "a" <- #x;
+                                                               Ret (#x + #b)
 
                                                              with Rule "add" :=
-                                                               Read a : SyntaxKind (Bit 3) <- "a";
-                                                               Read b : SyntaxKind (Bit 3) <- "b";
+                                                               Read a : Bit 3 <- "a";
+                                                               Read b : Bit 3 <- "b";
                                                                Write "b" <- #a + #b;
                                                                Retv
                                                         })
                                                         (MODULE {
                                                              Method "moe"(x : Bit 3) : Bit 3 :=
                                                                Call b <- rand();
-                                                               If (Var _ (SyntaxKind _) b) then
-                                                                 Call l <- larry(Var _ (SyntaxKind _) x);
-                                                                 Ret (Var _ (SyntaxKind _) l)
+                                                               If #b then
+                                                                 Call l <- larry(#x);
+                                                                 Ret (#l)
                                                                else
-                                                                 Call c <- curly(Var _ (SyntaxKind _) x);
-                                                                 Ret (Var _ (SyntaxKind _) c)
+                                                                 Call c <- curly(#x);
+                                                                 Ret (#c)
                                                                as v;
-                                                               Ret (Var _ (SyntaxKind _) v)
+                                                               Ret (#v)
                                              }))
                                              rm o n dm cm
                                      -> forall a b,
-                                       (a : fullType type (SyntaxKind (Bit 3))) === o.["a"]
-                                       -> (b : fullType type (SyntaxKind (Bit 3))) === o.["b"]
+                                       (a : SyntaxType (Bit 3)) === o.["a"]
+                                       -> (b : SyntaxType (Bit 3)) === o.["b"]
                                        -> match find "moe" dm with
                                           | None => True
                                           | Some r =>
@@ -169,11 +168,11 @@ Theorem rando : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                        \/ r = {| objType := Build_SignatureT (Bit 3) (Bit 3);
                                                                  objVal := (w, w ^+ b) |})
                                                       /\ (_=== n.["b"]
-                                                          \/ (w : fullType type (SyntaxKind (Bit 3))) === n.["b"]
-                                                          \/ (a ^+ b : fullType type (SyntaxKind (Bit 3))) === n.["b"]
+                                                          \/ (w : SyntaxType (Bit 3)) === n.["b"]
+                                                          \/ (a ^+ b : SyntaxType (Bit 3)) === n.["b"]
                                                           \/ exists w', w' <> w
-                                                                        /\ (w' : fullType type (SyntaxKind (Bit 3))) === n.["larryReceived"]
-                                                                        /\ (w' : fullType type (SyntaxKind (Bit 3))) === n.["b"])
+                                                                        /\ (w' : SyntaxType (Bit 3)) === n.["larryReceived"]
+                                                                        /\ (w' : SyntaxType (Bit 3)) === n.["b"])
                                           end.
 Proof.
   intros.

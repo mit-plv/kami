@@ -25,25 +25,6 @@ Section Vec.
     end.
 End Vec.
 
-(*
-Record Universe :=
-  { Univ     : Set    (* set of codes for the universe *)
-  ; typeU    : Univ -> Set (* decoding function *)
-  ; decUniv  : forall (t1 t2 : Univ), {t1 = t2} + {t1 <> t2}
-               (* decidable equality on codes *)
-  ; decEqU   : forall (t : Univ) (x y : typeU t), {x = y} + {x <> y}
-               (* decidable equality on all Coq Sets in the universe *)
-  ; defaultU : forall (u : Univ), typeU u 
-               (* default values for each Coq Set in the universe *)
-  }.
-*)
-
-(*
-Section Kinds.
-
-Context {U : Universe}.
-*)
-
 Inductive Kind: Type :=
 | Bool    : Kind
 | Bit     : nat -> Kind
@@ -221,7 +202,7 @@ Notation "'MethodSig' name ( argT ) : retT" :=
   (at level 0, name at level 0, argT at level 200, retT at level 200).
 
 (* Notations: expression *)
-Notation "# v" := (Var _ _ v) (at level 0) : kami_scope.
+Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
 Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.

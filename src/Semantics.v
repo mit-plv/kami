@@ -1037,13 +1037,13 @@ Notation "'Read' name <- reg ; cont" :=
   (ReadReg (type := type) reg _ (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Read' name : kind <- reg ; cont " :=
-  (ReadReg (type := type) reg kind (fun name => cont))
+  (ReadReg (type := type) reg (SyntaxKind kind) (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Write' reg <- expr ; cont " :=
   (WriteReg (type := type) reg expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
 Notation "'Write' reg <- expr : kind ; cont " :=
-  (@WriteReg type _ reg kind expr cont)
+  (@WriteReg type _ reg (SyntaxKind kind) expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (IfElse cexpr tact fact (fun name => cont))
@@ -1100,8 +1100,12 @@ Fixpoint makeModule (im : InModule) :=
   let '(a, b, c) := makeModule' im in
   Mod a b c.
 
+Notation SyntaxType k := (fullType type (SyntaxKind k)).
+
+Notation DefaultFull := (makeConst Default).
+
 Notation "'Register' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT type init)))
+  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (SyntaxKind type) (makeConst init))))
   (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
 
 Notation "'Method' name () : retT := c" :=
@@ -1126,20 +1130,22 @@ Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
 
 Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
 
-Definition icons' (na : {a : Attribute FullKind & Expr type (attrType a)})
-           {attrs} (tl : ilist (fun a : Attribute FullKind => Expr type (attrType a)) attrs)
-  : ilist (fun a : Attribute FullKind => Expr type (attrType a)) (projT1 na :: attrs) :=
+Definition icons' (na : {a : Attribute Kind & Expr type (SyntaxKind (attrType a))})
+           {attrs}
+           (tl : ilist (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a))) attrs)
+  : ilist (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a))) (projT1 na :: attrs) :=
   icons (projT1 na) (projT2 na) tl.
 
-Notation "name ::= value" := (existT (fun a : Attribute Kind => Expr type (attrType a))
-                                     (Build_Attribute name _) value) (at level 50) : init_scope.
+Notation "name ::= value" :=
+  (existT (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a)))
+          (Build_Attribute name _) value) (at level 50) : init_scope.
 Delimit Scope init_scope with init.
 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
   : kami_scope.
 
-Notation "e :: t" := (e : Expr type t) : kami_scope.
+Notation "e :: t" := (e : Expr type (SyntaxKind t)) : kami_scope.
 
 Definition firstAction {T} (ls : list (Action type T)) : Action type T :=
   match ls with
