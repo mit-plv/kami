@@ -18,8 +18,8 @@ Section ProcDec.
   Variable dec: DecT 2 addrSize valSize rfIdx.
   Variable exec: ExecT 2 addrSize valSize rfIdx.
 
-  Definition getNextPc ppc st inst := fst (exec st ppc inst).
-  Definition getNextState ppc st := snd (exec st ppc (dec st ppc)).
+  Definition getNextPc ty ppc st inst := fst (exec ty st ppc inst).
+  Definition getNextState ty ppc st := snd (exec ty st ppc (dec ty st ppc)).
 
   Definition opLd : ConstT (Bit 2) := WO~0~0.
   Definition opSt : ConstT (Bit 2) := WO~0~1.
@@ -32,45 +32,45 @@ Section ProcDec.
   Definition memRep := MethodSig (outName -n- "deq")() : memAtomK addrSize valSize.
   Definition halt := MethodSig ^"HALT"() : Void.
 
-  Definition nextPc ppc st := ACTION {
-    Write ^"pc" <- #(getNextPc ppc st (dec st ppc));
+  Definition nextPc {ty} ppc st : ActionT ty Void := (
+    Write ^"pc" <- #(getNextPc _ ppc st (dec _ st ppc));
     Retv
-  }.
+  )%kami.
 
-  Definition reqLd :=
+  Definition reqLd {ty} : ActionT ty Void :=
     (Read stall <- ^"stall";
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Assert #(dec st ppc)@."opcode" == $$opLd;
+     Assert #(dec _ st ppc)@."opcode" == $$opLd;
      Call memReq(STRUCT {  "type" ::= $$memLd;
-                           "addr" ::= #(dec st ppc)@."addr";
+                           "addr" ::= #(dec _ st ppc)@."addr";
                            "value" ::= $$Default });
      Write ^"stall" <- $$true;
      Retv)%kami.
 
-  Definition reqSt :=
+  Definition reqSt {ty} : ActionT ty Void :=
     (Read stall <- ^"stall";
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Assert #(dec st ppc)@."opcode" == $$opSt;
+     Assert #(dec _ st ppc)@."opcode" == $$opSt;
      Call memReq(STRUCT {  "type" ::= $$opSt;
-                           "addr" ::= #(dec st ppc)@."addr";
-                           "value" ::= #(dec st ppc)@."value" });
+                           "addr" ::= #(dec _ st ppc)@."addr";
+                           "value" ::= #(dec _ st ppc)@."value" });
      Write ^"stall" <- $$true;
      Retv)%kami.
 
-  Definition repLd :=
+  Definition repLd {ty} : ActionT ty Void :=
     (Call val <- memRep();
      Read ppc <- ^"pc";
      Read st <- ^"rf";
      Assert #val@."type" == $$opLd;
-     Write ^"rf" <- #st@[#(dec st ppc)@."reg" <- #val@."value"];
+     Write ^"rf" <- #st@[#(dec _ st ppc)@."reg" <- #val@."value"];
      Write ^"stall" <- $$false;
      nextPc ppc st)%kami.
 
-  Definition repSt :=
+  Definition repSt {ty} : ActionT ty Void :=
     (Call val <- memRep();
      Read ppc <- ^"pc";
      Read st <- ^"rf";
@@ -78,24 +78,24 @@ Section ProcDec.
      Write ^"stall" <- $$false;
      nextPc ppc st)%kami.
 
-  Definition execHt :=
+  Definition execHt {ty} : ActionT ty Void :=
     (Read stall <- ^"stall";
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Assert #(dec st ppc)@."opcode" == $$opHt;
+     Assert #(dec _ st ppc)@."opcode" == $$opHt;
      Call halt();
      Retv)%kami.
 
-  Definition execNm :=
+  Definition execNm {ty} : ActionT ty Void :=
     (Read stall <- ^"stall";
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Assert !(#(dec st ppc)@."opcode" == $$opLd
-           || #(dec st ppc)@."opcode" == $$opSt
-           || #(dec st ppc)@."opcode" == $$opHt);
-     Write ^"rf" <- #(getNextState ppc st);
+     Assert !(#(dec _ st ppc)@."opcode" == $$opLd
+           || #(dec _ st ppc)@."opcode" == $$opSt
+           || #(dec _ st ppc)@."opcode" == $$opHt);
+     Write ^"rf" <- #(getNextState _ ppc st);
      nextPc ppc st)%kami.
 
   Definition procDec := MODULE {

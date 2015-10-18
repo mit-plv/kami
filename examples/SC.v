@@ -12,7 +12,7 @@ Section DecExec.
   Variables opIdx addrSize valSize rfIdx: nat.
 
   Definition StateK := SyntaxKind (Vector (Bit valSize) rfIdx).
-  Definition StateT := fullType type StateK.
+  Definition StateT (ty : FullKind -> Type) := ty StateK.
 
   Definition DecInstK := SyntaxKind (STRUCT {
     "opcode" :: Bit opIdx;
@@ -20,11 +20,11 @@ Section DecExec.
     "addr" :: Bit addrSize;
     "value" :: Bit valSize
   }).
-  Definition DecInstT := fullType type DecInstK.
+  Definition DecInstT (ty : FullKind -> Type) := ty DecInstK.
 
-  Definition DecT := StateT -> fullType type (SyntaxKind (Bit addrSize)) -> DecInstT.
-  Definition ExecT := StateT -> fullType type (SyntaxKind (Bit addrSize)) -> DecInstT ->
-                      fullType type (SyntaxKind (Bit addrSize)) * StateT.
+  Definition DecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty.
+  Definition ExecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty ->
+                      ty (SyntaxKind (Bit addrSize)) * StateT ty.
 End DecExec.
 
 (* The module definition for Minst with n ports *)
@@ -73,8 +73,8 @@ Section ProcInst.
   Variable dec: DecT opIdx addrSize valSize rfIdx.
   Variable exec: ExecT opIdx addrSize valSize rfIdx.
 
-  Definition getNextPc ppc st := fst (exec st ppc (dec st ppc)).
-  Definition getNextState ppc st := snd (exec st ppc (dec st ppc)).
+  Definition getNextPc ty ppc st := fst (exec ty st ppc (dec ty st ppc)).
+  Definition getNextState ty ppc st := snd (exec ty st ppc (dec ty st ppc)).
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
@@ -85,10 +85,9 @@ Section ProcInst.
   Definition execCm := MethodSig ^"exec"(memAtomK) : memAtomK.
   Definition haltCm := MethodSig ^"HALT"(Bit 0) : Bit 0.
 
-  Definition nextPc ppc st := ACTION {
-    Write ^"pc" <- $$(getNextPc ppc st);
-    Retv
-  }.
+  Definition nextPc {ty} ppc st :=
+    (Write ^"pc" <- #(getNextPc ty ppc st);
+    Retv)%kami.
 
   Definition procInst := MODULE {
     Register ^"pc" : Bit addrSize <- Default
@@ -97,36 +96,36 @@ Section ProcInst.
     with Rule ^"execLd" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opLd;
+      Assert #(dec _ st ppc)@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
-                                     "addr" ::= #(dec st ppc)@."addr";
+                                     "addr" ::= #(dec _ st ppc)@."addr";
                                     "value" ::= $$Default });
-      Write ^"rf" <- #st@[#(dec st ppc)@."reg" <- #ldRep@."value"];
-      nextPc ppc st
+      Write ^"rf" <- #st@[#(dec _ st ppc)@."reg" <- #ldRep@."value"];
+      (nextPc ppc st)
 
     with Rule ^"execSt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opSt;
+      Assert #(dec _ st ppc)@."opcode" == $$opSt;
       Call execCm(STRUCT {  "type" ::= $$memSt;
-                            "addr" ::= #(dec st ppc)@."addr";
-                           "value" ::= #(dec st ppc)@."value" });
+                            "addr" ::= #(dec _ st ppc)@."addr";
+                           "value" ::= #(dec _ st ppc)@."value" });
       nextPc ppc st
 
     with Rule ^"execHt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Assert #(dec st ppc)@."opcode" == $$opHt;
+      Assert #(dec _ st ppc)@."opcode" == $$opHt;
       Call haltCm();
       Retv
 
     with Rule ^"execNm" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Assert !(#(dec st ppc)@."opcode" == $$opLd
-             || #(dec st ppc)@."opcode" == $$opSt
-             || #(dec st ppc)@."opcode" == $$opHt);
-      Write ^"rf" <- #(getNextState ppc st);
+      Assert !(#(dec _ st ppc)@."opcode" == $$opLd
+             || #(dec _ st ppc)@."opcode" == $$opSt
+             || #(dec _ st ppc)@."opcode" == $$opHt);
+      Write ^"rf" <- #(getNextState _ ppc st);
       nextPc ppc st
 
     with Rule ^"voidRule" :=
@@ -150,7 +149,7 @@ Section SC.
   Definition pinsti (i: nat) :=
     procInst i opIdx addrSize valSize rfIdx dec exec opLd opSt opHt.
 
-  Fixpoint pinsts (i: nat): Modules type :=
+  Fixpoint pinsts (i: nat): Modules :=
     match i with
       | O => pinsti O
       | S i' => ConcatMod (pinsti i) (pinsts i')

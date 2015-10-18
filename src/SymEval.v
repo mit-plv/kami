@@ -11,7 +11,7 @@ Notation "_=== m .[ k ]" := (find k m = None) (at level 70).
 
 Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _)) (at level 0).
 
-Fixpoint SymSemAction k (a : Action type k) (rs rsNotWritable rs' : RegsT) (cs : CallsT) (kf : RegsT -> CallsT -> type k -> Prop) : Prop :=
+Fixpoint SymSemAction k (a : ActionT fullType k) (rs rsNotWritable rs' : RegsT) (cs : CallsT) (kf : RegsT -> CallsT -> type k -> Prop) : Prop :=
   match a with
   | MCall meth s marg cont =>
     forall mret,
@@ -66,7 +66,7 @@ Proof.
   destruct (a k); auto.
 Qed.
 
-Lemma double_find : forall T (v1 v2 : fullType type T) m k,
+Lemma double_find : forall T (v1 v2 : fullType T) m k,
   v1 === m.[k]
   -> v2 === m.[k]
   -> v1 = v2.
@@ -112,7 +112,7 @@ Qed.
 
 Hint Immediate Disj_union1 Disj_union2 Disj_add.
 
-Lemma SymSemAction_sound' : forall k (a : Action type k) rs rsNotWritable rs' cs' rv,
+Lemma SymSemAction_sound' : forall k (a : ActionT fullType k) rs rsNotWritable rs' cs' rv,
   SemAction rs a rs' cs' rv
   -> forall rs'' cs kf, SymSemAction a rs rsNotWritable rs'' cs kf
     -> Disj rs' rsNotWritable
@@ -157,7 +157,7 @@ Proof.
   repeat rewrite union_empty_2; congruence.
 Qed.
 
-Theorem SymSemAction_sound : forall k (a : Action type k) rs rsNotWritable rs' cs rv,
+Theorem SymSemAction_sound : forall k (a : ActionT fullType k) rs rsNotWritable rs' cs rv,
   SemAction rs a rs' cs rv
   -> forall kf, SymSemAction a rs rsNotWritable empty empty kf
     -> Disj rs' rsNotWritable
@@ -168,27 +168,27 @@ Proof.
 Qed.
 
 (* Considering method calls only.  We later build a version that considers trying a rule first, too. *)
-Fixpoint SymSemMod_methods (dms : list (DefMethT type)) (rs rs' : RegsT) (dmeth cmeth : CallsT)
+Fixpoint SymSemMod_methods (dms : list DefMethT) (rs rs' : RegsT) (dmeth cmeth : CallsT)
          (kf : RegsT -> CallsT -> CallsT -> Prop) : Prop :=
   match dms with
   | nil => kf rs' dmeth cmeth
   | meth :: dms' =>
     SymSemMod_methods dms' rs rs' dmeth cmeth kf
     /\ find (attrName meth) dmeth = None
-    /\ forall argV, SymSemAction (objVal (attrType meth) argV) rs rs' rs' cmeth
+    /\ forall argV, SymSemAction (objVal (attrType meth) fullType argV) rs rs' rs' cmeth
                                  (fun rs'' cmeth' retV =>
                                     SymSemMod_methods dms' rs rs'' dmeth[attrName meth |-> (argV, retV)] cmeth' kf)
   end.
 
 (* Here's the version that also considers trying a rule first. *)
-Fixpoint SymSemMod (dms : list (DefMethT type)) (rules : list (Attribute (Action type (Bit 0)))) (rs rs' : RegsT) (dmeth cmeth : CallsT)
+Fixpoint SymSemMod (dms : list DefMethT) (rules : list (Attribute (Action (Bit 0)))) (rs rs' : RegsT) (dmeth cmeth : CallsT)
          (kf : option string -> RegsT -> CallsT -> CallsT -> Prop) : Prop :=
   match rules with
   | nil => kf None rs' dmeth cmeth
            /\ SymSemMod_methods dms rs rs' dmeth cmeth (kf None)
   | rule :: rules' =>
     SymSemMod dms rules' rs rs' dmeth cmeth kf
-    /\ SymSemAction (attrType rule) rs rs' rs' cmeth
+    /\ SymSemAction (attrType rule fullType) rs rs' rs' cmeth
                     (fun rs'' cmeth' _ =>
                        SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule))))
   end.
@@ -205,7 +205,7 @@ Fixpoint SymMatchCalls (ls : list string) (cmeth dmeth : CallsT) (P : Prop) : Pr
     end
   end.
 
-Fixpoint SymLtsStep (ms : Modules type) (rs : RegsT)
+Fixpoint SymLtsStep (ms : Modules) (rs : RegsT)
          (kf : option string -> RegsT -> CallsT -> CallsT -> Prop) : Prop :=
   match ms with
   | Mod regInits rules meths =>
@@ -281,7 +281,7 @@ Qed.
 Lemma SysSemMod_ind : forall dms rule rules rs rs' dmeth cmeth kf,
   SymSemMod dms rules rs rs' dmeth cmeth kf
   -> In rule rules
-  -> SymSemAction (attrType rule) rs rs' rs' cmeth
+  -> SymSemAction (attrType rule fullType) rs rs' rs' cmeth
                   (fun rs'' cmeth' _ => SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule)))).
 Proof.
   induction rules; simpl; intuition (subst; auto).

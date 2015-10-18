@@ -119,11 +119,8 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Sub n: BinBitOp n n n.
 
 Section Phoas.
-  Variable type: Kind -> Type.
-  Definition fullType k := match k with
-                             | SyntaxKind k' => type k'
-                             | NativeKind t c => t
-                           end.
+  Variable fullType: FullKind -> Type.
+  Definition type k := fullType (SyntaxKind k).
   
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
@@ -143,28 +140,31 @@ Section Phoas.
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k)
                       -> Expr (SyntaxKind (Vector k i)).
 
-  Inductive Action (lretT: Kind) : Type :=
+  Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
       Expr (SyntaxKind (arg s)) ->
-      (type (ret s) -> Action lretT) ->
-      Action lretT
-  | Let_ lretT': Expr lretT' -> (fullType lretT' -> Action lretT) -> Action lretT
+      (type (ret s) -> ActionT lretT) ->
+      ActionT lretT
+  | Let_ lretT': Expr lretT' -> (fullType lretT' -> ActionT lretT) -> ActionT lretT
   | ReadReg (r: string):
-      forall k, (fullType k -> Action lretT) -> Action lretT
+      forall k, (fullType k -> ActionT lretT) -> ActionT lretT
   | WriteReg (r: string) k:
-      Expr k -> Action lretT -> Action lretT
+      Expr k -> ActionT lretT -> ActionT lretT
   | IfElse: Expr (SyntaxKind Bool) -> forall k,
-                                        Action k ->
-                                        Action k ->
-                                        (type k -> Action lretT) ->
-                                        Action lretT
-  | Assert_: Expr (SyntaxKind Bool) -> Action lretT -> Action lretT
-  | Return: Expr (SyntaxKind lretT) -> Action lretT.
+                                        ActionT k ->
+                                        ActionT k ->
+                                        (type k -> ActionT lretT) ->
+                                        ActionT lretT
+  | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
+  | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
+End Phoas.
+
+  Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
+  Definition MethodT (sig : SignatureT) := forall ty,
+     ty (SyntaxKind (arg sig)) -> ActionT ty (ret sig).
 
   Definition RegInitT := Attribute (Typed ConstFullT).
-  Definition DefMethT := Attribute (Typed (fun (a: SignatureT) =>
-                                             type (arg a) ->
-                                             Action (ret a))).
+  Definition DefMethT := Attribute (Typed MethodT).
 
   Inductive Modules: Type :=
   | Mod (regs: list RegInitT)
@@ -185,8 +185,6 @@ Section Phoas.
       | Mod regs _ _ => regs
       | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
     end.
-
-End Phoas.
 
 Hint Unfold getRules getRegInits.
 
@@ -231,3 +229,156 @@ Delimit Scope kami_struct_scope with struct.
 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Struct (cons s1%struct .. (cons sN%struct nil) ..)).
+
+
+(** * Notation corner! *)
+
+(* Notations: action *)
+
+Coercion attrName : Attribute >-> string.
+
+Notation "'Call' meth ( arg ) ; cont " :=
+  (MCall (attrName meth) (attrType meth) arg (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_scope.
+Notation "'Call' name <- meth ( arg ) ; cont " :=
+  (MCall (attrName meth) (attrType meth) arg (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
+Notation "'Call' meth () ; cont " :=
+  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_scope.
+Notation "'Call' name <- meth () ; cont " :=
+  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
+Notation "'Let' name <- expr ; cont " :=
+  (Let_ expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Let' name : t <- expr ; cont " :=
+  (Let_ (lretT' := t) expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Read' name <- reg ; cont" :=
+  (ReadReg reg _ (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Read' name : kind <- reg ; cont " :=
+  (ReadReg reg (SyntaxKind kind) (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Write' reg <- expr ; cont " :=
+  (WriteReg reg expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_scope.
+Notation "'Write' reg <- expr : kind ; cont " :=
+  (@WriteReg _ _ reg (SyntaxKind kind) expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_scope.
+Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
+  (IfElse cexpr tact fact (fun name => cont))
+    (at level 13, right associativity, name at level 0, cexpr at level 0, tact at next level, fact at next level) : kami_scope.
+Notation "'Assert' expr ; cont " :=
+  (Assert_ expr cont)
+    (at level 12, right associativity) : kami_scope.
+Notation "'Ret' expr" :=
+  (Return expr) (at level 12) : kami_scope.
+Notation Retv := (Return (Const _ (k := Bit 0) Default)).
+
+
+(* * Modules *)
+
+Inductive InModule :=
+| NilInModule
+| RegisterInModule (_ : RegInitT)
+| RuleInModule (_ : Attribute (Action (Bit 0)))
+| MethodInModule (_ : DefMethT)
+| ConcatInModule (_ _ : InModule)
+| NumberedInModule (f : nat -> InModule) (n : nat).
+
+Section numbered.
+  Variable makeModule' : InModule
+                         -> list RegInitT
+                            * list (Attribute (Action (Bit 0)))
+                            * list DefMethT.
+
+  Variable f : nat -> InModule.
+
+  Fixpoint numbered (n : nat) :=
+    match n with
+      | O => (nil, nil, nil)
+      | S n' =>
+        let '(a, b, c) := makeModule' (f n') in
+        let '(a', b', c') := numbered n' in
+        (a ++ a', b ++ b', c ++ c')
+    end.
+End numbered.
+
+Fixpoint makeModule' (im : InModule) := 
+  match im with
+    | NilInModule => (nil, nil, nil)
+    | RegisterInModule r => (r :: nil, nil, nil)
+    | RuleInModule r => (nil, r :: nil, nil)
+    | MethodInModule r => (nil, nil, r :: nil)
+    | ConcatInModule im1 im2 =>
+      let '(a1, b1, c1) := makeModule' im1 in
+      let '(a2, b2, c2) := makeModule' im2 in
+      (a1 ++ a2, b1 ++ b2, c1 ++ c2)
+    | NumberedInModule f n => numbered makeModule' f n
+  end.
+
+Fixpoint makeModule (im : InModule) :=
+  let '(a, b, c) := makeModule' im in
+  Mod a b c.
+
+Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c.
+
+Notation DefaultFull := (makeConst Default).
+
+Definition firstAction {T} (ls : list (Action T)) : Action T :=
+  match ls with
+  | a :: _ => a
+  | _ => fun _ => Return (Const _ Default)
+  end.
+
+(*
+Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons (fun _ => a1%kami) .. (cons (fun _ => aN%kami) nil) ..))
+  (at level 0, only parsing, a at level 200). *)
+
+Notation "'ACTION' { a }" := (fun ty => a%kami : ActionT ty _)
+  (at level 0, only parsing, a at level 0).
+
+Notation "'Register' name : type <- init" :=
+  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (SyntaxKind type) (makeConst init))))
+  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
+
+Notation "'Method' name () : retT := c" :=
+  (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := Void; ret := retT |}
+     (fun ty => fun _ : ty (SyntaxKind Void) => (c)%kami : ActionT ty retT))))
+  (at level 0, name at level 0) : kami_method_scope.
+
+Notation "'Method' name ( param : dom ) : retT := c" :=
+  (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := dom; ret := retT |}
+     (fun ty => fun param : ty (SyntaxKind dom) => (c)%kami : ActionT ty retT))))
+  (at level 0, name at level 0, param at level 0, dom at level 0) : kami_method_scope.
+
+Notation "'Rule' name := c" :=
+  (RuleInModule (Build_Attribute name (fun ty => c%kami : ActionT ty Void)))
+  (at level 0, name at level 0) : kami_method_scope.
+
+Delimit Scope kami_method_scope with method.
+
+Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
+  (NumberedInModule (fun n => ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..) count)
+  (at level 0, count at level 0, n at level 0) : kami_method_scope.
+
+Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
+
+Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
+           {attrs}
+           (tl : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) attrs)
+  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (projT1 na :: attrs) :=
+  icons (projT1 na) (projT2 na) tl.
+
+Notation "name ::= value" :=
+  (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a)))
+          (Build_Attribute name _) value) (at level 50) : init_scope.
+Delimit Scope init_scope with init.
+
+Notation "'STRUCT' { s1 ; .. ; sN }" :=
+  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
+  : kami_scope.
+
+Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_scope.
