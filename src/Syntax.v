@@ -327,16 +327,6 @@ Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c
 
 Notation DefaultFull := (makeConst Default).
 
-Definition firstAction {T} (ls : list (Action T)) : Action T :=
-  match ls with
-  | a :: _ => a
-  | _ => fun _ => Return (Const _ Default)
-  end.
-
-(*
-Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons (fun _ => a1%kami) .. (cons (fun _ => aN%kami) nil) ..))
-  (at level 0, only parsing, a at level 200). *)
-
 Notation "'ACTION' { a }" := (fun ty => a%kami : ActionT ty _)
   (at level 0, only parsing, a at level 0).
 
