@@ -13,10 +13,12 @@ Fixpoint type (t: Kind): Type :=
     | Struct attrs => forall i, @GetAttrType _ (map (mapAttr type) attrs) i
   end.
 
+(*
 Fixpoint fullType (k : FullKind) : Type := match k with
   | SyntaxKind t => type t
-  | NativeKind t _ => t
+  | NativeKind t => t
   end.
+ *)
 
 Section WordFunc.
 
@@ -205,23 +207,23 @@ Fixpoint evalConstT k (e: ConstT k): type k :=
   end.
 
 Definition evalConstFullT k (e: ConstFullT k) :=
-  match e in ConstFullT k return fullType k with
+  match e in ConstFullT k return fullType type k with
     | SyntaxConst k' c' => evalConstT c'
     | NativeConst t c c' => c'
-  end.
-
-Definition defaultConstFullT k: fullType k :=
-  match k as k' return fullType k' with
-    | SyntaxKind k => evalConstT (getDefaultConst _)
-    | NativeKind t c => c
   end.
 
 Section GetCms.
   Fixpoint getCmsA {k} (a: ActionT (fun _ => True) k): list string :=
     match a with
       | MCall m _ _ c => m :: (getCmsA (c I))
-      | Let_ fk e c => getCmsA (c I)
-      | ReadReg _ fk c => getCmsA (c I)
+      | Let_ fk e c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
+                                    | SyntaxKind _ => I
+                                    | NativeKind _ c' => c'
+                                  end)
+      | ReadReg _ fk c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
+                                       | SyntaxKind _ => I
+                                       | NativeKind _ c' => c'
+                                     end)
       | WriteReg _ _ _ c => getCmsA c
       | IfElse _ _ aT aF c =>
         (getCmsA aT) ++ (getCmsA aF)
@@ -262,7 +264,7 @@ End GetCms.
 Hint Unfold getCmsMod getDmsMod.
 
 (* maps register names to the values which they currently hold *)
-Definition RegsT := @Map (Typed fullType).
+Definition RegsT := @Map (Typed (fullType type)).
 
 (* a pair of the value sent to a method call and the value it returned *)
 Definition SignT k := (type (arg k) * type (ret k))%type.
@@ -275,8 +277,8 @@ Section Semantics.
     fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
       mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
-  Fixpoint evalExpr exprT (e: Expr fullType exprT): fullType exprT :=
-    match e in Expr _ exprT return fullType exprT with
+  Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
+    match e in Expr _ exprT return fullType type exprT with
       | Var _ v => v
       | Const _ v => evalConstT v
       | UniBool op e1 => (evalUniBool op) (evalExpr e1)
@@ -308,42 +310,42 @@ Section Semantics.
   Variable oldRegs: RegsT.
 
   Inductive SemAction:
-    forall k, ActionT fullType k -> RegsT -> CallsT -> type k -> Prop :=
+    forall k, ActionT type k -> RegsT -> CallsT -> type k -> Prop :=
   | SemMCall
-      meth s (marg: Expr fullType (SyntaxKind (arg s)))
+      meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
-      (cont: type (ret s) -> ActionT fullType retK)
+      (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: CallsT) acalls
       (HAcalls: acalls = add meth {| objVal := (evalExpr marg, mret) |} calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
   | SemLet
-      k (e: Expr fullType k) retK (fret: type retK)
-      (cont: fullType k -> ActionT fullType retK) newRegs calls
+      k (e: Expr type k) retK (fret: type retK)
+      (cont: fullType type k -> ActionT type retK) newRegs calls
       (HSemAction: SemAction (cont (evalExpr e)) newRegs calls fret):
       SemAction (Let_ e cont) newRegs calls fret
   | SemReadReg
-      (r: string) regT (regV: fullType regT)
-      retK (fret: type retK) (cont: fullType regT -> ActionT fullType retK)
+      (r: string) regT (regV: fullType type regT)
+      retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       newRegs calls
       (HRegVal: find r oldRegs = Some {| objType := regT; objVal := regV |})
       (HSemAction: SemAction (cont regV) newRegs calls fret):
       SemAction (ReadReg r _ cont) newRegs calls fret
   | SemWriteReg
       (r: string) k
-      (e: Expr fullType k)
+      (e: Expr type k)
       retK (fret: type retK)
-      (cont: ActionT fullType retK) newRegs calls anewRegs
+      (cont: ActionT type retK) newRegs calls anewRegs
       (HANewRegs: anewRegs = add r {| objVal := (evalExpr e) |} newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
   | SemIfElseTrue
-      (p: Expr fullType (SyntaxKind Bool)) k1
-      (a: ActionT fullType k1)
-      (a': ActionT fullType k1)
+      (p: Expr type (SyntaxKind Bool)) k1
+      (a: ActionT type k1)
+      (a': ActionT type k1)
       (r1: type k1)
-      k2 (cont: type k1 -> ActionT fullType k2)
+      k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HAction: SemAction a newRegs1 calls1 r1)
@@ -353,11 +355,11 @@ Section Semantics.
       (HUCalls: ucalls = union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemIfElseFalse
-      (p: Expr fullType (SyntaxKind Bool)) k1
-      (a: ActionT fullType k1)
-      (a': ActionT fullType k1)
+      (p: Expr type (SyntaxKind Bool)) k1
+      (a: ActionT type k1)
+      (a': ActionT type k1)
       (r1: type k1)
-      k2 (cont: type k1 -> ActionT fullType k2)
+      k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
       (HFalse: evalExpr p = false)
       (HAction: SemAction a' newRegs1 calls1 r1)
@@ -367,13 +369,13 @@ Section Semantics.
       (HUCalls: ucalls = union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemAssertTrue
-      (p: Expr fullType (SyntaxKind Bool)) k2
-      (cont: ActionT fullType k2) newRegs2 calls2 (r2: type k2)
+      (p: Expr type (SyntaxKind Bool)) k2
+      (cont: ActionT type k2) newRegs2 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
       SemAction (Assert_ p cont) newRegs2 calls2 r2
   | SemReturn
-      k (e: Expr fullType (SyntaxKind k)) evale
+      k (e: Expr type (SyntaxKind k)) evale
       (HEvalE: evale = evalExpr e):
       SemAction (Return e) empty empty evale.
 
@@ -431,7 +433,7 @@ Section Semantics.
                (ruleBody: Action (Bit 0))
                (HInRule: In {| attrName := ruleName; attrType := ruleBody |} rules)
                news calls retV
-               (HAction: SemAction (ruleBody fullType) news calls retV)
+               (HAction: SemAction (ruleBody type) news calls retV)
                news2 meths dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
                (HNoDoubleWrites: Disj news news2)
@@ -442,7 +444,7 @@ Section Semantics.
       SemMod (Some ruleName) unews meths dm2 ucalls
   (* method `meth` was also called this clock cycle *)
   | SemAddMeth calls news (meth: DefMethT) meths argV retV
-               (HAction: SemAction ((objVal (attrType meth)) fullType argV) news calls retV)
+               (HAction: SemAction ((objVal (attrType meth)) type argV) news calls retV)
                news2 dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
                (HNoDoubleWrites: Disj news news2)
@@ -741,7 +743,7 @@ match goal with
     end
 end.
 
-Definition initRegs (init: list RegInitT): RegsT := makeMap fullType evalConstFullT init.
+Definition initRegs (init: list RegInitT): RegsT := makeMap (fullType type) evalConstFullT init.
 Hint Unfold initRegs.
 
 (* m = module
@@ -834,7 +836,7 @@ Section WellFormed.
     - exists (initRegs (getRegInits m1)).
              exists (initRegs (getRegInits m2)).
              unfold initRegs in *.
-             rewrite (disjUnionProp (f1 := ConstFullT) fullType evalConstFullT
+             rewrite (disjUnionProp (f1 := ConstFullT) (fullType type) evalConstFullT
                                     (getRegInits m1) (getRegInits m2)) in *.
              exists nil; exists nil.
              repeat (constructor || intuition).

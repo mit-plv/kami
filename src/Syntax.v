@@ -71,6 +71,12 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
                       end) ls)
   end.
 
+Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
+  match k with
+    | SyntaxKind k' => SyntaxConst (getDefaultConst k')
+    | NativeKind t c => NativeConst c c
+  end.
+
 (*
 Definition RegKey := Attribute Kind.
 
@@ -119,8 +125,11 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Sub n: BinBitOp n n n.
 
 Section Phoas.
-  Variable fullType: FullKind -> Type.
-  Definition type k := fullType (SyntaxKind k).
+  Variable type: Kind -> Type.
+  Definition fullType k := match k with
+                             | SyntaxKind k' => type k'
+                             | NativeKind k' _ => k'
+                           end.
   
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
@@ -159,39 +168,39 @@ Section Phoas.
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 End Phoas.
 
-  Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
-  Definition MethodT (sig : SignatureT) := forall ty,
-     ty (SyntaxKind (arg sig)) -> ActionT ty (ret sig).
+Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
+Definition MethodT (sig : SignatureT) := forall ty,
+                                           ty (arg sig) -> ActionT ty (ret sig).
 
-  Definition RegInitT := Attribute (Typed ConstFullT).
-  Definition DefMethT := Attribute (Typed MethodT).
+Definition RegInitT := Attribute (Typed ConstFullT).
+Definition DefMethT := Attribute (Typed MethodT).
 
-  Inductive Modules: Type :=
-  | Mod (regs: list RegInitT)
-        (rules: list (Attribute (Action (Bit 0))))
-        (dms: list DefMethT):
-      Modules
-  | ConcatMod (m1 m2: Modules):
+Definition Void := Bit 0.
+Inductive Modules: Type :=
+| Mod (regs: list RegInitT)
+      (rules: list (Attribute (Action Void)))
+      (dms: list DefMethT):
+    Modules
+| ConcatMod (m1 m2: Modules):
     Modules.
 
-  Fixpoint getRules m := 
-    match m with
-      | Mod _ rules _ => rules
-      | ConcatMod m1 m2 => getRules m1 ++ getRules m2
-    end.
+Fixpoint getRules m := 
+  match m with
+    | Mod _ rules _ => rules
+    | ConcatMod m1 m2 => getRules m1 ++ getRules m2
+  end.
 
-  Fixpoint getRegInits m :=
-    match m with
-      | Mod regs _ _ => regs
-      | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
-    end.
+Fixpoint getRegInits m :=
+  match m with
+    | Mod regs _ _ => regs
+    | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
+  end.
 
 Hint Unfold getRules getRegInits.
 
 
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).
-Definition Void := Bit 0.
 Notation "'MethodSig' name () : retT" :=
   (Build_Attribute name {| arg := Void; ret := retT |})
   (at level 0, name at level 0, retT at level 200).
@@ -275,7 +284,7 @@ Notation "'Assert' expr ; cont " :=
     (at level 12, right associativity) : kami_scope.
 Notation "'Ret' expr" :=
   (Return expr) (at level 12) : kami_scope.
-Notation Retv := (Return (Const _ (k := Bit 0) Default)).
+Notation Retv := (Return (Const _ (k := Void) Default)).
 
 
 (* * Modules *)
@@ -283,7 +292,7 @@ Notation Retv := (Return (Const _ (k := Bit 0) Default)).
 Inductive InModule :=
 | NilInModule
 | RegisterInModule (_ : RegInitT)
-| RuleInModule (_ : Attribute (Action (Bit 0)))
+| RuleInModule (_ : Attribute (Action Void))
 | MethodInModule (_ : DefMethT)
 | ConcatInModule (_ _ : InModule)
 | NumberedInModule (f : nat -> InModule) (n : nat).
@@ -291,7 +300,7 @@ Inductive InModule :=
 Section numbered.
   Variable makeModule' : InModule
                          -> list RegInitT
-                            * list (Attribute (Action (Bit 0)))
+                            * list (Attribute (Action Void))
                             * list DefMethT.
 
   Variable f : nat -> InModule.
@@ -327,6 +336,16 @@ Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c
 
 Notation DefaultFull := (makeConst Default).
 
+Definition firstAction {T} (ls : list (Action T)) : Action T :=
+  match ls with
+  | a :: _ => a
+  | _ => fun _ => Return (Const _ Default)
+  end.
+
+(*
+Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons (fun _ => a1%kami) .. (cons (fun _ => aN%kami) nil) ..))
+  (at level 0, only parsing, a at level 200). *)
+
 Notation "'ACTION' { a }" := (fun ty => a%kami : ActionT ty _)
   (at level 0, only parsing, a at level 0).
 
@@ -336,12 +355,12 @@ Notation "'Register' name : type <- init" :=
 
 Notation "'Method' name () : retT := c" :=
   (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := Void; ret := retT |}
-     (fun ty => fun _ : ty (SyntaxKind Void) => (c)%kami : ActionT ty retT))))
+     (fun ty => fun _ : ty Void => (c)%kami : ActionT ty retT))))
   (at level 0, name at level 0) : kami_method_scope.
 
 Notation "'Method' name ( param : dom ) : retT := c" :=
   (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := dom; ret := retT |}
-     (fun ty => fun param : ty (SyntaxKind dom) => (c)%kami : ActionT ty retT))))
+     (fun ty => fun param : ty dom => (c)%kami : ActionT ty retT))))
   (at level 0, name at level 0, param at level 0, dom at level 0) : kami_method_scope.
 
 Notation "'Rule' name := c" :=

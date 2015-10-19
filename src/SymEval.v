@@ -11,7 +11,7 @@ Notation "_=== m .[ k ]" := (find k m = None) (at level 70).
 
 Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _)) (at level 0).
 
-Fixpoint SymSemAction k (a : ActionT fullType k) (rs rsNotWritable rs' : RegsT) (cs : CallsT) (kf : RegsT -> CallsT -> type k -> Prop) : Prop :=
+Fixpoint SymSemAction k (a : ActionT type k) (rs rsNotWritable rs' : RegsT) (cs : CallsT) (kf : RegsT -> CallsT -> type k -> Prop) : Prop :=
   match a with
   | MCall meth s marg cont =>
     forall mret,
@@ -66,7 +66,7 @@ Proof.
   destruct (a k); auto.
 Qed.
 
-Lemma double_find : forall T (v1 v2 : fullType T) m k,
+Lemma double_find : forall T (v1 v2 : fullType type T) m k,
   v1 === m.[k]
   -> v2 === m.[k]
   -> v1 = v2.
@@ -112,7 +112,7 @@ Qed.
 
 Hint Immediate Disj_union1 Disj_union2 Disj_add.
 
-Lemma SymSemAction_sound' : forall k (a : ActionT fullType k) rs rsNotWritable rs' cs' rv,
+Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rsNotWritable rs' cs' rv,
   SemAction rs a rs' cs' rv
   -> forall rs'' cs kf, SymSemAction a rs rsNotWritable rs'' cs kf
     -> Disj rs' rsNotWritable
@@ -125,7 +125,7 @@ Proof.
   subst; rewrite union_add by assumption; auto.
 
   destruct H0; intuition.
-  specialize (double_find _ _ HRegVal H2); intro; subst.
+  specialize (double_find rs _ HRegVal H2); intro; subst.
   apply IHSemAction; auto.
 
   subst.
@@ -157,7 +157,7 @@ Proof.
   repeat rewrite union_empty_2; congruence.
 Qed.
 
-Theorem SymSemAction_sound : forall k (a : ActionT fullType k) rs rsNotWritable rs' cs rv,
+Theorem SymSemAction_sound : forall k (a : ActionT type k) rs rsNotWritable rs' cs rv,
   SemAction rs a rs' cs rv
   -> forall kf, SymSemAction a rs rsNotWritable empty empty kf
     -> Disj rs' rsNotWritable
@@ -175,7 +175,7 @@ Fixpoint SymSemMod_methods (dms : list DefMethT) (rs rs' : RegsT) (dmeth cmeth :
   | meth :: dms' =>
     SymSemMod_methods dms' rs rs' dmeth cmeth kf
     /\ find (attrName meth) dmeth = None
-    /\ forall argV, SymSemAction (objVal (attrType meth) fullType argV) rs rs' rs' cmeth
+    /\ forall argV, SymSemAction (objVal (attrType meth) type argV) rs rs' rs' cmeth
                                  (fun rs'' cmeth' retV =>
                                     SymSemMod_methods dms' rs rs'' dmeth[attrName meth |-> (argV, retV)] cmeth' kf)
   end.
@@ -188,7 +188,7 @@ Fixpoint SymSemMod (dms : list DefMethT) (rules : list (Attribute (Action (Bit 0
            /\ SymSemMod_methods dms rs rs' dmeth cmeth (kf None)
   | rule :: rules' =>
     SymSemMod dms rules' rs rs' dmeth cmeth kf
-    /\ SymSemAction (attrType rule fullType) rs rs' rs' cmeth
+    /\ SymSemAction (attrType rule type) rs rs' rs' cmeth
                     (fun rs'' cmeth' _ =>
                        SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule))))
   end.
@@ -281,7 +281,7 @@ Qed.
 Lemma SysSemMod_ind : forall dms rule rules rs rs' dmeth cmeth kf,
   SymSemMod dms rules rs rs' dmeth cmeth kf
   -> In rule rules
-  -> SymSemAction (attrType rule fullType) rs rs' rs' cmeth
+  -> SymSemAction (attrType rule type) rs rs' rs' cmeth
                   (fun rs'' cmeth' _ => SymSemMod_methods dms rs rs'' dmeth cmeth' (kf (Some (attrName rule)))).
 Proof.
   induction rules; simpl; intuition (subst; auto).

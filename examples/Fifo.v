@@ -15,7 +15,7 @@ Section Fifo.
 
   Definition max_index : ConstT (Bit sz) := ^~ $1.
 
-  Definition enq {ty} : forall (d: ty (SyntaxKind dType)), ActionT ty Void := fun d =>
+  Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (Read isFull <- ^"full";
      Assert !#isFull;
      Read elt <- ^"elt";
