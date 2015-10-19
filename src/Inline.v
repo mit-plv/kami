@@ -15,19 +15,19 @@ Ltac destruct_existT :=
 Section Phoas.
   Variable type: Kind -> Type.
 
-  Definition inlineArg {argT retT} (a: Expr type argT)
-             (m: fullType type argT -> Action type retT): Action type retT :=
+  Definition inlineArg {argT retT} (a: Expr type (SyntaxKind argT))
+             (m: type argT -> ActionT type retT): ActionT type retT :=
     Let_ a m.
 
-  Fixpoint getMethod (n: string) (dms: list (DefMethT type)) :=
+  Fixpoint getMethod (n: string) (dms: list DefMethT) :=
     match dms with
       | nil => None
       | {| attrName := mn; attrType := mb |} :: dms' =>
         if string_dec n mn then Some mb else getMethod n dms'
     end.
 
-  Fixpoint appendAction {retT1 retT2} (a1: Action type retT1)
-           (a2: type retT1 -> Action type retT2): Action type retT2 :=
+  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
+           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
     match a1 with
       | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
       | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
@@ -40,8 +40,8 @@ Section Phoas.
   
   Lemma appendAction_assoc:
     forall {retT1 retT2 retT3}
-           (a1: Action type retT1) (a2: type retT1 -> Action type retT2)
-           (a3: type retT2 -> Action type retT3),
+           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
+           (a3: type retT2 -> ActionT type retT3),
       appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
   Proof.
     induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
@@ -52,7 +52,7 @@ Section Phoas.
       | MCall name sig ar cont =>
         if string_dec name (attrName dm) then
           match SignatureT_dec (objType (attrType dm)) sig with
-            | left e => appendAction (inlineArg ar (eq_rect _ _ (objVal (attrType dm)) _ e))
+            | left e => appendAction (inlineArg ar ((eq_rect _ _ (objVal (attrType dm)) _ e) type))
                                      (* (fun ak => inlineDm (cont ak) dm) *) cont
             | right _ =>
               MCall name sig ar (fun ak => inlineDm (cont ak) dm)
@@ -68,33 +68,35 @@ Section Phoas.
       | Return e => Return e
     end.
 
-  Fixpoint inlineDms {retT} (a: Action type retT)
-           (dms: list (DefMethT type)): Action type retT :=
+  Fixpoint inlineDms {retT} (a: ActionT type retT)
+           (dms: list DefMethT): ActionT type retT :=
     match dms with
       | nil => a
       | dm :: dms' => inlineDms (inlineDm a dm) dms'
     end.
 
-  Fixpoint inlineDmsRep {retT} (a: Action type retT) (dms: list (DefMethT type))
-           (countdown: nat): Action type retT :=
+  Fixpoint inlineDmsRep {retT} (a: ActionT type retT) (dms: list DefMethT)
+           (countdown: nat): ActionT type retT :=
     match countdown with
       | O => inlineDms a dms
       | S cd => inlineDms (inlineDmsRep a dms cd) dms
     end.
 
+End Phoas.
+
   Section Countdown.
     Variable countdown: nat.
 
-    Definition inlineToRule (r: Attribute (Action type (Bit 0)))
-               (dms: list (DefMethT type)): Attribute (Action type (Bit 0)) :=
+    Definition inlineToRule (r: Attribute (Action (Bit 0)))
+               (dms: list DefMethT): Attribute (Action (Bit 0)) :=
       match r with
         | {| attrName := rn; attrType := ra |} =>
           {| attrName := rn;
-             attrType := inlineDmsRep ra dms countdown |}
+             attrType := (fun ty => inlineDmsRep (ra ty) dms countdown) |}
       end.
 
-    Fixpoint inlineToRules (rules: list (Attribute (Action type (Bit 0))))
-             (dms: list (DefMethT type)): list (Attribute (Action type (Bit 0))) :=
+    Fixpoint inlineToRules (rules: list (Attribute (Action (Bit 0))))
+             (dms: list DefMethT): list (Attribute (Action (Bit 0))) :=
       match rules with
         | nil => nil
         | r :: rules' => (inlineToRule r dms) :: (inlineToRules rules' dms)
@@ -108,11 +110,11 @@ Section Phoas.
       - right; apply IHrules; auto.
     Qed.
 
-    Definition inlineToDm (n: string) {argT retT} (m: type argT -> Action type retT)
-               (dms: list (DefMethT type)): type argT -> Action type retT :=
-      fun a => inlineDmsRep (m a) dms countdown.
+    Definition inlineToDm (n: string) {argT retT} (m: forall ty, ty argT -> ActionT ty retT)
+               (dms: list DefMethT): forall ty, ty argT -> ActionT ty retT :=
+     fun ty a => inlineDmsRep (m ty a) dms countdown.
 
-    Fixpoint inlineToDms (dms: list (DefMethT type)): list (DefMethT type) :=
+    Fixpoint inlineToDms (dms: list DefMethT): list DefMethT :=
       match dms with
         | nil => nil
         | {| attrName := n; attrType := {| objType := s; objVal := a |} |} :: dms' =>
@@ -120,7 +122,7 @@ Section Phoas.
             :: (inlineToDms dms')
       end.
 
-    Definition inlineMod (m1 m2: Modules type): Modules type :=
+    Definition inlineMod (m1 m2: Modules): Modules :=
       match m1, m2 with
         | Mod regs1 r1 dms1, Mod regs2 r2 dms2 =>
           Mod (regs1 ++ regs2) (inlineToRules (r1 ++ r2) (dms1 ++ dms2))
@@ -130,17 +132,11 @@ Section Phoas.
 
   End Countdown.
 
-End Phoas.
-
 Section PhoasTT.
 
   Definition typeTT (k: Kind): Type := unit.
 
-  Definition fullTypeTT (k: FullKind): Type :=
-    match k with
-      | SyntaxKind k' => typeTT k'
-      | NativeKind t c => t
-    end.
+  Definition fullTypeTT := fullType typeTT.
 
   Definition getTT (k: FullKind): fullTypeTT k :=
     match k with
@@ -170,11 +166,12 @@ Section PhoasTT.
         | {| attrType := r |} :: rules' => (noCalls r ml) && (noCallsRules rules' ml)
       end.
 
-    Fixpoint noCallsDms (dms: list (DefMethT typeTT)) (ml: list string) :=
+(*
+    Fixpoint noCallsDms (dms: list DefMethT) :=
       match dms with
         | nil => true
         | {| attrType := {| objVal := dm |} |} :: dms' =>
-          (noCalls (dm tt) ml) && (noCallsDms dms' ml)
+          (noCalls (dm fullTypeTT)) && (noCallsDms dms')
       end.
 
     Fixpoint noCallsMod (m: Modules typeTT) (ml: list string) :=
@@ -182,6 +179,7 @@ Section PhoasTT.
         | Mod _ rules dms => (noCallsRules rules ml) && (noCallsDms dms ml)
         | ConcatMod m1 m2 => (noCallsMod m1 ml) && (noCallsMod m2 ml)
       end.
+*)
 
   End NoCalls.
 
@@ -291,7 +289,7 @@ Proof.
   - invertAction H0; map_simpl_G; econstructor; eauto.
 Qed.
 
-Inductive WfmAction: list string -> forall {retT}, Action type retT -> Prop :=
+Inductive WfmAction {ty}: list string -> forall {retT}, ActionT ty retT -> Prop :=
 | WfmMCall:
     forall ll name sig ar {retT} cont (Hnin: ~ In name ll),
       (forall t, WfmAction (name :: ll) (cont t)) ->
@@ -318,12 +316,12 @@ Inductive WfmAction: list string -> forall {retT}, Action type retT -> Prop :=
       WfmAction ll cont ->
       WfmAction ll (Assert_ (lretT:= retT) e cont)
 | WfmReturn:
-    forall ll {retT} (e: Expr type (SyntaxKind retT)), WfmAction ll (Return e).
+    forall ll {retT} (e: Expr ty (SyntaxKind retT)), WfmAction ll (Return e).
 
 Hint Constructors WfmAction.
 
-Lemma WfmAction_init_sub:
-  forall {retK} (a: Action type retK) ll1
+Lemma WfmAction_init_sub {ty}:
+  forall {retK} (a: ActionT ty retK) ll1
          (Hwfm: WfmAction ll1 a) ll2
          (Hin: forall k, In k ll2 -> In k ll1),
     WfmAction ll2 a.
@@ -335,10 +333,10 @@ Proof.
   intros; inv H1; intuition.
 Qed.
 
-Lemma WfmAction_append_1':
+Lemma WfmAction_append_1' {ty} :
   forall {retT2} a3 ll,
     WfmAction ll a3 ->
-    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+    forall {retT1} (a1: ActionT ty retT1) (a2: ty retT1 -> ActionT ty retT2),
       a3 = appendAction a1 a2 -> WfmAction ll a1.
 Proof.
   induction 1; intros.
@@ -361,16 +359,16 @@ Proof.
   - destruct a1; simpl in *; try discriminate.
 Qed.
 
-Lemma WfmAction_append_1:
-  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+Lemma WfmAction_append_1 {ty}:
+  forall {retT1 retT2} (a1: ActionT ty retT1) (a2: ty retT1 -> ActionT ty retT2) ll,
     WfmAction ll (appendAction a1 a2) ->
     WfmAction ll a1.
 Proof. intros; eapply WfmAction_append_1'; eauto. Qed.
 
-Lemma WfmAction_append_2':
+Lemma WfmAction_append_2' : let ty := type in
   forall {retT2} a3 ll,
     WfmAction ll a3 ->
-    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+    forall {retT1} (a1: ActionT ty retT1) (a2: ty retT1 -> ActionT ty retT2),
       a3 = appendAction a1 a2 ->
       forall t, WfmAction ll (a2 t).
 Proof.
@@ -394,19 +392,19 @@ Proof.
   - destruct a1; simpl in *; try discriminate.
 
     Grab Existential Variables.
-    { exact (defaultConstFullT _). }    
-    { exact (defaultConstFullT _). }    
-    { exact (evalConstT (getDefaultConst _)). }    
+    { exact (evalConstFullT (getDefaultConstFull _)). }
+    { exact (evalConstFullT (getDefaultConstFull _)). }
+    { exact (evalConstT (getDefaultConst _)). }
 Qed.
 
 Lemma WfmAction_append_2:
-  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+  forall {retT1 retT2} (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2) ll,
     WfmAction ll (appendAction a1 a2) ->
     forall t, WfmAction ll (a2 t).
 Proof. intros; eapply WfmAction_append_2'; eauto. Qed.
 
 Lemma WfmAction_cmMap:
-  forall {retK} olds (a: Action type retK) news calls retV ll
+  forall {retK} olds (a: ActionT type retK) news calls retV ll
          (Hsem: SemAction olds a news calls retV)
          (Hwfm: WfmAction ll a)
          lb (Hin: In lb ll),
@@ -449,7 +447,7 @@ Qed.
 Lemma WfmAction_append_3':
   forall {retT2} a3 ll,
     WfmAction ll a3 ->
-    forall {retT1} (a1: Action type retT1) (a2: type retT1 -> Action type retT2),
+    forall {retT1} (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2),
       a3 = appendAction a1 a2 ->
       forall olds1 olds2 news1 news2 calls1 calls2 retV1 retV2,
       SemAction olds1 a1 news1 calls1 retV1 ->
@@ -489,7 +487,7 @@ Proof.
 Qed.
 
 Lemma WfmAction_append_3:
-  forall {retT1 retT2} (a1: Action type retT1) (a2: type retT1 -> Action type retT2) ll,
+  forall {retT1 retT2} (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2) ll,
     WfmAction ll (appendAction a1 a2) ->
     forall olds1 olds2 news1 news2 calls1 calls2 retV1 retV2,
       SemAction olds1 a1 news1 calls1 retV1 ->
@@ -498,7 +496,7 @@ Lemma WfmAction_append_3:
 Proof. intros; eapply WfmAction_append_3'; eauto. Qed.
 
 Lemma WfmAction_init:
-  forall {retK} (a: Action type retK) ll
+  forall {retK} (a: ActionT type retK) ll
          (Hwfm: WfmAction ll a),
     WfmAction nil a.
 Proof. intros; eapply WfmAction_init_sub; eauto; intros; inv H. Qed.
@@ -534,14 +532,15 @@ Proof.
 Qed.
 
 Lemma inlineDm_SemAction_not_called:
-  forall {retK} (a: Action type retK) olds news calls retV dm
+  forall {retK} (a: ActionT type retK) olds news calls retV dm
          (Hsem: SemAction olds a news calls retV)
          (Hcol: find (attrName dm) calls = None),
     SemAction olds (inlineDm a dm) news calls retV.
 Proof.
-  induction 1; intros; simpl; subst; intuition idtac.
+  induction 1; intros; simpl; subst; intuition idtac; fold type in *.
 
-  - destruct (string_dec meth dm); [subst; map_simpl Hcol; discriminate|].
+  - destruct (string_dec meth dm);
+    [subst; map_simpl Hcol; discriminate|].
     econstructor; eauto.
     rewrite find_add_2 in Hcol;
       [|unfold string_eq; destruct (string_dec _ _); intuition].
@@ -575,7 +574,7 @@ Section Preliminaries.
                                              ret := ret (objType (attrType dm)) |};
                                objVal := objVal (attrType dm) |} |} /\
         dmMap = add (attrName dm) {| objVal := (argV, retV) |} empty /\
-        SemAction olds (objVal (attrType dm) argV) news cmMap retV.
+        SemAction olds (objVal (attrType dm) type argV) news cmMap retV.
   Proof.
     intros.
     invertSemMod H.
@@ -900,7 +899,6 @@ Section Preliminaries.
       simpl; econstructor; eauto.
     - invertAction H3; simpl; map_simpl_G.
       map_simpl H4; inv H4.
-
   Qed.
 
   Lemma inlineDms_prop_1:
@@ -983,8 +981,8 @@ End Preliminaries.
 
 Section Facts.
   Variables (regs1 regs2: list RegInitT)
-            (r1 r2: list (Attribute (Action type (Bit 0))))
-            (dms1 dms2: list (DefMethT type)).
+            (r1 r2: list (Attribute (Action (Bit 0))))
+            (dms1 dms2: list DefMethT).
 
   Variable countdown: nat.
 
@@ -992,7 +990,7 @@ Section Facts.
   Definition m2 := Mod regs2 r2 dms2.
 
   Definition cm := ConcatMod m1 m2.
-  Definition im := @inlineMod type countdown m1 m2.
+  Definition im := @inlineMod countdown m1 m2.
 
   Lemma inline_correct_rule:
     forall r or nr cmMap,

@@ -27,6 +27,8 @@ Qed.
 Definition inc := MethodSig "inc"() : Void.
 Definition inc2 := MethodSig "inc2"() : Void.
 
+Notation SyntaxType k := (fullType type (SyntaxKind k)).
+
 Theorem really_atomic : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {
                                                                      Register "r" : Bit 2 <- Default
 

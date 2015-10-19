@@ -146,8 +146,8 @@ Qed.
 
 Section Relation.
   Variable rulesImp rulesSpec: list string.
-  Variable dmsImp dmsSpec: list (DefMethT type).
-  Variable imp spec: Modules type.
+  Variable dmsImp dmsSpec: list DefMethT.
+  Variable imp spec: Modules.
   Variable regRel: RegsT -> RegsT -> Prop.
   Variable ruleMap: string -> string.
   Variable cmmap dmmap: CallsT -> CallsT.
@@ -212,7 +212,7 @@ Section Relation.
 End Relation.
 
 Section Props.
-  Variables M N O P: Modules type.
+  Variables M N O P: Modules.
 
   Hypotheses (HwfM: RegsInDomain M)
              (HwfO: RegsInDomain O)

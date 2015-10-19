@@ -15,7 +15,7 @@ Section Middleman.
   Definition setRep := MethodSig (outName -n- "enq")(atomK addrSize dType) : Void.
   Definition exec := MethodSig ("exec"__ memi)(atomK addrSize dType) : atomK addrSize dType.
 
-  Definition processLd :=
+  Definition processLd {ty} : ActionT ty Void :=
     (Call req <- getReq();
      Assert #req@."type" == $$memLd;
      Call rep <- exec(#req);
@@ -23,7 +23,7 @@ Section Middleman.
      Call setRep(#rep);
      Retv)%kami.
 
-  Definition processSt :=
+  Definition processSt {ty} : ActionT ty Void :=
     (Call req <- getReq();
      Assert #req@."type" == $$memSt;
      Call rep <- exec(#req);

@@ -13,6 +13,13 @@ Fixpoint type (t: Kind): Type :=
     | Struct attrs => forall i, @GetAttrType _ (map (mapAttr type) attrs) i
   end.
 
+(*
+Fixpoint fullType (k : FullKind) : Type := match k with
+  | SyntaxKind t => type t
+  | NativeKind t => t
+  end.
+ *)
+
 Section WordFunc.
 
   Definition wordZero (w: word 0): w = WO :=
@@ -205,50 +212,47 @@ Definition evalConstFullT k (e: ConstFullT k) :=
     | NativeConst t c c' => c'
   end.
 
-Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c.
-
-Definition defaultConstFullT k: fullType type k :=
-  match k as k' return fullType type k' with
-    | SyntaxKind k => evalConstT (getDefaultConst _)
-    | NativeKind t c => c
-  end.
-
 Section GetCms.
-  Fixpoint getCmsA {k} (a: Action type k): list string :=
+  Fixpoint getCmsA {k} (a: ActionT (fun _ => True) k): list string :=
     match a with
-      | MCall m _ _ c => m :: (getCmsA (c (evalConstT (getDefaultConst _))))
-      | Let_ fk e c => getCmsA (c (defaultConstFullT fk))
-      | ReadReg _ fk c => getCmsA (c (defaultConstFullT fk))
+      | MCall m _ _ c => m :: (getCmsA (c I))
+      | Let_ fk e c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
+                                    | SyntaxKind _ => I
+                                    | NativeKind _ c' => c'
+                                  end)
+      | ReadReg _ fk c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
+                                       | SyntaxKind _ => I
+                                       | NativeKind _ c' => c'
+                                     end)
       | WriteReg _ _ _ c => getCmsA c
       | IfElse _ _ aT aF c =>
         (getCmsA aT) ++ (getCmsA aF)
-                     ++ (getCmsA (c (evalConstT (getDefaultConst _))))
+                     ++ (getCmsA (c I))
       | Assert_ _ c => getCmsA c
       | Return _ => nil
     end.
 
-  Fixpoint getCmsR (rl: list (Attribute (Action type (Bit 0))))
+  Fixpoint getCmsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
       | nil => nil
-      | r :: rl' => (getCmsA (attrType r)) ++ (getCmsR rl')
+      | r :: rl' => (getCmsA (attrType r (fun _ => True))) ++ (getCmsR rl')
     end.
 
-  Fixpoint getCmsM (ms: list (DefMethT type)): list string :=
+  Fixpoint getCmsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
-      | m :: ms' => (getCmsA ((objVal (attrType m))
-                                (evalConstT (getDefaultConst _))))
+      | m :: ms' => (getCmsA ((objVal (attrType m)) (fun _ => True) I))
                       ++ (getCmsM ms')
     end.
 
-  Fixpoint getCmsMod (m: Modules type): list string :=
+  Fixpoint getCmsMod (m: Modules): list string :=
     match m with
       | Mod _ rules meths => getCmsR rules ++ getCmsM meths
       | ConcatMod m1 m2 => (listSub (getCmsMod m1) (getDmsMod m2))
                              ++ (listSub (getCmsMod m2) (getDmsMod m1))
     end
-  with getDmsMod (m: Modules type): list string :=
+  with getDmsMod (m: Modules): list string :=
          match m with
            | Mod _ _ meths => map (@attrName _) meths
            | ConcatMod m1 m2 => (listSub (getDmsMod m1) (getCmsMod m2))
@@ -300,30 +304,30 @@ Section Semantics.
   (*register names and constant expressions for their initial values *)
   Variable regInit: list RegInitT.
 
-  Variable rules: list (Attribute (Action type (Bit 0))).
+  Variable rules: list (Attribute (Action (Bit 0))).
 
   (* register values just before the current cycle *)
   Variable oldRegs: RegsT.
 
   Inductive SemAction:
-    forall k, Action type k -> RegsT -> CallsT -> type k -> Prop :=
+    forall k, ActionT type k -> RegsT -> CallsT -> type k -> Prop :=
   | SemMCall
       meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
-      (cont: type (ret s) -> Action type retK)
+      (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: CallsT) acalls
       (HAcalls: acalls = add meth {| objVal := (evalExpr marg, mret) |} calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
   | SemLet
       k (e: Expr type k) retK (fret: type retK)
-      (cont: fullType type k -> Action type retK) newRegs calls
+      (cont: fullType type k -> ActionT type retK) newRegs calls
       (HSemAction: SemAction (cont (evalExpr e)) newRegs calls fret):
       SemAction (Let_ e cont) newRegs calls fret
   | SemReadReg
       (r: string) regT (regV: fullType type regT)
-      retK (fret: type retK) (cont: fullType type regT -> Action type retK)
+      retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       newRegs calls
       (HRegVal: find r oldRegs = Some {| objType := regT; objVal := regV |})
       (HSemAction: SemAction (cont regV) newRegs calls fret):
@@ -332,16 +336,16 @@ Section Semantics.
       (r: string) k
       (e: Expr type k)
       retK (fret: type retK)
-      (cont: Action type retK) newRegs calls anewRegs
+      (cont: ActionT type retK) newRegs calls anewRegs
       (HANewRegs: anewRegs = add r {| objVal := (evalExpr e) |} newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
   | SemIfElseTrue
       (p: Expr type (SyntaxKind Bool)) k1
-      (a: Action type k1)
-      (a': Action type k1)
+      (a: ActionT type k1)
+      (a': ActionT type k1)
       (r1: type k1)
-      k2 (cont: type k1 -> Action type k2)
+      k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HAction: SemAction a newRegs1 calls1 r1)
@@ -352,10 +356,10 @@ Section Semantics.
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemIfElseFalse
       (p: Expr type (SyntaxKind Bool)) k1
-      (a: Action type k1)
-      (a': Action type k1)
+      (a: ActionT type k1)
+      (a': ActionT type k1)
       (r1: type k1)
-      k2 (cont: type k1 -> Action type k2)
+      k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
       (HFalse: evalExpr p = false)
       (HAction: SemAction a' newRegs1 calls1 r1)
@@ -366,7 +370,7 @@ Section Semantics.
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemAssertTrue
       (p: Expr type (SyntaxKind Bool)) k2
-      (cont: Action type k2) newRegs2 calls2 (r2: type k2)
+      (cont: ActionT type k2) newRegs2 calls2 (r2: type k2)
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
       SemAction (Assert_ p cont) newRegs2 calls2 r2
@@ -419,17 +423,17 @@ Section Semantics.
     destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
   Qed.
 
-  Inductive SemMod: option string -> RegsT -> list (DefMethT type) -> CallsT -> CallsT -> Prop :=
+  Inductive SemMod: option string -> RegsT -> list DefMethT -> CallsT -> CallsT -> Prop :=
   | SemEmpty news dm cm
              (HEmptyRegs: news = empty)
              (HEmptyDms: dm = empty)
              (HEmptyCms: cm = empty):
       SemMod None news nil dm cm
   | SemAddRule (ruleName: string)
-               (ruleBody: Action type (Bit 0))
+               (ruleBody: Action (Bit 0))
                (HInRule: In {| attrName := ruleName; attrType := ruleBody |} rules)
                news calls retV
-               (HAction: SemAction ruleBody news calls retV)
+               (HAction: SemAction (ruleBody type) news calls retV)
                news2 meths dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
                (HNoDoubleWrites: Disj news news2)
@@ -439,8 +443,8 @@ Section Semantics.
                (HCalls: ucalls = union calls cm2):
       SemMod (Some ruleName) unews meths dm2 ucalls
   (* method `meth` was also called this clock cycle *)
-  | SemAddMeth calls news (meth: DefMethT type) meths argV retV
-               (HAction: SemAction ((objVal (attrType meth)) argV) news calls retV)
+  | SemAddMeth calls news (meth: DefMethT) meths argV retV
+               (HAction: SemAction ((objVal (attrType meth)) type argV) news calls retV)
                news2 dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
                (HNoDoubleWrites: Disj news news2)
@@ -662,7 +666,7 @@ Ltac destConcatLabel :=
 
 (* rm = ruleMethod *)
 Inductive LtsStep:
-  Modules type -> option string -> RegsT -> RegsT -> CallsT -> CallsT -> Prop :=
+  Modules -> option string -> RegsT -> RegsT -> CallsT -> CallsT -> Prop :=
 | LtsStepMod regInits oRegs nRegs rules meths rm dmMap cmMap
              (HOldRegs: InDomain oRegs (map (@attrName _) regInits))
              (Hltsmod: SemMod rules oRegs rm nRegs meths dmMap cmMap):
@@ -746,7 +750,7 @@ Hint Unfold initRegs.
    or = old registers
    nr = new registers *)
 Inductive LtsStepClosure:
-  Modules type ->
+  Modules ->
   RegsT -> list RuleLabelT ->
   Prop :=
 | lcNil m inits
@@ -785,7 +789,7 @@ Proof.
 Qed.
 
 Section Domain.
-  Variable m: Modules type.
+  Variable m: Modules.
   Variable newRegsDomain: RegsInDomain m.
   Theorem regsDomain r l
     (clos: LtsStepClosure m r l):
@@ -807,14 +811,14 @@ Section Domain.
 End Domain.
 
 Section WellFormed.
-  Variable m1 m2: Modules type.
+  Variable m1 m2: Modules.
 
   Variable newRegsDomainM1: RegsInDomain m1.
   Variable newRegsDomainM2: RegsInDomain m2.
 
   Variable disjRegs:
-    forall r, ~ (In r (map (@attrName _) (getRegInits (type := type) m1)) /\
-                 In r (map (@attrName _) (getRegInits (type := type) m2))).
+    forall r, ~ (In r (map (@attrName _) (getRegInits m1)) /\
+                 In r (map (@attrName _) (getRegInits m2))).
   Variable r: RegsT.
   Variable l: list RuleLabelT.
 
@@ -1036,153 +1040,5 @@ Ltac regsInDomain_tac :=
          | [ H : LtsStep _ _ _ _ _ _ |- _ ] => inv H
          | [ H : SemMod _ _ _ _ _ _ _ |- _ ] => inv H
          end; in_tac_H; (deattr; simpl in *; repeat invertActionRep; inDomain_tac).
-
-
-(** * Notation corner! *)
-
-(* Notations: action *)
-
-Coercion attrName : Attribute >-> string.
-
-Notation "'Call' meth ( arg ) ; cont " :=
-  (MCall (type := type) (attrName meth) (attrType meth) arg (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_scope.
-Notation "'Call' name <- meth ( arg ) ; cont " :=
-  (MCall (type := type) (attrName meth) (attrType meth) arg (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
-Notation "'Call' meth () ; cont " :=
-  (MCall (type := type) (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_scope.
-Notation "'Call' name <- meth () ; cont " :=
-  (MCall (type := type) (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
-Notation "'Let' name <- expr ; cont " :=
-  (Let_ (type := type) expr (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Let' name : t <- expr ; cont " :=
-  (Let_ (type := type) (lretT' := t) expr (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Read' name <- reg ; cont" :=
-  (ReadReg (type := type) reg _ (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Read' name : kind <- reg ; cont " :=
-  (ReadReg (type := type) reg (SyntaxKind kind) (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Write' reg <- expr ; cont " :=
-  (WriteReg (type := type) reg expr cont)
-    (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'Write' reg <- expr : kind ; cont " :=
-  (@WriteReg type _ reg (SyntaxKind kind) expr cont)
-    (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
-  (IfElse cexpr tact fact (fun name => cont))
-    (at level 13, right associativity, name at level 0, cexpr at level 0, tact at next level, fact at next level) : kami_scope.
-Notation "'Assert' expr ; cont " :=
-  (Assert_ expr cont)
-    (at level 12, right associativity) : kami_scope.
-Notation "'Ret' expr" :=
-  (Return expr) (at level 12) : kami_scope.
-Notation Retv := (Return (Const _ (k := Bit 0) Default)).
-
-(* * Modules *)
-
-Inductive InModule :=
-| NilInModule
-| RegisterInModule (_ : RegInitT)
-| RuleInModule (_ : Attribute (Action type (Bit 0)))
-| MethodInModule (_ : DefMethT type)
-| ConcatInModule (_ _ : InModule)
-| NumberedInModule (f : nat -> InModule) (n : nat).
-
-Section numbered.
-  Variable makeModule' : InModule
-                         -> list RegInitT
-                            * list (Attribute (Action type (Bit 0)))
-                            * list (DefMethT type).
-
-  Variable f : nat -> InModule.
-
-  Fixpoint numbered (n : nat) :=
-    match n with
-      | O => (nil, nil, nil)
-      | S n' =>
-        let '(a, b, c) := makeModule' (f n') in
-        let '(a', b', c') := numbered n' in
-        (a ++ a', b ++ b', c ++ c')
-    end.
-End numbered.
-
-Fixpoint makeModule' (im : InModule) := 
-  match im with
-    | NilInModule => (nil, nil, nil)
-    | RegisterInModule r => (r :: nil, nil, nil)
-    | RuleInModule r => (nil, r :: nil, nil)
-    | MethodInModule r => (nil, nil, r :: nil)
-    | ConcatInModule im1 im2 =>
-      let '(a1, b1, c1) := makeModule' im1 in
-      let '(a2, b2, c2) := makeModule' im2 in
-      (a1 ++ a2, b1 ++ b2, c1 ++ c2)
-    | NumberedInModule f n => numbered makeModule' f n
-  end.
-
-Fixpoint makeModule (im : InModule) :=
-  let '(a, b, c) := makeModule' im in
-  Mod a b c.
-
-Notation SyntaxType k := (fullType type (SyntaxKind k)).
-
-Notation DefaultFull := (makeConst Default).
-
-Notation "'Register' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (SyntaxKind type) (makeConst init))))
-  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
-
-Notation "'Method' name () : retT := c" :=
-  (MethodInModule (Build_Attribute name (Build_Typed (fun a : SignatureT => type (arg a) -> Action type (ret a)) {| arg := Void; ret := retT |}
-     (fun _ : type Void => c%kami : Action type retT))))
-  (at level 0, name at level 0) : kami_method_scope.
-
-Notation "'Method' name ( param : dom ) : retT := c" :=
-  (MethodInModule (Build_Attribute name (Build_Typed (fun a : SignatureT => type (arg a) -> Action type (ret a)) {| arg := dom; ret := retT |}
-     (fun param : type dom => c%kami : Action type retT))))
-  (at level 0, name at level 0, param at level 0) : kami_method_scope.
-
-Notation "'Rule' name := c" :=
-  (RuleInModule (Build_Attribute name (c%kami : Action type Void)))
-  (at level 0, name at level 0) : kami_method_scope.
-
-Delimit Scope kami_method_scope with method.
-
-Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
-  (NumberedInModule (fun n => ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..) count)
-  (at level 0, count at level 0, n at level 0) : kami_method_scope.
-
-Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
-
-Definition icons' (na : {a : Attribute Kind & Expr type (SyntaxKind (attrType a))})
-           {attrs}
-           (tl : ilist (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a))) attrs)
-  : ilist (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a))) (projT1 na :: attrs) :=
-  icons (projT1 na) (projT2 na) tl.
-
-Notation "name ::= value" :=
-  (existT (fun a : Attribute Kind => Expr type (SyntaxKind (attrType a)))
-          (Build_Attribute name _) value) (at level 50) : init_scope.
-Delimit Scope init_scope with init.
-
-Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
-  : kami_scope.
-
-Notation "e :: t" := (e : Expr type (SyntaxKind t)) : kami_scope.
-
-Definition firstAction {T} (ls : list (Action type T)) : Action type T :=
-  match ls with
-  | a :: _ => a
-  | _ => Return (Const _ Default)
-  end.
-
-Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons a1%kami .. (cons aN%kami nil) ..))
-  (at level 0, only parsing, a at level 200).
 
 Global Opaque mkStruct.
