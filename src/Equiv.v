@@ -60,7 +60,11 @@ Section Equiv.
                         (e2: Expr t2 (SyntaxKind (Struct attrs))),
                    ExprEquiv G e1 e2 ->
                    ExprEquiv G (ReadField attr e1) (ReadField attr e2)
-  (* | EEBuildVector: TODO *)
+  | EEBuildVector: forall G {n k}
+                          (v1: Vec (Expr t1 (SyntaxKind n)) k)
+                          (v2: Vec (Expr t2 (SyntaxKind n)) k),
+                     (forall w: word k, ExprEquiv G (evalVec v1 w) (evalVec v2 w)) ->
+                     ExprEquiv G (BuildVector v1) (BuildVector v2)
   | EEBuildStruct: forall G {attrs: list (Attribute Kind)}
                           (s1: ilist (fun a => Expr t1 (SyntaxKind (attrType a))) attrs)
                           (s2: ilist (fun a => Expr t2 (SyntaxKind (attrType a))) attrs),

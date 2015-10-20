@@ -25,6 +25,37 @@ Section Vec.
     end.
 End Vec.
 
+Section VecFunc.
+  Variable A: Type.
+  Fixpoint evalVec n (vec: Vec A n): word n -> A.
+  Proof.
+    refine match vec in Vec _ n return word n -> A with
+             | Vec0 e => fun _ => e
+             | VecNext n' v1 v2 =>
+               fun w =>
+                 match w in word m0 return m0 = S n' -> A with
+                   | WO => _
+                   | WS b m w' =>
+                     if b
+                     then fun _ => evalVec _ v2 (_ w')
+                     else fun _ => evalVec _ v2 (_ w')
+                 end eq_refl
+           end;
+    clear evalVec.
+    abstract (intros; discriminate).
+    abstract (injection _H; intros; subst; intuition).
+    abstract (injection _H; intros; subst; intuition).
+  Defined.
+
+  Variable B: Type.
+  Variable map: A -> B.
+  Fixpoint mapVec n (vec: Vec A n): Vec B n :=
+    match vec in Vec _ n return Vec B n with
+      | Vec0 e => Vec0 (map e)
+      | VecNext n' v1 v2 => VecNext (mapVec v1) (mapVec v2)
+    end.
+End VecFunc.
+
 Inductive Kind: Type :=
 | Bool    : Kind
 | Bit     : nat -> Kind
