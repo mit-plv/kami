@@ -37,6 +37,20 @@ Section StringEq.
 
 End StringEq.
 
+Section Lists. (* About domains *)
+  Context {A: Type}.
+  
+  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
+  Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+
+  Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
+  Proof. admit. Qed.
+
+  Lemma DisjList_SubList: forall sl1 l1 l2, DisjList l1 l2 -> DisjList sl1 l2.
+  Proof. admit. Qed.
+
+End Lists.
+
 Section Domains.
   Definition listSub (l1 l2: list string) :=
     filter (fun s => if in_dec string_dec s l2 then false else true) l1.
@@ -533,6 +547,13 @@ Section Facts.
     destruct (m2 k); [inv H|right; assumption].
   Qed.
 
+  Lemma Disj_DisjList_restrict:
+    forall {A} (m: @Map A) l1 l2, DisjList l1 l2 -> Disj (restrict m l1) (restrict m l2).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H;
+    [left; destruct (in_dec _ _ _); intuition|right; destruct (in_dec _ _ _); intuition].
+  Qed.
 
   Lemma Disj_complement: forall {A} (m1 m2: @Map A) l, Disj m1 m2 -> Disj m1 (complement m2 l).
   Proof.
