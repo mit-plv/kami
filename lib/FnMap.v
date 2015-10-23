@@ -330,6 +330,24 @@ Section Facts.
     destruct (in_dec string_dec k l); reflexivity.
   Qed.
 
+  Lemma restrict_add: forall {A} (m: @Map A) (l: list string) a v,
+                        In a l -> restrict (add a v m) l = add a v (restrict m l).
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs.
+    destruct (in_dec string_dec k l); intuition.
+    unfold string_eq; destruct (string_dec _ _); intuition.
+    subst; elim n; assumption.
+  Qed.
+
+  Lemma restrict_add_not: forall {A} (m: @Map A) (l: list string) a v,
+                            ~ In a l -> restrict (add a v m) l = restrict m l.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs.
+    destruct (in_dec _ k l); intuition.
+    unfold string_eq; destruct (string_dec _ _); intuition.
+    subst; elim H; assumption.
+  Qed.
+    
   Lemma restrict_union:
     forall {A} (m1 m2: @Map A) l,
       restrict (union m1 m2) l = union (restrict m1 l) (restrict m2 l).
@@ -547,6 +565,13 @@ Section Facts.
     destruct (m2 k); [inv H|right; assumption].
   Qed.
 
+  Lemma Disj_restrict:
+    forall {A} (m1 m2: @Map A) l, Disj m1 m2 -> Disj (restrict m1 l) m2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); destruct H; [left; destruct (in_dec _ _ _); auto|right; assumption].
+  Qed.
+    
   Lemma Disj_DisjList_restrict:
     forall {A} (m: @Map A) l1 l2, DisjList l1 l2 -> Disj (restrict m l1) (restrict m l2).
   Proof.

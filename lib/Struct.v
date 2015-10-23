@@ -67,6 +67,46 @@ Section BoundedIndexFull.
   : forall (a1 a2: Attribute), {a1 = a2} + {a1 <> a2}.
   Proof. intros; repeat decide equality. Qed.
 
+  Fixpoint getAttribute (n: string) (attrs: list Attribute) :=
+    match attrs with
+      | nil => None
+      | attr :: attrs' =>
+        if string_dec n (attrName attr) then Some attr
+        else getAttribute n attrs'
+    end.
+
+  Lemma getAttribute_app:
+    forall n (attrs1 attrs2: list Attribute) dm
+           (Hdm: dm = getAttribute n (attrs1 ++ attrs2)),
+      dm = getAttribute n attrs1 \/ dm = getAttribute n attrs2.
+  Proof.
+    induction attrs1; intros; simpl; [right; assumption|].
+    simpl in Hdm; destruct (string_dec n (attrName a)); subst; intuition.
+  Qed.
+
+  Lemma getAttribute_Some:
+    forall n (attrs: list Attribute) dm
+           (Hdm: Some dm = getAttribute n attrs),
+      In n (map attrName attrs).
+  Proof.
+    induction attrs; intros; simpl; [inv Hdm|].
+    simpl in Hdm; destruct (string_dec n (attrName a)); [left; auto|].
+    right; eapply IHattrs; eauto.
+  Qed.
+
+  Lemma getAttribute_None:
+    forall n (attrs: list Attribute)
+           (Hdm: None = getAttribute n attrs),
+      ~ In n (map attrName attrs).
+  Proof.
+    induction attrs; intros; intuition; inv H.
+    - simpl in Hdm.
+      destruct (string_dec (attrName a) (attrName a)); [inv Hdm|elim n; reflexivity].
+    - inv Hdm.
+      destruct (string_dec _ _); [inv H1|].
+      apply IHattrs; auto.
+  Qed.
+
   Definition BoundedIndexFull attrs := BoundedIndex (map attrName attrs).
 
   Definition GetAttr

@@ -509,6 +509,35 @@ Proof.
         right; specialize (IHdms _ H); assumption.
 Qed.
 
+Lemma SemMod_meth_singleton:
+  forall dms rules olds news dm a (Ha: Some a = getAttribute dm dms)
+         argV retV cmMap
+         (Hwf: NoDup (map (@attrName _) dms))
+         (Hsem: SemMod rules olds None news dms
+                       (add dm
+                            {| objType := objType (attrType a);
+                               objVal := (argV, retV) |} empty) cmMap),
+    SemAction olds (objVal (attrType a) type argV) news cmMap retV.
+Proof.
+  induction dms; intros; simpl in *.
+
+  - inv Hsem; apply Equal_val with (k:= dm) in HEmptyDms.
+    map_compute HEmptyDms; discriminate.
+
+  - inv Hsem.
+    + admit.
+    + inv Hwf.
+      assert (attrName a <> dm).
+      { pose proof (SemMod_dmMap_InDomain HSemMod).
+        destruct (string_dec dm a); [|auto].
+        subst; specialize (H a).
+        unfold InMap in H; map_compute H; specialize (H (opt_discr _)).
+        elim H1; assumption.
+      }
+      destruct (string_dec dm a); [elim H; auto|].
+      eapply IHdms; eauto.
+Qed.
+
 Lemma SemMod_dms_ext:
   forall dms2 rules dms1 or rm nr dmMap cmMap,
     SemMod rules or rm nr dms1 dmMap cmMap ->
