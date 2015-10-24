@@ -547,6 +547,19 @@ Proof.
   admit.
 Qed.
 
+Lemma SemMod_div:
+  forall rules olds rm news dms dmMap1 dmMap2 cmMap
+         (Hsem: SemMod rules olds rm news dms (union dmMap1 dmMap2) cmMap)
+         (Hdisj: Disj dmMap1 dmMap2),
+  exists news1 news2 cmMap1 cmMap2,
+    Disj news1 news2 /\ news = union news1 news2 /\
+    Disj cmMap1 cmMap2 /\ cmMap = union cmMap1 cmMap2 /\
+    SemMod rules olds rm news1 dms dmMap1 cmMap1 /\
+    SemMod rules olds rm news2 dms dmMap2 cmMap2.
+Proof.
+  admit.
+Qed.
+
 Lemma SemMod_merge_meths:
   forall rules dms or nr1 nr2 dmMap1 dmMap2 cmMap1 cmMap2,
     SemMod rules or None nr1 dms dmMap1 cmMap1 ->
