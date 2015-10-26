@@ -514,6 +514,33 @@ Proof.
   - map_simpl_G; reflexivity.
 Qed.
 
+Lemma getAttribute_SemMod:
+  forall rules olds dms news meth dmMap cmMap s sv
+         (Hdms: NoDup (map (@attrName _) dms))
+         (Hsem: SemMod rules olds None news dms dmMap cmMap)
+         (Hdm: find meth dmMap = Some {| objType := s; objVal := sv |})
+         (attr: Attribute (Typed MethodT))
+         (Hattr: Some attr = getAttribute meth dms),
+    objType (attrType attr) = s.
+Proof.
+  induction dms; intros; [discriminate|].
+
+  simpl in Hattr.
+  destruct (string_dec meth a).
+
+  - subst; inv Hattr.
+    inv Hsem; [map_simpl Hdm; inv Hdm; reflexivity|].
+    exfalso; clear IHdms.
+    inv Hdms.
+    pose proof (SemMod_dmMap_InDomain HSemMod).
+    elim H1; apply H.
+    unfold InMap; rewrite Hdm; discriminate.
+
+  - inv Hdms; inv Hsem; [|eapply IHdms; eauto].
+    rewrite find_add_2 in Hdm; [|unfold string_eq; destruct (string_dec _ _); intuition].
+    eapply IHdms; eauto.
+Qed.
+
 Section Preliminaries.
 
   Lemma inlineDms_prop:
@@ -736,7 +763,64 @@ Section Preliminaries.
           { eassumption. }
           { eassumption. }
         
-      + admit.
+      + unfold getBody in Heqodm.
+        remember (getAttribute meth (dmsAll1 ++ dmsAll2)) as mat.
+        destruct mat.
+
+        * destruct (SignatureT_dec (objType (attrType a0)) s); [discriminate|].
+          exfalso; elim n; clear n.
+
+          apply getAttribute_app in Heqmat; destruct Heqmat.
+          { eapply getAttribute_SemMod; [exact H3|exact H7| |exact H0].
+            pose proof (getAttribute_Some _ _ H0).
+            rewrite restrict_add by assumption.
+            map_simpl_G; reflexivity.
+          }
+          { eapply getAttribute_SemMod; [exact H4|exact H8| |exact H0].
+            pose proof (getAttribute_Some _ _ H0).
+            rewrite restrict_add by assumption.
+            map_simpl_G; reflexivity.
+          } 
+
+        * clear Heqodm; econstructor; eauto.
+
+          { instantiate
+              (1:= union cmMap1
+                         (union cmMap2
+                                (complement calls (map (@attrName _) (dmsAll1 ++ dmsAll2))))).
+            instantiate (1:= mret).
+
+            clear -Heqmat Hcm1A Hcm2A.
+            apply Equal_eq; repeat autounfold with MapDefs in *; intros k.
+            specialize (Hcm1A k); specialize (Hcm2A k).
+            unfold string_eq in *; destruct (string_dec meth k); [subst|reflexivity].
+            destruct Hcm1A; [|discriminate].
+            destruct Hcm2A; [|discriminate].
+            rewrite H, H0; destruct (in_dec _ _ _); [|reflexivity].
+            pose proof (getAttribute_None _ _ Heqmat); elim H1; assumption.
+          }
+          { eapply H; eauto.
+            { eapply Disj_add_2; eauto. }
+            { eapply Disj_add_2; eauto. }
+            { specialize (H12 mret).
+              eapply WfmAction_init_sub; eauto.
+              intros; inv H0.
+            }
+            { assert (~ In meth (map (@attrName _) dmsAll1)).
+              { pose proof (getAttribute_None _ _ Heqmat).
+                intro Hx; elim H0.
+                rewrite map_app; apply in_or_app; left; assumption.
+              }
+              rewrite restrict_add_not by assumption; reflexivity.
+            }
+            { assert (~ In meth (map (@attrName _) dmsAll2)).
+              { pose proof (getAttribute_None _ _ Heqmat).
+                intro Hx; elim H0.
+                rewrite map_app; apply in_or_app; right; assumption.
+              }
+              rewrite restrict_add_not by assumption; reflexivity.
+            }
+          }
         
     - inv H0; destruct_existT.
       inv H1; destruct_existT.
