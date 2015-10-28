@@ -384,6 +384,10 @@ Notation "'Register' name : type <- init" :=
   (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (SyntaxKind type) (makeConst init))))
   (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
 
+Notation "'RegisterN' name : type <- init" :=
+  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (type) (init))))
+  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
+
 Notation "'Method' name () : retT := c" :=
   (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := Void; ret := retT |}
      (fun ty => fun _ : ty Void => (c)%kami : ActionT ty retT))))
