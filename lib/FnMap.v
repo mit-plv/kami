@@ -587,6 +587,11 @@ Section Facts.
     right; destruct (in_dec _ _ _); intuition.
   Qed.
 
+  Lemma Sub_refl: forall {A} (m: @Map A), Sub m m.
+  Proof.
+    repeat autounfold with MapDefs; reflexivity.
+  Qed.
+
   Lemma Sub_unionL: forall {A} (m1 m2: @Map A), Sub m1 (unionL m1 m2).
   Proof.
     repeat autounfold with MapDefs; intros.

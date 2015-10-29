@@ -461,6 +461,63 @@ Section Semantics.
 
 End Semantics.
 
+Ltac cheap_firstorder :=
+  repeat match goal with
+           | [ H : ex _ |- _ ] => destruct H
+           | [ H : _ /\ _ |- _ ] => destruct H
+         end.
+
+Ltac invertAction H := apply inversionSemAction in H; simpl in H; cheap_firstorder; try subst.
+Ltac invertActionFirst :=
+  match goal with
+    | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+  end.
+Ltac invertActionRep :=
+  repeat
+    match goal with
+      | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+      | [H: if ?c
+            then
+              SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+            else
+              SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+        let ic := fresh "ic" in
+        (remember c as ic; destruct ic; dest; subst)
+    end.
+
+Ltac invertSemMod H :=
+  inv H;
+  repeat match goal with
+           | [H: Disj _ _ |- _] => clear H
+         end.
+
+Ltac invertSemModRep :=
+  repeat
+    match goal with
+      | [H: SemMod _ _ _ _ _ _ _ |- _] => invertSemMod H
+    end.
+
+Lemma SemAction_olds_ext:
+  forall retK a olds1 olds2 news calls (retV: type retK),
+    FnMap.Sub olds1 olds2 ->
+    SemAction olds1 a news calls retV ->
+    SemAction olds2 a news calls retV.
+Proof.
+  induction a; intros.
+  - invertAction H1; econstructor; eauto.
+  - invertAction H1; econstructor; eauto.
+  - invertAction H1; econstructor; eauto.
+    repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
+    rewrite <-H1; symmetry; apply H0; unfold InMap, find; rewrite H1; discriminate.
+  - invertAction H0; econstructor; eauto.
+  - invertAction H1.
+    remember (evalExpr e) as cv; destruct cv; dest.
+    + eapply SemIfElseTrue; eauto.
+    + eapply SemIfElseFalse; eauto.
+  - invertAction H0; econstructor; eauto.
+  - invertAction H0; econstructor; eauto.
+Qed.
+
 Lemma SemMod_empty:
   forall rules or dms, SemMod rules or None empty dms empty empty.
 Proof.
@@ -478,6 +535,20 @@ Proof.
   - apply Equal_val with (k := attrName a) in HDefs.
     map_compute HDefs; discriminate.
   - apply IHdms; auto.
+Qed.
+
+Lemma SemMod_olds_ext:
+  forall rules or1 or2 rm nr dms dmMap cmMap,
+    FnMap.Sub or1 or2 -> SemMod rules or1 rm nr dms dmMap cmMap ->
+    SemMod rules or2 rm nr dms dmMap cmMap.
+Proof.
+  induction 2; intros.
+  - subst; constructor; auto.
+  - eapply SemAddRule; eauto.
+    eapply SemAction_olds_ext; eauto.
+  - eapply SemAddMeth; eauto.
+    eapply SemAction_olds_ext; eauto.
+  - eapply SemSkipMeth; eauto.
 Qed.
 
 Lemma SemMod_dmMap_InDomain:
@@ -538,6 +609,15 @@ Proof.
       eapply IHdms; eauto.
 Qed.
 
+Lemma SemMod_dms_cut:
+  forall dms2 rules dms1 or rm nr dmMap cmMap,
+    SemMod rules or rm nr dms1 dmMap cmMap ->
+    InDomain dmMap (map (@attrName _) dms2) -> (forall k, In k dms2 -> In k dms1) -> 
+    SemMod rules or rm nr dms2 dmMap cmMap.
+Proof.
+  admit.
+Qed.
+
 Lemma SemMod_dms_ext:
   forall dms2 rules dms1 or rm nr dmMap cmMap,
     SemMod rules or rm nr dms1 dmMap cmMap ->
@@ -579,42 +659,6 @@ Lemma SemMod_merge_rule:
 Proof.
   admit.
 Qed.
-
-Ltac cheap_firstorder :=
-  repeat match goal with
-         | [ H : ex _ |- _ ] => destruct H
-         | [ H : _ /\ _ |- _ ] => destruct H
-         end.
-
-Ltac invertAction H := apply inversionSemAction in H; simpl in H; cheap_firstorder; try subst.
-Ltac invertActionFirst :=
-  match goal with
-    | [H: SemAction _ _ _ _ _ |- _] => invertAction H
-  end.
-Ltac invertActionRep :=
-  repeat
-    match goal with
-      | [H: SemAction _ _ _ _ _ |- _] => invertAction H
-      | [H: if ?c
-            then
-              SemAction _ _ _ _ _ /\ _ /\ _ /\ _
-            else
-              SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-        let ic := fresh "ic" in
-        (remember c as ic; destruct ic; dest; subst)
-    end.
-
-Ltac invertSemMod H :=
-  inv H;
-  repeat match goal with
-           | [H: Disj _ _ |- _] => clear H
-         end.
-
-Ltac invertSemModRep :=
-  repeat
-    match goal with
-      | [H: SemMod _ _ _ _ _ _ _ |- _] => invertSemMod H
-    end.
 
 (* dm       : defined methods
    cm       : called methods
