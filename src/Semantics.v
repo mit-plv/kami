@@ -259,9 +259,15 @@ Section GetCms.
                                   ++ (listSub (getDmsMod m2) (getCmsMod m1))
          end.
 
+  Fixpoint getDmsBodies (m: Modules): list DefMethT :=
+    match m with
+      | Mod _ _ meths => meths
+      | ConcatMod m1 m2 => (getDmsBodies m1) ++ (getDmsBodies m2)
+    end.
+
 End GetCms.
 
-Hint Unfold getCmsMod getDmsMod.
+Hint Unfold getCmsMod getDmsMod getDmsBodies.
 
 (* maps register names to the values which they currently hold *)
 Definition RegsT := @Map (Typed (fullType type)).
@@ -635,7 +641,7 @@ Lemma SemMod_div:
     Disj news1 news2 /\ news = union news1 news2 /\
     Disj cmMap1 cmMap2 /\ cmMap = union cmMap1 cmMap2 /\
     SemMod rules olds rm news1 dms dmMap1 cmMap1 /\
-    SemMod rules olds rm news2 dms dmMap2 cmMap2.
+    SemMod rules olds None news2 dms dmMap2 cmMap2.
 Proof.
   admit.
 Qed.
