@@ -191,6 +191,8 @@ Section Map.
   Definition Sub (m1 m2: Map) := forall k, InMap k m1 -> m1 k = m2 k.
 
   Definition InDomain (m: Map) (d: list string) := forall k, InMap k m -> In k d.
+  Definition OnDomain (m: Map) (d: list string) := forall k, In k d -> InMap k m.
+  Definition NotOnDomain (m: Map) (d: list string) := forall k, In k d -> ~ InMap k m.
   Definition DomainOf (m: Map) (d: list string) := forall k, InMap k m <-> In k d.
 
   Lemma Equal_eq: forall m1 m2, Equal m1 m2 -> m1 = m2.
@@ -204,7 +206,8 @@ End Map.
 Hint Unfold empty unionL unionR add union disjUnion
      find remove subtract update restrict complement : MapDefs.
 
-Hint Unfold MapsTo InMap Equal Disj Sub InDomain : MapDefs.
+Hint Unfold MapsTo InMap Equal Disj Sub
+     InDomain OnDomain NotOnDomain DomainOf : MapDefs.
     
 Section MakeMap.
   Variable A: Type.
@@ -607,6 +610,14 @@ Section Facts.
     right; destruct (in_dec _ _ _); intuition.
   Qed.
 
+  Lemma Disj_OnDomain: forall {A} (m1 m2: @Map A) l,
+                         Disj m1 m2 -> OnDomain m1 l -> NotOnDomain m2 l.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); specialize (H0 k).
+    destruct H; intuition.
+  Qed.
+
   Lemma Sub_refl: forall {A} (m: @Map A), Sub m m.
   Proof.
     repeat autounfold with MapDefs; reflexivity.
@@ -652,6 +663,16 @@ Section Facts.
       intuition.
     + rewrite H2 in H1.
       intuition.
+  Qed.
+
+  Lemma NotOnDomain_complement: forall {A} (m: @Map A) (d: list string),
+                                  NotOnDomain m d -> complement m d = m.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs in *; intros.
+    specialize (H k).
+    destruct (in_dec _ _ _); intuition.
+    destruct (m k); intuition.
+    specialize (H0 (opt_discr _)); elim H0.
   Qed.
 
   Lemma disjUnion_div':

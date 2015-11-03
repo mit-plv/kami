@@ -281,7 +281,7 @@ Lemma getCalls_SemAction:
          olds news calls retV,
     getCalls aut dms = cdms ->
     SemAction olds ast news calls retV ->
-    InDomain calls (map (@attrName _) cdms).
+    OnDomain calls (map (@attrName _) cdms).
 Proof.
   admit.
   (* induction 1; intros; simpl in *. *)
@@ -1257,7 +1257,57 @@ Section Preliminaries.
   Proof.
     induction cdn; intros.
 
-    - simpl.
+    - simpl; rewrite restrict_union in H10, H11.
+
+      assert (exists retV, SemAction olds2 (ar type) newsA cmMapA retV); dest.
+      { inv H4; pose proof (SemMod_empty_inv HSemMod); dest; subst.
+        eexists; map_simpl_G.
+        assert (ruleBody = ar); subst.
+        { clear -H0 HInRule H1.
+          induction rules2; [inv H0|].
+          simpl in H1; inv H1.
+          inv H0.
+          { inv HInRule; [inv H; reflexivity|].
+            elim H3. apply in_map with (B:= string) (f:= @attrName _) in H.
+            assumption.
+          }
+          { inv HInRule; [|apply IHrules2; auto].
+            elim H3. apply in_map with (B:= string) (f:= @attrName _) in H.
+            assumption.
+          }
+        }
+        eassumption.
+      }
+
+      assert (cmMap1 = complement cmMap1 (map (@attrName _) cdms2)).
+      { simpl in H2, H3.
+        pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll2)
+                                        _ _ _ _ eq_refl H12).
+        symmetry; apply NotOnDomain_complement.
+        subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto.
+        apply Disj_comm; assumption.
+      }
+      rewrite <-H13.
+
+      assert (empty = restrict cmMap1 (map (@attrName _) cdms2)).
+      { rewrite complement_restrict_nil; auto. }
+      rewrite <-H14 in H11; clear H13 H14.
+
+      assert (cmMap2 = complement cmMap2 (map (@attrName _) cdms1)).
+      { simpl in H2, H3.
+        pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll1)
+                                        _ _ _ _ eq_refl H12).
+        symmetry; apply NotOnDomain_complement.
+        subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto.
+        apply Disj_comm; assumption.
+      }
+      rewrite <-H13.
+
+      assert (empty = restrict cmMap2 (map (@attrName _) cdms1)).
+      { rewrite complement_restrict_nil; auto. }
+      rewrite <-H14 in H10; clear H13 H14.
+
+      map_simpl H10; map_simpl H11.
 
       eapply inlineToRules_prop; try assumption; try reflexivity.
 
@@ -1271,31 +1321,12 @@ Section Preliminaries.
         apply DisjList_SubList with (l1:= map (@attrName _) dmsAll2);
           [apply SubList_map; assumption|].
         apply DisjList_comm; assumption.
-      + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; assumption.
-      + apply Disj_comm, Disj_complement, Disj_comm; assumption.
-      + apply Disj_comm, Disj_complement, Disj_comm; assumption.
       + inv H; destruct_existT; assumption.
       + assumption.
       + assumption.
       + assumption.
-      + simpl in H2, H3; instantiate (1:= rules1).
-        assert (dmMap1 = restrict cmMapA (map (@attrName _) cdms1)).
-        { subst; admit. }
-        rewrite <-H12; clear H12.
-
-        assert (cmMap1 = complement cmMap1 (map (@attrName _) cdms2)).
-        { admit. }
-        rewrite <-H12; clear H12.
-        assumption.
-        
-      + assert (dmMap2 = restrict cmMapA (map (@attrName _) cdms2)).
-        { subst; admit. }
-        rewrite <-H12; clear H12.
-
-        assert (cmMap2 = complement cmMap2 (map (@attrName _) cdms1)).
-        { admit. }
-        rewrite <-H12; clear H12.
-        assumption.
+      + subst; eassumption.
+      + subst; eassumption.
 
     - admit.
 
