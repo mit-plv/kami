@@ -7,10 +7,9 @@ Set Implicit Arguments.
 Section StreamMod.
   Variable modName: string.
   Variable A : Kind.
-  Variable default : ConstT A.
   Variable stream : Stream (ConstT A).
 
-  Definition nk := NativeKind (const default).
+  Definition nk := NativeKind stream.
 
   Notation "^ s" := (modName -n- s) (at level 0).
 
@@ -18,7 +17,7 @@ Section StreamMod.
     RegisterN ^"stream" : nk <- (NativeConst _ stream)
 
     with Method ^"get"() : A :=
-    (ReadReg  (^"stream") nk (fun s => 
+    (ReadReg (^"stream") nk (fun s => 
     WriteReg (^"stream") (Var _ nk (tl s))
      (Ret $$(hd s))))%kami
   }.
