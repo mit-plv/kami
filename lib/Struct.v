@@ -84,6 +84,26 @@ Section BoundedIndexFull.
     simpl in Hdm; destruct (string_dec n (attrName a)); subst; intuition.
   Qed.
 
+  Lemma getAttribute_Some_name:
+    forall n (attrs: list Attribute) dm
+           (Hdm: Some dm = getAttribute n attrs),
+      attrName dm = n.
+  Proof.
+    induction attrs; intros; simpl; [inv Hdm|].
+    simpl in Hdm; destruct (string_dec _ _); [|auto].
+    inv Hdm; reflexivity.
+  Qed.
+
+  Lemma getAttribute_Some_body:
+    forall n (attrs: list Attribute) dm
+           (Hdm: Some dm = getAttribute n attrs),
+      In dm attrs.
+  Proof.
+    induction attrs; intros; simpl; [inv Hdm|].
+    simpl in Hdm; destruct (string_dec _ _); [|auto].
+    left; inv Hdm; reflexivity.
+  Qed.
+
   Lemma getAttribute_Some:
     forall n (attrs: list Attribute) dm
            (Hdm: Some dm = getAttribute n attrs),

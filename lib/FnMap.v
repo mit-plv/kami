@@ -46,10 +46,20 @@ Section Lists. (* About domains *)
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. admit. Qed.
 
-  Lemma DisjList_SubList: forall sl1 l1 l2, DisjList l1 l2 -> DisjList sl1 l2.
+  Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
   Proof. admit. Qed.
 
 End Lists.
+
+Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
+                     SubList l1 l2 -> SubList (map f l1) (map f l2).
+Proof.
+  induction l1; intros; simpl; unfold SubList in *; intros; [inv H0|].
+  inv H0.
+  - apply in_map; apply H; left; reflexivity.
+  - apply IHl1; auto.
+    intros; specialize (H e0); apply H; right; assumption.
+Qed.
 
 Section Domains.
   Definition listSub (l1 l2: list string) :=
@@ -368,6 +378,16 @@ Section Facts.
   Proof.
     repeat autounfold with MapDefs; intros.
     destruct (in_dec string_dec k l); intuition.
+  Qed.
+
+  Lemma restrict_InDomain_itself: forall {A} (m: @Map A) (l: list string),
+                                    InDomain m l -> restrict m l = m.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs in *; intros.
+    specialize (H k).
+    destruct (in_dec _ _ _); intuition.
+    destruct (m k); intuition.
+    specialize (H (opt_discr _)); elim n; assumption.
   Qed.
   
   Lemma complement_nil: forall {A} (m: @Map A), complement m nil = m.
