@@ -392,6 +392,13 @@ Section Facts.
     destruct (m k); intuition.
     specialize (H (opt_discr _)); elim n; assumption.
   Qed.
+
+  Lemma restrict_comm: forall {A} (m: @Map A) (l1 l2: list string),
+                           restrict (restrict m l1) l2 = restrict (restrict m l2) l1.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
+  Qed.
   
   Lemma complement_nil: forall {A} (m: @Map A), complement m nil = m.
   Proof.
@@ -443,6 +450,24 @@ Section Facts.
     destruct (m1 k); intuition.
   Qed.
 
+  Lemma complement_app: forall {A} (m: @Map A) (l1 l2: list string),
+                          complement m (l1 ++ l2) = complement (complement m l2) l1.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k (l1 ++ l2)).
+    - apply in_app_or in i; destruct i.
+      + destruct (in_dec _ k l1); intuition.
+      + destruct (in_dec _ k l1); destruct (in_dec string_dec k l2); intuition.
+    - destruct (in_dec _ k l1); destruct (in_dec string_dec k l2); intuition.
+  Qed.
+
+  Lemma complement_comm: forall {A} (m: @Map A) (l1 l2: list string),
+                           complement (complement m l1) l2 = complement (complement m l2) l1.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
+  Qed.
+
   Lemma restrict_complement: forall {A} (m: @Map A) (l: list string),
                                disjUnion (restrict m l) (complement m l) l = m.
   Proof.
@@ -450,6 +475,7 @@ Section Facts.
     apply Equal_eq; repeat autounfold with MapDefs; intros.
     destruct (in_dec string_dec k l); intuition.
   Qed.
+
 
   Lemma restrict_complement_nil:
     forall {A} (m: @Map A) (l: list string),
@@ -663,6 +689,15 @@ Section Facts.
       intuition.
     + rewrite H2 in H1.
       intuition.
+  Qed.
+
+  Lemma OnDomain_add:
+    forall {A} (m: @Map A) (d: list string) k v,
+      OnDomain m d -> OnDomain (add k v m) (k :: d).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k0); unfold string_eq; destruct (string_dec k k0); intuition; [inv H1|].
+    inv H0; intuition.
   Qed.
 
   Lemma NotOnDomain_complement: forall {A} (m: @Map A) (d: list string),

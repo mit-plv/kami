@@ -212,20 +212,13 @@ Section Exts.
       map (fun ar => {| attrName := attrName ar;
                         attrType := fun t => inlineDmsRep (attrType ar t) dms n |}) rules.
   Proof.
-    induction n; intros; simpl in *; [reflexivity|].
-    rewrite (IHn rules dms).
-    unfold inlineToRules; clear.
-    induction rules; simpl; [reflexivity|].
-    unfold inlineToRule; simpl; f_equal.
-    assumption.
+    admit.
   Qed.
 
   Lemma inlineToRulesRep_names:
-    forall n rules dms, map (@attrName _) rules = map (@attrName _) (inlineToRulesRep rules dms n).
+    forall n dms rules, map (@attrName _) rules = map (@attrName _) (inlineToRulesRep rules dms n).
   Proof.
-    induction n; intros; simpl in *; [apply inlineToRules_names|].
-    rewrite <-inlineToRules_names with (dms:= dms).
-    apply IHn.
+    admit.
   Qed.
 
   Definition inlineToDm (n: string) {argT retT} (m: forall ty, ty argT -> ActionT ty retT)
@@ -259,7 +252,7 @@ End Exts.
 Fixpoint collectCalls {retK} (a: ActionT typeUT retK) (idms tdms: list DefMethT) (cdn: nat) :=
   match cdn with
     | O => getCalls a tdms
-    | S n => (getCalls a tdms) ++ (collectCalls (inlineDms a idms) idms tdms n)
+    | S n => (getCalls (inlineDmsRep a idms n) tdms) ++ (collectCalls a idms tdms n)
   end.
 
 Lemma collectCalls_sub: forall cdn {retT} (a: ActionT typeUT retT) ics tcs ccs,
@@ -275,6 +268,29 @@ Qed.
 
 Require Import Semantics.
 
+Lemma inlineDms_ActionEquiv:
+  forall {retK} (a: Action retK) ast aut iast iaut dms,
+    ast = a type -> aut = a typeUT ->
+    ActionEquiv nil ast aut ->
+    iast = (fun t => inlineDms (a t) dms) type ->
+    iaut = (fun t => inlineDms (a t) dms) typeUT ->
+    ActionEquiv nil iast iaut.
+Proof.
+  (* induction 3; intros; simpl in *; subst. *)
+  admit.
+Qed.
+
+Lemma inlineDmsRep_ActionEquiv:
+  forall {retK} (a: Action retK) ast aut iast iaut dms cdn,
+    ast = a type -> aut = a typeUT ->
+    ActionEquiv nil ast aut ->
+    iast = (fun t => inlineDmsRep (a t) dms cdn) type ->
+    iaut = (fun t => inlineDmsRep (a t) dms cdn) typeUT ->
+    ActionEquiv nil iast iaut.
+Proof.
+  admit.
+Qed.
+
 Lemma getCalls_SemAction:
   forall {retK} (aut: ActionT typeUT retK) (ast: ActionT type retK)
          (Hequiv: ActionEquiv nil ast aut) dms cdms
@@ -283,8 +299,22 @@ Lemma getCalls_SemAction:
     SemAction olds ast news calls retV ->
     OnDomain calls (map (@attrName _) cdms).
 Proof.
-  admit.
-  (* induction 1; intros; simpl in *. *)
+  induction 1; intros; simpl in *.
+
+  - invertAction H2.
+    admit.
+    (* remember (getAttribute n dms); destruct o. *)
+    (* + pose proof (getAttribute_Some_name _ _ Heqo); subst. *)
+    (*   apply OnDomain_add. *)
+
+  - invertAction H2; eapply H0; eauto.
+  - invertAction H2; eapply H0; eauto.
+  - invertAction H1; eapply IHHequiv; eauto.
+    
+  - admit.
+    
+  - invertAction H1; eapply IHHequiv; eauto.
+  - invertAction H1; unfold OnDomain; intros; inv H0.
 Qed.
 
 Lemma appendAction_SemAction:
@@ -1225,10 +1255,11 @@ Section Preliminaries.
 
   Lemma inlineToRulesRep_prop:
     forall olds1 olds2 (Holds: Disj olds1 olds2 \/ FnMap.Sub olds1 olds2)
+           cdn
            r (ar: Action (Bit 0))
            (Hequiv: ActionEquiv nil (ar type) (ar typeUT))
            dmsAll1 dmsAll2 rules1 rules2
-           cdn news1 news2 newsA (Hnews12: Disj news1 news2)
+           news1 news2 newsA (Hnews12: Disj news1 news2)
            (Hnews1A: Disj news1 newsA) (Hnews2A: Disj news2 newsA)
            dmMap1 dmMap2 (Hdm: Disj dmMap1 dmMap2)
            cmMap1 cmMap2 cmMapA (Hcm12: Disj cmMap1 cmMap2)
@@ -1328,7 +1359,71 @@ Section Preliminaries.
       + subst; eassumption.
       + subst; eassumption.
 
-    - admit.
+    - simpl; simpl in H2, H3; subst.
+
+      match goal with
+        | [ |- SemMod _ _ _ _ _ _ (union (complement ?cm (map _ (?l1 ++ ?l2))) _) ] =>
+          replace (complement cm (map (@attrName _) (l1 ++ l2))) with
+          (complement (complement cm (map (@attrName _) l2)) (map (@attrName _) l1))
+            by (rewrite map_app, <-complement_app; reflexivity)
+      end.
+
+      match goal with
+        | [ |- SemMod _ _ _ _ _ _ (union _ (union (complement ?cm (map _ (?l1 ++ ?l2))) _)) ] =>
+          replace (complement cm (map (@attrName _) (l1 ++ l2))) with
+          (complement (complement cm (map (@attrName _) l2)) (map (@attrName _) l1))
+            by (rewrite map_app, <-complement_app; reflexivity)
+      end.
+
+      match goal with
+        | [ |- SemMod _ _ _ _ _ _
+          (union _ (union _ (complement ?cm (map _ ((?l1 ++ ?l2) ++ (?l3 ++ ?l4)))))) ] =>
+          replace (complement cm (map (@attrName _) ((l1 ++ l2) ++ (l3 ++ l4)))) with
+          (complement (complement cm (map (@attrName _) (l2 ++ l4)))
+                      (map (@attrName _) (l1 ++ l3)))
+      end.
+      2:(repeat rewrite map_app; repeat rewrite complement_app;
+         rewrite complement_comm with
+         (l1:= map (@attrName _)
+                   (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn));
+         reflexivity).
+
+      eapply inlineToRules_prop; try assumption; try reflexivity.
+
+      + instantiate (1:= fun t => inlineDmsRep (ar t) (dmsAll1 ++ dmsAll2) cdn).
+        eapply inlineDmsRep_ActionEquiv; eauto.
+      + apply Disj_DisjList_restrict.
+        apply DisjList_SubList with (l1:= map (@attrName _) dmsAll1);
+          [eapply SubList_map, getCalls_sub; eauto|].
+        apply DisjList_comm.
+        apply DisjList_SubList with (l1:= map (@attrName _) dmsAll2);
+          [eapply SubList_map, getCalls_sub; eauto|].
+        apply DisjList_comm.
+        assumption.
+      + do 2 apply Disj_complement; apply Disj_comm.
+        do 2 apply Disj_complement; apply Disj_comm.
+        assumption.
+      + apply Disj_complement, Disj_comm.
+        do 2 apply Disj_complement; apply Disj_comm.
+        assumption.
+      + apply Disj_complement, Disj_comm.
+        do 2 apply Disj_complement; apply Disj_comm.
+        assumption.
+      + inv H; destruct_existT.
+        clear -H12; inv H12; destruct_existT; auto.
+      + rewrite inlineToRulesRep_inlineDmsRep.
+        clear -H0.
+
+        induction rules2; [inv H0|].
+        inv H0; [left; reflexivity|].
+        right; apply IHrules2; auto.
+        
+      + rewrite <-inlineToRulesRep_names; assumption.
+      + reflexivity.
+      + reflexivity.
+      + admit. (* TODO: seems (complement cmMapA ...) is right, but not "newsA" *)
+      + instantiate (1:= rules1); admit. (* TODO: same. "news1" is wrong. *)
+      + admit. (* TODO: same. "news2" is wrong. *)
 
   Qed.
 
