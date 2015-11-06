@@ -2,6 +2,29 @@ Require Import FunctionalExtensionality List String.
 Require Import Lib.Word Lib.Struct Lib.FnMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.SymEval Lts.SymEvalTac.
 
+(** * Let's start with a basic example of symbolic evaluation, just inverting an action step. *)
+
+(* Huh... the old [ACTION] notation isn't working here. *)
+Definition incrementer : Action Void := (fun var =>
+  Read r : Bit 2 <- "r";
+  Write "r" <- #r + $1;
+  Retv
+)%kami.
+
+Theorem increment_increments : forall regsIn regsOut calls ret v,
+  SemAction regsIn (incrementer _) regsOut calls ret
+  -> find "r"%string regsIn = Some {| objType := SyntaxKind (Bit 2); objVal := v |}
+  -> regsOut = add "r" {| objType := SyntaxKind (Bit 2); objVal := v ^+ $1 |} empty.
+Proof.
+  intros.
+  SymEval_Action H.
+  eauto.
+  hnf; eauto.
+Qed.
+
+
+(** * Now some whole-module examples: *)
+
 Definition bar := MethodSig "bar"(Bit 1) : Bit 1.
 
 Theorem call_me : forall rm o n dm cm, LtsStep (ConcatMod (MODULE {

@@ -35,3 +35,10 @@ Ltac SymEval_simpl := simpl; intuition idtac; autorewrite with SymEval in *;
                              end.
 
 Ltac SymEval := SymEval'; SymEval_simpl.
+
+Ltac SymEval_Action H :=
+  match type of H with
+  | SemAction _ _ ?a ?b ?c =>
+    pattern a, b, c; apply (@SymSemAction_sound _ _ _ (fun _ => None) _ _ _ H); clear H;
+    SymEval_simpl
+  end.
