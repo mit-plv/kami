@@ -399,6 +399,17 @@ Section Facts.
     intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
     destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
   Qed.
+
+  Lemma restrict_app: forall {A} (m: @Map A) (l1 l2: list string),
+                        restrict m (l1 ++ l2) = union (restrict m l1) (restrict m l2).
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs; intros.
+    destruct (in_dec _ k (l1 ++ l2)).
+    - apply in_app_or in i; destruct i.
+      + destruct (in_dec _ k l1), (in_dec _ k l2), (m k); intuition.
+      + destruct (in_dec _ k l1), (in_dec _ k l2), (m k); intuition.
+    - destruct (in_dec _ k l1), (in_dec _ k l2); intuition.
+  Qed.
   
   Lemma complement_nil: forall {A} (m: @Map A), complement m nil = m.
   Proof.

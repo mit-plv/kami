@@ -633,6 +633,14 @@ Proof.
   admit.
 Qed.
 
+Lemma SemMod_rules_ext:
+  forall rules1 rules2 dms or nr dmMap cmMap,
+    SemMod rules1 or None nr dms dmMap cmMap ->
+    SemMod rules2 or None nr dms dmMap cmMap.
+Proof.
+  admit.
+Qed.
+
 Lemma SemMod_div:
   forall rules olds rm news dms dmMap1 dmMap2 cmMap
          (Hsem: SemMod rules olds rm news dms (union dmMap1 dmMap2) cmMap)
