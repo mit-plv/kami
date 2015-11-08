@@ -171,6 +171,24 @@ Proof.
     apply IHp; inv H; assumption.
 Qed.
 
+Local Open Scope string.
+Lemma string_append_assoc : forall {a b c : string},
+  a ++ b ++ c = (a ++ b) ++ c.
+Proof.
+intros.
+induction a.
+simpl. reflexivity.
+simpl. rewrite IHa. reflexivity.
+Qed.
+
+Lemma appendName_assoc : forall {a b c},
+  a -n- b -n- c = a -n- (b -n- c).
+Proof.
+intros. unfold appendName. simpl.
+rewrite <- string_append_assoc.
+simpl. reflexivity.
+Qed.
+
 Section BoundedProp.
   Definition boundedPropIdx (A: Type) (l: list A) (P: BoundedIndex l -> Prop)
              (i: nat): Prop.
