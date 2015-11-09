@@ -1361,81 +1361,74 @@ Section Preliminaries.
 
     - simpl; simpl in H2, H3; subst.
 
-      match goal with
-        | [ |- SemMod _ _ _ _ _ _ (union (complement ?cm (map _ (?l1 ++ ?l2))) _) ] =>
-          replace (complement cm (map (@attrName _) (l1 ++ l2))) with
-          (complement (complement cm (map (@attrName _) l2)) (map (@attrName _) l1))
-            by (rewrite map_app, <-complement_app; reflexivity)
-      end.
-
-      match goal with
-        | [ |- SemMod _ _ _ _ _ _ (union _ (union (complement ?cm (map _ (?l1 ++ ?l2))) _)) ] =>
-          replace (complement cm (map (@attrName _) (l1 ++ l2))) with
-          (complement (complement cm (map (@attrName _) l2)) (map (@attrName _) l1))
-            by (rewrite map_app, <-complement_app; reflexivity)
-      end.
-
-      match goal with
-        | [ |- SemMod _ _ _ _ _ _
-          (union _ (union _ (complement ?cm (map _ ((?l1 ++ ?l2) ++ (?l3 ++ ?l4)))))) ] =>
-          replace (complement cm (map (@attrName _) ((l1 ++ l2) ++ (l3 ++ l4)))) with
-          (complement (complement cm (map (@attrName _) (l2 ++ l4)))
-                      (map (@attrName _) (l1 ++ l3)))
-      end.
-      2:(repeat rewrite map_app; repeat rewrite complement_app;
-         rewrite complement_comm with
-         (l1:= map (@attrName _)
-                   (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn));
-         reflexivity).
-
       (* Reallocate olds *)
-      replace (union olds1 olds2) with (union olds1 (union olds1 olds2)) by admit.
+      replace (union olds1 olds2) with (union olds1 (union olds1 olds2));
+        [|rewrite union_assoc; rewrite union_idempotent; reflexivity].
 
       (* Reallocate dmMaps and news *)
-      rewrite map_app in H9; rewrite restrict_app in H9; apply SemMod_div in H9.
+      rewrite map_app in H9; rewrite restrict_app in H9; apply SemMod_div in H9;
+      [|apply Disj_DisjList_restrict; admit].
+      (* TODO: g2_c and col2_c should be disjoint *)
       destruct H9 as [news22 [news21 [cmMap22 [cmMap21 H9]]]].
 
-      rewrite map_app in H8; rewrite restrict_app in H8; apply SemMod_div in H8.
+      rewrite map_app in H8; rewrite restrict_app in H8; apply SemMod_div in H8;
+      [|apply Disj_DisjList_restrict; admit].
+      (* TODO: g1_c and col1_c should be disjoint *)
       destruct H8 as [news12 [news11 [cmMap12 [cmMap11 H8]]]].
 
       dest; subst.
 
       (* Reallocate news *)
       replace (union (union news12 news11) (union (union news22 news21) newsA)) with
-      (union news12 (union news22 (union news11 (union news21 newsA)))) by admit.
+      (union news12 (union news22 (union news11 (union news21 newsA)))).
+      Focus 2.
+      rewrite union_assoc with (m1:= news22).
+      rewrite union_comm with (m1:= news22);
+        [|apply Disj_union_1, Disj_comm, Disj_union_2 in Hnews12; assumption].
+      do 2 rewrite <-union_assoc.
+      f_equal; f_equal.
+      apply union_assoc.
+
+      (* TODO: how to ensure
+       * 1) restrict cmMap11 getCalls1 = empty
+       * 2) restrict cmMap21 getCalls1 = empty
+       * 3) restrict cmMap12 getCalls2 = restrict cmMap12 collectCalls2 = empty
+       * 4) restrict cmMap22 getCalls1 = restrict cmMap22 collectCalls1 = empty
+       *)
 
       (* Reallocate cmMaps *)
       match goal with
         | [ |- SemMod _ _ _ _ _ _ ?cm ] =>
           replace cm with
-          (union cmMap12
-                 (union cmMap22
-                        (complement
-                           (union (complement
-                                     cmMap11
-                                     (map (@attrName _)
-                                          (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
-                                                        cdn)))
-                                  (union
-                                     (complement
-                                        cmMap21
-                                        (map (@attrName _)
-                                             (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1
-                                                           cdn)))
-                                     (complement
-                                        cmMapA
-                                        (map (@attrName _)
-                                             (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1
-                                                           cdn ++
-                                                           collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
-                                                           cdn)))))
-                           (map (@attrName _)
-                                (getCalls
-                                   (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
-                                   dmsAll1 ++
-                                   getCalls
-                                   (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
-                                   dmsAll2))))) by admit
+          (union
+             cmMap12
+             (union
+                cmMap22
+                (complement
+                   (union (complement
+                             cmMap11
+                             (map (@attrName _)
+                                  (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
+                                                cdn)))
+                          (union
+                             (complement
+                                cmMap21
+                                (map (@attrName _)
+                                     (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1
+                                                   cdn)))
+                             (complement
+                                cmMapA
+                                (map (@attrName _)
+                                     ((collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn)
+                                        ++ (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
+                                                         cdn))))))
+                   (map (@attrName _)
+                        (getCalls
+                           (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
+                           dmsAll1 ++
+                           getCalls
+                           (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
+                           dmsAll2))))) by admit
       end.
 
       eapply inlineToRules_prop; try assumption; try reflexivity.
@@ -1565,8 +1558,6 @@ Section Preliminaries.
         destruct Holds.
         * rewrite union_comm by assumption; apply Sub_union.
         * rewrite Sub_merge by assumption; apply Sub_refl.
-      + apply Disj_DisjList_restrict; admit.
-      + apply Disj_DisjList_restrict; admit.
   Qed.
 
   Lemma inlineToRulesRep_prop':
