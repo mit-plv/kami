@@ -7,9 +7,10 @@ Set Implicit Arguments.
 Section StreamMod.
   Variable modName: string.
   Variable A : Kind.
+  Variable default : ConstT A.
   Variable stream : Stream (ConstT A).
 
-  Definition nk := NativeKind stream.
+  Definition nk := NativeKind (const default).
 
   Notation "^ s" := (modName -n- s) (at level 0).
 
