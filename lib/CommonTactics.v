@@ -106,6 +106,12 @@ Ltac destruct_eq :=
               assert (Hii: c = eq_refl) by apply UIP; rewrite Hii; clear Hii)
     end.
 
+Ltac destruct_existT :=
+  repeat match goal with
+           | [H: existT _ _ _ = existT _ _ _ |- _] =>
+             (apply Eqdep.EqdepTheory.inj_pair2 in H; subst)
+         end.
+
 Notation "'nosimpl' t" := (match tt with tt => t end) (at level 10).
 
 Notation Yes := (left _).

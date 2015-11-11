@@ -151,7 +151,8 @@ Section BoundedIndexFull.
 
 End BoundedIndexFull.
 
-Hint Unfold attrName attrType.
+Definition namesOf {A} (attrs: list (Attribute A)) := map (@attrName _) attrs.
+Hint Unfold attrName attrType namesOf.
 
 Definition appendName nm s := (nm ++ "." ++ s)%string.
 Definition appendAttr nm t (a: Attribute t) :=

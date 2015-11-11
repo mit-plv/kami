@@ -193,7 +193,7 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   end.
 
 Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
-  fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
+  fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
     mapAttrEq1 type attrs i
                (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
@@ -254,7 +254,7 @@ Section GetCms.
     end
   with getDmsMod (m: Modules): list string :=
          match m with
-           | Mod _ _ meths => map (@attrName _) meths
+           | Mod _ _ meths => namesOf meths
            | ConcatMod m1 m2 => (listSub (getDmsMod m1) (getCmsMod m2))
                                   ++ (listSub (getDmsMod m2) (getCmsMod m1))
          end.
@@ -280,7 +280,7 @@ Definition CallsT := @Map (Typed SignT).
 
 Section Semantics.
   Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
-    fun (i: BoundedIndex (map (@attrName _) (map (mapAttr type) attrs))) =>
+    fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
       mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
@@ -560,7 +560,7 @@ Qed.
 Lemma SemMod_dmMap_InDomain:
   forall rules dms or rm nr dmMap cmMap,
     SemMod rules or rm nr dms dmMap cmMap ->
-    InDomain dmMap (map (@attrName _) dms).
+    InDomain dmMap (namesOf dms).
 Proof.
   induction dms; intros.
   - simpl; inv H; [intuition|].
@@ -589,7 +589,7 @@ Qed.
 Lemma SemMod_meth_singleton:
   forall dms rules olds news dm a (Ha: Some a = getAttribute dm dms)
          argV retV cmMap
-         (Hwf: NoDup (map (@attrName _) dms))
+         (Hwf: NoDup (namesOf dms))
          (Hsem: SemMod rules olds None news dms
                        (add dm
                             {| objType := objType (attrType a);
@@ -618,7 +618,7 @@ Qed.
 Lemma SemMod_dms_cut:
   forall dms2 rules dms1 or rm nr dmMap cmMap,
     SemMod rules or rm nr dms1 dmMap cmMap ->
-    InDomain dmMap (map (@attrName _) dms2) -> (forall k, In k dms2 -> In k dms1) -> 
+    InDomain dmMap (namesOf dms2) -> (forall k, In k dms2 -> In k dms1) -> 
     SemMod rules or rm nr dms2 dmMap cmMap.
 Proof.
   admit.
@@ -768,18 +768,18 @@ Ltac destConcatLabel :=
 Inductive LtsStep:
   Modules -> option string -> RegsT -> RegsT -> CallsT -> CallsT -> Prop :=
 | LtsStepMod regInits oRegs nRegs rules meths rm dmMap cmMap
-             (HOldRegs: InDomain oRegs (map (@attrName _) regInits))
+             (HOldRegs: InDomain oRegs (namesOf regInits))
              (Hltsmod: SemMod rules oRegs rm nRegs meths dmMap cmMap):
     LtsStep (Mod regInits rules meths) rm oRegs nRegs dmMap cmMap
 | LtsStepConcat m1 rm1 olds1 news1 dmMap1 cmMap1
                 m2 rm2 olds2 news2 dmMap2 cmMap2
-                (HOldRegs1: InDomain olds1 (map (@attrName _) (getRegInits m1)))
-                (HOldRegs2: InDomain olds2 (map (@attrName _) (getRegInits m2)))
+                (HOldRegs1: InDomain olds1 (namesOf (getRegInits m1)))
+                (HOldRegs2: InDomain olds2 (namesOf (getRegInits m2)))
                 (Hlts1: @LtsStep m1 rm1 olds1 news1 dmMap1 cmMap1)
                 (Hlts2: @LtsStep m2 rm2 olds2 news2 dmMap2 cmMap2)
                 crm colds cnews cdmMap ccmMap
-                (Holds: colds = disjUnion olds1 olds2 (map (@attrName _) (getRegInits m1)))
-                (Hnews: cnews = disjUnion news1 news2 (map (@attrName _) (getRegInits m1)))
+                (Holds: colds = disjUnion olds1 olds2 (namesOf (getRegInits m1)))
+                (Hnews: cnews = disjUnion news1 news2 (namesOf (getRegInits m1)))
                 (HMerge: ConcatLabel
                            (Build_RuleLabelT rm1 (getDmsMod m1) dmMap1 (getCmsMod m1) cmMap1)
                            (Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2)
@@ -791,7 +791,7 @@ Lemma ltsStep_rule:
   forall m rm r or nr dmMap cmMap
          (Hstep: LtsStep m rm or nr dmMap cmMap)
          (Hrm: rm = Some r),
-    In r (map (@attrName _) (getRules m)).
+    In r (namesOf (getRules m)).
 Proof.
   intros; subst.
   dependent induction Hstep.
@@ -802,9 +802,9 @@ Proof.
     destruct rm1, rm2.
     + destruct H; discriminate.
     + inv H0; specialize (IHHstep1 s eq_refl).
-      rewrite map_app; apply in_or_app; left; assumption.
+      unfold namesOf; rewrite map_app; apply in_or_app; left; assumption.
     + inv H0; specialize (IHHstep2 s eq_refl).
-      rewrite map_app; apply in_or_app; right; assumption.
+      unfold namesOf; rewrite map_app; apply in_or_app; right; assumption.
     + inv H0.
 Qed.
 
@@ -813,20 +813,20 @@ Ltac constr_concatMod :=
   match goal with
     | [ |- LtsStep (ConcatMod ?m1 ?m2) (Some ?r) ?or _ _ _ ] =>
       (let Hvoid := fresh "Hvoid" in
-       assert (In r (map (@attrName _) (getRules m1))) as Hvoid by in_tac;
+       assert (In r (namesOf (getRules m1))) as Hvoid by in_tac;
        clear Hvoid;
        eapply LtsStepConcat with
-       (olds1 := restrict or (map (@attrName _) (getRegInits m1)))
-         (olds2 := complement or (map (@attrName _) (getRegInits m1)))
+       (olds1 := restrict or (namesOf (getRegInits m1)))
+         (olds2 := complement or (namesOf (getRegInits m1)))
          (rm1 := Some r) (rm2 := None); eauto)
         || (eapply LtsStepConcat with
-            (olds1 := restrict or (map (@attrName _) (getRegInits m1)))
-              (olds2 := complement or (map (@attrName _) (getRegInits m1)))
+            (olds1 := restrict or (namesOf (getRegInits m1)))
+              (olds2 := complement or (namesOf (getRegInits m1)))
               (rm1 := None) (rm2 := Some r); eauto)
     | [ |- LtsStep (ConcatMod ?m1 ?m2) None _ _ _ _ ] =>
       eapply LtsStepConcat with
-      (olds1 := restrict or (map (@attrName _) (getRegInits m1)))
-        (olds2 := complement or (map (@attrName _) (getRegInits m1)))
+      (olds1 := restrict or (namesOf (getRegInits m1)))
+        (olds2 := complement or (namesOf (getRegInits m1)))
         (rm1 := None) (rm2 := None); eauto
   end.
 
@@ -870,7 +870,7 @@ Inductive ConcatLabelSeq: list RuleLabelT -> list RuleLabelT -> list RuleLabelT 
 
 Definition RegsInDomain m :=
   forall rm or nr dm cm,
-    LtsStep m rm or nr dm cm -> InDomain nr (map (@attrName _) (getRegInits m)).
+    LtsStep m rm or nr dm cm -> InDomain nr (namesOf (getRegInits m)).
 
 Lemma concatMod_RegsInDomain:
   forall m1 m2 (Hin1: RegsInDomain m1) (Hin2: RegsInDomain m2),
@@ -880,7 +880,7 @@ Proof.
   specialize (Hin1 _ _ _ _ _ Hlts1).
   specialize (Hin2 _ _ _ _ _ Hlts2).
   clear -Hin1 Hin2.
-  unfold getRegInits; rewrite map_app.
+  unfold getRegInits, namesOf; rewrite map_app.
   unfold InDomain in *; intros.
   unfold InMap, find, disjUnion in H.
   destruct (in_dec string_dec k _).
@@ -893,7 +893,7 @@ Section Domain.
   Variable newRegsDomain: RegsInDomain m.
   Theorem regsDomain r l
     (clos: LtsStepClosure m r l):
-    InDomain r (map (@attrName _) (getRegInits m)).
+    InDomain r (namesOf (getRegInits m)).
   Proof.
     induction clos.
     - unfold InDomain, InMap, initRegs in *; intros.
@@ -917,8 +917,8 @@ Section WellFormed.
   Variable newRegsDomainM2: RegsInDomain m2.
 
   Variable disjRegs:
-    forall r, ~ (In r (map (@attrName _) (getRegInits m1)) /\
-                 In r (map (@attrName _) (getRegInits m2))).
+    forall r, ~ (In r (namesOf (getRegInits m1)) /\
+                 In r (namesOf (getRegInits m2))).
   Variable r: RegsT.
   Variable l: list RuleLabelT.
 
@@ -927,7 +927,7 @@ Section WellFormed.
     exists r1 r2 l1 l2,
       LtsStepClosure m1 r1 l1 /\
       LtsStepClosure m2 r2 l2 /\
-      disjUnion r1 r2 (map (@attrName _) (getRegInits m1)) = r /\
+      disjUnion r1 r2 (namesOf (getRegInits m1)) = r /\
       ConcatLabelSeq l1 l2 l.
   Proof.
     intros clos.
@@ -935,7 +935,7 @@ Section WellFormed.
     induction clos; rewrite Heqm in *; simpl in *.
     - exists (initRegs (getRegInits m1)).
              exists (initRegs (getRegInits m2)).
-             unfold initRegs in *.
+             unfold initRegs, namesOf in *.
              rewrite (disjUnionProp (f1 := ConstFullT) (fullType type) evalConstFullT
                                     (getRegInits m1) (getRegInits m2)) in *.
              exists nil; exists nil.
@@ -984,7 +984,7 @@ Ltac invStep :=
           match goal with
             | [Hcrm: CombineRm _ _ _, H: LtsStep ?m ?rm _ _ _ _ |- _] =>
               let Hin := fresh "Hin" in
-              assert (Hin: ~ In r (map (@attrName _) (getRules m))) by in_tac_ex;
+              assert (Hin: ~ In r (namesOf (getRules m))) by in_tac_ex;
                 assert (rm = None) by
                   (destruct rm; [exfalso; elim Hin|reflexivity];
                    eapply ltsStep_rule; [eassumption|];

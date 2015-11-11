@@ -1,16 +1,10 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FnMap.
-Require Import Syntax Equiv.
+Require Import Syntax Wf Equiv.
 
 Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
-
-Ltac destruct_existT :=
-  repeat match goal with
-           | [H: existT _ _ _ = existT _ _ _ |- _] =>
-             (apply Eqdep.EqdepTheory.inj_pair2 in H; subst)
-         end.
 
 Section PhoasUT.
   Definition typeUT (k: Kind): Type := unit.
@@ -115,28 +109,7 @@ Section Phoas.
       | {| attrName := mn; attrType := mb |} :: dms' =>
         if string_dec n mn then Some mb else getMethod n dms'
     end.
-
-  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
-           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
-    match a1 with
-      | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
-      | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
-      | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
-      | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
-      | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
-      | Assert_ ae cont => Assert_ ae (appendAction cont a2)
-      | Return e => Let_ e a2
-    end.
   
-  Lemma appendAction_assoc:
-    forall {retT1 retT2 retT3}
-           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
-           (a3: type retT2 -> ActionT type retT3),
-      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
-  Proof.
-    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
-  Qed.
-
   Definition getBody (n: string) (dms: list DefMethT) (sig: SignatureT):
     option (sigT (fun x: DefMethT => objType (attrType x) = sig)) :=
     match getAttribute n dms with
@@ -268,55 +241,6 @@ Qed.
 
 Require Import Semantics.
 
-Lemma inlineDms_ActionEquiv:
-  forall {retK} (a: Action retK) ast aut iast iaut dms,
-    ast = a type -> aut = a typeUT ->
-    ActionEquiv nil ast aut ->
-    iast = (fun t => inlineDms (a t) dms) type ->
-    iaut = (fun t => inlineDms (a t) dms) typeUT ->
-    ActionEquiv nil iast iaut.
-Proof.
-  (* induction 3; intros; simpl in *; subst. *)
-  admit.
-Qed.
-
-Lemma inlineDmsRep_ActionEquiv:
-  forall {retK} (a: Action retK) ast aut iast iaut dms cdn,
-    ast = a type -> aut = a typeUT ->
-    ActionEquiv nil ast aut ->
-    iast = (fun t => inlineDmsRep (a t) dms cdn) type ->
-    iaut = (fun t => inlineDmsRep (a t) dms cdn) typeUT ->
-    ActionEquiv nil iast iaut.
-Proof.
-  admit.
-Qed.
-
-Lemma getCalls_SemAction:
-  forall {retK} (aut: ActionT typeUT retK) (ast: ActionT type retK)
-         (Hequiv: ActionEquiv nil ast aut) dms cdms
-         olds news calls retV,
-    getCalls aut dms = cdms ->
-    SemAction olds ast news calls retV ->
-    OnDomain calls (map (@attrName _) cdms).
-Proof.
-  induction 1; intros; simpl in *.
-
-  - invertAction H2.
-    admit.
-    (* remember (getAttribute n dms); destruct o. *)
-    (* + pose proof (getAttribute_Some_name _ _ Heqo); subst. *)
-    (*   apply OnDomain_add. *)
-
-  - invertAction H2; eapply H0; eauto.
-  - invertAction H2; eapply H0; eauto.
-  - invertAction H1; eapply IHHequiv; eauto.
-    
-  - admit.
-    
-  - invertAction H1; eapply IHHequiv; eauto.
-  - invertAction H1; unfold OnDomain; intros; inv H0.
-Qed.
-
 Lemma appendAction_SemAction:
   forall retK1 retK2 a1 a2 olds1 olds2 news1 news2 calls1 calls2
          (retV1: type retK1) (retV2: type retK2),
@@ -361,7 +285,40 @@ Proof.
       rewrite Disj_union_unionR; auto.
       apply Sub_unionR.
     + rewrite Sub_merge; assumption.
+Qed.
 
+Lemma inlineDms_ActionEquiv:
+  forall {retK} (a: Action retK) ast aut iast iaut dms,
+    ast = a type -> aut = a typeUT ->
+    ActionEquiv nil ast aut ->
+    iast = (fun t => inlineDms (a t) dms) type ->
+    iaut = (fun t => inlineDms (a t) dms) typeUT ->
+    ActionEquiv nil iast iaut.
+Proof.
+  (* induction 3; intros; simpl in *; subst. *)
+  admit.
+Qed.
+
+Lemma inlineDmsRep_ActionEquiv:
+  forall {retK} (a: Action retK) ast aut iast iaut dms cdn,
+    ast = a type -> aut = a typeUT ->
+    ActionEquiv nil ast aut ->
+    iast = (fun t => inlineDmsRep (a t) dms cdn) type ->
+    iaut = (fun t => inlineDmsRep (a t) dms cdn) typeUT ->
+    ActionEquiv nil iast iaut.
+Proof.
+  admit.
+Qed.
+
+Lemma getCalls_SemAction:
+  forall {retK} (aut: ActionT typeUT retK) (ast: ActionT type retK)
+         (Hequiv: ActionEquiv nil ast aut) dms cdms
+         olds news calls retV,
+    getCalls aut dms = cdms ->
+    SemAction olds ast news calls retV ->
+    OnDomain calls (map (@attrName _) cdms).
+Proof.
+  admit.
 Qed.
 
 Inductive WfmAction {ty}: list string -> forall {retT}, ActionT ty retT -> Prop :=
@@ -672,498 +629,12 @@ Section Preliminaries.
       
       SemAction (union olds1 olds2) (inlineDms at2 (dmsAll1 ++ dmsAll2))
                 (union news1 (union news2 newsA))
-                (union cmMap1
-                       (union cmMap2
-                              (complement cmMapA (map (@attrName _) (cdms1 ++ cdms2)))))
+                (complement
+                   (union cmMap1 (union cmMap2 cmMapA))
+                   (map (@attrName _) (cdms1 ++ cdms2)))
                 retV.
   Proof.
-    induction 2; intros.
-
-    - inv H1; destruct_existT.
-      inv H4; destruct_existT.
-      simpl; remember (getBody n (dmsAll1 ++ dmsAll2) s) as odm; destruct odm.
-
-      + destruct s0; generalize dependent HSemAction; subst; intros.
-        rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq.
-        econstructor; eauto.
-
-        unfold getBody in Heqodm.
-        remember (getAttribute n (dmsAll1 ++ dmsAll2)) as dmAttr.
-        destruct dmAttr; [|discriminate].
-        destruct (SignatureT_dec _ _); [|discriminate].
-        generalize dependent HSemAction; inv Heqodm; inv e; intros.
-        apply getAttribute_app in HeqdmAttr; destruct HeqdmAttr.
-
-        * (* dealing with dmsAll1 *)
-          assert (In n (map (attrName (Kind:=Typed MethodT))
-                            (getCalls (MCall n (objType (attrType a)) e2 cont2) dmsAll1))).
-          { pose proof (getAttribute_Some_name _ _ H1); subst.
-            simpl; rewrite <-H1; left; reflexivity.
-          }
-          rewrite restrict_add in H10 by assumption.
-          rewrite restrict_add in Hdm by assumption.
-          match goal with
-            | [H: SemMod _ olds1 _ _ _ (add ?mn ?mv (restrict ?m ?dom)) _ |- _] =>
-              assert (add mn mv (restrict m dom) =
-                      union (add mn mv empty) (restrict m dom))
-          end.
-          { apply Equal_eq; repeat autounfold with MapDefs; intros key.
-            unfold string_eq; destruct (string_dec _ _); [reflexivity|].
-            reflexivity.
-          }
-          rewrite H3 in *; clear H3.
-
-          match goal with
-            | [H: SemMod _ olds1 _ _ _ (union ?m1 ?m2) _ |- _] =>
-              assert (Disj m1 m2)
-          end.
-          { pose proof (WfmAction_cmMap HSemAction (H15 mret) n (or_introl eq_refl)).
-            repeat autounfold with MapDefs in *; intros key.
-            unfold string_eq; destruct (string_dec _ _); [|left; reflexivity].
-            subst; rewrite H3; right; destruct (in_dec _ _ _); reflexivity.
-          }
-
-          (* dealing with dmsAll2 *)
-          assert (~ In n (map (attrName (Kind:=Typed MethodT))
-                              (getCalls (MCall n (objType (attrType a)) e2 cont2) dmsAll2))).
-          { pose proof (getAttribute_Some_body _ _ H1).
-            pose proof (getAttribute_Some_name _ _ H1); subst.
-            specialize (H5 a); destruct H5; [elim H5; apply in_map; auto|].
-            intro Hx; elim H5; clear H5.
-            pose proof (@getCalls_sub _ (MCall a _ e2 cont2) dmsAll2 _ eq_refl).
-            apply SubList_map with (f:= @attrName (Typed MethodT)) in H5.
-            apply H5; auto.
-          }
-          match goal with
-            | [H: SemMod _ olds2 _ _ _ (restrict (add ?mn ?mv ?m) ?dm) _ |- _] =>
-              assert (restrict (add mn mv m) dm = restrict m dm)
-          end.
-          { apply restrict_add_not; auto. }
-          rewrite H8 in *; clear H8.
-
-          (* getting rid of "meth" stuffs in order to apply IH *)
-          rewrite complement_add_1 by (rewrite map_app; apply in_or_app; left; assumption).
-          apply Disj_comm, Disj_union_2, Disj_comm in Hdm.
-          pose proof (SemMod_div H10 H3); clear H3 H10; dest; subst.
-          apply Disj_add_2 in Hcm1A; apply Disj_add_2 in Hcm2A.
-
-          (* getting SemAction for meth *)
-          pose proof (SemMod_meth_singleton H1 H6 H12).
-
-          (* TODO: getting rid of "n" from cmMap *)
-          
-
-          (* ready to prove! *)
-          rewrite <-union_idempotent with (m:= olds1).
-          rewrite <-union_assoc with (m1:= olds1).
-          rewrite <-union_assoc with (m1:= x).
-          rewrite <-union_assoc with (m1:= x1).
-
-          apply appendAction_SemAction with (retV1:= mret); auto; [right; apply Sub_union|].
-
-          eapply H0; try reflexivity.
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hnews12; assumption. }
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hnews1A; assumption. }
-          { assumption. }
-          { assumption. }
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hcm12; assumption. }
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hcm1A; assumption. }
-          { assumption. }
-          { specialize (H15 mret); eapply WfmAction_init_sub; eauto.
-            intros; inv H10.
-          }
-          { instantiate (1:= tt); admit. }
-          { admit. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { eassumption. }
-          { eassumption. }
-          
-        * (* dealing with dmsAll2 *)
-          (* pose proof (getAttribute_Some _ _ H0). *)
-          assert (In n (map (attrName (Kind:=Typed MethodT))
-                            (getCalls (MCall n (objType (attrType a)) e2 cont2) dmsAll2))).
-          { admit. }
-          rewrite restrict_add in H11 by assumption.
-          apply Disj_comm in Hdm; rewrite restrict_add in Hdm by assumption.
-          apply Disj_comm in Hdm.
-          match goal with
-            | [H: SemMod _ olds2 _ _ _ (add ?mn ?mv (restrict ?m ?dom)) _ |- _] =>
-              assert (add mn mv (restrict m dom) =
-                      union (add mn mv empty) (restrict m dom))
-          end.
-          { apply Equal_eq; repeat autounfold with MapDefs; intros key.
-            unfold string_eq; destruct (string_dec _ _); [reflexivity|].
-            reflexivity.
-          }
-          rewrite H3 in *; clear H3.
-
-          match goal with
-            | [H: SemMod _ olds2 _ _ _ (union ?m1 ?m2) _ |- _] =>
-              assert (Disj m1 m2)
-          end.
-          { pose proof (WfmAction_cmMap HSemAction (H15 mret) n (or_introl eq_refl)).
-            repeat autounfold with MapDefs in *; intros key.
-            unfold string_eq; destruct (string_dec _ _); [|left; reflexivity].
-            subst; rewrite H3; right; destruct (in_dec _ _ _); reflexivity.
-          }
-
-          (* dealing with dmsAll1 *)
-          assert (~ In n (map (@attrName _)
-                              (getCalls (MCall n (objType (attrType a)) e2 cont2) dmsAll1))).
-          { admit. }
-          match goal with
-            | [H: SemMod _ olds1 _ _ _ (restrict (add ?mn ?mv ?m) ?dm) _ |- _] =>
-              assert (restrict (add mn mv m) dm = restrict m dm)
-          end.
-          { apply restrict_add_not; auto. }
-          rewrite H8 in *; clear H8.
-
-          (* getting rid of "meth" stuffs in order to apply IH *)
-          rewrite complement_add_1 by (rewrite map_app; apply in_or_app; right; assumption).
-          apply Disj_union_2 in Hdm.
-          pose proof (SemMod_div H11 H3); clear H3 H11; dest; subst.
-          apply Disj_add_2 in Hcm1A; apply Disj_add_2 in Hcm2A.
-
-          (* getting SemAction for meth *)
-          pose proof (SemMod_meth_singleton H1 H7 H12).
-
-          (* ready to prove! *)
-          assert (union olds1 olds2 = union olds2 (union olds1 olds2)).
-          { destruct Holds.
-            { rewrite <-union_idempotent with (m:= olds2) at 1.
-              rewrite union_assoc with (m1:= olds1) at 1.
-              rewrite union_comm with (m1:= olds1) by assumption.
-              rewrite <-union_assoc with (m1:= olds2); f_equal.
-              apply union_comm; assumption.
-            }
-            { rewrite Sub_merge by assumption.
-              rewrite union_idempotent; reflexivity.
-            }
-          }
-          rewrite H11; clear H11.
-
-          rewrite union_assoc with (m1:= news1).
-          rewrite union_comm with (m1:= news1) by assumption.
-          rewrite <-union_assoc with (m2:= news1).
-          rewrite <-union_assoc with (m1:= x).
-          rewrite union_assoc with (m1:= x0).
-          rewrite union_comm with (m1:= x0) by
-              (apply Disj_union_2, Disj_comm in Hnews12; assumption).
-          rewrite <-union_assoc with (m1:= news1).
-
-          rewrite union_assoc with (m1:= cmMap1).
-          rewrite union_comm with (m1:= cmMap1) by assumption.
-          rewrite <-union_assoc with (m2:= cmMap1).
-          rewrite <-union_assoc with (m1:= x1).
-          rewrite union_assoc with (m1:= x2).
-          rewrite union_comm with (m1:= x2) by
-              (apply Disj_union_2, Disj_comm in Hcm12; assumption).
-          rewrite <-union_assoc with (m1:= cmMap1).
-
-          apply appendAction_SemAction with (retV1:= mret); auto.
-          { right; destruct Holds.
-            { rewrite Disj_union_unionR by assumption; apply Sub_union. }
-            { rewrite Sub_merge by assumption; apply Sub_refl. }
-          }
-
-          eapply H0; try reflexivity.
-          { apply Disj_union_2 in Hnews12; assumption. }
-          { assumption. }
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hnews2A; assumption. }
-          { assumption. }
-          { apply Disj_union_2 in Hcm12; assumption. }
-          { assumption. }
-          { apply Disj_comm, Disj_union_2, Disj_comm in Hcm2A; assumption. }
-          { specialize (H15 mret); eapply WfmAction_init_sub; eauto.
-            intros; inv H11.
-          }
-          { instantiate (1:= tt); admit. }
-          { admit. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { eassumption. }
-          { eassumption. }
-        
-      + unfold getBody in Heqodm.
-        remember (getAttribute n (dmsAll1 ++ dmsAll2)) as mat.
-        destruct mat.
-
-        * destruct (SignatureT_dec (objType (attrType a)) s); [discriminate|].
-          exfalso; elim n0; clear n0.
-
-          apply getAttribute_app in Heqmat; destruct Heqmat.
-          { eapply getAttribute_SemMod; [exact H6|eassumption| |eassumption].
-            rewrite restrict_add; [map_simpl_G; reflexivity|].
-            admit.
-          }
-          { eapply getAttribute_SemMod; [exact H7|eassumption| |eassumption].
-            rewrite restrict_add; [map_simpl_G; reflexivity|].
-            admit.
-          } 
-
-        * clear Heqodm; econstructor; eauto.
-
-          { instantiate
-              (1:= union
-                     cmMap1
-                     (union
-                        cmMap2
-                        (complement
-                           calls (map (@attrName _)
-                                      ((getCalls (MCall n s e2 cont2) dmsAll1)
-                                         ++ (getCalls (MCall n s e2 cont2) dmsAll2)))))).
-            instantiate (1:= mret).
-
-            clear -Heqmat Hcm1A Hcm2A.
-            apply Equal_eq; repeat autounfold with MapDefs in *; intros key.
-            specialize (Hcm1A key); specialize (Hcm2A key).
-            unfold string_eq in *; destruct (string_dec n key); [subst|reflexivity].
-            destruct Hcm1A; [|discriminate].
-            destruct Hcm2A; [|discriminate].
-            rewrite H, H0; destruct (in_dec _ _ _); [|reflexivity].
-            pose proof (getAttribute_None _ _ Heqmat); elim H1.
-            admit.
-          }
-          { admit.
-          }
-        
-    - inv H1; destruct_existT.
-      inv H4; destruct_existT.
-      simpl; econstructor; eauto.
-
-    - inv H1; destruct_existT.
-      inv H4; destruct_existT.
-      simpl; econstructor; eauto.
-
-      destruct Holds.
-      + apply Disj_find_union; auto.
-      + rewrite Sub_merge; assumption.
-
-    - inv H0; destruct_existT.
-      inv H3; destruct_existT.
-      simpl; econstructor; eauto.
-      + instantiate (1:= union news1 (union news2 newRegs)).
-        clear -Hnews1A Hnews2A.
-        apply Equal_eq; repeat autounfold with MapDefs in *; intros.
-        specialize (Hnews1A k); specialize (Hnews2A k); destruct Hnews1A.
-        * rewrite H; clear H.
-          destruct Hnews2A.
-          { rewrite H; clear H; reflexivity. }
-          { rewrite H; unfold string_eq in *.
-            destruct (string_dec rn k); [inv H|].
-            rewrite H; reflexivity.
-          }
-        * rewrite H; unfold string_eq in *.
-          destruct (string_dec rn k); [inv H|].
-          rewrite H; reflexivity.
-      + eapply IHHequiv with (news2:= news2) (cmMap2:= cmMap2); eauto.
-        * eapply Disj_add_2; eauto.
-        * eapply Disj_add_2; eauto.
-
-    - inv H2; destruct_existT.
-      inv H5; destruct_existT.
-
-      + rewrite restrict_union in H11, H12.
-        assert (Disj calls1 calls2)
-          by (pose proof (WfmAction_append_3 _ H17 HAction HSemAction); assumption).
-        assert (Disj (restrict calls1 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll1)))
-                     (restrict calls2 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll1))))
-          by (apply Disj_restrict, Disj_comm, Disj_restrict, Disj_comm; assumption).
-        assert (Disj (restrict calls1 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll2)))
-                     (restrict calls2 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll2))))
-          by (apply Disj_restrict, Disj_comm, Disj_restrict, Disj_comm; assumption).
-        
-        pose proof (SemMod_div H11 H3); clear H3 H11; dest; subst.
-        pose proof (SemMod_div H12 H4); clear H4 H12; dest; subst.
-
-        simpl; eapply SemIfElseTrue.
-
-        * assumption.
-        * eapply IHHequiv1 with (news1:= x) (news2:= x3) (newsA:= newRegs1)
-                                            (cmMap1:= x1) (cmMap2:= x5) (cmMapA:= calls1)
-                                            (retV:= r1);
-            try reflexivity.
-
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews12; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews1A; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews2A; assumption. }
-          { apply Disj_DisjList_restrict.
-            apply DisjList_SubList with (l1:= map (@attrName _) dmsAll1);
-              [apply SubList_map; eapply getCalls_sub; eauto|].
-            apply DisjList_comm.
-            apply DisjList_SubList with (l1:= map (@attrName _) dmsAll2);
-              [apply SubList_map; eapply getCalls_sub; eauto|].
-            apply DisjList_comm.
-            assumption.
-          }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm12; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm1A; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm2A; assumption. }
-          { eapply WfmAction_append_1; eauto. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { instantiate (1:= rules1); admit. }
-          { instantiate (1:= rules2); admit. }
-
-        * eapply H1 with (news1:= x0) (news2:= x4) (newsA:= newRegs2)
-                                      (cmMap1:= x2) (cmMap2:= x6) (cmMapA := calls2);
-            try reflexivity.
-
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews12; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews1A; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews2A; assumption. }
-          { rewrite 2! restrict_union in Hdm.
-            instantiate (1:= tt).
-            admit.
-          }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm12; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm1A; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm2A; assumption. }
-          { eapply WfmAction_append_2; eauto. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { instantiate (1:= rules1); admit. }
-          { instantiate (1:= rules2); admit. }
-          
-        * clear -Hnews12 Hnews1A Hnews2A.
-
-          do 2 rewrite <-union_assoc with (m1:= x); f_equal.
-          do 2 rewrite union_assoc with (m1:= x0).
-          rewrite union_comm with (m1:= x0);
-            [|apply Disj_union_1, Disj_comm, Disj_union_2, Disj_comm in Hnews12; assumption].
-          do 3 rewrite <-union_assoc with (m1:= x3); f_equal.
-          rewrite <-union_assoc with (m1:= x0).
-          rewrite union_assoc with (m1:= newRegs1).
-          rewrite union_comm with (m2:= x0);
-            [|apply Disj_union_1, Disj_comm, Disj_union_2 in Hnews1A; assumption].
-          rewrite <-union_assoc with (m1:= x0); f_equal.
-          do 2 rewrite union_assoc; f_equal.
-          apply union_comm.
-          apply Disj_union_1, Disj_comm, Disj_union_2, Disj_comm in Hnews2A; assumption.
-          
-        * admit.
-          
-      + rewrite restrict_union in H11, H12.
-        assert (Disj calls1 calls2)
-          by (pose proof (WfmAction_append_3 _ H21 HAction HSemAction); assumption).
-        assert (Disj (restrict calls1 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll1)))
-                     (restrict calls2 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll1))))
-          by (apply Disj_restrict, Disj_comm, Disj_restrict, Disj_comm; assumption).
-        assert (Disj (restrict calls1 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll2)))
-                     (restrict calls2 (map (@attrName _)
-                               (getCalls (If e2 then ta2 else fa2 as name; cont2 name)%kami
-                                         dmsAll2))))
-          by (apply Disj_restrict, Disj_comm, Disj_restrict, Disj_comm; assumption).
-        
-        pose proof (SemMod_div H11 H3); clear H3 H11; dest; subst.
-        pose proof (SemMod_div H12 H4); clear H4 H12; dest; subst.
-
-        simpl; eapply SemIfElseFalse.
-
-        * assumption.
-        * eapply IHHequiv2 with (news1:= x) (news2:= x3) (newsA:= newRegs1)
-                                            (cmMap1:= x1) (cmMap2:= x5) (cmMapA:= calls1)
-                                            (retV:= r1);
-          try reflexivity.
-
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews12; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews1A; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hnews2A; assumption. }
-          { apply Disj_DisjList_restrict.
-            apply DisjList_SubList with (l1:= map (@attrName _) dmsAll1);
-              [apply SubList_map; eapply getCalls_sub; eauto|].
-            apply DisjList_comm.
-            apply DisjList_SubList with (l1:= map (@attrName _) dmsAll2);
-              [apply SubList_map; eapply getCalls_sub; eauto|].
-            apply DisjList_comm.
-            assumption.
-          }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm12; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm1A; assumption. }
-          { apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm2A; assumption. }
-          { eapply WfmAction_append_1; eauto. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { instantiate (1:= rules1); admit. }
-          { instantiate (1:= rules2); admit. }
-
-        * eapply H1 with (news1:= x0) (news2:= x4) (newsA:= newRegs2)
-                                      (cmMap1:= x2) (cmMap2:= x6) (cmMapA := calls2);
-          try reflexivity.
-
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews12; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews1A; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hnews2A; assumption. }
-          { rewrite 2! restrict_union in Hdm.
-            instantiate (1:= tt).
-            admit.
-          }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm12; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm1A; assumption. }
-          { apply Disj_union_2, Disj_comm, Disj_union_2, Disj_comm in Hcm2A; assumption. }
-          { eapply WfmAction_append_2; eauto. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { assumption. }
-          { instantiate (1:= rules1); admit. }
-          { instantiate (1:= rules2); admit. }
-          
-        * clear -Hnews12 Hnews1A Hnews2A.
-
-          do 2 rewrite <-union_assoc with (m1:= x); f_equal.
-          do 2 rewrite union_assoc with (m1:= x0).
-          rewrite union_comm with (m1:= x0);
-            [|apply Disj_union_1, Disj_comm, Disj_union_2, Disj_comm in Hnews12; assumption].
-          do 3 rewrite <-union_assoc with (m1:= x3); f_equal.
-          rewrite <-union_assoc with (m1:= x0).
-          rewrite union_assoc with (m1:= newRegs1).
-          rewrite union_comm with (m2:= x0);
-            [|apply Disj_union_1, Disj_comm, Disj_union_2 in Hnews1A; assumption].
-          rewrite <-union_assoc with (m1:= x0); f_equal.
-          do 2 rewrite union_assoc; f_equal.
-          apply union_comm.
-          apply Disj_union_1, Disj_comm, Disj_union_2, Disj_comm in Hnews2A; assumption.
-          
-        * admit.
-          
-    - inv H0; destruct_existT.
-      inv H3; destruct_existT.
-      simpl; econstructor; eauto.
-
-    - inv H0; destruct_existT.
-      inv H3; destruct_existT.
-      map_simpl H9; map_simpl H10.
-      pose proof (SemMod_empty_inv H9); dest; subst.
-      pose proof (SemMod_empty_inv H10); dest; subst.
-      simpl; map_simpl_G.
-      econstructor; eauto.
-
+    admit.
   Qed.
 
   Lemma inlineToRules_prop:
@@ -1194,9 +665,9 @@ Section Preliminaries.
 
       SemMod (inlineToRules rules2 (dmsAll1 ++ dmsAll2)) (union olds1 olds2) (Some r)
              (union news1 (union news2 newsA)) (dmsAll1 ++ dmsAll2) empty
-             (union cmMap1
-                    (union cmMap2
-                           (complement cmMapA (map (@attrName _) (cdms1 ++ cdms2))))).
+             (complement
+                (union cmMap1 (union cmMap2 cmMapA))
+                (map (@attrName _) (cdms1 ++ cdms2))).
   Proof.
     intros; inv H4.
     pose proof (SemMod_empty_inv HSemMod); dest; subst.
@@ -1282,9 +753,9 @@ Section Preliminaries.
 
       SemMod (inlineToRulesRep rules2 (dmsAll1 ++ dmsAll2) cdn) (union olds1 olds2) (Some r)
              (union news1 (union news2 newsA)) (dmsAll1 ++ dmsAll2) empty
-             (union (complement cmMap1 (map (@attrName _) cdms2))
-                    (union (complement cmMap2 (map (@attrName _) cdms1))
-                           (complement cmMapA (map (@attrName _) (cdms1 ++ cdms2))))).
+             (complement
+                (union cmMap1 (union cmMap2 cmMapA))
+                (map (@attrName _) (cdms1 ++ cdms2))).
   Proof.
     induction cdn; intros.
 
@@ -1311,31 +782,33 @@ Section Preliminaries.
       }
 
       assert (cmMap1 = complement cmMap1 (map (@attrName _) cdms2)).
-      { simpl in H2, H3.
-        pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll2)
-                                        _ _ _ _ eq_refl H12).
-        symmetry; apply NotOnDomain_complement.
-        subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto.
-        apply Disj_comm; assumption.
+      { (* simpl in H2, H3. *)
+        (* pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll2) *)
+        (*                                 _ _ _ _ eq_refl H12). *)
+        (* symmetry; apply NotOnDomain_complement. *)
+        (* subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto. *)
+        (* apply Disj_comm; assumption. *)
+        admit.
       }
-      rewrite <-H13.
+      (* rewrite <-H13. *)
 
       assert (empty = restrict cmMap1 (map (@attrName _) cdms2)).
-      { rewrite complement_restrict_nil; auto. }
+      { (* rewrite complement_restrict_nil; auto. *) admit. }
       rewrite <-H14 in H11; clear H13 H14.
 
       assert (cmMap2 = complement cmMap2 (map (@attrName _) cdms1)).
-      { simpl in H2, H3.
-        pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll1)
-                                        _ _ _ _ eq_refl H12).
-        symmetry; apply NotOnDomain_complement.
-        subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto.
-        apply Disj_comm; assumption.
+      { (* simpl in H2, H3. *)
+        (* pose proof (@getCalls_SemAction _ _ _ Hequiv _ (getCalls (ar typeUT) dmsAll1) *)
+        (*                                 _ _ _ _ eq_refl H12). *)
+        (* symmetry; apply NotOnDomain_complement. *)
+        (* subst; eapply Disj_OnDomain with (m1:= cmMapA); eauto. *)
+        (* apply Disj_comm; assumption. *)
+        admit.
       }
-      rewrite <-H13.
+      (* rewrite <-H13. *)
 
       assert (empty = restrict cmMap2 (map (@attrName _) cdms1)).
-      { rewrite complement_restrict_nil; auto. }
+      { (* rewrite complement_restrict_nil; auto. *) admit. }
       rewrite <-H14 in H10; clear H13 H14.
 
       map_simpl H10; map_simpl H11.
@@ -1389,7 +862,7 @@ Section Preliminaries.
       f_equal; f_equal.
       apply union_assoc.
 
-      (* TODO: how to ensure
+      (* TODO: how to ensure (which I think is impossible (or very hard) with current semantics!)
        * 1) restrict cmMap11 getCalls1 = empty
        * 2) restrict cmMap21 getCalls1 = empty
        * 3) restrict cmMap12 getCalls2 = restrict cmMap12 collectCalls2 = empty
@@ -1400,35 +873,30 @@ Section Preliminaries.
       match goal with
         | [ |- SemMod _ _ _ _ _ _ ?cm ] =>
           replace cm with
-          (union
-             cmMap12
+          (complement
              (union
-                cmMap22
                 (complement
-                   (union (complement
-                             cmMap11
-                             (map (@attrName _)
-                                  (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
-                                                cdn)))
-                          (union
-                             (complement
-                                cmMap21
-                                (map (@attrName _)
-                                     (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1
-                                                   cdn)))
-                             (complement
-                                cmMapA
-                                (map (@attrName _)
-                                     ((collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn)
-                                        ++ (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2
-                                                         cdn))))))
+                   cmMap12
                    (map (@attrName _)
-                        (getCalls
-                           (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
-                           dmsAll1 ++
-                           getCalls
-                           (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
-                           dmsAll2))))) by admit
+                        ((collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn)
+                           ++ (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2 cdn))))
+                (union
+                   (complement
+                      cmMap22
+                      (map (@attrName _)
+                           ((collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn)
+                              ++ (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2 cdn))))
+                   (complement
+                      (union cmMap11 (union cmMap21 cmMapA))
+                      (map (@attrName _)
+                           ((collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll1 cdn)
+                              ++ (collectCalls (ar typeUT) (dmsAll1 ++ dmsAll2) dmsAll2 cdn))))))
+             (map (@attrName _)
+                  ((getCalls (inlineDmsRep (ar typeUT)
+                                           (dmsAll1 ++ dmsAll2) cdn) dmsAll1)
+                     ++ (getCalls (inlineDmsRep (ar typeUT)
+                                                (dmsAll1 ++ dmsAll2) cdn) dmsAll2))))
+            by admit
       end.
 
       eapply inlineToRules_prop; try assumption; try reflexivity.
@@ -1453,21 +921,13 @@ Section Preliminaries.
           [eapply SubList_map, getCalls_sub; eauto|].
         apply DisjList_comm.
         assumption.
-      + apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm12.
+      + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm.
+        apply Disj_union_1, Disj_comm, Disj_union_1, Disj_comm in Hcm12.
         assumption.
-      + apply Disj_union; [apply Disj_complement; assumption|].
-        apply Disj_union.
-        * apply Disj_complement.
-          apply Disj_union_2, Disj_comm, Disj_union_1, Disj_comm in Hcm12.
-          assumption.
-        * apply Disj_complement.
-          apply Disj_comm, Disj_union_1, Disj_comm in Hcm1A; assumption.
-      + apply Disj_union.
-        * apply Disj_complement.
-          apply Disj_union_1, Disj_comm, Disj_union_2 in Hcm12; assumption.
-        * apply Disj_union; [apply Disj_complement; assumption|].
-          apply Disj_complement.
-          apply Disj_comm, Disj_union_1, Disj_comm in Hcm2A; assumption.
+      + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm.
+        apply Disj_union; [assumption|].
+        apply Disj_union; admit.
+      + admit.
       + inv H; destruct_existT.
         inv H18; destruct_existT; auto.
       + rewrite inlineToRulesRep_inlineDmsRep.
@@ -1534,24 +994,26 @@ Section Preliminaries.
           exact H17.
         
       + match goal with
-          | [ |- SemMod _ _ _ _ _ ?dm _ ] =>
+          | [ |- SemMod _ _ _ _ _ ?dm ?cm ] =>
             replace dm
             with (restrict (union cmMapA (union cmMap22 cmMap21))
                            (map (@attrName _)
                                 (getCalls (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
                                           dmsAll1)))
-              by admit
+              by admit;
+              replace cm with cmMap12 by admit
         end.
         exact H11.
             
       + match goal with
-          | [ |- SemMod _ _ _ _ _ ?dm _ ] =>
+          | [ |- SemMod _ _ _ _ _ ?dm ?cm ] =>
             replace dm
             with (restrict (union cmMapA (union cmMap12 cmMap11))
                            (map (@attrName _)
                                 (getCalls (inlineDmsRep (ar typeUT) (dmsAll1 ++ dmsAll2) cdn)
                                           dmsAll2)))
-              by admit
+              by admit;
+              replace cm with cmMap22 by admit
         end.
         apply SemMod_rules_ext with (rules1:= rules2).
         apply SemMod_olds_ext with (or1:= olds2); [|exact H16].
@@ -1613,7 +1075,7 @@ Section Facts.
       LtsStep cm rm or nr dmMap cmMap -> LtsStep im rm or nr dmMap cmMap.
   Proof.
     intros; unfold im, cm in *; inv H0; inv Hlts1; inv Hlts2.
-    constructor; [rewrite map_app; apply disjUnion_InDomain; auto|].
+    constructor; [unfold namesOf; rewrite map_app; apply disjUnion_InDomain; auto|].
 
     simpl in H; apply andb_true_iff in H; dest.
     destConcatLabel; unfold CombineRm in Hcrm; dest.
