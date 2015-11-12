@@ -35,7 +35,7 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK( #stppc );
      Assert (#decoded)@."opcode" == $$opLd;
      Call memReq(STRUCT {  "type" ::= $$memLd;
@@ -49,7 +49,7 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK( #stppc );
      Assert (#decoded)@."opcode" == $$opSt;
      Call memReq(STRUCT {  "type" ::= $$memSt;
@@ -63,7 +63,7 @@ Section ProcDec.
      Read ppc <- ^"pc";
      Read st <- ^"rf";
      Assert #val@."type" == $$memLd;
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK(#stppc);
      Write ^"rf" <- #st@[#(decoded)@."reg" <- #val@."value"];
      Write ^"stall" <- $$false;
@@ -77,7 +77,7 @@ Section ProcDec.
      Read st <- ^"rf";
      Assert #val@."type" == $$memSt;
      Write ^"stall" <- $$false;
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK(#stppc);
      Call executed <- execK( STRUCT { "fst" ::= #stppc; "snd" ::= #decoded });
      Write ^"pc" <- (#executed)@."fst";
@@ -88,7 +88,7 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK( #stppc );
      Assert #(decoded)@."opcode" == $$opHt;
      Call halt();
@@ -99,7 +99,7 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- ^"pc";
      Read st <- ^"rf";
-     Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+     LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
      Call decoded <- decK( #stppc );
      Assert !(#(decoded)@."opcode" == $$opLd
            || #(decoded)@."opcode" == $$opSt

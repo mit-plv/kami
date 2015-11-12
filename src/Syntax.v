@@ -289,10 +289,10 @@ Notation "'Call' meth () ; cont " :=
 Notation "'Call' name <- meth () ; cont " :=
   (MCall (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
-Notation "'Let' name <- expr ; cont " :=
+Notation "'LET' name <- expr ; cont " :=
   (Let_ expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Let' name : t <- expr ; cont " :=
+Notation "'LET' name : t <- expr ; cont " :=
   (Let_ (lretT' := t) expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Read' name <- reg ; cont" :=

@@ -55,7 +55,7 @@ Section MemInst.
       Method ("exec"__ i)(a : atomK) : atomK :=
         If (#a@."type" == $$memLd) then
           Read memv <- "mem";
-          Let ldval <- #memv@[#a@."addr"];
+          LET ldval <- #memv@[#a@."addr"];
           Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
                :: atomK)
         else
@@ -102,7 +102,7 @@ Section ProcInst.
     with Rule ^"execLd" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
       Call decoded <- decK( #stppc );
       Assert (#decoded)@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
@@ -114,7 +114,7 @@ Section ProcInst.
     with Rule ^"execSt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
       Call decoded <- decK( #stppc );
       Assert #(decoded)@."opcode" == $$opSt;
       Call execCm(STRUCT {  "type" ::= $$memSt;
@@ -125,7 +125,7 @@ Section ProcInst.
     with Rule ^"execHt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
       Call decoded <- decK( #stppc );
       Assert #(decoded)@."opcode" == $$opHt;
       Call haltCm();
@@ -134,7 +134,7 @@ Section ProcInst.
     with Rule ^"execNm" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      Let stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
+      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
       Call decoded <- decK( #stppc );
       Assert !(#(decoded)@."opcode" == $$opLd
              || #(decoded)@."opcode" == $$opSt
