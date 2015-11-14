@@ -49,6 +49,12 @@ Section Lists. (* About domains *)
   Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
   Proof. admit. Qed.
 
+  Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
+  Proof. admit. Qed.
+
+  Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
+  Proof. admit. Qed.
+
 End Lists.
 
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
@@ -410,6 +416,15 @@ Section Facts.
       + destruct (in_dec _ k l1), (in_dec _ k l2), (m k); intuition.
     - destruct (in_dec _ k l1), (in_dec _ k l2); intuition.
   Qed.
+
+  Lemma restrict_SubList:
+    forall {A} (m: @Map A) (l1 l2: list string),
+      SubList l1 l2 -> restrict (restrict m l2) l1 = restrict m l1.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs.
+    specialize (H k).
+    destruct (in_dec _ k l1); destruct (in_dec string_dec k l2); intuition.
+  Qed.
   
   Lemma complement_nil: forall {A} (m: @Map A), complement m nil = m.
   Proof.
@@ -487,6 +502,23 @@ Section Facts.
     destruct (in_dec string_dec k l); intuition.
   Qed.
 
+  Lemma restrict_complement_DisjList:
+    forall {A} (m: @Map A) (l1 l2: list string),
+      DisjList l1 l2 -> restrict (complement m l1) l2 = restrict m l2.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    specialize (H k).
+    destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
+  Qed.
+    
+  Lemma complement_restrict_DisjList:
+    forall {A} (m: @Map A) (l1 l2: list string),
+      DisjList l1 l2 -> complement (restrict m l1) l2 = restrict m l1.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    specialize (H k).
+    destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
+  Qed.
 
   Lemma restrict_complement_nil:
     forall {A} (m: @Map A) (l: list string),
@@ -700,6 +732,16 @@ Section Facts.
       intuition.
     + rewrite H2 in H1.
       intuition.
+  Qed.
+
+  Lemma InDomain_DisjList_restrict:
+    forall {A} (m: @Map A) (d1 d2: list string),
+      InDomain m d1 -> DisjList d1 d2 -> restrict m d2 = empty.
+  Proof.
+    intros; apply Equal_eq; repeat autounfold with MapDefs in *; intros.
+    destruct (in_dec _ k d2); intuition.
+    specialize (H k); specialize (H0 k); destruct (m k); auto.
+    specialize (H (opt_discr _)); destruct H0; intuition.
   Qed.
 
   Lemma OnDomain_add:
