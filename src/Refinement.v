@@ -261,7 +261,7 @@ Section Decomposition.
 
   Local Open Scope string.
 
-  Inductive UnitStep : Modules -> RegsT -> RegsT -> LabelT -> Prop :=
+  Inductive UnitStep : Modules -> RegsT -> RegsT -> LabelT -> Type :=
   | EmptyStep : forall
      (regInits : list RegInitT)
      (rules : list (Attribute (Action Void)))
@@ -315,9 +315,9 @@ Section Decomposition.
       oRegs = union oRegs1 oRegs2 ->
       UnitStep (ConcatMod m1 m2) oRegs news l.
 
-  Inductive UnitSteps (m : Modules) (o : RegsT) : RegsT -> LabelT -> Prop :=
-   | UnitSteps1 : forall u l, UnitStep m o u l -> UnitSteps m o u l
-   | UnitStepsUnion : forall (u1 u2 : RegsT) (l1 l2 : LabelT), 
+  Inductive UnitSteps (m : Modules) (o : RegsT) : RegsT -> LabelT -> Type :=
+   | UnitSteps1 : forall {u l}, UnitStep m o u l -> UnitSteps m o u l
+   | UnitStepsUnion : forall {u1 u2 : RegsT} {l1 l2 : LabelT}, 
       UnitSteps m o u1 l1 -> UnitSteps m o u2 l2 
       -> CanCombine (u1, l1) (u2, l2)
       -> UnitSteps m o (union u1 u2) (mergeLabel l1 l2).
@@ -332,8 +332,8 @@ Section Decomposition.
       /\ NotOnDomain cs (getDmsMod m)
     end.
 
-  Inductive Step (m : Modules) (o u : RegsT) : LabelT -> Prop :=
-    MkStep : forall (l l': LabelT), UnitSteps m o u l
+  Inductive Step (m : Modules) (o u : RegsT) : LabelT -> Type :=
+    MkStep : forall {l l': LabelT}, UnitSteps m o u l
      -> l' = hide l -> wellHidden l' m 
      -> Step m o u l'.
 
@@ -350,10 +350,8 @@ Section Decomposition.
      -> Behavior m newRegs labels.
 
   Definition TraceRefines (mimpl mspec : Modules) (f : LabelT -> LabelT)
-    := forall simp limp,
-      Behavior mimpl simp limp ->
-     exists (sspec : RegsT),
-       Behavior mspec sspec (map f limp).
+    := forall simp limp,        Behavior mimpl simp         limp ->
+       exists (sspec : RegsT),  Behavior mspec sspec (map f limp).
 
   Variable rulesImp rulesSpec: list string.
   Variable dmsImp dmsSpec: list DefMethT.
@@ -362,34 +360,43 @@ Section Decomposition.
   Variable ruleMap: string -> string.
   Variable p : LabelT -> LabelT.
 
-  Variable T : RegsT -> (RegsT * LabelT) -> (RegsT * LabelT).
+  Variable T : forall {oImp nImp lImp}, UnitStep imp oImp nImp lImp -> (RegsT * LabelT).
 
-  Hypothesis Tcombine_compat : forall {t o u1 u2 l1 l2},
-     CanCombine (T o t) (T o (u1, l1))
-   -> CanCombine (T o t) (T o (u2, l2))
-   -> CanCombine (T o t) (T o (union u1 u2, mergeLabel l1 l2)).
+  Fixpoint Ts {oImp nImp lImp} (steps : UnitSteps imp oImp nImp lImp)
+      : RegsT * LabelT
+      := match steps with
+    | UnitSteps1 _ _ step => T step
+    | UnitStepsUnion _ _ _ _ step1 step2 canCombine => 
+      let (u1, l1) := Ts step1 in
+      let (u2, l2) := Ts step2 in
+      (union u1 u2, mergeLabel l1 l2)
+    end.
+
+  Fixpoint Ts' {oImp nImp lImp} (step : Step imp oImp nImp lImp)
+      : RegsT * LabelT
+      := match step with
+    | MkStep _ _ steps _ _  => Ts steps
+    end.
 
   Hypothesis stateMapBeginsWell :
     stateMap (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
 
   Hypothesis consistentSubstepMap : forall {oImp lImp nImp}
    , (exists ruleLabel, Behavior imp oImp ruleLabel)
-   -> UnitStep imp oImp nImp lImp
-   -> match T oImp (nImp, lImp) with (nSpec, lSpec) =>
+   -> forall (step : UnitStep imp oImp nImp lImp)
+   , match T step with (nSpec, lSpec) =>
       let oSpec := stateMap oImp in
-        update oSpec (stateMap nImp) = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p
-      /\ UnitStep spec oSpec nSpec (p lImp)
+        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
+      /\ equivalent lImp lSpec p)
+      * UnitStep spec oSpec nSpec (p lImp)
      end.
 
   Hypothesis specShouldCombine : forall {oImp} 
   , (exists ruleLabel, Behavior imp oImp ruleLabel)
-  -> forall {nImp1 lImp1}, UnitStep imp oImp nImp1 lImp1
-  -> forall {nImp2 lImp2}, UnitStep imp oImp nImp2 lImp2
-  -> let step1 := (nImp1, lImp1) in 
-    let step2 := (nImp2, lImp2) in
-    CanCombine step1 step2
-  -> CanCombine (T oImp step1) (T oImp step2).
+  -> forall {nImp1 lImp1} (step1 : UnitStep imp oImp nImp1 lImp1)
+      {nImp2 lImp2} (step2 : UnitStep imp oImp nImp2 lImp2)
+  , CanCombine (nImp1, lImp1) (nImp2, lImp2)
+  -> CanCombine (T step1) (T step2).
 
   Lemma canCombineLeft : forall {t u1 u2 l1 l2},
     CanCombine t (union u1 u2, mergeLabel l1 l2)
@@ -438,24 +445,24 @@ Section Decomposition.
 
   Lemma specShouldCombines : forall {oImp} 
   , (exists ruleLabel, Behavior imp oImp ruleLabel)
-  -> forall {nImp1 lImp1}, UnitSteps imp oImp nImp1 lImp1 
-  -> forall {nImp2 lImp2}, UnitSteps imp oImp nImp2 lImp2
-  -> let step1 := (nImp1, lImp1) in
-    let step2 := (nImp2, lImp2) in 
-    CanCombine step1 step2
-  -> CanCombine (T oImp step1) (T oImp step2).
+  -> forall {nImp1 lImp1} (step1 : UnitSteps imp oImp nImp1 lImp1)
+      {nImp2 lImp2} (step2 : UnitSteps imp oImp nImp2 lImp2)
+  , CanCombine (nImp1, lImp1) (nImp2, lImp2)
+  -> CanCombine (Ts step1) (Ts step2).
   Proof. intros oImp H nImp1 lImp1 US1. induction US1.
   - intros nImp2 lImp2 US2. induction US2.
     + apply specShouldCombine; assumption.
-    + intros. fold step1 in IHUS2_1, IHUS2_2.
+    + intros.
       simpl in IHUS2_1, IHUS2_2.
-      pose proof (IHUS2_1 (canCombineLeft H2)) as H21.
-      pose proof (IHUS2_2 (canCombineRight H2)) as H22.
-      apply Tcombine_compat; assumption.
+      pose proof (IHUS2_1 (canCombineLeft H0)) as H21.
+      pose proof (IHUS2_2 (canCombineRight H0)) as H22.
+      simpl. destruct (Ts US2_1). destruct (Ts US2_2).
+      apply canCombineMerge; assumption.
   - simpl in *. intros. apply canCombineSym.
-    apply Tcombine_compat; apply canCombineSym;
+    destruct (Ts US1_1). destruct (Ts US1_2).
+    apply canCombineMerge; apply canCombineSym;
      [apply IHUS1_1 | apply IHUS1_2]; try assumption;
-    apply canCombineSym in H2;
+    apply canCombineSym in H0;
     apply canCombineSym. 
     eapply canCombineLeft; eassumption.
     eapply canCombineRight; eassumption.    
@@ -463,30 +470,26 @@ Qed.
 
   Lemma consistentUnitStepsMap : forall oImp lImp nImp
    , (exists ruleLabel, Behavior imp oImp ruleLabel)
-   -> UnitSteps imp oImp nImp lImp
-   -> match T oImp (nImp, lImp) with (nSpec, lSpec) =>
+   -> forall (steps : UnitSteps imp oImp nImp lImp)
+   , let (nSpec, lSpec) := Ts steps in
         let oSpec := stateMap oImp in
-        update oSpec (stateMap nImp) = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p
-      /\ UnitSteps spec oSpec nSpec (p lImp)
-     end.
+        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
+      /\ equivalent lImp lSpec p)
+      * UnitSteps spec oSpec nSpec (p lImp).
   Proof.
   intros.
-  induction H0; intros.
-  - pose proof (consistentSubstepMap H H0). simpl in *.
-    destruct (T oImp (u, l)) as [uSpec lSpec].
+  induction steps; intros.
+  - pose proof (consistentSubstepMap H u0). simpl in *.
+    destruct (T u0) as [uSpec lSpec].
     intuition. constructor. assumption.
-  - pose proof (specShouldCombines H H0_ H0_0 H0).
-    destruct (T oImp (u1, l1)) as [uSpec1 lSpec1].
-    destruct (T oImp (u2, l2)) as [uSpec2 lSpec2].
-    pose (uImp := union u1 u2 : RegsT). fold uImp.
-    pose (lImp := mergeLabel l1 l2). fold lImp.
-    simpl in *.
-    destruct (T oImp (uImp, lImp)) as [uSpec lSpec] eqn:T1.
-   intuition. admit. admit. 
+  - pose proof (specShouldCombines H steps1 steps2 c).
+    destruct (Ts steps1) as [uSpec1 lSpec1].
+    destruct (Ts steps2) as [uSpec2 lSpec2].
+    destruct (Ts (UnitStepsUnion steps1 steps2 c)) as [uSpec lSpec] eqn:T1.
+   intuition. split. split.  admit. admit.
+   replace (p (mergeLabel l1 l2)) with (mergeLabel (p l1) (p l2)).
    replace uSpec with (union uSpec1 uSpec2). 
-   replace (p lImp) with (mergeLabel (p l1) (p l2)).
-   subst.
+   destruct IHsteps1, IHsteps2.
    apply UnitStepsUnion. assumption. assumption.
    replace (p l1) with lSpec1.
    replace (p l2) with lSpec2.
@@ -496,18 +499,17 @@ Qed.
 
   Lemma consistentStepMap : forall oImp lImp nImp
    , (exists ruleLabel, Behavior imp oImp ruleLabel)
-   -> Step imp oImp nImp lImp
-   -> match T oImp (nImp, lImp) with (nSpec, lSpec) =>
+   -> forall (step : Step imp oImp nImp lImp)
+   , let (nSpec, lSpec) := Ts' step in
         let oSpec := stateMap oImp in
-        update oSpec (stateMap nImp) = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p
-      /\ Step spec oSpec nSpec (p lImp)
-     end.
+        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
+      /\ equivalent lImp lSpec p)
+      * Step spec oSpec nSpec (p lImp).
   Proof. intros.
-  inversion H0; clear H0; subst.
-  pose proof (consistentUnitStepsMap H H1). simpl in *.
-  destruct (T oImp (nImp, l)) as [nSpec lSpec]. 
-  destruct (T oImp (nImp, hide l)) as [nSpec' lSpec']. 
+  inversion step; subst.
+  pose proof (consistentUnitStepsMap H X). simpl in *.
+  destruct (Ts X) as [nSpec lSpec]. 
+  destruct (Ts' step) as [nSpec' lSpec']. 
   replace nSpec' with nSpec in *.
   intuition. admit. 
   econstructor. eassumption.
@@ -525,13 +527,13 @@ Qed.
   - rewrite <- stateMapBeginsWell. apply MSNil.
   - assert (Behavior imp regs' labels).
     constructor. assumption.
-    pose proof (consistentStepMap (ex_intro _ labels H3) H0).
-    destruct (T regs' (u, l)).
-    destruct H4 as [HT1 [HT2 HT3]].
+    pose proof (consistentStepMap (ex_intro _ labels H2) X).
+    destruct (Ts' X).
+    destruct X0 as [[HT1 HT2] HT3].
     apply MSMulti with (regs' := stateMap regs') (u := r).
     apply IHMultiStep. assumption.
     assumption.
-    rewrite H2. rewrite <- HT1. admit.
+    rewrite H0. rewrite <- HT1. admit.
   Qed.
 
 End Decomposition.
