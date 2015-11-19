@@ -372,7 +372,7 @@ Section Decomposition.
       (union u1 u2, mergeLabel l1 l2)
     end.
 
-  Fixpoint Ts' {oImp nImp lImp} (step : Step imp oImp nImp lImp)
+  Let Ts' {oImp nImp lImp} (step : Step imp oImp nImp lImp)
       : RegsT * LabelT
       := match step with
     | MkStep _ _ steps _ _  => Ts steps
@@ -388,7 +388,7 @@ Section Decomposition.
       let oSpec := stateMap oImp in
         (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
       /\ equivalent lImp lSpec p)
-      * UnitStep spec oSpec nSpec (p lImp)
+      * UnitStep spec oSpec nSpec lSpec
      end.
 
   Hypothesis specShouldCombine : forall {oImp} 
@@ -475,7 +475,7 @@ Qed.
         let oSpec := stateMap oImp in
         (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
       /\ equivalent lImp lSpec p)
-      * UnitSteps spec oSpec nSpec (p lImp).
+      * UnitSteps spec oSpec nSpec lSpec.
   Proof.
   intros.
   induction steps; intros.
@@ -483,18 +483,17 @@ Qed.
     destruct (T u0) as [uSpec lSpec].
     intuition. constructor. assumption.
   - pose proof (specShouldCombines H steps1 steps2 c).
+    simpl in *.
     destruct (Ts steps1) as [uSpec1 lSpec1].
     destruct (Ts steps2) as [uSpec2 lSpec2].
-    destruct (Ts (UnitStepsUnion steps1 steps2 c)) as [uSpec lSpec] eqn:T1.
-   intuition. split. split.  admit. admit.
+   intuition. admit. unfold equivalent in *. subst.
+   admit.
+   unfold equivalent in *.
    replace (p (mergeLabel l1 l2)) with (mergeLabel (p l1) (p l2)).
-   replace uSpec with (union uSpec1 uSpec2). 
-   destruct IHsteps1, IHsteps2.
    apply UnitStepsUnion. assumption. assumption.
-   replace (p l1) with lSpec1.
-   replace (p l2) with lSpec2.
+   unfold equivalent in *.
    assumption.
-   admit.  admit. admit. admit.
+   admit.
   Admitted.
 
   Lemma consistentStepMap : forall oImp lImp nImp
@@ -502,18 +501,15 @@ Qed.
    -> forall (step : Step imp oImp nImp lImp)
    , let (nSpec, lSpec) := Ts' step in
         let oSpec := stateMap oImp in
-        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p)
+        (update oSpec (stateMap nImp) = stateMap (update oImp nImp))
       * Step spec oSpec nSpec (p lImp).
   Proof. intros.
-  inversion step; subst.
-  pose proof (consistentUnitStepsMap H X). simpl in *.
-  destruct (Ts X) as [nSpec lSpec]. 
-  destruct (Ts' step) as [nSpec' lSpec']. 
-  replace nSpec' with nSpec in *.
-  intuition. admit. 
-  econstructor. eassumption.
-  admit. admit. admit.
+  destruct step eqn:stepeqn.
+  pose proof (consistentUnitStepsMap H u). simpl in *.
+  destruct (Ts u) as [nSpec lSpec]. 
+  intuition.  
+  econstructor. eassumption. 
+  admit. unfold equivalent in *. subst. admit.
   Admitted.
 
   Theorem decomposition : TraceRefines imp spec p.
@@ -528,8 +524,8 @@ Qed.
   - assert (Behavior imp regs' labels).
     constructor. assumption.
     pose proof (consistentStepMap (ex_intro _ labels H2) X).
-    destruct (Ts' X).
-    destruct X0 as [[HT1 HT2] HT3].
+    destruct (Ts' X) eqn:Ts'X.
+    destruct X0 as [HT1 HT2].
     apply MSMulti with (regs' := stateMap regs') (u := r).
     apply IHMultiStep. assumption.
     assumption.
