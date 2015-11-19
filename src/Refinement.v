@@ -386,7 +386,7 @@ Section Decomposition.
    -> forall (step : UnitStep imp oImp nImp lImp)
    , match T step with (nSpec, lSpec) =>
       let oSpec := stateMap oImp in
-        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
+        (update oSpec nSpec = stateMap (update oImp nImp)
       /\ equivalent lImp lSpec p)
       * UnitStep spec oSpec nSpec lSpec
      end.
@@ -473,7 +473,7 @@ Qed.
    -> forall (steps : UnitSteps imp oImp nImp lImp)
    , let (nSpec, lSpec) := Ts steps in
         let oSpec := stateMap oImp in
-        (update oSpec (stateMap nImp) = stateMap (update oImp nImp)
+        (update oSpec nSpec = stateMap (update oImp nImp)
       /\ equivalent lImp lSpec p)
       * UnitSteps spec oSpec nSpec lSpec.
   Proof.
@@ -486,14 +486,15 @@ Qed.
     simpl in *.
     destruct (Ts steps1) as [uSpec1 lSpec1].
     destruct (Ts steps2) as [uSpec2 lSpec2].
-   intuition. admit. unfold equivalent in *. subst.
+   intuition. 
+   unfold update in *.
+   fold (@union (Typed (fullType type))) in *.
+   rewrite <- union_assoc.
+   rewrite H3. admit. unfold equivalent in *. subst.
    admit.
-   unfold equivalent in *.
-   replace (p (mergeLabel l1 l2)) with (mergeLabel (p l1) (p l2)).
    apply UnitStepsUnion. assumption. assumption.
    unfold equivalent in *.
    assumption.
-   admit.
   Admitted.
 
   Lemma consistentStepMap : forall oImp lImp nImp
@@ -501,7 +502,7 @@ Qed.
    -> forall (step : Step imp oImp nImp lImp)
    , let (nSpec, lSpec) := Ts' step in
         let oSpec := stateMap oImp in
-        (update oSpec (stateMap nImp) = stateMap (update oImp nImp))
+        (update oSpec nSpec = stateMap (update oImp nImp))
       * Step spec oSpec nSpec (p lImp).
   Proof. intros.
   destruct step eqn:stepeqn.
@@ -509,7 +510,8 @@ Qed.
   destruct (Ts u) as [nSpec lSpec]. 
   intuition.  
   econstructor. eassumption. 
-  admit. unfold equivalent in *. subst. admit.
+  admit. unfold equivalent in *. subst. 
+  admit.
   Admitted.
 
   Theorem decomposition : TraceRefines imp spec p.
@@ -529,7 +531,7 @@ Qed.
     apply MSMulti with (regs' := stateMap regs') (u := r).
     apply IHMultiStep. assumption.
     assumption.
-    rewrite H0. rewrite <- HT1. admit.
+    rewrite H0. rewrite <- HT1. reflexivity.
   Qed.
 
 End Decomposition.
