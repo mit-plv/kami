@@ -279,6 +279,13 @@ Section Facts.
     rewrite H; reflexivity.
   Qed.
 
+  Lemma add_empty_neq: forall {A} (m: @Map A) k v, add k v m = empty -> False.
+  Proof.
+    intros; apply @Equal_val with (k:= k) in H.
+    repeat autounfold with MapDefs in H.
+    rewrite string_dec_eq in H; inv H.
+  Qed.
+  
   Lemma union_empty_1: forall {A} (m: @Map A), union empty m = m.
   Proof.
     intros; repeat autounfold with MapDefs; reflexivity.
@@ -381,6 +388,13 @@ Section Facts.
     intros; repeat autounfold with MapDefs.
     destruct (in_dec string_dec k l); intuition.
   Qed.
+
+  Lemma restrict_not_in: forall {A} k (m: @Map A) (l: list string),
+                           ~ In k l -> find k (restrict m l) = None.
+  Proof.
+    intros; repeat autounfold with MapDefs.
+    destruct (in_dec string_dec k l); intuition.
+  Qed.    
 
   Lemma restrict_InDomain: forall {A} (m: @Map A) (l: list string),
                              InDomain (restrict m l) l.
@@ -719,6 +733,15 @@ Section Facts.
     apply Equal_eq; repeat autounfold with MapDefs; intros.
     specialize (H k); destruct (m1 k); intuition.
     apply H; discriminate.
+  Qed.
+
+  Lemma InDomain_add:
+    forall {A} (m: @Map A) k v d,
+      InDomain m d -> In k d -> InDomain (add k v m) d.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    unfold string_eq in *.
+    destruct (string_dec k k0); subst; intuition.
   Qed.
 
   Lemma InDomain_update:

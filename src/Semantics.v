@@ -4,6 +4,22 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
+(* TODO: may move to lib/Struct.v *)
+Lemma opt_some_eq: forall {A} (v1 v2: A), Some v1 = Some v2 -> v1 = v2.
+Proof. intros; inv H; reflexivity. Qed.
+
+Lemma typed_type_eq:
+  forall {A} (a1 a2: A) (B: A -> Type) (v1: B a1) (v2: B a2),
+    {| objType := a1; objVal := v1 |} = {| objType := a2; objVal := v2 |} ->
+    exists (Heq: a1 = a2), match Heq with eq_refl => v1 end = v2.
+Proof. intros; inv H; exists eq_refl; reflexivity. Qed.
+
+Lemma typed_eq:
+  forall {A} (a: A) (B: A -> Type) (v1 v2: B a),
+    {| objType := a; objVal := v1 |} = {| objType := a; objVal := v2 |} ->
+    v1 = v2.
+Proof. intros; inv H; apply Eqdep.EqdepTheory.inj_pair2 in H1; assumption. Qed.
+
 (* concrete representations of data kinds *)
 Fixpoint type (t: Kind): Type :=
   match t with
@@ -430,11 +446,11 @@ Section Semantics.
   Qed.
 
   Inductive SemMod: option string -> RegsT -> list DefMethT -> CallsT -> CallsT -> Prop :=
-  | SemEmpty news dm cm
+  | SemEmpty news meths dm cm
              (HEmptyRegs: news = empty)
              (HEmptyDms: dm = empty)
              (HEmptyCms: cm = empty):
-      SemMod None news nil dm cm
+      SemMod None news meths dm cm
   | SemAddRule (ruleName: string)
                (ruleBody: Action (Bit 0))
                (HInRule: In {| attrName := ruleName; attrType := ruleBody |} rules)
@@ -450,6 +466,7 @@ Section Semantics.
       SemMod (Some ruleName) unews meths dm2 ucalls
   (* method `meth` was also called this clock cycle *)
   | SemAddMeth calls news (meth: DefMethT) meths argV retV
+               (HIn: In meth meths)
                (HAction: SemAction ((objVal (attrType meth)) type argV) news calls retV)
                news2 dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
@@ -458,12 +475,9 @@ Section Semantics.
                unews ucalls udefs
                (HRegs: unews = union news news2)
                (HCalls: ucalls = union calls cm2)
+               (HNew: find (attrName meth) dm2 = None)
                (HDefs: udefs = add (attrName meth) {| objVal := (argV, retV) |} dm2):
-      SemMod None unews (meth :: meths) udefs ucalls
-  (* method `meth` was not called in this clock cycle *)
-  | SemSkipMeth news meth meths dm cm
-                (HSemMod: SemMod None news meths dm cm):
-      SemMod None news (meth :: meths) dm cm.
+      SemMod None unews meths udefs ucalls.
 
 End Semantics.
 
@@ -526,21 +540,16 @@ Qed.
 
 Lemma SemMod_empty:
   forall rules or dms, SemMod rules or None empty dms empty empty.
-Proof.
-  induction dms; intros; [econstructor; auto|].
-  eapply SemSkipMeth; eauto.
-Qed.
+Proof. intros; apply SemEmpty; auto. Qed.
 
 Lemma SemMod_empty_inv:
   forall rules or nr dms cmMap,
     SemMod rules or None nr dms empty cmMap ->
     nr = empty /\ cmMap = empty.
 Proof.
-  induction dms; intros; [inv H; intuition|].
-  inv H.
-  - apply Equal_val with (k := attrName a) in HDefs.
-    map_compute HDefs; discriminate.
-  - apply IHdms; auto.
+  intros; inv H; [intuition|].
+  apply @Equal_val with (k:= meth) in HDefs.
+  map_compute HDefs; inv HDefs.
 Qed.
 
 Lemma SemMod_olds_ext:
@@ -554,7 +563,6 @@ Proof.
     eapply SemAction_olds_ext; eauto.
   - eapply SemAddMeth; eauto.
     eapply SemAction_olds_ext; eauto.
-  - eapply SemSkipMeth; eauto.
 Qed.
 
 Lemma SemMod_dmMap_InDomain:
@@ -562,28 +570,9 @@ Lemma SemMod_dmMap_InDomain:
     SemMod rules or rm nr dms dmMap cmMap ->
     InDomain dmMap (namesOf dms).
 Proof.
-  induction dms; intros.
-  - simpl; inv H; [intuition|].
-    inv HSemMod; intuition.
-  - simpl; destruct rm.
-    + inv H; inv HSemMod.
-      * specialize (IHdms _ _ _ _ _ HSemMod0).
-        unfold InDomain; intros.
-        apply InMap_add in H; destruct H.
-        { subst; left; reflexivity. }
-        { right; specialize (IHdms _ H); assumption. }
-      * specialize (IHdms _ _ _ _ _ HSemMod0).
-        unfold InDomain; intros.
-        right; specialize (IHdms _ H); assumption.
-    + inv H.
-      * specialize (IHdms _ _ _ _ _ HSemMod).
-        unfold InDomain; intros.
-        apply InMap_add in H; destruct H.
-        { subst; left; reflexivity. }
-        { right; specialize (IHdms _ H); assumption. }
-      * specialize (IHdms _ _ _ _ _ HSemMod).
-        unfold InDomain; intros.
-        right; specialize (IHdms _ H); assumption.
+  induction 1; intros; subst; intuition.
+  apply InDomain_add; auto.
+  apply in_map; auto.
 Qed.
 
 Lemma SemMod_meth_singleton:
@@ -596,23 +585,10 @@ Lemma SemMod_meth_singleton:
                                objVal := (argV, retV) |} empty) cmMap),
     SemAction olds (objVal (attrType a) type argV) news cmMap retV.
 Proof.
-  induction dms; intros; simpl in *.
+  intros; inv Hsem;
+  [apply @Equal_val with (k:= dm) in HEmptyDms; map_compute HEmptyDms; inv HEmptyDms|].
 
-  - inv Hsem; apply Equal_val with (k:= dm) in HEmptyDms.
-    map_compute HEmptyDms; discriminate.
-
-  - inv Hsem.
-    + admit.
-    + inv Hwf.
-      assert (attrName a <> dm).
-      { pose proof (SemMod_dmMap_InDomain HSemMod).
-        destruct (string_dec dm a); [|auto].
-        subst; specialize (H a).
-        unfold InMap in H; map_compute H; specialize (H (opt_discr _)).
-        elim H1; assumption.
-      }
-      destruct (string_dec dm a); [elim H; auto|].
-      eapply IHdms; eauto.
+  admit.
 Qed.
 
 Lemma SemMod_dms_cut:
@@ -633,10 +609,19 @@ Proof.
   admit.
 Qed.
 
-Lemma SemMod_rules_ext:
+Lemma SemMod_rules_ext_1:
   forall rules1 rules2 dms or nr dmMap cmMap,
     SemMod rules1 or None nr dms dmMap cmMap ->
     SemMod rules2 or None nr dms dmMap cmMap.
+Proof.
+  admit.
+Qed.
+
+Lemma SemMod_rules_ext_2:
+  forall rules1 rules2 r dms or nr dmMap cmMap,
+    SemMod rules1 or (Some r) nr dms dmMap cmMap ->
+    SubList rules1 rules2 ->
+    SemMod rules2 or (Some r) nr dms dmMap cmMap.
 Proof.
   admit.
 Qed.
@@ -678,7 +663,6 @@ Qed.
    cm       : called methods
    ruleMeth : `None` if it is a method,
               `Some [rulename]` if it is a rule *)
-
 Record RuleLabelT := { ruleMeth: option string;
                        dms: list string;
                        dmMap: CallsT;
@@ -1054,21 +1038,6 @@ Ltac filt_dest :=
           subst
     end.
 
-Lemma opt_some_eq: forall {A} (v1 v2: A), Some v1 = Some v2 -> v1 = v2.
-Proof. intros; inv H; reflexivity. Qed.
-
-Lemma typed_type_eq:
-  forall {A} (a1 a2: A) (B: A -> Type) (v1: B a1) (v2: B a2),
-    {| objType := a1; objVal := v1 |} = {| objType := a2; objVal := v2 |} ->
-    exists (Heq: a1 = a2), match Heq with eq_refl => v1 end = v2.
-Proof. intros; inv H; exists eq_refl; reflexivity. Qed.
-
-Lemma typed_eq:
-  forall {A} (a: A) (B: A -> Type) (v1 v2: B a),
-    {| objType := a; objVal := v1 |} = {| objType := a; objVal := v2 |} ->
-    v1 = v2.
-Proof. intros; inv H; apply Eqdep.EqdepTheory.inj_pair2 in H1; assumption. Qed.
-
 Ltac basic_dest :=
   repeat
     match goal with
@@ -1134,11 +1103,11 @@ Ltac conn_tac meth :=
   callIffDef_dest; filt_dest; pred_dest meth; repeat (invariant_tac; basic_dest).
 Ltac fconn_tac meth := exfalso; conn_tac meth.
 
-Ltac regsInDomain_tac :=
-  hnf; intros;
-  repeat match goal with
-         | [ H : LtsStep _ _ _ _ _ _ |- _ ] => inv H
-         | [ H : SemMod _ _ _ _ _ _ _ |- _ ] => inv H
-         end; in_tac_H; (deattr; simpl in *; repeat invertActionRep; inDomain_tac).
+Ltac regsInDomain_tac := admit. (* TODO: reimplement *)
+  (* hnf; intros; *)
+  (* repeat match goal with *)
+  (*        | [ H : LtsStep _ _ _ _ _ _ |- _ ] => inv H *)
+  (*        | [ H : SemMod _ _ _ _ _ _ _ |- _ ] => inv H *)
+  (*        end; in_tac_H; (deattr; simpl in *; repeat invertActionRep; inDomain_tac). *)
 
 Global Opaque mkStruct.
