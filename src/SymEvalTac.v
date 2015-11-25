@@ -15,16 +15,16 @@ Qed.
 
 Hint Rewrite @disjUnion_empty : SymEval.
 
-Ltac SymEval'' H :=
-  match type of H with
-  | LtsStep _ ?a _ ?b ?c ?d =>
-    pattern a, b, c, d; apply (SymLtsStep_sound H); clear H
-  end.
+(* Ltac SymEval'' H := *)
+(*   match type of H with *)
+(*   | LtsStep _ ?a _ ?b ?c ?d => *)
+(*     pattern a, b, c, d; apply (SymLtsStep_sound H); clear H *)
+(*   end. *)
 
-Ltac SymEval' :=
-  match goal with
-  | [ H : LtsStep _ _ _ _ _ _ |- _ ] => SymEval'' H
-  end.
+(* Ltac SymEval' := *)
+(*   match goal with *)
+(*   | [ H : LtsStep _ _ _ _ _ _ |- _ ] => SymEval'' H *)
+(*   end. *)
 
 Ltac SymEval_simpl := simpl; intuition idtac; autorewrite with SymEval in *;
                       repeat match goal with
@@ -34,7 +34,7 @@ Ltac SymEval_simpl := simpl; intuition idtac; autorewrite with SymEval in *;
                              | _ => discriminate
                              end.
 
-Ltac SymEval := SymEval'; SymEval_simpl.
+Ltac SymEval := (* SymEval'; *) SymEval_simpl.
 
 Ltac SymEval_Action H :=
   match type of H with

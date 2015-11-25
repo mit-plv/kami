@@ -609,7 +609,15 @@ Proof.
   admit.
 Qed.
 
-Lemma SemMod_rules_ext_1:
+Lemma SemMod_dms_free:
+  forall rules dms1 dms2 or rm nr cmMap,
+    SemMod rules or rm nr dms1 empty cmMap ->
+    SemMod rules or rm nr dms2 empty cmMap.
+Proof.
+  admit.
+Qed.
+
+Lemma SemMod_rules_free:
   forall rules1 rules2 dms or nr dmMap cmMap,
     SemMod rules1 or None nr dms dmMap cmMap ->
     SemMod rules2 or None nr dms dmMap cmMap.
@@ -617,7 +625,7 @@ Proof.
   admit.
 Qed.
 
-Lemma SemMod_rules_ext_2:
+Lemma SemMod_rules_ext:
   forall rules1 rules2 r dms or nr dmMap cmMap,
     SemMod rules1 or (Some r) nr dms dmMap cmMap ->
     SubList rules1 rules2 ->
@@ -724,12 +732,10 @@ Definition CallIffDef (l1 l2: RuleLabelT) :=
   (forall m, In m (cms l2) -> In m (dms l1) -> find m (dmMap l1) = find m (cmMap l2)).
 
 Definition FiltDm (l1 l2 l: RuleLabelT) :=
-  dmMap l = disjUnion (complement (dmMap l1) (cms l2))
-                      (complement (dmMap l2) (cms l1)) (listSub (dms l1) (cms l2)).
+  dmMap l = union (complement (dmMap l1) (cms l2)) (complement (dmMap l2) (cms l1)).
 
 Definition FiltCm (l1 l2 l: RuleLabelT) :=
-  cmMap l = disjUnion (complement (cmMap l1) (dms l2))
-                      (complement (cmMap l2) (dms l1)) (listSub (cms l1) (dms l2)).
+  cmMap l = union (complement (cmMap l1) (dms l2)) (complement (cmMap l2) (dms l1)).
 
 Definition ConcatLabel (l1 l2 l: RuleLabelT) :=
   CombineRm (ruleMeth l1) (ruleMeth l2) (ruleMeth l) /\
@@ -762,8 +768,10 @@ Inductive LtsStep:
                 (Hlts1: @LtsStep m1 rm1 olds1 news1 dmMap1 cmMap1)
                 (Hlts2: @LtsStep m2 rm2 olds2 news2 dmMap2 cmMap2)
                 crm colds cnews cdmMap ccmMap
-                (Holds: colds = disjUnion olds1 olds2 (namesOf (getRegInits m1)))
-                (Hnews: cnews = disjUnion news1 news2 (namesOf (getRegInits m1)))
+                (Holds: colds = union olds1 olds2)
+                (Hnews: cnews = union news1 news2)
+                (HdmMap: Disj dmMap1 dmMap2)
+                (HcmMap: Disj cmMap1 cmMap2)
                 (HMerge: ConcatLabel
                            (Build_RuleLabelT rm1 (getDmsMod m1) dmMap1 (getCmsMod m1) cmMap1)
                            (Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2)
@@ -866,10 +874,11 @@ Proof.
   clear -Hin1 Hin2.
   unfold getRegInits, namesOf; rewrite map_app.
   unfold InDomain in *; intros.
-  unfold InMap, find, disjUnion in H.
-  destruct (in_dec string_dec k _).
-  - specialize (Hin1 _ H); apply in_or_app; intuition.
-  - specialize (Hin2 _ H); apply in_or_app; intuition.
+  repeat autounfold with MapDefs in H.
+  specialize (Hin1 k); specialize (Hin2 k); unfold InMap, find in *.
+  destruct (news1 k).
+  - apply in_or_app; intuition auto.
+  - apply in_or_app; intuition auto.
 Qed.
 
 Section Domain.
@@ -887,7 +896,7 @@ Section Domain.
       + unfold empty in *; intuition.
       + destruct a; destruct attrType; simpl in *.
         unfold add, unionL, find, string_eq in H.
-        destruct (string_dec attrName k); intuition.
+        destruct (string_dec attrName k); intuition auto.
     - pose proof (@newRegsDomain _ _ _ _ _ Hlts).
       rewrite Hrs.
       apply InDomain_update; intuition.
@@ -911,40 +920,41 @@ Section WellFormed.
     exists r1 r2 l1 l2,
       LtsStepClosure m1 r1 l1 /\
       LtsStepClosure m2 r2 l2 /\
-      disjUnion r1 r2 (namesOf (getRegInits m1)) = r /\
+      union r1 r2 = r /\
       ConcatLabelSeq l1 l2 l.
   Proof.
-    intros clos.
-    remember (ConcatMod m1 m2) as m.
-    induction clos; rewrite Heqm in *; simpl in *.
-    - exists (initRegs (getRegInits m1)).
-             exists (initRegs (getRegInits m2)).
-             unfold initRegs, namesOf in *.
-             rewrite (disjUnionProp (f1 := ConstFullT) (fullType type) evalConstFullT
-                                    (getRegInits m1) (getRegInits m2)) in *.
-             exists nil; exists nil.
-             repeat (constructor || intuition).
-    - destruct (IHclos eq_refl) as [r1 [r2 [l1 [l2 [step1 [step2 [regs labels]]]]]]];
-      clear IHclos.
-      inversion Hlts; subst.
-      exists (update olds1 news1).
-      exists (update olds2 news2).
-      exists ((Build_RuleLabelT rm1 (getDmsMod m1) dmMap1 (getCmsMod m1) cmMap1) :: l1).
-      exists ((Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2) :: l2).
-      pose proof (regsDomain newRegsDomainM1 step1) as regs1.
-      pose proof (regsDomain newRegsDomainM2 step2) as regs2.
-      pose proof (disjUnion_div disjRegs regs1 regs2 HOldRegs1 HOldRegs2 Holds) as [H1 H2].
-      subst.
-      constructor.
-      + apply (lcLtsStep (or' := update olds1 news1) step1 Hlts1 eq_refl).
-      + constructor.
-        * apply (lcLtsStep (or' := update olds2 news2) step2 Hlts2 eq_refl).
-        * constructor.
-          { pose proof newRegsDomainM1 Hlts1 as H1.
-            pose proof newRegsDomainM2 Hlts2 as H2.
-            apply disjUnion_update_comm.
-          }
-          { constructor; intuition. }
+    admit. (* Proof deprecated due to disjUnion -> union *)
+    (* intros clos. *)
+    (* remember (ConcatMod m1 m2) as m. *)
+    (* induction clos; rewrite Heqm in *; simpl in *. *)
+    (* - exists (initRegs (getRegInits m1)). *)
+    (*          exists (initRegs (getRegInits m2)). *)
+    (*          unfold initRegs, namesOf in *. *)
+    (*          rewrite (disjUnionProp (f1 := ConstFullT) (fullType type) evalConstFullT *)
+    (*                                 (getRegInits m1) (getRegInits m2)) in *. *)
+    (*          exists nil; exists nil. *)
+    (*          repeat (constructor || intuition). *)
+    (* - destruct (IHclos eq_refl) as [r1 [r2 [l1 [l2 [step1 [step2 [regs labels]]]]]]]; *)
+    (*   clear IHclos. *)
+    (*   inversion Hlts; subst. *)
+    (*   exists (update olds1 news1). *)
+    (*   exists (update olds2 news2). *)
+    (*   exists ((Build_RuleLabelT rm1 (getDmsMod m1) dmMap1 (getCmsMod m1) cmMap1) :: l1). *)
+    (*   exists ((Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2) :: l2). *)
+    (*   pose proof (regsDomain newRegsDomainM1 step1) as regs1. *)
+    (*   pose proof (regsDomain newRegsDomainM2 step2) as regs2. *)
+    (*   pose proof (disjUnion_div disjRegs regs1 regs2 HOldRegs1 HOldRegs2 Holds) as [H1 H2]. *)
+    (*   subst. *)
+    (*   constructor. *)
+    (*   + apply (lcLtsStep (or' := update olds1 news1) step1 Hlts1 eq_refl). *)
+    (*   + constructor. *)
+    (*     * apply (lcLtsStep (or' := update olds2 news2) step2 Hlts2 eq_refl). *)
+    (*     * constructor. *)
+    (*       { pose proof newRegsDomainM1 Hlts1 as H1. *)
+    (*         pose proof newRegsDomainM2 Hlts2 as H2. *)
+    (*         apply disjUnion_update_comm. *)
+    (*       } *)
+    (*       { constructor; intuition. } *)
   Qed.
 End WellFormed.
 

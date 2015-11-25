@@ -588,6 +588,15 @@ Section Facts.
     elim H0; apply H; intro X; inversion X.
   Qed.
 
+  Lemma union_InDomain:
+    forall {A} (m1 m2: @Map A) (d1 d2: list string),
+      InDomain m1 d1 -> InDomain m2 d2 -> InDomain (union m1 m2) (d1 ++ d2).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); specialize (H0 k).
+    destruct (m1 k); destruct (m2 k); intuition.
+  Qed.
+
   Lemma disjUnion_InDomain:
     forall {A} (m1 m2: @Map A) (d1 d2: list string),
       InDomain m1 d1 -> InDomain m2 d2 -> InDomain (disjUnion m1 m2 d1) (d1 ++ d2).
@@ -784,6 +793,15 @@ Section Facts.
     destruct (in_dec _ _ _); intuition.
     destruct (m k); intuition.
     specialize (H0 (opt_discr _)); elim H0.
+  Qed.
+
+  Lemma DomainOf_DisjList_Disj:
+    forall {A} (m: @Map A) (d1 d2: list string),
+      DomainOf m (d1 ++ d2) -> DisjList d1 d2 ->
+      exists m1 m2, (* m1 = restrict m d1 /\ m2 = restrict m d2 *)
+        Disj m1 m2 /\ m = union m1 m2 /\ DomainOf m1 d1 /\ DomainOf m2 d2.
+  Proof.
+    admit.
   Qed.
 
   Lemma disjUnion_div':

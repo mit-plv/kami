@@ -881,7 +881,7 @@ Section Preliminaries.
           map_simpl H10; rewrite <-restrict_union in H10.
           assumption.
 
-      + apply SemMod_rules_ext_1 with (rules1:= rules).
+      + apply SemMod_rules_free with (rules1:= rules).
         apply SemMod_olds_ext with (or1:= olds2);
           [rewrite Sub_merge by assumption; apply Sub_refl|].
 
@@ -1254,6 +1254,38 @@ Section Preliminaries.
 End Preliminaries.
 
 Section Facts.
+  
+  Inductive Inlinable:
+    nat (* countdown *) -> option (Attribute (Action Void)) ->
+    list DefMethT (* meths executed *) -> list DefMethT (* meths fired *) ->
+    list (Attribute (Action Void)) (* entire rules *) -> list DefMethT (* entire methods *) ->
+    Prop :=
+  | InlinableEmpty: forall cdn rules dmsAll, Inlinable cdn None nil nil rules dmsAll
+  | InlinableRule:
+      forall rules dmsAll pdms prdms
+             ruleName (rule: Action (Bit 0)) cdn rdms,
+        In {| attrName := ruleName; attrType := rule |} rules ->
+        ActionEquiv nil (rule type) (rule typeUT) ->
+        Inlinable cdn None pdms prdms rules dmsAll ->
+        WfmActionRep dmsAll nil (rule type) cdn ->
+        WfInline None (rule typeUT) dmsAll (S cdn) ->
+        collectCalls (rule typeUT) dmsAll cdn = rdms ->
+        DisjList (namesOf rdms) (namesOf pdms) ->
+        Inlinable cdn (Some {| attrName := ruleName; attrType := rule |})
+                  (rdms ++ pdms) prdms rules dmsAll
+  | InlinableMeth:
+      forall rules dmsAll dmn dsig (dm: MethodT dsig) cdn rdms pdms prdms,
+        (forall argV, ActionEquiv nil (dm type argV) (dm typeUT tt)) ->
+        Inlinable cdn None pdms prdms rules dmsAll ->
+        WfmActionRep dmsAll nil (dm typeUT tt) cdn ->
+        WfInline (Some dmn) (dm typeUT tt) dmsAll (S cdn) ->
+        collectCalls (dm typeUT tt) dmsAll cdn = rdms ->
+        DisjList (dmn :: (namesOf rdms)) (namesOf pdms) ->
+        Inlinable cdn None (({| attrName:= dmn; attrType := {| objType := dsig; objVal := dm |} |}
+                               :: rdms) ++ pdms)
+                  ({| attrName:= dmn; attrType := {| objType := dsig; objVal := dm |} |}
+                     :: prdms) rules dmsAll.
+
   Variables (regs1 regs2: list RegInitT)
             (r1 r2: list (Attribute (Action (Bit 0))))
             (dms1 dms2: list DefMethT).
@@ -1265,36 +1297,22 @@ Section Facts.
 
   Definition cm := ConcatMod m1 m2.
   Definition im := @inlineMod m1 m2 countdown.
-
-  Inductive Inlinable: option (Attribute (Action Void)) -> list DefMethT -> Prop :=
-  | InlinableEmpty: Inlinable None nil
-  | InlinableRule:
-      forall ruleName (rule: Action (Bit 0)) cdn rdms dmsAll pdms,
-        Inlinable None pdms -> WfInline None (rule typeUT) dmsAll (S cdn) ->
-        collectCalls (rule typeUT) dmsAll cdn = rdms ->
-        DisjList (namesOf rdms) (namesOf pdms) ->
-        Inlinable (Some {| attrName := ruleName; attrType := rule |}) (rdms ++ pdms)
-  | InlinableMeth:
-      forall dmn dsig (dm: MethodT dsig) argV cdn rdms dmsAll pdms,
-        Inlinable None pdms -> WfInline (Some dmn) (dm typeUT argV) dmsAll (S cdn) ->
-        collectCalls (dm typeUT argV) dmsAll cdn = rdms ->
-        DisjList (namesOf rdms) (namesOf pdms) ->
-        ~ In dmn (namesOf rdms) -> ~ In dmn (namesOf pdms) ->
-        Inlinable None ({| attrName:= dmn; attrType := {| objType := dsig; objVal := dm |} |}
-                          :: rdms ++ pdms).
-
+  
   Lemma inline_correct:
-    forall rm idms (Hsep: Inlinable rm idms)
+    forall cdn rm dms rdms rules dmsAll (Hsep: Inlinable cdn rm dms rdms rules dmsAll)
+           (Hcdn: cdn = countdown) (Hrules: rules = r1 ++ r2) (HdmsAll: dmsAll = dms1 ++ dms2)
            or nr rmn dmMap cmMap,
-      DomainOf dmMap (namesOf idms) ->
-      NoDup (namesOf (dms1 ++ dms2)) ->
-      noCallsMod im (namesOf (dms1 ++ dms2)) = true ->
+      DomainOf dmMap (namesOf dms) ->
+      NoDup (namesOf (r1 ++ r2)) -> NoDup (namesOf (dms1 ++ dms2)) ->
       rmn = match rm with
               | Some rm' => Some (attrName rm')
               | None => None
             end ->
-      LtsStep cm rmn or nr dmMap cmMap ->
-      LtsStep im rmn or nr dmMap cmMap.
+      (* substep? labels not merged *)
+      SemMod (getRules cm) or rmn nr (getDmsBodies cm) dmMap cmMap -> 
+      SemMod (getRules im) or rmn nr (getDmsBodies im)
+             (restrict dmMap (namesOf rdms))
+             (complement cmMap (namesOf dms)).
   Proof.
     induction 1; intros.
 
@@ -1305,15 +1323,54 @@ Section Facts.
         destruct H as [H _].
         specialize (H (opt_discr _)); inv H.
       }
-      admit. (* TODO: cycle problem *)
 
-    - inv H6; inv Hlts1; inv Hlts2; destConcatLabel; filt_dest.
-      constructor; [unfold namesOf; rewrite map_app; apply disjUnion_InDomain; auto|].
-      admit. (* TODO: ConcatLabel consistency *)
+      inv H3; [|exfalso; eapply add_empty_neq; eauto].
+      map_simpl_G; apply SemMod_empty.
 
-    - inv H8; inv Hlts1; inv Hlts2; destConcatLabel; filt_dest.
-      constructor; [unfold namesOf; rewrite map_app; apply disjUnion_InDomain; auto|].
+    - subst; simpl.
+
+      unfold namesOf in H5; rewrite map_app in H5.
+      pose proof (DomainOf_DisjList_Disj H5 H4).
+      destruct H3 as [dmMapR [dmMapO H3]]; dest; subst.
+
+      apply SemMod_div in H9; [|assumption].
+      destruct H9 as [newsR [newsO [cmMapR [cmMapO H9]]]].
+      dest; subst; simpl in H14, H15.
+
+      assert (restrict (union dmMapR dmMapO) (namesOf prdms) =
+              union empty (restrict dmMapO (namesOf prdms))).
+      { admit. }
+      rewrite H9; clear H9.
+
+      assert (complement
+                (union cmMapR cmMapO)
+                (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown ++ pdms)) =
+              union (complement cmMapR
+                                (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
+                    (complement cmMapO (namesOf pdms))).
+      { admit. }
+      rewrite H9; clear H9.
+
+      apply SemMod_merge_rule; auto;
+      [|apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; auto].
+
+      apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
+      eapply inlineToRulesRep_prop; eauto.
+
+      admit. (* dM = cM |_ cdms *)
+
+    - subst; simpl.
+
+      unfold namesOf in H4; rewrite map_app in H4.
+      pose proof (DomainOf_DisjList_Disj H4 H3).
+      destruct H2 as [dmMapM [dmMapO H2]]; dest; subst.
+
+      apply SemMod_div in H8; [|assumption].
+      destruct H8 as [newsM [newsO [cmMapM [cmMapO H8]]]].
+      dest; subst; simpl in H13, H14.
+
       admit.
+
   Qed.
 
 End Facts.
