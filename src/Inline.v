@@ -1259,41 +1259,39 @@ Section Facts.
     nat (* countdown *) -> option (Attribute (Action Void)) ->
     list DefMethT (* meths executed *) -> list DefMethT (* meths fired *) ->
     list (Attribute (Action Void)) (* entire rules *) -> list DefMethT (* entire methods *) ->
-    CallsT (* dmMap *) -> CallsT (* cmMap *) -> Prop :=
-  | InlinableEmpty: forall cdn rules dmsAll, Inlinable cdn None nil nil rules dmsAll empty empty
+    Prop :=
+  | InlinableEmpty: forall cdn rules dmsAll, Inlinable cdn None nil nil rules dmsAll
   | InlinableRule:
-      forall rules dmsAll pedms pfdms pdmMap pcmMap
-             ruleName (rule: Action (Bit 0)) cdn edms rdmMap rcmMap,
+      forall rules dmsAll pedms pfdms
+             ruleName (rule: Action (Bit 0)) cdn edms,
         In {| attrName := ruleName; attrType := rule |} rules ->
         ActionEquiv nil (rule type) (rule typeUT) ->
-        Inlinable cdn None pedms pfdms rules dmsAll pdmMap pcmMap ->
+        Inlinable cdn None pedms pfdms rules dmsAll ->
         WfmActionRep dmsAll nil (rule type) cdn ->
         WfInline None (rule typeUT) dmsAll (S cdn) ->
         collectCalls (rule typeUT) dmsAll cdn = edms ->
         DisjList (namesOf edms) (namesOf pedms) ->
-        rdmMap = restrict rcmMap (namesOf edms) ->
         Inlinable cdn (Some {| attrName := ruleName; attrType := rule |})
-                  (edms ++ pedms) pfdms rules dmsAll (union rdmMap pdmMap) (union rcmMap pcmMap)
+                  (edms ++ pedms) pfdms rules dmsAll
   | InlinableMeth:
-      forall rules dmsAll fdmn dsig (dm: MethodT dsig) cdn edms dsigV ddmMap dcmMap
-             pedms pfdms pdmMap pcmMap,
+      forall rules dmsAll fdmn dsig (dm: MethodT dsig) cdn edms
+             pedms pfdms,
+        In {| attrName := fdmn; attrType := {| objType := dsig; objVal := dm |} |} dmsAll ->
         (forall argV, ActionEquiv nil (dm type argV) (dm typeUT tt)) ->
-        Inlinable cdn None pedms pfdms rules dmsAll pdmMap pcmMap ->
-        WfmActionRep dmsAll nil (dm typeUT tt) cdn ->
+        Inlinable cdn None pedms pfdms rules dmsAll ->
+        (forall argV, WfmActionRep dmsAll nil (dm type argV) cdn) ->
         WfInline (Some fdmn) (dm typeUT tt) dmsAll (S cdn) ->
         collectCalls (dm typeUT tt) dmsAll cdn = edms ->
         DisjList (fdmn :: (namesOf edms)) (namesOf pedms) ->
-        ddmMap = restrict dcmMap (namesOf edms) ->
         Inlinable cdn None (({| attrName:= fdmn;
                                 attrType := {| objType := dsig; objVal := dm |} |}
                                :: edms) ++ pedms)
                   ({| attrName:= fdmn; attrType := {| objType := dsig; objVal := dm |} |}
-                     :: pfdms) rules dmsAll
-                  (union (add fdmn dsigV ddmMap) pdmMap) (union dcmMap pcmMap).
+                     :: pfdms) rules dmsAll.
 
   Lemma inlinable_dms_Sublist:
-    forall cdn rm edms fdms rules dmsAll dmMap cmMap,
-      Inlinable cdn rm edms fdms rules dmsAll dmMap cmMap ->
+    forall cdn rm edms fdms rules dmsAll,
+      Inlinable cdn rm edms fdms rules dmsAll ->
       SubList fdms edms.
   Proof.
     induction 1; intros; unfold SubList; intros; [inv H| |].
@@ -1302,8 +1300,42 @@ Section Facts.
       apply in_or_app; right; auto.
   Qed.
 
+  Definition ValidLabel (dmMap cmMap: CallsT) (dmsAll: list DefMethT) :=
+    dmMap = restrict cmMap (namesOf dmsAll).
+  Hint Unfold ValidLabel.
+
+  Lemma decompose_SemMod_rule:
+    forall rules or nr (rule: Attribute (Action Void)) dmsAll dmMap cmMap
+           (Hlbl: ValidLabel dmMap cmMap dmsAll)
+           (Hsem: SemMod rules or (Some (attrName rule)) nr dmsAll dmMap cmMap),
+    forall cdn edms (Hedms: collectCalls (attrType rule typeUT) dmsAll cdn = edms),
+    exists cmMap1 cmMap2 nr1 nr2,
+      SemMod rules or (Some (attrName rule)) nr1 dmsAll (restrict dmMap (namesOf edms)) cmMap1 /\
+      SemMod rules or None nr2 dmsAll (complement dmMap (namesOf edms)) cmMap2 /\
+      restrict cmMap1 (namesOf edms) = restrict dmMap (namesOf edms) /\
+      Disj nr1 nr2 /\ nr = union nr1 nr2 /\ Disj cmMap1 cmMap2.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma decompose_SemMod_meth:
+    forall rules or nr dmn dm dmsAll dmMap cmMap
+           (Hlbl: ValidLabel dmMap cmMap dmsAll)
+           (Hdm: In {| attrName := dmn; attrType := dm |} dmsAll)
+           (HdmMap: find dmn dmMap <> None)
+           (Hsem: SemMod rules or None nr dmsAll dmMap cmMap),
+    forall cdn edms (Hedms: collectCalls (objVal dm typeUT tt) dmsAll cdn = edms),
+    exists cmMap1 cmMap2 nr1 nr2,
+      SemMod rules or None nr1 dmsAll (restrict dmMap (dmn :: (namesOf edms))) cmMap1 /\
+      SemMod rules or None nr2 dmsAll (complement dmMap (dmn :: (namesOf edms))) cmMap2 /\
+      restrict cmMap1 (namesOf edms) = restrict dmMap (namesOf edms) /\
+      Disj nr1 nr2 /\ nr = union nr1 nr2 /\ Disj cmMap1 cmMap2.
+  Proof.
+    admit.
+  Qed.
+
   Variables (regs1 regs2: list RegInitT)
-            (r1 r2: list (Attribute (Action (Bit 0))))
+            (r1 r2: list (Attribute (Action Void)))
             (dms1 dms2: list DefMethT).
 
   Variable countdown: nat.
@@ -1315,16 +1347,17 @@ Section Facts.
   Definition im := @inlineMod m1 m2 countdown.
   
   Lemma inline_correct:
-    forall cdn rm edms fdms rules dmsAll dmMap cmMap
-           (Hsep: Inlinable cdn rm edms fdms rules dmsAll dmMap cmMap)
+    forall cdn rm edms fdms rules dmsAll
+           (Hsep: Inlinable cdn rm edms fdms rules dmsAll)
            (Hcdn: cdn = countdown) (Hrules: rules = r1 ++ r2) (HdmsAll: dmsAll = dms1 ++ dms2)
-           or nr rmn,
+           or nr dmMap cmMap rmn,
       NoDup (namesOf (r1 ++ r2)) -> NoDup (namesOf (dms1 ++ dms2)) ->
       rmn = match rm with
               | Some rm' => Some (attrName rm')
               | None => None
             end ->
 
+      DomainOf dmMap (namesOf edms) -> ValidLabel dmMap cmMap dmsAll ->
       SemMod (getRules cm) or rmn nr (getDmsBodies cm) dmMap cmMap ->
       SemMod (getRules im) or rmn nr (getDmsBodies im)
              (restrict dmMap (namesOf fdms))
@@ -1334,54 +1367,81 @@ Section Facts.
 
     - subst; map_simpl_G.
 
-      inv H2; [|exfalso; eapply add_empty_neq; eauto].
+      assert (dmMap = empty); subst.
+      { admit. (* easy *) }
+      
+      inv H4; [|exfalso; eapply add_empty_neq; eauto].
       map_simpl_G; apply SemMod_empty.
 
     - subst; simpl.
 
-      (* unfold namesOf in H5; rewrite map_app in H5. *)
-      (* pose proof (DomainOf_DisjList_Disj H5 H4). *)
-      (* destruct H3 as [dmMapR [dmMapO H3]]; dest. *)
-      (* rewrite H8 in *. *)
+      pose proof (decompose_SemMod_rule _ H9 H10 countdown eq_refl); clear H10.
+      destruct H3 as [cmMapR [cmMapO [newsR [newsO H3]]]]; dest; subst.
 
-      apply SemMod_div in H9. [|assumption].
-      destruct H10 as [newsR [newsO [cmMapR [cmMapO H10]]]].
-      dest; subst; simpl in H15, H16.
+      simpl in *.
+      repeat
+        match goal with
+          | [H: SemMod _ _ _ _ _ ?d cmMapR |- _] => remember d as dmMapR
+          | [H: SemMod _ _ _ _ _ ?d cmMapO |- _] => remember d as dmMapO
+        end.
 
-      assert (restrict (union dmMapR dmMapO) (namesOf pfdms) =
-              union empty (restrict dmMapO (namesOf pfdms))).
-      { admit. }
-      rewrite H12; clear H12.
-
-      assert (complement
-                (union cmMapR cmMapO)
-                (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown ++ pedms)) =
-              union (complement cmMapR
-                                (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
-                    (complement cmMapO (namesOf pedms))).
-      { admit. }
-      rewrite H12; clear H12.
+      match goal with
+        | [ |- SemMod _ _ _ _ _ ?d _ ] =>
+          replace d with (union empty (restrict dmMapO (namesOf pfdms))) by admit
+      end.
+      match goal with
+        | [ |- SemMod _ _ _ _ _ _ ?c ] =>
+          replace c
+          with (union (complement
+                         cmMapR
+                         (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
+                      (complement cmMapO (namesOf pedms))) by admit
+      end.
 
       apply SemMod_merge_rule; auto.
-      [|apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; auto].
 
-      apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
-      eapply inlineToRulesRep_prop; eauto.
-
-      admit. (* dM = cM |_ cdms *)
+      + apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
+        eapply inlineToRulesRep_prop; eauto.
+      + apply IHHsep; auto.
+        * admit. (* easy *)
+        * admit. (* TODO: think about it; it is true, but is it a right condition? *)
+      + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; auto.
 
     - subst; simpl.
 
-      unfold namesOf in H4; rewrite map_app in H4.
-      pose proof (DomainOf_DisjList_Disj H4 H3).
-      destruct H2 as [dmMapM [dmMapO H2]]; dest; subst.
+      assert (find fdmn dmMap <> None) by admit. (* easy with DomainOf condition *)
+      pose proof (decompose_SemMod_meth _ _ H9 H H3 H10 countdown eq_refl); clear H10.
+      destruct H7 as [cmMapM [cmMapO [newsM [newsO H7]]]]; dest; subst.
 
-      apply SemMod_div in H8; [|assumption].
-      destruct H8 as [newsM [newsO [cmMapM [cmMapO H8]]]].
-      dest; subst; simpl in H13, H14.
+      simpl in *.
+      repeat
+        match goal with
+          | [H: SemMod _ _ _ _ _ ?d cmMapM |- _] => remember d as dmMapM
+          | [H: SemMod _ _ _ _ _ ?d cmMapO |- _] => remember d as dmMapO
+        end.
 
-      admit.
+      match goal with
+        | [ |- SemMod _ _ _ _ _ ?d _ ] =>
+          replace d with (union (restrict dmMapM [fdmn])
+                                (restrict dmMapO (namesOf pfdms))) by admit
+      end.
+      match goal with
+        | [ |- SemMod _ _ _ _ _ _ ?c ] =>
+          replace c
+          with (union (complement
+                         cmMapM
+                         (namesOf (collectCalls (dm typeUT tt) (dms1 ++ dms2) countdown)))
+                      (complement cmMapO (namesOf pedms))) by admit
+      end.
 
+      apply SemMod_merge_meths; auto.
+
+      + admit. (* eapply inlineToDmsRep_prop; eauto. *)
+      + apply IHHsep; auto.
+        * admit. (* easy *)
+        * admit. (* TODO: think about it; it is true, but is it a right condition? *)
+      + admit.
+      + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; auto.
   Qed.
 
 End Facts.
