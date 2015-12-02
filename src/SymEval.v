@@ -45,27 +45,6 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rsNotWritable rs' : RegsT) (cs 
   | Return e => kf rs' cs (evalExpr e)
   end.
 
-Lemma union_add : forall A k (v : A) m1 m2,
-  m1 k = None
-  -> union m1 m2[k |--> v] = union m1[k |--> v] m2.
-Proof.
-  unfold union, add, unionL; intros.
-  extensionality k0.
-  destruct (string_dec k k0); subst.
-  rewrite string_dec_eq.
-  rewrite H; auto.
-  rewrite string_dec_neq by assumption.
-  auto.
-Qed.
-
-Lemma union_assoc : forall A (a b c : @Map A),
-  union a (union b c) = union (union a b) c.
-Proof.
-  unfold union, unionL; intros.
-  extensionality k.
-  destruct (a k); auto.
-Qed.
-
 Lemma double_find : forall T (v1 v2 : fullType type T) m k,
   v1 === m.[k]
   -> v2 === m.[k]
@@ -76,38 +55,6 @@ Proof.
   injection H0; intro.
   apply inj_pair2 in H1.
   auto.
-Qed.
-
-Lemma Disj_union1 : forall A (m1 m2 m : @Map A),
-  Disj (union m1 m2) m
-  -> Disj m1 m.
-Proof.
-  intros; intro k.
-  specialize (H k).
-  unfold find, union, unionL in *; intuition idtac.
-  destruct (m1 k); auto.
-Qed.
-
-Lemma Disj_union2 : forall A (m1 m2 m : @Map A),
-  Disj (union m1 m2) m
-  -> Disj m2 m.
-Proof.
-  intros; intro k.
-  specialize (H k).
-  unfold find, union, unionL in *; intuition idtac.
-  destruct (m1 k); auto; discriminate.
-Qed.
-
-Lemma Disj_add : forall A (m1 m2 : @Map A) k v,
-  Disj m1[k |--> v] m2
-  -> Disj m1 m2.
-Proof.
-  intros; intro k0.
-  specialize (H k0).
-  unfold find, add, unionL in *; intuition idtac.
-  destruct (string_dec k k0); subst.
-  rewrite string_dec_eq in *; discriminate.
-  rewrite string_dec_neq in * by tauto; tauto.
 Qed.
 
 Hint Immediate Disj_union1 Disj_union2 Disj_add.

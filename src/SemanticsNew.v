@@ -84,7 +84,7 @@ Inductive UnitSteps (m : Modules) (o : RegsT) : RegsT -> LabelT -> Type :=
 
 Definition subtractKV {A : Type} 
   (deceqA : forall (x y : A), sumbool (x = y) (x <> y))
-  (m1 m2 : @Map A) : @Map A := fun k => match m2 k, m1 k with
+  (m1 m2 : Map A) : Map A := fun k => match m2 k, m1 k with
   | Some v2, Some v1 => if deceqA v1 v2
      then None
      else Some v1

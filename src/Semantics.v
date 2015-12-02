@@ -286,13 +286,13 @@ End GetCms.
 Hint Unfold getCmsMod getDmsMod getDmsBodies.
 
 (* maps register names to the values which they currently hold *)
-Definition RegsT := @Map (Typed (fullType type)).
+Definition RegsT := Map (Typed (fullType type)).
 
 (* a pair of the value sent to a method call and the value it returned *)
 Definition SignT k := (type (arg k) * type (ret k))%type.
 
 (* a list of simulatenous method call actions made during a single step *)
-Definition CallsT := @Map (Typed SignT).
+Definition CallsT := Map (Typed SignT).
 
 Section Semantics.
   Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
