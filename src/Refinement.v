@@ -322,8 +322,32 @@ Section Decomposition.
       -> CanCombine (u1, l1) (u2, l2)
       -> UnitSteps m o (union u1 u2) (mergeLabel l1 l2).
 
+  Definition subtractKV {A : Type} 
+    (deceqA : forall (x y : A), sumbool (x = y) (x <> y))
+    (m1 m2 : @Map A) : @Map A := fun k => match m2 k, m1 k with
+    | Some v2, Some v1 => if deceqA v1 v2
+       then None
+       else Some v1
+    | _, m1k => m1k
+    end.
+
+  Definition signIsEq : forall (l1 l2 : Typed SignT),
+    sumbool (l1 = l2) (l1 <> l2).
+  Proof. intros. destruct l1, l2. 
+  destruct (SignatureT_dec objType objType0).
+  - induction e. destruct objType, objVal, objVal0.
+    destruct (isEq arg t t1). induction e.
+    destruct (isEq ret t0 t2). induction e. left. reflexivity.
+    right. unfold not. intros. apply typed_eq in H.
+    inversion H. apply n in H1. assumption.
+    right. unfold not. intros. apply typed_eq in H.
+    inversion H. apply n in H1. assumption.
+  - right. unfold not. intros. inversion H. apply n in H1.
+    assumption.
+  Qed.
+
   Definition hide (l : LabelT) : LabelT := match l with
-    (rm, ds, cs) => (rm, subtract ds cs, subtract cs ds)
+    (rm, ds, cs) => (rm, subtractKV signIsEq ds cs, subtractKV signIsEq cs ds)
     end.
 
   Definition wellHidden (l : LabelT) (m : Modules) := match l with
@@ -387,7 +411,7 @@ Section Decomposition.
    , match T step with (nSpec, lSpec) =>
       let oSpec := stateMap oImp in
         (update oSpec nSpec = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p)
+      /\ equivalent lSpec lImp p)
       * UnitStep spec oSpec nSpec lSpec
      end.
 
@@ -474,7 +498,7 @@ Qed.
    , let (nSpec, lSpec) := Ts steps in
         let oSpec := stateMap oImp in
         (update oSpec nSpec = stateMap (update oImp nImp)
-      /\ equivalent lImp lSpec p)
+      /\ equivalent lSpec lImp p)
       * UnitSteps spec oSpec nSpec lSpec.
   Proof.
   intros.
@@ -509,8 +533,10 @@ Qed.
   pose proof (consistentUnitStepsMap H u). simpl in *.
   destruct (Ts u) as [nSpec lSpec]. 
   intuition.  
-  econstructor. eassumption. 
-  admit. unfold equivalent in *. subst. 
+  econstructor. eassumption.
+  unfold equivalent in *. rewrite e.
+  rewrite H1.
+  admit. unfold equivalent in *. subst.
   admit.
   Admitted.
 
