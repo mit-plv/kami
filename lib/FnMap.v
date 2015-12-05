@@ -1129,3 +1129,119 @@ Proof.
   rewrite string_dec_eq in *; discriminate.
   rewrite string_dec_neq in * by tauto; tauto.
 Qed.
+
+
+Require FSets.FMapList FSets.FMapFacts.
+Require Import Structures.OrderedType.
+Require Import Lib.String_as_OT.
+
+Require Import Eqdep_dec.
+
+Scheme Sorted_ind' := Induction for Sorted Sort Prop.
+
+Theorem eq_rect_eq_list :
+  forall (A : Type), (forall (x y : A), {x = y} + {x <> y}) ->
+  forall (p:list A) (Q:list A->Type) (x:Q p) (h:p=p), 
+  x = eq_rect p Q x p h.
+Proof.
+intros.
+apply K_dec_type with (p := h).
+apply list_eq_dec.
+assumption.
+reflexivity.
+Qed.
+
+Scheme HdRel_ind' := Induction for HdRel Sort Prop.
+
+
+Fixpoint HdRel_irrel {A : Type} {le : A -> A -> Prop}
+  (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+  (le_irrel : forall {x y} (a b : le x y), a = b)
+  (x : A) (xs : list A) p {struct p}
+  : forall (q : HdRel le x xs), p = q.
+Proof.
+induction p using HdRel_ind'; intros.
+- replace (HdRel_nil le x) with
+  (eq_rect _ (fun xs => HdRel le x xs) (HdRel_nil le x) _ eq_refl)
+  by reflexivity.
+  generalize (@eq_refl (list A) nil).
+  pattern (@nil A) at 1 3 4 6, q. destruct q; intro Heq.
+  + rewrite <- eq_rect_eq_list by assumption. reflexivity.
+  + inversion Heq.
+- replace (HdRel_cons le x b l r) with
+  (eq_rect _ (HdRel le x) (HdRel_cons le x b l r) _ eq_refl)
+  by reflexivity.
+  generalize (eq_refl (b :: l)).
+  pattern (b :: l) at 1 3 4 6, q. destruct q; intro Heq.
+  + inversion Heq.
+  + inversion Heq. subst.
+    rewrite <- eq_rect_eq_list by assumption.
+    replace r with l1 by (apply le_irrel).
+    reflexivity.
+Qed.
+
+Fixpoint Sorted_irrel {A : Type} {le : A -> A -> Prop}
+  (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+  (le_irrel : forall {x y} (a b : le x y), a = b)
+  (xs : list A) p {struct p}
+  : forall (q : Sorted le xs), p = q.
+Proof.
+induction p using Sorted_ind'; intros.
+- replace (Sorted_nil le) with
+    (eq_rect _ (fun l => Sorted le l) (Sorted_nil le) _ eq_refl)
+    by reflexivity.
+  generalize (@eq_refl (list A) nil).
+    pattern (@nil A) at 1 3 4 6, q. destruct q; intro Heq.
+    + rewrite <- eq_rect_eq_list by assumption. reflexivity.
+    + inversion Heq.
+- replace (Sorted_cons p h) with
+    (eq_rect _ (fun l => Sorted le l) (Sorted_cons p h) _ eq_refl)
+    by reflexivity.
+  generalize (eq_refl (a :: l)).
+    pattern (a :: l) at 1 3 4 6, q. destruct q; intro Heq.
+    + inversion Heq.
+    + inversion Heq. subst. 
+      rewrite <- (eq_rect_eq_list) by assumption.
+      replace q with p by apply IHp.
+      replace h0 with h. reflexivity.
+      apply HdRel_irrel; assumption.
+Qed.
+
+Module FMap := FMapList.Make String_as_OT. 
+Module FMapF := FMapFacts.OrdProperties FMap.
+
+Theorem FMap_equal {A : Type}
+   (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+  {m1 m2 : FMap.t A}
+  : FMap.Equal m1 m2 -> m1 = m2.
+Proof.
+induction m1. induction m2. intros. 
+assert (this = this0).
+Focus 2.
+induction H0.
+replace sorted0 with sorted.
+trivial. 
+apply Sorted_irrel.
+intros. decide equality. apply string_dec.
+unfold FMap.Raw.PX.ltk. intros.
+apply UIP_dec.
+decide equality.
+
+apply (FMapF.P.F.Equal_Equivb_eqdec eq_dec_A) in H.
+apply FMap.Raw.equal_1 in H;
+  try assumption.
+simpl in H.
+
+generalize dependent this0.
+induction this; induction this0; intros. simpl in H.
+reflexivity. inversion H. destruct a in H. inversion H.
+simpl in H. destruct a, a0.
+destruct (String_as_OT.compare s s0). inversion H.
+destruct (eq_dec_A a a0); simpl in H.
+unfold String_as_OT.eq in e. subst. 
+f_equal. apply IHthis.
+inversion sorted; clear sorted; subst. assumption.
+inversion sorted0; clear sorted0; subst. assumption.
+assumption.
+inversion H. inversion H.
+Qed.
