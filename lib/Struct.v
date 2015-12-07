@@ -127,6 +127,23 @@ Section BoundedIndexFull.
       apply IHattrs; auto.
   Qed.
 
+  Lemma getAttribute_In:
+    forall n attr (attrs: list Attribute)
+           (HIn: In {| attrName := n; attrType := attr |} attrs)
+           (Hnd: NoDup (map attrName attrs)),
+      Some {| attrName := n; attrType := attr |} = getAttribute n attrs.
+  Proof.
+    induction attrs; intros; intuition.
+    inv HIn; simpl in *.
+    - destruct (string_dec n n); intuition.
+    - destruct (string_dec n (attrName a)).
+      + subst; simpl in *; exfalso.
+        inv Hnd; elim H2.
+        apply in_map with (B:= string) (f:= attrName) in H.
+        simpl in H; intuition.
+      + inv Hnd; apply IHattrs; auto.
+  Qed.
+
   Definition BoundedIndexFull attrs := BoundedIndex (map attrName attrs).
 
   Definition GetAttr

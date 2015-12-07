@@ -219,7 +219,10 @@ Section Exts.
   Lemma inlineToDms_names:
     forall dms tdms, namesOf dms = namesOf (inlineToDms dms tdms).
   Proof.
-    admit.
+    induction dms; intros; intuition auto.
+    simpl; f_equal.
+    - destruct a as [an [ ]]; reflexivity.
+    - apply IHdms.
   Qed.
 
   Fixpoint inlineToDmsRep (dms tdms: list DefMethT) (n: nat): list DefMethT :=
@@ -227,6 +230,31 @@ Section Exts.
       | O => inlineToDms dms tdms
       | S n' => inlineToDms (inlineToDmsRep dms tdms n') tdms
     end.
+
+  Program Lemma inlineToDmsRep_inlineDmsRep:
+    forall n (dms tdms: list DefMethT),
+      inlineToDmsRep dms tdms n =
+      map (fun (ar: Attribute (Typed MethodT))
+           => {| attrName := attrName ar;
+                 attrType :=
+                   {| objType := objType (attrType ar);
+                      objVal := fun t av => inlineDmsRep ((objVal (attrType ar)) t av) tdms n
+                   |}
+              |}) dms.
+  Proof.
+    induction n; intros.
+    - simpl; unfold inlineToDms, inlineToDm.
+      f_equal; extensionality dm; destruct dm as [dmn [ ]]; simpl; reflexivity.
+    - simpl; rewrite IHn; unfold inlineToDms.
+      rewrite map_map; reflexivity.
+  Qed.
+
+  Lemma inlineToDmsRep_names:
+    forall n dms tdms, namesOf dms = namesOf (inlineToDmsRep dms tdms n).
+  Proof.
+    intros; rewrite inlineToDmsRep_inlineDmsRep.
+    unfold namesOf; rewrite map_map; reflexivity.
+  Qed.
 
   Definition inlineMod (m1 m2: Modules) (cdn: nat): Modules :=
     match m1, m2 with
@@ -266,6 +294,10 @@ Inductive WfInline: forall {retK}, option string (* starting method *) ->
       WfInline odm a dms O
 | WfInlineS:
     forall {retK} odm (a: ActionT typeUT retK) dms n,
+      match odm with
+        | Some dm => ~ In dm (namesOf (getCalls (inlineDmsRep a dms n) dms))
+        | None => True
+      end ->
       WfInline odm a dms n ->
       DisjList (namesOf (getCalls (inlineDmsRep a dms n) dms)) (namesOf (collectCalls a dms n)) ->
       WfInline odm a dms (S n).
@@ -275,7 +307,12 @@ Lemma WfInline_start:
     WfInline (Some dm) a dms cdn ->
     ~ In dm (namesOf (collectCalls a dms cdn)).
 Proof.
-  admit.
+  induction cdn; intros; simpl in *.
+  - inv H; destruct_existT; assumption.
+  - inv H; destruct_existT.
+    specialize (IHcdn H5); clear H5.
+    intro Hx; unfold namesOf in Hx; rewrite map_app in Hx; apply in_app_or in Hx;
+    inv Hx; intuition.
 Qed.
 
 Require Import Semantics.
@@ -286,7 +323,7 @@ Lemma getCalls_cmMap:
     InDomain dmMap (namesOf (getCalls a dmsAll)) ->
     InDomain (restrict cmMap (namesOf dmsAll)) (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
 Proof.
-  admit.
+  admit. (* Semantics stuff *)
 Qed.
 
 Lemma appendAction_SemAction:
@@ -336,37 +373,25 @@ Proof.
 Qed.
 
 Lemma inlineDms_ActionEquiv:
-  forall {retK} (a: Action retK) ast aut iast iaut dms,
-    ast = a type -> aut = a typeUT ->
+  forall {retK} (ast: ActionT type retK) (aut: ActionT typeUT retK) dms,
     ActionEquiv nil ast aut ->
-    iast = (fun t => inlineDms (a t) dms) type ->
-    iaut = (fun t => inlineDms (a t) dms) typeUT ->
-    ActionEquiv nil iast iaut.
+    ActionEquiv nil (inlineDms ast dms) (inlineDms aut dms).
 Proof.
-  (* induction 3; intros; simpl in *; subst. *)
-  admit.
+  induction 1; intros; subst; simpl; try (constructor; auto; fail).
+  simpl; destruct (getBody n dms s).
+  - destruct s0; subst; simpl.
+    constructor; intros.
+    admit. (* ActionEquiv appendAction: need "MethsEquiv dms" *)
+  - constructor; intros.
+    eapply H0; eauto.
 Qed.
 
-Lemma inlineDmsRep_ActionEquiv_1:
-  forall {retK} (a: Action retK) ast aut iast iaut dms cdn,
-    ast = a type -> aut = a typeUT ->
+Lemma inlineDmsRep_ActionEquiv:
+  forall {retK} (ast: ActionT type retK) (aut: ActionT typeUT retK) dms cdn,
     ActionEquiv nil ast aut ->
-    iast = (fun t => inlineDmsRep (a t) dms cdn) type ->
-    iaut = (fun t => inlineDmsRep (a t) dms cdn) typeUT ->
-    ActionEquiv nil iast iaut.
+    ActionEquiv nil (inlineDmsRep ast dms cdn) (inlineDmsRep aut dms cdn).
 Proof.
-  admit.
-Qed.
-
-Lemma inlineDmsRep_ActionEquiv_2:
-  forall {sigT} (a: MethodT sigT) argV ast aut iast iaut dms cdn,
-    ast = a type argV -> aut = a typeUT tt ->
-    ActionEquiv nil ast aut ->
-    iast = (fun t av => inlineDmsRep (a t av) dms cdn) type argV ->
-    iaut = (fun t av => inlineDmsRep (a t av) dms cdn) typeUT tt ->
-    ActionEquiv nil iast iaut.
-Proof.
-  admit.
+  induction cdn; intros; simpl in *; apply inlineDms_ActionEquiv; auto.
 Qed.
 
 Lemma getCalls_SemAction:
@@ -377,7 +402,7 @@ Lemma getCalls_SemAction:
     SemAction olds ast news calls retV ->
     OnDomain calls (namesOf cdms).
 Proof.
-  admit.
+  admit. (* Semantics stuff *)
 Qed.
 
 Inductive WfmAction {ty}: list string -> forall {retT}, ActionT ty retT -> Prop :=
@@ -632,19 +657,6 @@ Proof.
   - map_simpl_G; reflexivity.
 Qed.
 
-Lemma getAttribute_SemMod:
-  forall rules olds dms news dmMap cmMap
-         (Hdms: NoDup (namesOf dms))
-         (Hsem: SemMod rules olds None news dms dmMap cmMap)
-         meth s sv
-         (Hdm: find meth dmMap = Some {| objType := s; objVal := sv |})
-         (attr: Attribute (Typed MethodT))
-         (Hattr: Some attr = getAttribute meth dms),
-    objType (attrType attr) = s.
-Proof.
-  admit.
-Qed.
-
 Section Preliminaries.
 
   Lemma inlineDms_prop:
@@ -802,7 +814,7 @@ Section Preliminaries.
       (* Reallocate dmMaps and news *)
       unfold namesOf in H6; rewrite map_app in H6;
       rewrite restrict_app in H6; apply SemMod_div in H6;
-      [|apply Disj_DisjList_restrict; inv H0; inv H10; destruct_existT; assumption].
+      [|apply Disj_DisjList_restrict; inv H0; inv H11; destruct_existT; assumption].
       destruct H6 as [news2 [news1 [cmMap2 [cmMap1 H6]]]].
 
       dest; subst.
@@ -838,7 +850,7 @@ Section Preliminaries.
 
       + apply Sub_refl.
       + instantiate (1:= fun t => inlineDmsRep (ar t) dmsAll cdn).
-        eapply inlineDmsRep_ActionEquiv_1; eauto.
+        eapply inlineDmsRep_ActionEquiv; eauto.
       + apply Disj_union; [assumption|].
         apply Disj_comm, Disj_union_1, Disj_comm in HnewsA; assumption.
       + apply Disj_union.
@@ -868,8 +880,8 @@ Section Preliminaries.
 
           assert (restrict cmMap2 (namesOf (collectCalls (ar typeUT) dmsAll cdn)) = empty).
           { inv H0; destruct_existT.
-            simpl in H16; unfold namesOf in H16;
-            rewrite map_app in H16; apply DisjList_app_2 in H16.
+            simpl in H17; unfold namesOf in H17;
+            rewrite map_app in H17; apply DisjList_app_2 in H17.
             rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
             eapply InDomain_DisjList_restrict; eauto.
             apply SubList_map; eapply collectCalls_sub; eauto.
@@ -890,8 +902,8 @@ Section Preliminaries.
 
         assert (restrict cmMap2 (namesOf (collectCalls (ar typeUT) dmsAll cdn)) = empty).
         { inv H0; destruct_existT.
-          simpl in H16; unfold namesOf in H16;
-          rewrite map_app in H16; apply DisjList_app_2 in H16.
+          simpl in H17; unfold namesOf in H17;
+          rewrite map_app in H17; apply DisjList_app_2 in H17.
           rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
           eapply InDomain_DisjList_restrict; eauto.
           apply SubList_map; eapply collectCalls_sub; eauto.
@@ -901,8 +913,8 @@ Section Preliminaries.
         assert (restrict cmMap2 (namesOf (getCalls (inlineDmsRep (ar typeUT) dmsAll cdn) dmsAll))
                 = empty).
         { inv H0; destruct_existT.
-          simpl in H16; unfold namesOf in H16;
-          rewrite map_app in H16; apply DisjList_app_1 in H16.
+          simpl in H17; unfold namesOf in H17;
+          rewrite map_app in H17; apply DisjList_app_1 in H17.
           rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
           eapply InDomain_DisjList_restrict; eauto.
           apply SubList_map; eapply getCalls_sub; eauto.
@@ -913,8 +925,8 @@ Section Preliminaries.
         map_simpl H9; rewrite <-restrict_union in H9.
         rewrite <-complement_union.
 
-        inv H0; inv H15; destruct_existT; clear H16 H17.
-        apply DisjList_comm in H19.
+        inv H0; inv H16; destruct_existT.
+        apply DisjList_comm in H21.
         rewrite restrict_complement_DisjList by assumption.
         assumption.
   Qed.
@@ -1098,7 +1110,7 @@ Section Preliminaries.
       (* Reallocate dmMaps and news *)
       unfold namesOf in H7; rewrite map_app in H7;
       rewrite restrict_app in H7; apply SemMod_div in H7;
-      [|apply Disj_DisjList_restrict; inv H0; inv H10; destruct_existT; assumption].
+      [|apply Disj_DisjList_restrict; inv H0; inv H11; destruct_existT; assumption].
       destruct H7 as [news2 [news1 [cmMap2 [cmMap1 H7]]]].
 
       dest; subst.
@@ -1134,7 +1146,7 @@ Section Preliminaries.
 
       + apply Sub_refl.
       + instantiate (1:= fun t av => inlineDmsRep (ad t av) dmsConst cdn).
-        eapply inlineDmsRep_ActionEquiv_2; eauto.
+        eapply inlineDmsRep_ActionEquiv; eauto.
       + apply Disj_union; [assumption|].
         apply Disj_comm, Disj_union_1, Disj_comm in HnewsA; assumption.
       + apply Disj_union.
@@ -1143,14 +1155,14 @@ Section Preliminaries.
           apply Disj_comm, Disj_union_1, Disj_comm in HcmA; assumption.
       + inv H; destruct_existT.
         inv H13; destruct_existT; auto.
-      + admit.
-        (* rewrite inlineToRulesRep_inlineDmsRep. *)
-        (* clear -H1. *)
-        (* induction rules; [inv H1|]. *)
-        (* inv H1; [left; reflexivity|]. *)
-        (* right; apply IHrules; auto. *)
-      + admit.
-        (* rewrite <-inlineToRulesRep_names; assumption. *)
+      + rewrite inlineToDmsRep_inlineDmsRep.
+        clear -H1; induction dmsAll; [inv H1|]; simpl in H1.
+        simpl; destruct (string_dec dmn a).
+        * clear -H1; subst; destruct a as [an [ ]].
+          simpl in *; inv H1; destruct_existT.
+          reflexivity.
+        * apply IHdmsAll; auto.
+      + rewrite <-inlineToDmsRep_names; assumption.
       + reflexivity.
       + rewrite <-complement_union.
         eapply IHcdn; try assumption; try reflexivity.
@@ -1166,8 +1178,8 @@ Section Preliminaries.
 
           assert (restrict cmMap2 (namesOf (collectCalls (ad typeUT tt) dmsConst cdn)) = empty).
           { inv H0; destruct_existT.
-            simpl in H16; unfold namesOf in H16;
-            rewrite map_app in H16; apply DisjList_app_2 in H16.
+            simpl in H17; unfold namesOf in H17;
+            rewrite map_app in H17; apply DisjList_app_2 in H17.
             rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
             eapply InDomain_DisjList_restrict; eauto.
             apply SubList_map; eapply collectCalls_sub; eauto.
@@ -1187,8 +1199,8 @@ Section Preliminaries.
 
         assert (restrict cmMap2 (namesOf (collectCalls (ad typeUT tt) dmsConst cdn)) = empty).
         { inv H0; destruct_existT.
-          simpl in H16; unfold namesOf in H16;
-          rewrite map_app in H16; apply DisjList_app_2 in H16.
+          simpl in H17; unfold namesOf in H17;
+          rewrite map_app in H17; apply DisjList_app_2 in H17.
           rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
           eapply InDomain_DisjList_restrict; eauto.
           apply SubList_map; eapply collectCalls_sub; eauto.
@@ -1198,8 +1210,8 @@ Section Preliminaries.
         assert (restrict cmMap2 (namesOf (getCalls (inlineDmsRep (ad typeUT tt) dmsConst cdn)
                                                    dmsConst)) = empty).
         { inv H0; destruct_existT.
-          simpl in H16; unfold namesOf in H16;
-          rewrite map_app in H16; apply DisjList_app_1 in H16.
+          simpl in H17; unfold namesOf in H17;
+          rewrite map_app in H17; apply DisjList_app_1 in H17.
           rewrite <-restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
           eapply InDomain_DisjList_restrict; eauto.
           apply SubList_map; eapply getCalls_sub; eauto.
@@ -1210,8 +1222,8 @@ Section Preliminaries.
         map_simpl H9; rewrite <-restrict_union in H9.
         rewrite <-complement_union.
 
-        inv H0; inv H15; destruct_existT; clear H16 H17.
-        apply DisjList_comm in H19.
+        inv H0; inv H16; destruct_existT.
+        apply DisjList_comm in H21.
         rewrite restrict_complement_DisjList by assumption.
         assumption.
   Qed.
@@ -1237,13 +1249,13 @@ Section Preliminaries.
 
     apply SemMod_div in H6.
 
-    - destruct H6 as [news2 [news1 [cmMap2 [cmMap1 H6]]]]; dest; subst.
+    - destruct H6 as [news1 [news2 [cmMap1 [cmMap2 H6]]]]; dest; subst.
       rewrite <-union_idempotent with (m:= olds) by auto.
       eapply inlineToDmsRep_prop'; eauto.
       apply Sub_refl.
 
     - clear -H0; inv H0; destruct_existT.
-      pose proof (WfInline_start H4); clear -H.
+      pose proof (WfInline_start H5); clear -H.
       unfold Disj; intros.
       destruct (string_dec k dmn);
         [|right; apply find_add_2; unfold string_eq; destruct (string_dec _ _); intuition].
@@ -1315,7 +1327,7 @@ Section Facts.
       restrict cmMap1 (namesOf edms) = restrict dmMap (namesOf edms) /\
       Disj nr1 nr2 /\ nr = union nr1 nr2 /\ Disj cmMap1 cmMap2.
   Proof.
-    admit.
+    admit. (* Semantics stuff *)
   Qed.
 
   Lemma decompose_SemMod_meth:
@@ -1331,7 +1343,18 @@ Section Facts.
       restrict cmMap1 (namesOf edms) = restrict dmMap (namesOf edms) /\
       Disj nr1 nr2 /\ nr = union nr1 nr2 /\ Disj cmMap1 cmMap2.
   Proof.
-    admit.
+    admit. (* Semantics stuff *)
+  Qed.
+
+  Lemma SemMod_dmMap_sig:
+    forall rules or rm nr dms dmn dsig dm dmMap cmMap
+           (Hdms: NoDup (namesOf dms))
+           (Hin: In (dmn :: {| objType := dsig; objVal := dm |})%struct dms)
+           (Hsem: SemMod rules or rm nr dms dmMap cmMap)
+           (Hdmn: find dmn dmMap <> None),
+      exists dv, find dmn dmMap = Some {| objType := dsig; objVal := dv |}.
+  Proof.
+    admit. (* Semantics stuff *)
   Qed.
 
   Variables (regs1 regs2: list RegInitT)
@@ -1368,7 +1391,7 @@ Section Facts.
     - subst; map_simpl_G.
 
       assert (dmMap = empty); subst.
-      { admit. (* easy *) }
+      { admit. (* map stuffs: easy *) }
       
       inv H4; [|exfalso; eapply add_empty_neq; eauto].
       map_simpl_G; apply SemMod_empty.
@@ -1403,13 +1426,13 @@ Section Facts.
       + apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
         eapply inlineToRulesRep_prop; eauto.
       + apply IHHsep; auto.
-        * admit. (* easy *)
+        * admit. (* map stuffs: easy *)
         * admit. (* TODO: think about it; it is true, but is it a right condition? *)
       + apply Disj_complement, Disj_comm, Disj_complement, Disj_comm; auto.
 
     - subst; simpl.
 
-      assert (find fdmn dmMap <> None) by admit. (* easy with DomainOf condition *)
+      assert (find fdmn dmMap <> None) by admit. (* map stuffs: easy with DomainOf condition *)
       pose proof (decompose_SemMod_meth _ _ H9 H H3 H10 countdown eq_refl); clear H10.
       destruct H7 as [cmMapM [cmMapO [newsM [newsO H7]]]]; dest; subst.
 
@@ -1436,7 +1459,13 @@ Section Facts.
 
       apply SemMod_merge_meths; auto.
 
-      + admit. (* eapply inlineToDmsRep_prop; eauto. *)
+      + eapply inlineToDmsRep_prop; eauto.
+        * apply getAttribute_In; auto.
+        * do 2 instantiate (1:= cheat _).
+          admit. (* TODO: map stuffs, use SemMod_dmMap_sig first *)
+        * apply SemMod_rules_free with (rules1:= r1 ++ r2).
+          p_equal H7.
+          admit. (* map stuffs; easy *)
       + apply IHHsep; auto.
         * admit. (* easy *)
         * admit. (* TODO: think about it; it is true, but is it a right condition? *)
