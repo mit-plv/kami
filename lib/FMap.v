@@ -1,10 +1,9 @@
 Require FSets.FMapList FSets.FMapFacts.
+Require Import Lists.SetoidList.
 Require Import Structures.OrderedType.
-Require Import Lib.String_as_OT.
-
+Require Import Structures.OrderedTypeEx.
+  
 Require Import Eqdep_dec.
-
-Require Import String.
 
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 
@@ -21,7 +20,6 @@ reflexivity.
 Qed.
 
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
-
 
 Fixpoint HdRel_irrel {A : Type} {le : A -> A -> Prop}
   (eq_dec_A : forall x y : A, {x = y} + {x <> y})
@@ -76,43 +74,104 @@ induction p using Sorted_ind'; intros.
       apply HdRel_irrel; assumption.
 Qed.
 
-Module FMap := FMapList.Make String_as_OT. 
+Require Import FMapInterface.
+
+Module FMapListEq (UOT : UsualOrderedType).
+  Module OT := UOT_to_OT UOT.
+  Module Export M := FMapList.Make(OT).
+  Module Facts := FMapFacts.OrdProperties M.
+
+    Lemma eq_leibniz_list: forall (A:Type) (xs ys: list A),
+      eqlistA eq xs ys -> xs = ys.
+    Proof. intros ? ? ? H; induction H; simpl; congruence. Qed.
+
+    Lemma eqke_sub_eq A: subrelation (@M.Raw.PX.eqke A) eq.
+    Proof. intros [] [] [??]; simpl in *; subst; auto. Qed.
+
+    Lemma eq_sub_eqke A: subrelation eq (@M.Raw.PX.eqke A).
+    Proof. intro H; split; subst; auto. Qed.
+
+    Add Parametric Morphism A: (@InA A)
+      with signature subrelation ==> eq ==> eq ==> impl
+      as InA_rel_d.
+    Proof.
+      unfold impl; firstorder.
+      apply InA_alt in H0.
+      destruct H0 as [?[??]].
+      apply InA_alt.
+      exists x0; split; auto.
+      apply H; auto.
+    Qed.
+
+    Add Parametric Morphism A: (@eqlistA A)
+      with signature subrelation ==> eq ==> eq ==> impl
+      as eqlistA_rel_d.
+    Proof.
+      unfold impl; firstorder.
+      induction H0; auto.
+      constructor; auto.
+      apply H; auto.
+    Qed.
+
+    Lemma Equal_this: forall elt L1 L2,
+      Equal (elt:=elt) L1 L2 -> this L1 = this L2.
+    Proof.
+      unfold Equal; destruct L1, L2; simpl. intros.
+      lapply (SortA_equivlistA_eqlistA _ _ _ sorted0 sorted1); intros.
+      clear H.
+      rewrite eqke_sub_eq in H0.
+      apply eq_leibniz_list in H0.
+      assumption.
+      * red.
+      apply Facts.P.F.Equal_Equiv in H. destruct H.
+      intros [a e].
+      specialize (H a).
+      repeat rewrite Facts.P.F.elements_in_iff in H. simpl in H.
+      specialize (H0 a).
+      setoid_rewrite Facts.P.F.elements_mapsto_iff in H0. simpl in H0.
+      firstorder.
+      edestruct H as [??]; eauto.
+      specialize (H0 e x H2 H3); subst; auto.
+      edestruct H1 as [??]; eauto.
+      specialize (H0 x e H3 H2); subst; auto.
+  Qed.
+
+  Theorem proof_irrel_leibniz {A : Type}
+    (proof_irrel : forall (P : Prop) (x y : P), x = y) (m m' : t A)
+    : Equal m m' -> m = m'.
+  Proof. intros H. 
+  apply Equal_this in H.
+  induction m. induction m'. simpl in H. induction H.
+  replace sorted1 with sorted0 by (apply proof_irrel).
+  reflexivity.
+  Qed.
+
+End FMapListEq.
+
+
+Require Import Lib.String_as_OT.
+
+Require Import String.
+
+Module FMapEq := FMapListEq String_as_OT.
+Module FMap := FMapEq.M. 
 Module FMapF := FMapFacts.OrdProperties FMap.
 
-Theorem FMap_equal {A : Type}
+Theorem FMap_dec_leibniz {A : Type}
    (eq_dec_A : forall x y : A, {x = y} + {x <> y})
   {m1 m2 : FMap.t A}
   : FMap.Equal m1 m2 -> m1 = m2.
 Proof.
-induction m1. induction m2. intros. 
-assert (this = this0).
-Focus 2.
-induction H0.
-replace sorted0 with sorted.
-trivial. 
+intros.
+apply FMapEq.Equal_this in H.
+induction m1. induction m2. 
+simpl in *. induction H.
+replace sorted0 with sorted. reflexivity. 
 apply Sorted_irrel.
 intros. decide equality. apply string_dec.
 unfold FMap.Raw.PX.ltk. intros.
 apply UIP_dec.
 decide equality.
-
-apply (FMapF.P.F.Equal_Equivb_eqdec eq_dec_A) in H.
-apply FMap.Raw.equal_1 in H;
-  try assumption.
-simpl in H.
-
-generalize dependent this0.
-induction this; induction this0; intros. simpl in H.
-reflexivity. inversion H. destruct a in H. inversion H.
-simpl in H. destruct a, a0.
-destruct (String_as_OT.compare s s0). inversion H.
-destruct (eq_dec_A a a0); simpl in H.
-unfold String_as_OT.eq in e. subst. 
-f_equal. apply IHthis.
-inversion sorted; clear sorted; subst. assumption.
-inversion sorted0; clear sorted0; subst. assumption.
-assumption.
-inversion H. inversion H.
 Qed.
 
 Theorem FMap_dec {A : Type}
@@ -124,13 +183,15 @@ pose (cmp := fun x y => if eq_dec_A x y then true else false).
 pose proof (FMapF.P.F.Equal_Equivb_eqdec eq_dec_A).
 destruct (FMap.equal cmp m1 m2) eqn:eqtest; [left | right].
 - apply FMap.equal_2 in eqtest.
-  apply FMap_equal. assumption. apply H. assumption.
+  apply FMap_dec_leibniz. assumption. apply H. assumption.
 - unfold not. intros contra. induction contra.
   assert (FMap.equal cmp m1 m1 = true).
   apply FMap.equal_1.
   apply H. apply FMapF.P.F.Equal_refl. rewrite H0 in eqtest.
   inversion eqtest.
 Qed.
+
+Axiom proof_irrel : forall (P : Prop) (x y : P), x = y.
 
 Section Map.
 
@@ -159,6 +220,8 @@ End Map.
 
 Hint Unfold empty unionL unionR add union
      find remove update : MapDefs.
+
+Hint Unfold FMap.empty FMap.add FMap.find FMap.remove : FMapDefs.
 
 Hint Unfold MapsTo Equal : MapDefs.
 
@@ -200,10 +263,7 @@ End StringEq.
 Section Facts.
 
   Lemma find_empty : forall {A} k, (find k (@empty A)) = None.
-  Proof. intros. repeat autounfold with MapDefs.
-  apply FMapF.P.F.not_find_in_iff.
-  unfold not.
-  apply FMapF.P.F.empty_in_iff.
+  Proof. intros. repeat autounfold with MapDefs FMapDefs. reflexivity.
   Qed.
 
   Lemma find_add_1 : forall {A} k v (m: Map A), find k (add k v m) = Some v.
@@ -232,11 +292,11 @@ Section Facts.
     intros; repeat autounfold with MapDefs. admit.
   Qed.
 
-  Lemma union_empty_2: forall {A} (dec_eq_A : forall x y : A, {x = y} + {x <> y})
+  Lemma union_empty_2: forall {A}
  (m: Map A), union m (@empty A) = m.
   Proof.
-    intros; repeat autounfold with MapDefs.
-    apply FMap_equal. assumption.
+    intros; repeat autounfold with MapDefs. simpl.
+    apply FMapEq.proof_irrel_leibniz. apply proof_irrel.
     apply FMapF.P.F.Equal_refl.
   Qed.
 
