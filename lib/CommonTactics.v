@@ -15,6 +15,8 @@ Ltac sassumption :=
 
 Ltac inv H := inversion H; subst; clear H.
 
+Ltac p_equal H := apply (eq_ind _ (@id _) H); f_equal.
+
 Lemma opt_discr: forall {A} v, Some v <> (@None A).
 Proof. discriminate. Qed.
 
