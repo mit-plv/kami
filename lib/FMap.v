@@ -21,57 +21,87 @@ Qed.
 
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 
-Fixpoint HdRel_irrel {A : Type} {le : A -> A -> Prop}
-  (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
   (le_irrel : forall {x y} (a b : le x y), a = b)
-  (x : A) (xs : list A) p {struct p}
-  : forall (q : HdRel le x xs), p = q.
-Proof.
-induction p using HdRel_ind'; intros.
-- replace (HdRel_nil le x) with
-  (eq_rect _ (fun xs => HdRel le x xs) (HdRel_nil le x) _ eq_refl)
-  by reflexivity.
-  generalize (@eq_refl (list A) nil).
-  pattern (@nil A) at 1 3 4 6, q. destruct q; intro Heq.
-  + rewrite <- eq_rect_eq_list by assumption. reflexivity.
-  + inversion Heq.
-- replace (HdRel_cons le x b l r) with
-  (eq_rect _ (HdRel le x) (HdRel_cons le x b l r) _ eq_refl)
-  by reflexivity.
-  generalize (eq_refl (b :: l)).
-  pattern (b :: l) at 1 3 4 6, q. destruct q; intro Heq.
-  + inversion Heq.
-  + inversion Heq. subst.
-    rewrite <- eq_rect_eq_list by assumption.
-    replace r with l1 by (apply le_irrel).
-    reflexivity.
+  (x : A) (xs : list A) (p q : HdRel le x xs)
+  : p = q.
+Proof. 
+induction p using HdRel_ind'.
+- refine (
+  match q as q' in HdRel _ _ xs return 
+    (match xs with 
+       | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
+       | _ :: _ => fun _ => True
+       end q'
+    )
+      with
+      | HdRel_nil => eq_refl
+      | HdRel_cons _ _ _ => I
+  end
+  ).
+- generalize dependent r.
+  assert (forall r : le x (hd b (b :: l)), HdRel_cons le x b l r = q).
+  2:assumption.
+refine (
+  match q as q' in HdRel _ _ xs return
+    forall r' : le x (hd b xs), (match xs as xs'
+      return HdRel le x xs' -> le x (hd b xs') -> Prop with
+      | nil => fun _ _ => True
+      | b' :: l' => fun (q'' : HdRel le x _) r''
+         => HdRel_cons le x b' l' r'' = q''
+     end q' r')
+  with
+    | HdRel_nil => fun _ => I
+    | HdRel_cons _ _ _ => fun _ => _
+  end
+  ).
+  replace r' with l1 by apply le_irrel.
+  reflexivity.
 Qed.
 
-Fixpoint Sorted_irrel {A : Type} {le : A -> A -> Prop}
-  (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+Theorem Sorted_irrel {A : Type} {le : A -> A -> Prop}
   (le_irrel : forall {x y} (a b : le x y), a = b)
-  (xs : list A) p {struct p}
+  (xs : list A) p
   : forall (q : Sorted le xs), p = q.
 Proof.
 induction p using Sorted_ind'; intros.
-- replace (Sorted_nil le) with
-    (eq_rect _ (fun l => Sorted le l) (Sorted_nil le) _ eq_refl)
-    by reflexivity.
-  generalize (@eq_refl (list A) nil).
-    pattern (@nil A) at 1 3 4 6, q. destruct q; intro Heq.
-    + rewrite <- eq_rect_eq_list by assumption. reflexivity.
-    + inversion Heq.
-- replace (Sorted_cons p h) with
-    (eq_rect _ (fun l => Sorted le l) (Sorted_cons p h) _ eq_refl)
-    by reflexivity.
-  generalize (eq_refl (a :: l)).
-    pattern (a :: l) at 1 3 4 6, q. destruct q; intro Heq.
-    + inversion Heq.
-    + inversion Heq. subst. 
-      rewrite <- (eq_rect_eq_list) by assumption.
-      replace q with p by apply IHp.
-      replace h0 with h. reflexivity.
-      apply HdRel_irrel; assumption.
+- refine (
+  match q as q' in Sorted _ xs return 
+    (match xs with 
+       | nil => fun (q : Sorted le nil) => Sorted_nil le = q
+       | _ :: _ => fun _ => True
+       end q'
+    )
+      with
+      | Sorted_nil => eq_refl
+      | Sorted_cons _ _ _ _ => I
+  end
+  ).
+- generalize dependent h.
+  generalize dependent p.
+  assert (forall p : Sorted le (tl (a :: l)),
+    (forall q' : Sorted le (tl (a :: l)), p = q') -> 
+    forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
+  2:assumption.
+refine (
+  match q as q' in Sorted _ xs return
+    (forall p : Sorted le (tl xs),
+    (forall q' : Sorted le (tl xs), p = q') -> 
+    forall h : HdRel le (hd a xs) (tl xs),
+    (match xs as xs'
+      return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
+             Sorted le xs' -> Prop with
+      | nil => fun _ _ _ => True
+      | a' :: l' => fun p' h' q''
+         => Sorted_cons p' h' = q''
+     end p h q'))
+  with
+    | Sorted_nil => fun _ _ _ => I
+    | Sorted_cons _ _ _ _ => fun _ _ _ => _
+  end
+  ).
+  replace h0 with h. replace p with s. reflexivity. 
+  symmetry. apply _H. apply HdRel_irrel; assumption.
 Qed.
 
 Require Import FMapInterface.
@@ -136,15 +166,17 @@ Module FMapListEq (UOT : UsualOrderedType).
       specialize (H0 x e H3 H2); subst; auto.
   Qed.
 
-  Theorem proof_irrel_leibniz {A : Type}
-    (proof_irrel : forall (P : Prop) (x y : P), x = y) (m m' : t A)
+  Theorem le_irrel_leibniz {A : Type}
+  (le_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
     : Equal m m' -> m = m'.
   Proof. intros H. 
   apply Equal_this in H.
   induction m. induction m'. simpl in H. induction H.
-  replace sorted1 with sorted0 by (apply proof_irrel).
-  reflexivity.
+  replace sorted1 with sorted0.
+  reflexivity. apply Sorted_irrel.
+  intros. destruct x, y. apply le_irrel.
   Qed.
+
 
 End FMapListEq.
 
@@ -157,21 +189,12 @@ Module FMapEq := FMapListEq String_as_OT.
 Module FMap := FMapEq.M. 
 Module FMapF := FMapFacts.OrdProperties FMap.
 
-Theorem FMap_dec_leibniz {A : Type}
-   (eq_dec_A : forall x y : A, {x = y} + {x <> y})
+Theorem FMap_leibniz {A : Type}
   {m1 m2 : FMap.t A}
   : FMap.Equal m1 m2 -> m1 = m2.
 Proof.
-intros.
-apply FMapEq.Equal_this in H.
-induction m1. induction m2. 
-simpl in *. induction H.
-replace sorted0 with sorted. reflexivity. 
-apply Sorted_irrel.
-intros. decide equality. apply string_dec.
-unfold FMap.Raw.PX.ltk. intros.
-apply UIP_dec.
-decide equality.
+apply FMapEq.le_irrel_leibniz.
+intros. apply UIP_dec. decide equality. 
 Qed.
 
 Theorem FMap_dec {A : Type}
@@ -183,15 +206,13 @@ pose (cmp := fun x y => if eq_dec_A x y then true else false).
 pose proof (FMapF.P.F.Equal_Equivb_eqdec eq_dec_A).
 destruct (FMap.equal cmp m1 m2) eqn:eqtest; [left | right].
 - apply FMap.equal_2 in eqtest.
-  apply FMap_dec_leibniz. assumption. apply H. assumption.
+  apply FMap_leibniz. apply H. assumption.
 - unfold not. intros contra. induction contra.
   assert (FMap.equal cmp m1 m1 = true).
   apply FMap.equal_1.
   apply H. apply FMapF.P.F.Equal_refl. rewrite H0 in eqtest.
   inversion eqtest.
 Qed.
-
-Axiom proof_irrel : forall (P : Prop) (x y : P), x = y.
 
 Section Map.
 
@@ -296,12 +317,21 @@ Section Facts.
  (m: Map A), union m (@empty A) = m.
   Proof.
     intros; repeat autounfold with MapDefs. simpl.
-    apply FMapEq.proof_irrel_leibniz. apply proof_irrel.
+    apply FMap_leibniz.
     apply FMapF.P.F.Equal_refl.
   Qed.
 
-  Lemma union_idempotent: forall {A} (m: Map A), union m m = m.
-  Proof. Admitted.
+  Lemma union_idempotent: forall {A} (m: Map A),
+  union m m = m.
+  Proof. intros. repeat autounfold with MapDefs.
+  apply (FMapF.P.fold_rec (P := fun m' t => (forall k v, FMap.MapsTo k v m' -> FMap.MapsTo k v m)
+   -> t = m)). 
+  trivial.
+  intros. 
+  2:trivial.
+  rewrite H2. apply FMap_leibniz.
+  admit. admit.
+  Qed.
 
   Lemma update_empty_1: forall {A} (m: Map A), update (@empty A) m = m.
   Proof. Admitted.
