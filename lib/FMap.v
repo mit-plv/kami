@@ -106,9 +106,11 @@ Qed.
 
 Require Import FMapInterface.
 
-Module FMapListEq (UOT : UsualOrderedType).
+Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S
+  with Module E := UOT.
   Module OT := UOT_to_OT UOT.
   Module Export M := FMapList.Make(OT).
+  Include M.
   Module Facts := FMapFacts.OrdProperties M.
 
     Lemma eq_leibniz_list: forall (A:Type) (xs ys: list A),
@@ -166,53 +168,166 @@ Module FMapListEq (UOT : UsualOrderedType).
       specialize (H0 x e H3 H2); subst; auto.
   Qed.
 
-  Theorem le_irrel_leibniz {A : Type}
-  (le_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
+  Theorem lt_irrel_leibniz {A : Type}
+  (lt_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
     : Equal m m' -> m = m'.
   Proof. intros H. 
   apply Equal_this in H.
   induction m. induction m'. simpl in H. induction H.
   replace sorted1 with sorted0.
   reflexivity. apply Sorted_irrel.
-  intros. destruct x, y. apply le_irrel.
+  intros. destruct x, y. apply lt_irrel.
   Qed.
-
 
 End FMapListEq.
 
+Require Import Equalities.
+
+Module Type LT_IRREL (Import T : OrderedType).
+  Parameter Inline lt_irrel : forall (x y : t) (p q : lt x y), p = q.
+End LT_IRREL.
+
+Module Type UsualOrderedTypeUIP := UsualOrderedType <+ LT_IRREL.
+
+Module Type MapLeibniz.
+  Declare Module E : UsualOrderedType.
+  Include Sfun E.
+
+  Parameter leibniz : forall {A : Type} (m m' : t A), Equal m m' -> m = m'.
+End MapLeibniz.
+
+Module LeibnizFacts (M : MapLeibniz).
+  Export M.
+  Module Export F := FMapFacts.OrdProperties M.
+  Include F.
+
+  Theorem empty_canon {A : Type} : forall (m : t A), Empty m -> m = empty A.
+  Proof.
+  intros. apply leibniz. unfold Equal. unfold Empty in H.
+  intros k. rewrite F.P.F.empty_o. apply F.P.F.not_find_in_iff.
+  unfold In. firstorder.
+  Qed.
+
+  Theorem add_canon {A : Type} {x} {e : A} {m m' : t A} :
+    F.P.Add x e m m' -> m' = add x e m.
+  Proof. intros. apply leibniz. assumption. Qed.
+
+  Theorem map_induction {A : Type} {P : t A -> Type} :
+    P (empty A)
+    -> (forall m, P m -> forall k v, ~ In k m -> P (add k v m))
+    -> forall m, P m.
+  Proof. intros. apply F.P.map_induction.
+  intros. replace m0 with (empty A). assumption. symmetry. apply empty_canon.
+  assumption. intros. replace m' with (add x e m0).
+  apply X0; assumption. symmetry. apply add_canon. assumption.
+  Qed.
+  
+  Lemma add_idempotent : forall {A} k (e : A) m, MapsTo k e m
+  -> add k e m = m. 
+  Proof. intros. apply leibniz. unfold Equal. intros.
+  rewrite F.P.F.add_o. destruct (E.eq_dec k y).
+  rewrite <- e0. symmetry. apply F.P.F.find_mapsto_iff. assumption.
+  reflexivity.
+  Qed.
+
+  Definition unionL {A} (m m' : t A) := fold (@add A) m' m.
+
+  Definition union {A} := @unionL A.
+
+  Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
+  Proof. intros. unfold union, unionL. 
+  apply leibniz. apply F.P.fold_identity.
+  Qed.
+
+  Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
+  Proof. intros. unfold union, unionL. pattern m.
+  apply map_induction.
+  - apply leibniz. apply F.P.fold_identity.
+  - intros. apply F.P.fold_Empty. auto. apply empty_1.
+  Qed.
+
+  Lemma transpose_neqkey_add {A : Type} 
+    : F.P.transpose_neqkey Equal (add (elt:=A)).
+  Proof. unfold F.P.transpose_neqkey. intros. 
+  unfold Equal. intros y. do 4 rewrite F.P.F.add_o.
+  destruct (E.eq_dec k y); destruct (E.eq_dec k' y);
+  unfold E.eq in *; subst; congruence || reflexivity.
+  Qed.
+
+  Lemma union_smothered {A : Type} : forall (m m' : t A),
+    (forall k, In k m -> In k m')
+    -> (forall k v, MapsTo k v m -> MapsTo k v m')
+    -> union m' m = m'.
+  Proof. intros m. pattern m. apply map_induction; intros.
+  - apply union_empty_R.
+  - unfold union, unionL in *. apply leibniz. unfold Equal.
+    intros y. rewrite F.P.fold_add. rewrite H. 
+    rewrite F.P.F.add_o. destruct (E.eq_dec k y); unfold E.eq in *.
+    symmetry. apply F.P.F.find_mapsto_iff. apply H2.
+    apply add_1. assumption. reflexivity. 
+    intros. apply H1.
+    destruct (E.eq_dec k k0); unfold E.eq in *.
+    unfold In. exists v. apply add_1. assumption. apply F.P.F.add_neq_in_iff. 
+    assumption. assumption.
+    intros. apply H2. destruct (E.eq_dec k k0); unfold E.eq in *.
+    subst. apply False_rect. apply H0. exists v0. assumption.
+    apply add_2; assumption.
+    auto. apply F.P.F.add_m_Proper. apply transpose_neqkey_add.
+    assumption.
+  Qed.
+
+  Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
+  Proof. intros. apply union_smothered; auto.
+  Qed.
+
+  Lemma add_empty_neq: forall {A} (m: t A) k v, add k v m <> @empty A.
+  Proof.
+    intros; unfold not; intros H. pose proof (@empty_1 A).
+    rewrite <- H in H0. unfold Empty in H0.
+    eapply H0. apply add_1. reflexivity.
+  Qed.
+
+  Theorem eq_dec {A : Type}
+  (eq_dec_A : forall x y : A, {x = y} + {x <> y })
+  (m1 m2 : t A)
+  : {m1 = m2} + {m1 <> m2}.
+  Proof.
+    pose (cmp := fun x y => if eq_dec_A x y then true else false).
+    pose proof (F.P.F.Equal_Equivb_eqdec eq_dec_A).
+    destruct (equal cmp m1 m2) eqn:eqtest; [left | right].
+    - apply equal_2 in eqtest.
+      apply leibniz. apply H. assumption.
+    - unfold not. intros contra. induction contra.
+      assert (equal cmp m1 m1 = true).
+      apply equal_1.
+      apply H. apply F.P.F.Equal_refl. rewrite H0 in eqtest.
+      inversion eqtest.
+  Qed.
+
+End LeibnizFacts.
+  
+
+Module FMapListEqUIP (UOT : UsualOrderedTypeUIP) <: MapLeibniz.
+  Module Export M := FMapListEq UOT.
+  Include M.
+  
+  Theorem leibniz {A : Type} (m m' : t A) : Equal m m' -> m = m'.
+  Proof. apply lt_irrel_leibniz. apply UOT.lt_irrel. Qed.
+End FMapListEqUIP.
 
 Require Import Lib.String_as_OT.
 
 Require Import String.
 
-Module FMapEq := FMapListEq String_as_OT.
-Module FMap := FMapEq.M. 
-Module FMapF := FMapFacts.OrdProperties FMap.
+Module String_as_OT' <: UsualOrderedTypeUIP.
+  Include String_as_OT.
+  Lemma lt_irrel : forall (x y : t) (p q : lt x y), p = q.
+  Proof. intros. apply UIP_dec. decide equality. 
+  Qed.
+End String_as_OT'.
 
-Theorem FMap_leibniz {A : Type}
-  {m1 m2 : FMap.t A}
-  : FMap.Equal m1 m2 -> m1 = m2.
-Proof.
-apply FMapEq.le_irrel_leibniz.
-intros. apply UIP_dec. decide equality. 
-Qed.
-
-Theorem FMap_dec {A : Type}
-  (eq_dec_A : forall x y : A, {x = y} + {x <> y })
-  (m1 m2 : FMap.t A)
-  : {m1 = m2} + {m1 <> m2}.
-Proof.
-pose (cmp := fun x y => if eq_dec_A x y then true else false).
-pose proof (FMapF.P.F.Equal_Equivb_eqdec eq_dec_A).
-destruct (FMap.equal cmp m1 m2) eqn:eqtest; [left | right].
-- apply FMap.equal_2 in eqtest.
-  apply FMap_leibniz. apply H. assumption.
-- unfold not. intros contra. induction contra.
-  assert (FMap.equal cmp m1 m1 = true).
-  apply FMap.equal_1.
-  apply H. apply FMapF.P.F.Equal_refl. rewrite H0 in eqtest.
-  inversion eqtest.
-Qed.
+Module FMap := FMapListEqUIP String_as_OT'. 
+Module FMapF := LeibnizFacts FMap.
 
 Section Map.
 
@@ -299,44 +414,5 @@ Section Facts.
     apply FMapF.P.F.add_neq_o.
     apply string_dec_neq. assumption.
   Qed.
-
- Lemma add_empty_neq: forall {A} (m: Map A) k v, add k v m = @empty A -> False.
-  Proof.
-    intros; apply @Equal_val with (k:= k) in H.
-    repeat autounfold with MapDefs in H.
-    rewrite find_empty in H. rewrite find_add_1 in H.
-    inversion H.
-  Qed.
-  
-  Lemma union_empty_1: forall {A} (m: Map A), union (@empty A) m = m.
-  Proof.
-    intros; repeat autounfold with MapDefs. admit.
-  Qed.
-
-  Lemma union_empty_2: forall {A}
- (m: Map A), union m (@empty A) = m.
-  Proof.
-    intros; repeat autounfold with MapDefs. simpl.
-    apply FMap_leibniz.
-    apply FMapF.P.F.Equal_refl.
-  Qed.
-
-  Lemma union_idempotent: forall {A} (m: Map A),
-  union m m = m.
-  Proof. intros. repeat autounfold with MapDefs.
-  apply (FMapF.P.fold_rec (P := fun m' t => (forall k v, FMap.MapsTo k v m' -> FMap.MapsTo k v m)
-   -> t = m)). 
-  trivial.
-  intros. 
-  2:trivial.
-  rewrite H2. apply FMap_leibniz.
-  admit. admit.
-  Qed.
-
-  Lemma update_empty_1: forall {A} (m: Map A), update (@empty A) m = m.
-  Proof. Admitted.
-
-  Lemma update_empty_2: forall {A} (m: Map A), update m (@empty A) = m.
-  Proof. Admitted.
 
 End Facts.
