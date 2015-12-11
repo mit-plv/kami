@@ -1,5 +1,5 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FnMap Syntax.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Syntax.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -262,6 +262,8 @@ Section GetCms.
                       ++ (getCmsM ms')
     end.
 
+Require Import Lib.FMap.
+
   Fixpoint getCmsMod (m: Modules): list string :=
     match m with
       | Mod _ rules meths => getCmsR rules ++ getCmsM meths
@@ -285,14 +287,17 @@ End GetCms.
 
 Hint Unfold getCmsMod getDmsMod getDmsBodies.
 
+Module M := FMap.Map.
+Module MF := FMap.MapF.
+
 (* maps register names to the values which they currently hold *)
-Definition RegsT := Map (Typed (fullType type)).
+Definition RegsT := M.t (Typed (fullType type)).
 
 (* a pair of the value sent to a method call and the value it returned *)
 Definition SignT k := (type (arg k) * type (ret k))%type.
 
 (* a list of simulatenous method call actions made during a single step *)
-Definition CallsT := Map (Typed SignT).
+Definition CallsT := M.t (Typed SignT).
 
 Section Semantics.
   Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
@@ -339,7 +344,7 @@ Section Semantics.
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: CallsT) acalls
-      (HAcalls: acalls = add meth {| objVal := (evalExpr marg, mret) |} calls)
+      (HAcalls: acalls = M.add meth {| objVal := (evalExpr marg, mret) |} calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
   | SemLet
@@ -351,7 +356,7 @@ Section Semantics.
       (r: string) regT (regV: fullType type regT)
       retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       newRegs calls
-      (HRegVal: find r oldRegs = Some {| objType := regT; objVal := regV |})
+      (HRegVal: M.find r oldRegs = Some {| objType := regT; objVal := regV |})
       (HSemAction: SemAction (cont regV) newRegs calls fret):
       SemAction (ReadReg r _ cont) newRegs calls fret
   | SemWriteReg
@@ -359,7 +364,7 @@ Section Semantics.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK) newRegs calls anewRegs
-      (HANewRegs: anewRegs = add r {| objVal := (evalExpr e) |} newRegs)
+      (HANewRegs: anewRegs = M.add r {| objVal := (evalExpr e) |} newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
   | SemIfElseTrue
@@ -373,8 +378,8 @@ Section Semantics.
       (HAction: SemAction a newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
       unewRegs ucalls
-      (HUNewRegs: unewRegs = union newRegs1 newRegs2)
-      (HUCalls: ucalls = union calls1 calls2):
+      (HUNewRegs: unewRegs = MF.union newRegs1 newRegs2)
+      (HUCalls: ucalls = MF.union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemIfElseFalse
       (p: Expr type (SyntaxKind Bool)) k1
@@ -387,8 +392,8 @@ Section Semantics.
       (HAction: SemAction a' newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
       unewRegs ucalls
-      (HUNewRegs: unewRegs = union newRegs1 newRegs2)
-      (HUCalls: ucalls = union calls1 calls2):
+      (HUNewRegs: unewRegs = MF.union newRegs1 newRegs2)
+      (HUCalls: ucalls = MF.union calls1 calls2):
       SemAction (IfElse p a a' cont) unewRegs ucalls r2
   | SemAssertTrue
       (p: Expr type (SyntaxKind Bool)) k2
@@ -399,7 +404,7 @@ Section Semantics.
   | SemReturn
       k (e: Expr type (SyntaxKind k)) evale
       (HEvalE: evale = evalExpr e):
-      SemAction (Return e) empty empty evale.
+      SemAction (Return e) (M.empty _) (M.empty _) evale.
 
   Theorem inversionSemAction
           k a news calls retC
@@ -408,38 +413,38 @@ Section Semantics.
       | MCall m s e c =>
         exists mret pcalls,
           SemAction (c mret) news pcalls retC /\
-          calls = add m {| objVal := (evalExpr e, mret) |} pcalls
+          calls = M.add m {| objVal := (evalExpr e, mret) |} pcalls
       | Let_ _ e cont =>
         SemAction (cont (evalExpr e)) news calls retC
       | ReadReg r k c =>
         exists rv,
-          find r oldRegs = Some {| objType := k; objVal := rv |} /\
+          M.find r oldRegs = Some {| objType := k; objVal := rv |} /\
           SemAction (c rv) news calls retC
       | WriteReg r _ e a =>
         exists pnews,
           SemAction a pnews calls retC /\
-          news = add r {| objVal := evalExpr e |} pnews
+          news = M.add r {| objVal := evalExpr e |} pnews
       | IfElse p _ aT aF c =>
         exists news1 calls1 news2 calls2 r1,
           match evalExpr p with
             | true =>
               SemAction aT news1 calls1 r1 /\
               SemAction (c r1) news2 calls2 retC /\
-              news = union news1 news2 /\
-              calls = union calls1 calls2
+              news = MF.union news1 news2 /\
+              calls = MF.union calls1 calls2
             | false =>
               SemAction aF news1 calls1 r1 /\
               SemAction (c r1) news2 calls2 retC /\
-              news = union news1 news2 /\
-              calls = union calls1 calls2
+              news = MF.union news1 news2 /\
+              calls = MF.union calls1 calls2
           end
       | Assert_ e c =>
         SemAction c news calls retC /\
         evalExpr e = true
       | Return e =>
         retC = evalExpr e /\
-        news = empty /\
-        calls = empty
+        news = M.empty _ /\
+        calls = M.empty _
     end.
   Proof.
     destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
@@ -447,9 +452,9 @@ Section Semantics.
 
   Inductive SemMod: option string -> RegsT -> list DefMethT -> CallsT -> CallsT -> Prop :=
   | SemEmpty news meths dm cm
-             (HEmptyRegs: news = empty)
-             (HEmptyDms: dm = empty)
-             (HEmptyCms: cm = empty):
+             (HEmptyRegs: news = M.empty _)
+             (HEmptyDms: dm = M.empty _)
+             (HEmptyCms: cm = M.empty _):
       SemMod None news meths dm cm
   | SemAddRule (ruleName: string)
                (ruleBody: Action (Bit 0))
@@ -458,11 +463,11 @@ Section Semantics.
                (HAction: SemAction (ruleBody type) news calls retV)
                news2 meths dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
-               (HNoDoubleWrites: Disj news news2)
-               (HNoCallsBoth: Disj calls cm2)
+               (HNoDoubleWrites: MF.Disj news news2)
+               (HNoCallsBoth: MF.Disj calls cm2)
                unews ucalls
-               (HRegs: unews = union news news2)
-               (HCalls: ucalls = union calls cm2):
+               (HRegs: unews = MF.union news news2)
+               (HCalls: ucalls = MF.union calls cm2):
       SemMod (Some ruleName) unews meths dm2 ucalls
   (* method `meth` was also called this clock cycle *)
   | SemAddMeth calls news (meth: DefMethT) meths argV retV
@@ -470,13 +475,13 @@ Section Semantics.
                (HAction: SemAction ((objVal (attrType meth)) type argV) news calls retV)
                news2 dm2 cm2
                (HSemMod: SemMod None news2 meths dm2 cm2)
-               (HNoDoubleWrites: Disj news news2)
-               (HNoCallsBoth: Disj calls cm2)
+               (HNoDoubleWrites: MF.Disj news news2)
+               (HNoCallsBoth: MF.Disj calls cm2)
                unews ucalls udefs
-               (HRegs: unews = union news news2)
-               (HCalls: ucalls = union calls cm2)
-               (HNew: find (attrName meth) dm2 = None)
-               (HDefs: udefs = add (attrName meth) {| objVal := (argV, retV) |} dm2):
+               (HRegs: unews = MF.union news news2)
+               (HCalls: ucalls = MF.union calls cm2)
+               (HNew: M.find (attrName meth) dm2 = None)
+               (HDefs: udefs = M.add (attrName meth) {| objVal := (argV, retV) |} dm2):
       SemMod None unews meths udefs ucalls.
 
 End Semantics.
@@ -508,7 +513,7 @@ Ltac invertActionRep :=
 Ltac invertSemMod H :=
   inv H;
   repeat match goal with
-           | [H: Disj _ _ |- _] => clear H
+           | [H: MF.Disj _ _ |- _] => clear H
          end.
 
 Ltac invertSemModRep :=
@@ -519,7 +524,7 @@ Ltac invertSemModRep :=
 
 Lemma SemAction_olds_ext:
   forall retK a olds1 olds2 news calls (retV: type retK),
-    FnMap.Sub olds1 olds2 ->
+    MF.Sub olds1 olds2 ->
     SemAction olds1 a news calls retV ->
     SemAction olds2 a news calls retV.
 Proof.
@@ -527,8 +532,7 @@ Proof.
   - invertAction H1; econstructor; eauto.
   - invertAction H1; econstructor; eauto.
   - invertAction H1; econstructor; eauto.
-    repeat autounfold with MapDefs; repeat autounfold with MapDefs in H1.
-    rewrite <-H1; symmetry; apply H0; unfold InMap, find; rewrite H1; discriminate.
+    apply M.find_1. apply H0. apply MF.F.P.F.find_mapsto_iff. assumption.
   - invertAction H0; econstructor; eauto.
   - invertAction H1.
     remember (evalExpr e) as cv; destruct cv; dest.
@@ -539,22 +543,23 @@ Proof.
 Qed.
 
 Lemma SemMod_empty:
-  forall rules or dms, SemMod rules or None empty dms empty empty.
+  forall rules or dms, SemMod rules or None (M.empty _) dms (M.empty _) (M.empty _).
 Proof. intros; apply SemEmpty; auto. Qed.
 
 Lemma SemMod_empty_inv:
   forall rules or nr dms cmMap,
-    SemMod rules or None nr dms empty cmMap ->
-    nr = empty /\ cmMap = empty.
+    SemMod rules or None nr dms (M.empty _) cmMap ->
+    nr = M.empty _ /\ cmMap = M.empty _.
 Proof.
   intros; inv H; [intuition|].
   apply @Equal_val with (k:= meth) in HDefs.
-  map_compute HDefs; inv HDefs.
+  rewrite MF.find_add_1 in HDefs.
+  rewrite MF.find_empty in HDefs. inv HDefs.
 Qed.
 
 Lemma SemMod_olds_ext:
   forall rules or1 or2 rm nr dms dmMap cmMap,
-    FnMap.Sub or1 or2 -> SemMod rules or1 rm nr dms dmMap cmMap ->
+    MF.Sub or1 or2 -> SemMod rules or1 rm nr dms dmMap cmMap ->
     SemMod rules or2 rm nr dms dmMap cmMap.
 Proof.
   induction 2; intros.
@@ -568,10 +573,12 @@ Qed.
 Lemma SemMod_dmMap_InDomain:
   forall rules dms or rm nr dmMap cmMap,
     SemMod rules or rm nr dms dmMap cmMap ->
-    InDomain dmMap (namesOf dms).
+    MF.InDomain dmMap (namesOf dms).
 Proof.
   induction 1; intros; subst; intuition.
-  apply InDomain_add; auto.
+  unfold MF.InDomain. intros.
+  apply MF.F.P.F.empty_in_iff in H. contradiction.
+  apply MF.InDomain_add; auto.
   apply in_map; auto.
 Qed.
 
