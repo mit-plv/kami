@@ -75,6 +75,20 @@ Section BoundedIndexFull.
         else getAttribute n attrs'
     end.
 
+  Lemma in_NoDup_getAttribute:
+    forall n (attrs: list Attribute) dm
+           (Hin: In {| attrName := n; attrType := dm |} attrs)
+           (Hnodup: NoDup (map attrName attrs)),
+      Some {| attrName := n; attrType := dm |} = getAttribute n attrs.
+  Proof.
+    induction attrs; intros; simpl; inv Hin.
+    - simpl; destruct (string_dec n n); [reflexivity|elim n0; reflexivity].
+    - destruct a as [an atyp]; inv Hnodup; simpl in *.
+      destruct (string_dec n an); [subst|].
+      + apply in_map with (f:= attrName) in H; simpl in H; elim H2; assumption.
+      + apply IHattrs; auto.
+  Qed.
+
   Lemma getAttribute_app:
     forall n (attrs1 attrs2: list Attribute) dm
            (Hdm: dm = getAttribute n (attrs1 ++ attrs2)),

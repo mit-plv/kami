@@ -536,6 +536,15 @@ Section Facts.
     destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
   Qed.
 
+  Lemma complement_DisjList:
+    forall {A} (m: Map A) (l1 l2: list string),
+      DisjList l1 l2 -> complement (complement m l1) l2 = complement (complement m l2) l1.
+  Proof.
+    intros; apply Equal_eq; intro k; repeat autounfold with MapDefs in *.
+    specialize (H k).
+    destruct (in_dec _ k l1); destruct (in_dec _ k l2); intuition.
+  Qed.
+    
   Lemma restrict_complement_nil:
     forall {A} (m: Map A) (l: list string),
       restrict m l = m -> complement m l = empty.

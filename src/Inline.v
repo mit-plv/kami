@@ -652,6 +652,17 @@ Proof.
   admit. (* Semantics stuff *)
 Qed.
 
+(* TODO: semantics stuff; move to Semantics.v *)
+Lemma SemMod_getCalls:
+  forall rules olds news dmsAll dmMap cmMap {retK} (a: ActionT typeUT retK) cdms
+         (Hcdms: cdms = getCalls a dmsAll)
+         (Hsem: SemMod rules olds None news dmsAll dmMap cmMap)
+         (Hdm: InDomain dmMap (namesOf cdms)),
+    InDomain cmMap (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
+Proof.
+  admit. (* Semantics stuff *)
+Qed.
+
 Section Preliminaries.
 
   Lemma inlineDms_prop:
@@ -950,15 +961,19 @@ Section Preliminaries.
   Proof.
     induction cdn; intros.
 
-    - simpl; rewrite restrict_union in H7.
-
-      assert (Some (r :: ar)%struct = getAttribute r rules) by admit.
-      pose proof (SemMod_rule_singleton H8 H2 H4); clear H8.
+    - simpl.
+      pose proof (SemMod_rule_singleton (in_NoDup_getAttribute _ _ _ H1 H2) H2 H4).
       simpl in *.
       inv H; destruct_existT.
 
       assert (cmMap = complement cmMap (namesOf (getCalls (ar typeUT) dmsAll))).
-      { admit. }
+      { inv H0; destruct_existT; simpl in H15.
+        pose proof (SemMod_getCalls (ar typeUT) eq_refl H6 (@restrict_InDomain _ _ _)).
+        pose proof (InDomain_DisjList_restrict H H15).
+        apply restrict_complement_itself in H0; auto.
+      }
+
+      rewrite restrict_union in H6.
       assert (empty = restrict cmMap (namesOf (getCalls (ar typeUT) dmsAll))).
       { rewrite complement_restrict_nil; auto. }
 
@@ -996,9 +1011,28 @@ Section Preliminaries.
                           cmMapA
                           (namesOf (collectCalls (ar typeUT) dmsAll cdn))))
                     (namesOf (getCalls (inlineDmsRep (ar typeUT) dmsAll cdn) dmsAll))))
-            by admit (* TODO: figure out it's true ... *)
       end.
+      Focus 2. (* "replace" subgoal begins *)
+      unfold namesOf; repeat rewrite map_app; repeat rewrite complement_app.
+      repeat rewrite complement_union.
+      rewrite union_assoc; do 2 f_equal.
 
+      inv H0; destruct_existT; clear H11.
+      inv H14; destruct_existT; clear H8.
+      pose proof (SemMod_getCalls (inlineDmsRep (ar typeUT) dmsAll cdn)
+                                  eq_refl H9 (@restrict_InDomain _ _ _)).
+      assert (cmMap2 = complement
+                         cmMap2 (namesOf (getCalls (inlineDmsRep (ar typeUT) dmsAll cdn)
+                                                   dmsAll))).
+      { simpl in H16; unfold namesOf in H16.
+        rewrite map_app in H16; apply DisjList_app_1 in H16.
+        pose proof (InDomain_DisjList_restrict H0 H16).
+        rewrite restrict_complement_itself by assumption; reflexivity.
+      }
+      rewrite H6 at 1; clear H6.
+      apply complement_DisjList; assumption.
+      (* "replace" subgoal ends *)
+      
       eapply inlineToRules_prop; try assumption; try reflexivity.
 
       + instantiate (1:= fun t => inlineDmsRep (ar t) dmsAll cdn).
@@ -1222,20 +1256,20 @@ Section Preliminaries.
   Proof.
     induction cdn; intros.
 
-    - simpl in *; rewrite restrict_union in H8.
-
-      assert (SemAction olds (ad type dargV) newsA cmMapA dretV); dest.
-      { inv H6; [exfalso; eapply add_empty_neq; eauto|].
-        admit. (* Very similar to what I did before, may be able to be extracted as a lemma? *)
-      }
+    - simpl in *.
+      rewrite H5 in H6; pose proof (SemMod_meth_singleton H1 H2 H6); simpl in H9.
 
       assert (cmMap = complement cmMap (namesOf cdms)).
-      { admit. }
+      { subst; pose proof (SemMod_getCalls _ eq_refl H7 (@restrict_InDomain _ _ _)).
+        inv H0; destruct_existT.
+        pose proof (InDomain_DisjList_restrict H4 H15); simpl in H0.
+        apply restrict_complement_itself in H0; auto.
+      }
       assert (empty = restrict cmMap (namesOf cdms)).
       { rewrite complement_restrict_nil; auto. }
 
       rewrite complement_union; rewrite <-H10.
-      rewrite <-H11 in H8; clear H10 H11.
+      rewrite restrict_union in H8; rewrite <-H11 in H8; clear H10 H11.
       map_simpl H8.
 
       subst; eapply inlineToDms_prop; eauto. 
@@ -1270,8 +1304,27 @@ Section Preliminaries.
                           cmMapA
                           (namesOf (collectCalls (ad typeUT tt) dmsConst cdn))))
                     (namesOf (getCalls (inlineDmsRep (ad typeUT tt) dmsConst cdn) dmsConst))))
-            by admit (* TODO: figure out it is true *)
       end.
+      Focus 2. (* "replace" subgoal begins *)
+      unfold namesOf; repeat rewrite map_app; repeat rewrite complement_app.
+      repeat rewrite complement_union.
+      rewrite union_assoc; do 2 f_equal.
+
+      inv H0; destruct_existT; clear H11.
+      inv H14; destruct_existT; clear H8.
+      pose proof (SemMod_getCalls (inlineDmsRep (ad typeUT tt) dmsConst cdn)
+                                  eq_refl H9 (@restrict_InDomain _ _ _)).
+      assert (cmMap2 = complement
+                         cmMap2 (namesOf (getCalls (inlineDmsRep (ad typeUT tt) dmsConst cdn)
+                                                   dmsConst))).
+      { simpl in H16; unfold namesOf in H16.
+        rewrite map_app in H16; apply DisjList_app_1 in H16.
+        pose proof (InDomain_DisjList_restrict H0 H16).
+        rewrite restrict_complement_itself by assumption; reflexivity.
+      }
+      rewrite H5 at 1; clear H5.
+      apply complement_DisjList; assumption.
+      (* "replace" subgoal ends *)
 
       eapply inlineToDms_prop; try assumption; try reflexivity.
 
@@ -1524,7 +1577,7 @@ Section Facts.
 
       match goal with
         | [ |- SemMod _ _ _ _ _ ?d _ ] =>
-          replace d with (union empty (restrict dmMapO (namesOf pfdms))) by admit
+          replace d with (union empty (restrict dmMapO (namesOf pfdms))) by admit (* map *)
       end.
       match goal with
         | [ |- SemMod _ _ _ _ _ _ ?c ] =>
@@ -1532,7 +1585,7 @@ Section Facts.
           with (union (complement
                          cmMapR
                          (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
-                      (complement cmMapO (namesOf pedms))) by admit
+                      (complement cmMapO (namesOf pedms))) by admit (* map *)
       end.
 
       apply SemMod_merge_rule; auto.
