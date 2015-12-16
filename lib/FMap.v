@@ -5,6 +5,41 @@ Require Import Structures.OrderedTypeEx.
   
 Require Import Eqdep_dec.
 
+Section Lists. (* For dealing with domains *)
+  Context {A: Type}.
+  
+  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
+  Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+
+  Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
+  Proof. 
+    intros. unfold DisjList in *. intros e. specialize (H e). intuition.
+  Qed.
+
+  Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
+  Proof. 
+    intros. unfold SubList, DisjList in *. intros e. 
+    specialize (H e). specialize (H0 e). intuition.
+  Qed.
+
+  Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
+  Proof. 
+    intros. unfold DisjList in *. intros e.
+    destruct (H e); [left | right].
+    - assumption.
+    - intuition.
+  Qed.
+
+  Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
+  Proof. 
+    intros. unfold DisjList in *. intros e.
+    destruct (H e); [left | right].
+    - assumption.
+    - intuition.
+  Qed.
+
+End Lists.
+
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
@@ -514,6 +549,204 @@ Module LeibnizFacts (M : MapLeibniz).
     admit.
   Qed.
 
+  Lemma restrict_nil: forall {A} (m: t A), restrict m nil = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_empty:
+    forall {A} (l: list E.t),
+      restrict (@empty A) l = @empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_add:
+    forall {A} (m: t A) (l: list E.t) a v,
+      List.In a l -> restrict (add a v m) l = add a v (restrict m l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_add_not:
+    forall {A} (m: t A) (l: list E.t) a v,
+      ~ List.In a l -> restrict (add a v m) l = restrict m l.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma restrict_union:
+    forall {A} (m1 m2: t A) l,
+      restrict (union m1 m2) l = union (restrict m1 l) (restrict m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_in: forall {A} k (m: t A) (l: list E.t),
+                       List.In k l -> find k (restrict m l) = find k m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_not_in: forall {A} k (m: t A) (l: list E.t),
+                           ~ List.In k l -> find k (restrict m l) = None.
+  Proof.
+    admit.
+  Qed.    
+
+  Lemma restrict_InDomain: forall {A} (m: t A) (l: list E.t),
+                             InDomain (restrict m l) l.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_InDomain_itself: forall {A} (m: t A) (l: list E.t),
+                                    InDomain m l -> restrict m l = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_comm:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      restrict (restrict m l1) l2 = restrict (restrict m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_app:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      restrict m (l1 ++ l2) = union (restrict m l1) (restrict m l2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_SubList:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      SubList l1 l2 -> restrict (restrict m l2) l1 = restrict m l1.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma complement_nil: forall {A} (m: t A), complement m nil = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_empty: forall {A} (l: list E.t),
+                            complement (empty A) l = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_in: forall {A} k (m: t A) (l: list E.t),
+                         ~ List.In k l -> find k (complement m l) = find k m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_add_1: forall {A} k v (m: t A) (l: list E.t),
+                            List.In k l -> complement (add k v m) l = complement m l.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_add_2:
+    forall {A} k v (m: t A) (l: list E.t),
+      ~ List.In k l -> complement (add k v m) l = add k v (complement m l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_union:
+    forall {A} (m1 m2: t A) l,
+      complement (union m1 m2) l =
+      union (complement m1 l) (complement m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_app:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      complement m (l1 ++ l2) = complement (complement m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_comm:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      complement (complement m l1) l2 = complement (complement m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_DisjList:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      DisjList l1 l2 -> restrict (complement m l1) l2 = restrict m l2.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma complement_restrict_DisjList:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      DisjList l1 l2 -> complement (restrict m l1) l2 = restrict m l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_nil:
+    forall {A} (m: t A) (l: list E.t),
+      restrict m l = m -> complement m l = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_itself:
+    forall {A} (m: t A) (l: list E.t),
+      restrict m l = empty A -> complement m l = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_restrict_nil:
+    forall {A} (m: t A) (l: list E.t),
+      complement m l = m -> restrict m l = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_restrict_itself:
+    forall {A} (m: t A) (l: list E.t),
+      complement m l = empty A -> restrict m l = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_restrict:
+    forall {A} (m1 m2: t A) l, Disj m1 m2 -> Disj (restrict m1 l) m2.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma Disj_DisjList_restrict:
+    forall {A} (m: t A) l1 l2,
+      DisjList l1 l2 -> Disj (restrict m l1) (restrict m l2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_complement:
+    forall {A} (m1 m2: t A) l,
+      Disj m1 m2 -> Disj m1 (complement m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_OnDomain: forall {A} (m1 m2: t A) l,
+                         Disj m1 m2 -> OnDomain m1 l -> NotOnDomain m2 l.
+  Proof.
+    admit.
+  Qed.
+
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
@@ -537,243 +770,6 @@ End String_as_OT'.
 
 Module Map := FMapListLeib String_as_OT'. 
 Module MapF := LeibnizFacts Map.
-
-Section Lists. (* For domains *)
-  Context {A: Type}.
-  
-  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
-  Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
-
-  Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
-  Proof. 
-    intros. unfold DisjList in *. intros e. specialize (H e). intuition.
-  Qed.
-
-  Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
-  Proof. 
-    intros. unfold SubList, DisjList in *. intros e. 
-    specialize (H e). specialize (H0 e). intuition.
-  Qed.
-
-  Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
-  Proof. 
-    intros. unfold DisjList in *. intros e.
-    destruct (H e); [left | right].
-    - assumption.
-    - intuition.
-  Qed.
-
-  Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
-  Proof. 
-    intros. unfold DisjList in *. intros e.
-    destruct (H e); [left | right].
-    - assumption.
-    - intuition.
-  Qed.
-
-End Lists.
-
-(* Domain restrictions and complements w.r.t. string keys *)
-Section Domains.
-  Lemma restrict_nil: forall {A} (m: Map.t A), MapF.restrict m nil = Map.empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_empty:
-    forall {A} (l: list string),
-      MapF.restrict (@Map.empty A) l = @Map.empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_add:
-    forall {A} (m: Map.t A) (l: list string) a v,
-      In a l -> MapF.restrict (Map.add a v m) l = Map.add a v (MapF.restrict m l).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_add_not:
-    forall {A} (m: Map.t A) (l: list string) a v,
-      ~ In a l -> MapF.restrict (Map.add a v m) l = MapF.restrict m l.
-  Proof.
-    admit.
-  Qed.
-  
-  Lemma restrict_union:
-    forall {A} (m1 m2: Map.t A) l,
-      MapF.restrict (MapF.union m1 m2) l = MapF.union (MapF.restrict m1 l) (MapF.restrict m2 l).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_in: forall {A} k (m: Map.t A) (l: list string),
-                       In k l -> Map.find k (MapF.restrict m l) = Map.find k m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_not_in: forall {A} k (m: Map.t A) (l: list string),
-                           ~ In k l -> Map.find k (MapF.restrict m l) = None.
-  Proof.
-    admit.
-  Qed.    
-
-  Lemma restrict_InDomain: forall {A} (m: Map.t A) (l: list string),
-                             MapF.InDomain (MapF.restrict m l) l.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_InDomain_itself: forall {A} (m: Map.t A) (l: list string),
-                                    MapF.InDomain m l -> MapF.restrict m l = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_comm:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      MapF.restrict (MapF.restrict m l1) l2 = MapF.restrict (MapF.restrict m l2) l1.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_app:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      MapF.restrict m (l1 ++ l2) = MapF.union (MapF.restrict m l1) (MapF.restrict m l2).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_SubList:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      SubList l1 l2 -> MapF.restrict (MapF.restrict m l2) l1 = MapF.restrict m l1.
-  Proof.
-    admit.
-  Qed.
-  
-  Lemma complement_nil: forall {A} (m: Map.t A), MapF.complement m nil = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_empty: forall {A} (l: list string),
-                            MapF.complement (Map.empty A) l = Map.empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_in: forall {A} k (m: Map.t A) (l: list string),
-                         ~ In k l -> Map.find k (MapF.complement m l) = Map.find k m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_add_1: forall {A} k v (m: Map.t A) (l: list string),
-                            In k l -> MapF.complement (Map.add k v m) l = MapF.complement m l.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_add_2:
-    forall {A} k v (m: Map.t A) (l: list string),
-      ~ In k l -> MapF.complement (Map.add k v m) l = Map.add k v (MapF.complement m l).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_union:
-    forall {A} (m1 m2: Map.t A) l,
-      MapF.complement (MapF.union m1 m2) l =
-      MapF.union (MapF.complement m1 l) (MapF.complement m2 l).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_app:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      MapF.complement m (l1 ++ l2) = MapF.complement (MapF.complement m l2) l1.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_comm:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      MapF.complement (MapF.complement m l1) l2 = MapF.complement (MapF.complement m l2) l1.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_complement_DisjList:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      DisjList l1 l2 -> MapF.restrict (MapF.complement m l1) l2 = MapF.restrict m l2.
-  Proof.
-    admit.
-  Qed.
-  
-  Lemma complement_restrict_DisjList:
-    forall {A} (m: Map.t A) (l1 l2: list string),
-      DisjList l1 l2 -> MapF.complement (MapF.restrict m l1) l2 = MapF.restrict m l1.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_complement_nil:
-    forall {A} (m: Map.t A) (l: list string),
-      MapF.restrict m l = m -> MapF.complement m l = Map.empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma restrict_complement_itself:
-    forall {A} (m: Map.t A) (l: list string),
-      MapF.restrict m l = Map.empty A -> MapF.complement m l = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_restrict_nil:
-    forall {A} (m: Map.t A) (l: list string),
-      MapF.complement m l = m -> MapF.restrict m l = Map.empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma complement_restrict_itself:
-    forall {A} (m: Map.t A) (l: list string),
-      MapF.complement m l = Map.empty A -> MapF.restrict m l = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma Disj_restrict:
-    forall {A} (m1 m2: Map.t A) l, MapF.Disj m1 m2 -> MapF.Disj (MapF.restrict m1 l) m2.
-  Proof.
-    admit.
-  Qed.
-  
-  Lemma Disj_DisjList_restrict:
-    forall {A} (m: Map.t A) l1 l2,
-      DisjList l1 l2 -> MapF.Disj (MapF.restrict m l1) (MapF.restrict m l2).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma Disj_complement:
-    forall {A} (m1 m2: Map.t A) l,
-      MapF.Disj m1 m2 -> MapF.Disj m1 (MapF.complement m2 l).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma Disj_OnDomain: forall {A} (m1 m2: Map.t A) l,
-                         MapF.Disj m1 m2 -> MapF.OnDomain m1 l -> MapF.NotOnDomain m2 l.
-  Proof.
-    admit.
-  Qed.
-
-End Domains.
 
 Require Import Lib.CommonTactics.
 
