@@ -587,13 +587,13 @@ Lemma SemMod_meth_singleton:
          argV retV cmMap
          (Hwf: NoDup (namesOf dms))
          (Hsem: SemMod rules olds None news dms
-                       (add dm
+                       (M.add dm
                             {| objType := objType (attrType a);
-                               objVal := (argV, retV) |} empty) cmMap),
+                               objVal := (argV, retV) |} (M.empty _)) cmMap),
     SemAction olds (objVal (attrType a) type argV) news cmMap retV.
 Proof.
   intros; inv Hsem;
-  [apply @Equal_val with (k:= dm) in HEmptyDms; map_compute HEmptyDms; inv HEmptyDms|].
+  [apply @Equal_val with (k:= dm) in HEmptyDms; (*map_compute HEmptyDms*)admit; inv HEmptyDms|].
 
   admit.
 Qed.
@@ -601,7 +601,7 @@ Qed.
 Lemma SemMod_dms_cut:
   forall dms2 rules dms1 or rm nr dmMap cmMap,
     SemMod rules or rm nr dms1 dmMap cmMap ->
-    InDomain dmMap (namesOf dms2) -> (forall k, In k dms2 -> In k dms1) -> 
+    MF.InDomain dmMap (namesOf dms2) -> (forall k, In k dms2 -> In k dms1) -> 
     SemMod rules or rm nr dms2 dmMap cmMap.
 Proof.
   admit.
@@ -618,8 +618,8 @@ Qed.
 
 Lemma SemMod_dms_free:
   forall rules dms1 dms2 or rm nr cmMap,
-    SemMod rules or rm nr dms1 empty cmMap ->
-    SemMod rules or rm nr dms2 empty cmMap.
+    SemMod rules or rm nr dms1 (M.empty _) cmMap ->
+    SemMod rules or rm nr dms2 (M.empty _) cmMap.
 Proof.
   admit.
 Qed.
@@ -643,11 +643,11 @@ Qed.
 
 Lemma SemMod_div:
   forall rules olds rm news dms dmMap1 dmMap2 cmMap
-         (Hsem: SemMod rules olds rm news dms (union dmMap1 dmMap2) cmMap)
-         (Hdisj: Disj dmMap1 dmMap2),
+         (Hsem: SemMod rules olds rm news dms (MF.union dmMap1 dmMap2) cmMap)
+         (Hdisj: MF.Disj dmMap1 dmMap2),
   exists news1 news2 cmMap1 cmMap2,
-    Disj news1 news2 /\ news = union news1 news2 /\
-    Disj cmMap1 cmMap2 /\ cmMap = union cmMap1 cmMap2 /\
+    MF.Disj news1 news2 /\ news = MF.union news1 news2 /\
+    MF.Disj cmMap1 cmMap2 /\ cmMap = MF.union cmMap1 cmMap2 /\
     SemMod rules olds rm news1 dms dmMap1 cmMap1 /\
     SemMod rules olds None news2 dms dmMap2 cmMap2.
 Proof.
@@ -658,8 +658,8 @@ Lemma SemMod_merge_meths:
   forall rules dms or nr1 nr2 dmMap1 dmMap2 cmMap1 cmMap2,
     SemMod rules or None nr1 dms dmMap1 cmMap1 ->
     SemMod rules or None nr2 dms dmMap2 cmMap2 ->
-    Disj nr1 nr2 -> Disj dmMap1 dmMap2 -> Disj cmMap1 cmMap2 ->
-    SemMod rules or None (union nr1 nr2) dms (union dmMap1 dmMap2) (union cmMap1 cmMap2).
+    MF.Disj nr1 nr2 -> MF.Disj dmMap1 dmMap2 -> MF.Disj cmMap1 cmMap2 ->
+    SemMod rules or None (MF.union nr1 nr2) dms (MF.union dmMap1 dmMap2) (MF.union cmMap1 cmMap2).
 Proof.
   admit.
 Qed.
@@ -668,8 +668,8 @@ Lemma SemMod_merge_rule:
   forall rules dms or r nr1 nr2 dmMap1 dmMap2 cmMap1 cmMap2,
     SemMod rules or (Some r) nr1 dms dmMap1 cmMap1 ->
     SemMod rules or None nr2 dms dmMap2 cmMap2 ->
-    Disj nr1 nr2 -> Disj dmMap1 dmMap2 -> Disj cmMap1 cmMap2 ->
-    SemMod rules or (Some r) (union nr1 nr2) dms (union dmMap1 dmMap2) (union cmMap1 cmMap2).
+    MF.Disj nr1 nr2 -> MF.Disj dmMap1 dmMap2 -> MF.Disj cmMap1 cmMap2 ->
+    SemMod rules or (Some r) (MF.union nr1 nr2) dms (MF.union dmMap1 dmMap2) (MF.union cmMap1 cmMap2).
 Proof.
   admit.
 Qed.
@@ -735,14 +735,14 @@ Proof.
 Qed.
 
 Definition CallIffDef (l1 l2: RuleLabelT) :=
-  (forall m, In m (cms l1) -> In m (dms l2) -> find m (cmMap l1) = find m (dmMap l2)) /\
-  (forall m, In m (cms l2) -> In m (dms l1) -> find m (dmMap l1) = find m (cmMap l2)).
+  (forall m, In m (cms l1) -> In m (dms l2) -> M.find m (cmMap l1) = M.find m (dmMap l2)) /\
+  (forall m, In m (cms l2) -> In m (dms l1) -> M.find m (dmMap l1) = M.find m (cmMap l2)).
 
 Definition FiltDm (l1 l2 l: RuleLabelT) :=
-  dmMap l = union (complement (dmMap l1) (cms l2)) (complement (dmMap l2) (cms l1)).
+  dmMap l = MF.union (MF.complement (dmMap l1) (cms l2)) (MF.complement (dmMap l2) (cms l1)).
 
 Definition FiltCm (l1 l2 l: RuleLabelT) :=
-  cmMap l = union (complement (cmMap l1) (dms l2)) (complement (cmMap l2) (dms l1)).
+  cmMap l = MF.union (MF.complement (cmMap l1) (dms l2)) (MF.complement (cmMap l2) (dms l1)).
 
 Definition ConcatLabel (l1 l2 l: RuleLabelT) :=
   CombineRm (ruleMeth l1) (ruleMeth l2) (ruleMeth l) /\
@@ -765,20 +765,20 @@ Ltac destConcatLabel :=
 Inductive LtsStep:
   Modules -> option string -> RegsT -> RegsT -> CallsT -> CallsT -> Prop :=
 | LtsStepMod regInits oRegs nRegs rules meths rm dmMap cmMap
-             (HOldRegs: InDomain oRegs (namesOf regInits))
+             (HOldRegs: MF.InDomain oRegs (namesOf regInits))
              (Hltsmod: SemMod rules oRegs rm nRegs meths dmMap cmMap):
     LtsStep (Mod regInits rules meths) rm oRegs nRegs dmMap cmMap
 | LtsStepConcat m1 rm1 olds1 news1 dmMap1 cmMap1
                 m2 rm2 olds2 news2 dmMap2 cmMap2
-                (HOldRegs1: InDomain olds1 (namesOf (getRegInits m1)))
-                (HOldRegs2: InDomain olds2 (namesOf (getRegInits m2)))
+                (HOldRegs1: MF.InDomain olds1 (namesOf (getRegInits m1)))
+                (HOldRegs2: MF.InDomain olds2 (namesOf (getRegInits m2)))
                 (Hlts1: @LtsStep m1 rm1 olds1 news1 dmMap1 cmMap1)
                 (Hlts2: @LtsStep m2 rm2 olds2 news2 dmMap2 cmMap2)
                 crm colds cnews cdmMap ccmMap
-                (Holds: colds = union olds1 olds2)
-                (Hnews: cnews = union news1 news2)
-                (HdmMap: Disj dmMap1 dmMap2)
-                (HcmMap: Disj cmMap1 cmMap2)
+                (Holds: colds = MF.union olds1 olds2)
+                (Hnews: cnews = MF.union news1 news2)
+                (HdmMap: MF.Disj dmMap1 dmMap2)
+                (HcmMap: MF.Disj cmMap1 cmMap2)
                 (HMerge: ConcatLabel
                            (Build_RuleLabelT rm1 (getDmsMod m1) dmMap1 (getCmsMod m1) cmMap1)
                            (Build_RuleLabelT rm2 (getDmsMod m2) dmMap2 (getCmsMod m2) cmMap2)
@@ -815,17 +815,17 @@ Ltac constr_concatMod :=
        assert (In r (namesOf (getRules m1))) as Hvoid by in_tac;
        clear Hvoid;
        eapply LtsStepConcat with
-       (olds1 := restrict or (namesOf (getRegInits m1)))
-         (olds2 := complement or (namesOf (getRegInits m1)))
+       (olds1 := MF.restrict or (namesOf (getRegInits m1)))
+         (olds2 := MF.complement or (namesOf (getRegInits m1)))
          (rm1 := Some r) (rm2 := None); eauto)
         || (eapply LtsStepConcat with
-            (olds1 := restrict or (namesOf (getRegInits m1)))
-              (olds2 := complement or (namesOf (getRegInits m1)))
+            (olds1 := MF.restrict or (namesOf (getRegInits m1)))
+              (olds2 := MF.complement or (namesOf (getRegInits m1)))
               (rm1 := None) (rm2 := Some r); eauto)
     | [ |- LtsStep (ConcatMod ?m1 ?m2) None _ _ _ _ ] =>
       eapply LtsStepConcat with
-      (olds1 := restrict or (namesOf (getRegInits m1)))
-        (olds2 := complement or (namesOf (getRegInits m1)))
+      (olds1 := MF.restrict or (namesOf (getRegInits m1)))
+        (olds2 := MF.complement or (namesOf (getRegInits m1)))
         (rm1 := None) (rm2 := None); eauto
   end.
 
@@ -848,6 +848,9 @@ Hint Unfold initRegs.
 (* m = module
    or = old registers
    nr = new registers *)
+
+Definition update {A : Type} (m1 m2 : M.t A) := MF.union m2 m1.
+
 Inductive LtsStepClosure:
   Modules ->
   RegsT -> list RuleLabelT ->
@@ -869,7 +872,7 @@ Inductive ConcatLabelSeq: list RuleLabelT -> list RuleLabelT -> list RuleLabelT 
 
 Definition RegsInDomain m :=
   forall rm or nr dm cm,
-    LtsStep m rm or nr dm cm -> InDomain nr (namesOf (getRegInits m)).
+    LtsStep m rm or nr dm cm -> MF.InDomain nr (namesOf (getRegInits m)).
 
 Lemma concatMod_RegsInDomain:
   forall m1 m2 (Hin1: RegsInDomain m1) (Hin2: RegsInDomain m2),
@@ -880,12 +883,11 @@ Proof.
   specialize (Hin2 _ _ _ _ _ Hlts2).
   clear -Hin1 Hin2.
   unfold getRegInits, namesOf; rewrite map_app.
-  unfold InDomain in *; intros.
+  unfold MF.InDomain in *; intros.
   repeat autounfold with MapDefs in H.
-  specialize (Hin1 k); specialize (Hin2 k); unfold InMap, find in *.
-  destruct (news1 k).
-  - apply in_or_app; intuition auto.
-  - apply in_or_app; intuition auto.
+  specialize (Hin1 k); specialize (Hin2 k).
+  apply MF.union_In in H.
+  destruct H; apply in_or_app; intuition auto.
 Qed.
 
 Section Domain.
@@ -893,20 +895,22 @@ Section Domain.
   Variable newRegsDomain: RegsInDomain m.
   Theorem regsDomain r l
     (clos: LtsStepClosure m r l):
-    InDomain r (namesOf (getRegInits m)).
+    MF.InDomain r (namesOf (getRegInits m)).
   Proof.
     induction clos.
-    - unfold InDomain, InMap, initRegs in *; intros.
+    - unfold MF.InDomain, initRegs in *; intros.
       subst.
       clear -H.
       induction (getRegInits m); simpl in *.
-      + unfold empty in *; intuition.
+      + apply MF.F.P.F.empty_in_iff in H. assumption.
       + destruct a; destruct attrType; simpl in *.
-        unfold add, unionL, find, string_eq in H.
         destruct (string_dec attrName k); intuition auto.
+        right. apply IHl.
+        rewrite MF.F.P.F.add_in_iff in H.
+        destruct H. specialize (n H). contradiction. assumption.
     - pose proof (@newRegsDomain _ _ _ _ _ Hlts).
-      rewrite Hrs.
-      apply InDomain_update; intuition.
+      rewrite Hrs. unfold update.
+      apply MF.InDomain_union; intuition.
   Qed.
 End Domain.
 
@@ -927,7 +931,7 @@ Section WellFormed.
     exists r1 r2 l1 l2,
       LtsStepClosure m1 r1 l1 /\
       LtsStepClosure m2 r2 l2 /\
-      union r1 r2 = r /\
+      MF.union r1 r2 = r /\
       ConcatLabelSeq l1 l2 l.
   Proof.
     admit. (* Proof deprecated due to disjUnion -> union *)
@@ -967,6 +971,9 @@ End WellFormed.
 
 (** Tactics for dealing with semantics *)
 
+(*
+I got rid of this because I have no in_tac_ex
+
 Ltac invStep :=
   repeat
     match goal with
@@ -992,7 +999,7 @@ Ltac invStep :=
                    (rewrite (combineRm_prop_1 Hcrm) || rewrite (combineRm_prop_2 Hcrm));
                    reflexivity);
                 clear Hin; subst;
-                (rewrite (combineRm_prop_3 Hcrm) in * || rewrite (combineRm_prop_4 Hcrm) in *);
+                (rewrite (combineRm_prop_3 Hcrm) in * || rewrite (combineRm_prop_4 Hcrm) in * );
                 clear Hcrm
           end
     end;
@@ -1003,6 +1010,7 @@ Ltac invStep :=
         assert (Ha: exists m1 m2 m3, m = Mod m1 m2 m3) by (repeat eexists);
           clear Ha; inv H
     end.
+*)
 
 Ltac destRule Hlts :=
   match type of Hlts with
@@ -1070,6 +1078,7 @@ Ltac basic_dest :=
       | [H: false = true |- _] => inversion H
     end.
 
+(* same story: missing in_tac_ex
 Ltac pred_dest meth :=
   repeat
     match goal with
@@ -1095,7 +1104,9 @@ Ltac pred_dest meth :=
     match goal with
       | [H: find _ _ = _ |- _] => repeat autounfold in H; repeat (map_compute H)
     end.
+*)
 
+(* missing map_simpl tactic
 Ltac invariant_tac :=
   repeat
     match goal with
@@ -1115,10 +1126,13 @@ Ltac invariant_tac :=
       | [H: ?w1 = ?w3 |- context [if weq ?w1 ?w2 then _ else _] ] =>
         rewrite H; simpl
     end.
+*)
 
+(* missing pred_dest tactic
 Ltac conn_tac meth :=
   callIffDef_dest; filt_dest; pred_dest meth; repeat (invariant_tac; basic_dest).
 Ltac fconn_tac meth := exfalso; conn_tac meth.
+*)
 
 Ltac regsInDomain_tac := admit. (* TODO: reimplement *)
   (* hnf; intros; *)

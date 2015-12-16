@@ -7,18 +7,6 @@ Require Import Eqdep_dec.
 
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 
-Theorem eq_rect_eq_list :
-  forall (A : Type), (forall (x y : A), {x = y} + {x <> y}) ->
-  forall (p:list A) (Q:list A->Type) (x:Q p) (h:p=p), 
-  x = eq_rect p Q x p h.
-Proof.
-intros.
-apply K_dec_type with (p := h).
-apply list_eq_dec.
-assumption.
-reflexivity.
-Qed.
-
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 
 Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
@@ -283,6 +271,30 @@ Module LeibnizFacts (M : MapLeibniz).
     assumption.
   Qed.
 
+  Fixpoint complement {A : Type} (m : t A) (xs : list E.t) := match xs with
+   | nil => m
+   | y :: ys => remove y (complement m ys)
+   end.
+
+  Definition subtract {A : Type} (m m' : t A) :=
+   M.fold (fun k _ => remove k) m' m.
+
+  Fixpoint restrict {A : Type} (m : t A) (l : list E.t) := match l with
+   | nil => M.empty _
+   | y :: ys => let m' := restrict m ys in match M.find y m with
+     | Some v => M.add y v m'
+     | None => m'
+     end
+   end.
+
+  Fixpoint disjUnion {A : Type} (m1 m2: t A) (d : list E.t) := match d with
+  | nil => m2
+  | x :: xs => let m' := disjUnion m1 m2 xs in match M.find x m1 with
+    | Some v => M.add x v m'
+    | None => m'
+    end
+  end.
+
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. intros. apply union_smothered. unfold Sub. auto.
   Qed.
@@ -336,7 +348,18 @@ Module LeibnizFacts (M : MapLeibniz).
      do 2 rewrite F.P.F.add_o. destruct (E.eq_dec k k0); [| apply H].
      reflexivity.
   Qed.
-     
+
+  Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
+  Proof. intros m. pattern m.
+  apply map_induction; simpl; intros.
+  - rewrite union_empty_L in H. right. assumption.
+  - rewrite union_add in H1 by assumption.
+    rewrite P.F.add_in_iff in H1. destruct H1.
+    subst. left. rewrite P.F.add_in_iff. left. reflexivity.
+    specialize (H m' k0 H1). destruct H; [left | right].
+    rewrite P.F.add_in_iff. right. assumption. assumption.
+  Qed.
+    
 
   Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'. 
 
@@ -368,6 +391,72 @@ Module LeibnizFacts (M : MapLeibniz).
       case_eq (find k m1); intros.
       apply H. exists a. apply find_2. assumption.
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
+  Qed.
+
+  Lemma Disj_add {A} : forall {m m' : t A} k v
+    , Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
+  Proof. intros. unfold Disj in *.
+  intros. destruct (H k0).
+  - destruct (E.eq_dec k k0); unfold E.eq in *.
+    + subst. right. assumption. 
+    + left. rewrite F.P.F.add_in_iff. intuition.
+  - right.  assumption.
+  Qed.
+
+  Lemma Disj_add1 {A} : forall {m m' : t A} k v
+    , Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
+  Proof. intros. unfold Disj in *.
+  split.
+  - intros. destruct (H k0).
+    rewrite F.P.F.add_in_iff in H0. intuition.
+    right.  assumption.
+  - specialize (H k). destruct H.
+    rewrite F.P.F.add_in_iff in H. intuition. assumption.
+  Qed.
+
+  Lemma Disj_comm {A} : forall {m m' : t A}, Disj m m' -> Disj m' m.
+  Proof. intros. unfold Disj in *. intros k.
+  specialize (H k). intuition.
+  Qed.
+
+  Lemma Disj_union_1 {A} : forall {m m1 m2 : t A}
+    , Disj m (union m1 m2) -> Disj m m1.
+  Proof.
+  intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
+  - unfold Disj. intros. right. rewrite F.P.F.empty_in_iff.
+    intuition.
+  - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
+    apply Disj_add1 in H1. destruct H1. apply Disj_comm in H1.
+    specialize (H H1). apply Disj_comm. apply Disj_add.
+    apply Disj_comm. assumption.
+    assumption.
+  Qed.
+
+  Lemma Disj_union_2 {A} : forall {m m1 m2 : t A}
+    , Disj m (union m1 m2) -> Disj m m2.
+  Proof.
+  intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
+  - rewrite union_empty_L in H. assumption. 
+  - apply H. rewrite union_add in H1 by assumption.
+    apply Disj_comm in H1.
+    apply Disj_add1 in H1. destruct H1. apply Disj_comm. assumption.
+  Qed.
+
+  Lemma Disj_union {A} : forall {m m1 m2 : t A}
+    , Disj m m1 -> Disj m m2 -> Disj m (union m1 m2).
+  Proof.
+  intros. unfold Disj in *.
+  intros k. specialize (H k). specialize (H0 k).
+  intuition. right. intros contra.
+  apply union_In in contra. intuition.
+  Qed.
+
+  Lemma union_assoc {A} : forall (m1 m2 m3: t A)
+    , union m1 (union m2 m3) = union (union m1 m2) m3.
+  Proof.
+  intros.  apply leibniz. unfold Equal. intros.
+  repeat rewrite find_union. simpl.
+  destruct (find y m1); destruct (find y m2); reflexivity.
   Qed.
 
 End LeibnizFacts.
@@ -466,6 +555,68 @@ Section StringEq.
 
 End StringEq.
 
+Section Lists. (* About domains *)
+  Context {A: Type}.
+  
+  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
+  Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+
+  Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
+  Proof. 
+  intros. unfold DisjList in *. intros e. specialize (H e). intuition.
+  Qed.
+
+  Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
+  Proof. 
+  intros. unfold SubList, DisjList in *. intros e. 
+  specialize (H e). specialize (H0 e). intuition.
+  Qed.
+
+  Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
+  Proof. 
+  intros. unfold DisjList in *. intros e.
+  destruct (H e); [left | right].
+  - assumption.
+  - intuition.
+  Qed.
+
+  Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
+  Proof. 
+  intros. unfold DisjList in *. intros e.
+  destruct (H e); [left | right].
+  - assumption.
+  - intuition.
+  Qed.
+
+End Lists.
+
 Section Facts.
 
 End Facts.
+
+Set Implicit Arguments.
+Section MakeMap.
+  Variable A: Type.
+  Variable f1 f2: A -> Type.
+  Variable f: forall x, f1 x -> f2 x.
+
+  Fixpoint makeMap (l: list (Attribute (Typed f1))) : Map.t (Typed f2) :=
+    match l with
+      | nil => Map.empty _
+      | {| attrName := n; attrType := {| objVal := rv |} |} :: xs =>
+        Map.add n {| objVal := f rv |} (makeMap xs)
+    end.
+
+  Lemma disjUnionProp: forall (l1 l2: list (Attribute (Typed f1))),
+                         MapF.disjUnion (makeMap l1) (makeMap l2) (map (@attrName _) l1) =
+                         makeMap (l1 ++ l2).
+  Proof.
+    induction l1; simpl.
+    - simpl; intros. reflexivity.
+    - intros.
+      destruct a.
+      destruct attrType. simpl.
+      rewrite MapF.find_add_1. 
+      admit.
+  Qed.
+End MakeMap.
