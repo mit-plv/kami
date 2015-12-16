@@ -12,80 +12,81 @@ Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
            (le_irrel : forall {x y} (a b : le x y), a = b)
            (x : A) (xs : list A) (p q : HdRel le x xs)
-  : p = q.
+: p = q.
 Proof. 
   induction p using HdRel_ind'.
   - refine (
         match q as q' in HdRel _ _ xs return 
               (match xs with 
-               | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
-               | _ :: _ => fun _ => True
+                 | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
+                 | _ :: _ => fun _ => True
                end q'
               )
         with
-        | HdRel_nil => eq_refl
-        | HdRel_cons _ _ _ => I
+          | HdRel_nil => eq_refl
+          | HdRel_cons _ _ _ => I
         end
-  ).
-- generalize dependent r.
-  assert (forall r : le x (hd b (b :: l)), HdRel_cons le x b l r = q).
-  2:assumption.
-refine (
-  match q as q' in HdRel _ _ xs return
-    forall r' : le x (hd b xs), (match xs as xs'
-      return HdRel le x xs' -> le x (hd b xs') -> Prop with
-      | nil => fun _ _ => True
-      | b' :: l' => fun (q'' : HdRel le x _) r''
-         => HdRel_cons le x b' l' r'' = q''
-     end q' r')
-  with
-    | HdRel_nil => fun _ => I
-    | HdRel_cons _ _ _ => fun _ => _
-  end
-  ).
-replace r' with l1 by apply le_irrel.
-reflexivity.
+      ).
+  - generalize dependent r.
+    assert (forall r : le x (hd b (b :: l)), HdRel_cons le x b l r = q).
+    2:assumption.
+    refine (
+        match q as q' in HdRel _ _ xs return
+              forall r' : le x (hd b xs),
+                (match xs as xs'
+                       return HdRel le x xs' -> le x (hd b xs') -> Prop with
+                   | nil => fun _ _ => True
+                   | b' :: l' => fun (q'' : HdRel le x _) r''
+                                 => HdRel_cons le x b' l' r'' = q''
+                 end q' r')
+        with
+          | HdRel_nil => fun _ => I
+          | HdRel_cons _ _ _ => fun _ => _
+        end
+      ).
+    replace r' with l1 by apply le_irrel.
+    reflexivity.
 Qed.
 
 Theorem Sorted_irrel {A : Type} {le : A -> A -> Prop}
         (le_irrel : forall {x y} (a b : le x y), a = b)
         (xs : list A) p
-  : forall (q : Sorted le xs), p = q.
+: forall (q : Sorted le xs), p = q.
 Proof.
   induction p using Sorted_ind'; intros.
   - refine (
         match q as q' in Sorted _ xs return 
               (match xs with 
-               | nil => fun (q : Sorted le nil) => Sorted_nil le = q
-               | _ :: _ => fun _ => True
+                 | nil => fun (q : Sorted le nil) => Sorted_nil le = q
+                 | _ :: _ => fun _ => True
                end q'
               )
         with
-        | Sorted_nil => eq_refl
-        | Sorted_cons _ _ _ _ => I
+          | Sorted_nil => eq_refl
+          | Sorted_cons _ _ _ _ => I
         end
       ).
   - generalize dependent h.
     generalize dependent p.
     assert (forall p : Sorted le (tl (a :: l)),
-               (forall q' : Sorted le (tl (a :: l)), p = q') -> 
-               forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
+              (forall q' : Sorted le (tl (a :: l)), p = q') -> 
+              forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
     2:assumption.
     refine (
         match q as q' in Sorted _ xs return
               (forall p : Sorted le (tl xs),
-                  (forall q' : Sorted le (tl xs), p = q') -> 
-                  forall h : HdRel le (hd a xs) (tl xs),
-                    (match xs as xs'
-                           return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
-                                  Sorted le xs' -> Prop with
-                     | nil => fun _ _ _ => True
-                     | a' :: l' => fun p' h' q''
-                                  => Sorted_cons p' h' = q''
-                     end p h q'))
+                 (forall q' : Sorted le (tl xs), p = q') -> 
+                 forall h : HdRel le (hd a xs) (tl xs),
+                   (match xs as xs'
+                          return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
+                                 Sorted le xs' -> Prop with
+                      | nil => fun _ _ _ => True
+                      | a' :: l' => fun p' h' q''
+                                    => Sorted_cons p' h' = q''
+                    end p h q'))
         with
-        | Sorted_nil => fun _ _ _ => I
-        | Sorted_cons _ _ _ _ => fun _ _ _ => _
+          | Sorted_nil => fun _ _ _ => I
+          | Sorted_cons _ _ _ _ => fun _ _ _ => _
         end
       ).
     replace h0 with h. replace p with s. reflexivity. 
@@ -94,56 +95,55 @@ Qed.
 
 Require Import FMapInterface.
 
-Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S
- with Module E := UOT.
- 
+Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := UOT.
+  
   Module OT := UOT_to_OT UOT.
   Module Export M := FMapList.Make(OT).
   Include M.
   Module Facts := FMapFacts.OrdProperties M.
+  
+  Lemma eq_leibniz_list: forall (A:Type) (xs ys: list A),
+                           eqlistA eq xs ys -> xs = ys.
+  Proof. intros ? ? ? H; induction H; simpl; congruence. Qed.
 
-    Lemma eq_leibniz_list: forall (A:Type) (xs ys: list A),
-      eqlistA eq xs ys -> xs = ys.
-    Proof. intros ? ? ? H; induction H; simpl; congruence. Qed.
+  Lemma eqke_sub_eq A: subrelation (@M.Raw.PX.eqke A) eq.
+  Proof. intros [] [] [??]; simpl in *; subst; auto. Qed.
 
-    Lemma eqke_sub_eq A: subrelation (@M.Raw.PX.eqke A) eq.
-    Proof. intros [] [] [??]; simpl in *; subst; auto. Qed.
+  Lemma eq_sub_eqke A: subrelation eq (@M.Raw.PX.eqke A).
+  Proof. intro H; split; subst; auto. Qed.
 
-    Lemma eq_sub_eqke A: subrelation eq (@M.Raw.PX.eqke A).
-    Proof. intro H; split; subst; auto. Qed.
-
-    Add Parametric Morphism A: (@InA A)
+  Add Parametric Morphism A: (@InA A)
       with signature subrelation ==> eq ==> eq ==> impl
-      as InA_rel_d.
-    Proof.
-      unfold impl; firstorder.
-      apply InA_alt in H0.
-      destruct H0 as [?[??]].
-      apply InA_alt.
-      exists x0; split; auto.
-      apply H; auto.
-    Qed.
+        as InA_rel_d.
+  Proof.
+    unfold impl; firstorder.
+    apply InA_alt in H0.
+    destruct H0 as [?[??]].
+    apply InA_alt.
+    exists x0; split; auto.
+    apply H; auto.
+  Qed.
 
-    Add Parametric Morphism A: (@eqlistA A)
+  Add Parametric Morphism A: (@eqlistA A)
       with signature subrelation ==> eq ==> eq ==> impl
-      as eqlistA_rel_d.
-    Proof.
-      unfold impl; firstorder.
-      induction H0; auto.
-      constructor; auto.
-      apply H; auto.
-    Qed.
+        as eqlistA_rel_d.
+  Proof.
+    unfold impl; firstorder.
+    induction H0; auto.
+    constructor; auto.
+    apply H; auto.
+  Qed.
 
-    Lemma Equal_this: forall elt L1 L2,
-      Equal (elt:=elt) L1 L2 -> this L1 = this L2.
-    Proof.
-      unfold Equal; destruct L1, L2; simpl. intros.
-      lapply (SortA_equivlistA_eqlistA _ _ _ sorted0 sorted1); intros.
-      clear H.
-      rewrite eqke_sub_eq in H0.
-      apply eq_leibniz_list in H0.
-      assumption.
-      * red.
+  Lemma Equal_this: forall elt L1 L2,
+                      Equal (elt:=elt) L1 L2 -> this L1 = this L2.
+  Proof.
+    unfold Equal; destruct L1, L2; simpl. intros.
+    lapply (SortA_equivlistA_eqlistA _ _ _ sorted0 sorted1); intros.
+    clear H.
+    rewrite eqke_sub_eq in H0.
+    apply eq_leibniz_list in H0.
+    assumption.
+    * red.
       apply Facts.P.F.Equal_Equiv in H. destruct H.
       intros [a e].
       specialize (H a).
@@ -158,8 +158,8 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S
   Qed.
 
   Theorem lt_irrel_leibniz {A : Type}
-  (lt_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
-    : Equal m m' -> m = m'.
+          (lt_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
+  : Equal m m' -> m = m'.
   Proof.
     intros H. 
     apply Equal_this in H.
@@ -232,7 +232,6 @@ Module LeibnizFacts (M : MapLeibniz).
     apply leibniz. apply F.P.fold_identity.
   Qed.
 
-
   Lemma transpose_neqkey_Equal_add {A : Type} 
     : F.P.transpose_neqkey Equal (add (elt:=A)).
   Proof. 
@@ -279,6 +278,18 @@ Module LeibnizFacts (M : MapLeibniz).
        assumption.
   Qed.
 
+  Definition update {A : Type} (m1 m2: t A) := unionL m2 m1.
+
+  Lemma update_empty_1: forall {A} (m: t A), update (empty A) m = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma update_empty_2: forall {A} (m: t A), update m (empty A) = m.
+  Proof.
+    admit.
+  Qed.
+
   Fixpoint complement {A : Type} (m : t A) (xs : list E.t) := match xs with
    | nil => m
    | y :: ys => remove y (complement m ys)
@@ -287,13 +298,16 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition subtract {A : Type} (m m' : t A) :=
    M.fold (fun k _ => remove k) m' m.
 
-  Fixpoint restrict {A : Type} (m : t A) (l : list E.t) := match l with
-   | nil => M.empty _
-   | y :: ys => let m' := restrict m ys in match M.find y m with
-     | Some v => M.add y v m'
-     | None => m'
-     end
-   end.
+  Fixpoint restrict {A : Type} (m : t A) (l : list E.t) :=
+    match l with
+      | nil => M.empty _
+      | y :: ys =>
+        let m' := restrict m ys in
+        match M.find y m with
+          | Some v => M.add y v m'
+          | None => m'
+        end
+    end.
 
   Fixpoint disjUnion {A : Type} (m1 m2: t A) (d : list E.t) := match d with
   | nil => m2
@@ -370,7 +384,6 @@ Module LeibnizFacts (M : MapLeibniz).
       specialize (H m' k0 H1). destruct H; [left | right].
       rewrite P.F.add_in_iff. right. assumption. assumption.
   Qed.
-    
 
   Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'. 
 
@@ -379,10 +392,9 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition NotOnDomain {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
   Definition DomainOf {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
 
-  Hint Unfold Equal Disj Sub
-     InDomain OnDomain NotOnDomain DomainOf : MapDefs.
+  Hint Unfold Equal Disj Sub InDomain OnDomain NotOnDomain DomainOf : MapDefs.
 
-    Lemma InDomain_add:
+  Lemma InDomain_add:
     forall {A} (m: t A) k v d,
       InDomain m d -> List.In k d -> InDomain (add k v m) d.
   Proof.
@@ -404,8 +416,9 @@ Module LeibnizFacts (M : MapLeibniz).
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
   Qed.
 
-  Lemma Disj_add {A} : forall {m m' : t A} k v
-    , Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
+  Lemma Disj_add {A}:
+    forall {m m' : t A} k v,
+      Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
   Proof. 
     intros. unfold Disj in *.
     intros. destruct (H k0).
@@ -415,8 +428,9 @@ Module LeibnizFacts (M : MapLeibniz).
     - right.  assumption.
   Qed.
 
-  Lemma Disj_add1 {A} : forall {m m' : t A} k v
-    , Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
+  Lemma Disj_add1 {A}:
+    forall {m m' : t A} k v,
+      Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
   Proof. 
     intros. unfold Disj in *.
     split.
@@ -433,20 +447,22 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H k). intuition.
   Qed.
 
-  Lemma Disj_union_1 {A} : forall {m m1 m2 : t A}
-    , Disj m (union m1 m2) -> Disj m m1.
+  Lemma Disj_union_1 {A}:
+    forall {m m1 m2 : t A},
+      Disj m (union m1 m2) -> Disj m m1.
   Proof.
-  intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
-  - unfold Disj. intros. right. rewrite F.P.F.empty_in_iff.
-    intuition.
-  - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
-    apply Disj_add1 in H1. destruct H1. apply Disj_comm in H1.
-    specialize (H H1). apply Disj_comm. apply Disj_add.
-    apply Disj_comm. assumption.
-    assumption.
+    intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
+    - unfold Disj. intros. right. rewrite F.P.F.empty_in_iff.
+      intuition.
+    - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
+      apply Disj_add1 in H1. destruct H1. apply Disj_comm in H1.
+      specialize (H H1). apply Disj_comm. apply Disj_add.
+      apply Disj_comm. assumption.
+      assumption.
   Qed.
 
-  Lemma Disj_union_2 {A} : forall {m m1 m2 : t A}
+  Lemma Disj_union_2 {A}:
+    forall {m m1 m2 : t A}
     , Disj m (union m1 m2) -> Disj m m2.
   Proof.
     intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
@@ -456,7 +472,8 @@ Module LeibnizFacts (M : MapLeibniz).
       apply Disj_add1 in H1. destruct H1. apply Disj_comm. assumption.
   Qed.
 
-  Lemma Disj_union {A} : forall {m m1 m2 : t A}
+  Lemma Disj_union {A}:
+    forall {m m1 m2 : t A}
     , Disj m m1 -> Disj m m2 -> Disj m (union m1 m2).
   Proof.
     intros. unfold Disj in *.
@@ -465,7 +482,8 @@ Module LeibnizFacts (M : MapLeibniz).
     apply union_In in contra. intuition.
   Qed.
 
-  Lemma union_assoc {A} : forall (m1 m2 m3: t A)
+  Lemma union_assoc {A}:
+    forall (m1 m2 m3: t A)
     , union m1 (union m2 m3) = union (union m1 m2) m3.
   Proof.
     intros.  apply leibniz. unfold Equal. intros.
@@ -474,7 +492,6 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
 End LeibnizFacts.
-  
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Module Export M := FMapListEq UOT.
@@ -498,78 +515,7 @@ End String_as_OT'.
 Module Map := FMapListLeib String_as_OT'. 
 Module MapF := LeibnizFacts Map.
 
-Require Import Lib.CommonTactics.
-
-Section Domains.
-  Definition listSub (l1 l2: list string) :=
-    filter (fun s => if in_dec string_dec s l2 then false else true) l1.
-
-  Lemma listSub_In_1:
-    forall s l1 l2, In s (listSub l1 l2) <-> In s l1 /\ ~ In s l2.
-  Proof.
-    intros; split; intros.
-    - unfold listSub in H; apply filter_In in H; dest; split; auto.
-      destruct (in_dec _ s l2); intuition.
-    - dest; unfold listSub; apply filter_In; split; auto.
-      destruct (in_dec _ s l2); intuition.
-  Qed.
-
-  Lemma listSub_In_2:
-    forall s l1 l2, ~ In s (listSub l1 l2) <-> (~ In s l1 \/ In s l2).
-  Proof.
-    intros; split; intros.
-    - destruct (in_dec string_dec s l1).
-      + right; destruct (in_dec string_dec s l2); [assumption|].
-        elim H; apply filter_In; split; [assumption|].
-        destruct (in_dec string_dec s l2); intuition.
-      + left; assumption.
-    - intro Hx; apply listSub_In_1 in Hx; dest; destruct H.
-      + elim H; assumption.
-      + elim H1; assumption.
-  Qed.
-
-End Domains.
-
-
-  Lemma Equal_val: forall {A : Type} (m1 m2: Map.t A) k, m1 = m2 -> Map.find k m1 = Map.find k m2.
-  Proof. intros; subst; reflexivity. Qed.
-
-Require Import Lib.Struct Lib.CommonTactics.
-
-Section StringEq.
-  Definition string_eq s1 s2 :=
-    match string_dec s1 s2 with
-      | left _ => true
-      | right _ => false
-    end.
-
-  Lemma string_dec_eq: forall s, string_eq s s = true.
-  Proof.
-    intros; unfold string_eq; destruct (string_dec s s).
-    - reflexivity.
-    - elim n; reflexivity.
-  Qed.
-
-  Lemma string_dec_neq: forall s t, s <> t <-> string_eq s t = false.
-  Proof.
-    intros; unfold string_eq; destruct (string_dec s t); intuition.
-  Qed.
-
-  Lemma string_eq_append:
-    forall p s t, string_eq s t = false -> string_eq (p -n- s) (p -n- t) = false.
-  Proof.
-    unfold string_eq; intros.
-    destruct (string_dec s t); [inversion H|].
-    destruct (string_dec (p -n- s) (p -n- t)); [|reflexivity].
-    elim n; clear -e.
-    induction p.
-    - unfold appendName in e; simpl in e; inversion e; auto.
-    - inversion e; apply IHp; auto.
-  Qed.
-
-End StringEq.
-
-Section Lists. (* About domains *)
+Section Lists. (* For domains *)
   Context {A: Type}.
   
   Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
@@ -604,6 +550,262 @@ Section Lists. (* About domains *)
 
 End Lists.
 
+(* Domain restrictions and complements w.r.t. string keys *)
+Section Domains.
+  Lemma restrict_nil: forall {A} (m: Map.t A), MapF.restrict m nil = Map.empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_empty:
+    forall {A} (l: list string),
+      MapF.restrict (@Map.empty A) l = @Map.empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_add:
+    forall {A} (m: Map.t A) (l: list string) a v,
+      In a l -> MapF.restrict (Map.add a v m) l = Map.add a v (MapF.restrict m l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_add_not:
+    forall {A} (m: Map.t A) (l: list string) a v,
+      ~ In a l -> MapF.restrict (Map.add a v m) l = MapF.restrict m l.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma restrict_union:
+    forall {A} (m1 m2: Map.t A) l,
+      MapF.restrict (MapF.union m1 m2) l = MapF.union (MapF.restrict m1 l) (MapF.restrict m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_in: forall {A} k (m: Map.t A) (l: list string),
+                       In k l -> Map.find k (MapF.restrict m l) = Map.find k m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_not_in: forall {A} k (m: Map.t A) (l: list string),
+                           ~ In k l -> Map.find k (MapF.restrict m l) = None.
+  Proof.
+    admit.
+  Qed.    
+
+  Lemma restrict_InDomain: forall {A} (m: Map.t A) (l: list string),
+                             MapF.InDomain (MapF.restrict m l) l.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_InDomain_itself: forall {A} (m: Map.t A) (l: list string),
+                                    MapF.InDomain m l -> MapF.restrict m l = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_comm:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      MapF.restrict (MapF.restrict m l1) l2 = MapF.restrict (MapF.restrict m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_app:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      MapF.restrict m (l1 ++ l2) = MapF.union (MapF.restrict m l1) (MapF.restrict m l2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_SubList:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      SubList l1 l2 -> MapF.restrict (MapF.restrict m l2) l1 = MapF.restrict m l1.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma complement_nil: forall {A} (m: Map.t A), MapF.complement m nil = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_empty: forall {A} (l: list string),
+                            MapF.complement (Map.empty A) l = Map.empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_in: forall {A} k (m: Map.t A) (l: list string),
+                         ~ In k l -> Map.find k (MapF.complement m l) = Map.find k m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_add_1: forall {A} k v (m: Map.t A) (l: list string),
+                            In k l -> MapF.complement (Map.add k v m) l = MapF.complement m l.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_add_2:
+    forall {A} k v (m: Map.t A) (l: list string),
+      ~ In k l -> MapF.complement (Map.add k v m) l = Map.add k v (MapF.complement m l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_union:
+    forall {A} (m1 m2: Map.t A) l,
+      MapF.complement (MapF.union m1 m2) l =
+      MapF.union (MapF.complement m1 l) (MapF.complement m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_app:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      MapF.complement m (l1 ++ l2) = MapF.complement (MapF.complement m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_comm:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      MapF.complement (MapF.complement m l1) l2 = MapF.complement (MapF.complement m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_DisjList:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      DisjList l1 l2 -> MapF.restrict (MapF.complement m l1) l2 = MapF.restrict m l2.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma complement_restrict_DisjList:
+    forall {A} (m: Map.t A) (l1 l2: list string),
+      DisjList l1 l2 -> MapF.complement (MapF.restrict m l1) l2 = MapF.restrict m l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_nil:
+    forall {A} (m: Map.t A) (l: list string),
+      MapF.restrict m l = m -> MapF.complement m l = Map.empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_complement_itself:
+    forall {A} (m: Map.t A) (l: list string),
+      MapF.restrict m l = Map.empty A -> MapF.complement m l = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_restrict_nil:
+    forall {A} (m: Map.t A) (l: list string),
+      MapF.complement m l = m -> MapF.restrict m l = Map.empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_restrict_itself:
+    forall {A} (m: Map.t A) (l: list string),
+      MapF.complement m l = Map.empty A -> MapF.restrict m l = m.
+  Proof.
+    admit.
+  Qed.
+  
+End Domains.
+
+Require Import Lib.CommonTactics.
+
+Section ListSub.
+  Definition listSub (l1 l2: list string) :=
+    filter (fun s => if in_dec string_dec s l2 then false else true) l1.
+
+  Lemma listSub_In_1:
+    forall s l1 l2, In s (listSub l1 l2) <-> In s l1 /\ ~ In s l2.
+  Proof.
+    intros; split; intros.
+    - unfold listSub in H; apply filter_In in H; dest; split; auto.
+      destruct (in_dec _ s l2); intuition.
+    - dest; unfold listSub; apply filter_In; split; auto.
+      destruct (in_dec _ s l2); intuition.
+  Qed.
+
+  Lemma listSub_In_2:
+    forall s l1 l2, ~ In s (listSub l1 l2) <-> (~ In s l1 \/ In s l2).
+  Proof.
+    intros; split; intros.
+    - destruct (in_dec string_dec s l1).
+      + right; destruct (in_dec string_dec s l2); [assumption|].
+        elim H; apply filter_In; split; [assumption|].
+        destruct (in_dec string_dec s l2); intuition.
+      + left; assumption.
+    - intro Hx; apply listSub_In_1 in Hx; dest; destruct H.
+      + elim H; assumption.
+      + elim H1; assumption.
+  Qed.
+
+End ListSub.
+
+Lemma Equal_val: forall {A : Type} (m1 m2: Map.t A) k, m1 = m2 -> Map.find k m1 = Map.find k m2.
+Proof. intros; subst; reflexivity. Qed.
+
+Require Import Lib.Struct.
+
+Section StringEq.
+  Definition string_eq s1 s2 :=
+    match string_dec s1 s2 with
+      | left _ => true
+      | right _ => false
+    end.
+
+  Lemma string_dec_eq: forall s, string_eq s s = true.
+  Proof.
+    intros; unfold string_eq; destruct (string_dec s s).
+    - reflexivity.
+    - elim n; reflexivity.
+  Qed.
+
+  Lemma string_dec_neq: forall s t, s <> t <-> string_eq s t = false.
+  Proof.
+    intros; unfold string_eq; destruct (string_dec s t); intuition.
+  Qed.
+
+  Lemma string_eq_append:
+    forall p s t, string_eq s t = false -> string_eq (p -n- s) (p -n- t) = false.
+  Proof.
+    unfold string_eq; intros.
+    destruct (string_dec s t); [inversion H|].
+    destruct (string_dec (p -n- s) (p -n- t)); [|reflexivity].
+    elim n; clear -e.
+    induction p.
+    - unfold appendName in e; simpl in e; inversion e; auto.
+    - inversion e; apply IHp; auto.
+  Qed.
+
+End StringEq.
+
+Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
+                     SubList l1 l2 -> SubList (map f l1) (map f l2).
+Proof.
+  induction l1; intros; simpl; unfold SubList in *; intros; [inv H0|].
+  inv H0.
+  - apply in_map; apply H; left; reflexivity.
+  - apply IHl1; auto.
+    intros; specialize (H e0); apply H; right; assumption.
+Qed.
+
 Section Facts.
 
 End Facts.
@@ -633,4 +835,6 @@ Section MakeMap.
       rewrite MapF.find_add_1. 
       admit.
   Qed.
+  
 End MakeMap.
+
