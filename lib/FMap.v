@@ -10,22 +10,22 @@ Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 
 Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
-  (le_irrel : forall {x y} (a b : le x y), a = b)
-  (x : A) (xs : list A) (p q : HdRel le x xs)
+           (le_irrel : forall {x y} (a b : le x y), a = b)
+           (x : A) (xs : list A) (p q : HdRel le x xs)
   : p = q.
 Proof. 
-induction p using HdRel_ind'.
-- refine (
-  match q as q' in HdRel _ _ xs return 
-    (match xs with 
-       | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
-       | _ :: _ => fun _ => True
-       end q'
-    )
-      with
-      | HdRel_nil => eq_refl
-      | HdRel_cons _ _ _ => I
-  end
+  induction p using HdRel_ind'.
+  - refine (
+        match q as q' in HdRel _ _ xs return 
+              (match xs with 
+               | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
+               | _ :: _ => fun _ => True
+               end q'
+              )
+        with
+        | HdRel_nil => eq_refl
+        | HdRel_cons _ _ _ => I
+        end
   ).
 - generalize dependent r.
   assert (forall r : le x (hd b (b :: l)), HdRel_cons le x b l r = q).
@@ -43,59 +43,60 @@ refine (
     | HdRel_cons _ _ _ => fun _ => _
   end
   ).
-  replace r' with l1 by apply le_irrel.
-  reflexivity.
+replace r' with l1 by apply le_irrel.
+reflexivity.
 Qed.
 
 Theorem Sorted_irrel {A : Type} {le : A -> A -> Prop}
-  (le_irrel : forall {x y} (a b : le x y), a = b)
-  (xs : list A) p
+        (le_irrel : forall {x y} (a b : le x y), a = b)
+        (xs : list A) p
   : forall (q : Sorted le xs), p = q.
 Proof.
-induction p using Sorted_ind'; intros.
-- refine (
-  match q as q' in Sorted _ xs return 
-    (match xs with 
-       | nil => fun (q : Sorted le nil) => Sorted_nil le = q
-       | _ :: _ => fun _ => True
-       end q'
-    )
-      with
-      | Sorted_nil => eq_refl
-      | Sorted_cons _ _ _ _ => I
-  end
-  ).
-- generalize dependent h.
-  generalize dependent p.
-  assert (forall p : Sorted le (tl (a :: l)),
-    (forall q' : Sorted le (tl (a :: l)), p = q') -> 
-    forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
-  2:assumption.
-refine (
-  match q as q' in Sorted _ xs return
-    (forall p : Sorted le (tl xs),
-    (forall q' : Sorted le (tl xs), p = q') -> 
-    forall h : HdRel le (hd a xs) (tl xs),
-    (match xs as xs'
-      return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
-             Sorted le xs' -> Prop with
-      | nil => fun _ _ _ => True
-      | a' :: l' => fun p' h' q''
-         => Sorted_cons p' h' = q''
-     end p h q'))
-  with
-    | Sorted_nil => fun _ _ _ => I
-    | Sorted_cons _ _ _ _ => fun _ _ _ => _
-  end
-  ).
-  replace h0 with h. replace p with s. reflexivity. 
-  symmetry. apply _H. apply HdRel_irrel; assumption.
+  induction p using Sorted_ind'; intros.
+  - refine (
+        match q as q' in Sorted _ xs return 
+              (match xs with 
+               | nil => fun (q : Sorted le nil) => Sorted_nil le = q
+               | _ :: _ => fun _ => True
+               end q'
+              )
+        with
+        | Sorted_nil => eq_refl
+        | Sorted_cons _ _ _ _ => I
+        end
+      ).
+  - generalize dependent h.
+    generalize dependent p.
+    assert (forall p : Sorted le (tl (a :: l)),
+               (forall q' : Sorted le (tl (a :: l)), p = q') -> 
+               forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
+    2:assumption.
+    refine (
+        match q as q' in Sorted _ xs return
+              (forall p : Sorted le (tl xs),
+                  (forall q' : Sorted le (tl xs), p = q') -> 
+                  forall h : HdRel le (hd a xs) (tl xs),
+                    (match xs as xs'
+                           return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
+                                  Sorted le xs' -> Prop with
+                     | nil => fun _ _ _ => True
+                     | a' :: l' => fun p' h' q''
+                                  => Sorted_cons p' h' = q''
+                     end p h q'))
+        with
+        | Sorted_nil => fun _ _ _ => I
+        | Sorted_cons _ _ _ _ => fun _ _ _ => _
+        end
+      ).
+    replace h0 with h. replace p with s. reflexivity. 
+    symmetry. apply _H. apply HdRel_irrel; assumption.
 Qed.
 
 Require Import FMapInterface.
 
 Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S
-  with Module E := UOT.
+ with Module E := UOT.
+ 
   Module OT := UOT_to_OT UOT.
   Module Export M := FMapList.Make(OT).
   Include M.
@@ -159,12 +160,13 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S
   Theorem lt_irrel_leibniz {A : Type}
   (lt_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
     : Equal m m' -> m = m'.
-  Proof. intros H. 
-  apply Equal_this in H.
-  induction m. induction m'. simpl in H. induction H.
-  replace sorted1 with sorted0.
-  reflexivity. apply Sorted_irrel.
-  intros. destruct x, y. apply lt_irrel.
+  Proof.
+    intros H. 
+    apply Equal_this in H.
+    induction m. induction m'. simpl in H. induction H.
+    replace sorted1 with sorted0.
+    reflexivity. apply Sorted_irrel.
+    intros. destruct x, y. apply lt_irrel.
   Qed.
 
 End FMapListEq.
@@ -191,9 +193,9 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Theorem empty_canon {A : Type} : forall (m : t A), Empty m -> m = empty A.
   Proof.
-  intros. apply leibniz. unfold Equal. unfold Empty in H.
-  intros k. rewrite F.P.F.empty_o. apply F.P.F.not_find_in_iff.
-  unfold In. firstorder.
+    intros. apply leibniz. unfold Equal. unfold Empty in H.
+    intros k. rewrite F.P.F.empty_o. apply F.P.F.not_find_in_iff.
+    unfold In. firstorder.
   Qed.
 
   Theorem add_canon {A : Type} {x} {e : A} {m m' : t A} :
@@ -204,18 +206,20 @@ Module LeibnizFacts (M : MapLeibniz).
     P (empty A)
     -> (forall m, P m -> forall k v, ~ In k m -> P (add k v m))
     -> forall m, P m.
-  Proof. intros. apply F.P.map_induction.
-  intros. replace m0 with (empty A). assumption. symmetry. apply empty_canon.
-  assumption. intros. replace m' with (add x e m0).
-  apply X0; assumption. symmetry. apply add_canon. assumption.
+  Proof.
+    intros. apply F.P.map_induction.
+    intros. replace m0 with (empty A). assumption. symmetry. apply empty_canon.
+    assumption. intros. replace m' with (add x e m0).
+    apply X0; assumption. symmetry. apply add_canon. assumption.
   Qed.
   
   Lemma add_idempotent : forall {A} k (e : A) m, MapsTo k e m
   -> add k e m = m. 
-  Proof. intros. apply leibniz. unfold Equal. intros.
-  rewrite F.P.F.add_o. destruct (E.eq_dec k y).
-  rewrite <- e0. symmetry. apply F.P.F.find_mapsto_iff. assumption.
-  reflexivity.
+  Proof.
+    intros. apply leibniz. unfold Equal. intros.
+    rewrite F.P.F.add_o. destruct (E.eq_dec k y).
+    rewrite <- e0. symmetry. apply F.P.F.find_mapsto_iff. assumption.
+    reflexivity.
   Qed.
 
   Definition unionL {A} (m m' : t A) := fold (@add A) m m'.
@@ -223,33 +227,36 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition union {A} := @unionL A.
 
   Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
-  Proof. intros. unfold union, unionL. 
-  apply leibniz. apply F.P.fold_identity.
+  Proof. 
+    intros. unfold union, unionL. 
+    apply leibniz. apply F.P.fold_identity.
   Qed.
 
 
   Lemma transpose_neqkey_Equal_add {A : Type} 
     : F.P.transpose_neqkey Equal (add (elt:=A)).
-  Proof. unfold F.P.transpose_neqkey. intros. 
-  unfold Equal. intros y. do 4 rewrite F.P.F.add_o.
-  destruct (E.eq_dec k y); destruct (E.eq_dec k' y);
-  unfold E.eq in *; subst; congruence || reflexivity.
+  Proof. 
+    unfold F.P.transpose_neqkey. intros. 
+    unfold Equal. intros y. do 4 rewrite F.P.F.add_o.
+    destruct (E.eq_dec k y); destruct (E.eq_dec k' y);
+    unfold E.eq in *; subst; congruence || reflexivity.
   Qed.
 
   Lemma union_add {A} {m m' : t A} k v 
     : ~ In k m -> union (add k v m) m' = add k v (union m m').
   Proof. 
-  intros.  unfold union, unionL. apply leibniz.
-   rewrite F.P.fold_add. reflexivity.
-  auto. apply F.P.F.add_m_Proper. 
-  apply transpose_neqkey_Equal_add. assumption.
+    intros.  unfold union, unionL. apply leibniz.
+    rewrite F.P.fold_add. reflexivity.
+    auto. apply F.P.F.add_m_Proper. 
+    apply transpose_neqkey_Equal_add. assumption.
   Qed.
 
   Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
-  Proof. intros. unfold union, unionL. pattern m.
-  apply map_induction.
-  - apply leibniz. apply F.P.fold_identity.
-  - intros. apply F.P.fold_Empty. auto. apply empty_1.
+  Proof. 
+    intros. unfold union, unionL. pattern m.
+    apply map_induction.
+    - apply leibniz. apply F.P.fold_identity.
+    - intros. apply F.P.fold_Empty. auto. apply empty_1.
   Qed.
 
   Definition Sub {A : Type} (m m' : t A) :=
@@ -257,18 +264,19 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma union_smothered {A : Type} : forall (m m' : t A),
      Sub m m' -> union m m' = m'.
-  Proof. intros m. unfold Sub. pattern m. apply map_induction; intros.
-  - apply union_empty_L.
-  -  unfold union, unionL in *. apply leibniz. unfold Equal.
-    intros y. rewrite F.P.fold_add. rewrite H. 
-    rewrite F.P.F.add_o. destruct (E.eq_dec k y); unfold E.eq in *.
-    symmetry. apply F.P.F.find_mapsto_iff. apply H1.
-    apply add_1. assumption. reflexivity. 
-    intros. apply H1. destruct (E.eq_dec k k0); unfold E.eq in *.
-    subst. apply False_rect. apply H0. exists v0. assumption.
-    apply add_2; assumption.
-    auto. apply F.P.F.add_m_Proper. apply transpose_neqkey_Equal_add.
-    assumption.
+  Proof. 
+    intros m. unfold Sub. pattern m. apply map_induction; intros.
+    - apply union_empty_L.
+    -  unfold union, unionL in *. apply leibniz. unfold Equal.
+       intros y. rewrite F.P.fold_add. rewrite H. 
+       rewrite F.P.F.add_o. destruct (E.eq_dec k y); unfold E.eq in *.
+       symmetry. apply F.P.F.find_mapsto_iff. apply H1.
+       apply add_1. assumption. reflexivity. 
+       intros. apply H1. destruct (E.eq_dec k k0); unfold E.eq in *.
+       subst. apply False_rect. apply H0. exists v0. assumption.
+       apply add_2; assumption.
+       auto. apply F.P.F.add_m_Proper. apply transpose_neqkey_Equal_add.
+       assumption.
   Qed.
 
   Fixpoint complement {A : Type} (m : t A) (xs : list E.t) := match xs with
@@ -296,7 +304,8 @@ Module LeibnizFacts (M : MapLeibniz).
   end.
 
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
-  Proof. intros. apply union_smothered. unfold Sub. auto.
+  Proof. 
+    intros. apply union_smothered. unfold Sub. auto.
   Qed.
 
   Lemma add_empty_neq: forall {A} (m: t A) k v, add k v m <> @empty A.
@@ -341,23 +350,25 @@ Module LeibnizFacts (M : MapLeibniz).
      | Some v => Some v
      | None => find k m'
      end.
-  Proof. intros m m'. pattern m.
-  apply map_induction; simpl; intros.
-  - rewrite union_empty_L. rewrite F.P.F.empty_o. reflexivity. 
-  - rewrite union_add by assumption. 
-     do 2 rewrite F.P.F.add_o. destruct (E.eq_dec k k0); [| apply H].
-     reflexivity.
+  Proof.
+    intros m m'. pattern m.
+    apply map_induction; simpl; intros.
+    - rewrite union_empty_L. rewrite F.P.F.empty_o. reflexivity. 
+    - rewrite union_add by assumption. 
+      do 2 rewrite F.P.F.add_o. destruct (E.eq_dec k k0); [| apply H].
+      reflexivity.
   Qed.
 
   Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
-  Proof. intros m. pattern m.
-  apply map_induction; simpl; intros.
-  - rewrite union_empty_L in H. right. assumption.
-  - rewrite union_add in H1 by assumption.
-    rewrite P.F.add_in_iff in H1. destruct H1.
-    subst. left. rewrite P.F.add_in_iff. left. reflexivity.
-    specialize (H m' k0 H1). destruct H; [left | right].
-    rewrite P.F.add_in_iff. right. assumption. assumption.
+  Proof. 
+    intros m. pattern m.
+    apply map_induction; simpl; intros.
+    - rewrite union_empty_L in H. right. assumption.
+    - rewrite union_add in H1 by assumption.
+      rewrite P.F.add_in_iff in H1. destruct H1.
+      subst. left. rewrite P.F.add_in_iff. left. reflexivity.
+      specialize (H m' k0 H1). destruct H; [left | right].
+      rewrite P.F.add_in_iff. right. assumption. assumption.
   Qed.
     
 
@@ -395,28 +406,31 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma Disj_add {A} : forall {m m' : t A} k v
     , Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
-  Proof. intros. unfold Disj in *.
-  intros. destruct (H k0).
-  - destruct (E.eq_dec k k0); unfold E.eq in *.
-    + subst. right. assumption. 
-    + left. rewrite F.P.F.add_in_iff. intuition.
-  - right.  assumption.
+  Proof. 
+    intros. unfold Disj in *.
+    intros. destruct (H k0).
+    - destruct (E.eq_dec k k0); unfold E.eq in *.
+      + subst. right. assumption. 
+      + left. rewrite F.P.F.add_in_iff. intuition.
+    - right.  assumption.
   Qed.
 
   Lemma Disj_add1 {A} : forall {m m' : t A} k v
     , Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
-  Proof. intros. unfold Disj in *.
-  split.
-  - intros. destruct (H k0).
-    rewrite F.P.F.add_in_iff in H0. intuition.
-    right.  assumption.
-  - specialize (H k). destruct H.
-    rewrite F.P.F.add_in_iff in H. intuition. assumption.
+  Proof. 
+    intros. unfold Disj in *.
+    split.
+    - intros. destruct (H k0).
+      rewrite F.P.F.add_in_iff in H0. intuition.
+      right.  assumption.
+    - specialize (H k). destruct H.
+      rewrite F.P.F.add_in_iff in H. intuition. assumption.
   Qed.
 
   Lemma Disj_comm {A} : forall {m m' : t A}, Disj m m' -> Disj m' m.
-  Proof. intros. unfold Disj in *. intros k.
-  specialize (H k). intuition.
+  Proof. 
+    intros. unfold Disj in *. intros k.
+    specialize (H k). intuition.
   Qed.
 
   Lemma Disj_union_1 {A} : forall {m m1 m2 : t A}
@@ -435,28 +449,28 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma Disj_union_2 {A} : forall {m m1 m2 : t A}
     , Disj m (union m1 m2) -> Disj m m2.
   Proof.
-  intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
-  - rewrite union_empty_L in H. assumption. 
-  - apply H. rewrite union_add in H1 by assumption.
-    apply Disj_comm in H1.
-    apply Disj_add1 in H1. destruct H1. apply Disj_comm. assumption.
+    intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
+    - rewrite union_empty_L in H. assumption. 
+    - apply H. rewrite union_add in H1 by assumption.
+      apply Disj_comm in H1.
+      apply Disj_add1 in H1. destruct H1. apply Disj_comm. assumption.
   Qed.
 
   Lemma Disj_union {A} : forall {m m1 m2 : t A}
     , Disj m m1 -> Disj m m2 -> Disj m (union m1 m2).
   Proof.
-  intros. unfold Disj in *.
-  intros k. specialize (H k). specialize (H0 k).
-  intuition. right. intros contra.
-  apply union_In in contra. intuition.
+    intros. unfold Disj in *.
+    intros k. specialize (H k). specialize (H0 k).
+    intuition. right. intros contra.
+    apply union_In in contra. intuition.
   Qed.
 
   Lemma union_assoc {A} : forall (m1 m2 m3: t A)
     , union m1 (union m2 m3) = union (union m1 m2) m3.
   Proof.
-  intros.  apply leibniz. unfold Equal. intros.
-  repeat rewrite find_union. simpl.
-  destruct (find y m1); destruct (find y m2); reflexivity.
+    intros.  apply leibniz. unfold Equal. intros.
+    repeat rewrite find_union. simpl.
+    destruct (find y m1); destruct (find y m2); reflexivity.
   Qed.
 
 End LeibnizFacts.
@@ -563,29 +577,29 @@ Section Lists. (* About domains *)
 
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 
-  intros. unfold DisjList in *. intros e. specialize (H e). intuition.
+    intros. unfold DisjList in *. intros e. specialize (H e). intuition.
   Qed.
 
   Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
   Proof. 
-  intros. unfold SubList, DisjList in *. intros e. 
-  specialize (H e). specialize (H0 e). intuition.
+    intros. unfold SubList, DisjList in *. intros e. 
+    specialize (H e). specialize (H0 e). intuition.
   Qed.
 
   Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
   Proof. 
-  intros. unfold DisjList in *. intros e.
-  destruct (H e); [left | right].
-  - assumption.
-  - intuition.
+    intros. unfold DisjList in *. intros e.
+    destruct (H e); [left | right].
+    - assumption.
+    - intuition.
   Qed.
 
   Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
   Proof. 
-  intros. unfold DisjList in *. intros e.
-  destruct (H e); [left | right].
-  - assumption.
-  - intuition.
+    intros. unfold DisjList in *. intros e.
+    destruct (H e); [left | right].
+    - assumption.
+    - intuition.
   Qed.
 
 End Lists.
