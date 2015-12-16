@@ -416,7 +416,24 @@ Module LeibnizFacts (M : MapLeibniz).
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
   Qed.
 
-  Lemma Disj_add {A}:
+  Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_empty_2: forall {A} (m: t A), Disj m (empty A).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_find_union:
+    forall {A} (m1 m2: t A) k v,
+      Disj m1 m2 -> find k m2 = Some v -> find k (union m1 m2) = Some v.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_add_1 {A}:
     forall {m m' : t A} k v,
       Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
   Proof. 
@@ -428,7 +445,7 @@ Module LeibnizFacts (M : MapLeibniz).
     - right.  assumption.
   Qed.
 
-  Lemma Disj_add1 {A}:
+  Lemma Disj_add_2 {A}:
     forall {m m' : t A} k v,
       Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
   Proof. 
@@ -455,8 +472,8 @@ Module LeibnizFacts (M : MapLeibniz).
     - unfold Disj. intros. right. rewrite F.P.F.empty_in_iff.
       intuition.
     - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
-      apply Disj_add1 in H1. destruct H1. apply Disj_comm in H1.
-      specialize (H H1). apply Disj_comm. apply Disj_add.
+      apply Disj_add_2 in H1. destruct H1. apply Disj_comm in H1.
+      specialize (H H1). apply Disj_comm. apply Disj_add_1.
       apply Disj_comm. assumption.
       assumption.
   Qed.
@@ -469,7 +486,7 @@ Module LeibnizFacts (M : MapLeibniz).
     - rewrite union_empty_L in H. assumption. 
     - apply H. rewrite union_add in H1 by assumption.
       apply Disj_comm in H1.
-      apply Disj_add1 in H1. destruct H1. apply Disj_comm. assumption.
+      apply Disj_add_2 in H1. destruct H1. apply Disj_comm. assumption.
   Qed.
 
   Lemma Disj_union {A}:
@@ -489,6 +506,12 @@ Module LeibnizFacts (M : MapLeibniz).
     intros.  apply leibniz. unfold Equal. intros.
     repeat rewrite find_union. simpl.
     destruct (find y m1); destruct (find y m2); reflexivity.
+  Qed.
+
+  Lemma union_comm:
+    forall {A} (m1 m2: t A), Disj m1 m2 -> union m1 m2 = union m2 m1.
+  Proof.
+    admit.
   Qed.
 
 End LeibnizFacts.
@@ -723,7 +746,33 @@ Section Domains.
   Proof.
     admit.
   Qed.
+
+  Lemma Disj_restrict:
+    forall {A} (m1 m2: Map.t A) l, MapF.Disj m1 m2 -> MapF.Disj (MapF.restrict m1 l) m2.
+  Proof.
+    admit.
+  Qed.
   
+  Lemma Disj_DisjList_restrict:
+    forall {A} (m: Map.t A) l1 l2,
+      DisjList l1 l2 -> MapF.Disj (MapF.restrict m l1) (MapF.restrict m l2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_complement:
+    forall {A} (m1 m2: Map.t A) l,
+      MapF.Disj m1 m2 -> MapF.Disj m1 (MapF.complement m2 l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_OnDomain: forall {A} (m1 m2: Map.t A) l,
+                         MapF.Disj m1 m2 -> MapF.OnDomain m1 l -> MapF.NotOnDomain m2 l.
+  Proof.
+    admit.
+  Qed.
+
 End Domains.
 
 Require Import Lib.CommonTactics.

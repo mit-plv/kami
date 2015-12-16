@@ -582,6 +582,15 @@ Proof.
   apply in_map; auto.
 Qed.
 
+Lemma SemMod_rule_singleton:
+  forall dms rules olds news r rb cmMap (Hrb: Some rb = getAttribute r rules)
+         (Hwf: NoDup (namesOf rules))
+         (Hsem: SemMod rules olds (Some r) news dms (M.empty _) cmMap),
+    SemAction olds (attrType rb type) news cmMap WO.
+Proof.
+  admit.
+Qed.
+
 Lemma SemMod_meth_singleton:
   forall dms rules olds news dm a (Ha: Some a = getAttribute dm dms)
          argV retV cmMap

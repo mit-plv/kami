@@ -57,7 +57,7 @@ Proof.
   auto.
 Qed.
 
-Hint Immediate MF.Disj_union_1 MF.Disj_union_2 MF.Disj_add.
+Hint Immediate MF.Disj_union_1 MF.Disj_union_2 MF.Disj_add_1.
 
 Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rsNotWritable rs' cs' rv,
   SemAction rs a rs' cs' rv
