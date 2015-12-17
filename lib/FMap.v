@@ -5,11 +5,26 @@ Require Import Structures.OrderedTypeEx.
   
 Require Import Eqdep_dec.
 
+Require Import Lib.CommonTactics.
+
 Section Lists. (* For dealing with domains *)
   Context {A: Type}.
   
   Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+
+  Lemma SubList_refl: forall l, SubList l l.
+  Proof. unfold SubList; intros; auto. Qed.
+
+  Lemma SubList_app_1: forall l1 l2 l3, SubList l1 l2 -> SubList l1 (l2 ++ l3).
+  Proof.
+    unfold SubList; intros; apply in_or_app; left; auto.
+  Qed.
+
+  Lemma SubList_app_2: forall l1 l2 l3, SubList l1 l3 -> SubList l1 (l2 ++ l3).
+  Proof.
+    unfold SubList; intros; apply in_or_app; right; auto.
+  Qed.
 
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 
@@ -39,6 +54,16 @@ Section Lists. (* For dealing with domains *)
   Qed.
 
 End Lists.
+
+Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
+                     SubList l1 l2 -> SubList (map f l1) (map f l2).
+Proof.
+  induction l1; intros; simpl; unfold SubList in *; intros; [inv H0|].
+  inv H0.
+  - apply in_map; apply H; left; reflexivity.
+  - apply IHl1; auto.
+    intros; specialize (H e0); apply H; right; assumption.
+Qed.
 
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 
@@ -261,6 +286,14 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Definition union {A} := @unionL A.
 
+  Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
+  Proof. 
+    intros. unfold union, unionL. pattern m.
+    apply map_induction.
+    - apply leibniz. apply F.P.fold_identity.
+    - intros. apply F.P.fold_Empty. auto. apply empty_1.
+  Qed.
+
   Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
   Proof. 
     intros. unfold union, unionL. 
@@ -276,21 +309,11 @@ Module LeibnizFacts (M : MapLeibniz).
     unfold E.eq in *; subst; congruence || reflexivity.
   Qed.
 
-  Lemma union_add {A} {m m' : t A} k v 
-    : ~ In k m -> union (add k v m) m' = add k v (union m m').
-  Proof. 
-    intros.  unfold union, unionL. apply leibniz.
-    rewrite F.P.fold_add. reflexivity.
-    auto. apply F.P.F.add_m_Proper. 
-    apply transpose_neqkey_Equal_add. assumption.
-  Qed.
-
-  Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
-  Proof. 
-    intros. unfold union, unionL. pattern m.
-    apply map_induction.
-    - apply leibniz. apply F.P.fold_identity.
-    - intros. apply F.P.fold_Empty. auto. apply empty_1.
+  Lemma union_add {A}:
+    forall {m m' : t A} k v,
+      union (add k v m) m' = add k v (union m m').
+  Proof.
+    admit.
   Qed.
 
   Definition Sub {A : Type} (m m' : t A) :=
@@ -606,6 +629,13 @@ Module LeibnizFacts (M : MapLeibniz).
     admit.
   Qed.
 
+  Lemma restrict_InDomain_DisjList:
+    forall {A} (m: t A) (d1 d2: list E.t),
+      InDomain m d1 -> DisjList d1 d2 -> restrict m d2 = empty A.
+  Proof.
+    admit.
+  Qed.
+
   Lemma restrict_comm:
     forall {A} (m: t A) (l1 l2: list E.t),
       restrict (restrict m l1) l2 = restrict (restrict m l2) l1.
@@ -675,6 +705,13 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma complement_comm:
     forall {A} (m: t A) (l1 l2: list E.t),
       complement (complement m l1) l2 = complement (complement m l2) l1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma complement_SubList:
+    forall {A} (m: t A) (l1 l2: list E.t),
+      SubList l1 l2 -> complement (complement m l1) l2 = complement m l2.
   Proof.
     admit.
   Qed.
@@ -771,8 +808,6 @@ End String_as_OT'.
 Module Map := FMapListLeib String_as_OT'. 
 Module MapF := LeibnizFacts Map.
 
-Require Import Lib.CommonTactics.
-
 Section ListSub.
   Definition listSub (l1 l2: list string) :=
     filter (fun s => if in_dec string_dec s l2 then false else true) l1.
@@ -840,16 +875,6 @@ Section StringEq.
   Qed.
 
 End StringEq.
-
-Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
-                     SubList l1 l2 -> SubList (map f l1) (map f l2).
-Proof.
-  induction l1; intros; simpl; unfold SubList in *; intros; [inv H0|].
-  inv H0.
-  - apply in_map; apply H; left; reflexivity.
-  - apply IHl1; auto.
-    intros; specialize (H e0); apply H; right; assumption.
-Qed.
 
 Section Facts.
 

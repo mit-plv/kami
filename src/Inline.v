@@ -323,7 +323,7 @@ Lemma getCalls_cmMap:
     MF.InDomain dmMap (namesOf (getCalls a dmsAll)) ->
     MF.InDomain (MF.restrict cmMap (namesOf dmsAll)) (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
 Proof.
-  admit. (* Semantics stuff *)
+  admit. (* Semantics proof *)
 Qed.
 
 Lemma appendAction_SemAction:
@@ -336,12 +336,11 @@ Proof.
   induction a1; intros.
 
   - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1); econstructor; eauto.
-    admit. (* map stuff *)
+    apply MF.union_add.
   - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1); econstructor; eauto.
   - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H2 H1); econstructor; eauto.
   - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0); econstructor; eauto.
-    admit. (* map stuff *)
-    
+    apply MF.union_add.
   - invertAction H0.
     simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
     + eapply SemIfElseTrue.
@@ -391,7 +390,7 @@ Lemma getCalls_SemAction:
     SemAction olds ast news calls retV ->
     MF.InDomain calls (namesOf cdms).
 Proof.
-  admit. (* Semantics stuff *)
+  admit. (* Semantics proof *)
 Qed.
 
 Inductive WfmAction {ty}: list string -> forall {retT}, ActionT ty retT -> Prop :=
@@ -652,7 +651,7 @@ Lemma SemMod_dmMap_sig:
          (Hdmn: M.find dmn dmMap <> None),
   exists dv, M.find dmn dmMap = Some {| objType := dsig; objVal := dv |}.
 Proof.
-  admit. (* Semantics stuff *)
+  admit. (* Semantics proof *)
 Qed.
 
 (* TODO: semantics stuff; move to Semantics.v *)
@@ -663,7 +662,7 @@ Lemma SemMod_getCalls:
          (Hdm: MF.InDomain dmMap (namesOf cdms)),
     MF.InDomain cmMap (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
 Proof.
-  admit. (* Semantics stuff *)
+  admit. (* Semantics proof *)
 Qed.
 
 Section Preliminaries.
@@ -709,40 +708,47 @@ Section Preliminaries.
         match goal with
           | [H: SemMod _ _ _ _ _ (M.add ?ak ?av ?dM) _ |- _] =>
             assert (M.add ak av dM = MF.union (M.add ak av (M.empty _)) dM)
-              by admit (* map stuff *)
+              by (rewrite MF.union_add, MF.union_empty_L; reflexivity)
         end.
+        
         rewrite H1 in H6; clear H1.
         replace (MF.restrict calls (namesOf (a :: getCalls (cont2 tt) dmsAll))) with
         (MF.restrict calls (namesOf (getCalls (cont2 tt) dmsAll))) in H6.
-        2: (pose proof (WfmAction_MCall HSemAction H10); admit). (* map stuff: use H1 *)
+        Focus 2. (* map proof begins *)
+        pose proof (WfmAction_MCall HSemAction H10).
+        apply MF.complement_restrict_nil in H1.
+        replace (a :: getCalls (cont2 tt) dmsAll)
+        with (app [a] (getCalls (cont2 tt) dmsAll)) by reflexivity.
+        unfold namesOf; rewrite map_app; rewrite MF.restrict_app.
+        simpl in H1; simpl; rewrite H1.
+        rewrite MF.union_empty_L; reflexivity.
+        (* map proof ends *)
 
-        assert (MF.NotOnDomain cmMap (namesOf (a :: getCalls (cont2 tt) dmsAll)))
-          by admit. (* map stuff *)
         match goal with
           | [ |- SemAction _ _ _ ?cM _ ] =>
             replace cM with
             (MF.union cmMap (MF.complement calls (namesOf (getCalls (cont2 tt) dmsAll))))
-              by admit (* map stuff; use HcmA, H1 *)
         end.
+        Focus 2. (* map proof begins *)
+        f_equal; rewrite MF.complement_add_1 by intuition.
+        admit.
+        (* map proof ends *)
+        
         apply MF.Disj_comm, MF.Disj_add_2 in HcmA; destruct HcmA as [HcmA _].
         
         match goal with
           | [H: SemMod _ _ _ _ _ (MF.union ?m1 ?m2) _ |- _] =>
             assert (MF.Disj m1 m2) by admit (* map stuff *)
         end.
-        pose proof (SemMod_div H6 H2); dest; subst; clear H6 H2.
-        pose proof (SemMod_meth_singleton HeqdmAttr H4 H9); clear H9.
+        
+        pose proof (SemMod_div H6 H1); dest; subst; clear H6 H1.
+        pose proof (SemMod_meth_singleton HeqdmAttr H4 H8); clear H8.
 
         (* reordering arguments to apply appendAction_SemAction *)
         rewrite <-MF.union_assoc with (m1:= x).
         rewrite <-MF.union_assoc with (m1:= x1).
 
         apply appendAction_SemAction with (retV1:= mret); auto.
-        (* assert (NotOnDomain x2 (namesOf (getCalls (cont2 tt) dmsAll))) *)
-        (*   by admit. (* map stuff using H1 *) *)
-        (* apply NotOnDomain_complement in H5. *)
-        (* rewrite <-H5; clear H5. *)
-        (* rewrite <-complement_MF.union. *)
 
         eapply H0; eauto.
         * apply MF.Disj_comm, MF.Disj_union_2, MF.Disj_comm in HnewsA; assumption.
@@ -762,8 +768,9 @@ Section Preliminaries.
           clear -H2; inv H2; reflexivity.
 
         * econstructor; eauto.
-          { instantiate (1:= MF.union cmMap (MF.complement calls
-                                                        (namesOf (getCalls (cont2 tt) dmsAll)))).
+          { instantiate (1:= MF.union cmMap (MF.complement
+                                               calls
+                                               (namesOf (getCalls (cont2 tt) dmsAll)))).
             instantiate (1:= mret).
             admit. (* map stuff *)
           }
@@ -795,7 +802,10 @@ Section Preliminaries.
       econstructor; eauto.
 
       + instantiate (1:= MF.union news newRegs).
-        admit. (* map stuff *)
+        rewrite MF.union_comm by assumption.
+        rewrite MF.union_add; f_equal.
+        apply MF.union_comm.
+        apply MF.Disj_comm, MF.Disj_add_2 in HnewsA; intuition.
       + eapply IHHequiv; eauto.
         apply MF.Disj_comm, MF.Disj_add_2 in HnewsA; destruct HnewsA.
         apply MF.Disj_comm; auto.
@@ -827,7 +837,10 @@ Section Preliminaries.
           { eapply WfmAction_append_1; eauto. }
           { assumption. }
           { pose proof (getCalls_SemAction Hequiv1 dmsAll eq_refl HAction).
-            admit. (* map stuff *)
+            apply MF.restrict_InDomain_itself in H3.
+            rewrite <-H3 at 1; rewrite MF.restrict_comm, MF.restrict_SubList; [reflexivity|].
+            unfold namesOf; rewrite map_app.
+            apply SubList_app_1, SubList_refl.
           }
         * eapply H1; [| | |reflexivity|exact HSemAction| |reflexivity|].
           { apply MF.Disj_union_2, MF.Disj_comm, MF.Disj_union_2, MF.Disj_comm in HnewsA;
@@ -841,12 +854,33 @@ Section Preliminaries.
           { instantiate (1:= tt).
             p_equal H8.
             pose proof (getCalls_SemAction (H0 r1 tt) dmsAll eq_refl HSemAction).
-            admit. (* map stuff using H3 *)
+            apply MF.restrict_InDomain_itself in H3.
+            rewrite <-H3 at 1; rewrite MF.restrict_comm, MF.restrict_SubList; [reflexivity|].
+            unfold namesOf; do 2 rewrite map_app.
+            do 2 apply SubList_app_2; apply SubList_refl.
           }
-        * admit. (* map stuff *)
+        * do 2 rewrite <-MF.union_assoc with (m1:= x); f_equal.
+          do 2 rewrite MF.union_assoc; f_equal.
+          apply MF.union_comm.
+          apply MF.Disj_union_1, MF.Disj_comm, MF.Disj_union_2, MF.Disj_comm in HnewsA.
+          assumption.
         * pose proof (getCalls_SemAction Hequiv1 dmsAll eq_refl HAction).
           pose proof (getCalls_SemAction (H0 r1 tt) dmsAll eq_refl HSemAction).
-          admit. (* map stuff using H3 and H6 *)
+
+          rewrite MF.complement_union.
+          apply MF.restrict_InDomain_itself in H3; apply MF.restrict_complement_nil in H3.
+          apply MF.restrict_InDomain_itself in H6; apply MF.restrict_complement_nil in H6.
+
+          unfold DefMethT in *.
+          unfold namesOf; rewrite map_app.
+          rewrite MF.complement_app; rewrite MF.complement_comm.
+          rewrite MF.complement_app with (m:= calls2); rewrite map_app.
+          rewrite MF.complement_app with (m:= calls2).
+          unfold namesOf in H3; rewrite H3.
+          unfold namesOf in H6; rewrite H6.
+          repeat rewrite MF.complement_empty.
+          repeat (try rewrite MF.union_empty_L; try rewrite MF.union_empty_R).
+          reflexivity.
 
       + rewrite MF.restrict_union in H7.
         match goal with
@@ -872,7 +906,10 @@ Section Preliminaries.
           { eapply WfmAction_append_1; eauto. }
           { assumption. }
           { pose proof (getCalls_SemAction Hequiv2 dmsAll eq_refl HAction).
-            admit. (* map stuff *)
+            apply MF.restrict_InDomain_itself in H3.
+            rewrite <-H3 at 1; rewrite MF.restrict_comm, MF.restrict_SubList; [reflexivity|].
+            unfold namesOf; do 2 rewrite map_app.
+            apply SubList_app_2, SubList_app_1; apply SubList_refl.
           }
         * eapply H1; [| | |reflexivity|exact HSemAction| |reflexivity|].
           { apply MF.Disj_union_2, MF.Disj_comm, MF.Disj_union_2, MF.Disj_comm in HnewsA;
@@ -886,12 +923,34 @@ Section Preliminaries.
           { instantiate (1:= tt).
             p_equal H8.
             pose proof (getCalls_SemAction (H0 r1 tt) dmsAll eq_refl HSemAction).
-            admit. (* map stuff using H3 *)
+            apply MF.restrict_InDomain_itself in H3.
+            rewrite <-H3 at 1; rewrite MF.restrict_comm, MF.restrict_SubList; [reflexivity|].
+            unfold namesOf; do 2 rewrite map_app.
+            do 2 apply SubList_app_2; apply SubList_refl.
           }
-        * admit. (* map stuff *)
+        * do 2 rewrite <-MF.union_assoc with (m1:= x); f_equal.
+          do 2 rewrite MF.union_assoc; f_equal.
+          apply MF.union_comm.
+          apply MF.Disj_union_1, MF.Disj_comm, MF.Disj_union_2, MF.Disj_comm in HnewsA.
+          assumption.
         * pose proof (getCalls_SemAction Hequiv2 dmsAll eq_refl HAction).
           pose proof (getCalls_SemAction (H0 r1 tt) dmsAll eq_refl HSemAction).
-          admit. (* map stuff using H3 and H6 *)
+
+          rewrite MF.complement_union.
+          apply MF.restrict_InDomain_itself in H3; apply MF.restrict_complement_nil in H3.
+          apply MF.restrict_InDomain_itself in H6; apply MF.restrict_complement_nil in H6.
+
+          unfold DefMethT in *.
+          unfold namesOf; rewrite map_app.
+          rewrite MF.complement_app with (m:= calls1); rewrite map_app.
+          rewrite MF.complement_app with (m:= calls1).
+          rewrite MF.complement_comm with (m:= calls1).
+          do 2 rewrite MF.complement_app with (m:= calls2).
+          unfold namesOf in H3; rewrite H3.
+          unfold namesOf in H6; rewrite H6.
+          repeat rewrite MF.complement_empty.
+          repeat (try rewrite MF.union_empty_L; try rewrite MF.union_empty_R).
+          reflexivity.
 
     - inv H0; destruct_existT.
       inv H2; destruct_existT.
@@ -990,9 +1049,8 @@ Section Preliminaries.
       assert (cmMap = MF.complement cmMap (namesOf (getCalls (ar typeUT) dmsAll))).
       { inv H0; destruct_existT; simpl in H15.
         pose proof (SemMod_getCalls (ar typeUT) eq_refl H6 (@MF.restrict_InDomain _ _ _)).
-        (* pose proof (InDomain_DisjList_restrict H H15). *)
-        (* apply MF.restrict_complement_itself in H0; auto. *)
-        admit. (* map stuff *)
+        pose proof (MF.restrict_InDomain_DisjList _ _ _ H H15).
+        apply MF.restrict_complement_itself in H0; auto.
       }
 
       rewrite MF.restrict_union in H6.
@@ -1048,12 +1106,11 @@ Section Preliminaries.
                                                    dmsAll))).
       { simpl in H16; unfold namesOf in H16.
         rewrite map_app in H16; apply DisjList_app_1 in H16.
-        (* pose proof (InDomain_DisjList_restrict H0 H16). *)
-        (* rewrite MF.restrict_complement_itself by assumption; reflexivity. *)
-        admit.
+        pose proof (MF.restrict_InDomain_DisjList _ _ _ H0 H16).
+        rewrite MF.restrict_complement_itself by assumption; reflexivity.
       }
       rewrite H6 at 1; clear H6.
-      (* apply complement_DisjList; assumption. *) admit. (* map stuff *)
+      rewrite MF.complement_comm; reflexivity.
       (* "replace" subgoal ends *)
       
       eapply inlineToRules_prop; try assumption; try reflexivity.
@@ -1093,10 +1150,8 @@ Section Preliminaries.
             simpl in H17; unfold namesOf in H17;
             rewrite map_app in H17; apply DisjList_app_2 in H17.
             rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
-            admit.
-            (* eapply InDomain_DisjList_restrict; eauto. *)
-            (* apply SubList_map; eapply collectCalls_sub; eauto. *)
-            admit.
+            eapply MF.restrict_InDomain_DisjList; eauto.
+            apply SubList_map; eapply collectCalls_sub; eauto.
           }
           do 2 rewrite MF.restrict_union in H10.
           unfold namesOf in H8.
@@ -1116,10 +1171,8 @@ Section Preliminaries.
           simpl in H17; unfold namesOf in H17;
           rewrite map_app in H17; apply DisjList_app_2 in H17.
           rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
-          (* eapply InDomain_DisjList_restrict; eauto. *)
-          (* apply SubList_map; eapply collectCalls_sub; eauto. *)
-          admit.
-          admit.
+          eapply MF.restrict_InDomain_DisjList; eauto.
+          apply SubList_map; eapply collectCalls_sub; eauto.
         }
         pose proof (MF.restrict_complement_itself _ _ H8); rewrite H11; clear H8 H11.
 
@@ -1130,10 +1183,8 @@ Section Preliminaries.
           simpl in H17; unfold namesOf in H17;
           rewrite map_app in H17; apply DisjList_app_1 in H17.
           rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsAll).
-          (* eapply MF.InDomain_DisjList_MF.restrict; eauto. *)
-          (* apply SubList_map; eapply getCalls_sub; eauto. *)
-          admit.
-          admit.
+          eapply MF.restrict_InDomain_DisjList; eauto.
+          apply SubList_map; eapply getCalls_sub; eauto.
         }
         do 2 rewrite MF.restrict_union in H9.
         unfold DefMethT in H9; unfold namesOf in H8; rewrite H8 in H9.
@@ -1205,8 +1256,22 @@ Section Preliminaries.
 
     assert (dmn = methName /\ dsig = methT /\ dm2 = M.empty _).
     { clear -HNew HDefs; pose proof HDefs.
-      apply @Equal_val with (k:= methName) in HDefs.
-      admit. (* map stuff *)
+      apply @Equal_val with (k:= methName) in H.
+      destruct (string_dec methName dmn); [subst|].
+      { do 2 rewrite MF.find_add_1 in H.
+        inv H; destruct_existT.
+        repeat split; auto.
+        apply M.leibniz; unfold M.Equal; intros k.
+        destruct (string_dec k dmn); [subst|].
+        { rewrite HNew; rewrite MF.F.P.F.empty_o; reflexivity. }
+        { apply @Equal_val with (k:= k) in HDefs.
+          do 2 rewrite MF.find_add_2 in HDefs by assumption.
+          auto.
+        }
+      }
+      { rewrite MF.find_add_1 in H; rewrite MF.find_add_2 in H by assumption.
+        rewrite MF.F.P.F.empty_o in H; inv H.
+      }
     }
     dest; subst.
 
@@ -1288,9 +1353,8 @@ Section Preliminaries.
       assert (cmMap = MF.complement cmMap (namesOf cdms)).
       { subst; pose proof (SemMod_getCalls _ eq_refl H7 (@MF.restrict_InDomain _ _ _)).
         inv H0; destruct_existT.
-        (* pose proof (InDomain_DisjList_restrict H4 H15); simpl in H0. *)
-        (* apply MF.restrict_complement_itself in H0; auto. *)
-        admit.
+        pose proof (MF.restrict_InDomain_DisjList _ _ _ H4 H15); simpl in H0.
+        apply MF.restrict_complement_itself in H0; auto.
       }
       assert (M.empty _ = MF.restrict cmMap (namesOf cdms)).
       { rewrite MF.complement_restrict_nil; auto. }
@@ -1346,12 +1410,11 @@ Section Preliminaries.
                                                    dmsConst))).
       { simpl in H16; unfold namesOf in H16.
         rewrite map_app in H16; apply DisjList_app_1 in H16.
-        (* pose proof (InDomain_DisjList_restrict H0 H16). *)
-        (* rewrite restrict_complement_itself by assumption; reflexivity. *)
-        admit.
+        pose proof (MF.restrict_InDomain_DisjList _ _ _ H0 H16).
+        rewrite MF.restrict_complement_itself by assumption; reflexivity.
       }
       rewrite H5 at 1; clear H5.
-      (* apply complement_DisjList; assumption. *) admit. (* map stuff *)
+      apply MF.complement_comm.
       (* "replace" subgoal ends *)
 
       eapply inlineToDms_prop; try assumption; try reflexivity.
@@ -1393,10 +1456,8 @@ Section Preliminaries.
             simpl in H17; unfold namesOf in H17;
             rewrite map_app in H17; apply DisjList_app_2 in H17.
             rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
-            (* eapply MF.InDomain_DisjList_MF.restrict; eauto. *)
-            (* apply SubList_map; eapply collectCalls_sub; eauto. *)
-            admit.
-            admit.
+            eapply MF.restrict_InDomain_DisjList; eauto.
+            apply SubList_map; eapply collectCalls_sub; eauto.
           }
           do 2 rewrite MF.restrict_union in H10.
           unfold namesOf in H8.
@@ -1415,10 +1476,8 @@ Section Preliminaries.
           simpl in H17; unfold namesOf in H17;
           rewrite map_app in H17; apply DisjList_app_2 in H17.
           rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
-          (* eapply MF.InDomain_DisjList_MF.restrict; eauto. *)
-          (* apply SubList_map; eapply collectCalls_sub; eauto. *)
-          admit.
-          admit.
+          eapply MF.restrict_InDomain_DisjList; eauto.
+          apply SubList_map; eapply collectCalls_sub; eauto.
         }
         pose proof (MF.restrict_complement_itself _ _ H8); rewrite H11; clear H8 H11.
 
@@ -1428,10 +1487,8 @@ Section Preliminaries.
           simpl in H17; unfold namesOf in H17;
           rewrite map_app in H17; apply DisjList_app_1 in H17.
           rewrite <-MF.restrict_SubList with (m:= cmMap2) (l2:= namesOf dmsConst).
-          (* eapply MF.InDomain_DisjList_MF.restrict; eauto. *)
-          (* apply SubList_map; eapply getCalls_sub; eauto. *)
-          admit.
-          admit.
+          eapply MF.restrict_InDomain_DisjList; eauto.
+          apply SubList_map; eapply getCalls_sub; eauto.
         }
         do 2 rewrite MF.restrict_union in H9.
         unfold DefMethT in H9; unfold namesOf in H8; rewrite H8 in H9.
@@ -1546,7 +1603,7 @@ Section Facts.
       MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
       MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\ MF.Disj cmMap1 cmMap2.
   Proof.
-    admit. (* Semantics stuff *)
+    admit. (* Semantics proof *)
   Qed.
 
   Lemma decompose_SemMod_meth:
@@ -1562,7 +1619,7 @@ Section Facts.
       MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
       MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\ MF.Disj cmMap1 cmMap2.
   Proof.
-    admit. (* Semantics stuff *)
+    admit. (* Semantics proof *)
   Qed.
 
   Variables (regs1 regs2: list RegInitT)
@@ -1599,7 +1656,12 @@ Section Facts.
     - subst; rewrite MF.restrict_nil, MF.complement_nil.
 
       assert (dmMap = M.empty _); subst.
-      { admit. (* map stuffs: easy *) }
+      { clear -H2. apply M.leibniz.
+        unfold M.Equal; intros k; specialize (H2 k).
+        rewrite MF.F.P.F.empty_o.
+        apply MF.F.P.F.not_find_in_iff; intro Hx.
+        destruct H2; specialize (H Hx); inv H.
+      }
       
       inv H4; [|exfalso; eapply MF.add_empty_neq; eauto].
       apply SemMod_empty.
@@ -1619,7 +1681,7 @@ Section Facts.
       match goal with
         | [ |- SemMod _ _ _ _ _ ?d _ ] =>
           replace d with (MF.union (M.empty _) (MF.restrict dmMapO (namesOf pfdms)))
-            by admit (* map *)
+            by admit
       end.
       match goal with
         | [ |- SemMod _ _ _ _ _ _ ?c ] =>
@@ -1642,7 +1704,10 @@ Section Facts.
 
     - subst; simpl.
 
-      assert (M.find fdmn dmMap <> None) by admit. (* map stuffs: easy with DomainOf condition *)
+      assert (M.find fdmn dmMap <> None).
+      { specialize (H8 fdmn).
+        apply MF.F.P.F.in_find_iff; apply H8; left; reflexivity.
+      }
       pose proof (decompose_SemMod_meth _ _ H9 H H3 H10 countdown eq_refl); clear H10.
       destruct H7 as [cmMapM [cmMapO [newsM [newsO H7]]]]; dest; subst.
 
