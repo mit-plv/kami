@@ -367,14 +367,6 @@ Module LeibnizFacts (M : MapLeibniz).
         end
     end.
 
-  Fixpoint disjUnion {A : Type} (m1 m2: t A) (d : list E.t) := match d with
-  | nil => m2
-  | x :: xs => let m' := disjUnion m1 m2 xs in match M.find x m1 with
-    | Some v => M.add x v m'
-    | None => m'
-    end
-  end.
-
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
     intros. apply union_smothered. unfold Sub. auto.
@@ -891,20 +883,6 @@ Section MakeMap.
       | nil => Map.empty _
       | {| attrName := n; attrType := {| objVal := rv |} |} :: xs =>
         Map.add n {| objVal := f rv |} (makeMap xs)
-    end.
-
-  Lemma disjUnionProp: forall (l1 l2: list (Attribute (Typed f1))),
-                         MapF.disjUnion (makeMap l1) (makeMap l2) (map (@attrName _) l1) =
-                         makeMap (l1 ++ l2).
-  Proof.
-    induction l1; simpl.
-    - simpl; intros. reflexivity.
-    - intros.
-      destruct a.
-      destruct attrType. simpl.
-      rewrite MapF.find_add_1. 
-      admit.
-  Qed.
-  
+    end.  
 End MakeMap.
 

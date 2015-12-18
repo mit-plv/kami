@@ -830,7 +830,10 @@ Section Preliminaries.
             rewrite <-MF.complement_add_2 by assumption.
             apply MF.Disj_complement; auto.
           }
-          { rewrite MF.union_comm with (m2:= cmMap) by admit.
+          { rewrite MF.union_comm with (m2:= cmMap)
+              by (apply MF.Disj_comm, MF.Disj_complement, MF.Disj_comm;
+                  apply MF.Disj_comm, MF.Disj_add_2 in HcmA; intuition auto).
+
             eapply H0; eauto.
             { apply MF.Disj_comm, MF.Disj_add_2 in HcmA; destruct HcmA as [HcmA _].
               apply MF.Disj_comm; auto.
@@ -1654,7 +1657,8 @@ Section Facts.
              (MF.restrict dmMap (namesOf edms)) cmMap1 /\
       SemMod rules or None nr2 dmsAll (MF.complement dmMap (namesOf edms)) cmMap2 /\
       MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
-      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\ MF.Disj cmMap1 cmMap2.
+      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\
+      MF.Disj cmMap1 cmMap2 /\ cmMap = MF.union cmMap1 cmMap2.
   Proof.
     admit. (* Semantics proof *)
   Qed.
@@ -1670,7 +1674,8 @@ Section Facts.
       SemMod rules or None nr1 dmsAll (MF.restrict dmMap (dmn :: (namesOf edms))) cmMap1 /\
       SemMod rules or None nr2 dmsAll (MF.complement dmMap (dmn :: (namesOf edms))) cmMap2 /\
       MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
-      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\ MF.Disj cmMap1 cmMap2.
+      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\
+      MF.Disj cmMap1 cmMap2 /\ cmMap = MF.union cmMap1 cmMap2.
   Proof.
     admit. (* Semantics proof *)
   Qed.
@@ -1734,15 +1739,25 @@ Section Facts.
       match goal with
         | [ |- SemMod _ _ _ _ _ ?d _ ] =>
           replace d with (MF.union (M.empty _) (MF.restrict dmMapO (namesOf pfdms)))
-            by admit
       end.
+      Focus 2. (* map proof begins *)
+      rewrite MF.union_empty_L.
+      pose proof (inlinable_dms_Sublist Hsep).
+      assert (SubList (namesOf pfdms) (namesOf pedms)) by (apply SubList_map; auto); clear H12.
+      apply DisjList_comm in H4.
+      apply DisjList_SubList with (sl1:= (namesOf pfdms)) in H4; [|assumption].
+      subst; apply MF.restrict_complement_DisjList.
+      apply DisjList_comm; auto.
+      (* map proof ends *)
+      
       match goal with
         | [ |- SemMod _ _ _ _ _ _ ?c ] =>
           replace c
           with (MF.union (MF.complement
                             cmMapR
                             (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
-                         (MF.complement cmMapO (namesOf pedms))) by admit (* map *)
+                         (MF.complement cmMapO (namesOf pedms)))
+            by admit (* map stuff *)
       end.
 
       apply SemMod_merge_rule; auto.
@@ -1764,7 +1779,6 @@ Section Facts.
       pose proof (decompose_SemMod_meth _ _ H9 H H3 H10 countdown eq_refl); clear H10.
       destruct H7 as [cmMapM [cmMapO [newsM [newsO H7]]]]; dest; subst.
 
-      simpl in *.
       repeat
         match goal with
           | [H: SemMod _ _ _ _ _ ?d cmMapM |- _] => remember d as dmMapM
@@ -1787,15 +1801,30 @@ Section Facts.
 
       apply SemMod_merge_meths; auto.
 
-      + eapply inlineToDmsRep_prop; eauto.
+      + pose proof (SemMod_dmMap_sig _ _ H6 H H7).
+        assert (M.find fdmn dmMapM <> None).
+        { intro Hx; elim H3; clear H3; subst.
+          erewrite <-MF.restrict_in; [exact Hx|intuition auto].
+        }
+        specialize (H13 H15); clear H15; dest; destruct x.
+
+        eapply inlineToDmsRep_prop; eauto.
         * apply getAttribute_In; auto.
-        * do 2 instantiate (1:= cheat _).
-          admit. (* TODO: map stuffs, use SemMod_dmMap_sig first *)
+        * apply M.leibniz; unfold M.Equal; intros k.
+          destruct (string_dec k fdmn).
+          { subst k.
+            rewrite MF.restrict_in; [|intuition auto]; rewrite H13.
+            rewrite MF.find_add_1; reflexivity.
+          }
+          { rewrite MF.restrict_not_in by (intro Hx; elim n; inv Hx; intuition).
+            rewrite MF.find_add_2 by assumption.
+            reflexivity.
+          }
         * apply SemMod_rules_free with (rules1:= r1 ++ r2).
           p_equal H7.
           admit. (* map stuffs; easy *)
       + apply IHHsep; auto.
-        * admit. (* easy *)
+        * admit. (* map stuffs; easy *)
         * admit. (* TODO: think about it; it is true, but is it a right condition? *)
       + admit.
       + apply MF.Disj_complement, MF.Disj_comm, MF.Disj_complement, MF.Disj_comm; auto.
