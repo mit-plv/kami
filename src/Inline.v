@@ -59,6 +59,29 @@ Section PhoasUT.
       unfold SubList; intros; inv H.
   Qed.
 
+  Lemma getCalls_sub_name: forall {retT} (a: ActionT typeUT retT) cs ccs,
+                             getCalls a cs = ccs -> SubList (namesOf ccs) (namesOf cs).
+  Proof.
+    induction a; intros; simpl; intuition; try (eapply H; eauto; fail).
+    - simpl in H0.
+      remember (getAttribute meth cs); destruct o.
+      + pose proof (getAttribute_Some_body _ _ Heqo); subst.
+        unfold SubList; intros.
+        inv H0; [apply in_map; auto|].
+        eapply H; eauto.
+      + eapply H; eauto.
+    - simpl in H0; subst.
+      unfold SubList; intros.
+      unfold namesOf in H0; rewrite map_app in H0.
+      apply in_app_or in H0; destruct H0.
+      + eapply IHa1; eauto.
+      + rewrite map_app in H0; apply in_app_or in H0; destruct H0.
+        * eapply IHa2; eauto.
+        * eapply H; eauto.
+    - simpl in H; subst.
+      unfold SubList; intros; inv H.
+  Qed.
+
   Section NoCalls.
     (* Necessary condition for inlining correctness *)
     Fixpoint noCalls {retT} (a: ActionT typeUT retT) (cs: list string) :=
@@ -787,29 +810,35 @@ Section Preliminaries.
           specialize (H2 (opt_discr _)); dest.
           clear -H2; inv H2; reflexivity.
 
-        * econstructor; eauto.
-          { instantiate (1:= MF.union cmMap (MF.complement
-                                               calls
-                                               (namesOf (getCalls (cont2 tt) dmsAll)))).
-            instantiate (1:= mret).
-            admit. (* map stuff *)
+        * assert (~ In n (namesOf (getCalls (cont2 tt) dmsAll))).
+          { pose proof (getAttribute_None _ _ Heqmat).
+            intro Hx; elim H1; clear H1.
+            pose proof (@getCalls_sub_name _ (cont2 tt) dmsAll _ eq_refl).
+            apply H1; auto.
           }
-          { eapply H0; eauto.
+
+          econstructor; eauto.
+          { instantiate (1:= MF.union (MF.complement
+                                         calls
+                                         (namesOf (getCalls (cont2 tt) dmsAll)))
+                                      cmMap).
+            instantiate (1:= mret).
+
+            rewrite MF.complement_add_2 by assumption.
+            rewrite <-MF.union_add.
+            apply MF.union_comm.
+            rewrite <-MF.complement_add_2 by assumption.
+            apply MF.Disj_complement; auto.
+          }
+          { rewrite MF.union_comm with (m2:= cmMap) by admit.
+            eapply H0; eauto.
             { apply MF.Disj_comm, MF.Disj_add_2 in HcmA; destruct HcmA as [HcmA _].
               apply MF.Disj_comm; auto.
             }
             { specialize (H10 mret); eapply WfmAction_init; eauto. }
-            { (* Note: map stuffs
-               * 1) complement calls [n] = calls, by WfmAction_MCall with H10
-               * 2) OnDomain calls (getCalls (cont2 tt) dmsAll), by getCalls_SemAction
-               * 3) By 1) and 2), ListDisj [n] (getCalls (cont2 tt) dmsAll)
-               *)
-              p_equal H6.
-
-              pose proof (WfmAction_MCall HSemAction (H10 mret)).
-              pose proof (getCalls_SemAction (H mret tt) dmsAll eq_refl HSemAction).
-              apply MF.complement_restrict_nil in H1.
-              admit.
+            { p_equal H6.
+              rewrite MF.restrict_add_not by assumption.
+              reflexivity.
             }
           }
 
