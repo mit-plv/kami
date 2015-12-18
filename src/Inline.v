@@ -731,15 +731,35 @@ Section Preliminaries.
         end.
         Focus 2. (* map proof begins *)
         f_equal; rewrite MF.complement_add_1 by intuition.
-        admit.
+        pose proof (getCalls_SemAction (H mret tt) dmsAll eq_refl HSemAction).
+        apply MF.restrict_InDomain_itself in H1; apply MF.restrict_complement_nil in H1.
+        rewrite H1.
+        rewrite <-MF.complement_SubList with (l1:= namesOf (getCalls (cont2 tt) dmsAll))
+          by (unfold SubList; intros; right; assumption).
+        rewrite H1; rewrite MF.complement_empty; reflexivity.
         (* map proof ends *)
         
         apply MF.Disj_comm, MF.Disj_add_2 in HcmA; destruct HcmA as [HcmA _].
-        
         match goal with
           | [H: SemMod _ _ _ _ _ (MF.union ?m1 ?m2) _ |- _] =>
-            assert (MF.Disj m1 m2) by admit (* map stuff *)
+            assert (MF.Disj m1 m2)
         end.
+        { pose proof (WfmAction_MCall HSemAction H10).
+          apply MF.Disj_comm, MF.Disj_restrict.
+          clear -H1; apply MF.complement_restrict_nil in H1.
+
+          (* manual map proof *)
+          unfold MF.restrict, MF.Disj in *; intros.
+          destruct (string_dec k a); [subst|].
+          { left; apply MF.F.P.F.not_find_in_iff.
+            destruct (Map.find a calls); intuition auto.
+            inv H1.
+          }
+          { right; intro Hx; elim n; clear n.
+            apply MF.F.P.F.add_in_iff in Hx; destruct Hx; [auto|].
+            apply MF.F.P.F.empty_in_iff in H; elim H.
+          }
+        }
         
         pose proof (SemMod_div H6 H1); dest; subst; clear H6 H1.
         pose proof (SemMod_meth_singleton HeqdmAttr H4 H8); clear H8.
@@ -785,6 +805,10 @@ Section Preliminaries.
                * 3) By 1) and 2), ListDisj [n] (getCalls (cont2 tt) dmsAll)
                *)
               p_equal H6.
+
+              pose proof (WfmAction_MCall HSemAction (H10 mret)).
+              pose proof (getCalls_SemAction (H mret tt) dmsAll eq_refl HSemAction).
+              apply MF.complement_restrict_nil in H1.
               admit.
             }
           }
@@ -1750,3 +1774,4 @@ Section Facts.
 
 End Facts.
 
+ 
