@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FnMap.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
 
 Set Implicit Arguments.
@@ -32,7 +32,7 @@ Section Tests.
 
   Lemma mab_prop:
     exists nr,
-      LtsStep mab (Some "ra"%string) (initRegs (getRegInits mab)) nr empty empty.
+      LtsStep mab (Some "ra"%string) (initRegs (getRegInits mab)) nr (M.empty _) (M.empty _).
   Proof.
     (* intros; unfold mab. *)
     (* repeat eexists. *)

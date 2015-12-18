@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist.
 Require Import Syntax Semantics.
-Require Import FunctionalExtensionality ProofIrrelevance Program.Equality Eqdep Eqdep_dec FnMap.
+Require Import FunctionalExtensionality ProofIrrelevance Program.Equality Eqdep Eqdep_dec FMap.
 
 Set Implicit Arguments.
 
@@ -22,7 +22,7 @@ Section Tau.
   (* f satisfies `t2t` (for "tau2tau") if it is the identity
      operation whenever a label has no external communication *)
   Definition t2t (f: LabelT -> LabelT) :=
-    forall x, second x = empty -> third x = empty -> f x = x.
+    forall x, second x = M.empty _ -> third x = M.empty _ -> f x = x.
 
   Lemma t2t_id : t2t (id (A:=LabelT)).
   Proof. unfold t2t; auto. Qed.
@@ -69,7 +69,7 @@ End Filter.
 (* a label satisfies `isTau` if the transition
    has no external communication *) 
 Definition isTau (x: LabelT) :=
-  second x = empty /\ third x = empty.
+  second x = M.empty _ /\ third x = M.empty _.
 
 Lemma rmEmpty_idempotent:
   forall (f: LabelTrans)
