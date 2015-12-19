@@ -139,6 +139,23 @@ Definition TraceRefines (mimpl mspec : Modules) (f : LabelT -> LabelT)
 
 Set Implicit Arguments.
 
+Ltac destruct_match := 
+match goal with
+| [ |- context[ match ?e with | _ => _ end ]] => 
+   let x := fresh "eqn" in destruct e eqn:x
+end.
+
+Lemma union_disj_reorder {A : Type} : forall (m m1 m2 : M.t A),
+  MF.Disj m1 m2 -> MF.union m2 (MF.union m1 m)
+                = MF.union m1 (MF.union m2 m).
+Proof.
+intros. apply M.leibniz. unfold M.Equal. intros k.
+repeat rewrite MF.find_union.
+destruct (H k) as [H0 | H0];
+apply MF.F.P.F.not_find_in_iff in H0;
+repeat rewrite H0; destruct_match; reflexivity.
+Qed.
+
 Section Decomposition.
   Variable rulesImp rulesSpec: list string.
   Variable dmsImp dmsSpec: list DefMethT.
@@ -146,6 +163,14 @@ Section Decomposition.
   Variable stateMap: RegsT -> RegsT.
   Variable ruleMap: string -> string.
   Variable p : LabelT -> LabelT.
+
+  Hypothesis pmerge : forall (l1 l2 : LabelT)
+    , mergeLabel (p l1) (p l2) = p (mergeLabel l1 l2).
+
+  Hypothesis phide : forall (l : LabelT), p (hide l) = hide (p l).
+
+  Hypothesis pwellHidden : forall (l : LabelT), 
+   wellHidden (hide l) imp -> wellHidden (p (hide l)) spec.
 
   Variable T : forall {oImp nImp lImp}, UnitStep imp oImp nImp lImp -> (RegsT * LabelT).
 
@@ -167,6 +192,13 @@ Section Decomposition.
 
   Hypothesis stateMapBeginsWell :
     stateMap (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
+
+  Hypothesis stateMapModular : forall (oImp u1 u2 uSpec1 uSpec2 : RegsT),
+    MF.Disj u1 u2 -> MF.Disj uSpec1 uSpec2
+  -> update (stateMap oImp) uSpec1 = stateMap (update oImp u1)
+  -> update (stateMap oImp) uSpec2 = stateMap (update oImp u2)
+  -> update (stateMap oImp) (MF.union uSpec1 uSpec2) 
+  = stateMap (update oImp (MF.union u1 u2)).
 
   Hypothesis consistentSubstepMap : forall {oImp lImp nImp}
    , (exists ruleLabel, Behavior imp oImp ruleLabel)
@@ -259,6 +291,8 @@ Section Decomposition.
       eapply canCombineRight; eassumption.    
   Qed.
   
+Require CommonTactics.
+
   Lemma consistentUnitStepsMap : forall oImp lImp nImp
     , (exists ruleLabel, Behavior imp oImp ruleLabel)
       -> forall (steps : UnitSteps imp oImp nImp lImp)
@@ -278,15 +312,14 @@ Section Decomposition.
     destruct (Ts steps1) as [uSpec1 lSpec1].
     destruct (Ts steps2) as [uSpec2 lSpec2].
     intuition. 
-    unfold update in *.
-    fold (@MF.union (Typed (fullType type))) in *.
-    rewrite <- MF.union_assoc.
-    rewrite H3. admit. unfold equivalent in *. subst.
-    admit.
+    CommonTactics.inv c. CommonTactics.inv H0.
+    apply stateMapModular; assumption.
+    unfold equivalent in *. subst.
+    apply pmerge.
     apply UnitStepsUnion. assumption. assumption.
     unfold equivalent in *.
     assumption.
-  Admitted.
+    Qed.
   
   Lemma consistentStepMap : forall oImp lImp nImp
     , (exists ruleLabel, Behavior imp oImp ruleLabel)
@@ -303,10 +336,10 @@ Section Decomposition.
     intuition.  
     econstructor. eassumption.
     unfold equivalent in *. rewrite e.
-    rewrite H1.
-    admit. unfold equivalent in *. subst.
-    admit.
-  Admitted.
+    rewrite H1. apply phide.
+    unfold equivalent in *. subst.
+    apply (pwellHidden _ w).
+  Qed. 
 
   Theorem decomposition : TraceRefines imp spec p.
   Proof.
