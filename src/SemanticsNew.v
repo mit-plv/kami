@@ -164,8 +164,11 @@ Section Decomposition.
   Variable ruleMap: string -> string.
   Variable p : LabelT -> LabelT.
 
-  Hypothesis pmerge : forall (l1 l2 : LabelT)
-    , mergeLabel (p l1) (p l2) = p (mergeLabel l1 l2).
+  Hypothesis pmerge : forall (ds1 ds2 cs1 cs2 : CallsT) (rm1 rm2 : bool)
+    , let l1 := (rm1, ds1, cs1) in let l2 := (rm2, ds2, cs2) in
+       MF.Disj ds1 ds2 -> MF.Disj cs1 cs2
+     -> bothNotRule rm1 rm2
+     -> mergeLabel (p l1) (p l2) = p (mergeLabel l1 l2).
 
   Hypothesis phide : forall (l : LabelT), p (hide l) = hide (p l).
 
@@ -315,7 +318,8 @@ Require CommonTactics.
     CommonTactics.inv c. CommonTactics.inv H0.
     apply stateMapModular; assumption.
     unfold equivalent in *. subst.
-    apply pmerge.
+    CommonTactics.inv c.
+    apply pmerge; assumption.
     apply UnitStepsUnion. assumption. assumption.
     unfold equivalent in *.
     assumption.
