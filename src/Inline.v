@@ -1691,7 +1691,7 @@ Section Facts.
 
   Definition cm := ConcatMod m1 m2.
   Definition im := @inlineMod m1 m2 countdown.
-  
+
   Lemma inline_correct:
     forall cdn rm edms fdms rules dmsAll
            (Hsep: Inlinable cdn rm edms fdms rules dmsAll)

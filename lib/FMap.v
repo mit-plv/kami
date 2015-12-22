@@ -549,6 +549,17 @@ Module LeibnizFacts (M : MapLeibniz).
     apply union_In in contra. intuition.
   Qed.
 
+  Lemma union_Disj_reorder {A}:
+    forall (m m1 m2 : M.t A),
+      Disj m1 m2 -> union m2 (union m1 m) = union m1 (union m2 m).
+  Proof.
+    intros. apply M.leibniz. unfold M.Equal. intros k.
+    repeat rewrite find_union.
+    destruct (H k) as [H0 | H0];
+      apply F.P.F.not_find_in_iff in H0;
+      repeat rewrite H0; reflexivity.
+  Qed.
+
   Lemma union_assoc {A}:
     forall (m1 m2 m3: t A)
     , union m1 (union m2 m3) = union (union m1 m2) m3.
@@ -885,4 +896,7 @@ Section MakeMap.
         Map.add n {| objVal := f rv |} (makeMap xs)
     end.  
 End MakeMap.
+
+Module M := FMap.Map.
+Module MF := FMap.MapF.
 

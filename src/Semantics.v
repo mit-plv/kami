@@ -287,9 +287,6 @@ End GetCms.
 
 Hint Unfold getCmsMod getDmsMod getDmsBodies.
 
-Module M := FMap.Map.
-Module MF := FMap.MapF.
-
 (* maps register names to the values which they currently hold *)
 Definition RegsT := M.t (Typed (fullType type)).
 

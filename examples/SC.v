@@ -11,26 +11,20 @@ Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
 Section DecExec.
   Variables opIdx addrSize valSize rfIdx: nat.
 
-  Definition StateK := Vector (Bit valSize) rfIdx.
+  Definition StateK := SyntaxKind (Vector (Bit valSize) rfIdx).
+  Definition StateT (ty : FullKind -> Type) := ty StateK.
 
-  Definition DecInstK := STRUCT {
+  Definition DecInstK := SyntaxKind (STRUCT {
     "opcode" :: Bit opIdx;
     "reg" :: Bit rfIdx;
     "addr" :: Bit addrSize;
     "value" :: Bit valSize
-  }.
+  }).
+  Definition DecInstT (ty : FullKind -> Type) := ty DecInstK.
 
-  Definition Pair (A B : Kind) := STRUCT {
-    "fst" :: A;
-    "snd" :: B
-  }.
-
-  Definition stateAndAddrK := Pair StateK (Bit addrSize).
-
-  Definition DecK := MethodSig "absDec"( stateAndAddrK ) : DecInstK. 
-  Definition ExecK := MethodSig "absExec"( Pair stateAndAddrK DecInstK ) : stateAndAddrK.
-  (* ExecK returns the next state and the next program counter address *)
-
+  Definition DecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty.
+  Definition ExecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty ->
+                      ty (SyntaxKind (Bit addrSize)) * StateT ty.
 End DecExec.
 
 (* The module definition for Minst with n ports *)
@@ -76,9 +70,11 @@ Section ProcInst.
   Variables opIdx addrSize valSize rfIdx : nat.
 
   (* External abstract ISA: dec and exec *)
-  Definition execK := ExecK opIdx addrSize valSize rfIdx.
-  Definition  decK := DecK opIdx addrSize valSize rfIdx.
-  Definition stateAddrK := stateAndAddrK addrSize valSize rfIdx.
+  Variable dec: DecT opIdx addrSize valSize rfIdx.
+  Variable exec: ExecT opIdx addrSize valSize rfIdx.
+
+  Definition getNextPc ty ppc st := fst (exec (fullType ty) st ppc (dec (fullType ty) st ppc)).
+  Definition getNextState ty ppc st := snd (exec (fullType ty) st ppc (dec (fullType ty) st ppc)).
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
@@ -89,11 +85,9 @@ Section ProcInst.
   Definition execCm := MethodSig ^"exec"(memAtomK) : memAtomK.
   Definition haltCm := MethodSig ^"HALT"(Bit 0) : Bit 0.
 
-  Definition nextPc {ty} (stppc decoded : Expr ty _) : ActionT ty Void := 
-    (Call executed <- execK( STRUCT { "fst" ::= stppc; "snd" ::= decoded });
-     Write ^"pc" <- (#executed)@."fst";
+  Definition nextPc {ty} ppc st :=
+    (Write ^"pc" <- #(getNextPc ty ppc st);
      Retv)%kami.
-
 
   Definition procInst := MODULE {
     Register ^"pc" : Bit addrSize <- Default
@@ -102,65 +96,58 @@ Section ProcInst.
     with Rule ^"execLd" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
-      Call decoded <- decK( #stppc );
-      Assert (#decoded)@."opcode" == $$opLd;
+      Assert #(dec _ st ppc)@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
-                                     "addr" ::= (#decoded)@."addr";
+                                     "addr" ::= #(dec _ st ppc)@."addr";
                                     "value" ::= $$Default });
-      Write ^"rf" <- #st@[ (#decoded)@."reg" <- #ldRep@."value"];
-      (nextPc #stppc #decoded)
+      Write ^"rf" <- #st@[#(dec _ st ppc)@."reg" <- #ldRep@."value"];
+      (nextPc ppc st)
 
     with Rule ^"execSt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
-      Call decoded <- decK( #stppc );
-      Assert #(decoded)@."opcode" == $$opSt;
+      Assert #(dec _ st ppc)@."opcode" == $$opSt;
       Call execCm(STRUCT {  "type" ::= $$memSt;
-                            "addr" ::= #(decoded)@."addr";
-                           "value" ::= #(decoded)@."value" });
-      (nextPc #stppc #decoded)
+                            "addr" ::= #(dec _ st ppc)@."addr";
+                           "value" ::= #(dec _ st ppc)@."value" });
+      nextPc ppc st
 
     with Rule ^"execHt" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
-      Call decoded <- decK( #stppc );
-      Assert #(decoded)@."opcode" == $$opHt;
+      Assert #(dec _ st ppc)@."opcode" == $$opHt;
       Call haltCm();
       Retv
 
     with Rule ^"execNm" :=
       Read ppc <- ^"pc";
       Read st <- ^"rf";
-      LET stppc <- STRUCT { "fst" ::= #st; "snd" ::= #ppc };
-      Call decoded <- decK( #stppc );
-      Assert !(#(decoded)@."opcode" == $$opLd
-             || #(decoded)@."opcode" == $$opSt
-             || #(decoded)@."opcode" == $$opHt);
-      Call executed <- execK( STRUCT { "fst" ::= #stppc; "snd" ::= #decoded });
-      Write ^"rf" <- #(executed)@."snd";
-      Write ^"pc" <- #(executed)@."fst";
-      Retv
+      Assert !(#(dec _ st ppc)@."opcode" == $$opLd
+             || #(dec _ st ppc)@."opcode" == $$opSt
+             || #(dec _ st ppc)@."opcode" == $$opHt);
+      Write ^"rf" <- #(getNextState _ ppc st);
+      nextPc ppc st
 
     with Rule ^"voidRule" :=
       Retv
   }.
 End ProcInst.
 
-Hint Unfold execCm haltCm nextPc.
+Hint Unfold execCm haltCm getNextPc getNextState nextPc.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
   Variables opIdx addrSize valSize rfIdx : nat.
+
+  Variable dec: DecT opIdx addrSize valSize rfIdx.
+  Variable exec: ExecT opIdx addrSize valSize rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Variable n: nat.
 
   Definition pinsti (i: nat) :=
-    procInst i opIdx addrSize valSize rfIdx opLd opSt opHt.
+    procInst i opIdx addrSize valSize rfIdx dec exec opLd opSt opHt.
 
   Fixpoint pinsts (i: nat): Modules :=
     match i with
@@ -181,8 +168,11 @@ Section Facts.
   Variables opLd opSt opHt: ConstT (Bit opIdx).
   Variable i: nat.
 
+  Variable dec: DecT opIdx addrSize valSize rfIdx.
+  Variable exec: ExecT opIdx addrSize valSize rfIdx.
+
   Lemma regsInDomain_pinsti:
-    RegsInDomain (pinsti opIdx addrSize valSize rfIdx opLd opSt opHt i).
+    RegsInDomain (pinsti opIdx _ _ _ dec exec opLd opSt opHt i).
   Proof.
     regsInDomain_tac.
   Qed.

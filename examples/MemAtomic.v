@@ -6,10 +6,12 @@ Require Import Ex.SC Ex.Fifo.
 Set Implicit Arguments.
 
 Section Middleman.
-  Variable midName inName outName: string.
-  Variable memi: nat.
+  Variable inName outName: string.
+  Variable memi i: nat.
   Variable addrSize: nat.
   Variable dType: Kind.
+
+  Notation "^ s" := (s __ i) (at level 0).
 
   Definition getReq := MethodSig (inName -n- "deq")() : atomK addrSize dType.
   Definition setRep := MethodSig (outName -n- "enq")(atomK addrSize dType) : Void.
@@ -32,8 +34,8 @@ Section Middleman.
      Retv)%kami.
 
   Definition mid := MODULE {
-    Rule (midName -n- "processLd") := processLd
-    with Rule (midName -n- "processSt") := processSt
+    Rule ^"processLd" := processLd
+    with Rule ^"processSt" := processSt
   }.
 
   Section Facts.
@@ -49,18 +51,18 @@ Hint Unfold getReq setRep exec.
 Hint Unfold mid : ModuleDefs.
 
 Section MemAtomic.
-  Variable addrSize : nat.
+  Variable addrSize fifoSize : nat.
   Variable dType : Kind.
 
   Variable n: nat.
 
   Definition minst := memInst n addrSize dType.
 
-  Definition insi (i: nat) := simpleFifo ("Ins"__ i) O (atomK addrSize dType).
-  Definition outsi (i: nat) := simpleFifo ("Outs"__ i) O (atomK addrSize dType).
+  Definition insi (i: nat) := simpleFifo ("Ins"__ i) fifoSize (atomK addrSize dType).
+  Definition outsi (i: nat) := simpleFifo ("Outs"__ i) fifoSize (atomK addrSize dType).
   Definition ioi (i: nat) := ConcatMod (insi i) (outsi i).
 
-  Definition midi (i: nat) := mid ("Mid"__ i) ("Ins"__ i) ("Outs"__ i) i addrSize dType.
+  Definition midi (i: nat) := mid ("Ins"__ i) ("Outs"__ i) i i addrSize dType.
   Definition iomi (i: nat) := ConcatMod (ioi i) (midi i).
 
   Fixpoint ioms (i: nat) :=
