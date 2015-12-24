@@ -124,5 +124,23 @@ Section Equiv.
              ExprEquiv G e1 e2 ->
              ActionEquiv G (Return e1) (Return e2).
 
+  Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
+  | RulesEquivNil: RulesEquiv nil
+  | RulesEquivCons:
+      forall r ar,
+        ActionEquiv nil (ar t1) (ar t2) ->
+        forall rules,
+          RulesEquiv rules -> RulesEquiv ({| attrName:= r; attrType:= ar |} :: rules).
+
+  Inductive MethsEquiv: list DefMethT -> Prop :=
+  | MethsEquivNil: MethsEquiv nil
+  | MethsEquivCons:
+      forall dmn dsig (dm: forall ty, ty (arg dsig) -> ActionT ty (ret dsig)),
+        (forall argV1 argV2, ActionEquiv nil (dm t1 argV1) (dm t2 argV2)) ->
+        forall meths,
+          MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
+                                             attrType := {| objType := dsig; objVal := dm |}
+                                          |} :: meths).
+
 End Equiv.
 

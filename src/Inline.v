@@ -1,6 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FMap.
 Require Import Syntax Wf Equiv.
+Require Import Semantics.
 
 Require Import FunctionalExtensionality.
 
@@ -283,7 +284,8 @@ Section Exts.
     match m1, m2 with
       | Mod regs1 r1 dms1, Mod regs2 r2 dms2 =>
         Mod (regs1 ++ regs2) (inlineToRulesRep (r1 ++ r2) (dms1 ++ dms2) cdn)
-            (inlineToDmsRep (dms1 ++ dms2) (dms1 ++ dms2) cdn)
+            (inlineToDmsRep (complementAttrs (getCmsMod (ConcatMod m1 m2)) (dms1 ++ dms2))
+                            (dms1 ++ dms2) cdn)
       | _, _ => m1 (* undefined *)
     end.
 
@@ -338,8 +340,6 @@ Proof.
     inv Hx; intuition.
 Qed.
 
-Require Import Semantics.
-
 Lemma getCalls_cmMap:
   forall rules olds news dmsAll dmMap cmMap {retK} (a: ActionT typeUT retK),
     SemMod rules olds None news dmsAll dmMap cmMap ->
@@ -385,20 +385,22 @@ Qed.
 
 Lemma inlineDms_ActionEquiv:
   forall {retK} (ast: ActionT type retK) (aut: ActionT typeUT retK) dms,
+    MethsEquiv type typeUT dms ->
     ActionEquiv nil ast aut ->
     ActionEquiv nil (inlineDms ast dms) (inlineDms aut dms).
 Proof.
-  induction 1; intros; subst; simpl; try (constructor; auto; fail).
+  induction 2; intros; subst; simpl; try (constructor; auto; fail).
   simpl; destruct (getBody n dms s).
   - destruct s0; subst; simpl.
     constructor; intros.
-    admit. (* ActionEquiv appendAction: need "MethsEquiv dms" *)
+    admit. (* ActionEquiv appendAction: need "MethsEquiv type typeUT dms" *)
   - constructor; intros.
-    eapply H0; eauto.
+    eapply H1; eauto.
 Qed.
 
 Lemma inlineDmsRep_ActionEquiv:
   forall {retK} (ast: ActionT type retK) (aut: ActionT typeUT retK) dms cdn,
+    MethsEquiv type typeUT dms ->
     ActionEquiv nil ast aut ->
     ActionEquiv nil (inlineDmsRep ast dms cdn) (inlineDmsRep aut dms cdn).
 Proof.
@@ -1079,8 +1081,8 @@ Section Preliminaries.
   Lemma inlineToRulesRep_prop':
     forall olds cdn r (ar: Action (Bit 0))
            (Hequiv: ActionEquiv nil (ar type) (ar typeUT))
-           dmsAll rules
-           news newsA (HnewsA: MF.Disj news newsA)
+           dmsAll (Hmequiv: MethsEquiv type typeUT dmsAll)
+           rules news newsA (HnewsA: MF.Disj news newsA)
            dmMap cmMap cmMapA (HcmA: MF.Disj cmMap cmMapA) cdms,
       WfmActionRep dmsAll nil (ar type) cdn ->
       WfInline None (ar typeUT) dmsAll (S cdn) ->
@@ -1258,7 +1260,8 @@ Section Preliminaries.
   Lemma inlineToRulesRep_prop:
     forall olds cdn r (ar: Action (Bit 0))
            (Hequiv: ActionEquiv nil (ar type) (ar typeUT))
-           dmsAll rules news dmMap cmMap cdms,
+           dmsAll (Hmequiv: MethsEquiv type typeUT dmsAll)
+           rules news dmMap cmMap cdms,
       WfmActionRep dmsAll nil (ar type) cdn ->
       WfInline None (ar typeUT) dmsAll (S cdn) ->
       In {| attrName := r; attrType := ar |} rules -> NoDup (namesOf rules) ->
@@ -1288,8 +1291,8 @@ Section Preliminaries.
   Lemma inlineToDms_prop:
     forall olds dmn dsig (dargV: type (arg dsig)) (dretV: type (ret dsig)) (ad: MethodT dsig)
            (Hequiv: ActionEquiv nil (ad type dargV) (ad typeUT tt))
-           dmsAll dmsConst rules
-           news newsA (HnewsA: MF.Disj news newsA)
+           dmsAll dmsConst (Hmequiv: MethsEquiv type typeUT dmsConst)
+           rules news newsA (HnewsA: MF.Disj news newsA)
            dmMap dmMapA cmMap cmMapA (HcmA: MF.Disj cmMap cmMapA) cdms,
       WfmAction nil (ad type dargV) ->
       Some {| attrName := dmn; attrType := {| objType := dsig; objVal := ad |} |}
@@ -1383,8 +1386,8 @@ Section Preliminaries.
   Lemma inlineToDmsRep_prop':
     forall olds cdn dmn dsig (dargV: type (arg dsig)) (dretV: type (ret dsig)) (ad: MethodT dsig)
            (Hequiv: ActionEquiv nil (ad type dargV) (ad typeUT tt))
-           dmsAll dmsConst rules
-           news newsA (HnewsA: MF.Disj news newsA)
+           dmsAll dmsConst (Hmequiv: MethsEquiv type typeUT dmsConst)
+           rules news newsA (HnewsA: MF.Disj news newsA)
            dmMap dmMapA cmMap cmMapA (HcmA: MF.Disj cmMap cmMapA) cdms,
       WfmActionRep dmsConst nil (ad type dargV) cdn ->
       WfInline (Some dmn) (ad typeUT tt) dmsConst (S cdn) ->
@@ -1562,7 +1565,8 @@ Section Preliminaries.
   Lemma inlineToDmsRep_prop:
     forall olds cdn dmn dsig (dargV: type (arg dsig)) (dretV: type (ret dsig)) (ad: MethodT dsig)
            (Hequiv: ActionEquiv nil (ad type dargV) (ad typeUT tt))
-           dmsAll rules news dmMap dmMapA cmMap cdms,
+           dmsAll (Hmequiv: MethsEquiv type typeUT dmsAll)
+           rules news dmMap dmMapA cmMap cdms,
       WfmActionRep dmsAll nil (ad type dargV) cdn ->
       WfInline (Some dmn) (ad typeUT tt) dmsAll (S cdn) ->
       Some {| attrName := dmn; attrType := {| objType := dsig; objVal := ad |} |}
@@ -1596,90 +1600,89 @@ Section Preliminaries.
 
 End Preliminaries.
 
-Section Facts.
+Section InlineModFacts.
 
-  Inductive Inlinable:
-    nat (* countdown *) -> option (Attribute (Action Void)) ->
-    list DefMethT (* meths executed *) -> list DefMethT (* meths fired *) ->
-    list (Attribute (Action Void)) (* entire rules *) -> list DefMethT (* entire methods *) ->
-    Prop :=
-  | InlinableEmpty: forall cdn rules dmsAll, Inlinable cdn None nil nil rules dmsAll
+  Definition LabelT := (option string * CallsT * CallsT)%type.
+
+  (* Inductive Inlinable (cdn: nat) *)
+  (*           (dmsAll: list DefMethT) (rules: list (Attribute (Action Void))): *)
+  (*   option (Attribute (Action Void)) (* rule fired? *) -> list DefMethT (* meths fired *) -> *)
+  (*   list DefMethT (* meths executed (soundly) *) -> Prop := *)
+  (* | InlinableEmpty: Inlinable cdn dmsAll rules None nil nil *)
+  (* | InlinableRule: *)
+  (*     forall r (ar: Action (Bit 0)) edms, *)
+  (*       ActionEquiv nil (ar type) (ar typeUT) -> *)
+  (*       WfmActionRep dmsAll nil (ar type) cdn -> *)
+  (*       WfInline None (ar typeUT) dmsAll (S cdn) -> *)
+  (*       In {| attrName := r; attrType := ar |} rules -> *)
+  (*       collectCalls (ar typeUT) dmsAll cdn = edms -> *)
+  (*       forall pfdms pedms, *)
+  (*         DisjList (namesOf edms) (namesOf pedms) -> *)
+  (*         Inlinable cdn dmsAll rules None pfdms pedms -> *)
+  (*         Inlinable cdn dmsAll rules (Some {| attrName := r; attrType := ar |}) *)
+  (*                   pfdms (edms ++ pedms) *)
+  (* | InlinableMeth: *)
+  (*     forall d dsig (dm: MethodT dsig) edms, *)
+  (*       (forall argV, ActionEquiv nil (dm type argV) (dm typeUT tt)) -> *)
+  (*       (forall argV, WfmActionRep dmsAll nil (dm type argV) cdn) -> *)
+  (*       WfInline (Some d) (dm typeUT tt) dmsAll (S cdn) -> *)
+  (*       Some {| attrName := d; attrType := {| objType := dsig; objVal := dm |} |} *)
+  (*       = getAttribute d dmsAll -> *)
+  (*       collectCalls (dm typeUT tt) dmsAll cdn = edms -> *)
+  (*       forall pfdms pedms, *)
+  (*         DisjList (d :: (namesOf edms)) (namesOf pedms) -> *)
+  (*         Inlinable cdn dmsAll rules None pfdms pedms -> *)
+  (*         Inlinable cdn dmsAll rules None *)
+  (*                   ({| attrName:= d; attrType := {| objType := dsig; objVal := dm |} |} *)
+  (*                      :: pfdms) *)
+  (*                   (({| attrName:= d; *)
+  (*                        attrType := {| objType := dsig; objVal := dm |} |} *)
+  (*                       :: edms) ++ pedms). *)
+
+  (* Lemma inlinable_dms_Sublist: *)
+  (*   forall cdn dmsAll rules rm edms fdms, *)
+  (*     Inlinable cdn dmsAll rules rm fdms edms -> *)
+  (*     SubList fdms edms. *)
+  (* Proof. *)
+  (*   induction 1; intros; unfold SubList; intros; [inv H| |]. *)
+  (*   - apply in_or_app; right; auto. *)
+  (*   - inv H6; [left; reflexivity|]. *)
+  (*     apply in_or_app; right; auto. *)
+  (* Qed. *)
+
+  (* TODO: SemMod dividable with this definition? *)
+  (* TODO: Global conditions; not by an inductive definition
+   * 1) All rules, methods should be ActionEquiv
+   * 2) All things WfmActionRep, WfInline
+   *)
+  Inductive Inlinable (cdn: nat) (rules: list (Attribute (Action Void)))
+            (dmsAll: list DefMethT)
+  : list string (* fired dms *) -> list string (* executed dms *) -> LabelT -> Prop :=
+  | InlinableEmpty: Inlinable cdn rules dmsAll nil nil (None, M.empty _, M.empty _)
   | InlinableRule:
-      forall rules dmsAll pedms pfdms
-             ruleName (rule: Action (Bit 0)) cdn edms,
-        In {| attrName := ruleName; attrType := rule |} rules ->
-        ActionEquiv nil (rule type) (rule typeUT) ->
-        Inlinable cdn None pedms pfdms rules dmsAll ->
-        WfmActionRep dmsAll nil (rule type) cdn ->
-        WfInline None (rule typeUT) dmsAll (S cdn) ->
-        collectCalls (rule typeUT) dmsAll cdn = edms ->
-        DisjList (namesOf edms) (namesOf pedms) ->
-        Inlinable cdn (Some {| attrName := ruleName; attrType := rule |})
-                  (edms ++ pedms) pfdms rules dmsAll
+      forall r ar,
+        In {| attrName := r; attrType := ar |} rules ->
+        forall pfdms pedms pdm pcm,
+          Inlinable cdn rules dmsAll pfdms pedms (None, pdm, pcm) ->
+          forall dm cm (cdms: list DefMethT),
+            collectCalls (ar typeUT) dmsAll cdn = cdms ->
+            dm = MF.restrict cm (namesOf cdms) ->
+            MF.Disj dm pdm -> MF.Disj cm pcm -> (* TODO: right? *)
+            Inlinable cdn rules dmsAll pfdms ((namesOf cdms) ++ pedms)
+                      (Some r, MF.union dm pdm, MF.union cm pcm)
   | InlinableMeth:
-      forall rules dmsAll fdmn dsig (dm: MethodT dsig) cdn edms
-             pedms pfdms,
-        In {| attrName := fdmn; attrType := {| objType := dsig; objVal := dm |} |} dmsAll ->
-        (forall argV, ActionEquiv nil (dm type argV) (dm typeUT tt)) ->
-        Inlinable cdn None pedms pfdms rules dmsAll ->
-        (forall argV, WfmActionRep dmsAll nil (dm type argV) cdn) ->
-        WfInline (Some fdmn) (dm typeUT tt) dmsAll (S cdn) ->
-        collectCalls (dm typeUT tt) dmsAll cdn = edms ->
-        DisjList (fdmn :: (namesOf edms)) (namesOf pedms) ->
-        Inlinable cdn None (({| attrName:= fdmn;
-                                attrType := {| objType := dsig; objVal := dm |} |}
-                               :: edms) ++ pedms)
-                  ({| attrName:= fdmn; attrType := {| objType := dsig; objVal := dm |} |}
-                     :: pfdms) rules dmsAll.
-
-  Lemma inlinable_dms_Sublist:
-    forall cdn rm edms fdms rules dmsAll,
-      Inlinable cdn rm edms fdms rules dmsAll ->
-      SubList fdms edms.
-  Proof.
-    induction 1; intros; unfold SubList; intros; [inv H| |].
-    - apply in_or_app; right; auto.
-    - inv H6; [left; reflexivity|].
-      apply in_or_app; right; auto.
-  Qed.
-
-  Definition ValidLabel (dmMap cmMap: CallsT) (dmsAll: list DefMethT) :=
-    dmMap = MF.restrict cmMap (namesOf dmsAll).
-  Hint Unfold ValidLabel.
-
-  Lemma decompose_SemMod_rule:
-    forall rules or nr (rule: Attribute (Action Void)) dmsAll dmMap cmMap
-           (Hlbl: ValidLabel dmMap cmMap dmsAll)
-           (Hsem: SemMod rules or (Some (attrName rule)) nr dmsAll dmMap cmMap),
-    forall cdn edms (Hedms: collectCalls (attrType rule typeUT) dmsAll cdn = edms),
-    exists cmMap1 cmMap2 nr1 nr2,
-      SemMod rules or (Some (attrName rule)) nr1 dmsAll
-             (MF.restrict dmMap (namesOf edms)) cmMap1 /\
-      SemMod rules or None nr2 dmsAll (MF.complement dmMap (namesOf edms)) cmMap2 /\
-      MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
-      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\
-      MF.Disj cmMap1 cmMap2 /\ cmMap = MF.union cmMap1 cmMap2.
-  Proof.
-    admit. (* Semantics proof *)
-  Qed.
-
-  Lemma decompose_SemMod_meth:
-    forall rules or nr dmn dm dmsAll dmMap cmMap
-           (Hlbl: ValidLabel dmMap cmMap dmsAll)
-           (Hdm: In {| attrName := dmn; attrType := dm |} dmsAll)
-           (HdmMap: M.find dmn dmMap <> None)
-           (Hsem: SemMod rules or None nr dmsAll dmMap cmMap),
-    forall cdn edms (Hedms: collectCalls (objVal dm typeUT tt) dmsAll cdn = edms),
-    exists cmMap1 cmMap2 nr1 nr2,
-      SemMod rules or None nr1 dmsAll (MF.restrict dmMap (dmn :: (namesOf edms))) cmMap1 /\
-      SemMod rules or None nr2 dmsAll (MF.complement dmMap (dmn :: (namesOf edms))) cmMap2 /\
-      MF.restrict cmMap1 (namesOf edms) = MF.restrict dmMap (namesOf edms) /\
-      MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2 /\
-      MF.Disj cmMap1 cmMap2 /\ cmMap = MF.union cmMap1 cmMap2.
-  Proof.
-    admit. (* Semantics proof *)
-  Qed.
-
+      forall dmn dsig dm,
+        Some {| attrName := dmn; attrType := {| objType := dsig; objVal := dm |} |}
+        = getAttribute dmn dmsAll ->
+      forall pfdms pedms pdm pcm,
+        Inlinable cdn rules dmsAll pfdms pedms (None, pdm, pcm) ->
+        forall fdm dargV dretV dm cm (cdms: list DefMethT),
+          fdm = M.add dmn {| objType := dsig; objVal := (dargV, dretV) |} (M.empty _) ->
+          dm = MF.restrict cm (namesOf cdms) ->
+          MF.Disj fdm pdm -> MF.Disj dm pdm -> MF.Disj cm pcm ->
+          Inlinable cdn rules dmsAll (dmn :: pfdms) ((dmn :: (namesOf cdms)) ++ pedms)
+                    (None, MF.union (MF.union fdm dm) pdm, MF.union cm pcm).
+  
   Variables (regs1 regs2: list RegInitT)
             (r1 r2: list (Attribute (Action Void)))
             (dms1 dms2: list DefMethT).
@@ -1692,144 +1695,26 @@ Section Facts.
   Definition cm := ConcatMod m1 m2.
   Definition im := @inlineMod m1 m2 countdown.
 
-  Lemma inline_correct:
-    forall cdn rm edms fdms rules dmsAll
-           (Hsep: Inlinable cdn rm edms fdms rules dmsAll)
+  Lemma inlineMod_correct:
+    forall cdn rules (Hrequiv: RulesEquiv type typeUT rules)
+           dmsAll (Hmequiv: MethsEquiv type typeUT dmsAll)
+           fdms edms rm dmMap cmMap
+           (Hsep: Inlinable cdn rules dmsAll fdms edms (rm, dmMap, cmMap))
            (Hcdn: cdn = countdown) (Hrules: rules = r1 ++ r2) (HdmsAll: dmsAll = dms1 ++ dms2)
-           or nr dmMap cmMap rmn,
+           or nr,
       NoDup (namesOf (r1 ++ r2)) -> NoDup (namesOf (dms1 ++ dms2)) ->
-      rmn = match rm with
-              | Some rm' => Some (attrName rm')
-              | None => None
-            end ->
 
-      MF.DomainOf dmMap (namesOf edms) -> ValidLabel dmMap cmMap dmsAll ->
-      SemMod (getRules cm) or rmn nr (getDmsBodies cm) dmMap cmMap ->
-      SemMod (getRules im) or rmn nr (getDmsBodies im)
-             (MF.restrict dmMap (namesOf fdms))
-             (MF.complement cmMap (namesOf edms)).
+      (* MF.OnDomain dmMap (namesOf fdms) -> *)
+      (* MF.InDomain dmMap (namesOf edms) -> *)
+      dmMap = MF.restrict cmMap edms ->
+      SemMod (getRules cm) or rm nr (getDmsBodies cm) dmMap cmMap ->
+      SemMod (getRules im) or rm nr (getDmsBodies im)
+             (MF.restrict dmMap fdms)
+             (MF.complement cmMap edms).
   Proof.
-    induction 1; intros.
-
-    - subst; rewrite MF.restrict_nil, MF.complement_nil.
-
-      assert (dmMap = M.empty _); subst.
-      { clear -H2. apply M.leibniz.
-        unfold M.Equal; intros k; specialize (H2 k).
-        rewrite MF.F.P.F.empty_o.
-        apply MF.F.P.F.not_find_in_iff; intro Hx.
-        destruct H2; specialize (H Hx); inv H.
-      }
-      
-      inv H4; [|exfalso; eapply MF.add_empty_neq; eauto].
-      apply SemMod_empty.
-
-    - subst; simpl.
-
-      pose proof (decompose_SemMod_rule _ H9 H10 countdown eq_refl); clear H10.
-      destruct H3 as [cmMapR [cmMapO [newsR [newsO H3]]]]; dest; subst.
-
-      simpl in *.
-      repeat
-        match goal with
-          | [H: SemMod _ _ _ _ _ ?d cmMapR |- _] => remember d as dmMapR
-          | [H: SemMod _ _ _ _ _ ?d cmMapO |- _] => remember d as dmMapO
-        end.
-
-      match goal with
-        | [ |- SemMod _ _ _ _ _ ?d _ ] =>
-          replace d with (MF.union (M.empty _) (MF.restrict dmMapO (namesOf pfdms)))
-      end.
-      Focus 2. (* map proof begins *)
-      rewrite MF.union_empty_L.
-      pose proof (inlinable_dms_Sublist Hsep).
-      assert (SubList (namesOf pfdms) (namesOf pedms)) by (apply SubList_map; auto); clear H12.
-      apply DisjList_comm in H4.
-      apply DisjList_SubList with (sl1:= (namesOf pfdms)) in H4; [|assumption].
-      subst; apply MF.restrict_complement_DisjList.
-      apply DisjList_comm; auto.
-      (* map proof ends *)
-      
-      match goal with
-        | [ |- SemMod _ _ _ _ _ _ ?c ] =>
-          replace c
-          with (MF.union (MF.complement
-                            cmMapR
-                            (namesOf (collectCalls (rule typeUT) (dms1 ++ dms2) countdown)))
-                         (MF.complement cmMapO (namesOf pedms)))
-            by admit (* map stuff *)
-      end.
-
-      apply SemMod_merge_rule; auto.
-
-      + apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
-        eapply inlineToRulesRep_prop; eauto.
-      + apply IHHsep; auto.
-        * admit. (* map stuffs: easy *)
-        * admit. (* TODO: think about it; it is true, but is it a right condition? *)
-      + apply MF.Disj_empty_1.
-      + apply MF.Disj_complement, MF.Disj_comm, MF.Disj_complement, MF.Disj_comm; auto.
-
-    - subst; simpl.
-
-      assert (M.find fdmn dmMap <> None).
-      { specialize (H8 fdmn).
-        apply MF.F.P.F.in_find_iff; apply H8; left; reflexivity.
-      }
-      pose proof (decompose_SemMod_meth _ _ H9 H H3 H10 countdown eq_refl); clear H10.
-      destruct H7 as [cmMapM [cmMapO [newsM [newsO H7]]]]; dest; subst.
-
-      repeat
-        match goal with
-          | [H: SemMod _ _ _ _ _ ?d cmMapM |- _] => remember d as dmMapM
-          | [H: SemMod _ _ _ _ _ ?d cmMapO |- _] => remember d as dmMapO
-        end.
-
-      match goal with
-        | [ |- SemMod _ _ _ _ _ ?d _ ] =>
-          replace d with (MF.union (MF.restrict dmMapM [fdmn])
-                                (MF.restrict dmMapO (namesOf pfdms))) by admit
-      end.
-      match goal with
-        | [ |- SemMod _ _ _ _ _ _ ?c ] =>
-          replace c
-          with (MF.union (MF.complement
-                            cmMapM
-                            (namesOf (collectCalls (dm typeUT tt) (dms1 ++ dms2) countdown)))
-                         (MF.complement cmMapO (namesOf pedms))) by admit
-      end.
-
-      apply SemMod_merge_meths; auto.
-
-      + pose proof (SemMod_dmMap_sig _ _ H6 H H7).
-        assert (M.find fdmn dmMapM <> None).
-        { intro Hx; elim H3; clear H3; subst.
-          erewrite <-MF.restrict_in; [exact Hx|intuition auto].
-        }
-        specialize (H13 H15); clear H15; dest; destruct x.
-
-        eapply inlineToDmsRep_prop; eauto.
-        * apply getAttribute_In; auto.
-        * apply M.leibniz; unfold M.Equal; intros k.
-          destruct (string_dec k fdmn).
-          { subst k.
-            rewrite MF.restrict_in; [|intuition auto]; rewrite H13.
-            rewrite MF.find_add_1; reflexivity.
-          }
-          { rewrite MF.restrict_not_in by (intro Hx; elim n; inv Hx; intuition).
-            rewrite MF.find_add_2 by assumption.
-            reflexivity.
-          }
-        * apply SemMod_rules_free with (rules1:= r1 ++ r2).
-          p_equal H7.
-          admit. (* map stuffs; easy *)
-      + apply IHHsep; auto.
-        * admit. (* map stuffs; easy *)
-        * admit. (* TODO: think about it; it is true, but is it a right condition? *)
-      + admit.
-      + apply MF.Disj_complement, MF.Disj_comm, MF.Disj_complement, MF.Disj_comm; auto.
+    admit.
   Qed.
 
-End Facts.
+End InlineModFacts.
 
  

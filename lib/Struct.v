@@ -158,6 +158,24 @@ Section BoundedIndexFull.
       + inv Hnd; apply IHattrs; auto.
   Qed.
 
+  Fixpoint restrictAttrs (d: list string) (attrs: list Attribute) :=
+    match attrs with
+      | nil => nil
+      | attr :: attrs' =>
+        if in_dec string_dec (attrName attr) d
+        then attr :: (restrictAttrs d attrs')
+        else restrictAttrs d attrs'
+    end.
+
+  Fixpoint complementAttrs (d: list string) (attrs: list Attribute) :=
+    match attrs with
+      | nil => nil
+      | attr :: attrs' =>
+        if in_dec string_dec (attrName attr) d
+        then complementAttrs d attrs'
+        else attr :: (complementAttrs d attrs')
+    end.
+
   Definition BoundedIndexFull attrs := BoundedIndex (map attrName attrs).
 
   Definition GetAttr

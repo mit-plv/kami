@@ -93,7 +93,8 @@ Section ProcDecSC.
         try (repeat rewrite MF.find_add_2 by (intro; vdiscriminate);
              rewrite MF.find_add_1; reflexivity); intuition auto.
           
-      - admit.
+      - intros.
+        admit.
 
     Qed.
 
