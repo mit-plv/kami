@@ -356,6 +356,16 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition subtract {A : Type} (m m' : t A) :=
    M.fold (fun k _ => remove k) m' m.
 
+  Definition subtractKV {A : Type}
+             (deceqA : forall x y : A, sumbool (x = y) (x <> y))
+             (m1 m2 : M.t A) : M.t A :=
+    M.fold (fun k2 v2 m1' =>
+              match M.find k2 m1' with
+                | None => m1'
+                | Some v1 => if deceqA v1 v2 then 
+                               M.remove k2 m1' else m1' 
+              end) m2 m1.
+
   Fixpoint restrict {A : Type} (m : t A) (l : list E.t) :=
     match l with
       | nil => M.empty _

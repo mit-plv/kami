@@ -1,5 +1,5 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Syntax.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap Syntax.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -227,65 +227,6 @@ Definition evalConstFullT k (e: ConstFullT k) :=
     | SyntaxConst k' c' => evalConstT c'
     | NativeConst t c c' => c'
   end.
-
-Section GetCms.
-  Fixpoint getCmsA {k} (a: ActionT (fun _ => True) k): list string :=
-    match a with
-      | MCall m _ _ c => m :: (getCmsA (c I))
-      | Let_ fk e c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
-                                    | SyntaxKind _ => I
-                                    | NativeKind _ c' => c'
-                                  end)
-      | ReadReg _ fk c => getCmsA (c match fk as fk' return fullType (fun _ => True) fk' with
-                                       | SyntaxKind _ => I
-                                       | NativeKind _ c' => c'
-                                     end)
-      | WriteReg _ _ _ c => getCmsA c
-      | IfElse _ _ aT aF c =>
-        (getCmsA aT) ++ (getCmsA aF)
-                     ++ (getCmsA (c I))
-      | Assert_ _ c => getCmsA c
-      | Return _ => nil
-    end.
-
-  Fixpoint getCmsR (rl: list (Attribute (Action (Bit 0))))
-  : list string :=
-    match rl with
-      | nil => nil
-      | r :: rl' => (getCmsA (attrType r (fun _ => True))) ++ (getCmsR rl')
-    end.
-
-  Fixpoint getCmsM (ms: list DefMethT): list string :=
-    match ms with
-      | nil => nil
-      | m :: ms' => (getCmsA ((objVal (attrType m)) (fun _ => True) I))
-                      ++ (getCmsM ms')
-    end.
-
-Require Import Lib.FMap.
-
-  Fixpoint getCmsMod (m: Modules): list string :=
-    match m with
-      | Mod _ rules meths => getCmsR rules ++ getCmsM meths
-      | ConcatMod m1 m2 => (listSub (getCmsMod m1) (getDmsMod m2))
-                             ++ (listSub (getCmsMod m2) (getDmsMod m1))
-    end
-  with getDmsMod (m: Modules): list string :=
-         match m with
-           | Mod _ _ meths => namesOf meths
-           | ConcatMod m1 m2 => (listSub (getDmsMod m1) (getCmsMod m2))
-                                  ++ (listSub (getDmsMod m2) (getCmsMod m1))
-         end.
-
-  Fixpoint getDmsBodies (m: Modules): list DefMethT :=
-    match m with
-      | Mod _ _ meths => meths
-      | ConcatMod m1 m2 => (getDmsBodies m1) ++ (getDmsBodies m2)
-    end.
-
-End GetCms.
-
-Hint Unfold getCmsMod getDmsMod getDmsBodies.
 
 (* maps register names to the values which they currently hold *)
 Definition RegsT := M.t (Typed (fullType type)).

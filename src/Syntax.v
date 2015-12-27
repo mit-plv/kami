@@ -227,8 +227,69 @@ Fixpoint getRegInits m :=
     | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
   end.
 
-Hint Unfold getRules getRegInits.
+Section GetCms.
+  Definition typeUT (k: Kind): Type := unit.
+  Definition fullTypeUT := fullType typeUT.
+  Definition getUT (k: FullKind): fullTypeUT k :=
+    match k with
+      | SyntaxKind _ => tt
+      | NativeKind t c => c
+    end.
 
+  Fixpoint getCmsA {k} (a: ActionT typeUT k): list string :=
+    match a with
+      | MCall m _ _ c => m :: (getCmsA (c tt))
+      | Let_ fk e c => getCmsA (c match fk as fk' return fullType _ fk' with
+                                    | SyntaxKind _ => tt
+                                    | NativeKind _ c' => c'
+                                  end)
+      | ReadReg _ fk c => getCmsA (c match fk as fk' return fullType _ fk' with
+                                       | SyntaxKind _ => tt
+                                       | NativeKind _ c' => c'
+                                     end)
+      | WriteReg _ _ _ c => getCmsA c
+      | IfElse _ _ aT aF c =>
+        (getCmsA aT) ++ (getCmsA aF)
+                     ++ (getCmsA (c tt))
+      | Assert_ _ c => getCmsA c
+      | Return _ => nil
+    end.
+
+  Fixpoint getCmsR (rl: list (Attribute (Action (Bit 0))))
+  : list string :=
+    match rl with
+      | nil => nil
+      | r :: rl' => (getCmsA (attrType r _)) ++ (getCmsR rl')
+    end.
+
+  Fixpoint getCmsM (ms: list DefMethT): list string :=
+    match ms with
+      | nil => nil
+      | m :: ms' => (getCmsA ((objVal (attrType m)) _ tt))
+                      ++ (getCmsM ms')
+    end.
+
+  Fixpoint getCmsMod (m: Modules): list string :=
+    match m with
+      | Mod _ rules meths => getCmsR rules ++ getCmsM meths
+      | ConcatMod m1 m2 => (getCmsMod m1) ++ (getCmsMod m2)
+    end.
+
+  Fixpoint getDmsMod (m: Modules): list string :=
+    match m with
+      | Mod _ _ meths => namesOf meths
+      | ConcatMod m1 m2 => (getDmsMod m1) ++ (getDmsMod m2)
+    end.
+
+  Fixpoint getDmsBodies (m: Modules): list DefMethT :=
+    match m with
+      | Mod _ _ meths => meths
+      | ConcatMod m1 m2 => (getDmsBodies m1) ++ (getDmsBodies m2)
+    end.
+
+End GetCms.
+
+Hint Unfold getRules getRegInits getCmsMod getDmsMod getDmsBodies.
 
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).

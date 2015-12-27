@@ -108,16 +108,6 @@ Inductive UnitSteps (m : Modules) (o : RegsT) : RegsT -> RuleLabelT -> Type :=
                      -> CanCombine (u1, l1) (u2, l2)
                      -> UnitSteps m o (MF.union u1 u2) (mergeLabel l1 l2).
 
-Definition subtractKV {A : Type}
-           (deceqA : forall x y : A, sumbool (x = y) (x <> y))
-           (m1 m2 : M.t A) : M.t A :=
-  M.fold (fun k2 v2 m1' =>
-            match M.find k2 m1' with
-              | None => m1'
-              | Some v1 => if deceqA v1 v2 then 
-                             M.remove k2 m1' else m1' 
-            end) m2 m1.
-
 Definition signIsEq :
   forall (l1 l2 : Typed SignT), sumbool (l1 = l2) (l1 <> l2).
 Proof.
@@ -137,8 +127,8 @@ Qed.
 Definition hide {A : Type} (l : LabelTP A) : LabelTP A :=
   match l with
       Build_LabelTP rm ds cs => 
-      Build_LabelTP rm (subtractKV signIsEq ds cs)
-                    (subtractKV signIsEq cs ds)
+      Build_LabelTP rm (MF.subtractKV signIsEq ds cs)
+                    (MF.subtractKV signIsEq cs ds)
   end.
 
 Definition wellHidden {A : Type} (l : LabelTP A) (m : Modules) :=
