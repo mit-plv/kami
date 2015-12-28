@@ -362,7 +362,7 @@ Lemma getCalls_cmMap:
     MF.InDomain (MF.restrict cmMap (namesOf dmsAll))
                 (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
 Proof.
-  admit. (* Semantics proof *)
+  admit. (* Semantics *)
 Qed.
 
 Lemma getCalls_SemMod_rule_div:
@@ -440,17 +440,59 @@ Proof.
   - invertAction H; econstructor; eauto.
 Qed.
 
+Lemma appendAction_ActionEquiv:
+  forall {retT1 retT2} (a11: ActionT type retT1)
+         (a12: ft1 type (SyntaxKind retT1) -> ActionT type retT2)
+         (a21: ActionT typeUT retT1)
+         (a22: ft2 typeUT (SyntaxKind retT1) -> ActionT typeUT retT2)
+         G (Hequiv1: ActionEquiv G a11 a21)
+         (Hequiv2: forall v1 v2, ActionEquiv (vars (v1, v2) :: G) (a12 v1) (a22 v2)),
+    ActionEquiv G (appendAction a11 a12) (appendAction a21 a22).
+Proof.
+  induction 1; intros; subst; simpl; try (constructor; auto; fail).
+  - constructor; intros.
+    apply H0; intros.
+    specialize (Hequiv2 v0 v3).
+    eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H1; intuition.
+  - constructor; intros.
+    apply H0; intros.
+    specialize (Hequiv2 v0 v3).
+    eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H1; intuition.
+  - constructor; intros.
+    apply H0; intros.
+    specialize (Hequiv2 v0 v3).
+    eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H1; intuition.
+  - constructor; auto.
+    intros; apply H1; intros.
+    specialize (Hequiv2 v0 v3).
+    eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H2; intuition.
+Qed.
+
 Lemma inlineDms_ActionEquiv:
-  forall {retK} (ast: ActionT type retK) (aut: ActionT typeUT retK) dms,
+  forall {retK} G (ast: ActionT type retK) (aut: ActionT typeUT retK) dms,
     MethsEquiv type typeUT dms ->
-    ActionEquiv nil ast aut ->
-    ActionEquiv nil (inlineDms ast dms) (inlineDms aut dms).
+    ActionEquiv G ast aut ->
+    ActionEquiv G (inlineDms ast dms) (inlineDms aut dms).
 Proof.
   induction 2; intros; subst; simpl; try (constructor; auto; fail).
-  simpl; destruct (getBody n dms s).
+  remember (getBody n dms s) as b; destruct b.
   - destruct s0; subst; simpl.
     constructor; intros.
-    admit. (* ActionEquiv appendAction: need "MethsEquiv type typeUT dms" *)
+    apply appendAction_ActionEquiv.
+    + unfold getBody in Heqb.
+      remember (getAttribute n dms) as dattr.
+      destruct dattr; [|inv Heqb].
+      destruct (SignatureT_dec _ _); [|inv Heqb].
+      inv Heqb; clear e.
+      pose proof (getAttribute_Some_body _ _ Heqdattr).
+      eapply MethsEquiv_in; eauto.
+    + intros; specialize (H1 v0 v3).
+      eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H2; intuition.
   - constructor; intros.
     eapply H1; eauto.
 Qed.
@@ -472,7 +514,7 @@ Lemma getCalls_SemAction:
     SemAction olds ast news calls retV ->
     MF.InDomain calls (namesOf cdms).
 Proof.
-  admit. (* Semantics proof *)
+  admit. (* Semantics *)
 Qed.
 
 Inductive WfmAction {ty}: list string -> forall {retT}, ActionT ty retT -> Prop :=
@@ -733,7 +775,7 @@ Lemma SemMod_dmMap_sig:
          (Hdmn: M.find dmn dmMap <> None),
   exists dv, M.find dmn dmMap = Some {| objType := dsig; objVal := dv |}.
 Proof.
-  admit. (* Semantics proof *)
+  admit. (* Semantics *)
 Qed.
 
 (* TODO: semantics stuff; move to Semantics.v *)
@@ -744,7 +786,7 @@ Lemma SemMod_getCalls:
          (Hdm: MF.InDomain dmMap (namesOf cdms)),
     MF.InDomain cmMap (namesOf (getCalls (inlineDms a dmsAll) dmsAll)).
 Proof.
-  admit. (* Semantics proof *)
+  admit. (* Semantics *)
 Qed.
 
 Section Preliminaries.
@@ -1691,6 +1733,7 @@ Section InlineModFacts.
           Inlinable cdn rules dmsAll pfdms pedms None pdm pcm ->
           forall fdm dargV dretV dm cm (edms: list DefMethT),
             fdm = M.add dmn {| objType := dsig; objVal := (dargV, dretV) |} (M.empty _) ->
+            collectCalls (dmb typeUT tt) dmsAll cdn = edms ->
             dm = MF.restrict cm (namesOf edms) -> (* inlining condition *)
             (* SemMod divisible condition *)
             MF.InDomain cm ((getCmsA (dmb typeUT tt)) ++ (getCmsM edms)) ->
@@ -1706,12 +1749,33 @@ Section InlineModFacts.
                           :: edms) ++ pedms)
                       None (MF.union (MF.union fdm dm) pdm) (MF.union cm pcm).
 
+  Lemma inlinable_fdms:
+    forall cdn rules dmsAll fdms edms rm dmMap cmMap
+           (Hin: Inlinable cdn rules dmsAll fdms edms rm dmMap cmMap),
+      SubList fdms edms.
+  Proof.
+    induction 1.
+    - apply SubList_nil.
+    - apply SubList_app_2; auto.
+    - simpl. rewrite app_comm_cons.
+      apply SubList_cons.
+      + rewrite <-app_comm_cons; left; reflexivity.
+      + apply SubList_app_2; auto.
+  Qed.
+    
   Lemma inlinable_edms:
     forall cdn rules dmsAll fdms edms rm dmMap cmMap
            (Hin: Inlinable cdn rules dmsAll fdms edms rm dmMap cmMap),
       SubList edms dmsAll.
   Proof.
-    admit.
+    induction 1.
+    - apply SubList_nil.
+    - apply SubList_app_3; [|assumption].
+      eapply collectCalls_sub; eauto.
+    - apply SubList_app_3; [|assumption].
+      unfold SubList; simpl; intros; destruct H8.
+      + subst e; eapply getAttribute_Some_body; eauto.
+      + eapply collectCalls_sub; eauto. 
   Qed.
     
   Lemma inlinable_label:
@@ -1723,7 +1787,30 @@ Section InlineModFacts.
                            | _ => nil
                          end ++ getCmsM edms).
   Proof.
-    admit.
+    induction 1.
+    - split; apply MF.InDomain_empty.
+    - split.
+      + unfold namesOf; rewrite map_app; apply MF.InDomain_union_app; [|intuition].
+        subst dm; apply MF.restrict_InDomain.
+      + apply MF.InDomain_union.
+        * rewrite getCmsM_app.
+          eapply MF.InDomain_SubList; [eassumption|].
+          apply SubList_app_3.
+          { apply SubList_app_1, SubList_refl. }
+          { apply SubList_app_2, SubList_app_1, SubList_refl. }
+        * destruct IHHin; rewrite getCmsM_app.
+          eapply MF.InDomain_SubList; [eassumption|].
+          do 2 apply SubList_app_2; apply SubList_refl.
+    - simpl; split.
+      + unfold namesOf; rewrite map_app, app_comm_cons.
+        apply MF.InDomain_union_app; [|intuition].
+        replace (dmn :: (map (@attrName _) edms)) with ([dmn] ++ (namesOf edms)) by reflexivity.
+        apply MF.InDomain_union_app.
+        * subst fdm; apply MF.InDomain_add; [|left; reflexivity].
+          apply MF.InDomain_empty.
+        * subst dm; apply MF.restrict_InDomain.
+      + rewrite getCmsM_app; rewrite app_assoc.
+        apply MF.InDomain_union_app; intuition.
   Qed.
   
   Variables (regs1 regs2: list RegInitT)
@@ -1774,9 +1861,19 @@ Section InlineModFacts.
       }
       clear H9; destruct H10 as [rnr [pnr ?]]; dest; subst nr.
 
-      replace (MF.restrict (MF.union dm pdm) (namesOf pfdms)) with
-      (MF.union (M.empty _) (MF.restrict pdm (namesOf pfdms))) by admit.
-      (* D(dm) in edms -> D(dm) not in pedms -> D(dm) not in pfdms since pfdms <= pedms *)
+      assert (MF.restrict (MF.union dm pdm) (namesOf pfdms) =
+              (MF.union (M.empty _) (MF.restrict pdm (namesOf pfdms)))).
+      { rewrite MF.union_empty_L, MF.restrict_union.
+        rewrite MF.restrict_InDomain_DisjList with (m:= dm) (d1:= namesOf edms).
+        { rewrite MF.union_empty_L; reflexivity. }
+        { subst dm; apply MF.restrict_InDomain. }
+        { pose proof (inlinable_fdms Hsep).
+          apply DisjList_comm; apply DisjList_SubList with (l1:= namesOf pedms).
+          { apply SubList_map; auto. }
+          { apply DisjList_comm; auto. }
+        }
+      }
+      rewrite H12; clear H12.
 
       rewrite MF.complement_union.
       unfold namesOf; rewrite map_app.
@@ -1787,18 +1884,10 @@ Section InlineModFacts.
       apply SemMod_merge_rule.
 
       + apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
-        eapply inlineToRulesRep_prop.
-
-        * instantiate (1:= ar). admit. (* from RulesEquiv *)
-        * assumption.
+        eapply inlineToRulesRep_prop; eauto.
+        * eapply RulesEquiv_in; eauto.
         * admit. (* TODO: construct conditions *)
         * admit. (* TODO: construct conditions *)
-        * assumption.
-        * assumption.
-        * assumption.
-        * eassumption.
-        * assumption.
-        * assumption.
 
       + apply IHHsep; auto.
       + assumption.
@@ -1816,37 +1905,44 @@ Section InlineModFacts.
                 SemMod (r1 ++ r2) or None nr2 (dms1 ++ dms2) pdm pcm /\
                 MF.Disj nr1 nr2 /\ nr = MF.union nr1 nr2).
       { pose proof (inlinable_label Hsep); dest.
-        rewrite app_nil_l in H11.
+        rewrite app_nil_l in H12.
         eapply getCalls_SemMod_meth_div; eauto.
         { instantiate (1:= (dmn :: {| objType := dsig; objVal := dmb |})%struct :: edms).
-          admit. (* provable *)
+          apply SubList_cons.
+          { eapply getAttribute_Some_body; eauto. }
+          { eapply collectCalls_sub; eauto. }
         }
         { eapply inlinable_edms; eauto. }
         { assumption. }
-        { admit. (* map stuff; provable *) }
+        { simpl; replace (dmn :: namesOf edms) with ([dmn] ++ (namesOf edms)) by reflexivity.
+          apply MF.InDomain_union_app.
+          { subst fdm. apply MF.InDomain_add; [apply MF.InDomain_empty|left; reflexivity]. }
+          { subst dm; apply MF.restrict_InDomain. }
+        }
         { assumption. }
         { assumption. }
       }
-      clear H9; destruct H10 as [mnr [pnr ?]]; dest; subst nr.
+      clear H10; destruct H11 as [mnr [pnr ?]]; dest; subst nr.
 
-      match goal with
-        | [ |- SemMod _ _ _ _ _ ?dm _ ] =>
-          replace dm with (MF.union fdm (MF.restrict pdm (namesOf pfdms)))
-            by admit (* map stuff; similar to "rule" case? *)
-      end.
+      assert (MF.restrict
+                (MF.union (MF.union fdm dm) pdm)
+                (namesOf ((dmn :: {| objType := dsig; objVal := dmb |})%struct :: pfdms)) =
+              MF.union fdm (MF.restrict pdm (namesOf pfdms))).
+      { admit. }
+      rewrite H13; clear H13.
 
       rewrite MF.complement_union.
       unfold namesOf; rewrite map_app.
       do 2 rewrite MF.complement_app.
-      unfold DefMethT; unfold namesOf in H5; rewrite H5.
-      rewrite MF.complement_comm; unfold namesOf in H6.
+      unfold DefMethT; unfold namesOf in H6; rewrite H6.
+      rewrite MF.complement_comm; unfold namesOf in H7.
 
-      simpl; simpl in H6; rewrite H6.
+      simpl; simpl in H7; rewrite H7.
 
       apply SemMod_merge_meths.
 
       + admit.
-      + admit.
+      + apply IHHsep; auto.
       + assumption.
       + admit. (* provable via DisjList dmn ... *)
       + match goal with
@@ -1854,10 +1950,10 @@ Section InlineModFacts.
             replace m with (MF.complement cm0 (dmn :: (namesOf edms))) by reflexivity
         end.
         apply MF.Disj_complement, MF.Disj_comm, MF.Disj_complement, MF.Disj_comm.
-        pose proof (inlinable_label Hsep); simpl in H12; dest.
+        pose proof (inlinable_label Hsep); simpl in H13; dest.
 
-        apply MF.restrict_InDomain_itself in H2; rewrite <-H2.
-        apply MF.restrict_InDomain_itself in H13; rewrite <-H13.
+        apply MF.restrict_InDomain_itself in H3; rewrite <-H3.
+        apply MF.restrict_InDomain_itself in H14; rewrite <-H14.
         apply MF.Disj_DisjList_restrict; assumption.
   Qed.
 

@@ -1,5 +1,5 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FnMap Syntax.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap Syntax.
 
 Set Implicit Arguments.
 
@@ -83,6 +83,11 @@ Section Equiv.
                       ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 -> ExprEquiv G e13 e23 ->
                       ExprEquiv G (UpdateVector e11 e12 e13) (UpdateVector e21 e22 e23).
 
+  Lemma ExprEquiv_ctxt:
+    forall G1 G2 {k} (e1: Expr t1 k) e2,
+      ExprEquiv G1 e1 e2 -> SubList G1 G2 -> ExprEquiv G2 e1 e2.
+  Proof. induction 1; intros; constructor; auto. Qed.
+
   Inductive ActionEquiv: forall {k}, ctxt ft1 ft2 -> ActionT t1 k -> ActionT t2 k -> Prop :=
   | AEMCall: forall G {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
                     (e2: Expr t2 (SyntaxKind (arg s)))
@@ -124,23 +129,76 @@ Section Equiv.
              ExprEquiv G e1 e2 ->
              ActionEquiv G (Return e1) (Return e2).
 
+  Lemma ActionEquiv_ctxt:
+    forall G1 {k} (a1: ActionT t1 k) a2,
+      ActionEquiv G1 a1 a2 ->
+      forall G2, SubList G1 G2 -> ActionEquiv G2 a1 a2.
+  Proof.
+    induction 1; intros.
+    - constructor; intros.
+      apply H0.
+      unfold SubList; intros; inv H2; [left; reflexivity|right; auto].
+    - constructor; intros.
+      apply H0.
+      unfold SubList; intros; inv H2; [left; reflexivity|right; auto].
+    - constructor; intros.
+      apply H0.
+      unfold SubList; intros; inv H2; [left; reflexivity|right; auto].
+    - constructor; intros.
+      + eapply ExprEquiv_ctxt; eauto.
+      + apply IHActionEquiv; auto.
+    - constructor; auto.
+      + eapply ExprEquiv_ctxt; eauto.
+      + intros; apply H3.
+        unfold SubList; intros; inv H5; [left; reflexivity|right; auto].
+    - constructor; auto.
+      eapply ExprEquiv_ctxt; eauto.
+    - constructor; auto.
+      eapply ExprEquiv_ctxt; eauto.
+  Qed.
+
   Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
   | RulesEquivNil: RulesEquiv nil
   | RulesEquivCons:
       forall r ar,
-        ActionEquiv nil (ar t1) (ar t2) ->
+        (forall G, ActionEquiv G (ar t1) (ar t2)) ->
         forall rules,
           RulesEquiv rules -> RulesEquiv ({| attrName:= r; attrType:= ar |} :: rules).
+
+  Lemma RulesEquiv_in:
+    forall rules r ar G
+           (Hequiv: RulesEquiv rules)
+           (Hin: In (r :: ar)%struct rules),
+      ActionEquiv G (ar t1) (ar t2).
+  Proof.
+    induction 1; intros; inv Hin.
+    - inv H0; auto.
+    - apply IHHequiv; assumption.
+  Qed.
 
   Inductive MethsEquiv: list DefMethT -> Prop :=
   | MethsEquivNil: MethsEquiv nil
   | MethsEquivCons:
       forall dmn dsig (dm: forall ty, ty (arg dsig) -> ActionT ty (ret dsig)),
-        (forall argV1 argV2, ActionEquiv nil (dm t1 argV1) (dm t2 argV2)) ->
+        (forall argV1 argV2 G, ActionEquiv G (dm t1 argV1) (dm t2 argV2)) ->
         forall meths,
           MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
                                              attrType := {| objType := dsig; objVal := dm |}
                                           |} :: meths).
+
+  Lemma MethsEquiv_in:
+    forall meths m
+           (Hequiv: MethsEquiv meths)
+           (Hin: In m meths),
+    forall (v1: ft1 (SyntaxKind (arg (objType (attrType m)))))
+           (v2: ft2 (SyntaxKind (arg (objType (attrType m))))) G,
+      ActionEquiv (vars (v1, v2) :: G)
+                  (objVal (attrType m) t1 v1) (objVal (attrType m) t2 v2).
+  Proof.
+    induction 1; intros; inv Hin.
+    - simpl in *; apply H.
+    - apply IHHequiv; auto.
+  Qed.
 
 End Equiv.
 

@@ -13,6 +13,12 @@ Section Lists. (* For dealing with domains *)
   Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
 
+  Lemma SubList_nil: forall l, SubList nil l.
+  Proof. unfold SubList; intros; inv H. Qed.
+
+  Lemma SubList_cons: forall a l1 l2, In a l2 -> SubList l1 l2 -> SubList (a :: l1) l2.
+  Proof. unfold SubList; intros; inv H1; auto. Qed.
+    
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
 
@@ -24,6 +30,12 @@ Section Lists. (* For dealing with domains *)
   Lemma SubList_app_2: forall l1 l2 l3, SubList l1 l3 -> SubList l1 (l2 ++ l3).
   Proof.
     unfold SubList; intros; apply in_or_app; right; auto.
+  Qed.
+
+  Lemma SubList_app_3: forall l1 l2 l3, SubList l1 l3 -> SubList l2 l3 -> SubList (l1 ++ l2) l3.
+  Proof.
+    unfold SubList; intros.
+    apply in_app_or in H1; destruct H1; intuition.
   Qed.
 
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
@@ -454,6 +466,13 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Hint Unfold Equal Disj Sub InDomain OnDomain NotOnDomain DomainOf : MapDefs.
 
+  Lemma InDomain_empty:
+    forall {A} d, InDomain (empty A) d.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    inv H; exfalso; eapply F.P.F.empty_mapsto_iff; eauto.
+  Qed.
+  
   Lemma InDomain_add:
     forall {A} (m: t A) k v d,
       InDomain m d -> List.In k d -> InDomain (add k v m) d.
@@ -474,6 +493,23 @@ Module LeibnizFacts (M : MapLeibniz).
       case_eq (find k m1); intros.
       apply H. exists a. apply find_2. assumption.
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
+  Qed.
+
+  Lemma InDomain_union_app:
+    forall {A} (m1 m2: t A) (d1 d2: list E.t),
+      InDomain m1 d1 -> InDomain m2 d2 -> InDomain (union m1 m2) (d1 ++ d2).
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    specialize (H k); specialize (H0 k); apply in_or_app.
+    apply union_In in H1; destruct H1; intuition.
+  Qed.
+
+  Lemma InDomain_SubList:
+    forall {A} (m: t A) (d1 d2: list E.t),
+      InDomain m d1 -> SubList d1 d2 -> InDomain m d2.
+  Proof.
+    repeat autounfold with MapDefs; intros.
+    apply H0, H; auto.
   Qed.
 
   Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.

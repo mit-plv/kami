@@ -269,6 +269,12 @@ Section GetCms.
                       ++ (getCmsM ms')
     end.
 
+  Lemma getCmsM_app: forall ms1 ms2, getCmsM (ms1 ++ ms2) = getCmsM ms1 ++ getCmsM ms2.
+  Proof.
+    induction ms1; intros; [reflexivity|].
+    simpl; rewrite IHms1; apply app_assoc.
+  Qed.
+
   Fixpoint getCmsMod (m: Modules): list string :=
     match m with
       | Mod _ rules meths => getCmsR rules ++ getCmsM meths
