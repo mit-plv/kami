@@ -778,8 +778,8 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
   
   Lemma Disj_DisjList_restrict:
-    forall {A} (m: t A) l1 l2,
-      DisjList l1 l2 -> Disj (restrict m l1) (restrict m l2).
+    forall {A} (m1 m2: t A) l1 l2,
+      DisjList l1 l2 -> Disj (restrict m1 l1) (restrict m2 l2).
   Proof.
     admit.
   Qed.
