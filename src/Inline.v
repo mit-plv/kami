@@ -342,6 +342,16 @@ Inductive WfInline: forall {retK}, option string (* starting method *) ->
       DisjList (namesOf (getCalls (inlineDmsRep a dms n) dms)) (namesOf (collectCalls a dms n)) ->
       WfInline odm a dms (S n).
 
+Definition WfInlineRules (rules: list (Attribute (Action Void)))
+           (dmsAll: list DefMethT) (n: nat) :=
+  Forall (fun r: Attribute (Action Void) => WfInline None (attrType r typeUT) dmsAll n) rules.
+
+Definition WfInlineMeths (meths: list DefMethT)
+           (dmsAll: list DefMethT) (n: nat) :=
+  Forall (fun d: DefMethT =>
+            forall argV, WfInline (Some (attrName d))
+                                  (objVal (attrType d) typeUT argV) dmsAll n) meths.
+
 Lemma WfInline_start:
   forall {retK} (a: ActionT typeUT retK) dm dms cdn,
     WfInline (Some dm) a dms cdn ->
@@ -557,6 +567,15 @@ Inductive WfmActionRep {ty} (dms: list DefMethT):
                 WfmActionRep dms ll a n ->
                 WfmAction ll (inlineDmsRep a dms (S n)) ->
                 WfmActionRep dms ll a (S n).
+
+Definition WfmActionRepRules (rules: list (Attribute (Action Void)))
+           (dms: list DefMethT) (l: list string) (n: nat) :=
+  Forall (fun r => WfmActionRep dms l (attrType r type) n) rules.
+
+Definition WfmActionRepMeths (meths: list DefMethT)
+           (dms: list DefMethT) (l: list string) (n: nat) :=
+  Forall (fun d: DefMethT =>
+            forall argV, WfmActionRep dms l (objVal (attrType d) type argV) n) meths.
 
 Lemma WfmAction_init_sub {ty}:
   forall {retK} (a: ActionT ty retK) ll1
@@ -1828,6 +1847,10 @@ Section InlineModFacts.
   Lemma inlineMod_correct:
     forall cdn rules (Hrequiv: RulesEquiv type typeUT rules)
            dmsAll (Hmequiv: MethsEquiv type typeUT dmsAll)
+           (Hwfmr: WfmActionRepRules rules dmsAll nil cdn)
+           (Hwfmd: WfmActionRepMeths dmsAll dmsAll nil cdn)
+           (Hwfir: WfInlineRules rules dmsAll (S cdn))
+           (Hwfid: WfInlineMeths dmsAll dmsAll (S cdn))
            fdms edms rm dmMap cmMap
            (Hsep: Inlinable cdn rules dmsAll fdms edms rm dmMap cmMap)
            (Hcdn: cdn = countdown) (Hrules: rules = r1 ++ r2) (HdmsAll: dmsAll = dms1 ++ dms2)
@@ -1842,7 +1865,7 @@ Section InlineModFacts.
              (MF.restrict dmMap (namesOf fdms))
              (MF.complement cmMap (namesOf edms)).
   Proof.
-    induction 3; intros.
+    induction 7; intros.
 
     - subst; apply SemMod_empty_inv in H1; dest; subst.
       apply SemMod_empty.
@@ -1886,8 +1909,10 @@ Section InlineModFacts.
       + apply SemMod_dms_free with (dms1:= dms1 ++ dms2).
         eapply inlineToRulesRep_prop; eauto.
         * eapply RulesEquiv_in; eauto.
-        * admit. (* TODO: construct conditions *)
-        * admit. (* TODO: construct conditions *)
+        * unfold WfmActionRepRules in Hwfmr.
+          eapply (proj1 (Forall_forall _ _)) in Hwfmr; [|exact H]; assumption.
+        * unfold WfInlineRules in Hwfir.
+          eapply (proj1 (Forall_forall _ _)) in Hwfir; [|exact H]; assumption.
 
       + apply IHHsep; auto.
       + assumption.
@@ -1941,7 +1966,16 @@ Section InlineModFacts.
 
       apply SemMod_merge_meths.
 
-      + admit.
+      + apply SemMod_dms_cut with
+        (dms1:= inlineToDmsRep (dms1 ++ dms2) (dms1 ++ dms2) countdown).
+        * admit. (* TODO: fix this *)
+        (* match goal with *)
+        (*   | [ |- SemMod _ _ _ _ _ _ ?cm ] => *)
+        (*     replace cm with (MF.complement cm0 (dmn :: (namesOf edms))) by reflexivity *)
+        (* end. *)
+        (* eapply inlineToDmsRep_prop. *)
+        * admit.
+        * admit.
       + apply IHHsep; auto.
       + assumption.
       + admit. (* provable via DisjList dmn ... *)
