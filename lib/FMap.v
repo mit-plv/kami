@@ -65,6 +65,18 @@ Section Lists. (* For dealing with domains *)
     - intuition.
   Qed.
 
+  Lemma DisjList_app_3:
+    forall l1 l2 l3, DisjList (l1 ++ l2) l3 -> DisjList l1 l3 /\ DisjList l2 l3.
+  Proof.
+    intros; unfold DisjList in *; split.
+    - intros; destruct (H e).
+      + left; intuition.
+      + right; intuition.
+    - intros; destruct (H e).
+      + left; intuition.
+      + right; intuition.
+  Qed.
+
 End Lists.
 
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
@@ -466,6 +478,14 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Hint Unfold Equal Disj Sub InDomain OnDomain NotOnDomain DomainOf : MapDefs.
 
+  Lemma find_InDomain {A} :
+    forall {m : t A} k d, InDomain m d -> ~ List.In k d -> find k m = None.
+  Proof.
+    repeat autounfold with MapDefs; intros; specialize (H k).
+    remember (find k m) as v; destruct v; [|reflexivity].
+    elim H0; apply H; apply F.P.F.in_find_iff; rewrite <-Heqv; discriminate.
+  Qed.
+    
   Lemma InDomain_empty:
     forall {A} d, InDomain (empty A) d.
   Proof.
@@ -816,6 +836,13 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma Disj_DisjList_restrict:
     forall {A} (m1 m2: t A) l1 l2,
       DisjList l1 l2 -> Disj (restrict m1 l1) (restrict m2 l2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_DisjList_InDomain:
+    forall {A} (m1 m2: t A) d1 d2,
+      DisjList d1 d2 -> InDomain m1 d1 -> InDomain m2 d2 -> Disj m1 m2.
   Proof.
     admit.
   Qed.
