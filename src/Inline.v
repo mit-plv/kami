@@ -2051,6 +2051,9 @@ Section InlineModFacts.
         apply MF.restrict_InDomain_itself in H3; rewrite <-H3.
         apply MF.restrict_InDomain_itself in H15; rewrite <-H15.
         apply MF.Disj_DisjList_restrict; assumption.
+
+        Grab Existential Variables.
+        exact nil.
   Qed.
 
 End InlineModFacts.

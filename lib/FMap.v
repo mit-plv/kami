@@ -378,17 +378,31 @@ Module LeibnizFacts (M : MapLeibniz).
    end.
 
   Definition subtract {A : Type} (m m' : t A) :=
-   M.fold (fun k _ => remove k) m' m.
+    fold (fun k _ => remove k) m' m.
 
   Definition subtractKV {A : Type}
              (deceqA : forall x y : A, sumbool (x = y) (x <> y))
-             (m1 m2 : M.t A) : M.t A :=
-    M.fold (fun k2 v2 m1' =>
-              match M.find k2 m1' with
-                | None => m1'
-                | Some v1 => if deceqA v1 v2 then 
-                               M.remove k2 m1' else m1' 
-              end) m2 m1.
+             (m1 m2 : t A) : t A :=
+    fold (fun k2 v2 m1' =>
+            match M.find k2 m1' with
+              | None => m1'
+              | Some v1 => if deceqA v1 v2 then 
+                             remove k2 m1' else m1' 
+            end) m2 m1.
+
+  Lemma subtractKV_empty_1:
+    forall {A : Type} (deceqA : forall x y : A, sumbool (x = y) (x <> y)) (m: t A),
+      subtractKV deceqA (empty A) m = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_empty_2:
+    forall {A : Type} (deceqA : forall x y : A, sumbool (x = y) (x <> y)) (m: t A),
+      subtractKV deceqA m (empty A) = m.
+  Proof.
+    admit.
+  Qed.
 
   Fixpoint restrict {A : Type} (m : t A) (l : list E.t) :=
     match l with
@@ -910,6 +924,15 @@ Section ListSub.
     - intro Hx; apply listSub_In_1 in Hx; dest; destruct H.
       + elim H; assumption.
       + elim H1; assumption.
+  Qed.
+
+  Lemma listSub_app:
+    forall l1 l2 l3, listSub (l1 ++ l2) l3 = (listSub l1 l3) ++ (listSub l2 l3).
+  Proof.
+    induction l1; intros; simpl; [reflexivity|].
+    destruct (in_dec string_dec a l3).
+    - apply IHl1; auto.
+    - simpl; f_equal; apply IHl1; auto.
   Qed.
 
 End ListSub.
