@@ -110,52 +110,41 @@ Section PhoasUT.
         | Return e => true
       end.
 
-    Fixpoint getLeafFromDms' (tree tgt: list DefMethT): option DefMethT :=
-      match tree with
-        | nil => None
-        | t :: tree' =>
-          if isLeaf (objVal (attrType t) typeUT tt) (namesOf tgt)
-          then Some t
-          else getLeafFromDms' tree' tgt
-      end.
-
-    Definition getLeafFromDms (dms: list DefMethT) := getLeafFromDms' dms dms.
-
-    Fixpoint getLeaf (m: Modules) :=
-      match m with
-        | Mod _ _ dms => getLeafFromDms dms
-        | ConcatMod m1 m2 =>
-          match getLeaf m1 with
-            | Some lf => Some lf
-            | _ => getLeaf m2
-          end
-      end.
-
-    Fixpoint noCallsDms' (tree tgt: list DefMethT) :=
-      match tree with
+    Fixpoint noCallDms (dms: list DefMethT) (tgt: DefMethT) :=
+      match dms with
         | nil => true
-        | t :: tree' =>
-          if isLeaf (objVal (attrType t) typeUT tt) (namesOf tgt)
-          then noCallsDms' tree' tgt
+        | dm :: dms' =>
+          if isLeaf (objVal (attrType dm) typeUT tt) [attrName tgt]
+          then noCallDms dms' tgt
           else false
       end.
 
-    Definition noCallsDms (dms: list DefMethT) := noCallsDms' dms dms.
-
-    Fixpoint noCallsRules (rules: list (Attribute (Action Void))) (dms: list DefMethT) :=
+    Fixpoint noCallRules (rules: list (Attribute (Action Void)))
+             (tgt: DefMethT) :=
       match rules with
         | nil => true
         | r :: rules' =>
-          if isLeaf (attrType r typeUT) (namesOf dms)
-          then noCallsRules rules' dms
+          if isLeaf (attrType r typeUT) [attrName tgt]
+          then noCallRules rules' tgt
           else false
       end.
 
-    Fixpoint noCalls (m: Modules) :=
+    Fixpoint noCall (m: Modules) (tgt: DefMethT) :=
       match m with
-        | Mod _ rules dms => (noCallsRules rules dms) && (noCallsDms dms)
-        | ConcatMod m1 m2 => (noCalls m1) && (noCalls m2)
+        | Mod _ rules dms =>
+          (noCallRules rules tgt) && (noCallDms dms tgt)
+        | ConcatMod m1 m2 => (noCall m1 tgt) && (noCall m2 tgt)
       end.
+
+    Fixpoint noCalls' (m: Modules) (dms: list DefMethT) :=
+      match dms with
+        | nil => true
+        | dm :: dms' =>
+          (noCall m dm) && (noCalls' m dms')
+      end.
+
+    Definition noCalls (m: Modules) :=
+      noCalls' m (getDmsBodies m).
 
   End Tree.
 
@@ -233,21 +222,35 @@ Section Exts.
         ConcatMod (inlineDmToMod m1 leaf) (inlineDmToMod m2 leaf)
     end.
 
-  Definition inlineOnce (m: Modules): Modules :=
-    match getLeaf m with
-      | Some lf => inlineDmToMod m lf
-      | _ => m
+  Fixpoint inline' (m: Modules) (dms: list DefMethT) :=
+    match dms with
+      | nil => m
+      | dm :: dms' => inline' (inlineDmToMod m dm) dms'
     end.
 
-  Fixpoint inline (m: Modules) (n: nat) :=
-    match n with
-      | O => m
-      | S n' => inlineOnce (inline m n')
-    end.
+  Definition inline (m: Modules) := inline' m (getDmsBodies m).
 
 End Exts.
 
 Require Import SemanticsNew.
+
+Section HideExts.
+  Definition hideMeth {A} (l: LabelTP A) (dm: DefMethT): LabelTP A :=
+    {| ruleMeth := ruleMeth l;
+       dms := M.remove (attrName dm) (dms l);
+       cms := M.remove (attrName dm) (cms l)
+    |}.
+
+  Lemma hideMeth_preserves_hide:
+    forall {A} m (l: LabelTP A) dm,
+      In dm (getDmsBodies m) ->
+      wellHidden (hide l) m ->
+      hide (hideMeth l dm) = hide l.
+  Proof.
+    admit.
+  Qed.
+
+End HideExts.
 
 Section Facts.
 
@@ -290,44 +293,74 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
-  (* WRONG *)
-  (* Lemma inline_correct_UnitStep: *)
-  (*   forall m or nr l n, *)
-  (*     UnitStep m or nr l -> *)
-  (*     noCalls (inline m n) = true -> *)
-  (*     wellHidden (hide l) m -> *)
-  (*     UnitStep (inline m n) or nr (hide l). *)
-  (* Proof. *)
-  (*   admit. *)
-  (* Qed. *)
-  
-  Lemma inline_correct_UnitSteps:
-    forall m or nr l n,
+  Lemma inlineDmToMod_correct_UnitSteps:
+    forall m or nr l dm,
       UnitSteps m or nr l ->
-      noCalls (inline m n) = true ->
-      wellHidden (hide l) m ->
-      UnitSteps (inline m n) or nr (hide l).
+      UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm).
   Proof.
     admit.
+  Qed.
+
+  Lemma inlineDmToMod_wellHidden:
+    forall {A} (l: LabelTP A) m a,
+      wellHidden l m ->
+      wellHidden l (inlineDmToMod m a).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma inline'_correct_UnitSteps:
+    forall dms m or nr l,
+      UnitSteps m or nr l ->
+      noCalls (inline' m dms) = true ->
+      wellHidden (hide l) m ->
+      UnitSteps (inline' m dms) or nr (hide l).
+  Proof.
+    induction dms; intros; simpl in *.
+    - rewrite (noCalls_UnitSteps_hide X H); auto.
+    - specialize (@IHdms (inlineDmToMod m a) or nr (hideMeth l a)).
+
+      assert (hide (hideMeth l a) = hide l).
+      { eapply hideMeth_preserves_hide; eauto using H0.
+        admit. (* TODO: bring information from a higher lemma *)
+      }
+      rewrite H1 in *; clear H1.
+
+      apply IHdms; auto.
+      + apply inlineDmToMod_correct_UnitSteps; auto.
+      + apply inlineDmToMod_wellHidden; auto.
+  Qed.
+
+  Lemma inline_correct_UnitSteps:
+    forall m or nr l,
+      UnitSteps m or nr l ->
+      noCalls (inline m) = true ->
+      wellHidden (hide l) m ->
+      UnitSteps (inline m) or nr (hide l).
+  Proof.
+    intros; apply inline'_correct_UnitSteps; auto.
   Qed.
 
   Lemma inline_wellHidden:
-    forall {A} (l: LabelTP A) m n,
+    forall {A} (l: LabelTP A) m,
       wellHidden l m ->
-      wellHidden l (inline m n).
+      wellHidden l (inline m).
   Proof.
-    induction n; intros; simpl in *; auto.
-    admit.
+    intros; unfold inline.
+    remember (getDmsBodies m) as dms; clear Heqdms.
+    generalize dependent m; induction dms; intros; [assumption|].
+    simpl; apply IHdms.
+    apply inlineDmToMod_wellHidden; auto.
   Qed.
 
   Theorem inline_correct:
-    forall m or nr l n,
+    forall m or nr l,
       Step m or nr l ->
-      noCalls (inline m n) = true ->
-      Step (inline m n) or nr l.
+      noCalls (inline m) = true ->
+      Step (inline m) or nr l.
   Proof.
     induction 1; intros.
-    subst; pose proof (inline_correct_UnitSteps n u H w).
+    subst; pose proof (inline_correct_UnitSteps u H w).
 
     apply MkStep with (l:= hide l); auto.
     - apply hide_idempotent.
