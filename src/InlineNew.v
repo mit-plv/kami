@@ -290,27 +290,16 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
-  Lemma inline_correct_UnitStep:
-    forall m or nr l n,
-      UnitStep m or nr l ->
-      noCalls (inline m n) = true ->
-      wellHidden (hide l) m ->
-      UnitStep (inline m n) or nr (hide l).
-  Proof.
-    induction 1; intros; simpl in *.
-
-    - rewrite MF.subtractKV_empty_1 in *.
-      admit. (* inline (Mod regInits ... ...) n = Mod regInit ... ...
-              * Thus can apply EmptyStep
-              *)
-
-    - rewrite MF.subtractKV_empty_1, MF.subtractKV_empty_2 in *.
-      admit.
-
-    - admit.
-    - admit.
-    - admit.
-  Qed.
+  (* WRONG *)
+  (* Lemma inline_correct_UnitStep: *)
+  (*   forall m or nr l n, *)
+  (*     UnitStep m or nr l -> *)
+  (*     noCalls (inline m n) = true -> *)
+  (*     wellHidden (hide l) m -> *)
+  (*     UnitStep (inline m n) or nr (hide l). *)
+  (* Proof. *)
+  (*   admit. *)
+  (* Qed. *)
   
   Lemma inline_correct_UnitSteps:
     forall m or nr l n,
@@ -319,13 +308,7 @@ Section Facts.
       wellHidden (hide l) m ->
       UnitSteps (inline m n) or nr (hide l).
   Proof.
-    induction 1; intros.
-    - apply UnitSteps1.
-      apply inline_correct_UnitStep; auto.
-    - erewrite hide_mergeLabel in *; eauto.
-      pose proof (wellHidden_mergeLabel _ _ _ H0); dest.
-      apply UnitStepsUnion; auto.
-      apply hide_CanCombine; auto.
+    admit.
   Qed.
 
   Lemma inline_wellHidden:
