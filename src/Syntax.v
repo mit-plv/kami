@@ -227,7 +227,7 @@ Fixpoint getRegInits m :=
     | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
   end.
 
-Section GetCms.
+Section GetMeths.
   Definition typeUT (k: Kind): Type := unit.
   Definition fullTypeUT := fullType typeUT.
   Definition getUT (k: FullKind): fullTypeUT k :=
@@ -293,7 +293,15 @@ Section GetCms.
       | ConcatMod m1 m2 => (getDmsBodies m1) ++ (getDmsBodies m2)
     end.
 
-End GetCms.
+  Lemma getDmsMod_getDmsBodies_name:
+    forall m, namesOf (getDmsBodies m) = getDmsMod m.
+  Proof.
+    induction m; intros; simpl; [reflexivity|].
+    unfold namesOf in *; rewrite map_app.
+    unfold DefMethT; rewrite IHm1, IHm2; reflexivity.
+  Qed.
+
+End GetMeths.
 
 Hint Unfold getRules getRegInits getCmsMod getDmsMod getDmsBodies.
 

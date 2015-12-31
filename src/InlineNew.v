@@ -222,6 +222,23 @@ Section Exts.
         ConcatMod (inlineDmToMod m1 leaf) (inlineDmToMod m2 leaf)
     end.
 
+  Lemma inlineDmToDms_getDmsMod:
+    forall dms dm,
+      namesOf dms = namesOf (inlineDmToDms dms dm).
+  Proof.
+    induction dms; intros; simpl; [reflexivity|].
+    f_equal; apply IHdms.
+  Qed.
+
+  Lemma inlineDmToMod_getDmsMod:
+    forall m dm,
+      getDmsMod m = getDmsMod (inlineDmToMod m dm).
+  Proof.
+    induction m; intros; simpl.
+    - apply inlineDmToDms_getDmsMod.
+    - rewrite (IHm1 dm), (IHm2 dm); reflexivity.
+  Qed.
+
   Fixpoint inline' (m: Modules) (dms: list DefMethT) :=
     match dms with
       | nil => m
@@ -235,19 +252,20 @@ End Exts.
 Require Import SemanticsNew.
 
 Section HideExts.
-  Definition hideMeth {A} (l: LabelTP A) (dm: DefMethT): LabelTP A :=
+  Definition hideMeth {A} (l: LabelTP A) (dm: string): LabelTP A :=
     {| ruleMeth := ruleMeth l;
-       dms := M.remove (attrName dm) (dms l);
-       cms := M.remove (attrName dm) (cms l)
+       dms := M.remove dm (dms l);
+       cms := M.remove dm (cms l)
     |}.
 
   Lemma hideMeth_preserves_hide:
     forall {A} m (l: LabelTP A) dm,
-      In dm (getDmsBodies m) ->
+      In dm (getDmsMod m) ->
       wellHidden (hide l) m ->
       hide (hideMeth l dm) = hide l.
   Proof.
-    admit.
+    intros; destruct l as [rm dms cms].
+    simpl in *; destruct H0; f_equal; admit. (* Semantics proof *)
   Qed.
 
 End HideExts.
@@ -255,7 +273,7 @@ End HideExts.
 Section Facts.
 
   Lemma noCalls_UnitSteps_hide:
-    forall m or nr l,
+    forall l m or nr,
       UnitSteps m or nr l ->
       noCalls m = true ->
       hide l = l.
@@ -269,36 +287,14 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
-  Lemma hide_mergeLabel:
-    forall u1 u2 l1 l2,
-      CanCombine (u1, l1) (u2, l2) ->
-      hide (mergeLabel l1 l2) = mergeLabel (hide l1) (hide l2).
-  Proof.
-    admit. (* Semantics proof *)
-  Qed.
-
-  Lemma hide_CanCombine:
-    forall u1 u2 l1 l2,
-      CanCombine (u1, l1) (u2, l2) ->
-      CanCombine (u1, hide l1) (u2, hide l2).
-  Proof.
-    admit. (* Semantics proof *)
-  Qed.
-
-  Lemma wellHidden_mergeLabel:
-    forall {A} (l1 l2: LabelTP A) m,
-      wellHidden (mergeLabel l1 l2) m ->
-      wellHidden l1 m /\ wellHidden l2 m.
-  Proof.
-    admit. (* Semantics proof *)
-  Qed.
-
   Lemma inlineDmToMod_correct_UnitSteps:
     forall m or nr l dm,
       UnitSteps m or nr l ->
+      (* In (attrName dm) (getDmsMod m) -> *) (* TODO: necessary? *)
+      wellHidden (hide l) m ->
       UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm).
   Proof.
-    admit.
+    admit. (* Inlining proof *)
   Qed.
 
   Lemma inlineDmToMod_wellHidden:
@@ -306,11 +302,12 @@ Section Facts.
       wellHidden l m ->
       wellHidden l (inlineDmToMod m a).
   Proof.
-    admit.
+    admit. (* Inlining proof *)
   Qed.
 
   Lemma inline'_correct_UnitSteps:
-    forall dms m or nr l,
+    forall dms m (Hdms: SubList (namesOf dms) (getDmsMod m))
+           or nr l,
       UnitSteps m or nr l ->
       noCalls (inline' m dms) = true ->
       wellHidden (hide l) m ->
@@ -318,13 +315,13 @@ Section Facts.
   Proof.
     induction dms; intros; simpl in *.
     - rewrite (noCalls_UnitSteps_hide X H); auto.
-    - specialize (@IHdms (inlineDmToMod m a) or nr (hideMeth l a)).
+    - apply SubList_cons_inv in Hdms; dest.
+      rewrite inlineDmToMod_getDmsMod with (dm:= a) in H2.
+      specialize (@IHdms (inlineDmToMod m a) H2 or nr (hideMeth l a)).
 
       assert (hide (hideMeth l a) = hide l).
-      { eapply hideMeth_preserves_hide; eauto using H0.
-        admit. (* TODO: bring information from a higher lemma *)
-      }
-      rewrite H1 in *; clear H1.
+      { eapply hideMeth_preserves_hide; eauto using H0. }
+      rewrite H3 in *; clear H3.
 
       apply IHdms; auto.
       + apply inlineDmToMod_correct_UnitSteps; auto.
@@ -339,6 +336,8 @@ Section Facts.
       UnitSteps (inline m) or nr (hide l).
   Proof.
     intros; apply inline'_correct_UnitSteps; auto.
+    rewrite getDmsMod_getDmsBodies_name.
+    apply SubList_refl.
   Qed.
 
   Lemma inline_wellHidden:
@@ -368,3 +367,4 @@ Section Facts.
   Qed.
 
 End Facts.
+

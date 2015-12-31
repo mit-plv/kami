@@ -18,6 +18,9 @@ Section Lists. (* For dealing with domains *)
 
   Lemma SubList_cons: forall a l1 l2, In a l2 -> SubList l1 l2 -> SubList (a :: l1) l2.
   Proof. unfold SubList; intros; inv H1; auto. Qed.
+
+  Lemma SubList_cons_inv: forall a l1 l2, SubList (a :: l1) l2 -> In a l2 /\ SubList l1 l2.
+  Proof. unfold SubList; intros; split; intuition. Qed.
     
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
