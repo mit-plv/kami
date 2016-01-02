@@ -268,6 +268,14 @@ Section HideExts.
     simpl in *; destruct H0; f_equal; admit. (* Semantics proof *)
   Qed.
 
+  Lemma hideMeth_mergeLabel:
+    forall {A} (l1 l2: LabelTP A) dm,
+      hideMeth (mergeLabel l1 l2) dm =
+      mergeLabel (hideMeth l1 dm) (hideMeth l2 dm).
+  Proof.
+    admit. (* Semantics proof *)
+  Qed.
+
 End HideExts.
 
 Section Facts.
@@ -287,6 +295,15 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
+  Lemma inlineDmToMod_correct_UnitStep_1:
+    forall m or nr l dm,
+      UnitStep m or nr l ->
+      wellHidden (hide l) m ->
+      UnitStep (inlineDmToMod m dm) or nr (hideMeth l dm).
+  Proof.
+    admit.
+  Qed.
+
   Lemma inlineDmToMod_correct_UnitSteps:
     forall m or nr l dm,
       UnitSteps m or nr l ->
@@ -294,7 +311,16 @@ Section Facts.
       wellHidden (hide l) m ->
       UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm).
   Proof.
-    admit. (* Inlining proof *)
+    induction 1; intros.
+
+    - constructor 1.
+      apply inlineDmToMod_correct_UnitStep_1; auto.
+
+    - rewrite hideMeth_mergeLabel.
+      constructor 2.
+      + apply IHX1. admit.
+      + apply IHX2. admit.
+      + admit.
   Qed.
 
   Lemma inlineDmToMod_wellHidden:
