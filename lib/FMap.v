@@ -559,9 +559,25 @@ Module LeibnizFacts (M : MapLeibniz).
     admit.
   Qed.
 
-  Lemma Disj_find_union:
+  Lemma Disj_find_union_1:
     forall {A} (m1 m2: t A) k v,
-      Disj m1 m2 -> find k m2 = Some v -> find k (union m1 m2) = Some v.
+      Disj m1 m2 -> find k m1 = Some v ->
+      find k (union m1 m2) = Some v.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_find_union_2:
+    forall {A} (m1 m2: t A) k v,
+      Disj m1 m2 -> find k m2 = Some v ->
+      find k (union m1 m2) = Some v.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_find_union_3:
+    forall {A} (m1 m2: t A) k v1 v2,
+      Disj m1 m2 -> find k m1 = Some v1 -> find k m2 = Some v2 -> False.
   Proof.
     admit.
   Qed.
@@ -630,6 +646,16 @@ Module LeibnizFacts (M : MapLeibniz).
     intros k. specialize (H k). specialize (H0 k).
     intuition. right. intros contra.
     apply union_In in contra. intuition.
+  Qed.
+
+  Lemma Disj_find_None {A}:
+    forall {m1 m2: t A} k,
+      Disj m1 m2 -> find k m1 = None \/ find k m2 = None.
+  Proof.
+    intros; autounfold with MapDefs in *.
+    destruct (H k).
+    - left; apply F.P.F.not_find_in_iff; auto.
+    - right; apply F.P.F.not_find_in_iff; auto.
   Qed.
 
   Lemma union_Disj_reorder {A}:
