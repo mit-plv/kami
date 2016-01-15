@@ -220,14 +220,12 @@ Section Exts.
   Fixpoint inlineDmToMod (m: Modules) (leaf: string) :=
     match getAttribute leaf (getDmsBodies m) with
       | Some dm =>
-        if noCallDm dm dm then
-          match m with
-            | Mod regs rules dms =>
-              Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm)
-            | ConcatMod m1 m2 =>
-              ConcatMod (inlineDmToMod m1 leaf) (inlineDmToMod m2 leaf)
-          end
-        else m
+        match m with
+          | Mod regs rules dms =>
+            Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm)
+          | ConcatMod m1 m2 =>
+            ConcatMod (inlineDmToMod m1 leaf) (inlineDmToMod m2 leaf)
+        end
       | None => m
     end.
 
@@ -248,25 +246,26 @@ Section Exts.
 
   Definition inlineDms (m: Modules) := inlineDms' m (getDmsMod m).
 
+  Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDmsBodies m).
+  Definition filterDms (dms: list DefMethT) (filt: list string) :=
+    filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms.
   Definition inline (m: Modules) :=
-    let im := inlineDms m in
-    Mod (getRegInits im) (getRules im)
-        (filter (fun dm => if in_dec string_dec (attrName dm) (getCmsMod m)
-                           then false else true)
-                (getDmsBodies im)).
+    let mm := merge m in
+    let im := inlineDms mm in
+    Mod (getRegInits im) (getRules im) (filterDms (getDmsBodies im) (getCmsMod m)).
 
 End Exts.
 
 Require Import SemanticsNew.
 
 Section HideExts.
-  Definition hideMeth {A} (l: LabelTP A) (dm: string): LabelTP A :=
-    match M.find dm (dms l), M.find dm (cms l) with
+  Definition hideMeth {A} (l: LabelTP A) (dmn: string): LabelTP A :=
+    match M.find dmn (dms l), M.find dmn (cms l) with
       | Some v1, Some v2 =>
         match signIsEq v1 v2 with
           | left _ => {| ruleMeth := ruleMeth l;
-                         dms := M.remove dm (dms l);
-                         cms := M.remove dm (cms l) |}
+                         dms := M.remove dmn (dms l);
+                         cms := M.remove dmn (cms l) |}
           | _ => l
         end
       | _, _ => l
@@ -307,22 +306,6 @@ Section HideExts.
     admit. (* easy *)
   Qed.
 
-  (* Lemma hideMeth_mergeLabel: *)
-  (*   forall {A} (l1 l2: LabelTP A) dm, *)
-  (*     hideMeth (mergeLabel l1 l2) dm = *)
-  (*     mergeLabel (hideMeth l1 dm) (hideMeth l2 dm). *)
-  (* Proof. *)
-  (*   admit. *)
-  (* Qed. *)
-
-  (* Lemma hideMeth_CanCombine: *)
-  (*   forall u1 u2 l1 l2 dm, *)
-  (*     CanCombine (u1, l1) (u2, l2) -> *)
-  (*     CanCombine (u1, hideMeth l1 dm) (u2, hideMeth l2 dm). *)
-  (* Proof. *)
-  (*   admit. *)
-  (* Qed. *)
-
 End HideExts.
 
 Section Facts.
@@ -352,88 +335,34 @@ Section Facts.
   (*   admit. *)
   (* Qed. *)
 
-  Lemma inlineDmToMod_correct_UnitSteps_sub:
-    forall m or u1 u2 rm1 rm2 dm1 dm2 cm1 cm2 (dm: DefMethT) t l1 l2,
-      l1 = {| ruleMeth := rm1; dms := dm1; cms := cm1 |} ->
-      l2 = {| ruleMeth := rm2; dms := dm2; cms := cm2 |} ->
-      UnitSteps m or u1 l1 -> UnitSteps m or u2 l2 ->
-      MF.Disj u1 u2 -> NotBothRule rm1 rm2 -> MF.Disj dm1 dm2 -> MF.Disj cm1 cm2 ->
-      Some t = M.find dm dm1 -> Some t = M.find dm cm2 ->
-      UnitSteps (inlineDmToMod m dm) or (MF.union u1 u2)
-                {| ruleMeth := match rm1 with
-                                 | Some r => Some r
-                                 | None => rm2
-                               end;
-                   dms := M.remove (elt:=Typed Semantics.SignT) dm (MF.union dm1 dm2);
-                   cms := M.remove (elt:=Typed Semantics.SignT) dm (MF.union cm1 cm2) |}.
-  Proof.
-    admit.
-  Qed.
+  (* Lemma inlineDmToMod_correct_UnitSteps_sub: *)
+  (*   forall m or u1 u2 rm1 rm2 dm1 dm2 cm1 cm2 (dm: DefMethT) t l1 l2, *)
+  (*     l1 = {| ruleMeth := rm1; dms := dm1; cms := cm1 |} -> *)
+  (*     l2 = {| ruleMeth := rm2; dms := dm2; cms := cm2 |} -> *)
+  (*     UnitSteps m or u1 l1 -> UnitSteps m or u2 l2 -> *)
+  (*     MF.Disj u1 u2 -> NotBothRule rm1 rm2 -> MF.Disj dm1 dm2 -> MF.Disj cm1 cm2 -> *)
+  (*     Some t = M.find dm dm1 -> Some t = M.find dm cm2 -> *)
+  (*     UnitSteps (inlineDmToMod m dm) or (MF.union u1 u2) *)
+  (*               {| ruleMeth := match rm1 with *)
+  (*                                | Some r => Some r *)
+  (*                                | None => rm2 *)
+  (*                              end; *)
+  (*                  dms := M.remove (elt:=Typed Semantics.SignT) dm (MF.union dm1 dm2); *)
+  (*                  cms := M.remove (elt:=Typed Semantics.SignT) dm (MF.union cm1 cm2) |}. *)
+  (* Proof. *)
+  (*   admit. *)
+  (* Qed. *)
 
   Lemma inlineDmToMod_correct_UnitSteps:
     forall m or nr l (dm: DefMethT),
-      In dm (getDmsBodies m) -> noCallDm dm dm = true ->
+      In dm (getDmsBodies m) ->
+      (* noCallDm dm dm = true -> *)
       UnitSteps m or nr l ->
       M.find dm (dms l) = M.find dm (cms l) ->
       UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm).
   Proof.
-    induction 3; intros.
-
-    - exfalso. admit.
-
-    - destruct l1 as [rm1 dm1 cm1], l2 as [rm2 dm2 cm2]; simpl in *.
-      remember (M.find dm (MF.union dm1 dm2)) as odmv.
-      destruct odmv.
-
-      + unfold hideMeth; simpl.
-        rewrite <-Heqodmv, <-H1; simpl.
-        destruct (signIsEq t t); [clear e|elim n; auto].
-        (* ??? *)
-        unfold CanCombine in c; dest; simpl in *.
-        rewrite MF.find_union in Heqodmv; rewrite MF.find_union in H1.
-        remember (M.find dm dm1) as odmv1; destruct odmv1.
-
-        * inv Heqodmv.
-          remember (M.find dm cm1) as ocmv1; destruct ocmv1.
-          { inv H1; specialize (IHX1 eq_refl).
-            admit. (* one-side inlined *)
-          }
-          { eapply inlineDmToMod_correct_UnitSteps_sub; eauto. }
-
-        * remember (M.find dm cm1) as ocmv1; destruct ocmv1.
-          { clear IHX1 IHX2; inv H1.
-            replace (MF.union u1 u2) with (MF.union u2 u1)
-              by (apply MF.union_comm; apply MF.Disj_comm; auto).
-            replace (match rm1 with | Some r => Some r | None => rm2 end) with
-            (match rm2 with | Some r => Some r | None => rm1 end)
-              by (destruct rm1, rm2; intuition idtac; destruct H3; discriminate).
-            replace (MF.union dm1 dm2) with (MF.union dm2 dm1)
-              by (apply MF.union_comm; apply MF.Disj_comm; auto).
-            replace (MF.union cm1 cm2) with (MF.union cm2 cm1)
-              by (apply MF.union_comm; apply MF.Disj_comm; auto).
-            eapply inlineDmToMod_correct_UnitSteps_sub; eauto; try (apply MF.Disj_comm; auto).
-            destruct H3; unfold NotBothRule; intuition auto.
-          }
-          { specialize (IHX1 eq_refl).
-            admit. (* one-side inlined *)
-          }
-
-      + unfold hideMeth in *; simpl in *; rewrite <-Heqodmv.
-        rewrite MF.find_union in Heqodmv.
-        destruct (M.find dm dm1); [discriminate|].
-        destruct (M.find dm dm2); [discriminate|].
-        rewrite MF.find_union in H1.
-        destruct (M.find dm cm1); [discriminate|].
-        destruct (M.find dm cm2); [discriminate|].
-        specialize (IHX1 eq_refl); specialize (IHX2 eq_refl).
-
-        match goal with
-            [ |- UnitSteps _ _ _ ?l] =>
-            replace l with (mergeLabel {| ruleMeth:= rm1; dms:= dm1; cms:= cm1 |}
-                                       {| ruleMeth:= rm2; dms:= dm2; cms:= cm2 |})
-              by reflexivity
-        end.
-        apply UnitStepsUnion; auto.
+    
+    admit.
   Qed.
 
   Lemma inlineDmToMod_wellHidden:
@@ -456,26 +385,6 @@ Section Facts.
     admit. (* TODO: hideMeths also needs "m" to check
             * if inline' really does inlining or not
             *)
-    
-    (* induction cdms; [auto|]. *)
-    (* intros; simpl in *. *)
-    (* apply SubList_cons_inv in Hcdms; dest. *)
-
-    (* specialize (@IHcdms m or nr l H1 X H). *)
-    (* apply inlineDmToMod_correct_UnitSteps; auto. *)
-
-    (* assert (hide (hideMeth l a) = hide l). *)
-    (* { eapply hideMeth_preserves_hide; eauto. } *)
-    (* rewrite H3 in *; clear H3. *)
-
-    (* apply IHcdms; auto. *)
-    (* - apply inlineDmToMod_correct_UnitSteps; auto. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + apply wellHiddenMeth_find. *)
-    (*     eapply wellHidden_wellHiddenMeth; eauto. *)
-    (*     admit. *)
-    (* - apply inlineDmToMod_wellHidden; auto. *)
   Qed.
 
   Lemma hideMeths_UnitSteps_hide:
@@ -489,7 +398,6 @@ Section Facts.
   Lemma inlineDms_correct_UnitSteps:
     forall m or nr l,
       UnitSteps m or nr l ->
-      noCalls (inlineDms m) = true ->
       wellHidden (hide l) m ->
       UnitSteps (inlineDms m) or nr (hide l).
   Proof.
@@ -512,11 +420,10 @@ Section Facts.
   Lemma inlineDms_correct:
     forall m or nr l,
       Step m or nr l ->
-      noCalls (inlineDms m) = true ->
       Step (inlineDms m) or nr l.
   Proof.
     induction 1; intros.
-    subst; pose proof (inlineDms_correct_UnitSteps u H w).
+    subst; pose proof (inlineDms_correct_UnitSteps u w).
 
     apply MkStep with (l:= hide l); auto.
     - apply hide_idempotent.
@@ -526,21 +433,30 @@ Section Facts.
   Lemma merge_preserves_step:
     forall m or nr l,
       Step m or nr l ->
-      Step (Mod (getRegInits m) (getRules m) (getDmsBodies m)) or nr l.
+      Step (merge m) or nr l.
   Proof.
-    admit.
+    admit. (* semantics proof *)
+  Qed.
+
+  Lemma filter_preserves_step:
+    forall regs rules dmsAll or nr l filt,
+      Step (Mod regs rules dmsAll) or nr l ->
+      MF.NotOnDomain (dms l) filt ->
+      Step (Mod regs rules (filterDms dmsAll filt)) or nr l.
+  Proof.
+    admit. (* semantics proof *)
   Qed.
 
   Theorem inline_correct:
     forall m or nr l,
       Step m or nr l ->
-      noCalls (inlineDms m) = true -> (* TODO: necessary? *)
       Step (inline m) or nr l.
   Proof.
-    intros; pose proof (inlineDms_correct X H).
-    pose proof (merge_preserves_step X0).
-    unfold inline.
-    admit. (* By "Step m or nr l", Domain(cms l) -*- (getCmsMod m) *)
+    intros; unfold inline.
+    apply filter_preserves_step; [|admit (* semantics proof *)].
+    apply merge_preserves_step.
+    apply inlineDms_correct.
+    apply merge_preserves_step; auto.
   Qed.
 
 End Facts.
