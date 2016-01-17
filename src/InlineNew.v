@@ -319,8 +319,24 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
+  Lemma noCallDm_SemAction_calls:
+    forall mn mb or nr calls argV retV,
+      noCallDm (mn :: mb)%struct (mn :: mb)%struct = true ->
+      Semantics.SemAction or (objVal mb Semantics.type argV) nr calls retV ->
+      M.find (elt:=Typed Semantics.SignT) mn calls = None.
+  Proof.
+    admit. (* Semantics proof *)
+  Qed.
+
+  (* NOTE: inlining should be targeted only for basic modules *)
+  Definition BasicMod (m: Modules) :=
+    match m with
+      | Mod _ _ _ => True
+      | _ => False
+    end.
+
   Lemma inlineDmToMod_correct_UnitStep_1:
-    forall m dm or u l,
+    forall m (Hm: BasicMod m) dm or u l,
       (* local conditions *)
       In dm (getDmsBodies m) ->
       NoDup (namesOf (getDmsBodies m)) ->
@@ -331,7 +347,7 @@ Section Facts.
       M.find dm (dms l) = M.find dm (cms l) ->
       UnitStep (inlineDmToMod m dm) or u (hideMeth l dm).
   Proof.
-    induction 4; intros; simpl in *.
+    induction 5; intros; simpl in *.
 
     - unfold hideMeth; simpl.
       destruct (getAttribute dm meths); constructor; auto.
@@ -357,10 +373,27 @@ Section Facts.
       rewrite <-(in_NoDup_getAttribute _ _ _ H H0) in Heqodm.
       inv Heqodm.
 
-      admit. (* not that difficult *)
+      destruct (string_dec dmn meth).
+      + subst; exfalso.
+        destruct meth as [mn mb]; simpl in *.
+        rewrite MF.find_add_1 in H2.
+        assert (mb = dmb) by admit; subst. (* NoDup property *)
+        rewrite (noCallDm_SemAction_calls _ _ _ H1 s) in H2.
+        discriminate.
+      + unfold hideMeth; simpl.
+        rewrite MF.find_add_2 by assumption.
+        rewrite MF.find_empty.
+        apply SingleMeth with (meth:= inlineDmToDm meth (dmn :: dmb)%struct)
+                                (argV:= argV) (retV:= retV); auto.
+        * apply in_map with (f:= fun dm => inlineDmToDm dm (dmn :: dmb)%struct) in i.
+          assumption.
+        * simpl.
+          rewrite MF.find_add_2 in H2 by assumption.
+          rewrite MF.find_empty in H2.
+          apply inlineDm_SemAction_intact; auto.
 
-    - admit. (* should be false (exfalso), inlining should be targeted only to Mod *)
-    - admit. (* ditto *)
+    - exfalso; auto.
+    - exfalso; auto.
   Qed.
 
   (* Lemma inlineDmToMod_correct_UnitSteps_sub: *)
@@ -382,7 +415,7 @@ Section Facts.
   (* Qed. *)
 
   Lemma inlineDmToMod_correct_UnitSteps:
-    forall m or nr l (dm: DefMethT),
+    forall m (Hm: BasicMod m) or nr l (dm: DefMethT),
       In dm (getDmsBodies m) ->
       NoDup (namesOf (getDmsBodies m)) ->
       noCallDm dm dm = true ->
@@ -390,7 +423,7 @@ Section Facts.
       M.find dm (dms l) = M.find dm (cms l) ->
       UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm).
   Proof.
-    induction 4; intros.
+    induction 5; intros.
 
     - constructor; apply inlineDmToMod_correct_UnitStep_1; auto.
 
@@ -458,7 +491,7 @@ Section Facts.
   Qed.
 
   Lemma inlineDms'_correct_UnitSteps:
-    forall cdms m or nr l,
+    forall cdms m (Hm: BasicMod m) or nr l,
       UnitSteps m or nr l ->
       wellHidden (hide l) m ->
       UnitSteps (inlineDms' m cdms) or nr (hideMeths l cdms).
@@ -479,7 +512,7 @@ Section Facts.
   Qed.
 
   Lemma inlineDms_correct_UnitSteps:
-    forall m or nr l,
+    forall m (Hm: BasicMod m) or nr l,
       UnitSteps m or nr l ->
       wellHidden (hide l) m ->
       UnitSteps (inlineDms m) or nr (hide l).
@@ -507,12 +540,12 @@ Section Facts.
   Qed.
 
   Lemma inlineDms_correct:
-    forall m or nr l,
+    forall m (Hm: BasicMod m) or nr l,
       Step m or nr l ->
       Step (inlineDms m) or nr l.
   Proof.
-    induction 1; intros.
-    subst; pose proof (inlineDms_correct_UnitSteps u w).
+    induction 2; intros.
+    subst; pose proof (inlineDms_correct_UnitSteps Hm u w).
 
     apply MkStep with (l:= hide l); auto.
     - apply hide_idempotent.
@@ -544,7 +577,7 @@ Section Facts.
     intros; unfold inline.
     apply filter_preserves_step; [|admit (* Semantics proof *)].
     apply merge_preserves_step.
-    apply inlineDms_correct.
+    apply inlineDms_correct; [unfold BasicMod, merge; auto|].
     apply merge_preserves_step; auto.
   Qed.
 

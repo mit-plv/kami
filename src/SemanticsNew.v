@@ -71,17 +71,18 @@ Inductive UnitStep : Modules -> RegsT -> RegsT -> RuleLabelT -> Type :=
            (meths : list DefMethT)
            (oRegs : RegsT)
            (calls : CallsT) (news : RegsT) 
-           (meth : DefMethT)
-           (argV : type (arg (objType (attrType meth))))
-           (retV : type (ret (objType (attrType meth))))
-           (udefs : CallsT),
-      SemAction oRegs (objVal (attrType meth) type argV) news calls retV ->
-      udefs = M.add meth {|
-                      objType := objType (attrType meth);
-                      objVal := (argV, retV) |} (M.empty _) ->
-      MF.InDomain oRegs (namesOf regInits) ->
-      UnitStep (Mod regInits rules meths) oRegs news
-               (Build_LabelTP None udefs calls)
+           (meth : DefMethT),
+      In meth meths ->
+      forall (argV : type (arg (objType (attrType meth))))
+             (retV : type (ret (objType (attrType meth))))
+             (udefs : CallsT),
+        SemAction oRegs (objVal (attrType meth) type argV) news calls retV ->
+        udefs = M.add meth {|
+                        objType := objType (attrType meth);
+                        objVal := (argV, retV) |} (M.empty _) ->
+        MF.InDomain oRegs (namesOf regInits) ->
+        UnitStep (Mod regInits rules meths) oRegs news
+                 (Build_LabelTP None udefs calls)
 | LeftIntro :
     forall (m1 m2 : Modules)
            (oRegs1 oRegs2 oRegs news : RegsT)
