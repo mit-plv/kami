@@ -224,8 +224,7 @@ Section Exts.
           match m with
             | Mod regs rules dms =>
               Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm)
-            | ConcatMod m1 m2 =>
-              ConcatMod (inlineDmToMod m1 leaf) (inlineDmToMod m2 leaf)
+            | ConcatMod m1 m2 => m (* don't care *)
           end
         else m
       | None => m
@@ -241,13 +240,10 @@ Section Exts.
   Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDmsBodies m)).
 
   Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDmsBodies m).
-  Definition filterDms (dms: list DefMethT) (filt: list string) :=
-    filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms.
-  Definition inline (m: Modules) :=
-    let mm := merge m in
-    let im := inlineDms mm in
-    Mod (getRegInits im) (getRules im) (filterDms (getDmsBodies im) (getCmsMod m)).
-
+  (* Definition filterDms (dms: list DefMethT) (filt: list string) := *)
+  (*   filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms. *)
+  Definition inline (m: Modules) := inlineDms (merge m).
+  
 End Exts.
 
 Require Import SemanticsNew.
@@ -504,17 +500,93 @@ Section Facts.
       rewrite hideMeth_preserves_hide; auto.
   Qed.
 
+  Definition InlinableDm (m: Modules) (dm: string) :=
+    match getAttribute dm (getDmsBodies m) with
+      | Some dmb =>
+        if noCallDm dmb dmb then True else False
+      | _ => False
+    end.
+
+  Inductive Inlinable (m: Modules): list string -> Prop :=
+  | InlinableNil: Inlinable m nil
+  | InlinableCons:
+      forall dm dms,
+        Inlinable (inlineDmToMod m dm) dms ->
+        InlinableDm m dm ->
+        Inlinable m (dm :: dms).
+
+  Definition hideMethF {A} (l: LabelTP A) (dmn: string): LabelTP A :=
+    match M.find dmn (dms l), M.find dmn (cms l) with
+      | Some v1, Some v2 =>
+        match signIsEq v1 v2 with
+          | left _ => {| ruleMeth := ruleMeth l;
+                         dms := M.remove dmn (dms l);
+                         cms := M.remove dmn (cms l) |}
+          | _ => l
+        end
+      | _, _ => l
+    end.
+
+  Fixpoint hideMethsF {A} (l: LabelTP A) (dms: list string): LabelTP A :=
+    match dms with
+      | nil => l
+      (* | dm :: dms' => hideMethF (hideMethsF l dms') dm *)
+      | dm :: dms' => hideMethsF (hideMethF l dm) dms'
+    end.
+
+  Lemma hideMethsF_hide:
+    forall dmsAll {A} (l: LabelTP A),
+      MF.InDomain (dms l) dmsAll ->
+      hideMethsF l dmsAll = hide l.
+  Proof.
+    admit. (* True, but not trivial *)
+  Qed.
+
+  Lemma hideMethsF_UnitSteps_hide:
+    forall m or nr l,
+      UnitSteps m or nr l ->
+      hideMethsF l (namesOf (getDmsBodies m)) = hide l.
+  Proof.
+    intros; apply hideMethsF_hide.
+    admit. (* Semantics proof *)
+  Qed.
+
+  Lemma hideMeth_hideMethF:
+    forall m dm {A} (l: LabelTP A),
+      InlinableDm m dm ->
+      hideMeth l dm m = hideMethF l dm.
+  Proof.
+    intros; unfold InlinableDm in H; unfold hideMeth.
+    destruct (getAttribute dm (getDmsBodies m)); [|intuition idtac].
+    destruct (noCallDm a a); [|intuition idtac].
+    reflexivity.
+  Qed.
+
+  Lemma hideMeths_hideMethsF:
+    forall m dms,
+      Inlinable m dms ->
+      forall {A} (l: LabelTP A),
+        hideMeths l dms m = hideMethsF l dms.
+  Proof.
+    induction 1; intros; [reflexivity|].
+    simpl; rewrite hideMeth_hideMethF; auto.
+  Qed.
+    
   Lemma hideMeths_UnitSteps_hide:
     forall m or nr l,
       UnitSteps m or nr l ->
+      Inlinable m (namesOf (getDmsBodies m)) ->
       hideMeths l (namesOf (getDmsBodies m)) m = hide l.
   Proof.
-    admit. (* not trivial; dig into this first *)
+    intros.
+    rewrite hideMeths_hideMethsF; auto.
+    eapply hideMethsF_UnitSteps_hide; eauto.
   Qed.
 
   Lemma inlineDms_correct_UnitSteps:
     forall m (Hm: BasicMod m) (Hdms: NoDup (namesOf (getDmsBodies m))) or nr l,
       UnitSteps m or nr l ->
+      Inlinable m (namesOf (getDmsBodies m)) ->
       wellHidden (hide l) m ->
       UnitSteps (inlineDms m) or nr (hide l).
   Proof.
@@ -543,12 +615,14 @@ Section Facts.
   Qed.
 
   Lemma inlineDms_correct:
-    forall m (Hm: BasicMod m) (Hdms: NoDup (namesOf (getDmsBodies m))) or nr l,
+    forall m (Hm: BasicMod m) (Hdms: NoDup (namesOf (getDmsBodies m)))
+           (Hin: Inlinable m (namesOf (getDmsBodies m)))
+           or nr l,
       Step m or nr l ->
       Step (inlineDms m) or nr l.
   Proof.
-    induction 3; intros.
-    subst; pose proof (inlineDms_correct_UnitSteps Hm Hdms u w).
+    induction 4; intros.
+    subst; pose proof (inlineDms_correct_UnitSteps Hm Hdms u Hin w).
 
     apply MkStep with (l:= hide l); auto.
     - apply hide_idempotent.
@@ -563,26 +637,37 @@ Section Facts.
     admit. (* Semantics proof *)
   Qed.
 
-  Lemma filter_preserves_step:
-    forall regs rules dmsAll or nr l filt,
-      Step (Mod regs rules dmsAll) or nr l ->
-      MF.NotOnDomain (dms l) filt ->
-      Step (Mod regs rules (filterDms dmsAll filt)) or nr l.
+  (* Lemma filter_preserves_step: *)
+  (*   forall regs rules dmsAll or nr l filt, *)
+  (*     Step (Mod regs rules dmsAll) or nr l -> *)
+  (*     MF.NotOnDomain (dms l) filt -> *)
+  (*     Step (Mod regs rules (filterDms dmsAll filt)) or nr l. *)
+  (* Proof. *)
+  (* Qed. *)
+
+  (* Instead of filter, use below *)
+  Lemma step_dms_hidden:
+    forall m or nr l,
+      Step m or nr l ->
+      MF.NotOnDomain (dms l) (getCmsMod m).
   Proof.
-    admit. (* Semantics proof *)
+    intros; inv X.
+    unfold wellHidden in H0.
+    destruct (hide l0); simpl in *; intuition.
   Qed.
 
   Theorem inline_correct:
-    forall m (Hdms: NoDup (namesOf (getDmsBodies m))) or nr l,
+    forall m (Hdms: NoDup (namesOf (getDmsBodies m)))
+           (Hin: Inlinable m (namesOf (getDmsBodies m)))
+           or nr l,
       Step m or nr l ->
       Step (inline m) or nr l.
   Proof.
     intros; unfold inline.
-    apply filter_preserves_step; [|admit (* Semantics proof *)].
-    apply merge_preserves_step.
     apply inlineDms_correct.
     - unfold BasicMod, merge; auto.
-    - admit. (* easy *)
+    - admit. (* easy, or change Hdms *)
+    - admit. (* easy, or change Hin *)
     - apply merge_preserves_step; auto.
   Qed.
 
