@@ -607,6 +607,20 @@ Module LeibnizFacts (M : MapLeibniz).
       rewrite F.P.F.add_in_iff in H. intuition. assumption.
   Qed.
 
+  Lemma Disj_remove_1 {A}:
+    forall (m1 m2: t A) k,
+      Disj m1 m2 -> Disj (remove k m1) m2.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Disj_remove_2 {A}:
+    forall (m1 m2: t A) k,
+      Disj m1 m2 -> Disj m1 (remove k m2).
+  Proof.
+    admit.
+  Qed.
+
   Lemma Disj_comm {A} : forall {m m' : t A}, Disj m m' -> Disj m' m.
   Proof. 
     intros. unfold Disj in *. intros k.
@@ -680,6 +694,26 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma union_comm:
     forall {A} (m1 m2: t A), Disj m1 m2 -> union m1 m2 = union m2 m1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma remove_empty:
+    forall {A} k, remove k (empty A) = empty A.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma remove_find_None:
+    forall {A} (m: t A) k,
+      find k m = None -> remove k m = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma remove_union:
+    forall {A} (m1 m2: t A) k,
+      remove k (union m1 m2) = union (remove k m1) (remove k m2).
   Proof.
     admit.
   Qed.
