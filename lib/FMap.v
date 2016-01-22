@@ -394,15 +394,23 @@ Module LeibnizFacts (M : MapLeibniz).
             end) m2 m1.
 
   Lemma subtractKV_empty_1:
-    forall {A : Type} (deceqA : forall x y : A, sumbool (x = y) (x <> y)) (m: t A),
+    forall {A : Type} deceqA (m: t A),
       subtractKV deceqA (empty A) m = empty A.
   Proof.
     admit.
   Qed.
 
   Lemma subtractKV_empty_2:
-    forall {A : Type} (deceqA : forall x y : A, sumbool (x = y) (x <> y)) (m: t A),
+    forall {A : Type} deceqA (m: t A),
       subtractKV deceqA m (empty A) = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_remove:
+    forall {A : Type} deceqA (m1 m2: t A) k,
+      subtractKV deceqA (remove k m1) (remove k m2) =
+      subtractKV deceqA m1 m2.
   Proof.
     admit.
   Qed.

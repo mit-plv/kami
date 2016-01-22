@@ -233,7 +233,6 @@ Section Exts.
   Fixpoint inlineDms' (m: Modules) (dms: list string) :=
     match dms with
       | nil => m
-      (* | dm :: dms' => inlineDmToMod (inlineDms' m dms') dm *)
       | dm :: dms' => inlineDms' (inlineDmToMod m dm) dms'
     end.
 
@@ -270,41 +269,61 @@ Section HideExts.
   Fixpoint hideMeths {A} (l: LabelTP A) (dms: list string) (m: Modules): LabelTP A :=
     match dms with
       | nil => l
-      (* | dm :: dms' => hideMeth (hideMeths l dms' m) dm m *)
       | dm :: dms' => hideMeths (hideMeth l dm m) dms' (inlineDmToMod m dm)
     end.
-
-  Definition wellHiddenMeth {A} (l: LabelTP A) (dm: string) :=
-    M.find dm (dms l) = None /\ M.find dm (cms l) = None.
 
   Lemma hideMeth_preserves_hide:
     forall {A} (l: LabelTP A) dm m,
       hide (hideMeth l dm m) = hide l.
   Proof.
     intros; destruct l as [rm dms cms].
-    admit.
-  Qed.
-
-  Lemma wellHidden_wellHiddenMeth:
-    forall {A} m (l: LabelTP A) dm,
-      In dm (namesOf (getDmsBodies m)) ->
-      wellHidden (hide l) m ->
-      wellHiddenMeth (hideMeth l dm m) dm.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma wellHiddenMeth_find:
-    forall {A} (l: LabelTP A) dm m,
-      wellHiddenMeth (hideMeth l dm m) dm <->
-      M.find dm (dms l) = M.find dm (cms l).
-  Proof.
-    admit. (* easy *)
+    unfold hide, hideMeth; simpl.
+    destruct (getAttribute dm (getDmsBodies m)); [|reflexivity].
+    destruct (noCallDm a a); [|reflexivity].
+    destruct (M.find dm dms); [|reflexivity].
+    destruct (M.find dm cms); [|reflexivity].
+    destruct (signIsEq t t0); [|reflexivity].
+    subst; f_equal; auto; apply MF.subtractKV_remove.
   Qed.
 
 End HideExts.
 
 Section Facts.
+
+  Lemma appendAction_SemAction:
+    forall retK1 retK2 a1 a2 olds news1 news2 calls1 calls2
+           (retV1: type retK1) (retV2: type retK2),
+      SemAction olds a1 news1 calls1 retV1 ->
+      SemAction olds (a2 retV1) news2 calls2 retV2 ->
+      SemAction olds (appendAction a1 a2) (MF.union news1 news2) (MF.union calls1 calls2) retV2.
+  Proof.
+    induction a1; intros.
+
+    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1); econstructor; eauto.
+      apply MF.union_add.
+    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1); econstructor; eauto.
+    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H2 H1); econstructor; eauto.
+    - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0); econstructor; eauto.
+      apply MF.union_add.
+    - invertAction H0.
+      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
+      + eapply SemIfElseTrue.
+        * eauto.
+        * eassumption.
+        * eapply H; eauto.
+        * rewrite MF.union_assoc; reflexivity.
+        * rewrite MF.union_assoc; reflexivity.
+      + eapply SemIfElseFalse.
+        * eauto.
+        * eassumption.
+        * eapply H; eauto.
+        * rewrite MF.union_assoc; reflexivity.
+        * rewrite MF.union_assoc; reflexivity.
+
+    - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
+      econstructor; eauto.
+    - invertAction H; econstructor; eauto.
+  Qed.
 
   Lemma inlineDm_correct_SemAction:
     forall (meth: DefMethT) or u1 cm1 argV retV1,
@@ -321,7 +340,26 @@ Section Facts.
   Proof.
     induction a; intros; simpl.
 
-    - admit. (* call case *)
+    - inv H4; destruct_existT.
+      remember (getBody meth0 meth s) as ob; destruct ob.
+      + unfold getBody in Heqob.
+        destruct (string_dec meth0 meth); [subst|inv Heqob].
+        destruct (SignatureT_dec _ _); [|inv Heqob].
+        generalize dependent HSemAction; inv Heqob; intros.
+        rewrite MF.find_add_1 in H3.
+        inv H3; destruct_existT.
+        simpl; constructor.
+        admit. (* TODO: need WfAction *)
+
+      + econstructor; eauto.
+        * instantiate (1:= MF.union cm1 (M.remove meth calls)).
+          instantiate (1:= mret).
+          admit. (* map stuff; not trivial *)
+        * apply H0; auto.
+          { apply MF.Disj_comm, MF.Disj_add_2 in H2; dest.
+            apply MF.Disj_comm; auto.
+          }
+          { admit. (* map stuff; not trivial *) }
       
     - inv H4; destruct_existT.
       constructor; auto.
@@ -346,12 +384,50 @@ Section Facts.
   Qed.
 
   Lemma inlineDm_SemAction_intact:
-    forall {retK} dmn dmb or a nr calls (retV: type retK),
+    forall {retK} or a nr calls (retV: type retK),
       SemAction or a nr calls retV ->
-      None = M.find dmn calls ->
-      SemAction or (inlineDm a (dmn :: dmb)%struct) nr calls retV.
+      forall dmn dmb,
+        None = M.find dmn calls ->
+        SemAction or (inlineDm a (dmn :: dmb)%struct) nr calls retV.
   Proof.
-    admit. (* Semantics proof *)
+    induction 1; intros.
+
+    - simpl.
+      remember (getBody meth (dmn :: dmb)%struct s) as omb;
+        destruct omb.
+      + exfalso; subst.
+        unfold getBody in Heqomb.
+        destruct (string_dec _ _); [|discriminate].
+        subst; rewrite MF.find_add_1 in H0; inv H0.
+      + subst.
+        unfold getBody in Heqomb.
+        destruct (string_dec _ _);
+          [subst; rewrite MF.find_add_1 in H0; inv H0|].
+        rewrite MF.find_add_2 in H0 by intuition auto.
+        econstructor; eauto.
+
+    - simpl; constructor; auto.
+    - simpl; econstructor; eauto.
+    - simpl; econstructor; eauto.
+
+    - subst; eapply SemIfElseTrue; eauto.
+      + apply IHSemAction1.
+        rewrite MF.find_union in H1.
+        destruct (M.find dmn calls1); auto.
+      + apply IHSemAction2.
+        rewrite MF.find_union in H1.
+        destruct (M.find dmn calls1); auto; inv H1.
+
+    - subst; eapply SemIfElseFalse; eauto.
+      + apply IHSemAction1.
+        rewrite MF.find_union in H1.
+        destruct (M.find dmn calls1); auto.
+      + apply IHSemAction2.
+        rewrite MF.find_union in H1.
+        destruct (M.find dmn calls1); auto; inv H1.
+
+    - simpl; constructor; auto.
+    - simpl; constructor; auto.
   Qed.
 
   Lemma noCallDm_SemAction_calls:
@@ -360,7 +436,8 @@ Section Facts.
       SemAction or (objVal mb type argV) nr calls retV ->
       M.find (elt:=Typed SignT) mn calls = None.
   Proof.
-    admit. (* Semantics proof *)
+    intros; unfold noCallDm in H; simpl in H.
+    admit. (* TODO: need equivalence *)    
   Qed.
 
   (* NOTE: inlining should be targeted only for basic modules *)
@@ -405,8 +482,11 @@ Section Facts.
       + subst; exfalso.
         destruct meth as [mn mb]; simpl in *; subst.
         rewrite MF.find_add_1 in H.
-        assert (ab = mb) by admit; subst. (* TODO: NoDup property *)
-        rewrite (noCallDm_SemAction_calls _ _ _ (eq_sym Heqocall) s) in H.
+        assert (ab = mb); subst.
+        { rewrite <-(in_NoDup_getAttribute _ _ _ i Hdms) in Heqodm.
+          inv Heqodm; reflexivity.
+        }
+        erewrite noCallDm_SemAction_calls in H; eauto.
         discriminate.
       + subst.
         rewrite MF.find_add_2 by assumption.
@@ -470,28 +550,103 @@ Section Facts.
     - inv H.
   Qed.
 
-  Lemma inlineDmToRules_UnitSteps_intact:
-    forall regs rules dms or u rm dm cm (a: DefMethT),
-      UnitSteps (Mod regs rules dms) or u
-                {| ruleMeth := rm; dms := dm; cms := cm |} ->
-      (* M.find a dm = None -> *) (* CHECK: necessary? *)
-      M.find a cm = None ->
-      UnitSteps (Mod regs (inlineDmToRules rules a) dms) or u
-                {| ruleMeth := rm; dms := dm; cms := cm |}.
+  Lemma inlineDmToRules_UnitStep_intact:
+    forall m or u l (a: DefMethT),
+      UnitStep m or u l ->
+      forall regs rules dms,
+        m = Mod regs rules dms ->
+        forall rm dm cm,
+          l = {| ruleMeth := rm; dms := dm; cms := cm |} ->
+          M.find a cm = None ->
+          UnitStep (Mod regs (inlineDmToRules rules a) dms) or u
+                   {| ruleMeth := rm; dms := dm; cms := cm |}.
   Proof.
-    admit.
+    induction 1; intros; subst.
+
+    - inv H; inv H0; constructor; auto.
+    - inv H; inv H0.
+      apply SingleRule with
+      (ruleBody:= attrType (inlineDmToRule (ruleName :: ruleBody)%struct a))
+        (retV:= retV); auto.
+      + apply in_map with (f:= fun r => inlineDmToRule r a) in i.
+        assumption.
+      + simpl; destruct a; apply inlineDm_SemAction_intact; auto.
+    - inv H; inv H0; eapply SingleMeth; eauto.
+    - inv H.
+    - inv H.
+  Qed.
+
+  Lemma inlineDmToRules_UnitSteps_intact:
+    forall regs rules dms or u l (a: DefMethT),
+      UnitSteps (Mod regs rules dms) or u l ->
+      forall rm dm cm,
+        l = {| ruleMeth := rm; dms := dm; cms := cm |} ->
+        M.find a cm = None ->
+        UnitSteps (Mod regs (inlineDmToRules rules a) dms) or u
+                  {| ruleMeth := rm; dms := dm; cms := cm |}.
+  Proof.
+    induction 1; intros; subst.
+
+    - apply UnitSteps1.
+      eapply inlineDmToRules_UnitStep_intact; eauto.
+
+    - destruct l1 as [rm1 dm1 cm1], l2 as [rm2 dm2 cm2].
+      simpl in *; inv H.
+      specialize (IHX1 _ _ _ eq_refl).
+      specialize (IHX2 _ _ _ eq_refl).
+      rewrite MF.find_union in H0.
+      destruct (M.find a cm1); [discriminate|].
+      destruct (M.find a cm2); [discriminate|].
+      apply (UnitStepsUnion (IHX1 eq_refl) (IHX2 eq_refl) c).
+  Qed.
+
+  Lemma inlineDmToDms_UnitStep_intact:
+    forall m or u l (a: DefMethT),
+      UnitStep m or u l ->
+      forall regs rules dms,
+        m = Mod regs rules dms ->
+        forall rm dm cm,
+          l = {| ruleMeth := rm; dms := dm; cms := cm |} ->
+          M.find a cm = None ->
+          UnitStep (Mod regs rules (inlineDmToDms dms a)) or u
+                   {| ruleMeth := rm; dms := dm; cms := cm |}.
+  Proof.
+    induction 1; intros; subst.
+
+    - inv H; inv H0; constructor; auto.
+    - inv H; inv H0; eapply SingleRule; eauto.
+    - inv H; inv H0.
+      apply SingleMeth with
+      (meth:= inlineDmToDm meth a) (argV:= argV) (retV:= retV); auto.
+      + apply in_map with (f:= fun dm => inlineDmToDm dm a) in i.
+        assumption.
+      + simpl; destruct a; eapply inlineDm_SemAction_intact; auto.
+    - inv H.
+    - inv H.
   Qed.
 
   Lemma inlineDmToDms_UnitSteps_intact:
-    forall regs rules dms or u rm dm cm (a: DefMethT),
-      UnitSteps (Mod regs rules dms) or u
-                {| ruleMeth := rm; dms := dm; cms := cm |} ->
-      (* M.find a dm = None -> *) (* CHECK: necessary? *)
-      M.find a cm = None ->
-      UnitSteps (Mod regs rules (inlineDmToDms dms a)) or u
-                {| ruleMeth := rm; dms := dm; cms := cm |}.
+    forall regs rules dms or u l (a: DefMethT),
+      UnitSteps (Mod regs rules dms) or u l ->
+      forall rm dm cm,
+        l = {| ruleMeth := rm; dms := dm; cms := cm |} ->
+        M.find a cm = None ->
+        UnitSteps (Mod regs rules (inlineDmToDms dms a)) or u
+                  {| ruleMeth := rm; dms := dm; cms := cm |}.
   Proof.
-    admit.
+    induction 1; intros; subst.
+
+    - apply UnitSteps1.
+      eapply inlineDmToDms_UnitStep_intact; eauto.
+
+    - destruct l1 as [rm1 dm1 cm1], l2 as [rm2 dm2 cm2].
+      simpl in *; inv H.
+      specialize (IHX1 _ _ _ eq_refl).
+      specialize (IHX2 _ _ _ eq_refl).
+      rewrite MF.find_union in H0.
+      destruct (M.find a cm1); [discriminate|].
+      destruct (M.find a cm2); [discriminate|].
+      apply (UnitStepsUnion (IHX1 eq_refl) (IHX2 eq_refl) c).
   Qed.
 
   Lemma inlineDmToMod_correct_UnitSteps_meth:
@@ -519,16 +674,87 @@ Section Facts.
     - apply UnitSteps1.
       eapply inlineDmToMod_correct_UnitStep_2; eauto.
 
-    - admit. (* induction step *)
+    - destruct l1 as [rml dml cml], l2 as [rmr dmr cmr]; simpl in *.
+      inv H.
+      specialize (IHX1 _ _ _ eq_refl H0 (MF.Disj_union_1 H1)
+                       (MF.Disj_union_1 H2) (MF.Disj_union_1 H3)).
+      specialize (IHX2 _ _ _ eq_refl H0 (MF.Disj_union_2 H1)
+                       (MF.Disj_union_2 H2) (MF.Disj_union_2 H3)).
+      rewrite MF.find_union in H4.
+      
+      remember (M.find meth cml) as ocml; destruct ocml.
+
+      + remember (M.find meth cmr) as ocmr; destruct ocmr;
+        [exfalso; inv c; dest; simpl in *;
+         eapply MF.Disj_find_union_3; eauto|].
+
+        specialize (IHX1 H4).
+        match goal with
+          | [ |- UnitSteps _ _ ?u {| cms := ?c |} ] =>
+            replace u with (MF.union (MF.union u1 u0) u2)
+              by admit; (* map stuff *)
+              replace c with (MF.union
+                                (MF.union cm1 (M.remove meth cml))
+                                cmr)
+              by admit (* map stuff *)
+        end.
+
+        match goal with
+          | [ |- UnitSteps _ _ _ ?l ] =>
+            replace l with
+            (mergeLabel
+               {| ruleMeth:= rml;
+                  dms:= dml;
+                  cms:= MF.union cm1 (M.remove meth cml) |}
+               {| ruleMeth:= rmr;
+                  dms:= dmr;
+                  cms:= cmr |}
+            ) by reflexivity
+        end.
+        apply UnitStepsUnion; auto.
+        * eapply inlineDmToRules_UnitSteps_intact; eauto.
+          eapply inlineDmToDms_UnitSteps_intact; eauto.
+        * admit. (* CanCombine / map stuff *)
+
+      + remember (M.find meth cmr) as ocmr;
+        destruct ocmr; [|discriminate].
+
+        specialize (IHX2 H4).
+        match goal with
+          | [ |- UnitSteps _ _ ?u {| cms := ?c |} ] =>
+            replace u with (MF.union u0 (MF.union u1 u2))
+              by admit; (* map stuff *)
+              replace c with (MF.union
+                                cml
+                                (MF.union cm1 (M.remove meth cmr)))
+              by admit (* map stuff *)
+        end.
+
+        match goal with
+          | [ |- UnitSteps _ _ _ ?l ] =>
+            replace l with
+            (mergeLabel
+               {| ruleMeth:= rml;
+                  dms:= dml;
+                  cms:= cml |}
+               {| ruleMeth:= rmr;
+                  dms:= dmr;
+                  cms:= MF.union cm1 (M.remove meth cmr) |}
+            ) by reflexivity
+        end.
+        apply UnitStepsUnion; auto.
+        * eapply inlineDmToRules_UnitSteps_intact; eauto.
+          eapply inlineDmToDms_UnitSteps_intact; eauto.
+        * admit. (* CanCombine / map stuff *)
   Qed.
 
   Lemma inlineDmToMod_correct_UnitSteps_sub:
     forall regs rules dms (Hdms: NoDup (namesOf dms))
-           or u1 u2 l1 l2,
-      UnitSteps (Mod regs rules dms) or u1 l1 ->
+           or u1 u2 l1 l2 dm,
+      In dm dms ->
       UnitSteps (Mod regs rules dms) or u2 l2 ->
-      forall rm1 rm2 dm1 dm2 cm1 cm2 dm t,
-        In dm dms ->
+      UnitSteps (Mod regs rules dms) or u1 l1 ->
+      forall rm1 rm2 dm1 dm2 cm1 cm2 t,
         l1 = {| ruleMeth := rm1; dms := dm1; cms := cm1 |} ->
         l2 = {| ruleMeth := rm2; dms := dm2; cms := cm2 |} ->
         MF.Disj u1 u2 -> NotBothRule rm1 rm2 ->
@@ -543,7 +769,7 @@ Section Facts.
                      dms := M.remove dm (MF.union dm1 dm2);
                      cms := M.remove dm (MF.union cm1 cm2) |}.
   Proof.
-    induction 2; intros; subst.
+    induction 4; intros; subst.
 
     - inv u0; try (rewrite MF.find_empty in H6; inv H6; fail).
       destruct (string_dec dm meth);
@@ -563,7 +789,23 @@ Section Facts.
 
       eapply inlineDmToMod_correct_UnitSteps_meth; eauto.
 
-    - admit. (* induction case *)
+    - destruct l0 as [rml dml cml], l1 as [rmr dmr cmr]; simpl in *.
+      inv H0; rewrite MF.find_union in H6.
+
+      (* specialize (IHX0_1 _ _ _ _ _ _ t eq_refl eq_refl). *)
+      (* specialize (IHX0_2 _ _ _ _ _ _ t eq_refl eq_refl). *)
+
+      remember (M.find dm dmr) as odmr; destruct odmr.
+
+      + inv H6; clear IHX0_2.
+        remember (M.find dm dml) as odml; destruct odml;
+        [exfalso; inv c; dest; simpl in *;
+         eapply MF.Disj_find_union_3 with (m1:= dmr) (m2:= dml);
+         eauto|].
+        admit.
+
+      + clear IHX0_1.
+        admit.
   Qed.
 
   Lemma inlineDmToMod_correct_UnitSteps:
@@ -622,8 +864,8 @@ Section Facts.
               by (destruct (MF.Disj_find_None a H4); auto;
                   rewrite H5 in Heqocmv1; inv Heqocmv1).
             do 2 rewrite MF.remove_find_None by assumption.
-            apply inlineDmToRules_UnitSteps_intact; auto.
-            apply inlineDmToDms_UnitSteps_intact; auto.
+            eapply inlineDmToRules_UnitSteps_intact; eauto.
+            eapply inlineDmToDms_UnitSteps_intact; eauto.
           }
           { repeat split; simpl; auto.
             { apply MF.Disj_remove_1, MF.Disj_remove_2; assumption. }
@@ -667,8 +909,8 @@ Section Facts.
           end.
           apply UnitStepsUnion; auto.
           { do 2 rewrite MF.remove_find_None by auto.
-            apply inlineDmToRules_UnitSteps_intact; auto.
-            apply inlineDmToDms_UnitSteps_intact; auto.
+            eapply inlineDmToRules_UnitSteps_intact; eauto.
+            eapply inlineDmToDms_UnitSteps_intact; eauto.
           }
           { repeat split; simpl; auto.
             { apply MF.Disj_remove_1, MF.Disj_remove_2; assumption. }
@@ -697,8 +939,47 @@ Section Facts.
     admit. (* Inlining proof *)
   Qed.
 
+  Lemma wellHidden_find:
+    forall {A} m a (l: LabelTP A),
+      In a (namesOf (getDmsBodies m)) ->
+      wellHidden (hide l) m ->
+      M.find a (dms l) = M.find a (cms l).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma inlineDmToMod_basicMod:
+    forall m a,
+      BasicMod m ->
+      BasicMod (inlineDmToMod m a).
+  Proof.
+    destruct m; intros; unfold inlineDmToMod;
+    destruct (getAttribute _ _); try destruct (noCallDm a0 a0);
+    auto.
+  Qed.
+
+  Lemma inlineDmToMod_dms_names:
+    forall m a,
+      namesOf (getDmsBodies (inlineDmToMod m a)) =
+      namesOf (getDmsBodies m).
+  Proof.
+    destruct m; intros; simpl in *.
+    - unfold inlineDmToMod.
+      destruct (getAttribute _ _); try destruct (noCallDm _ _);
+      try (reflexivity; fail).
+      simpl; clear.
+
+      induction dms; auto.
+      simpl; f_equal; auto.
+
+    - unfold inlineDmToMod.
+      destruct (getAttribute _ _); try destruct (noCallDm _ _);
+      reflexivity.
+  Qed.
+
   Lemma inlineDms'_correct_UnitSteps:
-    forall cdms m (Hm: BasicMod m) (Hdms: NoDup (namesOf (getDmsBodies m)))
+    forall cdms m (Hm: BasicMod m)
+           (Hdms: NoDup (namesOf (getDmsBodies m)))
            (Hcdms: SubList cdms (namesOf (getDmsBodies m)))
            or nr l,
       UnitSteps m or nr l ->
@@ -711,12 +992,11 @@ Section Facts.
     apply SubList_cons_inv in Hcdms; dest.
 
     apply IHcdms; auto.
-    - admit. (* easy *)
-    - admit. (* easy *)
-    - admit. (* easy *)
+    - apply inlineDmToMod_basicMod; auto.
+    - rewrite inlineDmToMod_dms_names; auto.
+    - rewrite inlineDmToMod_dms_names; auto.
     - apply inlineDmToMod_correct_UnitSteps; auto.
-      apply (proj1 (wellHiddenMeth_find _ _ m)).
-      apply wellHidden_wellHiddenMeth; auto.
+      eapply wellHidden_find; eauto.
     - apply inlineDmToMod_wellHidden.
       rewrite hideMeth_preserves_hide; auto.
   Qed.
@@ -751,7 +1031,6 @@ Section Facts.
   Fixpoint hideMethsF {A} (l: LabelTP A) (dms: list string): LabelTP A :=
     match dms with
       | nil => l
-      (* | dm :: dms' => hideMethF (hideMethsF l dms') dm *)
       | dm :: dms' => hideMethsF (hideMethF l dm) dms'
     end.
 
@@ -855,7 +1134,7 @@ Section Facts.
       Step m or nr l ->
       Step (merge m) or nr l.
   Proof.
-    admit. (* Semantics proof *)
+    admit.
   Qed.
 
   (* Lemma filter_preserves_step: *)
@@ -879,7 +1158,7 @@ Section Facts.
 
   Theorem inline_correct:
     forall m (Hdms: NoDup (namesOf (getDmsBodies m)))
-           (Hin: Inlinable m (namesOf (getDmsBodies m)))
+           (Hin: Inlinable (merge m) (namesOf (getDmsBodies m)))
            or nr l,
       Step m or nr l ->
       Step (inline m) or nr l.
@@ -887,8 +1166,8 @@ Section Facts.
     intros; unfold inline.
     apply inlineDms_correct.
     - unfold BasicMod, merge; auto.
-    - admit. (* easy, or change Hdms *)
-    - admit. (* easy, or change Hin *)
+    - simpl; auto.
+    - simpl; auto.
     - apply merge_preserves_step; auto.
   Qed.
 
