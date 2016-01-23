@@ -719,6 +719,13 @@ Module LeibnizFacts (M : MapLeibniz).
     admit.
   Qed.
 
+  Lemma remove_add:
+    forall {A} (m: t A) k v,
+      remove k (add k v m) = remove k m.
+  Proof.
+    admit.
+  Qed.
+
   Lemma remove_union:
     forall {A} (m1 m2: t A) k,
       remove k (union m1 m2) = union (remove k m1) (remove k m2).
