@@ -412,14 +412,59 @@ Section Facts.
       rewrite MF.find_empty in H2; inv H2.
   Qed.
 
+  Lemma isLeaf_SemAction_calls:
+    forall {retK} G aU aT,
+      ActionEquiv (k:= retK) G aU aT ->
+      forall lcalls or nr calls retV,
+        isLeaf aU lcalls = true ->
+        SemAction or aT nr calls retV ->
+        forall lc,
+          In lc lcalls ->
+          M.find lc calls = None.
+  Proof.
+    induction 1; intros.
+
+    - inv H2; destruct_existT.
+      destruct (string_dec lc n).
+      + subst; simpl in H1.
+        destruct (in_dec _ n lcalls); [inv H1|elim n0; auto].
+      + simpl in H1.
+        destruct (in_dec _ n lcalls); [inv H1|].
+        rewrite MF.find_add_2 by assumption.
+        eapply H0; eauto.
+
+    - inv H2; destruct_existT.
+      simpl in H1.
+      eapply H0; eauto.
+    - inv H2; destruct_existT.
+      simpl in H1.
+      eapply H0; eauto.
+    - inv H2; destruct_existT.
+      simpl in H1.
+      eapply IHActionEquiv; eauto.
+    - inv H4.
+      apply andb_true_iff in H8; dest.
+      apply andb_true_iff in H4; dest.
+      inv H5; destruct_existT; rewrite MF.find_union.
+      + erewrite IHActionEquiv1; eauto.
+      + erewrite IHActionEquiv2; eauto.
+    - inv H2; destruct_existT.
+      simpl in H1.
+      eapply IHActionEquiv; eauto.
+    - inv H1; destruct_existT.
+      rewrite MF.find_empty; auto.
+  Qed.
+
   Lemma noCallDm_SemAction_calls:
-    forall mn mb or nr calls argV retV,
+    forall mn (mb: Typed MethodT) G or nr calls argV retV
+           (Hmb: ActionEquiv G (objVal mb typeUT tt)
+                             (objVal mb type argV)),
       noCallDm (mn :: mb)%struct (mn :: mb)%struct = true ->
       SemAction or (objVal mb type argV) nr calls retV ->
       M.find (elt:=Typed SignT) mn calls = None.
   Proof.
     intros; unfold noCallDm in H; simpl in H.
-    admit. (* TODO: need equivalence *)    
+    eapply isLeaf_SemAction_calls; eauto.
   Qed.
 
   (* NOTE: inlining should be targeted only for basic modules *)
@@ -430,12 +475,13 @@ Section Facts.
     end.
 
   Lemma inlineDmToMod_correct_UnitStep_1:
-    forall m (Hm: BasicMod m) (Hdms: NoDup (namesOf (getDmsBodies m))) dm or u l,
+    forall m (Hm: BasicMod m) (Hequiv: ModEquiv typeUT type m)
+           (Hdms: NoDup (namesOf (getDmsBodies m))) dm or u l,
       UnitStep m or u l ->
       M.find dm (dms l) = M.find dm (cms l) ->
       UnitStep (inlineDmToMod m dm) or u (hideMeth l dm m).
   Proof.
-    induction 3; intros; simpl in *.
+    induction 4; intros; simpl in *.
 
     - unfold inlineDmToMod, hideMeth; simpl.
       destruct (getAttribute dm meths); try destruct (noCallDm a a);
@@ -454,7 +500,10 @@ Section Facts.
       + simpl; rewrite MF.find_empty in H.
         destruct a; apply inlineDm_SemAction_intact; auto.
 
-    - unfold inlineDmToMod, hideMeth; simpl.
+    - destruct Hequiv.
+      pose proof (MethsEquiv_in _ H1 i).
+
+      unfold inlineDmToMod, hideMeth; simpl.
       remember (getAttribute dm meths) as odm; destruct odm; [|eapply SingleMeth; eauto].
       remember (noCallDm a a) as ocall; destruct ocall; [|eapply SingleMeth; eauto].
       destruct a as [an ab]; simpl in *.
@@ -484,6 +533,9 @@ Section Facts.
 
     - exfalso; auto.
     - exfalso; auto.
+
+      Grab Existential Variables.
+      exact nil.
   Qed.
 
   Lemma inlineDmToMod_correct_UnitStep_2:
@@ -797,13 +849,15 @@ Section Facts.
   Qed.
 
   Lemma inlineDmToMod_correct_UnitSteps:
-    forall m (Hm: BasicMod m) (Hwf: WfModules type m) or nr l dm,
+    forall m (Hm: BasicMod m) (Hwf: WfModules type m)
+           (Hequiv: ModEquiv typeUT type m)
+           or nr l dm,
       NoDup (namesOf (getDmsBodies m)) ->
       UnitSteps m or nr l ->
       M.find dm (dms l) = M.find dm (cms l) ->
       UnitSteps (inlineDmToMod m dm) or nr (hideMeth l dm m).
   Proof.
-    induction 4; intros;
+    induction 5; intros;
     [constructor; apply inlineDmToMod_correct_UnitStep_1; auto|].
 
     destruct l1 as [rm1 dm1 cm1], l2 as [rm2 dm2 cm2]; simpl in *.
@@ -967,6 +1021,7 @@ Section Facts.
 
   Lemma inlineDms'_correct_UnitSteps:
     forall cdms m (Hm: BasicMod m) (Hwf: WfModules type m)
+           (Hequiv: ModEquiv typeUT type m)
            (Hdms: NoDup (namesOf (getDmsBodies m)))
            (Hcdms: SubList cdms (namesOf (getDmsBodies m)))
            or nr l,
@@ -982,6 +1037,7 @@ Section Facts.
     apply IHcdms; auto.
     - apply inlineDmToMod_basicMod; auto.
     - admit. (* WfModules type (inlineDmToMod m a) *)
+    - admit. (* ModEquiv typeUT type (inlineDmToMod m a) *)
     - rewrite inlineDmToMod_dms_names; auto.
     - rewrite inlineDmToMod_dms_names; auto.
     - apply inlineDmToMod_correct_UnitSteps; auto.
@@ -1074,6 +1130,7 @@ Section Facts.
 
   Lemma inlineDms_correct_UnitSteps:
     forall m (Hm: BasicMod m) (Hwf: WfModules type m)
+           (Hequiv: ModEquiv typeUT type m)
            (Hdms: NoDup (namesOf (getDmsBodies m))) or nr l,
       UnitSteps m or nr l ->
       Inlinable m (namesOf (getDmsBodies m)) ->
@@ -1106,13 +1163,14 @@ Section Facts.
 
   Lemma inlineDms_correct:
     forall m (Hm: BasicMod m) (Hwf: WfModules type m)
+           (Hequiv: ModEquiv typeUT type m)
            (Hdms: NoDup (namesOf (getDmsBodies m)))
            (Hin: Inlinable m (namesOf (getDmsBodies m)))
            or nr l,
       Step m or nr l ->
       Step (inlineDms m) or nr l.
   Proof.
-    induction 5; intros; subst.
+    induction 6; intros; subst.
     apply MkStep with (l:= hide l); auto.
     - apply inlineDms_correct_UnitSteps; auto.
     - apply hide_idempotent.
@@ -1148,6 +1206,7 @@ Section Facts.
 
   Theorem inline_correct:
     forall m (Hwf: WfModules type (merge m))
+           (Hequiv: ModEquiv typeUT type (merge m))
            (Hdms: NoDup (namesOf (getDmsBodies m)))
            (Hin: Inlinable (merge m) (namesOf (getDmsBodies m)))
            or nr l,
