@@ -2,7 +2,7 @@ Require FSets.FMapList FSets.FMapFacts.
 Require Import Lists.SetoidList.
 Require Import Structures.OrderedType.
 Require Import Structures.OrderedTypeEx.
-  
+
 Require Import Eqdep_dec.
 
 Require Import Lib.CommonTactics.
@@ -21,7 +21,7 @@ Section Lists. (* For dealing with domains *)
 
   Lemma SubList_cons_inv: forall a l1 l2, SubList (a :: l1) l2 -> In a l2 /\ SubList l1 l2.
   Proof. unfold SubList; intros; split; intuition. Qed.
-    
+  
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
 
@@ -85,22 +85,20 @@ End Lists.
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
                      SubList l1 l2 -> SubList (map f l1) (map f l2).
 Proof.
-  induction l1; intros; simpl; unfold SubList in *; intros; [inv H0|].
-  inv H0.
+  induction l1; intros; simpl; unfold SubList in *; intros; inv H0.
   - apply in_map; apply H; left; reflexivity.
   - apply IHl1; auto.
     intros; specialize (H e0); apply H; right; assumption.
 Qed.
 
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
-
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 
 Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
            (le_irrel : forall {x y} (a b : le x y), a = b)
            (x : A) (xs : list A) (p q : HdRel le x xs)
 : p = q.
-Proof. 
+Proof.
   induction p using HdRel_ind'.
   - refine (
         match q as q' in HdRel _ _ xs return 
@@ -183,7 +181,7 @@ Qed.
 Require Import FMapInterface.
 
 Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := UOT.
-  
+
   Module OT := UOT_to_OT UOT.
   Module Export M := FMapList.Make(OT).
   Include M.
@@ -274,146 +272,67 @@ Module Type MapLeibniz.
 End MapLeibniz.
 
 Module LeibnizFacts (M : MapLeibniz).
-  Export M.
+  Import M.
   Module F := FMapFacts.OrdProperties M.
-  Include F.
+  Import F.
+
+  Ltac ext k := apply leibniz; unfold Equal; intros k.
+
+  Lemma Equal_val: forall {A : Type} (m1 m2: t A) k, m1 = m2 -> find k m1 = find k m2.
+  Proof. intros; subst; reflexivity. Qed.
 
   Theorem empty_canon {A : Type} : forall (m : t A), Empty m -> m = empty A.
   Proof.
-    intros. apply leibniz. unfold Equal. unfold Empty in H.
-    intros k. rewrite F.P.F.empty_o. apply F.P.F.not_find_in_iff.
+    intros; ext k.
+    rewrite P.F.empty_o.
+    apply P.F.not_find_in_iff.
     unfold In. firstorder.
   Qed.
 
   Theorem add_canon {A : Type} {x} {e : A} {m m' : t A} :
-    F.P.Add x e m m' -> m' = add x e m.
-  Proof. intros. apply leibniz. assumption. Qed.
+    P.Add x e m m' -> m' = add x e m.
+  Proof. intros; apply leibniz; assumption. Qed.
 
   Theorem map_induction {A : Type} {P : t A -> Type} :
     P (empty A)
     -> (forall m, P m -> forall k v, ~ In k m -> P (add k v m))
     -> forall m, P m.
   Proof.
-    intros. apply F.P.map_induction.
+    intros. apply P.map_induction.
     intros. replace m0 with (empty A). assumption. symmetry. apply empty_canon.
     assumption. intros. replace m' with (add x e m0).
     apply X0; assumption. symmetry. apply add_canon. assumption.
   Qed.
+
+  Ltac mind v :=
+    generalize dependent v; intro; pattern v;
+    apply map_induction; clear v; intros.
+
+  Ltac cmp k1 k2 :=
+    let e := fresh "e" in
+    destruct (E.eq_dec k1 k2) as [e|]; [unfold E.eq in e; subst|].
   
-  Lemma add_idempotent : forall {A} k (e : A) m, MapsTo k e m
-  -> add k e m = m. 
+  Lemma add_idempotent:
+    forall {A} k (e : A) m, MapsTo k e m -> add k e m = m. 
   Proof.
-    intros. apply leibniz. unfold Equal. intros.
-    rewrite F.P.F.add_o. destruct (E.eq_dec k y).
-    rewrite <- e0. symmetry. apply F.P.F.find_mapsto_iff. assumption.
-    reflexivity.
+    intros; ext y.
+    rewrite P.F.add_o.
+    cmp k y; [|reflexivity].
+    symmetry; apply P.F.find_mapsto_iff; auto.
   Qed.
 
   Definition unionL {A} (m m' : t A) := fold (@add A) m m'.
-
   Definition union {A} := @unionL A.
-
-  Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
-  Proof. 
-    intros. unfold union, unionL. pattern m.
-    apply map_induction.
-    - apply leibniz. apply F.P.fold_identity.
-    - intros. apply F.P.fold_Empty. auto. apply empty_1.
-  Qed.
-
-  Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
-  Proof. 
-    intros. unfold union, unionL. 
-    apply leibniz. apply F.P.fold_identity.
-  Qed.
-
-  Lemma transpose_neqkey_Equal_add {A : Type} 
-    : F.P.transpose_neqkey Equal (add (elt:=A)).
-  Proof. 
-    unfold F.P.transpose_neqkey. intros. 
-    unfold Equal. intros y. do 4 rewrite F.P.F.add_o.
-    destruct (E.eq_dec k y); destruct (E.eq_dec k' y);
-    unfold E.eq in *; subst; congruence || reflexivity.
-  Qed.
-
-  Lemma union_add {A}:
-    forall {m m' : t A} k v,
-      union (add k v m) m' = add k v (union m m').
-  Proof.
-    admit.
-  Qed.
+  Definition update {A : Type} (m1 m2: t A) := unionL m2 m1.
 
   Definition Sub {A : Type} (m m' : t A) :=
     forall k v, MapsTo k v m -> MapsTo k v m'.
 
-  Lemma union_smothered {A : Type} : forall (m m' : t A),
-     Sub m m' -> union m m' = m'.
-  Proof. 
-    intros m. unfold Sub. pattern m. apply map_induction; intros.
-    - apply union_empty_L.
-    -  unfold union, unionL in *. apply leibniz. unfold Equal.
-       intros y. rewrite F.P.fold_add. rewrite H. 
-       rewrite F.P.F.add_o. destruct (E.eq_dec k y); unfold E.eq in *.
-       symmetry. apply F.P.F.find_mapsto_iff. apply H1.
-       apply add_1. assumption. reflexivity. 
-       intros. apply H1. destruct (E.eq_dec k k0); unfold E.eq in *.
-       subst. apply False_rect. apply H0. exists v0. assumption.
-       apply add_2; assumption.
-       auto. apply F.P.F.add_m_Proper. apply transpose_neqkey_Equal_add.
-       assumption.
-  Qed.
-
-  Definition update {A : Type} (m1 m2: t A) := unionL m2 m1.
-
-  Lemma update_empty_1: forall {A} (m: t A), update (empty A) m = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma update_empty_2: forall {A} (m: t A), update m (empty A) = m.
-  Proof.
-    admit.
-  Qed.
-
-  Fixpoint complement {A : Type} (m : t A) (xs : list E.t) := match xs with
-   | nil => m
-   | y :: ys => remove y (complement m ys)
-   end.
-
-  Definition subtract {A : Type} (m m' : t A) :=
-    fold (fun k _ => remove k) m' m.
-
-  Definition subtractKV {A : Type}
-             (deceqA : forall x y : A, sumbool (x = y) (x <> y))
-             (m1 m2 : t A) : t A :=
-    fold (fun k2 v2 m1' =>
-            match M.find k2 m1' with
-              | None => m1'
-              | Some v1 => if deceqA v1 v2 then 
-                             remove k2 m1' else m1' 
-            end) m2 m1.
-
-  Lemma subtractKV_empty_1:
-    forall {A : Type} deceqA (m: t A),
-      subtractKV deceqA (empty A) m = empty A.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma subtractKV_empty_2:
-    forall {A : Type} deceqA (m: t A),
-      subtractKV deceqA m (empty A) = m.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma subtractKV_remove:
-    forall {A : Type} deceqA (m1 m2: t A) k,
-      subtractKV deceqA (remove k m1) (remove k m2) =
-      subtractKV deceqA m1 m2.
-  Proof.
-    admit.
-  Qed.
+  Fixpoint complement {A : Type} (m : t A) (xs : list E.t) :=
+    match xs with
+      | nil => m
+      | y :: ys => remove y (complement m ys)
+    end.
 
   Fixpoint restrict {A : Type} (m : t A) (l : list E.t) :=
     match l with
@@ -425,6 +344,119 @@ Module LeibnizFacts (M : MapLeibniz).
           | None => m'
         end
     end.
+
+  Definition subtract {A : Type} (m m' : t A) :=
+    fold (fun k _ => remove k) m' m.
+  Definition subtractKV {A : Type}
+             (deceqA : forall x y : A, sumbool (x = y) (x <> y))
+             (m1 m2 : t A) : t A :=
+    fold (fun k2 v2 m1' =>
+            match M.find k2 m1' with
+              | None => m1'
+              | Some v1 => if deceqA v1 v2 then 
+                             remove k2 m1' else m1' 
+            end) m2 m1.
+
+  Hint Unfold update Sub complement subtract subtractKV : MapDefs.
+
+  Ltac mintros := repeat autounfold with MapDefs; intros.
+  
+  Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
+  Proof.
+    mintros; mind m.
+    - apply leibniz, P.fold_identity.
+    - apply P.fold_Empty; auto.
+      apply empty_1.
+  Qed.
+
+  Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
+  Proof. mintros; apply leibniz, P.fold_identity. Qed.
+
+  Lemma transpose_neqkey_Equal_add {A : Type} :
+    P.transpose_neqkey Equal (add (elt:=A)).
+  Proof.
+    unfold P.transpose_neqkey. intros. 
+    unfold Equal. intros y. do 4 rewrite P.F.add_o.
+    cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
+  Qed.
+
+  Lemma union_add {A}:
+    forall {m m' : t A} k v,
+      union (add k v m) m' = add k v (union m m').
+  Proof.
+    admit.
+  Qed.
+
+  Lemma union_smothered {A : Type}:
+    forall (m m' : t A), Sub m m' -> union m m' = m'.
+  Proof. 
+    intros m. unfold Sub. pattern m. apply map_induction; intros.
+    - apply union_empty_L.
+    - unfold union, unionL in *. ext y.
+      rewrite P.fold_add. rewrite H. 
+      rewrite P.F.add_o; destruct (E.eq_dec k y); unfold E.eq in *.
+      symmetry. apply P.F.find_mapsto_iff. apply H1.
+      apply add_1. assumption. reflexivity. 
+      intros. apply H1. destruct (E.eq_dec k k0); unfold E.eq in *.
+      subst. apply False_rect. apply H0. exists v0. assumption.
+      apply add_2; assumption.
+      auto. apply P.F.add_m_Proper. apply transpose_neqkey_Equal_add.
+      assumption.
+  Qed.
+
+  Lemma update_empty_1: forall {A} (m: t A), update (empty A) m = m.
+  Proof.
+    mintros; unfold unionL; mind m.
+    - apply P.fold_Empty; auto.
+      apply empty_1.
+    - apply leibniz. rewrite P.fold_add; auto.
+      + rewrite H; apply P.F.Equal_refl.
+      + apply P.F.add_m_Proper.
+      + apply transpose_neqkey_Equal_add.
+  Qed.
+
+  Lemma update_empty_2: forall {A} (m: t A), update m (empty A) = m.
+  Proof.
+    mintros; apply P.fold_Empty; auto; apply empty_1.
+  Qed.
+
+  Lemma transpose_neqkey_Equal_subtractKV:
+    forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y)),
+      P.transpose_neqkey
+        Equal
+        (fun (k2 : key) (v2 : A) (m1' : t A) =>
+           match find k2 m1' with
+             | Some v1 => if deceqA v1 v2 then remove k2 m1' else m1'
+             | None => m1'
+           end).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_empty_1:
+    forall {A : Type} deceqA (m: t A),
+      subtractKV deceqA (empty A) m = empty A.
+  Proof.
+    mintros; mind m.
+    - apply P.fold_Empty; auto; apply empty_1.
+    - apply leibniz; rewrite P.fold_add; auto.
+      + rewrite H; rewrite P.F.empty_o.
+        apply P.F.Equal_refl.
+      + compute; intros; subst.
+        rewrite H3; destruct (find y y1); auto.
+        destruct (deceqA _ _); auto.
+        cmp y2 y.
+        * do 2 (rewrite P.F.remove_eq_o; auto).
+        * do 2 (rewrite P.F.remove_neq_o; auto).
+      + apply transpose_neqkey_Equal_subtractKV.
+  Qed.
+
+  Lemma subtractKV_empty_2:
+    forall {A : Type} deceqA (m: t A),
+      subtractKV deceqA m (empty A) = m.
+  Proof.
+    mintros; apply P.fold_Empty; auto; apply empty_1.
+  Qed.
 
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
@@ -439,47 +471,45 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Theorem eq_dec {A : Type}
-  (eq_dec_A : forall x y : A, {x = y} + {x <> y })
-  (m1 m2 : t A)
+          (eq_dec_A : forall x y : A, {x = y} + {x <> y })
+          (m1 m2 : t A)
   : {m1 = m2} + {m1 <> m2}.
   Proof.
     pose (cmp := fun x y => if eq_dec_A x y then true else false).
-    pose proof (F.P.F.Equal_Equivb_eqdec eq_dec_A).
+    pose proof (P.F.Equal_Equivb_eqdec eq_dec_A).
     destruct (equal cmp m1 m2) eqn:eqtest; [left | right].
     - apply equal_2 in eqtest.
       apply leibniz. apply H. assumption.
     - unfold not. intros contra. induction contra.
       assert (equal cmp m1 m1 = true).
       apply equal_1.
-      apply H. apply F.P.F.Equal_refl. rewrite H0 in eqtest.
+      apply H. apply P.F.Equal_refl. rewrite H0 in eqtest.
       inversion eqtest.
   Qed.
 
   Lemma find_empty : forall {A} k, (find k (@empty A)) = None.
-  Proof. intros. apply P.F.empty_o.
-  Qed.
+  Proof. intros; apply P.F.empty_o. Qed.
 
   Lemma find_add_1 : forall {A} k v (m: t A), find k (add k v m) = Some v.
-  Proof. intros. apply find_1. apply add_1. reflexivity.
-  Qed.
+  Proof. intros; apply find_1, add_1; reflexivity. Qed.
 
-  Lemma find_add_2: forall {A} k k' v (m: t A), k <> k'
-                   -> find k (add k' v m) = find k m.
-  Proof.
-    intros. apply F.P.F.add_neq_o. firstorder. 
-  Qed.
+  Lemma find_add_2:
+    forall {A} k k' v (m: t A), k <> k' -> find k (add k' v m) = find k m.
+  Proof. intros; apply P.F.add_neq_o; firstorder. Qed.
 
-  Lemma find_union {A} : forall {m m' : t A} k, find k (union m m') = match find k m with
-     | Some v => Some v
-     | None => find k m'
-     end.
+  Lemma find_union {A}:
+    forall {m m' : t A} k,
+      find k (union m m') = match find k m with
+                              | Some v => Some v
+                              | None => find k m'
+                            end.
   Proof.
     intros m m'. pattern m.
     apply map_induction; simpl; intros.
-    - rewrite union_empty_L. rewrite F.P.F.empty_o. reflexivity. 
+    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
     - rewrite union_add by assumption. 
-      do 2 rewrite F.P.F.add_o. destruct (E.eq_dec k k0); [| apply H].
-      reflexivity.
+      do 2 rewrite P.F.add_o.
+      cmp k k0; auto.
   Qed.
 
   Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
@@ -495,7 +525,6 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'. 
-
   Definition InDomain {A} (m: t A) (d: list E.t) := forall k, In k m -> List.In k d.
   Definition OnDomain {A} (m: t A) (d: list E.t) := forall k, List.In k d -> In k m.
   Definition NotOnDomain {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
@@ -506,35 +535,65 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma find_InDomain {A} :
     forall {m : t A} k d, InDomain m d -> ~ List.In k d -> find k m = None.
   Proof.
-    repeat autounfold with MapDefs; intros; specialize (H k).
+    mintros; specialize (H k).
     remember (find k m) as v; destruct v; [|reflexivity].
-    elim H0; apply H; apply F.P.F.in_find_iff; rewrite <-Heqv; discriminate.
+    elim H0; apply H; apply P.F.in_find_iff; rewrite <-Heqv; discriminate.
   Qed.
     
   Lemma InDomain_empty:
     forall {A} d, InDomain (empty A) d.
   Proof.
-    repeat autounfold with MapDefs; intros.
-    inv H; exfalso; eapply F.P.F.empty_mapsto_iff; eauto.
+    mintros; inv H; exfalso; eapply P.F.empty_mapsto_iff; eauto.
+  Qed.
+
+  Lemma InDomain_nil:
+    forall {A} m, InDomain m nil -> m = M.empty A.
+  Proof.
+    mintros; ext y.
+    rewrite find_empty.
+    apply P.F.not_find_in_iff; intro Hx.
+    specialize (H y Hx); inv H.
+  Qed.
+
+  Lemma InDomain_find_None:
+    forall {A} (m: t A) k d,
+      InDomain m (k :: d) -> find k m = None -> InDomain m d.
+  Proof.
+    mintros; specialize (H k0).
+    cmp k k0.
+    - apply P.F.in_find_iff in H1; intuition auto.
+    - specialize (H H1); inv H; auto.
+      elim n; reflexivity.
   Qed.
   
   Lemma InDomain_add:
     forall {A} (m: t A) k v d,
       InDomain m d -> List.In k d -> InDomain (add k v m) d.
   Proof.
-    repeat autounfold with MapDefs; intros.
-    apply F.P.F.add_in_iff in H1. destruct H1.
+    mintros.
+    apply P.F.add_in_iff in H1. destruct H1.
     subst. assumption. auto.
+  Qed.
+
+  Lemma InDomain_remove:
+    forall {A} (m: t A) k d,
+      InDomain m (k :: d) -> InDomain (remove k m) d.
+  Proof.
+    mintros; specialize (H k0).
+    cmp k k0.
+    - elim (@remove_1 _ m k0 k0 eq_refl); auto.
+    - apply P.F.remove_neq_in_iff in H0; auto.
+      specialize (H H0); inv H; auto.
+      elim n; reflexivity.
   Qed.
 
   Lemma InDomain_union:
     forall {A} (m1 m2: t A) (d: list E.t),
       InDomain m1 d -> InDomain m2 d -> InDomain (union m1 m2) d.
   Proof.
-    repeat autounfold with MapDefs; intros.
-    specialize (H k); specialize (H0 k); case_eq (find k m2); intros.
-    + apply H0. exists a. apply find_2. assumption.
-    + destruct H1. apply find_1 in H1. rewrite find_union in H1.
+    mintros; specialize (H k); specialize (H0 k); case_eq (find k m2); intros.
+    - apply H0. exists a. apply find_2. assumption.
+    - destruct H1. apply find_1 in H1. rewrite find_union in H1.
       case_eq (find k m1); intros.
       apply H. exists a. apply find_2. assumption.
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
@@ -544,50 +603,54 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} (m1 m2: t A) (d1 d2: list E.t),
       InDomain m1 d1 -> InDomain m2 d2 -> InDomain (union m1 m2) (d1 ++ d2).
   Proof.
-    repeat autounfold with MapDefs; intros.
-    specialize (H k); specialize (H0 k); apply in_or_app.
+    mintros; specialize (H k); specialize (H0 k); apply in_or_app.
     apply union_In in H1; destruct H1; intuition.
   Qed.
 
   Lemma InDomain_SubList:
     forall {A} (m: t A) (d1 d2: list E.t),
       InDomain m d1 -> SubList d1 d2 -> InDomain m d2.
-  Proof.
-    repeat autounfold with MapDefs; intros.
-    apply H0, H; auto.
-  Qed.
+  Proof. mintros; apply H0, H; auto. Qed.
 
   Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.
   Proof.
-    admit.
+    mintros; left; intro.
+    apply (proj1 (P.F.empty_in_iff A k)); auto.
   Qed.
 
   Lemma Disj_empty_2: forall {A} (m: t A), Disj m (empty A).
   Proof.
-    admit.
+    mintros; right; intro.
+    apply (proj1 (P.F.empty_in_iff A k)); auto.
   Qed.
 
   Lemma Disj_find_union_1:
     forall {A} (m1 m2: t A) k v,
       Disj m1 m2 -> find k m1 = Some v ->
       find k (union m1 m2) = Some v.
-  Proof.
-    admit.
-  Qed.
+  Proof. mintros; rewrite find_union; rewrite H0; reflexivity. Qed.
 
   Lemma Disj_find_union_2:
     forall {A} (m1 m2: t A) k v,
       Disj m1 m2 -> find k m2 = Some v ->
       find k (union m1 m2) = Some v.
   Proof.
-    admit.
+    mintros; rewrite find_union; rewrite H0.
+    remember (find k m1) as v1; destruct v1; [|reflexivity].
+    exfalso; specialize (H k); inv H.
+    - elim H1; apply P.F.in_find_iff.
+      rewrite <-Heqv1; discriminate.
+    - elim H1; apply P.F.in_find_iff.
+      rewrite H0; discriminate.
   Qed.
 
   Lemma Disj_find_union_3:
     forall {A} (m1 m2: t A) k v1 v2,
       Disj m1 m2 -> find k m1 = Some v1 -> find k m2 = Some v2 -> False.
   Proof.
-    admit.
+    mintros; specialize (H k); destruct H.
+    - elim H; apply P.F.in_find_iff; rewrite H0; discriminate.
+    - elim H; apply P.F.in_find_iff; rewrite H1; discriminate.
   Qed.
 
   Lemma Disj_add_1 {A}:
@@ -596,10 +659,10 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof. 
     intros. unfold Disj in *.
     intros. destruct (H k0).
-    - destruct (E.eq_dec k k0); unfold E.eq in *.
-      + subst. right. assumption. 
-      + left. rewrite F.P.F.add_in_iff. intuition.
-    - right.  assumption.
+    - cmp k k0.
+      + right; assumption.
+      + left; rewrite P.F.add_in_iff; intuition.
+    - right; assumption.
   Qed.
 
   Lemma Disj_add_2 {A}:
@@ -609,24 +672,10 @@ Module LeibnizFacts (M : MapLeibniz).
     intros. unfold Disj in *.
     split.
     - intros. destruct (H k0).
-      rewrite F.P.F.add_in_iff in H0. intuition.
+      rewrite P.F.add_in_iff in H0. intuition.
       right.  assumption.
     - specialize (H k). destruct H.
-      rewrite F.P.F.add_in_iff in H. intuition. assumption.
-  Qed.
-
-  Lemma Disj_remove_1 {A}:
-    forall (m1 m2: t A) k,
-      Disj m1 m2 -> Disj (remove k m1) m2.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma Disj_remove_2 {A}:
-    forall (m1 m2: t A) k,
-      Disj m1 m2 -> Disj m1 (remove k m2).
-  Proof.
-    admit.
+      rewrite P.F.add_in_iff in H. intuition. assumption.
   Qed.
 
   Lemma Disj_comm {A} : forall {m m' : t A}, Disj m m' -> Disj m' m.
@@ -635,12 +684,25 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H k). intuition.
   Qed.
 
+  Lemma Disj_remove_1 {A}:
+    forall (m1 m2: t A) k,
+      Disj m1 m2 -> Disj (remove k m1) m2.
+  Proof.
+    mintros; specialize (H k0); destruct H; [left|right]; intro Hx; auto.
+    elim H; apply (proj1 (P.F.remove_in_iff _ k _)); auto.
+  Qed.
+
+  Lemma Disj_remove_2 {A}:
+    forall (m1 m2: t A) k,
+      Disj m1 m2 -> Disj m1 (remove k m2).
+  Proof. intros; apply Disj_comm, Disj_remove_1, Disj_comm; auto. Qed.
+
   Lemma Disj_union_1 {A}:
     forall {m m1 m2 : t A},
       Disj m (union m1 m2) -> Disj m m1.
   Proof.
     intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
-    - unfold Disj. intros. right. rewrite F.P.F.empty_in_iff.
+    - unfold Disj. intros. right. rewrite P.F.empty_in_iff.
       intuition.
     - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
       apply Disj_add_2 in H1. destruct H1. apply Disj_comm in H1.
@@ -676,18 +738,18 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     intros; autounfold with MapDefs in *.
     destruct (H k).
-    - left; apply F.P.F.not_find_in_iff; auto.
-    - right; apply F.P.F.not_find_in_iff; auto.
+    - left; apply P.F.not_find_in_iff; auto.
+    - right; apply P.F.not_find_in_iff; auto.
   Qed.
 
   Lemma union_Disj_reorder {A}:
     forall (m m1 m2 : M.t A),
       Disj m1 m2 -> union m2 (union m1 m) = union m1 (union m2 m).
   Proof.
-    intros. apply M.leibniz. unfold M.Equal. intros k.
+    intros; ext k.
     repeat rewrite find_union.
     destruct (H k) as [H0 | H0];
-      apply F.P.F.not_find_in_iff in H0;
+      apply P.F.not_find_in_iff in H0;
       repeat rewrite H0; reflexivity.
   Qed.
 
@@ -695,7 +757,7 @@ Module LeibnizFacts (M : MapLeibniz).
     forall (m1 m2 m3: t A)
     , union m1 (union m2 m3) = union (union m1 m2) m3.
   Proof.
-    intros.  apply leibniz. unfold Equal. intros.
+    intros; ext y.
     repeat rewrite find_union. simpl.
     destruct (find y m1); destruct (find y m2); reflexivity.
   Qed.
@@ -703,52 +765,104 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma union_comm:
     forall {A} (m1 m2: t A), Disj m1 m2 -> union m1 m2 = union m2 m1.
   Proof.
-    admit.
+    mintros; mind m1.
+    - rewrite union_empty_L, union_empty_R; reflexivity.
+    - rewrite union_add.
+      assert (forall k, ~ In k m \/ ~ In k m2).
+      { intros; specialize (H1 k0).
+        cmp k k0.
+        { left; auto. }
+        { destruct H1; [left|right]; auto.
+          intro Hx; elim H1.
+          eapply P.F.add_neq_in_iff in n.
+          eapply n; eauto.
+        }
+      }
+      specialize (H H2); clear H2.
+      specialize (H1 k).
+      destruct H1.
+      + elim H1; apply P.F.add_in_iff; left; auto.
+      + rewrite H; apply leibniz.
+        unfold Equal; intros.
+        apply P.F.not_find_in_iff in H1.
+        cmp y k.
+        * rewrite find_union, H1.
+          do 2 rewrite find_add_1; reflexivity.
+        * rewrite find_add_2 by assumption.
+          do 2 rewrite find_union.
+          destruct (find y m2); [reflexivity|].
+          rewrite find_add_2 by assumption; reflexivity.
   Qed.
 
   Lemma remove_empty:
     forall {A} k, remove k (empty A) = empty A.
   Proof.
-    admit.
+    mintros; ext y; cmp y k.
+    - rewrite P.F.remove_eq_o by reflexivity.
+      rewrite find_empty; reflexivity.
+    - rewrite P.F.remove_neq_o by auto; reflexivity.
   Qed.
 
   Lemma remove_find_None:
     forall {A} (m: t A) k,
       find k m = None -> remove k m = m.
   Proof.
-    admit.
+    mintros; ext y; cmp y k.
+    - rewrite P.F.remove_eq_o; auto.
+    - rewrite P.F.remove_neq_o; auto.
   Qed.
 
   Lemma remove_add:
     forall {A} (m: t A) k v,
       remove k (add k v m) = remove k m.
   Proof.
-    admit.
+    mintros; ext y; cmp y k.
+    - do 2 (rewrite P.F.remove_eq_o; auto).
+    - do 2 (rewrite P.F.remove_neq_o; auto).
+      rewrite find_add_2; auto.
   Qed.
 
   Lemma remove_union:
     forall {A} (m1 m2: t A) k,
       remove k (union m1 m2) = union (remove k m1) (remove k m2).
   Proof.
-    admit.
+    mintros; ext y; cmp y k; rewrite find_union.
+    - do 3 (rewrite P.F.remove_eq_o; auto).
+    - do 3 (rewrite P.F.remove_neq_o; auto).
+      rewrite find_union; reflexivity.
+  Qed.
+
+  Lemma subtractKV_remove:
+    forall {A : Type} deceqA (m1 m2: t A) k,
+      find k m1 = find k m2 ->
+      subtractKV deceqA (remove k m1) (remove k m2) =
+      subtractKV deceqA m1 m2.
+  Proof.
+    mintros; mind m2.
+    - rewrite remove_empty.
+      rewrite P.fold_Empty; auto; [|apply empty_1].
+      rewrite P.fold_Empty; auto; [|apply empty_1].
+      rewrite find_empty in H.
+      apply remove_find_None; auto.
+    - admit.
   Qed.
 
   Lemma restrict_nil: forall {A} (m: t A), restrict m nil = empty A.
-  Proof.
-    admit.
-  Qed.
+  Proof. reflexivity. Qed.
 
   Lemma restrict_empty:
     forall {A} (l: list E.t),
       restrict (@empty A) l = @empty A.
   Proof.
-    admit.
+    mintros; induction l; [reflexivity|].
+    simpl; rewrite IHl; rewrite find_empty; reflexivity.
   Qed.
 
   Lemma restrict_add:
     forall {A} (m: t A) (l: list E.t) a v,
       List.In a l -> restrict (add a v m) l = add a v (restrict m l).
   Proof.
+    mintros; induction l; [inv H|].
     admit.
   Qed.
 
@@ -959,12 +1073,10 @@ Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Include M.
   
   Theorem leibniz {A : Type} (m m' : t A) : Equal m m' -> m = m'.
-  Proof. apply lt_irrel_leibniz. apply UOT.lt_irrel. Qed.
+  Proof. apply lt_irrel_leibniz, UOT.lt_irrel. Qed.
 End FMapListLeib.
 
-Require Import Lib.String_as_OT.
-
-Require Import String.
+Require Import Lib.String_as_OT String.
 
 Module String_as_OT' <: UsualOrderedTypeLTI.
   Include String_as_OT.
@@ -973,104 +1085,9 @@ Module String_as_OT' <: UsualOrderedTypeLTI.
   Qed.
 End String_as_OT'.
 
-Module Map := FMapListLeib String_as_OT'. 
-Module MapF := LeibnizFacts Map.
-
-Section ListSub.
-  Definition listSub (l1 l2: list string) :=
-    filter (fun s => if in_dec string_dec s l2 then false else true) l1.
-
-  Lemma listSub_In_1:
-    forall s l1 l2, In s (listSub l1 l2) <-> In s l1 /\ ~ In s l2.
-  Proof.
-    intros; split; intros.
-    - unfold listSub in H; apply filter_In in H; dest; split; auto.
-      destruct (in_dec _ s l2); intuition.
-    - dest; unfold listSub; apply filter_In; split; auto.
-      destruct (in_dec _ s l2); intuition.
-  Qed.
-
-  Lemma listSub_In_2:
-    forall s l1 l2, ~ In s (listSub l1 l2) <-> (~ In s l1 \/ In s l2).
-  Proof.
-    intros; split; intros.
-    - destruct (in_dec string_dec s l1).
-      + right; destruct (in_dec string_dec s l2); [assumption|].
-        elim H; apply filter_In; split; [assumption|].
-        destruct (in_dec string_dec s l2); intuition.
-      + left; assumption.
-    - intro Hx; apply listSub_In_1 in Hx; dest; destruct H.
-      + elim H; assumption.
-      + elim H1; assumption.
-  Qed.
-
-  Lemma listSub_app:
-    forall l1 l2 l3, listSub (l1 ++ l2) l3 = (listSub l1 l3) ++ (listSub l2 l3).
-  Proof.
-    induction l1; intros; simpl; [reflexivity|].
-    destruct (in_dec string_dec a l3).
-    - apply IHl1; auto.
-    - simpl; f_equal; apply IHl1; auto.
-  Qed.
-
-End ListSub.
-
-Lemma Equal_val: forall {A : Type} (m1 m2: Map.t A) k, m1 = m2 -> Map.find k m1 = Map.find k m2.
-Proof. intros; subst; reflexivity. Qed.
-
-Require Import Lib.Struct.
-
-Section StringEq.
-  Definition string_eq s1 s2 :=
-    match string_dec s1 s2 with
-      | left _ => true
-      | right _ => false
-    end.
-
-  Lemma string_dec_eq: forall s, string_eq s s = true.
-  Proof.
-    intros; unfold string_eq; destruct (string_dec s s).
-    - reflexivity.
-    - elim n; reflexivity.
-  Qed.
-
-  Lemma string_dec_neq: forall s t, s <> t <-> string_eq s t = false.
-  Proof.
-    intros; unfold string_eq; destruct (string_dec s t); intuition.
-  Qed.
-
-  Lemma string_eq_append:
-    forall p s t, string_eq s t = false -> string_eq (p -n- s) (p -n- t) = false.
-  Proof.
-    unfold string_eq; intros.
-    destruct (string_dec s t); [inversion H|].
-    destruct (string_dec (p -n- s) (p -n- t)); [|reflexivity].
-    elim n; clear -e.
-    induction p.
-    - unfold appendName in e; simpl in e; inversion e; auto.
-    - inversion e; apply IHp; auto.
-  Qed.
-
-End StringEq.
-
-Section Facts.
-
-End Facts.
-
-Set Implicit Arguments.
-Section MakeMap.
-  Variable A: Type.
-  Variable f1 f2: A -> Type.
-  Variable f: forall x, f1 x -> f2 x.
-
-  Fixpoint makeMap (l: list (Attribute (Typed f1))) : Map.t (Typed f2) :=
-    match l with
-      | nil => Map.empty _
-      | {| attrName := n; attrType := {| objVal := rv |} |} :: xs =>
-        Map.add n {| objVal := f rv |} (makeMap xs)
-    end.  
-End MakeMap.
-
-Module M := FMap.Map.
-Module MF := FMap.MapF.
+Module M.
+  Module Map := FMapListLeib String_as_OT'.
+  Include Map.
+  Include (LeibnizFacts Map).
+End M.
 

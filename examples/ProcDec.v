@@ -134,20 +134,20 @@ Section ProcDecM.
 
   Definition procDecM (n: nat) := ConcatMod (pdecfs n) (minst addrSize (Bit valSize) n).
 
-  Section Facts.
+  (* Section Facts. *)
 
-    Lemma regsInDomain_pdeci i: RegsInDomain (pdeci i).
-    Proof.
-      regsInDomain_tac.
-    Qed.
+  (*   Lemma regsInDomain_pdeci i: RegsInDomain (pdeci i). *)
+  (*   Proof. *)
+  (*     regsInDomain_tac. *)
+  (*   Qed. *)
 
-    Lemma regsInDomain_pdecfi i: RegsInDomain (pdecfi i).
-    Proof.
-      apply concatMod_RegsInDomain;
-      [apply regsInDomain_pdeci|apply regsInDomain_iomi].
-    Qed.
+  (*   Lemma regsInDomain_pdecfi i: RegsInDomain (pdecfi i). *)
+  (*   Proof. *)
+  (*     apply concatMod_RegsInDomain; *)
+  (*     [apply regsInDomain_pdeci|apply regsInDomain_iomi]. *)
+  (*   Qed. *)
 
-  End Facts.
+  (* End Facts. *)
 
 End ProcDecM.
 

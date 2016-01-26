@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Inline Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics Lts.InlineNew.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Require Import FunctionalExtensionality.
@@ -60,57 +60,10 @@ Section ProcDecSC.
     Defined.
     Hint Unfold regRel.
 
-    Definition cmMap: CallsT -> CallsT := id.
-    Definition dmMap: CallsT -> CallsT := id.
-    Hint Unfold cmMap dmMap id.
-
-    Lemma Ht2t : t2t {dmMap, cmMap}.
-    Proof.
-      unfold t2t; intros.
-      destruct x as [[ ]]; simpl in *; subst; reflexivity.
-    Qed.
-
-    Definition ruleMap: string -> string :=
-      fun r =>
-        if string_eq r ("reqLd"__ i) then ("voidRule"__ i)
-        else if string_eq r ("reqSt"__ i) then ("voidRule"__ i)
-        else if string_eq r ("repLd"__ i) then ("voidRule"__ i)
-        else if string_eq r ("repSt"__ i) then ("voidRule"__ i)
-        else if string_eq r ("execHt"__ i) then ("execHt"__ i)
-        else if string_eq r ("execNm"__ i) then ("execNm"__ i)
-        else if string_eq r ("Mid"__ i -n- "processLd") then ("execLd"__ i)
-        else if string_eq r ("Mid"__ i -n- "processSt") then ("execSt"__ i)
-        else ("voidRule"__ i).
-    Hint Unfold ruleMap.
-
-    Definition f := f _ _ Ht2t.
-
-    Lemma procDec_SC_i: pdecfi <<=[f] pinsti.
-    Proof.
-      apply transMap with (regRel:=regRel) (ruleMap:=ruleMap).
-
-      - simpl; unfold regRel; repeat eexists;
-        try (repeat rewrite MF.find_add_2 by (intro; vdiscriminate);
-             rewrite MF.find_add_1; reflexivity); intuition auto.
-          
-      - intros.
-        admit.
-
-    Qed.
-
+    (* Lemma procDec_SC_i: pdecfi <<=[f] pinsti. *)
   End SingleCore.
 
-  Theorem procDecM_SC: forall n, exists f, (procDecM n) <<=[f] (sc n).
-  Proof.
-    intros; exists id.
-    pose proof (procDec_SC_i).
-    unfold f, Refinement.f, dmMap, cmMap in H; rewrite <-id_idTrs in H by reflexivity.
-    repeat autounfold with ModuleDefs.
-
-    apply tr_comb.
-    - induction n; [apply H|]; simpl.
-      apply tr_comb; [apply H|assumption].
-    - apply tr_refl.
-  Qed.
+  (* Theorem procDecM_SC: forall n, exists f, (procDecM n) <<=[f] (sc n). *)
 
 End ProcDecSC.
+

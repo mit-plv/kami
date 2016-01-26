@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FnMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics.
 
 (* The SC module is defined as follows: SC = n * Pinst + Minst,
  * where Pinst denotes an instantaneous processor core
@@ -163,18 +163,18 @@ End SC.
 
 Hint Unfold pinsti pinsts minst sc : ModuleDefs.
 
-Section Facts.
-  Variables opIdx addrSize valSize rfIdx : nat.
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
-  Variable i: nat.
+(* Section Facts. *)
+(*   Variables opIdx addrSize valSize rfIdx : nat. *)
+(*   Variables opLd opSt opHt: ConstT (Bit opIdx). *)
+(*   Variable i: nat. *)
 
-  Variable dec: DecT opIdx addrSize valSize rfIdx.
-  Variable exec: ExecT opIdx addrSize valSize rfIdx.
+(*   Variable dec: DecT opIdx addrSize valSize rfIdx. *)
+(*   Variable exec: ExecT opIdx addrSize valSize rfIdx. *)
 
-  Lemma regsInDomain_pinsti:
-    RegsInDomain (pinsti opIdx _ _ _ dec exec opLd opSt opHt i).
-  Proof.
-    regsInDomain_tac.
-  Qed.
+(*   Lemma regsInDomain_pinsti: *)
+(*     RegsInDomain (pinsti opIdx _ _ _ dec exec opLd opSt opHt i). *)
+(*   Proof. *)
+(*     regsInDomain_tac. *)
+(*   Qed. *)
 
-End Facts.
+(* End Facts. *)

@@ -23,11 +23,11 @@ Section StreamMod.
      (Ret $$(hd s))))%kami
   }.
 
-  Section Spec.
-    Lemma regsInDomain_streamMod: RegsInDomain streamMod.
-    Proof.
-      regsInDomain_tac.
-    Qed.
-  End Spec.
+  (* Section Spec. *)
+  (*   Lemma regsInDomain_streamMod: RegsInDomain streamMod. *)
+  (*   Proof. *)
+  (*     regsInDomain_tac. *)
+  (*   Qed. *)
+  (* End Spec. *)
 
 End StreamMod.

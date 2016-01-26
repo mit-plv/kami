@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics.
 
 Set Implicit Arguments.
 
@@ -29,27 +29,5 @@ Definition mb := MODULE {
 Section Tests.
 
   Definition mab := ConcatMod ma mb.
-
-  Lemma mab_prop:
-    exists nr,
-      LtsStep mab (Some "ra"%string) (initRegs (getRegInits mab)) nr (M.empty _) (M.empty _).
-  Proof.
-    (* intros; unfold mab. *)
-    (* repeat eexists. *)
-    (* constr_concatMod. *)
-    (* - econstructor; eauto. *)
-    (*   econstructor; eauto. *)
-    (*   + econstructor; eauto. *)
-    (*     econstructor; eauto. *)
-    (*   + apply Disj_empty_2. *)
-    (*   + apply Disj_empty_2. *)
-    (* - econstructor; eauto. *)
-    (* - repeat split. *)
-    (*   + eauto. *)
-    (*   + eauto. *)
-    (*   + eauto. *)
-    (*   + eauto. *)
-    admit.
-  Qed.
 
 End Tests.

@@ -38,12 +38,12 @@ Section Middleman.
     with Rule ^"processSt" := processSt
   }.
 
-  Section Facts.
-    Lemma regsInDomain_mid: RegsInDomain mid.
-    Proof.
-      regsInDomain_tac.
-    Qed.
-  End Facts.
+  (* Section Facts. *)
+  (*   Lemma regsInDomain_mid: RegsInDomain mid. *)
+  (*   Proof. *)
+  (*     regsInDomain_tac. *)
+  (*   Qed. *)
+  (* End Facts. *)
 
 End Middleman.
 
@@ -73,19 +73,19 @@ Section MemAtomic.
 
   Definition memAtomic := ConcatMod (ioms n) minst.
 
-  Section Facts.
-    Lemma regsInDomain_ioi i: RegsInDomain (ioi i).
-    Proof.
-      apply concatMod_RegsInDomain; apply regsInDomain_simpleFifo.
-    Qed.
+  (* Section Facts. *)
+  (*   Lemma regsInDomain_ioi i: RegsInDomain (ioi i). *)
+  (*   Proof. *)
+  (*     apply concatMod_RegsInDomain; apply regsInDomain_simpleFifo. *)
+  (*   Qed. *)
 
-    Lemma regsInDomain_iomi i: RegsInDomain (iomi i).
-    Proof.
-      apply concatMod_RegsInDomain;
-      [apply regsInDomain_ioi|apply regsInDomain_mid].
-    Qed.
+  (*   Lemma regsInDomain_iomi i: RegsInDomain (iomi i). *)
+  (*   Proof. *)
+  (*     apply concatMod_RegsInDomain; *)
+  (*     [apply regsInDomain_ioi|apply regsInDomain_mid]. *)
+  (*   Qed. *)
 
-  End Facts.
+  (* End Facts. *)
 
 End MemAtomic.
 

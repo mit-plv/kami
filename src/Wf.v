@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemanticsNew.
+Require Import Syntax Semantics.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -146,31 +146,31 @@ Section SemProps.
            (retV1: type retK1) (retV2: type retK2),
       SemAction olds a1 news1 calls1 retV1 ->
       SemAction olds (a2 retV1) news2 calls2 retV2 ->
-      SemAction olds (appendAction a1 a2) (MF.union news1 news2) (MF.union calls1 calls2) retV2.
+      SemAction olds (appendAction a1 a2) (M.union news1 news2) (M.union calls1 calls2) retV2.
   Proof.
     induction a1; intros.
 
     - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
       econstructor; eauto.
-      apply MF.union_add.
+      apply M.union_add.
     - invertAction H0; econstructor; eauto. 
     - invertAction H0; econstructor; eauto.
     - invertAction H; econstructor; eauto.
-      apply MF.union_add.
+      apply M.union_add.
     - invertAction H0.
       simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
       + eapply SemIfElseTrue.
         * eauto.
         * eassumption.
         * eapply H; eauto.
-        * rewrite MF.union_assoc; reflexivity.
-        * rewrite MF.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
       + eapply SemIfElseFalse.
         * eauto.
         * eassumption.
         * eapply H; eauto.
-        * rewrite MF.union_assoc; reflexivity.
-        * rewrite MF.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
 
     - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
       econstructor; eauto.
@@ -189,7 +189,7 @@ Section SemProps.
 
     - inv H1; destruct_existT.
       destruct (string_dec c name); [subst; elim Hnin; auto|].
-      rewrite MF.find_add_2 by assumption.
+      rewrite M.find_add_2 by assumption.
       eapply H0; eauto.
 
     - inv H1; destruct_existT; eapply H0; eauto.
@@ -201,7 +201,7 @@ Section SemProps.
       + eapply IHWfAction2; eauto.
         eapply appendAction_SemAction; eauto.
     - inv H0; destruct_existT; eapply IHWfAction; eauto.
-    - inv H; destruct_existT; apply MF.find_empty; auto.
+    - inv H; destruct_existT; apply M.find_empty; auto.
   Qed.
 
 End SemProps.

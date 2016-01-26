@@ -57,13 +57,13 @@ Proof.
   auto.
 Qed.
 
-Hint Immediate MF.Disj_union_1 MF.Disj_union_2 MF.Disj_add_1.
+Hint Immediate M.Disj_union_1 M.Disj_union_2 M.Disj_add_1.
 
 Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rsNotWritable rs' cs' rv,
   SemAction rs a rs' cs' rv
   -> forall rs'' cs kf, SymSemAction a rs rsNotWritable rs'' cs kf
-    -> MF.Disj rs' rsNotWritable
-    -> kf (MF.union rs'' rs') (MF.union cs cs') rv.
+    -> M.Disj rs' rsNotWritable
+    -> kf (M.union rs'' rs') (M.union cs cs') rv.
 Proof.
 Admitted.
 (*
@@ -110,7 +110,7 @@ Qed.
 Theorem SymSemAction_sound : forall k (a : ActionT type k) rs rsNotWritable rs' cs rv,
   SemAction rs a rs' cs rv
   -> forall kf, SymSemAction a rs rsNotWritable (M.empty _) (M.empty _) kf
-    -> MF.Disj rs' rsNotWritable
+    -> M.Disj rs' rsNotWritable
     -> kf rs' cs rv.
 Proof.
   intros.

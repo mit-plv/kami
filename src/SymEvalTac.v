@@ -1,6 +1,6 @@
 Require Import FunctionalExtensionality List String.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.FnMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.SymEval.
+Require Import Lts.Syntax Lts.Semantics Lts.SymEval.
 
 Hint Rewrite @find_empty @complement_empty @complement_nil @find_add_1 : SymEval.
 Hint Rewrite @disjUnion_In_1 using (clear; simpl; tauto) : SymEval.
