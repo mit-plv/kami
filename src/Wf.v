@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics.
+Require Import Syntax Semantics Equiv.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -8,7 +8,7 @@ Set Implicit Arguments.
 (* Well-formedness w.r.t. structural hazards:
  * 1) No double-writes and 2) No double-calls for all actions in Modules
  *)
-Section Wf1.
+Section WfInd.
   Variable type: Kind -> Type.
 
   Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
@@ -137,7 +137,7 @@ Section Wf1.
       forall m1 m2,
         WfModules m1 -> WfModules m2 -> WfModules (ConcatMod m1 m2).
     
-End Wf1.
+End WfInd.
 
 Section SemProps.
 
@@ -202,6 +202,44 @@ Section SemProps.
         eapply appendAction_SemAction; eauto.
     - inv H0; destruct_existT; eapply IHWfAction; eauto.
     - inv H; destruct_existT; apply M.find_empty; auto.
+  Qed.
+
+  Lemma wfAction_appendAction_calls_1:
+    forall {retT1 retT2} (a1: ActionT type retT1)
+           (a2: type retT1 -> ActionT type retT2) wr cc,
+      WfAction wr cc (appendAction a1 a2) ->
+      WfAction wr cc a1.
+  Proof.
+    induction a1; intros; simpl in *.
+    - inv H0; destruct_existT.
+      constructor; auto.
+      intros; eapply H; eauto.
+    - inv H0; destruct_existT; constructor; intros; eapply H; eauto.
+    - inv H0; destruct_existT; constructor; intros; eapply H; eauto.
+    - inv H; destruct_existT; constructor; auto; intros; eapply IHa1; eauto.
+    - admit.
+    - inv H; destruct_existT; constructor; eapply IHa1; eauto.
+    - constructor.
+  Qed.
+
+  Lemma wfAction_appendAction_calls_2:
+    forall {retT1 retT2} (a1: ActionT type retT1)
+           (a2: type retT1 -> ActionT type retT2) retV1 wr cc,
+      WfAction wr cc (appendAction a1 a2) ->
+      WfAction wr cc (a2 retV1).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma wfAction_appendAction_calls_disj:
+    forall {retT1 retT2} a1 a2 or newRegs1 calls1 (retV1: type retT1)
+           newRegs2 calls2 (retV2: type retT2),
+      WfAction nil nil (appendAction a1 a2) ->
+      SemAction or a1 newRegs1 calls1 retV1 ->
+      SemAction or (a2 retV1) newRegs2 calls2 retV2 ->
+      M.Disj calls1 calls2.
+  Proof.
+    admit.
   Qed.
 
 End SemProps.
