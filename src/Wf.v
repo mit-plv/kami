@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics Equiv.
+Require Import Syntax SemanticsExprAction Equiv.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -139,6 +139,24 @@ Section WfInd.
     
 End WfInd.
 
+Section WfEval.
+  (* Fixpoint wfAction (wr cc: list string) {retT} (a: ActionT typeUT retT) := *)
+  (*   match a with *)
+  (*     | MCall name _ _ cont => *)
+  (*       if in_dec string_dec name cc then false *)
+  (*       else wfAction wr (name :: cc) (cont tt) *)
+  (*     | Let_ _ _ cont => wfAction wr cc (cont (getUT _)) *)
+  (*     | ReadReg _ _ cont => wfAction wr cc (cont (getUT _)) *)
+  (*     | WriteReg reg _ _ cont => *)
+  (*       if in_dec string_dec reg wr then false *)
+  (*       else wfAction (reg :: wr) cc cont *)
+  (*     | IfElse _ _ ta fa cont => *)
+  (*       wfAction wr cc (appendAction ta cont) && wfAction wr cc (appendAction fa cont) *)
+  (*     | Assert_ _ cont => wfAction wr cc cont *)
+  (*     | Return _ => true *)
+  (*   end. *)
+End WfEval.
+
 Section SemProps.
 
   Lemma appendAction_SemAction:
@@ -204,31 +222,121 @@ Section SemProps.
     - inv H; destruct_existT; apply M.find_empty; auto.
   Qed.
 
+  Lemma wfAction_appendAction_calls_1':
+    forall wr cc {retT2} a3,
+      WfAction wr cc a3 ->
+      forall {retT1} (a1: ActionT type retT1)
+             (a2: type retT1 -> ActionT type retT2),
+        a3 = appendAction a1 a2 ->
+        WfAction wr cc a1.
+  Proof.
+    induction 1; intros.
+
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      econstructor; eauto.
+    - destruct a1; simpl in *; try discriminate.
+      + inv H1; destruct_existT; econstructor; eauto.
+      + inv H1; destruct_existT; econstructor.
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      econstructor; eauto.
+    - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+      econstructor; eauto.
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      constructor.
+      + eapply IHWfAction1; eauto; apply appendAction_assoc.
+      + eapply IHWfAction2; eauto; apply appendAction_assoc.
+    - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+      econstructor; eauto.
+    - destruct a1; simpl in *; try discriminate.
+  Qed.
+
   Lemma wfAction_appendAction_calls_1:
     forall {retT1 retT2} (a1: ActionT type retT1)
            (a2: type retT1 -> ActionT type retT2) wr cc,
       WfAction wr cc (appendAction a1 a2) ->
       WfAction wr cc a1.
-  Proof.
-    induction a1; intros; simpl in *.
-    - inv H0; destruct_existT.
-      constructor; auto.
-      intros; eapply H; eauto.
-    - inv H0; destruct_existT; constructor; intros; eapply H; eauto.
-    - inv H0; destruct_existT; constructor; intros; eapply H; eauto.
-    - inv H; destruct_existT; constructor; auto; intros; eapply IHa1; eauto.
-    - admit.
-    - inv H; destruct_existT; constructor; eapply IHa1; eauto.
-    - constructor.
-  Qed.
+  Proof. intros; eapply wfAction_appendAction_calls_1'; eauto. Qed.
 
+  Lemma wfAction_appendAction_calls_2':
+    forall {retT2} wr cc a3,
+      WfAction wr cc a3 ->
+      forall {retT1} (a1: ActionT type retT1)
+             (a2: type retT1 -> ActionT type retT2) retV1,
+        a3 = appendAction a1 a2 ->
+        WfAction wr cc (a2 retV1).
+  Proof.
+    induction 1; intros.
+
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      eapply wfAction_calls_weakening with (c1:= meth :: calls); eauto.
+      unfold SubList; intros; right; auto.
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      + eapply H0; eauto.
+      + apply H.
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      eapply H0; eauto.
+    - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+      eapply wfAction_regs_weakening with (r1:= r :: regs); eauto.
+      unfold SubList; intros; right; auto.
+    - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
+      eapply IHWfAction1; eauto.
+      apply appendAction_assoc.
+    - destruct a1; simpl in *; try discriminate; inv H0; destruct_existT.
+      eapply IHWfAction; eauto.
+    - destruct a1; simpl in *; try discriminate.
+
+      Grab Existential Variables.
+      { exact (evalConstFullT (getDefaultConstFull _)). }
+      { exact (evalConstFullT (getDefaultConstFull _)). }
+      { exact (evalConstT (getDefaultConst _)). }
+  Qed.
+  
   Lemma wfAction_appendAction_calls_2:
     forall {retT1 retT2} (a1: ActionT type retT1)
            (a2: type retT1 -> ActionT type retT2) retV1 wr cc,
       WfAction wr cc (appendAction a1 a2) ->
       WfAction wr cc (a2 retV1).
+  Proof. intros; eapply wfAction_appendAction_calls_2'; eauto. Qed.
+
+  Lemma wfAction_appendAction_calls_disj':
+    forall {retT2} a3 wr cc,
+      WfAction wr cc a3 ->
+      forall {retT1} a1 a2,
+        a3 = appendAction a1 a2 ->
+        forall or newRegs1 newRegs2 calls1 calls2
+               (retV1: type retT1) (retV2: type retT2),
+          SemAction or a1 newRegs1 calls1 retV1 ->
+          SemAction or (a2 retV1) newRegs2 calls2 retV2 ->
+          M.Disj calls1 calls2.
   Proof.
-    admit.
+    induction 1; intros; simpl; intuition idtac; destruct a1; simpl in *; try discriminate.
+    unfold M.Disj; intros lb.
+    
+    - inv H1; destruct_existT.
+      invertAction H2; specialize (H x).
+      specialize (H0 _ _ _ _ eq_refl _ _ _ _ _ _ _ H1 H3 lb).
+      destruct H0; [|right; assumption].
+      destruct (string_dec lb meth); [subst; right|left].
+      + pose proof (wfAction_appendAction_calls_2 _ _ retV1 H).
+        apply M.F.P.F.not_find_in_iff.
+        eapply wfAction_SemAction_calls; eauto.
+      + apply M.F.P.F.not_find_in_iff.
+        apply M.F.P.F.not_find_in_iff in H0.
+        rewrite M.find_add_2; auto.
+    - inv H1; destruct_existT; invertAction H2; eapply H0; eauto.
+    - inv H1; destruct_existT; invertAction H2; apply M.Disj_empty_1.
+    - inv H1; destruct_existT; invertAction H2; eapply H0; eauto.
+    - inv H0; destruct_existT; invertAction H1; eapply IHWfAction; eauto.
+    - inv H1; destruct_existT.
+      invertAction H2.
+      destruct (evalExpr e); dest; subst.
+      + specialize (@IHWfAction1 _ (appendAction a1_1 a) a2 (appendAction_assoc _ _ _)).
+        eapply IHWfAction1; eauto.
+        eapply appendAction_SemAction; eauto.
+      + specialize (@IHWfAction2 _ (appendAction a1_2 a) a2 (appendAction_assoc _ _ _)).
+        eapply IHWfAction2; eauto.
+        eapply appendAction_SemAction; eauto.
+    - inv H0; destruct_existT; invertAction H1; eapply IHWfAction; eauto.
   Qed.
 
   Lemma wfAction_appendAction_calls_disj:
@@ -238,9 +346,7 @@ Section SemProps.
       SemAction or a1 newRegs1 calls1 retV1 ->
       SemAction or (a2 retV1) newRegs2 calls2 retV2 ->
       M.Disj calls1 calls2.
-  Proof.
-    admit.
-  Qed.
+  Proof. intros; eapply wfAction_appendAction_calls_disj'; eauto. Qed.
 
 End SemProps.
 

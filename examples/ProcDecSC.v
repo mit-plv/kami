@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.InlineNew.
+Require Import Lts.Syntax Lts.Semantics Lts.Inline.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Require Import FunctionalExtensionality.

@@ -11,6 +11,47 @@ Definition BasicMod (m: Modules) :=
     | _ => False
   end.
 
+Section HideExts.
+  Definition hideMeth {A} (l: LabelTP A) (dmn: string) (m: Modules): LabelTP A :=
+    match getAttribute dmn (getDmsBodies m) with
+      | Some dm =>
+        if noCallDm dm dm then
+          match M.find dmn (dms l), M.find dmn (cms l) with
+            | Some v1, Some v2 =>
+              match signIsEq v1 v2 with
+                | left _ => {| ruleMeth := ruleMeth l;
+                               dms := M.remove dmn (dms l);
+                               cms := M.remove dmn (cms l) |}
+                | _ => l
+              end
+            | _, _ => l
+          end
+        else l
+      | _ => l
+    end.
+
+  Fixpoint hideMeths {A} (l: LabelTP A) (dms: list string) (m: Modules): LabelTP A :=
+    match dms with
+      | nil => l
+      | dm :: dms' => hideMeths (hideMeth l dm m) dms' (inlineDmToMod m dm)
+    end.
+
+  Lemma hideMeth_preserves_hide:
+    forall {A} (l: LabelTP A) dm m,
+      hide (hideMeth l dm m) = hide l.
+  Proof.
+    intros; destruct l as [rm dms cms].
+    unfold hide, hideMeth; simpl.
+    destruct (getAttribute dm (getDmsBodies m)); [|reflexivity].
+    destruct (noCallDm a a); [|reflexivity].
+    remember (M.find dm dms) as odm; destruct odm; [|reflexivity].
+    remember (M.find dm cms) as ocm; destruct ocm; [|reflexivity].
+    destruct (signIsEq t t0); [|reflexivity].
+    subst; f_equal; auto; apply M.subtractKV_remove; rewrite <-Heqodm, <-Heqocm; auto.
+  Qed.
+
+End HideExts.
+
 Lemma inlineDmToMod_correct_UnitStep_1:
   forall m (Hm: BasicMod m) (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDmsBodies m))) dm or u l,
