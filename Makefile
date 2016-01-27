@@ -1,4 +1,4 @@
-IGNORE:=src/Inline src/SemanticsDenot src/SemanticsOld src/RefinementOld
+IGNORE:=src/SemanticsDenot src/SemanticsOld src/RefinementOld
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))
