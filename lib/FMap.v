@@ -328,22 +328,11 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition Sub {A : Type} (m m' : t A) :=
     forall k v, MapsTo k v m -> MapsTo k v m'.
 
-  Fixpoint complement {A : Type} (m : t A) (xs : list E.t) :=
-    match xs with
-      | nil => m
-      | y :: ys => remove y (complement m ys)
-    end.
+  Definition complement {A : Type} (m : t A) (l : list E.t) :=
+    fold (fun k v m => if in_dec E.eq_dec k l then m else M.add k v m) m (M.empty _).
 
-  Fixpoint restrict {A : Type} (m : t A) (l : list E.t) :=
-    match l with
-      | nil => M.empty _
-      | y :: ys =>
-        let m' := restrict m ys in
-        match M.find y m with
-          | Some v => M.add y v m'
-          | None => m'
-        end
-    end.
+  Definition restrict {A : Type} (m : t A) (l : list E.t) :=
+    fold (fun k v m => if in_dec E.eq_dec k l then M.add k v m else m) m (M.empty _).
 
   Definition subtract {A : Type} (m m' : t A) :=
     fold (fun k _ => remove k) m' m.
@@ -357,10 +346,30 @@ Module LeibnizFacts (M : MapLeibniz).
                              remove k2 m1' else m1' 
             end) m2 m1.
 
-  Hint Unfold update Sub complement subtract subtractKV : MapDefs.
+  Hint Unfold update Sub complement restrict subtract subtractKV : MapDefs.
 
   Ltac mintros := repeat autounfold with MapDefs; intros.
-  
+
+  Lemma find_empty : forall {A} k, (find k (@empty A)) = None.
+  Proof. intros; apply P.F.empty_o. Qed.
+
+  Lemma find_add_1 : forall {A} k v (m: t A), find k (add k v m) = Some v.
+  Proof. intros; apply find_1, add_1; reflexivity. Qed.
+
+  Lemma find_add_2:
+    forall {A} k k' v (m: t A), k <> k' -> find k (add k' v m) = find k m.
+  Proof. intros; apply P.F.add_neq_o; firstorder. Qed.
+
+  Ltac find_add_tac :=
+    repeat ((rewrite find_add_1 ||rewrite find_add_2 by auto); try reflexivity).
+
+  Lemma union_add {A}:
+    forall {m m' : t A} k v,
+      union (add k v m) m' = add k v (union m m').
+  Proof.
+    admit.
+  Qed.
+
   Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
   Proof.
     mintros; mind m.
@@ -380,13 +389,6 @@ Module LeibnizFacts (M : MapLeibniz).
     cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
   Qed.
 
-  Lemma union_add {A}:
-    forall {m m' : t A} k v,
-      union (add k v m) m' = add k v (union m m').
-  Proof.
-    admit.
-  Qed.
-
   Lemma union_smothered {A : Type}:
     forall (m m' : t A), Sub m m' -> union m m' = m'.
   Proof. 
@@ -402,6 +404,21 @@ Module LeibnizFacts (M : MapLeibniz).
       apply add_2; assumption.
       auto. apply P.F.add_m_Proper. apply transpose_neqkey_Equal_add.
       assumption.
+  Qed.
+
+  Lemma find_union {A}:
+    forall {m m' : t A} k,
+      find k (union m m') = match find k m with
+                              | Some v => Some v
+                              | None => find k m'
+                            end.
+  Proof.
+    intros m m'. pattern m.
+    apply map_induction; simpl; intros.
+    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
+    - rewrite union_add by assumption. 
+      do 2 rewrite P.F.add_o.
+      cmp k k0; auto.
   Qed.
 
   Lemma update_empty_1: forall {A} (m: t A), update (empty A) m = m.
@@ -485,31 +502,6 @@ Module LeibnizFacts (M : MapLeibniz).
       apply equal_1.
       apply H. apply P.F.Equal_refl. rewrite H0 in eqtest.
       inversion eqtest.
-  Qed.
-
-  Lemma find_empty : forall {A} k, (find k (@empty A)) = None.
-  Proof. intros; apply P.F.empty_o. Qed.
-
-  Lemma find_add_1 : forall {A} k v (m: t A), find k (add k v m) = Some v.
-  Proof. intros; apply find_1, add_1; reflexivity. Qed.
-
-  Lemma find_add_2:
-    forall {A} k k' v (m: t A), k <> k' -> find k (add k' v m) = find k m.
-  Proof. intros; apply P.F.add_neq_o; firstorder. Qed.
-
-  Lemma find_union {A}:
-    forall {m m' : t A} k,
-      find k (union m m') = match find k m with
-                              | Some v => Some v
-                              | None => find k m'
-                            end.
-  Proof.
-    intros m m'. pattern m.
-    apply map_induction; simpl; intros.
-    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
-    - rewrite union_add by assumption. 
-      do 2 rewrite P.F.add_o.
-      cmp k k0; auto.
   Qed.
 
   Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
@@ -787,11 +779,10 @@ Module LeibnizFacts (M : MapLeibniz).
         apply P.F.not_find_in_iff in H1.
         cmp y k.
         * rewrite find_union, H1.
-          do 2 rewrite find_add_1; reflexivity.
-        * rewrite find_add_2 by assumption.
+          find_add_tac.
+        * find_add_tac.
           do 2 rewrite find_union.
-          destruct (find y m2); [reflexivity|].
-          rewrite find_add_2 by assumption; reflexivity.
+          destruct (find y m2); find_add_tac; reflexivity.
   Qed.
 
   Lemma remove_empty:
@@ -819,7 +810,7 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; ext y; cmp y k.
     - do 2 (rewrite P.F.remove_eq_o; auto).
     - do 2 (rewrite P.F.remove_neq_o; auto).
-      rewrite find_add_2; auto.
+      find_add_tac.
   Qed.
 
   Lemma remove_union:
@@ -848,21 +839,33 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Lemma restrict_nil: forall {A} (m: t A), restrict m nil = empty A.
-  Proof. reflexivity. Qed.
+  Proof.
+    mintros; simpl; mind m.
+    - apply P.fold_Empty; auto; apply empty_1.
+    - rewrite P.fold_add; auto.
+      + compute; intros; subst; auto.
+      + unfold P.transpose_neqkey; intros; auto.
+  Qed.
 
   Lemma restrict_empty:
     forall {A} (l: list E.t),
       restrict (@empty A) l = @empty A.
+  Proof. mintros; apply P.fold_Empty; auto; apply empty_1. Qed.
+
+  Lemma transpose_neqkey_Equal_restrict:
+    forall {A} l,
+      P.transpose_neqkey
+        eq
+        (fun (k : key) (v0 : A) (m : t A) =>
+           if in_dec P.F.eq_dec k l then add k v0 m else m).
   Proof.
-    mintros; induction l; [reflexivity|].
-    simpl; rewrite IHl; rewrite find_empty; reflexivity.
+    admit.
   Qed.
 
   Lemma restrict_add:
     forall {A} (m: t A) (l: list E.t) a v,
       List.In a l -> restrict (add a v m) l = add a v (restrict m l).
   Proof.
-    mintros; induction l; [inv H|].
     admit.
   Qed.
 
