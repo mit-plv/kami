@@ -215,7 +215,7 @@ Section Exts.
             match m with
               | Mod regs rules dms =>
                 (Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm), true)
-              | ConcatMod m1 m2 => (m, false) (* inlining should be done for (merge m) *)
+              | ConcatMod m1 m2 => (m, false) (* Inlining should be done for (merge m) *)
             end
           else (m, false)
         | None => (m, false)

@@ -458,17 +458,97 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma update_empty_2: forall {A} (m: t A), update m (empty A) = m.
   Proof. mintros; apply P.fold_Empty; auto. Qed.
 
+  Lemma remove_empty:
+    forall {A} k, remove k (empty A) = empty A.
+  Proof.
+    mintros; ext y; cmp y k.
+    - rewrite P.F.remove_eq_o by reflexivity.
+      rewrite find_empty; reflexivity.
+    - rewrite P.F.remove_neq_o by auto; reflexivity.
+  Qed.
+
+  Lemma remove_comm:
+    forall {A} k1 k2 (m: t A), remove k1 (remove k2 m) = remove k2 (remove k1 m).
+  Proof.
+    intros; ext y.
+    cmp y k1.
+    - rewrite P.F.remove_eq_o; auto.
+      cmp k1 k2.
+      + rewrite P.F.remove_eq_o; auto.
+      + rewrite P.F.remove_neq_o; auto.
+        rewrite P.F.remove_eq_o; auto.
+    - rewrite P.F.remove_neq_o; auto.
+      cmp y k2.
+      + do 2 (rewrite P.F.remove_eq_o; auto).
+      + do 3 (rewrite P.F.remove_neq_o; auto).
+  Qed.
+      
+  Lemma remove_find_None:
+    forall {A} (m: t A) k,
+      find k m = None -> remove k m = m.
+  Proof.
+    mintros; ext y; cmp y k.
+    - rewrite P.F.remove_eq_o; auto.
+    - rewrite P.F.remove_neq_o; auto.
+  Qed.
+
+  Lemma remove_add:
+    forall {A} (m: t A) k v,
+      remove k (add k v m) = remove k m.
+  Proof.
+    mintros; ext y; cmp y k.
+    - do 2 (rewrite P.F.remove_eq_o; auto).
+    - do 2 (rewrite P.F.remove_neq_o; auto).
+      find_add_tac.
+  Qed.
+
+  Lemma remove_union:
+    forall {A} (m1 m2: t A) k,
+      remove k (union m1 m2) = union (remove k m1) (remove k m2).
+  Proof.
+    mintros; ext y; cmp y k; rewrite find_union.
+    - do 3 (rewrite P.F.remove_eq_o; auto).
+    - do 3 (rewrite P.F.remove_neq_o; auto).
+      rewrite find_union; reflexivity.
+  Qed.
+
   Lemma transpose_neqkey_Equal_subtractKV:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y)),
       P.transpose_neqkey
-        Equal
-        (fun (k2 : key) (v2 : A) (m1' : t A) =>
+        eq
+        (fun k2 v2 m1' =>
            match find k2 m1' with
              | Some v1 => if deceqA v1 v2 then remove k2 m1' else m1'
              | None => m1'
            end).
   Proof.
-    admit.
+    compute; intros; simpl.
+
+    repeat
+      match goal with
+        | [ |- context [find ?k ?m] ] =>
+          let okv := fresh "okv" in
+          remember (find k m) as okv; destruct okv
+        | [H: _ = find _ _ |- _] => rewrite <-H
+        | [ |- context [deceqA ?a1 ?a2] ] =>
+          destruct (deceqA a1 a2); [subst|]
+        | [ |- context [remove ?k ?m] ] =>
+          try rewrite remove_find_None by auto
+      end;
+      repeat
+        match goal with
+          | [H1: ?v1 = find ?k ?m, H2: ?v2 = find ?k ?m |- _] =>
+            rewrite <-H1 in H2
+          | [H: Some ?v1 = Some ?v2 |- _] => inv H
+          | [H: Some _ = None |- _] => discriminate
+          | [H: ?a = ?a -> False |- _] => elim H; auto
+          | [H: context [find ?k (remove ?k _)] |- _] =>
+            rewrite P.F.remove_eq_o in H; auto
+          | [H: context [find ?k1 (remove ?k2 _)] |- _] =>
+            try (rewrite P.F.remove_neq_o in H; auto)
+        end; try reflexivity; try discriminate.
+    
+    apply remove_comm.
   Qed.
   Hint Immediate transpose_neqkey_Equal_subtractKV.
 
@@ -478,21 +558,24 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     mintros; mind m.
     - apply P.fold_Empty; auto.
-    - apply leibniz; rewrite P.fold_add; auto.
-      + rewrite H; rewrite P.F.empty_o.
-        apply P.F.Equal_refl.
-      + compute; intros; subst.
-        rewrite H3; destruct (find y y1); auto.
-        destruct (deceqA _ _); auto.
-        cmp y2 y.
-        * do 2 (rewrite P.F.remove_eq_o; auto).
-        * do 2 (rewrite P.F.remove_neq_o; auto).
+    - apply leibniz; rewrite P.fold_add with (eqA:= eq); auto.
+      rewrite H; rewrite P.F.empty_o.
+      apply P.F.Equal_refl.
   Qed.
 
   Lemma subtractKV_empty_2:
     forall {A : Type} deceqA (m: t A),
       subtractKV deceqA m (empty A) = m.
   Proof. mintros; apply P.fold_Empty; auto. Qed.
+
+  Lemma subtractKV_remove:
+    forall {A : Type} deceqA (m2 m1: t A) k,
+      find k m1 = find k m2 ->
+      subtractKV deceqA (remove k m1) (remove k m2) =
+      subtractKV deceqA m1 m2.
+  Proof.
+    admit.
+  Qed.
 
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
@@ -802,59 +885,6 @@ Module LeibnizFacts (M : MapLeibniz).
         * find_add_tac.
           do 2 rewrite find_union.
           destruct (find y m2); find_add_tac; reflexivity.
-  Qed.
-
-  Lemma remove_empty:
-    forall {A} k, remove k (empty A) = empty A.
-  Proof.
-    mintros; ext y; cmp y k.
-    - rewrite P.F.remove_eq_o by reflexivity.
-      rewrite find_empty; reflexivity.
-    - rewrite P.F.remove_neq_o by auto; reflexivity.
-  Qed.
-
-  Lemma remove_find_None:
-    forall {A} (m: t A) k,
-      find k m = None -> remove k m = m.
-  Proof.
-    mintros; ext y; cmp y k.
-    - rewrite P.F.remove_eq_o; auto.
-    - rewrite P.F.remove_neq_o; auto.
-  Qed.
-
-  Lemma remove_add:
-    forall {A} (m: t A) k v,
-      remove k (add k v m) = remove k m.
-  Proof.
-    mintros; ext y; cmp y k.
-    - do 2 (rewrite P.F.remove_eq_o; auto).
-    - do 2 (rewrite P.F.remove_neq_o; auto).
-      find_add_tac.
-  Qed.
-
-  Lemma remove_union:
-    forall {A} (m1 m2: t A) k,
-      remove k (union m1 m2) = union (remove k m1) (remove k m2).
-  Proof.
-    mintros; ext y; cmp y k; rewrite find_union.
-    - do 3 (rewrite P.F.remove_eq_o; auto).
-    - do 3 (rewrite P.F.remove_neq_o; auto).
-      rewrite find_union; reflexivity.
-  Qed.
-
-  Lemma subtractKV_remove:
-    forall {A : Type} deceqA (m1 m2: t A) k,
-      find k m1 = find k m2 ->
-      subtractKV deceqA (remove k m1) (remove k m2) =
-      subtractKV deceqA m1 m2.
-  Proof.
-    mintros; mind m2.
-    - rewrite remove_empty.
-      rewrite P.fold_Empty; auto.
-      rewrite P.fold_Empty; auto.
-      rewrite find_empty in H.
-      apply remove_find_None; auto.
-    - admit.
   Qed.
 
 End LeibnizFacts.
