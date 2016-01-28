@@ -221,7 +221,7 @@ Section Exts.
         | None => (m, false)
       end
     else (m, false).
-
+  
   Fixpoint inlineDms' (m: Modules) (dms: list string) :=
     match dms with
       | nil => (m, true)

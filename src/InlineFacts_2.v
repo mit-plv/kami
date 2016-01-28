@@ -609,7 +609,7 @@ Proof.
 Qed.
 
 Lemma inlineDms'_correct_UnitSteps:
-  forall cdms m (Hm: BasicMod m) (Hwf: WfModules type m)
+  forall cdms m (Hm: BasicMod m)
          (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDmsBodies m)))
          (Hcdms: SubList cdms (namesOf (getDmsBodies m)))
@@ -628,7 +628,6 @@ Proof.
   - assert (im = fst (inlineDmToMod m a)) by (rewrite <-Heqimb; reflexivity); subst.
     apply IHcdms; auto.
     + eapply inlineDmToMod_basicMod; eauto.
-    + admit. (* TODO: WfModules type (inlineDmToMod m a), should have a checker *)
     + admit. (* TODO: ModEquiv typeUT type (inlineDmToMod m a), provable? *)
     + rewrite inlineDmToMod_dms_names; auto.
     + rewrite inlineDmToMod_dms_names; auto.
@@ -763,7 +762,7 @@ Proof.
 Qed.
 
 Lemma inlineDms_correct_UnitSteps:
-  forall m (Hm: BasicMod m) (Hwf: WfModules type m)
+  forall m (Hm: BasicMod m)
          (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDmsBodies m))) or nr l,
     UnitSteps m or nr l ->
@@ -805,7 +804,7 @@ Proof.
 Qed.
 
 Lemma inlineDms_correct:
-  forall m (Hm: BasicMod m) (Hwf: WfModules type m)
+  forall m (Hm: BasicMod m)
          (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDmsBodies m)))
          (Hin: snd (inlineDms m) = true)
@@ -813,7 +812,7 @@ Lemma inlineDms_correct:
     Step m or nr l ->
     Step (fst (inlineDms m)) or nr l.
 Proof.
-  induction 6; intros; subst.
+  induction 5; intros; subst.
   apply MkStep with (l:= hide l); auto.
   - apply inlineDms_correct_UnitSteps; auto.
   - apply hide_idempotent.
@@ -848,8 +847,7 @@ Proof.
 Qed.
 
 Theorem inline_correct:
-  forall m (Hwf: WfModules type (merge m))
-         (Hequiv: ModEquiv typeUT type (merge m))
+  forall m (Hequiv: ModEquiv typeUT type (merge m))
          (Hdms: NoDup (namesOf (getDmsBodies m)))
          (Hin: snd (inline m) = true)
          or nr l,
@@ -861,3 +859,4 @@ Proof.
   - unfold BasicMod, merge; auto.
   - apply merge_preserves_step; auto.
 Qed.
+
