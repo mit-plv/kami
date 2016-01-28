@@ -208,22 +208,29 @@ Section Exts.
     map (fun d => inlineDmToDm d leaf) dms.
 
   Definition inlineDmToMod (m: Modules) (leaf: string) :=
-    match getAttribute leaf (getDmsBodies m) with
-      | Some dm =>
-        if noCallDm dm dm then
-          match m with
-            | Mod regs rules dms =>
-              Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm)
-            | ConcatMod m1 m2 => m (* don't care *)
-          end
-        else m
-      | None => m
-    end.
+    if wfModules m then
+      match getAttribute leaf (getDmsBodies m) with
+        | Some dm =>
+          if noCallDm dm dm then
+            match m with
+              | Mod regs rules dms =>
+                (Mod regs (inlineDmToRules rules dm) (inlineDmToDms dms dm), true)
+              | ConcatMod m1 m2 => (m, false) (* inlining should be done for (merge m) *)
+            end
+          else (m, false)
+        | None => (m, false)
+      end
+    else (m, false).
 
   Fixpoint inlineDms' (m: Modules) (dms: list string) :=
     match dms with
-      | nil => m
-      | dm :: dms' => inlineDms' (inlineDmToMod m dm) dms'
+      | nil => (m, true)
+      | dm :: dms' =>
+        let (im, ib) := inlineDmToMod m dm in
+        if ib then
+          inlineDms' im dms'
+        else
+          (im, false)
     end.
 
   Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDmsBodies m)).

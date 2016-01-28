@@ -140,21 +140,88 @@ Section WfInd.
 End WfInd.
 
 Section WfEval.
-  (* Fixpoint wfAction (wr cc: list string) {retT} (a: ActionT typeUT retT) := *)
-  (*   match a with *)
-  (*     | MCall name _ _ cont => *)
-  (*       if in_dec string_dec name cc then false *)
-  (*       else wfAction wr (name :: cc) (cont tt) *)
-  (*     | Let_ _ _ cont => wfAction wr cc (cont (getUT _)) *)
-  (*     | ReadReg _ _ cont => wfAction wr cc (cont (getUT _)) *)
-  (*     | WriteReg reg _ _ cont => *)
-  (*       if in_dec string_dec reg wr then false *)
-  (*       else wfAction (reg :: wr) cc cont *)
-  (*     | IfElse _ _ ta fa cont => *)
-  (*       wfAction wr cc (appendAction ta cont) && wfAction wr cc (appendAction fa cont) *)
-  (*     | Assert_ _ cont => wfAction wr cc cont *)
-  (*     | Return _ => true *)
-  (*   end. *)
+  Fixpoint maxPathLength {retT} (a: ActionT typeUT retT) :=
+    match a with
+      | MCall _ _ _ cont => S (maxPathLength (cont tt))
+      | Let_ _ _ cont => S (maxPathLength (cont (getUT _)))
+      | ReadReg _ _ cont => S (maxPathLength (cont (getUT _)))
+      | WriteReg _ _ _ cont => S (maxPathLength cont)
+      | IfElse _ _ ta fa cont =>
+        S ((max (maxPathLength ta) (maxPathLength fa)) + (maxPathLength (cont tt)))
+      | Assert_ _ cont => S (maxPathLength cont)
+      | Return _ => S O
+    end.
+  
+  Fixpoint wfActionC (wr cc: list string) {retT} (a: ActionT typeUT retT) (cdn: nat) :=
+    match cdn with
+      | O => false
+      | S n =>
+        match a with
+          | MCall name _ _ cont =>
+            if in_dec string_dec name cc then false
+            else wfActionC wr (name :: cc) (cont tt) n
+          | Let_ _ _ cont => wfActionC wr cc (cont (getUT _)) n
+          | ReadReg _ _ cont => wfActionC wr cc (cont (getUT _)) n
+          | WriteReg reg _ _ cont =>
+            if in_dec string_dec reg wr then false
+            else wfActionC (reg :: wr) cc cont n
+          | IfElse _ _ ta fa cont =>
+            wfActionC wr cc (appendAction ta cont) n && wfActionC wr cc (appendAction fa cont) n
+          | Assert_ _ cont => wfActionC wr cc cont n
+          | Return _ => true
+        end
+    end.
+
+  Definition wfAction {retT} (a: ActionT typeUT retT) := wfActionC nil nil a (maxPathLength a).
+
+  Lemma wfActionC_WfAction:
+    forall {retT type} aU (aT: ActionT type retT) {G} (Hequiv: ActionEquiv G aU aT)
+           wr cc cdn,
+      wfActionC wr cc aU cdn = true -> WfAction wr cc aT.
+  Proof.
+    induction 1; intros; try (destruct cdn; simpl in *; [discriminate|]);
+    try (constructor; eauto; fail).
+
+    - destruct (in_dec _ n cc); [discriminate|].
+      constructor; eauto.
+    - destruct (in_dec _ rn wr); [discriminate|].
+      constructor; eauto.
+    - apply andb_true_iff in H2; dest.
+      constructor; admit.
+  Qed.
+
+  Lemma wfAction_WfAction:
+    forall {retT type} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aU aT),
+      wfAction aU = true -> WfAction nil nil aT.
+  Proof. intros; eapply wfActionC_WfAction; eauto. Qed.
+
+  Fixpoint wfRules (rules: list (Attribute (Action Void))) :=
+    match rules with
+      | nil => true
+      | rule :: rules' =>
+        wfAction ((attrType rule) typeUT) && wfRules rules'
+    end.
+
+  Fixpoint wfDms (dms: list DefMethT) :=
+    match dms with
+      | nil => true
+      | dm :: dms' =>
+        wfAction (objVal (attrType dm) typeUT tt) && wfDms dms'
+    end.
+
+  Fixpoint wfModules (m: Modules) :=
+    match m with
+      | Mod _ rules dms => wfRules rules && wfDms dms
+      | ConcatMod m1 m2 => wfModules m1 && wfModules m2
+    end.
+
+  Lemma wfModules_WfModules:
+    forall m type (Hequiv: ModEquiv typeUT type m),
+      wfModules m = true -> WfModules type m.
+  Proof.
+    admit.
+  Qed.
+
 End WfEval.
 
 Section SemProps.

@@ -367,11 +367,41 @@ Module LeibnizFacts (M : MapLeibniz).
     cmp k k1; try cmp k k2; find_add_tac.
   Qed.
 
+  Lemma transpose_neqkey_Equal_add {A : Type} :
+    P.transpose_neqkey Equal (add (elt:=A)).
+  Proof.
+    unfold P.transpose_neqkey. intros. 
+    unfold Equal. intros y. do 4 rewrite P.F.add_o.
+    cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
+  Qed.
+  Hint Immediate transpose_neqkey_Equal_add.
+
+  Lemma transpose_neqkey_eq_add {A : Type} :
+    P.transpose_neqkey eq (add (elt:=A)).
+  Proof.
+    unfold P.transpose_neqkey; intros.
+    apply add_comm; auto.
+  Qed.
+  Hint Immediate transpose_neqkey_eq_add.
+
   Lemma union_add {A}:
     forall {m m' : t A} k v,
       union (add k v m) m' = add k v (union m m').
   Proof.
-    admit.
+    mintros; unfold union, unionL; mind m.
+    - rewrite P.fold_add; auto.
+      intro Hx; eapply P.F.empty_in_iff; eauto.
+    - cmp k k0.
+      + rewrite add_idempotent, H.
+        rewrite P.fold_add with (eqA:= eq); auto.
+        * rewrite add_idempotent; auto.
+      + rewrite add_comm by assumption.
+        rewrite P.fold_add; auto.
+        * rewrite H.
+          rewrite P.fold_add with (eqA:= eq); auto.
+          apply add_comm; auto.
+        * intro Hx; elim H0.
+          apply P.F.add_in_iff in Hx; destruct Hx; auto; elim n; auto.
   Qed.
 
   Lemma union_empty_L {A : Type} : forall m, union (empty A) m = m.
@@ -383,15 +413,6 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
   Proof. mintros; apply leibniz, P.fold_identity. Qed.
-
-  Lemma transpose_neqkey_Equal_add {A : Type} :
-    P.transpose_neqkey Equal (add (elt:=A)).
-  Proof.
-    unfold P.transpose_neqkey. intros. 
-    unfold Equal. intros y. do 4 rewrite P.F.add_o.
-    cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
-  Qed.
-  Hint Immediate transpose_neqkey_Equal_add.
 
   Lemma union_smothered {A : Type}:
     forall (m m' : t A), Sub m m' -> union m m' = m'.
