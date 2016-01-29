@@ -12,45 +12,30 @@ Definition BasicMod (m: Modules) :=
   end.
 
 Section HideExts.
-  Definition hideMeth {A} (l: LabelTP A) (dmn: string) (m: Modules): LabelTP A :=
-    if wfModules m then
-      match getAttribute dmn (getDmsBodies m) with
-        | Some dm =>
-          if noCallDm dm dm then
-            match M.find dmn (dms l), M.find dmn (cms l) with
-              | Some v1, Some v2 =>
-                match signIsEq v1 v2 with
-                  | left _ => {| ruleMeth := ruleMeth l;
-                                 dms := M.remove dmn (dms l);
-                                 cms := M.remove dmn (cms l) |}
-                  | _ => l
-                end
-              | _, _ => l
-            end
-          else l
-        | _ => l
-      end
-    else l.
+  Definition hideMeth {A} (l: LabelTP A) (dmn: string): LabelTP A :=
+    match M.find dmn (dms l), M.find dmn (cms l) with
+      | Some v1, Some v2 =>
+        match signIsEq v1 v2 with
+          | left _ => {| ruleMeth := ruleMeth l;
+                         dms := M.remove dmn (dms l);
+                         cms := M.remove dmn (cms l) |}
+          | _ => l
+        end
+      | _, _ => l
+    end.
 
-  Fixpoint hideMeths {A} (l: LabelTP A) (dms: list string) (m: Modules): LabelTP A :=
+  Fixpoint hideMeths {A} (l: LabelTP A) (dms: list string): LabelTP A :=
     match dms with
       | nil => l
-      | dm :: dms' =>
-        let (im, ib) := inlineDmToMod m dm in
-        if ib then
-          hideMeths (hideMeth l dm m) dms' im
-        else l
+      | dm :: dms' => hideMeths (hideMeth l dm) dms'
     end.
 
   Lemma hideMeth_preserves_hide:
-    forall {A} (l: LabelTP A) dm m,
-      hide (hideMeth l dm m) = hide l.
+    forall {A} (l: LabelTP A) dm,
+      hide (hideMeth l dm) = hide l.
   Proof.
     intros; destruct l as [rm dms cms].
     unfold hide, hideMeth; simpl.
-    destruct (wfModules m); [|reflexivity].
-    destruct (getAttribute dm (getDmsBodies m)); [|reflexivity].
-    destruct (noCallDm a a); [|reflexivity].
     remember (M.find dm dms) as odm; destruct odm; [|reflexivity].
     remember (M.find dm cms) as ocm; destruct ocm; [|reflexivity].
     destruct (signIsEq t t0); [|reflexivity].
@@ -64,7 +49,8 @@ Lemma inlineDmToMod_correct_UnitStep_1:
          (Hdms: NoDup (namesOf (getDmsBodies m))) dm or u l,
     UnitStep m or u l ->
     M.find dm (dms l) = M.find dm (cms l) ->
-    UnitStep (fst (inlineDmToMod m dm)) or u (hideMeth l dm m).
+    snd (inlineDmToMod m dm) = true ->
+    UnitStep (fst (inlineDmToMod m dm)) or u (hideMeth l dm).
 Proof.
   induction 4; intros; simpl in *.
 
@@ -88,12 +74,12 @@ Proof.
       destruct a; apply inlineDm_SemAction_intact; auto.
 
   - destruct Hequiv.
-    pose proof (MethsEquiv_in _ H1 i).
+    pose proof (MethsEquiv_in _ H2 i).
 
-    unfold inlineDmToMod, hideMeth; simpl.
-    remember (wfRules rules && wfDms meths) as owf; destruct owf; [|eapply SingleMeth; eauto].
-    remember (getAttribute dm meths) as odm; destruct odm; [|eapply SingleMeth; eauto].
-    remember (noCallDm a a) as ocall; destruct ocall; [|eapply SingleMeth; eauto].
+    unfold inlineDmToMod, hideMeth in *; simpl in *.
+    remember (wfRules rules && wfDms meths) as owf; destruct owf; [|discriminate].
+    remember (getAttribute dm meths) as odm; destruct odm; [|discriminate].
+    remember (noCallDm a a) as ocall; destruct ocall; [|discriminate].
     destruct a as [an ab]; simpl in *.
     pose proof (getAttribute_Some_name _ _ Heqodm); subst dm.
 
@@ -438,7 +424,8 @@ Lemma inlineDmToMod_correct_UnitSteps:
     NoDup (namesOf (getDmsBodies m)) ->
     UnitSteps m or nr l ->
     M.find dm (dms l) = M.find dm (cms l) ->
-    UnitSteps (fst (inlineDmToMod m dm)) or nr (hideMeth l dm m).
+    snd (inlineDmToMod m dm) = true ->
+    UnitSteps (fst (inlineDmToMod m dm)) or nr (hideMeth l dm).
 Proof.
   induction 4; intros; [constructor; apply inlineDmToMod_correct_UnitStep_1; auto|].
 
@@ -450,11 +437,9 @@ Proof.
     rewrite <-Heqodmv, <-H0; simpl.
     destruct (signIsEq t t); [clear e|elim n; auto].
 
-    remember (wfModules m) as owf; destruct owf; [|apply (UnitStepsUnion X1 X2 c)].
-    remember (getAttribute dm (getDmsBodies m)) as odm; destruct odm;
-    [|apply (UnitStepsUnion X1 X2 c)].
-    remember (noCallDm a a) as oc; destruct oc;
-    [|apply (UnitStepsUnion X1 X2 c)].
+    remember (wfModules m) as owf; destruct owf; [|discriminate].
+    remember (getAttribute dm (getDmsBodies m)) as odm; destruct odm; [|discriminate].
+    remember (noCallDm a a) as oc; destruct oc; [|discriminate].
 
     pose proof (getAttribute_Some_name _ _ Heqodm); subst.
     destruct m as [regs rules dms|]; [|exfalso; inv Hm].
@@ -483,11 +468,11 @@ Proof.
         end.
         apply UnitStepsUnion; auto.
         { assert (M.find a dm2 = None)
-            by (destruct (M.Disj_find_None a H3); auto;
+            by (destruct (M.Disj_find_None a H4); auto;
                 rewrite H0 in Heqodmv1; inv Heqodmv1).
           assert (M.find a cm2 = None)
-            by (destruct (M.Disj_find_None a H4); auto;
-                rewrite H5 in Heqocmv1; inv Heqocmv1).
+            by (destruct (M.Disj_find_None a H5); auto;
+                rewrite H6 in Heqocmv1; inv Heqocmv1).
           do 2 rewrite M.remove_find_None by assumption.
           eapply inlineDmToRules_UnitSteps_intact; eauto.
           eapply inlineDmToDms_UnitSteps_intact; eauto.
@@ -508,7 +493,7 @@ Proof.
           by (apply M.union_comm; apply M.Disj_comm; auto).
         replace (match rm1 with | Some r => Some r | None => rm2 end) with
         (match rm2 with | Some r => Some r | None => rm1 end)
-          by (destruct rm1, rm2; intuition idtac; destruct H2; discriminate).
+          by (destruct rm1, rm2; intuition idtac; destruct H3; discriminate).
         replace (M.union dm1 dm2) with (M.union dm2 dm1)
           by (apply M.union_comm; apply M.Disj_comm; auto).
         replace (M.union cm1 cm2) with (M.union cm2 cm1)
@@ -516,7 +501,7 @@ Proof.
         pose proof (getAttribute_Some_body _ _ Heqodm).
         eapply inlineDmToMod_correct_UnitSteps_sub; eauto; try (apply M.Disj_comm; auto).
         { apply wfModules_WfModules; auto. }
-        { destruct H2; unfold NotBothRule; intuition auto. }
+        { destruct H3; unfold NotBothRule; intuition auto. }
       * (* right-side inlined *)
         rewrite <-Heqodmv, <-H0 in IHX2.
         specialize (IHX2 eq_refl).
@@ -545,7 +530,7 @@ Proof.
           { apply M.Disj_remove_1, M.Disj_remove_2; assumption. }
         }
 
-  - unfold hideMeth in *; simpl in *; rewrite <-Heqodmv.
+  - unfold inlineDmToMod, hideMeth in *; simpl in *; rewrite <-Heqodmv.
     rewrite M.find_union in Heqodmv.
     destruct (M.find dm dm1); [discriminate|].
     destruct (M.find dm dm2); [discriminate|].
@@ -554,10 +539,13 @@ Proof.
     destruct (M.find dm cm2); [discriminate|].
     specialize (IHX1 eq_refl); specialize (IHX2 eq_refl).
 
-    destruct (wfModules m);
-      try destruct (getAttribute dm (getDmsBodies m));
-      try destruct (noCallDm a a);
-      apply (UnitStepsUnion IHX1 IHX2 c).
+    destruct (wfModules m); [|discriminate].
+    destruct (getAttribute dm (getDmsBodies m)); [|discriminate].
+    destruct (noCallDm a a); [|discriminate].
+    destruct m; [|discriminate].
+    simpl in *.
+    specialize (IHX1 eq_refl); specialize (IHX2 eq_refl).
+    apply (UnitStepsUnion IHX1 IHX2 c).
 Qed.
 
 Lemma inlineDmToMod_wellHidden:
@@ -616,11 +604,11 @@ Lemma inlineDms'_correct_UnitSteps:
          or nr l,
     UnitSteps m or nr l ->
     wellHidden (hide l) m ->
-    UnitSteps (fst (inlineDms' m cdms)) or nr (hideMeths l cdms m).
+    snd (inlineDms' m cdms) = true ->
+    UnitSteps (fst (inlineDms' m cdms)) or nr (hideMeths l cdms).
 Proof.
   induction cdms; [auto|].
   intros; simpl.
-
   apply SubList_cons_inv in Hcdms; dest.
   remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl.
   destruct ib.
@@ -632,42 +620,26 @@ Proof.
     + rewrite inlineDmToMod_dms_names; auto.
     + rewrite inlineDmToMod_dms_names; auto.
     + apply inlineDmToMod_correct_UnitSteps; auto.
-      eapply wellHidden_find; eauto.
+      * eapply wellHidden_find; eauto.
+      * simpl in H0; destruct (inlineDmToMod m a); simpl in *.
+        destruct b; [auto|inv Heqimb].
     + apply inlineDmToMod_wellHidden.
       rewrite hideMeth_preserves_hide; auto.
+    + simpl in H0; destruct (inlineDmToMod m a); simpl in *.
+      destruct b; [auto|inv Heqimb].
 
-  - simpl; unfold inlineDmToMod in Heqimb.
-    
-    destruct (wfModules m); [|inv Heqimb; assumption].
-    destruct (getAttribute _ _); [|inv Heqimb; assumption].
-    destruct (noCallDm _ _); [|inv Heqimb; assumption].
-    destruct m.
-    + inv Heqimb.
-    + inv Hm.
+  - simpl in *; unfold inlineDmToMod in *.
+    destruct (wfModules m); [|discriminate].
+    destruct (getAttribute _ _); [|discriminate].
+    destruct (noCallDm _ _); [|discriminate].
+    destruct m; [|discriminate].
+    inv Heqimb.
 Qed.
 
-Definition hideMethF {A} (l: LabelTP A) (dmn: string): LabelTP A :=
-  match M.find dmn (dms l), M.find dmn (cms l) with
-    | Some v1, Some v2 =>
-      match signIsEq v1 v2 with
-        | left _ => {| ruleMeth := ruleMeth l;
-                       dms := M.remove dmn (dms l);
-                       cms := M.remove dmn (cms l) |}
-        | _ => l
-      end
-    | _, _ => l
-  end.
-
-Fixpoint hideMethsF {A} (l: LabelTP A) (dms: list string): LabelTP A :=
-  match dms with
-    | nil => l
-    | dm :: dms' => hideMethsF (hideMethF l dm) dms'
-  end.
-
-Lemma hideMethsF_hide:
+Lemma hideMeths_hide:
   forall dmsAll {A} (l: LabelTP A),
     M.InDomain (dms l) dmsAll ->
-    hideMethsF l dmsAll = hide l.
+    hideMeths l dmsAll = hide l.
 Proof.
   induction dmsAll; intros.
 
@@ -680,7 +652,7 @@ Proof.
     remember (M.find a dm) as oda; remember (M.find a cm) as oca.
     destruct oda.
     + destruct oca.
-      * unfold hideMethF; simpl.
+      * unfold hideMeth; simpl.
         rewrite <-Heqoda, <-Heqoca.
         destruct (signIsEq t t0).
         { subst; rewrite IHdmsAll.
@@ -691,22 +663,22 @@ Proof.
         }
         { admit. }
 
-      * unfold hideMethF; simpl.
+      * unfold hideMeth; simpl.
         rewrite <-Heqoda, <-Heqoca.
         admit. (* same as the case where t <> t0 *)
 
-    + unfold hideMethF; simpl.
+    + unfold hideMeth; simpl.
       rewrite <-Heqoda.
       rewrite IHdmsAll; simpl; [reflexivity|].
       eapply M.InDomain_find_None; eauto.
 Qed.
 
-Lemma hideMethsF_UnitSteps_hide:
+Lemma hideMeths_UnitSteps_hide:
   forall m or nr l,
     UnitSteps m or nr l ->
-    hideMethsF l (namesOf (getDmsBodies m)) = hide l.
+    hideMeths l (namesOf (getDmsBodies m)) = hide l.
 Proof.
-  intros; apply hideMethsF_hide.
+  intros; apply hideMeths_hide.
   admit. (* Semantics proof *)
 Qed.
 
@@ -716,50 +688,6 @@ Definition InlinableDm (m: Modules) (dm: string) :=
       if noCallDm dmb dmb then True else False
     | _ => False
   end.
-
-Lemma hideMeth_hideMethF:
-  forall m dm {A} (l: LabelTP A),
-    wfModules m = true ->
-    InlinableDm m dm ->
-    hideMeth l dm m = hideMethF l dm.
-Proof.
-  intros; unfold InlinableDm in H0; unfold hideMeth.
-  rewrite H.
-  destruct (getAttribute dm (getDmsBodies m)); [|intuition idtac].
-  destruct (noCallDm a a); [|intuition idtac].
-  reflexivity.
-Qed.
-
-Lemma hideMeths_hideMethsF:
-  forall dms m,
-    snd (inlineDms' m dms) = true ->
-    forall {A} (l: LabelTP A),
-      hideMeths l dms m = hideMethsF l dms.
-Proof.
-  induction dms; intros; [reflexivity|].
-  simpl in *.
-  remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl in *.
-  destruct ib; [|discriminate].
-  rewrite hideMeth_hideMethF; auto.
-  - unfold inlineDmToMod in Heqimb.
-    destruct (wfModules m); auto; inv Heqimb.
-  - unfold InlinableDm; unfold inlineDmToMod in Heqimb.
-    destruct (wfModules _); [|inv Heqimb].
-    destruct (getAttribute _ _); [|inv Heqimb].
-    destruct (noCallDm _ _); [|inv Heqimb].
-    auto.
-Qed.
-
-Lemma hideMeths_UnitSteps_hide:
-  forall m or nr l,
-    UnitSteps m or nr l ->
-    snd (inlineDms m) = true ->
-    hideMeths l (namesOf (getDmsBodies m)) m = hide l.
-Proof.
-  intros.
-  rewrite hideMeths_hideMethsF; auto.
-  eapply hideMethsF_UnitSteps_hide; eauto.
-Qed.
 
 Lemma inlineDms_correct_UnitSteps:
   forall m (Hm: BasicMod m)
