@@ -1,5 +1,6 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap Syntax.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
+Require Import Syntax.
 
 Set Implicit Arguments.
 
@@ -207,4 +208,34 @@ Section Equiv.
     end.
 
 End Equiv.
+
+Section Facts.
+  Lemma actionEquiv_appendAction:
+    forall type1 type2
+           {retT1} G (a11: ActionT type1 retT1) (a21: ActionT type2 retT1)
+           (Hequiv1: ActionEquiv G a11 a21)
+           {retT2} (a12: type1 retT1 -> ActionT type1 retT2)
+           (a22: type2 retT1 -> ActionT type2 retT2)
+           (Hequiv2: forall (argV1: ft1 type1 (SyntaxKind retT1))
+                            (argV2: ft2 type2 (SyntaxKind retT1)),
+                       ActionEquiv (vars (argV1, argV2) :: G) (a12 argV1) (a22 argV2)),
+      ActionEquiv G (appendAction a11 a12) (appendAction a21 a22).
+  Proof.
+    induction 1; intros; try (simpl; constructor; intros; eauto).
+
+    - eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H1; intuition.
+    - eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H1; intuition.
+    - eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H1; intuition.
+    - eapply H1; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H2; intuition.
+  Qed.
+
+End Facts.
 

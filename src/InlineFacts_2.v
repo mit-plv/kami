@@ -396,7 +396,7 @@ Proof.
 
     match goal with
       | [ |- UnitSteps _ _ _ {| dms := ?d; cms := ?c |} ] =>
-        (* stupid map stuffs *)
+        (* map stuffs *)
         replace d with dm2 by admit;
           replace c with (M.union cm1 (M.remove meth cm2)) by admit
     end.
@@ -596,6 +596,84 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma inlineDm_ActionEquiv:
+  forall type1 type2 {retT} G
+         (aU: ActionT type1 retT) (aT: ActionT type2 retT) (dm: DefMethT),
+    (forall (argV1: ft1 type1 (SyntaxKind _))
+            (argV2: ft2 type2 (SyntaxKind _)),
+       ActionEquiv (vars (argV1, argV2) :: nil)
+                   (objVal (attrType dm) type1 argV1) (objVal (attrType dm) type2 argV2)) ->
+    ActionEquiv G aU aT ->
+    ActionEquiv G (inlineDm aU dm) (inlineDm aT dm).
+Proof.
+  induction 2; intros; try (constructor; auto).
+
+  simpl; remember (getBody n dm s) as dmb; destruct dmb; [|constructor; auto].
+
+  unfold getBody in Heqdmb.
+  destruct (string_dec n dm); [subst|discriminate].
+  destruct (SignatureT_dec _ _); [subst|discriminate].
+  inv Heqdmb; simpl.
+
+  constructor; intros.
+  apply actionEquiv_appendAction.
+  + eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H2; intuition.
+  + intros.
+    eapply ActionEquiv_ctxt; eauto.
+    unfold SubList; intros; inv H2; intuition.
+Qed.
+
+Lemma inlineDmToRules_RulesEquiv:
+  forall {type1 type2} rules (dm: DefMethT),
+    (forall (argV1: ft1 type1 (SyntaxKind _))
+            (argV2: ft2 type2 (SyntaxKind _)),
+       ActionEquiv (vars (argV1, argV2) :: nil)
+                   (objVal (attrType dm) type1 argV1) (objVal (attrType dm) type2 argV2)) ->
+    RulesEquiv type1 type2 rules ->
+    RulesEquiv type1 type2 (inlineDmToRules rules dm).
+Proof.
+  induction 2; intros; simpl in *; constructor; auto.
+  intros; simpl; apply inlineDm_ActionEquiv; auto.
+Qed.
+
+Lemma inlineDmToDms_MethsEquiv:
+  forall {type1 type2} dms (dm: DefMethT),
+    (forall (argV1: ft1 type1 (SyntaxKind _))
+            (argV2: ft2 type2 (SyntaxKind _)),
+       ActionEquiv (vars (argV1, argV2) :: nil)
+                   (objVal (attrType dm) type1 argV1) (objVal (attrType dm) type2 argV2)) ->
+    MethsEquiv type1 type2 dms ->
+    MethsEquiv type1 type2 (inlineDmToDms dms dm).
+Proof.
+  induction 2; intros; simpl in *; constructor; auto.
+  intros; simpl in *; apply inlineDm_ActionEquiv; auto.
+Qed.
+
+Lemma inlineDmToMod_ModEquiv:
+  forall m dm,
+    ModEquiv typeUT type m ->
+    ModEquiv typeUT type (fst (inlineDmToMod m dm)).
+Proof.
+  induction m; intros; simpl in *.
+  - unfold inlineDmToMod.
+    destruct (wfModules _); [|auto].
+    remember (getAttribute _ _) as oattr; destruct oattr; [|auto].
+    simpl in Heqoattr.
+    apply getAttribute_Some_body in Heqoattr.
+    destruct (noCallDm _ _); [|auto].
+    simpl; dest.
+    pose proof (MethsEquiv_in _ H0 Heqoattr).
+    split.
+    + apply inlineDmToRules_RulesEquiv; auto.
+    + apply inlineDmToDms_MethsEquiv; auto.
+  - unfold inlineDmToMod.
+    destruct (wfModules _); [|auto].
+    destruct (getAttribute _ _); [|auto].
+    destruct (noCallDm _ _); [|auto].
+    auto.
+Qed.
+
 Lemma inlineDms'_correct_UnitSteps:
   forall cdms m (Hm: BasicMod m)
          (Hequiv: ModEquiv typeUT type m)
@@ -616,7 +694,7 @@ Proof.
   - assert (im = fst (inlineDmToMod m a)) by (rewrite <-Heqimb; reflexivity); subst.
     apply IHcdms; auto.
     + eapply inlineDmToMod_basicMod; eauto.
-    + admit. (* TODO: ModEquiv typeUT type (inlineDmToMod m a), provable? *)
+    + apply inlineDmToMod_ModEquiv; auto.
     + rewrite inlineDmToMod_dms_names; auto.
     + rewrite inlineDmToMod_dms_names; auto.
     + apply inlineDmToMod_correct_UnitSteps; auto.

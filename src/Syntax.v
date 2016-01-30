@@ -1,6 +1,8 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word.
 
+Require Import FunctionalExtensionality. (* for appendAction_assoc *)
+
 Set Implicit Arguments.
 
 Fixpoint getDefaultConstBit n: word n :=
@@ -304,6 +306,32 @@ Section GetMeths.
 End GetMeths.
 
 Hint Unfold getRules getRegInits getCmsMod getDmsMod getDmsBodies.
+
+Section AppendAction.
+  Variable type: Kind -> Type.
+  
+  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
+           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
+    match a1 with
+      | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
+      | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
+      | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
+      | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
+      | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
+      | Assert_ ae cont => Assert_ ae (appendAction cont a2)
+      | Return e => Let_ e a2
+    end.
+
+  Lemma appendAction_assoc:
+    forall {retT1 retT2 retT3}
+           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
+           (a3: type retT2 -> ActionT type retT3),
+      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
+  Proof.
+    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
+  Qed.
+
+End AppendAction.
 
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).

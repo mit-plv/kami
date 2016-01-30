@@ -11,27 +11,6 @@ Set Implicit Arguments.
 Section WfInd.
   Variable type: Kind -> Type.
 
-  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
-           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
-    match a1 with
-      | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
-      | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
-      | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
-      | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
-      | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
-      | Assert_ ae cont => Assert_ ae (appendAction cont a2)
-      | Return e => Let_ e a2
-    end.
-
-  Lemma appendAction_assoc:
-    forall {retT1 retT2 retT3}
-           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
-           (a3: type retT2 -> ActionT type retT3),
-      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
-  Proof.
-    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
-  Qed.
-
   Inductive WfAction: list string -> list string -> forall {retT}, ActionT type retT -> Prop :=
   | WfMCall:
       forall regs calls name sig ar {retT} cont (Hnin: ~ In name calls),
@@ -225,42 +204,6 @@ Section WfEval.
 End WfEval.
 
 Section SemProps.
-
-  Lemma appendAction_SemAction:
-    forall retK1 retK2 a1 a2 olds news1 news2 calls1 calls2
-           (retV1: type retK1) (retV2: type retK2),
-      SemAction olds a1 news1 calls1 retV1 ->
-      SemAction olds (a2 retV1) news2 calls2 retV2 ->
-      SemAction olds (appendAction a1 a2) (M.union news1 news2) (M.union calls1 calls2) retV2.
-  Proof.
-    induction a1; intros.
-
-    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
-      econstructor; eauto.
-      apply M.union_add.
-    - invertAction H0; econstructor; eauto. 
-    - invertAction H0; econstructor; eauto.
-    - invertAction H; econstructor; eauto.
-      apply M.union_add.
-    - invertAction H0.
-      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
-      + eapply SemIfElseTrue.
-        * eauto.
-        * eassumption.
-        * eapply H; eauto.
-        * rewrite M.union_assoc; reflexivity.
-        * rewrite M.union_assoc; reflexivity.
-      + eapply SemIfElseFalse.
-        * eauto.
-        * eassumption.
-        * eapply H; eauto.
-        * rewrite M.union_assoc; reflexivity.
-        * rewrite M.union_assoc; reflexivity.
-
-    - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
-      econstructor; eauto.
-    - invertAction H; econstructor; eauto.
-  Qed.
 
   Lemma wfAction_SemAction_calls:
     forall wr cc {retK} (a: ActionT type retK),

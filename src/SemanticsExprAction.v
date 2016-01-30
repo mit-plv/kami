@@ -407,5 +407,44 @@ Ltac invertActionRep :=
         (remember c as ic; destruct ic; dest; subst)
     end.
 
+Section AppendAction.
+  Lemma appendAction_SemAction:
+    forall retK1 retK2 a1 a2 olds news1 news2 calls1 calls2
+           (retV1: type retK1) (retV2: type retK2),
+      SemAction olds a1 news1 calls1 retV1 ->
+      SemAction olds (a2 retV1) news2 calls2 retV2 ->
+      SemAction olds (appendAction a1 a2) (M.union news1 news2) (M.union calls1 calls2) retV2.
+  Proof.
+    induction a1; intros.
+
+    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
+      econstructor; eauto.
+      apply M.union_add.
+    - invertAction H0; econstructor; eauto. 
+    - invertAction H0; econstructor; eauto.
+    - invertAction H; econstructor; eauto.
+      apply M.union_add.
+    - invertAction H0.
+      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
+      + eapply SemIfElseTrue.
+        * eauto.
+        * eassumption.
+        * eapply H; eauto.
+        * rewrite M.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
+      + eapply SemIfElseFalse.
+        * eauto.
+        * eassumption.
+        * eapply H; eauto.
+        * rewrite M.union_assoc; reflexivity.
+        * rewrite M.union_assoc; reflexivity.
+
+    - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
+      econstructor; eauto.
+    - invertAction H; econstructor; eauto.
+  Qed.
+
+End AppendAction.
+
 Global Opaque mkStruct.
 
