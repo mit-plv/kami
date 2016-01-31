@@ -119,6 +119,8 @@ Section WfInd.
 End WfInd.
 
 Section WfEval.
+  Variable type: Kind -> Type.
+    
   Fixpoint maxPathLength {retT} (a: ActionT typeUT retT) :=
     match a with
       | MCall _ _ _ cont => S (maxPathLength (cont tt))
@@ -151,14 +153,73 @@ Section WfEval.
         end
     end.
 
-  Definition wfAction {retT} (a: ActionT typeUT retT) := wfActionC nil nil a (maxPathLength a).
+  Definition wfAction {retT} (a: ActionT typeUT retT) :=
+    wfActionC nil nil a (maxPathLength a).
+
+  Lemma wfActionC_WfAction_appendAction:
+    forall G {retT retT'} (cont1: ft1 typeUT (SyntaxKind retT) -> ActionT typeUT retT')
+           (cont2: ft2 type (SyntaxKind retT) -> ActionT type retT')
+           (Hcequiv: forall v1 v2, ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2))
+           (Hcwf: forall v1 v2 wr cc cdn,
+                    wfActionC wr cc (cont1 v1) cdn = true -> WfAction wr cc (cont2 v2)),
+    forall a1 a2 (Hequiv: ActionEquiv G a1 a2),
+    forall wr cc cdn,
+      wfActionC wr cc (appendAction a1 cont1) cdn = true ->
+      WfAction wr cc (appendAction a2 cont2).
+  Proof.
+    induction 3; intros; try (destruct cdn; simpl in *; [discriminate|]).
+
+    - destruct (in_dec _ _ _); [discriminate|].
+      constructor; auto.
+      intros; eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H2; intuition.
+
+    - constructor; auto.
+      intros; eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H2; intuition.
+
+    - constructor; auto.
+      intros; eapply H0; eauto.
+      intros; eapply ActionEquiv_ctxt; eauto.
+      unfold SubList; intros; inv H2; intuition.
+
+    - destruct (in_dec _ _ _); [discriminate|].
+      constructor; eauto.
+
+    - apply andb_true_iff in H2; dest.
+      constructor.
+      + eapply IHHequiv1; eauto.
+        * intros; simpl.
+          eapply actionEquiv_appendAction; eauto.
+          intros; eapply ActionEquiv_ctxt; eauto.
+          unfold SubList; intros; inv H4; intuition.
+        * intros; simpl in H4.
+          apply H1 with (v1:= v1) (cont1:= cont1) (cdn:= cdn0); auto.
+          intros; eapply ActionEquiv_ctxt; eauto.
+          unfold SubList; intros; inv H5; intuition.
+      + eapply IHHequiv2; eauto.
+        * intros; simpl.
+          eapply actionEquiv_appendAction; eauto.
+          intros; eapply ActionEquiv_ctxt; eauto.
+          unfold SubList; intros; inv H4; intuition.
+        * intros; simpl in H4.
+          apply H1 with (v1:= v1) (cont1:= cont1) (cdn:= cdn0); auto.
+          intros; eapply ActionEquiv_ctxt; eauto.
+          unfold SubList; intros; inv H5; intuition.
+
+    - constructor; eauto.
+    - constructor; eauto.
+  Qed.
 
   Lemma wfActionC_WfAction:
-    forall {retT type} aU (aT: ActionT type retT) {G} (Hequiv: ActionEquiv G aU aT)
+    forall {retT} aU (aT: ActionT type retT) {G} (Hequiv: ActionEquiv G aU aT)
            wr cc cdn,
       wfActionC wr cc aU cdn = true -> WfAction wr cc aT.
   Proof.
-    induction 1; intros; try (destruct cdn; simpl in *; [discriminate|]);
+    induction 1; intros;
+    try (destruct cdn; simpl in *; [discriminate|]);
     try (constructor; eauto; fail).
 
     - destruct (in_dec _ n cc); [discriminate|].
@@ -166,11 +227,11 @@ Section WfEval.
     - destruct (in_dec _ rn wr); [discriminate|].
       constructor; eauto.
     - apply andb_true_iff in H2; dest.
-      constructor; admit.
+      constructor; eapply wfActionC_WfAction_appendAction; eauto.
   Qed.
 
   Lemma wfAction_WfAction:
-    forall {retT type} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aU aT),
+    forall {retT} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aU aT),
       wfAction aU = true -> WfAction nil nil aT.
   Proof. intros; eapply wfActionC_WfAction; eauto. Qed.
 
@@ -181,12 +242,32 @@ Section WfEval.
         wfAction ((attrType rule) typeUT) && wfRules rules'
     end.
 
+  Lemma wfRules_WfRules:
+    forall rules,
+      RulesEquiv typeUT type rules ->
+      wfRules rules = true -> WfRules type rules.
+  Proof.
+    induction rules; simpl; intros; [constructor|].
+    inv H; constructor; apply andb_true_iff in H0; dest; auto.
+    simpl in *; eapply wfAction_WfAction; eauto.
+  Qed.
+
   Fixpoint wfDms (dms: list DefMethT) :=
     match dms with
       | nil => true
       | dm :: dms' =>
         wfAction (objVal (attrType dm) typeUT tt) && wfDms dms'
     end.
+
+  Lemma wfDms_WfDms:
+    forall dms,
+      MethsEquiv typeUT type dms ->
+      wfDms dms = true -> WfDms type dms.
+  Proof.
+    induction dms; simpl; intros; [constructor|].
+    inv H; constructor; apply andb_true_iff in H0; dest; auto.
+    simpl in *; intros; eapply wfAction_WfAction; eauto.
+  Qed.
 
   Fixpoint wfModules (m: Modules) :=
     match m with
@@ -195,10 +276,14 @@ Section WfEval.
     end.
 
   Lemma wfModules_WfModules:
-    forall m type (Hequiv: ModEquiv typeUT type m),
+    forall m (Hequiv: ModEquiv typeUT type m),
       wfModules m = true -> WfModules type m.
   Proof.
-    admit.
+    induction m; intros; simpl in *; apply andb_true_iff in H; dest.
+    - constructor.
+      + apply wfRules_WfRules; auto.
+      + apply wfDms_WfDms; auto.
+    - constructor; auto.
   Qed.
 
 End WfEval.
