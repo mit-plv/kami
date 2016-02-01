@@ -89,6 +89,26 @@ Section BoundedIndexFull.
       + apply IHattrs; auto.
   Qed.
 
+  Lemma in_NoDup_attr:
+    forall a1 a2 attrs,
+      NoDup (map attrName attrs) ->
+      attrName a1 = attrName a2 -> In a1 attrs -> In a2 attrs -> a1 = a2.
+  Proof.
+    induction attrs; intros; simpl in *; [destruct H1|].
+    destruct a1 as [an1 ab1], a2 as [an2 ab2]; simpl in *.
+    destruct H1; [subst|].
+    - destruct H2; [auto|].
+      inv H; elim H3.
+      replace an2 with (attrName {| attrName:= an2; attrType:= ab2 |}) by reflexivity.
+      apply in_map; auto.
+    - destruct H2.
+      + subst; inv H.
+        elim H3.
+        replace an2 with (attrName {| attrName:= an2; attrType:= ab1 |}) by reflexivity.
+        apply in_map; auto.
+      + inv H; apply IHattrs; auto.
+  Qed.
+
   Lemma getAttribute_app:
     forall n (attrs1 attrs2: list Attribute) dm
            (Hdm: dm = getAttribute n (attrs1 ++ attrs2)),

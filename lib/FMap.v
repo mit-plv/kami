@@ -183,7 +183,7 @@ Require Import FMapInterface.
 Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := UOT.
 
   Module OT := UOT_to_OT UOT.
-  Module Export M := FMapList.Make(OT).
+  Module M := FMapList.Make(OT).
   Include M.
   Module Facts := FMapFacts.OrdProperties M.
   
@@ -740,11 +740,11 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma Disj_find_union_3:
     forall {A} (m1 m2: t A) k v1 v2,
-      Disj m1 m2 -> find k m1 = Some v1 -> find k m2 = Some v2 -> False.
+      Some v1 = find k m1 -> Some v2 = find k m2 -> Disj m1 m2 -> False.
   Proof.
-    mintros; specialize (H k); destruct H.
-    - elim H; apply P.F.in_find_iff; rewrite H0; discriminate.
-    - elim H; apply P.F.in_find_iff; rewrite H1; discriminate.
+    mintros; specialize (H1 k); destruct H1.
+    - elim H1; apply P.F.in_find_iff; rewrite <-H; discriminate.
+    - elim H1; apply P.F.in_find_iff; rewrite <-H0; discriminate.
   Qed.
 
   Lemma Disj_add_1 {A}:
@@ -911,3 +911,50 @@ Module M.
   Include (LeibnizFacts Map).
 End M.
 
+Ltac dest_disj :=
+  repeat
+    match goal with
+      | [H: M.Disj (M.add _ _ _) _ |- _] =>
+        apply M.Disj_add_2 in H; dest
+      | [H: M.Disj _ (M.add _ _ _) |- _] =>
+        apply M.Disj_comm, M.Disj_add_2 in H; dest
+      | [H: M.Disj (M.union _ _) _ |- _] =>
+        apply M.Disj_comm in H
+      | [H: M.Disj _ (M.union _ _) |- _] =>
+        pose proof (M.Disj_union_1 H); pose proof (M.Disj_union_2 H); clear H
+      | [H: M.Disj _ (M.empty _) |- _] => clear H
+      | [H: M.Disj (M.empty _) _ |- _] => clear H
+    end.
+
+Ltac mred :=
+  repeat
+    (match goal with
+       | [ |- context [M.find ?y ?m] ] =>
+         (is_var m;
+          let v := fresh "v" in
+          remember (M.find y m) as v; destruct v)
+       | [ |- context [M.find ?y (M.union _ _)] ] =>
+         rewrite M.find_union with (k:= y)
+       | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         (destruct (string_dec y k);
+          [subst; rewrite M.F.P.F.remove_eq_o|
+           rewrite M.F.P.F.remove_neq_o by auto])
+       | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
+       | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
+         (rewrite M.find_add_2 by intuition idtac)
+       | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
+         (rewrite M.find_add_2 by intuition idtac)
+     end; try discriminate; try reflexivity; try (intuition idtac; fail)).
+
+Ltac mcontra :=
+  repeat
+    match goal with
+      | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
+        try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
+      | [H1: ~ M.In ?k ?m, H2: Some _ = M.find ?k ?m |- _] =>
+        elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
+    end.
+
+Ltac meq :=
+  let y := fresh "y" in
+  M.ext y; dest_disj; mred; mcontra.

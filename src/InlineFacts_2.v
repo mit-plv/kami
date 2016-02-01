@@ -299,19 +299,17 @@ Proof.
 
     + remember (M.find meth cmr) as ocmr; destruct ocmr;
       [exfalso; inv c; dest; simpl in *;
-       eapply M.Disj_find_union_3; eauto|].
+       eapply M.Disj_find_union_3; [exact Heqocml|exact Heqocmr|]; eauto|].
+
+      inv c; simpl in *; dest.
 
       specialize (IHX1 H5).
       match goal with
         | [ |- UnitSteps _ _ ?u {| cms := ?c |} ] =>
-          replace u with (M.union (M.union u1 u0) u2)
-            by admit; (* map stuff *)
-            replace c with (M.union
-                              (M.union cm1 (M.remove meth cml))
-                              cmr)
-            by admit (* map stuff *)
+          replace u with (M.union (M.union u1 u0) u2) by meq;
+          replace c with (M.union (M.union cm1 (M.remove meth cml)) cmr) by meq
       end.
-
+              
       match goal with
         | [ |- UnitSteps _ _ _ ?l ] =>
           replace l with
@@ -327,20 +325,20 @@ Proof.
       apply UnitStepsUnion; auto.
       * eapply inlineDmToRules_UnitSteps_intact; eauto.
         eapply inlineDmToDms_UnitSteps_intact; eauto.
-      * admit. (* CanCombine / map stuff *)
+      * admit. (* CanCombine, which will be removed in new semantics, I guess? *)
 
     + remember (M.find meth cmr) as ocmr;
       destruct ocmr; [|discriminate].
 
+      inv c; simpl in *; dest.
+      
       specialize (IHX2 H5).
       match goal with
         | [ |- UnitSteps _ _ ?u {| cms := ?c |} ] =>
-          replace u with (M.union u0 (M.union u1 u2))
-            by admit; (* map stuff *)
+          replace u with (M.union u0 (M.union u1 u2)) by meq;
             replace c with (M.union
                               cml
-                              (M.union cm1 (M.remove meth cmr)))
-            by admit (* map stuff *)
+                              (M.union cm1 (M.remove meth cmr))) by meq
       end.
 
       match goal with
@@ -358,7 +356,7 @@ Proof.
       apply UnitStepsUnion; auto.
       * eapply inlineDmToRules_UnitSteps_intact; eauto.
         eapply inlineDmToDms_UnitSteps_intact; eauto.
-      * admit. (* CanCombine / map stuff *)
+      * admit. (* CanCombine, which will be removed in new semantics, I guess? *)
 Qed.
 
 Lemma inlineDmToMod_correct_UnitSteps_sub:
@@ -389,18 +387,15 @@ Proof.
     destruct (string_dec dm meth);
       [|rewrite M.find_add_2 in H7 by assumption;
          rewrite M.find_empty in H7; inv H7].
-    assert (dm = meth) by admit. (* NoDup property *)
-    subst; clear e.
+    assert (dm = meth) by (eapply in_NoDup_attr; eauto); subst; clear e.
     
     rewrite M.find_add_1 in H7 by assumption; inv H7.
 
     match goal with
       | [ |- UnitSteps _ _ _ {| dms := ?d; cms := ?c |} ] =>
-        (* map stuffs *)
-        replace d with dm2 by admit;
-          replace c with (M.union cm1 (M.remove meth cm2)) by admit
+        replace d with dm2 by meq;
+          replace c with (M.union cm1 (M.remove meth cm2)) by meq
     end.
-
     eapply inlineDmToMod_correct_UnitSteps_meth; eauto.
 
   - destruct l0 as [rml dml cml], l1 as [rmr dmr cmr]; simpl in *.
@@ -564,7 +559,7 @@ Lemma wellHidden_find:
 Proof.
   unfold wellHidden, hide; intros.
   destruct l as [rm dm cm]; simpl in *.
-  admit. (* map stuff *)
+  admit. (* a bit complicated map stuff *)
 Qed.
 
 Lemma inlineDmToMod_basicMod:
@@ -739,11 +734,11 @@ Proof.
           }
           { simpl; apply M.InDomain_remove; auto. }
         }
-        { admit. }
+        { admit. (* a bit complicated map stuff *) }
 
       * unfold hideMeth; simpl.
         rewrite <-Heqoda, <-Heqoca.
-        admit. (* same as the case where t <> t0 *)
+        admit. (* same as above *)
 
     + unfold hideMeth; simpl.
       rewrite <-Heqoda.
@@ -757,7 +752,7 @@ Lemma hideMeths_UnitSteps_hide:
     hideMeths l (namesOf (getDmsBodies m)) = hide l.
 Proof.
   intros; apply hideMeths_hide.
-  admit. (* Semantics proof *)
+  admit. (* Semantics proof: dyn dms <= static dms *)
 Qed.
 
 Definition InlinableDm (m: Modules) (dm: string) :=
