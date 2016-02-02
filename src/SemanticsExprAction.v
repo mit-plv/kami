@@ -235,7 +235,7 @@ Definition RegsT := M.t (Typed (fullType type)).
 Definition SignT k := (type (arg k) * type (ret k))%type.
 
 (* a list of simulatenous method call actions made during a single step *)
-Definition CallsT := M.t (Typed SignT).
+Definition MethsT := M.t (Typed SignT).
 
 Section Semantics.
   Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
@@ -275,13 +275,13 @@ Section Semantics.
   Variable oldRegs: RegsT.
 
   Inductive SemAction:
-    forall k, ActionT type k -> RegsT -> CallsT -> type k -> Prop :=
+    forall k, ActionT type k -> RegsT -> MethsT -> type k -> Prop :=
   | SemMCall
       meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
-      newRegs (calls: CallsT) acalls
+      newRegs (calls: MethsT) acalls
       (HAcalls: acalls = M.add meth {| objVal := (evalExpr marg, mret) |} calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
