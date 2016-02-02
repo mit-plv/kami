@@ -15,7 +15,7 @@ Section MapSet.
                                  | Some v' => M.add k v' m
                                end.
   Definition mapSet s :=
-    Map.fold rmModify s (M.empty _).
+    M.fold rmModify s (M.empty _).
 
   Theorem mapSetEmpty: mapSet (M.empty _) = M.empty _.
   Proof.
@@ -24,24 +24,26 @@ Section MapSet.
 
   Lemma mapSetSubset s: DomainSubset (mapSet s) s.
   Proof.
-    apply (MF.map_induction (P := fun s => DomainSubset (mapSet s) s)); unfold DomainSubset; intros.
+    apply (M.map_induction (P := fun s => DomainSubset (mapSet s) s)); unfold DomainSubset; intros.
     - rewrite mapSetEmpty in *.
       intuition.
     - unfold mapSet in H1.
-      rewrite MF.P.fold_add in H1; fold (mapSet m) in *; intuition.
-      + apply MF.P.F.add_in_iff.
+      rewrite M.F.P.fold_add in H1; fold (mapSet m) in *; unfold rmModify. (* intuition. *)
+      + apply M.F.P.F.add_in_iff.
         unfold rmModify in *.
         destruct (p k v).
-        apply MF.P.F.add_in_iff in H1.
+        apply M.F.P.F.add_in_iff in H1.
         destruct H1; intuition.
         right; apply (H _ H1).
+      + intuition.
       + clear; unfold Morphisms.Proper, Morphisms.respectful; intros; subst.
         apply M.leibniz in H1; subst.
         intuition.
-      + clear; unfold MF.P.transpose_neqkey; intros.
+      + clear; unfold M.F.P.transpose_neqkey; intros.
         unfold rmModify.
         destruct (p k e), (p k' e');
-          try apply MF.transpose_neqkey_Equal_add; intuition.
+          try apply M.transpose_neqkey_Equal_add; intuition.
+      + intuition.
   Qed.
         
   Theorem mapSetAddOne k v:
@@ -91,7 +93,7 @@ Section Decomposition.
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
       { uSpec |
         Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (mapSet p csImp) /\
-        forall o, MF.union uSpec (theta o) = theta (MF.union uImp o) }.
+        forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
   Definition liftP meth :=
     match meth with
@@ -106,32 +108,32 @@ Section Decomposition.
       Substep imp oImp uImp (Meth (Some meth)) csImp ->
       { uSpec |
         Substep spec (theta oImp) uSpec (Meth (liftP meth)) (mapSet p csImp) /\
-        forall o, MF.union uSpec (theta o) = theta (MF.union uImp o) }.
+        forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
   Definition ruleMapEmpty o u cs (s: Substep imp o u (Rle None) cs):
     { uSpec |
       Substep spec (theta o) uSpec (Rle None) (mapSet p cs) /\
-      forall o', MF.union uSpec (theta o') = theta (MF.union u o') }.
+      forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
         inversion s; subst; rewrite mapSetEmpty;
         constructor;
         [ constructor; apply thetaGood |
-          repeat rewrite MF.union_empty_L; intuition]).
+          repeat rewrite M.union_empty_L; intuition]).
   Defined.
 
   Definition methMapEmpty o u cs (s: Substep imp o u (Meth None) cs):
     { uSpec |
       Substep spec (theta o) uSpec (Meth None) (mapSet p cs) /\
-      forall o', MF.union uSpec (theta o') = theta (MF.union u o') }.
+      forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
         inversion s; subst; rewrite mapSetEmpty;
         constructor;
         [ constructor; apply thetaGood |
-          repeat rewrite MF.union_empty_L; intuition]).
+          repeat rewrite M.union_empty_L; intuition]).
   Defined.
 
   Definition xformUnitAnnot o rm :=
@@ -146,7 +148,7 @@ Section Decomposition.
     match rm return Substep imp o u rm cs ->
                     { uSpec |
                       Substep spec (theta o) uSpec (xformUnitAnnot o rm) (mapSet p cs) /\
-                      forall o', MF.union uSpec (theta o') = theta (MF.union u o') } with
+                      forall o', M.union uSpec (theta o') = theta (M.union u o') } with
       | Rle (Some rule) => fun s => substepRuleMap s
       | Meth (Some meth) => fun s => substepMethMap s
       | Rle None => fun s => ruleMapEmpty s
@@ -202,39 +204,39 @@ Section Decomposition.
     pose proof (mapSetSubset p defs) as dH.
     pose proof (mapSetSubset p calls) as cH.
     unfold DomainSubset, M.KeysDisj in *.
-    constructor; intros.
-    - specialize (dH _ H).
-      specialize (callSubset _ H0).
-      specialize (dHid _ dH).
+    constructor; unfold not; intros.
+    - specialize (dH _ H0).
+      specialize (callSubset _ H).
+      specialize (dHid _ callSubset dH).
       intuition.
-    - specialize (cH _ H).
-      specialize (defSubset _ H0).
-      specialize (cHid _ cH).
+    - specialize (cH _ H0).
+      specialize (defSubset _ H).
+      specialize (cHid _ defSubset cH).
       intuition.
   Qed.
 
   Lemma subtractKVMapSet l1:
     forall l2,
       (forall x v1 v2, M.MapsTo x v1 l1 -> M.MapsTo x v2 l2 -> v1 = v2) ->
-      mapSet p (MF.subtractKV signIsEq l1 l2) = MF.subtractKV signIsEq (mapSet p l1)
-                                                              (mapSet p l2).
+      mapSet p (M.subtractKV signIsEq l1 l2) = M.subtractKV signIsEq (mapSet p l1)
+                                                            (mapSet p l2).
   Proof.
-    apply (MF.map_induction
+    apply (M.map_induction
              (P := fun l1 => forall l2 : M.t (sigT SignT),
                        (forall (x : M.key) (v1 v2 : sigT SignT), M.MapsTo x v1 l1 ->
                                                                  M.MapsTo x v2 l2 -> v1 = v2) ->
-                       mapSet p (MF.subtractKV signIsEq l1 l2) =
-                       MF.subtractKV signIsEq (mapSet p l1) (mapSet p l2))); intros; simpl in *.
-    - rewrite (MF.subtractKV_empty_1).
+                       mapSet p (M.subtractKV signIsEq l1 l2) =
+                       M.subtractKV signIsEq (mapSet p l1) (mapSet p l2))); intros; simpl in *.
+    - rewrite (M.subtractKV_empty_1).
       rewrite mapSetEmpty.
-      rewrite (MF.subtractKV_empty_1).
+      rewrite (M.subtractKV_empty_1).
       reflexivity.
     - admit.
   Qed.
 
   Lemma subtractKVDefn k l1 l2 v1 v2:
     M.MapsTo k v1 l1 -> M.MapsTo k v2 l2 -> v1 <> v2 ->
-    M.In k (MF.subtractKV signIsEq l1 l2).
+    M.In k (M.subtractKV signIsEq l1 l2).
   Proof.
     admit.
   Qed.
@@ -256,7 +258,7 @@ Section Decomposition.
       assert (sthIn: M.In x calls) by
           (unfold M.In, M.Raw.PX.In, M.MapsTo in *; exists v2; assumption).
       specialize (H0 _ sthIn).
-      exfalso; apply (d _ sthSub H0).
+      exfalso; apply (d _ H0 sthSub).
   Qed.
     
   Theorem xformLabelHideCommute o l:
@@ -274,7 +276,7 @@ Section Decomposition.
   Qed.
 
   Theorem mapSetUnionCommute l1 l2:
-    mapSet p (MF.union l1 l2) = MF.union (mapSet p l1) (mapSet p l2).
+    mapSet p (M.union l1 l2) = M.union (mapSet p l1) (mapSet p l2).
   Proof.
     admit.
   Qed.      
@@ -333,7 +335,7 @@ Section Decomposition.
   Qed.
 
   Lemma unionCommute' o a state:
-    MF.union (upd (xformSubstepRec (o := o) a)) (theta state) = theta (MF.union (upd a) state).
+    M.union (upd (xformSubstepRec (o := o) a)) (theta state) = theta (M.union (upd a) state).
   Proof.
     destruct a; simpl in *.
     destruct (substepMap substep).
@@ -343,21 +345,21 @@ Section Decomposition.
 
   Lemma unionCommute o ss:
     forall state,
-      MF.union (foldSSUpds (map (xformSubstepRec (o:=o)) ss)) (theta state) =
-      theta (MF.union (foldSSUpds ss) state).
+      M.union (foldSSUpds (map (xformSubstepRec (o:=o)) ss)) (theta state) =
+      theta (M.union (foldSSUpds ss) state).
   Proof.
     induction ss; intros; simpl in *.
-    - repeat rewrite MF.union_empty_L; reflexivity.
-    - rewrite <- MF.union_assoc.
-      rewrite <- MF.union_assoc.
+    - repeat rewrite M.union_empty_L; reflexivity.
+    - rewrite <- M.union_assoc.
+      rewrite <- M.union_assoc.
       rewrite unionCommute'.
-      apply (IHss (MF.union (upd a) state)).
+      apply (IHss (M.union (upd a) state)).
   Qed.
 
   Theorem stepMap o u l (s: Step imp o u l):
     exists uSpec,
       Step spec (theta o) uSpec (xformLabel o l) /\
-      MF.union uSpec (theta o) = theta (MF.union u o).
+      M.union uSpec (theta o) = theta (M.union u o).
   Proof.
     destruct s as [ss ssGd].
     exists (foldSSUpds (map (@xformSubstepRec _) ss)).
