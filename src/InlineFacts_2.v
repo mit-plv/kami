@@ -543,12 +543,29 @@ Proof.
     apply (UnitStepsUnion IHX1 IHX2 c).
 Qed.
 
+Lemma inlineDmToMod_getDmsMod:
+  forall m a,
+    getDmsMod m = getDmsMod (fst (inlineDmToMod m a)).
+Proof.
+  intros; unfold inlineDmToMod.
+  destruct (wfModules _); [|auto].
+  destruct (getAttribute _ _); [|auto].
+  destruct (noCallDm _ _); [|auto].
+  destruct m; [|auto].
+  simpl.
+
+  clear; induction dms; [auto|].
+  simpl; f_equal; auto.
+Qed.
+
 Lemma inlineDmToMod_wellHidden:
   forall {A} (l: LabelTP A) m a,
     wellHidden l m ->
     wellHidden l (fst (inlineDmToMod m a)).
 Proof.
-  admit. (* TODO: inlining proof *)
+  unfold wellHidden; intros.
+  rewrite <-inlineDmToMod_getDmsMod.
+  admit.
 Qed.
 
 Lemma wellHidden_find:
