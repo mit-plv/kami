@@ -184,17 +184,17 @@ Section Equiv.
         (forall argV1 argV2 G, ActionEquiv G (dm t1 argV1) (dm t2 argV2)) ->
         forall meths,
           MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
-                                             attrType := {| objType := dsig; objVal := dm |}
+                                             attrType := existT _ dsig dm
                                           |} :: meths).
 
   Lemma MethsEquiv_in:
     forall meths m
            (Hequiv: MethsEquiv meths)
            (Hin: In m meths),
-    forall (v1: ft1 (SyntaxKind (arg (objType (attrType m)))))
-           (v2: ft2 (SyntaxKind (arg (objType (attrType m))))) G,
+    forall (v1: ft1 (SyntaxKind (arg (projT1 (attrType m)))))
+           (v2: ft2 (SyntaxKind (arg (projT1 (attrType m))))) G,
       ActionEquiv (vars (v1, v2) :: G)
-                  (objVal (attrType m) t1 v1) (objVal (attrType m) t2 v2).
+                  (projT2 (attrType m) t1 v1) (projT2 (attrType m) t2 v2).
   Proof.
     induction 1; intros; inv Hin.
     - simpl in *; apply H.

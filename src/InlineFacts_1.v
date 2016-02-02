@@ -53,12 +53,12 @@ Qed.
 
 Lemma inlineDm_correct_SemAction:
   forall (meth: DefMethT) or u1 cm1 argV retV1,
-    SemAction or (objVal (attrType meth) type argV) u1 cm1 retV1 ->
+    SemAction or (projT2 (attrType meth) type argV) u1 cm1 retV1 ->
     forall {retK2} a (Ha: WfAction nil nil a)
            u2 cm2 (retV2: type retK2),
       M.Disj u1 u2 -> M.Disj cm1 cm2 ->
-      Some {| objType := objType (attrType meth);
-              objVal := (argV, retV1) |} =
+      Some (existT _ (projT1 (attrType meth))
+                   (argV, retV1)) =
       M.find meth cm2 ->
       SemAction or a u2 cm2 retV2 ->
       SemAction or (inlineDm a meth) (M.union u1 u2)
@@ -263,12 +263,12 @@ Proof.
 Qed.
 
 Lemma noCallDm_SemAction_calls:
-  forall mn (mb: Typed MethodT) G or nr calls argV retV
-         (Hmb: ActionEquiv G (objVal mb typeUT tt)
-                           (objVal mb type argV)),
+  forall mn (mb: sigT MethodT) G or nr calls argV retV
+         (Hmb: ActionEquiv G (projT2 mb typeUT tt)
+                           (projT2 mb type argV)),
     noCallDm (mn :: mb)%struct (mn :: mb)%struct = true ->
-    SemAction or (objVal mb type argV) nr calls retV ->
-    M.find (elt:=Typed SignT) mn calls = None.
+    SemAction or (projT2 mb type argV) nr calls retV ->
+    M.find (elt:=sigT SignT) mn calls = None.
 Proof.
   intros; unfold noCallDm in H; simpl in H.
   eapply isLeaf_SemAction_calls; eauto.

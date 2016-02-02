@@ -93,7 +93,7 @@ Section WfInd.
   | WfDmsCons:
       forall (dm: DefMethT) dms,
         WfDms dms ->
-        (forall argV, WfAction nil nil (objVal (attrType dm) type argV)) ->
+        (forall argV, WfAction nil nil (projT2 (attrType dm) type argV)) ->
         WfDms (dm :: dms).
 
   Lemma wfDms_dms:
@@ -101,7 +101,7 @@ Section WfInd.
       WfDms dms ->
       forall dm argV,
         In dm dms ->
-        WfAction nil nil (objVal (attrType dm) type argV).
+        WfAction nil nil (projT2 (attrType dm) type argV).
   Proof.
     induction dms; intros; inv H0.
     - inv H; auto.
@@ -256,7 +256,7 @@ Section WfEval.
     match dms with
       | nil => true
       | dm :: dms' =>
-        wfAction (objVal (attrType dm) typeUT tt) && wfDms dms'
+        wfAction (projT2 (attrType dm) typeUT tt) && wfDms dms'
     end.
 
   Lemma wfDms_WfDms:

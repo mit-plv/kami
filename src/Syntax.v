@@ -238,23 +238,31 @@ Fixpoint getDefsBodies (m: Modules): list DefMethT :=
 Definition getDefs m: list string := namesOf (getDefsBodies m).
 
 Section GetCalls.
-  Fixpoint getCallsA {k} (a: ActionT (fun _ => True) k): list string :=
+  Definition typeUT (k: Kind): Type := unit.
+  Definition fullTypeUT := fullType typeUT.
+  Definition getUT (k: FullKind): fullTypeUT k :=
+    match k with
+      | SyntaxKind _ => tt
+      | NativeKind t c => c
+    end.
+  
+  Fixpoint getCallsA {k} (a: ActionT typeUT k): list string :=
     match a with
-      | MCall m _ _ c => m :: (getCallsA (c I))
+      | MCall m _ _ c => m :: (getCallsA (c tt))
       | Let_ fk e c => getCallsA
-                         (c match fk as fk' return fullType (fun _ => True) fk' with
-                              | SyntaxKind _ => I
+                         (c match fk as fk' return fullType typeUT fk' with
+                              | SyntaxKind _ => tt
                               | NativeKind _ c' => c'
                             end)
       | ReadReg _ fk c => getCallsA
-                            (c match fk as fk' return fullType (fun _ => True) fk' with
-                                 | SyntaxKind _ => I
+                            (c match fk as fk' return fullType typeUT fk' with
+                                 | SyntaxKind _ => tt
                                  | NativeKind _ c' => c'
                                end)
       | WriteReg _ _ _ c => getCallsA c
       | IfElse _ _ aT aF c =>
         (getCallsA aT) ++ (getCallsA aF)
-                       ++ (getCallsA (c I))
+                       ++ (getCallsA (c tt))
       | Assert_ _ c => getCallsA c
       | Return _ => nil
     end.
@@ -263,13 +271,13 @@ Section GetCalls.
   : list string :=
     match rl with
       | nil => nil
-      | r :: rl' => (getCallsA (attrType r (fun _ => True))) ++ (getCallsR rl')
+      | r :: rl' => (getCallsA (attrType r typeUT)) ++ (getCallsR rl')
     end.
 
   Fixpoint getCallsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
-      | m :: ms' => (getCallsA ((projT2 (attrType m)) (fun _ => True) I))
+      | m :: ms' => (getCallsA ((projT2 (attrType m)) typeUT tt))
                       ++ (getCallsM ms')
     end.
 

@@ -82,7 +82,7 @@ Section PhoasUT.
       match dms with
         | nil => nil
         | dm :: dms' =>
-          (getCalls (objVal (attrType dm) typeUT tt) cs)
+          (getCalls (projT2 (attrType dm) typeUT tt) cs)
             ++ (getMethCalls dms' cs)
       end.
   End Exts.
@@ -101,7 +101,7 @@ Section PhoasUT.
       end.
 
     Definition noCallDm (dm: DefMethT) (tgt: DefMethT) :=
-      isLeaf (objVal (attrType dm) typeUT tt) [attrName tgt].
+      isLeaf (projT2 (attrType dm) typeUT tt) [attrName tgt].
 
     Fixpoint noCallDms (dms: list DefMethT) (tgt: DefMethT) :=
       match dms with
@@ -137,7 +137,7 @@ Section PhoasUT.
       end.
 
     Definition noCalls (m: Modules) :=
-      noCalls' m (getDmsBodies m).
+      noCalls' m (getDefsBodies m).
 
   End Tree.
 
@@ -158,9 +158,9 @@ Section Base.
     end.
   
   Definition getBody (n: string) (dm: DefMethT) (sig: SignatureT):
-    option (sigT (fun x: DefMethT => objType (attrType x) = sig)) :=
+    option (sigT (fun x: DefMethT => projT1 (attrType x) = sig)) :=
     if string_dec n (attrName dm) then
-      match SignatureT_dec (objType (attrType dm)) sig with
+      match SignatureT_dec (projT1 (attrType dm)) sig with
         | left e => Some (existT _ dm e)
         | right _ => None
       end
@@ -171,7 +171,7 @@ Section Base.
       | MCall name sig ar cont =>
         match getBody name dm sig with
           | Some (existT dm e) =>
-            appendAction (inlineArg ar ((eq_rect _ _ (objVal (attrType dm)) _ e)
+            appendAction (inlineArg ar ((eq_rect _ _ (projT2 (attrType dm)) _ e)
                                           type))
                          (fun ak => inlineDm (cont ak) dm)
           | None => MCall name sig ar (fun ak => inlineDm (cont ak) dm)
@@ -198,10 +198,10 @@ Section Exts.
 
   Definition inlineDmToDm (dm leaf: DefMethT): DefMethT.
     refine {| attrName := attrName dm;
-              attrType := {| objType := objType (attrType dm);
-                             objVal := _ |} |}.
+              attrType := existT _ (projT1 (attrType dm))
+                                 _ |}.
     unfold MethodT; intros.
-    exact (inlineDm (objVal (attrType dm) ty X) leaf).
+    exact (inlineDm (projT2 (attrType dm) ty X) leaf).
   Defined.
 
   Definition inlineDmToDms (dms: list DefMethT) (leaf: DefMethT) :=
@@ -209,7 +209,7 @@ Section Exts.
 
   Definition inlineDmToMod (m: Modules) (leaf: string) :=
     if wfModules m then
-      match getAttribute leaf (getDmsBodies m) with
+      match getAttribute leaf (getDefsBodies m) with
         | Some dm =>
           if noCallDm dm dm then
             match m with
@@ -233,9 +233,9 @@ Section Exts.
           (im, false)
     end.
 
-  Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDmsBodies m)).
+  Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDefsBodies m)).
 
-  Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDmsBodies m).
+  Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDefsBodies m).
   (* Definition filterDms (dms: list DefMethT) (filt: list string) := *)
   (*   filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms. *)
   Definition inline (m: Modules) := inlineDms (merge m).

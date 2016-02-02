@@ -12,45 +12,46 @@ Definition BasicMod (m: Modules) :=
   end.
 
 Section HideExts.
-  Definition hideMeth {A} (l: LabelTP A) (dmn: string): LabelTP A :=
-    match M.find dmn (dms l), M.find dmn (cms l) with
+  Definition hideMeth (l: LabelT) (dmn: string): LabelT :=
+    match M.find dmn (defs l), M.find dmn (calls l) with
       | Some v1, Some v2 =>
         match signIsEq v1 v2 with
-          | left _ => {| ruleMeth := ruleMeth l;
-                         dms := M.remove dmn (dms l);
-                         cms := M.remove dmn (cms l) |}
+          | left _ => {| annot := annot l;
+                         defs := M.remove dmn (defs l);
+                         calls := M.remove dmn (calls l) |}
           | _ => l
         end
       | _, _ => l
     end.
 
-  Fixpoint hideMeths {A} (l: LabelTP A) (dms: list string): LabelTP A :=
+  Fixpoint hideMeths (l: LabelT) (dms: list string): LabelT :=
     match dms with
       | nil => l
       | dm :: dms' => hideMeths (hideMeth l dm) dms'
     end.
 
   Lemma hideMeth_preserves_hide:
-    forall {A} (l: LabelTP A) dm,
+    forall (l: LabelT ) dm,
       hide (hideMeth l dm) = hide l.
   Proof.
     intros; destruct l as [rm dms cms].
     unfold hide, hideMeth; simpl.
     remember (M.find dm dms) as odm; destruct odm; [|reflexivity].
     remember (M.find dm cms) as ocm; destruct ocm; [|reflexivity].
-    destruct (signIsEq t t0); [|reflexivity].
+    destruct (signIsEq s s0); [|reflexivity].
     subst; f_equal; auto; apply M.subtractKV_remove; rewrite <-Heqodm, <-Heqocm; auto.
   Qed.
 
 End HideExts.
 
-Lemma inlineDmToMod_correct_UnitStep_1:
+(*
+Lemma inlineDmToMod_correct_Substep_1:
   forall m (Hm: BasicMod m) (Hequiv: ModEquiv typeUT type m)
-         (Hdms: NoDup (namesOf (getDmsBodies m))) dm or u l,
-    UnitStep m or u l ->
+         (Hdms: NoDup (namesOf (getDefsBodies m))) dm or u rm cs,
+    Subtep m or u rm cs ->
     M.find dm (dms l) = M.find dm (cms l) ->
     snd (inlineDmToMod m dm) = true ->
-    UnitStep (fst (inlineDmToMod m dm)) or u (hideMeth l dm).
+    Substep (fst (inlineDmToMod m dm)) or u (hideMeth l dm).
 Proof.
   induction 4; intros; simpl in *.
 
@@ -821,22 +822,6 @@ Proof.
   admit. (* Semantics proof *)
 Qed.
 
-Lemma inlineDms_correct:
-  forall m (Hm: BasicMod m)
-         (Hequiv: ModEquiv typeUT type m)
-         (Hdms: NoDup (namesOf (getDmsBodies m)))
-         (Hin: snd (inlineDms m) = true)
-         or nr l,
-    Step m or nr l ->
-    Step (fst (inlineDms m)) or nr l.
-Proof.
-  induction 5; intros; subst.
-  apply MkStep with (l:= hide l); auto.
-  - apply inlineDms_correct_UnitSteps; auto.
-  - apply hide_idempotent.
-  - apply inlineDms_wellHidden; auto.
-Qed.
-
 Lemma merge_preserves_step:
   forall m or nr l,
     Step m or nr l ->
@@ -863,10 +848,28 @@ Proof.
   unfold wellHidden in H0.
   destruct (hide l0); simpl in *; intuition.
 Qed.
+ *)
+
+Lemma inlineDms_correct:
+  forall m (Hm: BasicMod m)
+         (Hequiv: ModEquiv typeUT type m)
+         (Hdms: NoDup (namesOf (getDefsBodies m)))
+         (Hin: snd (inlineDms m) = true)
+         or nr l,
+    Step m or nr l ->
+    Step (fst (inlineDms m)) or nr l.
+Proof.
+  induction 5; intros; subst.
+  apply StepIntro with (m := fst (inlineDms m)); auto.
+  - apply inlineDms_correct_UnitSteps; auto.
+  - apply hide_idempotent.
+  - apply inlineDms_wellHidden; auto.
+Qed.
+
 
 Theorem inline_correct:
   forall m (Hequiv: ModEquiv typeUT type (merge m))
-         (Hdms: NoDup (namesOf (getDmsBodies m)))
+         (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inline m) = true)
          or nr l,
     Step m or nr l ->
