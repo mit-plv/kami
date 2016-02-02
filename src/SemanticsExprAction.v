@@ -8,18 +8,6 @@ Set Implicit Arguments.
 Lemma opt_some_eq: forall {A} (v1 v2: A), Some v1 = Some v2 -> v1 = v2.
 Proof. intros; inv H; reflexivity. Qed.
 
-Lemma typed_type_eq:
-  forall {A} (a1 a2: A) (B: A -> Type) (v1: B a1) (v2: B a2),
-    {| objType := a1; objVal := v1 |} = {| objType := a2; objVal := v2 |} ->
-    exists (Heq: a1 = a2), match Heq with eq_refl => v1 end = v2.
-Proof. intros; inv H; exists eq_refl; reflexivity. Qed.
-
-Lemma typed_eq:
-  forall {A} (a: A) (B: A -> Type) (v1 v2: B a),
-    {| objType := a; objVal := v1 |} = {| objType := a; objVal := v2 |} ->
-    v1 = v2.
-Proof. intros; inv H; apply Eqdep.EqdepTheory.inj_pair2 in H1; assumption. Qed.
-
 (* concrete representations of data kinds *)
 Fixpoint type (t: Kind): Type :=
   match t with
@@ -274,7 +262,7 @@ Section Semantics.
   (* register values just before the current cycle *)
   Variable oldRegs: RegsT.
 
-  Inductive SemAction:
+    Inductive SemAction:
     forall k, ActionT type k -> RegsT -> MethsT -> type k -> Prop :=
   | SemMCall
       meth s (marg: Expr type (SyntaxKind (arg s)))
@@ -282,7 +270,7 @@ Section Semantics.
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: MethsT) acalls
-      (HAcalls: acalls = M.add meth {| objVal := (evalExpr marg, mret) |} calls)
+      (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
   | SemLet
@@ -294,7 +282,7 @@ Section Semantics.
       (r: string) regT (regV: fullType type regT)
       retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       newRegs calls
-      (HRegVal: M.find r oldRegs = Some {| objType := regT; objVal := regV |})
+      (HRegVal: M.find r oldRegs = Some (existT _ regT regV))
       (HSemAction: SemAction (cont regV) newRegs calls fret):
       SemAction (ReadReg r _ cont) newRegs calls fret
   | SemWriteReg
@@ -302,7 +290,7 @@ Section Semantics.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK) newRegs calls anewRegs
-      (HANewRegs: anewRegs = M.add r {| objVal := (evalExpr e) |} newRegs)
+      (HANewRegs: anewRegs = M.add r (existT _ _ (evalExpr e)) newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
   | SemIfElseTrue
@@ -344,26 +332,26 @@ Section Semantics.
       (HEvalE: evale = evalExpr e):
       SemAction (Return e) (M.empty _) (M.empty _) evale.
 
-  Theorem inversionSemAction
-          k a news calls retC
-          (evalA: @SemAction k a news calls retC):
-    match a with
-      | MCall m s e c =>
-        exists mret pcalls,
+    Theorem inversionSemAction
+            k a news calls retC
+            (evalA: @SemAction k a news calls retC):
+      match a with
+        | MCall m s e c =>
+          exists mret pcalls,
           SemAction (c mret) news pcalls retC /\
-          calls = M.add m {| objVal := (evalExpr e, mret) |} pcalls
-      | Let_ _ e cont =>
-        SemAction (cont (evalExpr e)) news calls retC
-      | ReadReg r k c =>
-        exists rv,
-          M.find r oldRegs = Some {| objType := k; objVal := rv |} /\
+          calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
+        | Let_ _ e cont =>
+          SemAction (cont (evalExpr e)) news calls retC
+        | ReadReg r k c =>
+          exists rv,
+          M.find r oldRegs = Some (existT _ k rv) /\
           SemAction (c rv) news calls retC
-      | WriteReg r _ e a =>
-        exists pnews,
+        | WriteReg r _ e a =>
+          exists pnews,
           SemAction a pnews calls retC /\
-          news = M.add r {| objVal := evalExpr e |} pnews
-      | IfElse p _ aT aF c =>
-        exists news1 calls1 news2 calls2 r1,
+          news = M.add r (existT _ _ (evalExpr e)) pnews
+        | IfElse p _ aT aF c =>
+          exists news1 calls1 news2 calls2 r1,
           match evalExpr p with
             | true =>
               SemAction aT news1 calls1 r1 /\
@@ -376,17 +364,17 @@ Section Semantics.
               news = M.union news1 news2 /\
               calls = M.union calls1 calls2
           end
-      | Assert_ e c =>
-        SemAction c news calls retC /\
-        evalExpr e = true
-      | Return e =>
-        retC = evalExpr e /\
-        news = M.empty _ /\
-        calls = M.empty _
-    end.
-  Proof.
-    destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
-  Qed.
+        | Assert_ e c =>
+          SemAction c news calls retC /\
+          evalExpr e = true
+        | Return e =>
+          retC = evalExpr e /\
+          news = M.empty _ /\
+          calls = M.empty _
+      end.
+    Proof.
+      destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
+    Qed.
 End Semantics.
 
 Ltac invertAction H := apply inversionSemAction in H; simpl in H; dest; try subst.
