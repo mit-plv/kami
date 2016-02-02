@@ -54,9 +54,9 @@ Section GivenModule.
     Definition Substeps := list SubstepRec.
 
     Definition canCombine (s1 s2: SubstepRec) :=
-      MF.Disj (upd s1) (upd s2) /\
+      M.Disj (upd s1) (upd s2) /\
       (exists x, unitAnnot s1 = Meth x \/ unitAnnot s2 = Meth x) /\
-      MF.Disj (cms s1) (cms s2).
+      M.Disj (cms s1) (cms s2).
 
     Inductive substepsComb: Substeps -> Prop :=
     | NilSubsteps: substepsComb nil
@@ -66,7 +66,7 @@ Section GivenModule.
 
     Fixpoint foldSSUpds (ss: Substeps) :=
       match ss with
-        | x :: xs => MF.union (foldSSUpds xs) (upd x)
+        | x :: xs => M.union (foldSSUpds xs) (upd x)
         | nil => M.empty _
       end.
 
@@ -89,7 +89,7 @@ Section GivenModule.
                         | None, x => x
                         | x, None => x
                         | _, _ => None
-                      end; defs := MF.union d' d; calls := MF.union c' c |}
+                      end; defs := M.union d' d; calls := M.union c' c |}
       end.
     
     Definition addLabelLeft lold s := addLabelLeft' (getSLabel s) lold.
@@ -129,8 +129,8 @@ Section GivenModule.
     Qed.
 
     Definition hide (l: LabelT) :=
-      Build_LabelT (annot l) (MF.subtractKV signIsEq (defs l) (calls l))
-                   (MF.subtractKV signIsEq (calls l) (defs l)).
+      Build_LabelT (annot l) (M.subtractKV signIsEq (defs l) (calls l))
+                   (M.subtractKV signIsEq (calls l) (defs l)).
 
     Definition wellHidden (l: LabelT) := M.KeysDisj (defs l) (getCalls m) /\
                                          M.KeysDisj (calls l) (getDefs m).
@@ -145,7 +145,7 @@ Section GivenModule.
   | NilMultistep o: Multistep o o nil
   | Multi o a n (HMultistep: Multistep o n a)
           u l (HStep: Step n u l):
-      Multistep o (MF.union u n) (l :: a).
+      Multistep o (M.union u n) (l :: a).
 
   Definition initRegs (init: list RegInitT): RegsT :=
     makeMap (fullType type) evalConstFullT init.
@@ -207,25 +207,25 @@ Proof.
   intros.
   induction ss; simpl in *.
   - exfalso.
-    apply (proj1 (MF.F.P.F.empty_in_iff _ _) H).
+    apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
   - unfold addLabelLeft, addLabelLeft' in *.
     destruct a.
     simpl in *.
     destruct unitAnnot0.
     + destruct (foldSSLabel ss); simpl in *.
-      pose proof (MF.union_In _ H) as sth.
+      pose proof (M.union_In _ H) as sth.
       destruct sth.
       * apply (staticDynCallsSubstep substep0); intuition.
       * intuition.
     + destruct (foldSSLabel ss); simpl in *.
       dependent destruction o0; simpl in *.
       * dependent destruction a; simpl in *.
-        pose proof (MF.union_In _ H) as sth.
+        pose proof (M.union_In _ H) as sth.
         { destruct sth.
           - apply (staticDynCallsSubstep substep0); intuition.
           - intuition.
         }
-      * pose proof (MF.union_In _ H) as sth.
+      * pose proof (M.union_In _ H) as sth.
         { destruct sth.
           - apply (staticDynCallsSubstep substep0); intuition.
           - intuition.
@@ -238,27 +238,27 @@ Proof.
   intros.
   induction ss; simpl in *.
   - exfalso.
-    apply (proj1 (MF.F.P.F.empty_in_iff _ _) H).
+    apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
   - unfold addLabelLeft, addLabelLeft' in *.
     destruct a.
     simpl in *.
     destruct unitAnnot0.
     + destruct (foldSSLabel ss); simpl in *.
-      rewrite MF.union_empty_L in H.
+      rewrite M.union_empty_L in H.
       intuition.
     + destruct (foldSSLabel ss); simpl in *.
       dependent destruction o0; simpl in *.
       * dependent destruction a; simpl in *.
-        pose proof (MF.union_In _ H) as sth.
+        pose proof (M.union_In _ H) as sth.
         { destruct sth.
-          - apply MF.F.P.F.add_in_iff in H0.
+          - apply M.F.P.F.add_in_iff in H0.
             destruct H0.
             + subst.
               apply (staticDynDefsSubstep substep0).
-            + exfalso; apply ((proj1 (MF.F.P.F.empty_in_iff _ _)) H0).
+            + exfalso; apply ((proj1 (M.F.P.F.empty_in_iff _ _)) H0).
           - intuition.
         }
-      * rewrite MF.union_empty_L in H.
+      * rewrite M.union_empty_L in H.
         intuition.
 Qed.
 

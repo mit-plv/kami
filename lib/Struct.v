@@ -41,12 +41,6 @@ Section GenAttribute.
 
 End GenAttribute.
 
-Record Typed A (B: A -> Type) :=
-  { objType : A;
-    objVal : B objType }.
-
-Hint Unfold objType objVal.
-
 Definition unionMap Key (ValueT: Key -> Type)
                     (map1 map2: MapGenAttrT (fun k => option (ValueT k))) :=
   fun k =>

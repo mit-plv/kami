@@ -229,13 +229,13 @@ Definition evalConstFullT k (e: ConstFullT k) :=
   end.
 
 (* maps register names to the values which they currently hold *)
-Definition RegsT := M.t (Typed (fullType type)).
+Definition RegsT := M.t (sigT (fullType type)).
 
 (* a pair of the value sent to a method call and the value it returned *)
 Definition SignT k := (type (arg k) * type (ret k))%type.
 
 (* a list of simulatenous method call actions made during a single step *)
-Definition MethsT := M.t (Typed SignT).
+Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
   Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=

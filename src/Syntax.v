@@ -205,8 +205,8 @@ Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
 Definition MethodT (sig : SignatureT) := forall ty,
                                            ty (arg sig) -> ActionT ty (ret sig).
 
-Definition RegInitT := Attribute (Typed ConstFullT).
-Definition DefMethT := Attribute (Typed MethodT).
+Definition RegInitT := Attribute (sigT ConstFullT).
+Definition DefMethT := Attribute (sigT MethodT).
 
 Definition Void := Bit 0.
 Inductive Modules: Type :=
@@ -229,83 +229,68 @@ Fixpoint getRegInits m :=
     | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
   end.
 
-Section GetMeths.
-  Definition typeUT (k: Kind): Type := unit.
-  Definition fullTypeUT := fullType typeUT.
-  Definition getUT (k: FullKind): fullTypeUT k :=
-    match k with
-      | SyntaxKind _ => tt
-      | NativeKind t c => c
-    end.
+Fixpoint getDefsBodies (m: Modules): list DefMethT :=
+  match m with
+    | Mod _ _ meths => meths
+    | ConcatMod m1 m2 => (getDefsBodies m1) ++ (getDefsBodies m2)
+  end.
 
-  Fixpoint getCmsA {k} (a: ActionT typeUT k): list string :=
+Definition getDefs m: list string := namesOf (getDefsBodies m).
+
+Section GetCalls.
+  Fixpoint getCallsA {k} (a: ActionT (fun _ => True) k): list string :=
     match a with
-      | MCall m _ _ c => m :: (getCmsA (c tt))
-      | Let_ fk e c => getCmsA (c match fk as fk' return fullType _ fk' with
-                                    | SyntaxKind _ => tt
-                                    | NativeKind _ c' => c'
-                                  end)
-      | ReadReg _ fk c => getCmsA (c match fk as fk' return fullType _ fk' with
-                                       | SyntaxKind _ => tt
-                                       | NativeKind _ c' => c'
-                                     end)
-      | WriteReg _ _ _ c => getCmsA c
+      | MCall m _ _ c => m :: (getCallsA (c I))
+      | Let_ fk e c => getCallsA
+                         (c match fk as fk' return fullType (fun _ => True) fk' with
+                              | SyntaxKind _ => I
+                              | NativeKind _ c' => c'
+                            end)
+      | ReadReg _ fk c => getCallsA
+                            (c match fk as fk' return fullType (fun _ => True) fk' with
+                                 | SyntaxKind _ => I
+                                 | NativeKind _ c' => c'
+                               end)
+      | WriteReg _ _ _ c => getCallsA c
       | IfElse _ _ aT aF c =>
-        (getCmsA aT) ++ (getCmsA aF)
-                     ++ (getCmsA (c tt))
-      | Assert_ _ c => getCmsA c
+        (getCallsA aT) ++ (getCallsA aF)
+                       ++ (getCallsA (c I))
+      | Assert_ _ c => getCallsA c
       | Return _ => nil
     end.
 
-  Fixpoint getCmsR (rl: list (Attribute (Action (Bit 0))))
+  Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
       | nil => nil
-      | r :: rl' => (getCmsA (attrType r _)) ++ (getCmsR rl')
+      | r :: rl' => (getCallsA (attrType r (fun _ => True))) ++ (getCallsR rl')
     end.
 
-  Fixpoint getCmsM (ms: list DefMethT): list string :=
+  Fixpoint getCallsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
-      | m :: ms' => (getCmsA ((objVal (attrType m)) _ tt))
-                      ++ (getCmsM ms')
+      | m :: ms' => (getCallsA ((projT2 (attrType m)) (fun _ => True) I))
+                      ++ (getCallsM ms')
     end.
 
-  Lemma getCmsM_app: forall ms1 ms2, getCmsM (ms1 ++ ms2) = getCmsM ms1 ++ getCmsM ms2.
+  Fixpoint getCalls (m: Modules): list string :=
+    match m with
+      | Mod _ rules meths => getCallsR rules ++ getCallsM meths
+      | ConcatMod m1 m2 => getCalls m1 ++ getCalls m2
+    end.
+End GetCalls.
+
+Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies.
+
+
+
+Section GetMeths.
+  Lemma getCallsM_app: forall ms1 ms2, getCallsM (ms1 ++ ms2) = getCallsM ms1 ++ getCallsM ms2.
   Proof.
     induction ms1; intros; [reflexivity|].
     simpl; rewrite IHms1; apply app_assoc.
   Qed.
-
-  Fixpoint getCmsMod (m: Modules): list string :=
-    match m with
-      | Mod _ rules meths => getCmsR rules ++ getCmsM meths
-      | ConcatMod m1 m2 => (getCmsMod m1) ++ (getCmsMod m2)
-    end.
-
-  Fixpoint getDmsMod (m: Modules): list string :=
-    match m with
-      | Mod _ _ meths => namesOf meths
-      | ConcatMod m1 m2 => (getDmsMod m1) ++ (getDmsMod m2)
-    end.
-
-  Fixpoint getDmsBodies (m: Modules): list DefMethT :=
-    match m with
-      | Mod _ _ meths => meths
-      | ConcatMod m1 m2 => (getDmsBodies m1) ++ (getDmsBodies m2)
-    end.
-
-  Lemma getDmsMod_getDmsBodies_name:
-    forall m, namesOf (getDmsBodies m) = getDmsMod m.
-  Proof.
-    induction m; intros; simpl; [reflexivity|].
-    unfold namesOf in *; rewrite map_app.
-    unfold DefMethT; rewrite IHm1, IHm2; reflexivity.
-  Qed.
-
 End GetMeths.
-
-Hint Unfold getRules getRegInits getCmsMod getDmsMod getDmsBodies.
 
 Section AppendAction.
   Variable type: Kind -> Type.
@@ -484,20 +469,20 @@ Notation "'ACTION' { a }" := (fun ty => a%kami : ActionT ty _)
   (at level 0, only parsing, a at level 0).
 
 Notation "'Register' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (SyntaxKind type) (makeConst init))))
+  (RegisterInModule (Build_Attribute name (existT ConstFullT (SyntaxKind type) (makeConst init))))
   (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
 
 Notation "'RegisterN' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (Build_Typed ConstFullT (type) (init))))
+  (RegisterInModule (Build_Attribute name (existT ConstFullT (type) (init))))
   (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
 
 Notation "'Method' name () : retT := c" :=
-  (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := Void; ret := retT |}
+  (MethodInModule (Build_Attribute name (existT MethodT {| arg := Void; ret := retT |}
      (fun ty => fun _ : ty Void => (c)%kami : ActionT ty retT))))
   (at level 0, name at level 0) : kami_method_scope.
 
 Notation "'Method' name ( param : dom ) : retT := c" :=
-  (MethodInModule (Build_Attribute name (Build_Typed MethodT {| arg := dom; ret := retT |}
+  (MethodInModule (Build_Attribute name (existT MethodT {| arg := dom; ret := retT |}
      (fun ty => fun param : ty dom => (c)%kami : ActionT ty retT))))
   (at level 0, name at level 0, param at level 0, dom at level 0) : kami_method_scope.
 
