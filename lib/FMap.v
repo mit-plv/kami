@@ -619,29 +619,29 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'. 
-  Definition InDomain {A} (m: t A) (d: list E.t) := forall k, In k m -> List.In k d.
-  Definition OnDomain {A} (m: t A) (d: list E.t) := forall k, List.In k d -> In k m.
-  Definition NotOnDomain {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
-  Definition DomainOf {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
+  Definition KeysSubset {A} (m: t A) (d: list E.t) := forall k, In k m -> List.In k d.
+  Definition KeysSupset {A} (m: t A) (d: list E.t) := forall k, List.In k d -> In k m.
+  Definition KeysDisj {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
+  Definition KeysEq {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
 
-  Hint Unfold Equal Disj Sub InDomain OnDomain NotOnDomain DomainOf : MapDefs.
+  Hint Unfold Equal Disj Sub KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
 
-  Lemma find_InDomain {A} :
-    forall {m : t A} k d, InDomain m d -> ~ List.In k d -> find k m = None.
+  Lemma find_KeysSubset {A} :
+    forall {m : t A} k d, KeysSubset m d -> ~ List.In k d -> find k m = None.
   Proof.
     mintros; specialize (H k).
     remember (find k m) as v; destruct v; [|reflexivity].
     elim H0; apply H; apply P.F.in_find_iff; rewrite <-Heqv; discriminate.
   Qed.
     
-  Lemma InDomain_empty:
-    forall {A} d, InDomain (empty A) d.
+  Lemma KeysSubset_empty:
+    forall {A} d, KeysSubset (empty A) d.
   Proof.
     mintros; inv H; exfalso; eapply P.F.empty_mapsto_iff; eauto.
   Qed.
 
-  Lemma InDomain_nil:
-    forall {A} m, InDomain m nil -> m = M.empty A.
+  Lemma KeysSubset_nil:
+    forall {A} m, KeysSubset m nil -> m = M.empty A.
   Proof.
     mintros; ext y.
     rewrite find_empty.
@@ -649,9 +649,9 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H y Hx); inv H.
   Qed.
 
-  Lemma InDomain_find_None:
+  Lemma KeysSubset_find_None:
     forall {A} (m: t A) k d,
-      InDomain m (k :: d) -> find k m = None -> InDomain m d.
+      KeysSubset m (k :: d) -> find k m = None -> KeysSubset m d.
   Proof.
     mintros; specialize (H k0).
     cmp k k0.
@@ -660,18 +660,18 @@ Module LeibnizFacts (M : MapLeibniz).
       elim n; reflexivity.
   Qed.
   
-  Lemma InDomain_add:
+  Lemma KeysSubset_add:
     forall {A} (m: t A) k v d,
-      InDomain m d -> List.In k d -> InDomain (add k v m) d.
+      KeysSubset m d -> List.In k d -> KeysSubset (add k v m) d.
   Proof.
     mintros.
     apply P.F.add_in_iff in H1. destruct H1.
     subst. assumption. auto.
   Qed.
 
-  Lemma InDomain_remove:
+  Lemma KeysSubset_remove:
     forall {A} (m: t A) k d,
-      InDomain m (k :: d) -> InDomain (remove k m) d.
+      KeysSubset m (k :: d) -> KeysSubset (remove k m) d.
   Proof.
     mintros; specialize (H k0).
     cmp k k0.
@@ -681,9 +681,9 @@ Module LeibnizFacts (M : MapLeibniz).
       elim n; reflexivity.
   Qed.
 
-  Lemma InDomain_union:
+  Lemma KeysSubset_union:
     forall {A} (m1 m2: t A) (d: list E.t),
-      InDomain m1 d -> InDomain m2 d -> InDomain (union m1 m2) d.
+      KeysSubset m1 d -> KeysSubset m2 d -> KeysSubset (union m1 m2) d.
   Proof.
     mintros; specialize (H k); specialize (H0 k); case_eq (find k m2); intros.
     - apply H0. exists a. apply find_2. assumption.
@@ -693,17 +693,17 @@ Module LeibnizFacts (M : MapLeibniz).
       apply H0. rewrite H3 in H1. exists x. apply find_2. assumption.
   Qed.
 
-  Lemma InDomain_union_app:
+  Lemma KeysSubset_union_app:
     forall {A} (m1 m2: t A) (d1 d2: list E.t),
-      InDomain m1 d1 -> InDomain m2 d2 -> InDomain (union m1 m2) (d1 ++ d2).
+      KeysSubset m1 d1 -> KeysSubset m2 d2 -> KeysSubset (union m1 m2) (d1 ++ d2).
   Proof.
     mintros; specialize (H k); specialize (H0 k); apply in_or_app.
     apply union_In in H1; destruct H1; intuition.
   Qed.
 
-  Lemma InDomain_SubList:
+  Lemma KeysSubset_SubList:
     forall {A} (m: t A) (d1 d2: list E.t),
-      InDomain m d1 -> SubList d1 d2 -> InDomain m d2.
+      KeysSubset m d1 -> SubList d1 d2 -> KeysSubset m d2.
   Proof. mintros; apply H0, H; auto. Qed.
 
   Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.

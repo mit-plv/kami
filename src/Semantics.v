@@ -50,7 +50,7 @@ Inductive UnitStep : Modules -> RegsT -> RegsT -> RuleLabelT -> Type :=
            (rules : list (Attribute (Action Void)))
            (meths : list DefMethT)
            (oRegs : RegsT),
-      M.InDomain oRegs (namesOf regInits) ->
+      M.KeysSubset oRegs (namesOf regInits) ->
       UnitStep (Mod regInits rules meths) oRegs (M.empty _)
                (Build_LabelTP None (M.empty _) (M.empty _))
 | SingleRule : 
@@ -62,7 +62,7 @@ Inductive UnitStep : Modules -> RegsT -> RegsT -> RuleLabelT -> Type :=
     forall (oRegs news : RegsT) (calls : CallsT)
            (retV : type (Bit 0)),
       SemAction oRegs (ruleBody type) news calls retV ->
-      M.InDomain oRegs (namesOf regInits) ->
+      M.KeysSubset oRegs (namesOf regInits) ->
       UnitStep (Mod regInits rules meths) oRegs news
                (Build_LabelTP (Some ruleName) (M.empty _) calls)
 | SingleMeth :
@@ -80,14 +80,14 @@ Inductive UnitStep : Modules -> RegsT -> RegsT -> RuleLabelT -> Type :=
         udefs = M.add meth {|
                         objType := objType (attrType meth);
                         objVal := (argV, retV) |} (M.empty _) ->
-        M.InDomain oRegs (namesOf regInits) ->
+        M.KeysSubset oRegs (namesOf regInits) ->
         UnitStep (Mod regInits rules meths) oRegs news
                  (Build_LabelTP None udefs calls)
 | LeftIntro :
     forall (m1 m2 : Modules)
            (oRegs1 oRegs2 oRegs news : RegsT)
            (l : RuleLabelT),
-      M.InDomain oRegs2 (namesOf (getRegInits m2)) ->
+      M.KeysSubset oRegs2 (namesOf (getRegInits m2)) ->
       UnitStep m1 oRegs1 news l ->
       oRegs = M.union oRegs1 oRegs2 ->
       UnitStep (ConcatMod m1 m2) oRegs news l
@@ -95,7 +95,7 @@ Inductive UnitStep : Modules -> RegsT -> RegsT -> RuleLabelT -> Type :=
     forall (m1 m2 : Modules)
            (oRegs1 oRegs2 oRegs news : RegsT)
            (l : RuleLabelT),
-      M.InDomain oRegs1 (namesOf (getRegInits m1)) ->
+      M.KeysSubset oRegs1 (namesOf (getRegInits m1)) ->
       UnitStep m2 oRegs2 news l ->
       oRegs = M.union oRegs1 oRegs2 ->
       UnitStep (ConcatMod m1 m2) oRegs news l.
@@ -133,8 +133,8 @@ Definition hide {A : Type} (l : LabelTP A) : LabelTP A :=
 Definition wellHidden {A : Type} (l : LabelTP A) (m : Modules) :=
   match l with
       Build_LabelTP rm ds cs =>
-      M.NotOnDomain ds (getCmsMod m)
-      /\ M.NotOnDomain cs (getDmsMod m)
+      M.KeysDisj ds (getCmsMod m)
+      /\ M.KeysDisj cs (getDmsMod m)
   end.
 
 Inductive Step (m : Modules) (o u : RegsT) : RuleLabelT -> Type :=

@@ -728,13 +728,13 @@ Qed.
 
 Lemma hideMeths_hide:
   forall dmsAll {A} (l: LabelTP A),
-    M.InDomain (dms l) dmsAll ->
+    M.KeysSubset (dms l) dmsAll ->
     hideMeths l dmsAll = hide l.
 Proof.
   induction dmsAll; intros.
 
   - destruct l as [rm dm cm]; simpl in *.
-    rewrite (M.InDomain_nil _ H).
+    rewrite (M.KeysSubset_nil _ H).
     f_equal; auto.
     rewrite M.subtractKV_empty_1; reflexivity.
 
@@ -749,7 +749,7 @@ Proof.
           { unfold hide; f_equal; auto; apply M.subtractKV_remove;
             rewrite <-Heqoda, <-Heqoca; auto.
           }
-          { simpl; apply M.InDomain_remove; auto. }
+          { simpl; apply M.KeysSubset_remove; auto. }
         }
         { admit. (* a bit complicated map stuff *) }
 
@@ -760,7 +760,7 @@ Proof.
     + unfold hideMeth; simpl.
       rewrite <-Heqoda.
       rewrite IHdmsAll; simpl; [reflexivity|].
-      eapply M.InDomain_find_None; eauto.
+      eapply M.KeysSubset_find_None; eauto.
 Qed.
 
 Lemma hideMeths_UnitSteps_hide:
@@ -848,7 +848,7 @@ Qed.
 (* Lemma filter_preserves_step: *)
 (*   forall regs rules dmsAll or nr l filt, *)
 (*     Step (Mod regs rules dmsAll) or nr l -> *)
-(*     M.NotOnDomain (dms l) filt -> *)
+(*     M.KeysDisj (dms l) filt -> *)
 (*     Step (Mod regs rules (filterDms dmsAll filt)) or nr l. *)
 (* Proof. *)
 (* Qed. *)
@@ -857,7 +857,7 @@ Qed.
 Lemma step_dms_hidden:
   forall m or nr l,
     Step m or nr l ->
-    M.NotOnDomain (dms l) (getCmsMod m).
+    M.KeysDisj (dms l) (getCmsMod m).
 Proof.
   intros; inv X.
   unfold wellHidden in H0.

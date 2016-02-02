@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FnMap.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 
