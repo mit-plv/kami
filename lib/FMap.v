@@ -6,6 +6,7 @@ Require Import Structures.OrderedTypeEx.
 Require Import Eqdep_dec.
 
 Require Import Lib.CommonTactics.
+Set Implicit Arguments.
 
 Section Lists. (* For dealing with domains *)
   Context {A: Type}.
@@ -958,3 +959,19 @@ Ltac mcontra :=
 Ltac meq :=
   let y := fresh "y" in
   M.ext y; dest_disj; mred; mcontra.
+
+Require Import Lib.Struct.
+
+Section MakeMap.
+  Variable A: Type.
+  Variable f1 f2: A -> Type.
+  Variable f: forall x, f1 x -> f2 x.
+
+  Fixpoint makeMap (l: list (Attribute (sigT f1))) : M.t (sigT f2) :=
+    match l with
+      | nil => M.empty _
+      | {| attrName := n; attrType := existT _ rv |} :: xs =>
+        M.add n (existT _ _ (f rv)) (makeMap xs)
+    end.  
+End MakeMap.
+

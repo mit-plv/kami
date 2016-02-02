@@ -213,19 +213,19 @@ Proof.
     simpl in *.
     destruct unitAnnot0.
     + destruct (foldSSLabel ss); simpl in *.
-      pose proof (M.union_In _ H) as sth.
+      pose proof (M.union_In H) as sth.
       destruct sth.
       * apply (staticDynCallsSubstep substep0); intuition.
       * intuition.
     + destruct (foldSSLabel ss); simpl in *.
       dependent destruction o0; simpl in *.
       * dependent destruction a; simpl in *.
-        pose proof (M.union_In _ H) as sth.
+        pose proof (M.union_In H) as sth.
         { destruct sth.
           - apply (staticDynCallsSubstep substep0); intuition.
           - intuition.
         }
-      * pose proof (M.union_In _ H) as sth.
+      * pose proof (M.union_In H) as sth.
         { destruct sth.
           - apply (staticDynCallsSubstep substep0); intuition.
           - intuition.
@@ -249,7 +249,7 @@ Proof.
     + destruct (foldSSLabel ss); simpl in *.
       dependent destruction o0; simpl in *.
       * dependent destruction a; simpl in *.
-        pose proof (M.union_In _ H) as sth.
+        pose proof (M.union_In H) as sth.
         { destruct sth.
           - apply M.F.P.F.add_in_iff in H0.
             destruct H0.
