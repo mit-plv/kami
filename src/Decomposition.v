@@ -90,10 +90,9 @@ Section Decomposition.
 
   Variable substepRuleMap:
     forall oImp uImp rule csImp,
-      Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) oImp uImp (Rle (Some rule)) csImp ->
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
       { uSpec |
-        Substep (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta oImp) uSpec
-                (Rle (ruleMap oImp rule)) (mapSet p csImp) /\
+        Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (mapSet p csImp) /\
         forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
   Definition liftP meth :=
@@ -106,16 +105,14 @@ Section Decomposition.
 
   Variable substepMethMap:
     forall oImp uImp meth csImp,
-      Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) oImp uImp (Meth (Some meth)) csImp ->
+      Substep imp oImp uImp (Meth (Some meth)) csImp ->
       { uSpec |
-        Substep (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta oImp) uSpec
-                (Meth (liftP meth)) (mapSet p csImp) /\
+        Substep spec (theta oImp) uSpec (Meth (liftP meth)) (mapSet p csImp) /\
         forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
-  Definition ruleMapEmpty o u cs (s: Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) o u
-                                             (Rle None) cs):
+  Definition ruleMapEmpty o u cs (s: Substep imp o u (Rle None) cs):
     { uSpec |
-      Substep (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta o) uSpec (Rle None) (mapSet p cs) /\
+      Substep spec (theta o) uSpec (Rle None) (mapSet p cs) /\
       forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
@@ -126,10 +123,9 @@ Section Decomposition.
           repeat rewrite M.union_empty_L; intuition]).
   Defined.
 
-  Definition methMapEmpty o u cs (s: Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) o u
-                                             (Meth None) cs):
+  Definition methMapEmpty o u cs (s: Substep imp o u (Meth None) cs):
     { uSpec |
-      Substep (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta o) uSpec (Meth None) (mapSet p cs) /\
+      Substep spec (theta o) uSpec (Meth None) (mapSet p cs) /\
       forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
@@ -148,11 +144,10 @@ Section Decomposition.
       | Meth None => Meth None
     end.
 
-  Definition substepMap o u rm cs (s: Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) o u rm cs) :=
-    match rm return Substep (getRegInits imp) (getRules imp) (getDefsBodies imp) o u rm cs ->
+  Definition substepMap o u rm cs (s: Substep imp o u rm cs) :=
+    match rm return Substep imp o u rm cs ->
                     { uSpec |
-                      Substep (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta o) uSpec
-                              (xformUnitAnnot o rm) (mapSet p cs) /\
+                      Substep spec (theta o) uSpec (xformUnitAnnot o rm) (mapSet p cs) /\
                       forall o', M.union uSpec (theta o') = theta (M.union u o') } with
       | Rle (Some rule) => fun s => substepRuleMap s
       | Meth (Some meth) => fun s => substepMethMap s
@@ -160,7 +155,7 @@ Section Decomposition.
       | Meth None => fun s => methMapEmpty s
     end s.
 
-  Definition xformSubstepRec o (s': SubstepRec (getRegInits imp) (getRules imp) (getDefsBodies imp) o) :=
+  Definition xformSubstepRec o (s': SubstepRec imp o) :=
     match s' with
       | {| upd := u; unitAnnot := rm; cms := cs; substep := s |} =>
         match substepMap s with
@@ -171,11 +166,11 @@ Section Decomposition.
     end.
 
   Variable specCanCombine:
-    forall o (s1 s2: SubstepRec (getRegInits imp) (getRules imp) (getDefsBodies imp) o),
+    forall o (s1 s2: SubstepRec imp o),
       canCombine s1 s2 -> canCombine (xformSubstepRec s1) (xformSubstepRec s2).
 
   Theorem substepsSpecComb o:
-    forall (ss: Substeps (getRegInits imp) (getRules imp) (getDefsBodies imp) o), substepsComb ss ->
+    forall (ss: Substeps imp o), substepsComb ss ->
                                  substepsComb (map (@xformSubstepRec o) ss).
   Proof.
     induction ss; intros; simpl in *; constructor; intros.
@@ -199,8 +194,8 @@ Section Decomposition.
     end.
 
   Lemma wellHiddenSpec o l:
-    wellHidden (getRules imp) (getDefsBodies imp) l ->
-    wellHidden (getRules spec) (getDefsBodies spec) (xformLabel o l).
+    wellHidden imp l ->
+    wellHidden spec (xformLabel o l).
   Proof.
     intros [dHid cHid].
     unfold wellHidden in *.
@@ -246,10 +241,10 @@ Section Decomposition.
     admit.
   Qed.
   
-  Theorem wellHiddenEq1 rules defMeths l:
-    M.KeysSubset (defs l) (namesOf defMeths) ->
-    M.KeysSubset (calls l) (getCallsRaw rules defMeths) ->
-    wellHidden rules defMeths (hide l) ->
+  Theorem wellHiddenEq1 m l:
+    M.KeysSubset (defs l) (getDefs m) ->
+    M.KeysSubset (calls l) (getCalls m) ->
+    wellHidden m (hide l) ->
     forall x v1 v2, M.MapsTo x v1 (defs l) ->
                     M.MapsTo x v2 (calls l) ->
                     v1 = v2.
@@ -325,8 +320,7 @@ Section Decomposition.
   Qed.    
   
   Theorem xformLabelHide o:
-    forall(ss: Substeps (getRegInits imp) (getRules imp) (getDefsBodies imp) o)
-          (ssGd: wellHidden (getRules imp) (getDefsBodies imp) (hide (foldSSLabel ss))),
+    forall(ss: Substeps imp o) (ssGd: wellHidden imp (hide (foldSSLabel ss))),
       hide (foldSSLabel (map (@xformSubstepRec _) ss)) =
       xformLabel o (hide (foldSSLabel ss)).
   Proof.
@@ -334,7 +328,7 @@ Section Decomposition.
     rewrite xformLabelHideCommute.
     f_equal.
     apply eq_sym; apply xformLabelFoldCommute.
-    apply (wellHiddenEq1 (rules := getRules imp) (defMeths := getDefsBodies imp)).
+    apply (wellHiddenEq1 (m := imp)).
     - unfold M.KeysSubset; apply (staticDynDefsSubsteps ss).
     - unfold M.KeysSubset; apply (staticDynCallsSubsteps ss).
     - intuition.
@@ -362,9 +356,9 @@ Section Decomposition.
       apply (IHss (M.union (upd a) state)).
   Qed.
 
-  Theorem stepMap o u l (s: Step (getRegInits imp) (getRules imp) (getDefsBodies imp) o u l):
+  Theorem stepMap o u l (s: Step imp o u l):
     exists uSpec,
-      Step (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta o) uSpec (xformLabel o l) /\
+      Step spec (theta o) uSpec (xformLabel o l) /\
       M.union uSpec (theta o) = theta (M.union u o).
   Proof.
     destruct s as [ss ssGd].
@@ -379,16 +373,16 @@ Section Decomposition.
     - intuition.
   Qed.
 
-  Lemma rleEmpty regInits rules defMeths o u cs:
-    Substep regInits rules defMeths o u (Rle None) cs -> u = M.empty _ /\ cs = M.empty _.
+  Lemma rleEmpty m o u cs:
+    Substep m o u (Rle None) cs -> u = M.empty _ /\ cs = M.empty _.
   Proof.
     clear;
     intros.
     inversion H; intuition.
   Qed.
 
-  Lemma methEmpty regInits rules defMeths o u cs:
-    Substep regInits rules defMeths o u (Meth None) cs -> u = M.empty _ /\ cs = M.empty _.
+  Lemma methEmpty m o u cs:
+    Substep m o u (Meth None) cs -> u = M.empty _ /\ cs = M.empty _.
   Proof.
     clear;
     intros.
@@ -396,9 +390,8 @@ Section Decomposition.
   Qed.
 
   Theorem decomposition':
-    forall s sig, Behavior (getRegInits imp) (getRules imp) (getDefsBodies imp) s sig ->
-                  exists sigSpec, Behavior (getRegInits spec) (getRules spec) (getDefsBodies spec) (theta s)
-                                           sigSpec /\
+    forall s sig, Behavior imp s sig ->
+                  exists sigSpec, Behavior spec (theta s) sigSpec /\
                                   equivalentLabelSeq (mapSet p) sig sigSpec.
   Proof.
     intros.
@@ -410,7 +403,7 @@ Section Decomposition.
       clear defSubset0 callSubset0 thetaInit0 thetaGood0
             substepRuleMap0 substepMethMap0 specCanCombine0.
       pose proof (stepMap HStep) as [uSpec [stepSpec upd]].
-      destruct (IHHMultistepBeh eq_refl eq_refl eq_refl) as [sigSpec [behSpec eqv]].
+      destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].
       inversion behSpec; subst.
       pose proof (BehaviorIntro (Multi HMultistepBeh0 stepSpec)) as sth.
       rewrite upd in sth.

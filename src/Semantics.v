@@ -20,29 +20,26 @@ Record LabelT := { annot: option (option string);
                    calls: MethsT }.
 
 Section GivenModule.
-  Variable regInits: list RegInitT.
-  Variable rules: list (Attribute (Action Void)).
-  Variable defMeths: list DefMethT.
-  Definition callNames := getCallsRaw rules defMeths.
+  Variable m: Modules.
 
   Section GivenOldregs.
     Variable o: RegsT.
     Definition UpdatesT := RegsT.
 
     Inductive Substep: UpdatesT -> UnitLabel -> MethsT -> Prop :=
-    | EmptyRule (HDomainEq: M.KeysEq o (map (@attrName _) regInits)):
+    | EmptyRule (HDomainEq: M.KeysEq o (map (@attrName _) (getRegInits m))):
         Substep (M.empty _) (Rle None) (M.empty _)
-    | EmptyMeth (HDomainEq: M.KeysEq o (map (@attrName _) regInits)):
+    | EmptyMeth (HDomainEq: M.KeysEq o (map (@attrName _) (getRegInits m))):
         Substep (M.empty _) (Meth None) (M.empty _)
     | SingleRule k (a: Action Void)
-                 (HInRules: List.In {| attrName := k; attrType := a |} rules)
-                 (HOldRegs: M.KeysSubset o (map (@attrName _) regInits))
+                 (HInRules: List.In {| attrName := k; attrType := a |} (getRules m))
+                 (HOldRegs: M.KeysSubset o (map (@attrName _) (getRegInits m)))
                  u cs (HAction: SemAction o (a type) u cs WO):
         Substep u (Rle (Some k)) cs
     | SingleMeth (f: DefMethT)
-                 (HIn: In f defMeths)
+                 (HIn: In f (getDefsBodies m))
                  u cs argV retV
-                 (HOldRegs: M.KeysSubset o (map (@attrName _) regInits))
+                 (HOldRegs: M.KeysSubset o (map (@attrName _) (getRegInits m)))
                  (HAction: SemAction o ((projT2 (attrType f)) type argV) u cs retV):
         Substep u
                 (Meth (Some {| attrName := attrName f;
@@ -135,8 +132,8 @@ Section GivenModule.
       Build_LabelT (annot l) (M.subtractKV signIsEq (defs l) (calls l))
                    (M.subtractKV signIsEq (calls l) (defs l)).
 
-    Definition wellHidden (l: LabelT) := M.KeysDisj (defs l) callNames /\
-                                         M.KeysDisj (calls l) (namesOf defMeths).
+    Definition wellHidden (l: LabelT) := M.KeysDisj (defs l) (getCalls m) /\
+                                         M.KeysDisj (calls l) (getDefs m).
 
     Inductive Step: UpdatesT -> LabelT -> Prop :=
       StepIntro ss (HSubsteps: substepsComb ss)
@@ -157,7 +154,7 @@ Section GivenModule.
   Definition LabelSeqT := list LabelT.
 
   Inductive Behavior: UpdatesT -> LabelSeqT -> Prop :=
-  | BehaviorIntro a n (HMultistepBeh: Multistep (initRegs regInits) n a):
+  | BehaviorIntro a n (HMultistepBeh: Multistep (initRegs (getRegInits m)) n a):
       Behavior n a.
 End GivenModule.
 
@@ -176,26 +173,26 @@ Inductive equivalentLabelSeq p: LabelSeqT -> LabelSeqT -> Prop :=
                            equivalentLabelSeq p (x :: xs) (y :: ys).
 
 Definition traceRefines p m1 m2 :=
-  forall s1 sig1, Behavior (getRegInits m1) (getRules m1) (getDefsBodies m1) s1 sig1 ->
-                  exists s2 sig2,
-                    Behavior (getRegInits m2) (getRules m2) (getDefsBodies m2) s2 sig2 /\
-                    equivalentLabelSeq p sig1 sig2.
+  forall s1 sig1, Behavior m1 s1 sig1 ->
+                  exists s2 sig2, Behavior m2 s2 sig2 /\
+                                  equivalentLabelSeq p sig1 sig2.
 
-Theorem staticDynCallsSubstep regInits rules defMeths o u rm cs:
-  Substep regInits rules defMeths o u rm cs ->
-  forall f, M.In f cs -> List.In f (getCallsRaw rules defMeths).
+Theorem staticDynCallsSubstep m o u rm cs:
+  Substep m o u rm cs ->
+  forall f, M.In f cs -> List.In f (getCalls m).
 Proof.
   admit.
 Qed.
 
-Theorem staticDynDefsSubstep regInits rules defMeths o u far cs:
-  Substep regInits rules defMeths o u (Meth (Some far)) cs ->
-  List.In (attrName far) (namesOf defMeths).
+Theorem staticDynDefsSubstep m o u far cs:
+  Substep m o u (Meth (Some far)) cs ->
+  List.In (attrName far) (getDefs m).
 Proof.
   intros.
   dependent induction H; simpl in *.
+  unfold getDefs in *.
   clear - HIn.
-  induction defMeths.
+  induction (getDefsBodies m).
   - intuition.
   - simpl in *.
     destruct HIn.
@@ -204,10 +201,8 @@ Proof.
     + right; intuition.
 Qed.
 
-Theorem staticDynCallsSubsteps regInits rules defMeths o ss:
-  forall f,
-    M.In f (calls (foldSSLabel (regInits := regInits) (rules := rules) (defMeths := defMeths) (o := o) ss)) ->
-    In f (getCallsRaw rules defMeths).
+Theorem staticDynCallsSubsteps m o ss:
+  forall f, M.In f (calls (foldSSLabel (m := m) (o := o) ss)) -> In f (getCalls m).
 Proof.
   intros.
   induction ss; simpl in *.
@@ -237,10 +232,8 @@ Proof.
         }
 Qed.
 
-Theorem staticDynDefsSubsteps regInits rules defMeths o ss:
-  forall f,
-    M.In f (defs (foldSSLabel (regInits := regInits) (rules := rules) (defMeths := defMeths) (o := o) ss)) ->
-    In f (namesOf defMeths).
+Theorem staticDynDefsSubsteps m o ss:
+  forall f, M.In f (defs (foldSSLabel (m := m) (o := o) ss)) -> In f (getDefs m).
 Proof.
   intros.
   induction ss; simpl in *.
@@ -269,4 +262,4 @@ Proof.
         intuition.
 Qed.
 
-Definition reachable regInits rules defMeths o := exists sig, Behavior regInits rules defMeths o sig.
+Definition reachable m o := exists sig, Behavior m o sig.
