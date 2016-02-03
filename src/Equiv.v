@@ -201,11 +201,8 @@ Section Equiv.
     - apply IHHequiv; auto.
   Qed.
 
-  Fixpoint ModEquiv (m: Modules): Prop :=
-    match m with
-      | Mod _ rules dms => RulesEquiv rules /\ MethsEquiv dms
-      | ConcatMod m1 m2 => ModEquiv m1 /\ ModEquiv m2
-    end.
+  Definition ModEquiv (m: Modules): Prop :=
+    RulesEquiv (getRules m) /\ MethsEquiv (getDefsBodies m).
 
 End Equiv.
 

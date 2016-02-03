@@ -109,12 +109,10 @@ Section WfInd.
   Qed.
 
   Inductive WfModules: Modules -> Prop :=
-  | WfMod:
-      forall regs rules dms,
-        WfRules rules -> WfDms dms -> WfModules (Mod regs rules dms)
-  | WfConcatMod:
-      forall m1 m2,
-        WfModules m1 -> WfModules m2 -> WfModules (ConcatMod m1 m2).
+  | WfIntro:
+      forall m,
+        WfRules (getRules m) -> WfDms (getDefsBodies m) ->
+        WfModules m.
     
 End WfInd.
 
@@ -269,21 +267,19 @@ Section WfEval.
     simpl in *; intros; eapply wfAction_WfAction; eauto.
   Qed.
 
-  Fixpoint wfModules (m: Modules) :=
-    match m with
-      | Mod _ rules dms => wfRules rules && wfDms dms
-      | ConcatMod m1 m2 => wfModules m1 && wfModules m2
-    end.
+  Definition wfModules (m: Modules) :=
+    wfRules (getRules m) && wfDms (getDefsBodies m).
 
   Lemma wfModules_WfModules:
     forall m (Hequiv: ModEquiv typeUT type m),
       wfModules m = true -> WfModules type m.
   Proof.
-    induction m; intros; simpl in *; apply andb_true_iff in H; dest.
-    - constructor.
-      + apply wfRules_WfRules; auto.
-      + apply wfDms_WfDms; auto.
-    - constructor; auto.
+    intros; simpl in *.
+    unfold wfModules in H; apply andb_true_iff in H; dest.
+    inv Hequiv.
+    constructor.
+    - apply wfRules_WfRules; auto.
+    - apply wfDms_WfDms; auto.
   Qed.
 
 End WfEval.
