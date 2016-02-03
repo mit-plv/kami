@@ -55,6 +55,8 @@ Section GivenModule.
 
     Definition canCombine (s1 s2: SubstepRec) :=
       M.Disj (upd s1) (upd s2) /\
+      (forall x y, unitAnnot s1 = Meth (Some x) ->
+                   unitAnnot s2 = Meth (Some y) -> attrName x <> attrName y) /\
       (exists x, unitAnnot s1 = Meth x \/ unitAnnot s2 = Meth x) /\
       M.Disj (cms s1) (cms s2).
 
@@ -139,7 +141,82 @@ Section GivenModule.
       StepIntro ss (HSubsteps: substepsComb ss)
                 (HWellHidden: wellHidden (hide (foldSSLabel ss))) :
         Step (foldSSUpds ss) (hide (foldSSLabel ss)).
-  End GivenOldregs. 
+
+    (* Another step semantics based on inductive definitions for Substeps *)
+    Definition CanCombineLabel u (l: LabelT) (s: SubstepRec) :=
+      M.Disj u (upd s) /\
+      M.Disj (calls l) (cms s) /\
+      match annot l, unitAnnot s with
+        | Some _, Rle (Some _) => False
+        | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
+        | _, _ => True
+      end.
+
+    Inductive SubstepsInd: UpdatesT -> LabelT -> Prop :=
+    | SubstepsNil: SubstepsInd (M.empty _)
+                               {| annot:= None; defs:= M.empty _; calls:= M.empty _ |}
+    | SubstepsCons:
+        forall (s: SubstepRec) u l,
+          SubstepsInd u l ->
+          CanCombineLabel u l s ->
+          SubstepsInd (M.union u (upd s)) (addLabelLeft l s).
+
+    Inductive SubstepsIndAnnot: UpdatesT -> LabelT -> list SubstepRec -> Prop :=
+    | SubstepsAnnotNil:
+        SubstepsIndAnnot (M.empty _)
+                         {| annot:= None; defs:= M.empty _; calls:= M.empty _ |} nil
+    | SubstepsAnnotCons:
+        forall (s: SubstepRec) u l ss,
+          SubstepsIndAnnot u l ss ->
+          CanCombineLabel u l s ->
+          SubstepsIndAnnot (M.union u (upd s)) (addLabelLeft l s) (s :: ss).
+
+    Lemma canCombine_consistent:
+      forall s ss,
+        (forall s' : SubstepRec, In s' ss -> canCombine s s') <->
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) s.
+    Proof.
+      admit.
+    Qed.
+
+    Lemma substeps_annot:
+      forall u l,
+        SubstepsInd u l ->
+        exists ss, SubstepsIndAnnot u l ss /\
+                   substepsComb ss /\
+                   u = foldSSUpds ss /\ l = foldSSLabel ss.
+    Proof.
+      induction 1.
+      - eexists; repeat split; constructor.
+      - destruct IHSubstepsInd as [ss [? [? [? ?]]]]; subst.
+        exists (s :: ss); split.
+        + constructor; auto.
+        + repeat split.
+          constructor; auto.
+          apply canCombine_consistent; auto.
+    Qed.
+
+    Inductive StepInd: UpdatesT -> LabelT -> Prop :=
+    | StepIndIntro: forall u l (HSubSteps: SubstepsInd u l)
+                           (HWellHidden: wellHidden (hide l)),
+                      StepInd u (hide l).
+
+    Lemma step_consistent:
+      forall u l, Step u l <-> StepInd u l.
+    Proof.
+      split; intros.
+      - inv H; constructor; auto.
+        clear HWellHidden.
+        induction HSubsteps; simpl in *; [constructor|].
+        constructor; auto.
+        apply canCombine_consistent; auto.
+      - inv H.
+        apply substeps_annot in HSubSteps.
+        destruct HSubSteps as [ss [? [? [? ?]]]]; subst.
+        constructor; auto.
+    Qed.
+
+  End GivenOldregs.
 
   Inductive Multistep: RegsT -> UpdatesT -> list LabelT -> Prop :=
   | NilMultistep o: Multistep o o nil

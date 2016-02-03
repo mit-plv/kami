@@ -235,10 +235,10 @@ Section Exts.
 
   Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDefsBodies m)).
 
-  Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDefsBodies m).
+  (* Definition merge (m: Modules) := Mod (getRegInits m) (getRules m) (getDefsBodies m). *)
   (* Definition filterDms (dms: list DefMethT) (filt: list string) := *)
   (*   filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms. *)
-  Definition inline (m: Modules) := inlineDms (merge m).
+  Definition inline (m: Modules) := inlineDms m.
   
 End Exts.
 
