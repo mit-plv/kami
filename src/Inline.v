@@ -196,6 +196,11 @@ Section Exts.
   Definition inlineDmToRules (rules: list (Attribute (Action Void))) (leaf: DefMethT) :=
     map (fun r => inlineDmToRule r leaf) rules.
 
+  Lemma inlineDmToRules_app:
+    forall r1 r2 leaf,
+      inlineDmToRules (r1 ++ r2) leaf = inlineDmToRules r1 leaf ++ inlineDmToRules r2 leaf.
+  Proof. intros; apply map_app. Qed.
+
   Definition inlineDmToDm (dm leaf: DefMethT): DefMethT.
     refine {| attrName := attrName dm;
               attrType := existT _ (projT1 (attrType dm))
@@ -206,6 +211,18 @@ Section Exts.
 
   Definition inlineDmToDms (dms: list DefMethT) (leaf: DefMethT) :=
     map (fun d => inlineDmToDm d leaf) dms.
+
+  Lemma inlineDmToDms_names:
+    forall dms leaf, namesOf (inlineDmToDms dms leaf) = namesOf dms.
+  Proof.
+    induction dms; intros; auto.
+    simpl; f_equal; auto.
+  Qed.
+
+  Lemma inlineDmToDms_app:
+    forall d1 d2 leaf,
+      inlineDmToDms (d1 ++ d2) leaf = inlineDmToDms d1 leaf ++ inlineDmToDms d2 leaf.
+  Proof. intros; apply map_app. Qed.
 
   Definition inlineDmToMod (m: Modules) (leaf: string) :=
     if wfModules m then
