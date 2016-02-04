@@ -26,37 +26,37 @@ Section ProcDecSC.
     Definition regRel: RegsT -> RegsT -> Prop.
       intros ir sr.
       refine (exists pcv: fullType type (SyntaxKind (Bit addrSize)),
-                M.find ^"pc" ir = Some {| objVal := pcv |} /\
+                M.find ^"pc" ir = Some (existT _ _ pcv) /\
                 _).
       refine (exists rfv: fullType type (SyntaxKind (Vector (Bit valSize) rfIdx)),
-                M.find ^"rf" ir = Some {| objVal := rfv |} /\
+                M.find ^"rf" ir = Some (existT _ _ rfv) /\
                 _).
       refine (exists eltsv: fullType type (SyntaxKind (Vector (atomK addrSize (Bit valSize))
                                                               fifoSize)),
-                M.find (^"Outs" -n- "elt") ir = Some {| objVal := eltsv |} /\
+                M.find (^"Outs" -n- "elt") ir = Some (existT _ _ eltsv) /\
                 _).
       refine (exists deqPv: fullType type (SyntaxKind (Bit fifoSize)),
-                M.find (^"Outs" -n- "deqP") ir = Some {| objVal := deqPv |} /\
+                M.find (^"Outs" -n- "deqP") ir = Some (existT _ _ deqPv) /\
                 _).
       refine (exists emptyv: fullType type (SyntaxKind Bool),
-                M.find (^"Outs" -n- "empty") ir = Some {| objVal := emptyv |} /\
+                M.find (^"Outs" -n- "empty") ir = Some (existT _ _ emptyv) /\
                 _).
       destruct emptyv.
-      - exact (sr = M.add ^"pc" {| objVal := pcv |}
-                                (M.add ^"rf" {| objVal := rfv |} (M.empty _))).
+      - exact (sr = M.add ^"pc" (existT _ _ pcv)
+                                (M.add ^"rf" (existT _ _ rfv) (M.empty _))).
       - pose (eltsv deqPv ``"type") as opcond.
         destruct (weq opcond (evalConstT opLd)).
         + refine (sr =
-                  M.add ^"pc" {| objVal := fst (exec _ rfv pcv (dec _ rfv pcv)) |}
-                              (M.add ^"rf" {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
-                                              objVal := _ |} (M.empty _))).
+                  M.add ^"pc" (existT _ _ (fst (exec _ rfv pcv (dec _ rfv pcv))))
+                              (M.add ^"rf" (existT _ (SyntaxKind (Vector (Bit valSize) rfIdx)) _)
+                                              (M.empty _))).
           exact (fun a => if weq a (dec _ rfv pcv ``"reg")
                           then eltsv deqPv ``"value"
                           else rfv a).
         + refine (sr =
-                  M.add ("pc"__ i) {| objVal := fst (exec _ rfv pcv (dec _ rfv pcv)) |}
-                        (M.add ("rf"__ i) {| objType := SyntaxKind (Vector (Bit valSize) rfIdx);
-                                             objVal := rfv |} (M.empty _))).
+                  M.add ("pc"__ i) (existT _ _ (fst (exec _ rfv pcv (dec _ rfv pcv))))
+                        (M.add ("rf"__ i) (existT _ (SyntaxKind (Vector (Bit valSize) rfIdx))
+                                             rfv) (M.empty _))).
     Defined.
     Hint Unfold regRel.
 
