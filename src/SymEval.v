@@ -5,13 +5,13 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Set Implicit Arguments.
 
 Notation "m [ k |--> v ]" := (M.add k v m) (at level 0).
-Notation "m [ k |-> v ]" := (m [k |--> {| objVal := v |}]) (at level 0).
-Notation "v === m .[ k ]" := (M.find k m = Some {| objVal := v |}) (at level 70).
+Notation "m [ k |-> v ]" := (m [k |--> existT _ _ v]) (at level 0).
+Notation "v === m .[ k ]" := (M.find k m = Some (existT _ _ v)) (at level 70).
 Notation "_=== m .[ k ]" := (M.find k m = None) (at level 70).
 
 Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _)) (at level 0).
 
-Fixpoint SymSemAction k (a : ActionT type k) (rs rsNotWritable rs' : RegsT) (cs : CallsT) (kf : RegsT -> CallsT -> type k -> Prop) : Prop :=
+Fixpoint SymSemAction k (a : ActionT type k) (rs rsNotWritable rs' : RegsT) (cs : MethsT) (kf : RegsT -> MethsT -> type k -> Prop) : Prop :=
   match a with
   | MCall meth s marg cont =>
     forall mret,
