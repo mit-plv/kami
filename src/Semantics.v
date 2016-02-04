@@ -75,12 +75,18 @@ Section GivenModule.
     Definition getSLabel (s: SubstepRec) :=
       match s with
         | {| unitAnnot := a; cms := cs |} =>
-          match a with
-            | Rle x => {| annot := Some x; defs := M.empty _; calls := cs |}
-            | Meth None => {| annot := None; defs := M.empty _; calls := cs |}
-            | Meth (Some {| attrName := n; attrType := t |}) =>
-              {| annot := None; defs := M.add n t (M.empty _); calls := cs |}
-          end
+          {| annot :=
+               match a with
+                 | Rle x => Some x
+                 | Meth _ => None
+               end;
+             defs :=
+               match a with
+                 | Meth (Some {| attrName := n; attrType := t |}) =>
+                   M.add n t (M.empty _)
+                 | _ => M.empty _
+               end;
+             calls := cs |}
       end.
 
     Definition addLabelLeft' lnew lold :=
@@ -159,7 +165,10 @@ Section GivenModule.
         forall (s: SubstepRec) u l,
           SubstepsInd u l ->
           CanCombineLabel u l s ->
-          SubstepsInd (M.union u (upd s)) (addLabelLeft l s).
+          forall uu ll,
+            uu = M.union u (upd s) ->
+            ll = addLabelLeft l s ->
+            SubstepsInd uu ll.
 
     Inductive SubstepsIndAnnot: UpdatesT -> LabelT -> list SubstepRec -> Prop :=
     | SubstepsAnnotNil:
@@ -208,12 +217,12 @@ Section GivenModule.
       - inv H; constructor; auto.
         clear HWellHidden.
         induction HSubsteps; simpl in *; [constructor|].
-        constructor; auto.
+        econstructor; eauto.
         apply canCombine_consistent; auto.
       - inv H.
         apply substeps_annot in HSubSteps.
         destruct HSubSteps as [ss [? [? [? ?]]]]; subst.
-        constructor; auto.
+        econstructor; eauto.
     Qed.
 
   End GivenOldregs.
