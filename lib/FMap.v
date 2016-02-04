@@ -956,9 +956,8 @@ Ltac mcontra :=
         elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
 
-Ltac meq :=
-  let y := fresh "y" in
-  M.ext y; dest_disj; mred; mcontra.
+Ltac findeq := dest_disj; mred; mcontra; intuition auto.
+Ltac meq := let y := fresh "y" in M.ext y; findeq.
 
 Require Import Lib.Struct.
 

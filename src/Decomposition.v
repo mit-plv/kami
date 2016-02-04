@@ -283,10 +283,10 @@ Section Decomposition.
   
   Theorem xformLabelAddLabelCommute l1 l2:
     forall o,
-      xformLabel o (addLabelLeft' l1 l2) = addLabelLeft' (xformLabel o l1) (xformLabel o l2).
+      xformLabel o (mergeLabel l1 l2) = mergeLabel (xformLabel o l1) (xformLabel o l2).
   Proof.
     intros.
-    unfold addLabelLeft', xformLabel; simpl in *.
+    unfold mergeLabel, xformLabel; simpl in *.
     destruct l1, l2; simpl in *.
     destruct annot, annot0;
       repeat (try destruct o0; try destruct o1; simpl in *;
@@ -305,6 +305,7 @@ Section Decomposition.
     destruct a.
     unfold liftP.
     rewrite mapSetAddOne.
+    unfold getSLabel; simpl.
     destruct (p attrName attrType); intuition.
   Qed.
     

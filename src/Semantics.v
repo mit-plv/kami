@@ -72,24 +72,23 @@ Section GivenModule.
         | nil => M.empty _
       end.
 
-    Definition getSLabel (s: SubstepRec) :=
-      match s with
-        | {| unitAnnot := a; cms := cs |} =>
-          {| annot :=
-               match a with
-                 | Rle x => Some x
-                 | Meth _ => None
-               end;
-             defs :=
-               match a with
-                 | Meth (Some {| attrName := n; attrType := t |}) =>
-                   M.add n t (M.empty _)
-                 | _ => M.empty _
-               end;
-             calls := cs |}
-      end.
+    Definition getLabel (a: UnitLabel) (cs: MethsT) :=
+      {| annot :=
+           match a with
+             | Rle x => Some x
+             | Meth _ => None
+           end;
+         defs :=
+           match a with
+             | Meth (Some {| attrName := n; attrType := t |}) =>
+               M.add n t (M.empty _)
+             | _ => M.empty _
+           end;
+         calls := cs |}.
 
-    Definition addLabelLeft' lnew lold :=
+    Definition getSLabel (s: SubstepRec) := getLabel (unitAnnot s) (cms s).
+
+    Definition mergeLabel lnew lold :=
       match lnew, lold with
         | {| annot := a'; defs := d'; calls := c' |},
           {| annot := a; defs := d; calls := c |} =>
@@ -100,7 +99,7 @@ Section GivenModule.
                       end; defs := M.union d' d; calls := M.union c' c |}
       end.
     
-    Definition addLabelLeft lold s := addLabelLeft' (getSLabel s) lold.
+    Definition addLabelLeft lold s := mergeLabel (getSLabel s) lold.
 
     Fixpoint foldSSLabel (ss: Substeps) :=
       match ss with
@@ -149,10 +148,10 @@ Section GivenModule.
         Step (foldSSUpds ss) (hide (foldSSLabel ss)).
 
     (* Another step semantics based on inductive definitions for Substeps *)
-    Definition CanCombineLabel u (l: LabelT) (s: SubstepRec) :=
-      M.Disj u (upd s) /\
-      M.Disj (calls l) (cms s) /\
-      match annot l, unitAnnot s with
+    Definition CanCombineLabel u (l: LabelT) (su: UpdatesT) scs sul :=
+      M.Disj u su /\
+      M.Disj (calls l) scs /\
+      match annot l, sul with
         | Some _, Rle (Some _) => False
         | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
         | _, _ => True
@@ -162,28 +161,36 @@ Section GivenModule.
     | SubstepsNil: SubstepsInd (M.empty _)
                                {| annot:= None; defs:= M.empty _; calls:= M.empty _ |}
     | SubstepsCons:
-        forall (s: SubstepRec) u l,
+        forall u l,
           SubstepsInd u l ->
-          CanCombineLabel u l s ->
-          forall uu ll,
-            uu = M.union u (upd s) ->
-            ll = addLabelLeft l s ->
-            SubstepsInd uu ll.
+          forall su scs sul,
+            Substep su sul scs ->
+            CanCombineLabel u l su scs sul ->
+            forall uu ll,
+              uu = M.union u su ->
+              ll = mergeLabel (getLabel sul scs) l ->
+              SubstepsInd uu ll.
 
     Inductive SubstepsIndAnnot: UpdatesT -> LabelT -> list SubstepRec -> Prop :=
     | SubstepsAnnotNil:
         SubstepsIndAnnot (M.empty _)
                          {| annot:= None; defs:= M.empty _; calls:= M.empty _ |} nil
     | SubstepsAnnotCons:
-        forall (s: SubstepRec) u l ss,
+        forall u l ss,
           SubstepsIndAnnot u l ss ->
-          CanCombineLabel u l s ->
-          SubstepsIndAnnot (M.union u (upd s)) (addLabelLeft l s) (s :: ss).
+          forall su scs sul
+                 (Hss: Substep su sul scs),
+            CanCombineLabel u l su scs sul ->
+            SubstepsIndAnnot (M.union u su)
+                             (mergeLabel (getLabel sul scs) l)
+                             ({| upd:= su; unitAnnot:= sul; cms:= scs; substep:= Hss |} :: ss).
 
     Lemma canCombine_consistent:
-      forall s ss,
-        (forall s' : SubstepRec, In s' ss -> canCombine s s') <->
-        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) s.
+      forall su sul scs (Hss: Substep su sul scs) ss,
+        substepsComb ss ->
+        (forall s', In s' ss -> canCombine {| upd := su; unitAnnot := sul;
+                                              cms := scs; substep := Hss |} s') <->
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
     Proof.
       admit.
     Qed.
@@ -198,7 +205,7 @@ Section GivenModule.
       induction 1.
       - eexists; repeat split; constructor.
       - destruct IHSubstepsInd as [ss [? [? [? ?]]]]; subst.
-        exists (s :: ss); split.
+        exists ({| substep:= H0 |} :: ss); split.
         + constructor; auto.
         + repeat split.
           constructor; auto.
@@ -217,8 +224,10 @@ Section GivenModule.
       - inv H; constructor; auto.
         clear HWellHidden.
         induction HSubsteps; simpl in *; [constructor|].
+
+        destruct s as [su sul scs Hss]; simpl in *.
         econstructor; eauto.
-        apply canCombine_consistent; auto.
+        eapply canCombine_consistent; eauto.
       - inv H.
         apply substeps_annot in HSubSteps.
         destruct HSubSteps as [ss [? [? [? ?]]]]; subst.
@@ -294,7 +303,7 @@ Proof.
   induction ss; simpl in *.
   - exfalso.
     apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
-  - unfold addLabelLeft, addLabelLeft' in *.
+  - unfold addLabelLeft, mergeLabel in *.
     destruct a.
     simpl in *.
     destruct unitAnnot0.
@@ -325,7 +334,7 @@ Proof.
   induction ss; simpl in *.
   - exfalso.
     apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
-  - unfold addLabelLeft, addLabelLeft' in *.
+  - unfold addLabelLeft, mergeLabel in *.
     destruct a.
     simpl in *.
     destruct unitAnnot0.
