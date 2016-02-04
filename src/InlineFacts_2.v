@@ -46,10 +46,11 @@ End HideExts.
 
 Section SubstepFacts.
   Variable m: Modules.
-  Hypotheses (Hequiv: ModEquiv typeUT type m)
+  Hypotheses (Hwf: WfModules type m)
+             (Hequiv: ModEquiv typeUT type m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
-  Hypothesis (Hdm: In dm (getDefsBodies m)).
+  Hypothesis (Hdm: noCallDm dm dm = true).
   
   Lemma inlineDmToMod_correct_Substep:
     forall or u1 u2 cs1 cs2 argV retV ul2,
@@ -57,58 +58,33 @@ Section SubstepFacts.
       SemAction or (projT2 (attrType dm) type argV) u1 cs1 retV ->
       M.Disj u1 u2 -> M.Disj cs1 cs2 ->
       Some (existT _ (projT1 (attrType dm)) (argV, retV)) = M.find dm cs2 ->
-      snd (inlineDmToMod m dm) = true ->
-      Substep (fst (inlineDmToMod m dm)) or (M.union u1 u2) ul2 (M.union cs1 (M.remove dm cs2)).
+      Substep (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
+                   (inlineDmToDms (getDefsBodies m) dm))
+              or (M.union u1 u2) ul2 (M.union cs1 (M.remove dm cs2)).
   Proof.
     induction 1; intros; simpl in *; try (inv H2).
 
-    - unfold inlineDmToMod in *.
-      remember (wfModules _) as owf; destruct owf; [|discriminate].
-      remember (getAttribute _ _) as odm; destruct odm; [|discriminate].
-      destruct (noCallDm _ _); [|discriminate].
-
-      pose proof (getAttribute_Some_name _ _ Heqodm).
-      apply getAttribute_Some_body in Heqodm.
-      assert (a0 = dm) by (eapply in_NoDup_attr; eauto); subst.
-      
-      eapply SingleRule with (a:= attrType (inlineDmToRule (k :: a)%struct dm)); eauto.
+    - eapply SingleRule with (a:= attrType (inlineDmToRule (k :: a)%struct dm)); eauto.
       + apply in_map with (f:= fun r => inlineDmToRule r dm) in HInRules; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
-        apply eq_sym, (wfModules_WfModules Hequiv) in Heqowf.
-        inv Heqowf; eapply wfRules_rule; eauto.
+        inv Hwf; eapply wfRules_rule; eauto.
 
-    - unfold inlineDmToMod in *.
-      remember (wfModules _) as owf; destruct owf; [|discriminate].
-      remember (getAttribute _ _) as odm; destruct odm; [|discriminate].
-      destruct (noCallDm _ _); [|discriminate].
-
-      pose proof (getAttribute_Some_name _ _ Heqodm).
-      apply getAttribute_Some_body in Heqodm.
-      assert (a = dm) by (eapply in_NoDup_attr; eauto); subst.
-      
-      apply SingleMeth with (f:= inlineDmToDm f dm); auto.
+    - apply SingleMeth with (f:= inlineDmToDm f dm); auto.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
-        apply eq_sym, (wfModules_WfModules Hequiv) in Heqowf.
-        inv Heqowf; eapply wfDms_dms; eauto.
+        inv Hwf; eapply wfDms_dms; eauto.
   Qed.  
 
   Lemma inlineDmToMod_Substep_intact:
-    forall or u ul cs,
+    forall or u ul cs (dmn: string),
       Substep m or u ul cs ->
       None = M.find dm cs ->
-      Substep (fst (inlineDmToMod m dm)) or u ul cs.
+      dmn = dm ->
+      Substep (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
+                   (inlineDmToDms (getDefsBodies m) dm))
+              or u ul cs.
   Proof.
-    intros; unfold inlineDmToMod.
-    destruct (wfModules _); [|auto].
-    remember (getAttribute _ _) as odm; destruct odm; [|auto].
-    destruct (noCallDm _ _); [|auto].
-
-    pose proof (getAttribute_Some_name _ _ Heqodm).
-    apply getAttribute_Some_body in Heqodm.
-    assert (a = dm) by (eapply in_NoDup_attr; eauto); subst.
-
-    simpl; induction H; simpl in *; try (constructor; auto; fail).
+    induction 1; intros; simpl in *; try (constructor; auto; fail).
 
     - apply SingleRule with (a:= attrType (inlineDmToRule (k :: a)%struct dm)); auto.
       + apply in_map with (f:= fun r => inlineDmToRule r dm) in HInRules; auto.
@@ -118,17 +94,6 @@ Section SubstepFacts.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; destruct dm; apply inlineDm_SemAction_intact; auto.
   Qed.
-
-  (* Definition inlineDmToMod_substepRec *)
-  (*            (or: RegsT) (ss: SubstepRec m or) *)
-  (* : SubstepRec (fst (inlineDmToMod m dm)) or. *)
-  (* Proof. *)
-  (*   destruct ss as [u ul cs Hss]. *)
-  (*   remember (M.find dm cs) as odm; destruct odm. *)
-  (*   - econstructor. *)
-  (*   - econstructor. *)
-  (*     eapply inlineDmToMod_Substep_intact; eauto. *)
-  (* Defined. *)
 
 End SubstepFacts.
 
@@ -192,7 +157,20 @@ Lemma hideMeths_Substeps_hide:
     hideMeths l (namesOf (getDefsBodies m)) = hide l.
 Proof.
   intros; apply hideMeths_hide.
-  admit. (* Semantics proof: dyn dms <= static dms *)
+
+  (* NOTE: better to extract a lemma *)
+  induction H; [apply M.KeysSubset_empty|].
+  subst; destruct l as [ann ds cs].
+  inv H1; dest; simpl in *.
+  destruct ann; destruct sul as [|[|]]; auto; destruct a as [an ab].
+  - apply M.KeysSubset_union; auto.
+    apply M.KeysSubset_add.
+    + apply M.KeysSubset_empty.
+    + pose proof (staticDynDefsSubstep H0); auto.
+  - apply M.KeysSubset_union; auto.
+    apply M.KeysSubset_add.
+    + apply M.KeysSubset_empty.
+    + pose proof (staticDynDefsSubstep H0); auto.
 Qed.
 
 Lemma inlineDm_ActionEquiv:
@@ -293,7 +271,7 @@ Lemma inlineDmToMod_correct_Substeps:
          or nr l dm,
     NoDup (namesOf (getDefsBodies m)) ->
     SubstepsInd m or nr l ->
-    M.find dm (defs l) = M.find dm (calls l) ->
+    M.find dm (calls l) = None \/ M.find dm (defs l) = M.find dm (calls l) ->
     snd (inlineDmToMod m dm) = true ->
     SubstepsInd (fst (inlineDmToMod m dm)) or nr (hideMeth l dm).
 Proof.
@@ -309,48 +287,73 @@ Proof.
   apply getAttribute_Some_body in Heqodm.
   inv H2; dest; simpl in *.
 
-  destruct sul as [sr|[sdm|]].
+  unfold hideMeth in *; simpl in *.
+  remember (M.find a (M.union scs cs)) as ocmv; destruct ocmv.
 
-  - unfold hideMeth in *; simpl in *.
-    rewrite M.union_empty_L; rewrite M.union_empty_L in H5.
-    remember (M.find a (M.union scs cs)) as ocmv; destruct ocmv.
+  - destruct H5; [discriminate|].
+    rewrite H5 in *.
+    rewrite M.find_union in Heqocmv.
+    remember (M.find a scs) as oscmv; destruct oscmv.
+    + inv Heqocmv.
+      admit. (* TODO *)
 
-    + rewrite H5 in *.
-      rewrite M.find_union in Heqocmv.
-      remember (M.find a scs) as oscmv; destruct oscmv.
-      * inv Heqocmv.
-        admit.
-      * rewrite <-Heqocmv in IHSubstepsInd.
+    + rewrite <-Heqocmv in IHSubstepsInd.
+      match goal with
+        | [H: M.find ?a (M.union ?lm _) = Some _ |- _] =>
+          rewrite M.find_union in H;
+            remember (M.find a lm) as odmv; destruct odmv
+      end.
+
+      * admit. (* TODO *)
+
+      * rewrite H5 in IHSubstepsInd.
         destruct (signIsEq s s); [clear e|elim n; auto].
 
         eapply SubstepsCons; eauto.
-        { 
-        { instantiate (1:= {| upd:= su; unitAnnot:= Rle sr; cms:= scs |}).
-          instantiate (1:= H6).
-          repeat split; simpl; auto.
-          apply M.Disj_remove_1; auto.
+        { eapply inlineDmToMod_Substep_intact; eauto. }
+        { repeat split; simpl; auto.
+          { apply M.Disj_remove_1; auto. }
+          { destruct ann; destruct sul as [|[|]]; auto;
+            intro Hx; elim H4; eapply M.F.P.F.remove_in_iff; eauto.
+          }
         }
-        { reflexivity. }
-        { unfold addLabelLeft, addLabelLeft', getSLabel; f_equal.
-          meq.
+        { unfold mergeLabel, getSLabel, getLabel; f_equal.
+          { destruct sul as [|[|]]; destruct ann; try destruct o; auto; destruct a0;
+            meq; try (rewrite <-Heqodmv; auto; fail); try(inv Heqv; auto; fail).
+            (* TODO: strengthen meq to deal with following "try"s *)
+          }
+          { meq. }
         }
 
-    + 
-          
-  
-  
-  admit.
+  - rewrite M.find_union in Heqocmv.
+    remember (M.find a scs) as oscmv; destruct oscmv; [inv Heqocmv|].
+    rewrite <-Heqocmv in IHSubstepsInd.
+    match goal with
+      | [ |- SubstepsInd _ _ _ ?ll] =>
+        match ll with
+          | (match ?c with Some _ => ?l | None => ?l end) =>
+            replace ll with l by (destruct c; reflexivity)
+        end
+    end.
+
+    eapply SubstepsCons; eauto.
+    + eapply inlineDmToMod_Substep_intact; eauto.
+    + destruct (M.find a ds); repeat split; simpl; auto.
+    + destruct (M.find a ds); reflexivity.
 Qed.
 
 Lemma wellHidden_find:
   forall m a (l: LabelT),
     In a (namesOf (getDefsBodies m)) ->
     wellHidden m (hide l) ->
-    M.find a (defs l) = M.find a (calls l).
+    M.find a (calls l) = None \/ M.find a (defs l) = M.find a (calls l).
 Proof.
   unfold wellHidden, hide; intros.
-  destruct l as [rm dm cm]; simpl in *.
-  admit. (* a bit complicated map stuff *)
+  destruct l as [rm dm cm]; simpl in *; dest.
+
+  specialize (H1 _ H).
+  remember (M.find a cm) as ocm; destruct ocm; auto.
+  right; eapply M.subtractKV_not_In_find; eauto.
 Qed.
 
 Lemma inlineDms'_correct_Substeps:
@@ -408,7 +411,9 @@ Qed.
 Lemma hide_idempotent:
   forall (l: LabelT), hide l = hide (hide l).
 Proof.
-  admit. (* Semantics proof *)
+  intros; destruct l as [ann ds cs].
+  unfold hide; simpl; f_equal;
+  apply M.subtractKV_idempotent.
 Qed.
 
 Lemma inlineDms_correct:

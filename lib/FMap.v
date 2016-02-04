@@ -569,11 +569,29 @@ Module LeibnizFacts (M : MapLeibniz).
       subtractKV deceqA m (empty A) = m.
   Proof. mintros; apply P.fold_Empty; auto. Qed.
 
+  Lemma subtractKV_not_In_find:
+    forall {A} deceqA (m1 m2: t A) k v,
+      ~ In k (subtractKV deceqA m1 m2) ->
+      find k m1 = Some v ->
+      find k m2 = Some v.
+  Proof.
+    admit.
+  Qed.
+
   Lemma subtractKV_remove:
     forall {A : Type} deceqA (m2 m1: t A) k,
       find k m1 = find k m2 ->
       subtractKV deceqA (remove k m1) (remove k m2) =
       subtractKV deceqA m1 m2.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_idempotent:
+    forall {A} deceqA (m1 m2: t A),
+       subtractKV deceqA m1 m2 =
+       subtractKV deceqA (subtractKV deceqA m1 m2)
+                  (subtractKV deceqA m2 m1).
   Proof.
     admit.
   Qed.
