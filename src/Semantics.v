@@ -236,6 +236,29 @@ Section GivenModule.
             }
     Qed.
 
+    Lemma unionCanCombineLabel u l su scs sul a:
+      CanCombineLabel (M.union u (upd a))
+                      (addLabelLeft l a) su scs sul ->
+      CanCombineLabel u l su scs sul.
+    Proof.
+      intros [cond1 [cond2 cond3]].
+      apply M.Disj_union_1 in cond1.
+      unfold addLabelLeft, mergeLabel in cond2.
+      destruct (getSLabel a).
+      destruct l; simpl in *.
+      apply M.Disj_union_2 in cond2.
+      constructor; intuition; simpl in *.
+      destruct (unitAnnot a), annot1, sul; intuition.
+      destruct o2; intuition.
+      destruct o0; intuition.
+      destruct a1; intuition.
+      rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+      destruct o1; intuition.
+      destruct o0; intuition.
+      destruct a1; intuition.
+      rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+    Qed.
+
     Lemma canCombine_consistent_2:
       forall su sul scs (Hss: Substep su sul scs) ss,
         CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul ->
@@ -259,43 +282,8 @@ Section GivenModule.
             rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
           * destruct annot0, (unitAnnot s'), sul; intuition;
             eexists; intuition.
-        + 
-    Qed. (*
-          constructor.
-          destruct annot0.
-          destruct (unitAnnot s').
-          destruct sul.
-          admit.
-          apply M.Disj_union_1 in cond2.
-          rewrite H1, H2 in *.
-          constructor; simpl in *; intuition.
-          * rewrite H1,H2,H3 in *; clear H1 H2 H3.
-            destruct annot0.
-            { destruct y.
-              rewrite M.union_add in cond3.
-              rewrite M.union_empty_L in cond3.
-              rewrite M.F.P.F.add_in_iff in cond3.
-              intuition.
-            }
-            { destruct y.
-              rewrite M.union_add in cond3.
-              rewrite M.union_empty_L in cond3.
-              rewrite M.F.P.F.add_in_iff in cond3.
-              intuition.
-            }
-          * case_eq (unitAnnot s'); intros.
-            { rewrite H1 in *.
-              case_eq annot0; intuition.
-              rewrite H2 in *.
-              destruct sul; intuition.
-              destruct annot0, sul.
-              - 
-              *
-                
-          subst.
-
-        admit.
-    Qed. *)
+        + apply (IHss (unionCanCombineLabel _ _ _ H)); intuition.
+    Qed.
 
     Lemma canCombine_consistent:
       forall su sul scs (Hss: Substep su sul scs) ss,
