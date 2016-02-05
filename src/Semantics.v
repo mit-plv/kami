@@ -95,7 +95,7 @@ Section GivenModule.
           {| annot := match a', a with
                         | None, x => x
                         | x, None => x
-                        | _, _ => None
+                        | x, y => x
                       end; defs := M.union d' d; calls := M.union c' c |}
       end.
     
@@ -152,7 +152,7 @@ Section GivenModule.
       M.Disj su u /\
       M.Disj scs (calls l) /\
       match annot l, sul with
-        | Some _, Rle (Some _) => False
+        | Some _, Rle _ => False
         | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
         | _, _ => True
       end.
@@ -222,7 +222,7 @@ Section GivenModule.
               destruct H; intuition.
               eapply conda2; eauto.
             }
-            { destruct o1; intuition.
+            { destruct o1; intuition; 
               destruct conda3 as [x [y | z]]; discriminate.
             }
             { destruct o1; intuition.
@@ -243,8 +243,59 @@ Section GivenModule.
     Proof.
       induction ss; intros; simpl in *.
       - intuition.
-      - admit.
-    Qed.
+      - destruct H0.
+        + destruct H as [cond1 [cond2 cond3]].
+          subst.
+          unfold addLabelLeft, mergeLabel in *; case_eq (foldSSLabel ss); intros.
+          rewrite H in *.
+          case_eq (getSLabel s'); intros.
+          simpl in *.
+          constructor.
+          apply M.Disj_union_2 in cond1.
+          intuition.
+          constructor; simpl in *; intros.
+          rewrite H1, H2 in *; intuition.
+          destruct annot0, y.
+          rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+          rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+          admit.
+        + admit.
+    Qed. (*
+          constructor.
+          destruct annot0.
+          destruct (unitAnnot s').
+          destruct sul.
+          admit.
+          apply M.Disj_union_1 in cond2.
+          rewrite H1, H2 in *.
+          constructor; simpl in *; intuition.
+          * rewrite H1,H2,H3 in *; clear H1 H2 H3.
+            destruct annot0.
+            { destruct y.
+              rewrite M.union_add in cond3.
+              rewrite M.union_empty_L in cond3.
+              rewrite M.F.P.F.add_in_iff in cond3.
+              intuition.
+            }
+            { destruct y.
+              rewrite M.union_add in cond3.
+              rewrite M.union_empty_L in cond3.
+              rewrite M.F.P.F.add_in_iff in cond3.
+              intuition.
+            }
+          * case_eq (unitAnnot s'); intros.
+            { rewrite H1 in *.
+              case_eq annot0; intuition.
+              rewrite H2 in *.
+              destruct sul; intuition.
+              destruct annot0, sul.
+              - 
+              *
+                
+          subst.
+
+        admit.
+    Qed. *)
 
     Lemma canCombine_consistent:
       forall su sul scs (Hss: Substep su sul scs) ss,

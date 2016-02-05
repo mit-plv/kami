@@ -312,7 +312,7 @@ Proof.
         eapply SubstepsCons; eauto.
         { eapply inlineDmToMod_Substep_intact; eauto. }
         { repeat split; simpl; auto.
-          { apply M.Disj_remove_1; auto. }
+          { apply M.Disj_comm; apply M.Disj_remove_1; apply M.Disj_comm; auto. }
           { destruct ann; destruct sul as [|[|]]; auto;
             intro Hx; elim H4; eapply M.F.P.F.remove_in_iff; eauto.
           }
