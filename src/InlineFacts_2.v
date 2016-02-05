@@ -4,13 +4,6 @@ Require Import Syntax Semantics Wf Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
 
-(* NOTE: inlining should be targeted only for basic modules *)
-Definition BasicMod (m: Modules) :=
-  match m with
-    | Mod _ _ _ => True
-    | _ => False
-  end.
-
 Section HideExts.
   Definition hideMeth (l: LabelT) (dmn: string): LabelT :=
     match M.find dmn (defs l), M.find dmn (calls l) with
