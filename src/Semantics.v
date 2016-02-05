@@ -372,11 +372,35 @@ Definition traceRefines p m1 m2 :=
                   exists s2 sig2, Behavior m2 s2 sig2 /\
                                   equivalentLabelSeq p sig1 sig2.
 
-Theorem staticDynCallsSubstep m o u rm cs:
-  Substep m o u rm cs ->
-  forall f, M.In f cs -> List.In f (getCalls m).
+Theorem staticDynCallsRules m o name a u cs r:
+  In (name :: a)%struct (getRules m) ->
+  SemAction o (a type) u cs r ->
+  forall f, M.In f cs -> In f (getCalls m).
 Proof.
   admit.
+Qed.
+
+Theorem staticDynCallsMeths m o name a u cs r:
+  In (name :: a)%struct (getDefsBodies m) ->
+  forall argument,
+    SemAction o (projT2 a type argument) u cs r ->
+    forall f, M.In f cs -> In f (getCalls m).
+Proof.
+  admit.
+Qed.
+
+
+Theorem staticDynCallsSubstep m o u rm cs:
+  Substep m o u rm cs ->
+  forall f, M.In f cs -> In f (getCalls m).
+Proof.
+  intro H.
+  dependent induction H; simpl in *; intros.
+  - apply (M.F.P.F.empty_in_iff) in H; intuition.
+  - apply (M.F.P.F.empty_in_iff) in H; intuition.
+  - eapply staticDynCallsRules; eauto.
+  - destruct f as [name a]; simpl in *.
+    eapply staticDynCallsMeths; eauto.
 Qed.
 
 Theorem staticDynDefsSubstep m o u far cs:
