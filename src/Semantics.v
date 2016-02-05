@@ -250,16 +250,16 @@ Section GivenModule.
           rewrite H in *.
           case_eq (getSLabel s'); intros.
           simpl in *.
-          constructor.
           apply M.Disj_union_2 in cond1.
-          intuition.
-          constructor; simpl in *; intros.
-          rewrite H1, H2 in *; intuition.
-          destruct annot0, y.
-          rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
-          rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
-          admit.
-        + admit.
+          apply M.Disj_union_1 in cond2.
+          constructor; intuition; simpl in *.
+          * rewrite H1, H2, H3 in *; intuition.
+            destruct annot0, y.
+            rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+            rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+          * destruct annot0, (unitAnnot s'), sul; intuition;
+            eexists; intuition.
+        + 
     Qed. (*
           constructor.
           destruct annot0.
