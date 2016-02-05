@@ -149,8 +149,8 @@ Section GivenModule.
 
     (* Another step semantics based on inductive definitions for Substeps *)
     Definition CanCombineLabel u (l: LabelT) (su: UpdatesT) scs sul :=
-      M.Disj u su /\
-      M.Disj (calls l) scs /\
+      M.Disj su u /\
+      M.Disj scs (calls l) /\
       match annot l, sul with
         | Some _, Rle (Some _) => False
         | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
@@ -185,14 +185,75 @@ Section GivenModule.
                              (mergeLabel (getLabel sul scs) l)
                              ({| upd:= su; unitAnnot:= sul; cms:= scs; substep:= Hss |} :: ss).
 
-    Lemma canCombine_consistent:
+    Lemma canCombine_consistent_1:
       forall su sul scs (Hss: Substep su sul scs) ss,
-        substepsComb ss ->
-        (forall s', In s' ss -> canCombine {| upd := su; unitAnnot := sul;
-                                              cms := scs; substep := Hss |} s') <->
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s') ->
         CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
     Proof.
-      admit.
+      induction ss; intros; simpl in *.
+      - repeat (constructor; simpl in *; try apply M.Disj_empty_2).
+        destruct sul; intuition; try destruct a0; try destruct o0; try intros X;
+          try (apply M.F.P.F.empty_in_iff in X); intuition.
+      - assert (ez: forall s', In s' ss -> canCombine {| substep := Hss |} s') by
+            (intros s' ins'; apply H; intuition).
+        specialize (IHss ez); clear ez.
+        assert (ez: canCombine {| substep := Hss |} a) by
+            (apply H; intuition).
+        clear H.
+        destruct IHss as [condss1 [condss2 condss3]].
+        destruct ez as [conda1 [conda2 [conda3 conda4]]].
+        simpl in *.
+        constructor.
+        + apply M.Disj_union; intuition.
+        + constructor.
+          * unfold addLabelLeft, mergeLabel in *;
+            destruct (foldSSLabel ss); simpl in *.
+            apply M.Disj_union; intuition.
+          * unfold addLabelLeft, mergeLabel in *.
+            destruct (foldSSLabel ss); simpl in *.
+            destruct a; simpl in *.
+            destruct annot0, unitAnnot0, sul; intuition.
+            { destruct o2; intuition.
+              destruct o1; intuition.
+              destruct a0.
+              rewrite M.union_add in H.
+              rewrite M.union_empty_L in H.
+              apply M.F.P.F.add_in_iff in H.
+              destruct H; intuition.
+              eapply conda2; eauto.
+            }
+            { destruct o1; intuition.
+              destruct conda3 as [x [y | z]]; discriminate.
+            }
+            { destruct o1; intuition.
+              destruct o0; intuition.
+              destruct a0.
+              rewrite M.union_add in H.
+              rewrite M.union_empty_L in H.
+              apply M.F.P.F.add_in_iff in H.
+              destruct H; intuition.
+              eapply conda2; eauto.
+            }
+    Qed.
+
+    Lemma canCombine_consistent_2:
+      forall su sul scs (Hss: Substep su sul scs) ss,
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul ->
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s').
+    Proof.
+      induction ss; intros; simpl in *.
+      - intuition.
+      - admit.
+    Qed.
+
+    Lemma canCombine_consistent:
+      forall su sul scs (Hss: Substep su sul scs) ss,
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s') <->
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
+    Proof.
+      intros; constructor.
+      apply canCombine_consistent_1; intuition.
+      apply canCombine_consistent_2; intuition.
     Qed.
 
     Lemma substeps_annot:
