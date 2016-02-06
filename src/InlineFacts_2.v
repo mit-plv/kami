@@ -92,7 +92,7 @@ End SubstepFacts.
 
 Section SubtractKVD.
   Context {A: Type}.
-  Hypothesis deceqA : forall x y : A, sumbool (x = y) (x <> y). 
+  Hypothesis deceqA : forall x y : A, sumbool (x = y) (x <> y).
 
   Fixpoint subtractKVD (m1 m2 : M.t A) (dom: list string): M.t A :=
     match dom with
@@ -101,21 +101,31 @@ Section SubtractKVD.
         match M.find d m1, M.find d m2 with
           | Some v1, Some v2 =>
             match deceqA v1 v2 with
-              | left _ => subtractKVD (M.remove d m1) m2 dom'
+              | left _ => subtractKVD (M.remove d m1) (M.remove d m2) dom'
               | _ => subtractKVD m1 m2 dom'
             end
           | _, _ => subtractKVD m1 m2 dom'
         end
     end.
 
+  Lemma subtractKVD_empty_1:
+    forall dom (m: M.t A), subtractKVD (M.empty _) m dom = M.empty _.
+  Proof. induction dom; simpl; auto. Qed.
+
+  Lemma subtractKVD_empty_2:
+    forall dom (m: M.t A), subtractKVD m (M.empty _) dom = m.
+  Proof.
+    induction dom; simpl; intros; auto.
+    destruct (M.find _ _); auto.
+  Qed.
+
   Lemma subtractKV_subtractKVD_1:
-    forall (m1 m2: M.t A) dom,
+    forall dom (m1 m2: M.t A),
       M.KeysSubset m1 dom ->
       M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
   Proof.
-    intros; M.mind m2.
-    admit. (* TODO: here *)
-  Qed.
+    admit.
+  Qed.  
 
   Lemma subtractKV_subtractKVD_2:
     forall (m1 m2: M.t A) dom,
@@ -123,24 +133,6 @@ Section SubtractKVD.
       M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
   Proof.
     admit.
-  Qed.
-
-  Lemma subtractKVD_remove:
-    forall dom m1 m2 a,
-      subtractKVD (M.remove a m1) (M.remove a m2) dom =
-      subtractKVD (M.remove a m1) m2 dom.
-  Proof.
-    induction dom; auto.
-    intros; simpl.
-    remember (M.find a (M.remove a0 m1)) as aav; destruct aav; [|eapply IHdom; eauto].
-    M.cmp a a0.
-    * rewrite M.F.P.F.remove_eq_o in Heqaav by reflexivity; inv Heqaav.
-    * rewrite M.F.P.F.remove_neq_o by intuition auto.
-      rewrite M.F.P.F.remove_neq_o in Heqaav by intuition auto.
-      remember (M.find a m2) as acv; destruct acv; [|eapply IHdom; eauto].
-      destruct (deceqA a1 a2); [subst|eapply IHdom; eauto].
-      rewrite M.remove_comm.
-      eapply IHdom; eauto.
   Qed.
 
 End SubtractKVD.
@@ -158,7 +150,7 @@ Proof.
     destruct (signIsEq s s0); [|destruct (signIsEq _ _); intuition; apply IHdmsAll].
     subst; destruct (signIsEq s0 s0); intuition auto.
     rewrite IHdmsAll; simpl in *.
-    clear; f_equal; apply subtractKVD_remove.
+    clear; f_equal.
   - destruct (M.find a cs); apply IHdmsAll.
 Qed.
 

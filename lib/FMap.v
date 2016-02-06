@@ -322,17 +322,22 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Definition subtract {A : Type} (m m' : t A) :=
     fold (fun k _ => remove k) m' m.
+
+  Definition subtractKVf {A}
+             (deceqA : forall x y : A, sumbool (x = y) (x <> y)) :=
+    fun k2 v2 m1' =>
+      match M.find k2 m1' with
+        | None => m1'
+        | Some v1 => if deceqA v1 v2 then 
+                       remove k2 m1' else m1' 
+      end.
+  
   Definition subtractKV {A : Type}
              (deceqA : forall x y : A, sumbool (x = y) (x <> y))
              (m1 m2 : t A) : t A :=
-    fold (fun k2 v2 m1' =>
-            match M.find k2 m1' with
-              | None => m1'
-              | Some v1 => if deceqA v1 v2 then 
-                             remove k2 m1' else m1' 
-            end) m2 m1.
+    fold (subtractKVf deceqA) m2 m1.
 
-  Hint Unfold update Sub subtract subtractKV : MapDefs.
+  Hint Unfold update Sub subtract subtractKVf subtractKV : MapDefs.
 
   Ltac mintros := repeat autounfold with MapDefs; intros.
 
