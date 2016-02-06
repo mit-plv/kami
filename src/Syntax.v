@@ -281,11 +281,7 @@ Section GetCalls.
                       ++ (getCallsM ms')
     end.
 
-  Fixpoint getCalls (m: Modules): list string :=
-    match m with
-      | Mod _ rules meths => getCallsR rules ++ getCallsM meths
-      | ConcatMod m1 m2 => getCalls m1 ++ getCalls m2
-    end.
+  Definition getCalls m := getCallsR (getRules m) ++ getCallsM (getDefsBodies m).
 End GetCalls.
 
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies.
