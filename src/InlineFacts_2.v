@@ -97,12 +97,87 @@ Section SubstepFacts.
 
 End SubstepFacts.
 
+Section SubtractKVD.
+  Context {A: Type}.
+  Hypothesis deceqA : forall x y : A, sumbool (x = y) (x <> y). 
+
+  Fixpoint subtractKVD (m1 m2 : M.t A) (dom: list string): M.t A :=
+    match dom with
+      | nil => m1
+      | d :: dom' =>
+        match M.find d m1, M.find d m2 with
+          | Some v1, Some v2 =>
+            match deceqA v1 v2 with
+              | left _ => subtractKVD (M.remove d m1) m2 dom'
+              | _ => subtractKVD m1 m2 dom'
+            end
+          | _, _ => subtractKVD m1 m2 dom'
+        end
+    end.
+
+  Lemma subtractKV_subtractKVD_1:
+    forall (m1 m2: M.t A) dom,
+      M.KeysSubset m1 dom ->
+      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
+  Proof.
+    intros; M.mind m2.
+    admit. (* TODO: here *)
+  Qed.
+
+  Lemma subtractKV_subtractKVD_2:
+    forall (m1 m2: M.t A) dom,
+      M.KeysSubset m2 dom ->
+      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKVD_remove:
+    forall dom m1 m2 a,
+      subtractKVD (M.remove a m1) (M.remove a m2) dom =
+      subtractKVD (M.remove a m1) m2 dom.
+  Proof.
+    induction dom; auto.
+    intros; simpl.
+    remember (M.find a (M.remove a0 m1)) as aav; destruct aav; [|eapply IHdom; eauto].
+    M.cmp a a0.
+    * rewrite M.F.P.F.remove_eq_o in Heqaav by reflexivity; inv Heqaav.
+    * rewrite M.F.P.F.remove_neq_o by intuition auto.
+      rewrite M.F.P.F.remove_neq_o in Heqaav by intuition auto.
+      remember (M.find a m2) as acv; destruct acv; [|eapply IHdom; eauto].
+      destruct (deceqA a1 a2); [subst|eapply IHdom; eauto].
+      rewrite M.remove_comm.
+      eapply IHdom; eauto.
+  Qed.
+
+End SubtractKVD.
+
+Lemma hideMeths_subtractKVD:
+  forall dmsAll (l: LabelT),
+    hideMeths l dmsAll = {| annot := annot l;
+                            defs := subtractKVD signIsEq (defs l) (calls l) dmsAll;
+                            calls := subtractKVD signIsEq (calls l) (defs l) dmsAll |}.
+Proof.
+  induction dmsAll; intros; destruct l as [ann ds cs]; simpl in *; auto.
+  unfold hideMeth; simpl in *.
+  remember (M.find a ds) as odv; destruct odv.
+  - remember (M.find a cs) as ocv; destruct ocv; [|apply IHdmsAll].
+    destruct (signIsEq s s0); [|destruct (signIsEq _ _); intuition; apply IHdmsAll].
+    subst; destruct (signIsEq s0 s0); intuition auto.
+    rewrite IHdmsAll; simpl in *.
+    clear; f_equal; apply subtractKVD_remove.
+  - destruct (M.find a cs); apply IHdmsAll.
+Qed.
+
 Lemma hideMeths_hide:
   forall dmsAll (l: LabelT),
     M.KeysSubset (defs l) dmsAll ->
     hideMeths l dmsAll = hide l.
 Proof.
-  admit. (* correct, but not trivial *)
+  intros; rewrite hideMeths_subtractKVD.
+  unfold hide; f_equal.
+  - rewrite <-subtractKV_subtractKVD_1; auto.
+  - rewrite <-subtractKV_subtractKVD_2; auto.
 Qed.
 
 Lemma inlineDmToMod_getDmsMod:

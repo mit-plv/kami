@@ -348,6 +348,18 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} k k' v (m: t A), k <> k' -> find k (add k' v m) = find k m.
   Proof. intros; apply P.F.add_neq_o; firstorder. Qed.
 
+  Lemma find_add_3:
+    forall {A} k v (m: t A),
+      find k m = Some v -> exists m', m = add k v m' /\ ~ In k m'.
+  Proof.
+    intros; exists (remove k m); split.
+    - ext y; cmp y k.
+      + rewrite find_add_1; assumption.
+      + rewrite find_add_2 by assumption.
+        rewrite P.F.remove_neq_o by intuition; auto.
+    - apply remove_1; auto.
+  Qed.
+
   Ltac find_add_tac :=
     repeat ((rewrite find_add_1 ||rewrite find_add_2 by auto); try reflexivity).
 
