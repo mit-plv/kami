@@ -22,6 +22,9 @@ Section Lists. (* For dealing with domains *)
 
   Lemma SubList_cons_inv: forall a l1 l2, SubList (a :: l1) l2 -> In a l2 /\ SubList l1 l2.
   Proof. unfold SubList; intros; split; intuition. Qed.
+
+  Lemma SubList_cons_right: forall a l1 l2, SubList l1 l2 -> SubList l1 (a :: l2).
+  Proof. unfold SubList; intros; right; auto. Qed.
   
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
@@ -40,6 +43,22 @@ Section Lists. (* For dealing with domains *)
   Proof.
     unfold SubList; intros.
     apply in_app_or in H1; destruct H1; intuition.
+  Qed.
+
+  Lemma SubList_app_comm:
+    forall l1 l2 l3, SubList l1 (l2 ++ l3) -> SubList l1 (l3 ++ l2).
+  Proof.
+    unfold SubList; intros.
+    apply in_or_app.
+    specialize (H e H0); apply in_app_or in H; intuition.
+  Qed.
+
+  Lemma SubList_app_idempotent:
+    forall l1 l2, SubList l1 (l2 ++ l2) -> SubList l1 l2.
+  Proof.
+    unfold SubList; intros.
+    specialize (H e H0).
+    apply in_app_or in H; intuition.
   Qed.
 
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
@@ -368,7 +387,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Ltac find_add_tac :=
     repeat ((rewrite find_add_1 ||rewrite find_add_2 by auto); try reflexivity).
 
-  Ltac proper_tac := compute; intros; subst; auto.
+  Ltac proper_tac := unfold Morphisms.Proper, Morphisms.respectful; intros; subst; auto.
   Hint Extern 1 (Proper _ _) => proper_tac.
 
   Lemma add_idempotent:
@@ -742,6 +761,11 @@ Module LeibnizFacts (M : MapLeibniz).
       KeysSubset m d1 -> SubList d1 d2 -> KeysSubset m d2.
   Proof. mintros; apply H0, H; auto. Qed.
 
+  Lemma KeysDisj_SubList:
+    forall {A} (m: t A) (d1 d2: list E.t),
+      KeysDisj m d1 -> SubList d2 d1 -> KeysDisj m d2.
+  Proof. mintros; auto. Qed.
+    
   Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.
   Proof.
     mintros; left; intro.
