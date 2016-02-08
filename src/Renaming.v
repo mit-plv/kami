@@ -42,9 +42,7 @@ End FnInv.
 Section AlphaRename.
   Variable nameMap: string -> string.
   Variable nameMap1To1: forall x y, nameMap x = nameMap y -> x = y.
-  Variable nameMapInv: string -> string.
   Variable nameMapOnto: forall x, exists y, nameMap y = x.
-  Variable nameMapInvGood: forall s, nameMapInv (nameMap s) = s.
 
   Definition mapName A a := {| attrName := nameMap (@attrName A a); attrType := attrType a |}.
   
@@ -67,32 +65,11 @@ Section AlphaRename.
       | Meth (Some {| attrName := f; attrType := v |}) => Meth (Some {| attrName := nameMap f; attrType := v |})
     end.
 
-  Lemma mapInvKeyMatches k A (m: M.t A): M.Map.In k (mapNamesMap m) -> M.Map.In (nameMapInv k) m.
-  Proof.
-    intros.
-    apply M.map_induction.
-    
-    simpl in *.
-    mind.
-
   Lemma mapNamesKeysEq A (m: M.t A) l:
     M.KeysEq m l ->
     M.KeysEq (mapNamesMap m) (map nameMap l).
   Proof.
-    unfold M.KeysEq in *.
-    constructor; intros.
-    specialize (H (nameMapInv k)).
-    destruct H.
-   *)
-  
+    admit.
+  Qed.
 
-  
-  Theorem substepAlhpaMap regInits rules defMeths o u rm cs (s: Substep regInits rules defMeths o u rm cs):
-    Substep (mapNames regInits) (mapNames rules) (mapNames defMeths) (mapNamesMap o)
-            (mapNamesMap u) (mapNameUnitLabel rm) (mapNamesMap cs).
-  Proof.
-    induction s; simpl.
-    repeat rewrite mapNamesMapEmpty.
-    constructor.
-    simpl in *.
 End AlphaRename.
