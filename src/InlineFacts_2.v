@@ -4,162 +4,12 @@ Require Import Syntax Semantics Wf Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
 
-Section SubtractKVD.
-  Context {A: Type}.
-  Hypothesis deceqA : forall x y : A, sumbool (x = y) (x <> y).
-
-  Definition subtractKVD (m1 m2 : M.t A) (dom: list string): M.t A :=
-    M.fold (fun k2 v2 m1' =>
-              match M.find k2 m1' with
-                | None => m1'
-                | Some v1 => if deceqA v1 v2 then
-                               if in_dec string_dec k2 dom then
-                                 M.remove k2 m1'
-                               else m1'
-                             else m1'
-              end) m2 m1.
-
-  Lemma transpose_neqkey_Equal_subtractKVD:
-    forall dom,
-      M.F.P.transpose_neqkey
-        eq
-        (fun k2 v2 m1' =>
-           match M.find k2 m1' with
-             | Some v1 =>
-               if deceqA v1 v2
-               then
-                 if in_dec string_dec k2 dom
-                 then M.remove k2 m1'
-                 else m1'
-               else m1'
-             | None => m1'
-           end).
-  Proof.
-    simpl; unfold M.F.P.transpose_neqkey; intros.
-
-    repeat
-      match goal with
-        | [ |- context [in_dec string_dec ?k ?l] ] =>
-          destruct (in_dec string_dec k l)
-        | [ |- context [M.find ?k ?m] ] =>
-          let okv := fresh "okv" in
-          remember (M.find k m) as okv; destruct okv
-        | [H: _ = M.find _ _ |- _] => rewrite <-H
-        | [ |- context [deceqA ?a1 ?a2] ] =>
-          destruct (deceqA a1 a2); [subst|]
-        | [ |- context [M.remove ?k ?m] ] =>
-          try rewrite M.remove_find_None by auto
-      end;
-      repeat
-        match goal with
-          | [H1: ?v1 = M.find ?k ?m, H2: ?v2 = M.find ?k ?m |- _] =>
-            rewrite <-H1 in H2
-          | [H: Some ?v1 = Some ?v2 |- _] => inv H
-          | [H: Some _ = None |- _] => discriminate
-          | [H: ?a = ?a -> False |- _] => elim H; auto
-          | [H: context [M.find ?k (M.remove ?k _)] |- _] =>
-            rewrite M.F.P.F.remove_eq_o in H; auto
-          | [H: context [M.find ?k1 (M.remove ?k2 _)] |- _] =>
-            try (rewrite M.F.P.F.remove_neq_o in H; auto)
-        end; try reflexivity; try discriminate;
-      meq.
-  Qed.
-
-  Lemma subtractKVD_nil:
-    forall (m1 m2: M.t A), subtractKVD m1 m2 nil = m1.
-  Proof.
-    intros; unfold subtractKVD; rewrite M.fold_1.
-    induction (M.elements m2); auto.
-    simpl in *.
-    destruct (M.find (fst a) m1); auto.
-    destruct (deceqA a0 (snd a)); auto.
-  Qed.
-
-  Lemma subtractKVD_cons_1:
-    forall dom d (m1 m2: M.t A),
-      M.find d m1 = None \/ M.find d m2 = None \/ M.find d m1 <> M.find d m2 ->
-      subtractKVD m1 m2 (d :: dom) = subtractKVD m1 m2 dom.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma subtractKVD_cons_2:
-    forall dom d (m1 m2: M.t A),
-      M.find d m1 <> None ->
-      M.find d m1 = M.find d m2 ->
-      subtractKVD m1 m2 (d :: dom) = subtractKVD (M.remove d m1) (M.remove d m2) dom.
-  Proof.
-    admit.
-  Qed.
-    
-  Lemma subtractKVD_empty_1:
-    forall dom (m: M.t A), subtractKVD (M.empty _) m dom = M.empty _.
-  Proof.
-    intros; unfold subtractKVD; rewrite M.fold_1.
-    induction (M.elements m); auto.
-  Qed.
-
-  Lemma subtractKVD_empty_2:
-    forall dom (m: M.t A), subtractKVD m (M.empty _) dom = m.
-  Proof.
-    intros; unfold subtractKVD; rewrite M.fold_1.
-    induction (M.elements m); auto.
-  Qed.
-
-  Lemma subtractKV_subtractKVD_1:
-    forall dom (m1 m2: M.t A),
-      M.KeysSubset m1 dom ->
-      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
-  Proof.
-    intros; unfold M.subtractKV, subtractKVD.
-    do 2 rewrite M.fold_1.
-    generalize dependent m1.
-    induction (M.elements m2); intros; [reflexivity|].
-    unfold M.subtractKVf; simpl.
-    destruct a as [ak av]; simpl in *.
-    remember (M.find ak m1) as ov1; destruct ov1.
-    - destruct (deceqA a av); [subst|].
-      + destruct (in_dec string_dec ak dom).
-        * apply IHl.
-          unfold M.KeysSubset; intros.
-          apply M.F.P.F.remove_in_iff in H0; dest.
-          apply H; auto.
-        * exfalso; elim n.
-          apply H, M.F.P.F.in_find_iff.
-          rewrite <-Heqov1; discriminate.
-      + apply IHl; auto.
-    - apply IHl; auto.
-  Qed.
-
-  Lemma subtractKV_subtractKVD_2:
-    forall (m1 m2: M.t A) dom,
-      M.KeysSubset m2 dom ->
-      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
-  Proof.
-    intros; unfold M.subtractKV, subtractKVD.
-    do 2 rewrite M.fold_1.
-    apply M.KeysSubset_elements in H.
-    
-    generalize dependent m1.
-    induction (M.elements m2); intros; [reflexivity|].
-    unfold M.subtractKVf; simpl.
-    destruct a as [ak av]; simpl in *.
-    assert (SubList (map (fun e => fst e) l) dom)
-      by (apply SubList_cons_inv in H; intuition).
-    specialize (IHl H0).
-
-    remember (M.find ak m1) as ov1; destruct ov1.
-    - destruct (deceqA a av); [subst|].
-      + destruct (in_dec string_dec ak dom).
-        * apply IHl.
-        * exfalso; elim n; apply H; auto.
-      + apply IHl; auto.
-    - apply IHl; auto.
-  Qed.
-
-End SubtractKVD.
-
-Hint Immediate transpose_neqkey_Equal_subtractKVD.
+(* NOTE: inlining should be targeted only for basic modules *)
+Definition BasicMod (m: Modules) :=
+  match m with
+    | Mod _ _ _ => True
+    | _ => False
+  end.
 
 Section HideExts.
   Definition hideMeth (l: LabelT) (dmn: string): LabelT :=
@@ -174,6 +24,12 @@ Section HideExts.
       | _, _ => l
     end.
 
+  Fixpoint hideMeths (l: LabelT) (dms: list string): LabelT :=
+    match dms with
+      | nil => l
+      | dm :: dms' => hideMeths (hideMeth l dm) dms'
+    end.
+
   Lemma hideMeth_preserves_hide:
     forall (l: LabelT ) dm,
       hide (hideMeth l dm) = hide l.
@@ -184,55 +40,6 @@ Section HideExts.
     remember (M.find dm cms) as ocm; destruct ocm; [|reflexivity].
     destruct (signIsEq s s0); [|reflexivity].
     subst; f_equal; auto; apply M.subtractKV_remove; rewrite <-Heqodm, <-Heqocm; auto.
-  Qed.
-
-  Definition hideMeths (l: LabelT) (dms: list string): LabelT :=
-    {| annot := annot l;
-       defs := subtractKVD signIsEq (defs l) (calls l) dms;
-       calls := subtractKVD signIsEq (calls l) (defs l) dms |}.
-
-  Lemma hideMeths_nil:
-    forall l, hideMeths l nil = l.
-  Proof.
-    intros; destruct l as [ann ds cs].
-    unfold hideMeths; f_equal; simpl; apply subtractKVD_nil.
-  Qed.
-
-  Lemma hideMeths_hideMeth:
-    forall l d dom, hideMeths l (d :: dom) =
-                    hideMeths (hideMeth l d) dom.
-  Proof.
-    destruct l as [ann ds cs].
-    intros; unfold hideMeths; f_equal; simpl.
-
-    - unfold hideMeth; simpl.
-      destruct (M.find d ds);
-        try destruct (M.find d cs);
-        try destruct (signIsEq _ _); reflexivity.
-
-    - unfold hideMeth; simpl.
-      remember (M.find d ds) as odv; destruct odv; simpl; [|apply subtractKVD_cons_1; auto].
-      remember (M.find d cs) as ocv; destruct ocv; simpl; [|apply subtractKVD_cons_1; auto].
-      destruct (signIsEq s s0); simpl.
-      + subst; apply subtractKVD_cons_2; auto.
-        * rewrite <-Heqodv; discriminate.
-        * rewrite <-Heqocv, <-Heqodv; reflexivity.
-      + apply subtractKVD_cons_1.
-        right; right.
-        rewrite <-Heqocv, <-Heqodv.
-        intro Hx; elim n; inv Hx; auto.
-
-    - unfold hideMeth; simpl.
-      remember (M.find d ds) as odv; destruct odv; simpl; [|apply subtractKVD_cons_1; auto].
-      remember (M.find d cs) as ocv; destruct ocv; simpl; [|apply subtractKVD_cons_1; auto].
-      destruct (signIsEq s s0); simpl.
-      + subst; apply subtractKVD_cons_2; auto.
-        * rewrite <-Heqocv; discriminate.
-        * rewrite <-Heqocv, <-Heqodv; reflexivity.
-      + apply subtractKVD_cons_1.
-        right; right.
-        rewrite <-Heqocv, <-Heqodv.
-        intro Hx; elim n; inv Hx; auto.
   Qed.
 
 End HideExts.
@@ -290,13 +97,84 @@ Section SubstepFacts.
 
 End SubstepFacts.
 
+Section SubtractKVD.
+  Context {A: Type}.
+  Hypothesis deceqA : forall x y : A, sumbool (x = y) (x <> y). 
+
+  Fixpoint subtractKVD (m1 m2 : M.t A) (dom: list string): M.t A :=
+    match dom with
+      | nil => m1
+      | d :: dom' =>
+        match M.find d m1, M.find d m2 with
+          | Some v1, Some v2 =>
+            match deceqA v1 v2 with
+              | left _ => subtractKVD (M.remove d m1) m2 dom'
+              | _ => subtractKVD m1 m2 dom'
+            end
+          | _, _ => subtractKVD m1 m2 dom'
+        end
+    end.
+
+  Lemma subtractKV_subtractKVD_1:
+    forall (m1 m2: M.t A) dom,
+      M.KeysSubset m1 dom ->
+      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_subtractKVD_2:
+    forall (m1 m2: M.t A) dom,
+      M.KeysSubset m2 dom ->
+      M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKVD_remove:
+    forall dom m1 m2 a,
+      subtractKVD (M.remove a m1) (M.remove a m2) dom =
+      subtractKVD (M.remove a m1) m2 dom.
+  Proof.
+    induction dom; auto.
+    intros; simpl.
+    remember (M.find a (M.remove a0 m1)) as aav; destruct aav; [|eapply IHdom; eauto].
+    M.cmp a a0.
+    * rewrite M.F.P.F.remove_eq_o in Heqaav by reflexivity; inv Heqaav.
+    * rewrite M.F.P.F.remove_neq_o by intuition auto.
+      rewrite M.F.P.F.remove_neq_o in Heqaav by intuition auto.
+      remember (M.find a m2) as acv; destruct acv; [|eapply IHdom; eauto].
+      destruct (deceqA a1 a2); [subst|eapply IHdom; eauto].
+      rewrite M.remove_comm.
+      eapply IHdom; eauto.
+  Qed.
+
+End SubtractKVD.
+
+Lemma hideMeths_subtractKVD:
+  forall dmsAll (l: LabelT),
+    hideMeths l dmsAll = {| annot := annot l;
+                            defs := subtractKVD signIsEq (defs l) (calls l) dmsAll;
+                            calls := subtractKVD signIsEq (calls l) (defs l) dmsAll |}.
+Proof.
+  induction dmsAll; intros; destruct l as [ann ds cs]; simpl in *; auto.
+  unfold hideMeth; simpl in *.
+  remember (M.find a ds) as odv; destruct odv.
+  - remember (M.find a cs) as ocv; destruct ocv; [|apply IHdmsAll].
+    destruct (signIsEq s s0); [|destruct (signIsEq _ _); intuition; apply IHdmsAll].
+    subst; destruct (signIsEq s0 s0); intuition auto.
+    rewrite IHdmsAll; simpl in *.
+    clear; f_equal; apply subtractKVD_remove.
+  - destruct (M.find a cs); apply IHdmsAll.
+Qed.
+
 Lemma hideMeths_hide:
   forall dmsAll (l: LabelT),
     M.KeysSubset (defs l) dmsAll ->
     hideMeths l dmsAll = hide l.
 Proof.
-  intros.
-  unfold hide, hideMeths; f_equal.
+  intros; rewrite hideMeths_subtractKVD.
+  unfold hide; f_equal.
   - rewrite <-subtractKV_subtractKVD_1; auto.
   - rewrite <-subtractKV_subtractKVD_2; auto.
 Qed.
@@ -681,10 +559,9 @@ Lemma inlineDms'_correct_Substeps:
     snd (inlineDms' m cdms) = true ->
     SubstepsInd (fst (inlineDms' m cdms)) or nr (hideMeths l cdms).
 Proof.
-  induction cdms; [intros; simpl; rewrite hideMeths_nil; auto|].
+  induction cdms; auto.
   
   intros; simpl.
-  rewrite hideMeths_hideMeth.
   apply SubList_cons_inv in Hcdms; dest.
   remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl.
   destruct ib.
