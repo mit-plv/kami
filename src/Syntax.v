@@ -237,6 +237,32 @@ Fixpoint getDefsBodies (m: Modules): list DefMethT :=
 
 Definition getDefs m: list string := namesOf (getDefsBodies m).
 
+Section AppendAction.
+  Variable type: Kind -> Type.
+  
+  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
+           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
+    match a1 with
+      | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
+      | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
+      | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
+      | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
+      | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
+      | Assert_ ae cont => Assert_ ae (appendAction cont a2)
+      | Return e => Let_ e a2
+    end.
+
+  Lemma appendAction_assoc:
+    forall {retT1 retT2 retT3}
+           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
+           (a3: type retT2 -> ActionT type retT3),
+      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
+  Proof.
+    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
+  Qed.
+
+End AppendAction.
+
 Section GetCalls.
   Definition typeUT (k: Kind): Type := unit.
   Definition fullTypeUT := fullType typeUT.
@@ -267,6 +293,18 @@ Section GetCalls.
       | Return _ => nil
     end.
 
+  Lemma getCallsA_appendAction:
+    forall {retK1} (a1: ActionT typeUT retK1)
+           {retK2} (a2: typeUT retK1 -> ActionT typeUT retK2),
+      getCallsA (appendAction a1 a2) =
+      getCallsA a1 ++ getCallsA (a2 tt).
+  Proof.
+    induction a1; simpl; intros; auto.
+    - f_equal; auto.
+    - do 2 rewrite <-app_assoc.
+      f_equal; f_equal; auto.
+  Qed.
+
   Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
@@ -281,50 +319,16 @@ Section GetCalls.
                       ++ (getCallsM ms')
     end.
 
-  Fixpoint getCalls (m: Modules): list string :=
-    match m with
-      | Mod _ rules meths => getCallsR rules ++ getCallsM meths
-      | ConcatMod m1 m2 => getCalls m1 ++ getCalls m2
-    end.
-End GetCalls.
-
-Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies.
-
-
-
-Section GetMeths.
   Lemma getCallsM_app: forall ms1 ms2, getCallsM (ms1 ++ ms2) = getCallsM ms1 ++ getCallsM ms2.
   Proof.
     induction ms1; intros; [reflexivity|].
     simpl; rewrite IHms1; apply app_assoc.
   Qed.
-End GetMeths.
 
-Section AppendAction.
-  Variable type: Kind -> Type.
-  
-  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
-           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
-    match a1 with
-      | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
-      | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
-      | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
-      | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
-      | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
-      | Assert_ ae cont => Assert_ ae (appendAction cont a2)
-      | Return e => Let_ e a2
-    end.
+  Definition getCalls m := getCallsR (getRules m) ++ getCallsM (getDefsBodies m).
+End GetCalls.
 
-  Lemma appendAction_assoc:
-    forall {retT1 retT2 retT3}
-           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
-           (a3: type retT2 -> ActionT type retT3),
-      appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
-  Proof.
-    induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
-  Qed.
-
-End AppendAction.
+Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies.
 
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).

@@ -95,7 +95,7 @@ Section GivenModule.
           {| annot := match a', a with
                         | None, x => x
                         | x, None => x
-                        | _, _ => None
+                        | x, y => x
                       end; defs := M.union d' d; calls := M.union c' c |}
       end.
     
@@ -149,10 +149,10 @@ Section GivenModule.
 
     (* Another step semantics based on inductive definitions for Substeps *)
     Definition CanCombineLabel u (l: LabelT) (su: UpdatesT) scs sul :=
-      M.Disj u su /\
-      M.Disj (calls l) scs /\
+      M.Disj su u /\
+      M.Disj scs (calls l) /\
       match annot l, sul with
-        | Some _, Rle (Some _) => False
+        | Some _, Rle _ => False
         | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
         | _, _ => True
       end.
@@ -185,14 +185,114 @@ Section GivenModule.
                              (mergeLabel (getLabel sul scs) l)
                              ({| upd:= su; unitAnnot:= sul; cms:= scs; substep:= Hss |} :: ss).
 
-    Lemma canCombine_consistent:
+    Lemma canCombine_consistent_1:
       forall su sul scs (Hss: Substep su sul scs) ss,
-        substepsComb ss ->
-        (forall s', In s' ss -> canCombine {| upd := su; unitAnnot := sul;
-                                              cms := scs; substep := Hss |} s') <->
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s') ->
         CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
     Proof.
-      admit.
+      induction ss; intros; simpl in *.
+      - repeat (constructor; simpl in *; try apply M.Disj_empty_2).
+        destruct sul; intuition; try destruct a0; try destruct o0; try intros X;
+          try (apply M.F.P.F.empty_in_iff in X); intuition.
+      - assert (ez: forall s', In s' ss -> canCombine {| substep := Hss |} s') by
+            (intros s' ins'; apply H; intuition).
+        specialize (IHss ez); clear ez.
+        assert (ez: canCombine {| substep := Hss |} a) by
+            (apply H; intuition).
+        clear H.
+        destruct IHss as [condss1 [condss2 condss3]].
+        destruct ez as [conda1 [conda2 [conda3 conda4]]].
+        simpl in *.
+        constructor.
+        + apply M.Disj_union; intuition.
+        + constructor.
+          * unfold addLabelLeft, mergeLabel in *;
+            destruct (foldSSLabel ss); simpl in *.
+            apply M.Disj_union; intuition.
+          * unfold addLabelLeft, mergeLabel in *.
+            destruct (foldSSLabel ss); simpl in *.
+            destruct a; simpl in *.
+            destruct annot0, unitAnnot0, sul; intuition.
+            { destruct o2; intuition.
+              destruct o1; intuition.
+              destruct a0.
+              rewrite M.union_add in H.
+              rewrite M.union_empty_L in H.
+              apply M.F.P.F.add_in_iff in H.
+              destruct H; intuition.
+              eapply conda2; eauto.
+            }
+            { destruct o1; intuition; 
+              destruct conda3 as [x [y | z]]; discriminate.
+            }
+            { destruct o1; intuition.
+              destruct o0; intuition.
+              destruct a0.
+              rewrite M.union_add in H.
+              rewrite M.union_empty_L in H.
+              apply M.F.P.F.add_in_iff in H.
+              destruct H; intuition.
+              eapply conda2; eauto.
+            }
+    Qed.
+
+    Lemma unionCanCombineLabel u l su scs sul a:
+      CanCombineLabel (M.union u (upd a))
+                      (addLabelLeft l a) su scs sul ->
+      CanCombineLabel u l su scs sul.
+    Proof.
+      intros [cond1 [cond2 cond3]].
+      apply M.Disj_union_1 in cond1.
+      unfold addLabelLeft, mergeLabel in cond2.
+      destruct (getSLabel a).
+      destruct l; simpl in *.
+      apply M.Disj_union_2 in cond2.
+      constructor; intuition; simpl in *.
+      destruct (unitAnnot a), annot1, sul; intuition.
+      destruct o2; intuition.
+      destruct o0; intuition.
+      destruct a1; intuition.
+      rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+      destruct o1; intuition.
+      destruct o0; intuition.
+      destruct a1; intuition.
+      rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+    Qed.
+
+    Lemma canCombine_consistent_2:
+      forall su sul scs (Hss: Substep su sul scs) ss,
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul ->
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s').
+    Proof.
+      induction ss; intros; simpl in *.
+      - intuition.
+      - destruct H0.
+        + destruct H as [cond1 [cond2 cond3]].
+          subst.
+          unfold addLabelLeft, mergeLabel in *; case_eq (foldSSLabel ss); intros.
+          rewrite H in *.
+          case_eq (getSLabel s'); intros.
+          simpl in *.
+          apply M.Disj_union_2 in cond1.
+          apply M.Disj_union_1 in cond2.
+          constructor; intuition; simpl in *.
+          * rewrite H1, H2, H3 in *; intuition.
+            destruct annot0, y.
+            rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+            rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
+          * destruct annot0, (unitAnnot s'), sul; intuition;
+            eexists; intuition.
+        + apply (IHss (unionCanCombineLabel _ _ _ H)); intuition.
+    Qed.
+
+    Lemma canCombine_consistent:
+      forall su sul scs (Hss: Substep su sul scs) ss,
+        (forall s', In s' ss -> canCombine {| substep := Hss |} s') <->
+        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
+    Proof.
+      intros; constructor.
+      apply canCombine_consistent_1; intuition.
+      apply canCombine_consistent_2; intuition.
     Qed.
 
     Lemma substeps_annot:
@@ -272,11 +372,35 @@ Definition traceRefines p m1 m2 :=
                   exists s2 sig2, Behavior m2 s2 sig2 /\
                                   equivalentLabelSeq p sig1 sig2.
 
-Theorem staticDynCallsSubstep m o u rm cs:
-  Substep m o u rm cs ->
-  forall f, M.In f cs -> List.In f (getCalls m).
+Theorem staticDynCallsRules m o name a u cs r:
+  In (name :: a)%struct (getRules m) ->
+  SemAction o (a type) u cs r ->
+  forall f, M.In f cs -> In f (getCalls m).
 Proof.
   admit.
+Qed.
+
+Theorem staticDynCallsMeths m o name a u cs r:
+  In (name :: a)%struct (getDefsBodies m) ->
+  forall argument,
+    SemAction o (projT2 a type argument) u cs r ->
+    forall f, M.In f cs -> In f (getCalls m).
+Proof.
+  admit.
+Qed.
+
+
+Theorem staticDynCallsSubstep m o u rm cs:
+  Substep m o u rm cs ->
+  forall f, M.In f cs -> In f (getCalls m).
+Proof.
+  intro H.
+  dependent induction H; simpl in *; intros.
+  - apply (M.F.P.F.empty_in_iff) in H; intuition.
+  - apply (M.F.P.F.empty_in_iff) in H; intuition.
+  - eapply staticDynCallsRules; eauto.
+  - destruct f as [name a]; simpl in *.
+    eapply staticDynCallsMeths; eauto.
 Qed.
 
 Theorem staticDynDefsSubstep m o u far cs:
