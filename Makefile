@@ -1,4 +1,4 @@
-IGNORE:=src/AlphaRenaming
+IGNORE:=src/Renaming
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))

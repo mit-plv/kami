@@ -61,22 +61,6 @@ Section MapSet.
   Qed.
 End MapSet.
 
-(*
-Definition transformLabel l p :=
-  match l with
-    | {| annot := a; defs := dfs; calls := clls |} => {| annotStrip := match a with
-                                                                         | Some _ => true
-                                                                         | None => false
-                                                                       end;
-                                                         defsStrip := p dfs;
-                                                         callsStrip := p clls |}
-  end.
-
-Definition equivalentLabel p l1 l2 :=
-  transformLabel l1 p = transformLabel l2 (fun x => x).
-*)
-
-
 Section Decomposition.
   Variable imp spec: Modules.
   Variable theta: RegsT -> RegsT.
