@@ -551,13 +551,7 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma transpose_neqkey_Equal_subtractKV:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y)),
-      P.transpose_neqkey
-        eq
-        (fun k2 v2 m1' =>
-           match find k2 m1' with
-             | Some v1 => if deceqA v1 v2 then remove k2 m1' else m1'
-             | None => m1'
-           end).
+      P.transpose_neqkey eq (subtractKVf deceqA).
   Proof.
     compute; intros; simpl.
 
@@ -596,8 +590,9 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; mind m.
     - apply P.fold_Empty; auto.
     - apply leibniz; rewrite P.fold_add with (eqA:= eq); auto.
-      rewrite H; rewrite P.F.empty_o.
-      apply P.F.Equal_refl.
+      + rewrite H; rewrite P.F.empty_o.
+        apply P.F.Equal_refl.
+      + apply transpose_neqkey_Equal_subtractKV.
   Qed.
 
   Lemma subtractKV_empty_2:
@@ -760,6 +755,19 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} (m: t A) (d1 d2: list E.t),
       KeysSubset m d1 -> SubList d1 d2 -> KeysSubset m d2.
   Proof. mintros; apply H0, H; auto. Qed.
+
+  Lemma KeysSubset_elements:
+    forall {A} (m: t A) (d: list E.t),
+      KeysSubset m d -> SubList (List.map (fun e => fst e) (elements m)) d.
+  Proof.
+    unfold SubList; mintros.
+    apply H; rewrite P.F.elements_in_iff.
+    apply in_map_iff in H0; dest.
+    destruct x; simpl in *; subst.
+    exists a.
+    apply In_InA; auto.
+    apply P.eqke_equiv.
+  Qed.
 
   Lemma KeysDisj_SubList:
     forall {A} (m: t A) (d1 d2: list E.t),

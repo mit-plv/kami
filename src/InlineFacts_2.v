@@ -19,7 +19,6 @@ Section SubtractKVD.
                              else m1'
               end) m2 m1.
 
-
   Lemma transpose_neqkey_Equal_subtractKVD:
     forall dom,
       M.F.P.transpose_neqkey
@@ -75,6 +74,23 @@ Section SubtractKVD.
     destruct (M.find (fst a) m1); auto.
     destruct (deceqA a0 (snd a)); auto.
   Qed.
+
+  Lemma subtractKVD_cons_1:
+    forall dom d (m1 m2: M.t A),
+      M.find d m1 = None \/ M.find d m2 = None \/ M.find d m1 <> M.find d m2 ->
+      subtractKVD m1 m2 (d :: dom) = subtractKVD m1 m2 dom.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKVD_cons_2:
+    forall dom d (m1 m2: M.t A),
+      M.find d m1 <> None ->
+      M.find d m1 = M.find d m2 ->
+      subtractKVD m1 m2 (d :: dom) = subtractKVD (M.remove d m1) (M.remove d m2) dom.
+  Proof.
+    admit.
+  Qed.
     
   Lemma subtractKVD_empty_1:
     forall dom (m: M.t A), subtractKVD (M.empty _) m dom = M.empty _.
@@ -120,7 +136,25 @@ Section SubtractKVD.
       M.KeysSubset m2 dom ->
       M.subtractKV deceqA m1 m2 = subtractKVD m1 m2 dom.
   Proof.
-    admit.
+    intros; unfold M.subtractKV, subtractKVD.
+    do 2 rewrite M.fold_1.
+    apply M.KeysSubset_elements in H.
+    
+    generalize dependent m1.
+    induction (M.elements m2); intros; [reflexivity|].
+    unfold M.subtractKVf; simpl.
+    destruct a as [ak av]; simpl in *.
+    assert (SubList (map (fun e => fst e) l) dom)
+      by (apply SubList_cons_inv in H; intuition).
+    specialize (IHl H0).
+
+    remember (M.find ak m1) as ov1; destruct ov1.
+    - destruct (deceqA a av); [subst|].
+      + destruct (in_dec string_dec ak dom).
+        * apply IHl.
+        * exfalso; elim n; apply H; auto.
+      + apply IHl; auto.
+    - apply IHl; auto.
   Qed.
 
 End SubtractKVD.
@@ -176,13 +210,29 @@ Section HideExts.
         try destruct (M.find d cs);
         try destruct (signIsEq _ _); reflexivity.
 
-    - admit.
-      (* unfold hideMeth; simpl. *)
-      (* remember (M.find d ds) as odv; destruct odv; simpl. *)
-      (* + remember (M.find d cs) as ocv; destruct ocv; simpl. *)
-      (*   * destruct (signIsEq s s0); simpl. *)
+    - unfold hideMeth; simpl.
+      remember (M.find d ds) as odv; destruct odv; simpl; [|apply subtractKVD_cons_1; auto].
+      remember (M.find d cs) as ocv; destruct ocv; simpl; [|apply subtractKVD_cons_1; auto].
+      destruct (signIsEq s s0); simpl.
+      + subst; apply subtractKVD_cons_2; auto.
+        * rewrite <-Heqodv; discriminate.
+        * rewrite <-Heqocv, <-Heqodv; reflexivity.
+      + apply subtractKVD_cons_1.
+        right; right.
+        rewrite <-Heqocv, <-Heqodv.
+        intro Hx; elim n; inv Hx; auto.
 
-    - admit.
+    - unfold hideMeth; simpl.
+      remember (M.find d ds) as odv; destruct odv; simpl; [|apply subtractKVD_cons_1; auto].
+      remember (M.find d cs) as ocv; destruct ocv; simpl; [|apply subtractKVD_cons_1; auto].
+      destruct (signIsEq s s0); simpl.
+      + subst; apply subtractKVD_cons_2; auto.
+        * rewrite <-Heqocv; discriminate.
+        * rewrite <-Heqocv, <-Heqodv; reflexivity.
+      + apply subtractKVD_cons_1.
+        right; right.
+        rewrite <-Heqocv, <-Heqodv.
+        intro Hx; elim n; inv Hx; auto.
   Qed.
 
 End HideExts.
