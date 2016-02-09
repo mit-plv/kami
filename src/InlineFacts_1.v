@@ -87,7 +87,7 @@ Proof.
 
       destruct meth; apply inlineDm_SemAction_intact; auto.
 
-    + econstructor; eauto.
+    + econstructor.
       * instantiate (1:= M.union cm1 (M.remove meth calls)).
         instantiate (1:= mret).
         admit. (* map stuff; not trivial *)
@@ -95,9 +95,6 @@ Proof.
         { inv Ha; destruct_existT.
           eapply wfAction_calls_weakening; eauto.
           apply SubList_nil.
-        }
-        { apply M.Disj_comm, M.Disj_add_2 in H2; dest.
-          apply M.Disj_comm; auto.
         }
         { admit. (* map stuff; not trivial *) }
         
@@ -113,8 +110,6 @@ Proof.
     + apply IHa; auto.
       * eapply wfAction_regs_weakening; eauto.
         apply SubList_nil.
-      * apply M.Disj_comm, M.Disj_add_2 in H0; dest.
-        apply M.Disj_comm; auto.
 
   - inv Ha; destruct_existT.
     inv H4; destruct_existT.
@@ -131,9 +126,7 @@ Proof.
           rewrite M.union_assoc, M.remove_union, M.union_assoc.
           eapply SemIfElseTrue; eauto.
           { eapply IHa1; eauto.
-            { eapply wfAction_appendAction_calls_1; eauto. }
-            { eapply M.Disj_union_1; eauto. }
-            { eapply M.Disj_union_1; eauto. }
+            eapply wfAction_appendAction_calls_1; eauto.
           }
           { rewrite M.remove_find_None by auto.
             destruct meth; apply inlineDm_SemAction_intact; auto.
@@ -160,9 +153,7 @@ Proof.
           destruct meth; eapply inlineDm_SemAction_intact; eauto.
         }
         { apply H0; auto.
-          { eapply wfAction_appendAction_calls_2; eauto. }
-          { eapply M.Disj_union_2; eauto. }
-          { eapply M.Disj_union_2; eauto. }
+          eapply wfAction_appendAction_calls_2; eauto.
         }
         
     + rewrite M.find_union in H3.
@@ -178,9 +169,7 @@ Proof.
           rewrite M.union_assoc, M.remove_union, M.union_assoc.
           eapply SemIfElseFalse; eauto.
           { eapply IHa2; eauto.
-            { eapply wfAction_appendAction_calls_1; eauto. }
-            { eapply M.Disj_union_1; eauto. }
-            { eapply M.Disj_union_1; eauto. }
+            eapply wfAction_appendAction_calls_1; eauto.
           }
           { rewrite M.remove_find_None by auto.
             destruct meth; apply inlineDm_SemAction_intact; auto.
@@ -207,9 +196,7 @@ Proof.
           destruct meth; eapply inlineDm_SemAction_intact; eauto.
         }
         { apply H0; auto.
-          { eapply wfAction_appendAction_calls_2; eauto. }
-          { eapply M.Disj_union_2; eauto. }
-          { eapply M.Disj_union_2; eauto. }
+          eapply wfAction_appendAction_calls_2; eauto.
         }
 
   - inv H3; inv Ha; destruct_existT.

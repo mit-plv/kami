@@ -1022,6 +1022,19 @@ Ltac solve_disj :=
 
 Ltac mdisj := dest_disj; solve_disj.
 
+Ltac dest_in :=
+  repeat
+    match goal with
+      | [H: ~ M.In _ _ |- _] =>
+        apply M.F.P.F.not_find_in_iff in H
+      | [H: M.In _ _ -> False |- _] =>
+        apply M.F.P.F.not_find_in_iff in H
+      | [ |- ~ M.In _ _] =>
+        apply M.F.P.F.not_find_in_iff
+      | [ |- M.In _ _ -> False] =>
+        apply M.F.P.F.not_find_in_iff
+    end.
+
 Ltac mred :=
   repeat
     (match goal with
@@ -1063,6 +1076,9 @@ Ltac mred :=
          (rewrite M.find_add_2 by intuition idtac)
        | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
          (rewrite M.find_add_2 by intuition idtac)
+       | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
+         M.cmp y k; [rewrite M.find_add_1|
+                     rewrite M.find_add_2 by intuition idtac]
      end; try discriminate; try reflexivity; try (intuition idtac; fail)).
 
 Ltac mcontra :=
@@ -1078,8 +1094,11 @@ Ltac mcontra :=
         elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
 
-Ltac findeq := dest_disj; mred; mcontra; intuition auto.
+Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition auto.
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
+
+Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
+Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
 
 Require Import Lib.Struct.
 

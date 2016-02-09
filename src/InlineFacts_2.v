@@ -4,13 +4,6 @@ Require Import Syntax Semantics Wf Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
 
-(* NOTE: inlining should be targeted only for basic modules *)
-Definition BasicMod (m: Modules) :=
-  match m with
-    | Mod _ _ _ => True
-    | _ => False
-  end.
-
 Section HideExts.
   Definition hideMeth (l: LabelT) (dmn: string): LabelT :=
     match M.find dmn (defs l), M.find dmn (calls l) with
@@ -457,45 +450,102 @@ Section SubstepsFacts.
              defs := M.remove dm (M.union (M.empty (sigT SignT)) ds);
              calls := M.remove dm (M.union scs cs) |}.
   Proof.
-    induction 2; simpl; intros;
-    [inv H0; rewrite M.find_empty in H2; discriminate|].
+    induction 2; simpl; intros; [inv H0; mcontra|].
     destruct l as [pann pds pcs]; simpl in *; subst.
     assert (pann = None); subst.
     { destruct pann; [destruct sul; discriminate|reflexivity]. }
 
-    destruct sul as [psr|[[pdmn pdmv]|]]; simpl in *; inv H5.
+    destruct sul as [psr|[[pdmn pdmv]|]]; inv H5.
 
-    - admit.
+    - M.cmp dm pdmn; mred.
+      + inv H7; inv H2; dest; simpl in *.
+        eapply SubstepsCons.
+        * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
+        * inv H1.
+          assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
+          eapply inlineDmToMod_correct_Substep; eauto.
+        * repeat split; simpl; auto.
+        * auto.
+        * simpl; f_equal; auto.
+      + eapply SubstepsCons.
+        * eapply IHSubstepsInd; eauto.
+        * eapply inlineDmToMod_Substep_intact; eauto; findeq.
+        * inv H2; dest; simpl in *.
+          repeat split; simpl; auto.
+          findeq.
+        * auto.
+        * simpl; f_equal; auto.
+      
     - eapply SubstepsCons.
-      + apply IHSubstepsInd; eauto; mdisj.
+      + apply IHSubstepsInd; eauto.
       + eapply inlineDmToMod_Substep_intact; eauto; findeq.
-      + inv H2; simpl in *.
-        constructor; simpl in *; auto.
-        * mdisj.
-        * split; auto.
-          destruct H4; mdisj.
-      + meq.
-      + simpl; f_equal; meq.
+      + inv H2; dest; simpl in *.
+        repeat split; simpl; auto.
+      + auto.
+      + simpl; f_equal; auto.
   Qed.
 
   Lemma inlineDmToMod_correct_Substeps_called_meth:
-    forall or su smn smv scs u ann cs ds s,
+    forall or su smn smv scs u l,
       Substep m or su (Meth (Some (smn :: smv)%struct)) scs ->
-      SubstepsInd m or u {| annot := ann; defs := ds; calls := cs |} ->
-      Some s = M.find dm scs ->
-      Some s = M.find dm ds ->
-      M.Disj su u ->
-      M.Disj scs cs ->
-      ~ M.In (smn :: smv)%struct ds ->
-      SubstepsInd
-        (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
-             (inlineDmToDms (getDefsBodies m) dm)) or (M.union u su)
-        {|
-          annot := ann;
-          defs := M.remove dm (M.union (M.add smn smv (M.empty (sigT SignT))) ds);
-          calls := M.remove dm (M.union scs cs) |}.
+      SubstepsInd m or u l ->
+      forall ann ds cs s,
+        l = {| annot := ann; defs := ds; calls := cs |} ->
+        Some s = M.find dm scs ->
+        Some s = M.find dm ds ->
+        M.Disj su u ->
+        M.Disj scs cs ->
+        ~ M.In (smn :: smv)%struct ds ->
+        SubstepsInd
+          (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
+               (inlineDmToDms (getDefsBodies m) dm)) or (M.union u su)
+          {|
+            annot := ann;
+            defs := M.remove dm (M.union (M.add smn smv (M.empty (sigT SignT))) ds);
+            calls := M.remove dm (M.union scs cs) |}.
   Proof.
-    admit.
+    induction 2; simpl; intros; [inv H0; mcontra|].
+    destruct l as [pann pds pcs]; simpl in *; subst.
+
+    destruct sul as [psr|[[pdmn pdmv]|]]; inv H5.
+
+    - mred; eapply SubstepsCons.
+      + eapply IHSubstepsInd; eauto.
+      + eapply inlineDmToMod_Substep_intact; eauto; findeq.
+      + inv H2; dest; simpl in *.
+        repeat split; simpl; auto.
+      + auto.
+      + simpl; f_equal; auto.
+
+    - M.cmp dm pdmn; mred.
+      + inv H7; inv H2; dest; simpl in *.
+        eapply SubstepsCons.
+        * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
+        * inv H1.
+          assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
+          eapply inlineDmToMod_correct_Substep; eauto.
+        * repeat split; simpl; auto.
+          destruct ann; M.cmp smn dm; findeq.
+        * auto.
+        * simpl; f_equal; auto.
+          destruct ann; meq.
+      + eapply SubstepsCons.
+        * eapply IHSubstepsInd; eauto.
+          M.cmp smn pdmn; findeq.
+        * eapply inlineDmToMod_Substep_intact; eauto; findeq.
+        * inv H2; dest; simpl in *.
+          repeat split; simpl; auto.
+          destruct ann; M.cmp pdmn smn; findeq.
+        * auto.
+        * simpl; f_equal; auto.
+
+    - mred; eapply SubstepsCons.
+      + eapply IHSubstepsInd; eauto.
+      + eapply inlineDmToMod_Substep_intact; eauto; findeq.
+      + inv H2; dest; simpl in *.
+        repeat split; simpl; auto.
+      + auto.
+      + simpl; f_equal; auto.
   Qed.
 
   Lemma inlineDmToMod_correct_Substeps_calling:
@@ -516,9 +566,7 @@ Section SubstepsFacts.
                               (M.union (M.add dm sdmv (M.empty (sigT SignT))) ds);
              calls := M.remove (elt:=sigT SignT) dm (M.union scs cs) |}.
   Proof.
-    induction 2; simpl; intros;
-    [inv H0; rewrite M.find_empty in H3; discriminate|].
-    apply M.F.P.F.not_find_in_iff in H9.
+    induction 2; simpl; intros; [inv H0; mcontra|].
     subst; destruct l as [pann pds pcs].
     inv H5; mred.
     remember (M.find dm scs0) as osdm; destruct osdm.
@@ -528,30 +576,22 @@ Section SubstepsFacts.
       + eapply inlineDmToMod_Substeps_intact; eauto; findeq.
       + inv H.
         assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
-        eapply inlineDmToMod_correct_Substep; eauto; mdisj.
-      + repeat split; simpl; auto; mdisj.
-      + meq.
-      + simpl; f_equal; meq.
+        eapply inlineDmToMod_correct_Substep; eauto.
+      + repeat split; simpl; auto.
+      + auto.
+      + simpl; f_equal; auto.
 
     - inv H2; dest; simpl in *.
       eapply SubstepsCons.
       + apply IHSubstepsInd; auto.
-        * mdisj.
-        * mdisj.
-        * apply M.F.P.F.not_find_in_iff.
-          destruct sul as [|[[pdmn pdmv]|]]; findeq.
-          M.cmp dm pdmn; findeq.
-      + eapply inlineDmToMod_Substep_intact; eauto.
-      + repeat split; simpl.
-        * mdisj.
-        * mdisj.
-        * destruct pann; destruct sul as [|[[pdmn pdmv]|]]; auto.
-          { apply M.F.P.F.not_find_in_iff; findeq. }
-          { apply M.F.P.F.not_find_in_iff; findeq. }
-      + meq.
-      + simpl; f_equal; meq.
         destruct sul as [|[[pdmn pdmv]|]]; findeq.
         M.cmp dm pdmn; findeq.
+      + eapply inlineDmToMod_Substep_intact; eauto.
+      + repeat split; simpl; auto.
+        destruct pann; destruct sul as [|[[pdmn pdmv]|]]; auto; findeq.
+      + auto.
+      + simpl; f_equal; auto.
+        destruct sul as [|[[pdmn pdmv]|]]; auto.
   Qed.
 
 End SubstepsFacts.
@@ -599,6 +639,7 @@ Proof.
         rewrite H5 in IHSubstepsInd.
         destruct ann; [intuition idtac|].
         eapply inlineDmToMod_correct_Substeps_called_rule; eauto.
+        apply wfModules_WfModules; auto.
       * M.cmp a sdmn.
         { (* Substep(head)-inlined: impossible *)
           mred; exfalso.
@@ -644,12 +685,10 @@ Proof.
         eapply SubstepsCons; eauto.
         { eapply inlineDmToMod_Substep_intact; eauto. }
         { repeat split; simpl; auto.
-          { mdisj. }
-          { destruct ann; destruct sul as [|[|]]; auto;
-            intro Hx; elim H4; eapply M.F.P.F.remove_in_iff; eauto.
-          }
+          destruct ann; destruct sul as [|[|]]; auto;
+          intro Hx; elim H4; eapply M.F.P.F.remove_in_iff; eauto.
         }
-        { simpl; f_equal; meq. }
+        { simpl; f_equal; auto. }
 
   - rewrite M.find_union in Heqocmv.
     remember (M.find a scs) as oscmv; destruct oscmv; [inv Heqocmv|].
