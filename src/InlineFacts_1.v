@@ -87,16 +87,41 @@ Proof.
 
       destruct meth; apply inlineDm_SemAction_intact; auto.
 
-    + econstructor.
-      * instantiate (1:= M.union cm1 (M.remove meth calls)).
-        instantiate (1:= mret).
-        admit. (* map stuff; not trivial *)
-      * apply H0; auto.
-        { inv Ha; destruct_existT.
-          eapply wfAction_calls_weakening; eauto.
-          apply SubList_nil.
+    + unfold getBody in Heqob.
+      destruct (string_dec meth0 meth).
+
+      * subst; destruct (SignatureT_dec _ _); [inv Heqob|].
+
+        econstructor.
+        { instantiate (1:= M.union cm1 (M.remove meth calls)).
+          instantiate (1:= mret).
+          meq.
+          elim n. clear -H3.
+          inv H3; destruct_existT; auto.
         }
-        { admit. (* map stuff; not trivial *) }
+        { apply H0; auto.
+          { inv Ha; destruct_existT.
+            eapply wfAction_calls_weakening; eauto.
+            apply SubList_nil.
+          }
+          { elim n.
+            rewrite M.find_add_1 in H3.
+            clear -H3; inv H3; destruct_existT; auto.
+          }
+        }
+
+      * econstructor.
+        { instantiate (1:= M.union cm1 (M.remove meth calls)).
+          instantiate (1:= mret).
+          meq.
+        }
+        { apply H0; auto.
+          { inv Ha; destruct_existT.
+            eapply wfAction_calls_weakening; eauto.
+            apply SubList_nil.
+          }
+          { rewrite M.find_add_2 in H3 by auto; auto. }
+        }
         
   - inv H4; inv Ha; destruct_existT.
     constructor; auto.
@@ -106,7 +131,7 @@ Proof.
     econstructor; eauto.
 
     + instantiate (1:= M.union u1 newRegs).
-      admit. (* map stuff *)
+      meq.
     + apply IHa; auto.
       * eapply wfAction_regs_weakening; eauto.
         apply SubList_nil.

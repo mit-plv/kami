@@ -658,6 +658,7 @@ Proof.
           assert (~ M.In (elt:=sigT SignT) (sdmn :: sdmv)%struct ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_called_meth; eauto.
+          apply wfModules_WfModules; auto.
         }
       * exfalso; inv H1; mred.
 

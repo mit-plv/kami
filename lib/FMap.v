@@ -1064,7 +1064,7 @@ Ltac mred :=
           [subst; rewrite M.F.P.F.remove_eq_o|
            rewrite M.F.P.F.remove_neq_o by intuition auto])
        | [ |- context [M.find ?y (M.union _ _)] ] =>
-         rewrite M.find_union with (k:= y)
+         rewrite M.find_union
        | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
          rewrite M.F.P.F.remove_eq_o
        | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
