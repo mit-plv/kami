@@ -1006,15 +1006,46 @@ Ltac dest_disj :=
       | [H: M.Disj (M.empty _) _ |- _] => clear H
     end.
 
+Ltac solve_disj :=
+  repeat
+    (try assumption;
+     match goal with
+       | [H: M.Disj ?m1 ?m2 |- M.Disj ?m2 ?m1] =>
+         (apply M.Disj_comm; auto)
+       | [ |- M.Disj _ (M.union _ _) ] =>
+         apply M.Disj_union
+       | [ |- M.Disj (M.union _ _) _ ] =>
+         apply M.Disj_comm, M.Disj_union
+       | [ |- M.Disj _ (M.remove _ _) ] =>
+         try (apply M.Disj_remove_2; solve_disj; fail)
+     end).
+
+Ltac mdisj := dest_disj; solve_disj.
+
 Ltac mred :=
   repeat
     (match goal with
+       (* basic destruction *)
        | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
          rewrite <-H
        | [ |- context [M.find ?y ?m] ] =>
          (is_var m;
           let v := fresh "v" in
           remember (M.find y m) as v; destruct v)
+       (* hypothesis reduction *)
+       | [H: context [M.find _ (M.empty _)] |- _] =>
+         rewrite M.find_empty in H
+       | [H: context [M.union (M.empty _) _] |- _] =>
+         rewrite M.union_empty_L in H
+       | [H: context [M.union _ (M.empty _)] |- _] =>
+         rewrite M.union_empty_R in H
+       | [H: context [M.find _ (M.union _ _)] |- _] =>
+         rewrite M.find_union in H
+       | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
+         rewrite M.find_add_1 in H
+       | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+         rewrite M.find_add_2 in H by auto
+       (* goal reduction *)
        | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
          (destruct (string_dec y k);
           [subst; rewrite M.F.P.F.remove_eq_o|
@@ -1039,6 +1070,10 @@ Ltac mcontra :=
     match goal with
       | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
         try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
+      | [H1: None = ?f, H2: Some _ = ?f |- _] => (rewrite <-H1 in H2; discriminate)
+      | [H1: None = ?f, H2: ?f = Some _ |- _] => (rewrite <-H1 in H2; discriminate)
+      | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite H1 in H2; discriminate)
+      | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite <-H1 in H2; discriminate)
       | [H1: ~ M.In ?k ?m, H2: Some _ = M.find ?k ?m |- _] =>
         elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
