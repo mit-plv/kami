@@ -336,7 +336,7 @@ Section GivenModule.
 
   End GivenOldregs.
 
-  Inductive Multistep: RegsT -> UpdatesT -> list LabelT -> Prop :=
+  Inductive Multistep: RegsT -> RegsT -> list LabelT -> Prop :=
   | NilMultistep o: Multistep o o nil
   | Multi o a n (HMultistep: Multistep o n a)
           u l (HStep: Step n u l):
@@ -348,7 +348,7 @@ Section GivenModule.
 
   Definition LabelSeqT := list LabelT.
 
-  Inductive Behavior: UpdatesT -> LabelSeqT -> Prop :=
+  Inductive Behavior: RegsT -> LabelSeqT -> Prop :=
   | BehaviorIntro a n (HMultistepBeh: Multistep (initRegs (getRegInits m)) n a):
       Behavior n a.
 End GivenModule.
@@ -480,5 +480,3 @@ Proof.
       * rewrite M.union_empty_L in H.
         intuition.
 Qed.
-
-Definition reachable m o := exists sig, Behavior m o sig.
