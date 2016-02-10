@@ -793,7 +793,6 @@ Proof.
     apply inlineDms_wellHidden; auto.
 Qed.
 
-(* Instead of filter, use below *)
 Lemma step_dms_hidden:
   forall m or nr l,
     Step m or nr l ->
@@ -854,25 +853,29 @@ Proof.
     inv Heqima.
 Qed.
 
-Lemma inline_preserves_regInits:
-  forall m, getRegInits m = getRegInits (fst (inline m)).
-Proof. intros; apply inlineDms'_preserves_regInits. Qed.
+Lemma inlineF_preserves_regInits:
+  forall m, getRegInits m = getRegInits (fst (inlineF m)).
+Proof.
+  intros; unfold inlineF.
+  remember (inline m) as imb; destruct imb as [im ib]; simpl.
+  replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
+  apply inlineDms'_preserves_regInits.
+Qed.
 
 Require Import Refinement.
 
-Theorem inline_refines:
+Theorem inlineF_refines:
   forall m (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
-         (Hin: snd (inline m) = true),
-    m <<== (fst (inline m)).
+         (Hin: snd (inlineF m) = true),
+    traceRefines id m (fst (inlineF m)).
 Proof.
   intros.
   apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
-  - rewrite inline_preserves_regInits; reflexivity.
-  - intros; apply inline_correct_Step in H; unfold id in *; auto.
+  - rewrite inlineF_preserves_regInits; reflexivity.
+  - intros; apply inlineF_correct_Step in H; unfold id in *; auto.
     exists u; split; auto.
     destruct l as [ann ds cs]; simpl in *.
-    repeat rewrite liftToMap1IdElementwiseId.
     destruct ann as [[|]|]; auto.
 Qed.
 

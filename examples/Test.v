@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound L
 
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
-Require Import Lts.Refinement Lts.Decomposition.
+Require Import Lts.Renaming Lts.Refinement Lts.Decomposition.
 
 Require Import FunctionalExtensionality.
 
@@ -49,14 +49,13 @@ Section Tests.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    (* apply traceRefines_trans with (mb:= fst (inline (ConcatMod ma mb))). *)
-    (* - apply inline_refines; auto. *)
-    (*   + repeat constructor. *)
-    (*   + repeat constructor; auto. *)
-    (* - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto. *)
-    (*   + intuition. *)
-    (*   + intuition. *)
-    (*   + (* ?? *) *)
+    apply traceRefines_trans with (mb:= fst (inlineF (ConcatMod ma mb))).
+    - apply inlineF_refines; auto.
+      + repeat constructor.
+      + repeat constructor; auto.
+    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
+      + intuition.
+      + (* ?? *)
   Abort.
 
 End Tests.
