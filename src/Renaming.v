@@ -45,14 +45,31 @@ Section Rename.
   Variable p1To1: forall x y, p x = p y -> x = y.
   Variable pOnto: forall x, exists y, p y = x.
 
-  Definition mapNameAttr A a := {| attrName := p (@attrName A a); attrType := attrType a |}.
+  Definition mapNamesAttr A a := {| attrName := p (@attrName A a); attrType := attrType a |}.
   
   Fixpoint mapNamesList A (ls: list (Attribute A)) :=
-    map (@mapNameAttr _) ls.
+    map (@mapNamesAttr _) ls.
 
   Definition mapNamesMap A (m: M.t A) :=
     M.fold (fun k v old => M.add (p k) v old) m (M.empty _).
 
+  Definition mapNameUnitLabel l :=
+    match l with
+      | Rle None => Rle None
+      | Meth None => Meth None
+      | Rle (Some r) => Rle (Some (p r))
+      | Meth (Some {| attrName := f; attrType := v |}) => Meth (Some {| attrName := p f; attrType := v |})
+    end.
+
+  Definition mapNamesLabel l :=
+    match l with
+    | Build_LabelT annot defs calls =>
+      Build_LabelT (match annot with
+                    | Some (Some r) => Some (Some (p r))
+                    | x => x
+                    end) (mapNamesMap defs) (mapNamesMap calls)
+    end.
+  
   Lemma mapNamesMapEmpty A: mapNamesMap (M.empty A) = M.empty A.
   Proof.
     apply (M.F.P.fold_Empty); intuition.
@@ -74,7 +91,7 @@ Section Rename.
       (* ~ M.In k m -> *)
       mapNamesMap (M.add k v m) = M.add (p k) v (mapNamesMap m).
   Proof.
-    intros; remember (M.find k m) as okm; destruct okm.
+    intros; remember (M.find k m) as okm. destruct okm.
     - apply eq_sym, M.find_add_3 in Heqokm.
       destruct Heqokm as [sm [? ?]]; subst.
       rewrite M.add_idempotent.
@@ -118,33 +135,54 @@ Section Rename.
         apply M.F.P.F.add_mapsto_iff; intuition.
   Qed.
 
-  Definition mapNameUnitLabel l :=
-    match l with
-      | Rle None => Rle None
-      | Meth None => Meth None
-      | Rle (Some r) => Rle (Some (p r))
-      | Meth (Some {| attrName := f; attrType := v |}) => Meth (Some {| attrName := p f; attrType := v |})
+  Fixpoint mapNamesAction k t (a: ActionT t k) :=
+    match a with
+    | MCall meth s e cont => MCall (p meth) s e (fun v => mapNamesAction (cont v))
+    | Let_ lret' e cont => Let_ e (fun v => mapNamesAction (cont v))
+    | ReadReg r k cont => ReadReg r k (fun v => mapNamesAction (cont v))
+    | WriteReg r k e cont => WriteReg r e (mapNamesAction cont)
+    | IfElse e k t f cont => IfElse e (mapNamesAction t) (mapNamesAction f)
+                                   (fun v => mapNamesAction (cont v))
+    | Assert_ e cont => Assert_ e (mapNamesAction cont)
+    | Return e => Return e
     end.
 
-  Section SomeType.
-    
-    Fixpoint mapNamesAction t k (a: ActionT t k) :=
-      match a with
-      | MCall meth s e cont => MCall (p meth) s e (fun v => mapNamesAction (cont v))
-      | Let_ lret' e cont => Let_ e (fun v => mapNamesAction (cont v))
-      | ReadReg r k cont => ReadReg r k (fun v => mapNamesAction (cont v))
-      | WriteReg r k e cont => WriteReg r e (mapNamesAction cont)
-      | IfElse e k t f cont => IfElse e (mapNamesAction t) (mapNamesAction f)
-                                      (fun v => mapNamesAction (cont v))
-      | Assert_ e cont => Assert_ e (mapNamesAction cont)
-      | Return e => Return e
-      end.
+  Definition mapNamesRules (rules: list (Attribute (Action Void))) :=
+                              map (fun x => match x with
+                                         | {| attrName := r;
+                                              attrType := a |} =>
+                                           {| attrName := p r;
+                                              attrType := fun ty => mapNamesAction (a ty) |}
+                                         end) rules.
 
-    Lemma actionMapName o k a u cs r (sa: @SemAction o k a u cs r):
-      SemAction (mapNamesMap o) (mapNamesAction a) (mapNamesMap u) (mapNamesMap cs) r.
-    Proof.
-      dependent induction sa; simpl in *.
-      - 
+  Definition mapNamesMeths (meths: list DefMethT): list DefMethT.
+    refine (map (fun x => match x with
+                       | {| attrName := m;
+                            attrType := a |} =>
+                         {| attrName := p m;
+                            attrType := existT _ (projT1 a)
+                                               (fun ty v => _) |}
+                       end) meths).
+    exact (mapNamesAction (projT2 a ty v)).
+  Defined.
+
+  Fixpoint mapNamesModules (m: Modules) :=
+    match m with
+    | Mod regs rules dms => Mod (mapNamesList regs) (mapNamesRules rules) (mapNamesMeths dms)
+    | ConcatMod m1 m2 => ConcatMod (mapNamesModules m1) (mapNamesModules m2)
+    end.
+
+  Theorem traceRefinesRename m: traceRefines (mapNamesMap (A := _)) m (mapNamesModules m).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma actionMapName o k a u cs r (sa: @SemAction o k a u cs r):
+    SemAction (mapNamesMap o) (mapNamesAction a) (mapNamesMap u) (mapNamesMap cs) r.
+  Proof.
+    admit.
+  Qed.
+
   Lemma mapNamesKeysEq A (m: M.t A) l:
     M.KeysEq m l ->
     M.KeysEq (mapNamesMap m) (map p l).
