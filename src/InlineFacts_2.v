@@ -855,12 +855,12 @@ Theorem inline_refines:
   forall m (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inline m) = true),
-    m <<== (fst (inline m)).
+    traceRefines id m (fst (inline m)).
 Proof.
   intros.
   apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
   - rewrite inline_preserves_regInits; reflexivity.
-  - intros; apply inline_correct_Step in H; auto.
+  - intros; apply inline_correct_Step in H; unfold id in *; auto.
     exists u; split; auto.
     destruct l as [ann ds cs]. simpl in *.
     destruct ann as [[|]|]; auto.

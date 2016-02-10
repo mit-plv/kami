@@ -370,14 +370,72 @@ Inductive equivalentLabelSeq p: LabelSeqT -> LabelSeqT -> Prop :=
 Definition traceRefines p m1 m2 :=
   forall s1 sig1, Behavior m1 s1 sig1 ->
                   exists s2 sig2, Behavior m2 s2 sig2 /\
-                                  equivalentLabelSeq p sig1 sig2.
+                             equivalentLabelSeq p sig1 sig2.
+
+Definition DomainSubset A B (s1: M.t A) (s2: M.t B) := forall k, M.In k s1 -> M.In k s2.
+Section MapSet.
+  Variable A: Type.
+  Variable p: M.key -> A -> option A.
+
+  Definition rmModify k v m := match p k v with
+                                 | None => m
+                                 | Some v' => M.add k v' m
+                               end.
+  Definition liftToMap1 s :=
+    M.fold rmModify s (M.empty _).
+
+  Theorem liftToMap1Empty: liftToMap1 (M.empty _) = M.empty _.
+  Proof.
+    unfold liftToMap1, M.fold; reflexivity.
+  Qed.
+
+  Lemma liftToMap1Subset s: DomainSubset (liftToMap1 s) s.
+  Proof.
+    apply (M.map_induction (P := fun s => DomainSubset (liftToMap1 s) s)); unfold DomainSubset; intros.
+    - rewrite liftToMap1Empty in *.
+      intuition.
+    - unfold liftToMap1 in H1.
+      rewrite M.F.P.fold_add in H1; fold (liftToMap1 m) in *; unfold rmModify. (* intuition. *)
+      + apply M.F.P.F.add_in_iff.
+        unfold rmModify in *.
+        destruct (p k v).
+        apply M.F.P.F.add_in_iff in H1.
+        destruct H1; intuition.
+        right; apply (H _ H1).
+      + intuition.
+      + clear; unfold Morphisms.Proper, Morphisms.respectful; intros; subst.
+        apply M.leibniz in H1; subst.
+        intuition.
+      + clear; unfold M.F.P.transpose_neqkey; intros.
+        unfold rmModify.
+        destruct (p k e), (p k' e');
+          try apply M.transpose_neqkey_Equal_add; intuition.
+      + intuition.
+  Qed.
+        
+  Theorem liftToMap1AddOne k v:
+    liftToMap1 (M.add k v (M.empty _)) =
+    match p k v with
+      | Some argRet => M.add k argRet (M.empty _)
+      | None => M.empty _
+    end.
+  Proof.
+    case_eq (p k v); unfold liftToMap1, rmModify, M.fold; simpl.
+    intros a H.
+    rewrite H; reflexivity.
+    intros H.
+    rewrite H; reflexivity.
+  Qed.
+End MapSet.
+
+Definition idElementwise A (k: M.key) (v: A) := Some v.
 
 Notation "ma '<<=[' p ']' mb" :=
-  (traceRefines p ma mb) (at level 100, format "ma  <<=[  p  ]  mb").
+  (traceRefines (liftToMap1 p) ma mb) (at level 100, format "ma  <<=[  p  ]  mb").
 Notation "ma '<<==' mb" :=
-  (traceRefines id ma mb) (at level 100, format "ma  <<==  mb").
+  (ma <<=[@idElementwise _] mb) (at level 100, format "ma  <<==  mb").
 Notation "ma '<<==>>' mb" :=
-  (traceRefines id ma mb /\ traceRefines id mb ma)
+  (ma <<== mb /\ mb <<== ma)
     (at level 100, format "ma  <<==>>  mb").
 
 Theorem staticDynCallsRules m o name a u cs r:

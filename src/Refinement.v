@@ -62,6 +62,7 @@ End StepToRefinement.
 
 Section Facts.
 
+  (*
   Lemma traceRefines_trans:
     forall ma mb mc p q,
       (ma <<=[p] mb) ->
@@ -70,6 +71,6 @@ Section Facts.
   Proof.
     admit.
   Qed.
-
+   *)
 End Facts.
 
