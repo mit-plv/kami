@@ -5,6 +5,8 @@ Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
 Require Import Lts.Refinement Lts.Decomposition.
 
+Require Import FunctionalExtensionality.
+
 Set Implicit Arguments.
 
 Parameter i: nat.
@@ -45,15 +47,34 @@ Definition mc := MODULE {
 
 Section Tests.
 
-  Definition p : MethsT -> MethsT := id.
-  
-  Lemma mab_mc: traceRefines p (ConcatMod ma mb) mc.
+  Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
     apply traceRefines_trans with (mb:= fst (inline (ConcatMod ma mb))).
     - apply inline_refines; auto.
       + repeat constructor.
       + repeat constructor; auto.
-    - admit. (* decomposition? *)
-  Qed.
+    - (* TODO: constructing mapSet should be easy and automated *)
+      assert (id (A:= MethsT) = mapSet (fun n v => Some v)).
+      { extensionality k.
+        unfold mapSet, rmModify, id; simpl.
+        M.mind k.
+        { rewrite M.F.P.fold_Empty; auto. }
+        { rewrite M.F.P.fold_add; auto.
+          { f_equal; auto. }
+          { clear; M.proper_tac. }
+          { unfold M.F.P.transpose_neqkey; intros.
+            apply M.add_comm; auto.
+          }
+        }
+      }
+      rewrite H; clear H.
+
+      eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
+      + intuition.
+      + intuition.
+      + (* ??? *)
+
+  Abort.
 
 End Tests.
+
