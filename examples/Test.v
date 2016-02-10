@@ -49,15 +49,14 @@ Section Tests.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    apply traceRefines_trans with (mb:= fst (inline (ConcatMod ma mb))).
-    - apply inline_refines; auto.
-      + repeat constructor.
-      + repeat constructor; auto.
-    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
-      + intuition.
-      + intuition.
-      + (* ?? *)
-
+    (* apply traceRefines_trans with (mb:= fst (inline (ConcatMod ma mb))). *)
+    (* - apply inline_refines; auto. *)
+    (*   + repeat constructor. *)
+    (*   + repeat constructor; auto. *)
+    (* - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto. *)
+    (*   + intuition. *)
+    (*   + intuition. *)
+    (*   + (* ?? *) *)
   Abort.
 
 End Tests.

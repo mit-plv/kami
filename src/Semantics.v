@@ -420,9 +420,48 @@ Section MapSet.
     intros H.
     rewrite H; reflexivity.
   Qed.
+
 End MapSet.
 
 Definition idElementwise A (k: M.key) (v: A) := Some v.
+
+Theorem liftToMap1IdElementwiseAdd A m:
+  forall k (v: A),
+    liftToMap1 (@idElementwise _) (M.add k v m) =
+    rmModify (@idElementwise _) k v (liftToMap1 (@idElementwise _) m).
+Proof.
+  intros; remember (M.find k m) as okm. destruct okm.
+  - apply eq_sym, M.find_add_3 in Heqokm.
+    destruct Heqokm as [sm [? ?]]; subst.
+    rewrite M.add_idempotent.
+    unfold liftToMap1.
+    rewrite M.F.P.fold_add; auto.
+    rewrite M.F.P.fold_add; auto.
+    unfold rmModify; simpl in *.
+    rewrite M.add_idempotent; reflexivity.
+    + apply M.transpose_neqkey_eq_add; intuition.
+    + apply M.transpose_neqkey_eq_add; intuition.
+  - unfold liftToMap1, rmModify; simpl in *.
+    rewrite M.F.P.fold_add; auto.
+    apply M.F.P.F.not_find_in_iff; auto.
+Qed.
+
+Theorem liftToMap1IdElementwiseId A m:
+  liftToMap1 (@idElementwise A) m = m.
+Proof.
+  M.mind m; simpl in *.
+  - rewrite liftToMap1Empty; reflexivity.
+  - rewrite liftToMap1IdElementwiseAdd.
+    unfold rmModify; simpl in *.
+    rewrite H.
+    reflexivity.
+Qed.
+
+Theorem idElementwiseId A: liftToMap1 (@idElementwise A) = id.
+Proof.
+  apply functional_extensionality; intros.
+  apply liftToMap1IdElementwiseId.
+Qed.
 
 Notation "ma '<<=[' p ']' mb" :=
   (traceRefines (liftToMap1 p) ma mb) (at level 100, format "ma  <<=[  p  ]  mb").
