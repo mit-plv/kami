@@ -471,6 +471,12 @@ Notation "ma '<<==>>' mb" :=
   (ma <<== mb /\ mb <<== ma)
     (at level 100, format "ma  <<==>>  mb").
 
+Theorem idElementwiseId A: liftToMap1 (@idElementwise A) = id.
+Proof.
+  apply functional_extensionality; intros.
+  apply liftToMap1IdElementwiseId.
+Qed.
+
 Theorem staticDynCallsRules m o name a u cs r:
   In (name :: a)%struct (getRules m) ->
   SemAction o (a type) u cs r ->
