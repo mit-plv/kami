@@ -1,6 +1,6 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FMap.
-Require Import Syntax Semantics Wf Equiv Inline InlineFacts_1.
+Require Import Syntax Semantics SemFacts Wf Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
 
@@ -777,14 +777,6 @@ Proof.
   apply SubList_refl.
 Qed.
 
-Lemma hide_idempotent:
-  forall (l: LabelT), hide l = hide (hide l).
-Proof.
-  intros; destruct l as [ann ds cs].
-  unfold hide; simpl; f_equal;
-  apply M.subtractKV_idempotent.
-Qed.
-
 Lemma inlineDms_correct:
   forall m (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
@@ -825,6 +817,23 @@ Proof.
   apply inlineDms_correct; auto.
 Qed.
 
+Lemma inlineF_correct_Step:
+  forall m (Hequiv: ModEquiv typeUT type m)
+         (Hdms: NoDup (namesOf (getDefsBodies m)))
+         (Hin: snd (inlineF m) = true)
+         or nr l,
+    Step m or nr l ->
+    Step (fst (inlineF m)) or nr l.
+Proof.
+  unfold inlineF; intros.
+  remember (inline m) as imb; destruct imb as [im ib]; subst.
+  pose proof (inline_correct_Step _ Hequiv Hdms (cheat _) _ _ _ H).
+  rewrite <-Heqimb in H0; simpl in H0.
+  pose proof (step_dms_hidden _ _ _ _ H).
+  apply step_dms_weakening; auto.
+  apply merge_preserves_step; auto.
+Qed.
+  
 Lemma inlineDms'_preserves_regInits:
   forall dms m, getRegInits m = getRegInits (fst (inlineDms' m dms)).
 Proof.

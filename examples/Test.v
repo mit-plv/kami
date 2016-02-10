@@ -53,26 +53,10 @@ Section Tests.
     - apply inline_refines; auto.
       + repeat constructor.
       + repeat constructor; auto.
-    - (* TODO: constructing mapSet should be easy and automated *)
-      assert (id (A:= MethsT) = mapSet (fun n v => Some v)).
-      { extensionality k.
-        unfold mapSet, rmModify, id; simpl.
-        M.mind k.
-        { rewrite M.F.P.fold_Empty; auto. }
-        { rewrite M.F.P.fold_add; auto.
-          { f_equal; auto. }
-          { clear; M.proper_tac. }
-          { unfold M.F.P.transpose_neqkey; intros.
-            apply M.add_comm; auto.
-          }
-        }
-      }
-      rewrite H; clear H.
-
-      eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
+    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
       + intuition.
       + intuition.
-      + (* ??? *)
+      + (* ?? *)
 
   Abort.
 

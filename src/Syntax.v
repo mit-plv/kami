@@ -208,6 +208,9 @@ Definition MethodT (sig : SignatureT) := forall ty,
 Definition RegInitT := Attribute (sigT ConstFullT).
 Definition DefMethT := Attribute (sigT MethodT).
 
+Definition filterDms (dms: list DefMethT) (filt: list string) :=
+  filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms.
+
 Definition Void := Bit 0.
 Inductive Modules: Type :=
 | Mod (regs: list RegInitT)

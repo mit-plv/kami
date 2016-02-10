@@ -62,15 +62,14 @@ End StepToRefinement.
 
 Section Facts.
 
-  (*
   Lemma traceRefines_trans:
     forall ma mb mc p q,
-      (ma <<=[p] mb) ->
-      (mb <<=[q] mc) ->
-      (ma <<=[fun f => q (p f)] mc).
+      traceRefines p ma mb ->
+      traceRefines q mb mc ->
+      traceRefines (fun f => q (p f)) ma mc.
   Proof.
     admit.
   Qed.
-   *)
+  
 End Facts.
 

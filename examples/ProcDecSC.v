@@ -1,9 +1,8 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Inline.
+Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
+Require Import Lts.Decomposition Lts.Renaming Lts.Inline.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
-
-Require Import FunctionalExtensionality.
 
 Section ProcDecSC.
   Variables addrSize fifoSize valSize rfIdx: nat.
