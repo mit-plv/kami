@@ -14,21 +14,21 @@ Section MapSet.
                                  | None => m
                                  | Some v' => M.add k v' m
                                end.
-  Definition mapSet s :=
+  Definition liftToMap1 s :=
     M.fold rmModify s (M.empty _).
 
-  Theorem mapSetEmpty: mapSet (M.empty _) = M.empty _.
+  Theorem liftToMap1Empty: liftToMap1 (M.empty _) = M.empty _.
   Proof.
-    unfold mapSet, M.fold; reflexivity.
+    unfold liftToMap1, M.fold; reflexivity.
   Qed.
 
-  Lemma mapSetSubset s: DomainSubset (mapSet s) s.
+  Lemma liftToMap1Subset s: DomainSubset (liftToMap1 s) s.
   Proof.
-    apply (M.map_induction (P := fun s => DomainSubset (mapSet s) s)); unfold DomainSubset; intros.
-    - rewrite mapSetEmpty in *.
+    apply (M.map_induction (P := fun s => DomainSubset (liftToMap1 s) s)); unfold DomainSubset; intros.
+    - rewrite liftToMap1Empty in *.
       intuition.
-    - unfold mapSet in H1.
-      rewrite M.F.P.fold_add in H1; fold (mapSet m) in *; unfold rmModify. (* intuition. *)
+    - unfold liftToMap1 in H1.
+      rewrite M.F.P.fold_add in H1; fold (liftToMap1 m) in *; unfold rmModify. (* intuition. *)
       + apply M.F.P.F.add_in_iff.
         unfold rmModify in *.
         destruct (p k v).
@@ -46,14 +46,14 @@ Section MapSet.
       + intuition.
   Qed.
         
-  Theorem mapSetAddOne k v:
-    mapSet (M.add k v (M.empty _)) =
+  Theorem liftToMap1AddOne k v:
+    liftToMap1 (M.add k v (M.empty _)) =
     match p k v with
       | Some argRet => M.add k argRet (M.empty _)
       | None => M.empty _
     end.
   Proof.
-    case_eq (p k v); unfold mapSet, rmModify, M.fold; simpl.
+    case_eq (p k v); unfold liftToMap1, rmModify, M.fold; simpl.
     intros a H.
     rewrite H; reflexivity.
     intros H.
@@ -76,7 +76,7 @@ Section Decomposition.
     forall oImp uImp rule csImp,
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
       { uSpec |
-        Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (mapSet p csImp) /\
+        Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
         forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
   Definition liftP meth :=
@@ -91,17 +91,17 @@ Section Decomposition.
     forall oImp uImp meth csImp,
       Substep imp oImp uImp (Meth (Some meth)) csImp ->
       { uSpec |
-        Substep spec (theta oImp) uSpec (Meth (liftP meth)) (mapSet p csImp) /\
+        Substep spec (theta oImp) uSpec (Meth (liftP meth)) (liftToMap1 p csImp) /\
         forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
 
   Definition ruleMapEmpty o u cs (s: Substep imp o u (Rle None) cs):
     { uSpec |
-      Substep spec (theta o) uSpec (Rle None) (mapSet p cs) /\
+      Substep spec (theta o) uSpec (Rle None) (liftToMap1 p cs) /\
       forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite mapSetEmpty;
+        inversion s; subst; rewrite liftToMap1Empty;
         constructor;
         [ constructor; apply thetaGood |
           repeat rewrite M.union_empty_L; intuition]).
@@ -109,12 +109,12 @@ Section Decomposition.
 
   Definition methMapEmpty o u cs (s: Substep imp o u (Meth None) cs):
     { uSpec |
-      Substep spec (theta o) uSpec (Meth None) (mapSet p cs) /\
+      Substep spec (theta o) uSpec (Meth None) (liftToMap1 p cs) /\
       forall o', M.union uSpec (theta o') = theta (M.union u o') }.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite mapSetEmpty;
+        inversion s; subst; rewrite liftToMap1Empty;
         constructor;
         [ constructor; apply thetaGood |
           repeat rewrite M.union_empty_L; intuition]).
@@ -131,7 +131,7 @@ Section Decomposition.
   Definition substepMap o u rm cs (s: Substep imp o u rm cs) :=
     match rm return Substep imp o u rm cs ->
                     { uSpec |
-                      Substep spec (theta o) uSpec (xformUnitAnnot o rm) (mapSet p cs) /\
+                      Substep spec (theta o) uSpec (xformUnitAnnot o rm) (liftToMap1 p cs) /\
                       forall o', M.union uSpec (theta o') = theta (M.union u o') } with
       | Rle (Some rule) => fun s => substepRuleMap s
       | Meth (Some meth) => fun s => substepMethMap s
@@ -145,7 +145,7 @@ Section Decomposition.
         match substepMap s with
           | exist uSpec (conj sSpec _) =>
             {| upd := uSpec; unitAnnot := xformUnitAnnot o rm;
-               cms := mapSet p cs; substep := sSpec |}
+               cms := liftToMap1 p cs; substep := sSpec |}
         end
     end.
 
@@ -173,8 +173,8 @@ Section Decomposition.
                       | Some None => Some None
                       | None => None
                     end;
-           defs := mapSet p dfs;
-           calls := mapSet p clls |}
+           defs := liftToMap1 p dfs;
+           calls := liftToMap1 p clls |}
     end.
 
   Lemma wellHiddenSpec o l:
@@ -185,8 +185,8 @@ Section Decomposition.
     unfold wellHidden in *.
     unfold xformLabel; destruct l; simpl in *.
     clear - defSubset callSubset dHid cHid.
-    pose proof (mapSetSubset p defs) as dH.
-    pose proof (mapSetSubset p calls) as cH.
+    pose proof (liftToMap1Subset p defs) as dH.
+    pose proof (liftToMap1Subset p calls) as cH.
     unfold DomainSubset, M.KeysDisj in *.
     constructor; unfold not; intros.
     - specialize (dH _ H0).
@@ -202,17 +202,17 @@ Section Decomposition.
   Lemma subtractKVMapSet l1:
     forall l2,
       (forall x v1 v2, M.MapsTo x v1 l1 -> M.MapsTo x v2 l2 -> v1 = v2) ->
-      mapSet p (M.subtractKV signIsEq l1 l2) = M.subtractKV signIsEq (mapSet p l1)
-                                                            (mapSet p l2).
+      liftToMap1 p (M.subtractKV signIsEq l1 l2) = M.subtractKV signIsEq (liftToMap1 p l1)
+                                                            (liftToMap1 p l2).
   Proof.
     apply (M.map_induction
              (P := fun l1 => forall l2 : M.t (sigT SignT),
                        (forall (x : M.key) (v1 v2 : sigT SignT), M.MapsTo x v1 l1 ->
                                                                  M.MapsTo x v2 l2 -> v1 = v2) ->
-                       mapSet p (M.subtractKV signIsEq l1 l2) =
-                       M.subtractKV signIsEq (mapSet p l1) (mapSet p l2))); intros; simpl in *.
+                       liftToMap1 p (M.subtractKV signIsEq l1 l2) =
+                       M.subtractKV signIsEq (liftToMap1 p l1) (liftToMap1 p l2))); intros; simpl in *.
     - rewrite (M.subtractKV_empty_1).
-      rewrite mapSetEmpty.
+      rewrite liftToMap1Empty.
       rewrite (M.subtractKV_empty_1).
       reflexivity.
     - admit.
@@ -259,8 +259,8 @@ Section Decomposition.
     - f_equal; rewrite subtractKVMapSet; intuition.
   Qed.
 
-  Theorem mapSetUnionCommute l1 l2:
-    mapSet p (M.union l1 l2) = M.union (mapSet p l1) (mapSet p l2).
+  Theorem liftToMap1UnionCommute l1 l2:
+    liftToMap1 p (M.union l1 l2) = M.union (liftToMap1 p l1) (liftToMap1 p l2).
   Proof.
     admit.
   Qed.      
@@ -274,7 +274,7 @@ Section Decomposition.
     destruct l1, l2; simpl in *.
     destruct annot, annot0;
       repeat (try destruct o0; try destruct o1; simpl in *;
-              repeat rewrite mapSetUnionCommute; intuition).
+              repeat rewrite liftToMap1UnionCommute; intuition).
   Qed.
 
   Lemma xformLabelGetSLabelCommute o a:
@@ -285,10 +285,10 @@ Section Decomposition.
     destruct a.
     simpl.
     unfold xformLabel, xformUnitAnnot.
-    destruct unitAnnot; destruct o0; try rewrite mapSetEmpty; intuition.
+    destruct unitAnnot; destruct o0; try rewrite liftToMap1Empty; intuition.
     destruct a.
     unfold liftP.
-    rewrite mapSetAddOne.
+    rewrite liftToMap1AddOne.
     unfold getSLabel; simpl.
     destruct (p attrName attrType); intuition.
   Qed.
@@ -296,7 +296,7 @@ Section Decomposition.
   Theorem xformLabelFoldCommute o ss:
     xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _) ss).
   Proof.
-    induction ss; simpl in *; try rewrite mapSetEmpty.
+    induction ss; simpl in *; try rewrite liftToMap1Empty.
     - reflexivity.
     - unfold addLabelLeft in *.
       rewrite xformLabelAddLabelCommute.
@@ -377,7 +377,7 @@ Section Decomposition.
   Theorem decomposition':
     forall s sig, Behavior imp s sig ->
                   exists sigSpec, Behavior spec (theta s) sigSpec /\
-                                  equivalentLabelSeq (mapSet p) sig sigSpec.
+                                  equivalentLabelSeq (liftToMap1 p) sig sigSpec.
   Proof.
     intros.
     dependent induction H.
@@ -403,7 +403,7 @@ Section Decomposition.
   Qed.
 
   Theorem decomposition:
-    traceRefines (mapSet p) imp spec.
+    traceRefines (liftToMap1 p) imp spec.
   Proof.
     unfold traceRefines; intros.
     pose proof (decomposition' H) as [sigSpec beh].
