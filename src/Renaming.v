@@ -58,14 +58,32 @@ Section Rename.
     apply (M.F.P.fold_Empty); intuition.
   Qed.
 
-  Lemma mapNamesMapAdd A m: forall k (v: A),
-      ~ M.In k m ->
+  Lemma mapNamesAdd_transpose_neqkey A:
+    M.F.P.transpose_neqkey
+      eq
+      (fun (k0 : M.key) (v0 : A) (old : M.t A) => M.add (p k0) v0 old).
+  Proof.
+    unfold M.F.P.transpose_neqkey; intros.
+    meq; M.cmp (p k) (p k'); findeq.
+    elim H; auto.
+  Qed.
+  Hint Immediate mapNamesAdd_transpose_neqkey.
+  
+  Lemma mapNamesMapAdd:
+    forall {A} m k (v: A),
+      (* ~ M.In k m -> *)
       mapNamesMap (M.add k v m) = M.add (p k) v (mapNamesMap m).
   Proof.
-    intros; unfold mapNamesMap; rewrite M.F.P.fold_add; simpl in *; intuition.
-    unfold M.F.P.transpose_neqkey; intros.
-    assert (pneq: p k0 <> p k') by (unfold not; intros; apply H0; apply p1To1; intuition).
-    apply M.transpose_neqkey_eq_add; intuition.
+    intros; remember (M.find k m) as okm; destruct okm.
+    - apply eq_sym, M.find_add_3 in Heqokm.
+      destruct Heqokm as [sm [? ?]]; subst.
+      rewrite M.add_idempotent.
+      unfold mapNamesMap.
+      rewrite M.F.P.fold_add; auto.
+      rewrite M.F.P.fold_add; auto.
+    - unfold mapNamesMap.
+      rewrite M.F.P.fold_add; auto.
+      apply M.F.P.F.not_find_in_iff; auto.
   Qed.
   
   Lemma mapNamesMapsTo1 A m: forall k (v: A),
