@@ -372,6 +372,14 @@ Definition traceRefines p m1 m2 :=
                   exists s2 sig2, Behavior m2 s2 sig2 /\
                                   equivalentLabelSeq p sig1 sig2.
 
+Notation "ma '<<=[' p ']' mb" :=
+  (traceRefines p ma mb) (at level 100, format "ma  <<=[  p  ]  mb").
+Notation "ma '<<==' mb" :=
+  (traceRefines id ma mb) (at level 100, format "ma  <<==  mb").
+Notation "ma '<<==>>' mb" :=
+  (traceRefines id ma mb /\ traceRefines id mb ma)
+    (at level 100, format "ma  <<==>>  mb").
+
 Theorem staticDynCallsRules m o name a u cs r:
   In (name :: a)%struct (getRules m) ->
   SemAction o (a type) u cs r ->

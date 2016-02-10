@@ -59,3 +59,17 @@ Section StepToRefinement.
     intuition.
   Qed.
 End StepToRefinement.
+
+Section Facts.
+
+  Lemma traceRefines_trans:
+    forall ma mb mc p q,
+      (ma <<=[p] mb) ->
+      (mb <<=[q] mc) ->
+      (ma <<=[fun f => q (p f)] mc).
+  Proof.
+    admit.
+  Qed.
+
+End Facts.
+

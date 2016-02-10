@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound L
 
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
-Require Import Lts.Decomposition.
+Require Import Lts.Refinement Lts.Decomposition.
 
 Set Implicit Arguments.
 
@@ -49,32 +49,11 @@ Section Tests.
   
   Lemma mab_mc: traceRefines p (ConcatMod ma mb) mc.
   Proof.
-    unfold traceRefines; intros.
-    inv H; induction HMultistepBeh.
-
-    - exists (initRegs (getRegInits mc)), nil.
-      split; [|constructor].
-      repeat constructor.
-
-    - apply inline_correct in HStep.
-
-      + simpl in HStep.
-        unfold inlineDmToRule, inlineDmToDm in HStep.
-        simpl in HStep.
-        unfold getBody in HStep.
-        simpl in HStep.
-        destruct (SignatureT_dec _ _); [|elim n0; reflexivity].
-        simpl in HStep.
-        rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq in HStep.
-        unfold appendAction in HStep.
-
-        admit.
-
+    apply traceRefines_trans with (mb:= fst (inline (ConcatMod ma mb))).
+    - apply inline_refines; auto.
       + repeat constructor.
-      + repeat constructor.
-        simpl; auto.
-      + reflexivity.
-
+      + repeat constructor; auto.
+    - admit. (* decomposition? *)
   Qed.
 
 End Tests.

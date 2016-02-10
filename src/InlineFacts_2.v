@@ -812,7 +812,7 @@ Proof.
   destruct (hide _); simpl in *; intuition.
 Qed.
 
-Theorem inline_correct:
+Lemma inline_correct_Step:
   forall m (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inline m) = true)
@@ -823,5 +823,46 @@ Proof.
   intros; unfold inline.
   apply step_consistent; apply step_consistent in H.
   apply inlineDms_correct; auto.
+Qed.
+
+Lemma inlineDms'_preserves_regInits:
+  forall dms m, getRegInits m = getRegInits (fst (inlineDms' m dms)).
+Proof.
+  induction dms; [reflexivity|].
+  intros; simpl; remember (inlineDmToMod m a) as ima; destruct ima.
+  destruct b.
+  - rewrite <-IHdms.
+    unfold inlineDmToMod in Heqima.
+    destruct (wfModules _); [|inv Heqima; auto].
+    destruct (getAttribute _ _); [|inv Heqima; auto].
+    destruct (noCallDm _ _); [|inv Heqima; auto].
+    inv Heqima; auto.
+    
+  - unfold inlineDmToMod in Heqima.
+    destruct (wfModules _); [|inv Heqima; auto].
+    destruct (getAttribute _ _); [|inv Heqima; auto].
+    destruct (noCallDm _ _); [|inv Heqima; auto].
+    inv Heqima.
+Qed.
+
+Lemma inline_preserves_regInits:
+  forall m, getRegInits m = getRegInits (fst (inline m)).
+Proof. intros; apply inlineDms'_preserves_regInits. Qed.
+
+Require Import Refinement.
+
+Theorem inline_refines:
+  forall m (Hequiv: ModEquiv typeUT type m)
+         (Hdms: NoDup (namesOf (getDefsBodies m)))
+         (Hin: snd (inline m) = true),
+    m <<== (fst (inline m)).
+Proof.
+  intros.
+  apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
+  - rewrite inline_preserves_regInits; reflexivity.
+  - intros; apply inline_correct_Step in H; auto.
+    exists u; split; auto.
+    destruct l as [ann ds cs]. simpl in *.
+    destruct ann as [[|]|]; auto.
 Qed.
 
