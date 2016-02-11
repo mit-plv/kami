@@ -53,9 +53,9 @@ Section Tests.
     - apply inlineF_refines; auto.
       + repeat constructor.
       + repeat constructor; auto.
-    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
-      + intuition.
-      + (* ?? *)
+      + admit.
+    - admit.
+      (* eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto. *)
   Abort.
 
 End Tests.

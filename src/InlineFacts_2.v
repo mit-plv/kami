@@ -877,7 +877,7 @@ Proof.
   apply andb_true_iff in H; dest.
   apply DisjList_app_4.
   - apply noCallsRules_implies_disj; auto.
-  - 
+  - apply noCallsDms_implies_disj; auto.
 Qed.
 
 Lemma inlineF_correct_Step:
@@ -927,8 +927,11 @@ Lemma inlineF_preserves_regInits:
 Proof.
   intros; unfold inlineF.
   remember (inline m) as imb; destruct imb as [im ib]; simpl.
-  replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
-  apply inlineDms'_preserves_regInits.
+  destruct (noCalls im).
+  - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
+    apply inlineDms'_preserves_regInits.
+  - simpl; replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
+    apply inlineDms'_preserves_regInits.
 Qed.
 
 Require Import Refinement.
