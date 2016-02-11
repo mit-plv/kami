@@ -112,6 +112,28 @@ Proof.
         intuition.
 Qed.
 
+Lemma substepsInd_defs_in:
+  forall m or u l,
+    SubstepsInd m or u l -> M.KeysSubset (defs l) (getDefs m).
+Proof.
+  induction 1; simpl; [apply M.KeysSubset_empty|].
+  subst; destruct l as [ann ds cs]; simpl in *.
+  apply M.KeysSubset_union; auto.
+  destruct sul as [|[[dmn dmv]|]]; try (apply M.KeysSubset_empty).
+  apply M.KeysSubset_add; [apply M.KeysSubset_empty|].
+  pose proof (staticDynDefsSubstep H0); auto.
+Qed.
+
+Lemma substepsInd_calls_in:
+  forall m or u l,
+    SubstepsInd m or u l -> M.KeysSubset (calls l) (getCalls m).
+Proof.
+  induction 1; simpl; [apply M.KeysSubset_empty|].
+  subst; destruct l as [ann ds cs]; simpl in *.
+  apply M.KeysSubset_union; auto.
+  pose proof (staticDynCallsSubstep H0); auto.
+Qed.
+
 Lemma hide_idempotent:
   forall (l: LabelT), hide l = hide (hide l).
 Proof.
@@ -195,17 +217,66 @@ Proof.
   apply merge_preserves_stepInd; auto.
 Qed.
 
+Lemma substep_dms_weakening:
+  forall regs rules dms or u ul cs,
+    Substep (Mod regs rules dms) or u ul cs ->
+    forall filt,
+      M.KeysDisj (defs (getLabel ul cs)) filt ->
+      Substep (Mod regs rules (filterDms dms filt)) or u ul cs.
+Proof.
+  induction 1; simpl; intros; try (econstructor; eauto; fail).
+
+  eapply SingleMeth; eauto.
+  clear -H HIn; simpl in *.
+  specialize (H f).
+  apply filter_In.
+  destruct (in_dec string_dec f filt); auto.
+  elim H; auto.
+  apply M.F.P.F.add_in_iff; auto.
+Qed.
+
 Lemma substepInd_dms_weakening:
   forall regs rules dms or u l,
-    DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
     SubstepsInd (Mod regs rules dms) or u l ->
     forall filt,
-      M.KeysDisj (defs (hide l)) filt ->
+      M.KeysDisj (defs l) filt ->
       SubstepsInd (Mod regs rules (filterDms dms filt)) or u l.
 Proof.
-  induction 2; intros; subst; simpl; [constructor|].
-  (* eapply SubstepsCons; eauto. *)
-  admit.
+  induction 1; intros; subst; simpl; [constructor|].
+  eapply SubstepsCons; eauto.
+  - apply IHSubstepsInd.
+    clear -H4.
+    destruct (getLabel sul scs) as [ann ds cs], l as [lann lds lcs].
+    simpl in *; eapply M.KeysDisj_union_2; eauto.
+  - apply substep_dms_weakening; auto.
+    clear -H4.
+    destruct (getLabel sul scs) as [ann ds cs], l as [lann lds lcs].
+    simpl in *; eapply M.KeysDisj_union_1; eauto.
+Qed.
+
+Lemma substepsInd_meths_disj:
+  forall regs rules dms,
+    DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
+    forall or u l,
+      SubstepsInd (Mod regs rules dms) or u l ->
+      M.Disj (calls l) (defs l).
+Proof.
+  intros.
+  pose proof (substepsInd_calls_in H0).
+  pose proof (substepsInd_defs_in H0).
+  eapply M.DisjList_KeysSubset_Disj; eauto.
+Qed.
+
+Lemma substepsInd_hide_void:
+  forall regs rules dms,
+    DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
+    forall or u l,
+      SubstepsInd (Mod regs rules dms) or u l ->
+      hide l = l.
+Proof.
+  intros; destruct l as [ann ds cs].
+  pose proof (substepsInd_meths_disj H H0).
+  unfold hide; simpl in *; f_equal; apply M.subtractKV_disj; mdisj.
 Qed.
 
 Lemma stepInd_dms_weakening:
@@ -218,7 +289,8 @@ Lemma stepInd_dms_weakening:
 Proof.
   induction 2; intros.
   constructor.
-  - apply substepInd_dms_weakening; auto.
+  - erewrite substepsInd_hide_void in H0; eauto.
+    apply substepInd_dms_weakening; auto.
   - apply filterDms_wellHidden; auto.
 Qed.
 

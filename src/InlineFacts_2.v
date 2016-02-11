@@ -816,6 +816,70 @@ Proof.
   apply inlineDms_correct; auto.
 Qed.
 
+Lemma DisjList_string_cons:
+  forall l1 l2 (e: string),
+    ~ In e l2 -> DisjList l1 l2 -> DisjList (e :: l1) l2.
+Proof.
+  unfold DisjList; intros.
+  destruct (string_dec e e0); subst; auto.
+  pose proof (H0 e0); clear H0.
+  inv H1; auto.
+  left; intro Hx; inv Hx; auto.
+Qed.
+
+Lemma isLeaf_implies_disj:
+  forall {retK} (a: ActionT typeUT retK) calls,
+    true = isLeaf a calls -> DisjList (getCallsA a) calls.
+Proof.
+  induction a; simpl; intros; auto.
+  - destruct (in_dec string_dec meth calls); [inv H0|].
+    apply DisjList_string_cons; auto.
+  - apply eq_sym, andb_true_iff in H0; dest.
+    apply andb_true_iff in H0; dest.
+    apply DisjList_app_4; auto.
+    apply DisjList_app_4; auto.
+  - apply DisjList_nil_1.
+Qed.
+
+Lemma noCallsRules_implies_disj:
+  forall calls rules,
+    noCallsRules rules calls = true ->
+    DisjList (getCallsR rules) calls.
+Proof.
+  induction rules; simpl; intros; [apply DisjList_nil_1|].
+  remember (isLeaf (attrType a typeUT) calls) as blf; destruct blf; [|discriminate].
+  apply DisjList_app_4.
+  - apply isLeaf_implies_disj; auto.
+  - apply IHrules; auto.
+Qed.
+
+Lemma noCallsDms_implies_disj:
+  forall calls dms,
+    noCallsDms dms calls = true ->
+    DisjList (getCallsM dms) calls.
+Proof.
+  induction dms; simpl; intros; [apply DisjList_nil_1|].
+  remember (isLeaf (projT2 (attrType a) typeUT tt) calls) as blf; destruct blf; [|discriminate].
+  apply DisjList_app_4.
+  - apply isLeaf_implies_disj; auto.
+  - apply IHdms; auto.
+Qed.
+
+Lemma noCalls_implies_disj:
+  forall m,
+    noCalls m = true ->
+    DisjList
+      (Syntax.getCalls (Mod (getRegInits m) (getRules m)
+                            (getDefsBodies m)))
+      (getDefs (Mod (getRegInits m) (getRules m) (getDefsBodies m))).
+Proof.
+  unfold noCalls, noCalls', Syntax.getCalls, getDefs; simpl; intros.
+  apply andb_true_iff in H; dest.
+  apply DisjList_app_4.
+  - apply noCallsRules_implies_disj; auto.
+  - 
+Qed.
+
 Lemma inlineF_correct_Step:
   forall m (Hequiv: ModEquiv typeUT type m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
@@ -826,12 +890,15 @@ Lemma inlineF_correct_Step:
 Proof.
   unfold inlineF; intros.
   remember (inline m) as imb; destruct imb as [im ib]; subst.
-  pose proof (inline_correct_Step _ Hequiv Hdms (cheat _) _ _ _ H).
+  simpl; remember (noCalls im) as imc.
+  destruct imc; [|inv Hin].
+  assert (Hit: snd (inline m) = true)
+    by (rewrite <-Heqimb; inv Hin; auto).
+  pose proof (inline_correct_Step _ Hequiv Hdms Hit _ _ _ H).
   rewrite <-Heqimb in H0; simpl in H0.
   pose proof (step_dms_hidden _ _ _ _ H).
-  simpl.
   apply step_dms_weakening; auto.
-  - admit.
+  - apply noCalls_implies_disj; auto.
   - apply merge_preserves_step; auto.
 Qed.
   

@@ -103,41 +103,31 @@ Section PhoasUT.
     Definition noCallDm (dm: DefMethT) (tgt: DefMethT) :=
       isLeaf (projT2 (attrType dm) typeUT tt) [attrName tgt].
 
-    Fixpoint noCallDms (dms: list DefMethT) (tgt: DefMethT) :=
+    Fixpoint noCallsDms (dms: list DefMethT) (calls: list string) :=
       match dms with
         | nil => true
         | dm :: dms' =>
-          if noCallDm dm tgt
-          then noCallDms dms' tgt
+          if isLeaf (projT2 (attrType dm) typeUT tt) calls
+          then noCallsDms dms' calls
           else false
       end.
 
-    Fixpoint noCallRules (rules: list (Attribute (Action Void)))
-             (tgt: DefMethT) :=
+    Fixpoint noCallsRules (rules: list (Attribute (Action Void)))
+             (calls: list string) :=
       match rules with
         | nil => true
         | r :: rules' =>
-          if isLeaf (attrType r typeUT) [attrName tgt]
-          then noCallRules rules' tgt
+          if isLeaf (attrType r typeUT) calls
+          then noCallsRules rules' calls
           else false
       end.
 
-    Fixpoint noCall (m: Modules) (tgt: DefMethT) :=
-      match m with
-        | Mod _ rules dms =>
-          (noCallRules rules tgt) && (noCallDms dms tgt)
-        | ConcatMod m1 m2 => (noCall m1 tgt) && (noCall m2 tgt)
-      end.
-
-    Fixpoint noCalls' (m: Modules) (dms: list DefMethT) :=
-      match dms with
-        | nil => true
-        | dm :: dms' =>
-          (noCall m dm) && (noCalls' m dms')
-      end.
+    Definition noCalls' (m: Modules) (calls: list string) :=
+      (noCallsRules (getRules m) calls)
+        && (noCallsDms (getDefsBodies m) calls).
 
     Definition noCalls (m: Modules) :=
-      noCalls' m (getDefsBodies m).
+      noCalls' m (getDefs m).
 
   End Tree.
 
@@ -253,8 +243,11 @@ Section Exts.
 
   Definition inlineF (m: Modules) :=
     let (im, ib) := inline m in
-    (Mod (getRegInits im) (getRules im)
-         (filterDms (getDefsBodies im) (Syntax.getCalls m)), ib).
-  
+    if noCalls im then
+      (Mod (getRegInits im) (getRules im)
+           (filterDms (getDefsBodies im) (Syntax.getCalls m)), ib)
+    else
+      (im, false).
+
 End Exts.
 

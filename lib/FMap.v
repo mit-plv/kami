@@ -1,3 +1,4 @@
+Require Import String.
 Require FSets.FMapList FSets.FMapFacts.
 Require Import Lists.SetoidList.
 Require Import Structures.OrderedType.
@@ -61,6 +62,12 @@ Section Lists. (* For dealing with domains *)
     apply in_app_or in H; intuition.
   Qed.
 
+  Lemma DisjList_nil_1: forall l, DisjList nil l.
+  Proof. unfold DisjList; auto. Qed.
+
+  Lemma DisjList_nil_2: forall l, DisjList l nil.
+  Proof. unfold DisjList; auto. Qed.
+
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 
     intros. unfold DisjList in *. intros e. specialize (H e). intuition.
@@ -98,6 +105,18 @@ Section Lists. (* For dealing with domains *)
     - intros; destruct (H e).
       + left; intuition.
       + right; intuition.
+  Qed.
+
+  Lemma DisjList_app_4:
+    forall l1 l2 l3,
+      DisjList l1 l3 -> DisjList l2 l3 -> DisjList (l1 ++ l2) l3.
+  Proof.
+    intros; unfold DisjList in *; intros.
+    specialize (H e); specialize (H0 e).
+    destruct H; auto.
+    destruct H0; auto.
+    left; intro Hx.
+    apply in_app_or in Hx; destruct Hx; auto.
   Qed.
 
 End Lists.
@@ -759,11 +778,51 @@ Module LeibnizFacts (M : MapLeibniz).
     apply P.eqke_equiv.
   Qed.
 
+  Lemma KeysDisj_union_1:
+    forall {A} (m1 m2: t A) d, KeysDisj (union m1 m2) d -> KeysDisj m1 d.
+  Proof.
+    mintros; specialize (H _ H0).
+    apply P.F.not_find_in_iff; apply P.F.not_find_in_iff in H.
+    rewrite find_union in H; destruct (find k m1); auto.
+  Qed.
+
+  Lemma KeysDisj_union_2:
+    forall {A} (m1 m2: t A) d, KeysDisj (union m1 m2) d -> KeysDisj m2 d.
+  Proof.
+    mintros; specialize (H _ H0).
+    apply P.F.not_find_in_iff; apply P.F.not_find_in_iff in H.
+    rewrite find_union in H; destruct (find k m1); auto; inv H.
+  Qed.
+
   Lemma KeysDisj_SubList:
     forall {A} (m: t A) (d1 d2: list E.t),
       KeysDisj m d1 -> SubList d2 d1 -> KeysDisj m d2.
   Proof. mintros; auto. Qed.
 
+  Lemma DisjList_KeysSubset_Disj:
+    forall {A} (m1 m2: t A) (d1 d2: list E.t),
+      DisjList d1 d2 -> KeysSubset m1 d1 -> KeysSubset m2 d2 -> Disj m1 m2.
+  Proof.
+    mintros; unfold DisjList in H.
+    specialize (H k).
+    remember (M.find k m1) as ov; destruct ov.
+    - right.
+      assert (In k m1) by (apply P.F.in_find_iff; rewrite <-Heqov; discriminate).
+      specialize (H0 _ H2).
+      inv H; intuition.
+    - left.
+      inv H; intuition.
+      specialize (H0 _ H).
+      apply eq_sym, P.F.not_find_in_iff in Heqov; intuition.
+  Qed.
+
+  Lemma subtractKV_disj:
+    forall {A} deceqA (m1 m2: t A),
+      Disj m1 m2 -> subtractKV deceqA m1 m2 = m1.
+  Proof.
+    admit.
+  Qed.
+  
   Lemma subtractKV_subtractKVD_1:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
            (m1 m2: t A) dom,
@@ -976,7 +1035,7 @@ Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Proof. apply lt_irrel_leibniz, UOT.lt_irrel. Qed.
 End FMapListLeib.
 
-Require Import Lib.String_as_OT String.
+Require Import Lib.String_as_OT.
 
 Module String_as_OT' <: UsualOrderedTypeLTI.
   Include String_as_OT.
@@ -1010,6 +1069,10 @@ Ltac solve_disj :=
   repeat
     (try assumption;
      match goal with
+       | [ |- M.Disj (M.empty _) _ ] =>
+         apply M.Disj_empty_1
+       | [ |- M.Disj _ (M.empty _) ] =>
+         apply M.Disj_empty_2
        | [H: M.Disj ?m1 ?m2 |- M.Disj ?m2 ?m1] =>
          (apply M.Disj_comm; auto)
        | [ |- M.Disj _ (M.union _ _) ] =>
