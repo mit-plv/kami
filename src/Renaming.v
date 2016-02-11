@@ -47,7 +47,7 @@ Section Rename.
 
   Definition renameAttr A a := {| attrName := p (@attrName A a); attrType := attrType a |}.
   
-  Fixpoint renameList A (ls: list (Attribute A)) :=
+  Definition renameList A (ls: list (Attribute A)) :=
     map (@renameAttr _) ls.
 
   Definition renameMap A (m: M.t A) :=
