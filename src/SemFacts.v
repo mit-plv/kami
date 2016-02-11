@@ -112,77 +112,6 @@ Proof.
         intuition.
 Qed.
 
-Lemma hide_mergeLabel:
-  forall l1 l2,
-    M.Disj (defs l1) (defs l2) ->
-    M.Disj (calls l1) (calls l2) ->
-    hide (mergeLabel l1 l2) = mergeLabel (hide l1) (hide l2).
-Proof.
-  destruct l1 as [ann1 ds1 cs1], l2 as [ann2 ds2 cs2].
-  unfold hide, mergeLabel; simpl; f_equal; admit.
-Qed.
-
-Lemma substep_rule_dms_weakening:
-  forall regs rules dms1 or u r cs,
-    Substep (Mod regs rules dms1) or u (Rle r) cs ->
-    forall dms2,
-      Substep (Mod regs rules dms2) or u (Rle r) cs.
-Proof.
-  intros; inv H.
-  - constructor; auto.
-  - eapply SingleRule; eauto.
-Qed.
-
-Lemma substep_meth_none_dms_weakening:
-  forall regs rules dms1 or u cs,
-    Substep (Mod regs rules dms1) or u (Meth None) cs ->
-    forall dms2,
-      Substep (Mod regs rules dms2) or u (Meth None) cs.
-Proof. intros; inv H; constructor; auto. Qed.
-
-Lemma substepsInd_dms_weakening:
-  forall regs rules dms or u l,
-    SubstepsInd (Mod regs rules dms) or u l ->
-    forall filt,
-      M.KeysDisj (defs (hide l)) filt ->
-      SubstepsInd (Mod regs rules (filterDms dms filt)) or u (hide l).
-Proof.
-  induction 1; intros; [constructor|subst].
-  destruct sul as [sr|[[sdmn sdmv]|]].
-
-  - eapply SubstepsCons.
-    Focus 5.
-    + rewrite hide_mergeLabel.
-      * f_equal.
-        instantiate (1:= scs); instantiate (1:= Rle sr).
-        unfold hide, getLabel; simpl; f_equal.
-        apply M.subtractKV_empty_2.
-      * simpl; apply M.Disj_empty_1.
-      * inv H1; dest; simpl; auto.
-    + apply IHSubstepsInd.
-      admit.
-    + eapply substep_rule_dms_weakening; eauto.
-    + admit.
-    + auto.
-
-  - admit.
-    
-  - eapply SubstepsCons.
-    Focus 5.
-    + rewrite hide_mergeLabel.
-      * f_equal.
-        instantiate (1:= scs); instantiate (1:= Meth None).
-        unfold hide, getLabel; simpl; f_equal.
-        apply M.subtractKV_empty_2.
-      * simpl; apply M.Disj_empty_1.
-      * inv H1; dest; simpl; auto.
-    + apply IHSubstepsInd.
-      admit.
-    + eapply substep_meth_none_dms_weakening; eauto.
-    + admit.
-    + auto.
-Qed.
-
 Lemma hide_idempotent:
   forall (l: LabelT), hide l = hide (hide l).
 Proof.
@@ -191,30 +120,70 @@ Proof.
   apply M.subtractKV_idempotent.
 Qed.
 
-Lemma stepInd_dms_weakening:
-  forall regs rules dms or nr l,
-    StepInd (Mod regs rules dms) or nr l ->
-    forall filt,
-      M.KeysDisj (defs l) filt ->
-      StepInd (Mod regs rules (filterDms dms filt)) or nr l.
+Lemma filterDms_getCalls:
+  forall regs rules dms filt,
+    SubList (getCalls (Mod regs rules (filterDms dms filt)))
+            (getCalls (Mod regs rules dms)).
 Proof.
-  induction 1; intros.
-  rewrite hide_idempotent.
-  constructor.
-  - apply substepsInd_dms_weakening; auto.
-  - rewrite <-hide_idempotent.
-    admit.
+  unfold getCalls; simpl; intros.
+  apply SubList_app_3; [apply SubList_app_1, SubList_refl|].
+  apply SubList_app_2.
+
+  clear.
+  induction dms; simpl; [apply SubList_nil|].
+  destruct (in_dec _ _ _).
+  - apply SubList_app_2; auto.
+  - apply SubList_app_3.
+    + apply SubList_app_1, SubList_refl.
+    + apply SubList_app_2; auto.
 Qed.
 
-Lemma step_dms_weakening:
-  forall regs rules dms or nr l,
-    Step (Mod regs rules dms) or nr l ->
+Lemma filterDms_wellHidden:
+  forall regs rules dms l,
+    wellHidden (Mod regs rules dms) (hide l) ->
     forall filt,
-      M.KeysDisj (defs l) filt ->
-      Step (Mod regs rules (filterDms dms filt)) or nr l.
+      wellHidden (Mod regs rules (filterDms dms filt)) (hide l).
 Proof.
-  intros; apply step_consistent; apply step_consistent in H.
-  apply stepInd_dms_weakening; auto.
+  unfold wellHidden, hide; simpl; intros; dest.
+  split.
+  - eapply M.KeysDisj_SubList; eauto.
+    apply filterDms_getCalls.
+  - unfold getDefs in *; simpl in *.
+    eapply M.KeysDisj_SubList; eauto.
+
+    clear.
+    induction dms; simpl; auto.
+    + apply SubList_nil.
+    + destruct (in_dec _ _ _).
+      * apply SubList_cons_right; auto.
+      * simpl; apply SubList_cons; auto.
+        apply SubList_cons_right; auto.
+Qed.
+
+Lemma merge_preserves_substep:
+  forall m or u ul cs,
+    Substep m or u ul cs ->
+    Substep (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or u ul cs.
+Proof. induction 1; simpl; intros; try (econstructor; eauto). Qed.
+
+Lemma merge_preserves_substepsInd:
+  forall m or u l,
+    SubstepsInd m or u l ->
+    SubstepsInd (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or u l.
+Proof.
+  induction 1; intros; [constructor|].
+  subst; eapply SubstepsCons; eauto.
+  apply merge_preserves_substep; auto.
+Qed.
+
+Lemma merge_preserves_stepInd:
+  forall m or nr l,
+    StepInd m or nr l ->
+    StepInd (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or nr l.
+Proof.
+  intros; inv H.
+  constructor; auto.
+  apply merge_preserves_substepsInd; auto.
 Qed.
 
 Lemma merge_preserves_step:
@@ -222,6 +191,48 @@ Lemma merge_preserves_step:
     Step m or nr l ->
     Step (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or nr l.
 Proof.
+  intros; apply step_consistent; apply step_consistent in H.
+  apply merge_preserves_stepInd; auto.
+Qed.
+
+Lemma substepInd_dms_weakening:
+  forall regs rules dms or u l,
+    DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
+    SubstepsInd (Mod regs rules dms) or u l ->
+    forall filt,
+      M.KeysDisj (defs (hide l)) filt ->
+      SubstepsInd (Mod regs rules (filterDms dms filt)) or u l.
+Proof.
+  induction 2; intros; subst; simpl; [constructor|].
+  (* eapply SubstepsCons; eauto. *)
   admit.
+Qed.
+
+Lemma stepInd_dms_weakening:
+  forall regs rules dms or u l,
+    DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
+    StepInd (Mod regs rules dms) or u l ->
+    forall filt,
+      M.KeysDisj (defs l) filt ->
+      StepInd (Mod regs rules (filterDms dms filt)) or u l.
+Proof.
+  induction 2; intros.
+  constructor.
+  - apply substepInd_dms_weakening; auto.
+  - apply filterDms_wellHidden; auto.
+Qed.
+
+Lemma step_dms_weakening:
+  forall regs rules dms or u l,
+    DisjList (getCalls (Mod regs rules dms))
+             (getDefs (Mod regs rules dms)) ->
+    Step (Mod regs rules dms) or u l ->
+    forall filt,
+      M.KeysDisj (defs l) filt ->
+      Step (Mod regs rules (filterDms dms filt)) or u l.
+Proof.
+  intros; subst; simpl.
+  apply step_consistent; apply step_consistent in H0.
+  apply stepInd_dms_weakening; auto.
 Qed.
 

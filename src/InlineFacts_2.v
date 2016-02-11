@@ -829,8 +829,10 @@ Proof.
   pose proof (inline_correct_Step _ Hequiv Hdms (cheat _) _ _ _ H).
   rewrite <-Heqimb in H0; simpl in H0.
   pose proof (step_dms_hidden _ _ _ _ H).
+  simpl.
   apply step_dms_weakening; auto.
-  apply merge_preserves_step; auto.
+  - admit.
+  - apply merge_preserves_step; auto.
 Qed.
   
 Lemma inlineDms'_preserves_regInits:
