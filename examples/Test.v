@@ -45,7 +45,12 @@ Definition mc := MODULE {
     Retv
 }.
 
+Require Import Program.Equality.
+
 Section Tests.
+
+  (* TODO: eq_rect incomputable *)
+  (* Eval compute in (noCalls (fst (inline (ConcatMod ma mb)))). *)
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
@@ -53,9 +58,7 @@ Section Tests.
     - apply inlineF_refines; auto.
       + repeat constructor.
       + repeat constructor; auto.
-      + admit.
-    - admit.
-      (* eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto. *)
+    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r); auto.
   Abort.
 
 End Tests.

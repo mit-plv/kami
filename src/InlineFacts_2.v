@@ -922,6 +922,10 @@ Proof.
     inv Heqima.
 Qed.
 
+Lemma inline_preserves_regInits:
+  forall m, getRegInits m = getRegInits (fst (inline m)).
+Proof. intros; apply inlineDms'_preserves_regInits. Qed.
+
 Lemma inlineF_preserves_regInits:
   forall m, getRegInits m = getRegInits (fst (inlineF m)).
 Proof.
@@ -935,6 +939,21 @@ Proof.
 Qed.
 
 Require Import Refinement.
+
+Theorem inline_refines:
+  forall m (Hequiv: ModEquiv typeUT type m)
+         (Hdms: NoDup (namesOf (getDefsBodies m)))
+         (Hin: snd (inline m) = true),
+    traceRefines id m (fst (inline m)).
+Proof.
+  intros.
+  apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
+  - erewrite inlineDms'_preserves_regInits; reflexivity.
+  - intros; apply inline_correct_Step in H; unfold id in *; auto.
+    exists u; split; auto.
+    destruct l as [ann ds cs]; simpl in *.
+    destruct ann as [[|]|]; auto.
+Qed.
 
 Theorem inlineF_refines:
   forall m (Hequiv: ModEquiv typeUT type m)

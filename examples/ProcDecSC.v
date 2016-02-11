@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
-Require Import Lts.Decomposition Lts.Renaming Lts.Inline.
+Require Import Lts.Decomposition Lts.Renaming Lts.Inline Lts.InlineFacts_2.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Section ProcDecSC.
@@ -59,7 +59,6 @@ Section ProcDecSC.
     Defined.
     Hint Unfold regRel.
 
-    (* Lemma procDec_SC_i: pdecfi <<=[f] pinsti. *)
   End SingleCore.
 
   (* Theorem procDecM_SC: forall n, exists f, (procDecM n) <<=[f] (sc n). *)
