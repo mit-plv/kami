@@ -57,7 +57,7 @@ Section Inverse.
   Qed.
 
   Theorem traceEqvRename m: traceRefines (renameMap p (A := _)) m (renameModules p m) /\
-                       traceRefines (renameMap pInv (A := _)) (renameModules p m) m.
+                            traceRefines (renameMap pInv (A := _)) (renameModules p m) m.
   Proof.
     constructor.
     - apply traceRefinesRename.
