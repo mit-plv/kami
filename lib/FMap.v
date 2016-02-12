@@ -382,6 +382,13 @@ Module LeibnizFacts (M : MapLeibniz).
              (m1 m2 : t A) : t A :=
     subtractKVD deceqA m1 m2 (List.map (fun e => fst e) (elements m1)).
 
+  (* Definition restrict {A} (m: t A) (d: list E.t) := *)
+  (*   fold_left (fun fm k => *)
+  (*                match find k m with *)
+  (*                  | Some v => add k v fm *)
+  (*                  | None => fm *)
+  (*                end) d (M.empty _). *)
+
   Hint Unfold update Sub subtract subtractKV : MapDefs.
   Hint Unfold E.eq.
 
@@ -1026,6 +1033,13 @@ Module LeibnizFacts (M : MapLeibniz).
           destruct (find y m2); find_add_tac; reflexivity.
   Qed.
 
+  (* Lemma KeysEq_app_restrict_union: *)
+  (*   forall {A} (m: t A) (d1 d2: list E.t), *)
+  (*     KeysEq m (d1 ++ d2) -> m = union (restrict m d1) (restrict m d2). *)
+  (* Proof. *)
+  (*   admit. *)
+  (* Qed. *)
+
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
@@ -1057,10 +1071,10 @@ Ltac dest_disj :=
         apply M.Disj_add_2 in H; dest
       | [H: M.Disj _ (M.add _ _ _) |- _] =>
         apply M.Disj_comm, M.Disj_add_2 in H; dest
-      | [H: M.Disj (M.union _ _) _ |- _] =>
-        apply M.Disj_comm in H
       | [H: M.Disj _ (M.union _ _) |- _] =>
         pose proof (M.Disj_union_1 H); pose proof (M.Disj_union_2 H); clear H
+      | [H: M.Disj (M.union _ _) _ |- _] =>
+        apply M.Disj_comm in H
       | [H: M.Disj _ (M.empty _) |- _] => clear H
       | [H: M.Disj (M.empty _) _ |- _] => clear H
     end.

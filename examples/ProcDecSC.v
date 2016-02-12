@@ -65,3 +65,34 @@ Section ProcDecSC.
 
 End ProcDecSC.
 
+Variable dec: DecT 2 1 1 1.
+Variable exec: ExecT 2 1 1 1.
+
+Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
+Proof.
+  apply traceRefines_trans with (mb:= fst (inlineF (pdecfi _ 1 _ _ dec exec 0))).
+  - apply inlineF_refines.
+    (* + constructor. *)
+    (*   * constructor. *)
+    (*     { constructor. *)
+    (*       intros; constructor; [repeat constructor|]. *)
+    (*       constructor. *)
+    (*       intros; constructor. *)
+    (*       intros; constructor. *)
+    (*       { constructor. *)
+    (*         { constructor. *)
+    (*           constructor. *)
+    (*           simpl. *)
+    (*           constructor. *)
+    + admit.
+    + admit.
+    + vm_compute; reflexivity.
+
+  - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r).
+    + rewrite <-inlineF_preserves_regInits.
+      admit. (* ?? *)
+    + vm_compute; auto.
+    + vm_compute; intuition.
+    + (* TODO *)
+Abort.
+
