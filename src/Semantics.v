@@ -21,19 +21,17 @@ Section GivenModule.
     Definition UpdatesT := RegsT.
 
     Inductive Substep: UpdatesT -> UnitLabel -> MethsT -> Prop :=
-    | EmptyRule (HDomainEq: M.KeysEq o (map (@attrName _) (getRegInits m))):
+    | EmptyRule:
         Substep (M.empty _) (Rle None) (M.empty _)
-    | EmptyMeth (HDomainEq: M.KeysEq o (map (@attrName _) (getRegInits m))):
+    | EmptyMeth:
         Substep (M.empty _) (Meth None) (M.empty _)
     | SingleRule k (a: Action Void)
                  (HInRules: List.In {| attrName := k; attrType := a |} (getRules m))
-                 (HOldRegs: M.KeysSubset o (map (@attrName _) (getRegInits m)))
                  u cs (HAction: SemAction o (a type) u cs WO):
         Substep u (Rle (Some k)) cs
     | SingleMeth (f: DefMethT)
                  (HIn: In f (getDefsBodies m))
                  u cs argV retV
-                 (HOldRegs: M.KeysSubset o (map (@attrName _) (getRegInits m)))
                  (HAction: SemAction o ((projT2 (attrType f)) type argV) u cs retV):
         Substep u
                 (Meth (Some {| attrName := attrName f;

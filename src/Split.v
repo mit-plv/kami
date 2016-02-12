@@ -71,9 +71,7 @@ Section TwoModules.
         o = M.union oa ob /\ u = M.union ua ub /\
         ul = mergeUnitLabel ula ulb /\ cs = M.union csa csb.
   Proof.
-    induction 1; simpl; intros.
-
-    - 
+    admit.
   Qed.
 
   Lemma substepsInd_split:
