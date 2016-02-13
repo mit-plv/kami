@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Refinement.
-Require Import Lts.Decomposition Lts.Renaming Lts.Inline.
+Require Import Lts.Decomposition Lts.Renaming Lts.Inline Lts.InlineFacts_2.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Section ProcDecSC.
@@ -59,10 +59,40 @@ Section ProcDecSC.
     Defined.
     Hint Unfold regRel.
 
-    (* Lemma procDec_SC_i: pdecfi <<=[f] pinsti. *)
   End SingleCore.
 
   (* Theorem procDecM_SC: forall n, exists f, (procDecM n) <<=[f] (sc n). *)
 
 End ProcDecSC.
+
+Variable dec: DecT 2 1 1 1.
+Variable exec: ExecT 2 1 1 1.
+
+Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
+Proof.
+  apply traceRefines_trans with (mb:= fst (inlineF (pdecfi _ 1 _ _ dec exec 0))).
+  - apply inlineF_refines.
+    (* + constructor. *)
+    (*   * constructor. *)
+    (*     { constructor. *)
+    (*       intros; constructor; [repeat constructor|]. *)
+    (*       constructor. *)
+    (*       intros; constructor. *)
+    (*       intros; constructor. *)
+    (*       { constructor. *)
+    (*         { constructor. *)
+    (*           constructor. *)
+    (*           simpl. *)
+    (*           constructor. *)
+    + admit.
+    + admit.
+    + vm_compute; reflexivity.
+
+  - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r).
+    + rewrite <-inlineF_preserves_regInits.
+      admit. (* ?? *)
+    + vm_compute; auto.
+    + vm_compute; intuition.
+    + (* TODO *)
+Abort.
 

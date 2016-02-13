@@ -137,7 +137,7 @@ Proof.
   decide equality.
   apply decKind.
   apply decKind.
-Qed.
+Defined.
 
 Inductive UniBoolOp: Set :=
 | Neg: UniBoolOp.

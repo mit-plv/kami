@@ -1,4 +1,7 @@
-Require Import Syntax Semantics String Lib.FMap Program.Equality List.
+Require Import List String.
+Require Import Program.Equality.
+Require Import Lib.CommonTactics Lib.FMap.
+Require Import Syntax Semantics Split.
 
 Set Implicit Arguments.
 
@@ -69,6 +72,27 @@ Section Facts.
       traceRefines (fun f => q (p f)) ma mc.
   Proof.
     admit.
+  Qed.
+  
+  Lemma traceRefines_modular:
+    forall ma mb mc md p,
+      traceRefines p ma mb ->
+      traceRefines p mc md ->
+      traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
+  Proof.
+    unfold traceRefines; intros.
+    apply behavior_split in H1.
+    destruct H1 as [sa [lsa [sc [lsc [? [? [? ?]]]]]]]; subst.
+    specialize (H _ _ H1).
+    destruct H as [sb [lsb [? ?]]].
+    specialize (H0 _ _ H2).
+    destruct H0 as [sd [lsd [? ?]]].
+
+    exists (M.union sb sd).
+    exists (composeLabels lsb lsd).
+    split.
+    - apply behavior_modular; auto.
+    - apply composeLabels_modular; auto.
   Qed.
   
 End Facts.

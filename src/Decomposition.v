@@ -10,8 +10,6 @@ Section Decomposition.
   Variable ruleMap: RegsT -> string -> option string.
   Variable p: string -> (sigT SignT) -> option (sigT SignT).
   Variable thetaInit: theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
-  Variable thetaGood: forall o, M.KeysEq (theta o) (map (@attrName _)
-                                                         (getRegInits spec)).
   Variable defSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
   Variable callSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
 
@@ -46,7 +44,7 @@ Section Decomposition.
     abstract (
         inversion s; subst; rewrite liftToMap1Empty;
         constructor;
-        [ constructor; apply thetaGood |
+        [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
   Defined.
 
@@ -59,7 +57,7 @@ Section Decomposition.
     abstract (
         inversion s; subst; rewrite liftToMap1Empty;
         constructor;
-        [ constructor; apply thetaGood |
+        [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
   Defined.
 
@@ -327,8 +325,8 @@ Section Decomposition.
     dependent induction HMultistepBeh; subst.
     - exists nil; rewrite thetaInit; repeat constructor.
     - specialize (IHHMultistepBeh specCanCombine substepMethMap substepRuleMap
-                                  callSubset defSubset thetaGood thetaInit eq_refl).
-      clear defSubset0 callSubset0 thetaInit0 thetaGood0
+                                  callSubset defSubset thetaInit eq_refl).
+      clear defSubset0 callSubset0 thetaInit0
             substepRuleMap0 substepMethMap0 specCanCombine0.
       pose proof (stepMap HStep) as [uSpec [stepSpec upd]].
       destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].
