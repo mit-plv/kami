@@ -1,7 +1,7 @@
 Require Import List String.
 Require Import Program.Equality.
-Require Import Lib.CommonTactics Lib.FMap.
-Require Import Syntax Semantics Split.
+Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
+Require Import Syntax Semantics Wf Split.
 
 Set Implicit Arguments.
 
@@ -75,13 +75,20 @@ Section Facts.
   Qed.
   
   Lemma traceRefines_modular:
-    forall ma mb mc md p,
+    forall ma mb mc md p
+           (Hacdisj: DisjList (namesOf (getRegInits ma))
+                              (namesOf (getRegInits mc)))
+           (Hacval: ValidRegsModules type (ConcatMod ma mc))
+           (Hpunion: forall m1 m2, M.union (p m1) (p m2) =
+                                   p (M.union m1 m2))
+           (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
+                                 p (M.subtractKV signIsEq m1 m2)),
       traceRefines p ma mb ->
       traceRefines p mc md ->
       traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
   Proof.
     unfold traceRefines; intros.
-    apply behavior_split in H1.
+    apply behavior_split in H1; auto.
     destruct H1 as [sa [lsa [sc [lsc [? [? [? ?]]]]]]]; subst.
     specialize (H _ _ H1).
     destruct H as [sb [lsb [? ?]]].
@@ -90,7 +97,7 @@ Section Facts.
 
     exists (M.union sb sd).
     exists (composeLabels lsb lsd).
-    split.
+    split; auto.
     - apply behavior_modular; auto.
     - apply composeLabels_modular; auto.
   Qed.
