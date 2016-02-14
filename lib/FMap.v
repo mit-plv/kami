@@ -650,6 +650,13 @@ Module LeibnizFacts (M : MapLeibniz).
     admit.
   Qed.
 
+  Lemma restrict_find:
+    forall {A} (m: t A) d e,
+      List.In e d -> find e (restrict m d) = find e m.
+  Proof.
+    admit.
+  Qed.
+  
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
     intros. apply union_smothered. unfold Sub. auto.
@@ -1040,13 +1047,6 @@ Module LeibnizFacts (M : MapLeibniz).
           destruct (find y m2); find_add_tac; reflexivity.
   Qed.
 
-  (* Lemma KeysEq_app_restrict_union: *)
-  (*   forall {A} (m: t A) (d1 d2: list E.t), *)
-  (*     KeysEq m (d1 ++ d2) -> m = union (restrict m d1) (restrict m d2). *)
-  (* Proof. *)
-  (*   admit. *)
-  (* Qed. *)
-
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
@@ -1146,6 +1146,8 @@ Ltac mred :=
          rewrite M.find_add_1 in H
        | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
          rewrite M.find_add_2 in H by auto
+       | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
+         rewrite M.restrict_find in H2 by auto
        (* goal reduction *)
        | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
          (destruct (string_dec y k);
@@ -1167,6 +1169,8 @@ Ltac mred :=
        | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
          M.cmp y k; [rewrite M.find_add_1|
                      rewrite M.find_add_2 by intuition idtac]
+       | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
+         rewrite M.restrict_find by auto
      end; try discriminate; try reflexivity; try (intuition idtac; fail)).
 
 Ltac mcontra :=

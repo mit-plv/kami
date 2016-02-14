@@ -33,8 +33,9 @@ Section TwoModules.
       | _, _ => Meth None (* unspecified *)
     end.
 
-  Definition BothNotRule (ul1 ul2: UnitLabel) :=
-    (exists x, ul1 = Meth x \/ ul2 = Meth x).
+  Definition OneMustMethNone (ul1 ul2: UnitLabel) :=
+    ul1 = Meth None \/ ul2 = Meth None.
+  Hint Unfold OneMustMethNone.
 
   Lemma substep_split:
     forall o u ul cs,
@@ -43,20 +44,18 @@ Section TwoModules.
         Substep ma (regsA o) ua ula csa /\
         Substep mb (regsB o) ub ulb csb /\
         u = M.union ua ub /\
-        ul = mergeUnitLabel ula ulb /\ BothNotRule ula ulb /\
+        ul = mergeUnitLabel ula ulb /\ OneMustMethNone ula ulb /\
         cs = M.union csa csb.
   Proof.
     induction 1; simpl; intros.
 
     - exists (M.empty _), (M.empty _).
       exists (Rle None), (Meth None), (M.empty _), (M.empty _).
-      repeat split; auto; try constructor.
-      eexists; intuition.
+      repeat split; auto; constructor.
 
     - exists (M.empty _), (M.empty _).
       exists (Meth None), (Meth None), (M.empty _), (M.empty _).
-      repeat split; auto; try constructor.
-      eexists; intuition.
+      repeat split; auto; constructor.
 
     - simpl in HInRules; apply in_app_or in HInRules.
       destruct HInRules.
@@ -65,25 +64,13 @@ Section TwoModules.
         repeat split; auto; econstructor; eauto.
         apply validRegsAction_weakening; auto.
         eapply validRegsRules_rule; eauto.
-        inv Hvr.
-        apply validRegsRules_rules_weakening
-        with (rules1:= getRules (ConcatMod ma mb)).
-        * eapply validRegsRules_regs_weakening; eauto.
-          unfold namesOf; simpl; rewrite map_app.
-          eapply SubList_app_1, SubList_refl.
-        * simpl; eapply SubList_app_1, SubList_refl.
+        inv Hvr; dest; auto.
       + exists (M.empty _), u.
         exists (Meth None), (Rle (Some k)), (M.empty _), cs.
         repeat split; auto; econstructor; eauto.
         apply validRegsAction_weakening; auto.
         eapply validRegsRules_rule; eauto.
-        inv Hvr.
-        apply validRegsRules_rules_weakening
-        with (rules1:= getRules (ConcatMod ma mb)).
-        * eapply validRegsRules_regs_weakening; eauto.
-          unfold namesOf; simpl; rewrite map_app.
-          eapply SubList_app_2, SubList_refl.
-        * simpl; eapply SubList_app_2, SubList_refl.
+        inv Hvr; dest; auto.
 
     - simpl in HIn; apply in_app_or in HIn.
       destruct HIn.
@@ -92,25 +79,13 @@ Section TwoModules.
         repeat split; auto; econstructor; eauto.
         apply validRegsAction_weakening; auto.
         eapply validRegsDms_dm; eauto.
-        inv Hvr.
-        apply validRegsDms_dms_weakening
-        with (dms1:= getDefsBodies (ConcatMod ma mb)).
-        * eapply validRegsDms_regs_weakening; eauto.
-          unfold namesOf; simpl; rewrite map_app.
-          eapply SubList_app_1, SubList_refl.
-        * simpl; eapply SubList_app_1, SubList_refl.
+        inv Hvr; dest; auto.
       + exists (M.empty _), u.
         eexists (Meth None), (Meth (Some _)), (M.empty _), cs.
         repeat split; auto; econstructor; eauto.
         apply validRegsAction_weakening; auto.
         eapply validRegsDms_dm; eauto.
-        inv Hvr.
-        apply validRegsDms_dms_weakening
-        with (dms1:= getDefsBodies (ConcatMod ma mb)).
-        * eapply validRegsDms_regs_weakening; eauto.
-          unfold namesOf; simpl; rewrite map_app.
-          eapply SubList_app_2, SubList_refl.
-        * simpl; eapply SubList_app_2, SubList_refl.
+        inv Hvr; dest; auto.
         
   Qed.
 
@@ -142,21 +117,34 @@ Section TwoModules.
         inv H1; dest.
         repeat split; auto.
         { destruct pla, plb; simpl in *; mdisj. }
-        { (* destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?]; *)
-          (* destruct sula as [[|]|[|]], sulb as [[|]|[|]]; *)
-          (* simpl in *; auto; findeq. *)
-          admit. (* wierd because of "Rle None" *)
+        { destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?];
+          destruct sula as [[|]|[|]], sulb as [[|]|[|]];
+          simpl in *; auto; findeq; try (inv H7; discriminate).
         }
-
+        
       + eapply SubstepsCons; eauto.
         inv H1; dest.
         repeat split; auto.
         { destruct pla, plb; simpl in *; mdisj. }
-        { admit. (* also wierd *) }
+        { destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?];
+          destruct sula as [[|]|[|]], sulb as [[|]|[|]];
+          simpl in *; auto; findeq; try (inv H7; discriminate);
+          try (destruct (M.find a defs); discriminate).
+        }
         
       + inv H1; auto.
-      + admit.
+      + admit. (* map stuff; need to borrow Disj information from RegsValidModules *)
   Qed.
+
+  (* Lemma wellHidden_hide_split: *)
+  (*   forall la lb, *)
+  (*     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) -> *)
+  (*     wellHidden ma (hide la). *)
+  (* Proof. *)
+  (*   intros; destruct la as [anna dsa csa], lb as [annb dsb csb]. *)
+  (*   unfold wellHidden, hide in *; dest; simpl in *. *)
+  (*   split. *)
+  (*   -  *)
 
   Lemma stepInd_split:
     forall o u l,

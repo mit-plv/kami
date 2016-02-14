@@ -345,12 +345,17 @@ Section WfInd2.
 
   End Regs.
 
-  Inductive ValidRegsModules: Modules -> Prop :=
-  | ValidRegsIntro:
-      forall m,
-        ValidRegsRules (namesOf (getRegInits m)) (getRules m) ->
-        ValidRegsDms (namesOf (getRegInits m)) (getDefsBodies m) ->
-        ValidRegsModules m.
+  Definition ValidRegsModules (m: Modules): Prop :=
+    match m with
+    | Mod regs rules dms =>
+      ValidRegsRules (namesOf regs) rules /\
+      ValidRegsDms (namesOf regs) dms
+    | ConcatMod ma mb =>
+      ValidRegsRules (namesOf (getRegInits ma)) (getRules ma) /\
+      ValidRegsDms (namesOf (getRegInits ma)) (getDefsBodies ma) /\
+      ValidRegsRules (namesOf (getRegInits mb)) (getRules mb) /\
+      ValidRegsDms (namesOf (getRegInits mb)) (getDefsBodies mb)
+    end.
 
 End WfInd2.
 
@@ -524,26 +529,6 @@ Section SemProps2.
     inv H1; eauto.
   Qed.
 
-  Lemma validRegsRules_regs_weakening:
-    forall type regs1 rules,
-      ValidRegsRules type regs1 rules ->
-      forall regs2,
-        SubList regs2 regs1 ->
-        ValidRegsRules type regs2 rules.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma validRegsRules_rules_weakening:
-    forall type regs rules1,
-      ValidRegsRules type regs rules1 ->
-      forall rules2,
-        SubList rules2 rules1 ->
-        ValidRegsRules type regs rules2.
-  Proof.
-    admit.
-  Qed.
-
   Lemma validRegsDms_dm:
     forall type regs dms,
       ValidRegsDms type regs dms ->
@@ -555,26 +540,6 @@ Section SemProps2.
     inv H1; eauto.
   Qed.
 
-  Lemma validRegsDms_regs_weakening:
-    forall type regs1 dms,
-      ValidRegsDms type regs1 dms ->
-      forall regs2,
-        SubList regs2 regs1 ->
-        ValidRegsDms type regs2 dms.
-  Proof.
-    admit.
-  Qed.
-
-  Lemma validRegsDms_dms_weakening:
-    forall type regs dms1,
-      ValidRegsDms type regs dms1 ->
-      forall dms2,
-        SubList dms2 dms1 ->
-        ValidRegsDms type regs dms2.
-  Proof.
-    admit.
-  Qed.
-
   Lemma validRegsAction_weakening:
     forall regs {retT} (a: ActionT type retT),
       ValidRegsAction regs a ->
@@ -582,7 +547,17 @@ Section SemProps2.
         SemAction or a u calls retV ->
         SemAction (M.restrict or regs) a u calls retV.
   Proof.
-    admit.
+    induction 1; simpl; intros.
+
+    - inv H1; destruct_existT; econstructor; eauto.
+    - inv H1; destruct_existT; econstructor; eauto.
+    - inv H2; destruct_existT; econstructor; eauto.
+      findeq.
+    - inv H0; destruct_existT; econstructor; eauto.
+    - inv H3; destruct_existT;
+        [eapply SemIfElseTrue|eapply SemIfElseFalse]; eauto.
+    - inv H0; destruct_existT; econstructor; eauto.
+    - inv H; destruct_existT; econstructor; eauto.
   Qed.
 
 End SemProps2.
