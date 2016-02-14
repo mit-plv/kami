@@ -342,6 +342,7 @@ mmap]
     intros sa; simpl in *.
     dependent induction sa; simpl in *; intros.
     - destruct a'; simpl in *.
+      injection x; intros.
       admit.
   Admitted.
   (*     CommonTactics.destruct_existT. *)
