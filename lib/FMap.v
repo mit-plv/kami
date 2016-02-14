@@ -68,6 +68,13 @@ Section Lists. (* For dealing with domains *)
   Lemma DisjList_nil_2: forall l, DisjList l nil.
   Proof. unfold DisjList; auto. Qed.
 
+  Lemma DisjList_cons:
+    forall a l1 l2, DisjList (a :: l1) l2 -> DisjList l1 l2.
+  Proof.
+    unfold DisjList; intros.
+    specialize (H e); intuition.
+  Qed.
+
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 
     intros. unfold DisjList in *. intros e. specialize (H e). intuition.
@@ -382,12 +389,12 @@ Module LeibnizFacts (M : MapLeibniz).
              (m1 m2 : t A) : t A :=
     subtractKVD deceqA m1 m2 (List.map (fun e => fst e) (elements m1)).
 
-  (* Definition restrict {A} (m: t A) (d: list E.t) := *)
-  (*   fold_left (fun fm k => *)
-  (*                match find k m with *)
-  (*                  | Some v => add k v fm *)
-  (*                  | None => fm *)
-  (*                end) d (M.empty _). *)
+  Definition restrict {A} (m: t A) (d: list E.t) :=
+    fold_left (fun fm k =>
+                 match find k m with
+                   | Some v => add k v fm
+                   | None => fm
+                 end) d (M.empty _).
 
   Hint Unfold update Sub subtract subtractKV : MapDefs.
   Hint Unfold E.eq.
@@ -1118,6 +1125,10 @@ Ltac mred :=
        (* basic destruction *)
        | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
          rewrite <-H
+       | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+         rewrite <-H1 in H2
+       | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+         rewrite <-H1 in H2
        | [ |- context [M.find ?y ?m] ] =>
          (is_var m;
           let v := fresh "v" in
@@ -1189,6 +1200,22 @@ Section MakeMap.
       | nil => M.empty _
       | {| attrName := n; attrType := existT _ rv |} :: xs =>
         M.add n (existT _ _ (f rv)) (makeMap xs)
-    end.  
+    end.
+
+  Lemma makeMap_union:
+    forall m1 m2,
+      DisjList (namesOf m1) (namesOf m2) ->
+      makeMap (m1 ++ m2) = M.union (makeMap m1) (makeMap m2).
+  Proof.
+    induction m1; simpl; intros;
+      [rewrite M.union_empty_L; reflexivity|].
+
+    destruct a as [rn [rk r]].
+    rewrite M.union_add.
+    f_equal.
+    apply IHm1.
+    eapply DisjList_cons; eauto.
+  Qed.
+
 End MakeMap.
 

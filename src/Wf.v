@@ -8,7 +8,7 @@ Set Implicit Arguments.
 (* Well-formedness w.r.t. structural hazards:
  * 1) No double-writes and 2) No double-calls for all actions in Modules
  *)
-Section WfInd.
+Section WfInd1.
   Variable type: Kind -> Type.
 
   Inductive WfAction: list string -> list string -> forall {retT}, ActionT type retT -> Prop :=
@@ -114,9 +114,9 @@ Section WfInd.
         WfRules (getRules m) -> WfDms (getDefsBodies m) ->
         WfModules m.
     
-End WfInd.
+End WfInd1.
 
-Section WfEval.
+Section WfEval1.
   Variable type: Kind -> Type.
     
   Fixpoint maxPathLength {retT} (a: ActionT typeUT retT) :=
@@ -282,9 +282,79 @@ Section WfEval.
     - apply wfDms_WfDms; auto.
   Qed.
 
-End WfEval.
+End WfEval1.
 
-Section SemProps.
+(* Well-formedness w.r.t. valid register reads *)
+Section WfInd2.
+  Variable type: Kind -> Type.
+
+  Section Regs.
+    Variable regs: list string.
+
+    Inductive ValidRegsAction:
+      forall {retT}, ActionT type retT -> Prop :=
+    | VRMCall:
+        forall name sig ar {retT} cont,
+          (forall t, ValidRegsAction (cont t)) ->
+          ValidRegsAction (MCall (lretT:= retT) name sig ar cont)
+    | VRLet:
+        forall {argT retT} ar cont,
+          (forall t, ValidRegsAction (cont t)) ->
+          ValidRegsAction (Let_ (lretT':= argT) (lretT:= retT) ar cont)
+    | VRReadReg:
+        forall {retT} reg k cont,
+          In reg regs ->
+          (forall t, ValidRegsAction (cont t)) ->
+          ValidRegsAction (ReadReg (lretT:= retT) reg k cont)
+    | VRWriteReg:
+        forall {writeT retT} reg e cont (Hnin: ~ In reg regs),
+          ValidRegsAction cont ->
+          ValidRegsAction (WriteReg (k:= writeT) (lretT:= retT)
+                                    reg e cont)
+    | VRIfElse:
+        forall {retT1 retT2} ce (ta fa: ActionT type retT1)
+               (cont: type retT1 -> ActionT type retT2),
+          ValidRegsAction ta ->
+          ValidRegsAction fa ->
+          (forall t, ValidRegsAction (cont t)) ->
+          ValidRegsAction (IfElse ce ta fa cont)
+    | VRAssert:
+        forall {retT} e cont,
+          ValidRegsAction cont ->
+          ValidRegsAction (Assert_ (lretT:= retT) e cont)
+    | VRReturn:
+        forall {retT} (e: Expr type (SyntaxKind retT)),
+          ValidRegsAction (Return e).
+
+    Inductive ValidRegsRules: list (Attribute (Action Void)) -> Prop :=
+    | ValidRegsRulesNil: ValidRegsRules nil
+    | ValidRegsRulesCons:
+        forall rule rules,
+          ValidRegsRules rules ->
+          ValidRegsAction ((attrType rule) type) ->
+          ValidRegsRules (rule :: rules).
+
+    Inductive ValidRegsDms: list DefMethT -> Prop :=
+    | ValidRegsDmsNil: ValidRegsDms nil
+    | ValidRegsDmsCons:
+        forall (dm: DefMethT) dms,
+          ValidRegsDms dms ->
+          (forall argV,
+              ValidRegsAction (projT2 (attrType dm) type argV)) ->
+          ValidRegsDms (dm :: dms).
+
+  End Regs.
+
+  Inductive ValidRegsModules: Modules -> Prop :=
+  | ValidRegsIntro:
+      forall m,
+        ValidRegsRules (namesOf (getRegInits m)) (getRules m) ->
+        ValidRegsDms (namesOf (getRegInits m)) (getDefsBodies m) ->
+        ValidRegsModules m.
+
+End WfInd2.
+
+Section SemProps1.
 
   Lemma wfAction_SemAction_calls:
     forall wr cc {retK} (a: ActionT type retK),
@@ -439,5 +509,82 @@ Section SemProps.
       M.Disj calls1 calls2.
   Proof. intros; eapply wfAction_appendAction_calls_disj'; eauto. Qed.
 
-End SemProps.
+End SemProps1.
+
+Section SemProps2.
+  
+  Lemma validRegsRules_rule:
+    forall type regs rules,
+      ValidRegsRules type regs rules ->
+      forall rn rb,
+        In (rn :: rb)%struct rules ->
+        ValidRegsAction regs (rb type).
+  Proof.
+    induction 1; simpl; intros; [inv H|].
+    inv H1; eauto.
+  Qed.
+
+  Lemma validRegsRules_regs_weakening:
+    forall type regs1 rules,
+      ValidRegsRules type regs1 rules ->
+      forall regs2,
+        SubList regs2 regs1 ->
+        ValidRegsRules type regs2 rules.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma validRegsRules_rules_weakening:
+    forall type regs rules1,
+      ValidRegsRules type regs rules1 ->
+      forall rules2,
+        SubList rules2 rules1 ->
+        ValidRegsRules type regs rules2.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma validRegsDms_dm:
+    forall type regs dms,
+      ValidRegsDms type regs dms ->
+      forall dm argV,
+        In dm dms ->
+        ValidRegsAction regs (projT2 (attrType dm) type argV).
+  Proof.
+    induction 1; simpl; intros; [inv H|].
+    inv H1; eauto.
+  Qed.
+
+  Lemma validRegsDms_regs_weakening:
+    forall type regs1 dms,
+      ValidRegsDms type regs1 dms ->
+      forall regs2,
+        SubList regs2 regs1 ->
+        ValidRegsDms type regs2 dms.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma validRegsDms_dms_weakening:
+    forall type regs dms1,
+      ValidRegsDms type regs dms1 ->
+      forall dms2,
+        SubList dms2 dms1 ->
+        ValidRegsDms type regs dms2.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma validRegsAction_weakening:
+    forall regs {retT} (a: ActionT type retT),
+      ValidRegsAction regs a ->
+      forall or u calls retV,
+        SemAction or a u calls retV ->
+        SemAction (M.restrict or regs) a u calls retV.
+  Proof.
+    admit.
+  Qed.
+
+End SemProps2.
+
 

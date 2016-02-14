@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.FMap.
-Require Import Syntax Semantics SemFacts.
+Require Import Syntax Semantics SemFacts Wf.
 
 Set Implicit Arguments.
 
@@ -14,103 +14,146 @@ Fixpoint composeLabels (ls1 ls2: LabelSeqT) :=
     | _, _ => nil
   end.
 
-Lemma substep_regs_new:
-  forall m o u ul cs,
-    Substep m o u ul cs -> M.KeysSubset u (namesOf (getRegInits m)).
-Proof.
-  induction 1; auto.
-  - apply M.KeysSubset_empty.
-  - apply M.KeysSubset_empty.
-  - admit. (* easy but tedious *)
-  - admit. (* easy but tedious *)
-Qed.
-
-Lemma substepsInd_regs_new:
-  forall m o u l,
-    SubstepsInd m o u l -> M.KeysSubset u (namesOf (getRegInits m)).
-Proof.
-  admit.
-Qed.
-
-Lemma step_regs_new:
-  forall m o u l,
-    Step m o u l -> M.KeysSubset u (namesOf (getRegInits m)).
-Proof.
-  intros; apply step_consistent in H.
-  induction H.
-  eapply substepsInd_regs_new; eauto.
-Qed.
-
-Lemma multistep_regs:
-  forall m s ls ir,
-    Multistep m ir s ls ->
-    ir = initRegs (getRegInits m) ->
-    M.KeysSubset s (namesOf (getRegInits m)).
-Proof.
-  induction 1; simpl; intros; subst.
-  - admit. (* easy *)
-  - apply M.KeysSubset_union; auto.
-    eapply step_regs_new; eauto.
-Qed.
-
 Section TwoModules.
   Variables (ma mb: Modules).
   Hypothesis (Hinit: DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mb))).
+  Hypothesis (Hvr: ValidRegsModules type (ConcatMod ma mb)).
+
+  Definition regsA (r: RegsT) := M.restrict r (namesOf (getRegInits ma)).
+  Definition regsB (r: RegsT) := M.restrict r (namesOf (getRegInits mb)).
 
   Definition mergeUnitLabel (ul1 ul2: UnitLabel): UnitLabel :=
     match ul1, ul2 with
-      | _, Rle _ => ul2
-      | _, _ => ul1
+      | Rle (Some _), _ => ul1
+      | _, Rle (Some _) => ul2
+      | Meth (Some _), _ => ul1
+      | _, Meth (Some _) => ul2
+      | Rle None, _ => ul1
+      | _, Rle None => ul2
+      | _, _ => Meth None (* unspecified *)
     end.
+
+  Definition BothNotRule (ul1 ul2: UnitLabel) :=
+    (exists x, ul1 = Meth x \/ ul2 = Meth x).
 
   Lemma substep_split:
     forall o u ul cs,
       Substep (ConcatMod ma mb) o u ul cs ->
-      exists oa ob ua ub ula ulb csa csb,
-        Substep ma oa ua ula csa /\ Substep mb ob ub ulb csb /\
-        o = M.union oa ob /\ u = M.union ua ub /\
-        ul = mergeUnitLabel ula ulb /\ cs = M.union csa csb.
+      exists ua ub ula ulb csa csb,
+        Substep ma (regsA o) ua ula csa /\
+        Substep mb (regsB o) ub ulb csb /\
+        u = M.union ua ub /\
+        ul = mergeUnitLabel ula ulb /\ BothNotRule ula ulb /\
+        cs = M.union csa csb.
   Proof.
-    admit.
+    induction 1; simpl; intros.
+
+    - exists (M.empty _), (M.empty _).
+      exists (Rle None), (Meth None), (M.empty _), (M.empty _).
+      repeat split; auto; try constructor.
+      eexists; intuition.
+
+    - exists (M.empty _), (M.empty _).
+      exists (Meth None), (Meth None), (M.empty _), (M.empty _).
+      repeat split; auto; try constructor.
+      eexists; intuition.
+
+    - simpl in HInRules; apply in_app_or in HInRules.
+      destruct HInRules.
+      + exists u, (M.empty _).
+        exists (Rle (Some k)), (Meth None), cs, (M.empty _).
+        repeat split; auto; econstructor; eauto.
+        apply validRegsAction_weakening; auto.
+        eapply validRegsRules_rule; eauto.
+        inv Hvr.
+        apply validRegsRules_rules_weakening
+        with (rules1:= getRules (ConcatMod ma mb)).
+        * eapply validRegsRules_regs_weakening; eauto.
+          unfold namesOf; simpl; rewrite map_app.
+          eapply SubList_app_1, SubList_refl.
+        * simpl; eapply SubList_app_1, SubList_refl.
+      + exists (M.empty _), u.
+        exists (Meth None), (Rle (Some k)), (M.empty _), cs.
+        repeat split; auto; econstructor; eauto.
+        apply validRegsAction_weakening; auto.
+        eapply validRegsRules_rule; eauto.
+        inv Hvr.
+        apply validRegsRules_rules_weakening
+        with (rules1:= getRules (ConcatMod ma mb)).
+        * eapply validRegsRules_regs_weakening; eauto.
+          unfold namesOf; simpl; rewrite map_app.
+          eapply SubList_app_2, SubList_refl.
+        * simpl; eapply SubList_app_2, SubList_refl.
+
+    - simpl in HIn; apply in_app_or in HIn.
+      destruct HIn.
+      + exists u, (M.empty _).
+        eexists (Meth (Some _)), (Meth None), cs, (M.empty _).
+        repeat split; auto; econstructor; eauto.
+        apply validRegsAction_weakening; auto.
+        eapply validRegsDms_dm; eauto.
+        inv Hvr.
+        apply validRegsDms_dms_weakening
+        with (dms1:= getDefsBodies (ConcatMod ma mb)).
+        * eapply validRegsDms_regs_weakening; eauto.
+          unfold namesOf; simpl; rewrite map_app.
+          eapply SubList_app_1, SubList_refl.
+        * simpl; eapply SubList_app_1, SubList_refl.
+      + exists (M.empty _), u.
+        eexists (Meth None), (Meth (Some _)), (M.empty _), cs.
+        repeat split; auto; econstructor; eauto.
+        apply validRegsAction_weakening; auto.
+        eapply validRegsDms_dm; eauto.
+        inv Hvr.
+        apply validRegsDms_dms_weakening
+        with (dms1:= getDefsBodies (ConcatMod ma mb)).
+        * eapply validRegsDms_regs_weakening; eauto.
+          unfold namesOf; simpl; rewrite map_app.
+          eapply SubList_app_2, SubList_refl.
+        * simpl; eapply SubList_app_2, SubList_refl.
+        
   Qed.
 
   Lemma substepsInd_split:
     forall o u l,
       SubstepsInd (ConcatMod ma mb) o u l ->
-      exists oa ob ua ub la lb,
-        SubstepsInd ma oa ua la /\ SubstepsInd mb ob ub lb /\
-        o = M.union oa ob /\ u = M.union ua ub /\ l = mergeLabel la lb.
+      exists ua ub la lb,
+        SubstepsInd ma (regsA o) ua la /\
+        SubstepsInd mb (regsB o) ub lb /\
+        u = M.union ua ub /\ l = mergeLabel la lb.
   Proof.
     induction 1; simpl; intros.
-    - exists o, (M.empty _), (M.empty _), (M.empty _), emptyLabel, emptyLabel.
-      repeat split; auto; constructor.
+    - exists (M.empty _), (M.empty _), emptyLabel, emptyLabel.
+      repeat split; auto; try constructor.
 
     - subst.
-      destruct IHSubstepsInd as [poa [pob [pua [pub [pla [plb ?]]]]]]; dest; subst.
+      destruct IHSubstepsInd as [pua [pub [pla [plb ?]]]]; dest; subst.
       apply substep_split in H0.
-      destruct H0 as [soa [sob [sua [sub [sula [sulb [scsa [scsb ?]]]]]]]]; dest; subst.
+      destruct H0 as [sua [sub [sula [sulb [scsa [scsb ?]]]]]];
+        dest; subst.
 
-      exists poa, pob, (M.union pua sua), (M.union pub sub).
-      exists (mergeLabel (getLabel sula scsa) pla), (mergeLabel (getLabel sulb scsb) plb).
+      exists (M.union pua sua), (M.union pub sub).
+      exists (mergeLabel (getLabel sula scsa) pla),
+      (mergeLabel (getLabel sulb scsb) plb).
 
       repeat split.
 
       + eapply SubstepsCons; eauto.
-        * assert (poa = soa) by admit; subst. (* map stuff *)
-          auto.
-        * inv H1; dest.
-          repeat split; auto.
-          { mdisj. admit. }
-          { admit. }
+        inv H1; dest.
+        repeat split; auto.
+        { destruct pla, plb; simpl in *; mdisj. }
+        { (* destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?]; *)
+          (* destruct sula as [[|]|[|]], sulb as [[|]|[|]]; *)
+          (* simpl in *; auto; findeq. *)
+          admit. (* wierd because of "Rle None" *)
+        }
 
       + eapply SubstepsCons; eauto.
-        * assert (pob = sob) by admit; subst. (* map stuff *)
-          auto.
-        * inv H1; dest.
-          repeat split; auto.
-          { mdisj. admit. }
-          { admit. }
-
+        inv H1; dest.
+        repeat split; auto.
+        { destruct pla, plb; simpl in *; mdisj. }
+        { admit. (* also wierd *) }
+        
       + inv H1; auto.
       + admit.
   Qed.
@@ -118,33 +161,34 @@ Section TwoModules.
   Lemma stepInd_split:
     forall o u l,
       StepInd (ConcatMod ma mb) o u l ->
-      exists oa ob ua ub la lb,
-        StepInd ma oa ua la /\ StepInd mb ob ub lb /\
-        o = M.union oa ob /\ u = M.union ua ub /\ l = hide (mergeLabel la lb).
+      exists ua ub la lb,
+        StepInd ma (regsA o) ua la /\ StepInd mb (regsB o) ub lb /\
+        u = M.union ua ub /\ l = hide (mergeLabel la lb).
   Proof.
     induction 1; simpl; intros.
     pose proof (substepsInd_split HSubSteps)
-      as [oa [ob [ua [ub [la [lb ?]]]]]]; dest; subst.
-    exists oa, ob, ua, ub, (hide la), (hide lb).
+      as [ua [ub [la [lb ?]]]]; dest; subst.
+    exists ua, ub, (hide la), (hide lb).
     intuition auto.
 
     - constructor; auto.
       admit. (* maybe the most difficult part *)
     - constructor; auto.
       admit. (* maybe the most difficult part *)
-    - admit. (* easy, using hide_idempotent *)
+    - clear.
+      admit. (* also nontrivial *)
   Qed.
 
   Lemma step_split:
     forall o u l,
       Step (ConcatMod ma mb) o u l ->
-      exists oa ob ua ub la lb,
-        Step ma oa ua la /\ Step mb ob ub lb /\
-        o = M.union oa ob /\ u = M.union ua ub /\ l = hide (mergeLabel la lb).
+      exists ua ub la lb,
+        Step ma (regsA o) ua la /\ Step mb (regsB o) ub lb /\
+        u = M.union ua ub /\ l = hide (mergeLabel la lb).
   Proof.
     intros; apply step_consistent in H.
-    pose proof (stepInd_split H) as [oa [ob [ua [ub [la [lb ?]]]]]]; dest; subst.
-    exists oa, ob, ua, ub, la, lb.
+    pose proof (stepInd_split H) as [ua [ub [la [lb ?]]]]; dest; subst.
+    exists ua, ub, la, lb.
     repeat split; apply step_consistent; auto.
   Qed.
 
@@ -160,24 +204,25 @@ Section TwoModules.
     induction 1.
     - do 2 (eexists; exists nil); repeat split; try constructor.
       subst.
-      admit. (* map stuff *)
+      unfold initRegs.
+      apply makeMap_union; auto.
 
     - intros; subst.
       specialize (IHMultistep eq_refl).
       destruct IHMultistep as [sa [lsa [sb [lsb ?]]]]; dest; subst.
 
       apply step_split in HStep.
-      destruct HStep as [soa [sob [sua [sub [sla [slb ?]]]]]]; dest; subst.
+      destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
       repeat split.
 
       + constructor; auto.
-        admit. (* map stuff *)
+        admit. (* map stuff; disj comes from ValidRegsModules *)
       + constructor; auto.
-        admit. (* map stuff *)
-      + admit. (* map stuff *)
+        admit. (* map stuff; disj comes from ValidRegsModules *)
+      + admit. (* map stuff; disj comes from ValidRegsModules *)
   Qed.
 
   Lemma behavior_split:
@@ -190,7 +235,8 @@ Section TwoModules.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
-    destruct HMultistepBeh as [sa [lsa [sb [lsb [? [? [? ?]]]]]]]; subst.
+    destruct HMultistepBeh as [sa [lsa [sb [lsb [? [? [? ?]]]]]]];
+      subst.
     exists sa, lsa, sb, lsb.
     repeat split; auto.
     reflexivity.
@@ -207,33 +253,46 @@ Section TwoModules.
 
 End TwoModules.
 
-Lemma equivalentLabel_hide_mergeLabel:
-  forall p la lb,
-    equivalentLabel p la lb ->
-    forall lc ld,
-      equivalentLabel p lc ld ->
-      equivalentLabel p (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
-Proof.
-  intros.
-  destruct la as [anna dsa csa], lb as [annb dsb csb].
-  destruct lc as [annc dsc csc], ld as [annd dsd csd].
-  unfold equivalentLabel in *; simpl in *; dest; subst.
-  repeat split.
-  - clear H2 H4. (* ?!?!? *)
-    admit.
-  - admit.
-  - destruct anna, annb, annc, annd; auto.
-Qed.
+Section LabelMap.
+  Variable (p: MethsT -> MethsT).
+  Hypotheses (Hpunion: forall m1 m2, M.union (p m1) (p m2) =
+                                     p (M.union m1 m2))
+             (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
+                                   p (M.subtractKV signIsEq m1 m2)).
 
-Lemma composeLabels_modular:
-  forall p lsa lsb,
-    equivalentLabelSeq p lsa lsb ->
-    forall lsc lsd,
-      equivalentLabelSeq p lsc lsd ->
-      equivalentLabelSeq p (composeLabels lsa lsc) (composeLabels lsb lsd).
-Proof.
-  induction 1; simpl; intros; [constructor|].
-  destruct lsc, lsd; [constructor|inv H1|inv H1|].
-  inv H1; constructor; [|apply IHequivalentLabelSeq; auto].
-  apply equivalentLabel_hide_mergeLabel; auto.
-Qed.
+  Lemma equivalentLabel_hide_mergeLabel:
+    forall la lb,
+      equivalentLabel p la lb ->
+      forall lc ld,
+        equivalentLabel p lc ld ->
+        equivalentLabel p (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
+  Proof.
+    intros.
+    destruct la as [anna dsa csa], lb as [annb dsb csb].
+    destruct lc as [annc dsc csc], ld as [annd dsd csd].
+    unfold equivalentLabel in *; simpl in *; dest; subst.
+    repeat split.
+    - do 2 rewrite Hpunion.
+      rewrite Hpsub.
+      reflexivity.
+    - do 2 rewrite Hpunion.
+      rewrite Hpsub.
+      reflexivity.
+    - destruct anna, annb, annc, annd; auto.
+  Qed.
+
+  Lemma composeLabels_modular:
+    forall lsa lsb,
+      equivalentLabelSeq p lsa lsb ->
+      forall lsc lsd,
+        equivalentLabelSeq p lsc lsd ->
+        equivalentLabelSeq p (composeLabels lsa lsc) (composeLabels lsb lsd).
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    destruct lsc, lsd; [constructor|inv H1|inv H1|].
+    inv H1; constructor; [|apply IHequivalentLabelSeq; auto].
+    apply equivalentLabel_hide_mergeLabel; auto.
+  Qed.
+
+End LabelMap.
+
