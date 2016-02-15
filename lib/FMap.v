@@ -662,6 +662,13 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     admit.
   Qed.
+
+  Lemma restrict_union:
+    forall {A} (m1 m2: t A) d,
+      restrict (union m1 m2) d = union (restrict m1 d) (restrict m2 d).
+  Proof.
+    admit.
+  Qed.
   
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
@@ -734,6 +741,10 @@ Module LeibnizFacts (M : MapLeibniz).
     apply P.F.not_find_in_iff; intro Hx.
     specialize (H y Hx); inv H.
   Qed.
+
+  Lemma KeysSubset_cons:
+    forall {A} (m: t A) a d, KeysSubset m d -> KeysSubset m (a :: d).
+  Proof. mintros; specialize (H k); right; auto. Qed.
 
   Lemma KeysSubset_find_None:
     forall {A} (m: t A) k d,
@@ -1053,6 +1064,20 @@ Module LeibnizFacts (M : MapLeibniz).
           destruct (find y m2); find_add_tac; reflexivity.
   Qed.
 
+  Lemma restrict_KeysSubset:
+    forall {A} (m: t A) d,
+      KeysSubset m d -> restrict m d = m.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma restrict_DisjList:
+    forall {A} (m: t A) d1 d2,
+      KeysSubset m d1 -> DisjList d1 d2 -> restrict m d2 = empty _.
+  Proof.
+    admit.
+  Qed.
+
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
@@ -1211,6 +1236,15 @@ Section MakeMap.
       | {| attrName := n; attrType := existT _ rv |} :: xs =>
         M.add n (existT _ _ (f rv)) (makeMap xs)
     end.
+
+  Lemma makeMap_KeysSubset:
+    forall m, M.KeysSubset (makeMap m) (namesOf m).
+  Proof.
+    induction m; simpl; intros; [apply M.KeysSubset_empty|].
+    destruct a as [an [atype av]]; simpl.
+    apply M.KeysSubset_add; auto.
+    apply M.KeysSubset_cons; auto.
+  Qed.
 
   Lemma makeMap_union:
     forall m1 m2,

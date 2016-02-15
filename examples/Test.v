@@ -29,7 +29,7 @@ Definition ma := MODULE {
 Definition mb := MODULE {
   Register "b" : Bool <- true
 
-  with Method "fb"() : Bool :=
+  with Method ("fb"__ i)() : Bool :=
     Write "b" <- $$true;
     Read rb <- "b";
     Ret #rb
@@ -50,53 +50,60 @@ Require Import Program.Equality.
 
 Section Tests.
 
-  (* TODO: eq_rect incomputable *)
-  (* Eval compute in (noCalls (fst (inline (ConcatMod ma mb)))). *)
+  Definition theta : RegsT -> RegsT := id.
+  Definition ruleMap : RegsT -> string -> option string :=
+    fun _ r => Some r.
+
+  Definition HssRuleMap:
+    forall o u rule cs,
+      Substep (fst (inlineF (ConcatMod ma mb))) o u (Rle (Some rule)) cs ->
+      {uSpec : UpdatesT |
+       Substep mc (id o) uSpec (Rle (Some rule))
+               (liftToMap1 (idElementwise (A:=sigT SignT)) cs) /\
+       forall o0 : RegsT, M.union uSpec (id o0) = id (M.union u o0)
+      }.
+  Proof.
+    simpl; intros.
+    exists u; split; auto.
+    rewrite idElementwiseId; unfold id.
+    inv H.
+    inv HInRules.
+    {
+      inv H; invertActionRep.
+      repeat (econstructor; eauto).
+    }
+    { inv H. }
+  Defined.
+
+  Definition HssMethMap:
+    forall o u meth cs,
+      Substep (fst (inlineF (ConcatMod ma mb))) o u (Meth (Some meth)) cs ->
+      {uSpec : UpdatesT |
+       Substep mc (id o) uSpec (Meth (liftP (idElementwise (A:=sigT SignT)) meth))
+               (liftToMap1 (idElementwise (A:=sigT SignT)) cs) /\
+       forall o0 : RegsT, M.union uSpec (id o0) = id (M.union u o0)
+      }.
+  Proof.
+    simpl; intros.
+    exists u; split; auto.
+    rewrite idElementwiseId; unfold id.
+    inv H.
+    inv HIn.
+  Defined.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
     apply traceRefines_trans with (mb:= fst (inlineF (ConcatMod ma mb))).
     - apply inlineF_refines; auto.
-      + repeat constructor.
+      + repeat (constructor; intros).
       + repeat constructor; auto.
-    - assert (HssRuleMap:
-                (forall o u rule cs,
-                    Substep (fst (inlineF (ConcatMod ma mb))) o u (Rle (Some rule)) cs ->
-                    {uSpec : UpdatesT |
-                     Substep mc (id o) uSpec (Rle (Some rule))
-                             (liftToMap1 (idElementwise (A:=sigT SignT)) cs) /\
-                     (forall o0 : RegsT, M.union uSpec (id o0) = id (M.union u o0))})).
-      { simpl; intros.
-        exists u; split; auto.
-        rewrite idElementwiseId; unfold id.
-        inv H.
-        inv HInRules.
-        { inv H; invertActionRep.
-          repeat (econstructor; eauto).
-        }
-        { inv H. }
-      }
+    - eapply decomposition with (theta:= id)
+                                 (ruleMap:= fun _ r => Some r); eauto.
+                                 (* (substepRuleMap:= HssRuleMap) *)
+                                 (* (substepMethMap:= HssMethMap); auto. *)
 
-      assert (HssMethMap:
-                (forall o u meth cs,
-                    Substep (fst (inlineF (ConcatMod ma mb))) o u (Meth (Some meth)) cs ->
-                    {uSpec : UpdatesT |
-                     Substep mc (id o) uSpec (Meth (liftP (idElementwise (A:=sigT SignT)) meth))
-                             (liftToMap1 (idElementwise (A:=sigT SignT)) cs) /\
-                     (forall o0 : RegsT, M.union uSpec (id o0) = id (M.union u o0))})).
-      { simpl; intros.
-        exists u; split; auto.
-        rewrite idElementwiseId; unfold id.
-        inv H.
-        inv HIn.
-      }
-
-      apply decomposition with (theta:= id)
-                                 (ruleMap:= fun _ r => Some r)
-                                 (substepRuleMap:= HssRuleMap)
-                                 (substepMethMap:= HssMethMap); auto.
-
-      admit.
+      intros.
+      admit. (* do we really have to prove this for each instance? *)
   Qed.
 
 End Tests.

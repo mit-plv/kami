@@ -135,7 +135,7 @@ Section TwoModules.
       + inv H1; auto.
       + inv H1; dest; mdisj.
 
-        admit. (* below works; but slow (takes about 30secs) *)
+        admit. (** below works; but slow (takes about 30secs) *)
         (* unfold mergeLabel, getLabel, mergeUnitLabel. *)
         (* destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb]; *)
         (*   destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]]; *)
@@ -143,16 +143,6 @@ Section TwoModules.
         (*     try (intuition auto; fail); *)
         (*     try (f_equal; auto; fail). *)
   Qed.
-
-  (* Lemma wellHidden_hide_split: *)
-  (*   forall la lb, *)
-  (*     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) -> *)
-  (*     wellHidden ma (hide la). *)
-  (* Proof. *)
-  (*   intros; destruct la as [anna dsa csa], lb as [annb dsb csb]. *)
-  (*   unfold wellHidden, hide in *; dest; simpl in *. *)
-  (*   split. *)
-  (*   -  *)
 
   Lemma stepInd_split:
     forall o u l,
@@ -167,8 +157,7 @@ Section TwoModules.
     exists ua, ub, (hide la), (hide lb).
     intuition auto.
 
-    - constructor; auto.
-      admit. (* maybe the most difficult part *)
+    - admit. (* maybe the most difficult part *)
     - constructor; auto.
       admit. (* maybe the most difficult part *)
     - clear.
@@ -210,15 +199,31 @@ Section TwoModules.
       apply step_split in HStep.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
+      inv Hvr.
+      pose proof (validRegsModules_multistep_newregs_subset H4 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H5 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H4 H2).
+      pose proof (validRegsModules_step_newregs_subset H5 H3).
+
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
       repeat split.
 
       + constructor; auto.
-        admit. (* map stuff; disj comes from ValidRegsModules *)
+        p_equal H2.
+        unfold regsA; rewrite M.restrict_union.
+        rewrite M.restrict_KeysSubset; auto.
+        rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits mb)); auto.
+        apply DisjList_comm; auto.
+
       + constructor; auto.
-        admit. (* map stuff; disj comes from ValidRegsModules *)
-      + admit. (* map stuff; disj comes from ValidRegsModules *)
+        p_equal H3.
+        unfold regsB; rewrite M.restrict_union.
+        rewrite M.restrict_KeysSubset with (m:= sb); auto.
+        rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
+
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H6 H9).
+        meq.
   Qed.
 
   Lemma behavior_split:
@@ -238,13 +243,24 @@ Section TwoModules.
     reflexivity.
   Qed.
 
+  Lemma multistep_modular:
+    forall sa sb lsa lsb,
+      Multistep ma (initRegs (getRegInits ma)) sa lsa ->
+      Multistep mb (initRegs (getRegInits mb)) sb lsb ->
+      Multistep (ConcatMod ma mb) (initRegs (getRegInits (ConcatMod ma mb))) 
+                (M.union sa sb) (composeLabels lsa lsb).
+  Proof.
+    admit.
+  Qed.
+
   Lemma behavior_modular:
     forall sa sb lsa lsb,
       Behavior ma sa lsa ->
       Behavior mb sb lsb ->
       Behavior (ConcatMod ma mb) (M.union sa sb) (composeLabels lsa lsb).
   Proof.
-    admit.
+    intros; inv H; inv H0; constructor.
+    apply multistep_modular; auto.
   Qed.
 
 End TwoModules.

@@ -24,15 +24,13 @@ Section ProcDecSC.
 
   End SingleCore.
 
-  (* Theorem procDecM_SC: forall n, exists f, (procDecM n) <<=[f] (sc n). *)
-
 End ProcDecSC.
 
-Section Ins.
+Section Instantiation.
   Variable dec: DecT 2 1 1 1.
-  Variable exec: ExecT 2 1 1 1.
+  Variable exec: ExecT 2 1 1 1. (* 1 *)
 
-  Hypothesis Hdec:
+  Hypothesis Hdec: (* 2 *)
     forall G (st1: ft1 typeUT (StateK 1 1)) st2
            (a1: ft1 typeUT (SyntaxKind (Bit 1))) a2,
       In (vars (st1, st2)) G ->
@@ -40,10 +38,14 @@ Section Ins.
       Equiv.ExprEquiv G #(dec (fullType typeUT) st1 a1)%kami #(dec (fullType type) st2 a2)%kami.
   Hint Immediate Hdec.
 
+  Ltac tequiv :=
+    match goal with
+    | [ |- 
+
   Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
   Proof.
     apply traceRefines_trans with (mb:= fst (inlineF (pdecfi _ 1 _ _ dec exec 0))).
-    - apply inlineF_refines.
+    - apply inlineF_refines. (* TODO: automate all about inlining *)
       + constructor.
         * constructor.
           { repeat (constructor; auto).
@@ -52,14 +54,20 @@ Section Ins.
             admit.
           }
         * admit.
+          (* simpl; tauto. (* hint extern 1 ... *) *)
+            (* constructor. (* 4 *) *)
+          
       + repeat constructor; intro Hx; in_tac_H; discriminate.
       + vm_compute; reflexivity.
 
     - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r).
       + rewrite <-inlineF_preserves_regInits.
-        admit. (* ?? *)
+        admit. (* TODO: theta shouldn't be an id (have to drain registers) *)
       + vm_compute; auto.
       + vm_compute; intuition.
-      + (* TODO *)
+      + (* 5 *)
   Abort.
+
+End Ins.
+
 

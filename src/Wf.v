@@ -730,6 +730,32 @@ Section SemProps2.
     eapply validRegsModules_substepsInd_newregs_subset; eauto.
   Qed.
 
+  Lemma validRegsModules_step_newregs_subset:
+    forall m,
+      ValidRegsModules type m ->
+      forall or u l,
+        Step m or u l ->
+        M.KeysSubset u (namesOf (getRegInits m)).
+  Proof.
+    intros; apply step_consistent in H0.
+    eapply validRegsModules_stepInd_newregs_subset; eauto.
+  Qed.
+
+  Lemma validRegsModules_multistep_newregs_subset:
+    forall m,
+      ValidRegsModules type m ->
+      forall or u ll,
+        Multistep m or u ll ->
+        or = initRegs (getRegInits m) ->
+        M.KeysSubset u (namesOf (getRegInits m)).
+  Proof.
+    induction 2; simpl; intros; subst.
+    - apply makeMap_KeysSubset.
+    - apply M.KeysSubset_union; auto.
+      apply step_consistent in HStep.
+      eapply validRegsModules_stepInd_newregs_subset; eauto.
+  Qed.
+  
 End SemProps2.
 
 
