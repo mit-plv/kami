@@ -62,30 +62,30 @@ Section TwoModules.
       + exists u, (M.empty _).
         exists (Rle (Some k)), (Meth None), cs, (M.empty _).
         repeat split; auto; econstructor; eauto.
-        apply validRegsAction_weakening; auto.
+        apply validRegsAction_old_regs_restrict; auto.
         eapply validRegsRules_rule; eauto.
-        inv Hvr; dest; auto.
+        inv Hvr; apply validRegsModules_validRegsRules; auto.
       + exists (M.empty _), u.
         exists (Meth None), (Rle (Some k)), (M.empty _), cs.
         repeat split; auto; econstructor; eauto.
-        apply validRegsAction_weakening; auto.
+        apply validRegsAction_old_regs_restrict; auto.
         eapply validRegsRules_rule; eauto.
-        inv Hvr; dest; auto.
+        inv Hvr; apply validRegsModules_validRegsRules; auto.
 
     - simpl in HIn; apply in_app_or in HIn.
       destruct HIn.
       + exists u, (M.empty _).
         eexists (Meth (Some _)), (Meth None), cs, (M.empty _).
         repeat split; auto; econstructor; eauto.
-        apply validRegsAction_weakening; auto.
+        apply validRegsAction_old_regs_restrict; auto.
         eapply validRegsDms_dm; eauto.
-        inv Hvr; dest; auto.
+        inv Hvr; apply validRegsModules_validRegsDms; auto.
       + exists (M.empty _), u.
         eexists (Meth None), (Meth (Some _)), (M.empty _), cs.
         repeat split; auto; econstructor; eauto.
-        apply validRegsAction_weakening; auto.
+        apply validRegsAction_old_regs_restrict; auto.
         eapply validRegsDms_dm; eauto.
-        inv Hvr; dest; auto.
+        inv Hvr; apply validRegsModules_validRegsDms; auto.
         
   Qed.
 
@@ -133,7 +133,15 @@ Section TwoModules.
         }
         
       + inv H1; auto.
-      + admit. (* map stuff; need to borrow Disj information from RegsValidModules *)
+      + inv H1; dest; mdisj.
+
+        admit. (* below works; but slow (takes about 30secs) *)
+        (* unfold mergeLabel, getLabel, mergeUnitLabel. *)
+        (* destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb]; *)
+        (*   destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]]; *)
+        (*   simpl in *; try (inv H7; discriminate); *)
+        (*     try (intuition auto; fail); *)
+        (*     try (f_equal; auto; fail). *)
   Qed.
 
   (* Lemma wellHidden_hide_split: *)

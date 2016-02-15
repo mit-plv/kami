@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax SemanticsExprAction Equiv.
+Require Import Syntax SemanticsExprAction Semantics Equiv.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -284,7 +284,7 @@ Section WfEval1.
 
 End WfEval1.
 
-(* Well-formedness w.r.t. valid register reads *)
+(* Well-formedness w.r.t. valid register uses (read/writes) *)
 Section WfInd2.
   Variable type: Kind -> Type.
 
@@ -308,6 +308,7 @@ Section WfInd2.
           ValidRegsAction (ReadReg (lretT:= retT) reg k cont)
     | VRWriteReg:
         forall {writeT retT} reg e cont (Hnin: ~ In reg regs),
+          In reg regs ->
           ValidRegsAction cont ->
           ValidRegsAction (WriteReg (k:= writeT) (lretT:= retT)
                                     reg e cont)
@@ -345,16 +346,13 @@ Section WfInd2.
 
   End Regs.
 
-  Definition ValidRegsModules (m: Modules): Prop :=
+  Fixpoint ValidRegsModules (m: Modules): Prop :=
     match m with
     | Mod regs rules dms =>
       ValidRegsRules (namesOf regs) rules /\
       ValidRegsDms (namesOf regs) dms
     | ConcatMod ma mb =>
-      ValidRegsRules (namesOf (getRegInits ma)) (getRules ma) /\
-      ValidRegsDms (namesOf (getRegInits ma)) (getDefsBodies ma) /\
-      ValidRegsRules (namesOf (getRegInits mb)) (getRules mb) /\
-      ValidRegsDms (namesOf (getRegInits mb)) (getDefsBodies mb)
+      ValidRegsModules ma /\ ValidRegsModules mb
     end.
 
 End WfInd2.
@@ -370,12 +368,10 @@ Section SemProps1.
           In c cc -> M.find c calls = None.
   Proof.
     induction 1; intros; simpl in *.
-
     - inv H1; destruct_existT.
       destruct (string_dec c name); [subst; elim Hnin; auto|].
       rewrite M.find_add_2 by assumption.
       eapply H0; eauto.
-
     - inv H1; destruct_existT; eapply H0; eauto.
     - inv H1; destruct_existT; eapply H0; eauto.
     - inv H0; destruct_existT; eapply IHWfAction; eauto.
@@ -397,7 +393,6 @@ Section SemProps1.
         WfAction wr cc a1.
   Proof.
     induction 1; intros.
-
     - destruct a1; simpl in *; try discriminate; inv H1; destruct_existT.
       econstructor; eauto.
     - destruct a1; simpl in *; try discriminate.
@@ -516,8 +511,88 @@ Section SemProps1.
 
 End SemProps1.
 
-Section SemProps2.
-  
+Section SemProps2.    
+
+  Lemma validRegsAction_regs_weakening:
+    forall {retT type} (a: ActionT type retT) regs,
+      ValidRegsAction regs a ->
+      forall regs',
+        SubList regs regs' ->
+        ValidRegsAction regs' a.
+  Proof.
+    induction 1; simpl; intros; try (constructor; auto).
+  Qed.
+
+  Lemma validRegsRules_regs_weakening:
+    forall type regs rules,
+      ValidRegsRules type regs rules ->
+      forall regs',
+        SubList regs regs' ->
+        ValidRegsRules type regs' rules.
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    constructor; auto.
+    eapply validRegsAction_regs_weakening; eauto.
+  Qed.
+
+  Lemma validRegsDms_regs_weakening:
+    forall type regs dms,
+      ValidRegsDms type regs dms ->
+      forall regs',
+        SubList regs regs' ->
+        ValidRegsDms type regs' dms.
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    constructor; auto.
+    intros; eapply validRegsAction_regs_weakening; eauto.
+  Qed.
+
+  Lemma validRegsRules_rules_app:
+    forall type regs rules1 rules2,
+      ValidRegsRules type regs rules1 ->
+      ValidRegsRules type regs rules2 ->
+      ValidRegsRules type regs (rules1 ++ rules2).
+  Proof.
+    induction 1; simpl; intros; auto.
+    constructor; auto.
+  Qed.
+
+  Lemma validRegsModules_validRegsRules:
+    forall type m,
+      ValidRegsModules type m ->
+      ValidRegsRules type (namesOf (getRegInits m)) (getRules m).
+  Proof.
+    induction m; simpl; intros; intuition.
+    apply validRegsRules_rules_app.
+    - eapply validRegsRules_regs_weakening; eauto.
+      unfold namesOf; simpl; rewrite map_app; apply SubList_app_1, SubList_refl.
+    - eapply validRegsRules_regs_weakening; eauto.
+      unfold namesOf; simpl; rewrite map_app; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma validRegsDms_dms_app:
+    forall type regs dms1 dms2,
+      ValidRegsDms type regs dms1 ->
+      ValidRegsDms type regs dms2 ->
+      ValidRegsDms type regs (dms1 ++ dms2).
+  Proof.
+    induction 1; simpl; intros; auto.
+    constructor; auto.
+  Qed.
+
+  Lemma validRegsModules_validRegsDms:
+    forall type m,
+      ValidRegsModules type m ->
+      ValidRegsDms type (namesOf (getRegInits m)) (getDefsBodies m).
+  Proof.
+    induction m; simpl; intros; intuition.
+    apply validRegsDms_dms_app.
+    - eapply validRegsDms_regs_weakening; eauto.
+      unfold namesOf; simpl; rewrite map_app; apply SubList_app_1, SubList_refl.
+    - eapply validRegsDms_regs_weakening; eauto.
+      unfold namesOf; simpl; rewrite map_app; apply SubList_app_2, SubList_refl.
+  Qed.
+
   Lemma validRegsRules_rule:
     forall type regs rules,
       ValidRegsRules type regs rules ->
@@ -527,6 +602,21 @@ Section SemProps2.
   Proof.
     induction 1; simpl; intros; [inv H|].
     inv H1; eauto.
+  Qed.
+
+  Lemma validRegsRules_weakening:
+    forall type regs rules,
+      ValidRegsRules type regs rules ->
+      forall rules',
+        SubList rules' rules ->
+        ValidRegsRules type regs rules'.
+  Proof.
+    induction rules'; simpl; intros; [constructor|].
+    constructor.
+    - apply IHrules'.
+      apply SubList_cons_inv in H0; dest; auto.
+    - eapply validRegsRules_rule with (rn:= attrName a); eauto using H.
+      apply H0; left; destruct a; auto.
   Qed.
 
   Lemma validRegsDms_dm:
@@ -540,7 +630,21 @@ Section SemProps2.
     inv H1; eauto.
   Qed.
 
-  Lemma validRegsAction_weakening:
+  Lemma validRegsDms_weakening:
+    forall type regs dms,
+      ValidRegsDms type regs dms ->
+      forall dms',
+        SubList dms' dms ->
+        ValidRegsDms type regs dms'.
+  Proof.
+    induction dms'; simpl; intros; [constructor|].
+    constructor.
+    - apply IHdms'.
+      apply SubList_cons_inv in H0; dest; auto.
+    - intros; eapply validRegsDms_dm; eauto.
+  Qed.
+    
+  Lemma validRegsAction_old_regs_restrict:
     forall regs {retT} (a: ActionT type retT),
       ValidRegsAction regs a ->
       forall or u calls retV,
@@ -548,16 +652,82 @@ Section SemProps2.
         SemAction (M.restrict or regs) a u calls retV.
   Proof.
     induction 1; simpl; intros.
-
     - inv H1; destruct_existT; econstructor; eauto.
     - inv H1; destruct_existT; econstructor; eauto.
     - inv H2; destruct_existT; econstructor; eauto.
       findeq.
-    - inv H0; destruct_existT; econstructor; eauto.
+    - inv H1; destruct_existT; econstructor; eauto.
     - inv H3; destruct_existT;
         [eapply SemIfElseTrue|eapply SemIfElseFalse]; eauto.
     - inv H0; destruct_existT; econstructor; eauto.
     - inv H; destruct_existT; econstructor; eauto.
+  Qed.
+
+  Lemma validRegsAction_new_regs_subset:
+    forall regs {retT} (a: ActionT type retT),
+      ValidRegsAction regs a ->
+      forall or u calls retV,
+        SemAction or a u calls retV ->
+        M.KeysSubset u regs.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H1; destruct_existT; eapply H0; eauto.
+    - inv H1; destruct_existT; eapply H0; eauto.
+    - inv H2; destruct_existT; eapply H1; eauto.
+    - inv H1; destruct_existT.
+      apply M.KeysSubset_add; auto.
+      eapply IHValidRegsAction; eauto.
+    - inv H3; destruct_existT.
+      + apply M.KeysSubset_union; auto.
+        * eapply IHValidRegsAction1; eauto.
+        * eapply H2; eauto.
+      + apply M.KeysSubset_union; auto.
+        * eapply IHValidRegsAction2; eauto.
+        * eapply H2; eauto.
+    - inv H0; destruct_existT; eapply IHValidRegsAction; eauto.
+    - inv H; destruct_existT; apply M.KeysSubset_empty.
+  Qed.
+
+  Lemma validRegsModules_substep_new_regs_subset:
+    forall m,
+      ValidRegsModules type m ->
+      forall or u ul cs,
+        Substep m or u ul cs ->
+        M.KeysSubset u (namesOf (getRegInits m)).
+  Proof.
+    induction 2; simpl; intros.
+    - apply M.KeysSubset_empty.
+    - apply M.KeysSubset_empty.
+    - apply validRegsModules_validRegsRules in H.
+      eapply validRegsAction_new_regs_subset; eauto.
+      + eapply validRegsRules_rule; eauto.
+      + exact HAction.
+    - apply validRegsModules_validRegsDms in H.
+      eapply validRegsAction_new_regs_subset; eauto.
+      eapply validRegsDms_dm; eauto.
+  Qed.
+
+  Lemma validRegsModules_substepsInd_newregs_subset:
+    forall m,
+      ValidRegsModules type m ->
+      forall or u l,
+        SubstepsInd m or u l ->
+        M.KeysSubset u (namesOf (getRegInits m)).
+  Proof.
+    induction 2; simpl; intros; [apply M.KeysSubset_empty|].
+    subst; apply M.KeysSubset_union; auto.
+    eapply validRegsModules_substep_new_regs_subset; eauto.
+  Qed.
+
+  Lemma validRegsModules_stepInd_newregs_subset:
+    forall m,
+      ValidRegsModules type m ->
+      forall or u l,
+        StepInd m or u l ->
+        M.KeysSubset u (namesOf (getRegInits m)).
+  Proof.
+    induction 2; simpl; intros; auto.
+    eapply validRegsModules_substepsInd_newregs_subset; eauto.
   Qed.
 
 End SemProps2.

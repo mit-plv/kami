@@ -18,6 +18,12 @@ Section Lists. (* For dealing with domains *)
   Lemma SubList_nil: forall l, SubList nil l.
   Proof. unfold SubList; intros; inv H. Qed.
 
+  Lemma SubList_nil_inv: forall l, SubList l nil -> l = nil.
+  Proof.
+    unfold SubList; intros; destruct l; auto.
+    specialize (H a (or_introl eq_refl)); inv H.
+  Qed.
+
   Lemma SubList_cons: forall a l1 l2, In a l2 -> SubList l1 l2 -> SubList (a :: l1) l2.
   Proof. unfold SubList; intros; inv H1; auto. Qed.
 
