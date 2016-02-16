@@ -184,10 +184,11 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
-        s = M.union sa sb /\ ls = composeLabels lsa lsb.
+        s = M.union sa sb /\ ls = composeLabels lsa lsb /\
+        List.length lsa = List.length lsb.
   Proof.
-    induction 1.
-    - do 2 (eexists; exists nil); repeat split; try constructor.
+    induction 1; simpl; intros; subst.
+    - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto).
       subst.
       unfold initRegs.
       apply makeMap_union; auto.
@@ -200,10 +201,10 @@ Section TwoModules.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       inv Hvr.
-      pose proof (validRegsModules_multistep_newregs_subset H4 H0 eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H5 H1 eq_refl).
-      pose proof (validRegsModules_step_newregs_subset H4 H2).
-      pose proof (validRegsModules_step_newregs_subset H5 H3).
+      pose proof (validRegsModules_multistep_newregs_subset H5 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H6 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H5 H2).
+      pose proof (validRegsModules_step_newregs_subset H6 H3).
 
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
@@ -222,8 +223,10 @@ Section TwoModules.
         rewrite M.restrict_KeysSubset with (m:= sb); auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
 
-      + pose proof (M.DisjList_KeysSubset_Disj Hinit H6 H9).
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H7 H10).
         meq.
+
+      + simpl; auto.
   Qed.
 
   Lemma behavior_split:
@@ -232,35 +235,62 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
         s = M.union sa sb /\
-        ls = composeLabels lsa lsb. 
+        ls = composeLabels lsa lsb /\ List.length lsa = List.length lsb.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
-    destruct HMultistepBeh as [sa [lsa [sb [lsb [? [? [? ?]]]]]]];
-      subst.
+    destruct HMultistepBeh as [sa [lsa [sb [lsb ?]]]]; dest; subst.
     exists sa, lsa, sb, lsb.
     repeat split; auto.
     reflexivity.
   Qed.
 
   Lemma multistep_modular:
-    forall sa sb lsa lsb,
-      Multistep ma (initRegs (getRegInits ma)) sa lsa ->
-      Multistep mb (initRegs (getRegInits mb)) sb lsb ->
-      Multistep (ConcatMod ma mb) (initRegs (getRegInits (ConcatMod ma mb))) 
-                (M.union sa sb) (composeLabels lsa lsb).
+    forall lsa oa sa,
+      Multistep ma oa sa lsa ->
+      oa = initRegs (getRegInits ma) ->
+      forall ob sb lsb,
+        Multistep mb ob sb lsb ->
+        ob = initRegs (getRegInits mb) ->
+        List.length lsa = List.length lsb ->
+        Multistep (ConcatMod ma mb) (initRegs (getRegInits (ConcatMod ma mb))) 
+                  (M.union sa sb) (composeLabels lsa lsb).
   Proof.
-    admit.
+    induction lsa; simpl; intros; subst.
+
+    - destruct lsb; [|discriminate].
+      inv H; inv H1; constructor.
+      unfold initRegs.
+      apply makeMap_union; auto.
+
+    - destruct lsb as [|]; [discriminate|].
+      simpl in H3; inv H3.
+      inv H; inv H1.
+      inv Hvr.
+      
+      pose proof (validRegsModules_multistep_newregs_subset H HMultistep eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H0 HMultistep0 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H HStep).
+      pose proof (validRegsModules_step_newregs_subset H0 HStep0).
+
+      replace (M.union (M.union u n) (M.union u0 n0))
+      with (M.union (M.union u u0) (M.union n n0))
+        by (pose proof (M.DisjList_KeysSubset_Disj Hinit H1 H5); meq).
+      
+      constructor; eauto.
+
+      admit. (* TODO: from here *)
   Qed.
 
   Lemma behavior_modular:
     forall sa sb lsa lsb,
       Behavior ma sa lsa ->
       Behavior mb sb lsb ->
+      List.length lsa = List.length lsb ->
       Behavior (ConcatMod ma mb) (M.union sa sb) (composeLabels lsa lsb).
   Proof.
     intros; inv H; inv H0; constructor.
-    apply multistep_modular; auto.
+    eapply multistep_modular; eauto.
   Qed.
 
 End TwoModules.

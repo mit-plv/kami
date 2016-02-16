@@ -29,7 +29,7 @@ Definition ma := MODULE {
 Definition mb := MODULE {
   Register "b" : Bool <- true
 
-  with Method ("fb"__ i)() : Bool :=
+  with Method "fb"() : Bool :=
     Write "b" <- $$true;
     Read rb <- "b";
     Ret #rb
@@ -98,9 +98,9 @@ Section Tests.
       + repeat (constructor; intros).
       + repeat constructor; auto.
     - eapply decomposition with (theta:= id)
-                                 (ruleMap:= fun _ r => Some r); eauto.
-                                 (* (substepRuleMap:= HssRuleMap) *)
-                                 (* (substepMethMap:= HssMethMap); auto. *)
+                                 (ruleMap:= fun _ r => Some r)
+                                 (substepRuleMap:= HssRuleMap)
+                                 (substepMethMap:= HssMethMap); auto.
 
       intros.
       admit. (* do we really have to prove this for each instance? *)

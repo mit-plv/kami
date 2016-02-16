@@ -329,7 +329,7 @@ Section GivenModule.
   End GivenOldregs.
 
   Inductive Multistep: RegsT -> RegsT -> list LabelT -> Prop :=
-  | NilMultistep o: Multistep o o nil
+  | NilMultistep o1 o2: o1 = o2 -> Multistep o1 o2 nil
   | Multi o a n (HMultistep: Multistep o n a)
           u l (HStep: Step n u l):
       Multistep o (M.union u n) (l :: a).

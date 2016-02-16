@@ -749,8 +749,8 @@ Section SemProps2.
         or = initRegs (getRegInits m) ->
         M.KeysSubset u (namesOf (getRegInits m)).
   Proof.
-    induction 2; simpl; intros; subst.
-    - apply makeMap_KeysSubset.
+    induction 2; simpl; intros.
+    - do 2 subst; apply makeMap_KeysSubset.
     - apply M.KeysSubset_union; auto.
       apply step_consistent in HStep.
       eapply validRegsModules_stepInd_newregs_subset; eauto.

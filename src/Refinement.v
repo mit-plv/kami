@@ -73,12 +73,21 @@ Section Facts.
   Proof.
     admit.
   Qed.
-  
+
+  Lemma equivalentLabelSeq_length:
+    forall l1 l2 p,
+      equivalentLabelSeq p l1 l2 ->
+      List.length l1 = List.length l2.
+  Proof. induction 1; simpl; intros; auto. Qed.
+
   Lemma traceRefines_modular:
     forall ma mb mc md p
            (Hacdisj: DisjList (namesOf (getRegInits ma))
                               (namesOf (getRegInits mc)))
            (Hacval: ValidRegsModules type (ConcatMod ma mc))
+           (Hbddisj: DisjList (namesOf (getRegInits mb))
+                              (namesOf (getRegInits md)))
+           (Hbdval: ValidRegsModules type (ConcatMod mb md))
            (Hpunion: forall m1 m2, M.union (p m1) (p m2) =
                                    p (M.union m1 m2))
            (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
@@ -89,7 +98,7 @@ Section Facts.
   Proof.
     unfold traceRefines; intros.
     apply behavior_split in H1; auto.
-    destruct H1 as [sa [lsa [sc [lsc [? [? [? ?]]]]]]]; subst.
+    destruct H1 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
     specialize (H _ _ H1).
     destruct H as [sb [lsb [? ?]]].
     specialize (H0 _ _ H2).
@@ -99,6 +108,9 @@ Section Facts.
     exists (composeLabels lsb lsd).
     split; auto.
     - apply behavior_modular; auto.
+      apply equivalentLabelSeq_length in H3.
+      apply equivalentLabelSeq_length in H4.
+      intuition.
     - apply composeLabels_modular; auto.
   Qed.
   

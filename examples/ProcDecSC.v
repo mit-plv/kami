@@ -38,10 +38,6 @@ Section Instantiation.
       Equiv.ExprEquiv G #(dec (fullType typeUT) st1 a1)%kami #(dec (fullType type) st2 a2)%kami.
   Hint Immediate Hdec.
 
-  Ltac tequiv :=
-    match goal with
-    | [ |- 
-
   Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
   Proof.
     apply traceRefines_trans with (mb:= fst (inlineF (pdecfi _ 1 _ _ dec exec 0))).
@@ -68,6 +64,6 @@ Section Instantiation.
       + (* 5 *)
   Abort.
 
-End Ins.
+End Instantiation.
 
 
