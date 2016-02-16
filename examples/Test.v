@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
+Require Import Lts.Syntax Lts.Semantics Lts.SemSmall Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
 Require Import Lts.Refinement Lts.Decomposition.
 (* Require Import Lts.Renaming *)
@@ -30,6 +30,7 @@ Definition mb := MODULE {
   Register "b" : Bool <- true
 
   with Method "fb"() : Bool :=
+  (* with Method ("fb"__ i)() : Bool := *)
     Write "b" <- $$true;
     Read rb <- "b";
     Ret #rb
@@ -47,6 +48,58 @@ Definition mc := MODULE {
 }.
 
 Require Import Program.Equality.
+
+Section SmallStepTest.
+
+  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Proof.
+    intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
+    intros; exists u; split; auto.
+
+    apply stepSmall_consistent.
+    apply stepSmall_consistent in H.
+
+    inv H.
+    inv HSubSteps; [do 2 constructor|].
+
+    (* decomposition like this? *)
+    assert (forall o nu nl,
+               SubstepSmall (ConcatMod ma mb) o nu nl ->
+               SubstepSmall mc o nu nl).
+    { clear; intros.
+      inv H; try (constructor; fail).
+
+      - inv HInRules; [|inv H].
+        inv H.
+
+        eapply SSSRule; [left; reflexivity|].
+
+        invertActionSmall HAction.
+        inv HAction; [|dest; elim H; left; auto].
+        inv H; dest.
+        inv H; [|intuition].
+        inv H5; simpl in *.
+        invertActionSmallRep.
+
+        assert (x5 = eq_refl) by apply UIP; subst; simpl.
+        econstructor.
+        + instantiate (1:= M.add "a"%string (existT (fullType type) (SyntaxKind Bool) x1)
+                                 (M.empty (sigT (fullType type)))).
+          meq.
+        + econstructor; eauto.
+          econstructor.
+          * instantiate (1:= M.empty (sigT (fullType type))).
+            meq.
+          * econstructor; eauto.
+
+      - exfalso; simpl in *.
+        inv HIn; simpl in *; intuition.
+    }
+
+    admit.
+  Qed.
+
+End SmallStepTest.
 
 Section Tests.
 
@@ -105,6 +158,6 @@ Section Tests.
       intros.
       admit. (* do we really have to prove this for each instance? *)
   Qed.
-
+  
 End Tests.
 

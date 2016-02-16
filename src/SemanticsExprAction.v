@@ -226,7 +226,8 @@ Definition SignT k := (type (arg k) * type (ret k))%type.
 Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
-  Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
+  Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs)
+  : type (Struct attrs) :=
     fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
       mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
@@ -254,15 +255,10 @@ Section Semantics.
           fun w => if weq w (evalExpr i) then evalExpr v else (evalExpr fn) w
     end.
 
-  (*register names and constant expressions for their initial values *)
-  Variable regInit: list RegInitT.
-
-  Variable rules: list (Attribute (Action (Bit 0))).
-
   (* register values just before the current cycle *)
   Variable oldRegs: RegsT.
 
-    Inductive SemAction:
+  Inductive SemAction:
     forall k, ActionT type k -> RegsT -> MethsT -> type k -> Prop :=
   | SemMCall
       meth s (marg: Expr type (SyntaxKind (arg s)))
@@ -332,67 +328,67 @@ Section Semantics.
       (HEvalE: evale = evalExpr e):
       SemAction (Return e) (M.empty _) (M.empty _) evale.
 
-    Theorem inversionSemAction
-            k a news calls retC
-            (evalA: @SemAction k a news calls retC):
-      match a with
-        | MCall m s e c =>
-          exists mret pcalls,
-          SemAction (c mret) news pcalls retC /\
-          calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
-        | Let_ _ e cont =>
-          SemAction (cont (evalExpr e)) news calls retC
-        | ReadReg r k c =>
-          exists rv,
-          M.find r oldRegs = Some (existT _ k rv) /\
-          SemAction (c rv) news calls retC
-        | WriteReg r _ e a =>
-          exists pnews,
-          SemAction a pnews calls retC /\
-          news = M.add r (existT _ _ (evalExpr e)) pnews
-        | IfElse p _ aT aF c =>
-          exists news1 calls1 news2 calls2 r1,
-          match evalExpr p with
-            | true =>
-              SemAction aT news1 calls1 r1 /\
-              SemAction (c r1) news2 calls2 retC /\
-              news = M.union news1 news2 /\
-              calls = M.union calls1 calls2
-            | false =>
-              SemAction aF news1 calls1 r1 /\
-              SemAction (c r1) news2 calls2 retC /\
-              news = M.union news1 news2 /\
-              calls = M.union calls1 calls2
-          end
-        | Assert_ e c =>
-          SemAction c news calls retC /\
-          evalExpr e = true
-        | Return e =>
-          retC = evalExpr e /\
-          news = M.empty _ /\
-          calls = M.empty _
-      end.
-    Proof.
-      destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
-    Qed.
+  Theorem inversionSemAction
+          k a news calls retC
+          (evalA: @SemAction k a news calls retC):
+    match a with
+    | MCall m s e c =>
+      exists mret pcalls,
+      SemAction (c mret) news pcalls retC /\
+      calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
+    | Let_ _ e cont =>
+      SemAction (cont (evalExpr e)) news calls retC
+    | ReadReg r k c =>
+      exists rv,
+      M.find r oldRegs = Some (existT _ k rv) /\
+      SemAction (c rv) news calls retC
+    | WriteReg r _ e a =>
+      exists pnews,
+      SemAction a pnews calls retC /\
+      news = M.add r (existT _ _ (evalExpr e)) pnews
+    | IfElse p _ aT aF c =>
+      exists news1 calls1 news2 calls2 r1,
+      match evalExpr p with
+      | true =>
+        SemAction aT news1 calls1 r1 /\
+        SemAction (c r1) news2 calls2 retC /\
+        news = M.union news1 news2 /\
+        calls = M.union calls1 calls2
+      | false =>
+        SemAction aF news1 calls1 r1 /\
+        SemAction (c r1) news2 calls2 retC /\
+        news = M.union news1 news2 /\
+        calls = M.union calls1 calls2
+      end
+    | Assert_ e c =>
+      SemAction c news calls retC /\
+      evalExpr e = true
+    | Return e =>
+      retC = evalExpr e /\
+      news = M.empty _ /\
+      calls = M.empty _
+    end.
+  Proof.
+    destruct evalA; eauto; repeat eexists; destruct (evalExpr p); eauto; try discriminate.
+  Qed.
 End Semantics.
 
 Ltac invertAction H := apply inversionSemAction in H; simpl in H; dest; try subst.
 Ltac invertActionFirst :=
   match goal with
-    | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+  | [H: SemAction _ _ _ _ _ |- _] => invertAction H
   end.
 Ltac invertActionRep :=
   repeat
     match goal with
-      | [H: SemAction _ _ _ _ _ |- _] => invertAction H
-      | [H: if ?c
-            then
-              SemAction _ _ _ _ _ /\ _ /\ _ /\ _
-            else
-              SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-        let ic := fresh "ic" in
-        (remember c as ic; destruct ic; dest; subst)
+    | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+    | [H: if ?c
+          then
+            SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+          else
+            SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+      let ic := fresh "ic" in
+      (remember c as ic; destruct ic; dest; subst)
     end.
 
 Section AppendAction.
@@ -406,7 +402,7 @@ Section AppendAction.
     induction a1; intros.
 
     - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
-      econstructor; eauto.
+        econstructor; eauto.
       apply M.union_add.
     - invertAction H0; econstructor; eauto. 
     - invertAction H0; econstructor; eauto.
@@ -428,7 +424,7 @@ Section AppendAction.
         * rewrite M.union_assoc; reflexivity.
 
     - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
-      econstructor; eauto.
+        econstructor; eauto.
     - invertAction H; econstructor; eauto.
   Qed.
 

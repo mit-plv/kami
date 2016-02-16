@@ -13,6 +13,11 @@ Record LabelT := { annot: option (option string);
                    defs: MethsT;
                    calls: MethsT }.
 
+Definition emptyRuleLabel: LabelT :=
+  {| annot := Some None; defs := M.empty _; calls := M.empty _ |}.
+Definition emptyMethLabel: LabelT :=
+  {| annot := None; defs := M.empty _; calls := M.empty _ |}.
+
 Section GivenModule.
   Variable m: Modules.
 

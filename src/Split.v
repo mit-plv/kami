@@ -4,9 +4,6 @@ Require Import Syntax Semantics SemFacts Wf.
 
 Set Implicit Arguments.
 
-Definition emptyLabel: LabelT :=
-  {| annot := None; defs := M.empty _; calls := M.empty _ |}.
-
 Fixpoint composeLabels (ls1 ls2: LabelSeqT) :=
   match ls1, ls2 with
     | l1 :: ls1', l2 :: ls2' =>
@@ -98,7 +95,7 @@ Section TwoModules.
         u = M.union ua ub /\ l = mergeLabel la lb.
   Proof.
     induction 1; simpl; intros.
-    - exists (M.empty _), (M.empty _), emptyLabel, emptyLabel.
+    - exists (M.empty _), (M.empty _), emptyMethLabel, emptyMethLabel.
       repeat split; auto; try constructor.
 
     - subst.
