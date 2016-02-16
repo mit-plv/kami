@@ -242,6 +242,63 @@ Section TwoModules.
     reflexivity.
   Qed.
 
+  Lemma substepsInd_modular:
+    forall oa ua la,
+      SubstepsInd ma oa ua la ->
+      forall ob ub lb,
+        M.Disj oa ob -> CanCombineUL ua ub la lb ->
+        SubstepsInd mb ob ub lb ->
+        SubstepsInd (ConcatMod ma mb) (M.union oa ob) (M.union ua ub) (mergeLabel la lb).
+  Proof.
+    induction 1; simpl; intros; subst.
+    - destruct lb as [annb dsb csb]; simpl in *.
+      do 3 rewrite M.union_empty_L.
+      apply substepsInd_modules_weakening with (mc:= mb); [|eauto].
+      eapply substepsInd_oldRegs_weakening; eauto.
+      apply M.Sub_union_2; auto.
+    - rewrite mergeLabel_assoc.
+      inv H1; dest.
+      rewrite M.union_comm with (m1:= u); [|auto].
+      eapply SubstepsCons.
+      + eapply IHSubstepsInd; eauto.
+        clear -H5.
+        admit.
+      + apply substep_modules_weakening with (mc:= ma); [|eauto].
+        eapply substep_oldRegs_weakening; eauto.
+        apply M.Sub_union_1.
+      + admit.
+      + admit.
+      + reflexivity.
+  Qed.
+
+  Lemma stepInd_modular:
+    forall oa ua la,
+      StepInd ma oa ua la ->
+      forall ob ub lb,
+        M.Disj oa ob -> CanCombineUL ua ub la lb ->
+        StepInd mb ob ub lb ->
+        StepInd (ConcatMod ma mb) (M.union oa ob) (M.union ua ub) (hide (mergeLabel la lb)).
+  Proof.
+    intros; inv H; inv H2.
+    replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
+    - admit.
+    - admit.
+  Qed.
+
+  Lemma step_modular:
+    forall oa ua la,
+      Step ma oa ua la ->
+      forall ob ub lb,
+        M.Disj oa ob -> CanCombineUL ua ub la lb ->
+        Step mb ob ub lb ->
+        Step (ConcatMod ma mb) (M.union oa ob) (M.union ua ub) (hide (mergeLabel la lb)).
+  Proof.
+    intros.
+    apply step_consistent in H; apply step_consistent in H2.
+    apply step_consistent.
+    apply stepInd_modular; auto.
+  Qed.
+
   Lemma multistep_modular:
     forall lsa oa sa,
       Multistep ma oa sa lsa ->
@@ -275,8 +332,9 @@ Section TwoModules.
         by (pose proof (M.DisjList_KeysSubset_Disj Hinit H1 H5); meq).
       
       constructor; eauto.
-
-      admit. (* TODO: from here *)
+      apply step_modular; auto.
+      + eapply M.DisjList_KeysSubset_Disj; eauto.
+      + admit.
   Qed.
 
   Lemma behavior_modular:

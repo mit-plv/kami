@@ -13,6 +13,7 @@ Ltac sassumption :=
       progress replace P with P' by reflexivity; assumption
   end.
 
+Ltac ind H := induction H; simpl; intros; subst.
 Ltac inv H := inversion H; subst; clear H.
 
 Ltac p_equal H := apply (eq_ind _ (@id _) H); f_equal.

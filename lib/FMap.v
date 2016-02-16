@@ -719,6 +719,18 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Hint Unfold Equal Disj Sub KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
 
+  Lemma Sub_union_1:
+    forall {A} (m1 m2: t A), Sub m1 (union m1 m2).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma Sub_union_2:
+    forall {A} (m1 m2: t A), Disj m1 m2 -> Sub m2 (union m1 m2).
+  Proof.
+    admit.
+  Qed.
+
   Lemma find_KeysSubset {A} :
     forall {m : t A} k d, KeysSubset m d -> ~ List.In k d -> find k m = None.
   Proof.

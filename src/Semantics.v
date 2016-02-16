@@ -145,13 +145,22 @@ Section GivenModule.
         Step (foldSSUpds ss) (hide (foldSSLabel ss)).
 
     (* Another step semantics based on inductive definitions for Substeps *)
-    Definition CanCombineLabel u (l: LabelT) (su: UpdatesT) scs sul :=
+    Definition CanCombineUUL u (l: LabelT) (su: UpdatesT) scs sul :=
       M.Disj su u /\
       M.Disj scs (calls l) /\
       match annot l, sul with
         | Some _, Rle _ => False
         | _, Meth (Some a) => ~ M.In (attrName a) (defs l)
         | _, _ => True
+      end.
+
+    Definition CanCombineUL (u1 u2: UpdatesT) (l1 l2: LabelT) :=
+      M.Disj u1 u2 /\
+      M.Disj (defs l1) (defs l2) /\
+      M.Disj (calls l1) (calls l2) /\
+      match annot l1, annot l2 with
+      | Some _, Some _ => False
+      | _, _ => True
       end.
 
     Inductive SubstepsInd: UpdatesT -> LabelT -> Prop :=
@@ -162,7 +171,7 @@ Section GivenModule.
           SubstepsInd u l ->
           forall su scs sul,
             Substep su sul scs ->
-            CanCombineLabel u l su scs sul ->
+            CanCombineUUL u l su scs sul ->
             forall uu ll,
               uu = M.union u su ->
               ll = mergeLabel (getLabel sul scs) l ->
@@ -177,7 +186,7 @@ Section GivenModule.
           SubstepsIndAnnot u l ss ->
           forall su scs sul
                  (Hss: Substep su sul scs),
-            CanCombineLabel u l su scs sul ->
+            CanCombineUUL u l su scs sul ->
             SubstepsIndAnnot (M.union u su)
                              (mergeLabel (getLabel sul scs) l)
                              ({| upd:= su; unitAnnot:= sul; cms:= scs; substep:= Hss |} :: ss).
@@ -185,7 +194,7 @@ Section GivenModule.
     Lemma canCombine_consistent_1:
       forall su sul scs (Hss: Substep su sul scs) ss,
         (forall s', In s' ss -> canCombine {| substep := Hss |} s') ->
-        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
+        CanCombineUUL (foldSSUpds ss) (foldSSLabel ss) su scs sul.
     Proof.
       induction ss; intros; simpl in *.
       - repeat (constructor; simpl in *; try apply M.Disj_empty_2).
@@ -233,10 +242,10 @@ Section GivenModule.
             }
     Qed.
 
-    Lemma unionCanCombineLabel u l su scs sul a:
-      CanCombineLabel (M.union u (upd a))
+    Lemma unionCanCombineUUL u l su scs sul a:
+      CanCombineUUL (M.union u (upd a))
                       (addLabelLeft l a) su scs sul ->
-      CanCombineLabel u l su scs sul.
+      CanCombineUUL u l su scs sul.
     Proof.
       intros [cond1 [cond2 cond3]].
       apply M.Disj_union_1 in cond1.
@@ -258,7 +267,7 @@ Section GivenModule.
 
     Lemma canCombine_consistent_2:
       forall su sul scs (Hss: Substep su sul scs) ss,
-        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul ->
+        CanCombineUUL (foldSSUpds ss) (foldSSLabel ss) su scs sul ->
         (forall s', In s' ss -> canCombine {| substep := Hss |} s').
     Proof.
       induction ss; intros; simpl in *.
@@ -279,13 +288,13 @@ Section GivenModule.
             rewrite M.union_add, M.union_empty_L, M.F.P.F.add_in_iff in cond3; intuition.
           * destruct annot0, (unitAnnot s'), sul; intuition;
             eexists; intuition.
-        + apply (IHss (unionCanCombineLabel _ _ _ H)); intuition.
+        + apply (IHss (unionCanCombineUUL _ _ _ H)); intuition.
     Qed.
 
     Lemma canCombine_consistent:
       forall su sul scs (Hss: Substep su sul scs) ss,
         (forall s', In s' ss -> canCombine {| substep := Hss |} s') <->
-        CanCombineLabel (foldSSUpds ss) (foldSSLabel ss) su scs sul.
+        CanCombineUUL (foldSSUpds ss) (foldSSLabel ss) su scs sul.
     Proof.
       intros; constructor.
       apply canCombine_consistent_1; intuition.
@@ -350,6 +359,19 @@ Section GivenModule.
       Behavior n a.
 End GivenModule.
 
+Fixpoint CanCombineLabelSeq (ll1 ll2: list LabelT) :=
+  match ll1, ll2 with
+  | l1 :: ll1', l2 :: ll2' =>
+    M.Disj (defs l1) (defs l2) /\
+    M.Disj (calls l1) (calls l2) /\
+    match annot l1, annot l2 with
+    | Some _, Some _ => False
+    | _, _ => True
+    end /\
+    CanCombineLabelSeq ll1' ll2'
+  | _, _ => True
+  end.
+           
 Definition equivalentLabel p l1 l2 :=
   p (defs l1) = defs l2 /\
   p (calls l1) = calls l2 /\

@@ -112,6 +112,14 @@ Proof.
         intuition.
 Qed.
 
+Lemma mergeLabel_assoc:
+  forall l1 l2 l3,
+    mergeLabel (mergeLabel l1 l2) l3 = mergeLabel l1 (mergeLabel l2 l3).
+Proof.
+  intros; destruct l1 as [[[|]|] ? ?], l2 as [[[|]|] ? ?], l3 as [[[|]|] ? ?];
+    unfold mergeLabel; try reflexivity; try (f_equal; auto).
+Qed.
+
 Lemma substepsInd_defs_in:
   forall m or u l,
     SubstepsInd m or u l -> M.KeysSubset (defs l) (getDefs m).
@@ -306,5 +314,82 @@ Proof.
   intros; subst; simpl.
   apply step_consistent; apply step_consistent in H0.
   apply stepInd_dms_weakening; auto.
+Qed.
+
+Definition IsChild (c p: Modules) :=
+  (exists c', p = ConcatMod c c' \/ p = ConcatMod c' c).
+Hint Unfold IsChild.
+
+Lemma substep_modules_weakening:
+  forall mc o u ul cs,
+    Substep mc o u ul cs ->
+    forall mp,
+      IsChild mc mp ->
+      Substep mp o u ul cs.
+Proof.
+  induction 1; simpl; intros; subst; try (constructor; auto; fail).
+  - eapply SingleRule; eauto.
+    inv H; inv H0; apply in_or_app; auto.
+  - eapply SingleMeth; eauto.
+    inv H; inv H0; apply in_or_app; auto.
+Qed.
+
+Lemma substepsInd_modules_weakening:
+  forall mc o u l,
+    SubstepsInd mc o u l ->
+    forall mp,
+      IsChild mc mp ->
+      SubstepsInd mp o u l.
+Proof.
+  induction 1; simpl; intros; subst; [constructor|].
+  eapply SubstepsCons; eauto.
+  eapply substep_modules_weakening; eauto.
+Qed.
+
+Lemma semAction_oldRegs_weakening:
+  forall o {retK} retv (a: ActionT type retK) u cs,
+    SemAction o a u cs retv ->
+    forall so,
+      M.Sub o so ->
+      SemAction so a u cs retv.
+Proof.
+  induction 1; simpl; intros; subst.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+    apply M.F.P.F.find_mapsto_iff.
+    apply H0.
+    apply M.F.P.F.find_mapsto_iff; auto.
+  - econstructor; eauto.
+  - eapply SemIfElseTrue; eauto.
+  - eapply SemIfElseFalse; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+Qed.
+
+Lemma substep_oldRegs_weakening:
+  forall m o u ul cs,
+    Substep m o u ul cs ->
+    forall so,
+      M.Sub o so ->
+      Substep m so u ul cs.
+Proof.
+  induction 1; simpl; intros; subst; try (constructor; auto; fail).
+  - eapply SingleRule; eauto.
+    eapply semAction_oldRegs_weakening; eauto.
+  - eapply SingleMeth; eauto.
+    eapply semAction_oldRegs_weakening; eauto.
+Qed.
+
+Lemma substepsInd_oldRegs_weakening:
+  forall m o u l,
+    SubstepsInd m o u l ->
+    forall so,
+      M.Sub o so ->
+      SubstepsInd m so u l.
+Proof.
+  induction 1; simpl; intros; subst; [constructor|].
+  eapply SubstepsCons; eauto.
+  eapply substep_oldRegs_weakening; eauto.
 Qed.
 

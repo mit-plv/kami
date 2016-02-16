@@ -186,15 +186,6 @@ Section GivenModule.
                           defs := M.add (attrName f) (existT _ _ (argV, retV)) (M.empty _);
                           calls := cs |}.
 
-  Definition CanCombineLabels (u1 u2: UpdatesT) (l1 l2: LabelT) :=
-    M.Disj u1 u2 /\
-    M.Disj (defs l1) (defs l2) /\
-    M.Disj (calls l1) (calls l2) /\
-    match annot l1, annot l2 with
-    | Some _, Some _ => False
-    | _, _ => True
-    end.
-
   Inductive SubstepsSmall: UpdatesT -> LabelT -> Prop :=
   | SSSNil:
       SubstepsSmall (M.empty _) emptyMethLabel
@@ -202,7 +193,7 @@ Section GivenModule.
       forall pu pl,
         SubstepsSmall pu pl ->
         forall nu nl,
-          CanCombineLabels pu nu pl nl ->
+          CanCombineUL pu nu pl nl ->
           SubstepSmall nu nl ->
           SubstepsSmall (M.union pu nu) (mergeLabel nl pl).
 
@@ -230,15 +221,49 @@ Ltac invertActionSmallRep :=
       (remember c as ic; destruct ic; dest; subst)
     end.
 
-Section Facts.
+Require Import Inline InlineFacts_2.
 
-  Lemma stepSmall_consistent:
-    forall m o u l,
-      Step m o u l <-> StepSmall m o u l.
+Section Consistency.
+
+  Variable m: Modules.
+  Hypotheses (Hequiv: Equiv.ModEquiv typeUT type m)
+             (Hdms: NoDup (namesOf (getDefsBodies m)))
+             (Hinline: snd (inlineF m) = true).
+
+  Lemma stepSmall_implies_Step:
+    forall o u l,
+      StepSmall m o u l -> Step m o u l.
   Proof.
     admit.
   Qed.
 
-End Facts.
+  Lemma inlineF_implies_StepSmall:
+    forall o u l,
+      Step (fst (inlineF m)) o u l -> StepSmall m o u l.
+  Proof.
+    admit.
+  Qed.
+
+  Theorem stepSmall_consistent:
+    forall o u l,
+      Step m o u l <-> StepSmall m o u l.
+  Proof.
+    intros; split; intros.
+    - apply inlineF_implies_StepSmall.
+      apply inlineF_correct_Step; auto.
+    - apply stepSmall_implies_Step; auto.
+  Qed.
+
+  Theorem inlineF_consistent:
+    forall o u l,
+      Step m o u l <-> Step (fst (inlineF m)) o u l.
+  Proof.
+    intros; split; intros.
+    - apply inlineF_correct_Step; auto.
+    - apply stepSmall_implies_Step.
+      apply inlineF_implies_StepSmall; auto.
+  Qed.
+
+End Consistency.
 
 

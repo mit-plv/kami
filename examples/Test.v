@@ -56,8 +56,8 @@ Section SmallStepTest.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
     intros; exists u; split; auto.
 
-    apply stepSmall_consistent.
-    apply stepSmall_consistent in H.
+    apply stepSmall_consistent; auto; try (repeat constructor).
+    apply stepSmall_consistent in H; auto; try (repeat constructor); [|simpl; auto].
 
     inv H.
     inv HSubSteps; [do 2 constructor|].
