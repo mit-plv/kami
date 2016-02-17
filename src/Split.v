@@ -164,12 +164,12 @@ Section TwoModules.
     intuition auto.
 
     - constructor; auto.
-      admit. (* maybe the most difficult part *)
+      admit. (* nontrivial *)
     - constructor; auto.
-      admit. (* maybe the most difficult part *)
+      admit. (* nontrivial *)
     - admit.
     - clear.
-      admit. (* also nontrivial *)
+      admit. (* nontrivial *)
   Qed.
 
   Lemma step_split:
@@ -280,12 +280,20 @@ Section TwoModules.
       eapply SubstepsCons.
       + eapply IHSubstepsInd; eauto.
         clear -H5.
-        admit.
+
+        (* Better to extract a lemma *)
+        inv H5; inv H0; dest.
+        destruct (getLabel sul scs), l, lb; simpl in *.
+        repeat split; simpl; auto.
+        destruct annot, annot0, annot1; auto.
+        
       + apply substep_modules_weakening with (mc:= ma); [|eauto].
         eapply substep_oldRegs_weakening; eauto.
         apply M.Sub_union_1.
-      + admit.
-      + admit.
+      + inv H5; inv H8; dest.
+        destruct l, lb; repeat split; simpl in *; auto.
+        destruct annot, annot0, sul as [|[[? ?]|]]; auto; findeq.
+      + inv H5; inv H8; dest; auto.
       + reflexivity.
   Qed.
 
@@ -299,8 +307,11 @@ Section TwoModules.
   Proof.
     intros; inv H; inv H2.
     replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
-    - admit.
-    - admit.
+    - constructor.
+      + apply substepsInd_modular; auto.
+        admit. (* nontrivial *)
+      + admit. (* nontrivial *)
+    - admit. (* nontrivial *)
   Qed.
 
   Lemma step_modular:

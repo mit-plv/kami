@@ -1117,128 +1117,128 @@ End M.
 Ltac dest_disj :=
   repeat
     match goal with
-      | [H: M.Disj (M.add _ _ _) _ |- _] =>
-        apply M.Disj_add_2 in H; dest
-      | [H: M.Disj _ (M.add _ _ _) |- _] =>
-        apply M.Disj_comm, M.Disj_add_2 in H; dest
-      | [H: M.Disj _ (M.union _ _) |- _] =>
-        pose proof (M.Disj_union_1 H); pose proof (M.Disj_union_2 H); clear H
-      | [H: M.Disj (M.union _ _) _ |- _] =>
-        apply M.Disj_comm in H
-      | [H: M.Disj _ (M.empty _) |- _] => clear H
-      | [H: M.Disj (M.empty _) _ |- _] => clear H
+    | [H: M.Disj (M.add _ _ _) _ |- _] =>
+      apply M.Disj_add_2 in H; destruct H
+    | [H: M.Disj _ (M.add _ _ _) |- _] =>
+      apply M.Disj_comm, M.Disj_add_2 in H; destruct H
+    | [H: M.Disj _ (M.union _ _) |- _] =>
+      pose proof (M.Disj_union_1 H); pose proof (M.Disj_union_2 H); clear H
+    | [H: M.Disj (M.union _ _) _ |- _] =>
+      apply M.Disj_comm in H
+    | [H: M.Disj _ (M.empty _) |- _] => clear H
+    | [H: M.Disj (M.empty _) _ |- _] => clear H
     end.
 
 Ltac solve_disj :=
   repeat
     (try assumption;
      match goal with
-       | [ |- M.Disj (M.empty _) _ ] =>
-         apply M.Disj_empty_1
-       | [ |- M.Disj _ (M.empty _) ] =>
-         apply M.Disj_empty_2
-       | [H: M.Disj ?m1 ?m2 |- M.Disj ?m2 ?m1] =>
-         (apply M.Disj_comm; auto)
-       | [ |- M.Disj (M.add _ _ _) _ ] =>
-         (apply M.Disj_add_1; auto)
-       | [ |- M.Disj _ (M.add _ _ _) ] =>
-         (apply M.Disj_comm, M.Disj_add_1; auto)
-       | [ |- M.Disj _ (M.union _ _) ] =>
-         apply M.Disj_union
-       | [ |- M.Disj (M.union _ _) _ ] =>
-         apply M.Disj_comm, M.Disj_union
-       | [ |- M.Disj _ (M.remove _ _) ] =>
-         try (apply M.Disj_remove_2; solve_disj; fail)
+     | [ |- M.Disj (M.empty _) _ ] =>
+       apply M.Disj_empty_1
+     | [ |- M.Disj _ (M.empty _) ] =>
+       apply M.Disj_empty_2
+     | [H: M.Disj ?m1 ?m2 |- M.Disj ?m2 ?m1] =>
+       apply M.Disj_comm; auto
+     | [ |- M.Disj (M.add _ _ _) _ ] =>
+       apply M.Disj_add_1; auto
+     | [ |- M.Disj _ (M.add _ _ _) ] =>
+       apply M.Disj_comm, M.Disj_add_1; auto
+     | [ |- M.Disj _ (M.union _ _) ] =>
+       apply M.Disj_union
+     | [ |- M.Disj (M.union _ _) _ ] =>
+       apply M.Disj_comm, M.Disj_union
+     | [ |- M.Disj _ (M.remove _ _) ] =>
+       try (apply M.Disj_remove_2; solve_disj; fail)
      end).
 
 Ltac dest_in :=
   repeat
     match goal with
-      | [H: ~ M.In _ _ |- _] =>
-        apply M.F.P.F.not_find_in_iff in H
-      | [H: M.In _ _ -> False |- _] =>
-        apply M.F.P.F.not_find_in_iff in H
-      | [ |- ~ M.In _ _] =>
-        apply M.F.P.F.not_find_in_iff
-      | [ |- M.In _ _ -> False] =>
-        apply M.F.P.F.not_find_in_iff
-      | [ |- M.In _ _] =>
-        (apply M.F.P.F.in_find_iff; intro)
+    | [H: ~ M.In _ _ |- _] =>
+      apply M.F.P.F.not_find_in_iff in H
+    | [H: M.In _ _ -> False |- _] =>
+      apply M.F.P.F.not_find_in_iff in H
+    | [ |- ~ M.In _ _] =>
+      apply M.F.P.F.not_find_in_iff
+    | [ |- M.In _ _ -> False] =>
+      apply M.F.P.F.not_find_in_iff
+    | [ |- M.In _ _] =>
+      apply M.F.P.F.in_find_iff; intro
     end.
 
 Ltac mred :=
   repeat
     (match goal with
-       (* basic destruction *)
-       | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
-         rewrite <-H
-       | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-         rewrite <-H1 in H2
-       | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-         rewrite <-H1 in H2
-       | [ |- context [M.find ?y ?m] ] =>
-         (is_var m;
-          let v := fresh "v" in
-          remember (M.find y m) as v; destruct v)
-       (* hypothesis reduction *)
-       | [H: context [M.find _ (M.empty _)] |- _] =>
-         rewrite M.find_empty in H
-       | [H: context [M.union (M.empty _) _] |- _] =>
-         rewrite M.union_empty_L in H
-       | [H: context [M.union _ (M.empty _)] |- _] =>
-         rewrite M.union_empty_R in H
-       | [H: context [M.find _ (M.union _ _)] |- _] =>
-         rewrite M.find_union in H
-       | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
-         rewrite M.find_add_1 in H
-       | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
-         rewrite M.find_add_2 in H by auto
-       | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
-         rewrite M.restrict_find in H2 by auto
-       (* goal reduction *)
-       | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
-         (destruct (string_dec y k);
-          [subst; rewrite M.F.P.F.remove_eq_o|
-           rewrite M.F.P.F.remove_neq_o by intuition auto])
-       | [ |- context [M.union (M.empty _) _] ] =>
-         rewrite M.union_empty_L
-       | [ |- context [M.union _ (M.empty _)] ] =>
-         rewrite M.union_empty_R
-       | [ |- context [M.find ?y (M.union _ _)] ] =>
-         rewrite M.find_union
-       | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
-         rewrite M.F.P.F.remove_eq_o
-       | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
-         rewrite M.F.P.F.remove_neq_o by intuition auto
-       | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
-         rewrite M.F.P.F.remove_neq_o by intuition auto
-       | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
-       | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
-         (rewrite M.find_add_2 by intuition idtac)
-       | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
-         (rewrite M.find_add_2 by intuition idtac)
-       | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
-         M.cmp y k; [rewrite M.find_add_1|
-                     rewrite M.find_add_2 by intuition idtac]
-       | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
-         rewrite M.restrict_find by auto
+     (* basic destruction *)
+     | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
+       rewrite <-H
+     | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+       rewrite <-H1 in H2
+     | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+       rewrite <-H1 in H2
+     | [ |- context [M.find ?y ?m] ] =>
+       (is_var m;
+        let v := fresh "v" in
+        remember (M.find y m) as v; destruct v)
+     (* hypothesis reduction *)
+     | [H: context [M.find _ (M.empty _)] |- _] =>
+       rewrite M.find_empty in H
+     | [H: context [M.union (M.empty _) _] |- _] =>
+       rewrite M.union_empty_L in H
+     | [H: context [M.union _ (M.empty _)] |- _] =>
+       rewrite M.union_empty_R in H
+     | [H: context [M.find _ (M.union _ _)] |- _] =>
+       rewrite M.find_union in H
+     | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
+       rewrite M.find_add_1 in H
+     | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+       rewrite M.find_add_2 in H by auto
+     | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
+       rewrite M.restrict_find in H2 by auto
+     (* goal reduction *)
+     | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
+       destruct (string_dec y k);
+       [subst; rewrite M.F.P.F.remove_eq_o|
+        rewrite M.F.P.F.remove_neq_o by intuition auto]
+     | [ |- context [M.union (M.empty _) _] ] =>
+       rewrite M.union_empty_L
+     | [ |- context [M.union _ (M.empty _)] ] =>
+       rewrite M.union_empty_R
+     | [ |- context [M.find ?y (M.union _ _)] ] =>
+       rewrite M.find_union
+     | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
+       rewrite M.F.P.F.remove_eq_o
+     | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
+       rewrite M.F.P.F.remove_neq_o by intuition auto
+     | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
+       rewrite M.F.P.F.remove_neq_o by intuition auto
+     | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
+     | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
+       rewrite M.find_add_2 by intuition idtac
+     | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
+       rewrite M.find_add_2 by intuition idtac
+     | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
+       M.cmp y k; [rewrite M.find_add_1|
+                   rewrite M.find_add_2 by intuition idtac]
+     | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
+       rewrite M.restrict_find by auto
      end; try discriminate; try reflexivity; try (intuition idtac; fail)).
 
 Ltac mcontra :=
   repeat
     match goal with
-      | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
-        try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
-      | [H1: None = ?f, H2: Some _ = ?f |- _] => (rewrite <-H1 in H2; discriminate)
-      | [H1: None = ?f, H2: ?f = Some _ |- _] => (rewrite <-H1 in H2; discriminate)
-      | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite H1 in H2; discriminate)
-      | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite <-H1 in H2; discriminate)
-      | [H: match ?c with | Some _ => Some _ | None => Some _ end = None |- _] =>
-        (destruct c; discriminate)
-      | [H: match ?c with | Some _ => None | None => None end = Some _ |- _] =>
-        (destruct c; discriminate)
-      | [H1: ~ M.In ?k ?m, H2: Some _ = M.find ?k ?m |- _] =>
-        elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
+    | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
+      try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
+    | [H1: None = ?f, H2: Some _ = ?f |- _] => rewrite <-H1 in H2; discriminate
+    | [H1: None = ?f, H2: ?f = Some _ |- _] => rewrite <-H1 in H2; discriminate
+    | [H1: ?f = None, H2: Some _ = ?f |- _] => rewrite H1 in H2; discriminate
+    | [H1: ?f = None, H2: Some _ = ?f |- _] => rewrite <-H1 in H2; discriminate
+    | [H: match ?c with | Some _ => Some _ | None => Some _ end = None |- _] =>
+      destruct c; discriminate
+    | [H: match ?c with | Some _ => None | None => None end = Some _ |- _] =>
+      destruct c; discriminate
+    | [H1: ~ M.In ?k ?m, H2: Some _ = M.find ?k ?m |- _] =>
+      elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
 
 Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition idtac.
@@ -1257,9 +1257,9 @@ Section MakeMap.
 
   Fixpoint makeMap (l: list (Attribute (sigT f1))) : M.t (sigT f2) :=
     match l with
-      | nil => M.empty _
-      | {| attrName := n; attrType := existT _ rv |} :: xs =>
-        M.add n (existT _ _ (f rv)) (makeMap xs)
+    | nil => M.empty _
+    | {| attrName := n; attrType := existT _ rv |} :: xs =>
+      M.add n (existT _ _ (f rv)) (makeMap xs)
     end.
 
   Lemma makeMap_KeysSubset:
