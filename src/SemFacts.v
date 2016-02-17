@@ -1,8 +1,24 @@
-Require Import String List Program.Equality.
+Require Import String List Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
 Require Import Syntax Semantics.
 
 Set Implicit Arguments.
+
+Lemma equivalentLabelSeq_CanCombineLabelSeq:
+  forall p (Hp: Proper (equivalentLabel p ==> equivalentLabel p ==> impl) CanCombineLabel)
+         lsa lsb lsc lsd,
+    equivalentLabelSeq p lsa lsb ->
+    equivalentLabelSeq p lsc lsd ->
+    CanCombineLabelSeq lsa lsc ->
+    CanCombineLabelSeq lsb lsd.
+Proof.
+  ind lsa.
+  - destruct lsc; intuition idtac.
+    inv H; inv H0; constructor.
+  - destruct lsc; intuition idtac.
+    inv H; inv H0; constructor; [|eapply IHlsa; eauto].
+    eapply Hp; eauto.
+Qed.
 
 Theorem staticDynCallsRules m o name a u cs r:
   In (name :: a)%struct (getRules m) ->

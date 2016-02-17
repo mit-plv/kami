@@ -1,7 +1,7 @@
 Require Import List String.
-Require Import Program.Equality.
+Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
-Require Import Syntax Semantics Wf Split.
+Require Import Syntax Semantics SemFacts Wf Split.
 
 Set Implicit Arguments.
 
@@ -74,12 +74,6 @@ Section Facts.
     admit.
   Qed.
 
-  Lemma equivalentLabelSeq_length:
-    forall l1 l2 p,
-      equivalentLabelSeq p l1 l2 ->
-      List.length l1 = List.length l2.
-  Proof. induction 1; simpl; intros; auto. Qed.
-
   Lemma traceRefines_modular:
     forall ma mb mc md p
            (Hacdisj: DisjList (namesOf (getRegInits ma))
@@ -88,10 +82,11 @@ Section Facts.
            (Hbddisj: DisjList (namesOf (getRegInits mb))
                               (namesOf (getRegInits md)))
            (Hbdval: ValidRegsModules type (ConcatMod mb md))
-           (Hpunion: forall m1 m2, M.union (p m1) (p m2) =
-                                   p (M.union m1 m2))
+           (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
            (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
-                                 p (M.subtractKV signIsEq m1 m2)),
+                                 p (M.subtractKV signIsEq m1 m2))
+           (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
+                           CanCombineLabel),
       traceRefines p ma mb ->
       traceRefines p mc md ->
       traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
@@ -108,9 +103,7 @@ Section Facts.
     exists (composeLabels lsb lsd).
     split; auto.
     - apply behavior_modular; auto.
-      apply equivalentLabelSeq_length in H3.
-      apply equivalentLabelSeq_length in H4.
-      intuition.
+      eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
     - apply composeLabels_modular; auto.
   Qed.
   

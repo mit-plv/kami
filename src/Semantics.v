@@ -154,14 +154,16 @@ Section GivenModule.
         | _, _ => True
       end.
 
-    Definition CanCombineUL (u1 u2: UpdatesT) (l1 l2: LabelT) :=
-      M.Disj u1 u2 /\
+    Definition CanCombineLabel (l1 l2: LabelT) :=
       M.Disj (defs l1) (defs l2) /\
       M.Disj (calls l1) (calls l2) /\
       match annot l1, annot l2 with
       | Some _, Some _ => False
       | _, _ => True
       end.
+
+    Definition CanCombineUL (u1 u2: UpdatesT) (l1 l2: LabelT) :=
+      M.Disj u1 u2 /\ CanCombineLabel l1 l2.
 
     Inductive SubstepsInd: UpdatesT -> LabelT -> Prop :=
     | SubstepsNil: SubstepsInd (M.empty _)
@@ -361,17 +363,12 @@ End GivenModule.
 
 Fixpoint CanCombineLabelSeq (ll1 ll2: list LabelT) :=
   match ll1, ll2 with
+  | nil, nil => True
   | l1 :: ll1', l2 :: ll2' =>
-    M.Disj (defs l1) (defs l2) /\
-    M.Disj (calls l1) (calls l2) /\
-    match annot l1, annot l2 with
-    | Some _, Some _ => False
-    | _, _ => True
-    end /\
-    CanCombineLabelSeq ll1' ll2'
-  | _, _ => True
+    CanCombineLabel l1 l2 /\ CanCombineLabelSeq ll1' ll2'
+  | _, _ => False (* forces the same length *)
   end.
-           
+
 Definition equivalentLabel p l1 l2 :=
   p (defs l1) = defs l2 /\
   p (calls l1) = calls l2 /\

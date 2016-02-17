@@ -580,15 +580,16 @@ Section SubstepsFacts.
       + repeat split; simpl; auto.
       + auto.
       + simpl; f_equal; auto.
+        destruct sul as [|[[? ?]|]]; auto.
 
     - inv H2; dest; simpl in *.
       eapply SubstepsCons.
       + apply IHSubstepsInd; auto.
         destruct sul as [|[[pdmn pdmv]|]]; findeq.
-        M.cmp dm pdmn; findeq.
       + eapply inlineDmToMod_Substep_intact; eauto.
       + repeat split; simpl; auto.
-        destruct pann; destruct sul as [|[[pdmn pdmv]|]]; auto; findeq.
+        destruct pann; destruct sul as [|[[pdmn pdmv]|]]; auto;
+          findeq; auto.
       + auto.
       + simpl; f_equal; auto.
         destruct sul as [|[[pdmn pdmv]|]]; auto.

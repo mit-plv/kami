@@ -1139,6 +1139,10 @@ Ltac solve_disj :=
          apply M.Disj_empty_2
        | [H: M.Disj ?m1 ?m2 |- M.Disj ?m2 ?m1] =>
          (apply M.Disj_comm; auto)
+       | [ |- M.Disj (M.add _ _ _) _ ] =>
+         (apply M.Disj_add_1; auto)
+       | [ |- M.Disj _ (M.add _ _ _) ] =>
+         (apply M.Disj_comm, M.Disj_add_1; auto)
        | [ |- M.Disj _ (M.union _ _) ] =>
          apply M.Disj_union
        | [ |- M.Disj (M.union _ _) _ ] =>
@@ -1146,8 +1150,6 @@ Ltac solve_disj :=
        | [ |- M.Disj _ (M.remove _ _) ] =>
          try (apply M.Disj_remove_2; solve_disj; fail)
      end).
-
-Ltac mdisj := dest_disj; solve_disj.
 
 Ltac dest_in :=
   repeat
@@ -1160,6 +1162,8 @@ Ltac dest_in :=
         apply M.F.P.F.not_find_in_iff
       | [ |- M.In _ _ -> False] =>
         apply M.F.P.F.not_find_in_iff
+      | [ |- M.In _ _] =>
+        (apply M.F.P.F.in_find_iff; intro)
     end.
 
 Ltac mred :=
@@ -1196,6 +1200,10 @@ Ltac mred :=
          (destruct (string_dec y k);
           [subst; rewrite M.F.P.F.remove_eq_o|
            rewrite M.F.P.F.remove_neq_o by intuition auto])
+       | [ |- context [M.union (M.empty _) _] ] =>
+         rewrite M.union_empty_L
+       | [ |- context [M.union _ (M.empty _)] ] =>
+         rewrite M.union_empty_R
        | [ |- context [M.find ?y (M.union _ _)] ] =>
          rewrite M.find_union
        | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
@@ -1225,12 +1233,17 @@ Ltac mcontra :=
       | [H1: None = ?f, H2: ?f = Some _ |- _] => (rewrite <-H1 in H2; discriminate)
       | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite H1 in H2; discriminate)
       | [H1: ?f = None, H2: Some _ = ?f |- _] => (rewrite <-H1 in H2; discriminate)
+      | [H: match ?c with | Some _ => Some _ | None => Some _ end = None |- _] =>
+        (destruct c; discriminate)
+      | [H: match ?c with | Some _ => None | None => None end = Some _ |- _] =>
+        (destruct c; discriminate)
       | [H1: ~ M.In ?k ?m, H2: Some _ = M.find ?k ?m |- _] =>
         elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
 
-Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition auto.
+Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition idtac.
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
+Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 
 Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
 Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).

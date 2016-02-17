@@ -40,9 +40,9 @@ Section TwoModules.
       exists ua ub ula ulb csa csb,
         Substep ma (regsA o) ua ula csa /\
         Substep mb (regsB o) ub ulb csb /\
-        u = M.union ua ub /\
-        ul = mergeUnitLabel ula ulb /\ OneMustMethNone ula ulb /\
-        cs = M.union csa csb.
+        M.Disj ua ub /\ u = M.union ua ub /\
+        OneMustMethNone ula ulb /\ ul = mergeUnitLabel ula ulb /\ 
+        M.Disj csa csb /\ cs = M.union csa csb.
   Proof.
     induction 1; simpl; intros.
 
@@ -92,11 +92,13 @@ Section TwoModules.
       exists ua ub la lb,
         SubstepsInd ma (regsA o) ua la /\
         SubstepsInd mb (regsB o) ub lb /\
-        u = M.union ua ub /\ l = mergeLabel la lb.
+        M.Disj ua ub /\ u = M.union ua ub /\
+        CanCombineLabel la lb /\ l = mergeLabel la lb.
   Proof.
     induction 1; simpl; intros.
     - exists (M.empty _), (M.empty _), emptyMethLabel, emptyMethLabel.
-      repeat split; auto; try constructor.
+      repeat split; auto; try constructor;
+        simpl; intro; eapply M.F.P.F.empty_in_iff; eauto.
 
     - subst.
       destruct IHSubstepsInd as [pua [pub [pla [plb ?]]]]; dest; subst.
@@ -107,46 +109,53 @@ Section TwoModules.
       exists (M.union pua sua), (M.union pub sub).
       exists (mergeLabel (getLabel sula scsa) pla),
       (mergeLabel (getLabel sulb scsb) plb).
+      inv H1; inv H6; dest.
 
       repeat split.
 
       + eapply SubstepsCons; eauto.
-        inv H1; dest.
         repeat split; auto.
         { destruct pla, plb; simpl in *; mdisj. }
         { destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?];
           destruct sula as [[|]|[|]], sulb as [[|]|[|]];
-          simpl in *; auto; findeq; try (inv H7; discriminate).
+          simpl in *; auto; findeq; try (inv H9; discriminate).
         }
         
       + eapply SubstepsCons; eauto.
-        inv H1; dest.
         repeat split; auto.
         { destruct pla, plb; simpl in *; mdisj. }
         { destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?];
           destruct sula as [[|]|[|]], sulb as [[|]|[|]];
-          simpl in *; auto; findeq; try (inv H7; discriminate);
+          simpl in *; auto; findeq; try (inv H9; discriminate);
           try (destruct (M.find a defs); discriminate).
         }
         
-      + inv H1; auto.
-      + inv H1; dest; mdisj.
-
-        admit. (** below works; but slow (takes about 30secs) *)
-        (* unfold mergeLabel, getLabel, mergeUnitLabel. *)
-        (* destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb]; *)
-        (*   destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]]; *)
-        (*   simpl in *; try (inv H7; discriminate); *)
-        (*     try (intuition auto; fail); *)
-        (*     try (f_equal; auto; fail). *)
-  Qed.
+      + auto.
+      + auto.
+      + destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb];
+          destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]];
+          simpl in *; try (inv H9; discriminate); auto.
+      + destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb];
+          destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]];
+          simpl in *; try (inv H9; discriminate); auto.
+      + destruct pla as [[[|]|] ? ?], plb as [[[|]|] ? ?];
+          destruct sula as [[|]|[|]], sulb as [[|]|[|]];
+          simpl in *; try (inv H9; discriminate); auto.
+      + destruct pla as [[[|]|] pdsa pcsa], plb as [[[|]|] pdsb pcsb];
+          destruct sula as [[|]|[[? ?]|]], sulb as [[|]|[[? ?]|]];
+          simpl in *; try (inv H9; discriminate);
+            try (intuition auto; fail);
+            try (f_equal; auto; fail).
+          
+  Admitted. (* NOTE: It works but takes some time *)
 
   Lemma stepInd_split:
     forall o u l,
       StepInd (ConcatMod ma mb) o u l ->
       exists ua ub la lb,
         StepInd ma (regsA o) ua la /\ StepInd mb (regsB o) ub lb /\
-        u = M.union ua ub /\ l = hide (mergeLabel la lb).
+        M.Disj ua ub /\ u = M.union ua ub /\
+        CanCombineLabel la lb /\ l = hide (mergeLabel la lb).
   Proof.
     induction 1; simpl; intros.
     pose proof (substepsInd_split HSubSteps)
@@ -154,9 +163,11 @@ Section TwoModules.
     exists ua, ub, (hide la), (hide lb).
     intuition auto.
 
-    - admit. (* maybe the most difficult part *)
     - constructor; auto.
       admit. (* maybe the most difficult part *)
+    - constructor; auto.
+      admit. (* maybe the most difficult part *)
+    - admit.
     - clear.
       admit. (* also nontrivial *)
   Qed.
@@ -166,12 +177,14 @@ Section TwoModules.
       Step (ConcatMod ma mb) o u l ->
       exists ua ub la lb,
         Step ma (regsA o) ua la /\ Step mb (regsB o) ub lb /\
-        u = M.union ua ub /\ l = hide (mergeLabel la lb).
+        M.Disj ua ub /\ u = M.union ua ub /\
+        CanCombineLabel la lb /\ l = hide (mergeLabel la lb).
   Proof.
     intros; apply step_consistent in H.
     pose proof (stepInd_split H) as [ua [ub [la [lb ?]]]]; dest; subst.
     exists ua, ub, la, lb.
-    repeat split; apply step_consistent; auto.
+    inv H4; dest.
+    repeat split; auto; apply step_consistent; auto.
   Qed.
 
   Lemma multistep_split:
@@ -181,14 +194,14 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
-        s = M.union sa sb /\ ls = composeLabels lsa lsb /\
-        List.length lsa = List.length lsb.
+        M.Disj sa sb /\ s = M.union sa sb /\
+        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
   Proof.
     induction 1; simpl; intros; subst.
-    - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto).
-      subst.
-      unfold initRegs.
-      apply makeMap_union; auto.
+    - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
+      + eapply M.DisjList_KeysSubset_Disj; eauto;
+          unfold initRegs; apply makeMap_KeysSubset; auto.
+      + subst; unfold initRegs; apply makeMap_union; auto.
 
     - intros; subst.
       specialize (IHMultistep eq_refl).
@@ -198,32 +211,37 @@ Section TwoModules.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       inv Hvr.
-      pose proof (validRegsModules_multistep_newregs_subset H5 H0 eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H6 H1 eq_refl).
-      pose proof (validRegsModules_step_newregs_subset H5 H2).
-      pose proof (validRegsModules_step_newregs_subset H6 H3).
+      pose proof (validRegsModules_multistep_newregs_subset H7 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H9 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H7 H3).
+      pose proof (validRegsModules_step_newregs_subset H9 H5).
 
+      inv H8; dest.
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
-      repeat split.
+      repeat split; auto.
 
       + constructor; auto.
-        p_equal H2.
+        p_equal H3.
         unfold regsA; rewrite M.restrict_union.
         rewrite M.restrict_KeysSubset; auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits mb)); auto.
         apply DisjList_comm; auto.
 
       + constructor; auto.
-        p_equal H3.
+        p_equal H5.
         unfold regsB; rewrite M.restrict_union.
         rewrite M.restrict_KeysSubset with (m:= sb); auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
 
-      + pose proof (M.DisjList_KeysSubset_Disj Hinit H7 H10).
-        meq.
+      + mdisj.
+        * eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits mb)); eauto.
+          apply DisjList_comm; auto.
+        * eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits mb)); eauto.
+          apply DisjList_comm; auto.
 
-      + simpl; auto.
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H10 H13).
+        meq.
   Qed.
 
   Lemma behavior_split:
@@ -231,8 +249,8 @@ Section TwoModules.
       Behavior (ConcatMod ma mb) s ls ->
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
-        s = M.union sa sb /\
-        ls = composeLabels lsa lsb /\ List.length lsa = List.length lsb.
+        M.Disj sa sb /\ s = M.union sa sb /\
+        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
@@ -306,42 +324,44 @@ Section TwoModules.
       forall ob sb lsb,
         Multistep mb ob sb lsb ->
         ob = initRegs (getRegInits mb) ->
-        List.length lsa = List.length lsb ->
+        CanCombineLabelSeq lsa lsb ->
         Multistep (ConcatMod ma mb) (initRegs (getRegInits (ConcatMod ma mb))) 
                   (M.union sa sb) (composeLabels lsa lsb).
   Proof.
     induction lsa; simpl; intros; subst.
 
-    - destruct lsb; [|discriminate].
+    - destruct lsb; [|intuition idtac].
       inv H; inv H1; constructor.
       unfold initRegs.
       apply makeMap_union; auto.
 
-    - destruct lsb as [|]; [discriminate|].
-      simpl in H3; inv H3.
+    - destruct lsb as [|]; [intuition idtac|].
+      inv H3.
       inv H; inv H1.
       inv Hvr.
       
       pose proof (validRegsModules_multistep_newregs_subset H HMultistep eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H0 HMultistep0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H1 HMultistep0 eq_refl).
       pose proof (validRegsModules_step_newregs_subset H HStep).
-      pose proof (validRegsModules_step_newregs_subset H0 HStep0).
+      pose proof (validRegsModules_step_newregs_subset H1 HStep0).
 
       replace (M.union (M.union u n) (M.union u0 n0))
       with (M.union (M.union u u0) (M.union n n0))
-        by (pose proof (M.DisjList_KeysSubset_Disj Hinit H1 H5); meq).
-      
+        by (pose proof (M.DisjList_KeysSubset_Disj Hinit H3 H6); meq).
+
+      inv H0; dest.
       constructor; eauto.
       apply step_modular; auto.
       + eapply M.DisjList_KeysSubset_Disj; eauto.
-      + admit.
+      + repeat split; auto.
+        eapply M.DisjList_KeysSubset_Disj; eauto.
   Qed.
 
   Lemma behavior_modular:
     forall sa sb lsa lsb,
       Behavior ma sa lsa ->
       Behavior mb sb lsb ->
-      List.length lsa = List.length lsb ->
+      CanCombineLabelSeq lsa lsb ->
       Behavior (ConcatMod ma mb) (M.union sa sb) (composeLabels lsa lsb).
   Proof.
     intros; inv H; inv H0; constructor.
