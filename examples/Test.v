@@ -57,7 +57,7 @@ Section SmallStepTest.
     intros; exists u; split; auto.
 
     apply stepSmall_consistent; auto; try (repeat constructor).
-    apply stepSmall_consistent in H; auto; try (repeat constructor); [|simpl; auto].
+    apply stepSmall_consistent in H.
 
     inv H.
     inv HSubSteps; [do 2 constructor|].

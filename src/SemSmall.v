@@ -221,49 +221,161 @@ Ltac invertActionSmallRep :=
       (remember c as ic; destruct ic; dest; subst)
     end.
 
-Require Import Inline InlineFacts_2.
-
 Section Consistency.
 
   Variable m: Modules.
-  Hypotheses (Hequiv: Equiv.ModEquiv typeUT type m)
-             (Hdms: NoDup (namesOf (getDefsBodies m)))
-             (Hinline: snd (inlineF m) = true).
+
+  Lemma semActionSmall_calls:
+    forall o {retK} (a: ActionT type retK) u cs retv,
+      SemActionSmall m o a u cs retv ->
+      M.KeysDisj cs (getDefs m).
+  Proof.
+    induction 1; simpl; intros; subst; auto.
+    - apply M.KeysDisj_add; auto.
+    - apply M.KeysDisj_union; auto.
+    - apply M.KeysDisj_union; auto.
+    - apply M.KeysDisj_union; auto.
+    - apply M.KeysDisj_empty.
+  Qed.
+
+  Lemma substepSmall_calls:
+    forall o u l,
+      SubstepSmall m o u l ->
+      M.KeysDisj (calls l) (getDefs m).
+  Proof.
+    induction 1; simpl; intros.
+    - apply M.KeysDisj_empty.
+    - apply M.KeysDisj_empty.
+    - eapply semActionSmall_calls; exact HAction.
+    - eapply semActionSmall_calls; exact HAction.
+  Qed.
+
+  Lemma substepsSmall_calls:
+    forall o u l,
+      SubstepsSmall m o u l ->
+      M.KeysDisj (calls l) (getDefs m).
+  Proof.
+    induction 1; simpl; intros.
+    - apply M.KeysDisj_empty.
+    - apply substepSmall_calls in H1.
+      destruct nl, pl; simpl in *.
+      apply M.KeysDisj_union; auto.
+  Qed.
+
+  Lemma stepSmall_calls:
+    forall o u l,
+      StepSmall m o u l ->
+      M.KeysDisj (calls l) (getDefs m).
+  Proof. induction 1; eapply substepsSmall_calls; eauto. Qed.
+
+  Lemma semActionSmall_implies_substepsInd_meth:
+    forall o (f: DefMethT) u cs argV retV,
+      SemActionSmall m o (projT2 (attrType f) type argV) u cs retV ->
+      In f (getDefsBodies m) ->
+      exists ol,
+        {| annot := None;
+           defs := M.add
+                     f
+                     (existT SignT (projT1 (attrType f)) (argV, retV))
+                     (M.empty (sigT SignT));
+           calls := cs |} = hide ol /\
+        SubstepsInd m o u ol.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma semActionSmall_implies_substepsInd_rule:
+    forall o k (a: Action Void) u cs,
+      SemActionSmall m o (a type) u cs WO ->
+      In (k :: a)%struct (getRules m) ->
+      exists ol,
+        {| annot := Some (Some k);
+           defs := M.empty (sigT SignT);
+           calls := cs |} = hide ol /\
+        SubstepsInd m o u ol.
+  Proof.
+    admit.
+  Qed.
+  
+  Lemma substepSmall_implies_substepsInd:
+    forall o u l,
+      SubstepSmall m o u l ->
+      wellHidden m l /\
+      exists ol, l = hide ol /\ SubstepsInd m o u ol.
+  Proof.
+    induction 1.
+    - repeat split.
+      + apply M.KeysDisj_empty.
+      + apply M.KeysDisj_empty.
+      + exists emptyRuleLabel; repeat split; auto.
+        eapply SubstepsCons.
+        * apply SubstepsNil.
+        * apply EmptyRule.
+        * repeat split; auto.
+        * meq.
+        * reflexivity.
+    - repeat split.
+      + apply M.KeysDisj_empty.
+      + apply M.KeysDisj_empty.
+      + exists emptyMethLabel; repeat split; auto.
+        constructor.
+    - repeat split; simpl.
+      + apply M.KeysDisj_empty.
+      + simpl; eapply semActionSmall_calls; eauto.
+        exact HAction.
+      + pose proof (semActionSmall_implies_substepsInd_rule _ _ HAction HInRules).
+        destruct H as [ol ?]; dest.
+        exists ol; repeat split; auto.
+    - repeat split; simpl.
+      + simpl; apply M.KeysDisj_add; auto.
+        apply M.KeysDisj_empty.
+      + simpl; eapply semActionSmall_calls; eauto.
+      + pose proof (semActionSmall_implies_substepsInd_meth _ _ HAction HIn).
+        destruct H as [ol ?]; dest.
+        exists ol; repeat split; auto.
+  Qed.
+
+  Lemma substepsSmall_implies_substepsInd:
+    forall o u l,
+      SubstepsSmall m o u l ->
+      wellHidden m l /\
+      exists ol, l = hide ol /\ SubstepsInd m o u ol.
+  Proof.
+    induction 1;
+      [repeat split; try apply M.KeysDisj_empty;
+       exists emptyMethLabel; repeat split; try (constructor; auto; fail)|].
+
+    clear H.
+    apply substepSmall_implies_substepsInd in H1.
+    destruct H1 as [? [sol ?]], IHSubstepsSmall as [? [pol ?]]; dest; subst.
+
+    split.
+    - admit.
+    - exists (mergeLabel pol sol); split.
+      + inv H0; inv H3; dest.
+        admit.
+      + admit.
+  Qed.
 
   Lemma stepSmall_implies_Step:
     forall o u l,
       StepSmall m o u l -> Step m o u l.
   Proof.
-    admit.
+    intros; inv H.
+    apply step_consistent.
+    apply substepsSmall_implies_substepsInd in HSubSteps.
+    dest; subst.
+    constructor; auto.
   Qed.
 
-  Lemma inlineF_implies_StepSmall:
+  Lemma stepSmall_consistent:
     forall o u l,
-      Step (fst (inlineF m)) o u l -> StepSmall m o u l.
-  Proof.
-    admit.
-  Qed.
-
-  Theorem stepSmall_consistent:
-    forall o u l,
-      Step m o u l <-> StepSmall m o u l.
+      StepSmall m o u l <-> Step m o u l.
   Proof.
     intros; split; intros.
-    - apply inlineF_implies_StepSmall.
-      apply inlineF_correct_Step; auto.
     - apply stepSmall_implies_Step; auto.
+    - admit.
   Qed.
-
-  Theorem inlineF_consistent:
-    forall o u l,
-      Step m o u l <-> Step (fst (inlineF m)) o u l.
-  Proof.
-    intros; split; intros.
-    - apply inlineF_correct_Step; auto.
-    - apply stepSmall_implies_Step.
-      apply inlineF_implies_StepSmall; auto.
-  Qed.
-
+    
 End Consistency.
-
 

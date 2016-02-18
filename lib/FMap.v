@@ -828,6 +828,36 @@ Module LeibnizFacts (M : MapLeibniz).
     apply P.eqke_equiv.
   Qed.
 
+  Lemma KeysDisj_empty:
+    forall {A} d, KeysDisj (empty A) d.
+  Proof.
+    mintros; auto; intro.
+    eapply P.F.empty_in_iff; eauto.
+  Qed.
+
+  Lemma KeysDisj_add:
+    forall {A} k v (m: t A) d,
+      KeysDisj m d -> ~ List.In k d -> KeysDisj (add k v m) d.
+  Proof.
+    mintros; auto; intro.
+    apply P.F.add_in_iff in H2; destruct H2; subst.
+    - elim H0; auto.
+    - elim (H k0 H1); auto.
+  Qed.
+
+  Lemma KeysDisj_union:
+    forall {A} (m1 m2: t A) d,
+      KeysDisj m1 d -> KeysDisj m2 d -> KeysDisj (union m1 m2) d.
+  Proof.
+    mintros.
+    specialize (H _ H1); specialize (H0 _ H1).
+    apply P.F.not_find_in_iff.
+    apply P.F.not_find_in_iff in H.
+    apply P.F.not_find_in_iff in H0.
+    rewrite find_union.
+    destruct (find k m1); auto.
+  Qed.
+
   Lemma KeysDisj_union_1:
     forall {A} (m1 m2: t A) d, KeysDisj (union m1 m2) d -> KeysDisj m1 d.
   Proof.
