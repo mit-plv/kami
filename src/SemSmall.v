@@ -34,7 +34,9 @@ Section GivenModule.
       (HCallee: SemActionSmall ((projT2 methBody) type (evalExpr marg))
                                cnewRegs ccalls mret)
       newRegs (calls: MethsT)
-      (HSemAction: SemActionSmall (cont mret) newRegs calls fret):
+      (HSemAction: SemActionSmall (cont mret) newRegs calls fret)
+      (Hnews: M.Disj cnewRegs newRegs)
+      (Hcalls: M.Disj ccalls calls):
       SemActionSmall (MCall meth (projT1 methBody) marg cont)
                      (M.union cnewRegs newRegs) (M.union ccalls calls) fret
   | SASLet
@@ -111,7 +113,9 @@ Section GivenModule.
                                            end) cnewRegs ccalls mret /\
          SemActionSmall (c (match eq_sym Hsig with eq_refl => mret end)) nnewRegs ncalls retC /\
          news = M.union cnewRegs nnewRegs /\
-         calls = M.union ccalls ncalls) \/
+         calls = M.union ccalls ncalls /\
+         M.Disj cnewRegs nnewRegs /\
+         M.Disj ccalls ncalls) \/
       (~ In meth (getDefs m) /\
        exists mret pcalls,
          SemActionSmall (c mret) news pcalls retC /\
@@ -268,35 +272,48 @@ Section Consistency.
       M.KeysDisj (calls l) (getDefs m).
   Proof. induction 1; eapply substepsSmall_calls; eauto. Qed.
 
-  Lemma semActionSmall_implies_substepsInd_meth:
-    forall o (f: DefMethT) u cs argV retV,
-      SemActionSmall m o (projT2 (attrType f) type argV) u cs retV ->
-      In f (getDefsBodies m) ->
-      exists ol,
-        {| annot := None;
-           defs := M.add
-                     f
-                     (existT SignT (projT1 (attrType f)) (argV, retV))
-                     (M.empty (sigT SignT));
-           calls := cs |} = hide ol /\
-        SubstepsInd m o u ol.
+  Lemma semActionSmall_implies_substepsInd:
+    forall o {retT} (a: ActionT type retT) u cs retv,
+      SemActionSmall m o a u cs retv ->
+      exists cu ccs ru rds rcs,
+        SemAction o a cu ccs retv /\
+        SubstepsInd m o ru {| annot:= None; defs:= rds; calls:= rcs |}  /\
+        M.Disj cu ru /\ u = M.union ru cu /\
+        M.Disj ccs rcs /\ M.Sub rds (M.union ccs rcs) /\
+        cs = M.subtractKV signIsEq (M.union ccs rcs) rds.
   Proof.
-    admit.
+    induction 1; simpl; subst; intros.
+    - admit. (* call ext *)
+    - admit. (* call int *)
+
+    - dest; subst.
+      repeat eexists; eauto.
+      econstructor; eauto.
+
+    - dest; subst.
+      repeat eexists; eauto.
+      econstructor; eauto.
+
+    - dest; subst.
+      repeat eexists.
+      + econstructor; eauto.
+      + eauto.
+      + admit. (* write register problem *)
+      + admit. (* write regsiter problem *)
+      + auto.
+      + auto.
+
+    - admit.
+    - admit.
+
+    - dest; subst.
+      repeat eexists; eauto.
+      econstructor; eauto.
+
+    - repeat eexists; eauto; [econstructor; eauto|apply SubstepsNil| | | | |]; auto.
+      mred; unfold M.Sub; auto.
   Qed.
 
-  Lemma semActionSmall_implies_substepsInd_rule:
-    forall o k (a: Action Void) u cs,
-      SemActionSmall m o (a type) u cs WO ->
-      In (k :: a)%struct (getRules m) ->
-      exists ol,
-        {| annot := Some (Some k);
-           defs := M.empty (sigT SignT);
-           calls := cs |} = hide ol /\
-        SubstepsInd m o u ol.
-  Proof.
-    admit.
-  Qed.
-  
   Lemma substepSmall_implies_substepsInd:
     forall o u l,
       SubstepSmall m o u l ->
@@ -323,16 +340,42 @@ Section Consistency.
       + apply M.KeysDisj_empty.
       + simpl; eapply semActionSmall_calls; eauto.
         exact HAction.
-      + pose proof (semActionSmall_implies_substepsInd_rule _ _ HAction HInRules).
-        destruct H as [ol ?]; dest.
-        exists ol; repeat split; auto.
+      + apply semActionSmall_implies_substepsInd in HAction.
+        destruct HAction as [cu [ccs [ru [rds [rcs ?]]]]]; dest; subst.
+        eexists {| annot := Some (Some k) |}.
+        split.
+        2:(eapply SubstepsCons;
+           [ exact H0
+           | eapply SingleRule; [exact HInRules|exact H]
+           | repeat split; auto
+           | reflexivity
+           | simpl; f_equal]).
+
+        unfold hide; simpl; f_equal.
+        mred; rewrite M.subtractKV_sub_empty; auto.
+
     - repeat split; simpl.
       + simpl; apply M.KeysDisj_add; auto.
         apply M.KeysDisj_empty.
       + simpl; eapply semActionSmall_calls; eauto.
-      + pose proof (semActionSmall_implies_substepsInd_meth _ _ HAction HIn).
-        destruct H as [ol ?]; dest.
-        exists ol; repeat split; auto.
+      + apply semActionSmall_implies_substepsInd in HAction.
+        destruct HAction as [cu [ccs [ru [rds [rcs ?]]]]]; dest; subst.
+
+        assert (Hf: ~ M.In f (M.union ccs rcs)).
+        { admit. (* map stuff *) }
+
+        eexists {| annot := None |}.
+        split.
+        2:(eapply SubstepsCons;
+           [ exact H0
+           | eapply SingleMeth; [exact HIn|exact H]
+           | repeat split; auto; admit (* map stuff *)
+           | reflexivity
+           | simpl; f_equal]).
+
+        unfold hide; simpl; f_equal.
+        * admit. (* map stuff *)
+        * admit. (* map stuff *)
   Qed.
 
   Lemma substepsSmall_implies_substepsInd:
@@ -350,11 +393,11 @@ Section Consistency.
     destruct H1 as [? [sol ?]], IHSubstepsSmall as [? [pol ?]]; dest; subst.
 
     split.
-    - admit.
+    - admit. (* nontrivial *)
     - exists (mergeLabel pol sol); split.
       + inv H0; inv H3; dest.
-        admit.
-      + admit.
+        admit. (* nontrivial *)
+      + admit. (* nontrivial *)
   Qed.
 
   Lemma stepSmall_implies_Step:

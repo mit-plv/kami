@@ -595,7 +595,7 @@ Module LeibnizFacts (M : MapLeibniz).
     - do 3 (rewrite P.F.remove_neq_o; auto).
       rewrite find_union; reflexivity.
   Qed.
-  
+
   Lemma subtractKVD_remove:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
            dom m1 m2 a,
@@ -629,6 +629,20 @@ Module LeibnizFacts (M : MapLeibniz).
     simpl; rewrite find_empty; destruct (find _ _); auto.
   Qed.
 
+  Lemma subtractKV_sub:
+    forall {A} deceqA (m1 m2: t A),
+      Sub (subtractKV deceqA m1 m2) m1.
+  Proof.
+    admit.
+  Qed.
+
+  Lemma subtractKV_sub_empty:
+    forall {A} deceqA (m1 m2: t A),
+      Sub m1 m2 -> subtractKV deceqA m1 m2 = empty _.
+  Proof.
+    admit.
+  Qed.
+  
   Lemma subtractKV_not_In_find:
     forall {A} deceqA (m1 m2: t A) k v,
       ~ In k (subtractKV deceqA m1 m2) ->
@@ -964,6 +978,13 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; specialize (H1 k); destruct H1.
     - elim H1; apply P.F.in_find_iff; rewrite <-H; discriminate.
     - elim H1; apply P.F.in_find_iff; rewrite <-H0; discriminate.
+  Qed.
+
+  Lemma Disj_Sub:
+    forall {A} (m1 m2 m3: t A),
+      Disj m2 m3 -> Sub m1 m2 -> Disj m1 m3.
+  Proof.
+    admit.
   Qed.
 
   Lemma Disj_add_1 {A}:

@@ -4,6 +4,24 @@ Require Import Syntax Semantics.
 
 Set Implicit Arguments.
 
+Lemma CanCombineLabel_hide:
+  forall la lb,
+    CanCombineLabel la lb ->
+    CanCombineLabel (hide la) (hide lb).
+Proof.
+  intros; destruct la as [anna dsa csa], lb as [annb dsb csb].
+  inv H; simpl in *; dest.
+  repeat split; unfold hide; simpl in *; auto.
+  - apply M.Disj_Sub with (m2:= dsa); [|apply M.subtractKV_sub].
+    apply M.Disj_comm.
+    apply M.Disj_Sub with (m2:= dsb); [|apply M.subtractKV_sub].
+    auto.
+  - apply M.Disj_Sub with (m2:= csa); [|apply M.subtractKV_sub].
+    apply M.Disj_comm.
+    apply M.Disj_Sub with (m2:= csb); [|apply M.subtractKV_sub].
+    auto.
+Qed.
+
 Lemma equivalentLabelSeq_CanCombineLabelSeq:
   forall p (Hp: Proper (equivalentLabel p ==> equivalentLabel p ==> impl) CanCombineLabel)
          lsa lsb lsc lsd,

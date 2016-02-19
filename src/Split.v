@@ -167,9 +167,8 @@ Section TwoModules.
       admit. (* nontrivial *)
     - constructor; auto.
       admit. (* nontrivial *)
-    - admit.
-    - clear.
-      admit. (* nontrivial *)
+    - apply CanCombineLabel_hide; auto.
+    - admit. (* nontrivial *)
   Qed.
 
   Lemma step_split:
@@ -309,6 +308,8 @@ Section TwoModules.
     replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
     - constructor.
       + apply substepsInd_modular; auto.
+        inv H1; constructor; auto.
+        
         admit. (* nontrivial *)
       + admit. (* nontrivial *)
     - admit. (* nontrivial *)
