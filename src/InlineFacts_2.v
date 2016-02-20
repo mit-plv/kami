@@ -96,14 +96,17 @@ Lemma hideMeths_subtractKVD:
                             defs := M.subtractKVD signIsEq (defs l) (calls l) dmsAll;
                             calls := M.subtractKVD signIsEq (calls l) (defs l) dmsAll |}.
 Proof.
-  induction dmsAll; intros; destruct l as [ann ds cs]; simpl in *; auto.
+  induction dmsAll; intros; destruct l as [ann ds cs]; simpl in *;
+    [do 2 rewrite M.subtractKVD_nil; auto|].
+
   unfold hideMeth; simpl in *.
+  do 2 rewrite M.subtractKVD_cons.
   remember (M.find a ds) as odv; destruct odv.
   - remember (M.find a cs) as ocv; destruct ocv; [|apply IHdmsAll].
     destruct (signIsEq s s0); [|destruct (signIsEq _ _); intuition; apply IHdmsAll].
     subst; destruct (signIsEq s0 s0); intuition auto.
     rewrite IHdmsAll; simpl in *.
-    clear; f_equal; apply M.subtractKVD_remove.
+    clear; f_equal.
   - destruct (M.find a cs); apply IHdmsAll.
 Qed.
 

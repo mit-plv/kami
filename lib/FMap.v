@@ -374,22 +374,6 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition subtract {A : Type} (m m' : t A) :=
     fold (fun k _ => remove k) m' m.
 
-  Fixpoint subtractKVD {A}
-           (deceqA : forall x y : A, sumbool (x = y) (x <> y))
-           (m1 m2 : t A) (dom: list E.t): t A :=
-    match dom with
-    | nil => m1
-    | d :: dom' =>
-      match find d m1, find d m2 with
-      | Some v1, Some v2 =>
-        match deceqA v1 v2 with
-        | left _ => subtractKVD deceqA (remove d m1) m2 dom'
-        | _ => subtractKVD deceqA m1 m2 dom'
-        end
-      | _, _ => subtractKVD deceqA m1 m2 dom'
-      end
-    end.
-
   Definition subtractKV {A}
              (deceqA : forall x y : A, sumbool (x = y) (x <> y))
              (m1 m2 : t A) : t A :=
@@ -403,6 +387,21 @@ Module LeibnizFacts (M : MapLeibniz).
             | _ => m1'
             end) m2 m1.
 
+  Definition subtractKVD {A}
+           (deceqA : forall x y : A, sumbool (x = y) (x <> y))
+           (m1 m2 : t A) (dom: list E.t): t A :=
+    fold (fun k v2 m1' =>
+            if in_dec E.eq_dec k dom then
+              match find k m1' with
+              | Some v1 =>
+                match deceqA v1 v2 with
+                | left _ => remove k m1'
+                | _ => m1'
+                end
+              | _ => m1'
+              end
+            else m1') m2 m1.
+
   Definition restrict {A} (m: t A) (d: list E.t) :=
     fold_left (fun fm k =>
                  match find k m with
@@ -410,7 +409,8 @@ Module LeibnizFacts (M : MapLeibniz).
                    | None => fm
                  end) d (M.empty _).
 
-  Hint Unfold update Sub subtract subtractKV restrict : MapDefs.
+  (* NOTE: do not add "subtractKV" and "restrict" to below *)
+  Hint Unfold update Sub subtract : MapDefs.
   Hint Unfold E.eq.
 
   Ltac mintros := repeat autounfold with MapDefs; intros.
@@ -630,25 +630,6 @@ Module LeibnizFacts (M : MapLeibniz).
       rewrite find_union; reflexivity.
   Qed.
 
-  Lemma subtractKVD_remove:
-    forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
-           dom m1 m2 a,
-      subtractKVD deceqA (remove a m1) (remove a m2) dom =
-      subtractKVD deceqA (remove a m1) m2 dom.
-  Proof.
-    induction dom; auto.
-    intros; simpl.
-    remember (find a (remove a0 m1)) as aav; destruct aav; [|eapply IHdom; eauto].
-    cmp a a0.
-    * rewrite F.P.F.remove_eq_o in Heqaav by reflexivity; inv Heqaav.
-    * rewrite F.P.F.remove_neq_o by intuition auto.
-      rewrite F.P.F.remove_neq_o in Heqaav by intuition auto.
-      remember (find a m2) as acv; destruct acv; [|eapply IHdom; eauto].
-      destruct (deceqA a1 a2); [subst|eapply IHdom; eauto].
-      rewrite remove_comm.
-      eapply IHdom; eauto.
-  Qed.
-
   Lemma transpose_neqkey_subtractKV:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y)),
       P.transpose_neqkey
@@ -663,50 +644,163 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
   Hint Immediate transpose_neqkey_subtractKV.
 
+  Lemma subtractKV_find:
+    forall {A} deceqA (m1 m2: t A) k,
+      find k (subtractKV deceqA m1 m2) =
+      match find k m1 with
+      | None => None
+      | Some v1 =>
+        match find k m2 with
+        | None => Some v1
+        | Some v2 => if deceqA v1 v2 then None else Some v1
+        end
+      end.
+  Proof.
+    mintros; unfold subtractKV; mind m2.
+    - rewrite P.fold_Empty, find_empty; auto.
+      destruct (find k m1); auto.
+
+    - admit.
+  Qed.
+
+  Lemma subtractKVD_find:
+    forall {A} deceqA (m1 m2: t A) d k,
+      find k (subtractKVD deceqA m1 m2 d) =
+      match find k m1 with
+      | None => None
+      | Some v1 =>
+        if in_dec E.eq_dec k d then
+          match find k m2 with
+          | None => Some v1
+          | Some v2 => if deceqA v1 v2 then None else Some v1
+          end
+        else Some v1
+      end.
+  Proof.
+    admit.
+  Qed.
+
+  Ltac subtractKVD_solve deceqA :=
+    repeat
+      (match goal with
+       | [ |- context [find _ (subtractKVD _ _ _ _)] ] =>
+         rewrite subtractKVD_find
+       | [ |- context [M.find ?y ?m] ] =>
+         (is_var m;
+          let v := fresh "v" in
+          remember (M.find y m) as v; destruct v)
+       | [ |- context [in_dec E.eq_dec ?k ?d] ] =>
+         destruct (in_dec E.eq_dec k d)
+       | [ |- context [E.eq_dec ?k1 ?k2] ] =>
+         is_var k1; is_var k2; cmp k1 k2
+       | [ |- context [deceqA ?v1 ?v2] ] =>
+         destruct (deceqA v1 v2); [subst|]
+       | [ |- context [deceqA ?v1 ?v2] ] =>
+         destruct (deceqA v1 v2); [subst|]
+       | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         cmp y k;
+         [rewrite F.P.F.remove_eq_o|
+          rewrite F.P.F.remove_neq_o by intuition auto]
+       | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
+         rewrite F.P.F.remove_eq_o
+       | [H: ~ E.eq ?y ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         rewrite F.P.F.remove_neq_o by intuition auto
+       | [H: ~ E.eq ?k ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         rewrite F.P.F.remove_neq_o by intuition auto
+       | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         rewrite F.P.F.remove_neq_o by intuition auto
+       | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
+         rewrite F.P.F.remove_neq_o by intuition auto
+       end;
+       repeat
+         match goal with
+         | [H: ~ E.eq ?a ?a |- _] => elim H; auto
+         | [H1: ~ ?p, H2: ?p |- _] => elim H1; auto
+         | [H: Some _ = Some _ |- _] => inv H
+         | [H: ?a <> ?a |- _] => elim H; auto
+         | [H1: Some _ = ?v, H2: None = ?v |- _] =>
+           rewrite <-H1 in H2; inv H2
+         | [H1: Some _ = ?v, H2: Some _ = ?v |- _] =>
+           rewrite <-H1 in H2; inv H2
+         end; simpl; auto).
+
+  Lemma subtractKVD_nil:
+    forall {A} deceqA (m1 m2: t A),
+      subtractKVD deceqA m1 m2 nil = m1.
+  Proof.
+    mintros; ext y.
+    subtractKVD_solve deceqA.
+  Qed.
+    
+  Lemma subtractKVD_cons:
+    forall {A} deceqA (m1 m2: t A) a d,
+      subtractKVD deceqA m1 m2 (a :: d) =
+      match find a m1 with
+      | Some v1 =>
+        match find a m2 with
+        | Some v2 =>
+          if deceqA v1 v2
+          then subtractKVD deceqA (remove a m1) (remove a m2) d
+          else subtractKVD deceqA m1 m2 d
+        | _ => subtractKVD deceqA m1 m2 d
+        end
+      | _ => subtractKVD deceqA m1 m2 d
+      end.
+  Proof.
+    mintros; ext y.
+    subtractKVD_solve deceqA.
+  Qed.
+
+  Lemma subtractKVD_remove:
+    forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
+           dom m1 m2 a,
+      subtractKVD deceqA (remove a m1) (remove a m2) dom =
+      subtractKVD deceqA (remove a m1) m2 dom.
+  Proof.
+    mintros; ext y.
+    subtractKVD_solve deceqA.
+  Qed.
+
   Lemma subtractKV_empty_1:
     forall {A : Type} deceqA (m: t A),
       subtractKV deceqA (empty A) m = empty A.
   Proof.
-    mintros; mind m.
-    - apply P.fold_Empty; auto.
-    - rewrite P.fold_add; auto.
-      rewrite H, find_empty; auto.
+    mintros; ext y.
+    rewrite subtractKV_find, find_empty; reflexivity.
   Qed.
 
   Lemma subtractKV_empty_2:
     forall {A : Type} deceqA (m: t A),
       subtractKV deceqA m (empty A) = m.
   Proof.
-    mintros; apply P.fold_Empty; auto.
+    mintros; unfold subtractKV; apply P.fold_Empty; auto.
   Qed.
 
   Lemma subtractKV_sub:
     forall {A} deceqA (m1 m2: t A),
       Sub (subtractKV deceqA m1 m2) m1.
   Proof.
-    mintros; mind m2.
-    - rewrite P.fold_Empty in H; auto.
-    - rewrite P.fold_add with (eqA:= eq) in H1; auto.
-      remember (fold
-                  (fun (k1 : key) (v2 : A) (m1' : t A) =>
-                     match find k1 m1' with
-                     | Some v1 => if deceqA v1 v2 then remove k1 m1' else m1'
-                     | None => m1'
-                     end) m m1) as prev.
-      clear Heqprev.
-      remember (find k0 prev) as prevk; destruct prevk; auto.
-      destruct (deceqA a v0); auto.
-      subst; apply H.
-      cmp k k0.
-      + rewrite P.F.remove_eq_o in H1 by auto; inv H1.
-      + erewrite <-P.F.remove_neq_o; eauto.
+    mintros.
+    rewrite subtractKV_find in H.
+    destruct (find k m1); auto.
+    destruct (find k m2); auto.
+    destruct (deceqA a a0); auto.
+    inv H.
   Qed.
 
   Lemma subtractKV_sub_empty:
     forall {A} deceqA (m1 m2: t A),
       Sub m1 m2 -> subtractKV deceqA m1 m2 = empty _.
   Proof.
-    admit.
+    intros; ext y.
+    rewrite subtractKV_find, find_empty.
+    remember (find y m1) as ov1; destruct ov1; auto.
+    remember (find y m2) as ov2; destruct ov2.
+    - destruct (deceqA a a0); auto.
+      exfalso; specialize (H _ _ (eq_sym Heqov1)).
+      rewrite H in Heqov2; inv Heqov2; elim n; auto.
+    - exfalso; specialize (H _ _ (eq_sym Heqov1)).
+      rewrite H in Heqov2; inv Heqov2; elim n; auto.
   Qed.
   
   Lemma subtractKV_not_In_find:
@@ -715,17 +809,12 @@ Module LeibnizFacts (M : MapLeibniz).
       find k m1 = Some v ->
       find k m2 = Some v.
   Proof.
-    mintros; mind m2.
-    - rewrite P.fold_Empty in H; auto.
-      elim H; apply P.F.in_find_iff; rewrite H0; discriminate.
-    - rewrite P.fold_add with (eqA:= eq) in H2; auto.
-      remember (fold
-                  (fun (k0 : key) (v2 : A) (m1' : t A) =>
-                     match find k0 m1' with
-                     | Some v1 => if deceqA v1 v2 then remove k0 m1' else m1'
-                     | None => m1'
-                     end) m m1) as mprev; clear Heqmprev.
-      admit.
+    mintros.
+    apply P.F.not_find_in_iff in H; rewrite subtractKV_find in H.
+    destruct (find k m1); inv H0.
+    destruct (find k m2); auto.
+    destruct (deceqA v a); [|inv H].
+    subst; auto.
   Qed.
 
   Lemma subtractKV_remove:
@@ -734,7 +823,15 @@ Module LeibnizFacts (M : MapLeibniz).
       subtractKV deceqA (remove k m1) (remove k m2) =
       subtractKV deceqA m1 m2.
   Proof.
-    admit.
+    mintros; ext y.
+    do 2 rewrite subtractKV_find.
+    cmp y k.
+    - rewrite P.F.remove_eq_o by auto.
+      destruct (find k m1), (find k m2); auto.
+      destruct (deceqA a a0); auto.
+      inv H; elim n; auto.
+    - do 2 rewrite P.F.remove_neq_o by auto.
+      destruct (find y m1); auto.
   Qed.
 
   Lemma subtractKV_idempotent:
@@ -743,21 +840,40 @@ Module LeibnizFacts (M : MapLeibniz).
        subtractKV deceqA (subtractKV deceqA m1 m2)
                   (subtractKV deceqA m2 m1).
   Proof.
-    admit.
+    mintros; ext y.
+    repeat rewrite subtractKV_find.
+    destruct (find y m1); auto.
+    destruct (find y m2); auto.
+    destruct (deceqA a a0); auto.
+    destruct (deceqA a0 a); auto.
+    destruct (deceqA a a0); auto.
+    elim n; auto.
   Qed.
 
   Lemma restrict_find:
+    forall {A} (m: t A) d k,
+      find k (restrict m d) =
+      if in_dec E.eq_dec k d then find k m else None.
+  Proof.
+    admit.
+  Qed.
+    
+  Lemma restrict_in_find:
     forall {A} (m: t A) d e,
       List.In e d -> find e (restrict m d) = find e m.
   Proof.
-    admit.
+    mintros; rewrite restrict_find.
+    destruct (in_dec E.eq_dec e d); auto.
+    elim n; auto.
   Qed.
 
   Lemma restrict_union:
     forall {A} (m1 m2: t A) d,
       restrict (union m1 m2) d = union (restrict m1 d) (restrict m2 d).
   Proof.
-    admit.
+    mintros; ext y.
+    repeat (rewrite restrict_find || rewrite find_union).
+    destruct (in_dec E.eq_dec y d); auto.
   Qed.
   
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
@@ -988,7 +1104,13 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} deceqA (m1 m2: t A),
       Disj m1 m2 -> subtractKV deceqA m1 m2 = m1.
   Proof.
-    admit.
+    mintros; ext y.
+    specialize (H y).
+    do 2 rewrite P.F.not_find_in_iff in H.
+    rewrite subtractKV_find.
+    destruct (find y m1); auto.
+    destruct (find y m2); auto.
+    inv H; discriminate.
   Qed.
   
   Lemma subtractKV_subtractKVD_1:
@@ -997,7 +1119,13 @@ Module LeibnizFacts (M : MapLeibniz).
       KeysSubset m1 dom ->
       subtractKV deceqA m1 m2 = subtractKVD deceqA m1 m2 dom.
   Proof.
-    admit.
+    mintros; ext y.
+    specialize (H y).
+    rewrite P.F.in_find_iff in H.
+    rewrite subtractKV_find, subtractKVD_find.
+    destruct (find y m1); auto.
+    destruct (in_dec E.eq_dec y dom); auto.
+    elim n; apply H; discriminate.
   Qed.
 
   Lemma subtractKV_subtractKVD_2:
@@ -1006,9 +1134,17 @@ Module LeibnizFacts (M : MapLeibniz).
       KeysSubset m2 dom ->
       subtractKV deceqA m1 m2 = subtractKVD deceqA m1 m2 dom.
   Proof.
-    admit.
+    mintros; ext y.
+    specialize (H y).
+    rewrite P.F.in_find_iff in H.
+    rewrite subtractKV_find, subtractKVD_find.
+    destruct (find y m1); auto.
+    destruct (find y m2).
+    - destruct (in_dec E.eq_dec y dom); auto.
+      elim n; apply H; discriminate.
+    - destruct (in_dec E.eq_dec y dom); auto.
   Qed.
-  
+
   Lemma Disj_empty_1: forall {A} (m: t A), Disj (empty A) m.
   Proof.
     mintros; left; intro.
@@ -1054,7 +1190,12 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} (m1 m2 m3: t A),
       Disj m2 m3 -> Sub m1 m2 -> Disj m1 m3.
   Proof.
-    admit.
+    mintros.
+    specialize (H k); specialize (H0 k).
+    destruct H; auto.
+    left; rewrite P.F.not_find_in_iff in *.
+    destruct (find k m1); auto.
+    elim H0; auto.
   Qed.
 
   Lemma Disj_add_1 {A}:
@@ -1201,14 +1342,26 @@ Module LeibnizFacts (M : MapLeibniz).
     forall {A} (m: t A) d,
       KeysSubset m d -> restrict m d = m.
   Proof.
-    admit.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite restrict_find.
+    destruct (in_dec E.eq_dec y d); auto.
+    destruct (find y m); auto.
+    elim n; apply H; discriminate.
   Qed.
 
   Lemma restrict_DisjList:
     forall {A} (m: t A) d1 d2,
       KeysSubset m d1 -> DisjList d1 d2 -> restrict m d2 = empty _.
   Proof.
-    admit.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite restrict_find, find_empty.
+    destruct (in_dec E.eq_dec y d2); auto.
+    destruct (find y m); auto.
+    specialize (H0 y); destruct H0.
+    - elim H0; apply H; discriminate.
+    - elim H0; auto.
   Qed.
 
 End LeibnizFacts.
@@ -1315,7 +1468,7 @@ Ltac mred :=
      | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
        rewrite M.find_add_2 in H by auto
      | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
-       rewrite M.restrict_find in H2 by auto
+       rewrite M.restrict_in_find in H2 by auto
      (* goal reduction *)
      | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
        destruct (string_dec y k);
@@ -1342,7 +1495,7 @@ Ltac mred :=
        M.cmp y k; [rewrite M.find_add_1|
                    rewrite M.find_add_2 by intuition idtac]
      | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
-       rewrite M.restrict_find by auto
+       rewrite M.restrict_in_find by auto
      end; try discriminate; try reflexivity; try (intuition idtac; fail)).
 
 Ltac mcontra :=
