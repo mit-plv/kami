@@ -391,9 +391,6 @@ Proof.
   - econstructor; eauto.
   - econstructor; eauto.
   - econstructor; eauto.
-    apply M.F.P.F.find_mapsto_iff.
-    apply H0.
-    apply M.F.P.F.find_mapsto_iff; auto.
   - econstructor; eauto.
   - eapply SemIfElseTrue; eauto.
   - eapply SemIfElseFalse; eauto.

@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 
-Require Import Lts.Syntax Lts.Semantics Lts.SemSmall Lts.Equiv Lts.Wf.
+Require Import Lts.Syntax Lts.Semantics Lts.SemOp Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
 Require Import Lts.Refinement Lts.Decomposition.
 (* Require Import Lts.Renaming *)
@@ -56,16 +56,16 @@ Section SmallStepTest.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
     intros; exists u; split; auto.
 
-    apply stepSmall_consistent; auto; try (repeat constructor).
-    apply stepSmall_consistent in H.
+    apply stepOp_consistent; auto; try (repeat constructor).
+    apply stepOp_consistent in H.
 
     inv H.
     inv HSubSteps; [do 2 constructor|].
 
     (* decomposition like this? *)
     assert (forall o nu nl,
-               SubstepSmall (ConcatMod ma mb) o nu nl ->
-               SubstepSmall mc o nu nl).
+               SubstepOp (ConcatMod ma mb) o nu nl ->
+               SubstepOp mc o nu nl).
     { clear; intros.
       inv H; try (constructor; fail).
 
@@ -74,12 +74,12 @@ Section SmallStepTest.
 
         eapply SSSRule; [left; reflexivity|].
 
-        invertActionSmall HAction.
+        invertActionOp HAction.
         inv HAction; [|dest; elim H; left; auto].
         inv H; dest.
         inv H; [|intuition].
-        inv H5; simpl in *.
-        invertActionSmallRep.
+        inv H7; simpl in *.
+        invertActionOpRep.
 
         assert (x5 = eq_refl) by apply UIP; subst; simpl.
         econstructor.
