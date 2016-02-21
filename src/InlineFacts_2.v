@@ -159,9 +159,9 @@ Proof.
           { apply SubList_app_2; auto. }
         }          
         { apply SubList_cons_right; auto. }
-      * simpl; apply SubList_cons; auto.
+      * simpl; apply SubList_cons; intuition.
         apply SubList_cons_right; eauto.
-    + simpl; apply SubList_cons; auto.
+    + simpl; apply SubList_cons; intuition.
       apply SubList_cons_right; eauto.
   - apply SubList_app_3.
     + apply SubList_app_comm.

@@ -35,15 +35,6 @@ Ltac vdiscriminate :=
              (discriminate || apply discr_var in H; auto))
     end.
 
-Ltac in_tac :=
-  exact (or_introl eq_refl) || refine (or_intror _); in_tac.
-
-Ltac in_tac_H :=
-  repeat
-    match goal with
-      | [H: In _ _ |- _] => inv H (* simpl in H; intuition idtac *)
-    end.
-
 Ltac exact_refl :=
   match goal with
     | [ |- ?t = ?t ] => reflexivity
@@ -141,6 +132,6 @@ Notation "str '__' idx" := (withIndex str idx) (at level 0).
 
 Axiom cheat: forall t, t.
 
-Hint Extern 1 (In _ _) => in_tac.
 Hint Extern 1 (_ /\ _) => repeat split.
+Hint Extern 1 (NoDup _) => (repeat constructor; simpl; intro; intuition auto; discriminate).
 

@@ -220,7 +220,7 @@ Proof.
     + apply SubList_nil.
     + destruct (in_dec _ _ _).
       * apply SubList_cons_right; auto.
-      * simpl; apply SubList_cons; auto.
+      * simpl; apply SubList_cons; intuition.
         apply SubList_cons_right; auto.
 Qed.
 

@@ -1672,8 +1672,7 @@ Section MakeMap.
   Proof.
     induction m; simpl; intros; [apply M.KeysSubset_empty|].
     destruct a as [an [atype av]]; simpl.
-    apply M.KeysSubset_add; auto.
-    apply M.KeysSubset_cons; auto.
+    apply M.KeysSubset_add; intuition.
   Qed.
 
   Lemma makeMap_union:
