@@ -28,9 +28,9 @@ End ProcDecSC.
 
 Section Instantiation.
   Variable dec: DecT 2 1 1 1.
-  Variable exec: ExecT 2 1 1 1. (* 1 *)
+  Variable exec: ExecT 2 1 1 1.
 
-  Hypothesis Hdec: (* 2 *)
+  Hypothesis Hdec:
     forall G (st1: ft1 typeUT (StateK 1 1)) st2
            (a1: ft1 typeUT (SyntaxKind (Bit 1))) a2,
       In (vars (st1, st2)) G ->
@@ -38,23 +38,32 @@ Section Instantiation.
       Equiv.ExprEquiv G #(dec (fullType typeUT) st1 a1)%kami #(dec (fullType type) st2 a2)%kami.
   Hint Immediate Hdec.
 
+  Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
+
+  Ltac equiv_tac :=
+    repeat
+      match goal with
+      | [ |- ModEquiv _ _ _ ] => constructor; intros
+      | [ |- RulesEquiv _ _ _ ] => constructor; intros
+      | [ |- MethsEquiv _ _ _ ] => constructor; intros
+      | [ |- ActionEquiv _ _ _ ] => constructor; intros
+      | [ |- ExprEquiv _ _ _ ] => constructor; intros
+      | [ |- In _ _ ] => simpl; tauto
+      end.
+  (* Hint Extern 1 (ModEquiv _ _ _) => equiv_tac. *)
+
+  Ltac apply_inline :=
+    match goal with
+    | [ |- traceRefines _ ?lm _ ] =>
+      apply traceRefines_trans with (mb:= fst (inlineF lm));
+      [apply inlineF_refines; auto|]
+    end.
+  
   Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
   Proof.
-    apply traceRefines_trans with (mb:= fst (inlineF (pdecfi _ 1 _ _ dec exec 0))).
-    - apply inlineF_refines. (* TODO: automate all about inlining *)
-      + constructor.
-        * constructor.
-          { repeat (constructor; auto).
-          }
-          { (* repeat (constructor; auto). *)
-            admit.
-          }
-        * admit.
-          (* simpl; tauto. (* hint extern 1 ... *) *)
-            (* constructor. (* 4 *) *)
-          
-      + repeat constructor; intro Hx; in_tac_H; discriminate.
-      + vm_compute; reflexivity.
+    apply_inline.
+
+    - admit.
 
     - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r).
       + rewrite <-inlineF_preserves_regInits.

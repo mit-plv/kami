@@ -236,3 +236,19 @@ Section Facts.
 
 End Facts.
 
+(* Require Import Semantics. *)
+(* Require Import Program.Equality. *)
+(* Goal (forall (a: Action Void), ActionEquiv nil (a type) (a typeUT)). *)
+(* Proof. *)
+(*   intros. *)
+(*   remember (a type) as aType; remember (a typeUT) as aTypeUT. *)
+(*   dependent induction aType. *)
+(*   - *)
+(*     assert (forall (t: type (ret s)), *)
+(*                ActionEquiv nil (a0 t) aTypeUT). *)
+(*     intros. *)
+(*     specialize (H t _ eq_refl JMeq_refl). *)
+
+(*     dependent induction aTypeUT. *)
+(*     specialize (H _ _ eq_refl JMeq_refl). *)
+(*     subst. *)

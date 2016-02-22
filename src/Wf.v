@@ -50,7 +50,7 @@ Section WfInd1.
     induction 1; intros; simpl in *; constructor; auto.
 
     apply IHWfAction.
-    apply SubList_cons; auto.
+    apply SubList_cons; intuition.
     unfold SubList; intros; right; auto.
   Qed.
 
@@ -64,7 +64,7 @@ Section WfInd1.
     induction 1; intros; simpl in *; constructor; auto.
 
     intros; apply H0.
-    apply SubList_cons; auto.
+    apply SubList_cons; intuition.
     unfold SubList; intros; right; auto.
   Qed.
 
@@ -481,6 +481,7 @@ Section SemProps1.
       + pose proof (wfAction_appendAction_calls_2 _ _ retV1 H).
         apply M.F.P.F.not_find_in_iff.
         eapply wfAction_SemAction_calls; eauto.
+        intuition.
       + apply M.F.P.F.not_find_in_iff.
         apply M.F.P.F.not_find_in_iff in H0.
         rewrite M.find_add_2; auto.
@@ -642,6 +643,7 @@ Section SemProps2.
     - apply IHdms'.
       apply SubList_cons_inv in H0; dest; auto.
     - intros; eapply validRegsDms_dm; eauto.
+      intuition.
   Qed.
     
   Lemma validRegsAction_old_regs_restrict:

@@ -163,7 +163,14 @@ Section Decomposition.
     M.MapsTo k v1 l1 -> M.MapsTo k v2 l2 -> v1 <> v2 ->
     M.In k (M.subtractKV signIsEq l1 l2).
   Proof.
-    admit.
+    intros.
+    apply M.F.P.F.find_mapsto_iff in H.
+    apply M.F.P.F.find_mapsto_iff in H0.
+    apply M.F.P.F.in_find_iff.
+    rewrite M.subtractKV_find.
+    findeq.
+    inv H; inv H0.
+    elim H1; auto.
   Qed.
   
   Theorem wellHiddenEq1 m l:

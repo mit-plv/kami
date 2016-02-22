@@ -284,5 +284,6 @@ Lemma noCallDm_SemAction_calls:
 Proof.
   intros; unfold noCallDm in H; simpl in H.
   eapply isLeaf_SemAction_calls; eauto.
+  intuition.
 Qed.
 

@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 
-Require Import Lts.Syntax Lts.Semantics Lts.SemSmall Lts.Equiv Lts.Wf.
+Require Import Lts.Syntax Lts.Semantics Lts.SemOp Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
 Require Import Lts.Refinement Lts.Decomposition.
 (* Require Import Lts.Renaming *)
@@ -49,23 +49,20 @@ Definition mc := MODULE {
 
 Require Import Program.Equality.
 
-Section SmallStepTest.
+Section SemOpTest.
 
   Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
   Proof.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
     intros; exists u; split; auto.
 
-    apply stepSmall_consistent; auto; try (repeat constructor).
-    apply stepSmall_consistent in H.
+    apply stepOp_consistent; auto.
+    apply stepOp_consistent in H.
 
-    inv H.
-    inv HSubSteps; [do 2 constructor|].
-
-    (* decomposition like this? *)
+    (* decomposition condition like this? *)
     assert (forall o nu nl,
-               SubstepSmall (ConcatMod ma mb) o nu nl ->
-               SubstepSmall mc o nu nl).
+               SubstepOp (ConcatMod ma mb) o nu nl ->
+               SubstepOp mc o nu nl).
     { clear; intros.
       inv H; try (constructor; fail).
 
@@ -74,12 +71,12 @@ Section SmallStepTest.
 
         eapply SSSRule; [left; reflexivity|].
 
-        invertActionSmall HAction.
+        invertActionOp HAction.
         inv HAction; [|dest; elim H; left; auto].
         inv H; dest.
         inv H; [|intuition].
-        inv H5; simpl in *.
-        invertActionSmallRep.
+        inv H7; simpl in *.
+        invertActionOpRep.
 
         assert (x5 = eq_refl) by apply UIP; subst; simpl.
         econstructor.
@@ -99,7 +96,7 @@ Section SmallStepTest.
     admit.
   Qed.
 
-End SmallStepTest.
+End SemOpTest.
 
 Section Tests.
 
@@ -144,19 +141,37 @@ Section Tests.
     inv HIn.
   Defined.
 
+  Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
+
+  Ltac equiv_tac :=
+    repeat
+      match goal with
+      | [ |- ModEquiv _ _ _ ] => constructor; intros
+      | [ |- RulesEquiv _ _ _ ] => constructor; intros
+      | [ |- MethsEquiv _ _ _ ] => constructor; intros
+      | [ |- ActionEquiv _ _ _ ] => constructor; intros
+      | [ |- ExprEquiv _ _ _ ] => constructor; intros
+      | [ |- In _ _ ] => simpl; tauto
+      end.
+  Hint Extern 1 (ModEquiv _ _ _) => equiv_tac.
+
+  Ltac apply_inline :=
+    match goal with
+    | [ |- traceRefines _ ?lm _ ] =>
+      apply traceRefines_trans with (mb:= fst (inlineF lm));
+      [apply inlineF_refines; auto|]
+    end.
+
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    apply traceRefines_trans with (mb:= fst (inlineF (ConcatMod ma mb))).
-    - apply inlineF_refines; auto.
-      + repeat (constructor; intros).
-      + repeat constructor; auto.
-    - eapply decomposition with (theta:= id)
-                                 (ruleMap:= fun _ r => Some r)
-                                 (substepRuleMap:= HssRuleMap)
-                                 (substepMethMap:= HssMethMap); auto.
+    apply_inline.
 
-      intros.
-      admit. (* do we really have to prove this for each instance? *)
+    eapply decomposition with (theta:= id)
+                                (ruleMap:= fun _ r => Some r)
+                                (substepRuleMap:= HssRuleMap)
+                                (substepMethMap:= HssMethMap); auto.
+    intros.
+    admit. (* do we really have to prove this for each instance? *)
   Qed.
   
 End Tests.

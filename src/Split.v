@@ -164,11 +164,24 @@ Section TwoModules.
     intuition auto.
 
     - constructor; auto.
-      admit. (* nontrivial *)
+      inv H3; dest.
+      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_defs_in H).
+      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_defs_in H0).
+      eapply wellHidden_split
+      with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
     - constructor; auto.
-      admit. (* nontrivial *)
+      inv H3; dest.
+      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_defs_in H).
+      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_defs_in H0).
+      eapply wellHidden_split
+      with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
     - apply CanCombineLabel_hide; auto.
-    - admit. (* nontrivial *)
+    - inv H3; dest.
+      apply hide_mergeLabel_idempotent; auto.
   Qed.
 
   Lemma step_split:
@@ -309,10 +322,10 @@ Section TwoModules.
     - constructor.
       + apply substepsInd_modular; auto.
         inv H1; constructor; auto.
-        
         admit. (* nontrivial *)
       + admit. (* nontrivial *)
-    - admit. (* nontrivial *)
+    - inv H1; inv H2; dest.
+      apply hide_mergeLabel_idempotent; auto; admit.
   Qed.
 
   Lemma step_modular:
