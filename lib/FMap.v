@@ -883,6 +883,17 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; unfold subtractKV; apply P.fold_Empty; auto.
   Qed.
 
+  Lemma subtractKV_empty_3:
+    forall {A} deceqA (m: t A),
+      subtractKV deceqA m m = empty A.
+  Proof.
+    mintros; ext y.
+    rewrite subtractKV_find, find_empty.
+    destruct (find y m); auto.
+    destruct (deceqA a a); auto.
+    elim n; auto.
+  Qed.
+
   Lemma subtractKV_sub:
     forall {A} deceqA (m1 m2: t A),
       Sub (subtractKV deceqA m1 m2) m1.
@@ -1231,7 +1242,7 @@ Module LeibnizFacts (M : MapLeibniz).
       apply eq_sym, P.F.not_find_in_iff in Heqov; intuition.
   Qed.
 
-  Lemma subtractKV_disj:
+  Lemma subtractKV_disj_invalid:
     forall {A} deceqA (m1 m2: t A),
       Disj m1 m2 -> subtractKV deceqA m1 m2 = m1.
   Proof.
@@ -1243,7 +1254,41 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (find y m2); auto.
     inv H; discriminate.
   Qed.
-  
+
+  Lemma subtractKV_disj_union_1:
+    forall {A} deceqA (m1 m2 m: t A),
+      Disj m1 m2 ->
+      subtractKV deceqA (union m1 m2) m =
+      union (subtractKV deceqA m1 m) (subtractKV deceqA m2 m).
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    do 2 rewrite P.F.not_find_in_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m1); auto.
+    destruct (find y m); auto.
+    destruct (deceqA a a0); auto.
+    destruct (find y m2); auto.
+    inv H; inv H0.
+  Qed.
+
+  Lemma subtractKV_disj_union_2:
+    forall {A} deceqA (m m1 m2: t A),
+      Disj m1 m2 ->
+      subtractKV deceqA m (union m1 m2) =
+      subtractKV deceqA (subtractKV deceqA m m1) m2.
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    do 2 rewrite P.F.not_find_in_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m); auto.
+    destruct (find y m1); auto.
+    destruct (deceqA a a0); auto.
+    destruct (find y m2); auto.
+    inv H; inv H0.
+  Qed.
+
   Lemma subtractKV_subtractKVD_1:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
            (m1 m2: t A) dom,
@@ -1627,6 +1672,12 @@ Ltac mred :=
                    rewrite M.find_add_2 by intuition idtac]
      | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
        rewrite M.restrict_in_find by auto
+     | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
+       rewrite M.subtractKV_find
+     | [ |- context [if ?c then _ else _] ] =>
+       match type of c with
+       | {_ = _} + {_ <> _} => destruct c; [subst|]
+       end
      end; try discriminate; try reflexivity; try (intuition idtac; fail)).
 
 Ltac mcontra :=

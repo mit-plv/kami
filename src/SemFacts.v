@@ -4,6 +4,51 @@ Require Import Syntax Semantics.
 
 Set Implicit Arguments.
 
+Lemma wellHidden_split:
+  forall ma mb la lb,
+    wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) ->
+    M.KeysSubset (calls la) (getCalls ma) ->
+    M.KeysSubset (calls lb) (getCalls mb) ->
+    M.KeysSubset (defs la) (getDefs ma) ->
+    M.KeysSubset (defs lb) (getDefs mb) ->
+    M.Disj (defs la) (defs lb) ->
+    M.Disj (calls la) (calls lb) ->
+    wellHidden ma (hide la) /\ wellHidden mb (hide lb).
+Proof.
+  unfold wellHidden in *; dest.
+  destruct la as [anna dsa csa], lb as [annb dsb csb].
+  simpl in *; split.
+
+  - dest; clear H2.
+    rewrite M.subtractKV_disj_union_1 in H by auto.
+    do 2 rewrite M.subtractKV_disj_union_2 in H by auto.
+    split.
+    + apply M.KeysDisj_union_1 in H.
+      admit.
+    + apply M.KeysDisj_union_2 in H.
+      admit.
+
+  - dest; clear H.
+    rewrite M.subtractKV_disj_union_1 in H6 by auto.
+    do 2 rewrite M.subtractKV_disj_union_2 in H6 by auto.
+    split.
+    + apply M.KeysDisj_union_1 in H6.
+      admit.
+    + apply M.KeysDisj_union_2 in H6.
+      admit.
+Qed.
+
+Lemma hide_mergeLabel_idempotent:
+  forall la lb,
+    M.Disj (defs la) (defs lb) ->
+    M.Disj (calls la) (calls lb) ->
+    hide (mergeLabel la lb) = hide (mergeLabel (hide la) (hide lb)).
+Proof.
+  intros; destruct la as [anna dsa csa], lb as [annb dsb csb].
+  simpl in *.
+  unfold hide; simpl; f_equal; meq.
+Qed.
+   
 Lemma CanCombineLabel_hide:
   forall la lb,
     CanCombineLabel la lb ->
@@ -38,7 +83,7 @@ Proof.
     eapply Hp; eauto.
 Qed.
 
-Theorem staticDynCallsRules m o name a u cs r:
+Lemma staticDynCallsRules m o name a u cs r:
   In (name :: a)%struct (getRules m) ->
   SemAction o (a type) u cs r ->
   forall f, M.In f cs -> In f (getCalls m).
@@ -318,7 +363,7 @@ Lemma substepsInd_hide_void:
 Proof.
   intros; destruct l as [ann ds cs].
   pose proof (substepsInd_meths_disj H H0).
-  unfold hide; simpl in *; f_equal; apply M.subtractKV_disj; mdisj.
+  unfold hide; simpl in *; f_equal; apply M.subtractKV_disj_invalid; mdisj.
 Qed.
 
 Lemma stepInd_dms_weakening:
