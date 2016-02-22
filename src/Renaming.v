@@ -1,6 +1,8 @@
 Require Import Lib.FMap Lib.Struct Semantics Syntax String List.
 Require Import Program.Equality.
 
+Require Import Lib.CommonTactics.
+
 Set Implicit Arguments.
 
 Lemma rename1To1: forall c s1 s2: string, (c ++ s1)%string = (c ++ s2)%string -> s1 = s2.
@@ -14,7 +16,8 @@ Hint Resolve rename1To1.
 
 Section Rename.
   Variable i: string.
-  Definition rename s := ((i ++ "--") ++ s)%string.
+  Variable rename: string -> string.
+  Variable rename1To1: forall s1 s2, rename s1 = rename s2 -> s1 = s2.
 
   Definition renameAttr A a := {| attrName := rename (@attrName A a); attrType := attrType a |}.
   
@@ -112,6 +115,8 @@ Section Rename.
       apply M.F.P.F.not_find_in_iff; auto.
   Qed.
 
+  Hint Extern 1 (_ = renameMap _) => rewrite renameMapAdd.
+
   Lemma renameMapFind A (m: M.t A):
     forall k, M.find k m = M.find (rename k) (renameMap m).
   Proof.
@@ -200,7 +205,7 @@ Section Rename.
       M.MapsTo (rename k) v (renameMap m).
   Proof.
     assert (rename1To1': forall s1 s2, rename s1 = rename s2 -> s1 = s2) by
-        (intros; specialize (rename1To1 (i ++ "--") s1 s2); intuition).
+        (intros; specialize (@rename1To1 s1 s2); intuition).
     M.mind m.
     - apply M.F.P.F.empty_mapsto_iff in H; intuition.
     - apply M.F.P.F.add_mapsto_iff in H1.
@@ -218,7 +223,7 @@ Section Rename.
       M.MapsTo k v m.
   Proof.
     assert (rename1To1': forall s1 s2, rename s1 = rename s2 -> s1 = s2) by
-        (intros; specialize (rename1To1 (i ++ "--") s1 s2); intuition).
+        (intros; specialize (@rename1To1 s1 s2); intuition).
     M.mind m.
     - apply M.F.P.F.empty_mapsto_iff in H; intuition.
     - rewrite renameMapAdd in H1; intuition; apply M.F.P.F.add_mapsto_iff in H1.
@@ -330,55 +335,91 @@ mmap]
       unfold renameModules.
       simpl in *.
    *)
+  Lemma renameMapEmptyImpEmpty A o: M.empty _ = renameMap o -> M.empty A = o.
+  Proof.
+    M.mind o; intros.
+    - reflexivity.
+    - rewrite renameMapAdd in H1.
+      apply eq_sym in H1; apply M.add_empty_neq in H1; intuition.
+  Qed.
   
-  Lemma renameSemActionRev o k a' u cs r:
-    SemAction o (renameAction a') u cs r ->
-    exists o' u' cs',
-      o = renameMap o' /\
+  Lemma renameMapEq A o1: forall (o2: M.t A), renameMap o1 = renameMap o2 -> o1 = o2.
+  Proof.
+    intros o2 rnEq.
+    apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff.
+    intros.
+    constructor; intros H;
+      apply renameMapsTo in H;
+      [rewrite rnEq in H | rewrite <- rnEq in H];
+      apply renameMapsTo in H;
+      assumption.
+  Qed.
+                            
+  Lemma renameSemActionRev o' k a' u cs r:
+    SemAction (renameMap o') (renameAction a') u cs r ->
+    exists u' cs',
       u = renameMap u' /\
       cs = renameMap cs' /\
       @SemAction o' k a' u' cs' r.
   Proof.
     intros sa; simpl in *.
-    dependent induction sa; simpl in *; intros.
-    - destruct a'; simpl in *.
-      injection x; intros.
-      admit.
-  Admitted.
-  (*     CommonTactics.destruct_existT. *)
-  (*     rewrite H2 in H0. *)
-  (*     apply Eqdep.EqdepTheory.inj_pair2. subst. *)
-  (*   - destruct IHsa as [o' [u' [cs' [oEq [aEq [uEq [csEq sa']]]]]]]; subst. *)
-  (*     rewrite aEq in sa. *)
-  (*     exists o'. *)
-  (*     exists (MCall *)
-  (*     constructor. *)
-  (*   - destruct IHsa as [[[ ] ] ]. *)
-  (*   - specialize (IHsa _ eq_refl eq_refl). *)
-  (*   - specialize (IHsa o a u cs). *)
-  (*   - rewrite HAcalls; simpl in *. *)
-  (*     rewrite renameMapAdd. *)
-  (*     eapply SemMCall; eauto; intuition. *)
-  (*   - eapply SemLet; eauto; intuition. *)
-  (*   - rewrite renameMapFind in HRegVal. *)
-  (*     eapply SemReadReg; eauto. *)
-  (*   - eapply SemWriteReg; eauto. *)
-  (*     rewrite <- renameMapAdd. *)
-  (*     f_equal; intuition. *)
-  (*   - eapply SemIfElseTrue; eauto. *)
-  (*     rewrite <- renameMapUnion. *)
-  (*     f_equal; intuition. *)
-  (*     rewrite <- renameMapUnion. *)
-  (*     f_equal; intuition. *)
-  (*   - eapply SemIfElseFalse; eauto. *)
-  (*     rewrite <- renameMapUnion. *)
-  (*     f_equal; intuition. *)
-  (*     rewrite <- renameMapUnion. *)
-  (*     f_equal; intuition. *)
-  (*   - eapply SemAssertTrue; eauto. *)
-  (*   - eapply SemReturn; eauto. *)
-  (* Qed. *)
-
+    dependent induction sa; simpl in *; intros; destruct a'; simpl in *; try discriminate.
+    - generalize dependent mret;
+        inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' (a mret) JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst.
+      repeat (econstructor; eauto).
+    - inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' (a (evalExpr e0)) JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst.
+      repeat (econstructor; eauto).
+    - generalize dependent regV; inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' (a regV) JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst.
+      repeat (econstructor; eauto).
+      rewrite <- HRegVal; auto.
+      rewrite renameMapFind; reflexivity.
+    - inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst.
+      repeat (econstructor; eauto).
+    - generalize dependent r1.
+      inv x; destruct_existT; intros.
+      destruct (IHsa1 rename1To1 o' a'1 JMeq_refl eq_refl) as
+          [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
+        clear IHsa1.
+      destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
+          [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
+        clear IHsa2.
+      repeat econstructor.
+      + rewrite renameMapUnion; eauto.
+      + rewrite renameMapUnion; eauto.
+      + eauto.
+      + eauto.
+      + eauto.
+    - generalize dependent r1.
+      inv x; destruct_existT; intros.
+      destruct (IHsa1 rename1To1 o' a'2 JMeq_refl eq_refl) as
+          [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
+        clear IHsa1.
+      destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
+          [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
+        clear IHsa2.
+      econstructor.
+      econstructor.
+      econstructor.
+      rewrite renameMapUnion; eauto.
+      econstructor.
+      rewrite renameMapUnion; eauto.
+      econstructor 6; eauto.
+    - inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+          [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
+        clear IHsa.
+      repeat (econstructor; eauto).
+    - inv x; destruct_existT; intros.
+      repeat (econstructor; eauto; try (rewrite renameMapEmpty; reflexivity)).
+  Qed.
 
   Theorem traceRefinesRename m: traceRefines (renameMap (A := _)) m (renameModules m).
   Proof.
