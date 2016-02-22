@@ -142,43 +142,24 @@ Section Decomposition.
 
   Lemma subtractKVMapSet l1:
     forall l2,
-      (forall x v1 v2, M.MapsTo x v1 l1 -> M.MapsTo x v2 l2 -> v1 = v2) ->
-      liftToMap1 p (M.subtractKV signIsEq l1 l2) = M.subtractKV signIsEq (liftToMap1 p l1)
-                                                            (liftToMap1 p l2).
+      (forall x v1 v2, M.find x l1 = Some v1 -> M.find x l2 = Some v2 -> v1 = v2) ->
+      liftToMap1 p (M.subtractKV signIsEq l1 l2) =
+      M.subtractKV signIsEq (liftToMap1 p l1) (liftToMap1 p l2).
   Proof.
-    apply (M.map_induction
-             (P := fun l1 => forall l2 : M.t (sigT SignT),
-                       (forall (x : M.key) (v1 v2 : sigT SignT), M.MapsTo x v1 l1 ->
-                                                                 M.MapsTo x v2 l2 -> v1 = v2) ->
-                       liftToMap1 p (M.subtractKV signIsEq l1 l2) =
-                       M.subtractKV signIsEq (liftToMap1 p l1) (liftToMap1 p l2))); intros; simpl in *.
-    - rewrite (M.subtractKV_empty_1).
+    intros; M.mind l1.
+    - rewrite M.subtractKV_empty_1.
       rewrite liftToMap1Empty.
-      rewrite (M.subtractKV_empty_1).
+      rewrite M.subtractKV_empty_1.
       reflexivity.
     - admit.
-  Qed.
-
-  Lemma subtractKVDefn k l1 l2 v1 v2:
-    M.MapsTo k v1 l1 -> M.MapsTo k v2 l2 -> v1 <> v2 ->
-    M.In k (M.subtractKV signIsEq l1 l2).
-  Proof.
-    intros.
-    apply M.F.P.F.find_mapsto_iff in H.
-    apply M.F.P.F.find_mapsto_iff in H0.
-    apply M.F.P.F.in_find_iff.
-    rewrite M.subtractKV_find.
-    findeq.
-    inv H; inv H0.
-    elim H1; auto.
   Qed.
   
   Theorem wellHiddenEq1 m l:
     M.KeysSubset (defs l) (getDefs m) ->
     M.KeysSubset (calls l) (getCalls m) ->
     wellHidden m (hide l) ->
-    forall x v1 v2, M.MapsTo x v1 (defs l) ->
-                    M.MapsTo x v2 (calls l) ->
+    forall x v1 v2, M.find x (defs l) = Some v1 ->
+                    M.find x (calls l) = Some v2 ->
                     v1 = v2.
   Proof.
     intros; unfold M.KeysSubset, wellHidden, M.KeysDisj in *.
@@ -186,25 +167,25 @@ Section Decomposition.
     destruct H1 as [d c].
     destruct (signIsEq v1 v2).
     - assumption.
-    - pose proof (subtractKVDefn H2 H3 n) as sthSub.
-      assert (sthIn: M.In x calls) by
-          (unfold M.In, M.Raw.PX.In, M.MapsTo in *; exists v2; assumption).
-      specialize (H0 _ sthIn).
-      exfalso; apply (d _ H0 sthSub).
+    - exfalso.
+      pose proof (M.subtractKV_in_find signIsEq H2 H3 n) as sthSub.
+      elim (d x); auto.
+      apply H0.
+      apply M.F.P.F.in_find_iff.
+      rewrite H3; discriminate.
   Qed.
     
   Theorem xformLabelHideCommute o l:
-    (forall x v1 v2, M.MapsTo x v1 (defs l) -> M.MapsTo x v2 (calls l) -> v1 = v2) ->
+    (forall x v1 v2, M.find x (defs l) = Some v1 -> M.find x (calls l) = Some v2 -> v1 = v2) ->
     xformLabel o (hide l) = hide (xformLabel o l).
   Proof.
     intros Hyp.
     unfold xformLabel, hide.
-    destruct l.
-    assert (Hyp2: forall x v1 v2, M.MapsTo x v1 calls -> M.MapsTo x v2 defs -> v1 = v2) by
-        (intros ? ? ? M1 M2; apply eq_sym; apply (Hyp x v2 v1); intuition).
-    destruct annot; simpl in *.
-    - destruct o0; simpl in *; f_equal; rewrite subtractKVMapSet; intuition.
-    - f_equal; rewrite subtractKVMapSet; intuition.
+    destruct l as [ann ds cs]; simpl in *; f_equal.
+    - apply subtractKVMapSet; auto.
+    - apply subtractKVMapSet.
+      intros; apply eq_sym.
+      eapply Hyp; eauto.
   Qed.
 
   Theorem liftToMap1UnionCommute l1 l2:

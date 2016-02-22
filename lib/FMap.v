@@ -935,6 +935,19 @@ Module LeibnizFacts (M : MapLeibniz).
     subst; auto.
   Qed.
 
+  Lemma subtractKV_in_find:
+    forall {A} deceqA k (m1 m2: t A) v1 v2,
+      find k m1 = Some v1 -> find k m2 = Some v2 -> v1 <> v2 ->
+      In k (subtractKV deceqA m1 m2).
+  Proof.
+    intros.
+    apply F.P.F.in_find_iff.
+    rewrite subtractKV_find.
+    rewrite H, H0.
+    destruct (deceqA v1 v2); auto.
+    discriminate.
+  Qed.
+
   Lemma subtractKV_remove:
     forall {A : Type} deceqA (m2 m1: t A) k,
       find k m1 = find k m2 ->
