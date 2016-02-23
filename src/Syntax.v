@@ -328,6 +328,12 @@ Section GetCalls.
     simpl; rewrite IHms1; apply app_assoc.
   Qed.
 
+  Lemma getCallsR_app: forall ms1 ms2, getCallsR (ms1 ++ ms2) = getCallsR ms1 ++ getCallsR ms2.
+  Proof.
+    induction ms1; intros; [reflexivity|].
+    simpl; rewrite IHms1; apply app_assoc.
+  Qed.
+
   Definition getCalls m := getCallsR (getRules m) ++ getCallsM (getDefsBodies m).
 End GetCalls.
 

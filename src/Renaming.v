@@ -1,18 +1,18 @@
-Require Import Lib.FMap Lib.Struct Semantics Syntax String List.
+Require Import Lib.FMap Lib.Struct Semantics Syntax String List Refinement.
 Require Import Program.Equality.
 
 Require Import Lib.CommonTactics.
 
 Set Implicit Arguments.
 
-Lemma rename1To1: forall c s1 s2: string, (c ++ s1)%string = (c ++ s2)%string -> s1 = s2.
+Lemma prepend1To1: forall c s1 s2: string, (c ++ s1)%string = (c ++ s2)%string -> s1 = s2.
 Proof.
   induction c; simpl in *; intros.
   - intuition.
   - injection H; intros H'.
     intuition.
 Qed.
-Hint Resolve rename1To1.
+Hint Resolve prepend1To1.
 
 Section Rename.
   Variable i: string.
@@ -136,6 +136,18 @@ Section Rename.
       unfold renameMeths.
       rewrite map_app.
       reflexivity.
+  Qed.
+
+  Lemma renameGetDefs m: getDefs (renameModules m) = map rename (getDefs m).
+  Proof.
+    unfold getDefs.
+    rewrite renameGetMeths; simpl.
+    remember (getDefsBodies m) as sth.
+    clear Heqsth m.
+    induction sth; simpl.
+    - reflexivity.
+    - f_equal; intuition.
+      destruct a; reflexivity.
   Qed.
   
   Lemma renameMapEmpty A: renameMap (M.empty A) = M.empty A.
@@ -274,6 +286,16 @@ Section Rename.
         apply M.F.P.F.add_mapsto_iff; intuition.
   Qed.
 
+  Lemma renameFind1 A m: forall k (v: A),
+      M.find k m = Some v ->
+      M.find (rename k) (renameMap m) = Some v.
+  Proof.
+    intros.
+    apply M.F.P.F.find_mapsto_iff in H.
+    apply M.F.P.F.find_mapsto_iff.
+    apply renameMapsTo1; intuition.
+  Qed.
+
   Lemma renameMapsTo2 A m: forall k (v: A),
       M.MapsTo (rename k) v (renameMap m) ->
       M.MapsTo k v m.
@@ -288,6 +310,16 @@ Section Rename.
       + specialize (H _ _ kin).
         assert (kneq': k <> k0) by (unfold not; intros; subst; intuition).
         apply M.F.P.F.add_mapsto_iff; intuition.
+  Qed.
+
+  Lemma renameFind2 A m: forall k (v: A),
+      M.find (rename k) (renameMap m) = Some v ->
+      M.find k m = Some v.
+  Proof.
+    intros.
+    apply M.F.P.F.find_mapsto_iff in H.
+    apply M.F.P.F.find_mapsto_iff.
+    apply renameMapsTo2; intuition.
   Qed.
 
   Lemma renameMapsTo2' A m: forall k (v: A),
@@ -307,6 +339,17 @@ Section Rename.
         constructor; intuition.
         assert (kneq': k' <> k) by (unfold not; intros; subst; intuition).
         apply M.F.P.F.add_mapsto_iff; intuition.
+  Qed.
+
+  Lemma renameFind2' A m: forall k (v: A),
+      M.find k (renameMap m) = Some v ->
+      exists k', k = rename k' /\ M.find k' m = Some v.
+  Proof.
+    intros.
+    apply M.F.P.F.find_mapsto_iff in H.
+    apply renameMapsTo2' in H.
+    dest.
+    exists x; constructor; try apply M.F.P.F.find_mapsto_iff; intuition.
   Qed.
 
   Lemma renameMapsTo A m: forall k (v: A),
@@ -368,60 +411,6 @@ Section Rename.
     intuition.
   Qed.
 
-  (*
-  Lemma renameKeysEq A (m: M.t A) l: M.KeysEq m l -> M.KeysEq (renameMap m) (map rename l).
-  Proof.
-    intros keysEq.
-    unfold M.KeysEq in *.
-    assert (keysEq1: forall k, M.Map.In k m -> In k l) by
-        (intros k0; specialize (keysEq k0); intuition).
-    assert (keysEq2: forall k, In k l -> M.Map.In k m) by
-        (intros k0; specialize (keysEq k0); intuition).
-    clear keysEq.
-    constructor; intros.
-    split in keysEq.
-    specialize (keysEq k).
-    destruct keysEq as [fwd bck].
-    destruct (renameMapIn m k) as 
-    assert (fwd: forall v, M.MapsTo k v m -> In k l) by
-        (intros v mmap;
-         apply (fwd' (MapsToIn1 mmap))).
-    assert (bck: In k l -> (exists v, M.MapsTo k v m)) by intuition.
-    clear fwd' bck'.
-    constructor; intros H'.
-    destruct (MapsToIn2 H') as [v mmap]; clear H'.
-    assert (H: 
-mmap]
-    clear fwd' bck'.
-    pose proof (MapsToIn (renameMap m) k) as [lfact rfact].
-    constructor; intros.
-    - destruct (rfact H) as [v mmap].
-    intros ink.
-    intuition.
-        (intros [v mmap];
-         pose proof (MapsToIn m k) as [lfact rfact];
-         apply (fwd' (lfact (@ex_intro _ _ v mmap)))).
-    firstorder.
-    intuition.
-    assert (M.In k m) by apply (or_introl (MapsToIn m k)) in mmap.
-    eapply MapsToIn in mmap.
-    eapply MapsToIn.
-      by (apply MapsToIn; intuition).
-    rewrite MapsToIn in fwd.
-    constructor; intros.
-    - apply MapsToIn in H.
-      destruct H as [v mrn].
-      apply MapsToIn in keysEq.
-
-  Lemma renameSubstep m o u ul cs (sa: @Substep m o u ul cs):
-    Substep (renameModules m) (renameMap o) (renameMap u) (renameUnitLabel ul) (renameMap cs).
-  Proof.
-    dependent induction sa; simpl in *.
-    - repeat rewrite renameMapEmpty.
-      constructor.
-      unfold renameModules.
-      simpl in *.
-   *)
   Lemma renameMapEmptyImpEmpty A o: M.empty _ = renameMap o -> M.empty A = o.
   Proof.
     M.mind o; intros.
@@ -562,9 +551,37 @@ mmap]
 
   Lemma renameDisj A m1 m2: M.Disj (A := A) m1 m2 -> M.Disj (renameMap m1) (renameMap m2).
   Proof.
-    admit.
+    intros; unfold M.Disj in *; intros.
+    pose proof (M.F.P.F.In_dec (renameMap m1) k) as sth1.
+    pose proof (M.F.P.F.In_dec (renameMap m2) k) as sth2.
+    destruct sth1, sth2.
+    apply renameMapIn2' in i0.
+    apply renameMapIn2' in i1.
+    destruct i0 as [k1 [k1Eq k1In]].
+    destruct i1 as [k2 [k2Eq k2In]].
+    subst.
+    specialize (rename1To1 k2Eq).
+    subst.
+    specialize (H k2).
+    intuition.
+    apply renameMapIn2' in i0.
+    destruct i0 as [k1 [k1Eq k1In]].
+    subst.
+    specialize (H k1).
+    assert (~ M.In k1 m2) by intuition.
+    right; unfold not; intros.
+    apply renameMapIn2 in H1.
+    intuition.
+    apply renameMapIn2' in i0.
+    destruct i0 as [k1 [k1Eq k1In]].
+    subst.
+    specialize (H k1).
+    assert (~ M.In k1 m1) by intuition.
+    left; unfold not; intros.
+    apply renameMapIn2 in H1.
+    intuition.
+    intuition.
   Qed.
-    
 
   Lemma renameCanCombine m o s1 s2:
     canCombine (m := m) (o := o) s1 s2 ->
@@ -579,17 +596,40 @@ mmap]
            | H: exists x, _ |- _ => destruct H
            end.
     constructor.
-    - admit.
+    - apply renameDisj; intuition.
     - constructor; intros.
-      destruct unitAnnot, unitAnnot0; simpl in *.
-      destruct o0, o1; discriminate.
-      destruct o0; discriminate.
-      destruct o1; discriminate.
-      destruct o0, o1.
-      destruct a, a0; apply H0; injection H3; injection H4; intros; intuition.
-      simpl in *.
-    destructExist
-    repeat (destruct H)
+      + destruct unitAnnot, unitAnnot0; simpl in *.
+        destruct o0, o1; discriminate.
+        destruct o0; discriminate.
+        destruct o1; discriminate.
+        destruct o0, o1; try discriminate.
+        destruct a, a0.
+        inv H3; destruct_existT.
+        inv H4; destruct_existT.
+        unfold not; intros.
+        simpl in *.
+        specialize (rename1To1 H3).
+        subst.
+        specialize (H0 (attrName0 :: attrType)%struct (attrName0 :: attrType0)%struct
+                       eq_refl eq_refl).
+        simpl in *.
+        intuition.
+      + constructor.
+        * destruct H1.
+          destruct unitAnnot; try discriminate.
+          injection H1; intros; subst.
+          simpl in *.
+          destruct x. destruct a; simpl in *.
+          eexists; eauto.
+          eexists; eauto.
+          destruct unitAnnot0; try discriminate.
+          injection H1; intros; subst.
+          simpl in *.
+          destruct x. destruct a; simpl in *.
+          eexists; eauto.
+          eexists; eauto.
+        * apply renameDisj; intuition.
+  Qed.
   
   Lemma renameSubstepsComb m o ss: substepsComb (m := m) (o := o) ss ->
                                    substepsComb (renameSubsteps ss).
@@ -603,7 +643,165 @@ mmap]
         destruct H1 as [s1 [s1Eq inS1]].
         specialize (H0 _ inS1).
         subst.
-        admit.
+        apply renameCanCombine; intuition.
+  Qed.
+
+  Lemma renameSubtractKV m1 m2:
+      renameMap (M.subtractKV signIsEq m1 m2) =
+      M.subtractKV signIsEq (renameMap m1) (renameMap m2).
+  Proof.
+    apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff;
+    constructor; intros.
+    - apply renameMapsTo2' in H.
+      destruct H as [? [? sth]]; subst.
+      apply M.subtractKV_mapsto in sth.
+      destruct sth as [K1 K2].
+      apply M.subtractKV_mapsto.
+      constructor.
+      + apply renameMapsTo in K1; intuition.
+      + unfold not; intros.
+        apply renameMapsTo in H; intuition.
+    - apply M.subtractKV_mapsto in H.
+      destruct H.
+      apply renameMapsTo2' in H.
+      destruct H as [? [? ?]]; subst.
+      apply renameMapsTo with (m := M.subtractKV signIsEq m1 m2).
+      apply M.subtractKV_mapsto.
+      constructor; intuition.
+      apply renameMapsTo in H; intuition.
+  Qed.
+  
+  Lemma renameHide l: renameLabel (hide l) = hide (renameLabel l).
+  Proof.
+    simpl in *.
+    unfold hide, renameLabel; simpl.
+    destruct l; simpl.
+    repeat rewrite renameSubtractKV in *.
+    reflexivity.
+  Qed.
+
+  Lemma renameHideFoldSS m o ss:
+    hide (foldSSLabel (renameSubsteps (m := m) (o := o) ss)) =
+    renameLabel (hide (foldSSLabel ss)).
+  Proof.
+    rewrite renameHide.
+    f_equal.
+    induction ss; simpl.
+    - rewrite renameMapEmpty; reflexivity.
+    - rewrite IHss.
+      remember (foldSSLabel ss) as sth; clear Heqsth ss IHss.
+      destruct a, sth; simpl in *.
+      destruct unitAnnot, annot; simpl in *;
+      unfold addLabelLeft; simpl;
+      destruct o0; try destruct o1; try destruct a;
+      repeat rewrite M.union_empty_L in *;
+      repeat rewrite renameMapUnion in *; try reflexivity.
+  Qed.
+
+  Lemma renameFoldSSUpdsSubsteps m o ss:
+    foldSSUpds (renameSubsteps (m := m) (o := o) ss) = renameMap (foldSSUpds ss).
+  Proof.
+    induction ss; simpl.
+    - rewrite renameMapEmpty; reflexivity.
+    - rewrite IHss.
+      rewrite renameMapUnion.
+      reflexivity.
+  Qed.
+
+  Lemma renameListIn k l: In k l <-> In (rename k) (map rename l).
+  Proof.
+    induction l; simpl.
+    - intuition.
+    - constructor; intros.
+      + destruct H; subst; intuition.
+      + destruct H.
+        * apply rename1To1 in H; intuition.
+        * intuition.
+  Qed.
+
+  Lemma renameGetCallsA k a: getCallsA (renameAction (k := k) a) = map rename (getCallsA a).
+  Proof.
+    induction a; simpl; try f_equal; intuition.
+    specialize (H tt).
+    repeat rewrite List.map_app.
+    rewrite H, IHa1, IHa2.
+    reflexivity.
+  Qed.
+
+  Lemma renameGetCallsR (rl: list (Attribute (Action (Bit 0)))):
+    getCallsR (renameRules rl) = map rename (getCallsR rl).
+  Proof.
+    induction rl; simpl.
+    - reflexivity.
+    - repeat rewrite List.map_app.
+      rewrite IHrl.
+      destruct a; simpl.
+      rewrite renameGetCallsA.
+      reflexivity.
+  Qed.
+
+  Lemma renameGetCallsR' m:
+    getCallsR (getRules (renameModules m)) = map rename (getCallsR (getRules m)).
+  Proof.
+    induction m; simpl.
+    - apply renameGetCallsR.
+    - repeat rewrite getCallsR_app.
+      rewrite List.map_app.
+      rewrite <- IHm1, <- IHm2.
+      reflexivity.
+  Qed.
+
+  Lemma renameGetCallsM (ms: list DefMethT):
+    getCallsM (renameMeths ms) = map rename (getCallsM ms).
+  Proof.
+    induction ms; simpl.
+    - reflexivity.
+    - repeat rewrite List.map_app.
+      rewrite IHms.
+      destruct a; simpl.
+      rewrite renameGetCallsA.
+      reflexivity.
+  Qed.
+
+  Lemma renameGetCallsM' m:
+    getCallsM (getDefsBodies (renameModules m)) = map rename (getCallsM (getDefsBodies m)).
+  Proof.
+    induction m; simpl.
+    - apply renameGetCallsM.
+    - repeat rewrite getCallsM_app.
+      rewrite List.map_app.
+      rewrite <- IHm1, <- IHm2.
+      reflexivity.
+  Qed.
+
+  Lemma renameGetCalls m:
+    getCalls (renameModules m) = map rename (getCalls m).
+  Proof.
+    unfold getCalls in *.
+    rewrite List.map_app.
+    rewrite renameGetCallsM', renameGetCallsR'.
+    reflexivity.
+  Qed.
+
+  Lemma renameWellHidden m l: wellHidden m l -> wellHidden (renameModules m) (renameLabel l).
+  Proof.
+    intros wh.
+    unfold wellHidden in *.
+    unfold M.KeysDisj in *.
+    destruct wh as [wh1 wh2].
+    destruct l; simpl in *.
+    constructor; unfold not; intros.
+    - apply renameMapIn2' in H0.
+      destruct H0 as [? [kEq kIn]]; subst.
+      rewrite renameGetCalls in H.
+      apply renameListIn in H.
+      apply (wh1 _ H kIn).
+    - apply renameMapIn2' in H0.
+      destruct H0 as [? [kEq kIn]]; subst.
+      simpl in *.
+      rewrite renameGetDefs in H.
+      apply renameListIn in H.
+      apply (wh2 _ H kIn).
   Qed.
 
   Lemma renameStep m o u l
@@ -611,47 +809,35 @@ mmap]
     Step (renameModules m) (renameMap o) (renameMap u) (renameLabel l).
   Proof.
     dependent induction sa.
-    pose proof (StepIntro (m := renameModules m) (o := renameMap o) (ss := renameSubsteps ss)).
-
-      induction ss; simpl; intros.
-      - constructor.
-      - simpl in *.
-        dependent destruction H.
-        specialize (IHss H).
-        constructor; intros.
-        + intuition.
-        + 
-        intuition.
-      - 
-    econstructor.
-
-    SubstepRec (renameModules m) (renameMap o).
-
+    pose proof (StepIntro (m := renameModules m) (o := renameMap o) (ss := renameSubsteps ss)
+                          (renameSubstepsComb HSubsteps)).
+    rewrite renameHideFoldSS, renameFoldSSUpdsSubsteps in *.
+    apply H.
+    apply renameWellHidden; intuition.
+  Qed.
   
   Theorem traceRefinesRename m: traceRefines (renameMap (A := _)) m (renameModules m).
   Proof.
-    admit.
-  Qed.
-(*
-  Lemma renameSubstep m o u ul cs (ss: @Substep m o u ul cs):
-    Substep (renameModules m) (renameMap o) (renameMap u) (renameUnitLabel ul) (renameMap cs).
-  Proof.
-    induction ss; simpl in *.
-    - rewrite renameMapEmpty.
+    apply (stepRefinement (@renameMap _) (fun _ s => Some (rename s)) (@renameMap _)).
+    - rewrite renameGetRegInits.
+      remember (getRegInits m) as sth; clear m Heqsth.
+      induction sth.
+      + reflexivity.
+      + destruct a.
+        destruct attrType.
+        simpl.
+        rewrite <- IHsth.
+        rewrite renameMapAdd.
+        reflexivity.
+    - intros.
+      exists (renameMap u).
       constructor.
-      admit.
-    - rewrite renameMapEmpty.
-      constructor.
-      admit.
-    - pose proof (renameSemAction HAction) as act1.
-      simpk
-    
-  Lemma renameKeysEq A (m: M.t A) l:
-    M.KeysEq m l ->
-    M.KeysEq (renameMap m) (map p l).
-  Proof.
-    admit.
+      + unfold liftPLabel.
+        pose proof (renameStep H).
+        destruct l; simpl in *.
+        destruct annot;
+          try destruct o0; simpl in *; intuition.
+      + rewrite renameMapUnion.
+        reflexivity.
   Qed.
-
-*)
 End Rename.

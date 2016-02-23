@@ -868,6 +868,49 @@ Module LeibnizFacts (M : MapLeibniz).
     subtractKVD_solve deceqA.
   Qed.
 
+  Lemma subtractKV_mapsto A (decA: forall x y: A, {x = y} + {x <> y}):
+    forall m1 m2 k e, MapsTo k e (subtractKV decA m1 m2) <-> MapsTo k e m1 /\ ~ MapsTo k e m2.
+  Proof.
+    intros; constructor; intros.
+    - apply P.F.find_mapsto_iff in H.
+      rewrite subtractKV_find in H.
+      constructor.
+      + apply P.F.find_mapsto_iff.
+        repeat match goal with
+        | H: context [match ?P with
+                      | _ => _
+                      end] |- _ => case_eq P; intros;
+                                     match goal with
+                                     | H : _ = _ |- _ => try rewrite H in *
+                                     end
+               end; intuition; try discriminate.
+      + unfold not; intros Heq; apply P.F.find_mapsto_iff in Heq.
+        repeat match goal with
+        | H: context [match ?P with
+                      | _ => _
+                      end] |- _ => case_eq P; intros;
+                                     match goal with
+                                     | H : _ = _ |- _ => try rewrite H in *
+                                     end
+               end; intuition; try discriminate.
+        injection H; injection Heq; intros; subst; intuition.
+    - destruct H as [c1 c2].
+      apply P.F.find_mapsto_iff.
+      apply P.F.find_mapsto_iff in c1.
+      rewrite subtractKV_find.
+      assert (find k m2 <> Some e) by (unfold not; intros Y; apply P.F.find_mapsto_iff in Y;
+                                      intuition).
+        repeat match goal with
+               | |- context [match ?P with
+                             | _ => _
+                             end] => case_eq P; intros;
+                   match goal with
+                   | H : _ = _ |- _ => try rewrite H in *
+                   end
+               end; intuition; try discriminate.
+        rewrite e0 in *; intuition.
+  Qed.
+
   Lemma subtractKV_empty_1:
     forall {A : Type} deceqA (m: t A),
       subtractKV deceqA (empty A) m = empty A.
