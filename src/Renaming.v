@@ -952,9 +952,13 @@ Section Rename.
   Proof.
     intros.
     unfold M.Disj in *; intros.
-    admit.
+    pose proof (M.F.P.F.In_dec m1 k).
+    pose proof (M.F.P.F.In_dec m2 k).
+    destruct H0, H1; try intuition.
+    pose proof (renameMapIn1 i0) as sth1;
+    pose proof (renameMapIn1 i1) as sth2.
+    destruct (H (rename k)); intuition.
   Qed.
-
   
   Lemma renameCanCombineUUL a b c d e:
     CanCombineUUL (renameMap a) (renameLabel b) (renameMap c) (renameMap d) (renameUnitLabel e) ->
@@ -975,7 +979,7 @@ Section Rename.
     intuition.
   Qed.
   
-  Lemma SubstepsIndRev m' o' u l
+  Lemma renameSubstepsIndRev m' o' u l
         (ssi: SubstepsInd (renameModules m') (renameMap o') u l):
     exists u' l',
       u = renameMap u' /\
@@ -995,14 +999,47 @@ Section Rename.
       apply (SubstepsCons H5 H3); intuition.
       apply renameCanCombineUUL; intuition.
   Qed.
-  
+
+  Lemma renameWellHiddenRev m l:
+    wellHidden (renameModules m) (renameLabel l) -> wellHidden m l.
+  Proof.
+    intros.
+    unfold wellHidden in *.
+    unfold M.KeysDisj in *.
+    dest.
+    constructor; unfold not; intros.
+    - specialize (H (rename k)).
+      specialize (H0 (rename k)).
+      apply renameListIn in H1.
+      apply renameMapIn1 in H2.
+      rewrite <- renameGetCalls in H1.
+      destruct l; simpl in *.
+      apply (H H1 H2).
+    - specialize (H (rename k)).
+      specialize (H0 (rename k)).
+      apply renameListIn in H1.
+      apply renameMapIn1 in H2.
+      rewrite <- renameGetDefs in H1.
+      destruct l; simpl in *.
+      apply (H0 H1 H2).
+  Qed.
+
   Lemma renameStepRev m' o' u l:
     StepInd (renameModules m') (renameMap o') u l ->
     exists u' l',
       u = renameMap u' /\
       l = renameLabel l' /\
-      Step m' o' u' l'.
+      StepInd m' o' u' l'.
   Proof.
-    admit.
+    intros s.
+    dependent induction s.
+    apply renameSubstepsIndRev in HSubSteps.
+    dest; subst.
+    rewrite <- renameHide in *.
+    exists x; exists (hide x0).
+    intuition.
+    constructor.
+    intuition.
+    apply renameWellHiddenRev in HWellHidden; intuition.
   Qed.
 End Rename.
