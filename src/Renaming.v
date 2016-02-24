@@ -1130,8 +1130,24 @@ Section Rename.
           apply renameMapEq in H2.
           subst; reflexivity.
   Qed.
-    
-  Lemma renameBehavior m' n l:
+  
+  Lemma renameBehavior m n l:
+    Behavior m n l ->
+    Behavior (renameModules m) (renameMap n) (map renameLabel l).
+  Proof.
+    intros b.
+    dependent induction b.
+    constructor.
+    dependent induction HMultistepBeh; simpl.
+    - rewrite <- renameInitRegs.
+      repeat constructor; intuition.
+    - rewrite renameMapUnion.
+      specialize (IHHMultistepBeh rename1To1).
+      apply renameStep in HStep.
+      repeat constructor; intuition.
+  Qed.
+  
+  Lemma renameBehaviorRev m' n l:
     Behavior (renameModules m') n l ->
     exists n' l',
       n = renameMap n' /\
@@ -1159,5 +1175,24 @@ Section Rename.
       apply renameListLabel1To1 in H0; subst.
       constructor; intuition.
       constructor; intuition.
+  Qed.
+
+  Theorem renameTheorem p a b:
+    traceRefines p a b ->
+    forall na la1, Behavior (renameModules a) na la1 ->
+                   exists nb la2 lb2,
+                     la1 = map renameLabel la2 /\
+                     Behavior (renameModules b) nb (map renameLabel lb2) /\
+                     equivalentLabelSeq p la2 lb2.
+  Proof.
+    intros.
+    unfold traceRefines in *; dest.
+    apply renameBehaviorRev in H0.
+    dest; subst.
+    specialize (H _ _ H2); dest; subst.
+    apply renameBehavior in H.
+    dest; subst.
+    exists (renameMap x1); exists x0; exists x2.
+    intuition.
   Qed.
 End Rename.
