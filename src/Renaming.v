@@ -1196,3 +1196,119 @@ Section Rename.
     intuition.
   Qed.
 End Rename.
+
+Section RenameInv.
+  Variable f: string -> string.
+  Variable g: string -> string.
+  Variable gInvF: forall x, g (f x) = x.
+  Variable fInvG: forall x, f (g x) = x.
+
+  Lemma f1To1 x1 x2: f x1 = f x2 -> x1 = x2.
+  Proof.
+    intros hyp.
+    pose proof (gInvF x1) as y1.
+    pose proof (gInvF x2) as y2.
+    rewrite <- y1, <- y2.
+    f_equal; intuition.
+  Qed.
+
+  Lemma g1To1 x1 x2: g x1 = g x2 -> x1 = x2.
+  Proof.
+    intros hyp.
+    pose proof (fInvG x1) as y1.
+    pose proof (fInvG x2) as y2.
+    rewrite <- y1, <- y2.
+    f_equal; intuition.
+  Qed.
+
+  Lemma renameMapGInvF A (m: M.t A): renameMap g (renameMap f m) = m.
+  Proof.
+    apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff; constructor; intros.
+    apply renameMapsTo2' in H;
+    dest; subst.
+    apply renameMapsTo2' in H0; dest; subst.
+    rewrite gInvF; intuition.
+    apply f1To1.
+    apply g1To1.
+    apply renameMapsTo1 with (rename := f) in H.
+    apply renameMapsTo1 with (rename := g) in H.
+    rewrite gInvF in H.
+    intuition.
+    apply g1To1.
+    apply f1To1.
+  Qed.
+    
+  Lemma renameMapFInvG A (m: M.t A): renameMap f (renameMap g m) = m.
+  Proof.
+    apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff; constructor; intros.
+    apply renameMapsTo2' in H;
+    dest; subst.
+    apply renameMapsTo2' in H0; dest; subst.
+    rewrite fInvG; intuition.
+    apply g1To1.
+    apply f1To1.
+    apply renameMapsTo1 with (rename := g) in H.
+    apply renameMapsTo1 with (rename := f) in H.
+    rewrite fInvG in H.
+    intuition.
+    apply f1To1.
+    apply g1To1.
+  Qed.
+
+  Lemma renameLabelGInvF l: renameLabel g (renameLabel f l) = l.
+  Proof.
+    destruct l.
+    unfold renameLabel.
+    destruct annot; try destruct o;
+      repeat rewrite renameMapGInvF; repeat rewrite gInvF; reflexivity.
+  Qed.
+    
+  Lemma renameLabelFInvG l: renameLabel f (renameLabel g l) = l.
+  Proof.
+    destruct l.
+    unfold renameLabel.
+    destruct annot; try destruct o;
+      repeat rewrite renameMapFInvG; repeat rewrite fInvG; reflexivity.
+  Qed.
+
+  Lemma renameLabelsGInvF ls: map (renameLabel g) (map (renameLabel f) ls) = ls.
+  Proof.
+    induction ls.
+    - reflexivity.
+    - simpl in *.
+      rewrite renameLabelGInvF.
+      f_equal; intuition.
+  Qed.
+    
+  Lemma renameLabelsFInvG ls: map (renameLabel f) (map (renameLabel g) ls) = ls.
+  Proof.
+    induction ls.
+    - reflexivity.
+    - simpl in *.
+      rewrite renameLabelFInvG.
+      f_equal; intuition.
+  Qed.
+
+  Definition liftPRename A p (m: M.t A): M.t A := renameMap f (p (renameMap g m)).
+    
+  Theorem renameTheorem' p a b:
+    traceRefines p a b ->
+    traceRefines (liftPRename p) (renameModules f a) (renameModules f b).
+  Proof.
+    intros tr.
+    pose proof (renameTheorem f f1To1 tr) as sth.
+    unfold traceRefines; intros.
+    specialize (sth s1 sig1 H).
+    dest; subst.
+    exists x, (map (renameLabel f) x1).
+    constructor; intuition.
+    clear - H2; induction H2.
+    - constructor.
+    - simpl; constructor; intuition.      
+      unfold liftPRename, renameLabel.
+      destruct x, y; destruct annot, annot0; try destruct o, o0; try destruct o;
+        unfold equivalentLabel in *; dest; subst; simpl in *;
+          repeat rewrite (renameMapGInvF defs);
+          repeat rewrite (renameMapGInvF calls); subst; intuition.
+  Qed.
+End RenameInv.
