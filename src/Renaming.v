@@ -910,4 +910,99 @@ Section Rename.
         intuition.
   Qed.
 
+  Lemma renameSubstepRecRev m' o'
+        (ss: SubstepRec (renameModules m') (renameMap o')):
+    exists (ss': SubstepRec m' o'),
+      upd ss = renameMap (upd ss') /\
+      unitAnnot ss = renameUnitLabel (unitAnnot ss') /\
+      cms ss = renameMap (cms ss').
+  Proof.
+    destruct ss.
+    simpl.
+    apply renameSubstepRev in substep.
+    dest.
+    exists {| upd := x;
+              unitAnnot := x0;
+              cms := x1;
+              substep := H2 |}; simpl.
+    intuition.
+  Qed.
+
+  Lemma renameGetLabel l1 l2: getLabel (renameUnitLabel l1) (renameMap l2) =
+                              renameLabel (getLabel l1 l2).
+  Proof.
+    destruct l1;
+      unfold getLabel, renameUnitLabel, renameLabel; repeat rewrite renameMapEmpty;
+    destruct o; try destruct a;
+      intuition.
+  Qed.
+
+  Lemma renameMergeLabel l1 l2: mergeLabel (renameLabel l1) (renameLabel l2) =
+                                renameLabel (mergeLabel l1 l2).
+  Proof.
+    unfold mergeLabel, renameLabel.
+    destruct l1, l2.
+    destruct annot, annot0; try destruct o, o0;
+      repeat rewrite renameMapUnion; intuition.
+    destruct o; intuition.
+  Qed.
+
+  Lemma renameDisjRev A (m1 m2: M.t A): M.Disj (renameMap m1) (renameMap m2) ->
+                                        M.Disj m1 m2.
+  Proof.
+    intros.
+    unfold M.Disj in *; intros.
+    admit.
+  Qed.
+
+  
+  Lemma renameCanCombineUUL a b c d e:
+    CanCombineUUL (renameMap a) (renameLabel b) (renameMap c) (renameMap d) (renameUnitLabel e) ->
+    CanCombineUUL a b c d e.
+  Proof.
+    intros cc.
+    unfold CanCombineUUL in *.
+    dest.
+    constructor.
+
+    admit.
+    constructor.
+    admit.
+    destruct b; simpl in *.
+    destruct annot, e; try destruct o;
+      simpl in *; try destruct o0; intuition; try destruct a0;
+    apply renameMapIn1 in H2;
+    intuition.
+  Qed.
+  
+  Lemma SubstepsIndRev m' o' u l
+        (ssi: SubstepsInd (renameModules m') (renameMap o') u l):
+    exists u' l',
+      u = renameMap u' /\
+      l = renameLabel l' /\
+      SubstepsInd m' o' u' l'.
+  Proof.
+    dependent induction ssi; simpl.
+    - repeat (econstructor; eauto); simpl;
+        rewrite renameMapEmpty; reflexivity.
+    - dest; subst.
+      apply renameSubstepRev in H; dest; subst.
+      rewrite <- renameMapUnion.
+      rewrite renameGetLabel, renameMergeLabel.
+      eexists (M.union x x1).
+      exists (mergeLabel (getLabel x2 x3) x0).
+      repeat (constructor; intuition).
+      apply (SubstepsCons H5 H3); intuition.
+      apply renameCanCombineUUL; intuition.
+  Qed.
+  
+  Lemma renameStepRev m' o' u l:
+    StepInd (renameModules m') (renameMap o') u l ->
+    exists u' l',
+      u = renameMap u' /\
+      l = renameLabel l' /\
+      Step m' o' u' l'.
+  Proof.
+    admit.
+  Qed.
 End Rename.
