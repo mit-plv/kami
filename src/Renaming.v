@@ -1312,3 +1312,124 @@ Section RenameInv.
           repeat rewrite (renameMapGInvF calls); subst; intuition.
   Qed.
 End RenameInv.
+
+Definition bijective dom img s :=
+  match dom, img with
+    | d :: ds, i :: is =>
+      match string_dec s d, string_dec s i with
+        | left _, right _ => i
+        | right _, left _ => d
+        | _, _ => s
+      end
+    | _, _ => s
+  end.
+
+Section MakeBijective1.
+  Variable dom img: list string.
+  Variable lengthEq: length dom = length img.
+  Variable disjDomImg: forall i, ~ (In i dom /\ In i img).
+  Variable noDupDom: NoDup dom.
+  Variable noDupImg: NoDup img.
+
+  Lemma bijectiveCorrect s: bijective dom img (bijective dom img s) = s.
+  Proof.
+    generalize img lengthEq disjDomImg noDupDom noDupImg s; clear.
+    induction dom; intros.
+    - destruct img; simpl in *.
+      + reflexivity.
+      + discriminate.
+    - destruct img.
+      + discriminate.
+      + inversion lengthEq.
+        specialize (IHl _ H0); clear H0 lengthEq.
+        inversion noDupDom; subst.
+        inversion noDupImg; subst.
+        assert (sth: forall i, ~ (In i l /\ In i l0)) by
+            (unfold not; intros; dest;
+             specialize (disjDomImg i);
+             clear - disjDomImg H H0; intuition).
+        specialize (IHl sth H2 H4).
+        simpl.
+        destruct (string_dec s s0); subst.
+        destruct (string_dec s0 a); subst;
+        destruct (string_dec a a); subst;
+        try reflexivity.
+        destruct (string_dec a s0); subst; intuition.
+        intuition.
+        destruct (string_dec s a); subst;
+        destruct (string_dec s0 a); subst;
+        destruct (string_dec a a); subst;
+        try destruct (string_dec s0 s0); subst; intuition.
+        destruct (string_dec s a); subst; try reflexivity.
+        destruct (string_dec s a); subst; try reflexivity; intuition.
+        destruct (string_dec s s0); subst; intuition.
+  Qed.
+End MakeBijective1.
+
+(*
+Fixpoint bijective' dom c s :=
+  match dom with
+    | x :: xs => if string_dec s x
+                 then (c ++ x)%string
+                 else if string_dec s (c ++ x)
+                      then x
+                      else bijective' xs c s
+    | nil => s
+  end.
+
+Section MakeBijective2.
+  Variable dom: list string.
+  Variable c: string.
+  Variable disjDomImg: forall i y, In i dom -> (c ++ y)%string <> i.
+
+  Lemma bijectiveCorrect' s: bijective' dom c (bijective' dom c s) = s.
+  Proof.
+    generalize disjDomImg s; clear.
+    induction dom; intros.
+    - reflexivity.
+    - assert (sth: forall i y, In i l -> (c ++ y)%string <> i) by
+      (intros;
+       specialize (disjDomImg (i := i) y); intuition).
+      specialize (IHl sth).
+      simpl.
+      destruct (string_dec s a); subst.
+      destruct (string_dec (c ++ a) (c ++ a)); subst.
+      destruct (string_dec (c ++ a) a); intuition.
+      intuition.
+      destruct (string_dec s (c ++ a)); subst.
+      destruct (string_dec a a); intuition.
+      rewrite IHl.
+      destruct (string_dec (bijective' l c s) a).
+      unfold bijective' in e.
+    - specialize (IHl disjDomImg).
+    - destruct img; simpl in *.
+      + reflexivity.
+      + discriminate.
+    - destruct img.
+      + discriminate.
+      + inversion lengthEq.
+        specialize (IHl _ H0); clear H0 lengthEq.
+        inversion noDupDom; subst.
+        inversion noDupImg; subst.
+        assert (sth: forall i, ~ (In i l /\ In i l0)) by
+            (unfold not; intros; dest;
+             specialize (disjDomImg i);
+             clear - disjDomImg H H0; intuition).
+        specialize (IHl sth H2 H4).
+        simpl.
+        destruct (string_dec s s0); subst.
+        destruct (string_dec s0 a); subst;
+        destruct (string_dec a a); subst;
+        try reflexivity.
+        destruct (string_dec a s0); subst; intuition.
+        intuition.
+        destruct (string_dec s a); subst;
+        destruct (string_dec s0 a); subst;
+        destruct (string_dec a a); subst;
+        try destruct (string_dec s0 s0); subst; intuition.
+        destruct (string_dec s a); subst; try reflexivity.
+        destruct (string_dec s a); subst; try reflexivity; intuition.
+        destruct (string_dec s s0); subst; intuition.
+  Qed.
+End MakeBijective2.
+*)
