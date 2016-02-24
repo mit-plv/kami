@@ -964,10 +964,10 @@ Section Rename.
     unfold CanCombineUUL in *.
     dest.
     constructor.
-
-    admit.
+    apply renameDisjRev in H; intuition.
     constructor.
-    admit.
+    unfold renameLabel in H0; destruct b; simpl in *.
+    apply renameDisjRev in H0; intuition.
     destruct b; simpl in *.
     destruct annot, e; try destruct o;
       simpl in *; try destruct o0; intuition; try destruct a0;
