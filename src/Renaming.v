@@ -840,4 +840,74 @@ Section Rename.
       + rewrite renameMapUnion.
         reflexivity.
   Qed.
+
+  Lemma renameInRulesAction m r a: In (r :: a)%struct (getRules (renameModules m)) ->
+                                   exists r' (a': Action Void),
+                                     r = rename r' /\
+                                     a type = renameAction (a' type) /\
+                                     In (r' :: a')%struct (getRules m).
+  Proof.
+    intros ina.
+    rewrite renameGetRules in *.
+    induction (getRules m); simpl in *.
+    - intuition.
+    - destruct a0; simpl in *.
+      destruct ina.
+      + inversion H; subst.
+        exists attrName; exists attrType.
+        repeat (constructor; try reflexivity).
+      + specialize (IHl H).
+        clear - IHl.
+        firstorder.
+  Qed.
+
+  Lemma renameInMethsAction m f: In f (getDefsBodies (renameModules m)) ->
+                                 exists f',
+                                   f = renameMeth f' /\
+                                   In f' (getDefsBodies m).
+  Proof.
+    rewrite renameGetMeths in *.
+    induction (getDefsBodies m); simpl in *; intros.
+    - intuition.
+    - destruct H.
+      + exists a; intuition.
+      + specialize (IHl H); firstorder.
+  Qed.
+
+  Lemma renameSubstepRev m' o' u l cs:
+    Substep (renameModules m') (renameMap o') u l cs ->
+    exists u' l' cs',
+      u = renameMap u' /\
+      l = renameUnitLabel l' /\
+      cs = renameMap cs' /\
+      Substep m' o' u' l' cs'.
+  Proof.
+    intros s.
+    dependent induction s; subst.
+    - repeat (econstructor; eauto);
+        try rewrite renameMapEmpty; reflexivity.
+    - exists (M.empty _).
+      exists (Meth None).
+      repeat (econstructor; eauto).
+      try rewrite renameMapEmpty; reflexivity.
+    - apply renameInRulesAction in HInRules.
+      dest; subst.
+      rewrite H0 in HAction.
+      apply renameSemActionRev in HAction.
+      dest; subst.
+      repeat (econstructor; eauto).
+      reflexivity.
+    - apply renameInMethsAction in HIn.
+      dest; subst.
+      destruct x; simpl in *.
+      apply renameSemActionRev in HAction.
+      dest; subst.
+      exists x.
+      exists (Meth (Some (attrName :: existT SignT (projT1 attrType) (argV, retV))%struct)).
+      exists x0.
+      intuition.
+      apply (SingleMeth m' (attrName :: attrType)%struct) in H2; simpl in *;
+        intuition.
+  Qed.
+
 End Rename.
