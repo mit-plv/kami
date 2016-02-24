@@ -1024,7 +1024,7 @@ Section Rename.
       apply (H0 H1 H2).
   Qed.
 
-  Lemma renameStepRev m' o' u l:
+  Lemma renameStepIndRev m' o' u l:
     StepInd (renameModules m') (renameMap o') u l ->
     exists u' l',
       u = renameMap u' /\
@@ -1041,5 +1041,123 @@ Section Rename.
     constructor.
     intuition.
     apply renameWellHiddenRev in HWellHidden; intuition.
+  Qed.
+
+  Lemma renameStepRev m' o' u l:
+    Step (renameModules m') (renameMap o') u l ->
+    exists u' l',
+      u = renameMap u' /\
+      l = renameLabel l' /\
+      Step m' o' u' l'.
+  Proof.
+    intros s.
+    apply step_consistent in s.
+    apply renameStepIndRev in s.
+    dest.
+    repeat (econstructor; eauto).
+    apply step_consistent; intuition.
+  Qed.
+
+  Lemma renameInitRegs m:
+    initRegs (getRegInits (renameModules m)) = renameMap (initRegs (getRegInits m)).
+  Proof.
+    rewrite renameGetRegInits.
+    remember (getRegInits m) as sth; clear m Heqsth.
+    induction sth.
+    + reflexivity.
+    + destruct a.
+      destruct attrType.
+      simpl.
+      rewrite IHsth.
+      rewrite renameMapAdd.
+      reflexivity.
+  Qed.
+
+  Lemma renameMultistep m' n l:
+    Multistep (renameModules m') (renameMap (initRegs (getRegInits m'))) n l ->
+    exists n' l',
+      n = renameMap n' /\
+      l = map renameLabel l' /\
+      Multistep m' (initRegs (getRegInits m')) n' l'.
+  Proof.
+    intros m.
+    dependent induction m.
+    - repeat (econstructor; eauto).
+      reflexivity.
+    - specialize (IHm rename1To1 JMeq_refl).
+      dest; subst.
+      apply renameStepRev in HStep.
+      dest; subst.
+      exists (M.union x1 x).
+      exists (x2 :: x0).
+      constructor.
+      rewrite renameMapUnion; intuition.
+      constructor.
+      reflexivity.
+      constructor; intuition.
+  Qed.
+
+  Lemma renameListLabel1To1 l1: forall l2,
+      map renameLabel l1 = map renameLabel l2 -> l1 = l2.
+  Proof.
+    induction l1; intros.
+    - destruct l2.
+      + reflexivity.
+      + discriminate.
+    - simpl in *.    
+      destruct l2.
+      + discriminate.
+      + inversion H; subst.
+        specialize (IHl1 _ H2); subst.
+        f_equal.
+        clear - H1 rename1To1.
+        destruct a, l.
+        simpl in *.
+        destruct annot, annot0; try destruct o0, o; inversion H1.
+        * apply rename1To1 in H0.
+          apply renameMapEq in H2.
+          apply renameMapEq in H3.
+          subst.
+          reflexivity.
+        * apply renameMapEq in H0.
+          apply renameMapEq in H2.
+          subst.
+          reflexivity.
+        * destruct o;
+            discriminate.
+        * destruct o; discriminate.
+        * apply renameMapEq in H0.
+          apply renameMapEq in H2.
+          subst; reflexivity.
+  Qed.
+    
+  Lemma renameBehavior m' n l:
+    Behavior (renameModules m') n l ->
+    exists n' l',
+      n = renameMap n' /\
+      l = map renameLabel l' /\
+      Behavior m' n' l'.
+  Proof.
+    intros b.
+    dependent induction b.
+    dependent induction HMultistepBeh.
+    repeat (econstructor; eauto).
+    - apply renameInitRegs.
+    - reflexivity.
+    - specialize (IHHMultistepBeh rename1To1).
+      dest; subst.
+      apply renameStepRev in HStep.
+      dest; subst.
+      rewrite <- renameMapUnion.
+      exists (M.union x1 x).
+      exists (x2 :: x0).
+      constructor; intuition.
+      rewrite renameInitRegs in *.
+      apply renameMultistep in HMultistepBeh.
+      dest; subst.
+      apply renameMapEq in H; subst.
+      apply renameListLabel1To1 in H0; subst.
+      constructor; intuition.
+      constructor; intuition.
   Qed.
 End Rename.
