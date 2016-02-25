@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics.
+Require Export SemanticsExprAction Semantics SemFacts.
 
 Set Implicit Arguments.
 
@@ -282,8 +282,23 @@ Section Consistency.
         M.Disj ccs rcs /\ M.Sub rds (M.union ccs rcs) /\
         cs = M.subtractKV signIsEq (M.union ccs rcs) rds.
   Proof.
-    induction 1; simpl; subst; intros.
-    - admit. (* call ext *)
+    induction 1; simpl; subst.
+    - destruct IHSemActionOp as [pcu [pccs [pru [prds [prcs ?]]]]]; dest; subst.
+      exists pcu.
+      exists (M.add meth (existT SignT s (evalExpr marg, mret)) pccs).
+      exists pru.
+      exists prds.
+      exists prcs.
+
+      repeat split; auto.
+
+      + econstructor; eauto.
+      + apply M.Disj_add_1; auto.
+        admit. (* ????? *)
+      + admit.
+      + apply substepsInd_defs_in in H1; simpl in H1.
+        meq; elim HNotIn; apply H1; findeq.
+
     - admit. (* call int *)
 
     - dest; subst.
@@ -362,20 +377,33 @@ Section Consistency.
         destruct HAction as [cu [ccs [ru [rds [rcs ?]]]]]; dest; subst.
 
         assert (Hf: ~ M.In f (M.union ccs rcs)).
-        { admit. (* map stuff *) }
+        { findeq.
+          { destruct f as [fn fb]; simpl in H.
+            elim HNotIn; eapply staticDynCallsMeths; eauto.
+            findeq.
+          }
+          { apply substepsInd_calls_in in H0; simpl in H0.
+            elim HNotIn; apply H0; findeq.
+          }
+        }
 
         eexists {| annot := None |}.
         split.
         2:(eapply SubstepsCons;
            [ exact H0
            | eapply SingleMeth; [exact HIn|exact H]
-           | repeat split; auto; admit (* map stuff *)
+           | repeat split; auto; simpl
            | reflexivity
            | simpl; f_equal]).
 
+        2:(specialize (H4 f); findeq;
+           specialize (H4 s eq_refl); rewrite H4 in Hf; auto).
+        
         unfold hide; simpl; f_equal.
-        * admit. (* map stuff *)
-        * admit. (* map stuff *)
+        * meq;
+          try (specialize (H4 y s (eq_sym Heqv));
+               findeq; elim n0; inv H4; auto).
+        * meq.
   Qed.
 
   Lemma substepsOp_implies_substepsInd:

@@ -1706,6 +1706,8 @@ Ltac mred :=
        destruct (string_dec y k);
        [subst; rewrite M.F.P.F.remove_eq_o|
         rewrite M.F.P.F.remove_neq_o by intuition auto]
+     | [ |- context [M.find _ (M.empty _)] ] =>
+       rewrite M.find_empty
      | [ |- context [M.union (M.empty _) _] ] =>
        rewrite M.union_empty_L
      | [ |- context [M.union _ (M.empty _)] ] =>

@@ -315,13 +315,24 @@ Section TwoModules.
       forall ob ub lb,
         M.Disj oa ob -> CanCombineUL ua ub la lb ->
         StepInd mb ob ub lb ->
-        StepInd (ConcatMod ma mb) (M.union oa ob) (M.union ua ub) (hide (mergeLabel la lb)).
+        StepInd (ConcatMod ma mb) (M.union oa ob) (M.union ua ub)
+                (hide (mergeLabel la lb)).
   Proof.
     intros; inv H; inv H2.
-    replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
+    replace (hide (mergeLabel (hide l) (hide l0)))
+    with (hide (mergeLabel l l0)).
     - constructor.
       + apply substepsInd_modular; auto.
         inv H1; constructor; auto.
+
+        inv H2; dest.
+        repeat split; auto.
+
+        * admit.
+        * 
+
+
+          
         admit. (* nontrivial *)
       + admit. (* nontrivial *)
     - inv H1; inv H2; dest.
