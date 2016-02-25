@@ -1369,11 +1369,11 @@ End MakeBijective1.
 (*
 Fixpoint bijective' dom c s :=
   match dom with
-    | x :: xs => if string_dec s x
-                 then (c ++ x)%string
-                 else if string_dec s (c ++ x)
-                      then x
-                      else bijective' xs c s
+    | x :: xs => match string_dec s x, string_dec s (c ++ x) with
+                   | left _, right _ => (c ++ x)%string
+                   | right _, left _ => x
+                   | _, _ => bijective' xs c s
+                 end
     | nil => s
   end.
 
@@ -1381,6 +1381,16 @@ Section MakeBijective2.
   Variable dom: list string.
   Variable c: string.
   Variable disjDomImg: forall i y, In i dom -> (c ++ y)%string <> i.
+  
+  Lemma bijectiveOne l: forall c s a, bijective' l c s = a -> s = a \/ s = (c ++ a)%string \/ (c ++ s)%string = a.
+  Proof.
+    induction l; intros.
+    - intuition.
+    - simpl in H.
+      destruct (string_dec s a); intros; subst; intuition.
+      destruct (string_dec a (c0 ++ a)); intros; try subst; intuition.
+      destruct (string_dec s (c0 ++ a)); intros; try subst; intuition.
+  Qed.
 
   Lemma bijectiveCorrect' s: bijective' dom c (bijective' dom c s) = s.
   Proof.
@@ -1392,6 +1402,72 @@ Section MakeBijective2.
        specialize (disjDomImg (i := i) y); intuition).
       specialize (IHl sth).
       simpl.
+      destruct (string_dec s a), (string_dec s (c ++ a)); intuition; repeat rewrite IHl.
+      + subst.
+        specialize (disjDomImg (i := a) a).
+        assert (st: In a (a :: l)) by intuition.
+        specialize (@disjDomImg st).
+        apply eq_sym in e0; intuition.
+      + subst.
+        destruct (string_dec (c ++ a) a).
+        intuition.
+        destruct (string_dec (c ++ a) (c ++ a)); intuition.
+      + destruct (string_dec a a); intuition.
+        destruct (string_dec a (c ++ a)).
+        specialize (disjDomImg (i := a) a).
+        assert (st: In a (a :: l)) by intuition.
+        specialize (@disjDomImg st).
+        apply eq_sym in e0; intuition.
+        intuition.
+      + remember (bijective' l c s) as b.
+        apply eq_sym in Heqb.
+        pose proof (bijectiveOne _ _ _ Heqb) as sth2.
+        destruct sth2 as [M1 |[ M2 | M3]]; try subst.
+        * destruct (string_dec b a).
+          rewrite M1 in *.
+          intuition.
+          destruct (string_dec b (c ++ a)).
+          rewrite e in *.
+          intuition.
+          intuition.
+        * destruct (string_dec b a).
+          rewrite M2 in *.
+          rewrite e in *.
+          intuition.
+          destruct (string_dec b (c ++ a)).
+          rewrite <- e in *.
+          admit.
+          intuition.
+        * 
+          subst.
+        apply bijectiveOne in Heqb.
+        destruct (string_dec b a); subst.
+        rewrite e.
+        destruct (string_dec a (c ++ a)); intuition.
+        apply bijectiveOne in e.
+        destruct e as [M1 | [M2 | M3]]; subst.
+        intuition.
+        intuition.
+        intui
+        admit.
+        remember (bijective' l c s) as b.
+        destruct (string_dec b (c ++ a)); subst; intuition.
+        admit.
+  Qed.
+        subst.
+        specialize (disjDomImg (i := a) a).
+        assert (st: In a (a :: l)) by intuition.
+        specialize (@disjDomImg st).
+        apply eq_sym in e0; intuition.
+        
+        
+        specialize (disjDomImg (i := a) a).
+        assert (st: In a (a :: l)) by intuition.
+        specialize (@disjDomImg st).
+        apply eq_sym in n. intuition.
+      + 
+        specialize (disjDomImg a).
+      fold (bijective' l c (bijective' l c s)).
       destruct (string_dec s a); subst.
       destruct (string_dec (c ++ a) (c ++ a)); subst.
       destruct (string_dec (c ++ a) a); intuition.
