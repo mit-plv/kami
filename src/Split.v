@@ -148,8 +148,7 @@ Section TwoModules.
           simpl in *; try (inv H9; discriminate);
             try (intuition auto; fail);
             try (f_equal; auto; fail).
-          
-  Admitted. (* NOTE: It works but takes some time *)
+  Qed.
 
   Lemma stepInd_split:
     forall o u l,
@@ -212,8 +211,7 @@ Section TwoModules.
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ WellHiddenSeq (ConcatMod ma mb) ls /\
-        ls = composeLabels lsa lsb.
+        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
   Proof.
     induction 1; simpl; intros; subst.
     - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
@@ -229,12 +227,12 @@ Section TwoModules.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       inv Hvr.
-      pose proof (validRegsModules_multistep_newregs_subset H8 H0 eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H11 H1 eq_refl).
-      pose proof (validRegsModules_step_newregs_subset H8 H3).
-      pose proof (validRegsModules_step_newregs_subset H11 H6).
+      pose proof (validRegsModules_multistep_newregs_subset H7 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H10 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H7 H3).
+      pose proof (validRegsModules_step_newregs_subset H10 H5).
 
-      inv H9; inv H10; dest.
+      inv H8; dest.
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
       repeat split; auto.
@@ -247,7 +245,7 @@ Section TwoModules.
         apply DisjList_comm; auto.
 
       + constructor; auto.
-        p_equal H6.
+        p_equal H5.
         unfold regsB; rewrite M.restrict_union.
         rewrite M.restrict_KeysSubset with (m:= sb); auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
@@ -258,7 +256,7 @@ Section TwoModules.
         * eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits mb)); eauto.
           apply DisjList_comm; auto.
 
-      + pose proof (M.DisjList_KeysSubset_Disj Hinit H12 H15).
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H11 H14).
         meq.
   Qed.
 
@@ -268,8 +266,7 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ WellHiddenSeq (ConcatMod ma mb) ls /\
-        ls = composeLabels lsa lsb.
+        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
@@ -316,6 +313,13 @@ Section TwoModules.
       + reflexivity.
   Qed.
 
+  Definition WellHiddenModular (ma mb: Modules) :=
+    forall la lb,
+      wellHidden ma (hide la) ->
+      wellHidden mb (hide lb) ->
+      wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
+  Hypothesis (Hwhm: WellHiddenModular ma mb).
+
   Lemma stepInd_modular:
     forall oa ua la,
       StepInd ma oa ua la ->
@@ -338,14 +342,15 @@ Section TwoModules.
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
     inv H1; inv H8; dest.
 
-    replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
-    - constructor.
-      + apply substepsInd_modular; auto.
-        constructor; auto.
-        repeat split; auto.
-      + rewrite hide_mergeLabel_idempotent by auto.
-        admit.
-    - apply hide_mergeLabel_idempotent; auto.
+    replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0))
+      by (apply hide_mergeLabel_idempotent; auto).
+    constructor.
+    - apply substepsInd_modular; auto.
+      constructor; auto.
+      repeat split; auto.
+    - replace (hide (mergeLabel l l0)) with (hide (mergeLabel (hide l) (hide l0)))
+        by (rewrite <-hide_mergeLabel_idempotent; auto).
+      apply Hwhm; rewrite <-hide_idempotent; auto.
   Qed.
 
   Lemma step_modular:

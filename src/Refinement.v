@@ -74,40 +74,61 @@ Section Facts.
     admit.
   Qed.
 
-  Lemma traceRefines_modular:
-    forall ma mb mc md p
-           (Hacdisj: DisjList (namesOf (getRegInits ma))
-                              (namesOf (getRegInits mc)))
-           (Hacval: ValidRegsModules type (ConcatMod ma mc))
-           (Hdisjregs: DisjList (namesOf (getRegInits mb))
-                                (namesOf (getRegInits md)))
-           (Hdisjdefs: DisjList (getDefs mb) (getDefs md))
-           (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
-           (Hbdval: ValidRegsModules type (ConcatMod mb md))
-           (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
-           (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
-                                 p (M.subtractKV signIsEq m1 m2))
-           (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
-                           CanCombineLabel),
+  Section Modularity.
+    Variables (ma mb mc md: Modules)
+              (p: MethsT -> MethsT).
+
+    Hypotheses (Hacdisj: DisjList (namesOf (getRegInits ma))
+                                  (namesOf (getRegInits mc)))
+               (Hacval: ValidRegsModules type (ConcatMod ma mc))
+               (Hdisjregs: DisjList (namesOf (getRegInits mb))
+                                    (namesOf (getRegInits md)))
+               (Hdisjdefs: DisjList (getDefs mb) (getDefs md))
+               (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
+               (Hbdval: ValidRegsModules type (ConcatMod mb md)).
+
+    Hypotheses (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
+               (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
+                                     p (M.subtractKV signIsEq m1 m2))
+               (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
+                               CanCombineLabel).
+
+    Definition NonInteracting (m1 m2: Modules) :=
+      DisjList (getDefs m1) (getCalls m2) /\
+      DisjList (getCalls m1) (getDefs m2).
+
+    Lemma nonInteracting_implies_wellHiddenModular:
+      forall m1 m2,
+        NonInteracting m1 m2 ->
+        WellHiddenModular m1 m2.
+    Proof.
+      admit.
+    Qed.
+
+    Lemma traceRefines_modular_noninteracting:
+      NonInteracting mb md ->
       traceRefines p ma mb ->
       traceRefines p mc md ->
       traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
-  Proof.
-    unfold traceRefines; intros.
-    apply behavior_split in H1; auto.
-    destruct H1 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
-    specialize (H _ _ H1).
-    destruct H as [sb [lsb [? ?]]].
-    specialize (H0 _ _ H2).
-    destruct H0 as [sd [lsd [? ?]]].
+    Proof.
+      unfold traceRefines; intros.
+      apply behavior_split in H2; auto.
+      destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
+      specialize (H0 _ _ H2).
+      destruct H0 as [sb [lsb [? ?]]].
+      specialize (H1 _ _ H3).
+      destruct H1 as [sd [lsd [? ?]]].
 
-    exists (M.union sb sd).
-    exists (composeLabels lsb lsd).
-    split; auto.
-    - apply behavior_modular; auto.
-      eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
-    - apply composeLabels_modular; auto.
-  Qed.
+      exists (M.union sb sd).
+      exists (composeLabels lsb lsd).
+      split; auto.
+      - apply behavior_modular; auto.
+        + apply nonInteracting_implies_wellHiddenModular; auto.
+        + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+      - apply composeLabels_modular; auto.
+    Qed.
+
+  End Modularity.
   
 End Facts.
 

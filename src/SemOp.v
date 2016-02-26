@@ -428,7 +428,8 @@ Section Consistency.
         pose proof (substepsInd_defs_in H4).
         pose proof (substepsInd_calls_in H4).
         eapply wellHidden_mergeLabel_hide; eauto.
-      + admit.
+      + inv H0; inv H3; dest.
+        
   Qed.
 
   Lemma stepOp_implies_Step:
