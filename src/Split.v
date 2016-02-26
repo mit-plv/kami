@@ -13,8 +13,10 @@ Fixpoint composeLabels (ls1 ls2: LabelSeqT) :=
 
 Section TwoModules.
   Variables (ma mb: Modules).
-  Hypothesis (Hinit: DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mb))).
-  Hypothesis (Hvr: ValidRegsModules type (ConcatMod ma mb)).
+  Hypotheses (Hinit: DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mb)))
+             (Hdefs: DisjList (getDefs ma) (getDefs mb))
+             (Hcalls: DisjList (getCalls ma) (getCalls mb))
+             (Hvr: ValidRegsModules type (ConcatMod ma mb)).
 
   Definition regsA (r: RegsT) := M.restrict r (namesOf (getRegInits ma)).
   Definition regsB (r: RegsT) := M.restrict r (namesOf (getRegInits mb)).
@@ -155,7 +157,8 @@ Section TwoModules.
       exists ua ub la lb,
         StepInd ma (regsA o) ua la /\ StepInd mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
-        CanCombineLabel la lb /\ l = hide (mergeLabel la lb).
+        CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
+        l = hide (mergeLabel la lb).
   Proof.
     induction 1; simpl; intros.
     pose proof (substepsInd_split HSubSteps)
@@ -181,7 +184,8 @@ Section TwoModules.
       with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
     - apply CanCombineLabel_hide; auto.
     - inv H3; dest.
-      apply hide_mergeLabel_idempotent; auto.
+      rewrite <-hide_mergeLabel_idempotent; auto.
+    - inv H3; rewrite <-hide_mergeLabel_idempotent; auto.
   Qed.
 
   Lemma step_split:
@@ -190,12 +194,13 @@ Section TwoModules.
       exists ua ub la lb,
         Step ma (regsA o) ua la /\ Step mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
-        CanCombineLabel la lb /\ l = hide (mergeLabel la lb).
+        CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
+        l = hide (mergeLabel la lb).
   Proof.
     intros; apply step_consistent in H.
     pose proof (stepInd_split H) as [ua [ub [la [lb ?]]]]; dest; subst.
     exists ua, ub, la, lb.
-    inv H4; dest.
+    inv H4; inv H5; dest.
     repeat split; auto; apply step_consistent; auto.
   Qed.
 
@@ -207,11 +212,12 @@ Section TwoModules.
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
+        CanCombineLabelSeq lsa lsb /\ WellHiddenSeq (ConcatMod ma mb) ls /\
+        ls = composeLabels lsa lsb.
   Proof.
     induction 1; simpl; intros; subst.
     - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
-      + eapply M.DisjList_KeysSubset_Disj; eauto;
+      + eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits ma)); eauto;
           unfold initRegs; apply makeMap_KeysSubset; auto.
       + subst; unfold initRegs; apply makeMap_union; auto.
 
@@ -223,12 +229,12 @@ Section TwoModules.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       inv Hvr.
-      pose proof (validRegsModules_multistep_newregs_subset H7 H0 eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H9 H1 eq_refl).
-      pose proof (validRegsModules_step_newregs_subset H7 H3).
-      pose proof (validRegsModules_step_newregs_subset H9 H5).
+      pose proof (validRegsModules_multistep_newregs_subset H8 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H11 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H8 H3).
+      pose proof (validRegsModules_step_newregs_subset H11 H6).
 
-      inv H8; dest.
+      inv H9; inv H10; dest.
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
       repeat split; auto.
@@ -241,7 +247,7 @@ Section TwoModules.
         apply DisjList_comm; auto.
 
       + constructor; auto.
-        p_equal H5.
+        p_equal H6.
         unfold regsB; rewrite M.restrict_union.
         rewrite M.restrict_KeysSubset with (m:= sb); auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
@@ -252,7 +258,7 @@ Section TwoModules.
         * eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits mb)); eauto.
           apply DisjList_comm; auto.
 
-      + pose proof (M.DisjList_KeysSubset_Disj Hinit H10 H13).
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H12 H15).
         meq.
   Qed.
 
@@ -262,7 +268,8 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
+        CanCombineLabelSeq lsa lsb /\ WellHiddenSeq (ConcatMod ma mb) ls /\
+        ls = composeLabels lsa lsb.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
@@ -319,24 +326,26 @@ Section TwoModules.
                 (hide (mergeLabel la lb)).
   Proof.
     intros; inv H; inv H2.
-    replace (hide (mergeLabel (hide l) (hide l0)))
-    with (hide (mergeLabel l l0)).
+
+    pose proof (substepsInd_defs_in HSubSteps).
+    pose proof (substepsInd_calls_in HSubSteps).
+    pose proof (substepsInd_defs_in HSubSteps0).
+    pose proof (substepsInd_calls_in HSubSteps0).
+
+    assert (M.Disj (defs l) (defs l0))
+      by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
+    assert (M.Disj (calls l) (calls l0))
+      by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
+    inv H1; inv H8; dest.
+
+    replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0)).
     - constructor.
       + apply substepsInd_modular; auto.
-        inv H1; constructor; auto.
-
-        inv H2; dest.
+        constructor; auto.
         repeat split; auto.
-
-        * admit.
-        * 
-
-
-          
-        admit. (* nontrivial *)
-      + admit. (* nontrivial *)
-    - inv H1; inv H2; dest.
-      apply hide_mergeLabel_idempotent; auto; admit.
+      + rewrite hide_mergeLabel_idempotent by auto.
+        admit.
+    - apply hide_mergeLabel_idempotent; auto.
   Qed.
 
   Lemma step_modular:
@@ -388,9 +397,9 @@ Section TwoModules.
       inv H0; dest.
       constructor; eauto.
       apply step_modular; auto.
-      + eapply M.DisjList_KeysSubset_Disj; eauto.
+      + eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits ma)); eauto.
       + repeat split; auto.
-        eapply M.DisjList_KeysSubset_Disj; eauto.
+        eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits ma)); eauto.
   Qed.
 
   Lemma behavior_modular:

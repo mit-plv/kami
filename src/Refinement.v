@@ -79,8 +79,10 @@ Section Facts.
            (Hacdisj: DisjList (namesOf (getRegInits ma))
                               (namesOf (getRegInits mc)))
            (Hacval: ValidRegsModules type (ConcatMod ma mc))
-           (Hbddisj: DisjList (namesOf (getRegInits mb))
-                              (namesOf (getRegInits md)))
+           (Hdisjregs: DisjList (namesOf (getRegInits mb))
+                                (namesOf (getRegInits md)))
+           (Hdisjdefs: DisjList (getDefs mb) (getDefs md))
+           (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
            (Hbdval: ValidRegsModules type (ConcatMod mb md))
            (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
            (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =

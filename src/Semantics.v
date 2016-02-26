@@ -369,6 +369,12 @@ Fixpoint CanCombineLabelSeq (ll1 ll2: list LabelT) :=
   | _, _ => False (* forces the same length *)
   end.
 
+Fixpoint WellHiddenSeq m (ls: LabelSeqT) :=
+  match ls with
+  | nil => True
+  | l :: ls' => wellHidden m l /\ WellHiddenSeq m ls'
+  end.
+
 Definition equivalentLabel p l1 l2 :=
   p (defs l1) = defs l2 /\
   p (calls l1) = calls l2 /\
