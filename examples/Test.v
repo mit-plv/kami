@@ -56,39 +56,27 @@ Section SemOpTest.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
     intros; exists u; split; auto.
 
-    apply stepOp_consistent; auto.
-    apply stepOp_consistent in H.
+    apply step_implies_StepOp in H.
 
     (* decomposition condition like this? *)
     assert (forall o nu nl,
                SubstepOp (ConcatMod ma mb) o nu nl ->
-               SubstepOp mc o nu nl).
+               SubstepsInd mc o nu nl).
     { clear; intros.
       inv H; try (constructor; fail).
+
+      - eapply SubstepsCons.
+        + apply SubstepsNil.
+        + apply EmptyRule.
+        + repeat split; auto.
+        + meq.
+        + reflexivity.
 
       - inv HInRules; [|inv H].
         inv H.
 
-        eapply SSSRule; [left; reflexivity|].
-
-        invertActionOp HAction.
-        inv HAction; [|dest; elim H; left; auto].
-        inv H; dest.
-        inv H; [|intuition].
-        inv H7; simpl in *.
-        invertActionOpRep.
-
-        assert (x5 = eq_refl) by apply UIP; subst; simpl.
-        econstructor.
-        + instantiate (1:= M.add "a"%string (existT (fullType type) (SyntaxKind Bool) x1)
-                                 (M.empty (sigT (fullType type)))).
-          meq.
-        + econstructor; eauto.
-          econstructor.
-          * instantiate (1:= M.empty (sigT (fullType type))).
-            meq.
-          * econstructor; eauto.
-
+        admit.
+        
       - exfalso; simpl in *.
         inv HIn; simpl in *; intuition.
     }

@@ -315,6 +315,10 @@ Section TwoModules.
 
   Definition WellHiddenModular (ma mb: Modules) :=
     forall la lb,
+      M.KeysSubset (defs la) (getDefs ma) ->
+      M.KeysSubset (calls la) (getCalls ma) ->
+      M.KeysSubset (defs lb) (getDefs mb) ->
+      M.KeysSubset (calls lb) (getCalls mb) ->
       wellHidden ma (hide la) ->
       wellHidden mb (hide lb) ->
       wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
@@ -348,9 +352,7 @@ Section TwoModules.
     - apply substepsInd_modular; auto.
       constructor; auto.
       repeat split; auto.
-    - replace (hide (mergeLabel l l0)) with (hide (mergeLabel (hide l) (hide l0)))
-        by (rewrite <-hide_mergeLabel_idempotent; auto).
-      apply Hwhm; rewrite <-hide_idempotent; auto.
+    - apply Hwhm; auto.
   Qed.
 
   Lemma step_modular:

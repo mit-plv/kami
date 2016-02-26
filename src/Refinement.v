@@ -74,9 +74,39 @@ Section Facts.
     admit.
   Qed.
 
+  Definition NonInteracting (m1 m2: Modules) :=
+    DisjList (getDefs m1) (getCalls m2) /\
+    DisjList (getCalls m1) (getDefs m2).
+
+  Lemma nonInteracting_implies_wellHiddenModular:
+    forall ma mb,
+      NonInteracting ma mb ->
+      WellHiddenModular ma mb.
+  Proof.
+    unfold NonInteracting, WellHiddenModular, wellHidden; intros; dest.
+    destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl in *.
+    admit. (* TODO: think it's correct *)
+  Qed.
+
+  Definition Interacting (m1 m2: Modules)
+             (vp: M.key -> sigT SignT -> option (sigT SignT)) :=
+    (forall k, In k (getCalls m1) -> ~ In k (getDefs m2) ->
+               forall v, vp k v = Some v) /\
+    (forall k, In k (getCalls m2) -> ~ In k (getDefs m1) ->
+               forall v, vp k v = Some v).
+
+  Lemma interacting_implies_wellHiddenModular:
+    forall ma mb vp,
+      Interacting ma mb vp ->
+      WellHiddenModular ma mb.
+  Proof.
+    unfold Interacting, WellHiddenModular, wellHidden; intros; dest.
+    destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl in *.
+    admit. (* TODO: correct? *)
+  Qed.
+
   Section Modularity.
-    Variables (ma mb mc md: Modules)
-              (p: MethsT -> MethsT).
+    Variables (ma mb mc md: Modules).
 
     Hypotheses (Hacdisj: DisjList (namesOf (getRegInits ma))
                                   (namesOf (getRegInits mc)))
@@ -87,46 +117,69 @@ Section Facts.
                (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
                (Hbdval: ValidRegsModules type (ConcatMod mb md)).
 
-    Hypotheses (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
-               (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
-                                     p (M.subtractKV signIsEq m1 m2))
-               (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
-                               CanCombineLabel).
+    Section NonInteracting.
+      Variable (p: MethsT -> MethsT).
 
-    Definition NonInteracting (m1 m2: Modules) :=
-      DisjList (getDefs m1) (getCalls m2) /\
-      DisjList (getCalls m1) (getDefs m2).
+      Hypotheses (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
+                 (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
+                                       p (M.subtractKV signIsEq m1 m2))
+                 (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
+                                 CanCombineLabel).
 
-    Lemma nonInteracting_implies_wellHiddenModular:
-      forall m1 m2,
-        NonInteracting m1 m2 ->
-        WellHiddenModular m1 m2.
-    Proof.
-      admit.
-    Qed.
+      Lemma traceRefines_modular_noninteracting:
+        NonInteracting mb md ->
+        traceRefines p ma mb ->
+        traceRefines p mc md ->
+        traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
+      Proof.
+        unfold traceRefines; intros.
+        apply behavior_split in H2; auto.
+        destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
+        specialize (H0 _ _ H2).
+        destruct H0 as [sb [lsb [? ?]]].
+        specialize (H1 _ _ H3).
+        destruct H1 as [sd [lsd [? ?]]].
 
-    Lemma traceRefines_modular_noninteracting:
-      NonInteracting mb md ->
-      traceRefines p ma mb ->
-      traceRefines p mc md ->
-      traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
-    Proof.
-      unfold traceRefines; intros.
-      apply behavior_split in H2; auto.
-      destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
-      specialize (H0 _ _ H2).
-      destruct H0 as [sb [lsb [? ?]]].
-      specialize (H1 _ _ H3).
-      destruct H1 as [sd [lsd [? ?]]].
+        exists (M.union sb sd).
+        exists (composeLabels lsb lsd).
+        split; auto.
+        - apply behavior_modular; auto.
+          + apply nonInteracting_implies_wellHiddenModular; auto.
+          + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+        - apply composeLabels_modular; auto.
+      Qed.
 
-      exists (M.union sb sd).
-      exists (composeLabels lsb lsd).
-      split; auto.
-      - apply behavior_modular; auto.
-        + apply nonInteracting_implies_wellHiddenModular; auto.
-        + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
-      - apply composeLabels_modular; auto.
-    Qed.
+    End NonInteracting.
+
+    Section Interacting.
+      Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
+
+      Lemma traceRefines_modular_interacting:
+        Interacting mb md vp ->
+        traceRefines (liftToMap1 vp) ma mb ->
+        traceRefines (liftToMap1 vp) mc md ->
+        traceRefines id (ConcatMod ma mc) (ConcatMod mb md).
+      Proof.
+        unfold traceRefines; intros.
+        apply behavior_split in H2; auto.
+        destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
+        specialize (H0 _ _ H2).
+        destruct H0 as [sb [lsb [? ?]]].
+        specialize (H1 _ _ H3).
+        destruct H1 as [sd [lsd [? ?]]].
+
+        exists (M.union sb sd).
+        exists (composeLabels lsb lsd).
+        split; auto.
+        - apply behavior_modular; auto.
+          + eapply interacting_implies_wellHiddenModular; eauto.
+          + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+            admit. (* true; easy *)
+        - apply composeLabels_modular; auto;
+            admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
+      Qed.
+
+    End Interacting.
 
   End Modularity.
   

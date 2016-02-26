@@ -225,8 +225,7 @@ Ltac invertActionOpRep :=
       (remember c as ic; destruct ic; dest; subst)
     end.
 
-Section Consistency.
-
+Section Facts.
   Variable m: Modules.
 
   Lemma semActionOp_calls:
@@ -272,184 +271,28 @@ Section Consistency.
       M.KeysDisj (calls l) (getDefs m).
   Proof. induction 1; eapply substepsOp_calls; eauto. Qed.
 
-  Lemma semActionOp_implies_substepsInd:
-    forall o {retT} (a: ActionT type retT) u cs retv,
-      SemActionOp m o a u cs retv ->
-      exists cu ccs ru rds rcs,
-        SemAction o a cu ccs retv /\
-        SubstepsInd m o ru {| annot:= None; defs:= rds; calls:= rcs |}  /\
-        M.Disj cu ru /\ u = M.union ru cu /\
-        M.Disj ccs rcs /\ M.Sub rds (M.union ccs rcs) /\
-        cs = M.subtractKV signIsEq (M.union ccs rcs) rds.
+End Facts.
+
+Section Consistency.
+  Variable m: Modules.
+
+  Lemma substepsInd_implies_substepOp:
+    forall o u l,
+      SubstepsInd m o u l ->
+      wellHidden m (hide l) ->
+      SubstepsOp m o u (hide l).
   Proof.
-    induction 1; simpl; subst.
-    - destruct IHSemActionOp as [pcu [pccs [pru [prds [prcs ?]]]]]; dest; subst.
-      exists pcu.
-      exists (M.add meth (existT SignT s (evalExpr marg, mret)) pccs).
-      exists pru.
-      exists prds.
-      exists prcs.
-
-      repeat split; auto.
-
-      + econstructor; eauto.
-      + apply M.Disj_add_1; auto.
-        admit. (* ????? *)
-      + admit.
-      + apply substepsInd_defs_in in H1; simpl in H1.
-        meq; elim HNotIn; apply H1; findeq.
-
-    - admit. (* call int *)
-
-    - dest; subst.
-      repeat eexists; eauto.
-      econstructor; eauto.
-
-    - dest; subst.
-      repeat eexists; eauto.
-      econstructor; eauto.
-
-    - dest; subst.
-      repeat eexists.
-      + econstructor; eauto.
-      + eauto.
-      + admit. (* write register problem *)
-      + admit. (* write regsiter problem *)
-      + auto.
-      + auto.
-
-    - admit.
-    - admit.
-
-    - dest; subst.
-      repeat eexists; eauto.
-      econstructor; eauto.
-
-    - repeat eexists; eauto; [econstructor; eauto|apply SubstepsNil| | | | |]; auto.
-      mred; unfold M.Sub; auto.
+    induction 1; simpl; intros; subst; [apply SSSNil|].
+    admit.
   Qed.
 
-  Lemma substepOp_implies_substepsInd:
+  Lemma step_implies_StepOp:
     forall o u l,
-      SubstepOp m o u l ->
-      wellHidden m l /\
-      exists ol, l = hide ol /\ SubstepsInd m o u ol.
+      Step m o u l -> StepOp m o u l.
   Proof.
-    induction 1.
-    - repeat split.
-      + apply M.KeysDisj_empty.
-      + apply M.KeysDisj_empty.
-      + exists emptyRuleLabel; repeat split; auto.
-        eapply SubstepsCons.
-        * apply SubstepsNil.
-        * apply EmptyRule.
-        * repeat split; auto.
-        * meq.
-        * reflexivity.
-    - repeat split.
-      + apply M.KeysDisj_empty.
-      + apply M.KeysDisj_empty.
-      + exists emptyMethLabel; repeat split; auto.
-        constructor.
-    - repeat split; simpl.
-      + apply M.KeysDisj_empty.
-      + simpl; eapply semActionOp_calls; eauto.
-        exact HAction.
-      + apply semActionOp_implies_substepsInd in HAction.
-        destruct HAction as [cu [ccs [ru [rds [rcs ?]]]]]; dest; subst.
-        eexists {| annot := Some (Some k) |}.
-        split.
-        2:(eapply SubstepsCons;
-           [ exact H0
-           | eapply SingleRule; [exact HInRules|exact H]
-           | repeat split; auto
-           | reflexivity
-           | simpl; f_equal]).
-
-        unfold hide; simpl; f_equal.
-        mred; rewrite M.subtractKV_sub_empty; auto.
-
-    - repeat split; simpl.
-      + simpl; apply M.KeysDisj_add; auto.
-        apply M.KeysDisj_empty.
-      + simpl; eapply semActionOp_calls; eauto.
-      + apply semActionOp_implies_substepsInd in HAction.
-        destruct HAction as [cu [ccs [ru [rds [rcs ?]]]]]; dest; subst.
-
-        assert (Hf: ~ M.In f (M.union ccs rcs)).
-        { findeq.
-          { destruct f as [fn fb]; simpl in H.
-            elim HNotIn; eapply staticDynCallsMeths; eauto.
-            findeq.
-          }
-          { apply substepsInd_calls_in in H0; simpl in H0.
-            elim HNotIn; apply H0; findeq.
-          }
-        }
-
-        eexists {| annot := None |}.
-        split.
-        2:(eapply SubstepsCons;
-           [ exact H0
-           | eapply SingleMeth; [exact HIn|exact H]
-           | repeat split; auto; simpl
-           | reflexivity
-           | simpl; f_equal]).
-
-        2:(specialize (H4 f); findeq;
-           specialize (H4 s eq_refl); rewrite H4 in Hf; auto).
-        
-        unfold hide; simpl; f_equal.
-        * meq;
-          try (specialize (H4 y s (eq_sym Heqv));
-               findeq; elim n0; inv H4; auto).
-        * meq.
-  Qed.
-
-  Lemma substepsOp_implies_substepsInd:
-    forall o u l,
-      SubstepsOp m o u l ->
-      wellHidden m l /\
-      exists ol, l = hide ol /\ SubstepsInd m o u ol.
-  Proof.
-    induction 1;
-      [repeat split; try apply M.KeysDisj_empty;
-       exists emptyMethLabel; repeat split; try (constructor; auto; fail)|].
-
-    clear H.
-    apply substepOp_implies_substepsInd in H1.
-    destruct H1 as [? [sol ?]], IHSubstepsOp as [? [pol ?]]; dest; subst.
-
-    split.
-    - apply wellHidden_combine; auto.
-    - exists (mergeLabel sol pol); split.
-      + pose proof (substepsInd_defs_in H5).
-        pose proof (substepsInd_calls_in H5).
-        pose proof (substepsInd_defs_in H4).
-        pose proof (substepsInd_calls_in H4).
-        eapply wellHidden_mergeLabel_hide; eauto.
-      + inv H0; inv H3; dest.
-        
-  Qed.
-
-  Lemma stepOp_implies_Step:
-    forall o u l,
-      StepOp m o u l -> Step m o u l.
-  Proof.
-    intros; inv H.
-    apply step_consistent.
-    apply substepsOp_implies_substepsInd in HSubSteps.
-    dest; subst.
-    constructor; auto.
-  Qed.
-
-  Lemma stepOp_consistent:
-    forall o u l,
-      StepOp m o u l <-> Step m o u l.
-  Proof.
-    intros; split; intros.
-    - apply stepOp_implies_Step; auto.
-    - admit.
+    intros; apply step_consistent in H; inv H.
+    constructor.
+    apply substepsInd_implies_substepOp; auto.
   Qed.
     
 End Consistency.
