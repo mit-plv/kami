@@ -974,3 +974,12 @@ Proof.
     destruct ann as [[|]|]; auto.
 Qed.
 
+Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
+
+Ltac inlineL :=
+  match goal with
+  | [ |- traceRefines _ ?lm _ ] =>
+    apply traceRefines_trans with (mb:= fst (inlineF lm));
+    [apply inlineF_refines; auto|]
+  end.
+

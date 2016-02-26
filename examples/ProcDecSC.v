@@ -37,31 +37,10 @@ Section Instantiation.
       In (vars (a1, a2)) G ->
       Equiv.ExprEquiv G #(dec (fullType typeUT) st1 a1)%kami #(dec (fullType type) st2 a2)%kami.
   Hint Immediate Hdec.
-
-  Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
-
-  Ltac equiv_tac :=
-    repeat
-      match goal with
-      | [ |- ModEquiv _ _ _ ] => constructor; intros
-      | [ |- RulesEquiv _ _ _ ] => constructor; intros
-      | [ |- MethsEquiv _ _ _ ] => constructor; intros
-      | [ |- ActionEquiv _ _ _ ] => constructor; intros
-      | [ |- ExprEquiv _ _ _ ] => constructor; intros
-      | [ |- In _ _ ] => simpl; tauto
-      end.
-  (* Hint Extern 1 (ModEquiv _ _ _) => equiv_tac. *)
-
-  Ltac apply_inline :=
-    match goal with
-    | [ |- traceRefines _ ?lm _ ] =>
-      apply traceRefines_trans with (mb:= fst (inlineF lm));
-      [apply inlineF_refines; auto|]
-    end.
   
   Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
   Proof.
-    apply_inline.
+    inlineL.
 
     - admit.
 

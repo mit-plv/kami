@@ -236,19 +236,14 @@ Section Facts.
 
 End Facts.
 
-(* Require Import Semantics. *)
-(* Require Import Program.Equality. *)
-(* Goal (forall (a: Action Void), ActionEquiv nil (a type) (a typeUT)). *)
-(* Proof. *)
-(*   intros. *)
-(*   remember (a type) as aType; remember (a typeUT) as aTypeUT. *)
-(*   dependent induction aType. *)
-(*   - *)
-(*     assert (forall (t: type (ret s)), *)
-(*                ActionEquiv nil (a0 t) aTypeUT). *)
-(*     intros. *)
-(*     specialize (H t _ eq_refl JMeq_refl). *)
+Ltac equiv_tac :=
+  repeat
+    match goal with
+    | [ |- ModEquiv _ _ _ ] => constructor; intros
+    | [ |- RulesEquiv _ _ _ ] => constructor; intros
+    | [ |- MethsEquiv _ _ _ ] => constructor; intros
+    | [ |- ActionEquiv _ _ _ ] => constructor; intros
+    | [ |- ExprEquiv _ _ _ ] => constructor; intros
+    | [ |- In _ _ ] => simpl; tauto
+    end.
 
-(*     dependent induction aTypeUT. *)
-(*     specialize (H _ _ eq_refl JMeq_refl). *)
-(*     subst. *)

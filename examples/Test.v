@@ -49,43 +49,6 @@ Definition mc := MODULE {
 
 Require Import Program.Equality.
 
-Section SemOpTest.
-
-  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
-  Proof.
-    intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
-    intros; exists u; split; auto.
-
-    apply step_implies_StepOp in H.
-
-    (* decomposition condition like this? *)
-    assert (forall o nu nl,
-               SubstepOp (ConcatMod ma mb) o nu nl ->
-               SubstepsInd mc o nu nl).
-    { clear; intros.
-      inv H; try (constructor; fail).
-
-      - eapply SubstepsCons.
-        + apply SubstepsNil.
-        + apply EmptyRule.
-        + repeat split; auto.
-        + meq.
-        + reflexivity.
-
-      - inv HInRules; [|inv H].
-        inv H.
-
-        admit.
-        
-      - exfalso; simpl in *.
-        inv HIn; simpl in *; intuition.
-    }
-
-    admit.
-  Qed.
-
-End SemOpTest.
-
 Section Tests.
 
   Definition theta : RegsT -> RegsT := id.
@@ -129,38 +92,51 @@ Section Tests.
     inv HIn.
   Defined.
 
-  Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
-
-  Ltac equiv_tac :=
-    repeat
-      match goal with
-      | [ |- ModEquiv _ _ _ ] => constructor; intros
-      | [ |- RulesEquiv _ _ _ ] => constructor; intros
-      | [ |- MethsEquiv _ _ _ ] => constructor; intros
-      | [ |- ActionEquiv _ _ _ ] => constructor; intros
-      | [ |- ExprEquiv _ _ _ ] => constructor; intros
-      | [ |- In _ _ ] => simpl; tauto
-      end.
-  Hint Extern 1 (ModEquiv _ _ _) => equiv_tac.
-
-  Ltac apply_inline :=
-    match goal with
-    | [ |- traceRefines _ ?lm _ ] =>
-      apply traceRefines_trans with (mb:= fst (inlineF lm));
-      [apply inlineF_refines; auto|]
-    end.
-
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    apply_inline.
-
-    eapply decomposition with (theta:= id)
-                                (ruleMap:= fun _ r => Some r)
-                                (substepRuleMap:= HssRuleMap)
-                                (substepMethMap:= HssMethMap); auto.
-    intros.
+    inlineL.
+    equiv_tac.
+    decomposeT (id (A:= RegsT))
+               (fun (r: RegsT) (rl: string) => Some rl)
+               HssRuleMap HssMethMap.
     admit. (* do we really have to prove this for each instance? *)
   Qed.
   
 End Tests.
 
+Section SemOpTest.
+
+  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Proof.
+    intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
+    intros; exists u; split; auto.
+
+    apply step_implies_StepOp in H.
+
+    (* decomposition condition like this? *)
+    assert (forall o nu nl,
+               SubstepOp (ConcatMod ma mb) o nu nl ->
+               SubstepsInd mc o nu nl).
+    { clear; intros.
+      inv H; try (constructor; fail).
+
+      - eapply SubstepsCons.
+        + apply SubstepsNil.
+        + apply EmptyRule.
+        + repeat split; auto.
+        + meq.
+        + reflexivity.
+
+      - inv HInRules; [|inv H].
+        inv H.
+
+        admit.
+        
+      - exfalso; simpl in *.
+        inv HIn; simpl in *; intuition.
+    }
+
+    admit.
+  Qed.
+
+End SemOpTest.
