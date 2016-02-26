@@ -1701,6 +1701,12 @@ Ltac mred :=
        rewrite M.find_add_2 in H by auto
      | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
        rewrite M.restrict_in_find in H2 by auto
+     | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
+       rewrite M.subtractKV_find in H
+     | [H: context [if ?c then _ else _] |- _] =>
+       match type of c with
+       | {_ = _} + {_ <> _} => destruct c; [subst|]
+       end
      (* goal reduction *)
      | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
        destruct (string_dec y k);

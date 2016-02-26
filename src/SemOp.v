@@ -421,11 +421,14 @@ Section Consistency.
     destruct H1 as [? [sol ?]], IHSubstepsOp as [? [pol ?]]; dest; subst.
 
     split.
-    - admit. (* nontrivial *)
-    - exists (mergeLabel pol sol); split.
-      + inv H0; inv H3; dest.
-        admit. (* nontrivial *)
-      + admit. (* nontrivial *)
+    - apply wellHidden_combine; auto.
+    - exists (mergeLabel sol pol); split.
+      + pose proof (substepsInd_defs_in H5).
+        pose proof (substepsInd_calls_in H5).
+        pose proof (substepsInd_defs_in H4).
+        pose proof (substepsInd_calls_in H4).
+        eapply wellHidden_mergeLabel_hide; eauto.
+      + admit.
   Qed.
 
   Lemma stepOp_implies_Step:

@@ -48,6 +48,58 @@ Proof.
   simpl in *.
   unfold hide; simpl; f_equal; meq.
 Qed.
+
+Lemma wellHidden_combine:
+  forall m la lb,
+    wellHidden m la ->
+    wellHidden m lb ->
+    wellHidden m (mergeLabel la lb).
+Proof.
+  intros.
+  destruct la as [anna dsa csa], lb as [annb dsb csb].
+  unfold wellHidden in *; simpl in *; dest.
+  split; unfold M.KeysDisj in *; intros.
+  - specialize (H k H3); specialize (H0 k H3); findeq.
+  - specialize (H2 k H3); specialize (H1 k H3); findeq.
+Qed.
+
+Lemma wellHidden_mergeLabel_hide:
+  forall m la lb,
+    wellHidden m (hide la) ->
+    wellHidden m (hide lb) ->
+    M.KeysSubset (defs la) (getDefs m) ->
+    M.KeysSubset (calls la) (getCalls m) ->
+    M.KeysSubset (defs lb) (getDefs m) ->
+    M.KeysSubset (calls lb) (getCalls m) ->
+    mergeLabel (hide la) (hide lb) = hide (mergeLabel la lb).
+Proof.
+  intros; destruct la as [anna dsa csa], lb as [annb dsb csb].
+  unfold hide, wellHidden in *; simpl in *; dest.
+  unfold M.KeysDisj, M.KeysSubset in *.
+  f_equal.
+
+  - meq; repeat
+           match goal with
+           | [H: forall _, _ |- _] => specialize (H y)
+           end.
+    + elim H0; [apply H4; findeq|findeq].
+    + elim H0; [apply H2; findeq|findeq].
+    + elim H; [apply H4; findeq|findeq].
+    + elim H6; [apply H3; findeq|findeq].
+    + elim H6; [apply H3; findeq|findeq].
+    + elim H6; [apply H3; findeq|findeq].
+
+  - meq; repeat
+           match goal with
+           | [H: forall _, _ |- _] => specialize (H y)
+           end.
+    + elim H0; [apply H4; findeq|findeq].
+    + elim H5; [apply H1; findeq|findeq].
+    + elim H6; [apply H3; findeq|findeq].
+    + elim H; [apply H4; findeq|findeq].
+    + elim H; [apply H4; findeq|findeq].
+    + elim H; [apply H4; findeq|findeq].
+Qed.
    
 Lemma CanCombineLabel_hide:
   forall la lb,
