@@ -147,26 +147,110 @@ Section SemOpTest.
 
   Definition bijMaMb := makeBijective (ConcatMod ma mb) ("s" ++ "-").
   
-  Ltac bijective :=
-    apply bijectiveCorrect; auto;
+  Definition bij x := makeBijective mc ("-" ++ x ++ "-").
+
+  Lemma prependSame: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
+  Proof.
+    induction x; intros.
+    - intuition.
+    - inversion H.
+      intuition.
+  Qed.
+
+  Lemma prependNoDup x : forall ls, NoDup ls ->
+                                    NoDup (map (fun s => (x ++ s)%string) ls).
+  Proof.
+    induction ls; intros; simpl in *.
+    - intuition.
+    - inversion H; subst.
+      specialize (IHls H3).
+      constructor; auto.
+      clear - H2.
+      dependent induction ls; intros.
+      + intuition.
+      + unfold not; intros.
+        simpl in *.
+        assert (sth1: a0 <> a) by intuition.
+        assert (sth2: ~ In a ls) by intuition.
+        specialize (IHls sth2).
+        destruct H.
+        * assert (sth: a0 = a) by (apply (prependSame x); intuition).
+          intuition.
+        * intuition.
+  Qed.
+
+  Lemma prependCons x: forall a y, (x ++ String a y)%string =
+                                   ((x ++ String a "")%string ++ y)%string.
+  Proof.
+    simpl.
+    induction x; intros; simpl in *.
+    - intuition.
+    - f_equal; intuition.
+  Qed.
+
+  Lemma lengthApp x: forall y, String.length (x ++ y)%string =
+                               String.length x + String.length y.
+  Proof.
+    induction x; intros; simpl in *.
+    - reflexivity.
+    - f_equal; intuition.
+  Qed.
+      
+  Lemma prependNil x: forall i, i = (x ++ i)%string -> x = ""%string.
+  Proof.
+    intros.
+    assert (sth: String.length (x ++ i0)%string = String.length i0) by
+        (f_equal; intuition).
+    rewrite lengthApp in sth.
+    assert (final: String.length x = 0) by omega.
+    clear - final.
+    induction x.
+    - intuition.
+    - discriminate.
+  Qed.
+
+  (*
+  Lemma prependNonnilNoteq x: x <> ""%string -> forall i, (x ++ i)%string <> i.
+  Proof.
+    intros.
+    unfold not; intros.
+    ap
+    apply prependNil in H0.
+    intuition.
+  Qed. *)
+
+  Lemma strRename a x y: String a (x ++ y)%string = ((String a x) ++ y)%string.
+  Proof.
+    reflexivity.
+  Qed.
+
+  Ltac bijectiveFinish :=
+    apply bijectiveCorrect;
+    try apply prependNoDup;
     repeat unfold not, getNames, getPrepNames;
     repeat unfold getRegInits, getRules, getDefs, getDefsBodies;
-    simpl in *;
     intros;
-    dest;
+    simpl in *; dest; auto;
+    repeat rewrite strRename in *;
     repeat match goal with
-           | H: _ \/ _ |- _ => destruct H
-           end; subst;
-      try discriminate; intuition.
-
+           | H: _ \/ _ |- _ => destruct H; subst
+           | H: _ = (_ ++ _)%string |- _ =>
+             apply prependNil in H; apply eq_sym in H
+           end; simpl in *; try discriminate; intuition.
+  
+  Lemma bijCorrect x s: bij x (bij x s) = s.
+  Proof.
+    bijectiveFinish.
+  Qed.
+    
   Lemma bijMaMbCorrect s: bijMaMb (bijMaMb s) = s.
-    bijective.
+    bijectiveFinish.
   Qed.
 
   Definition bijMc := makeBijective mc ("s" ++ "-").
   
   Lemma bijMcCorrect s: bijMc (bijMc s) = s.
-    bijective.
+    bijectiveFinish.
   Qed.
 
   Lemma renameTR:
