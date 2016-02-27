@@ -139,4 +139,44 @@ Section SemOpTest.
     admit.
   Qed.
 
+  Definition getNames m := namesOf (getRegInits m) ++ namesOf (getRules m) ++ getDefs m.
+  Definition getPrepNames m s := map (fun x => (s ++ x)%string) (getNames m).
+
+  Require Import Renaming.
+  Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
+
+  Definition bijMaMb (s: string) := makeBijective (ConcatMod ma mb) ("s" ++ "-").
+  
+  Ltac bijective :=
+    apply bijectiveCorrect; auto;
+    repeat unfold not, getNames, getPrepNames;
+    repeat unfold getRegInits, getRules, getDefs, getDefsBodies;
+    simpl in *;
+    intros;
+    dest;
+    repeat match goal with
+           | H: _ \/ _ |- _ => destruct H
+           end; subst;
+      try discriminate; intuition.
+
+  Lemma bijMaMbCorrect x s: bijMaMb x (bijMaMb x s) = s.
+    bijective.
+  Qed.
+
+  Definition bijMc (s: string) := makeBijective mc ("s" ++ "-").
+  
+  Lemma bijMcCorrect x s: bijMc x (bijMc x s) = s.
+    bijective.
+  Qed.
+
+  Lemma renameTR x:
+    traceRefines
+      (liftPRename (bijMaMb x) (bijMc x) (liftToMap1 (@idElementwise _)))
+      (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
+  Proof.
+    apply renameTheorem'.
+    - apply bijMcCorrect.
+    - apply bijMcCorrect.
+    - apply mab_mc2.
+  Qed.
 End SemOpTest.
