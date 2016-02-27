@@ -145,7 +145,7 @@ Section SemOpTest.
   Require Import Renaming.
   Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
 
-  Definition bijMaMb (s: string) := makeBijective (ConcatMod ma mb) ("s" ++ "-").
+  Definition bijMaMb := makeBijective (ConcatMod ma mb) ("s" ++ "-").
   
   Ltac bijective :=
     apply bijectiveCorrect; auto;
@@ -159,20 +159,20 @@ Section SemOpTest.
            end; subst;
       try discriminate; intuition.
 
-  Lemma bijMaMbCorrect x s: bijMaMb x (bijMaMb x s) = s.
+  Lemma bijMaMbCorrect s: bijMaMb (bijMaMb s) = s.
     bijective.
   Qed.
 
-  Definition bijMc (s: string) := makeBijective mc ("s" ++ "-").
+  Definition bijMc := makeBijective mc ("s" ++ "-").
   
-  Lemma bijMcCorrect x s: bijMc x (bijMc x s) = s.
+  Lemma bijMcCorrect s: bijMc (bijMc s) = s.
     bijective.
   Qed.
 
-  Lemma renameTR x:
+  Lemma renameTR:
     traceRefines
-      (liftPRename (bijMaMb x) (bijMc x) (liftToMap1 (@idElementwise _)))
-      (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
+      (liftPRename (bijMaMb) (bijMc) (liftToMap1 (@idElementwise _)))
+      (renameModules (bijMaMb) (ConcatMod ma mb)) (renameModules (bijMc) mc).
   Proof.
     apply renameTheorem'.
     - apply bijMcCorrect.
