@@ -1115,13 +1115,15 @@ Module LeibnizFacts (M : MapLeibniz).
       rewrite P.F.add_in_iff. right. assumption. assumption.
   Qed.
 
-  Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'. 
+  Definition Disj {A} (m m' : t A) := forall k, ~ In k m \/ ~ In k m'.
+  Definition DomainSubset {A B} (s1: t A) (s2: t B) := forall k, In k s1 -> In k s2.
+
   Definition KeysSubset {A} (m: t A) (d: list E.t) := forall k, In k m -> List.In k d.
   Definition KeysSupset {A} (m: t A) (d: list E.t) := forall k, List.In k d -> In k m.
   Definition KeysDisj {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
   Definition KeysEq {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
 
-  Hint Unfold Equal Disj Sub KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
+  Hint Unfold Equal Disj Sub DomainSubset KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
 
   Lemma Sub_union_2:
     forall {A} (m1 m2: t A), Disj m1 m2 -> Sub m2 (union m1 m2).
@@ -1131,6 +1133,15 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (H k).
     - elim H1; apply P.F.in_find_iff; rewrite <-Heqokv; discriminate.
     - elim H1; apply P.F.in_find_iff; rewrite H0; discriminate.
+  Qed.
+
+  Lemma DomainSubset_Disj:
+    forall {A} (m1 m2 m3: t A),
+      Disj m2 m3 -> DomainSubset m1 m2 -> Disj m1 m3.
+  Proof.
+    mintros.
+    specialize (H k); specialize (H0 k).
+    destruct H; auto.
   Qed.
 
   Lemma find_KeysSubset {A} :

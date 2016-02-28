@@ -63,7 +63,38 @@ Section StepToRefinement.
   Qed.
 End StepToRefinement.
 
+Lemma vp_equivalentLabel_CanCombineLabel_proper:
+  forall vp,
+    Proper (equivalentLabel (liftToMap1 vp) ==> equivalentLabel (liftToMap1 vp) ==> impl)
+           CanCombineLabel.
+Proof.
+  unfold Proper, respectful, impl; intros.
+  destruct x as [annx dsx csx], y as [anny dsy csy].
+  destruct x0 as [annx0 dsx0 csx0], y0 as [anny0 dsy0 csy0]; simpl in *.
+  inv H; inv H0; inv H1; dest; simpl in *; subst.
+  repeat split; simpl; auto.
+  - apply M.DomainSubset_Disj with (m2:= dsx); [|apply liftToMap1Subset].
+    apply M.Disj_comm.
+    apply M.DomainSubset_Disj with (m2:= dsx0); [|apply liftToMap1Subset].
+    auto.
+  - apply M.DomainSubset_Disj with (m2:= csx); [|apply liftToMap1Subset].
+    apply M.Disj_comm.
+    apply M.DomainSubset_Disj with (m2:= csx0); [|apply liftToMap1Subset].
+    auto.
+  - destruct annx, annx0, anny, anny0; auto.
+Qed.
+
 Section Facts.
+
+  Lemma traceRefines_refl:
+    forall m, traceRefines id m m.
+  Proof.
+    unfold traceRefines; intros.
+    exists s1, sig1; split; auto.
+    clear; induction sig1; constructor; auto.
+    clear; repeat split.
+    destruct (annot a); auto.
+  Qed.
 
   Lemma traceRefines_trans:
     forall ma mb mc p q,
@@ -71,7 +102,21 @@ Section Facts.
       traceRefines q mb mc ->
       traceRefines (fun f => q (p f)) ma mc.
   Proof.
-    admit.
+    unfold traceRefines; intros.
+    specialize (H _ _ H1); destruct H as [s2 [sig2 ?]]; dest.
+    specialize (H0 _ _ H); destruct H0 as [s3 [sig3 ?]]; dest.
+    exists s3, sig3; split; auto.
+    clear -H2 H3.
+    generalize dependent sig2; generalize dependent sig3.
+    induction sig1; intros.
+    - inv H2; inv H3; constructor.
+    - inv H2; inv H3; constructor; eauto.
+      clear -H1 H2.
+      inv H1; inv H2; dest.
+      repeat split; auto.
+      + rewrite H; auto.
+      + rewrite H0; auto.
+      + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
   Definition NonInteracting (m1 m2: Modules) :=
@@ -157,13 +202,6 @@ Section Facts.
     Section Interacting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
-      Lemma vp_equivalentLabel_CanCombineLabel_proper:
-        Proper (equivalentLabel (liftToMap1 vp) ==> equivalentLabel (liftToMap1 vp) ==> impl)
-               CanCombineLabel.
-      Proof.
-        admit.
-      Qed.
-
       Lemma traceRefines_modular_interacting:
         Interacting mb md vp ->
         traceRefines (liftToMap1 vp) ma mb ->
@@ -185,8 +223,16 @@ Section Facts.
           + eapply interacting_implies_wellHiddenModular; eauto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
             apply vp_equivalentLabel_CanCombineLabel_proper.
-        - apply composeLabels_modular; auto;
+        - apply composeLabels_modular; auto.
+          + (* pose proof (behavior_defs_disj H2). *)
+            (* pose proof (behavior_calls_disj H2). *)
+            (* clear -H H5 H8 H9. *)
+            (* generalize dependent lsb. *)
+            (* induction lsa; intros; [inv H5; constructor|]. *)
+            (* inv H5; inv H8; inv H9. *)
+            (* constructor; auto. *)
             admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
+          + admit.
       Qed.
 
     End Interacting.
