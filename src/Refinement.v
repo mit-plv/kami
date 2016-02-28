@@ -108,14 +108,17 @@ Section Facts.
   Section Modularity.
     Variables (ma mb mc md: Modules).
 
-    Hypotheses (Hacdisj: DisjList (namesOf (getRegInits ma))
+    Hypotheses (Hacregs: DisjList (namesOf (getRegInits ma))
                                   (namesOf (getRegInits mc)))
-               (Hacval: ValidRegsModules type (ConcatMod ma mc))
-               (Hdisjregs: DisjList (namesOf (getRegInits mb))
+               (Hbdregs: DisjList (namesOf (getRegInits mb))
                                     (namesOf (getRegInits md)))
-               (Hdisjdefs: DisjList (getDefs mb) (getDefs md))
-               (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
+               (Hacval: ValidRegsModules type (ConcatMod ma mc))
                (Hbdval: ValidRegsModules type (ConcatMod mb md)).
+
+    Hypotheses (Hacdefs: DisjList (getDefs ma) (getDefs mc))
+               (Haccalls: DisjList (getCalls ma) (getCalls mc))
+               (Hbddefs: DisjList (getDefs mb) (getDefs md))
+               (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
 
     Section NonInteracting.
       Variable (p: MethsT -> MethsT).
@@ -154,6 +157,13 @@ Section Facts.
     Section Interacting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
+      Lemma vp_equivalentLabel_CanCombineLabel_proper:
+        Proper (equivalentLabel (liftToMap1 vp) ==> equivalentLabel (liftToMap1 vp) ==> impl)
+               CanCombineLabel.
+      Proof.
+        admit.
+      Qed.
+
       Lemma traceRefines_modular_interacting:
         Interacting mb md vp ->
         traceRefines (liftToMap1 vp) ma mb ->
@@ -174,7 +184,7 @@ Section Facts.
         - apply behavior_modular; auto.
           + eapply interacting_implies_wellHiddenModular; eauto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
-            admit. (* true; easy *)
+            apply vp_equivalentLabel_CanCombineLabel_proper.
         - apply composeLabels_modular; auto;
             admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
       Qed.

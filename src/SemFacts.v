@@ -4,38 +4,73 @@ Require Import Syntax Semantics.
 
 Set Implicit Arguments.
 
+Ltac specializeAll k :=
+  repeat
+    match goal with
+    | [H: forall _, _ |- _] => specialize (H k)
+    end.
+
 Lemma wellHidden_split:
   forall ma mb la lb,
     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) ->
+    DisjList (getDefs ma) (getDefs mb) ->
+    DisjList (getCalls ma) (getCalls mb) ->
     M.KeysSubset (calls la) (getCalls ma) ->
     M.KeysSubset (calls lb) (getCalls mb) ->
     M.KeysSubset (defs la) (getDefs ma) ->
     M.KeysSubset (defs lb) (getDefs mb) ->
-    M.Disj (defs la) (defs lb) ->
-    M.Disj (calls la) (calls lb) ->
     wellHidden ma (hide la) /\ wellHidden mb (hide lb).
 Proof.
+  intros.
+
+  assert (M.Disj (defs la) (defs lb))
+    by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
+  assert (M.Disj (calls la) (calls lb))
+    by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
+  
   unfold wellHidden in *; dest.
   destruct la as [anna dsa csa], lb as [annb dsb csb].
-  simpl in *; split.
+  simpl in *; split; dest.
 
-  - dest; clear H2.
-    rewrite M.subtractKV_disj_union_1 in H by auto.
-    do 2 rewrite M.subtractKV_disj_union_2 in H by auto.
-    split.
-    + apply M.KeysDisj_union_1 in H.
-      admit.
-    + apply M.KeysDisj_union_2 in H.
-      admit.
+  - split.
+    + clear H8.
+      unfold M.KeysDisj, M.KeysSubset in *; intros.
+      specializeAll k.
+      specialize (H (getCalls_in_1 ma mb _ H8)).
+      rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H; clear H.
+      findeq.
+      specialize (H1 k); destruct H1; auto.
+    + clear H.
+      unfold M.KeysDisj, M.KeysSubset in *; intros.
+      specializeAll k.
+      specialize (H8 (getDefs_in_1 ma mb _ H)).
+      rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H8; clear H8.
+      findeq.
+      specialize (H0 k); destruct H0; auto.
 
-  - dest; clear H.
-    rewrite M.subtractKV_disj_union_1 in H6 by auto.
-    do 2 rewrite M.subtractKV_disj_union_2 in H6 by auto.
-    split.
-    + apply M.KeysDisj_union_1 in H6.
-      admit.
-    + apply M.KeysDisj_union_2 in H6.
-      admit.
+  - split.
+    + clear H8.
+      unfold M.KeysDisj, M.KeysSubset in *; intros.
+      specializeAll k.
+      specialize (H (getCalls_in_2 ma mb _ H8)).
+      rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H; clear H.
+      findeq;
+        try (remember (M.find k dsb) as v; destruct v;
+             remember (M.find k csb) as v; destruct v; findeq).
+      specialize (H1 k); destruct H1; auto.
+    + clear H.
+      unfold M.KeysDisj, M.KeysSubset in *; intros.
+      specializeAll k.
+      specialize (H8 (getDefs_in_2 ma mb _ H)).
+      rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H8; clear H8.
+      findeq;
+        try (remember (M.find k csb) as v; destruct v;
+             remember (M.find k dsb) as v; destruct v; findeq).
+      specialize (H0 k); destruct H0; auto.
 Qed.
 
 Lemma hide_mergeLabel_idempotent:
