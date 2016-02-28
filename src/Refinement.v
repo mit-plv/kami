@@ -108,14 +108,17 @@ Section Facts.
   Section Modularity.
     Variables (ma mb mc md: Modules).
 
-    Hypotheses (Hacdisj: DisjList (namesOf (getRegInits ma))
+    Hypotheses (Hacregs: DisjList (namesOf (getRegInits ma))
                                   (namesOf (getRegInits mc)))
-               (Hacval: ValidRegsModules type (ConcatMod ma mc))
-               (Hdisjregs: DisjList (namesOf (getRegInits mb))
+               (Hbdregs: DisjList (namesOf (getRegInits mb))
                                     (namesOf (getRegInits md)))
-               (Hdisjdefs: DisjList (getDefs mb) (getDefs md))
-               (Hdisjcalls: DisjList (getCalls mb) (getCalls md))
+               (Hacval: ValidRegsModules type (ConcatMod ma mc))
                (Hbdval: ValidRegsModules type (ConcatMod mb md)).
+
+    Hypotheses (Hacdefs: DisjList (getDefs ma) (getDefs mc))
+               (Haccalls: DisjList (getCalls ma) (getCalls mc))
+               (Hbddefs: DisjList (getDefs mb) (getDefs md))
+               (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
 
     Section NonInteracting.
       Variable (p: MethsT -> MethsT).
