@@ -240,6 +240,16 @@ Fixpoint getDefsBodies (m: Modules): list DefMethT :=
 
 Definition getDefs m: list string := namesOf (getDefsBodies m).
 
+Lemma getDefs_in:
+  forall ma mb k,
+    In k (getDefs (ConcatMod ma mb)) ->
+    In k (getDefs ma) \/ In k (getDefs mb).
+Proof.
+  unfold getDefs, namesOf; intros.
+  simpl in *; rewrite map_app in H.
+  apply in_app_or; auto.
+Qed.
+
 Lemma getDefs_in_1:
   forall ma mb k,
     In k (getDefs ma) -> In k (getDefs (ConcatMod ma mb)).
@@ -353,6 +363,23 @@ Section GetCalls.
   Qed.
 
   Definition getCalls m := getCallsR (getRules m) ++ getCallsM (getDefsBodies m).
+
+  Lemma getCalls_in:
+    forall ma mb k,
+      In k (getCalls (ConcatMod ma mb)) ->
+      In k (getCalls ma) \/ In k (getCalls mb).
+  Proof.
+    unfold getCalls; intros.
+    apply in_app_or in H; destruct H.
+    - simpl in H; rewrite getCallsR_app in H.
+      apply in_app_or in H; destruct H.
+      + left; apply in_or_app; auto.
+      + right; apply in_or_app; auto.
+    - simpl in H; rewrite getCallsM_app in H.
+      apply in_app_or in H; destruct H.
+      + left; apply in_or_app; auto.
+      + right; apply in_or_app; auto.
+  Qed.
 
   Lemma getCalls_in_1:
     forall ma mb k,
