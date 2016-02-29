@@ -388,7 +388,6 @@ Definition traceRefines p m1 m2 :=
                   exists s2 sig2, Behavior m2 s2 sig2 /\
                              equivalentLabelSeq p sig1 sig2.
 
-Definition DomainSubset A B (s1: M.t A) (s2: M.t B) := forall k, M.In k s1 -> M.In k s2.
 Section MapSet.
   Variable A: Type.
   Variable p: M.key -> A -> option A.
@@ -405,9 +404,10 @@ Section MapSet.
     unfold liftToMap1, M.fold; reflexivity.
   Qed.
 
-  Lemma liftToMap1Subset s: DomainSubset (liftToMap1 s) s.
+  Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 s) s.
   Proof.
-    apply (M.map_induction (P := fun s => DomainSubset (liftToMap1 s) s)); unfold DomainSubset; intros.
+    apply (M.map_induction (P := fun s => M.DomainSubset (liftToMap1 s) s));
+      unfold M.DomainSubset; intros.
     - rewrite liftToMap1Empty in *.
       intuition.
     - unfold liftToMap1 in H1.

@@ -308,6 +308,70 @@ Proof.
   pose proof (staticDynCallsSubstep H0); auto.
 Qed.
 
+Lemma step_defs_disj:
+  forall m or u l,
+    Step m or u l -> M.KeysDisj (defs l) (getCalls m).
+Proof.
+  intros; apply step_consistent in H.
+  inv H; destruct l0 as [ann ds cs].
+  unfold wellHidden, hide in *; simpl in *; dest; auto.
+Qed.
+
+Lemma step_calls_disj:
+  forall m or u l,
+    Step m or u l -> M.KeysDisj (calls l) (getDefs m).
+Proof.
+  intros; apply step_consistent in H.
+  inv H; destruct l0 as [ann ds cs].
+  unfold wellHidden, hide in *; simpl in *; dest; auto.
+Qed.
+
+Lemma multistep_defs_disj:
+  forall m or ll u,
+    Multistep m or u ll ->
+    Forall (fun l => M.KeysDisj (defs l) (getCalls m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor.
+  - eapply step_defs_disj; eauto.
+  - eapply IHll; eauto.
+Qed.
+
+Lemma multistep_calls_disj:
+  forall m or ll u,
+    Multistep m or u ll ->
+    Forall (fun l => M.KeysDisj (calls l) (getDefs m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor.
+  - eapply step_calls_disj; eauto.
+  - eapply IHll; eauto.
+Qed.
+
+Lemma behavior_defs_disj:
+  forall m ll n,
+    Behavior m n ll ->
+    Forall (fun l => M.KeysDisj (defs l) (getCalls m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; inv HMultistepBeh; constructor.
+  - eapply step_defs_disj; eauto.
+  - eapply IHll.
+    econstructor; eauto.
+Qed.
+
+Lemma behavior_calls_disj:
+  forall m ll n,
+    Behavior m n ll ->
+    Forall (fun l => M.KeysDisj (calls l) (getDefs m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; inv HMultistepBeh; constructor.
+  - eapply step_calls_disj; eauto.
+  - eapply IHll.
+    econstructor; eauto.
+Qed.
+
 Lemma hide_idempotent:
   forall (l: LabelT), hide l = hide (hide l).
 Proof.

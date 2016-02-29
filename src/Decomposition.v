@@ -128,7 +128,7 @@ Section Decomposition.
     clear - defSubset callSubset dHid cHid.
     pose proof (liftToMap1Subset p defs) as dH.
     pose proof (liftToMap1Subset p calls) as cH.
-    unfold DomainSubset, M.KeysDisj in *.
+    unfold M.DomainSubset, M.KeysDisj in *.
     constructor; unfold not; intros.
     - specialize (dH _ H0).
       specialize (callSubset _ H).
