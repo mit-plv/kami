@@ -20,6 +20,7 @@ Section GivenModule.
       (cont: type (ret s) -> ActionT type retK)
       (HNotIn: ~ In meth (getDefs m))
       newRegs (calls: MethsT) acalls
+      (HNotCalled: ~ M.In meth calls) (* it implies well-formedness *)
       (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) calls)
       (HSemAction: SemActionOp (cont mret) newRegs calls fret):
       SemActionOp (MCall meth s marg cont) newRegs acalls fret
@@ -56,6 +57,7 @@ Section GivenModule.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK) newRegs calls anewRegs
+      (HNotWritten: ~ M.In r newRegs) (* it implies well-formedness *)
       (HANewRegs: anewRegs = M.add r (existT _ _ (evalExpr e)) newRegs)
       (HSemActionOp: SemActionOp cont newRegs calls fret):
       SemActionOp (WriteReg r e cont) anewRegs calls fret
@@ -119,6 +121,7 @@ Section GivenModule.
       (~ In meth (getDefs m) /\
        exists mret pcalls,
          SemActionOp (c mret) news pcalls retC /\
+         ~ M.In meth pcalls /\
          calls = M.add meth (existT _ _ (evalExpr e, mret)) pcalls)
     | Let_ _ e cont =>
       SemActionOp (cont (evalExpr e)) news calls retC
@@ -129,6 +132,7 @@ Section GivenModule.
     | WriteReg r _ e a =>
       exists pnews,
       SemActionOp a pnews calls retC /\
+      ~ M.In r pnews /\
       news = M.add r (existT _ _ (evalExpr e)) pnews
     | IfElse p _ aT aF c =>
       exists news1 calls1 news2 calls2 r1,
@@ -273,8 +277,12 @@ Section Facts.
 
 End Facts.
 
+Require Import Wf.
+
 Section Consistency.
   Variable m: Modules.
+
+  Hypothesis (Hwfm: WfModules type m).
 
   Lemma substepsInd_implies_substepOp:
     forall o u l,
