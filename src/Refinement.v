@@ -126,11 +126,70 @@ Section Facts.
   Lemma nonInteracting_implies_wellHiddenModular:
     forall ma mb,
       NonInteracting ma mb ->
-      WellHiddenModular ma mb.
+      forall la lb,
+        WellHiddenModular ma mb la lb.
   Proof.
     unfold NonInteracting, WellHiddenModular, wellHidden; intros; dest.
     destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl in *.
-    admit. (* TODO: think it's correct *)
+    split.
+
+    - unfold M.KeysDisj, M.KeysSubset in *; intros.
+      apply M.F.P.F.not_find_in_iff.
+      specializeAll k.
+      apply getCalls_in in H9; destruct H9.
+      + specialize (H4 H9); clear H5 H6 H7.
+        apply M.F.P.F.not_find_in_iff in H4.
+        rewrite M.F.P.F.in_find_iff in *.
+        findeq;
+          try (specialize (H8 k); destruct H8;
+               [elim H5; auto|
+                elim H5; apply H2; intro; inv H6]).
+      + specialize (H5 H9); clear H4 H6 H7.
+        apply M.F.P.F.not_find_in_iff in H5.
+        rewrite M.F.P.F.in_find_iff in *.
+        findeq;
+          try (specialize (H k); destruct H;
+               [elim H; apply H0; intro; inv H4|
+                elim H; auto]; fail).
+        specialize (H8 k); destruct H8;
+          [elim H4; apply H1; intro; inv H6|
+           elim H4; apply H2; intro; inv H6].
+
+    - unfold M.KeysDisj, M.KeysSubset in *; intros.
+      apply M.F.P.F.not_find_in_iff.
+      specializeAll k.
+      apply getDefs_in in H9; destruct H9.
+      + specialize (H7 H9); clear H4 H5 H6.
+        apply M.F.P.F.not_find_in_iff in H7.
+        rewrite M.F.P.F.in_find_iff in *.
+        findeq;
+          try (specialize (H k); destruct H;
+               [elim H; auto|
+                elim H; apply H3; intro; inv H4]).
+      + specialize (H6 H9); clear H4 H5 H7.
+        apply M.F.P.F.not_find_in_iff in H6.
+        rewrite M.F.P.F.in_find_iff in *.
+        findeq;
+          try (specialize (H8 k); destruct H8;
+               [elim H4; apply H1; intro; inv H5|
+                elim H4; auto]; fail).
+        specialize (H k); destruct H;
+          [elim H; apply H0; intro; inv H4|
+           elim H; apply H3; intro; inv H4].
+  Qed.
+
+  Lemma nonInteracting_implies_wellHiddenModularSeq:
+    forall ma mb,
+      NonInteracting ma mb ->
+      forall lsa lsb,
+        List.length lsa = List.length lsb ->
+        WellHiddenModularSeq ma mb lsa lsb.
+  Proof.
+    induction lsa; intros.
+    - destruct lsb; [constructor|inv H0].
+    - destruct lsb; [inv H0|].
+      constructor; auto.
+      apply nonInteracting_implies_wellHiddenModular; auto.
   Qed.
 
   Definition Interacting (m1 m2: Modules)
@@ -141,13 +200,35 @@ Section Facts.
                forall v, vp k v = Some v).
 
   Lemma interacting_implies_wellHiddenModular:
-    forall ma mb vp,
-      Interacting ma mb vp ->
-      WellHiddenModular ma mb.
+    forall ma mb mc md vp,
+      Interacting ma mc vp ->
+      forall la lb lc ld,
+        WellHiddenModular ma mc la lc ->
+        equivalentLabel (liftToMap1 vp) la lb ->
+        equivalentLabel (liftToMap1 vp) lc ld ->
+        WellHiddenModular mb md lb ld.
   Proof.
     unfold Interacting, WellHiddenModular, wellHidden; intros; dest.
-    destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl in *.
+    destruct la as [anna dsa csa], lb as [annb dsb csb].
+    destruct lc as [annc dsc csc], ld as [annd dsd csd]; simpl in *.
+    inv H1; inv H2; dest; simpl in *; subst.
     admit. (* TODO: correct? *)
+  Qed.
+
+  Lemma interacting_implies_wellHiddenModularSeq:
+    forall ma mb mc md vp,
+      Interacting ma mc vp ->
+      forall la lb lc ld,
+        WellHiddenModularSeq ma mc la lc ->
+        equivalentLabelSeq (liftToMap1 vp) la lb ->
+        equivalentLabelSeq (liftToMap1 vp) lc ld ->
+        WellHiddenModularSeq mb md lb ld.
+  Proof.
+    induction la; intros.
+    - inv H0; inv H1; inv H2; constructor.
+    - inv H0; inv H1; inv H2; constructor.
+      + eapply IHla; eauto.
+      + eapply interacting_implies_wellHiddenModular; eauto.
   Qed.
 
   Section Modularity.
@@ -192,8 +273,9 @@ Section Facts.
         exists (composeLabels lsb lsd).
         split; auto.
         - apply behavior_modular; auto.
-          + apply nonInteracting_implies_wellHiddenModular; auto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+          + apply nonInteracting_implies_wellHiddenModularSeq; auto.
+            admit. (* easy *)
         - apply composeLabels_modular; auto.
       Qed.
 
@@ -203,7 +285,7 @@ Section Facts.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
       Lemma traceRefines_modular_interacting:
-        Interacting mb md vp ->
+        Interacting ma mc vp ->
         traceRefines (liftToMap1 vp) ma mb ->
         traceRefines (liftToMap1 vp) mc md ->
         traceRefines id (ConcatMod ma mc) (ConcatMod mb md).
@@ -220,9 +302,9 @@ Section Facts.
         exists (composeLabels lsb lsd).
         split; auto.
         - apply behavior_modular; auto.
-          + eapply interacting_implies_wellHiddenModular; eauto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
             apply vp_equivalentLabel_CanCombineLabel_proper.
+          + eapply interacting_implies_wellHiddenModularSeq; eauto.
         - apply composeLabels_modular; auto.
           + (* pose proof (behavior_defs_disj H2). *)
             (* pose proof (behavior_calls_disj H2). *)
