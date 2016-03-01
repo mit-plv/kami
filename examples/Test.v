@@ -145,7 +145,7 @@ Section SemOpTest.
   Require Import Renaming.
   Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
 
-  Definition bijMaMb := makeBijective (ConcatMod ma mb) ("s" ++ "-").
+  Definition bijMaMb := makeBijective (ConcatMod ma mb) ("s-").
   
   Definition bij x := makeBijective mc ("-" ++ x ++ "-").
 
@@ -247,7 +247,7 @@ Section SemOpTest.
     bijectiveFinish.
   Qed.
 
-  Definition bijMc := makeBijective mc ("s" ++ "-").
+  Definition bijMc := makeBijective mc ("s-").
   
   Lemma bijMcCorrect s: bijMc (bijMc s) = s.
     bijectiveFinish.

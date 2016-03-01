@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemFacts.
+Require Import Syntax Semantics SemFacts Equiv CanCombine.
 
 Set Implicit Arguments.
 
@@ -89,6 +89,32 @@ Section Decomposition.
                cms := liftToMap1 p cs; substep := sSpec |}
         end
     end.
+
+  Variable specRegsCanCombine:
+    forall o (s1 s2: SubstepRec imp o),
+      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
+
+  Definition specCanCombine:
+    forall o (s1 s2: SubstepRec imp o),
+      canCombine s1 s2 -> canCombine (xformSubstepRec s1) (xformSubstepRec s2).
+  Proof.
+    intros.
+    unfold canCombine in *.
+    dest.
+    constructor.
+    intuition.
+    constructor.
+    admit.
+    constructor.
+    admit.
+    unfold xformSubstepRec.
+    destruct s1, s2; simpl in *.
+    destruct (substepMap substep), (substepMap substep0);
+      destruct a, a0; simpl in *.
+    clear -H2.
+    unfold liftToMap1.
+    admit.
+  Qed.
 
   Variable specCanCombine:
     forall o (s1 s2: SubstepRec imp o),
@@ -340,6 +366,7 @@ Section Decomposition.
     intuition.
   Qed.
 End Decomposition.
+
 
 Ltac decomposeT t r Hrm Hmm :=
   eapply decomposition with (theta:= t)

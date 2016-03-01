@@ -399,10 +399,76 @@ Section MapSet.
   Definition liftToMap1 s :=
     M.fold rmModify s (M.empty _).
 
+  Lemma transpose_neqkey_rmModify:
+    M.F.P.transpose_neqkey eq rmModify.
+  Proof.
+    unfold M.F.P.transpose_neqkey; intros.
+    unfold rmModify.
+    destruct (p k e), (p k' e'); intuition.
+  Qed.
+
   Theorem liftToMap1Empty: liftToMap1 (M.empty _) = M.empty _.
   Proof.
     unfold liftToMap1, M.fold; reflexivity.
   Qed.
+
+  Theorem liftToMap1MapsTo1:
+    forall m k v, M.MapsTo k v (liftToMap1 m) <-> exists v', p k v' = Some v /\ M.MapsTo k v' m.
+  Proof.
+    intros m; M.mind m.
+    - constructor; intros.
+      + apply M.F.P.F.empty_mapsto_iff in H; intuition.
+      + dest; subst.
+        apply M.F.P.F.empty_mapsto_iff in H0; intuition.
+    - constructor; intros.
+      unfold liftToMap1 in H1.
+      rewrite (M.F.P.fold_add (eqA := eq)) in H1; try apply transpose_neqkey_rmModify; intuition.
+      fold (liftToMap1 m) in H1.
+      unfold rmModify in H1.
+      destruct (p k v).
+      + apply M.F.P.F.add_mapsto_iff in H1; dest.
+        destruct H1; dest; subst.
+        specialize (H k0 v0).
+        destruct H.
+        dest.
+        * exists v.
+      
+                                               | 
+  
+  Theorem liftToMap1MapsTo2:
+    forall m k v, M.MapsTo k v m -> match p k v with
+                                    | None => forall v', ~ M.MapsTo k v' (liftToMap1 m)
+                                    | Some v' => M.MapsTo k v' (liftToMap1 m)
+                                    end.
+  Proof.
+    intros m.
+    M.mind m.
+    - apply M.F.P.F.empty_mapsto_iff in H; intuition.
+    - unfold liftToMap1.
+      rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
+      fold (liftToMap1 m); unfold rmModify.
+      apply M.F.P.F.add_mapsto_iff in H1; dest.
+      destruct H1; dest; subst.
+      + destruct (p k0 v0).
+        * apply M.F.P.F.add_mapsto_iff; intuition.
+        * intros.
+          
+        intros.
+      unfold M.Map.In,M.Map.Raw.PX.In in H0.
+      intros.
+      assert (exists e, M.Map.Raw.PX.MapsTo k0 e (M.Map.
+      clear - H0 H1; intuition.
+      admit.
+      intuition.
+      intuition.
+      apply transpose_neqkey_rmModify.
+      intuition.
+      unfold M.F.P.transpose_neqkey; intros.
+      unfold rmModify
+      intuition.
+      unfold rmModify.
+      + destruct (p k0 v0), (p k v).
+      destruct (p k0 v0).
 
   Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 s) s.
   Proof.

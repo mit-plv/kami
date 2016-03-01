@@ -360,23 +360,6 @@ Section Rename.
     - apply renameMapsTo2.
   Qed.
 
-  Lemma MapsToIn1 A m k (v: A):
-    M.MapsTo k v m -> M.In k m.
-  Proof.
-    unfold M.MapsTo, M.In.
-    unfold M.Raw.PX.In.
-    intros.
-    eexists; eauto.
-  Qed.
-
-  Lemma MapsToIn2 A m k:
-    M.In k m -> (exists (v: A), M.MapsTo k v m).
-  Proof.
-    unfold M.MapsTo, M.In.
-    unfold M.Raw.PX.In.
-    intuition.
-  Qed.
-
   Lemma renameMapIn1 A (m: M.t A): forall k,
       M.In k m -> M.In (rename k) (renameMap m).
   Proof.
