@@ -240,9 +240,10 @@ Section Decomposition.
   Qed.
 
   Theorem liftToMap1UnionCommute l1 l2:
+    M.Disj l1 l2 ->
     liftToMap1 p (M.union l1 l2) = M.union (liftToMap1 p l1) (liftToMap1 p l2).
   Proof.
-    clear.
+    clear; intros disj.
     apply M.leibniz.
     apply M.F.P.F.Equal_mapsto_iff; intros.
     constructor; intros.
@@ -267,10 +268,17 @@ Section Decomposition.
         exists x; intuition.
         apply M.mapsto_union; intuition.
       + apply liftToMap1MapsTo in H0; dest; subst.
-        admit.
+        unfold M.Disj in disj.
+        pose proof H1 as sth.
+        apply M.MapsToIn1 in H1.
+        destruct (disj k); clear disj; intuition.
+        exists x; intuition.
+        apply M.mapsto_union; intuition.
   Qed.
-  
+
   Theorem xformLabelAddLabelCommute l1 l2:
+    M.Disj (defs l1) (defs l2) ->
+    M.Disj (calls l1) (calls l2) ->
     forall o,
       xformLabel o (mergeLabel l1 l2) = mergeLabel (xformLabel o l1) (xformLabel o l2).
   Proof.
@@ -299,25 +307,53 @@ Section Decomposition.
   Qed.
     
   Theorem xformLabelFoldCommute o ss:
+    substepsComb ss ->
     xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _) ss).
   Proof.
-    induction ss; simpl in *; try rewrite liftToMap1Empty.
+    induction ss; simpl in *; try rewrite liftToMap1Empty; intros.
     - reflexivity.
-    - unfold addLabelLeft in *.
+    - dependent destruction H.
+      specialize (IHss H).
+      unfold addLabelLeft in *.
       rewrite xformLabelAddLabelCommute.
       f_equal; intuition.
       apply xformLabelGetSLabelCommute.
-  Qed.    
+      admit.
+      admit.
+  Qed.
+
+  Lemma defsDisjSs m o (ss: list (SubstepRec m o)):
+    forall a,
+      substepsComb (a :: ss) ->
+      M.Disj (defs (getSLabel a)) (defs (foldSSLabel ss)).
+  Proof.
+    clear.
+    dependent induction ss; intros; simpl in *.
+    - unfold M.Disj; unfold not; intros.
+      right; intros.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
+    - dependent destruction H.
+      specialize (IHss _ H).
+      destruct a, a0; simpl in *.
+      unfold addLabelLeft, mergeLabel, getSLabel; simpl in *.
+      destruct unitAnnot0, unitAnnot; try apply M.Disj_empty_1;
+        try destruct o0; try destruct a; try apply M.Disj_empty_1.
+      case_eq (foldSSLabel ss); intros; simpl.
+      rewrite M.union_empty_L.
+      admit.
+      admit.
+  Qed.
   
   Theorem xformLabelHide o:
     forall(ss: Substeps imp o) (ssGd: wellHidden imp (hide (foldSSLabel ss))),
+      substepsComb ss ->
       hide (foldSSLabel (map (@xformSubstepRec _) ss)) =
       xformLabel o (hide (foldSSLabel ss)).
   Proof.
     intros.
     rewrite xformLabelHideCommute.
     f_equal.
-    apply eq_sym; apply xformLabelFoldCommute.
+    apply eq_sym; apply xformLabelFoldCommute; intuition.
     apply (wellHiddenEq1 (m := imp)).
     - unfold M.KeysSubset; apply (staticDynDefsSubsteps ss).
     - unfold M.KeysSubset; apply (staticDynCallsSubsteps ss).
@@ -360,6 +396,7 @@ Section Decomposition.
     constructor.
     - intuition.
     - apply unionCommute; intuition.
+    - intuition.
     - intuition.
   Qed.
 
