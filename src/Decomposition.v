@@ -90,7 +90,6 @@ Section Decomposition.
         end
     end.
 
-  (*
   Variable specRegsCanCombine:
     forall o (s1 s2: SubstepRec imp o),
       M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
@@ -104,23 +103,59 @@ Section Decomposition.
     dest.
     constructor.
     intuition.
-    constructor.
-    admit.
-    constructor.
-    admit.
-    unfold xformSubstepRec.
-    destruct s1, s2; simpl in *.
-    destruct (substepMap substep), (substepMap substep0);
+    - constructor.
+      clear - H0; intros.
+      unfold xformSubstepRec in *.
+      destruct s1, s2; simpl in *.
+      destruct (substepMap substep), (substepMap substep0); simpl in *.
       destruct a, a0; simpl in *.
-    clear -H2.
-    unfold liftToMap1.
-    admit.
+      unfold xformUnitAnnot in *.
+      destruct unitAnnot, unitAnnot0.
+      destruct o0, o1; try discriminate.
+      destruct o0, o1; try discriminate.
+      destruct o0, o1; try discriminate.
+      destruct o0, o1; try discriminate.
+      unfold liftP in *.
+      destruct a, a0.
+      unfold not; intros.
+      destruct x, y; simpl in *.
+      rewrite <- H2 in *.
+      case_eq (p attrName attrType);
+      case_eq (p attrName0 attrType0).
+      intros.
+      rewrite H3, H4 in *.
+      subst.
+      inversion H; inversion H1; subst.
+      specialize (H0 (attrName2 :: attrType)%struct (attrName2 :: attrType0)%struct eq_refl
+                     eq_refl); simpl in *.
+      intuition.
+      intros; subst.
+      rewrite H3 in *.
+      inversion H1; discriminate.
+      intros; subst.
+      rewrite H4 in *.
+      inversion H; discriminate.
+      intros; subst.
+      rewrite H3 in *.
+      inversion H1; discriminate.
+
+      + constructor.
+        clear -H1.
+        unfold xformSubstepRec.
+        destruct s1, s2; simpl in *.
+        destruct (substepMap substep), (substepMap substep0).
+        destruct a, a0; simpl in *.
+        unfold xformUnitAnnot.
+        destruct unitAnnot, unitAnnot0; destruct o0, o1; destruct H1; try discriminate;
+          unfold liftP; try destruct a; try destruct (p attrName attrType); eexists; eauto.
+
+        clear -H2.
+        unfold xformSubstepRec.
+        destruct s1, s2; simpl in *.
+        destruct (substepMap substep), (substepMap substep0).
+        destruct a, a0; simpl in *.
+        admit.
   Qed.
-   *)
-  
-  Variable specCanCombine:
-    forall o (s1 s2: SubstepRec imp o),
-      canCombine s1 s2 -> canCombine (xformSubstepRec s1) (xformSubstepRec s2).
 
   Theorem substepsSpecComb o:
     forall (ss: Substeps imp o), substepsComb ss ->
@@ -528,10 +563,10 @@ Section Decomposition.
     dependent induction H.
     dependent induction HMultistepBeh; subst.
     - exists nil; rewrite thetaInit; repeat constructor.
-    - specialize (IHHMultistepBeh specCanCombine substepMethMap substepRuleMap
+    - specialize (IHHMultistepBeh specRegsCanCombine substepMethMap substepRuleMap
                                   callSubset defSubset thetaInit eq_refl).
       clear defSubset0 callSubset0 thetaInit0
-            substepRuleMap0 substepMethMap0 specCanCombine0.
+            substepRuleMap0 substepMethMap0 specRegsCanCombine0.
       pose proof (stepMap HStep) as [uSpec [stepSpec upd]].
       destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].
       inversion behSpec; subst.
