@@ -92,20 +92,31 @@ Section Tests.
     inv HIn.
   Defined.
 
+  Ltac decompositionSimple :=
+    repeat
+      match goal with
+      | s: SubstepRec _ _ |- _ => destruct s
+      | s: Substep _ _ _ _ _ |- _ => destruct s; simpl in *
+      | |- context [match ?P with
+                    | _ => _
+                    end] => destruct P
+      | |- M.Disj (M.empty _) _ => apply M.Disj_empty_1
+      | |- M.Disj _ (M.empty _) => apply M.Disj_empty_2
+      | _ => intuition
+      end.
+
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
     inlineL.
     equiv_tac.
     decomposeT (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
-               HssRuleMap HssMethMap.
-    admit. (* do we really have to prove this for each instance? *)
+               HssRuleMap HssMethMap;
+    decompositionSimple.
   Qed.
-  
 End Tests.
 
 Section SemOpTest.
-
   Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
   Proof.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
@@ -247,8 +258,8 @@ Section SemOpTest.
       (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
   Proof.
     apply renameTheorem'.
-    - apply bijMaMbCorrect.
     - apply bijMcCorrect.
-    - apply mab_mc2.
+    - apply bijMcCorrect.
+    - apply mab_mc.
   Qed.
 End SemOpTest.
