@@ -154,7 +154,19 @@ Section Decomposition.
         destruct s1, s2; simpl in *.
         destruct (substepMap substep), (substepMap substep0).
         destruct a, a0; simpl in *.
-        admit.
+        { clear - H2.
+          unfold M.Disj in *; intros.
+          specialize (H2 k).
+          destruct H2; unfold not.
+          - left; intros.
+            apply M.MapsToIn2 in H0; dest.
+            apply liftToMap1MapsTo in H0; dest; subst.
+            apply M.MapsToIn1 in H1; intuition.
+          - right; intros.
+            apply M.MapsToIn2 in H0; dest.
+            apply liftToMap1MapsTo in H0; dest; subst.
+            apply M.MapsToIn1 in H1; intuition.
+        }
   Qed.
 
   Theorem substepsSpecComb o:
