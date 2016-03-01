@@ -1292,6 +1292,17 @@ Module LeibnizFacts (M : MapLeibniz).
       KeysDisj m d1 -> SubList d2 d1 -> KeysDisj m d2.
   Proof. mintros; auto. Qed.
 
+  Lemma KeysSubset_Sub:
+    forall {A} (m1 m2: t A) (d: list E.t),
+      KeysSubset m2 d -> Sub m1 m2 -> KeysSubset m1 d.
+  Proof.
+    mintros.
+    apply H.
+    apply P.F.in_find_iff in H1; apply P.F.in_find_iff.
+    specialize (H0 k); destruct (find k m1); [|elim H1; auto].
+    specialize (H0 a eq_refl); rewrite H0; discriminate.
+  Qed.
+
   Lemma DisjList_KeysSubset_Disj:
     forall {A} (m1 m2: t A) (d1 d2: list E.t),
       DisjList d1 d2 -> KeysSubset m1 d1 -> KeysSubset m2 d2 -> Disj m1 m2.

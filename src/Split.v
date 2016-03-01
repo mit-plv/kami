@@ -150,6 +150,15 @@ Section TwoModules.
             try (f_equal; auto; fail).
   Qed.
 
+  Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
+    M.KeysSubset (defs la) (getDefs ma) ->
+    M.KeysSubset (calls la) (getCalls ma) ->
+    M.KeysSubset (defs lb) (getDefs mb) ->
+    M.KeysSubset (calls lb) (getCalls mb) ->
+    wellHidden ma (hide la) ->
+    wellHidden mb (hide lb) ->
+    wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
+
   Lemma stepInd_split:
     forall o u l,
       StepInd (ConcatMod ma mb) o u l ->
@@ -157,7 +166,7 @@ Section TwoModules.
         StepInd ma (regsA o) ua la /\ StepInd mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
         CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
-        l = hide (mergeLabel la lb).
+        WellHiddenModular ma mb la lb /\ l = hide (mergeLabel la lb).
   Proof.
     induction 1; simpl; intros.
     pose proof (substepsInd_split HSubSteps)
@@ -184,6 +193,8 @@ Section TwoModules.
     - apply CanCombineLabel_hide; auto.
     - inv H3; dest.
       rewrite <-hide_mergeLabel_idempotent; auto.
+    - unfold WellHiddenModular; intros.
+      inv H3; rewrite <-hide_mergeLabel_idempotent; auto.
     - inv H3; rewrite <-hide_mergeLabel_idempotent; auto.
   Qed.
 
@@ -194,7 +205,7 @@ Section TwoModules.
         Step ma (regsA o) ua la /\ Step mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
         CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
-        l = hide (mergeLabel la lb).
+        WellHiddenModular ma mb la lb /\ l = hide (mergeLabel la lb).
   Proof.
     intros; apply step_consistent in H.
     pose proof (stepInd_split H) as [ua [ub [la [lb ?]]]]; dest; subst.
@@ -203,6 +214,14 @@ Section TwoModules.
     repeat split; auto; apply step_consistent; auto.
   Qed.
 
+  Inductive WellHiddenModularSeq (ma mb: Modules): LabelSeqT -> LabelSeqT -> Prop :=
+  | WHMSNil: WellHiddenModularSeq ma mb nil nil
+  | WHMSCons:
+      forall la lb lsa lsb,
+        WellHiddenModularSeq ma mb lsa lsb ->
+        WellHiddenModular ma mb la lb ->
+        WellHiddenModularSeq ma mb (la :: lsa) (lb :: lsb).
+
   Lemma multistep_split:
     forall s ls ir,
       Multistep (ConcatMod ma mb) ir s ls ->
@@ -210,8 +229,9 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
-        M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
+        M.Disj sa sb /\ s = M.union sa sb /\ 
+        CanCombineLabelSeq lsa lsb /\ WellHiddenModularSeq ma mb lsa lsb /\
+        ls = composeLabels lsa lsb.
   Proof.
     induction 1; simpl; intros; subst.
     - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
@@ -227,12 +247,12 @@ Section TwoModules.
       destruct HStep as [sua [sub [sla [slb ?]]]]; dest; subst.
 
       inv Hvr.
-      pose proof (validRegsModules_multistep_newregs_subset H7 H0 eq_refl).
-      pose proof (validRegsModules_multistep_newregs_subset H10 H1 eq_refl).
-      pose proof (validRegsModules_step_newregs_subset H7 H3).
-      pose proof (validRegsModules_step_newregs_subset H10 H5).
+      pose proof (validRegsModules_multistep_newregs_subset H8 H0 eq_refl).
+      pose proof (validRegsModules_multistep_newregs_subset H12 H1 eq_refl).
+      pose proof (validRegsModules_step_newregs_subset H8 H3).
+      pose proof (validRegsModules_step_newregs_subset H12 H6).
 
-      inv H8; dest.
+      inv H9; dest.
       exists (M.union sua sa), (sla :: lsa).
       exists (M.union sub sb), (slb :: lsb).
       repeat split; auto.
@@ -245,7 +265,7 @@ Section TwoModules.
         apply DisjList_comm; auto.
 
       + constructor; auto.
-        p_equal H5.
+        p_equal H6.
         unfold regsB; rewrite M.restrict_union.
         rewrite M.restrict_KeysSubset with (m:= sb); auto.
         rewrite M.restrict_DisjList with (d1:= namesOf (getRegInits ma)); auto.
@@ -256,8 +276,10 @@ Section TwoModules.
         * eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits mb)); eauto.
           apply DisjList_comm; auto.
 
-      + pose proof (M.DisjList_KeysSubset_Disj Hinit H11 H14).
+      + pose proof (M.DisjList_KeysSubset_Disj Hinit H13 H16).
         meq.
+
+      + constructor; auto.
   Qed.
 
   Lemma behavior_split:
@@ -266,7 +288,8 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ ls = composeLabels lsa lsb.
+        CanCombineLabelSeq lsa lsb /\ WellHiddenModularSeq ma mb lsa lsb /\
+        ls = composeLabels lsa lsb.
   Proof.
     induction 1.
     apply multistep_split in HMultistepBeh.
@@ -275,6 +298,8 @@ Section TwoModules.
     repeat split; auto.
     reflexivity.
   Qed.
+
+  (** Now modular theorem begins *)
 
   Lemma substepsInd_modular:
     forall oa ua la,
@@ -313,27 +338,17 @@ Section TwoModules.
       + reflexivity.
   Qed.
 
-  Definition WellHiddenModular (ma mb: Modules) :=
-    forall la lb,
-      M.KeysSubset (defs la) (getDefs ma) ->
-      M.KeysSubset (calls la) (getCalls ma) ->
-      M.KeysSubset (defs lb) (getDefs mb) ->
-      M.KeysSubset (calls lb) (getCalls mb) ->
-      wellHidden ma (hide la) ->
-      wellHidden mb (hide lb) ->
-      wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
-  Hypothesis (Hwhm: WellHiddenModular ma mb).
-
   Lemma stepInd_modular:
     forall oa ua la,
       StepInd ma oa ua la ->
       forall ob ub lb,
         M.Disj oa ob -> CanCombineUL ua ub la lb ->
+        WellHiddenModular ma mb la lb ->
         StepInd mb ob ub lb ->
         StepInd (ConcatMod ma mb) (M.union oa ob) (M.union ua ub)
                 (hide (mergeLabel la lb)).
   Proof.
-    intros; inv H; inv H2.
+    intros; inv H; inv H3.
 
     pose proof (substepsInd_defs_in HSubSteps).
     pose proof (substepsInd_calls_in HSubSteps).
@@ -344,7 +359,7 @@ Section TwoModules.
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
     assert (M.Disj (calls l) (calls l0))
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
-    inv H1; inv H8; dest.
+    inv H1; inv H9; dest.
 
     replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0))
       by (apply hide_mergeLabel_idempotent; auto).
@@ -352,7 +367,19 @@ Section TwoModules.
     - apply substepsInd_modular; auto.
       constructor; auto.
       repeat split; auto.
-    - apply Hwhm; auto.
+    - unfold WellHiddenModular in H2.
+      rewrite <-hide_mergeLabel_idempotent in H2 by auto.
+      apply H2.
+      + apply M.KeysSubset_Sub with (m2:= defs l); auto.
+        apply M.subtractKV_sub.
+      + apply M.KeysSubset_Sub with (m2:= calls l); auto.
+        apply M.subtractKV_sub.
+      + apply M.KeysSubset_Sub with (m2:= defs l0); auto.
+        apply M.subtractKV_sub.
+      + apply M.KeysSubset_Sub with (m2:= calls l0); auto.
+        apply M.subtractKV_sub.
+      + rewrite <-hide_idempotent; auto.
+      + rewrite <-hide_idempotent; auto.
   Qed.
 
   Lemma step_modular:
@@ -360,11 +387,12 @@ Section TwoModules.
       Step ma oa ua la ->
       forall ob ub lb,
         M.Disj oa ob -> CanCombineUL ua ub la lb ->
+        WellHiddenModular ma mb la lb ->
         Step mb ob ub lb ->
         Step (ConcatMod ma mb) (M.union oa ob) (M.union ua ub) (hide (mergeLabel la lb)).
   Proof.
     intros.
-    apply step_consistent in H; apply step_consistent in H2.
+    apply step_consistent in H; apply step_consistent in H3.
     apply step_consistent.
     apply stepInd_modular; auto.
   Qed.
@@ -377,6 +405,7 @@ Section TwoModules.
         Multistep mb ob sb lsb ->
         ob = initRegs (getRegInits mb) ->
         CanCombineLabelSeq lsa lsb ->
+        WellHiddenModularSeq ma mb lsa lsb ->
         Multistep (ConcatMod ma mb) (initRegs (getRegInits (ConcatMod ma mb))) 
                   (M.union sa sb) (composeLabels lsa lsb).
   Proof.
@@ -388,7 +417,7 @@ Section TwoModules.
       apply makeMap_union; auto.
 
     - destruct lsb as [|]; [intuition idtac|].
-      inv H3.
+      destruct H3; inv H4.
       inv H; inv H1.
       inv Hvr.
       
@@ -414,6 +443,7 @@ Section TwoModules.
       Behavior ma sa lsa ->
       Behavior mb sb lsb ->
       CanCombineLabelSeq lsa lsb ->
+      WellHiddenModularSeq ma mb lsa lsb ->
       Behavior (ConcatMod ma mb) (M.union sa sb) (composeLabels lsa lsb).
   Proof.
     intros; inv H; inv H0; constructor.

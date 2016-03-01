@@ -145,8 +145,6 @@ Section SemOpTest.
   Require Import Renaming.
   Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
 
-  Definition bijMaMb := makeBijective (ConcatMod ma mb) ("s-").
-  
   Definition bij x := makeBijective mc ("-" ++ x ++ "-").
 
   Lemma prependSame: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
@@ -209,16 +207,6 @@ Section SemOpTest.
     - discriminate.
   Qed.
 
-  (*
-  Lemma prependNonnilNoteq x: x <> ""%string -> forall i, (x ++ i)%string <> i.
-  Proof.
-    intros.
-    unfold not; intros.
-    ap
-    apply prependNil in H0.
-    intuition.
-  Qed. *)
-
   Lemma strRename a x y: String a (x ++ y)%string = ((String a x) ++ y)%string.
   Proof.
     reflexivity.
@@ -237,26 +225,26 @@ Section SemOpTest.
            | H: _ = (_ ++ _)%string |- _ =>
              apply prependNil in H; apply eq_sym in H
            end; simpl in *; try discriminate; intuition.
-  
-  Lemma bijCorrect x s: bij x (bij x s) = s.
+
+  Definition prepend x := ("-" ++ x ++ "-")%string.
+  Definition makeBijectivePrepend m x := makeBijective m (prepend x).
+  Definition bijMaMb x := makeBijectivePrepend (ConcatMod ma mb) x.
+
+  Lemma bijMaMbCorrect x s: bijMaMb x (bijMaMb x s) = s.
   Proof.
     bijectiveFinish.
   Qed.
-    
-  Lemma bijMaMbCorrect s: bijMaMb (bijMaMb s) = s.
-    bijectiveFinish.
-  Qed.
 
-  Definition bijMc := makeBijective mc ("s-").
+  Definition bijMc x := makeBijectivePrepend mc x.
   
-  Lemma bijMcCorrect s: bijMc (bijMc s) = s.
+  Lemma bijMcCorrect x s: bijMc x (bijMc x s) = s.
     bijectiveFinish.
   Qed.
 
-  Lemma renameTR:
+  Lemma renameTR x:
     traceRefines
-      (liftPRename (bijMaMb) (bijMc) (liftToMap1 (@idElementwise _)))
-      (renameModules (bijMaMb) (ConcatMod ma mb)) (renameModules (bijMc) mc).
+      (liftPRename (bijMaMb x) (bijMc x) (liftToMap1 (@idElementwise _)))
+      (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
   Proof.
     apply renameTheorem'.
     - apply bijMcCorrect.

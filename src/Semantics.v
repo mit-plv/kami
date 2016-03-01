@@ -412,6 +412,7 @@ Section MapSet.
     unfold liftToMap1, M.fold; reflexivity.
   Qed.
 
+  (*
   Theorem liftToMap1MapsTo1:
     forall m k v, M.MapsTo k v (liftToMap1 m) <-> exists v', p k v' = Some v /\ M.MapsTo k v' m.
   Proof.
@@ -469,6 +470,7 @@ Section MapSet.
       unfold rmModify.
       + destruct (p k0 v0), (p k v).
       destruct (p k0 v0).
+   *)
 
   Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 s) s.
   Proof.

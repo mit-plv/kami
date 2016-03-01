@@ -90,6 +90,7 @@ Section Decomposition.
         end
     end.
 
+  (*
   Variable specRegsCanCombine:
     forall o (s1 s2: SubstepRec imp o),
       M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
@@ -115,7 +116,8 @@ Section Decomposition.
     unfold liftToMap1.
     admit.
   Qed.
-
+   *)
+  
   Variable specCanCombine:
     forall o (s1 s2: SubstepRec imp o),
       canCombine s1 s2 -> canCombine (xformSubstepRec s1) (xformSubstepRec s2).
