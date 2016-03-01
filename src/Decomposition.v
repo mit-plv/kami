@@ -306,26 +306,50 @@ Section Decomposition.
     destruct (p attrName attrType); intuition.
   Qed.
     
-  Theorem xformLabelFoldCommute o ss:
-    substepsComb ss ->
-    xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _) ss).
+  Lemma defsDisjSs' m o u n ar cms
+        (s: Substep m o u (Meth (Some (n :: ar)%struct)) cms) ss:
+    (forall s', In s' ss -> canCombine {| substep := s |} s') ->
+    M.Disj (M.add n ar (M.empty _)) (defs (foldSSLabel ss)).
   Proof.
-    induction ss; simpl in *; try rewrite liftToMap1Empty; intros.
-    - reflexivity.
-    - dependent destruction H.
-      specialize (IHss H).
-      unfold addLabelLeft in *.
-      rewrite xformLabelAddLabelCommute.
-      f_equal; intuition.
-      apply xformLabelGetSLabelCommute.
-      admit.
-      admit.
+    clear.
+    dependent induction ss; intros; simpl in *.
+    - apply M.Disj_empty_2.
+    - assert (sth: forall s', In s' ss ->
+                              canCombine {| substep := s |} s') by
+          (intros; specialize (H s'); intuition).
+      specialize (IHss sth); clear sth.
+      assert (sth2: canCombine {| substep := s |} a) by (specialize (H a); intuition).
+      clear H; unfold canCombine in *.
+      dest.
+      clear H x H1 H2; simpl in *.
+      destruct a.
+      unfold addLabelLeft, mergeLabel, getSLabel, getLabel; simpl in *.
+      destruct (foldSSLabel ss); simpl in *.
+      destruct unitAnnot; simpl in *.
+      + rewrite M.union_empty_L.
+        intuition.
+      + destruct o0.
+        * destruct a.
+          { apply M.Disj_union.
+            - specialize (H0 (n :: ar)%struct (attrName :: attrType)%struct eq_refl eq_refl).
+              apply M.Disj_add_1.
+              apply M.Disj_empty_1.
+              unfold not; intros.
+              simpl in *.
+              apply M.F.P.F.add_in_iff in H.
+              destruct H; intuition.
+              apply M.F.P.F.empty_in_iff in H.
+              intuition.
+            - intuition.
+          } 
+        * rewrite M.union_empty_L.
+          intuition.
   Qed.
-
+  
   Lemma defsDisjSs m o (ss: list (SubstepRec m o)):
-    forall a,
-      substepsComb (a :: ss) ->
-      M.Disj (defs (getSLabel a)) (defs (foldSSLabel ss)).
+    forall b,
+      substepsComb (b :: ss) ->
+      M.Disj (defs (getSLabel b)) (defs (foldSSLabel ss)).
   Proof.
     clear.
     dependent induction ss; intros; simpl in *.
@@ -334,16 +358,95 @@ Section Decomposition.
       apply M.F.P.F.empty_in_iff in H0; intuition.
     - dependent destruction H.
       specialize (IHss _ H).
-      destruct a, a0; simpl in *.
+      destruct a, b; simpl in *.
       unfold addLabelLeft, mergeLabel, getSLabel; simpl in *.
       destruct unitAnnot0, unitAnnot; try apply M.Disj_empty_1;
         try destruct o0; try destruct a; try apply M.Disj_empty_1.
       case_eq (foldSSLabel ss); intros; simpl.
       rewrite M.union_empty_L.
-      admit.
-      admit.
+      rewrite H1 in *; simpl in *.
+      assert (sth: forall s', In s' ss ->
+                              canCombine {| substep := substep0 |} s') by
+          (intros; specialize (H0 s'); intuition); clear - sth H1.
+      assert (sth3: defs = Semantics.defs (foldSSLabel ss)) by (rewrite H1; reflexivity).
+      rewrite sth3.
+      eapply defsDisjSs'; eauto.
+      case_eq (foldSSLabel ss); intros; simpl.
+      destruct o1.
+      + destruct a.
+        rewrite H1 in *; simpl in *.
+        assert (sth3: defs = Semantics.defs (foldSSLabel ss)) by (rewrite H1; reflexivity).
+        assert (sth2: M.union (M.add attrName0 attrType0 (M.empty _)) defs =
+                      Semantics.defs (foldSSLabel ({| substep := substep |} :: ss))) by
+            (simpl;
+             unfold addLabelLeft, mergeLabel, getSLabel, getLabel;
+             destruct (foldSSLabel ss); simpl in *; subst; reflexivity).
+        rewrite sth2.
+        eapply defsDisjSs'; eauto.
+      + rewrite M.union_empty_L.
+        rewrite H1 in *; simpl in *.
+        assert (sth: forall s', In s' ss ->
+                                canCombine {| substep := substep0 |} s') by
+            (intros; specialize (H0 s'); intuition); clear - sth H1.
+        assert (sth3: defs = Semantics.defs (foldSSLabel ss)) by (rewrite H1; reflexivity).
+        rewrite sth3.
+        eapply defsDisjSs'; eauto.
+  Qed.
+
+  Lemma callsDisjSs' m o u a cms (sr: Substep m o u a cms): forall ss,
+      (forall s', In s' ss -> canCombine {| substep := sr|} s') ->
+      M.Disj cms (calls (foldSSLabel ss)).
+  Proof.    
+    clear.
+    dependent induction ss; intros.
+    - apply M.Disj_empty_2.
+    - assert (sth: forall s', In s' ss ->
+                              canCombine {| substep := sr |} s') by
+          (intros; specialize (H s'); intuition).
+      specialize (IHss sth); clear sth.
+      assert (sth2: canCombine {| substep := sr |} a0) by (specialize (H a0); intuition).
+      clear H; unfold canCombine in *.
+      dest.
+      clear H x H0 H1; simpl in *.
+      destruct a0.
+      unfold addLabelLeft, mergeLabel, getSLabel, getLabel; simpl in *.
+      destruct (foldSSLabel ss); simpl in *.
+      apply M.Disj_union; intuition.
   Qed.
   
+  Lemma callsDisjSs m o (ss: list (SubstepRec m o)):
+    forall b,
+      substepsComb (b :: ss) ->
+      M.Disj (calls (getSLabel b)) (calls (foldSSLabel ss)).
+  Proof.
+    clear.
+    intros.
+    destruct b; simpl in *.
+    unfold addLabelLeft, mergeLabel, getSLabel; simpl in *.
+    case_eq (foldSSLabel ss); intros; simpl in *.
+    assert (sth: Semantics.calls (foldSSLabel ss) = calls) by (rewrite H0; reflexivity).
+    rewrite <- sth.
+    dependent destruction H.
+    eapply callsDisjSs'; eauto.
+  Qed.
+  
+  Theorem xformLabelFoldCommute o ss:
+    substepsComb ss ->
+    xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _) ss).
+  Proof.
+    induction ss; simpl in *; try rewrite liftToMap1Empty; intros.
+    - reflexivity.
+    - pose proof H as sth.
+      dependent destruction H.
+      specialize (IHss H).
+      unfold addLabelLeft in *.
+      rewrite xformLabelAddLabelCommute.
+      f_equal; intuition.
+      apply xformLabelGetSLabelCommute.
+      apply defsDisjSs; intuition.
+      apply callsDisjSs; intuition.
+  Qed.
+
   Theorem xformLabelHide o:
     forall(ss: Substeps imp o) (ssGd: wellHidden imp (hide (foldSSLabel ss))),
       substepsComb ss ->
