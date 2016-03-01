@@ -247,7 +247,7 @@ Section SemOpTest.
       (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
   Proof.
     apply renameTheorem'.
-    - apply bijMcCorrect.
+    - apply bijMaMbCorrect.
     - apply bijMcCorrect.
     - apply mab_mc2.
   Qed.

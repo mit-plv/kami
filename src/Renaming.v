@@ -364,33 +364,33 @@ Section Rename.
       M.In k m -> M.In (rename k) (renameMap m).
   Proof.
     intros. 
-    apply MapsToIn2 in H.
+    apply M.MapsToIn2 in H.
     destruct H.
     apply renameMapsTo in H.
-    apply (MapsToIn1 (v := x)); intuition.
+    apply (M.MapsToIn1 (v := x)); intuition.
   Qed.
 
   Lemma renameMapIn2 A (m: M.t A): forall k,
       M.In (rename k) (renameMap m) -> M.In k m.
   Proof.
     intros. 
-    apply MapsToIn2 in H.
+    apply M.MapsToIn2 in H.
     destruct H.
     apply renameMapsTo in H.
-    apply (MapsToIn1 (v := x)); intuition.
+    apply (M.MapsToIn1 (v := x)); intuition.
   Qed.
 
   Lemma renameMapIn2' A (m: M.t A): forall k,
       M.In k (renameMap m) -> exists k', k = rename k' /\ M.In k' m.
   Proof.
     intros.
-    apply MapsToIn2 in H.
+    apply M.MapsToIn2 in H.
     destruct H.
     apply renameMapsTo2' in H.
     destruct H as [k' [kEq maps]].
     exists k'.
     constructor; auto.
-    apply MapsToIn1 in maps.
+    apply M.MapsToIn1 in maps.
     intuition.
   Qed.
 
