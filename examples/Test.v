@@ -102,7 +102,7 @@ Section Tests.
                     end] => destruct P
       | |- M.Disj (M.empty _) _ => apply M.Disj_empty_1
       | |- M.Disj _ (M.empty _) => apply M.Disj_empty_2
-      | _ => intuition
+      | _ => eauto
       end.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
@@ -114,6 +114,36 @@ Section Tests.
                HssRuleMap HssMethMap;
     decompositionSimple.
   Qed.
+
+  (*
+  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Proof.
+    inlineL.
+    equiv_tac.
+    eapply (decomposition id (fun _ s => Some s)); auto.
+    refine (let rMap := _ in
+            let mMap := _ in
+            @decomposition _ _ id (fun _ s => Some s) _ _ _ _ rMap mMap _).
+    apply HssRuleMap; intuition.
+    apply HssMethMap; intuition.
+    
+                           (ruleMap := ruleMap) (substepRuleMap := rMap)
+                          (substepMethMap := mMap)).
+    inlineL.
+    equiv_tac.
+    eapply decomposition.
+
+    
+    eapply decomposition with (theta := id) (ruleMap := fun _ s => Some s); auto; intros.
+    decompositionSimple; unfold inlineDmToRule in *; simpl in *.
+    destruct HInRules, HInRules0; intuition.
+    inversion H0; inversion H1; subst.
+    unfold inlineDmToRule in H0; simpl in *.
+    simpl in *.
+    decompositionSimple.
+  Qed.
+   *)
+
 End Tests.
 
 Section SemOpTest.
