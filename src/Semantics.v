@@ -412,8 +412,7 @@ Section MapSet.
     unfold liftToMap1, M.fold; reflexivity.
   Qed.
 
-  (*
-  Theorem liftToMap1MapsTo1:
+  Theorem liftToMap1MapsTo:
     forall m k v, M.MapsTo k v (liftToMap1 m) <-> exists v', p k v' = Some v /\ M.MapsTo k v' m.
   Proof.
     intros m; M.mind m.
@@ -426,51 +425,44 @@ Section MapSet.
       rewrite (M.F.P.fold_add (eqA := eq)) in H1; try apply transpose_neqkey_rmModify; intuition.
       fold (liftToMap1 m) in H1.
       unfold rmModify in H1.
-      destruct (p k v).
+      case_eq (p k v); intros; subst.
+      rewrite H2 in H1.
       + apply M.F.P.F.add_mapsto_iff in H1; dest.
         destruct H1; dest; subst.
-        specialize (H k0 v0).
-        destruct H.
-        dest.
-        * exists v.
-      
-                                               | 
-  
-  Theorem liftToMap1MapsTo2:
-    forall m k v, M.MapsTo k v m -> match p k v with
-                                    | None => forall v', ~ M.MapsTo k v' (liftToMap1 m)
-                                    | Some v' => M.MapsTo k v' (liftToMap1 m)
-                                    end.
-  Proof.
-    intros m.
-    M.mind m.
-    - apply M.F.P.F.empty_mapsto_iff in H; intuition.
-    - unfold liftToMap1.
-      rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
-      fold (liftToMap1 m); unfold rmModify.
-      apply M.F.P.F.add_mapsto_iff in H1; dest.
-      destruct H1; dest; subst.
-      + destruct (p k0 v0).
-        * apply M.F.P.F.add_mapsto_iff; intuition.
-        * intros.
-          
-        intros.
-      unfold M.Map.In,M.Map.Raw.PX.In in H0.
-      intros.
-      assert (exists e, M.Map.Raw.PX.MapsTo k0 e (M.Map.
-      clear - H0 H1; intuition.
-      admit.
-      intuition.
-      intuition.
-      apply transpose_neqkey_rmModify.
-      intuition.
-      unfold M.F.P.transpose_neqkey; intros.
-      unfold rmModify
-      intuition.
-      unfold rmModify.
-      + destruct (p k0 v0), (p k v).
-      destruct (p k0 v0).
-   *)
+        * exists v; intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+        * destruct (H k0 v0); dest; subst.
+          specialize (H4 H3); dest; subst.
+          exists x.
+          intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+      + rewrite H2 in H1.
+        destruct (H k0 v0); dest; subst.
+        specialize (H3 H1); dest; subst.
+        exists x.
+        intuition.
+        apply M.F.P.F.add_mapsto_iff; right; intuition.
+        subst.
+        apply M.MapsToIn1 in H5.
+        intuition.
+      + dest; subst.
+        apply M.F.P.F.add_mapsto_iff in H2; dest.
+        destruct H2; dest; try subst.
+        * unfold liftToMap1.
+          rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
+          unfold rmModify at 1.
+          rewrite H1.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+        * unfold liftToMap1.
+          rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
+          unfold rmModify at 1.
+          fold (liftToMap1 m).
+          specialize (H k0 v0).
+          assert (sth: exists x, p k0 x = Some v0 /\ M.MapsTo k0 x m) by (eexists; eauto).
+          apply H in sth.
+          destruct (p k v); intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+  Qed.
 
   Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 s) s.
   Proof.

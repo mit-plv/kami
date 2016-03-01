@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemFacts Equiv CanCombine.
+Require Import Syntax Semantics SemFacts.
 
 Set Implicit Arguments.
 
@@ -174,12 +174,35 @@ Section Decomposition.
       liftToMap1 p (M.subtractKV signIsEq l1 l2) =
       M.subtractKV signIsEq (liftToMap1 p l1) (liftToMap1 p l2).
   Proof.
-    intros; M.mind l1.
-    - rewrite M.subtractKV_empty_1.
-      rewrite liftToMap1Empty.
-      rewrite M.subtractKV_empty_1.
-      reflexivity.
-    - admit.
+    clear; intros.
+    assert (sth: forall x v1 v2, M.MapsTo x v1 l1 -> M.MapsTo x v2 l2 -> v1 = v2) by
+        (intros;
+         apply M.F.P.F.find_mapsto_iff in H0;
+         apply M.F.P.F.find_mapsto_iff in H1; apply (H x); intuition); clear H.
+    apply M.leibniz.
+    apply M.F.P.F.Equal_mapsto_iff; intros.
+    constructor; intros.
+    - apply M.subtractKV_mapsto.
+      apply liftToMap1MapsTo in H; dest.
+      apply M.subtractKV_mapsto in H0; dest.
+      constructor.
+      apply liftToMap1MapsTo.
+      eexists; eauto.
+      unfold not; intros.
+      apply liftToMap1MapsTo in H2; dest.
+      specialize (sth _ _ _ H0 H3).
+      subst.
+      intuition.
+    - apply liftToMap1MapsTo.
+      apply M.subtractKV_mapsto in H; dest.
+      apply liftToMap1MapsTo in H; dest.
+      exists x.
+      intuition.
+      apply M.subtractKV_mapsto.
+      constructor; intuition.
+      assert (sth2: exists x, p k x = Some e /\ M.MapsTo k x l2) by (eexists; eauto).
+      apply liftToMap1MapsTo in sth2.
+      intuition.
   Qed.
   
   Theorem wellHiddenEq1 m l:
@@ -219,8 +242,33 @@ Section Decomposition.
   Theorem liftToMap1UnionCommute l1 l2:
     liftToMap1 p (M.union l1 l2) = M.union (liftToMap1 p l1) (liftToMap1 p l2).
   Proof.
-    admit.
-  Qed.      
+    clear.
+    apply M.leibniz.
+    apply M.F.P.F.Equal_mapsto_iff; intros.
+    constructor; intros.
+    - apply liftToMap1MapsTo in H; dest.
+      apply M.mapsto_union in H0.
+      apply M.mapsto_union.
+      destruct H0; dest; subst.
+      + left.
+        apply liftToMap1MapsTo.
+        eexists; eauto.
+      + right.
+        constructor; unfold not; intros.
+        apply M.MapsToIn2 in H2; dest.
+        apply liftToMap1MapsTo in H2; dest; subst.
+        apply M.MapsToIn1 in H3; intuition.
+        apply liftToMap1MapsTo.
+        exists x; intuition.
+    - apply M.mapsto_union in H.
+      apply liftToMap1MapsTo.
+      destruct H; dest; subst.
+      + apply liftToMap1MapsTo in H; dest; subst.
+        exists x; intuition.
+        apply M.mapsto_union; intuition.
+      + apply liftToMap1MapsTo in H0; dest; subst.
+        admit.
+  Qed.
   
   Theorem xformLabelAddLabelCommute l1 l2:
     forall o,

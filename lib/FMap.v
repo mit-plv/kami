@@ -538,6 +538,50 @@ Module LeibnizFacts (M : MapLeibniz).
       cmp k k0; auto.
   Qed.
 
+  Lemma MapsToIn1 A m k (v: A):
+    MapsTo k v m -> In k m.
+  Proof.
+    unfold In.
+    eexists; eauto.
+  Qed.
+
+  Lemma MapsToIn2 A m k:
+    In k m -> (exists (v: A), MapsTo k v m).
+  Proof.
+    unfold In.
+    intuition.
+  Qed.
+
+  Lemma mapsto_union A:
+    forall (m m': t A) k v,
+      MapsTo k v (union m m') <-> MapsTo k v m \/ ~ In k m /\ MapsTo k v m'.
+  Proof.
+    intros.
+    constructor; intros.
+    - apply P.F.find_mapsto_iff in H.
+      rewrite find_union in H.
+      case_eq (find k m); intros; subst.
+      + rewrite H0 in *.
+        inversion H; subst.
+        apply P.F.find_mapsto_iff in H0; intuition.
+      + rewrite H0 in *.
+        inversion H; subst.
+        apply P.F.find_mapsto_iff in H.
+        apply P.F.not_find_in_iff in H0.
+        intuition.
+    - apply P.F.find_mapsto_iff.
+      destruct H.
+      + apply P.F.find_mapsto_iff in H.
+        rewrite find_union.
+        rewrite H; reflexivity.
+      + rewrite find_union.
+        dest.
+        apply P.F.find_mapsto_iff in H0.
+        apply P.F.not_find_in_iff in H.
+        rewrite H, H0.
+        reflexivity.
+  Qed.
+
   Lemma update_empty_1: forall {A} (m: t A), update (empty A) m = m.
   Proof.
     mintros; unfold unionL; mind m.
@@ -1825,23 +1869,6 @@ Section MakeMap.
     f_equal.
     apply IHm1.
     eapply DisjList_cons; eauto.
-  Qed.
-
-  Lemma MapsToIn1 m k (v: A):
-    M.MapsTo k v m -> M.In k m.
-  Proof.
-    unfold M.MapsTo, M.In.
-    unfold M.Raw.PX.In.
-    intros.
-    eexists; eauto.
-  Qed.
-
-  Lemma MapsToIn2 m k:
-    M.In k m -> (exists (v: A), M.MapsTo k v m).
-  Proof.
-    unfold M.MapsTo, M.In.
-    unfold M.Raw.PX.In.
-    intuition.
   Qed.
 End MakeMap.
 
