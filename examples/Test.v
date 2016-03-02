@@ -113,7 +113,6 @@ Section Tests.
                (fun (r: RegsT) (rl: string) => Some rl)
                HssRuleMap HssMethMap;
       decompositionSimple.
-    auto.
     equiv_tac.
   Qed.
 
