@@ -150,11 +150,12 @@ Section TwoModules.
             try (f_equal; auto; fail).
   Qed.
 
+  Definition ValidLabel (m: Modules) (l: LabelT) :=
+    M.KeysSubset (defs l) (getDefs m) /\ M.KeysSubset (calls l) (getCalls m).
+
   Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
-    M.KeysSubset (defs la) (getDefs ma) ->
-    M.KeysSubset (calls la) (getCalls ma) ->
-    M.KeysSubset (defs lb) (getDefs mb) ->
-    M.KeysSubset (calls lb) (getCalls mb) ->
+    ValidLabel ma la ->
+    ValidLabel mb lb ->
     wellHidden ma (hide la) ->
     wellHidden mb (hide lb) ->
     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
@@ -367,17 +368,19 @@ Section TwoModules.
     - apply substepsInd_modular; auto.
       constructor; auto.
       repeat split; auto.
-    - unfold WellHiddenModular in H2.
+    - unfold WellHiddenModular, ValidLabel in H2.
       rewrite <-hide_mergeLabel_idempotent in H2 by auto.
       apply H2.
-      + apply M.KeysSubset_Sub with (m2:= defs l); auto.
-        apply M.subtractKV_sub.
-      + apply M.KeysSubset_Sub with (m2:= calls l); auto.
-        apply M.subtractKV_sub.
-      + apply M.KeysSubset_Sub with (m2:= defs l0); auto.
-        apply M.subtractKV_sub.
-      + apply M.KeysSubset_Sub with (m2:= calls l0); auto.
-        apply M.subtractKV_sub.
+      + split.
+        * apply M.KeysSubset_Sub with (m2:= defs l); auto.
+          apply M.subtractKV_sub.
+        * apply M.KeysSubset_Sub with (m2:= calls l); auto.
+          apply M.subtractKV_sub.
+      + split.
+        * apply M.KeysSubset_Sub with (m2:= defs l0); auto.
+          apply M.subtractKV_sub.
+        * apply M.KeysSubset_Sub with (m2:= calls l0); auto.
+          apply M.subtractKV_sub.
       + rewrite <-hide_idempotent; auto.
       + rewrite <-hide_idempotent; auto.
   Qed.

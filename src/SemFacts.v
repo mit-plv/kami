@@ -308,6 +308,62 @@ Proof.
   pose proof (staticDynCallsSubstep H0); auto.
 Qed.
 
+Lemma step_defs_in:
+  forall m or u l,
+    Step m or u l -> M.KeysSubset (defs l) (getDefs m).
+Proof.
+  intros; apply step_consistent in H; inv H.
+  apply substepsInd_defs_in in HSubSteps.
+  destruct l0 as [ann ds cs]; unfold hide in *; simpl in *.
+  eapply M.KeysSubset_Sub; eauto.
+  apply M.subtractKV_sub.
+Qed.
+
+Lemma step_calls_in:
+  forall m or u l,
+    Step m or u l -> M.KeysSubset (calls l) (getCalls m).
+Proof.
+  intros; apply step_consistent in H; inv H.
+  apply substepsInd_calls_in in HSubSteps.
+  destruct l0 as [ann ds cs]; unfold hide in *; simpl in *.
+  eapply M.KeysSubset_Sub; eauto.
+  apply M.subtractKV_sub.
+Qed.
+
+Lemma multistep_defs_in:
+  forall m or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  eapply step_defs_in; eauto.
+Qed.
+
+Lemma multistep_calls_in:
+  forall m or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (calls l) (getCalls m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  eapply step_calls_in; eauto.
+Qed.
+
+Lemma behavior_defs_in:
+  forall m ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_defs_in; eauto.
+Qed.
+
+Lemma behavior_calls_in:
+  forall m ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (calls l) (getCalls m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_calls_in; eauto.
+Qed.
+      
 Lemma step_defs_disj:
   forall m or u l,
     Step m or u l -> M.KeysDisj (defs l) (getCalls m).
