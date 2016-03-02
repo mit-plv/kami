@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf.
+Require Import Syntax Semantics SemFacts Wf Equiv.
 
 Set Implicit Arguments.
 
@@ -13,6 +13,10 @@ Fixpoint composeLabels (ls1 ls2: LabelSeqT) :=
 
 Section TwoModules.
   Variables (ma mb: Modules).
+
+  Hypotheses (HmaEquiv: ModEquiv type typeUT ma)
+             (HmbEquiv: ModEquiv type typeUT mb).
+
   Hypotheses (Hinit: DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mb)))
              (Hdefs: DisjList (getDefs ma) (getDefs mb))
              (Hcalls: DisjList (getCalls ma) (getCalls mb))
@@ -177,17 +181,17 @@ Section TwoModules.
 
     - constructor; auto.
       inv H3; dest.
-      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_calls_in HmaEquiv H).
       pose proof (substepsInd_defs_in H).
-      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_calls_in HmbEquiv H0).
       pose proof (substepsInd_defs_in H0).
       eapply wellHidden_split
       with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
     - constructor; auto.
       inv H3; dest.
-      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_calls_in HmaEquiv H).
       pose proof (substepsInd_defs_in H).
-      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_calls_in HmbEquiv H0).
       pose proof (substepsInd_defs_in H0).
       eapply wellHidden_split
       with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
@@ -352,9 +356,9 @@ Section TwoModules.
     intros; inv H; inv H3.
 
     pose proof (substepsInd_defs_in HSubSteps).
-    pose proof (substepsInd_calls_in HSubSteps).
+    pose proof (substepsInd_calls_in HmaEquiv HSubSteps).
     pose proof (substepsInd_defs_in HSubSteps0).
-    pose proof (substepsInd_calls_in HSubSteps0).
+    pose proof (substepsInd_calls_in HmbEquiv HSubSteps0).
 
     assert (M.Disj (defs l) (defs l0))
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).

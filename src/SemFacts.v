@@ -170,35 +170,112 @@ Proof.
     eapply Hp; eauto.
 Qed.
 
-Lemma staticDynCallsRules m o name a u cs r:
-  In (name :: a)%struct (getRules m) ->
-  SemAction o (a type) u cs r ->
-  forall f, M.In f cs -> In f (getCalls m).
-Proof.
-  admit.
-Qed.
+Require Import Equiv StaticDynamic.
 
-Theorem staticDynCallsMeths m o name a u cs r:
-  In (name :: a)%struct (getDefsBodies m) ->
-  forall argument,
-    SemAction o (projT2 a type argument) u cs r ->
+Section ModEquiv.
+  Variable m: Modules.
+  Variable mEquiv: ModEquiv type typeUT m.
+
+  Lemma getCallsARulesSubset (a: Action Void) rName:
+    forall x,
+      In x (getCallsA (a typeUT)) ->
+      In (rName :: a)%struct (getRules m) ->
+      In x (getCalls m).
+  Proof.
+    intros.
+    unfold getCalls.
+    apply in_or_app.
+    left.
+    induction (getRules m).
+    - intuition.
+    - simpl in *.
+      destruct H0; subst; apply in_or_app; intuition.
+  Qed.
+
+  Lemma getCallsAMethsSubset (a: sigT MethodT) mName:
+    forall x,
+      In x (getCallsA (projT2 a typeUT tt)) ->
+      In (mName :: a)%struct (getDefsBodies m) ->
+      In x (getCalls m).
+  Proof.
+    intros.
+    unfold getCalls.
+    apply in_or_app.
+    right.
+    induction (getDefsBodies m).
+    - intuition.
+    - simpl in *.
+      destruct H0; subst; apply in_or_app; intuition.
+  Qed.
+
+  (*
+  Lemma staticDynCallsRules o name a u cs r:
+    In (name :: a)%struct (getRules m) ->
+    SemAction o (a type) u cs r ->
     forall f, M.In f cs -> In f (getCalls m).
-Proof.
-  admit.
-Qed.
+  Proof.
+    intros.
+    apply 
+    admit.
+  Qed.
 
-Theorem staticDynCallsSubstep m o u rm cs:
-  Substep m o u rm cs ->
-  forall f, M.In f cs -> In f (getCalls m).
-Proof.
-  intro H.
-  dependent induction H; simpl in *; intros.
-  - apply (M.F.P.F.empty_in_iff) in H; intuition.
-  - apply (M.F.P.F.empty_in_iff) in H; intuition.
-  - eapply staticDynCallsRules; eauto.
-  - destruct f as [name a]; simpl in *.
-    eapply staticDynCallsMeths; eauto.
-Qed.
+  Theorem staticDynCallsMeths o name a u cs r:
+    In (name :: a)%struct (getDefsBodies m) ->
+    forall argument,
+      SemAction o (projT2 a type argument) u cs r ->
+      forall f, M.In f cs -> In f (getCalls m).
+  Proof.
+    admit.
+  Qed.
+   *)
+
+  Theorem staticDynCallsSubstep o u rm cs:
+    Substep m o u rm cs ->
+    forall f, M.In f cs -> In f (getCalls m).
+  Proof.
+    dependent induction rm; dependent induction o0; intros.
+    - eapply callsSubsetR in H; dest; subst;
+        try eapply getCallsARulesSubset in H1; eauto.
+    - dependent destruction H.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
+    - destruct a.
+      eapply callsSubsetM  in H; dest; subst;
+        try eapply getCallsAMethsSubset in H1; eauto.
+    - dependent destruction H.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
+  Qed.
+
+  Theorem staticDynCallsSubsteps o ss:
+    forall f, M.In f (calls (foldSSLabel (m := m) (o := o) ss)) -> In f (getCalls m).
+  Proof.
+    intros.
+    induction ss; simpl in *.
+    - exfalso.
+      apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
+    - unfold addLabelLeft, mergeLabel in *.
+      destruct a.
+      simpl in *.
+      destruct unitAnnot.
+      + destruct (foldSSLabel ss); simpl in *.
+        pose proof (M.union_In H) as sth.
+        destruct sth.
+        * apply (staticDynCallsSubstep substep); intuition.
+        * intuition.
+      + destruct (foldSSLabel ss); simpl in *.
+        dependent destruction o0; simpl in *.
+        * dependent destruction a; simpl in *.
+          pose proof (M.union_In H) as sth.
+          { destruct sth.
+            - apply (staticDynCallsSubstep substep); intuition.
+            - intuition.
+          }
+        * pose proof (M.union_In H) as sth.
+          { destruct sth.
+            - apply (staticDynCallsSubstep substep); intuition.
+            - intuition.
+          }
+  Qed.
+End ModEquiv.
 
 Theorem staticDynDefsSubstep m o u far cs:
   Substep m o u (Meth (Some far)) cs ->
@@ -215,37 +292,6 @@ Proof.
     + subst.
       left; intuition.
     + right; intuition.
-Qed.
-
-Theorem staticDynCallsSubsteps m o ss:
-  forall f, M.In f (calls (foldSSLabel (m := m) (o := o) ss)) -> In f (getCalls m).
-Proof.
-  intros.
-  induction ss; simpl in *.
-  - exfalso.
-    apply (proj1 (M.F.P.F.empty_in_iff _ _) H).
-  - unfold addLabelLeft, mergeLabel in *.
-    destruct a.
-    simpl in *.
-    destruct unitAnnot.
-    + destruct (foldSSLabel ss); simpl in *.
-      pose proof (M.union_In H) as sth.
-      destruct sth.
-      * apply (staticDynCallsSubstep substep); intuition.
-      * intuition.
-    + destruct (foldSSLabel ss); simpl in *.
-      dependent destruction o0; simpl in *.
-      * dependent destruction a; simpl in *.
-        pose proof (M.union_In H) as sth.
-        { destruct sth.
-          - apply (staticDynCallsSubstep substep); intuition.
-          - intuition.
-        }
-      * pose proof (M.union_In H) as sth.
-        { destruct sth.
-          - apply (staticDynCallsSubstep substep); intuition.
-          - intuition.
-        }
 Qed.
 
 Theorem staticDynDefsSubsteps m o ss:
@@ -299,39 +345,39 @@ Proof.
 Qed.
 
 Lemma substepsInd_calls_in:
-  forall m or u l,
+  forall m (Hequiv: ModEquiv type typeUT m) or u l,
     SubstepsInd m or u l -> M.KeysSubset (calls l) (getCalls m).
 Proof.
-  induction 1; simpl; [apply M.KeysSubset_empty|].
+  induction 2; simpl; [apply M.KeysSubset_empty|].
   subst; destruct l as [ann ds cs]; simpl in *.
   apply M.KeysSubset_union; auto.
-  pose proof (staticDynCallsSubstep H0); auto.
+  pose proof (staticDynCallsSubstep Hequiv H0); auto.
 Qed.
 
 Lemma step_defs_in:
-  forall m or u l,
+  forall m (Hequiv: ModEquiv type typeUT m) or u l,
     Step m or u l -> M.KeysSubset (defs l) (getDefs m).
 Proof.
   intros; apply step_consistent in H; inv H.
-  apply substepsInd_defs_in in HSubSteps.
+  apply substepsInd_defs_in in HSubSteps; auto.
   destruct l0 as [ann ds cs]; unfold hide in *; simpl in *.
   eapply M.KeysSubset_Sub; eauto.
   apply M.subtractKV_sub.
 Qed.
 
 Lemma step_calls_in:
-  forall m or u l,
+  forall m (Hequiv: ModEquiv type typeUT m) or u l,
     Step m or u l -> M.KeysSubset (calls l) (getCalls m).
 Proof.
   intros; apply step_consistent in H; inv H.
-  apply substepsInd_calls_in in HSubSteps.
+  apply substepsInd_calls_in in HSubSteps; auto.
   destruct l0 as [ann ds cs]; unfold hide in *; simpl in *.
   eapply M.KeysSubset_Sub; eauto.
   apply M.subtractKV_sub.
 Qed.
 
 Lemma multistep_defs_in:
-  forall m or ll u,
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
     Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   induction ll; intros; auto.
@@ -340,7 +386,7 @@ Proof.
 Qed.
 
 Lemma multistep_calls_in:
-  forall m or ll u,
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
     Multistep m or u ll -> Forall (fun l => M.KeysSubset (calls l) (getCalls m)) ll.
 Proof.
   induction ll; intros; auto.
@@ -349,7 +395,7 @@ Proof.
 Qed.
 
 Lemma behavior_defs_in:
-  forall m ll u,
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
     Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   intros; inv H.
@@ -357,7 +403,7 @@ Proof.
 Qed.
 
 Lemma behavior_calls_in:
-  forall m ll u,
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
     Behavior m u ll -> Forall (fun l => M.KeysSubset (calls l) (getCalls m)) ll.
 Proof.
   intros; inv H.
@@ -549,39 +595,42 @@ Proof.
 Qed.
 
 Lemma substepsInd_meths_disj:
-  forall regs rules dms,
+  forall regs rules dms
+    (mEquiv: ModEquiv type typeUT (Mod regs rules dms)),
     DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
     forall or u l,
       SubstepsInd (Mod regs rules dms) or u l ->
       M.Disj (calls l) (defs l).
 Proof.
   intros.
-  pose proof (substepsInd_calls_in H0).
+  pose proof (substepsInd_calls_in mEquiv H0).
   pose proof (substepsInd_defs_in H0).
   eapply M.DisjList_KeysSubset_Disj; eauto.
 Qed.
 
 Lemma substepsInd_hide_void:
-  forall regs rules dms,
+  forall regs rules dms
+    (mEquiv: ModEquiv type typeUT (Mod regs rules dms)),
     DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
     forall or u l,
       SubstepsInd (Mod regs rules dms) or u l ->
       hide l = l.
 Proof.
   intros; destruct l as [ann ds cs].
-  pose proof (substepsInd_meths_disj H H0).
+  pose proof (substepsInd_meths_disj mEquiv H H0).
   unfold hide; simpl in *; f_equal; apply M.subtractKV_disj_invalid; mdisj.
 Qed.
 
 Lemma stepInd_dms_weakening:
-  forall regs rules dms or u l,
+  forall regs rules dms or u l
+         (mEquiv: ModEquiv type typeUT (Mod regs rules dms)),
     DisjList (getCalls (Mod regs rules dms)) (getDefs (Mod regs rules dms)) ->
     StepInd (Mod regs rules dms) or u l ->
     forall filt,
       M.KeysDisj (defs l) filt ->
       StepInd (Mod regs rules (filterDms dms filt)) or u l.
 Proof.
-  induction 2; intros.
+  induction 3; intros.
   constructor.
   - erewrite substepsInd_hide_void in H0; eauto.
     apply substepInd_dms_weakening; auto.
@@ -590,6 +639,7 @@ Qed.
 
 Lemma step_dms_weakening:
   forall regs rules dms or u l,
+    ModEquiv type typeUT (Mod regs rules dms) ->
     DisjList (getCalls (Mod regs rules dms))
              (getDefs (Mod regs rules dms)) ->
     Step (Mod regs rules dms) or u l ->
@@ -598,7 +648,8 @@ Lemma step_dms_weakening:
       Step (Mod regs rules (filterDms dms filt)) or u l.
 Proof.
   intros; subst; simpl.
-  apply step_consistent; apply step_consistent in H0.
+  apply step_consistent.
+  apply step_consistent in H1.
   apply stepInd_dms_weakening; auto.
 Qed.
 

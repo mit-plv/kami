@@ -92,20 +92,63 @@ Section Tests.
     inv HIn.
   Defined.
 
+  Ltac decompositionSimple :=
+    repeat
+      match goal with
+      | s: SubstepRec _ _ |- _ => destruct s
+      | s: Substep _ _ _ _ _ |- _ => destruct s; simpl in *
+      | |- context [match ?P with
+                    | _ => _
+                    end] => destruct P
+      | |- M.Disj (M.empty _) _ => apply M.Disj_empty_1
+      | |- M.Disj _ (M.empty _) => apply M.Disj_empty_2
+      | _ => eauto
+      end.
+
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
     inlineL.
     equiv_tac.
     decomposeT (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
-               HssRuleMap HssMethMap.
-    admit. (* do we really have to prove this for each instance? *)
+               HssRuleMap HssMethMap;
+      decompositionSimple.
+    auto.
+    equiv_tac.
   Qed.
-  
+
+  (*
+  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Proof.
+    inlineL.
+    equiv_tac.
+    eapply (decomposition id (fun _ s => Some s)); auto.
+    refine (let rMap := _ in
+            let mMap := _ in
+            @decomposition _ _ id (fun _ s => Some s) _ _ _ _ rMap mMap _).
+    apply HssRuleMap; intuition.
+    apply HssMethMap; intuition.
+    
+                           (ruleMap := ruleMap) (substepRuleMap := rMap)
+                          (substepMethMap := mMap)).
+    inlineL.
+    equiv_tac.
+    eapply decomposition.
+
+    
+    eapply decomposition with (theta := id) (ruleMap := fun _ s => Some s); auto; intros.
+    decompositionSimple; unfold inlineDmToRule in *; simpl in *.
+    destruct HInRules, HInRules0; intuition.
+    inversion H0; inversion H1; subst.
+    unfold inlineDmToRule in H0; simpl in *.
+    simpl in *.
+    decompositionSimple.
+  Qed.
+   *)
+
 End Tests.
 
 Section SemOpTest.
-
   Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
   Proof.
     intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
@@ -247,8 +290,8 @@ Section SemOpTest.
       (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
   Proof.
     apply renameTheorem'.
-    - apply bijMaMbCorrect.
     - apply bijMcCorrect.
-    - apply mab_mc2.
+    - apply bijMcCorrect.
+    - apply mab_mc.
   Qed.
 End SemOpTest.

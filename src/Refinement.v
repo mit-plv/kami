@@ -1,10 +1,11 @@
 Require Import List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
-Require Import Syntax Semantics SemFacts Wf Split.
+Require Import Syntax Semantics SemFacts Wf Equiv Split.
 
 Set Implicit Arguments.
 
+(* TODO: should move to proper file *)
 Lemma liftToMap1_find:
   forall {A} vp (m: M.t A) k,
     M.find k (liftToMap1 vp m) = match M.find k m with
@@ -276,29 +277,6 @@ Section Facts.
         WellHiddenModular mb md lb ld.
   Proof.
     intros.
-    (* unfold Interacting, WellHiddenModular, wellHidden; intros; dest. *)
-    (* specialize (H2 H0 H1). *)
-    (* destruct la as [anna dsa csa], lb as [annb dsb csb]. *)
-    (* destruct lc as [annc dsc csc], ld as [annd dsd csd]; simpl in *. *)
-    (* inv H3; inv H4; dest; simpl in *; subst. *)
-    (* split. *)
-
-    (* - assert (SubList (getCalls mb) (getCalls ma)) by admit.  *)
-    (*   assert (SubList (getDefs mb) (getDefs ma)) by admit. *)
-    (*   assert (SubList (getCalls md) (getCalls mc)) by admit. *)
-    (*   assert (SubList (getDefs md) (getDefs mc)) by admit. *)
-
-    (*   (* apply M.KeysDisj_SubList with (d1:= getCalls (ConcatMod ma mc)); [|admit]. *) *)
-
-    (*   rewrite liftToMap1_union; [|admit]. *)
-    (*   rewrite liftToMap1_union; [|admit]. *)
-    (*   rewrite liftToMap1_subtractKV. [|admit]. *)
-
-    (*   apply liftToMap1_KeysDisj. *)
-
-    (*   rewrite liftToMap1_subtractKV in H12; [|admit].  *)
-    
-   
     admit.
   Qed.
 
@@ -319,13 +297,16 @@ Section Facts.
     - inv H4; inv H5; inv H6; constructor.
     - inv H0; inv H1; inv H2; inv H3; inv H4; inv H5; inv H6; constructor.
       + eapply IHla; eauto.
-      + eapply interacting_implies_wellHiddenModular; eauto.
-        admit.
-        admit.
+      + eapply interacting_implies_wellHiddenModular; eauto; split; auto.
   Qed.
 
   Section Modularity.
     Variables (ma mb mc md: Modules).
+
+    Hypotheses (HmaEquiv: Equiv.ModEquiv type typeUT ma)
+               (HmbEquiv: Equiv.ModEquiv type typeUT mb)
+               (HmcEquiv: Equiv.ModEquiv type typeUT mc)
+               (HmdEquiv: Equiv.ModEquiv type typeUT md).
 
     Hypotheses (Hacregs: DisjList (namesOf (getRegInits ma))
                                   (namesOf (getRegInits mc)))
@@ -397,10 +378,10 @@ Section Facts.
         - apply behavior_modular; auto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
             apply vp_equivalentLabel_CanCombineLabel_proper.
-          + pose proof (behavior_defs_in H2).
-            pose proof (behavior_calls_in H2).
-            pose proof (behavior_defs_in H3).
-            pose proof (behavior_calls_in H3).
+          + pose proof (behavior_defs_in HmaEquiv H2).
+            pose proof (behavior_calls_in HmaEquiv H2).
+            pose proof (behavior_defs_in HmcEquiv H3).
+            pose proof (behavior_calls_in HmcEquiv H3).
             eapply interacting_implies_wellHiddenModularSeq; eauto.
         - apply composeLabels_modular; auto.
           + (* pose proof (behavior_defs_disj H2). *)
