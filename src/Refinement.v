@@ -256,11 +256,16 @@ Section Facts.
                                  CanCombineLabel).
 
       Lemma traceRefines_modular_noninteracting:
+        Equiv.ModEquiv type typeUT ma ->
+        Equiv.ModEquiv type typeUT mb ->
+        Equiv.ModEquiv type typeUT mc ->
+        Equiv.ModEquiv type typeUT md ->
         NonInteracting mb md ->
         traceRefines p ma mb ->
         traceRefines p mc md ->
         traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
       Proof.
+        intros maEquiv mbEquiv mcEquiv mdEquiv.
         unfold traceRefines; intros.
         apply behavior_split in H2; auto.
         destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
@@ -285,11 +290,16 @@ Section Facts.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
       Lemma traceRefines_modular_interacting:
+        Equiv.ModEquiv type typeUT ma ->
+        Equiv.ModEquiv type typeUT mb ->
+        Equiv.ModEquiv type typeUT mc ->
+        Equiv.ModEquiv type typeUT md ->
         Interacting ma mc vp ->
         traceRefines (liftToMap1 vp) ma mb ->
         traceRefines (liftToMap1 vp) mc md ->
         traceRefines id (ConcatMod ma mc) (ConcatMod mb md).
       Proof.
+        intros maEquiv mbEquiv mcEquiv mdEquiv.
         unfold traceRefines; intros.
         apply behavior_split in H2; auto.
         destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.

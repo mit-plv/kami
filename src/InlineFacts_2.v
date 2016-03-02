@@ -902,6 +902,7 @@ Proof.
   rewrite <-Heqimb in H0; simpl in H0.
   pose proof (step_dms_hidden _ _ _ _ H).
   apply step_dms_weakening; auto.
+  - admit. (* inlined mod equiv *)
   - apply noCalls_implies_disj; auto.
   - apply merge_preserves_step; auto.
 Qed.

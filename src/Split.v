@@ -150,6 +150,10 @@ Section TwoModules.
             try (f_equal; auto; fail).
   Qed.
 
+  Require Import Equiv.
+  Variable maEquiv: ModEquiv type typeUT ma.
+  Variable mbEquiv: ModEquiv type typeUT mb.
+
   Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
     M.KeysSubset (defs la) (getDefs ma) ->
     M.KeysSubset (calls la) (getCalls ma) ->
@@ -176,17 +180,17 @@ Section TwoModules.
 
     - constructor; auto.
       inv H3; dest.
-      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_calls_in maEquiv H).
       pose proof (substepsInd_defs_in H).
-      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_calls_in mbEquiv H0).
       pose proof (substepsInd_defs_in H0).
       eapply wellHidden_split
       with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
     - constructor; auto.
       inv H3; dest.
-      pose proof (substepsInd_calls_in H).
+      pose proof (substepsInd_calls_in maEquiv H).
       pose proof (substepsInd_defs_in H).
-      pose proof (substepsInd_calls_in H0).
+      pose proof (substepsInd_calls_in mbEquiv H0).
       pose proof (substepsInd_defs_in H0).
       eapply wellHidden_split
       with (ma:= ma) (mb:= mb) (la:= la) (lb:= lb); eauto.
@@ -351,9 +355,9 @@ Section TwoModules.
     intros; inv H; inv H3.
 
     pose proof (substepsInd_defs_in HSubSteps).
-    pose proof (substepsInd_calls_in HSubSteps).
+    pose proof (substepsInd_calls_in maEquiv HSubSteps).
     pose proof (substepsInd_defs_in HSubSteps0).
-    pose proof (substepsInd_calls_in HSubSteps0).
+    pose proof (substepsInd_calls_in mbEquiv HSubSteps0).
 
     assert (M.Disj (defs l) (defs l0))
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).

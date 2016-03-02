@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemFacts.
+Require Import Syntax Semantics SemFacts Equiv.
 
 Set Implicit Arguments.
 
@@ -494,6 +494,8 @@ Section Decomposition.
       apply callsDisjSs; intuition.
   Qed.
 
+  Variable impEquiv: ModEquiv type typeUT imp.
+
   Theorem xformLabelHide o:
     forall(ss: Substeps imp o) (ssGd: wellHidden imp (hide (foldSSLabel ss))),
       substepsComb ss ->
@@ -506,7 +508,7 @@ Section Decomposition.
     apply eq_sym; apply xformLabelFoldCommute; intuition.
     apply (wellHiddenEq1 (m := imp)).
     - unfold M.KeysSubset; apply (staticDynDefsSubsteps ss).
-    - unfold M.KeysSubset; apply (staticDynCallsSubsteps ss).
+    - unfold M.KeysSubset; apply (staticDynCallsSubsteps impEquiv ss).
     - intuition.
   Qed.
 
@@ -610,4 +612,3 @@ Ltac decomposeT t r Hrm Hmm :=
                               (ruleMap:= r)
                               (substepRuleMap:= Hrm)
                               (substepMethMap:= Hmm); auto; intros.
-

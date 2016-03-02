@@ -112,7 +112,9 @@ Section Tests.
     decomposeT (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
                HssRuleMap HssMethMap;
-    decompositionSimple.
+      decompositionSimple.
+    auto.
+    equiv_tac.
   Qed.
 
   (*
