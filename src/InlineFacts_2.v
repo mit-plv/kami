@@ -381,6 +381,33 @@ Proof.
   - apply inlineDmToDms_MethsEquiv; auto.
 Qed.
 
+Lemma inlineDms'_ModEquiv:
+  forall dms m,
+    ModEquiv type typeUT m ->
+    ModEquiv type typeUT (fst (inlineDms' m dms)).
+Proof.
+  induction dms; simpl; intros; auto.
+  case_eq (inlineDmToMod m a); intros.
+  destruct b; simpl in *.
+  - apply IHdms.
+    replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
+    apply inlineDmToMod_ModEquiv; auto.
+  - replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
+    apply inlineDmToMod_ModEquiv; auto.
+Qed.
+
+Lemma inlineDms_ModEquiv:
+  forall m,
+    ModEquiv type typeUT m ->
+    ModEquiv type typeUT (fst (inlineDms m)).
+Proof. intros; apply inlineDms'_ModEquiv; auto. Qed.
+
+Lemma inline_ModEquiv:
+  forall m,
+    ModEquiv type typeUT m ->
+    ModEquiv type typeUT (fst (inline m)).
+Proof. intros; apply inlineDms_ModEquiv; auto. Qed.
+
 Lemma inlineDmToMod_dms_names:
   forall m a,
     namesOf (getDefsBodies (fst (inlineDmToMod m a))) =
@@ -902,7 +929,8 @@ Proof.
   rewrite <-Heqimb in H0; simpl in H0.
   pose proof (step_dms_hidden _ _ _ _ H).
   apply step_dms_weakening; auto.
-  - admit. (* inlined mod equiv *)
+  - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
+    apply inline_ModEquiv; auto.
   - apply noCalls_implies_disj; auto.
   - apply merge_preserves_step; auto.
 Qed.
