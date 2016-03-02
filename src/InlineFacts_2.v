@@ -40,7 +40,7 @@ End HideExts.
 Section SubstepFacts.
   Variable m: Modules.
   Hypotheses (Hwf: WfModules type m)
-             (Hequiv: ModEquiv typeUT type m)
+             (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
   Hypothesis (Hdm: noCallDm dm dm = true).
@@ -364,8 +364,8 @@ Qed.
 
 Lemma inlineDmToMod_ModEquiv:
   forall m dm,
-    ModEquiv typeUT type m ->
-    ModEquiv typeUT type (fst (inlineDmToMod m dm)).
+    ModEquiv type typeUT m ->
+    ModEquiv type typeUT (fst (inlineDmToMod m dm)).
 Proof.
   intros.
   unfold inlineDmToMod.
@@ -404,7 +404,7 @@ Qed.
 Section SubstepsFacts.
   Variable m: Modules.
   Hypotheses (Hwf: WfModules type m)
-             (Hequiv: ModEquiv typeUT type m)
+             (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
   Hypotheses (Hdm: In dm (getDefsBodies m))
@@ -601,7 +601,7 @@ Section SubstepsFacts.
 End SubstepsFacts.
 
 Lemma inlineDmToMod_correct_Substeps:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          or nr l dm,
     NoDup (namesOf (getDefsBodies m)) ->
     SubstepsInd m or nr l ->
@@ -729,7 +729,7 @@ Proof.
 Qed.
 
 Lemma inlineDms'_correct_Substeps:
-  forall cdms m (Hequiv: ModEquiv typeUT type m)
+  forall cdms m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hcdms: SubList cdms (namesOf (getDefsBodies m)))
          or nr l,
@@ -768,7 +768,7 @@ Proof.
 Qed.
 
 Lemma inlineDms_correct_SubstepsInd:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m))) or u l,
     SubstepsInd m or u l ->
     snd (inlineDms m) = true ->
@@ -782,7 +782,7 @@ Proof.
 Qed.
 
 Lemma inlineDms_correct:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inlineDms m) = true)
          or nr l,
@@ -808,7 +808,7 @@ Proof.
 Qed.
 
 Lemma inline_correct_Step:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inline m) = true)
          or nr l,
@@ -885,7 +885,7 @@ Proof.
 Qed.
 
 Lemma inlineF_correct_Step:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inlineF m) = true)
          or nr l,
@@ -946,7 +946,7 @@ Qed.
 Require Import Refinement.
 
 Theorem inline_refines:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inline m) = true),
     traceRefines id m (fst (inline m)).
@@ -961,7 +961,7 @@ Proof.
 Qed.
 
 Theorem inlineF_refines:
-  forall m (Hequiv: ModEquiv typeUT type m)
+  forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
          (Hin: snd (inlineF m) = true),
     traceRefines id m (fst (inlineF m)).

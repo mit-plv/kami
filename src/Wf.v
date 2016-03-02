@@ -155,15 +155,15 @@ Section WfEval1.
     wfActionC nil nil a (maxPathLength a).
 
   Lemma wfActionC_WfAction_appendAction:
-    forall G {retT retT'} (cont1: ft1 typeUT (SyntaxKind retT) -> ActionT typeUT retT')
-           (cont2: ft2 type (SyntaxKind retT) -> ActionT type retT')
+    forall G {retT retT'} (cont1: ft1 type (SyntaxKind retT) -> ActionT type retT')
+           (cont2: ft2 typeUT (SyntaxKind retT) -> ActionT typeUT retT')
            (Hcequiv: forall v1 v2, ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2))
            (Hcwf: forall v1 v2 wr cc cdn,
-                    wfActionC wr cc (cont1 v1) cdn = true -> WfAction wr cc (cont2 v2)),
+                    wfActionC wr cc (cont2 v2) cdn = true -> WfAction wr cc (cont1 v1)),
     forall a1 a2 (Hequiv: ActionEquiv G a1 a2),
     forall wr cc cdn,
-      wfActionC wr cc (appendAction a1 cont1) cdn = true ->
-      WfAction wr cc (appendAction a2 cont2).
+      wfActionC wr cc (appendAction a2 cont2) cdn = true ->
+      WfAction wr cc (appendAction a1 cont1).
   Proof.
     induction 3; intros; try (destruct cdn; simpl in *; [discriminate|]).
 
@@ -194,7 +194,7 @@ Section WfEval1.
           intros; eapply ActionEquiv_ctxt; eauto.
           unfold SubList; intros; inv H4; intuition.
         * intros; simpl in H4.
-          apply H1 with (v1:= v1) (cont1:= cont1) (cdn:= cdn0); auto.
+          apply H1 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
           intros; eapply ActionEquiv_ctxt; eauto.
           unfold SubList; intros; inv H5; intuition.
       + eapply IHHequiv2; eauto.
@@ -203,7 +203,7 @@ Section WfEval1.
           intros; eapply ActionEquiv_ctxt; eauto.
           unfold SubList; intros; inv H4; intuition.
         * intros; simpl in H4.
-          apply H1 with (v1:= v1) (cont1:= cont1) (cdn:= cdn0); auto.
+          apply H1 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
           intros; eapply ActionEquiv_ctxt; eauto.
           unfold SubList; intros; inv H5; intuition.
 
@@ -212,7 +212,7 @@ Section WfEval1.
   Qed.
 
   Lemma wfActionC_WfAction:
-    forall {retT} aU (aT: ActionT type retT) {G} (Hequiv: ActionEquiv G aU aT)
+    forall {retT} aU (aT: ActionT type retT) {G} (Hequiv: ActionEquiv G aT aU)
            wr cc cdn,
       wfActionC wr cc aU cdn = true -> WfAction wr cc aT.
   Proof.
@@ -229,7 +229,7 @@ Section WfEval1.
   Qed.
 
   Lemma wfAction_WfAction:
-    forall {retT} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aU aT),
+    forall {retT} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aT aU),
       wfAction aU = true -> WfAction nil nil aT.
   Proof. intros; eapply wfActionC_WfAction; eauto. Qed.
 
@@ -242,7 +242,7 @@ Section WfEval1.
 
   Lemma wfRules_WfRules:
     forall rules,
-      RulesEquiv typeUT type rules ->
+      RulesEquiv type typeUT rules ->
       wfRules rules = true -> WfRules type rules.
   Proof.
     induction rules; simpl; intros; [constructor|].
@@ -259,7 +259,7 @@ Section WfEval1.
 
   Lemma wfDms_WfDms:
     forall dms,
-      MethsEquiv typeUT type dms ->
+      MethsEquiv type typeUT dms ->
       wfDms dms = true -> WfDms type dms.
   Proof.
     induction dms; simpl; intros; [constructor|].
@@ -271,7 +271,7 @@ Section WfEval1.
     wfRules (getRules m) && wfDms (getDefsBodies m).
 
   Lemma wfModules_WfModules:
-    forall m (Hequiv: ModEquiv typeUT type m),
+    forall m (Hequiv: ModEquiv type typeUT m),
       wfModules m = true -> WfModules type m.
   Proof.
     intros; simpl in *.
