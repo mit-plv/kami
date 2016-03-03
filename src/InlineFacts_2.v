@@ -488,7 +488,7 @@ Section SubstepsFacts.
     destruct sul as [psr|[[pdmn pdmv]|]]; inv H5.
 
     - M.cmp dm pdmn; mred.
-      + inv H7; inv H2; dest; simpl in *.
+      + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
         * inv H1.
@@ -548,7 +548,7 @@ Section SubstepsFacts.
       + simpl; f_equal; auto.
 
     - M.cmp dm pdmn; mred.
-      + inv H7; inv H2; dest; simpl in *.
+      + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
         * inv H1.
@@ -703,7 +703,7 @@ Proof.
         destruct sul as [sr|[[sdmn sdmv]|]].
         { mred; mcontra. }
         { M.cmp a sdmn; [|mred; mcontra].
-          mred; inv Heqodmv.
+          mred.
           assert (~ M.In (elt:=sigT SignT) (a :: sdmv)%struct ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_calling; eauto.

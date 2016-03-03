@@ -154,14 +154,7 @@ Section TwoModules.
             try (f_equal; auto; fail).
   Qed.
 
-  Definition ValidLabel (m: Modules) (l: LabelT) :=
-    M.KeysSubset (defs l) (getDefs m) /\ M.KeysSubset (calls l) (getCalls m).
-
-  Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
-    ValidLabel ma la ->
-    ValidLabel mb lb ->
-    wellHidden ma (hide la) ->
-    wellHidden mb (hide lb) ->
+  Definition WellHiddenConcat (ma mb: Modules) (la lb: LabelT) :=
     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
 
   Lemma stepInd_split:
@@ -171,7 +164,7 @@ Section TwoModules.
         StepInd ma (regsA o) ua la /\ StepInd mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
         CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
-        WellHiddenModular ma mb la lb /\ l = hide (mergeLabel la lb).
+        WellHiddenConcat ma mb la lb /\ l = hide (mergeLabel la lb).
   Proof.
     induction 1; simpl; intros.
     pose proof (substepsInd_split HSubSteps)
@@ -198,7 +191,7 @@ Section TwoModules.
     - apply CanCombineLabel_hide; auto.
     - inv H3; dest.
       rewrite <-hide_mergeLabel_idempotent; auto.
-    - unfold WellHiddenModular; intros.
+    - unfold WellHiddenConcat; intros.
       inv H3; rewrite <-hide_mergeLabel_idempotent; auto.
     - inv H3; rewrite <-hide_mergeLabel_idempotent; auto.
   Qed.
@@ -210,7 +203,7 @@ Section TwoModules.
         Step ma (regsA o) ua la /\ Step mb (regsB o) ub lb /\
         M.Disj ua ub /\ u = M.union ua ub /\
         CanCombineLabel la lb /\ wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) /\
-        WellHiddenModular ma mb la lb /\ l = hide (mergeLabel la lb).
+        WellHiddenConcat ma mb la lb /\ l = hide (mergeLabel la lb).
   Proof.
     intros; apply step_consistent in H.
     pose proof (stepInd_split H) as [ua [ub [la [lb ?]]]]; dest; subst.
@@ -219,13 +212,19 @@ Section TwoModules.
     repeat split; auto; apply step_consistent; auto.
   Qed.
 
-  Inductive WellHiddenModularSeq (ma mb: Modules): LabelSeqT -> LabelSeqT -> Prop :=
-  | WHMSNil: WellHiddenModularSeq ma mb nil nil
-  | WHMSCons:
+  Inductive WellHiddenConcatSeq (ma mb: Modules): LabelSeqT -> LabelSeqT -> Prop :=
+  | WHCSNil: WellHiddenConcatSeq ma mb nil nil
+  | WHCSCons:
       forall la lb lsa lsb,
-        WellHiddenModularSeq ma mb lsa lsb ->
-        WellHiddenModular ma mb la lb ->
-        WellHiddenModularSeq ma mb (la :: lsa) (lb :: lsb).
+        WellHiddenConcatSeq ma mb lsa lsb ->
+        WellHiddenConcat ma mb la lb ->
+        WellHiddenConcatSeq ma mb (la :: lsa) (lb :: lsb).
+
+  Lemma wellHiddenConcatSeq_length:
+    forall ma mb lsa lsb,
+      WellHiddenConcatSeq ma mb lsa lsb ->
+      List.length lsa = List.length lsb.
+  Proof. induction lsa; intros; inv H; simpl; auto. Qed.
 
   Lemma multistep_split:
     forall s ls ir,
@@ -235,7 +234,7 @@ Section TwoModules.
         Multistep ma (initRegs (getRegInits ma)) sa lsa /\
         Multistep mb (initRegs (getRegInits mb)) sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\ 
-        CanCombineLabelSeq lsa lsb /\ WellHiddenModularSeq ma mb lsa lsb /\
+        CanCombineLabelSeq lsa lsb /\ WellHiddenConcatSeq ma mb lsa lsb /\
         ls = composeLabels lsa lsb.
   Proof.
     induction 1; simpl; intros; subst.
@@ -293,7 +292,7 @@ Section TwoModules.
       exists sa lsa sb lsb,
         Behavior ma sa lsa /\ Behavior mb sb lsb /\
         M.Disj sa sb /\ s = M.union sa sb /\
-        CanCombineLabelSeq lsa lsb /\ WellHiddenModularSeq ma mb lsa lsb /\
+        CanCombineLabelSeq lsa lsb /\ WellHiddenConcatSeq ma mb lsa lsb /\
         ls = composeLabels lsa lsb.
   Proof.
     induction 1.
@@ -342,6 +341,24 @@ Section TwoModules.
       + inv H5; inv H8; dest; auto.
       + reflexivity.
   Qed.
+
+  Definition ValidLabel (m: Modules) (l: LabelT) :=
+    M.KeysSubset (defs l) (getDefs m) /\ M.KeysSubset (calls l) (getCalls m).
+
+  Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
+    ValidLabel ma la ->
+    ValidLabel mb lb ->
+    wellHidden ma (hide la) ->
+    wellHidden mb (hide lb) ->
+    wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)).
+
+  Inductive WellHiddenModularSeq (ma mb: Modules): LabelSeqT -> LabelSeqT -> Prop :=
+  | WHMSNil: WellHiddenModularSeq ma mb nil nil
+  | WHMSCons:
+      forall la lb lsa lsb,
+        WellHiddenModularSeq ma mb lsa lsb ->
+        WellHiddenModular ma mb la lb ->
+        WellHiddenModularSeq ma mb (la :: lsa) (lb :: lsb).
 
   Lemma stepInd_modular:
     forall oa ua la,

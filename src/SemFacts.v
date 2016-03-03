@@ -154,6 +154,12 @@ Proof.
     auto.
 Qed.
 
+Lemma equivalentLabelSeq_length:
+  forall p lsa lsb,
+    equivalentLabelSeq p lsa lsb ->
+    List.length lsa = List.length lsb.
+Proof. induction lsa; intros; inv H; simpl; auto. Qed.
+
 Lemma equivalentLabelSeq_CanCombineLabelSeq:
   forall p (Hp: Proper (equivalentLabel p ==> equivalentLabel p ==> impl) CanCombineLabel)
          lsa lsb lsc lsd,
@@ -207,27 +213,6 @@ Section ModEquiv.
     - simpl in *.
       destruct H0; subst; apply in_or_app; intuition.
   Qed.
-
-  (*
-  Lemma staticDynCallsRules o name a u cs r:
-    In (name :: a)%struct (getRules m) ->
-    SemAction o (a type) u cs r ->
-    forall f, M.In f cs -> In f (getCalls m).
-  Proof.
-    intros.
-    apply 
-    admit.
-  Qed.
-
-  Theorem staticDynCallsMeths o name a u cs r:
-    In (name :: a)%struct (getDefsBodies m) ->
-    forall argument,
-      SemAction o (projT2 a type argument) u cs r ->
-      forall f, M.In f cs -> In f (getCalls m).
-  Proof.
-    admit.
-  Qed.
-   *)
 
   Theorem staticDynCallsSubstep o u rm cs:
     Substep m o u rm cs ->

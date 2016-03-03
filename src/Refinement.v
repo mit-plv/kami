@@ -30,44 +30,12 @@ Proof.
     eapply M.MapsToIn1; eauto.
 Qed.
 
-Lemma liftToMap1_union:
-  forall {A} vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    M.union (liftToMap1 vp m1) (liftToMap1 vp m2) = liftToMap1 vp (M.union m1 m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  repeat rewrite liftToMap1_find.
-  findeq.
-  - destruct (H y); findeq.
-  - destruct (vp y a); auto.
-Qed.
-
-Lemma liftToMap1_subtractKV:
-  forall {A} deceqA vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
-    liftToMap1 vp (M.subtractKV deceqA m1 m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  repeat rewrite liftToMap1_find.
-  findeq.
-  - destruct (H y); findeq.
-  - destruct (vp y a); auto.
-Qed.
-
-Lemma liftToMap1_KeysDisj:
-  forall {A} vp (m: M.t A) d,
-    M.KeysDisj m d ->
-    M.KeysDisj (liftToMap1 vp m) d.
-Proof.
-  M.mintros.
-  specialize (H k H0).
-  findeq.
-  rewrite liftToMap1_find.
-  rewrite H; auto.
-Qed.
+Ltac liftToMap1_find_tac :=
+  repeat
+    match goal with
+    | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
+      rewrite liftToMap1_find in H
+    end.
 
 Section StepToRefinement.
   Variable imp spec: Modules.
@@ -197,52 +165,32 @@ Section Facts.
     destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl in *.
     split.
 
-    - unfold M.KeysDisj, M.KeysSubset in *; intros.
+    - unfold M.KeysDisj in *; intros.
       apply M.F.P.F.not_find_in_iff.
       specializeAll k.
       apply getCalls_in in H9; destruct H9.
-      + specialize (H2 H9).
+      + specialize (H2 H9); clear H3 H4 H5.
         apply M.F.P.F.not_find_in_iff in H2.
-        rewrite M.F.P.F.in_find_iff in *.
-        (* findeq; *)
-        (*   try (specialize (H8 k); destruct H8; *)
-        (*        [elim H5; auto| *)
-        (*         elim H5; apply H2; intro; inv H6]). *)
-        admit.
-      + specialize (H3 H9).
+        findeq;
+          try (destruct (H8 k); [elim H3; auto|elim H3; apply H1; findeq]).
+      + specialize (H3 H9); clear H2 H4 H5.
         apply M.F.P.F.not_find_in_iff in H3.
-        rewrite M.F.P.F.in_find_iff in *.
-        (* findeq; *)
-        (*   try (specialize (H k); destruct H; *)
-        (*        [elim H; apply H0; intro; inv H4| *)
-        (*         elim H; auto]; fail). *)
-        (* specialize (H8 k); destruct H8; *)
-        (*   [elim H4; apply H1; intro; inv H6| *)
-        (*    elim H4; apply H2; intro; inv H6]. *)
-        admit.
-    - unfold M.KeysDisj, M.KeysSubset in *; intros.
+        findeq; findeq_more;
+          try (destruct (H k); elim H2; [apply H0; findeq|apply H6; findeq]; fail).
+        destruct (H8 k); elim H2; [apply H7; findeq|apply H1; findeq].
+    - unfold M.KeysDisj in *; intros.
       apply M.F.P.F.not_find_in_iff.
       specializeAll k.
       apply getDefs_in in H9; destruct H9.
-      + specialize (H5 H9).
+      + specialize (H5 H9); clear H2 H3 H4.
         apply M.F.P.F.not_find_in_iff in H5.
-        rewrite M.F.P.F.in_find_iff in *.
-        (* findeq; *)
-        (*   try (specialize (H k); destruct H; *)
-        (*        [elim H; auto| *)
-        (*         elim H; apply H3; intro; inv H4]). *)
-        admit.
-      + specialize (H4 H9).
+        findeq;
+          try (destruct (H k); elim H2; [apply H0; findeq|apply H6; findeq]).
+      + specialize (H4 H9); clear H2 H3 H5.
         apply M.F.P.F.not_find_in_iff in H4.
-        rewrite M.F.P.F.in_find_iff in *.
-        (* findeq; *)
-        (*   try (specialize (H8 k); destruct H8; *)
-        (*        [elim H4; apply H1; intro; inv H5| *)
-        (*         elim H4; auto]; fail). *)
-        (* specialize (H k); destruct H; *)
-        (*   [elim H; apply H0; intro; inv H4| *)
-        (*    elim H; apply H3; intro; inv H4]. *)
-        admit.
+        findeq; findeq_more;
+          try (destruct (H k); elim H2; [apply H0; findeq|apply H6; findeq]; fail);
+          try (destruct (H8 k); elim H2; [apply H7; findeq|apply H1; findeq]; fail).
   Qed.
 
   Lemma nonInteracting_implies_wellHiddenModularSeq:
@@ -266,47 +214,112 @@ Section Facts.
     (forall k, In k (getCalls m2) -> ~ In k (getDefs m1) ->
                forall v, vp k v = Some v).
 
+  Definition DefCallSub (impl spec: Modules) :=
+    SubList (getDefs spec) (getDefs impl) /\
+    SubList (getCalls spec) (getCalls impl).
+
   Lemma interacting_implies_wellHiddenModular:
     forall ma mb mc md vp,
+      DefCallSub ma mb -> DefCallSub mc md ->
       Interacting ma mc vp ->
       forall la lb lc ld,
-        ValidLabel ma la -> ValidLabel mc lc ->
-        WellHiddenModular ma mc la lc ->
+        CanCombineLabel la lc ->
+        WellHiddenConcat ma mc la lc ->
         equivalentLabel (liftToMap1 vp) la lb ->
         equivalentLabel (liftToMap1 vp) lc ld ->
         WellHiddenModular mb md lb ld.
   Proof.
-    intros.
-    admit.
+    unfold WellHiddenConcat, WellHiddenModular; intros.
+    destruct la as [anna dsa csa], lc as [annc dsc csc].
+    destruct lb as [annb dsb csb], ld as [annd dsd csd].
+    unfold wellHidden, hide in *; simpl in *; dest.
+    inv H4; inv H5; dest; simpl in *; clear H15 H16.
+    split.
+
+    - unfold M.KeysDisj in *; intros.
+      specializeAll k.
+      apply getCalls_in in H15; destruct H15.
+
+      + specialize (H8 H15).
+        apply M.F.P.F.not_find_in_iff; apply M.F.P.F.not_find_in_iff in H8.
+        assert (In k (getCalls (ConcatMod ma mc)))
+          by (apply getCalls_in_1; inv H; auto).
+        specialize (H3 H16); clear H16.
+        findeq; try (inv H2; inv H6; inv H7; simpl in *; dest; subst).
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv1 in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv2 in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+
+      + specialize (H9 H15).
+        apply M.F.P.F.not_find_in_iff; apply M.F.P.F.not_find_in_iff in H9.
+        assert (In k (getCalls (ConcatMod ma mc)))
+          by (apply getCalls_in_2; inv H0; auto).
+        specialize (H3 H16); clear H16.
+        findeq; try (inv H2; inv H6; inv H7; simpl in *; dest; subst).
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv1 in Heqv; inv Heqv; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+        * findeq_custom liftToMap1_find_tac.
+
+    - unfold M.KeysDisj in *; intros.
+      specializeAll k.
+      apply getDefs_in in H15; destruct H15.
+
+      + specialize (H11 H15).
+        apply M.F.P.F.not_find_in_iff; apply M.F.P.F.not_find_in_iff in H11.
+        assert (In k (getDefs (ConcatMod ma mc)))
+          by (apply getDefs_in_1; inv H; auto).
+        specialize (H12 H16); clear H16.
+        findeq; try (inv H2; inv H6; inv H7; simpl in *; dest; subst).
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv1 in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv2 in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+          
+      + specialize (H10 H15).
+        apply M.F.P.F.not_find_in_iff; apply M.F.P.F.not_find_in_iff in H10.
+        assert (In k (getDefs (ConcatMod ma mc)))
+          by (apply getDefs_in_2; inv H0; auto).
+        specialize (H12 H16); clear H16.
+        findeq; try (inv H2; inv H6; inv H7; simpl in *; dest; subst).
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv in Heqv0; inv Heqv0; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+          rewrite <-Heqv1 in Heqv; inv Heqv; elim n; auto.
+        * findeq_custom liftToMap1_find_tac.
+        * findeq_custom liftToMap1_find_tac.
   Qed.
 
   Lemma interacting_implies_wellHiddenModularSeq:
     forall ma mb mc md vp,
+      DefCallSub ma mb -> DefCallSub mc md ->
       Interacting ma mc vp ->
       forall la lb lc ld,
-        Forall (fun l => M.KeysSubset (defs l) (getDefs ma)) la ->
-        Forall (fun l => M.KeysSubset (calls l) (getCalls ma)) la ->
-        Forall (fun l => M.KeysSubset (defs l) (getDefs mc)) lc ->
-        Forall (fun l => M.KeysSubset (calls l) (getCalls mc)) lc ->
-        WellHiddenModularSeq ma mc la lc ->
+        CanCombineLabelSeq la lc ->
+        WellHiddenConcatSeq ma mc la lc ->
         equivalentLabelSeq (liftToMap1 vp) la lb ->
         equivalentLabelSeq (liftToMap1 vp) lc ld ->
         WellHiddenModularSeq mb md lb ld.
   Proof.
     induction la; intros.
-    - inv H4; inv H5; inv H6; constructor.
-    - inv H0; inv H1; inv H2; inv H3; inv H4; inv H5; inv H6; constructor.
+    - inv H3; inv H4; inv H5; constructor.
+    - inv H3; inv H4; inv H5; inv H2; constructor.
       + eapply IHla; eauto.
-      + eapply interacting_implies_wellHiddenModular; eauto; split; auto.
+      + eapply interacting_implies_wellHiddenModular; eauto.
   Qed.
 
   Section Modularity.
     Variables (ma mb mc md: Modules).
 
-    Hypotheses (HmaEquiv: Equiv.ModEquiv type typeUT ma)
-               (HmbEquiv: Equiv.ModEquiv type typeUT mb)
-               (HmcEquiv: Equiv.ModEquiv type typeUT mc)
-               (HmdEquiv: Equiv.ModEquiv type typeUT md).
+    Hypotheses (HmaEquiv: ModEquiv type typeUT ma)
+               (HmbEquiv: ModEquiv type typeUT mb)
+               (HmcEquiv: ModEquiv type typeUT mc)
+               (HmdEquiv: ModEquiv type typeUT md).
 
     Hypotheses (Hacregs: DisjList (namesOf (getRegInits ma))
                                   (namesOf (getRegInits mc)))
@@ -349,7 +362,10 @@ Section Facts.
         - apply behavior_modular; auto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
           + apply nonInteracting_implies_wellHiddenModularSeq; auto.
-            admit. (* easy *)
+            apply equivalentLabelSeq_length in H5.
+            apply equivalentLabelSeq_length in H8.
+            apply wellHiddenConcatSeq_length in H7.
+            intuition.
         - apply composeLabels_modular; auto.
       Qed.
 
@@ -357,6 +373,9 @@ Section Facts.
 
     Section Interacting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
+
+      Hypotheses (Habsub: DefCallSub ma mb)
+                 (Hcdsub: DefCallSub mc md).
 
       Lemma traceRefines_modular_interacting:
         Interacting ma mc vp ->
@@ -378,21 +397,10 @@ Section Facts.
         - apply behavior_modular; auto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
             apply vp_equivalentLabel_CanCombineLabel_proper.
-          + pose proof (behavior_defs_in HmaEquiv H2).
-            pose proof (behavior_calls_in HmaEquiv H2).
-            pose proof (behavior_defs_in HmcEquiv H3).
-            pose proof (behavior_calls_in HmcEquiv H3).
-            eapply interacting_implies_wellHiddenModularSeq; eauto.
+          + eapply interacting_implies_wellHiddenModularSeq; eauto.
         - apply composeLabels_modular; auto.
-          + (* pose proof (behavior_defs_disj H2). *)
-            (* pose proof (behavior_calls_disj H2). *)
-            (* clear -H H5 H8 H9. *)
-            (* generalize dependent lsb. *)
-            (* induction lsa; intros; [inv H5; constructor|]. *)
-            (* inv H5; inv H8; inv H9. *)
-            (* constructor; auto. *)
-            admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
-          + admit.
+          + admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
+          + admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
       Qed.
 
     End Interacting.

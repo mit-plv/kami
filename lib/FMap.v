@@ -1738,83 +1738,88 @@ Ltac dest_in :=
       apply M.F.P.F.in_find_iff; intro
     end.
 
-Ltac mred :=
-  repeat
-    (match goal with
-     (* basic destruction *)
-     | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
-       rewrite <-H
-     | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-       rewrite <-H1 in H2
-     | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-       rewrite <-H1 in H2
-     | [ |- context [M.find ?y ?m] ] =>
-       (is_var m;
-        let v := fresh "v" in
-        remember (M.find y m) as v; destruct v)
-     (* hypothesis reduction *)
-     | [H: context [M.find _ (M.empty _)] |- _] =>
-       rewrite M.find_empty in H
-     | [H: context [M.union (M.empty _) _] |- _] =>
-       rewrite M.union_empty_L in H
-     | [H: context [M.union _ (M.empty _)] |- _] =>
-       rewrite M.union_empty_R in H
-     | [H: context [M.find _ (M.union _ _)] |- _] =>
-       rewrite M.find_union in H
-     | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
-       rewrite M.find_add_1 in H
-     | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
-       rewrite M.find_add_2 in H by auto
-     | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
-       rewrite M.restrict_in_find in H2 by auto
-     | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
-       rewrite M.subtractKV_find in H
-     | [H: context [if ?c then _ else _] |- _] =>
-       match type of c with
-       | {_ = _} + {_ <> _} => destruct c; [subst|]
-       end
-     (* goal reduction *)
-     | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
-       destruct (string_dec y k);
-       [subst; rewrite M.F.P.F.remove_eq_o|
-        rewrite M.F.P.F.remove_neq_o by intuition auto]
-     | [ |- context [M.find _ (M.empty _)] ] =>
-       rewrite M.find_empty
-     | [ |- context [M.union (M.empty _) _] ] =>
-       rewrite M.union_empty_L
-     | [ |- context [M.union _ (M.empty _)] ] =>
-       rewrite M.union_empty_R
-     | [ |- context [M.find ?y (M.union _ _)] ] =>
-       rewrite M.find_union
-     | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
-       rewrite M.F.P.F.remove_eq_o
-     | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
-       rewrite M.F.P.F.remove_neq_o by intuition auto
-     | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
-       rewrite M.F.P.F.remove_neq_o by intuition auto
-     | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
-     | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
-       rewrite M.find_add_2 by intuition idtac
-     | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
-       rewrite M.find_add_2 by intuition idtac
-     | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
-       M.cmp y k; [rewrite M.find_add_1|
-                   rewrite M.find_add_2 by intuition idtac]
-     | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
-       rewrite M.restrict_in_find by auto
-     | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
-       rewrite M.subtractKV_find
-     | [ |- context [if ?c then _ else _] ] =>
-       match type of c with
-       | {_ = _} + {_ <> _} => destruct c; [subst|]
-       end
-     end; try discriminate; try reflexivity; try (intuition idtac; fail)).
+Ltac mred_unit :=
+  match goal with
+  (* basic destruction *)
+  | [H: Some _ = Some _ |- _] => inv H
+  | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
+    rewrite <-H
+  | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+    rewrite <-H1 in H2
+  | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
+    rewrite <-H1 in H2
+  | [ |- context [M.find ?y ?m] ] =>
+    (is_var m;
+     let v := fresh "v" in
+     remember (M.find y m) as v; destruct v)
+  (* hypothesis reduction *)
+  | [H: context [M.find _ (M.empty _)] |- _] =>
+    rewrite M.find_empty in H
+  | [H: context [M.union (M.empty _) _] |- _] =>
+    rewrite M.union_empty_L in H
+  | [H: context [M.union _ (M.empty _)] |- _] =>
+    rewrite M.union_empty_R in H
+  | [H: context [M.find _ (M.union _ _)] |- _] =>
+    rewrite M.find_union in H
+  | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
+    rewrite M.find_add_1 in H
+  | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+    rewrite M.find_add_2 in H by auto
+  | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
+    rewrite M.restrict_in_find in H2 by auto
+  | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
+    rewrite M.subtractKV_find in H
+  | [H: context [if ?c then _ else _] |- _] =>
+    match type of c with
+    | {_ = _} + {_ <> _} => destruct c; [subst|]
+    end
+  (* goal reduction *)
+  | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    destruct (string_dec y k);
+    [subst; rewrite M.F.P.F.remove_eq_o|
+     rewrite M.F.P.F.remove_neq_o by intuition auto]
+  | [ |- context [M.find _ (M.empty _)] ] =>
+    rewrite M.find_empty
+  | [ |- context [M.union (M.empty _) _] ] =>
+    rewrite M.union_empty_L
+  | [ |- context [M.union _ (M.empty _)] ] =>
+    rewrite M.union_empty_R
+  | [ |- context [M.find ?y (M.union _ _)] ] =>
+    rewrite M.find_union
+  | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
+    rewrite M.F.P.F.remove_eq_o
+  | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_neq_o by intuition auto
+  | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_neq_o by intuition auto
+  | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
+  | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
+    rewrite M.find_add_2 by intuition idtac
+  | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
+    rewrite M.find_add_2 by intuition idtac
+  | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
+    M.cmp y k; [rewrite M.find_add_1|
+                rewrite M.find_add_2 by intuition idtac]
+  | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
+    rewrite M.restrict_in_find by auto
+  | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
+    rewrite M.subtractKV_find
+  | [ |- context [if ?c then _ else _] ] =>
+    match type of c with
+    | {_ = _} + {_ <> _} => destruct c; [subst|]
+    end
+  end;
+  try discriminate; try reflexivity; try (intuition idtac; fail).
+
+Ltac mred := repeat mred_unit.
 
 Ltac mcontra :=
   repeat
     match goal with
     | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
       try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
+    | [H: Some _ = None |- _] => inv H
+    | [H: None = Some _ |- _] => inv H
     | [H1: None = ?f, H2: Some _ = ?f |- _] => rewrite <-H1 in H2; discriminate
     | [H1: None = ?f, H2: ?f = Some _ |- _] => rewrite <-H1 in H2; discriminate
     | [H1: ?f = None, H2: Some _ = ?f |- _] => rewrite H1 in H2; discriminate
@@ -1828,6 +1833,28 @@ Ltac mcontra :=
     end.
 
 Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition idtac.
+
+Ltac is_new_find y m :=
+  match goal with
+  | [ _: Some _ = M.find y m |- _] => fail 1
+  | [ _: None = M.find y m |- _] => fail 1
+  | [ _: M.find y m = Some _ |- _] => fail 1
+  | [ _: M.find y m = None |- _] => fail 1
+  | _ => idtac
+  end.
+
+Ltac dest_find_more :=
+  repeat
+    match goal with
+    | [H: context [M.find ?y ?m] |- _] =>
+      (is_var m; is_new_find y m;
+       let v := fresh "v" in
+       remember (M.find y m) as v; destruct v)
+    end.
+
+Ltac findeq_custom tac := tac; dest_find_more; mred; mcontra; intuition idtac.
+Ltac findeq_more := findeq_custom idtac.
+
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 
