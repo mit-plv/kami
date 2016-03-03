@@ -211,7 +211,11 @@ Section Facts.
              (vp: M.key -> sigT SignT -> option (sigT SignT)) :=
     (forall k, In k (getCalls m1) -> ~ In k (getDefs m2) ->
                forall v, vp k v = Some v) /\
+    (forall k, In k (getDefs m1) -> ~ In k (getCalls m2) ->
+               forall v, vp k v = Some v) /\
     (forall k, In k (getCalls m2) -> ~ In k (getDefs m1) ->
+               forall v, vp k v = Some v) /\
+    (forall k, In k (getDefs m2) -> ~ In k (getCalls m1) ->
                forall v, vp k v = Some v).
 
   Definition DefCallSub (impl spec: Modules) :=
@@ -313,6 +317,54 @@ Section Facts.
       + eapply interacting_implies_wellHiddenModular; eauto.
   Qed.
 
+  Lemma interacting_implies_id:
+    forall ma mc vp,
+      Interacting ma mc vp ->
+      forall la lb lc ld,
+        ValidLabel ma la -> ValidLabel mc lc ->
+        equivalentLabel (liftToMap1 vp) la lb ->
+        equivalentLabel (liftToMap1 vp) lc ld ->
+        WellHiddenConcat ma mc la lc ->
+        equivalentLabel id (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma interacting_seq_implies_id:
+    forall ma mc vp,
+      Interacting ma mc vp ->
+      forall lsa lsb lsc lsd,
+        Forall (fun l => ValidLabel ma l) lsa ->
+        Forall (fun l => ValidLabel mc l) lsc ->
+        equivalentLabelSeq (liftToMap1 vp) lsa lsb ->
+        equivalentLabelSeq (liftToMap1 vp) lsc lsd ->
+        WellHiddenConcatSeq ma mc lsa lsc ->
+        equivalentLabelSeq id (composeLabels lsa lsc) (composeLabels lsb lsd).
+  Proof.
+    induction lsa; simpl; intros; [inv H2; constructor|].
+    inv H2; destruct lsc.
+    - inv H4; constructor.
+    - simpl; destruct lsd.
+      + inv H3.
+      + inv H0; inv H1; inv H4.
+        inv H3; constructor; auto.
+        eapply interacting_implies_id; eauto.
+  Qed.
+
+  Lemma behavior_ValidLabel:
+    forall m (Hequiv: ModEquiv type typeUT m) ll u,
+      Behavior m u ll ->
+      Forall (fun l => ValidLabel m l) ll.
+  Proof.
+    intros.
+    pose proof (behavior_defs_in Hequiv H).
+    pose proof (behavior_calls_in Hequiv H).
+    clear H u.
+    induction ll; simpl; intros; auto.
+    inv H0; inv H1; constructor; auto.
+    split; auto.
+  Qed.
+
   Section Modularity.
     Variables (ma mb mc md: Modules).
 
@@ -398,9 +450,8 @@ Section Facts.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
             apply vp_equivalentLabel_CanCombineLabel_proper.
           + eapply interacting_implies_wellHiddenModularSeq; eauto.
-        - apply composeLabels_modular; auto.
-          + admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
-          + admit. (* true with "Behavior property w.r.t. label" and Interacting predicate *)
+        - eapply interacting_seq_implies_id; eauto;
+            eapply behavior_ValidLabel; eauto.
       Qed.
 
     End Interacting.

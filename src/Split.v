@@ -345,6 +345,9 @@ Section TwoModules.
   Definition ValidLabel (m: Modules) (l: LabelT) :=
     M.KeysSubset (defs l) (getDefs m) /\ M.KeysSubset (calls l) (getCalls m).
 
+  Definition IndependentLabel (m: Modules) (l: LabelT) :=
+    M.KeysDisj (defs l) (getCalls m) /\ M.KeysDisj (calls l) (getDefs m).
+
   Definition WellHiddenModular (ma mb: Modules) (la lb: LabelT) :=
     ValidLabel ma la ->
     ValidLabel mb lb ->
