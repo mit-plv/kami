@@ -1477,11 +1477,11 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma Disj_find_union_3:
     forall {A} (m1 m2: t A) k v1 v2,
-      Some v1 = find k m1 -> Some v2 = find k m2 -> Disj m1 m2 -> False.
+      Disj m1 m2 -> Some v1 = find k m1 -> Some v2 = find k m2 -> False.
   Proof.
-    mintros; specialize (H1 k); destruct H1.
-    - elim H1; apply P.F.in_find_iff; rewrite <-H; discriminate.
-    - elim H1; apply P.F.in_find_iff; rewrite <-H0; discriminate.
+    mintros; specialize (H k); destruct H.
+    - elim H; apply P.F.in_find_iff; rewrite <-H0; discriminate.
+    - elim H; apply P.F.in_find_iff; rewrite <-H1; discriminate.
   Qed.
 
   Lemma Disj_Sub:

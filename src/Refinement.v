@@ -35,7 +35,21 @@ Ltac liftToMap1_find_tac :=
     match goal with
     | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
       rewrite liftToMap1_find in H
+    | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
+      rewrite liftToMap1_find
     end.
+
+Lemma liftToMap1_union:
+  forall {A} vp (m1 m2: M.t A),
+    M.Disj m1 m2 ->
+    liftToMap1 vp (M.union m1 m2) = M.union (liftToMap1 vp m1) (liftToMap1 vp m2).
+Proof.
+  intros; M.ext y.
+  findeq.
+  findeq_custom liftToMap1_find_tac.
+  - exfalso; eapply M.Disj_find_union_3; eauto. (* TODO: should be handled by mcontra *)
+  - destruct (vp y a); auto.
+Qed.
 
 Section StepToRefinement.
   Variable imp spec: Modules.
@@ -322,12 +336,104 @@ Section Facts.
       Interacting ma mc vp ->
       forall la lb lc ld,
         ValidLabel ma la -> ValidLabel mc lc ->
+        CanCombineLabel la lc ->
         equivalentLabel (liftToMap1 vp) la lb ->
         equivalentLabel (liftToMap1 vp) lc ld ->
         WellHiddenConcat ma mc la lc ->
         equivalentLabel id (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
   Proof.
-    admit.
+    intros.
+    assert (equivalentLabel (liftToMap1 vp) (mergeLabel la lc) (mergeLabel lb ld)).
+    { clear -H2 H3 H4.
+      destruct la as [anna dsa csa], lb as [annb dsb csb].
+      destruct lc as [annc dsc csc], ld as [annd dsd csd].
+      inv H2; unfold equivalentLabel in *; simpl in *; dest.
+      repeat split; [| |destruct anna, annb, annc, annd; auto];
+        clear H1 H5 H7; subst.
+      { apply liftToMap1_union; auto. }
+      { apply liftToMap1_union; auto. }
+    }
+
+    assert (M.KeysSubset (defs (mergeLabel la lc)) (getDefs (ConcatMod ma mc))).
+    { inv H0; inv H1.
+      destruct la as [anna dsa csa], lc as [annc dsc csc]; simpl in *.
+      apply M.KeysSubset_union.
+      { unfold M.KeysSubset in *; intros.
+        apply getDefs_in_1; auto.
+      }
+      { unfold M.KeysSubset in *; intros.
+        apply getDefs_in_2; auto.
+      }
+    }
+    assert (M.KeysSubset (calls (mergeLabel la lc)) (getCalls (ConcatMod ma mc))).
+    { inv H0; inv H1.
+      destruct la as [anna dsa csa], lc as [annc dsc csc]; simpl in *.
+      apply M.KeysSubset_union.
+      { unfold M.KeysSubset in *; intros.
+        apply getCalls_in_1; auto.
+      }
+      { unfold M.KeysSubset in *; intros.
+        apply getCalls_in_2; auto.
+      }
+    }
+    
+    inv H5.
+    remember (mergeLabel la lc) as lac; clear Heqlac.
+    remember (mergeLabel lb ld) as lbd; clear Heqlbd.
+    clear -H H6 H7 H8 H9 H10.
+
+    inv H6; dest.
+    repeat split; auto; clear H2; unfold id.
+
+    - destruct lac as [anna dsa csa], lbd as [annb dsb csb]; simpl in *; subst.
+      M.ext y.
+      unfold M.KeysSubset, M.KeysDisj in *; inv H; dest.
+      specializeAll y.
+      rewrite M.F.P.F.not_find_in_iff in *.
+      rewrite M.F.P.F.in_find_iff in *.
+      repeat rewrite M.subtractKV_find.
+      repeat rewrite liftToMap1_find.
+      findeq.
+      
+      + destruct (vp y s); auto.
+        destruct (signIsEq _ _); auto.
+        elim n; auto.
+      + specialize (H7 (opt_discr _)).
+        specialize (H10 H7).
+        inv H10.
+      + specialize (H7 (opt_discr _)).
+        destruct (in_dec string_dec y (getCalls (ConcatMod ma mc)));
+          [specialize (H9 i); inv H9|].
+        apply getDefs_in in H7; destruct H7.
+        * rewrite H; auto.
+          intro; elim n; apply getCalls_in_2; auto.
+        * rewrite H2; auto.
+          intro; elim n; apply getCalls_in_1; auto.
+
+    - destruct lac as [anna dsa csa], lbd as [annb dsb csb]; simpl in *; subst.
+      M.ext y.
+      unfold M.KeysSubset, M.KeysDisj in *; inv H; dest.
+      specializeAll y.
+      rewrite M.F.P.F.not_find_in_iff in *.
+      rewrite M.F.P.F.in_find_iff in *.
+      repeat rewrite M.subtractKV_find.
+      repeat rewrite liftToMap1_find.
+      findeq.
+      
+      + destruct (vp y s0); auto.
+        destruct (signIsEq _ _); auto.
+        elim n; auto.
+      + specialize (H7 (opt_discr _)).
+        specialize (H10 H7).
+        inv H10.
+      + specialize (H8 (opt_discr _)).
+        destruct (in_dec string_dec y (getDefs (ConcatMod ma mc)));
+          [specialize (H10 i); inv H10|].
+        apply getCalls_in in H8; destruct H8.
+        * rewrite H0; auto.
+          intro; elim n; apply getDefs_in_2; auto.
+        * rewrite H1; auto.
+          intro; elim n; apply getDefs_in_1; auto.
   Qed.
 
   Lemma interacting_seq_implies_id:
@@ -336,18 +442,19 @@ Section Facts.
       forall lsa lsb lsc lsd,
         Forall (fun l => ValidLabel ma l) lsa ->
         Forall (fun l => ValidLabel mc l) lsc ->
+        CanCombineLabelSeq lsa lsc ->
         equivalentLabelSeq (liftToMap1 vp) lsa lsb ->
         equivalentLabelSeq (liftToMap1 vp) lsc lsd ->
         WellHiddenConcatSeq ma mc lsa lsc ->
         equivalentLabelSeq id (composeLabels lsa lsc) (composeLabels lsb lsd).
   Proof.
-    induction lsa; simpl; intros; [inv H2; constructor|].
-    inv H2; destruct lsc.
-    - inv H4; constructor.
+    induction lsa; simpl; intros; [inv H3; constructor|].
+    inv H3; destruct lsc.
+    - inv H5; constructor.
     - simpl; destruct lsd.
-      + inv H3.
-      + inv H0; inv H1; inv H4.
-        inv H3; constructor; auto.
+      + inv H4.
+      + inv H0; inv H1; inv H5; dest.
+        inv H4; constructor; auto.
         eapply interacting_implies_id; eauto.
   Qed.
 
