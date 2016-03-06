@@ -307,7 +307,7 @@ Section WfInd2.
           (forall t, ValidRegsAction (cont t)) ->
           ValidRegsAction (ReadReg (lretT:= retT) reg k cont)
     | VRWriteReg:
-        forall {writeT retT} reg e cont (Hnin: ~ In reg regs),
+        forall {writeT retT} reg e cont,
           In reg regs ->
           ValidRegsAction cont ->
           ValidRegsAction (WriteReg (k:= writeT) (lretT:= retT)
