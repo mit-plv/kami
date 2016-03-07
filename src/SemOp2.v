@@ -9,32 +9,50 @@ Section GivenModule.
   Variable m: Modules.
   Variable o: RegsT.
 
-  Inductive SubstepComb: UpdatesT -> UnitLabel -> MethsT -> Prop :=
-  | SSCStart
+  (* Inductive SubstepComb: UpdatesT -> UnitLabel -> MethsT -> Prop := *)
+  (* | SSCStart *)
+  (*     u l cs *)
+  (*     (HSubstep: Substep m o u l cs): *)
+  (*     SubstepComb u l cs *)
+  (* | SSCComb *)
+  (*     u l cs *)
+  (*     (HSSC: SubstepComb o l cs) *)
+  (*     meth ar *)
+  (*     (HInDynCalls: M.In meth cs) *)
+  (*     (HFind: M.find meth cs = Some ar) *)
+  (*     u' cs' *)
+  (*     (HSubstep: Substep m o u' (Meth (Some (meth :: ar)%struct)) cs') *)
+  (*     (HDisjRegs: M.Disj u u') *)
+  (*     (HDisjCalls: M.Disj cs cs') *)
+  (*     u'' cs'' *)
+  (*     (HUEq: u'' = M.union u u') *)
+  (*     (HCsEq: cs'' = M.union (M.remove meth cs) cs'): *)
+  (*     SubstepComb u'' l cs''. *)
+
+  (* Inductive SubstepFull: UpdatesT -> UnitLabel -> MethsT -> Prop := *)
+  (* | SSF u l cs *)
+  (*       (HSubstepComb: SubstepComb u l cs) *)
+  (*       (HNoInternalCalls: forall x, M.In x cs -> In x (getDefs m) -> False): *)
+  (*     SubstepFull u l cs. *)
+
+  Inductive SubstepFull: UpdatesT -> UnitLabel -> MethsT -> Prop :=
+  | SSFStart
       u l cs
-      (HSubstep: Substep m o u l cs):
-      SubstepComb u l cs
-  | SSCComb
-      u l cs
-      (HSSC: SubstepComb o l cs)
+      (HSubstep: Substep m o u l cs)
       meth ar
       (HInDynCalls: M.In meth cs)
       (HFind: M.find meth cs = Some ar)
       u' cs'
-      (HSubstep: Substep m o u' (Meth (Some (meth :: ar)%struct)) cs')
+      (HSubstepFull: SubstepFull u' (Meth (Some (meth :: ar)%struct)) cs')
       (HDisjRegs: M.Disj u u')
-      (HDisjCalls: M.Disj cs cs')
+      (HDisjCalls: M.Disj (M.remove meth cs) cs')
       u'' cs''
       (HUEq: u'' = M.union u u')
       (HCsEq: cs'' = M.union (M.remove meth cs) cs'):
-      SubstepComb u'' l cs''.
-
-  Inductive SubstepFull: UpdatesT -> UnitLabel -> MethsT -> Prop :=
-  | SSF u l cs
-        (HSubstepComb: SubstepComb u l cs)
-        (HNoInternalCalls: forall x, M.In x cs -> In x (getDefs m) -> False):
-      SubstepFull u l cs.
-
+      SubstepFull u'' l cs''
+  | SSFDone:
+      SubstepFull (M.empty _) (Meth None) (M.empty _).
+  
   Inductive StepComb: UpdatesT -> LabelT -> Prop :=
   | SCNil:
       StepComb (M.empty _) {| annot := None; defs := M.empty _; calls := M.empty _ |}
