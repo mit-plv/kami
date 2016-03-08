@@ -76,7 +76,9 @@ Section GivenModule.
       (HSemActionOp: SemActionOp (cont r1) newRegs2 calls2 icalls2 r2)
       unewRegs ucalls icalls
       (HUNewRegs: unewRegs = M.union newRegs1 newRegs2)
+      (HregsDisj: M.Disj newRegs1 newRegs2)
       (HUCalls: ucalls = M.union calls1 calls2)
+      (HcallsDisj: M.Disj calls1 calls2)
       (Hicalls: icalls = M.union icalls1 icalls2)
       (HicallsDisj: M.Disj icalls1 icalls2):
       SemActionOp (IfElse p a a' cont) unewRegs ucalls icalls r2
@@ -92,7 +94,9 @@ Section GivenModule.
       (HSemActionOp: SemActionOp (cont r1) newRegs2 calls2 icalls2 r2)
       unewRegs ucalls icalls
       (HUNewRegs: unewRegs = M.union newRegs1 newRegs2)
+      (HregsDisj: M.Disj newRegs1 newRegs2)
       (HUCalls: ucalls = M.union calls1 calls2)
+      (HcallsDisj: M.Disj calls1 calls2)
       (Hicalls: icalls = M.union icalls1 icalls2)
       (HicallsDisj: M.Disj icalls1 icalls2):
       SemActionOp (IfElse p a a' cont) unewRegs ucalls icalls r2
@@ -113,19 +117,14 @@ Section GivenModule.
     match a with
     | MCall meth s e c =>
       (In meth (getDefs m) /\
-       exists methBody mret cnewRegs ccalls cicalls nnewRegs ncalls nicalls
-              (Hsig: s = projT1 methBody),
-         In (meth :: methBody)%struct (getDefsBodies m) /\
-         SemActionOp ((projT2 methBody) type
-                                        match Hsig with
-                                          eq_refl => (evalExpr e)
-                                        end) cnewRegs ccalls cicalls mret /\
-         SemActionOp (c (match eq_sym Hsig with eq_refl => mret end))
+       exists methBody mret cnewRegs ccalls cicalls nnewRegs ncalls nicalls,
+         In (meth :: existT _ s methBody)%struct (getDefsBodies m) /\
+         SemActionOp (methBody type (evalExpr e)) cnewRegs ccalls cicalls mret /\
+         SemActionOp (c mret)
                      nnewRegs ncalls nicalls retC /\
          news = M.union cnewRegs nnewRegs /\
          calls = M.union ccalls ncalls /\
-         (* TODO: uncomment below and prove *)
-         (* icalls = M.union cicalls (M.add meth (existT _ _ (evalExpr e, mret)) nicalls) /\ *)
+         icalls = M.union cicalls (M.add meth (existT _ _ (evalExpr e, mret)) nicalls) /\
          M.Disj cnewRegs nnewRegs /\
          M.Disj ccalls ncalls /\
          M.Disj cicalls nicalls /\
@@ -182,10 +181,7 @@ Section GivenModule.
         replace meth with (attrName (meth :: methBody)%struct) by reflexivity.
         apply in_map; auto.
       + repeat eexists; eauto.
-        * instantiate (1:= mret).
-          instantiate (1:= eq_refl).
-          simpl; auto.
-        * simpl; auto.
+        destruct methBody; auto.
     - destruct (evalExpr p); eauto; try discriminate.
     - destruct (evalExpr p); eauto; try discriminate.
   Qed.
