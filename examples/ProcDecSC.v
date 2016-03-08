@@ -1,8 +1,10 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming.
 Require Import Lts.Decomposition Lts.Renaming Lts.Inline Lts.InlineFacts_2.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
+
+Set Implicit Arguments.
 
 Section ProcDecSC.
   Variables addrSize fifoSize valSize rfIdx: nat.
@@ -10,48 +12,28 @@ Section ProcDecSC.
   Variable dec: DecT 2 addrSize valSize rfIdx.
   Variable exec: ExecT 2 addrSize valSize rfIdx.
 
-  Definition procDecM (n: nat) := procDecM fifoSize dec exec n.
-  Definition sc (n: nat) := sc 2 _ _ _ dec exec opLd opSt opHt n.
-  Hint Unfold procDecM sc : ModuleDefs.
+  Variable n: nat.
+
+  Definition pdecN := procDecM fifoSize dec exec n.
+  Definition scN := sc dec exec opLd opSt opHt n.
+  Hint Unfold pdecN scN : ModuleDefs.
 
   Section SingleCore.
-    Variable i: nat. (* i-th core *)
-    Notation "^ s" := (s __ i) (at level 0).
+    Definition pdec := pdecf fifoSize dec exec.
+    Definition pinst := pinst dec exec opLd opSt opHt.
+    Hint Unfold pdec pinst.
 
-    Definition pdecfi := ProcDec.pdecfi fifoSize dec exec i.
-    Definition pinsti := pinsti 2 _ _ _ dec exec opLd opSt opHt i.
-    Hint Unfold pdecfi pinsti.
+    Lemma pdec_refines_pinst: pdec <<== pinst.
+    Proof.
+      admit.
+    Qed.
 
   End SingleCore.
 
-End ProcDecSC.
-
-Section Instantiation.
-  Variable dec: DecT 2 1 1 1.
-  Variable exec: ExecT 2 1 1 1.
-
-  Hypothesis Hdec:
-    forall G (st1: ft1 typeUT (StateK 1 1)) st2
-           (a1: ft1 typeUT (SyntaxKind (Bit 1))) a2,
-      In (vars (st1, st2)) G ->
-      In (vars (a1, a2)) G ->
-      Equiv.ExprEquiv G #(dec (fullType typeUT) st1 a1)%kami #(dec (fullType type) st2 a2)%kami.
-  Hint Immediate Hdec.
-  
-  Lemma pdecf_pinst: (pdecfi _ 1 _ _ dec exec 0) <<== (pinsti _ _ _ dec exec 0).
+  Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof.
-    inlineL.
+    admit.
+  Qed.
 
-    - admit.
-
-    - eapply decomposition with (theta:= id) (ruleMap:= fun _ r => Some r).
-      + rewrite <-inlineF_preserves_regInits.
-        admit. (* TODO: theta shouldn't be an id (have to drain registers) *)
-      + vm_compute; auto.
-      + vm_compute; intuition.
-      + (* 5 *)
-  Abort.
-
-End Instantiation.
-
+End ProcDecSC.
 

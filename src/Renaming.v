@@ -1349,3 +1349,22 @@ Section MakeBijective1.
   Qed.
 End MakeBijective1.
 
+Section SpecializeModule.
+  Variable m: Modules.
+  Variable i: nat.
+
+  Definition spDom := (namesOf (getRegInits m))
+                        ++ (namesOf (getRules m))
+                        ++ (namesOf (getDefsBodies m))
+                        ++ (getCalls m).
+
+  Definition spImg := map (fun e => e __ i) spDom.
+
+  Lemma sp_lengthEq: length spDom = length spImg.
+  Proof. unfold spImg; rewrite map_length; auto. Qed.
+
+  Definition specializer := bijective spDom spImg.
+  Definition specializeMod := renameModules specializer m.
+
+End SpecializeModule.
+

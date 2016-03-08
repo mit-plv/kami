@@ -77,13 +77,6 @@ Section Fifo.
     with Method ^"deq"() : dType := deq
   }.
 
-  (* Section Spec. *)
-  (*   Lemma regsInDomain_simpleFifo: RegsInDomain simpleFifo. *)
-  (*   Proof. *)
-  (*     regsInDomain_tac. *)
-  (*   Qed. *)
-  (* End Spec. *)
-
 End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.

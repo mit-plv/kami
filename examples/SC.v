@@ -1,6 +1,8 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Semantics Lts.Renaming.
+
+Set Implicit Arguments.
 
 (* The SC module is defined as follows: SC = n * Pinst + Minst,
  * where Pinst denotes an instantaneous processor core
@@ -66,7 +68,6 @@ Hint Unfold memInst: ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variable i : nat.
   Variables opIdx addrSize valSize rfIdx : nat.
 
   (* External abstract ISA: dec and exec *)
@@ -78,59 +79,58 @@ Section ProcInst.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
-  Notation "^ s" := (s __ i) (at level 0).
-
   Definition memAtomK := atomK addrSize (Bit valSize).
 
-  Definition execCm := MethodSig ^"exec"(memAtomK) : memAtomK.
-  Definition haltCm := MethodSig ^"HALT"(Bit 0) : Bit 0.
+  Definition execCm := MethodSig "exec"(memAtomK) : memAtomK.
+  Definition haltCm := MethodSig "HALT"(Bit 0) : Bit 0.
 
   Definition nextPc {ty} ppc st :=
-    (Write ^"pc" <- #(getNextPc ty ppc st);
+    (Write "pc" <- #(getNextPc ty ppc st);
      Retv)%kami.
 
   Definition procInst := MODULE {
-    Register ^"pc" : Bit addrSize <- Default
-    with Register ^"rf" : Vector (Bit valSize) rfIdx <- Default
+    Register "pc" : Bit addrSize <- Default
+    with Register "rf" : Vector (Bit valSize) rfIdx <- Default
 
-    with Rule ^"execLd" :=
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
+    with Rule "execLd" :=
+      Read ppc <- "pc";
+      Read st <- "rf";
       Assert #(dec _ st ppc)@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
                                      "addr" ::= #(dec _ st ppc)@."addr";
                                     "value" ::= $$Default });
-      Write ^"rf" <- #st@[#(dec _ st ppc)@."reg" <- #ldRep@."value"];
+      Write "rf" <- #st@[#(dec _ st ppc)@."reg" <- #ldRep@."value"];
       (nextPc ppc st)
 
-    with Rule ^"execSt" :=
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
+    with Rule "execSt" :=
+      Read ppc <- "pc";
+      Read st <- "rf";
       Assert #(dec _ st ppc)@."opcode" == $$opSt;
       Call execCm(STRUCT {  "type" ::= $$memSt;
                             "addr" ::= #(dec _ st ppc)@."addr";
                            "value" ::= #(dec _ st ppc)@."value" });
       nextPc ppc st
 
-    with Rule ^"execHt" :=
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
+    with Rule "execHt" :=
+      Read ppc <- "pc";
+      Read st <- "rf";
       Assert #(dec _ st ppc)@."opcode" == $$opHt;
       Call haltCm();
       Retv
 
-    with Rule ^"execNm" :=
-      Read ppc <- ^"pc";
-      Read st <- ^"rf";
+    with Rule "execNm" :=
+      Read ppc <- "pc";
+      Read st <- "rf";
       Assert !(#(dec _ st ppc)@."opcode" == $$opLd
              || #(dec _ st ppc)@."opcode" == $$opSt
              || #(dec _ st ppc)@."opcode" == $$opHt);
-      Write ^"rf" <- #(getNextState _ ppc st);
+      Write "rf" <- #(getNextState _ ppc st);
       nextPc ppc st
 
-    with Rule ^"voidRule" :=
-      Retv
+    (* with Rule "voidRule" := *)
+    (*   Retv *)
   }.
+
 End ProcInst.
 
 Hint Unfold execCm haltCm getNextPc getNextState nextPc.
@@ -146,8 +146,9 @@ Section SC.
 
   Variable n: nat.
 
-  Definition pinsti (i: nat) :=
-    procInst i opIdx addrSize valSize rfIdx dec exec opLd opSt opHt.
+  Definition pinst := procInst dec exec opLd opSt opHt.
+
+  Definition pinsti (i: nat) := specializeMod pinst i.
 
   Fixpoint pinsts (i: nat): Modules :=
     match i with
@@ -163,18 +164,3 @@ End SC.
 
 Hint Unfold pinsti pinsts minst sc : ModuleDefs.
 
-(* Section Facts. *)
-(*   Variables opIdx addrSize valSize rfIdx : nat. *)
-(*   Variables opLd opSt opHt: ConstT (Bit opIdx). *)
-(*   Variable i: nat. *)
-
-(*   Variable dec: DecT opIdx addrSize valSize rfIdx. *)
-(*   Variable exec: ExecT opIdx addrSize valSize rfIdx. *)
-
-(*   Lemma regsInDomain_pinsti: *)
-(*     RegsInDomain (pinsti opIdx _ _ _ dec exec opLd opSt opHt i). *)
-(*   Proof. *)
-(*     regsInDomain_tac. *)
-(*   Qed. *)
-
-(* End Facts. *)

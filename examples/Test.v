@@ -156,27 +156,10 @@ Section SemOpTest.
     apply step_implies_StepOp in H.
 
     (* decomposition condition like this? *)
-    assert (forall o nu nl,
-               SubstepOp (ConcatMod ma mb) o nu nl ->
+    assert (forall o nu nl ics,
+               SubstepOp (ConcatMod ma mb) o nu nl ics ->
                SubstepsInd mc o nu nl).
-    { clear; intros.
-      inv H; try (constructor; fail).
-
-      - eapply SubstepsCons.
-        + apply SubstepsNil.
-        + apply EmptyRule.
-        + repeat split; auto.
-        + meq.
-        + reflexivity.
-
-      - inv HInRules; [|inv H].
-        inv H.
-
-        admit.
-        
-      - exfalso; simpl in *.
-        inv HIn; simpl in *; intuition.
-    }
+    { admit. }
 
     admit.
   Qed.
