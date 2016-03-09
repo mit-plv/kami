@@ -188,24 +188,35 @@ Section GivenModule.
 
   Inductive SubstepOp: UpdatesT -> LabelT -> MethsT ->Prop :=
   | SSSEmptyRule:
-      SubstepOp (M.empty _) emptyRuleLabel (M.empty _)
+      forall u l ics,
+        u = M.empty _ ->
+        l = emptyRuleLabel ->
+        ics = M.empty _ ->
+        SubstepOp u l ics
   | SSSEmptyMeth:
-      SubstepOp (M.empty _) emptyMethLabel (M.empty _)
+      forall u l ics,
+        u = M.empty _ ->
+        l = emptyMethLabel ->
+        ics = M.empty _ ->
+        SubstepOp u l ics
   | SSSRule:
       forall k (a: Action Void)
              (HInRules: List.In {| attrName := k; attrType := a |} (getRules m))
-             u cs ics (HAction: SemActionOp (a type) u cs ics WO),
+             u cs ics (HAction: SemActionOp (a type) u cs ics WO) ndefs,
+        ndefs = M.empty _ ->
         SubstepOp u {| annot := Some (Some k);
-                       defs := M.empty _;
+                       defs := ndefs;
                        calls := cs |} ics
   | SSSMeth:
       forall (f: DefMethT)
              (HIn: In f (getDefsBodies m))
              (HNotIn: ~ In (attrName f) (getCalls m))
              u cs ics argV retV
-             (HAction: SemActionOp ((projT2 (attrType f)) type argV) u cs ics retV),
+             (HAction: SemActionOp ((projT2 (attrType f)) type argV) u cs ics retV)
+             adefs,
+        adefs = M.add (attrName f) (existT _ _ (argV, retV)) (M.empty _) ->
         SubstepOp u {| annot := None;
-                       defs := M.add (attrName f) (existT _ _ (argV, retV)) (M.empty _);
+                       defs := adefs;
                        calls := cs |} ics.
 
   Inductive SubstepsOp: UpdatesT -> LabelT -> MethsT -> Prop :=
@@ -226,23 +237,23 @@ Section GivenModule.
 
 End GivenModule.
 
-(* Ltac invertActionOp H := apply inversionSemActionOp in H; simpl in H; dest; try subst. *)
-(* Ltac invertActionOpFirst := *)
-(*   match goal with *)
-(*   | [H: SemActionOp _ _ _ _ _ _ |- _] => invertActionOp H *)
-(*   end. *)
-(* Ltac invertActionOpRep := *)
-(*   repeat *)
-(*     match goal with *)
-(*     | [H: SemActionOp _ _ _ _ _ _ |- _] => invertActionOp H *)
-(*     | [H: if ?c *)
-(*           then *)
-(*             SemActionOp _ _ _ _ _ _ /\ _ /\ _ /\ _ *)
-(*           else *)
-(*             SemActionOp _ _ _ _ _ _ /\ _ /\ _ /\ _ |- _] => *)
-(*       let ic := fresh "ic" in *)
-(*       (remember c as ic; destruct ic; dest; subst) *)
-(*     end. *)
+Ltac invertActionOp H := apply inversionSemActionOp in H; simpl in H; dest; try subst.
+Ltac invertActionOpFirst :=
+  match goal with
+  | [H: SemActionOp _ _ _ _ _ _ _ |- _] => invertActionOp H
+  end.
+Ltac invertActionOpRep :=
+  repeat
+    match goal with
+    | [H: SemActionOp _ _ _ _ _ _ _ |- _] => invertActionOp H
+    | [H: if ?c
+          then
+            SemActionOp _ _ _ _ _ _ _ /\ _ /\ _ /\ _
+          else
+            SemActionOp _ _ _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+      let ic := fresh "ic" in
+      (remember c as ic; destruct ic; dest; subst)
+    end.
 
 Section Facts.
   Variable m: Modules.
@@ -265,7 +276,7 @@ Section Facts.
       SubstepOp m o u l ics ->
       M.KeysDisj (calls l) (getDefs m).
   Proof.
-    induction 1; simpl; intros.
+    induction 1; simpl; subst; intros.
     - apply M.KeysDisj_empty.
     - apply M.KeysDisj_empty.
     - eapply semActionOp_calls; exact HAction.
