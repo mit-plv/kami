@@ -23,7 +23,6 @@ Section GivenModule.
 
   Section GivenOldregs.
     Variable o: RegsT.
-    Definition UpdatesT := RegsT.
 
     Inductive Substep: UpdatesT -> UnitLabel -> MethsT -> Prop :=
     | EmptyRule:

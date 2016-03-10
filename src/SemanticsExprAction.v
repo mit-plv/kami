@@ -257,9 +257,10 @@ Section Semantics.
 
   (* register values just before the current cycle *)
   Variable oldRegs: RegsT.
+  Definition UpdatesT := RegsT.
 
   Inductive SemAction:
-    forall k, ActionT type k -> RegsT -> MethsT -> type k -> Prop :=
+    forall k, ActionT type k -> UpdatesT -> MethsT -> type k -> Prop :=
   | SemMCall
       meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
