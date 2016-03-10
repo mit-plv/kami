@@ -229,7 +229,7 @@ Section GivenModule.
           CanCombineUL pu nu pl nl ->
           M.Disj pics nics ->
           SubstepOp nu nl nics ->
-          SubstepsOp (M.union pu nu) (mergeLabel nl pl) (M.union pics nics).
+          SubstepsOp (M.union pu nu) (mergeLabel pl nl) (M.union pics nics).
 
   Inductive StepOp: UpdatesT -> LabelT -> Prop :=
   | StepOpIntro: forall u l ics (HSubSteps: SubstepsOp u l ics),
