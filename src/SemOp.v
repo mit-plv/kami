@@ -414,12 +414,37 @@ Section Consistency.
         apply M.MapsToIn1 in sth.
         intuition.
     - admit.
+    - exists x; exists x0; exists x1; exists x2.
+      intuition.
+      econstructor; eauto.
+    - exists x; exists x0; exists x1; exists x2.
+      intuition.
+      econstructor; eauto.
     - admit.
+    - exists (M.union x3 x).
+      exists (M.union x4 x0).
+      exists (M.union x5 x1).
+      exists (mergeLabel x6 x2).
+      intuition.
+      + econstructor; eauto.
+      + admit.
+      + subst.
+        dest_disj.
+        solve_disj.
+      + admit.
+      + subst; meq.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
     - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
+    - exists x; exists x0; exists x1; exists x2.
+      intuition.
+      econstructor; eauto.
     - repeat (econstructor; eauto); intros; simpl in *; dest.
       apply M.F.P.F.empty_mapsto_iff in H0; intuition.
       apply M.F.P.F.empty_mapsto_iff in H; intuition.
