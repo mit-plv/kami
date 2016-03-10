@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming.
-Require Import Lts.Decomposition Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.SemOp.
+Require Import Lts.DecompositionOp Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.SemOp.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Set Implicit Arguments.
@@ -113,45 +113,34 @@ Section ProcDecSC.
 
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
-      apply stepRefinement with (ruleMap:= pdec_pinst_ruleMap) (theta:= pdec_pinst_regMap);
-        [admit (* cannot use computation because of parameters... *)|].
+      apply decomposition with (theta:= pdec_pinst_regMap)
+                                 (ruleMap:= pdec_pinst_ruleMap).
 
-      intros.
-      apply step_implies_StepOp in H.
-      exists (pdec_pinst_regMap u).
-      rewrite idElementwiseId.
+      - admit. (* cannot use computation because of parameters... *)
 
-      assert (forall o u l iics,
-                 SubstepOp pdec o u l iics ->
-                 exists sics,
-                   SubstepOp pinst (pdec_pinst_regMap o) (pdec_pinst_regMap u)
-                             (liftPLabel id pdec_pinst_ruleMap o l)
-                             sics).
-      { clear; intros; eexists.
-        inv H; [exfalso; admit|exfalso; admit| |]. (* two admits; trivial empty cases *)
+      - intros.
+        inv H; try inv H1.
+        dest_rules.
+        + invertActionOpRep.
+          invert_call.
+          invertActionOpRep.
+          admit. (* eapply EmptyRule *)
 
-        - dest_rules.
-          + invertActionOpRep.
-            invert_call.
-            invertActionOpRep.
-            apply SSSEmptyRule; auto.
+        + invertActionOpRep.
+          invert_call.
+          invertActionOpRep.
+          admit. (* eapply EmptyRule *)
 
-          + invertActionOpRep.
-            invert_call.
-            invertActionOpRep.
-            apply SSSEmptyRule; auto.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
 
-          + admit.
-          + admit.
-          + admit.
-          + admit.
-          + admit.
-          + admit.
+      - admit. (* meths case *)
 
-        - admit. (* meths case *)
-      }
-
-    Abort.
+    Qed.
 
   End SingleCore.
 
