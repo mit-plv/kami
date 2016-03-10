@@ -427,7 +427,8 @@ Section Consistency.
       + econstructor; eauto.
       + subst; dest_disj; solve_disj.
         unfold not; intros.
-        
+        admit.
+      + admit.
     - exists (M.union x3 x).
       exists (M.union x4 x0).
       exists (M.union x5 x1).
