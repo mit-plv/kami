@@ -1147,6 +1147,27 @@ Module LeibnizFacts (M : MapLeibniz).
       inversion eqtest.
   Qed.
 
+  Lemma in_union_L A: forall (m: t A) k, M.In k m -> forall m', In k (union m m').
+  Proof.
+    intros m.
+    mind m.
+    - apply P.F.empty_in_iff in H; intuition.
+    - rewrite union_add.
+      apply P.F.add_in_iff.
+      apply P.F.add_in_iff in H1.
+      destruct H1; intuition.
+  Qed.
+
+  Lemma in_union_R A: forall (m' m: t A) k, M.In k m -> In k (union m' m).
+  Proof.
+    intros m'.
+    mind m'.
+    - rewrite union_empty_L; intuition.
+    - rewrite union_add.
+      apply P.F.add_in_iff.
+      intuition.
+  Qed.
+
   Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
   Proof. 
     intros m. pattern m.

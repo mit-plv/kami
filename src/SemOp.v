@@ -420,7 +420,14 @@ Section Consistency.
     - exists x; exists x0; exists x1; exists x2.
       intuition.
       econstructor; eauto.
-    - admit.
+    - exists (M.add r (existT _ _ (evalExpr e)) x).
+      exists x0.
+      exists x1; exists x2.
+      intuition.
+      + econstructor; eauto.
+      + subst; dest_disj; solve_disj.
+        unfold not; intros.
+        
     - exists (M.union x3 x).
       exists (M.union x4 x0).
       exists (M.union x5 x1).
@@ -433,7 +440,24 @@ Section Consistency.
         solve_disj.
       + admit.
       + subst; meq.
-      + admit.
+      + apply M.mapsto_union in H13; dest.
+        unfold mergeLabel; destruct x6, x2; simpl.
+        destruct H13; dest.
+        * apply H11 in H13; simpl in *; dest.
+          { destruct H13.
+            - left; apply M.mapsto_union; auto.
+            - right; apply M.mapsto_union; auto.
+          }
+        * apply H4 in H14; simpl in *; dest.
+          { destruct H14.
+            - left; apply M.mapsto_union.
+              right; constructor; unfold not; intros; auto.
+              admit.
+            - right; apply M.mapsto_union.
+              right; constructor; unfold not; intros; auto.
+              admit.
+          } 
+              
       + admit.
       + admit.
       + admit.
