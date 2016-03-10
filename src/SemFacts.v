@@ -279,6 +279,39 @@ Proof.
     + right; intuition.
 Qed.
 
+Theorem staticDynDefsSubstepsInd m o u l:
+  SubstepsInd m o u l ->
+  forall x, M.In x (defs l) -> List.In x (getDefs m).
+Proof.
+  intros.
+  dependent induction H; simpl in *.
+  - apply M.F.P.F.empty_in_iff in H0; intuition.
+  - destruct sul.
+    destruct l.
+    destruct annot; simpl in *; subst; simpl in *;
+    rewrite M.union_empty_L in H4; simpl in *; apply IHSubstepsInd; intuition.
+    destruct l.
+    destruct o0.
+    + destruct a.
+      destruct ll.
+      simpl in *.
+      inv H3.
+      apply M.union_In in H4.
+      destruct H4.
+      * apply M.F.P.F.add_in_iff in H2.
+        { destruct H2; subst.
+          - apply staticDynDefsSubstep in H0.
+            assumption.
+          - apply M.F.P.F.empty_in_iff in H2; intuition.
+        }
+      * apply IHSubstepsInd; intuition.
+    + destruct ll.
+      simpl in *.
+      rewrite M.union_empty_L in H3.
+      inv H3.
+      apply IHSubstepsInd; intuition.
+Qed.
+
 Theorem staticDynDefsSubsteps m o ss:
   forall f, M.In f (defs (foldSSLabel (m := m) (o := o) ss)) -> In f (getDefs m).
 Proof.

@@ -10,17 +10,17 @@ Section GivenModule.
   Variable oldRegs: RegsT.
 
   Inductive SemActionOp:
-    forall k, ActionT type k -> RegsT -> MethsT -> MethsT -> type k -> Prop :=
+    forall k, ActionT type k -> UpdatesT -> MethsT -> MethsT -> type k -> Prop :=
   | SASMCallExt
       meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       (HNotIn: ~ In meth (getDefs m))
-      newRegs (calls icalls: MethsT) acalls
-      (HNotCalled: ~ M.In meth calls) (* forces no double-call within an action, but necessary *)
-      (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) calls)
-      (HSemAction: SemActionOp (cont mret) newRegs calls icalls fret):
+      newRegs (cs icalls: MethsT) acalls
+      (HNotCalled: ~ M.In meth cs) (* forces no double-call within an action, but necessary *)
+      (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) cs)
+      (HSemAction: SemActionOp (cont mret) newRegs cs icalls fret):
       SemActionOp (MCall meth s marg cont) newRegs acalls icalls fret
   | SASMCallInt
       meth methBody
@@ -32,38 +32,38 @@ Section GivenModule.
       cnewRegs ccalls cicalls 
       (HCallee: SemActionOp ((projT2 methBody) type (evalExpr marg))
                             cnewRegs ccalls cicalls mret)
-      newRegs (calls icalls: MethsT)
-      (HSemAction: SemActionOp (cont mret) newRegs calls icalls fret)
+      newRegs (cs icalls: MethsT)
+      (HSemAction: SemActionOp (cont mret) newRegs cs icalls fret)
       (Hnews: M.Disj cnewRegs newRegs)
-      (Hcalls: M.Disj ccalls calls)
+      (Hcalls: M.Disj ccalls cs)
       (Hicalls: M.Disj cicalls icalls)
       (Hmethnin1: ~ M.In meth icalls)
       (Hmethnin2: ~ M.In meth cicalls):
       SemActionOp (MCall meth (projT1 methBody) marg cont)
-                  (M.union cnewRegs newRegs) (M.union ccalls calls)
+                  (M.union cnewRegs newRegs) (M.union ccalls cs)
                   (M.union cicalls (M.add meth (existT _ _ (evalExpr marg, mret)) icalls))
                   fret
   | SASLet
       k (e: Expr type k) retK (fret: type retK)
-      (cont: fullType type k -> ActionT type retK) newRegs calls icalls
-      (HSemActionOp: SemActionOp (cont (evalExpr e)) newRegs calls icalls fret):
-      SemActionOp (Let_ e cont) newRegs calls icalls fret
+      (cont: fullType type k -> ActionT type retK) newRegs cs icalls
+      (HSemActionOp: SemActionOp (cont (evalExpr e)) newRegs cs icalls fret):
+      SemActionOp (Let_ e cont) newRegs cs icalls fret
   | SASReadReg
       (r: string) regT (regV: fullType type regT)
       retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
-      newRegs calls icalls
+      newRegs cs icalls
       (HRegVal: M.find r oldRegs = Some (existT _ regT regV))
-      (HSemActionOp: SemActionOp (cont regV) newRegs calls icalls fret):
-      SemActionOp (ReadReg r _ cont) newRegs calls icalls fret
+      (HSemActionOp: SemActionOp (cont regV) newRegs cs icalls fret):
+      SemActionOp (ReadReg r _ cont) newRegs cs icalls fret
   | SASWriteReg
       (r: string) k
       (e: Expr type k)
       retK (fret: type retK)
-      (cont: ActionT type retK) newRegs calls icalls anewRegs
+      (cont: ActionT type retK) newRegs cs icalls anewRegs
       (HNotWritten: ~ M.In r newRegs) (* it implies well-formedness *)
       (HANewRegs: anewRegs = M.add r (existT _ _ (evalExpr e)) newRegs)
-      (HSemActionOp: SemActionOp cont newRegs calls icalls fret):
-      SemActionOp (WriteReg r e cont) anewRegs calls icalls fret
+      (HSemActionOp: SemActionOp cont newRegs cs icalls fret):
+      SemActionOp (WriteReg r e cont) anewRegs cs icalls fret
   | SASIfElseTrue
       (p: Expr type (SyntaxKind Bool)) k1
       (a: ActionT type k1)
@@ -112,8 +112,8 @@ Section GivenModule.
       SemActionOp (Return e) (M.empty _) (M.empty _) (M.empty _) evale.
 
   Theorem inversionSemActionOp
-          k a news calls icalls retC
-          (evalA: @SemActionOp k a news calls icalls retC):
+          k a news cs icalls retC
+          (evalA: @SemActionOp k a news cs icalls retC):
     match a with
     | MCall meth s e c =>
       (In meth (getDefs m) /\
@@ -123,7 +123,7 @@ Section GivenModule.
          SemActionOp (c mret)
                      nnewRegs ncalls nicalls retC /\
          news = M.union cnewRegs nnewRegs /\
-         calls = M.union ccalls ncalls /\
+         cs = M.union ccalls ncalls /\
          icalls = M.union cicalls (M.add meth (existT _ _ (evalExpr e, mret)) nicalls) /\
          M.Disj cnewRegs nnewRegs /\
          M.Disj ccalls ncalls /\
@@ -134,16 +134,16 @@ Section GivenModule.
        exists mret pcalls,
          SemActionOp (c mret) news pcalls icalls retC /\
          ~ M.In meth pcalls /\
-         calls = M.add meth (existT _ _ (evalExpr e, mret)) pcalls)
+         cs = M.add meth (existT _ _ (evalExpr e, mret)) pcalls)
     | Let_ _ e cont =>
-      SemActionOp (cont (evalExpr e)) news calls icalls retC
+      SemActionOp (cont (evalExpr e)) news cs icalls retC
     | ReadReg r k c =>
       exists rv,
       M.find r oldRegs = Some (existT _ k rv) /\
-      SemActionOp (c rv) news calls icalls retC
+      SemActionOp (c rv) news cs icalls retC
     | WriteReg r _ e a =>
       exists pnews,
-      SemActionOp a pnews calls icalls retC /\
+      SemActionOp a pnews cs icalls retC /\
       ~ M.In r pnews /\
       news = M.add r (existT _ _ (evalExpr e)) pnews
     | IfElse p _ aT aF c =>
@@ -153,24 +153,24 @@ Section GivenModule.
         SemActionOp aT news1 calls1 icalls1 r1 /\
         SemActionOp (c r1) news2 calls2 icalls2 retC /\
         news = M.union news1 news2 /\
-        calls = M.union calls1 calls2 /\
+        cs = M.union calls1 calls2 /\
         icalls = M.union icalls1 icalls2 /\
         M.Disj icalls1 icalls2
       | false =>
         SemActionOp aF news1 calls1 icalls1 r1 /\
         SemActionOp (c r1) news2 calls2 icalls2 retC /\
         news = M.union news1 news2 /\
-        calls = M.union calls1 calls2 /\
+        cs = M.union calls1 calls2 /\
         icalls = M.union icalls1 icalls2 /\
         M.Disj icalls1 icalls2
       end
     | Assert_ e c =>
-      SemActionOp c news calls icalls retC /\
+      SemActionOp c news cs icalls retC /\
       evalExpr e = true
     | Return e =>
       retC = evalExpr e /\
       news = M.empty _ /\
-      calls = M.empty _ /\
+      cs = M.empty _ /\
       icalls = M.empty _
     end.
   Proof.
@@ -258,6 +258,27 @@ Ltac invertActionOpRep :=
 Section Facts.
   Variable m: Modules.
 
+  Lemma semActionOp_icalls:
+    forall o {retK} (a: ActionT type retK) u cs ics retv,
+      SemActionOp m o a u cs ics retv ->
+      M.KeysSubset ics (getDefs m).
+  Proof.
+    induction 1; simpl; intros; subst; auto.
+    - apply M.KeysSubset_union; auto.
+      apply M.KeysSubset_add; auto.
+      unfold getDefs, namesOf.
+      induction (getDefsBodies m).
+      + intuition.
+      + simpl in *.
+        destruct HIn; subst.
+        * intuition.
+        * specialize (IHl H1).
+          intuition.
+    - apply M.KeysSubset_union; auto.
+    - apply M.KeysSubset_union; auto.
+    - apply M.KeysSubset_empty; auto.
+  Qed.
+
   Lemma semActionOp_calls:
     forall o {retK} (a: ActionT type retK) u cs ics retv,
       SemActionOp m o a u cs ics retv ->
@@ -303,11 +324,108 @@ Section Facts.
 
 End Facts.
 
-Require Import Wf.
+Require Import Wf Program.Equality StaticDynamic Equiv.
 
 Section Consistency.
   Variable m: Modules.
   Hypothesis (Hwfm: WfModules type m).
+  Variable mEquiv: ModEquiv type typeUT m.
+  Variable o: RegsT.
+
+  Lemma SemActionOp_implies_SemActionSubsteps:
+    forall k (a: ActionT type k) u ecs ics retv,
+      SemActionOp m o a u ecs ics retv ->
+      exists u1 cs1 u2 l2,
+        SemAction o a u1 cs1 retv /\
+        SubstepsInd m o u2 l2 /\
+        M.Disj u1 u2 /\
+        M.Disj cs1 (calls l2) /\
+        u = M.union u1 u2 /\
+        (forall k v, M.MapsTo k v ics <-> (M.MapsTo k v cs1 \/ M.MapsTo k v (calls l2)) /\
+                                          (M.MapsTo k v (defs l2))) /\
+        (forall k v, M.MapsTo k v ecs <-> (M.MapsTo k v cs1 \/ M.MapsTo k v (calls l2)) /\
+                                          ~ (M.In k (defs l2))).
+  Proof.
+    intros ? ? ? ? ? ? so.
+    dependent induction so; subst; dest.
+    - exists x.
+      exists (M.add meth (existT _ _ (evalExpr marg, mret)) x0).
+      exists x1.
+      exists x2.
+      intuition.
+      + econstructor; eauto.
+      + apply M.Disj_add_1; try assumption.
+        unfold not; intros.
+        apply M.MapsToIn2 in H6; dest.
+        specialize (H5 meth x3).
+        destruct H5.
+        assert (sth: M.In meth (defs x2) -> False).
+        { intros.
+          apply staticDynDefsSubstepsInd with (x := meth) in H0.
+          intuition.
+          intuition.
+        }
+        assert (sth2: M.MapsTo meth x3 cs) by intuition.
+        apply M.MapsToIn1 in sth2.
+        intuition.
+      + specialize (H4 k v); specialize (H5 k v).
+        apply H4 in H6.
+        dest.
+        destruct H6; [ left | right; assumption].
+        apply M.F.P.F.add_mapsto_iff; try assumption.
+        destruct (string_dec meth k); subst; [left | right; intuition].
+        constructor;
+        try reflexivity.
+        assert (sth: M.MapsTo k v icalls) by intuition.
+        apply semActionOp_icalls in so.
+        apply M.MapsToIn1 in sth.
+        specialize (so _ sth).
+        intuition.
+      + apply H4 in H6; dest.
+        intuition.
+      + apply M.F.P.F.add_mapsto_iff in H6.
+        destruct H6; dest.
+        * subst.
+          apply M.MapsToIn1 in H8.
+          apply staticDynDefsSubstepsInd with (x := k) in H0.
+          intuition.
+          intuition.
+        * specialize (H4 k v); intuition.
+      + specialize (H4 k v); intuition.
+      + apply M.F.P.F.add_mapsto_iff in H6.
+        destruct H6; dest; subst.
+        left; apply M.F.P.F.add_mapsto_iff; intuition.
+        apply H5 in H7; dest.
+        destruct H3; try assumption.
+        left.
+        apply M.F.P.F.add_mapsto_iff.
+        right; intuition.
+        intuition.
+      + apply M.F.P.F.add_mapsto_iff in H6; destruct H6; dest; subst.
+        apply staticDynDefsSubstepsInd with (x := k) in H0; intuition.
+        apply H5 in H8; intuition.
+      + apply M.F.P.F.add_mapsto_iff.
+        apply M.F.P.F.add_mapsto_iff in H6.
+        destruct H6; [left | right]; intuition.
+        specialize (H5 k v); intuition.
+      + apply M.F.P.F.add_mapsto_iff.
+        assert (sth: M.MapsTo k v cs) by (specialize (H5 k v); intuition).
+        destruct (string_dec meth k); subst; [left | right]; intuition.
+        apply M.MapsToIn1 in sth.
+        intuition.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - repeat (econstructor; eauto); intros; simpl in *; dest.
+      apply M.F.P.F.empty_mapsto_iff in H0; intuition.
+      apply M.F.P.F.empty_mapsto_iff in H; intuition.
+      destruct H;
+        apply M.F.P.F.empty_mapsto_iff in H; intuition.
+  Qed.
 
   Lemma step_implies_StepOp:
     forall o u l,
