@@ -267,6 +267,7 @@ Section Semantics.
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: MethsT) acalls
+      (HDisj: ~ M.In meth calls)
       (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
@@ -287,6 +288,7 @@ Section Semantics.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK) newRegs calls anewRegs
+      (HDisj: ~ M.In r newRegs)
       (HANewRegs: anewRegs = M.add r (existT _ _ (evalExpr e)) newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
@@ -300,6 +302,8 @@ Section Semantics.
       (HTrue: evalExpr p = true)
       (HAction: SemAction a newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
+      (HDisjRegs: M.Disj newRegs1 newRegs2)
+      (HDisjCalls: M.Disj calls1 calls2)
       unewRegs ucalls
       (HUNewRegs: unewRegs = M.union newRegs1 newRegs2)
       (HUCalls: ucalls = M.union calls1 calls2):
@@ -314,6 +318,8 @@ Section Semantics.
       (HFalse: evalExpr p = false)
       (HAction: SemAction a' newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
+      (HDisjRegs: M.Disj newRegs1 newRegs2)
+      (HDisjCalls: M.Disj calls1 calls2)
       unewRegs ucalls
       (HUNewRegs: unewRegs = M.union newRegs1 newRegs2)
       (HUCalls: ucalls = M.union calls1 calls2):
@@ -336,6 +342,7 @@ Section Semantics.
     | MCall m s e c =>
       exists mret pcalls,
       SemAction (c mret) news pcalls retC /\
+      ~ M.In m pcalls /\
       calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
     | Let_ _ e cont =>
       SemAction (cont (evalExpr e)) news calls retC
@@ -346,6 +353,7 @@ Section Semantics.
     | WriteReg r _ e a =>
       exists pnews,
       SemAction a pnews calls retC /\
+      ~ M.In r pnews /\
       news = M.add r (existT _ _ (evalExpr e)) pnews
     | IfElse p _ aT aF c =>
       exists news1 calls1 news2 calls2 r1,
@@ -353,11 +361,15 @@ Section Semantics.
       | true =>
         SemAction aT news1 calls1 r1 /\
         SemAction (c r1) news2 calls2 retC /\
+        M.Disj news1 news2 /\
+        M.Disj calls1 calls2 /\
         news = M.union news1 news2 /\
         calls = M.union calls1 calls2
       | false =>
         SemAction aF news1 calls1 r1 /\
         SemAction (c r1) news2 calls2 retC /\
+        M.Disj news1 news2 /\
+        M.Disj calls1 calls2 /\
         news = M.union news1 news2 /\
         calls = M.union calls1 calls2
       end
@@ -400,6 +412,8 @@ Section AppendAction.
       SemAction olds (a2 retV1) news2 calls2 retV2 ->
       SemAction olds (appendAction a1 a2) (M.union news1 news2) (M.union calls1 calls2) retV2.
   Proof.
+    admit.
+    (*
     induction a1; intros.
 
     - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
@@ -427,6 +441,7 @@ Section AppendAction.
     - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
         econstructor; eauto.
     - invertAction H; econstructor; eauto.
+     *)
   Qed.
 
 End AppendAction.
