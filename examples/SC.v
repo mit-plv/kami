@@ -64,7 +64,8 @@ Section MemInst.
   }.
 End MemInst.
 
-Hint Unfold memInst: ModuleDefs.
+Hint Unfold atomK memLd memSt : MethDefs.
+Hint Unfold memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
@@ -133,7 +134,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold execCm haltCm getNextPc getNextState nextPc.
+Hint Unfold getNextPc getNextState memAtomK execCm haltCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -162,5 +163,5 @@ Section SC.
 
 End SC.
 
-Hint Unfold pinsti pinsts minst sc : ModuleDefs.
+Hint Unfold pinst pinsti pinsts minst sc : ModuleDefs.
 

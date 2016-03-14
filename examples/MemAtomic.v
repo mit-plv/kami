@@ -37,8 +37,8 @@ Section Middleman.
 
 End Middleman.
 
-Hint Unfold getReq setRep exec.
 Hint Unfold mid : ModuleDefs.
+Hint Unfold getReq setRep exec processLd processSt : MethDefs.
 
 Section MemAtomic.
   Variable addrSize fifoSize : nat.

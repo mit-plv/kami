@@ -80,3 +80,4 @@ Section Fifo.
 End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.
+Hint Unfold max_index enq deq : MethDefs.

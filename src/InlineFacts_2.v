@@ -50,10 +50,10 @@ Section SubstepFacts.
       Substep m or u2 ul2 cs2 ->
       SemAction or (projT2 (attrType dm) type argV) u1 cs1 retV ->
       M.Disj u1 u2 -> M.Disj cs1 cs2 ->
-      Some (existT _ (projT1 (attrType dm)) (argV, retV)) = M.find dm cs2 ->
+      Some (existT _ (projT1 (attrType dm)) (argV, retV)) = M.find (attrName dm) cs2 ->
       Substep (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                    (inlineDmToDms (getDefsBodies m) dm))
-              or (M.union u1 u2) ul2 (M.union cs1 (M.remove dm cs2)).
+              or (M.union u1 u2) ul2 (M.union cs1 (M.remove (attrName dm) cs2)).
   Proof.
     induction 1; intros; simpl in *; try (inv H2).
 
@@ -71,8 +71,8 @@ Section SubstepFacts.
   Lemma inlineDmToMod_Substep_intact:
     forall or u ul cs (dmn: string),
       Substep m or u ul cs ->
-      None = M.find dm cs ->
-      dmn = dm ->
+      None = M.find (attrName dm) cs ->
+      dmn = attrName dm ->
       Substep (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                    (inlineDmToDms (getDefsBodies m) dm))
               or u ul cs.
@@ -323,7 +323,7 @@ Proof.
   simpl; remember (getBody n dm s) as dmb; destruct dmb; [|constructor; auto].
 
   unfold getBody in Heqdmb.
-  destruct (string_dec n dm); [subst|discriminate].
+  destruct (string_dec n (attrName dm)); [subst|discriminate].
   destruct (SignatureT_dec _ _); [subst|discriminate].
   inv Heqdmb; simpl.
 
@@ -442,7 +442,7 @@ Section SubstepsFacts.
       SubstepsInd m or u l ->
       forall ann ds cs,
         l = {| annot := ann; defs := ds; calls := cs |} ->
-        None = M.find dm cs ->
+        None = M.find (attrName dm) cs ->
         SubstepsInd
           (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                (inlineDmToDms (getDefsBodies m) dm)) or u l.
@@ -455,12 +455,12 @@ Section SubstepsFacts.
       + reflexivity.
       + inv H4.
         rewrite M.find_union in H5.
-        destruct (M.find dm pcs); auto.
-        destruct (M.find dm scs); inv H5.
+        destruct (M.find (attrName dm) pcs); auto.
+        destruct (M.find (attrName dm) scs); inv H5.
     - eapply inlineDmToMod_Substep_intact; eauto.
       inv H4.
       rewrite M.find_union in H5.
-      destruct (M.find dm scs); auto.
+      destruct (M.find (attrName dm) scs); auto.
   Qed.
 
   Lemma inlineDmToMod_correct_Substeps_called_rule:
@@ -469,16 +469,16 @@ Section SubstepsFacts.
       SubstepsInd m or u l ->
       forall ds cs,
         l = {| annot := None; defs := ds; calls := cs |} ->
-        Some s = M.find dm scs ->
-        Some s = M.find dm ds ->
+        Some s = M.find (attrName dm) scs ->
+        Some s = M.find (attrName dm) ds ->
         M.Disj su u ->
         M.Disj scs cs ->
         SubstepsInd
           (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                (inlineDmToDms (getDefsBodies m) dm)) or (M.union u su)
           {| annot := Some sr;
-             defs := M.remove dm (M.union (M.empty (sigT SignT)) ds);
-             calls := M.remove dm (M.union scs cs) |}.
+             defs := M.remove (attrName dm) (M.union (M.empty (sigT SignT)) ds);
+             calls := M.remove (attrName dm) (M.union scs cs) |}.
   Proof.
     induction 2; simpl; intros; [inv H0; mcontra|].
     destruct l as [pann pds pcs]; simpl in *; subst.
@@ -487,7 +487,7 @@ Section SubstepsFacts.
 
     destruct sul as [psr|[[pdmn pdmv]|]]; inv H5.
 
-    - M.cmp dm pdmn; mred.
+    - M.cmp (attrName dm) pdmn; mred.
       + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
@@ -521,18 +521,18 @@ Section SubstepsFacts.
       SubstepsInd m or u l ->
       forall ann ds cs s,
         l = {| annot := ann; defs := ds; calls := cs |} ->
-        Some s = M.find dm scs ->
-        Some s = M.find dm ds ->
+        Some s = M.find (attrName dm) scs ->
+        Some s = M.find (attrName dm) ds ->
         M.Disj su u ->
         M.Disj scs cs ->
-        ~ M.In (smn :: smv)%struct ds ->
+        ~ M.In smn ds ->
         SubstepsInd
           (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                (inlineDmToDms (getDefsBodies m) dm)) or (M.union u su)
           {|
             annot := ann;
-            defs := M.remove dm (M.union (M.add smn smv (M.empty (sigT SignT))) ds);
-            calls := M.remove dm (M.union scs cs) |}.
+            defs := M.remove (attrName dm) (M.union (M.add smn smv (M.empty (sigT SignT))) ds);
+            calls := M.remove (attrName dm) (M.union scs cs) |}.
   Proof.
     induction 2; simpl; intros; [inv H0; mcontra|].
     destruct l as [pann pds pcs]; simpl in *; subst.
@@ -547,7 +547,7 @@ Section SubstepsFacts.
       + auto.
       + simpl; f_equal; auto.
 
-    - M.cmp dm pdmn; mred.
+    - M.cmp (attrName dm) pdmn; mred.
       + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
@@ -555,7 +555,7 @@ Section SubstepsFacts.
           assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
           eapply inlineDmToMod_correct_Substep; eauto.
         * repeat split; simpl; auto.
-          destruct ann; M.cmp smn dm; findeq.
+          destruct ann; M.cmp smn (attrName dm); findeq.
         * auto.
         * simpl; f_equal; auto.
           destruct ann; meq.
@@ -580,26 +580,26 @@ Section SubstepsFacts.
 
   Lemma inlineDmToMod_correct_Substeps_calling:
     forall or su scs u l sdmv,
-      Substep m or su (Meth (Some (dm :: sdmv)%struct)) scs ->
+      Substep m or su (Meth (Some ((attrName dm) :: sdmv)%struct)) scs ->
       SubstepsInd m or u l ->
       forall ann ds cs,
         l = {| annot := ann; defs := ds; calls := cs |} ->
         M.Disj su u ->
         M.Disj scs cs ->
-        Some sdmv = M.Map.find (elt:=sigT SignT) dm cs ->
-        ~ M.In (elt:=sigT SignT) (dm :: sdmv)%struct ds ->
+        Some sdmv = M.Map.find (elt:=sigT SignT) (attrName dm) cs ->
+        ~ M.In (attrName dm) ds ->
         SubstepsInd
           (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
                (inlineDmToDms (getDefsBodies m) dm)) or (M.union u su)
           {| annot := ann;
-             defs := M.remove (elt:=sigT SignT) dm
-                              (M.union (M.add dm sdmv (M.empty (sigT SignT))) ds);
-             calls := M.remove (elt:=sigT SignT) dm (M.union scs cs) |}.
+             defs := M.remove (elt:=sigT SignT) (attrName dm)
+                              (M.union (M.add (attrName dm) sdmv (M.empty (sigT SignT))) ds);
+             calls := M.remove (elt:=sigT SignT) (attrName dm) (M.union scs cs) |}.
   Proof.
     induction 2; simpl; intros; [inv H0; mcontra|].
     subst; destruct l as [pann pds pcs].
     inv H5; mred.
-    remember (M.find dm scs0) as osdm; destruct osdm.
+    remember (M.find (attrName dm) scs0) as osdm; destruct osdm.
 
     - inv H8; inv H2; dest; simpl in *.
       eapply SubstepsCons.
@@ -651,15 +651,15 @@ Proof.
   unfold hideMeth in *; simpl in *.
 
   (* inline target called? *)
-  remember (M.find a (M.union scs cs)) as ocmv; destruct ocmv.
+  remember (M.find (attrName a) (M.union scs cs)) as ocmv; destruct ocmv.
 
   - destruct H5; [discriminate|].
     rewrite H5 in *; mred.
 
     (* by Substep? *)
-    remember (M.find a scs) as oscmv; destruct oscmv.
+    remember (M.find (attrName a) scs) as oscmv; destruct oscmv.
     + inv Heqocmv.
-      assert (None = M.find a cs) by findeq.
+      assert (None = M.find (attrName a) cs) by findeq.
       rewrite <-H7 in IHSubstepsInd.
       destruct (signIsEq s0 s0); [clear e|elim n; auto].
       specialize (IHSubstepsInd (or_introl eq_refl) eq_refl).
@@ -671,13 +671,13 @@ Proof.
         destruct ann; [intuition idtac|].
         eapply inlineDmToMod_correct_Substeps_called_rule; eauto.
         apply wfModules_WfModules; auto.
-      * M.cmp a sdmn.
+      * M.cmp (attrName a) sdmn.
         { (* Substep(head)-inlined: impossible *)
           mred; exfalso.
           inv H1.
           assert (f = a) by (apply in_NoDup_attr with (attrs:= getDefsBodies m); auto);
             subst.
-          assert (M.find a scs = None).
+          assert (M.find (attrName a) scs = None).
           { eapply noCallDm_SemAction_calls; eauto.
             eapply MethsEquiv_in; eauto.
             inv Hequiv; auto.
@@ -686,7 +686,7 @@ Proof.
         }
         { mred.
           rewrite H5 in IHSubstepsInd.
-          assert (~ M.In (elt:=sigT SignT) (sdmn :: sdmv)%struct ds)
+          assert (~ M.In sdmn ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_called_meth; eauto.
           apply wfModules_WfModules; auto.
@@ -702,9 +702,9 @@ Proof.
       * inv H5; destruct (signIsEq s s); [clear e|elim n; auto].
         destruct sul as [sr|[[sdmn sdmv]|]].
         { mred; mcontra. }
-        { M.cmp a sdmn; [|mred; mcontra].
+        { M.cmp (attrName a) sdmn; [|mred; mcontra].
           mred.
-          assert (~ M.In (elt:=sigT SignT) (a :: sdmv)%struct ds)
+          assert (~ M.In (attrName a) ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_calling; eauto.
           apply wfModules_WfModules; auto.
@@ -723,7 +723,7 @@ Proof.
         { simpl; f_equal; auto. }
 
   - rewrite M.find_union in Heqocmv.
-    remember (M.find a scs) as oscmv; destruct oscmv; [inv Heqocmv|].
+    remember (M.find (attrName a) scs) as oscmv; destruct oscmv; [inv Heqocmv|].
     rewrite <-Heqocmv in IHSubstepsInd.
     match goal with
       | [ |- SubstepsInd _ _ _ ?ll] =>
@@ -735,8 +735,8 @@ Proof.
 
     eapply SubstepsCons; eauto.
     + eapply inlineDmToMod_Substep_intact; eauto.
-    + destruct (M.find a ds); repeat split; simpl; auto.
-    + destruct (M.find a ds); reflexivity.
+    + destruct (M.find (attrName a) ds); repeat split; simpl; auto.
+    + destruct (M.find (attrName a) ds); reflexivity.
 
       Grab Existential Variables.
       exact nil.
