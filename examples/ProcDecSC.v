@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.DecompositionOp Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.SemOp.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
@@ -20,7 +20,8 @@ Section ProcDecSC.
   Section SingleCore.
     Definition pdec := pdecf fifoSize dec exec.
     Definition pinst := pinst dec exec opLd opSt opHt.
-
+    Hint Unfold pdec pinst : ModuleDefs.
+    
     Definition pdec_pinst_ruleMap (_: RegsT) (s: string): option string :=
       if string_dec s "reqLd" then None
       else if string_dec s "reqSt" then None
@@ -111,7 +112,7 @@ Section ProcDecSC.
         | [H: False |- _] => elim H
         end.
 
-    Lemma pdec_refines_pinst: pdec <<== pinst.
+    Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
       apply decomposition with (theta:= pdec_pinst_regMap)
                                  (ruleMap:= pdec_pinst_ruleMap).
