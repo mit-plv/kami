@@ -21,8 +21,6 @@ Section GivenModule.
       (cont: type (ret s) -> ActionT type retK)
       u cs retK u' ds' cs'
       (HNotInDefs: ~ In meth (getDefs m))
-      (HNotInCs: ~ M.In meth cs)
-      (HNotInCalls: ~ M.In meth cs')
       (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs'):
       SemActionOp (MCall meth s marg cont) u (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
                   retK u' ds' cs'
@@ -46,7 +44,6 @@ Section GivenModule.
       (cont: ActionT type retK)
       u cs retK u' ds' cs'
       (HNotInRegs: ~ M.In r u)
-      (HNotInRegsOther: ~ M.In r u')
       (HSemActionOp: SemActionOp cont u cs retK u' ds' cs'):
       SemActionOp (WriteReg r e cont) (M.add r (existT _ _ (evalExpr e)) u) cs retK u' ds' cs'
   | SASIfElseTrue
@@ -57,16 +54,7 @@ Section GivenModule.
       u1 cs1 retK1 u1' ds1' cs1'
       (HAction: SemActionOp a u1 cs1 retK1 u1' ds1' cs1')
       u2 cs2 retK2 u2' ds2' cs2'
-      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2')
-      (HRegsDisj1: M.Disj u1 u2)
-      (HRegsDisj2: M.Disj u1' u2')
-      (HRegsDisj3: M.Disj u1' u2)
-      (HRegsDisj4: M.Disj u1 u2')
-      (HCsDisj1: M.Disj cs1 cs2)
-      (HCsDisj2: M.Disj cs1' cs2')
-      (HCsDisj3: M.Disj cs1' cs2)
-      (HCsDisj4: M.Disj cs1 cs2')
-      (HDsDisj1: M.Disj ds1' ds2'):
+      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2'):
       SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
                   (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASIfElseFalse
@@ -77,16 +65,7 @@ Section GivenModule.
       u1 cs1 retK1 u1' ds1' cs1'
       (HAction: SemActionOp a' u1 cs1 retK1 u1' ds1' cs1')
       u2 cs2 retK2 u2' ds2' cs2'
-      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2')
-      (HRegsDisj1: M.Disj u1 u2)
-      (HRegsDisj2: M.Disj u1' u2')
-      (HRegsDisj3: M.Disj u1' u2)
-      (HRegsDisj4: M.Disj u1 u2')
-      (HCsDisj1: M.Disj cs1 cs2)
-      (HCsDisj2: M.Disj cs1' cs2')
-      (HCsDisj3: M.Disj cs1' cs2)
-      (HCsDisj4: M.Disj cs1 cs2')
-      (HDsDisj2: M.Disj ds1' ds2'):
+      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2'):
       SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
                   (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASAssertTrue
@@ -106,18 +85,9 @@ Section GivenModule.
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       u cs retK u' ds' cs'
-      (HNotInCs: ~ M.In meth cs)
-      (HNotInCalls: ~ M.In meth cs')
       (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs')
       u1 ds1 cs1
-      (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1)
-      (HDisjRegs1: M.Disj u u1)
-      (HDisjRegs2: M.Disj u' u1)
-      (HDisjCs1: M.Disj cs cs1)
-      (HDisjCs2: M.Disj cs' cs1)
-      (HDisjDs1: M.Disj ds' ds1)
-      (HDisjDs2: ~ M.In meth ds1)
-      (HDisjDs3: ~ M.In meth ds'):
+      (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1):
       SemActionOp (MCall meth s marg cont) u (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
                   retK (M.union u' u1) (M.union ds' ds1) (M.union cs' cs1)
   with
@@ -127,6 +97,9 @@ Section GivenModule.
        meth body arval
        (HInDefs: In (meth :: body)%struct (getDefsBodies m))
        u cs retK u' ds' cs'
+       (HUDisj: M.Disj u u')
+       (HCsDisj: M.Disj cs cs')
+       (HDsDisj: ~ M.In meth ds')
        (HSemActionOp: SemActionOp (projT2 body type (fst arval)) u cs retK u' ds' cs')
        uFinal csFinal dsFinal
        (HUFinal: uFinal = M.union u u')
