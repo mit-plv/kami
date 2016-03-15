@@ -103,11 +103,21 @@ Section GivenModule.
         | nil => {| annot := None; defs := M.empty _; calls := M.empty _ |}
       end.
 
-(*
-    Definition getSSLabel (ss: Substeps) :=
-      fold_left addLabelLeft ss
-                {| annot := None; defs := M.empty _; calls := M.empty _ |}.
-*)
+    
+    Theorem foldSSLabelDist: forall s1 s2,
+        foldSSLabel (s1 ++ s2) = mergeLabel (foldSSLabel s1) (foldSSLabel s2).
+    Proof.
+      induction s1; intros; simpl.
+      - destruct (foldSSLabel s2).
+        repeat rewrite M.union_empty_L.
+        reflexivity.
+      - specialize (IHs1 s2).
+        rewrite IHs1; clear.
+        unfold addLabelLeft.
+        destruct a, (foldSSLabel s1), (foldSSLabel s2); clear; simpl.
+        destruct unitAnnot0, annot0, annot1; repeat rewrite M.union_empty_L;
+          repeat rewrite M.union_assoc; try reflexivity.
+    Qed.
 
     Lemma sigT_eq:
       forall {A} (a: A) (B: A -> Type) (v1 v2: B a),

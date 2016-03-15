@@ -10,102 +10,129 @@ Section GivenModule.
   Variable o: RegsT.
 
   Inductive SemActionOp:
-    forall k, ActionT type k -> forall ss, substepsComb (m := m) (o := o) ss -> MethsT -> Prop :=
+    forall k,
+      ActionT type k ->
+      UpdatesT -> MethsT -> type k ->
+      UpdatesT -> MethsT -> MethsT -> Prop :=
   | SASMCallExt
       meth s (marg: Expr type (SyntaxKind (arg s)))
       (mret: type (ret s))
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
-      ss (ssComb: substepsComb ss) icalls
+      u cs retK u' ds' cs'
       (HNotInDefs: ~ In meth (getDefs m))
-      (HSemActionOp: SemActionOp (cont mret) ssComb icalls):
-      SemActionOp (MCall meth s marg cont) ssComb icalls
-  | SASMCallInt
-      meth (body: sigT SignT) (marg: Expr type (SyntaxKind (arg (projT1 body))))
-      (mret: type (ret (projT1 body)))
-      retK (fret: type retK)
-      (cont: type (ret (projT1 body)) -> ActionT type retK)
-      ss (ssComb: substepsComb ss) icalls
-      (HSemActionOp: SemActionOp (cont mret) ssComb icalls)
-      icallsFinal
-      ss' (ssComb': substepsComb ss') icalls'
-      (HSubstepOp': MethOp meth (evalExpr marg, mret) ssComb' icalls')
-      (ssCombFinal: substepsComb (ss ++ ss'))
-      (HAddICalls: icallsFinal = M.union icalls icalls'):
-      SemActionOp (MCall meth _ marg cont) ssCombFinal icallsFinal
+      (HNotInCs: ~ M.In meth cs)
+      (HNotInCalls: ~ M.In meth cs')
+      (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs'):
+      SemActionOp (MCall meth s marg cont) u (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
+                  retK u' ds' cs'
   | SASLet
       k (e: Expr type k) retK (fret: type retK)
       (cont: fullType type k -> ActionT type retK)
-      ss (ssComb: substepsComb ss) icalls
-      (HSemActionOp: SemActionOp (cont (evalExpr e)) ssComb icalls):
-      SemActionOp (Let_ e cont) ssComb icalls
+      u cs retK u' ds' cs'
+      (HSemActionOp: SemActionOp (cont (evalExpr e)) u cs retK u' ds' cs'):
+      SemActionOp (Let_ e cont) u cs retK u' ds' cs'
   | SASReadReg
       (r: string) regT (regV: fullType type regT)
       retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       (HRegVal: M.find r o = Some (existT _ regT regV))
-      ss (ssComb: substepsComb ss) icalls
-      (HSemActionOp: SemActionOp (cont regV) ssComb icalls):
-      SemActionOp (ReadReg r _ cont) ssComb icalls
+      u cs retK u' ds' cs'
+      (HSemActionOp: SemActionOp (cont regV) u cs retK u' ds' cs'):
+      SemActionOp (ReadReg r _ cont) u cs retK u' ds' cs'
   | SASWriteReg
       (r: string) k
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK)
-      ss (ssComb: substepsComb ss) icalls
-      (HSemActionOp: SemActionOp cont ssComb icalls):
-      SemActionOp (WriteReg r e cont) ssComb icalls
+      u cs retK u' ds' cs'
+      (HNotInRegs: ~ M.In r u)
+      (HNotInRegsOther: ~ M.In r u')
+      (HSemActionOp: SemActionOp cont u cs retK u' ds' cs'):
+      SemActionOp (WriteReg r e cont) (M.add r (existT _ _ (evalExpr e)) u) cs retK u' ds' cs'
   | SASIfElseTrue
       (p: Expr type (SyntaxKind Bool)) k1
       (a a': ActionT type k1)
       k2 (cont: type k1 -> ActionT type k2) r
-      ss1 (ssComb1: substepsComb ss1) icalls1
-      ss2 (ssComb2: substepsComb ss2) icalls2
       (HTrue: evalExpr p = true)
-      (HAction: SemActionOp a ssComb1 icalls1)
-      (HSemActionOp: SemActionOp (cont r) ssComb2 icalls2)
-      (ssComb: substepsComb (ss1 ++ ss2))
-      icalls
-      (HICallsUnion: icalls = M.union icalls1 icalls2):
-      SemActionOp (IfElse p a a' cont) ssComb icalls
+      u1 cs1 retK1 u1' ds1' cs1'
+      (HAction: SemActionOp a u1 cs1 retK1 u1' ds1' cs1')
+      u2 cs2 retK2 u2' ds2' cs2'
+      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2')
+      (HRegsDisj1: M.Disj u1 u2)
+      (HRegsDisj2: M.Disj u1' u2')
+      (HRegsDisj3: M.Disj u1' u2)
+      (HRegsDisj4: M.Disj u1 u2')
+      (HCsDisj1: M.Disj cs1 cs2)
+      (HCsDisj2: M.Disj cs1' cs2')
+      (HCsDisj3: M.Disj cs1' cs2)
+      (HCsDisj4: M.Disj cs1 cs2')
+      (HDsDisj1: M.Disj ds1' ds2'):
+      SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
+                  (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASIfElseFalse
       (p: Expr type (SyntaxKind Bool)) k1
       (a a': ActionT type k1)
       k2 (cont: type k1 -> ActionT type k2) r
-      ss1 (ssComb1: substepsComb ss1) icalls1
-      ss2 (ssComb2: substepsComb ss2) icalls2
       (HTrue: evalExpr p = false)
-      (HAction: SemActionOp a' ssComb1 icalls1)
-      (HSemActionOp: SemActionOp (cont r) ssComb2 icalls2)
-      (ssComb: substepsComb (ss1 ++ ss2))
-      icalls
-      (HICallsUnion: icalls = M.union icalls1 icalls2):
-      SemActionOp (IfElse p a a' cont) ssComb icalls
+      u1 cs1 retK1 u1' ds1' cs1'
+      (HAction: SemActionOp a' u1 cs1 retK1 u1' ds1' cs1')
+      u2 cs2 retK2 u2' ds2' cs2'
+      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2')
+      (HRegsDisj1: M.Disj u1 u2)
+      (HRegsDisj2: M.Disj u1' u2')
+      (HRegsDisj3: M.Disj u1' u2)
+      (HRegsDisj4: M.Disj u1 u2')
+      (HCsDisj1: M.Disj cs1 cs2)
+      (HCsDisj2: M.Disj cs1' cs2')
+      (HCsDisj3: M.Disj cs1' cs2)
+      (HCsDisj4: M.Disj cs1 cs2')
+      (HDsDisj2: M.Disj ds1' ds2'):
+      SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
+                  (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASAssertTrue
       (p: Expr type (SyntaxKind Bool)) k2
       (cont: ActionT type k2)
       (HTrue: evalExpr p = true)
-      ss (ssComb: substepsComb ss) icalls
-      (HSemActionOp: SemActionOp cont ssComb icalls):
-      SemActionOp (Assert_ p cont) ssComb icalls
+      u cs retK u' ds' cs'
+      (HSemActionOp: SemActionOp cont u cs retK u' ds' cs'):
+      SemActionOp (Assert_ p cont) u cs retK u' ds' cs'
   | SASReturn
-      k (e: Expr type (SyntaxKind k))
-      (ssComb: substepsComb nil)
-      icalls
-      (HEmptyICalls: icalls = M.empty _):
-      SemActionOp (Return e) ssComb icalls
+      k (e: Expr type (SyntaxKind k)):
+      SemActionOp (Return e) (M.empty _) (M.empty _) (evalExpr e) (M.empty _) (M.empty _)
+                  (M.empty _)
+  | SASMCallInt
+      meth s (marg: Expr type (SyntaxKind (arg s)))
+      (mret: type (ret s))
+      retK (fret: type retK)
+      (cont: type (ret s) -> ActionT type retK)
+      u cs retK u' ds' cs'
+      (HNotInCs: ~ M.In meth cs)
+      (HNotInCalls: ~ M.In meth cs')
+      (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs')
+      u1 ds1 cs1
+      (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1)
+      (HDisjRegs1: M.Disj u u1)
+      (HDisjRegs2: M.Disj u' u1)
+      (HDisjCs1: M.Disj cs cs1)
+      (HDisjCs2: M.Disj cs' cs1)
+      (HDisjDs1: M.Disj ds' ds1)
+      (HDisjDs2: ~ M.In meth ds1)
+      (HDisjDs3: ~ M.In meth ds'):
+      SemActionOp (MCall meth s marg cont) u (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
+                  retK (M.union u' u1) (M.union ds' ds1) (M.union cs' cs1)
   with
   MethOp: string -> forall ar,
-      SignT ar -> forall ss, substepsComb (m := m) (o := o) ss -> MethsT -> Prop :=
-  |  MethOpIntro meth body arval
-                 (HInDefs: In (meth :: body)%struct (getDefsBodies m))
-                 (sRec: SubstepRec m o)
-                 (HSRecMeth: unitAnnot sRec = Meth (Some (meth :: (existT _ _ arval))%struct))
-                 ss (ssComb: substepsComb ss)
-                 icalls
-                 (HICalls: icalls = defs (foldSSLabel (sRec :: ss)))
-                 (HSemActionOp: SemActionOp (projT2 body type (fst arval)) ssComb icalls)
-                 (ssCombFinal: substepsComb (sRec :: ss)):
-       MethOp meth arval ssCombFinal icalls.
+      SignT ar -> UpdatesT -> MethsT -> MethsT -> Prop :=
+  |  MethOpIntro
+       meth body arval
+       (HInDefs: In (meth :: body)%struct (getDefsBodies m))
+       u cs retK u' ds' cs'
+       (HSemActionOp: SemActionOp (projT2 body type (fst arval)) u cs retK u' ds' cs')
+       uFinal csFinal dsFinal
+       (HUFinal: uFinal = M.union u u')
+       (HCsFinal: csFinal = M.union cs cs')
+       (HDsFinal: dsFinal = (M.add meth (existT _ _ arval) ds')):
+          MethOp meth arval uFinal csFinal dsFinal.
 
   Scheme SemActionOp_ind_2 := Induction for SemActionOp Sort Prop
                               with MethOp_ind_2 := Induction for MethOp Sort Prop.
@@ -115,24 +142,120 @@ Section GivenModule.
       conj (@SemActionOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10)
            (@MethOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10).
 
+  About mutual_op_ind.
+
   Inductive RuleOp: string -> forall ss, substepsComb (m := m) (o := o) ss -> Prop :=
   | RuleOpIntro rle body
                 (HInRules: In (rle :: body)%struct (getRules m))
                 (sRec: SubstepRec m o)
                 (HSRecRule: unitAnnot sRec = Rle (Some rle))
-                ss (ssComb: substepsComb ss) icalls
-                (HSemActionOp: SemActionOp (body type) ssComb icalls)
+                ss (ssComb: substepsComb ss)
+                u cs retK
+                (HSemActionOp: SemActionOp (body type) ssComb u cs retK)
                 (ssCombFinal: substepsComb (sRec :: ss)):
       RuleOp rle ssCombFinal.
 
   Theorem wellHiddenSizeLe1:
-    (forall k (a: ActionT type k) ss (ssComb: substepsComb ss) icalls,
-        SemActionOp a ssComb icalls -> defs (foldSSLabel ss) = icalls) /\
-    (forall meth ar (arval: SignT ar) ss (ssComb: substepsComb ss) icalls,
-        MethOp meth arval ssComb icalls ->
-        defs (foldSSLabel ss) = M.add meth (existT _ _ arval) icalls).
+    (forall k (a: ActionT type k) ss (ssComb: substepsComb ss) u cs retK,
+        SemActionOp a ssComb u cs retK ->
+        SemAction o a u cs retK /\
+        (*M.Disj cs (calls (foldSSLabel ss)) /\*)
+        defs (foldSSLabel ss) =
+        M.restrict (M.union cs (calls (foldSSLabel ss))) (getDefs m)) /\
+    (forall meth ar (arval: SignT ar) ss (ssComb: substepsComb ss),
+        MethOp meth arval ssComb ->
+        ~ M.In meth (calls (foldSSLabel ss)) /\
+        defs (foldSSLabel ss) = M.add meth (existT _ _ arval)
+                                      (M.restrict (calls (foldSSLabel ss)) (getDefs m))).
   Proof.
-    apply mutual_op_ind; intros; auto; subst.
+    apply mutual_op_ind; intros; subst; try rewrite foldSSLabelDist, mergeLabel; dest.
+    - constructor.
+      econstructor; eauto.
+      repeat rewrite M.restrict_union in *.
+      repeat rewrite M.restrict_add_not_in.
+      rewrite M.restrict_union in H0.
+      intuition.
+      intuition.
+    - constructor.
+      apply SemMCall with (mret := mret) (calls := cs); intuition.
+      econstructor; eauto.
+      repeat rewrite foldSSLabelDist.
+      case_eq (foldSSLabel ss); case_eq (foldSSLabel ss'); intros; simpl in *.
+      rewrite H2, H3 in *; simpl in *.
+      subst.
+      repeat rewrite M.restrict_union.
+      rewrite <- M.restrict_add_in.
+      subst.
+      rewrite M.restrict_union.
+      rewrite <- M.restrict_union.
+      rewrite M.union_assoc.
+      rewrite M.restrict_union in *.
+      subst.
+      repeat f_equal.
+      rewrite M.restrict_union 
+      
+      rewrite <- M.restrict_add_in.
+      rewrite M.restrict_union.
+      rewrite H0.
+      rewrite M.restrict_union.
+      rewrite H0.
+      unfold mergeLabel.
+      rewrite M.restrict_union in H1.
+      intuition.
+      intuition.
+      
+      try constructor.
+    - econstructor; eauto.
+    - repeat rewrite M.restrict_union in *.
+      repeat rewrite M.restrict_add_not_in.
+      rewrite M.restrict_union in H0.
+      intuition.
+      intuition.
+    - econstructor; eauto.
+    - 
+      repeat rewrite M.restrict_union in *.
+      f_equal.
+      repeat rewrite M.restrict_add_in.
+      rewrite M.restrict_union in H1.
+      intuition.
+      intuition.
+      M.ext y.
+      rewrite M.restrict_find.
+      rewrite M.restrict_add.
+      dependent destruction HSemAction.
+      exists x, (M.add meth (existT _ _ (evalExpr marg, mret)) x0), x1.
+      constructor.
+      + apply SemMCall.
+      admit.
+      try (eexists, eauto).
+    - apply inversionSemAction in H0; dest.
+      dependent destruction H0.
+      specialize (H _ _ _ H0).
+      eapply H; eauto.
+    - 
+    repeat match goal with
+           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
+           end; simpl in *. rewrite M.restrict_union; subst; reflexivity.
+    repeat match goal with
+           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
+           end; simpl in *; rewrite M.restrict_union; subst; reflexivity.
+    repeat match goal with
+           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
+           end; simpl in *; rewrite M.restrict_union; subst; reflexivity.
+    simpl.
+    unfold addLabelLeft, mergeLabel.
+    destruct (getSLabel sRec), (foldSSLabel ss); simpl in *.
+    rewrite M.restrict_union; subst. reflexivity.
+      subst.
+        subst; reflexivity.
+    intuition.
+      try destruct (foldSSLabel ss), (foldSSLabel ss'); simpl in *.
+    - unfold
+    - admit.
+    - admit.
+    - admit.
+    - simpl in *.
+      unfold addLabelLeft.
     - dependent destruction HSubstepOp'; subst.
 
     (forall ss (ssComb: substepsComb ss) k (a: ActionT type k),
