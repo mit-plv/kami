@@ -586,9 +586,9 @@ Proof.
 
   eapply SingleMeth; eauto.
   clear -H HIn; simpl in *.
-  specialize (H f).
+  specialize (H (attrName f)).
   apply filter_In.
-  destruct (in_dec string_dec f filt); auto.
+  destruct (in_dec string_dec (attrName f) filt); auto.
   elim H; auto.
   apply M.F.P.F.add_in_iff; auto.
 Qed.

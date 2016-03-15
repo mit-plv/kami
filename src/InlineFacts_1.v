@@ -59,10 +59,10 @@ Lemma inlineDm_correct_SemAction:
       M.Disj u1 u2 -> M.Disj cm1 cm2 ->
       Some (existT _ (projT1 (attrType meth))
                    (argV, retV1)) =
-      M.find meth cm2 ->
+      M.find (attrName meth) cm2 ->
       SemAction or a u2 cm2 retV2 ->
       SemAction or (inlineDm a meth) (M.union u1 u2)
-                (M.union cm1 (M.remove meth cm2))
+                (M.union cm1 (M.remove (attrName meth) cm2))
                 retV2.
 Proof.
   induction a; intros; simpl.
@@ -70,7 +70,7 @@ Proof.
   - inv H4; destruct_existT.
     remember (getBody meth0 meth s) as ob; destruct ob.
     + unfold getBody in Heqob.
-      destruct (string_dec meth0 meth); [subst|inv Heqob].
+      destruct (string_dec meth0 (attrName meth)); [subst|inv Heqob].
       destruct (SignatureT_dec _ _); [|inv Heqob].
       generalize dependent HSemAction; inv Heqob; intros.
       rewrite M.find_add_1 in H3.
@@ -81,19 +81,19 @@ Proof.
       inv Ha; destruct_existT.
       pose proof (wfAction_SemAction_calls
                     (H7 mret) HSemAction
-                    meth (or_introl eq_refl)).
+                    (attrName meth) (or_introl eq_refl)).
       rewrite M.remove_add.
       rewrite M.remove_find_None by assumption.
 
       destruct meth; apply inlineDm_SemAction_intact; auto.
 
     + unfold getBody in Heqob.
-      destruct (string_dec meth0 meth).
+      destruct (string_dec meth0 (attrName meth)).
 
       * subst; destruct (SignatureT_dec _ _); [inv Heqob|].
 
         econstructor.
-        { instantiate (1:= M.union cm1 (M.remove meth calls)).
+        { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
           instantiate (1:= mret).
           meq.
           elim n. clear -H3.
@@ -111,7 +111,7 @@ Proof.
         }
 
       * econstructor.
-        { instantiate (1:= M.union cm1 (M.remove meth calls)).
+        { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
           instantiate (1:= mret).
           meq.
         }
@@ -139,11 +139,11 @@ Proof.
   - inv Ha; destruct_existT.
     inv H4; destruct_existT.
     + rewrite M.find_union in H3.
-      remember (M.find meth calls1) as omv1; destruct omv1.
-      * remember (M.find meth calls2) as omv2; destruct omv2.
+      remember (M.find (attrName meth) calls1) as omv1; destruct omv1.
+      * remember (M.find (attrName meth) calls2) as omv2; destruct omv2.
         { exfalso.
           pose proof (wfAction_appendAction_calls_disj _ H10 HAction HSemAction).
-          specialize (H4 meth); destruct H4; elim H4.
+          specialize (H4 (attrName meth)); destruct H4; elim H4.
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv1; discriminate. }
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv2; discriminate. }
         }
@@ -165,8 +165,9 @@ Proof.
         }
         rewrite H4; clear H4.
 
-        assert (M.union cm1 (M.remove meth (M.union calls1 calls2)) =
-                M.union (M.remove meth calls1) (M.union cm1 (M.remove meth calls2))).
+        assert (M.union cm1 (M.remove (attrName meth) (M.union calls1 calls2)) =
+                M.union (M.remove (attrName meth) calls1)
+                        (M.union cm1 (M.remove (attrName meth) calls2))).
         { rewrite M.remove_union, M.union_assoc.
           rewrite M.union_comm with (m1:= cm1);
             [|apply M.Disj_remove_2; eapply M.Disj_union_1; eauto].
@@ -182,11 +183,11 @@ Proof.
         }
         
     + rewrite M.find_union in H3.
-      remember (M.find meth calls1) as omv1; destruct omv1.
-      * remember (M.find meth calls2) as omv2; destruct omv2.
+      remember (M.find (attrName meth) calls1) as omv1; destruct omv1.
+      * remember (M.find (attrName meth) calls2) as omv2; destruct omv2.
         { exfalso.
           pose proof (wfAction_appendAction_calls_disj _ H14 HAction HSemAction).
-          specialize (H4 meth); destruct H4; elim H4.
+          specialize (H4 (attrName meth)); destruct H4; elim H4.
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv1; discriminate. }
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv2; discriminate. }
         }
@@ -208,8 +209,9 @@ Proof.
         }
         rewrite H4; clear H4.
 
-        assert (M.union cm1 (M.remove meth (M.union calls1 calls2)) =
-                M.union (M.remove meth calls1) (M.union cm1 (M.remove meth calls2))).
+        assert (M.union cm1 (M.remove (attrName meth) (M.union calls1 calls2)) =
+                M.union (M.remove (attrName meth) calls1)
+                        (M.union cm1 (M.remove (attrName meth) calls2))).
         { rewrite M.remove_union, M.union_assoc.
           rewrite M.union_comm with (m1:= cm1);
             [|apply M.Disj_remove_2; eapply M.Disj_union_1; eauto].

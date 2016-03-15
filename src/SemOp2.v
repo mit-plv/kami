@@ -1,7 +1,7 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap Program.Equality.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics SemFacts.
+Require Export SemanticsExprAction Semantics SemFacts SemOp.
 
 Set Implicit Arguments.
 
@@ -362,278 +362,50 @@ Section GivenModule.
   Inductive StepOp: UpdatesT -> LabelT -> Prop :=
   | StepOpIntro: forall u l ics (HSubSteps: SubstepsOp u l ics),
       StepOp u l.
+=======
+  Inductive SubstepComb:
+    UpdatesT -> UnitLabel (* firing point *) ->
+    MethsT (* internal defs *) -> MethsT (* calls *) -> Prop :=
+  | SSCStart
+      u l cs
+      (Hss: Substep m o u l cs):
+      SubstepComb u l (M.empty _) cs
+  | SSCComb
+      u l ids cs
+      (Hssc: SubstepComb u l ids cs)
+      meth ar (Hmeth: M.find meth cs = Some ar)
+      u' cs'
+      (Hss: Substep m o u' (Meth (Some (meth :: ar)%struct)) cs')
+      (HDisjRegs: M.Disj u u')
+      (HDisjCalls: M.Disj cs cs')
+      (HDisjIds: ~ M.In meth ids)
+      u'' cs'' ids''
+      (HUEq: u'' = M.union u u')
+      (HIdsEq: ids'' = M.add meth ar ids)
+      (HCsEq: cs'' = M.union (M.remove meth cs) cs'):
+      SubstepComb u'' l ids'' cs''.
+
+  Inductive SubstepFull: UpdatesT -> UnitLabel -> MethsT -> MethsT -> Prop :=
+  | SSFIntro
+      u l ids cs
+      (HSubstepComb: SubstepComb u l ids cs)
+      (HNoInternalCalls: M.KeysDisj cs (getDefs m)):
+      SubstepFull u l ids cs.
+
+  Inductive StepFull: UpdatesT -> LabelT -> Prop :=
+  | SFNil:
+      StepFull (M.empty _) emptyMethLabel
+  | SFCons:
+      forall pu pl,
+        StepFull pu pl ->
+        forall nu nul nids ncs,
+          SubstepFull nu nul nids ncs ->
+          CanCombineUL pu nu pl (getLabel nul ncs) ->
+          forall u l,
+            u = M.union pu nu ->
+            l = mergeLabel pl (getLabel nul ncs) ->
+            StepFull u l.
 
 End GivenModule.
 
-Ltac invertActionOp H := apply inversionSemActionOp in H; simpl in H; dest; try subst.
-Ltac invertActionOpFirst :=
-  match goal with
-  | [H: SemActionOp _ _ _ _ _ _ _ |- _] => invertActionOp H
-  end.
-Ltac invertActionOpRep :=
-  repeat
-    match goal with
-    | [H: SemActionOp _ _ _ _ _ _ _ |- _] => invertActionOp H
-    | [H: if ?c
-          then
-            SemActionOp _ _ _ _ _ _ _ /\ _ /\ _ /\ _
-          else
-            SemActionOp _ _ _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-      let ic := fresh "ic" in
-      (remember c as ic; destruct ic; dest; subst)
-    end.
-
-Section Facts.
-  Variable m: Modules.
-
-  Lemma semActionOp_icalls:
-    forall o {retK} (a: ActionT type retK) u cs ics retv,
-      SemActionOp m o a u cs ics retv ->
-      M.KeysSubset ics (getDefs m).
-  Proof.
-    induction 1; simpl; intros; subst; auto.
-    - apply M.KeysSubset_union; auto.
-      apply M.KeysSubset_add; auto.
-      unfold getDefs, namesOf.
-      induction (getDefsBodies m).
-      + intuition.
-      + simpl in *.
-        destruct HIn; subst.
-        * intuition.
-        * specialize (IHl H1).
-          intuition.
-    - apply M.KeysSubset_union; auto.
-    - apply M.KeysSubset_union; auto.
-    - apply M.KeysSubset_empty; auto.
-  Qed.
-
-  Lemma semActionOp_calls:
-    forall o {retK} (a: ActionT type retK) u cs ics retv,
-      SemActionOp m o a u cs ics retv ->
-      M.KeysDisj cs (getDefs m).
-  Proof.
-    induction 1; simpl; intros; subst; auto.
-    - apply M.KeysDisj_add; auto.
-    - apply M.KeysDisj_union; auto.
-    - apply M.KeysDisj_union; auto.
-    - apply M.KeysDisj_union; auto.
-    - apply M.KeysDisj_empty.
-  Qed.
-
-  Lemma substepOp_calls:
-    forall o u l ics,
-      SubstepOp m o u l ics ->
-      M.KeysDisj (calls l) (getDefs m).
-  Proof.
-    induction 1; simpl; subst; intros.
-    - apply M.KeysDisj_empty.
-    - apply M.KeysDisj_empty.
-    - eapply semActionOp_calls; exact HAction.
-    - eapply semActionOp_calls; exact HAction.
-  Qed.
-
-  Lemma substepsOp_calls:
-    forall o u l ics,
-      SubstepsOp m o u l ics ->
-      M.KeysDisj (calls l) (getDefs m).
-  Proof.
-    induction 1; simpl; intros.
-    - apply M.KeysDisj_empty.
-    - apply substepOp_calls in H2.
-      destruct nl, pl; simpl in *.
-      apply M.KeysDisj_union; auto.
-  Qed.
-
-  Lemma stepOp_calls:
-    forall o u l,
-      StepOp m o u l ->
-      M.KeysDisj (calls l) (getDefs m).
-  Proof. induction 1; eapply substepsOp_calls; eauto. Qed.
-
-End Facts.
-
-Require Import Wf Program.Equality StaticDynamic Equiv.
-
-Section Consistency.
-  Variable m: Modules.
-  Hypothesis (Hwfm: WfModules type m).
-  Variable mEquiv: ModEquiv type typeUT m.
-  Variable o: RegsT.
-
-  Lemma SemActionOp_implies_SemActionSubsteps:
-    forall k (a: ActionT type k) u ecs ics retv,
-      SemActionOp m o a u ecs ics retv ->
-      exists u1 cs1 u2 l2,
-        SemAction o a u1 cs1 retv /\
-        SubstepsInd m o u2 l2 /\
-        M.Disj u1 u2 /\
-        M.Disj cs1 (calls l2) /\
-        u = M.union u1 u2 /\
-        (forall k v, M.MapsTo k v ics <-> (M.MapsTo k v cs1 \/ M.MapsTo k v (calls l2)) /\
-                                          (M.MapsTo k v (defs l2))) /\
-        (forall k v, M.MapsTo k v ecs <-> (M.MapsTo k v cs1 \/ M.MapsTo k v (calls l2)) /\
-                                          ~ (M.In k (defs l2))).
-  Proof.
-    intros ? ? ? ? ? ? so.
-    dependent induction so; subst; dest.
-    - exists x.
-      exists (M.add meth (existT _ _ (evalExpr marg, mret)) x0).
-      exists x1.
-      exists x2.
-      intuition.
-      + econstructor; eauto.
-      + apply M.Disj_add_1; try assumption.
-        unfold not; intros.
-        apply M.MapsToIn2 in H6; dest.
-        specialize (H5 meth x3).
-        destruct H5.
-        assert (sth: M.In meth (defs x2) -> False).
-        { intros.
-          apply staticDynDefsSubstepsInd with (x := meth) in H0.
-          intuition.
-          intuition.
-        }
-        assert (sth2: M.MapsTo meth x3 cs) by intuition.
-        apply M.MapsToIn1 in sth2.
-        intuition.
-      + specialize (H4 k v); specialize (H5 k v).
-        apply H4 in H6.
-        dest.
-        destruct H6; [ left | right; assumption].
-        apply M.F.P.F.add_mapsto_iff; try assumption.
-        destruct (string_dec meth k); subst; [left | right; intuition].
-        constructor;
-        try reflexivity.
-        assert (sth: M.MapsTo k v icalls) by intuition.
-        apply semActionOp_icalls in so.
-        apply M.MapsToIn1 in sth.
-        specialize (so _ sth).
-        intuition.
-      + apply H4 in H6; dest.
-        intuition.
-      + apply M.F.P.F.add_mapsto_iff in H6.
-        destruct H6; dest.
-        * subst.
-          apply M.MapsToIn1 in H8.
-          apply staticDynDefsSubstepsInd with (x := k) in H0.
-          intuition.
-          intuition.
-        * specialize (H4 k v); intuition.
-      + specialize (H4 k v); intuition.
-      + apply M.F.P.F.add_mapsto_iff in H6.
-        destruct H6; dest; subst.
-        left; apply M.F.P.F.add_mapsto_iff; intuition.
-        apply H5 in H7; dest.
-        destruct H3; try assumption.
-        left.
-        apply M.F.P.F.add_mapsto_iff.
-        right; intuition.
-        intuition.
-      + apply M.F.P.F.add_mapsto_iff in H6; destruct H6; dest; subst.
-        apply staticDynDefsSubstepsInd with (x := k) in H0; intuition.
-        apply H5 in H8; intuition.
-      + apply M.F.P.F.add_mapsto_iff.
-        apply M.F.P.F.add_mapsto_iff in H6.
-        destruct H6; [left | right]; intuition.
-        specialize (H5 k v); intuition.
-      + apply M.F.P.F.add_mapsto_iff.
-        assert (sth: M.MapsTo k v cs) by (specialize (H5 k v); intuition).
-        destruct (string_dec meth k); subst; [left | right]; intuition.
-        apply M.MapsToIn1 in sth.
-        intuition.
-    - subst.
-      dest_disj.
-      pose proof
-           (SubstepsCons H7 (SingleMeth m (meth :: methBody)%struct HIn (evalExpr marg) H6))
-        as sstep.
-      simpl in *.
-      assert (cc: CanCombineUUL
-                    x5 x6 x3 x4
-                    (Meth (Some (meth :: existT _ _ (evalExpr marg, mret))%struct))).
-      { unfold CanCombineUUL.
-        intuition.
-        destruct x6 as [a6 d6 c6]; simpl in *.
-        destruct a6; intros; simpl in *.
-        - admit.
-        - 
-                                                  
-      exists x.
-      exists (M.add meth (existT _ _ (evalExpr marg, mret)) x0).
-      exists (M.union x1 (M.union x3 x5)).
-      exists (M.x2.
-      intuition.
-    - exists x; exists x0; exists x1; exists x2.
-      intuition.
-      econstructor; eauto.
-    - exists x; exists x0; exists x1; exists x2.
-      intuition.
-      econstructor; eauto.
-    - exists (M.add r (existT _ _ (evalExpr e)) x).
-      exists x0.
-      exists x1; exists x2.
-      intuition.
-      + econstructor; eauto.
-      + subst; dest_disj; solve_disj.
-        unfold not; intros.
-        apply M.in_union_R with (m' := x) in H3.
-        intuition.
-      + rewrite M.union_add.
-        rewrite H3.
-        reflexivity.
-    - exists (M.union x3 x).
-      exists (M.union x4 x0).
-      exists (M.union x5 x1).
-      exists (mergeLabel x6 x2).
-      intuition.
-      + econstructor; eauto.
-      + admit.
-      + subst.
-        dest_disj.
-        solve_disj.
-      + admit.
-      + subst; meq.
-      + apply M.mapsto_union in H13; dest.
-        unfold mergeLabel; destruct x6, x2; simpl.
-        destruct H13; dest.
-        * apply H11 in H13; simpl in *; dest.
-          { destruct H13.
-            - left; apply M.mapsto_union; auto.
-            - right; apply M.mapsto_union; auto.
-          }
-        * apply H4 in H14; simpl in *; dest.
-          { destruct H14.
-            - left; apply M.mapsto_union.
-              right; constructor; unfold not; intros; auto.
-              admit.
-            - right; apply M.mapsto_union.
-              right; constructor; unfold not; intros; auto.
-              admit.
-          } 
-              
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-    - admit.
-    - exists x; exists x0; exists x1; exists x2.
-      intuition.
-      econstructor; eauto.
-    - repeat (econstructor; eauto); intros; simpl in *; dest.
-      apply M.F.P.F.empty_mapsto_iff in H0; intuition.
-      apply M.F.P.F.empty_mapsto_iff in H; intuition.
-      destruct H;
-        apply M.F.P.F.empty_mapsto_iff in H; intuition.
-  Qed.
-
-  Lemma step_implies_StepOp:
-    forall o u l,
-      Step m o u l -> StepOp m o u l.
-  Proof.
-    admit.
-  Qed.
-    
-End Consistency.
-
+  

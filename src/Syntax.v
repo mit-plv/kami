@@ -454,7 +454,7 @@ Notation "'STRUCT' { s1 ; .. ; sN }" :=
 
 (* Notations: action *)
 
-Coercion attrName : Attribute >-> string.
+(* Coercion attrName : Attribute >-> string. *)
 
 Notation "'Call' meth ( arg ) ; cont " :=
   (MCall (attrName meth) (attrType meth) arg (fun _ => cont))

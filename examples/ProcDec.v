@@ -110,8 +110,10 @@ Section ProcDec.
 
 End ProcDec.
 
-Hint Unfold getNextPc nextPc memReq memRep halt.
 Hint Unfold procDec : ModuleDefs.
+Hint Unfold getNextPc getNextState opLd opSt opHt
+     memReq memRep halt nextPc
+     reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
   Variables opIdx addrSize fifoSize valSize rfIdx: nat.
