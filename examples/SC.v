@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming.
+Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
 
 Set Implicit Arguments.
 
@@ -26,8 +26,51 @@ Section DecExec.
 
   Definition DecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty.
   Definition ExecT := forall ty, StateT ty -> ty (SyntaxKind (Bit addrSize)) -> DecInstT ty ->
-                      ty (SyntaxKind (Bit addrSize)) * StateT ty.
+                                 ty (SyntaxKind (Bit addrSize)) * StateT ty.
+
+  Definition DecEquiv (dec: DecT) :=
+    forall (v1: fullType type StateK)
+           (v1': fullType typeUT StateK)
+           (v2: fullType type (SyntaxKind (Bit addrSize)))
+           (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
+      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      ExprEquiv G
+                (#(dec (fullType type) v1 v2))%kami
+                (#(dec (fullType typeUT) v1' v2'))%kami.
+
+  Definition ExecEquiv_1 (dec: DecT) (exec: ExecT) :=
+    forall (v1: fullType type StateK)
+           (v1': fullType typeUT StateK)
+           (v2: fullType type (SyntaxKind (Bit addrSize)))
+           (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
+      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      ExprEquiv G
+                #(fst (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami
+                #(fst (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami.
+
+  Definition ExecEquiv_2 (dec: DecT) (exec: ExecT) :=
+    forall (v1: fullType type StateK)
+           (v1': fullType typeUT StateK)
+           (v2: fullType type (SyntaxKind (Bit addrSize)))
+           (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
+      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      ExprEquiv G
+                #(snd (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami
+                #(snd (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami.
+
 End DecExec.
+
+Ltac dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2 :=
+  match goal with
+  | [ |- ExprEquiv _ (#(dec _ _ _))%kami (#(dec _ _ _))%kami ] =>
+    apply HdecEquiv
+  | [ |- ExprEquiv _ (#(fst (exec _ _ _ (dec _ _ _))))%kami
+                   (#(fst (exec _ _ _ (dec _ _ _))))%kami ] =>
+    apply HexecEquiv_1
+  | [ |- ExprEquiv _ (#(snd (exec _ _ _ (dec _ _ _))))%kami
+                   (#(snd (exec _ _ _ (dec _ _ _))))%kami ] =>
+    apply HexecEquiv_2
+  end.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.

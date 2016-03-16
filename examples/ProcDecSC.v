@@ -11,6 +11,27 @@ Section ProcDecSC.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
   Variable exec: ExecT 2 addrSize valSize rfIdx.
+  Hypotheses (HdecEquiv: DecEquiv dec)
+             (HexecEquiv_1: ExecEquiv_1 dec exec)
+             (HexecEquiv_2: ExecEquiv_2 dec exec).
+
+  Ltac equiv_tac_with tac :=
+    repeat
+      (repeat autounfold with MethDefs;
+       try tac;
+       match goal with
+       | [ |- ModEquiv _ _ _ ] => constructor; intros
+       | [ |- RulesEquiv _ _ _ ] => constructor; intros
+       | [ |- MethsEquiv _ _ _ ] => constructor; intros
+       | [ |- ActionEquiv _ _ _ ] => constructor; intros
+       | [ |- ExprEquiv _ _ _ ] => constructor; intros
+       | [ |- @ExprEquiv _ _ _ ?fk (ReadField ?a _) (ReadField ?a _) ] =>
+         change fk with (SyntaxKind (GetAttrType a)); constructor; intros
+       | [ |- In _ _] => simpl; tauto
+       end).
+
+  Ltac proc_dec_exec_equiv :=
+    idtac; SC.dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2.
 
   Variable n: nat.
 
@@ -112,35 +133,46 @@ Section ProcDecSC.
         | [H: False |- _] => elim H
         end.
 
+    Lemma pdec_ModEquiv: ModEquiv type typeUT pdec.
+    Proof.
+      equiv_tac_with proc_dec_exec_equiv.
+    Qed.
+    Hint Resolve pdec_ModEquiv.
+
+    (* Lemma pdec_refines_pinst_inl: pdec <<== pinst. *)
+    (* Proof. *)
+    (*   inlineL. *)
+
+    (* TODO: seems too arbitrary *)
+    Ltac mred_concrete :=
+      repeat
+        match goal with
+        | [ |- context[M.find _ (M.add _ _ _)] ] =>
+          (rewrite M.find_add_1 by auto)
+          || (rewrite M.find_add_2 by auto)
+        | [ |- context[decKind ?k1 ?k2] ] =>
+          let Hneq := fresh "Hneq" in
+          destruct (decKind k1 k2) as [|Hneq];
+          [|elim Hneq; reflexivity]
+        | [ |- context[eq_rect_r _ _ _ _] ] =>
+          unfold eq_rect_r
+        | [ |- context[eq_rect _ _ _ _ _ _] ] =>
+          rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq
+        end.
+
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
       apply decomposition with (theta:= pdec_pinst_regMap)
                                  (ruleMap:= pdec_pinst_ruleMap).
 
-      - admit. (* cannot use computation because of parameters... *)
+      - unfold initRegs, makeMap, getRegInits; simpl.
+        unfold pdec_pinst_regMap.
 
-      - intros.
-        inv H; try inv H1.
-        dest_rules.
-        + invertActionOpRep.
-          invert_call.
-          invertActionOpRep.
-          admit. (* eapply EmptyRule *)
-
-        + invertActionOpRep.
-          invert_call.
-          invertActionOpRep.
-          admit. (* eapply EmptyRule *)
-
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-
-      - admit. (* meths case *)
-
+        repeat mred_concrete.
+        meq.
+        
+      - admit.
+      - admit.
     Qed.
 
   End SingleCore.
