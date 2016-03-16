@@ -5,6 +5,15 @@ Require Export SemanticsExprAction Semantics SemFacts.
 
 Set Implicit Arguments.
 
+Lemma add_union_empty
+      A k (v: A) m:
+  M.add k v m = M.union (M.add k v (M.empty _)) m.
+Proof.
+  rewrite M.union_add.
+  rewrite M.union_empty_L.
+  reflexivity.
+Qed.
+
 Section GivenModule.
   Variable m: Modules.
   Variable o: RegsT.
@@ -95,7 +104,8 @@ Section GivenModule.
       (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs')
       u1 ds1 cs1
       (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1)
-      (HMethNotIn: ~ M.In meth cs')
+      (HMethNotIn: ~ M.In meth cs)
+      (HMethNotIn': ~ M.In meth cs')
       (HDisj1: M.Disj u' u1)
       (HDisj2: M.Disj ds' ds1)
       (HDisj3: M.Disj cs' cs1):
@@ -127,20 +137,6 @@ Section GivenModule.
       conj (@SemActionOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10)
            (@MethOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10).
 
-  (*
-  Inductive RuleOp: string -> forall ss, substepsComb (m := m) (o := o) ss -> Prop :=
-  | RuleOpIntro rle body
-                (HInRules: In (rle :: body)%struct (getRules m))
-                (sRec: SubstepRec m o)
-                (HSRecRule: unitAnnot sRec = Rle (Some rle))
-                ss (ssComb: substepsComb ss)
-                u cs retK
-                (HSemActionOp: SemActionOp (body type) ssComb u cs retK)
-                (ssCombFinal: substepsComb (sRec :: ss)):
-      RuleOp rle ssCombFinal.
-   *)
-
-  
   Theorem SubstepsIndComb u1 l1:
     SubstepsInd m o u1 l1 ->
     forall u2 l2,
@@ -212,8 +208,8 @@ Section GivenModule.
           constructor; solve_disj.
           destruct annot, annot0; try discriminate; auto.
   Qed.
-  
-  Theorem wellHiddenSizeLe1:
+
+  Theorem semActionOp_implies_semAction_substeps:
     (forall k (a: ActionT type k) u cs retK u' ds' cs',
         SemActionOp a u cs retK u' ds' cs' ->
         SemAction o a u cs retK /\
@@ -264,8 +260,31 @@ Section GivenModule.
       constructor.
       apply (SubstepsIndComb H2 H0 HDisj1 HDisj2 HDisj3 (or_introl eq_refl)).
       subst; simpl in *.
-      repeat rewrite M.restrict_union.
-      admit.
+      rewrite M.restrict_add_in.
+      rewrite <- M.restrict_union.
+      f_equal.
+      rewrite add_union_empty.
+      rewrite add_union_empty with (m := cs).
+      rewrite M.union_assoc.
+      rewrite M.union_assoc.
+      f_equal.
+      rewrite M.union_comm with (m2 := cs).
+      rewrite <- M.union_assoc with (m3 := cs').
+      rewrite M.union_comm with (m1 := (M.add meth _ _)) (m2 := cs').
+      rewrite <- M.union_assoc; reflexivity.
+      apply M.Disj_add_1.
+      apply M.Disj_empty_1.
+      intuition.
+      apply M.Disj_add_1.
+      apply M.Disj_empty_1.
+      intuition.
+      dependent destruction HMethOp.
+      clear - HInDefs.
+      unfold getDefs, namesOf.
+      assert (sth: meth = attrName (Kind := sigT MethodT) (meth :: body)%struct) by reflexivity.
+      rewrite sth.
+      apply in_map.
+      intuition.
     - constructor.
       pose proof (SubstepsCons H0 (SingleMeth m _ HInDefs _ H)) as sth.
       simpl in *.
@@ -287,174 +306,6 @@ Section GivenModule.
         assumption.
       subst; reflexivity.
   Qed.
-
-  (*
-  Theorem inversionSemActionOp
-          k a news cs icalls retC
-          (evalA: @SemActionOp k a news cs icalls retC):
-    match a with
-    | MCall meth s e c =>
-      (In meth (getDefs m) /\
-       exists methBody mret cnewRegs ccalls cicalls nnewRegs ncalls nicalls,
-         In (meth :: existT _ s methBody)%struct (getDefsBodies m) /\
-         SemActionOp (methBody type (evalExpr e)) cnewRegs ccalls cicalls mret /\
-         SemActionOp (c mret)
-                     nnewRegs ncalls nicalls retC /\
-         news = M.union cnewRegs nnewRegs /\
-         cs = M.union ccalls ncalls /\
-         icalls = M.union cicalls (M.add meth (existT _ _ (evalExpr e, mret)) nicalls) /\
-         M.Disj cnewRegs nnewRegs /\
-         M.Disj ccalls ncalls /\
-         M.Disj cicalls nicalls /\
-         ~ M.In meth cicalls /\
-         ~ M.In meth nicalls) \/
-      (~ In meth (getDefs m) /\
-       exists mret pcalls,
-         SemActionOp (c mret) news pcalls icalls retC /\
-         ~ M.In meth pcalls /\
-         cs = M.add meth (existT _ _ (evalExpr e, mret)) pcalls)
-    | Let_ _ e cont =>
-      SemActionOp (cont (evalExpr e)) news cs icalls retC
-    | ReadReg r k c =>
-      exists rv,
-      M.find r oldRegs = Some (existT _ k rv) /\
-      SemActionOp (c rv) news cs icalls retC
-    | WriteReg r _ e a =>
-      exists pnews,
-      SemActionOp a pnews cs icalls retC /\
-      ~ M.In r pnews /\
-      news = M.add r (existT _ _ (evalExpr e)) pnews
-    | IfElse p _ aT aF c =>
-      exists news1 calls1 icalls1 news2 calls2 icalls2 r1,
-      match evalExpr p with
-      | true =>
-        SemActionOp aT news1 calls1 icalls1 r1 /\
-        SemActionOp (c r1) news2 calls2 icalls2 retC /\
-        news = M.union news1 news2 /\
-        cs = M.union calls1 calls2 /\
-        icalls = M.union icalls1 icalls2 /\
-        M.Disj icalls1 icalls2
-      | false =>
-        SemActionOp aF news1 calls1 icalls1 r1 /\
-        SemActionOp (c r1) news2 calls2 icalls2 retC /\
-        news = M.union news1 news2 /\
-        cs = M.union calls1 calls2 /\
-        icalls = M.union icalls1 icalls2 /\
-        M.Disj icalls1 icalls2
-      end
-    | Assert_ e c =>
-      SemActionOp c news cs icalls retC /\
-      evalExpr e = true
-    | Return e =>
-      retC = evalExpr e /\
-      news = M.empty _ /\
-      cs = M.empty _ /\
-      icalls = M.empty _
-    end.
-  Proof.
-    destruct evalA; eauto; repeat eexists.
-    - right; repeat eexists; eauto.
-    - left; split.
-      + unfold getDefs, namesOf in *.
-        replace meth with (attrName (meth :: methBody)%struct) by reflexivity.
-        apply in_map; auto.
-      + repeat eexists; eauto.
-        destruct methBody; auto.
-    - destruct (evalExpr p); eauto; try discriminate.
-    - destruct (evalExpr p); eauto; try discriminate.
-  Qed.
-
-  Inductive SubstepOp: UpdatesT -> LabelT -> MethsT ->Prop :=
-  | SSSEmptyRule:
-      forall u l ics,
-        u = M.empty _ ->
-        l = emptyRuleLabel ->
-        ics = M.empty _ ->
-        SubstepOp u l ics
-  | SSSEmptyMeth:
-      forall u l ics,
-        u = M.empty _ ->
-        l = emptyMethLabel ->
-        ics = M.empty _ ->
-        SubstepOp u l ics
-  | SSSRule:
-      forall k (a: Action Void)
-             (HInRules: List.In {| attrName := k; attrType := a |} (getRules m))
-             u cs ics (HAction: SemActionOp (a type) u cs ics WO) ndefs,
-        ndefs = M.empty _ ->
-        SubstepOp u {| annot := Some (Some k);
-                       defs := ndefs;
-                       calls := cs |} ics
-  | SSSMeth:
-      forall (f: DefMethT)
-             (HIn: In f (getDefsBodies m))
-             (HNotIn: ~ In (attrName f) (getCalls m))
-             u cs ics argV retV
-             (HAction: SemActionOp ((projT2 (attrType f)) type argV) u cs ics retV)
-             adefs,
-        adefs = M.add (attrName f) (existT _ _ (argV, retV)) (M.empty _) ->
-        SubstepOp u {| annot := None;
-                       defs := adefs;
-                       calls := cs |} ics.
-
-  Inductive SubstepsOp: UpdatesT -> LabelT -> MethsT -> Prop :=
-  | SSSNil:
-      SubstepsOp (M.empty _) emptyMethLabel (M.empty _)
-  | SSSCons:
-      forall pu pl pics,
-        SubstepsOp pu pl pics ->
-        forall nu nl nics,
-          CanCombineUL pu nu pl nl ->
-          M.Disj pics nics ->
-          SubstepOp nu nl nics ->
-          SubstepsOp (M.union pu nu) (mergeLabel pl nl) (M.union pics nics).
-
-  Inductive StepOp: UpdatesT -> LabelT -> Prop :=
-  | StepOpIntro: forall u l ics (HSubSteps: SubstepsOp u l ics),
-      StepOp u l.
-  Inductive SubstepComb:
-    UpdatesT -> UnitLabel (* firing point *) ->
-    MethsT (* internal defs *) -> MethsT (* calls *) -> Prop :=
-  | SSCStart
-      u l cs
-      (Hss: Substep m o u l cs):
-      SubstepComb u l (M.empty _) cs
-  | SSCComb
-      u l ids cs
-      (Hssc: SubstepComb u l ids cs)
-      meth ar (Hmeth: M.find meth cs = Some ar)
-      u' cs'
-      (Hss: Substep m o u' (Meth (Some (meth :: ar)%struct)) cs')
-      (HDisjRegs: M.Disj u u')
-      (HDisjCalls: M.Disj cs cs')
-      (HDisjIds: ~ M.In meth ids)
-      u'' cs'' ids''
-      (HUEq: u'' = M.union u u')
-      (HIdsEq: ids'' = M.add meth ar ids)
-      (HCsEq: cs'' = M.union (M.remove meth cs) cs'):
-      SubstepComb u'' l ids'' cs''.
-
-  Inductive SubstepFull: UpdatesT -> UnitLabel -> MethsT -> MethsT -> Prop :=
-  | SSFIntro
-      u l ids cs
-      (HSubstepComb: SubstepComb u l ids cs)
-      (HNoInternalCalls: M.KeysDisj cs (getDefs m)):
-      SubstepFull u l ids cs.
-
-  Inductive StepFull: UpdatesT -> LabelT -> Prop :=
-  | SFNil:
-      StepFull (M.empty _) emptyMethLabel
-  | SFCons:
-      forall pu pl,
-        StepFull pu pl ->
-        forall nu nul nids ncs,
-          SubstepFull nu nul nids ncs ->
-          CanCombineUL pu nu pl (getLabel nul ncs) ->
-          forall u l,
-            u = M.union pu nu ->
-            l = mergeLabel pl (getLabel nul ncs) ->
-            StepFull u l.
-   *)
 
 End GivenModule.
 
