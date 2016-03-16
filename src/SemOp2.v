@@ -1,7 +1,7 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap Program.Equality.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics SemFacts SemOp.
+Require Export SemanticsExprAction Semantics SemFacts.
 
 Set Implicit Arguments.
 
@@ -43,29 +43,36 @@ Section GivenModule.
       retK (fret: type retK)
       (cont: ActionT type retK)
       u cs retK u' ds' cs'
-      (HNotInRegs: ~ M.In r u)
       (HSemActionOp: SemActionOp cont u cs retK u' ds' cs'):
       SemActionOp (WriteReg r e cont) (M.add r (existT _ _ (evalExpr e)) u) cs retK u' ds' cs'
   | SASIfElseTrue
       (p: Expr type (SyntaxKind Bool)) k1
       (a a': ActionT type k1)
-      k2 (cont: type k1 -> ActionT type k2) r
+      k2 (cont: type k1 -> ActionT type k2)
       (HTrue: evalExpr p = true)
       u1 cs1 retK1 u1' ds1' cs1'
       (HAction: SemActionOp a u1 cs1 retK1 u1' ds1' cs1')
       u2 cs2 retK2 u2' ds2' cs2'
-      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2'):
+      (HSemActionOp: SemActionOp (cont retK1) u2 cs2 retK2 u2' ds2' cs2')
+      (HUDisj: M.Disj u1' u2')
+      (HDsDisj: M.Disj ds1' ds2')
+      (HCsDisj: M.Disj cs1' cs2')
+      (HCsDisj': M.Disj cs1' cs2):
       SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
                   (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASIfElseFalse
       (p: Expr type (SyntaxKind Bool)) k1
       (a a': ActionT type k1)
-      k2 (cont: type k1 -> ActionT type k2) r
+      k2 (cont: type k1 -> ActionT type k2)
       (HTrue: evalExpr p = false)
       u1 cs1 retK1 u1' ds1' cs1'
       (HAction: SemActionOp a' u1 cs1 retK1 u1' ds1' cs1')
       u2 cs2 retK2 u2' ds2' cs2'
-      (HSemActionOp: SemActionOp (cont r) u2 cs2 retK2 u2' ds2' cs2'):
+      (HSemActionOp: SemActionOp (cont retK1) u2 cs2 retK2 u2' ds2' cs2')
+      (HUDisj: M.Disj u1' u2')
+      (HDsDisj: M.Disj ds1' ds2')
+      (HCsDisj: M.Disj cs1' cs2')
+      (HCsDisj': M.Disj cs1' cs2):
       SemActionOp (IfElse p a a' cont) (M.union u1 u2) (M.union cs1 cs2) retK2
                   (M.union u1' u2') (M.union ds1' ds2') (M.union cs1' cs2')
   | SASAssertTrue
@@ -87,8 +94,13 @@ Section GivenModule.
       u cs retK u' ds' cs'
       (HSemActionOp: SemActionOp (cont mret) u cs retK u' ds' cs')
       u1 ds1 cs1
-      (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1):
-      SemActionOp (MCall meth s marg cont) u (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
+      (HMethOp: MethOp meth (evalExpr marg, mret) u1 ds1 cs1)
+      (HMethNotIn: ~ M.In meth cs')
+      (HDisj1: M.Disj u' u1)
+      (HDisj2: M.Disj ds' ds1)
+      (HDisj3: M.Disj cs' cs1):
+      SemActionOp (MCall meth s marg cont) u
+                  (M.add meth (existT _ _ (evalExpr marg, mret)) cs)
                   retK (M.union u' u1) (M.union ds' ds1) (M.union cs' cs1)
   with
   MethOp: string -> forall ar,
@@ -96,16 +108,16 @@ Section GivenModule.
   |  MethOpIntro
        meth body arval
        (HInDefs: In (meth :: body)%struct (getDefsBodies m))
-       u cs retK u' ds' cs'
+       u cs u' ds' cs'
        (HUDisj: M.Disj u u')
        (HCsDisj: M.Disj cs cs')
        (HDsDisj: ~ M.In meth ds')
-       (HSemActionOp: SemActionOp (projT2 body type (fst arval)) u cs retK u' ds' cs')
+       (HSemActionOp: SemActionOp (projT2 body type (fst arval)) u cs (snd arval) u' ds' cs')
        uFinal csFinal dsFinal
        (HUFinal: uFinal = M.union u u')
        (HCsFinal: csFinal = M.union cs cs')
        (HDsFinal: dsFinal = (M.add meth (existT _ _ arval) ds')):
-          MethOp meth arval uFinal csFinal dsFinal.
+          MethOp meth arval uFinal dsFinal csFinal.
 
   Scheme SemActionOp_ind_2 := Induction for SemActionOp Sort Prop
                               with MethOp_ind_2 := Induction for MethOp Sort Prop.
@@ -115,8 +127,7 @@ Section GivenModule.
       conj (@SemActionOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10)
            (@MethOp_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10).
 
-  About mutual_op_ind.
-
+  (*
   Inductive RuleOp: string -> forall ss, substepsComb (m := m) (o := o) ss -> Prop :=
   | RuleOpIntro rle body
                 (HInRules: In (rle :: body)%struct (getRules m))
@@ -127,118 +138,157 @@ Section GivenModule.
                 (HSemActionOp: SemActionOp (body type) ssComb u cs retK)
                 (ssCombFinal: substepsComb (sRec :: ss)):
       RuleOp rle ssCombFinal.
+   *)
 
+  
+  Theorem SubstepsIndComb u1 l1:
+    SubstepsInd m o u1 l1 ->
+    forall u2 l2,
+      SubstepsInd m o u2 l2 ->
+      M.Disj u1 u2 ->
+      M.Disj (defs l1) (defs l2) ->
+      M.Disj (calls l1) (calls l2) ->
+      (annot l1 = None \/ annot l2 = None) ->
+      SubstepsInd m o (M.union u1 u2) (mergeLabel l1 l2).
+  Proof.
+    intros s.
+    dependent induction s; intros.
+    - rewrite M.union_empty_L; simpl.
+      destruct l2; simpl in *.
+      repeat rewrite M.union_empty_L.
+      assumption.
+    - specialize (IHs _ _ H3).
+      subst.
+      unfold CanCombineUUL in H0; dest.
+      destruct l; simpl in *.
+      destruct sul; simpl in *.
+      destruct l2, annot; simpl in *.
+      + intuition.
+      + destruct H7; try discriminate.
+        subst.
+        dest_disj.
+        rewrite M.union_empty_L.
+        apply M.Disj_comm in H0.
+        rewrite M.union_comm with (m1 := u) (m2 := su); auto.
+        repeat rewrite <- M.union_assoc.
+        apply M.Disj_comm in H7.
+        apply M.Disj_comm in H10.
+        apply M.Disj_comm in H9.
+        specialize (IHs H7 H10 H9 (or_introl eq_refl)).
+        clear H3.
+        econstructor; eauto.
+        constructor.
+        solve_disj.
+        simpl.
+        constructor; solve_disj.
+      + destruct l2; simpl in *.
+        dest_disj; simpl in *.
+        apply M.Disj_comm in H8.
+        apply M.Disj_comm in H10.
+        destruct o0; simpl in *.
+        * destruct a.
+          dest_disj; simpl in *.
+          specialize (IHs H8 (M.Disj_comm H11) H10 H7).
+          rewrite M.union_comm with (m1 := u) (m2 := su); auto.
+          repeat rewrite <- M.union_assoc.
+          rewrite M.union_add.
+          rewrite M.union_empty_L.
+          clear H3.
+          econstructor; eauto.
+          constructor; simpl in *.
+          solve_disj.
+          constructor; solve_disj.
+          destruct annot, annot0; try discriminate; unfold not; intros;
+            apply M.union_In in H3; intuition.
+        * dest_disj; simpl in *.
+          specialize (IHs H8 (M.Disj_comm H11) H10 H7).
+          rewrite M.union_comm with (m1 := u) (m2 := su); auto.
+          repeat rewrite <- M.union_assoc.
+          rewrite M.union_empty_L.
+          clear H3.
+          econstructor; eauto.
+          constructor; simpl in *.
+          solve_disj.
+          constructor; solve_disj.
+          destruct annot, annot0; try discriminate; auto.
+  Qed.
+  
   Theorem wellHiddenSizeLe1:
-    (forall k (a: ActionT type k) ss (ssComb: substepsComb ss) u cs retK,
-        SemActionOp a ssComb u cs retK ->
+    (forall k (a: ActionT type k) u cs retK u' ds' cs',
+        SemActionOp a u cs retK u' ds' cs' ->
         SemAction o a u cs retK /\
-        (*M.Disj cs (calls (foldSSLabel ss)) /\*)
-        defs (foldSSLabel ss) =
-        M.restrict (M.union cs (calls (foldSSLabel ss))) (getDefs m)) /\
-    (forall meth ar (arval: SignT ar) ss (ssComb: substepsComb ss),
-        MethOp meth arval ssComb ->
-        ~ M.In meth (calls (foldSSLabel ss)) /\
-        defs (foldSSLabel ss) = M.add meth (existT _ _ arval)
-                                      (M.restrict (calls (foldSSLabel ss)) (getDefs m))).
+        SubstepsInd m o u' {| annot := None; defs := ds'; calls := cs' |} /\
+        ds' = M.restrict (M.union cs cs') (getDefs m)) /\
+    (forall meth ar (arval: SignT ar) u ds cs,
+        MethOp meth arval u ds cs ->
+        SubstepsInd m o u {| annot := None; defs := ds; calls := cs|} /\
+        ds = M.add meth (existT _ _ arval)
+                   (M.restrict cs (getDefs m))).
   Proof.
     apply mutual_op_ind; intros; subst; try rewrite foldSSLabelDist, mergeLabel; dest.
+    - repeat (econstructor; eauto).
+      rewrite M.restrict_union.
+      rewrite M.restrict_add_not_in;
+        try rewrite <- M.restrict_union; auto.
+    - repeat (econstructor; eauto).
+    - repeat (econstructor; eauto).
+    - repeat (econstructor; eauto).
     - constructor.
       econstructor; eauto.
-      repeat rewrite M.restrict_union in *.
-      repeat rewrite M.restrict_add_not_in.
-      rewrite M.restrict_union in H0.
-      intuition.
-      intuition.
-    - constructor.
-      apply SemMCall with (mret := mret) (calls := cs); intuition.
-      econstructor; eauto.
-      repeat rewrite foldSSLabelDist.
-      case_eq (foldSSLabel ss); case_eq (foldSSLabel ss'); intros; simpl in *.
-      rewrite H2, H3 in *; simpl in *.
-      subst.
-      repeat rewrite M.restrict_union.
-      rewrite <- M.restrict_add_in.
-      subst.
-      rewrite M.restrict_union.
-      rewrite <- M.restrict_union.
-      rewrite M.union_assoc.
-      rewrite M.restrict_union in *.
-      subst.
-      repeat f_equal.
-      rewrite M.restrict_union 
-      
-      rewrite <- M.restrict_add_in.
-      rewrite M.restrict_union.
-      rewrite H0.
-      rewrite M.restrict_union.
-      rewrite H0.
-      unfold mergeLabel.
-      rewrite M.restrict_union in H1.
-      intuition.
-      intuition.
-      
-      try constructor.
-    - econstructor; eauto.
-    - repeat rewrite M.restrict_union in *.
-      repeat rewrite M.restrict_add_not_in.
-      rewrite M.restrict_union in H0.
-      intuition.
-      intuition.
-    - econstructor; eauto.
-    - 
-      repeat rewrite M.restrict_union in *.
-      f_equal.
-      repeat rewrite M.restrict_add_in.
-      rewrite M.restrict_union in H1.
-      intuition.
-      intuition.
-      M.ext y.
-      rewrite M.restrict_find.
-      rewrite M.restrict_add.
-      dependent destruction HSemAction.
-      exists x, (M.add meth (existT _ _ (evalExpr marg, mret)) x0), x1.
       constructor.
-      + apply SemMCall.
-      admit.
-      try (eexists, eauto).
-    - apply inversionSemAction in H0; dest.
-      dependent destruction H0.
-      specialize (H _ _ _ H0).
-      eapply H; eauto.
-    - 
-    repeat match goal with
-           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
-           end; simpl in *. rewrite M.restrict_union; subst; reflexivity.
-    repeat match goal with
-           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
-           end; simpl in *; rewrite M.restrict_union; subst; reflexivity.
-    repeat match goal with
-           | |- context [foldSSLabel ?P] => destruct (foldSSLabel P)
-           end; simpl in *; rewrite M.restrict_union; subst; reflexivity.
-    simpl.
-    unfold addLabelLeft, mergeLabel.
-    destruct (getSLabel sRec), (foldSSLabel ss); simpl in *.
-    rewrite M.restrict_union; subst. reflexivity.
+      apply (SubstepsIndComb H3 H1); auto.
+      rewrite M.restrict_union.
       subst.
-        subst; reflexivity.
-    intuition.
-      try destruct (foldSSLabel ss), (foldSSLabel ss'); simpl in *.
-    - unfold
-    - admit.
-    - admit.
-    - admit.
-    - simpl in *.
-      unfold addLabelLeft.
-    - dependent destruction HSubstepOp'; subst.
+      repeat rewrite <- M.restrict_union.
+      f_equal.
+      repeat rewrite M.union_assoc.
+      rewrite <- M.union_assoc with (m1 := cs1) (m2 := cs1') (m3 := cs2).
+      rewrite <- M.union_assoc with (m1 := cs1) (m2 := cs2) (m3 := cs1').
+      rewrite M.union_comm with (m1 := cs1') (m2 := cs2); intuition.
+    - constructor.
+      eapply SemIfElseFalse; eauto.
+      constructor.
+      apply (SubstepsIndComb H3 H1); auto.
+      rewrite M.restrict_union.
+      subst.
+      repeat rewrite <- M.restrict_union.
+      f_equal.
+      repeat rewrite M.union_assoc.
+      rewrite <- M.union_assoc with (m1 := cs1) (m2 := cs1') (m3 := cs2).
+      rewrite <- M.union_assoc with (m1 := cs1) (m2 := cs2) (m3 := cs1').
+      rewrite M.union_comm with (m1 := cs1') (m2 := cs2); intuition.
+    - repeat (econstructor; eauto).
+    - repeat (econstructor; eauto).
+    - constructor.
+      econstructor; eauto.
+      constructor.
+      apply (SubstepsIndComb H2 H0 HDisj1 HDisj2 HDisj3 (or_introl eq_refl)).
+      subst; simpl in *.
+      repeat rewrite M.restrict_union.
+      admit.
+    - constructor.
+      pose proof (SubstepsCons H0 (SingleMeth m _ HInDefs _ H)) as sth.
+      simpl in *.
+      assert (sth2: CanCombineUUL u' {| annot := None; defs := ds'; calls := cs' |} u cs
+                                  (Meth (Some (meth :: existT _ _ (fst arval, snd arval))%struct))).
+      { unfold CanCombineUUL.
+        dest_disj.
+        constructor.
+        solve_disj.
+        constructor.
+        solve_disj.
+        intuition.
+      }
+      specialize (sth sth2 _ _ eq_refl eq_refl).
+      rewrite M.union_add in sth.
+      rewrite M.union_empty_L in sth.
+      destruct arval; simpl in *.
+      rewrite M.union_comm;
+        assumption.
+      subst; reflexivity.
+  Qed.
 
-    (forall ss (ssComb: substepsComb ss) k (a: ActionT type k),
-        SemActionOp a ssComb -> defs (foldSSLabel ss) = M.empty _) /\
-    (forall ss (ssComb: substepsComb ss) meth ar (arval: SignT ar),
-        MethOp meth arval ssComb ->
-        defs (foldSSLabel ss) = M.add meth (existT _ _ arval) (M.empty _)).
-  Proof.
-    apply mutual_ind.
-
+  (*
   Theorem inversionSemActionOp
           k a news cs icalls retC
           (evalA: @SemActionOp k a news cs icalls retC):
@@ -362,7 +412,6 @@ Section GivenModule.
   Inductive StepOp: UpdatesT -> LabelT -> Prop :=
   | StepOpIntro: forall u l ics (HSubSteps: SubstepsOp u l ics),
       StepOp u l.
-=======
   Inductive SubstepComb:
     UpdatesT -> UnitLabel (* firing point *) ->
     MethsT (* internal defs *) -> MethsT (* calls *) -> Prop :=
@@ -405,6 +454,7 @@ Section GivenModule.
             u = M.union pu nu ->
             l = mergeLabel pl (getLabel nul ncs) ->
             StepFull u l.
+   *)
 
 End GivenModule.
 

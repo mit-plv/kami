@@ -16,61 +16,59 @@ Section GivenModule.
 
   Inductive ActionCycle:
     forall k,
-      ActionT typeUT k -> list string -> Prop :=
+      ActionT type k -> list string -> Prop :=
   | CycleMCallExt
-      meth s (marg: Expr typeUT (SyntaxKind (arg s)))
-      (mret: typeUT (ret s))
-      retK (fret: typeUT retK)
-      (cont: typeUT (ret s) -> ActionT typeUT retK)
+      meth s (marg: Expr type (SyntaxKind (arg s)))
+      retK (fret: type retK)
+      (cont: type (ret s) -> ActionT type retK)
       called
       (HNotInDefs: ~ In meth (getDefs m))
-      (HSemActionOp: ActionCycle (cont mret) called):
+      (HSemActionOp: forall mret, ActionCycle (cont mret) called):
       ActionCycle (MCall meth s marg cont) called
   | CycleLet
-      k (e: Expr typeUT k) retK (fret: typeUT retK)
-      (cont: fullType typeUT k -> ActionT typeUT retK)
+      k (e: Expr type k) retK
+      (cont: fullType type k -> ActionT type retK)
       called
-      (HSemActionOp: ActionCycle (cont (getConst k)) called):
+      (HSemActionOp: forall mret, ActionCycle (cont mret) called):
       ActionCycle (Let_ e cont) called
   | CycleReadReg
-      (r: string) regT (regV: fullType typeUT regT)
-      retK (fret: typeUT retK) (cont: fullType typeUT regT -> ActionT typeUT retK)
+      (r: string) regT
+      retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
       called
-      (HSemActionOp: ActionCycle (cont (getConst regT)) called):
+      (HSemActionOp: forall mret, ActionCycle (cont mret) called):
       ActionCycle (ReadReg r _ cont) called
   | CycleWriteReg
       (r: string) k
-      (e: Expr typeUT k)
-      retK (fret: typeUT retK)
-      (cont: ActionT typeUT retK)
+      (e: Expr type k)
+      retK (fret: type retK)
+      (cont: ActionT type retK)
       called
       (HSemActionOp: ActionCycle cont called):
       ActionCycle (WriteReg r e cont) called
   | CycleIfElse
-      (p: Expr typeUT (SyntaxKind Bool)) k1
-      (a a': ActionT typeUT k1)
-      k2 (cont: typeUT k1 -> ActionT typeUT k2)
+      (p: Expr type (SyntaxKind Bool)) k1
+      (a a': ActionT type k1)
+      k2 (cont: type k1 -> ActionT type k2)
       called
       (HActionIf: ActionCycle a called)
       (HActionElse: ActionCycle a' called)
-      (HSemActionOp: ActionCycle (cont tt) called):
+      (HSemActionOp: forall mret, ActionCycle (cont mret) called):
       ActionCycle (IfElse p a a' cont) called
   | CycleAssertTrue
-      (p: Expr typeUT (SyntaxKind Bool)) k2
-      (cont: ActionT typeUT k2)
+      (p: Expr type (SyntaxKind Bool)) k2
+      (cont: ActionT type k2)
       called
       (HSemActionOp: ActionCycle cont called):
       ActionCycle (Assert_ p cont) called
   | CycleReturn
-      k (e: Expr typeUT (SyntaxKind k)) called:
+      k (e: Expr type (SyntaxKind k)) called:
       ActionCycle (Return e) called
   | CycleCallInt
-      meth s (marg: Expr typeUT (SyntaxKind (arg s)))
-      (mret: typeUT (ret s))
-      retK (fret: typeUT retK)
-      (cont: typeUT (ret s) -> ActionT typeUT retK)
+      meth s (marg: Expr type (SyntaxKind (arg s)))
+      retK (fret: type retK)
+      (cont: type (ret s) -> ActionT type retK)
       called
-      (HSemActionOp: ActionCycle (cont mret) called)
+      (HSemActionOp: forall mret, ActionCycle (cont mret) called)
       (HMethDisj: ~ In meth called)
       (HMethOp: MethCycle (meth :: called)):
       ActionCycle (MCall meth s marg cont) called
@@ -80,7 +78,7 @@ Section GivenModule.
        meth body
        (HInDefs: In (meth :: body)%struct (getDefsBodies m))
        called
-       (HSemActionOp: ActionCycle (projT2 body typeUT tt) (meth :: called))
+       (HSemActionOp: forall marg, ActionCycle (projT2 body type marg) (meth :: called))
        calledFinal
        (HCalledFinal: calledFinal = meth :: called):
        MethCycle calledFinal.
@@ -93,8 +91,11 @@ Section GivenModule.
       conj (@ActionCycle_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9)
            (@MethCycle_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9).
 
-  Definition ModulesCycle := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
+  Definition NoModulesCycles := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
 
+  Variable noModulesCycle: NoModulesCycles.
+
+  (*
   Theorem wellHiddenEmptySubstepsNotRule o ss:
     substepsComb ss ->
     wellHidden m (hide (foldSSLabel ss)) ->
@@ -447,6 +448,7 @@ Section GivenModule.
             u = M.union pu nu ->
             l = mergeLabel pl (getLabel nul ncs) ->
             StepFull u l.
+   *)
 
 End GivenModule.
 
