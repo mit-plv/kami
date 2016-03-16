@@ -91,9 +91,9 @@ Section GivenModule.
       conj (@ActionCycle_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9)
            (@MethCycle_ind_2 P P0 h1 h2 h3 h4 h5 h6 h7 h8 h9).
 
-  Definition NoModulesCycles := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
+  Definition NoModulesCycle := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
 
-  Variable noModulesCycle: NoModulesCycles.
+  Variable noModulesCycle: NoModulesCycle.
 
   (*
   Theorem wellHiddenEmptySubstepsNotRule o ss:
