@@ -1099,6 +1099,53 @@ Module LeibnizFacts (M : MapLeibniz).
         * do 2 rewrite find_add_2 by auto; auto.
         * rewrite find_add_2 by auto; auto.
   Qed.
+
+  Lemma restrict_empty:
+    forall A d,
+      restrict (empty A) d = empty A.
+  Proof.
+    intros.
+    ext y.
+    rewrite restrict_find.
+    rewrite find_empty.
+    destruct (in_dec P.F.eq_dec y d); intuition.
+  Qed.
+
+  Lemma restrict_add_in A (m: t A) d:
+    forall k v,
+      List.In k d ->
+      add k v (restrict m d) = restrict (add k v m) d.
+  Proof.
+    intros.
+    ext y.
+    rewrite restrict_find.
+    destruct (in_dec P.F.eq_dec y d).
+    rewrite P.F.add_o.
+    rewrite P.F.add_o.
+    destruct (P.F.eq_dec k y); intuition.
+    rewrite restrict_find.
+    destruct (in_dec P.F.eq_dec y d); intuition.
+    assert (sth: k <> y) by (unfold not; intros; subst; intuition).
+    pose proof (P.F.add_neq_o (restrict m d) v sth).
+    rewrite H0.
+    rewrite restrict_find.
+    destruct (in_dec P.F.eq_dec y d);
+      intuition.
+  Qed.
+
+  Lemma restrict_add_not_in A (m: t A) d:
+    forall k v,
+      ~ List.In k d ->
+      restrict (add k v m) d = restrict m d.
+  Proof.
+    intros.
+    ext y.
+    repeat rewrite restrict_find.
+    destruct (in_dec P.F.eq_dec y d).
+    assert (sth: k <> y) by (unfold not; intros; subst; intuition).
+    apply (P.F.add_neq_o m v sth).
+    intuition.
+  Qed.
     
   Lemma restrict_in_find:
     forall {A} (m: t A) d e,
