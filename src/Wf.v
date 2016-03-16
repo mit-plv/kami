@@ -229,7 +229,7 @@ Section WfEval1.
   Qed.
 
   Lemma wfAction_WfAction:
-    forall {retT} aU (aT: ActionT type retT) (Hequiv: ActionEquiv nil aT aU),
+    forall {retT} aU (aT: ActionT type retT) G (Hequiv: ActionEquiv G aT aU),
       wfAction aU = true -> WfAction nil nil aT.
   Proof. intros; eapply wfActionC_WfAction; eauto. Qed.
 
@@ -247,7 +247,7 @@ Section WfEval1.
   Proof.
     induction rules; simpl; intros; [constructor|].
     inv H; constructor; apply andb_true_iff in H0; dest; auto.
-    simpl in *; eapply wfAction_WfAction; eauto.
+    simpl in *; eapply wfAction_WfAction with (G:= nil); eauto.
   Qed.
 
   Fixpoint wfDms (dms: list DefMethT) :=
@@ -265,6 +265,8 @@ Section WfEval1.
     induction dms; simpl; intros; [constructor|].
     inv H; constructor; apply andb_true_iff in H0; dest; auto.
     simpl in *; intros; eapply wfAction_WfAction; eauto.
+    Grab Existential Variables.
+    exact nil.
   Qed.
 
   Definition wfModules (m: Modules) :=

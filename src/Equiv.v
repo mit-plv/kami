@@ -181,7 +181,10 @@ Section Equiv.
   | MethsEquivNil: MethsEquiv nil
   | MethsEquivCons:
       forall dmn dsig (dm: forall ty, ty (arg dsig) -> ActionT ty (ret dsig)),
-        (forall argV1 argV2 G, ActionEquiv G (dm t1 argV1) (dm t2 argV2)) ->
+        (forall (argV1: fullType t1 (SyntaxKind (arg dsig)))
+                (argV2: fullType t2 (SyntaxKind (arg dsig))) G,
+            ActionEquiv (vars (argV1, argV2) :: G)
+                        (dm t1 argV1) (dm t2 argV2)) ->
         forall meths,
           MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
                                              attrType := existT _ dsig dm

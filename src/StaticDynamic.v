@@ -120,52 +120,52 @@ Section EquivMod.
   Variable m: Modules.
   Variable modEquiv: ModEquiv type typeUT m.
 
-  Lemma ruleEquiv rs:
-    RulesEquiv type typeUT rs ->
-    forall rName a, In (rName :: a)%struct rs ->
-                    ActionEquiv nil (a type) (a typeUT).
-  Proof.
-    induction rs; intros; simpl in *.
-    - intuition.
-    - dependent destruction H0.
-      + subst.
-        dependent destruction H;
-          intuition.
-      + dependent destruction H.
-        apply (IHrs H0 _ _ H1).
-  Qed.
+  (* Lemma ruleEquiv rs: *)
+  (*   RulesEquiv type typeUT rs -> *)
+  (*   forall rName a, In (rName :: a)%struct rs -> *)
+  (*                   ActionEquiv nil (a type) (a typeUT). *)
+  (* Proof. *)
+  (*   induction rs; intros; simpl in *. *)
+  (*   - intuition. *)
+  (*   - dependent destruction H0. *)
+  (*     + subst. *)
+  (*       dependent destruction H; *)
+  (*         intuition. *)
+  (*     + dependent destruction H. *)
+  (*       apply (IHrs H0 _ _ H1). *)
+  (* Qed. *)
         
-  Lemma methEquiv ms:
-    MethsEquiv type typeUT ms ->
-    forall mName a,
-      In (mName :: a)%struct ms ->
-      (forall argV1 argV2 G, ActionEquiv G (projT2 a type argV1) (projT2 a typeUT argV2)).
-  Proof.
-    induction ms; intros; simpl in *.
-    - intuition.
-    - dependent destruction H0.
-      + subst.
-        dependent destruction H;
-          intuition.
-      + dependent destruction H.
-        apply (IHms H0 _ _ H1).
-  Qed.
+  (* Lemma methEquiv ms: *)
+  (*   MethsEquiv type typeUT ms -> *)
+  (*   forall mName a, *)
+  (*     In (mName :: a)%struct ms -> *)
+  (*     (forall argV1 argV2 G, ActionEquiv G (projT2 a type argV1) (projT2 a typeUT argV2)). *)
+  (* Proof. *)
+  (*   induction ms; intros; simpl in *. *)
+  (*   - intuition. *)
+  (*   - dependent destruction H0. *)
+  (*     + subst. *)
+  (*       dependent destruction H; *)
+  (*         intuition. *)
+  (*     + dependent destruction H. *)
+  (*       apply (IHms H0 _ _ H1). *)
+  (* Qed. *)
 
-  Lemma ruleEquivM rName a:
-    In (rName :: a)%struct (getRules m) ->
-    ActionEquiv nil (a type) (a typeUT).
-  Proof.
-    destruct modEquiv.
-    apply (ruleEquiv H).
-  Qed.
+  (* Lemma ruleEquivM rName a: *)
+  (*   In (rName :: a)%struct (getRules m) -> *)
+  (*   ActionEquiv nil (a type) (a typeUT). *)
+  (* Proof. *)
+  (*   destruct modEquiv. *)
+  (*   apply (ruleEquiv H). *)
+  (* Qed. *)
 
-  Lemma methEquivM rName a:
-    In (rName :: a)%struct (getDefsBodies m) ->
-    forall argV1 argV2 G, ActionEquiv G (projT2 a type argV1) (projT2 a typeUT argV2).
-  Proof.
-    destruct modEquiv.
-    apply (methEquiv H0).
-  Qed.
+  (* Lemma methEquivM rName a: *)
+  (*   In (rName :: a)%struct (getDefsBodies m) -> *)
+  (*   forall argV1 argV2 G, ActionEquiv G (projT2 a type argV1) (projT2 a typeUT argV2). *)
+  (* Proof. *)
+  (*   destruct modEquiv. *)
+  (*   apply (methEquiv H0). *)
+  (* Qed. *)
   
   Lemma regWritesSubsetR:
     forall o u rName cs,
@@ -180,8 +180,8 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    apply ruleEquivM in HInRules.
-    apply (regWritesSubsetA HInRules HAction); intuition.
+    pose proof (RulesEquiv_in _ _ nil H HInRules).
+    apply (regWritesSubsetA H0 HAction); intuition.
   Qed.
 
   Lemma callsSubsetR:
@@ -197,8 +197,8 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    apply ruleEquivM in HInRules.
-    apply (callsSubsetA HInRules HAction); intuition.
+    pose proof (RulesEquiv_in _ _ nil H HInRules).
+    apply (callsSubsetA H0 HAction); intuition.
   Qed.
 
   Lemma regWritesSubsetM:
@@ -215,8 +215,8 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    apply methEquivM with (argV1 := argV) (argV2 := tt) (G := nil) in HIn.
-    apply (regWritesSubsetA HIn HAction); intuition.
+    pose proof (MethsEquiv_in _ H0 HIn argV tt nil).
+    apply (regWritesSubsetA H HAction); intuition.
   Qed.
 
   Lemma callsSubsetM:
@@ -233,7 +233,7 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    apply methEquivM with (argV1 := argV) (argV2 := tt) (G := nil) in HIn.
-    apply (callsSubsetA HIn HAction); intuition.
+    pose proof (MethsEquiv_in _ H0 HIn argV tt nil).
+    apply (callsSubsetA H HAction); intuition.
   Qed.
 End EquivMod.
