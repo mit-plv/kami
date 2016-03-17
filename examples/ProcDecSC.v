@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.DecompositionOp Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.SemOp.
+Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.Cycles.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Set Implicit Arguments.
@@ -86,7 +86,7 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Ltac dest_rules :=
+    Ltac dest_in :=
       repeat
         match goal with
         | [H: In _ _ |- _] => inv H
@@ -131,6 +131,25 @@ Section ProcDecSC.
         | [ |- context[eq_rect _ _ _ _ _ _] ] =>
           rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq
         end.
+
+    Lemma pdec_noCycleModules: NoModulesCycle pdec.
+    Proof.
+      unfold NoModulesCycle; intros; dest_in; simpl.
+
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+
+    Qed.
 
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
