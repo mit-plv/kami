@@ -307,6 +307,52 @@ Section GivenModule.
       subst; reflexivity.
   Qed.
 
+  (*
+  Theorem semAction_substeps_implies_semActionOp:
+    forall k (a: ActionT type k) u cs retK,
+      SemAction o a u cs retK ->
+      forall u' ds' cs',
+        SubstepsInd m o u' {| annot := None; defs := ds'; calls := cs' |} ->
+        ds' = M.restrict (M.union cs cs') (getDefs m) ->
+        SemActionOp a u cs retK u' ds' cs'.
+  Proof.
+    intros k a u cs retK sa.
+    dependent induction sa; intros.
+    - destruct (in_dec string_dec meth (getDefs m)).
+      + 
+      + rewrite M.restrict_union in H0.
+        rewrite HAcalls in H0.
+        rewrite M.restrict_add_not_in in H0; auto.
+        rewrite <- M.restrict_union in H0.
+        specialize (IHsa H H0).
+        rewrite HAcalls.
+        econstructor; eauto.
+    - econstructor; eauto.
+    - econstructor; eauto.
+    - rewrite HANewRegs.
+      econstructor; eauto.
+    - rewrite HUNewRegs.
+      rewrite HUCalls.
+      specialize (IHsa1 H).
+      econstructor; eauto.
+
+      eapply IHsa.
+        pose proof (SASMCallExt meth s marg mret fret cont n IHsa).
+        econstructor; eauto.
+        
+    induction 1; intros.
+    - specialize (IHSemAction H0).
+    /\
+    (forall meth ar (arval: SignT ar) u ds cs,
+        SubstepsInd m o u {| annot := None; defs := ds; calls := cs|} ->
+        ds = M.add meth (existT _ _ arval)
+                   (M.restrict cs (getDefs m)) ->
+        MethOp meth arval u ds cs
+    ).
+  Proof.
+    intros.
+
+*)
 End GivenModule.
 
   

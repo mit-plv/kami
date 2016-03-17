@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap Program.Equality.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics SemFacts.
+Require Export SemanticsExprAction Semantics SemFacts SemOp2 Wf.
 
 Set Implicit Arguments.
 
@@ -94,6 +94,118 @@ Section GivenModule.
   Definition NoModulesCycle := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
 
   Variable noModulesCycle: NoModulesCycle.
+  Variable wfModules: WfModules type m.
+
+  Record MethOpRec :=
+    { mAttr: Attribute (sigT MethodT);
+      mUpd: UpdatesT;
+      mDefs: MethsT;
+      mCalls: MethsT
+    }.
+
+  Variable o: RegsT.
+  
+  Inductive StepAnnot: UpdatesT -> LabelT -> LabelT -> Prop :=
+  | StepAnnotIntro u lHide l
+      (HLHide: lHide = hide l)
+      (HWellHidden: wellHidden m lHide)
+      (HSubstepsInd: SubstepsInd m o u l):
+      StepAnnot u lHide l.
+
+  Theorem StepAnnot_implies_StepInd u lHide l:
+    StepAnnot u lHide l -> StepInd m o u lHide.
+  Proof.
+    intros.
+    induction H.
+    subst.
+    constructor; intuition.
+  Qed.
+
+  Theorem StepInd_implies_StepAnnot u lHide:
+    StepInd m o u lHide -> exists l, StepAnnot u lHide l /\ lHide = hide l.
+  Proof.
+    intros.
+    induction H.
+    exists l; intuition.
+    constructor; intuition.
+  Qed.
+  
+(*
+  Theorem stepToSemActionOp u meth s argval lHide l:
+    StepAnnot u lHide l ->
+    annot lHide = None ->
+    defs lHide = M.add meth (existT _ s argval) (M.empty _) ->
+    MethOp m o meth argval u (defs l) (calls l).
+  Proof.
+    intros.
+    destruct lHide; simpl in *.
+    dependent destruction H;
+      destruct l as [a ds cs]; simpl in *; subst.
+    unfold wellHidden in *; simpl in *; dest.
+    assert (sth: M.MapsTo meth (existT _ _ argval) ds).
+    {  clear - H1.
+       match goal with
+       | H: ?m1 = ?m2 |- _ => assert (M.Equal m1 m2) by (rewrite H; intuition)
+       end.
+       pose proof (proj1 (@M.F.P.F.Equal_mapsto_iff _ _ _) H meth (existT _ _ argval)).
+       apply proj2 in H0.
+       assert (sth2: M.MapsTo meth (existT _ _ argval)
+                              (M.add meth (existT _ _ argval) (M.empty _))) by
+           (apply M.F.P.F.add_mapsto_iff; intuition).
+       specialize (H0 sth2).
+       apply M.subtractKV_mapsto in H0; intuition.
+    }
+    assert (sth2:
+              exists u' ds' cs' u'' cs'',
+                SubstepsInd m o u' {| annot := None; defs := ds'; calls := cs' |} /\
+                Substep m o u'' (Meth (Some (meth :: existT _ _ argval)%struct)) cs'' /\
+                M.Disj u'' u' /\
+                M.Disj cs'' cs' /\
+                ~ M.In meth ds' /\
+                u = M.union u'' u' /\
+                ds = M.add meth (existT _ _ argval) ds' /\
+                cs = M.union cs'' cs').
+    { clear - HSubstepsInd sth.
+      dependent induction HSubstepsInd.
+      - apply M.F.P.F.empty_mapsto_iff in sth; intuition.
+      - dependent destruction l; simpl in *.
+        dependent destruction sul; simpl in *.
+        inv H2; rewrite M.union_empty_L in *.
+        destruct annot; discriminate.
+        inv H2.
+        destruct o0.
+        destruct a.
+        apply M.mapsto_union in sth.
+        destruct sth.
+        specialize (IHHSubstepsInd argval defs calls eq_refl).
+        apply M.F.P.F.add_mapsto_iff in H1.
+        destruct H1; dest.
+        subst.
+        subst.
+        inv H2.
+    }
+      pose proof (
+      destruct H0.
+      
+      eapply M.F.P.F.Equal_mapsto_iff in H.
+      rewrite H1.
+      subst.
+      assert (M.Equal (
+      findeq.
+      rewrite M.subtractKV_mapsto in H1.
+    rewrite H1 in HWellHidden.
+    unfold hide in *; simpl in *.
+    True.
+    exists (mr: list MethOpRec),
+      
+    True.
+  Proof.
+    intros.
+    inv H0; inv H.
+    induction HSubSteps.
+    eapply wfDms_dms in H1.
+    inv H.
+*)
 
   (*
   Theorem wellHiddenEmptySubstepsNotRule o ss:
