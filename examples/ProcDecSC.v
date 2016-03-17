@@ -86,7 +86,7 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Ltac dest_in :=
+    Ltac dest_rules :=
       repeat
         match goal with
         | [H: In _ _ |- _] => inv H

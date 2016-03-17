@@ -72,6 +72,12 @@ Ltac dest :=
             | H: exists _, _ |- _ => destruct H
           end).
 
+Ltac dest_in :=
+  repeat
+    match goal with
+    | [H: In _ _ |- _] => inv H
+    end.
+
 Ltac destruct_option :=
   repeat
     match goal with

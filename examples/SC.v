@@ -232,9 +232,49 @@ Section Facts.
   Lemma memInst_ModEquiv:
     forall n a d, ModEquiv type typeUT (memInst n a d).
   Proof.
-    induction n; simpl; intros.
-    - equiv_tac.
-    - admit.
+    intros; constructor.
+    - induction n; simpl.
+      + constructor.
+      + unfold memInst; simpl.
+        remember (numbered _ _ _) as nb; destruct nb as [[nba nbb] nbc]; simpl.
+        unfold memInst in IHn; simpl in IHn; rewrite <-Heqnb in IHn; simpl in IHn.
+        auto.
+    - induction n.
+      + constructor.
+      + Opaque map. (* when map is done with "simpl", we lose information from BoundedIndexFull *)
+        unfold memInst; simpl.
+        remember (numbered _ _ _) as nb; destruct nb as [[nba nbb] nbc].
+        unfold memInst in IHn; simpl in IHn; rewrite <-Heqnb in IHn; simpl in IHn.
+        rewrite app_nil_r in *.
+        Transparent map.
+        equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+
+        * (* TODO: automate, should be a part of "equiv_tac" *)
+          match goal with
+          | [H: In ?a _, H1: ilist_In ?e1 _, H2: ilist_In ?e2 _ |- ExprEquiv _ ?e1 ?e2 ] =>
+            dest_in
+          end.
+          { repeat
+              match goal with
+              | [H: ilist_In _ _ |- _] => inv H; destruct_existT
+              end.
+            equiv_tac.
+          }
+          { repeat
+              match goal with
+              | [H: ilist_In _ _ |- _] => inv H; destruct_existT
+              end.
+            equiv_tac.
+          }
+          { repeat
+              match goal with
+              | [H: ilist_In _ _ |- _] => inv H; destruct_existT
+              end.
+            equiv_tac.
+          }
+        * clear -IHn.
+          replace nbc with (nbc ++ nil) in IHn by (rewrite app_nil_r; auto).
+          auto.
   Qed.
 
   Lemma sc_ModEquiv:
