@@ -19,7 +19,7 @@ Section GivenModule.
       ActionT type k -> list string -> Prop :=
   | CycleMCallExt
       meth s (marg: Expr type (SyntaxKind (arg s)))
-      retK (fret: type retK)
+      retK
       (cont: type (ret s) -> ActionT type retK)
       called
       (HNotInDefs: ~ In meth (getDefs m))
@@ -33,14 +33,14 @@ Section GivenModule.
       ActionCycle (Let_ e cont) called
   | CycleReadReg
       (r: string) regT
-      retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
+      retK (cont: fullType type regT -> ActionT type retK)
       called
       (HSemActionOp: forall mret, ActionCycle (cont mret) called):
       ActionCycle (ReadReg r _ cont) called
   | CycleWriteReg
       (r: string) k
       (e: Expr type k)
-      retK (fret: type retK)
+      retK
       (cont: ActionT type retK)
       called
       (HSemActionOp: ActionCycle cont called):
@@ -65,7 +65,7 @@ Section GivenModule.
       ActionCycle (Return e) called
   | CycleCallInt
       meth s (marg: Expr type (SyntaxKind (arg s)))
-      retK (fret: type retK)
+      retK
       (cont: type (ret s) -> ActionT type retK)
       called
       (HSemActionOp: forall mret, ActionCycle (cont mret) called)

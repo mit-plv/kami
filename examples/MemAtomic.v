@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming.
+Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
 Require Import Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
@@ -68,4 +68,25 @@ Section MemAtomic.
 End MemAtomic.
 
 Hint Unfold minst inQ outQ ioQ midQ iom iomi ioms memAtomic : ModuleDefs.
+
+Section Facts.
+  Lemma ioms_ModEquiv:
+    forall a sz d n, ModEquiv type typeUT (ioms a sz d n).
+  Proof.
+    induction n; simpl; intros.
+    - equiv_tac.
+    - apply ModEquiv_modular.
+      + equiv_tac.
+      + auto.
+  Qed.
+
+  Lemma memAtomic_ModEquiv:
+    forall a sz d n, ModEquiv type typeUT (memAtomic a sz d n).
+  Proof.
+    intros; apply ModEquiv_modular.
+    - apply ioms_ModEquiv.
+    - apply memInst_ModEquiv.
+  Qed.
+
+End Facts.
 

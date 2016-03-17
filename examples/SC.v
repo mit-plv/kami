@@ -208,3 +208,41 @@ End SC.
 
 Hint Unfold pinst pinsti pinsts minst sc : ModuleDefs.
 
+Section Facts.
+  Variables opIdx addrSize valSize rfIdx : nat.
+
+  Variable dec: DecT opIdx addrSize valSize rfIdx.
+  Variable exec: ExecT opIdx addrSize valSize rfIdx.
+  Hypotheses (HdecEquiv: DecEquiv dec)
+             (HexecEquiv_1: ExecEquiv_1 dec exec)
+             (HexecEquiv_2: ExecEquiv_2 dec exec).
+  
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  
+  Lemma pinsts_ModEquiv:
+    forall n, ModEquiv type typeUT (pinsts dec exec opLd opSt opHt n).
+  Proof.
+    induction n; simpl; intros.
+    - equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+    - apply ModEquiv_modular.
+      + equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+      + auto.
+  Qed.
+
+  Lemma memInst_ModEquiv:
+    forall n a d, ModEquiv type typeUT (memInst n a d).
+  Proof.
+    induction n; simpl; intros.
+    - equiv_tac.
+    - admit.
+  Qed.
+
+  Lemma sc_ModEquiv:
+    forall n, ModEquiv type typeUT (sc dec exec opLd opSt opHt n).
+  Proof.
+    intros; apply ModEquiv_modular.
+    - apply pinsts_ModEquiv.
+    - apply memInst_ModEquiv.
+  Qed.
+
+End Facts.

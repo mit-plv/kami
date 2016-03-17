@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.DecompositionOp Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.SemOp.
+Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.Cycles.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 
 Set Implicit Arguments.
@@ -14,24 +14,6 @@ Section ProcDecSC.
   Hypotheses (HdecEquiv: DecEquiv dec)
              (HexecEquiv_1: ExecEquiv_1 dec exec)
              (HexecEquiv_2: ExecEquiv_2 dec exec).
-
-  Ltac equiv_tac_with tac :=
-    repeat
-      (repeat autounfold with MethDefs;
-       try tac;
-       match goal with
-       | [ |- ModEquiv _ _ _ ] => constructor; intros
-       | [ |- RulesEquiv _ _ _ ] => constructor; intros
-       | [ |- MethsEquiv _ _ _ ] => constructor; intros
-       | [ |- ActionEquiv _ _ _ ] => constructor; intros
-       | [ |- ExprEquiv _ _ _ ] => constructor; intros
-       | [ |- @ExprEquiv _ _ _ ?fk (ReadField ?a _) (ReadField ?a _) ] =>
-         change fk with (SyntaxKind (GetAttrType a)); constructor; intros
-       | [ |- In _ _] => simpl; tauto
-       end).
-
-  Ltac proc_dec_exec_equiv :=
-    idtac; SC.dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2.
 
   Variable n: nat.
 
@@ -104,7 +86,7 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Ltac dest_rules :=
+    Ltac dest_in :=
       repeat
         match goal with
         | [H: In _ _ |- _] => inv H
@@ -133,16 +115,6 @@ Section ProcDecSC.
         | [H: False |- _] => elim H
         end.
 
-    Lemma pdec_ModEquiv: ModEquiv type typeUT pdec.
-    Proof.
-      equiv_tac_with proc_dec_exec_equiv.
-    Qed.
-    Hint Resolve pdec_ModEquiv.
-
-    (* Lemma pdec_refines_pinst_inl: pdec <<== pinst. *)
-    (* Proof. *)
-    (*   inlineL. *)
-
     (* TODO: seems too arbitrary *)
     Ltac mred_concrete :=
       repeat
@@ -160,26 +132,56 @@ Section ProcDecSC.
           rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq
         end.
 
+    Lemma pdec_noCycleModules: NoModulesCycle pdec.
+    Proof.
+      unfold NoModulesCycle; intros; dest_in; simpl.
+
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+      - econstructor; eauto; [simpl; tauto|].
+        intros; simpl.
+        repeat constructor.
+
+    Qed.
+
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
-      apply decomposition with (theta:= pdec_pinst_regMap)
-                                 (ruleMap:= pdec_pinst_ruleMap).
-
-      - unfold initRegs, makeMap, getRegInits; simpl.
-        unfold pdec_pinst_regMap.
-
-        repeat mred_concrete.
-        meq.
-        
-      - admit.
-      - admit.
+      admit.
     Qed.
 
   End SingleCore.
 
   Lemma pdecN_refines_scN: traceRefines id pdecN scN.
   Proof.
-    apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); admit.
+    apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
+
+    - apply pdecfs_ModEquiv; auto.
+    - apply pinsts_ModEquiv; auto.
+    - apply memInst_ModEquiv; auto.
+    - apply memInst_ModEquiv; auto.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - repeat split.
+    - induction n; simpl; intros.
+      + admit.
+      + admit. (* apply traceRefines_modular_noninteracting. *)
+    - rewrite idElementwiseId; apply traceRefines_refl.
+
   Qed.
 
 End ProcDecSC.

@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv.
 
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
