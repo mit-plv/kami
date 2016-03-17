@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming.
+Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
@@ -116,7 +116,7 @@ Hint Unfold getNextPc getNextState opLd opSt opHt
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
-  Variables opIdx addrSize fifoSize valSize rfIdx: nat.
+  Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
   Variable exec: ExecT 2 addrSize valSize rfIdx.
@@ -139,3 +139,31 @@ End ProcDecM.
 
 Hint Unfold pdec pdecf pdecfi pdecfs procDecM : ModuleDefs.
 
+Section Facts.
+  Variables addrSize fifoSize valSize rfIdx: nat.
+
+  Variable dec: DecT 2 addrSize valSize rfIdx.
+  Variable exec: ExecT 2 addrSize valSize rfIdx.
+  Hypotheses (HdecEquiv: DecEquiv dec)
+             (HexecEquiv_1: ExecEquiv_1 dec exec)
+             (HexecEquiv_2: ExecEquiv_2 dec exec).
+  
+  Lemma pdecfs_ModEquiv:
+    forall fsz n, ModEquiv type typeUT (pdecfs fsz dec exec n).
+  Proof.
+    induction n; simpl; intros.
+    - equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+    - apply ModEquiv_modular.
+      + equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+      + auto.
+  Qed.
+
+  Lemma procDecM_ModEquiv:
+    forall fsz n, ModEquiv type typeUT (procDecM fsz dec exec n).
+  Proof.
+    intros; apply ModEquiv_modular.
+    - apply pdecfs_ModEquiv.
+    - apply memInst_ModEquiv.
+  Qed.
+
+End Facts.

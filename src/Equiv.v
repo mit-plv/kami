@@ -177,6 +177,17 @@ Section Equiv.
     - apply IHHequiv; assumption.
   Qed.
 
+  Lemma RulesEquiv_app:
+    forall rules1 rules2
+           (Hequiv1: RulesEquiv rules1)
+           (Hequiv2: RulesEquiv rules2),
+      RulesEquiv (rules1 ++ rules2).
+  Proof.
+    induction rules1; intros; auto.
+    simpl; inv Hequiv1.
+    constructor; auto.
+  Qed.
+
   Inductive MethsEquiv: list DefMethT -> Prop :=
   | MethsEquivNil: MethsEquiv nil
   | MethsEquivCons:
@@ -204,9 +215,20 @@ Section Equiv.
     - apply IHHequiv; auto.
   Qed.
 
+  Lemma MethsEquiv_app:
+    forall meths1 meths2
+           (Hequiv1: MethsEquiv meths1)
+           (Hequiv2: MethsEquiv meths2),
+      MethsEquiv (meths1 ++ meths2).
+  Proof.
+    induction meths1; intros; auto.
+    simpl; inv Hequiv1.
+    constructor; auto.
+  Qed.
+
   Definition ModEquiv (m: Modules): Prop :=
     RulesEquiv (getRules m) /\ MethsEquiv (getDefsBodies m).
-
+  
 End Equiv.
 
 Section Facts.
@@ -235,6 +257,18 @@ Section Facts.
     - eapply H1; eauto.
       intros; eapply ActionEquiv_ctxt; eauto.
       unfold SubList; intros; inv H2; intuition.
+  Qed.
+
+  Lemma ModEquiv_modular:
+    forall t1 t2 m1 m2,
+      ModEquiv t1 t2 m1 ->
+      ModEquiv t1 t2 m2 ->
+      ModEquiv t1 t2 (ConcatMod m1 m2).
+  Proof.
+    intros; inv H; inv H0.
+    constructor; simpl.
+    - apply RulesEquiv_app; auto.
+    - apply MethsEquiv_app; auto.
   Qed.
 
 End Facts.
