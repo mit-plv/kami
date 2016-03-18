@@ -134,7 +134,7 @@ Section ProcDecSC.
 
     Lemma pdec_noCycleModules: NoModulesCycle pdec.
     Proof.
-      unfold NoModulesCycle; intros; dest_in; simpl.
+      unfold NoModulesCycle; intros; CommonTactics.dest_in.
 
       - econstructor; eauto; [simpl; tauto|].
         intros; simpl.
@@ -148,7 +148,6 @@ Section ProcDecSC.
       - econstructor; eauto; [simpl; tauto|].
         intros; simpl.
         repeat constructor.
-
     Qed.
 
     Lemma pdec_refines_pinst_op: pdec <<== pinst.

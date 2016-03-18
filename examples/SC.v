@@ -286,3 +286,5 @@ Section Facts.
   Qed.
 
 End Facts.
+
+(* Hint Immediate pinsts_ModEquiv memInst_ModEquiv. *)

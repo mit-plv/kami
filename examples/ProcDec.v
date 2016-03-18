@@ -167,3 +167,5 @@ Section Facts.
   Qed.
 
 End Facts.
+
+(* Hint Immediate pdecfs_ModEquiv. *)
