@@ -177,7 +177,9 @@ Section ProcDecSC.
     - admit.
     - repeat split.
     - induction n; simpl; intros.
-      + admit.
+      + unfold pdecfi, pinsti, specializeMod.
+        (* apply renameTheorem'. *)
+        admit.
       + admit. (* apply traceRefines_modular_noninteracting. *)
     - rewrite idElementwiseId; apply traceRefines_refl.
 
