@@ -433,8 +433,7 @@ Section SubstepsFacts.
              (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
-  Hypotheses (Hdm: In dm (getDefsBodies m))
-             (Hnc: noCallDm dm dm = true).
+  Hypotheses (Hdm: In dm (getDefsBodies m)).
 
   Lemma inlineDmToMod_Substeps_intact:
     forall or u l,

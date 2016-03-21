@@ -219,8 +219,9 @@ Section Relaxed.
   | SSRCons
       ull sss (Hss: SubstepsRelaxed ull sss)
       ul ss (Hs: SubstepRelaxed ul ss)
-      (HCombine: substepsComb (ss ++ sss)):
-      SubstepsRelaxed (ul :: ull) (ss ++ sss).
+      (HCombine: substepsComb (ss ++ sss))
+      cull (Hcull: cull = ul :: ull):
+      SubstepsRelaxed cull (ss ++ sss).
 
   Inductive StepRelaxed: list UnitLabel -> UpdatesT -> LabelT -> Prop :=
   | StepRIntro
@@ -233,10 +234,26 @@ End Relaxed.
 
 Section Consistency.
 
-  Lemma substeps_implies_stepRelaxed:
+  Definition EquivList {A} (l1 l2: list A) :=
+    SubList l1 l2 /\ SubList l2 l1.
+
+  Lemma substeps_implies_substepsRelaxed:
     forall m o (ss: Substeps m o),
       substepsComb ss ->
-      SubstepsRelaxed (toUnitLabels (hide (foldSSLabel ss))) ss.
+      exists rss,
+        SubstepsRelaxed (m:= m) (o:= o) (toUnitLabels (hide (foldSSLabel ss))) rss.
+  Proof.
+    intros; eexists.
+    remember (toUnitLabels (hide (foldSSLabel ss))) as ull.
+    clear Hequll H ss.
+    (* induction ull. *)
+  Admitted.
+
+  Lemma substepsRelaxed_equiv:
+    forall m o (ss rss: Substeps m o),
+      substepsComb ss ->
+      SubstepsRelaxed (m:= m) (o:= o) (toUnitLabels (hide (foldSSLabel ss))) rss ->
+      EquivList ss rss.
   Proof.
     admit.
   Qed.
@@ -257,21 +274,16 @@ Section Consistency.
       StepBig m o (toUnitLabels l) u l.
   Proof.
     intros; inv H.
-    econstructor; eauto.
-    apply relaxed_to_big; auto.
-    apply substeps_implies_stepRelaxed; auto.
+    pose proof (substeps_implies_substepsRelaxed HSubsteps) as Hsr.
+    destruct Hsr as [rss ?].
+    pose proof (substepsRelaxed_equiv HSubsteps H).
+    
+    econstructor.
+    - eapply relaxed_to_big; eauto.
+      admit. (* easy, foldSSLabel ss = foldSSLabel x *)
+    - admit. (* easy *)
+    - admit. (* easy *)
   Qed.
-
-  (* Lemma decomposition_big: *)
-  (*   forall m o *)
-  (*          (Hss: forall ul (ss: list (SubstepRec m o)), *)
-  (*              SubstepBig ul ss -> *)
-  (*              Step m o (foldSSUpds ss) (hide (mergeLabel (getLabel ul (M.empty _)) *)
-  (*                                                         (foldSSLabel ss)))) *)
-  (*          ull u l *)
-  (*          (HStepBig: StepBig m o ull u l), *)
-  (*     Step m o u l. *)
-  (* Proof. *)
     
 End Consistency.
 
