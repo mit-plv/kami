@@ -152,7 +152,106 @@ Section ProcDecSC.
 
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
-      admit.
+      inlineL.
+
+      - admit. (* modequiv *)
+
+      - admit.
+        (* cbv beta iota zeta delta [inlineF inline inlineDms inlineDms' *)
+        (*                                   namesOf getDefsBodies map attrName *)
+        (*                                   makeModule makeModule' app *)
+        (*                                   inlineDmToMod wfModules wfRules getRules *)
+        (*                                   app wfAction andb *)
+        (*                                   wfActionC attrType maxPathLength Syntax.getCalls *)
+        (*                                   getCallsR attrName wfDms *)
+        (*                                   appendName append ret arg projT1 projT2 *)
+        (*                                   getAttribute noCallDm isLeaf *)
+        (*                                   inlineDmToRules inlineDmToRule inlineDm *)
+        (*                                   inlineArg getBody]. *)
+
+        (* Lemma in_dec_in: forall p l, In p l -> *)
+        (*                              forall A (F1: A) (F2: A), *)
+        (*                                (if in_dec string_dec p l *)
+        (*                                 then F1 *)
+        (*                                 else F2) = F1. *)
+        (* Admitted. *)
+
+        (* Lemma in_dec_notin: forall p l, ~ In p l -> *)
+        (*                                 forall A (F1: A) (F2: A), *)
+        (*                                   (if in_dec string_dec p l *)
+        (*                                    then F1 *)
+        (*                                    else F2) = F2. *)
+        (* Admitted. *)
+
+        (* repeat rewrite in_dec_notin by (simpl; intuition discriminate). *)
+
+        (* Lemma string_dec_eq: forall p q, p = q -> *)
+        (*                                  forall A (F1: A) (F2: A), *)
+        (*                                    (if string_dec p q *)
+        (*                                     then F1 *)
+        (*                                     else F2) = F1. *)
+        (* Admitted. *)
+
+        (* Lemma string_dec_neq: forall p q, p <> q -> *)
+        (*                                   forall A (F1: A) (F2: A), *)
+        (*                                     (if string_dec p q *)
+        (*                                      then F1 *)
+        (*                                      else F2) = F2. *)
+        (* Admitted. *)
+
+        (* rewrite string_dec_eq by reflexivity. *)
+
+        
+
+        (* cbv beta iota zeta delta [inlineF inline inlineDms inlineDms' *)
+        (*                                   namesOf getDefsBodies map attrName *)
+        (*                                   makeModule makeModule' app *)
+        (*                                   inlineDmToMod wfModules wfRules getRules *)
+        (*                                   app wfAction andb *)
+        (*                                   wfActionC attrType maxPathLength Syntax.getCalls *)
+        (*                                   getCallsR attrName wfDms *)
+        (*                                   appendName append ret arg projT1 projT2]. *)
+
+        (* repeat rewrite in_dec_notin by (simpl; intuition discriminate). *)
+
+        (* cbv beta iota zeta delta [inlineF inline inlineDms inlineDms' *)
+        (*                                   namesOf getDefsBodies map attrName *)
+        (*                                   makeModule makeModule' app *)
+        (*                                   inlineDmToMod wfModules wfRules getRules *)
+        (*                                   app wfAction andb *)
+        (*                                   wfActionC attrType maxPathLength Syntax.getCalls *)
+        (*                                   getCallsR attrName wfDms *)
+        (*                                   appendName append ret arg projT1 projT2 *)
+        (*                                   getAttribute]. *)
+
+        (* cbv beta iota zeta delta [inlineF inline inlineDms inlineDms' *)
+        (*                                   namesOf getDefsBodies map attrName *)
+        (*                                   makeModule makeModule' app *)
+        (*                                   inlineDmToMod wfModules wfRules getRules *)
+        (*                                   app wfAction andb *)
+        (*                                   wfActionC attrType maxPathLength Syntax.getCalls *)
+        (*                                   getCallsR attrName wfDms *)
+        (*                                   appendName append ret arg projT1 projT2 *)
+        (*                                   getAttribute noCallDm isLeaf *)
+        (*                                   inlineDmToRules inlineDmToRule inlineDm *)
+        (*                                   inlineArg getBody]. *)
+
+        (* rewrite string_dec_eq by reflexivity. *)
+
+        
+
+
+        (* repeat rewrite string_dec_neq by discriminate. *)
+
+        (* vm_compute. *)
+
+
+        (* unfold string_dec, string_rec, string_rect. *)
+        (* unfold sumbool_rec, sumbool_rect. *)
+        (* unfold Ascii.ascii_dec, Ascii.ascii_rec, Ascii.ascii_rect. *)
+        (* unfold sumbool_rec, sumbool_rect. *)
+
+      - admit.
     Qed.
 
   End SingleCore.
