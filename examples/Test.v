@@ -12,10 +12,10 @@ Set Implicit Arguments.
 
 Parameter i: nat.
 
-(* Definition fbCm := MethodSig "fb"() : Bool. *)
+Definition fbCm := MethodSig "fb"() : Bool.
 
 (* Test below after implementing alpha-renaming *)
-Definition fbCm := MethodSig ("fb"__ i)() : Bool.
+(* Definition fbCm := MethodSig ("fb"__ i)() : Bool. *)
 
 Definition ma := MODULE {
   Register "a" : Bool <- Default
@@ -29,8 +29,8 @@ Definition ma := MODULE {
 Definition mb := MODULE {
   Register "b" : Bool <- true
 
-  (* with Method "fb"() : Bool := *)
-  with Method ("fb"__ i)() : Bool :=
+  with Method "fb"() : Bool :=
+  (* with Method ("fb"__ i)() : Bool := *)
     Write "b" <- $$true;
     Read rb <- "b";
     Ret #rb
