@@ -51,6 +51,19 @@ Proof.
   - destruct (vp y a); auto.
 Qed.
 
+Lemma liftToMap1_subtractKV:
+  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
+    M.Disj m1 m2 ->
+    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
+    liftToMap1 vp (M.subtractKV deceqA m1 m2).
+Proof.
+  intros; M.ext y.
+  findeq.
+  findeq_custom liftToMap1_find_tac.
+  - exfalso; eapply M.Disj_find_union_3; eauto.
+  - destruct (vp y a); auto.
+Qed.
+
 Section StepToRefinement.
   Variable imp spec: Modules.
   Variable p: MethsT -> MethsT.
@@ -219,6 +232,122 @@ Section Facts.
     - destruct lsb; [inv H0|].
       constructor; auto.
       apply nonInteracting_implies_wellHiddenModular; auto.
+  Qed.
+
+  Lemma equivalentLabel_mergeLabel:
+    forall la lb vp,
+      equivalentLabel (liftToMap1 vp) la lb ->
+      forall lc ld,
+        CanCombineLabel la lc ->
+        equivalentLabel (liftToMap1 vp) lc ld ->
+        equivalentLabel (liftToMap1 vp) (mergeLabel la lc) (mergeLabel lb ld).
+  Proof.
+    intros.
+    destruct la as [anna dsa csa], lb as [annb dsb csb].
+    destruct lc as [annc dsc csc], ld as [annd dsd csd].
+    inv H; inv H0; inv H1; dest; simpl in *; subst.
+    repeat split.
+    - apply liftToMap1_union; auto.
+    - apply liftToMap1_union; auto.
+    - destruct anna, annb, annc, annd; auto.
+  Qed.
+  
+  Definition NonInteractingLabel (l1 l2: LabelT) :=
+    hide l1 = l1 /\ hide l2 = l2 /\
+    M.Disj (defs l1) (calls l2) /\ M.Disj (calls l1) (defs l2).
+
+  Lemma NonInteractingLabel_mergeLabel_hide:
+    forall l1 l2,
+      CanCombineLabel l1 l2 ->
+      NonInteractingLabel l1 l2 ->
+      hide (mergeLabel l1 l2) = mergeLabel l1 l2.
+  Proof.
+    intros; inv H; dest.
+    unfold NonInteractingLabel in H0; dest.
+    destruct l1 as [ann1 ds1 cs1], l2 as [ann2 ds2 cs2].
+    unfold hide in *; simpl in *.
+    f_equal.
+    - rewrite M.subtractKV_disj_union_1 by assumption.
+      do 2 (rewrite M.subtractKV_disj_union_2 by assumption).
+      rewrite M.subtractKV_disj_invalid with (m1:= ds2) by auto.
+      remember (M.subtractKV _ ds1 cs1) as dcs1; clear Heqdcs1.
+      remember (M.subtractKV _ cs1 ds1) as cds1; clear Heqcds1.
+      remember (M.subtractKV _ ds2 cs2) as dcs2; clear Heqdcs2.
+      remember (M.subtractKV _ cs2 ds2) as cds2; clear Heqcds2.
+      inv H0; inv H3.
+      rewrite M.subtractKV_disj_invalid by auto.
+      reflexivity.
+    - rewrite M.subtractKV_disj_union_1 by assumption.
+      do 2 (rewrite M.subtractKV_disj_union_2 by assumption).
+      rewrite M.subtractKV_disj_invalid with (m1:= cs2) by auto.
+      remember (M.subtractKV _ ds1 cs1) as dcs1; clear Heqdcs1.
+      remember (M.subtractKV _ cs1 ds1) as cds1; clear Heqcds1.
+      remember (M.subtractKV _ ds2 cs2) as dcs2; clear Heqdcs2.
+      remember (M.subtractKV _ cs2 ds2) as cds2; clear Heqcds2.
+      inv H0; inv H3.
+      rewrite M.subtractKV_disj_invalid by auto.
+      reflexivity.
+  Qed.
+
+  Inductive NonInteractingLabelSeq: LabelSeqT -> LabelSeqT -> Prop :=
+  | NILSNil: NonInteractingLabelSeq nil nil
+  | NILSCons:
+      forall l1 l2 ll1 ll2,
+        NonInteractingLabelSeq ll1 ll2 ->
+        NonInteractingLabel l1 l2 ->
+        NonInteractingLabelSeq (l1 :: ll1) (l2 :: ll2).
+
+  Lemma nonInteracting_to_labels:
+    forall (m1 m2: Modules)
+           (Hequiv1: ModEquiv type typeUT m1)
+           (Hequiv2: ModEquiv type typeUT m2)
+           (ll1 ll2: LabelSeqT) o1 o2,
+      NonInteracting m1 m2 ->
+      Behavior m1 o1 ll1 ->
+      Behavior m2 o2 ll2 ->
+      List.length ll1 = List.length ll2 ->
+      NonInteractingLabelSeq ll1 ll2.
+  Proof.
+    induction ll1; simpl; intros;
+      [destruct ll2; [|inv H2]; constructor|].
+
+    destruct ll2; [inv H2|].
+    constructor.
+    - inv H0; inv HMultistepBeh; inv H1; inv HMultistepBeh; eapply IHll1; eauto.
+      + econstructor; eauto.
+      + econstructor; eauto.
+    - inv H0; inv HMultistepBeh; inv H1; inv HMultistepBeh.
+      clear -Hequiv1 Hequiv2 HStep HStep0 H.
+      pose proof (step_defs_in Hequiv1 HStep).
+      pose proof (step_calls_in Hequiv1 HStep).
+      pose proof (step_defs_in Hequiv2 HStep0).
+      pose proof (step_calls_in Hequiv2 HStep0).
+      inv H; repeat split.
+      + eapply step_hide; eauto.
+      + eapply step_hide; eauto.
+      + apply (M.DisjList_KeysSubset_Disj H4); auto.
+      + apply (M.DisjList_KeysSubset_Disj H5); auto.
+  Qed.
+
+  Lemma composeLabels_modular:
+    forall vp lsa lsb,
+      equivalentLabelSeq (liftToMap1 vp) lsa lsb ->
+      forall lsc lsd,
+        CanCombineLabelSeq lsa lsc ->
+        CanCombineLabelSeq lsb lsd ->
+        NonInteractingLabelSeq lsa lsc ->
+        NonInteractingLabelSeq lsb lsd ->
+        equivalentLabelSeq (liftToMap1 vp) lsc lsd ->
+        equivalentLabelSeq (liftToMap1 vp) (composeLabels lsa lsc) (composeLabels lsb lsd).
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    destruct lsc, lsd; [constructor|inv H5|inv H5|].
+    inv H1; inv H2; inv H3; inv H4; inv H5;
+      constructor; [|apply IHequivalentLabelSeq; auto].
+    clear IHequivalentLabelSeq H0 H7 H8 H10 H11 H15.
+    rewrite NonInteractingLabel_mergeLabel_hide by assumption.
+    rewrite NonInteractingLabel_mergeLabel_hide by assumption.
+    apply equivalentLabel_mergeLabel; auto.
   Qed.
 
   Definition Interacting (m1 m2: Modules)
@@ -493,39 +622,44 @@ Section Facts.
                (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
 
     Section NonInteracting.
-      Variable (p: MethsT -> MethsT).
-
-      Hypotheses (Hpunion: forall m1 m2, M.union (p m1) (p m2) = p (M.union m1 m2))
-                 (Hpsub: forall m1 m2, M.subtractKV signIsEq (p m1) (p m2) =
-                                       p (M.subtractKV signIsEq m1 m2))
-                 (Hpcomb: Proper (equivalentLabel p ==> equivalentLabel p ==> impl)
-                                 CanCombineLabel).
+      Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
       Lemma traceRefines_modular_noninteracting:
+        NonInteracting ma mc ->
         NonInteracting mb md ->
-        traceRefines p ma mb ->
-        traceRefines p mc md ->
-        traceRefines p (ConcatMod ma mc) (ConcatMod mb md).
+        traceRefines (liftToMap1 vp) ma mb ->
+        traceRefines (liftToMap1 vp) mc md ->
+        traceRefines (liftToMap1 vp) (ConcatMod ma mc) (ConcatMod mb md).
       Proof.
         unfold traceRefines; intros.
-        apply behavior_split in H2; auto.
-        destruct H2 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
-        specialize (H0 _ _ H2).
-        destruct H0 as [sb [lsb [? ?]]].
+        apply behavior_split in H3; auto.
+        destruct H3 as [sa [lsa [sc [lsc ?]]]]; dest; subst.
         specialize (H1 _ _ H3).
-        destruct H1 as [sd [lsd [? ?]]].
+        destruct H1 as [sb [lsb [? ?]]].
+        specialize (H2 _ _ H4).
+        destruct H2 as [sd [lsd [? ?]]].
 
         exists (M.union sb sd).
         exists (composeLabels lsb lsd).
         split; auto.
         - apply behavior_modular; auto.
           + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+            apply vp_equivalentLabel_CanCombineLabel_proper.
           + apply nonInteracting_implies_wellHiddenModularSeq; auto.
-            apply equivalentLabelSeq_length in H5.
-            apply equivalentLabelSeq_length in H8.
-            apply wellHiddenConcatSeq_length in H7.
+            apply equivalentLabelSeq_length in H6.
+            apply equivalentLabelSeq_length in H9.
+            apply wellHiddenConcatSeq_length in H8.
             intuition.
         - apply composeLabels_modular; auto.
+          + eapply equivalentLabelSeq_CanCombineLabelSeq; eauto.
+            apply vp_equivalentLabel_CanCombineLabel_proper.
+          + eapply nonInteracting_to_labels with (m1:= ma) (m2:= mc); eauto.
+            eapply wellHiddenConcatSeq_length; eauto.
+          + eapply nonInteracting_to_labels with (m1:= mb) (m2:= md); eauto.
+            apply equivalentLabelSeq_length in H6.
+            apply equivalentLabelSeq_length in H9.
+            apply wellHiddenConcatSeq_length in H8.
+            intuition.
       Qed.
 
     End NonInteracting.

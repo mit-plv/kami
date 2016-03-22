@@ -1,5 +1,6 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics.
+Require Import Lib.StringBound Lib.ilist Lib.FMap Lib.StringEq.
 Require Import Syntax SemanticsExprAction Semantics Equiv.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
@@ -133,22 +134,20 @@ Section WfEval1.
   
   Fixpoint wfActionC (wr cc: list string) {retT} (a: ActionT typeUT retT) (cdn: nat) :=
     match cdn with
-      | O => false
-      | S n =>
-        match a with
-          | MCall name _ _ cont =>
-            if in_dec string_dec name cc then false
-            else wfActionC wr (name :: cc) (cont tt) n
-          | Let_ _ _ cont => wfActionC wr cc (cont (getUT _)) n
-          | ReadReg _ _ cont => wfActionC wr cc (cont (getUT _)) n
-          | WriteReg reg _ _ cont =>
-            if in_dec string_dec reg wr then false
-            else wfActionC (reg :: wr) cc cont n
-          | IfElse _ _ ta fa cont =>
-            wfActionC wr cc (appendAction ta cont) n && wfActionC wr cc (appendAction fa cont) n
-          | Assert_ _ cont => wfActionC wr cc cont n
-          | Return _ => true
-        end
+    | O => false
+    | S n =>
+      match a with
+      | MCall name _ _ cont =>
+        (negb (string_in name cc)) && (wfActionC wr (name :: cc) (cont tt) n)
+      | Let_ _ _ cont => wfActionC wr cc (cont (getUT _)) n
+      | ReadReg _ _ cont => wfActionC wr cc (cont (getUT _)) n
+      | WriteReg reg _ _ cont =>
+        (negb (string_in reg wr)) && (wfActionC (reg :: wr) cc cont n)
+      | IfElse _ _ ta fa cont =>
+        wfActionC wr cc (appendAction ta cont) n && wfActionC wr cc (appendAction fa cont) n
+      | Assert_ _ cont => wfActionC wr cc cont n
+      | Return _ => true
+      end
     end.
 
   Definition wfAction {retT} (a: ActionT typeUT retT) :=
@@ -167,11 +166,13 @@ Section WfEval1.
   Proof.
     induction 3; intros; try (destruct cdn; simpl in *; [discriminate|]).
 
-    - destruct (in_dec _ _ _); [discriminate|].
+    - rewrite andb_true_iff in H1; dest.
+      remember (string_in _ _) as sin; destruct sin; [discriminate|].
+      apply string_in_dec_not_in in Heqsin.
       constructor; auto.
       intros; eapply H0; eauto.
       intros; eapply ActionEquiv_ctxt; eauto.
-      unfold SubList; intros; inv H2; intuition.
+      unfold SubList; intros; inv H3; intuition.
 
     - constructor; auto.
       intros; eapply H0; eauto.
@@ -183,7 +184,9 @@ Section WfEval1.
       intros; eapply ActionEquiv_ctxt; eauto.
       unfold SubList; intros; inv H2; intuition.
 
-    - destruct (in_dec _ _ _); [discriminate|].
+    - rewrite andb_true_iff in H0; dest.
+      remember (string_in _ _) as sin; destruct sin; [discriminate|].
+      apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
 
     - apply andb_true_iff in H2; dest.
@@ -220,9 +223,13 @@ Section WfEval1.
     try (destruct cdn; simpl in *; [discriminate|]);
     try (constructor; eauto; fail).
 
-    - destruct (in_dec _ n cc); [discriminate|].
+    - apply andb_true_iff in H1; dest.
+      remember (string_in _ _) as sin; destruct sin; [discriminate|].
+      apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
-    - destruct (in_dec _ rn wr); [discriminate|].
+    - apply andb_true_iff in H0; dest.
+      remember (string_in _ _) as sin; destruct sin; [discriminate|].
+      apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
     - apply andb_true_iff in H2; dest.
       constructor; eapply wfActionC_WfAction_appendAction; eauto.

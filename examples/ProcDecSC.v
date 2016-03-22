@@ -1,8 +1,10 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word.
+Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.Cycles.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
+Require Import Eqdep.
 
 Set Implicit Arguments.
 
@@ -86,74 +88,53 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Ltac dest_in :=
-      repeat
-        match goal with
-        | [H: In _ _ |- _] => inv H
-        | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
-        end.
-    
-    Lemma attribute_invert:
-      forall {k: Type} n1 n2 (a1 a2: k),
-        (n1 :: a1)%struct = (n2 :: a2)%struct -> a1 = a2.
-    Proof. intros; inv H; auto. Qed.
-
-    Ltac invert_call :=
-      (* Figure out if the call is internal or not *)
-      repeat
-        match goal with
-        | [H: (_ /\ _) \/ (_ /\ _) |- _] => destruct H; dest; subst; simpl in *
-        | [H: ~ (_ \/ _) |- _] => try (elim H; tauto; fail)
-        end;
-      (* Find the call body *)
-      repeat
-        match goal with
-        | [H: ((_ :: _)%struct = (_ :: _)%struct \/ _) |- _] => destruct H 
-        | [H: (_ :: _)%struct = (_ :: _)%struct |- _] =>
-          try (inv H; fail);
-          try (apply attribute_invert in H; destruct_existT)
-        | [H: False |- _] => elim H
-        end.
-
-    (* TODO: seems too arbitrary *)
-    Ltac mred_concrete :=
-      repeat
-        match goal with
-        | [ |- context[M.find _ (M.add _ _ _)] ] =>
-          (rewrite M.find_add_1 by auto)
-          || (rewrite M.find_add_2 by auto)
-        | [ |- context[decKind ?k1 ?k2] ] =>
-          let Hneq := fresh "Hneq" in
-          destruct (decKind k1 k2) as [|Hneq];
-          [|elim Hneq; reflexivity]
-        | [ |- context[eq_rect_r _ _ _ _] ] =>
-          unfold eq_rect_r
-        | [ |- context[eq_rect _ _ _ _ _ _] ] =>
-          rewrite <-Eqdep.Eq_rect_eq.eq_rect_eq
-        end.
-
-    Lemma pdec_noCycleModules: NoModulesCycle pdec.
+    Lemma signature_eq: forall sig, SignatureT_dec sig sig = left eq_refl.
     Proof.
-      unfold NoModulesCycle; intros; dest_in; simpl.
-
-      - econstructor; eauto; [simpl; tauto|].
-        intros; simpl.
-        repeat constructor.
-      - econstructor; eauto; [simpl; tauto|].
-        intros; simpl.
-        repeat constructor.
-      - econstructor; eauto; [simpl; tauto|].
-        intros; simpl.
-        repeat constructor.
-      - econstructor; eauto; [simpl; tauto|].
-        intros; simpl.
-        repeat constructor.
-
+      intros; destruct (SignatureT_dec sig sig).
+      - rewrite UIP_refl with (p:= e); auto.
+      - elim n0; auto.
     Qed.
+
+    Ltac mcompute :=
+      repeat autounfold with ModuleDefs;
+      repeat autounfold with MethDefs;
+      cbv [fst snd
+               inlineF inline inlineDms inlineDms'
+               inlineDmToMod inlineDmToRules inlineDmToRule
+               inlineDmToDms inlineDmToDm inlineDm
+               noCalls noCalls'
+               noCallsRules noCallsDms noCallDm isLeaf
+               getBody inlineArg
+               appendAction getAttribute
+               makeModule makeModule'
+               wfModules wfRules wfDms wfAction wfActionC maxPathLength
+               getDefs getDefsBodies getRules namesOf
+               map app attrName attrType
+               Syntax.getCalls getCallsR
+               appendName append
+               ret arg projT1 projT2
+               string_in string_eq ascii_eq
+               eqb existsb andb orb negb];
+      repeat
+        match goal with
+        | [ |- context[SignatureT_dec ?s ?s] ] =>
+          let H := fresh "H" in
+          let Heq := fresh "Heq" in
+          rewrite (signature_eq s); unfold eq_rect
+        end.
 
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
-      admit.
+      inlineL.
+
+      - admit.
+
+      - (* Reset Profile. Start Profiling. *)
+        (* mcompute. *)
+        (* Stop Profiling. Show Profile. *)
+        admit.
+
+      - admit.
     Qed.
 
   End SingleCore.
@@ -178,7 +159,9 @@ Section ProcDecSC.
     - admit.
     - repeat split.
     - induction n; simpl; intros.
-      + admit.
+      + unfold pdecfi, pinsti, specializeMod.
+        (* apply renameTheorem'. *)
+        admit.
       + admit. (* apply traceRefines_modular_noninteracting. *)
     - rewrite idElementwiseId; apply traceRefines_refl.
 

@@ -1,5 +1,6 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FMap.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax SemanticsExprAction Wf Equiv Inline.
 
 Require Import FunctionalExtensionality.
@@ -18,14 +19,17 @@ Proof.
       destruct omb.
     + exfalso; subst.
       unfold getBody in Heqomb.
-      destruct (string_dec _ _); [|discriminate].
+      remember (string_eq _ _) as seq; destruct seq; [|discriminate].
+      apply string_eq_dec_eq in Heqseq.
       subst; rewrite M.find_add_1 in H0; inv H0.
     + subst.
       unfold getBody in Heqomb.
-      destruct (string_dec _ _);
-        [subst; rewrite M.find_add_1 in H0; inv H0|].
-      rewrite M.find_add_2 in H0 by intuition auto.
-      econstructor; eauto.
+      remember (string_eq _ _) as seq; destruct seq.
+      * apply string_eq_dec_eq in Heqseq.
+        subst; rewrite M.find_add_1 in H0; inv H0.
+      * apply string_eq_dec_neq in Heqseq.
+        rewrite M.find_add_2 in H0 by intuition auto.
+        econstructor; eauto.
 
   - simpl; constructor; auto.
   - simpl; econstructor; eauto.
@@ -70,7 +74,8 @@ Proof.
   - inv H4; destruct_existT.
     remember (getBody meth0 meth s) as ob; destruct ob.
     + unfold getBody in Heqob.
-      destruct (string_dec meth0 (attrName meth)); [subst|inv Heqob].
+      remember (string_eq _ _) as seq; destruct seq; [|inv Heqob].
+      apply string_eq_dec_eq in Heqseq; subst.
       destruct (SignatureT_dec _ _); [|inv Heqob].
       generalize dependent HSemAction; inv Heqob; intros.
       rewrite M.find_add_1 in H3.
@@ -88,9 +93,10 @@ Proof.
       destruct meth; apply inlineDm_SemAction_intact; auto.
 
     + unfold getBody in Heqob.
-      destruct (string_dec meth0 (attrName meth)).
+      remember (string_eq _ _) as seq; destruct seq.
 
-      * subst; destruct (SignatureT_dec _ _); [inv Heqob|].
+      * apply string_eq_dec_eq in Heqseq; subst.
+        destruct (SignatureT_dec _ _); [inv Heqob|].
 
         econstructor.
         { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
@@ -110,7 +116,8 @@ Proof.
           }
         }
 
-      * econstructor.
+      * apply string_eq_dec_neq in Heqseq.
+        econstructor.
         { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
           instantiate (1:= mret).
           meq.
@@ -248,9 +255,13 @@ Proof.
   - inv H2; destruct_existT.
     destruct (string_dec lc n).
     + subst; simpl in H1.
-      destruct (in_dec _ n lcalls); [inv H1|elim n0; auto].
+      apply andb_true_iff in H1; dest.
+      remember (string_in _ _) as sin; destruct sin; [inv H1|].
+      apply string_in_dec_not_in in Heqsin; elim Heqsin; auto.
     + simpl in H1.
-      destruct (in_dec _ n lcalls); [inv H1|].
+      apply andb_true_iff in H1; dest.
+      remember (string_in _ _) as sin; destruct sin; [inv H1|].
+      apply string_in_dec_not_in in Heqsin.
       rewrite M.find_add_2 by assumption.
       eapply H0; eauto.
 

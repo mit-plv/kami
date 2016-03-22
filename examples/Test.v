@@ -49,6 +49,15 @@ Definition mc := MODULE {
 
 Require Import Program.Equality.
 
+Section InlineTest.
+  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Proof.
+    admit.
+  Qed.
+
+End InlineTest.
+
+
 Section Tests.
 
   Definition theta : RegsT -> RegsT := id.
@@ -115,165 +124,134 @@ Section Tests.
       decompositionSimple.
     equiv_tac.
   Qed.
-
-  (*
-  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
-  Proof.
-    inlineL.
-    equiv_tac.
-    eapply (decomposition id (fun _ s => Some s)); auto.
-    refine (let rMap := _ in
-            let mMap := _ in
-            @decomposition _ _ id (fun _ s => Some s) _ _ _ _ rMap mMap _).
-    apply HssRuleMap; intuition.
-    apply HssMethMap; intuition.
-    
-                           (ruleMap := ruleMap) (substepRuleMap := rMap)
-                          (substepMethMap := mMap)).
-    inlineL.
-    equiv_tac.
-    eapply decomposition.
-
-    
-    eapply decomposition with (theta := id) (ruleMap := fun _ s => Some s); auto; intros.
-    decompositionSimple; unfold inlineDmToRule in *; simpl in *.
-    destruct HInRules, HInRules0; intuition.
-    inversion H0; inversion H1; subst.
-    unfold inlineDmToRule in H0; simpl in *.
-    simpl in *.
-    decompositionSimple.
-  Qed.
-   *)
-
+  
 End Tests.
 
 Section SemOpTest.
-  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
+  Lemma mab_mc3: (ConcatMod ma mb) <<== mc.
   Proof.
-    intros; apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id); auto.
-    intros; exists u; split; auto.
+    apply stepRefinement with (ruleMap:= fun _ s => Some s) (theta:= id); auto.
 
-    apply step_implies_StepOp in H.
-
-    (* decomposition condition like this? *)
-    assert (forall o nu nl ics,
-               SubstepOp (ConcatMod ma mb) o nu nl ics ->
-               SubstepsInd mc o nu nl).
-    { admit. }
+    intros.
+    apply step_implies_StepBig in H.
 
     admit.
   Qed.
 
-  Definition getNames m := namesOf (getRegInits m) ++ namesOf (getRules m) ++ getDefs m.
-  Definition getPrepNames m s := map (fun x => (s ++ x)%string) (getNames m).
-
-  Require Import Renaming.
-  Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
-
-  Definition bij x := makeBijective mc ("-" ++ x ++ "-").
-
-  Lemma prependSame: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
-  Proof.
-    induction x; intros.
-    - intuition.
-    - inversion H.
-      intuition.
-  Qed.
-
-  Lemma prependNoDup x : forall ls, NoDup ls ->
-                                    NoDup (map (fun s => (x ++ s)%string) ls).
-  Proof.
-    induction ls; intros; simpl in *.
-    - intuition.
-    - inversion H; subst.
-      specialize (IHls H3).
-      constructor; auto.
-      clear - H2.
-      dependent induction ls; intros.
-      + intuition.
-      + unfold not; intros.
-        simpl in *.
-        assert (sth1: a0 <> a) by intuition.
-        assert (sth2: ~ In a ls) by intuition.
-        specialize (IHls sth2).
-        destruct H.
-        * assert (sth: a0 = a) by (apply (prependSame x); intuition).
-          intuition.
-        * intuition.
-  Qed.
-
-  Lemma prependCons x: forall a y, (x ++ String a y)%string =
-                                   ((x ++ String a "")%string ++ y)%string.
-  Proof.
-    simpl.
-    induction x; intros; simpl in *.
-    - intuition.
-    - f_equal; intuition.
-  Qed.
-
-  Lemma lengthApp x: forall y, String.length (x ++ y)%string =
-                               String.length x + String.length y.
-  Proof.
-    induction x; intros; simpl in *.
-    - reflexivity.
-    - f_equal; intuition.
-  Qed.
-      
-  Lemma prependNil x: forall i, i = (x ++ i)%string -> x = ""%string.
-  Proof.
-    intros.
-    assert (sth: String.length (x ++ i0)%string = String.length i0) by
-        (f_equal; intuition).
-    rewrite lengthApp in sth.
-    assert (final: String.length x = 0) by omega.
-    clear - final.
-    induction x.
-    - intuition.
-    - discriminate.
-  Qed.
-
-  Lemma strRename a x y: String a (x ++ y)%string = ((String a x) ++ y)%string.
-  Proof.
-    reflexivity.
-  Qed.
-
-  Ltac bijectiveFinish :=
-    apply bijectiveCorrect;
-    try apply prependNoDup;
-    repeat unfold not, getNames, getPrepNames;
-    repeat unfold getRegInits, getRules, getDefs, getDefsBodies;
-    intros;
-    simpl in *; dest; auto;
-    repeat rewrite strRename in *;
-    repeat match goal with
-           | H: _ \/ _ |- _ => destruct H; subst
-           | H: _ = (_ ++ _)%string |- _ =>
-             apply prependNil in H; apply eq_sym in H
-           end; simpl in *; try discriminate; intuition.
-
-  Definition prepend x := ("-" ++ x ++ "-")%string.
-  Definition makeBijectivePrepend m x := makeBijective m (prepend x).
-  Definition bijMaMb x := makeBijectivePrepend (ConcatMod ma mb) x.
-
-  Lemma bijMaMbCorrect x s: bijMaMb x (bijMaMb x s) = s.
-  Proof.
-    bijectiveFinish.
-  Qed.
-
-  Definition bijMc x := makeBijectivePrepend mc x.
-  
-  Lemma bijMcCorrect x s: bijMc x (bijMc x s) = s.
-    bijectiveFinish.
-  Qed.
-
-  Lemma renameTR x:
-    traceRefines
-      (liftPRename (bijMaMb x) (bijMc x) (liftToMap1 (@idElementwise _)))
-      (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
-  Proof.
-    apply renameTheorem'.
-    - apply bijMcCorrect.
-    - apply bijMcCorrect.
-    - apply mab_mc.
-  Qed.
 End SemOpTest.
+
+(** Renaming stuff; should be moved to proper sites *)
+Require Import Renaming.
+
+Definition getNames m := namesOf (getRegInits m) ++ namesOf (getRules m) ++ getDefs m.
+Definition getPrepNames m s := map (fun x => (s ++ x)%string) (getNames m).
+
+Definition makeBijective m s := bijective (getNames m) (getPrepNames m s).
+
+Definition bij x := makeBijective mc ("-" ++ x ++ "-").
+
+Lemma prependSame: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
+Proof.
+  induction x; intros.
+  - intuition.
+  - inversion H.
+    intuition.
+Qed.
+
+Lemma prependNoDup x : forall ls, NoDup ls ->
+                                  NoDup (map (fun s => (x ++ s)%string) ls).
+Proof.
+  induction ls; intros; simpl in *.
+  - intuition.
+  - inversion H; subst.
+    specialize (IHls H3).
+    constructor; auto.
+    clear - H2.
+    dependent induction ls; intros.
+    + intuition.
+    + unfold not; intros.
+      simpl in *.
+      assert (sth1: a0 <> a) by intuition.
+      assert (sth2: ~ In a ls) by intuition.
+      specialize (IHls sth2).
+      destruct H.
+      * assert (sth: a0 = a) by (apply (prependSame x); intuition).
+        intuition.
+      * intuition.
+Qed.
+
+Lemma prependCons x: forall a y, (x ++ String a y)%string =
+                                 ((x ++ String a "")%string ++ y)%string.
+Proof.
+  simpl.
+  induction x; intros; simpl in *.
+  - intuition.
+  - f_equal; intuition.
+Qed.
+
+Lemma lengthApp x: forall y, String.length (x ++ y)%string =
+                             String.length x + String.length y.
+Proof.
+  induction x; intros; simpl in *.
+  - reflexivity.
+  - f_equal; intuition.
+Qed.
+
+Lemma prependNil x: forall i, i = (x ++ i)%string -> x = ""%string.
+Proof.
+  intros.
+  assert (sth: String.length (x ++ i0)%string = String.length i0) by
+      (f_equal; intuition).
+  rewrite lengthApp in sth.
+  assert (final: String.length x = 0) by omega.
+  clear - final.
+  induction x.
+  - intuition.
+  - discriminate.
+Qed.
+
+Lemma strRename a x y: String a (x ++ y)%string = ((String a x) ++ y)%string.
+Proof.
+  reflexivity.
+Qed.
+
+Ltac bijectiveFinish :=
+  apply bijectiveCorrect;
+  try apply prependNoDup;
+  repeat unfold not, getNames, getPrepNames;
+  repeat unfold getRegInits, getRules, getDefs, getDefsBodies;
+  intros;
+  simpl in *; dest; auto;
+  repeat rewrite strRename in *;
+  repeat match goal with
+         | H: _ \/ _ |- _ => destruct H; subst
+         | H: _ = (_ ++ _)%string |- _ =>
+           apply prependNil in H; apply eq_sym in H
+         end; simpl in *; try discriminate; intuition.
+
+Definition prepend x := ("-" ++ x ++ "-")%string.
+Definition makeBijectivePrepend m x := makeBijective m (prepend x).
+Definition bijMaMb x := makeBijectivePrepend (ConcatMod ma mb) x.
+
+Lemma bijMaMbCorrect x s: bijMaMb x (bijMaMb x s) = s.
+Proof.
+  bijectiveFinish.
+Qed.
+
+Definition bijMc x := makeBijectivePrepend mc x.
+
+Lemma bijMcCorrect x s: bijMc x (bijMc x s) = s.
+  bijectiveFinish.
+Qed.
+
+Lemma renameTR x:
+  traceRefines
+    (liftPRename (bijMaMb x) (bijMc x) (liftToMap1 (@idElementwise _)))
+    (renameModules (bijMaMb x) (ConcatMod ma mb)) (renameModules (bijMc x) mc).
+Proof.
+  apply renameTheorem'.
+  - apply bijMcCorrect.
+  - apply bijMcCorrect.
+  - apply mab_mc.
+Qed.
+

@@ -1,4 +1,4 @@
-Require Import Ascii String List Eqdep.
+Require Import Bool Ascii String List Eqdep.
 Require Import Logic.FunctionalExtensionality.
 
 Ltac isNew P :=
@@ -71,6 +71,12 @@ Ltac dest :=
             | H: _ /\ _ |- _ => destruct H
             | H: exists _, _ |- _ => destruct H
           end).
+
+Ltac dest_in :=
+  repeat
+    match goal with
+    | [H: In _ _ |- _] => inv H
+    end.
 
 Ltac destruct_option :=
   repeat

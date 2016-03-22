@@ -1,6 +1,6 @@
 Require Import String List Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
-Require Import Syntax Semantics.
+Require Import Syntax Semantics Equiv StaticDynamic.
 
 Set Implicit Arguments.
 
@@ -176,7 +176,39 @@ Proof.
     eapply Hp; eauto.
 Qed.
 
-Require Import Equiv StaticDynamic.
+Lemma hide_idempotent:
+  forall (l: LabelT), hide l = hide (hide l).
+Proof.
+  intros; destruct l as [ann ds cs].
+  unfold hide; simpl; f_equal;
+  apply M.subtractKV_idempotent.
+Qed.
+
+Lemma step_hide:
+  forall m o u l,
+    Step m o u l -> hide l = l.
+Proof.
+  intros; apply step_consistent in H; inv H.
+  rewrite <-hide_idempotent; auto.
+Qed.
+
+Inductive HiddenLabelSeq: LabelSeqT -> Prop :=
+| HLSNil: HiddenLabelSeq nil
+| HLSCons:
+    forall l ll,
+      HiddenLabelSeq ll ->
+      hide l = l ->
+      HiddenLabelSeq (l :: ll).
+
+Lemma behavior_hide:
+  forall m n ll,
+    Behavior m n ll -> HiddenLabelSeq ll.
+Proof.
+  intros; inv H.
+  induction HMultistepBeh; [constructor|].
+  constructor; auto.
+  eapply step_hide; eauto.
+Qed.
 
 Section ModEquiv.
   Variable m: Modules.
@@ -490,14 +522,6 @@ Proof.
   - eapply step_calls_disj; eauto.
   - eapply IHll.
     econstructor; eauto.
-Qed.
-
-Lemma hide_idempotent:
-  forall (l: LabelT), hide l = hide (hide l).
-Proof.
-  intros; destruct l as [ann ds cs].
-  unfold hide; simpl; f_equal;
-  apply M.subtractKV_idempotent.
 Qed.
 
 Lemma filterDms_getCalls:

@@ -1,5 +1,5 @@
 Require Import String Word List Arith.
-Require Import Lib.CommonTactics Lib.ilist Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.StringBound Lib.StringEq.
 Require Import Equality Eqdep_dec FunctionalExtensionality.
 
 Set Implicit Arguments.
@@ -65,7 +65,7 @@ Section BoundedIndexFull.
     match attrs with
       | nil => None
       | attr :: attrs' =>
-        if string_dec n (attrName attr) then Some attr
+        if string_eq n (attrName attr) then Some attr
         else getAttribute n attrs'
     end.
   
@@ -95,7 +95,7 @@ Section BoundedIndexFull.
       dm = getAttribute n attrs1 \/ dm = getAttribute n attrs2.
   Proof.
     induction attrs1; intros; simpl; [right; assumption|].
-    simpl in Hdm; destruct (string_dec n (attrName a)); subst; intuition.
+    simpl in Hdm; destruct (string_eq n (attrName a)); subst; intuition.
   Qed.
 
   Lemma getAttribute_Some_name:
@@ -104,7 +104,9 @@ Section BoundedIndexFull.
       attrName dm = n.
   Proof.
     induction attrs; intros; simpl; [inv Hdm|].
-    simpl in Hdm; destruct (string_dec _ _); [|auto].
+    simpl in Hdm.
+    remember (string_eq _ _) as seq; destruct seq; [|auto].
+    apply string_eq_dec_eq in Heqseq.
     inv Hdm; reflexivity.
   Qed.
 
@@ -114,7 +116,8 @@ Section BoundedIndexFull.
       In dm attrs.
   Proof.
     induction attrs; intros; simpl; [inv Hdm|].
-    simpl in Hdm; destruct (string_dec _ _); [|auto].
+    simpl in Hdm.
+    destruct (string_eq _ _); [|auto].
     left; inv Hdm; reflexivity.
   Qed.
 
@@ -124,8 +127,10 @@ Section BoundedIndexFull.
       In n (map attrName attrs).
   Proof.
     induction attrs; intros; simpl; [inv Hdm|].
-    simpl in Hdm; destruct (string_dec n (attrName a)); [left; auto|].
-    right; eapply IHattrs; eauto.
+    simpl in Hdm.
+    remember (string_eq _ _) as seq; destruct seq.
+    - left; apply string_eq_dec_eq in Heqseq; auto.
+    - right; eauto.
   Qed.
 
   Lemma getAttribute_None:
@@ -135,9 +140,10 @@ Section BoundedIndexFull.
   Proof.
     induction attrs; intros; intuition; inv H.
     - simpl in Hdm.
-      destruct (string_dec (attrName a) (attrName a)); [inv Hdm|elim n; reflexivity].
+      remember (string_eq _ _) as seq; destruct seq; [inv Hdm|].
+      apply string_eq_dec_neq in Heqseq; elim Heqseq; reflexivity.
     - inv Hdm.
-      destruct (string_dec _ _); [inv H1|].
+      remember (string_eq _ _) as seq; destruct seq; [inv H1|].
       apply IHattrs; auto.
   Qed.
 
