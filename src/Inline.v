@@ -1,5 +1,6 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FMap.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Wf.
 
 Set Implicit Arguments.
@@ -90,14 +91,13 @@ Section PhoasUT.
   Section Tree.
     Fixpoint isLeaf {retT} (a: ActionT typeUT retT) (cs: list string) :=
       match a with
-        | MCall name _ _ cont =>
-          if in_dec string_dec name cs then false else isLeaf (cont tt) cs
-        | Let_ _ ar cont => isLeaf (cont (getUT _)) cs
-        | ReadReg reg k cont => isLeaf (cont (getUT _)) cs
-        | WriteReg reg _ e cont => isLeaf cont cs
-        | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
-        | Assert_ ae cont => isLeaf cont cs
-        | Return e => true
+      | MCall name _ _ cont => (negb (string_in name cs)) && (isLeaf (cont tt) cs)
+      | Let_ _ ar cont => isLeaf (cont (getUT _)) cs
+      | ReadReg reg k cont => isLeaf (cont (getUT _)) cs
+      | WriteReg reg _ e cont => isLeaf cont cs
+      | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
+      | Assert_ ae cont => isLeaf cont cs
+      | Return e => true
       end.
 
     Definition noCallDm (dm: DefMethT) (tgt: DefMethT) :=
@@ -139,17 +139,10 @@ Section Base.
   Definition inlineArg {argT retT} (a: Expr type (SyntaxKind argT))
              (m: type argT -> ActionT type retT): ActionT type retT :=
     Let_ a m.
-
-  Fixpoint getMethod (n: string) (dms: list DefMethT) :=
-    match dms with
-      | nil => None
-      | {| attrName := mn; attrType := mb |} :: dms' =>
-        if string_dec n mn then Some mb else getMethod n dms'
-    end.
   
   Definition getBody (n: string) (dm: DefMethT) (sig: SignatureT):
     option (sigT (fun x: DefMethT => projT1 (attrType x) = sig)) :=
-    if string_dec n (attrName dm) then
+    if string_eq n (attrName dm) then
       match SignatureT_dec (projT1 (attrType dm)) sig with
         | left e => Some (existT _ dm e)
         | right _ => None

@@ -1,5 +1,6 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word Lib.FMap.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Semantics SemFacts Wf Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
@@ -146,7 +147,7 @@ Proof.
   induction a; simpl; intros; eauto.
 
   - unfold getBody.
-    destruct (string_dec _ _).
+    destruct (string_eq _ _).
     + subst; destruct (SignatureT_dec _ _).
       * subst; simpl.
         rewrite getCallsA_appendAction.
@@ -156,7 +157,7 @@ Proof.
           simpl; inv H.
           { apply SubList_app_1, SubList_refl. }
           { apply SubList_app_2; auto. }
-        }          
+        }
         { apply SubList_cons_right; auto. }
       * simpl; apply SubList_cons; intuition.
         apply SubList_cons_right; eauto.
@@ -322,7 +323,8 @@ Proof.
   simpl; remember (getBody n dm s) as dmb; destruct dmb; [|constructor; auto].
 
   unfold getBody in Heqdmb.
-  destruct (string_dec n (attrName dm)); [subst|discriminate].
+  remember (string_eq _ _) as seq; destruct seq; [|discriminate].
+  apply string_eq_dec_eq in Heqseq; subst.
   destruct (SignatureT_dec _ _); [subst|discriminate].
   inv Heqdmb; simpl.
 
@@ -861,7 +863,9 @@ Lemma isLeaf_implies_disj:
     true = isLeaf a calls -> DisjList (getCallsA a) calls.
 Proof.
   induction a; simpl; intros; auto.
-  - destruct (in_dec string_dec meth calls); [inv H0|].
+  - apply eq_sym, andb_true_iff in H0; dest.
+    remember (string_in _ _) as sin; destruct sin; [inv H0|].
+    apply string_in_dec_not_in in Heqsin.
     apply DisjList_string_cons; auto.
   - apply eq_sym, andb_true_iff in H0; dest.
     apply andb_true_iff in H0; dest.
@@ -988,20 +992,17 @@ Qed.
 
 Theorem inlineF_refines:
   forall m (Hequiv: ModEquiv type typeUT m)
-         (Hdms: NoDup (namesOf (getDefsBodies m)))
-         (Hin: snd (inlineF m) = true),
-    traceRefines id m (fst (inlineF m)).
+         (Hdms: NoDup (namesOf (getDefsBodies m))),
+    let im := inlineF m in
+    snd im = true -> traceRefines id m (fst im).
 Proof.
   intros.
   apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
   - rewrite inlineF_preserves_regInits; reflexivity.
-  - intros; apply inlineF_correct_Step in H; unfold id in *; auto.
-    exists u; split; auto.
+  - intros; eapply inlineF_correct_Step in H; unfold id in *; eauto.
     destruct l as [ann ds cs]; simpl in *.
     destruct ann as [[|]|]; auto.
 Qed.
-
-Hint Extern 1 (snd (inlineF _) = true) => (vm_compute; reflexivity).
 
 Ltac inlineL :=
   match goal with

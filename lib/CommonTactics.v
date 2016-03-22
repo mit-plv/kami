@@ -1,4 +1,4 @@
-Require Import Ascii String List Eqdep.
+Require Import Bool Ascii String List Eqdep.
 Require Import Logic.FunctionalExtensionality.
 
 Ltac isNew P :=
