@@ -178,6 +178,15 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
+  Corollary traceRefines_trans_conj:
+    forall ma mb mc p q,
+      traceRefines p ma mb /\
+      traceRefines q mb mc ->
+      traceRefines (fun f => q (p f)) ma mc.
+  Proof.
+    intros; dest; eapply traceRefines_trans; eauto.
+  Qed.
+
   Definition NonInteracting (m1 m2: Modules) :=
     DisjList (getDefs m1) (getCalls m2) /\
     DisjList (getCalls m1) (getDefs m2).

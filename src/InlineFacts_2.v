@@ -1004,12 +1004,19 @@ Proof.
     destruct ann as [[|]|]; auto.
 Qed.
 
-Ltac kinline_left :=
-  match goal with
-  | [ |- traceRefines _ ?lm _ ] =>
-    apply traceRefines_trans with (mb:= fst (inlineF lm));
-    [apply inlineF_refines; auto|]
-  end.
+(** Interface lemmas and ltacs *)
+Lemma traceRefines_inlining_left:
+  forall ma
+         (Hequiv: ModEquiv type typeUT ma)
+         (Hdup: NoDup (namesOf (getDefsBodies ma)))
+         mb p,
+    traceRefines p (fst (inlineF ma)) mb /\ snd (inlineF ma) = true ->
+    traceRefines p ma mb.
+Proof.
+  intros; dest; apply traceRefines_trans with (mb:= fst (inlineF ma)).
+  - apply inlineF_refines; auto.
+  - auto.
+Qed.
 
 Ltac kinline_compute :=
   repeat autounfold with ModuleDefs;
@@ -1036,4 +1043,8 @@ Ltac kinline_compute :=
     | [ |- context[SignatureT_dec ?s ?s] ] =>
       rewrite (signature_eq s); unfold eq_rect
     end.
+
+Ltac kinline_left :=
+  apply traceRefines_inlining_left; auto; kinline_compute;
+  split; [|reflexivity].
 

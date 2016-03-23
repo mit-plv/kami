@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.Cycles.
+Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2 Lts.Decomposition.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
 Require Import Eqdep.
 
@@ -86,10 +86,8 @@ Section ProcDecSC.
 
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
-      kinline_left.
-      - admit. (* kinline_compute; reflexivity. *)
-      - (* kinline_compute. *)
-        admit.
+      (* kinline_left. *)
+      admit.
     Qed.
 
   End SingleCore.
