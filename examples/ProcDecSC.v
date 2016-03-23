@@ -94,6 +94,7 @@ Section ProcDecSC.
 
   End SingleCore.
 
+  (* TODO: it's not better to have id label mapping for this relation *)
   Lemma pdecN_refines_scN: traceRefines id pdecN scN.
   Proof.
     apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
@@ -110,7 +111,7 @@ Section ProcDecSC.
     - admit.
     - repeat split.
     - induction n; simpl; intros.
-      + apply specialized.
+      + apply specialized_2.
         * intros; vm_compute; admit.
         * intros; vm_compute; admit.
         * admit.

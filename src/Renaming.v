@@ -1281,16 +1281,50 @@ Section RenameRefinement.
              (Hgfb: forall x, gb (fb x) = x)
              (Hfgb: forall x, fb (gb x) = x).
 
-  Definition liftPRename A p (m: M.t A): M.t A :=
-    renameMap fb (p (renameMap ga m)).
+  Definition liftPRename (p: MethsT -> MethsT) :=
+    fun m => renameMap fb (p (renameMap ga m)).
 
-  Theorem renameRefinement p a b:
-    traceRefines p a b ->
-    forall rp,
-      rp = liftPRename p ->
-      traceRefines rp (renameModules fa a) (renameModules fb b).
+  Theorem renameRefinement:
+    forall p ma mb,
+      traceRefines p ma mb ->
+      forall rp,
+        rp = liftPRename p ->
+        traceRefines rp (renameModules fa ma) (renameModules fb mb).
   Proof.
-    admit.
+    intros; subst; unfold liftPRename.
+    change (fun m => renameMap fb (p (renameMap ga m))) with
+    (fun m => (fun m => renameMap fb (p m)) (renameMap ga m)).
+
+    apply traceRefines_trans with (mb := ma).
+    - clear H.
+      unfold traceRefines; intros.
+      apply renameBehaviorRev in H;
+        [|apply f1To1 with (g:= ga); auto].
+      destruct H as [n [l ?]]; dest; subst.
+      do 2 eexists; split; eauto.
+
+      clear H1.
+      induction l; simpl; [constructor|].
+      constructor; auto.
+      destruct a as [ann ds cs].
+      unfold equivalentLabel; repeat split; simpl.
+      + apply renameMapGInvF; auto.
+      + apply renameMapGInvF; auto.
+      + destruct ann as [[|]|]; auto.
+      
+    - apply traceRefines_trans with (mb := mb).
+      + auto.
+      + clear H; unfold traceRefines; intros.
+        apply renameBehavior with (rename:= fb) in H;
+          [|apply f1To1 with (g:= gb); auto].
+        do 2 eexists; split; eauto.
+
+        clear.
+        induction sig1; simpl; [constructor|].
+        constructor; auto.
+        destruct a as [ann ds cs].
+        unfold equivalentLabel; repeat split; simpl.
+        destruct ann as [[|]|]; auto.
   Qed.
 
 End RenameRefinement.
@@ -1376,8 +1410,18 @@ Section SpecializeModule.
 
   Definition spf := fun e => e __ i.
 
+  Lemma prepend_same: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
+  Proof.
+    induction x; intros; intuition.
+    inv H; auto.
+  Qed.
+
   Lemma spf_onto: forall a1 a2, spf a1 = spf a2 -> a1 = a2.
-  Proof. admit. Qed.
+  Proof.
+    unfold spf; intros.
+    rewrite withIndex_eq in H.
+    eapply prepend_same; eauto.
+  Qed.
 
   Lemma spf_in: forall a l, In (spf a) (map spf l) -> In a l.
   Proof.
@@ -1430,16 +1474,37 @@ Section SpRefinement.
   Hypothesis (HdisjDomImgA: forall s, ~ (In s (spDom ma) /\ In s (spImg ma i))).
   Hypothesis (HdisjDomImgB: forall s, ~ (In s (spDom mb) /\ In s (spImg mb i))).
   
-  Lemma specialized:
+  Lemma specialized_1:
+    forall rp,
+      traceRefines rp ma mb ->
+      traceRefines (liftPRename (specializer mb i) (specializer ma i) rp)
+                   (specializeMod ma i) (specializeMod mb i).
+  Proof.
+    intros.
+    eapply renameRefinement.
+    - instantiate (1:= specializer ma i).
+      apply specializer_bijective; auto.
+    - apply specializer_bijective; auto.
+    - instantiate (1:= specializer mb i).
+      apply specializer_bijective; auto.
+    - exact H.
+    - reflexivity.
+  Qed.
+
+  Lemma specialized_2:
     forall rp,
       traceRefines (liftPRename (specializer mb i) (specializer ma i) rp) ma mb ->
       traceRefines rp (specializeMod ma i) (specializeMod mb i).
   Proof.
     intros.
     eapply renameRefinement.
-    - exact H.
     - instantiate (1:= specializer ma i).
-      unfold liftPRename.
+      apply specializer_bijective; auto.
+    - apply specializer_bijective; auto.
+    - instantiate (1:= specializer mb i).
+      apply specializer_bijective; auto.
+    - exact H.
+    - unfold liftPRename.
       extensionality dm.
       rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
       rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
