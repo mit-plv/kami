@@ -1,7 +1,8 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.ilist Lib.Word.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.StringEq Lib.ilist Lib.Word.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
+Require Import Eqdep. (* for signature_eq *)
 
 Set Implicit Arguments.
 
@@ -139,6 +140,13 @@ Proof.
   apply decKind.
 Defined.
 
+Lemma signature_eq: forall sig, SignatureT_dec sig sig = left eq_refl.
+Proof.
+  intros; destruct (SignatureT_dec sig sig).
+  - rewrite UIP_refl with (p:= e); auto.
+  - elim n; auto.
+Qed.
+
 Inductive UniBoolOp: Set :=
 | Neg: UniBoolOp.
 
@@ -209,7 +217,7 @@ Definition RegInitT := Attribute (sigT ConstFullT).
 Definition DefMethT := Attribute (sigT MethodT).
 
 Definition filterDms (dms: list DefMethT) (filt: list string) :=
-  filter (fun dm => if in_dec string_dec (attrName dm) filt then false else true) dms.
+  filter (fun dm => if string_in (attrName dm) filt then false else true) dms.
 
 Definition Void := Bit 0.
 Inductive Modules: Type :=

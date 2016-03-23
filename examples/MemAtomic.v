@@ -70,11 +70,17 @@ End MemAtomic.
 Hint Unfold minst inQ outQ ioQ midQ iom iomi ioms memAtomic : ModuleDefs.
 
 Section Facts.
+
+  Lemma minst_ModEquiv:
+    forall a d n, ModEquiv type typeUT (minst a d n).
+  Proof.
+    intros; apply memInst_ModEquiv.
+  Qed.
+  
   Lemma ioms_ModEquiv:
     forall a sz d n, ModEquiv type typeUT (ioms a sz d n).
   Proof.
-    admit.
-  Qed.
+  Admitted.
   (*   induction n; simpl; intros. *)
   (*   - equiv_tac. *)
   (*   - apply ModEquiv_modular. *)
@@ -85,12 +91,12 @@ Section Facts.
   Lemma memAtomic_ModEquiv:
     forall a sz d n, ModEquiv type typeUT (memAtomic a sz d n).
   Proof.
-    admit.
+    intros; apply ModEquiv_modular.
+    - apply ioms_ModEquiv.
+    - apply minst_ModEquiv.
   Qed.
-  (*   intros; apply ModEquiv_modular. *)
-  (*   - apply ioms_ModEquiv. *)
-  (*   - apply memInst_ModEquiv. *)
-  (* Qed. *)
 
 End Facts.
+
+Hint Immediate minst_ModEquiv ioms_ModEquiv memAtomic_ModEquiv.
 

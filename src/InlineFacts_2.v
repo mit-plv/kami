@@ -237,15 +237,15 @@ Qed.
 
 Lemma inlineDmToMod_calls:
   forall m a,
-    SubList (Syntax.getCalls (fst (inlineDmToMod m a)))
-            (Syntax.getCalls m).
+    SubList (getCalls (fst (inlineDmToMod m a)))
+            (getCalls m).
 Proof.
   intros; unfold inlineDmToMod.
   destruct (wfModules _); [|apply SubList_refl].
   remember (getAttribute _ _) as odm; destruct odm;
   [|apply SubList_refl].
   destruct (noCallDm _ _); [|apply SubList_refl].
-  unfold Syntax.getCalls; simpl.
+  unfold getCalls; simpl.
   apply SubList_app_3.
   - eapply inlineDmToRule_calls; eauto.
     eapply getAttribute_Some_body; eauto.
@@ -262,7 +262,7 @@ Proof.
   unfold wellHidden; intros.
   rewrite inlineDmToMod_getDmsMod.
   dest; split; auto.
-  apply M.KeysDisj_SubList with (d1:= Syntax.getCalls m); auto.
+  apply M.KeysDisj_SubList with (d1:= getCalls m); auto.
   apply inlineDmToMod_calls.
 Qed.
 
@@ -827,7 +827,7 @@ Qed.
 Lemma step_dms_hidden:
   forall m or nr l,
     Step m or nr l ->
-    M.KeysDisj (defs l) (Syntax.getCalls m).
+    M.KeysDisj (defs l) (getCalls m).
 Proof.
   intros; inv H.
   unfold wellHidden in HWellHidden.
@@ -902,11 +902,11 @@ Lemma noCalls_implies_disj:
   forall m,
     noCalls m = true ->
     DisjList
-      (Syntax.getCalls (Mod (getRegInits m) (getRules m)
+      (getCalls (Mod (getRegInits m) (getRules m)
                             (getDefsBodies m)))
       (getDefs (Mod (getRegInits m) (getRules m) (getDefsBodies m))).
 Proof.
-  unfold noCalls, noCalls', Syntax.getCalls, getDefs; simpl; intros.
+  unfold noCalls, noCalls', getCalls, getDefs; simpl; intros.
   apply andb_true_iff in H; dest.
   apply DisjList_app_4.
   - apply noCallsRules_implies_disj; auto.
@@ -1004,10 +1004,36 @@ Proof.
     destruct ann as [[|]|]; auto.
 Qed.
 
-Ltac inlineL :=
+Ltac kinline_left :=
   match goal with
   | [ |- traceRefines _ ?lm _ ] =>
     apply traceRefines_trans with (mb:= fst (inlineF lm));
     [apply inlineF_refines; auto|]
   end.
+
+Ltac kinline_compute :=
+  repeat autounfold with ModuleDefs;
+  repeat autounfold with MethDefs;
+  cbv [inlineF inline inlineDms inlineDms'
+               inlineDmToMod inlineDmToRules inlineDmToRule
+               inlineDmToDms inlineDmToDm inlineDm
+               filterDms filter
+               noCalls noCalls'
+               noCallsRules noCallsDms noCallDm isLeaf
+               getBody inlineArg
+               appendAction getAttribute
+               makeModule makeModule'
+               wfModules wfRules wfDms wfAction wfActionC maxPathLength
+               getRegInits getDefs getDefsBodies getRules namesOf
+               map app attrName attrType
+               getCalls getCallsR getCallsM getCallsA
+               appendName append
+               ret arg fst snd projT1 projT2
+               string_in string_eq ascii_eq
+               eqb existsb andb orb negb];
+  repeat
+    match goal with
+    | [ |- context[SignatureT_dec ?s ?s] ] =>
+      rewrite (signature_eq s); unfold eq_rect
+    end.
 

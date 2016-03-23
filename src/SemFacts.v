@@ -1,5 +1,5 @@
 Require Import String List Program.Equality Program.Basics Classes.Morphisms.
-Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
+Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics Equiv StaticDynamic.
 
 Set Implicit Arguments.
@@ -535,7 +535,7 @@ Proof.
 
   clear.
   induction dms; simpl; [apply SubList_nil|].
-  destruct (in_dec _ _ _).
+  destruct (string_in _ _).
   - apply SubList_app_2; auto.
   - apply SubList_app_3.
     + apply SubList_app_1, SubList_refl.
@@ -558,7 +558,7 @@ Proof.
     clear.
     induction dms; simpl; auto.
     + apply SubList_nil.
-    + destruct (in_dec _ _ _).
+    + destruct (string_in _ _).
       * apply SubList_cons_right; auto.
       * simpl; apply SubList_cons; intuition.
         apply SubList_cons_right; auto.
@@ -612,7 +612,8 @@ Proof.
   clear -H HIn; simpl in *.
   specialize (H (attrName f)).
   apply filter_In.
-  destruct (in_dec string_dec (attrName f) filt); auto.
+  remember (string_in _ _) as sin; destruct sin; auto.
+  apply string_in_dec_in in Heqsin.
   elim H; auto.
   apply M.F.P.F.add_in_iff; auto.
 Qed.

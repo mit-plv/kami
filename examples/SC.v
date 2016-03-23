@@ -281,14 +281,20 @@ Section Facts.
   (*         auto. *)
   (* Qed. *)
 
+  Lemma minst_ModEquiv:
+    forall n a d, ModEquiv type typeUT (minst n a d).
+  Proof.
+    intros; apply memInst_ModEquiv.
+  Qed.
+
   Lemma sc_ModEquiv:
     forall n, ModEquiv type typeUT (sc dec exec opLd opSt opHt n).
   Proof.
     intros; apply ModEquiv_modular.
     - apply pinsts_ModEquiv.
-    - apply memInst_ModEquiv.
+    - apply minst_ModEquiv.
   Qed.
 
 End Facts.
 
-(* Hint Immediate pinsts_ModEquiv memInst_ModEquiv. *)
+Hint Immediate pinsts_ModEquiv memInst_ModEquiv minst_ModEquiv sc_ModEquiv.

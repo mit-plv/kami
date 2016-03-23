@@ -6,31 +6,31 @@ Require Import Syntax Wf.
 Set Implicit Arguments.
 
 Section PhoasUT.
-  Fixpoint getCalls {retT} (a: ActionT typeUT retT) (cs: list DefMethT)
+  Fixpoint getCallsFrom {retT} (a: ActionT typeUT retT) (cs: list DefMethT)
   : list DefMethT :=
     match a with
       | MCall name _ _ cont =>
         match getAttribute name cs with
-          | Some dm => dm :: (getCalls (cont tt) cs)
-          | None => getCalls (cont tt) cs
+          | Some dm => dm :: (getCallsFrom (cont tt) cs)
+          | None => getCallsFrom (cont tt) cs
         end
-      | Let_ _ ar cont => getCalls (cont (getUT _)) cs
-      | ReadReg reg k cont => getCalls (cont (getUT _)) cs
-      | WriteReg reg _ e cont => getCalls cont cs
+      | Let_ _ ar cont => getCallsFrom (cont (getUT _)) cs
+      | ReadReg reg k cont => getCallsFrom (cont (getUT _)) cs
+      | WriteReg reg _ e cont => getCallsFrom cont cs
       | IfElse ce _ ta fa cont =>
-        (getCalls ta cs) ++ (getCalls fa cs) ++ (getCalls (cont tt) cs)
-      | Assert_ ae cont => getCalls cont cs
+        (getCallsFrom ta cs) ++ (getCallsFrom fa cs) ++ (getCallsFrom (cont tt) cs)
+      | Assert_ ae cont => getCallsFrom cont cs
       | Return e => nil
     end.
 
-  Lemma getCalls_nil: forall {retT} (a: ActionT typeUT retT), getCalls a nil = nil.
+  Lemma getCallsFrom_nil: forall {retT} (a: ActionT typeUT retT), getCallsFrom a nil = nil.
   Proof.
     induction a; intros; simpl; intuition.
     rewrite IHa1, IHa2, (H tt); reflexivity.
   Qed.
 
-  Lemma getCalls_sub: forall {retT} (a: ActionT typeUT retT) cs ccs,
-                        getCalls a cs = ccs -> SubList ccs cs.
+  Lemma getCallsFrom_sub: forall {retT} (a: ActionT typeUT retT) cs ccs,
+                        getCallsFrom a cs = ccs -> SubList ccs cs.
   Proof.
     induction a; intros; simpl; intuition; try (eapply H; eauto; fail).
     - simpl in H0.
@@ -50,8 +50,8 @@ Section PhoasUT.
       unfold SubList; intros; inv H.
   Qed.
 
-  Lemma getCalls_sub_name: forall {retT} (a: ActionT typeUT retT) cs ccs,
-                             getCalls a cs = ccs -> SubList (namesOf ccs) (namesOf cs).
+  Lemma getCallsFrom_sub_name: forall {retT} (a: ActionT typeUT retT) cs ccs,
+                             getCallsFrom a cs = ccs -> SubList (namesOf ccs) (namesOf cs).
   Proof.
     induction a; intros; simpl; intuition; try (eapply H; eauto; fail).
     - simpl in H0.
@@ -76,14 +76,14 @@ Section PhoasUT.
   Section Exts.
     Definition getRuleCalls (r: Attribute (Action Void)) (cs: list DefMethT)
     : list DefMethT :=
-      getCalls (attrType r typeUT) cs.
+      getCallsFrom (attrType r typeUT) cs.
 
     Fixpoint getMethCalls (dms: list DefMethT) (cs: list DefMethT)
     : list DefMethT :=
       match dms with
         | nil => nil
         | dm :: dms' =>
-          (getCalls (projT2 (attrType dm) typeUT tt) cs)
+          (getCallsFrom (projT2 (attrType dm) typeUT tt) cs)
             ++ (getMethCalls dms' cs)
       end.
   End Exts.
@@ -238,7 +238,7 @@ Section Exts.
     let (im, ib) := inline m in
     if noCalls im then
       (Mod (getRegInits im) (getRules im)
-           (filterDms (getDefsBodies im) (Syntax.getCalls m)), ib)
+           (filterDms (getDefsBodies im) (getCalls m)), ib)
     else
       (im, false).
 

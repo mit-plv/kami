@@ -147,6 +147,15 @@ Section Facts.
   Hypotheses (HdecEquiv: DecEquiv dec)
              (HexecEquiv_1: ExecEquiv_1 dec exec)
              (HexecEquiv_2: ExecEquiv_2 dec exec).
+
+  Lemma pdecf_ModEquiv:
+    forall fsz, ModEquiv type typeUT (pdecf fsz dec exec).
+  Proof.
+    admit.
+  Qed.    
+  (*   intros. *)
+  (*   equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
+  (* Qed. *)
   
   Lemma pdecfs_ModEquiv:
     forall fsz n, ModEquiv type typeUT (pdecfs fsz dec exec n).
@@ -170,4 +179,5 @@ Section Facts.
 
 End Facts.
 
-(* Hint Immediate pdecfs_ModEquiv. *)
+Hint Immediate pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
+

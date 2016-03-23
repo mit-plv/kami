@@ -25,7 +25,9 @@ Section ProcDecSC.
   Section SingleCore.
     Definition pdec := pdecf fifoSize dec exec.
     Definition pinst := pinst dec exec opLd opSt opHt.
-    Hint Unfold pdec pinst : ModuleDefs.
+    Hint Unfold pdec pinst: ModuleDefs.
+    Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec.
+    Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst.
     
     Definition pdec_pinst_ruleMap (_: RegsT) (s: string): option string :=
       if string_dec s "reqLd" then None
@@ -88,65 +90,20 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Lemma signature_eq: forall sig, SignatureT_dec sig sig = left eq_refl.
-    Proof.
-      intros; destruct (SignatureT_dec sig sig).
-      - rewrite UIP_refl with (p:= e); auto.
-      - elim n0; auto.
-    Qed.
-
-    Ltac mcompute :=
-      repeat autounfold with ModuleDefs;
-      repeat autounfold with MethDefs;
-      cbv [fst snd
-               inlineF inline inlineDms inlineDms'
-               inlineDmToMod inlineDmToRules inlineDmToRule
-               inlineDmToDms inlineDmToDm inlineDm
-               noCalls noCalls'
-               noCallsRules noCallsDms noCallDm isLeaf
-               getBody inlineArg
-               appendAction getAttribute
-               makeModule makeModule'
-               wfModules wfRules wfDms wfAction wfActionC maxPathLength
-               getDefs getDefsBodies getRules namesOf
-               map app attrName attrType
-               Syntax.getCalls getCallsR
-               appendName append
-               ret arg projT1 projT2
-               string_in string_eq ascii_eq
-               eqb existsb andb orb negb];
-      repeat
-        match goal with
-        | [ |- context[SignatureT_dec ?s ?s] ] =>
-          let H := fresh "H" in
-          let Heq := fresh "Heq" in
-          rewrite (signature_eq s); unfold eq_rect
-        end.
-
     Lemma pdec_refines_pinst_op: pdec <<== pinst.
     Proof.
-      inlineL.
-
-      - admit.
-
-      - (* Reset Profile. Start Profiling. *)
-        (* mcompute. *)
-        (* Stop Profiling. Show Profile. *)
+      kinline_left.
+      - admit. (* kinline_compute; reflexivity. *)
+      - (* kinline_compute. *)
         admit.
-
-      - admit.
     Qed.
 
   End SingleCore.
 
   Lemma pdecN_refines_scN: traceRefines id pdecN scN.
   Proof.
-    apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
+    apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
 
-    - apply pdecfs_ModEquiv; auto.
-    - apply pinsts_ModEquiv; auto.
-    - apply memInst_ModEquiv; auto.
-    - apply memInst_ModEquiv; auto.
     - admit.
     - admit.
     - admit.

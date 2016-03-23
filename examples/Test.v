@@ -1,5 +1,6 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.FMap.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word.
+Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 
 Require Import Lts.Syntax Lts.Semantics Lts.SemOp Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
@@ -47,16 +48,10 @@ Definition mc := MODULE {
     Retv
 }.
 
-Require Import Program.Equality.
+Hint Unfold ma mb mc: ModuleDefs.
+Hint Unfold fbCm: MethDefs.
 
-Section InlineTest.
-  Lemma mab_mc2: (ConcatMod ma mb) <<== mc.
-  Proof.
-    admit.
-  Qed.
-
-End InlineTest.
-
+(* Require Import Program.Equality. *)
 
 Section Tests.
 
@@ -116,8 +111,8 @@ Section Tests.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    inlineL.
-    equiv_tac.
+    kinline_left; [equiv_tac|].
+    (* kinline_compute. *)
     decomposeT (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
                HssRuleMap HssMethMap;
@@ -126,19 +121,6 @@ Section Tests.
   Qed.
   
 End Tests.
-
-Section SemOpTest.
-  Lemma mab_mc3: (ConcatMod ma mb) <<== mc.
-  Proof.
-    apply stepRefinement with (ruleMap:= fun _ s => Some s) (theta:= id); auto.
-
-    intros.
-    apply step_implies_StepBig in H.
-
-    admit.
-  Qed.
-
-End SemOpTest.
 
 (** Renaming stuff; should be moved to proper sites *)
 Require Import Renaming.
