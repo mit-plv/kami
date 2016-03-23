@@ -25,10 +25,10 @@ Section ProcDecSC.
   Section SingleCore.
     Definition pdec := pdecf fifoSize dec exec.
     Definition pinst := pinst dec exec opLd opSt opHt.
-    Hint Unfold pdec pinst: ModuleDefs.
-    Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec.
-    Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst.
-    
+    Hint Unfold pdec pinst: ModuleDefs. (* for kinline_compute *)
+    Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for equiv_tac *)
+    Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for equiv_tac *)
+
     Definition pdec_pinst_ruleMap (_: RegsT) (s: string): option string :=
       if string_dec s "reqLd" then None
       else if string_dec s "reqSt" then None
@@ -39,12 +39,6 @@ Section ProcDecSC.
       else if string_dec s "processLd" then Some "execLd"%string
       else if string_dec s "processSt" then Some "execSt"%string
       else None.
-
-    (* Eval vm_compute in (getRegInits pdec). *)
-    (* = ["pc"%string; "rf"%string; "stall"%string; "Ins.elt"%string; "Ins.enqP"%string; *)
-    (*    "Ins.deqP"%string; "Ins.empty"%string; "Ins.full"%string; "Outs.elt"%string; *)
-    (*    "Outs.enqP"%string; "Outs.deqP"%string; "Outs.empty"%string; "Outs.full"%string] *)
-    (*   : list string *)
     
     Definition pdec_pinst_regMap (r: RegsT): RegsT.
     Proof.
@@ -90,7 +84,7 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
-    Lemma pdec_refines_pinst_op: pdec <<== pinst.
+    Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
       kinline_left.
       - admit. (* kinline_compute; reflexivity. *)
@@ -116,9 +110,10 @@ Section ProcDecSC.
     - admit.
     - repeat split.
     - induction n; simpl; intros.
-      + unfold pdecfi, pinsti, specializeMod.
-        (* apply renameTheorem'. *)
-        admit.
+      + apply specialized.
+        * intros; vm_compute; admit.
+        * intros; vm_compute; admit.
+        * admit.
       + admit. (* apply traceRefines_modular_noninteracting. *)
     - rewrite idElementwiseId; apply traceRefines_refl.
 

@@ -1271,30 +1271,29 @@ Section RenameInv.
       rewrite renameLabelFInvG.
       f_equal; intuition.
   Qed.
-
-  Definition liftPRename A p (m: M.t A): M.t A := renameMap f (p (renameMap g m)).
-    
-  Theorem renameTheorem' p a b:
-    traceRefines p a b ->
-    traceRefines (liftPRename p) (renameModules f a) (renameModules f b).
-  Proof.
-    intros tr.
-    pose proof (renameTheorem f f1To1 tr) as sth.
-    unfold traceRefines; intros.
-    specialize (sth s1 sig1 H).
-    dest; subst.
-    exists x, (map (renameLabel f) x1).
-    constructor; intuition.
-    clear - H2; induction H2.
-    - constructor.
-    - simpl; constructor; intuition.      
-      unfold liftPRename, renameLabel.
-      destruct x, y; destruct annot, annot0; try destruct o, o0; try destruct o;
-        unfold equivalentLabel in *; dest; subst; simpl in *;
-          repeat rewrite (renameMapGInvF defs);
-          repeat rewrite (renameMapGInvF calls); subst; intuition.
-  Qed.
 End RenameInv.
+
+Section RenameRefinement.
+  Variables fa fb: string -> string.
+  Variables ga gb: string -> string.
+  Hypotheses (Hgfa: forall x, ga (fa x) = x)
+             (Hfga: forall x, fa (ga x) = x)
+             (Hgfb: forall x, gb (fb x) = x)
+             (Hfgb: forall x, fb (gb x) = x).
+
+  Definition liftPRename A p (m: M.t A): M.t A :=
+    renameMap fb (p (renameMap ga m)).
+
+  Theorem renameRefinement p a b:
+    traceRefines p a b ->
+    forall rp,
+      rp = liftPRename p ->
+      traceRefines rp (renameModules fa a) (renameModules fb b).
+  Proof.
+    admit.
+  Qed.
+
+End RenameRefinement.
 
 Definition bijective dom img s :=
   match dom, img with
@@ -1307,7 +1306,7 @@ Definition bijective dom img s :=
     | _, _ => s
   end.
 
-Section MakeBijective1.
+Section MakeBijective.
   Variable dom img: list string.
   Variable lengthEq: length dom = length img.
   Variable disjDomImg: forall i, ~ (In i dom /\ In i img).
@@ -1347,24 +1346,105 @@ Section MakeBijective1.
         destruct (string_dec s a); subst; try reflexivity; intuition.
         destruct (string_dec s s0); subst; intuition.
   Qed.
-End MakeBijective1.
+End MakeBijective.
+
+Require Import Lib.StringEq.
 
 Section SpecializeModule.
   Variable m: Modules.
   Variable i: nat.
 
-  Definition spDom := (namesOf (getRegInits m))
-                        ++ (namesOf (getRules m))
-                        ++ (namesOf (getDefsBodies m))
-                        ++ (getCalls m).
+  Fixpoint makeNoDup (l: list string) :=
+    match l with
+    | nil => nil
+    | h :: t => let nt := makeNoDup t in
+                if string_in h nt then nt else h :: nt
+    end.
 
-  Definition spImg := map (fun e => e __ i) spDom.
+  Lemma makeNoDup_NoDup: forall l, NoDup (makeNoDup l).
+  Proof.
+    induction l; [auto|].
+    simpl; remember (string_in a (makeNoDup l)) as sin; destruct sin; [auto|].
+    apply string_in_dec_not_in in Heqsin.
+    constructor; auto.
+  Qed.    
+
+  Definition spDom := makeNoDup ((namesOf (getRegInits m))
+                                   ++ (namesOf (getRules m))
+                                   ++ (namesOf (getDefsBodies m))
+                                   ++ (getCalls m)).
+
+  Definition spf := fun e => e __ i.
+
+  Lemma spf_onto: forall a1 a2, spf a1 = spf a2 -> a1 = a2.
+  Proof. admit. Qed.
+
+  Lemma spf_in: forall a l, In (spf a) (map spf l) -> In a l.
+  Proof.
+    induction l; simpl; intros; [auto|].
+    destruct H.
+    - left; apply spf_onto; auto.
+    - auto.
+  Qed.
+
+  Lemma spf_NoDup: forall l, NoDup l -> NoDup (map spf l).
+  Proof.
+    induction l; simpl; intros; [auto|].
+    inv H; constructor; auto.
+    intro; elim H2; apply spf_in; auto.
+  Qed.
+
+  Definition spImg := map spf spDom.
 
   Lemma sp_lengthEq: length spDom = length spImg.
   Proof. unfold spImg; rewrite map_length; auto. Qed.
 
+  Lemma spImg_NoDup: NoDup spImg.
+  Proof.
+    unfold spImg.
+    assert (NoDup spDom) by apply makeNoDup_NoDup.
+    apply spf_NoDup; auto.
+  Qed.
+
   Definition specializer := bijective spDom spImg.
   Definition specializeMod := renameModules specializer m.
 
+  Hypothesis (HdisjDomImg: forall i, ~ (In i spDom /\ In i spImg)).
+
+  Lemma specializer_bijective:
+    forall x, specializer (specializer x) = x.
+  Proof.
+    intros; apply bijectiveCorrect; auto.
+    - apply sp_lengthEq.
+    - apply makeNoDup_NoDup.
+    - apply spImg_NoDup.
+  Qed.
+
 End SpecializeModule.
+
+Require Import FunctionalExtensionality.
+
+Section SpRefinement.
+  Variables ma mb: Modules.
+  Variable i: nat.
+  Hypothesis (HdisjDomImgA: forall s, ~ (In s (spDom ma) /\ In s (spImg ma i))).
+  Hypothesis (HdisjDomImgB: forall s, ~ (In s (spDom mb) /\ In s (spImg mb i))).
+  
+  Lemma specialized:
+    forall rp,
+      traceRefines (liftPRename (specializer mb i) (specializer ma i) rp) ma mb ->
+      traceRefines rp (specializeMod ma i) (specializeMod mb i).
+  Proof.
+    intros.
+    eapply renameRefinement.
+    - exact H.
+    - instantiate (1:= specializer ma i).
+      unfold liftPRename.
+      extensionality dm.
+      rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
+      rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
+      reflexivity.
+  Qed.
+
+End SpRefinement.
 
