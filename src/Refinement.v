@@ -469,7 +469,8 @@ Section Facts.
         equivalentLabel (liftToMap1 vp) la lb ->
         equivalentLabel (liftToMap1 vp) lc ld ->
         WellHiddenConcat ma mc la lc ->
-        equivalentLabel id (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
+        equivalentLabel (liftToMap1 (@idElementwise _))
+                        (hide (mergeLabel la lc)) (hide (mergeLabel lb ld)).
   Proof.
     intros.
     assert (equivalentLabel (liftToMap1 vp) (mergeLabel la lc) (mergeLabel lb ld)).
@@ -575,7 +576,8 @@ Section Facts.
         equivalentLabelSeq (liftToMap1 vp) lsa lsb ->
         equivalentLabelSeq (liftToMap1 vp) lsc lsd ->
         WellHiddenConcatSeq ma mc lsa lsc ->
-        equivalentLabelSeq id (composeLabels lsa lsc) (composeLabels lsb lsd).
+        equivalentLabelSeq (liftToMap1 (@idElementwise _))
+                           (composeLabels lsa lsc) (composeLabels lsb lsd).
   Proof.
     induction lsa; simpl; intros; [inv H3; constructor|].
     inv H3; destruct lsc.
@@ -674,7 +676,7 @@ Section Facts.
         Interacting ma mc vp ->
         traceRefines (liftToMap1 vp) ma mb ->
         traceRefines (liftToMap1 vp) mc md ->
-        traceRefines id (ConcatMod ma mc) (ConcatMod mb md).
+        traceRefines (liftToMap1 (@idElementwise _)) (ConcatMod ma mc) (ConcatMod mb md).
       Proof.
         unfold traceRefines; intros.
         apply behavior_split in H2; auto.
