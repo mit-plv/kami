@@ -111,8 +111,8 @@ Section Tests.
 
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
-    kinline_left; [equiv_tac|].
-    (* kinline_compute. *)
+    apply traceRefines_inlining_left; auto; [equiv_tac|].
+    kinline_compute; split; [|reflexivity].
     decomposeT (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
                HssRuleMap HssMethMap;

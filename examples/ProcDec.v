@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
@@ -124,20 +124,12 @@ Section ProcDecM.
   Definition pdec := procDec "Ins"%string "Outs"%string dec exec.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize (Bit valSize)).
-
-  Definition pdecfi (i: nat) := specializeMod pdecf i.
-
-  Fixpoint pdecfs (i: nat) :=
-    match i with
-      | O => pdecfi O
-      | S i' => ConcatMod (pdecfi i) (pdecfs i')
-    end.
-
+  Definition pdecfs (i: nat) := duplicate pdecf i.
   Definition procDecM (n: nat) := ConcatMod (pdecfs n) (minst addrSize (Bit valSize) n).
 
 End ProcDecM.
 
-Hint Unfold pdec pdecf pdecfi pdecfs procDecM : ModuleDefs.
+Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
   Variables addrSize fifoSize valSize rfIdx: nat.

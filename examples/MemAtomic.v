@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
 Require Import Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
@@ -54,20 +54,12 @@ Section MemAtomic.
 
   Definition midQ := mid "Ins" "Outs" addrSize dType.
   Definition iom := ConcatMod ioQ midQ.
-
-  Definition iomi (i: nat) := specializeMod iom i.
-
-  Fixpoint ioms (i: nat) :=
-    match i with
-      | O => iomi O
-      | S i' => ConcatMod (iomi i) (ioms i')
-    end.
-
+  Definition ioms (i: nat) := duplicate iom i.
   Definition memAtomic := ConcatMod (ioms n) minst.
 
 End MemAtomic.
 
-Hint Unfold minst inQ outQ ioQ midQ iom iomi ioms memAtomic : ModuleDefs.
+Hint Unfold minst inQ outQ ioQ midQ iom ioms memAtomic : ModuleDefs.
 
 Section Facts.
 

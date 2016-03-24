@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Renaming Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
 
 Set Implicit Arguments.
 
@@ -191,22 +191,14 @@ Section SC.
   Variable n: nat.
 
   Definition pinst := procInst dec exec opLd opSt opHt.
-
-  Definition pinsti (i: nat) := specializeMod pinst i.
-
-  Fixpoint pinsts (i: nat): Modules :=
-    match i with
-      | O => pinsti O
-      | S i' => ConcatMod (pinsti i) (pinsts i')
-    end.
-  
+  Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize (Bit valSize).
 
   Definition sc := ConcatMod (pinsts n) minst.
 
 End SC.
 
-Hint Unfold pinst pinsti pinsts minst sc : ModuleDefs.
+Hint Unfold pinst pinsts minst sc : ModuleDefs.
 
 Section Facts.
   Variables opIdx addrSize valSize rfIdx : nat.
