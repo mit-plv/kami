@@ -187,6 +187,68 @@ Section Facts.
     intros; dest; eapply traceRefines_trans; eauto.
   Qed.
 
+  Definition EquivalentLabelMap (p q: MethsT -> MethsT) (dom: list M.key) :=
+    forall m, M.KeysSubset m dom -> p m = q m.
+
+  Lemma step_label_map:
+    forall m (Hequiv: ModEquiv type typeUT m) p q,
+      EquivalentLabelMap p q (getExtMeths m) ->
+      forall o u l1,
+        Step m o u l1 ->
+        forall l2,
+          equivalentLabel p l1 l2 ->
+          equivalentLabel q l1 l2.
+  Proof.
+    intros. destruct H1 as [? [? ?]].
+    repeat split; auto; clear H3.
+    - rewrite <-H1.
+      apply eq_sym, H.
+      eapply step_defs_ext_in; eauto.
+    - rewrite <-H2.
+      apply eq_sym, H.
+      eapply step_calls_ext_in; eauto.
+  Qed.
+    
+  Lemma multistep_label_map:
+    forall m (Hequiv: ModEquiv type typeUT m) p q,
+      EquivalentLabelMap p q (getExtMeths m) ->
+      forall o s ll1,
+        Multistep m o s ll1 ->
+        forall ll2,
+          equivalentLabelSeq p ll1 ll2 ->
+          equivalentLabelSeq q ll1 ll2.
+  Proof.
+    induction 3; simpl; intros; [inv H1; constructor|].
+    destruct ll2; [inv H1|].
+    inv H1; constructor; auto.
+    eapply step_label_map; eauto.
+  Qed.
+
+  Lemma behavior_label_map:
+    forall m (Hequiv: ModEquiv type typeUT m) p q,
+      EquivalentLabelMap p q (getExtMeths m) ->
+      forall s ll1,
+        Behavior m s ll1 ->
+        forall ll2,
+          equivalentLabelSeq p ll1 ll2 ->
+          equivalentLabelSeq q ll1 ll2.
+  Proof.
+    intros; inv H0.
+    eapply multistep_label_map; eauto.
+  Qed.
+
+  Lemma traceRefines_label_map:
+    forall ma (Hequiv: ModEquiv type typeUT ma) mb p q,
+      EquivalentLabelMap p q (getExtMeths ma) ->
+      traceRefines p ma mb ->
+      traceRefines q ma mb.
+  Proof.
+    unfold traceRefines; intros.
+    specialize (H0 _ _ H1); destruct H0 as [s2 [sig2 ?]]; dest.
+    exists s2, sig2; split; auto.
+    eapply behavior_label_map; eauto.
+  Qed.
+
   Definition NonInteracting (m1 m2: Modules) :=
     DisjList (getDefs m1) (getCalls m2) /\
     DisjList (getCalls m1) (getDefs m2).

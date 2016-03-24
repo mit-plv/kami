@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.StringEq.
-Require Import Syntax Semantics Refinement Renaming.
+Require Import Syntax Semantics Refinement Renaming Equiv.
 
 Set Implicit Arguments.
 
@@ -21,7 +21,7 @@ Section SpecializeModule.
     simpl; remember (string_in a (makeNoDup l)) as sin; destruct sin; [auto|].
     apply string_in_dec_not_in in Heqsin.
     constructor; auto.
-  Qed.    
+  Qed.
 
   Definition spDom := makeNoDup ((namesOf (getRegInits m))
                                    ++ (namesOf (getRules m))
@@ -85,6 +85,19 @@ Section SpecializeModule.
   Qed.
 
 End SpecializeModule.
+
+Section SpecializeFacts.
+  Variable m: Modules.
+  Variable i: nat.
+
+  Lemma specializeMod_ModEquiv:
+    ModEquiv type typeUT m ->
+    ModEquiv type typeUT (specializeMod m i).
+  Proof.
+    admit.
+  Qed.
+
+End SpecializeFacts.
 
 Require Import FunctionalExtensionality.
 
@@ -150,6 +163,20 @@ Section Duplicate.
    * 3) ValidRegsModules m -> ValidRegsModules (duplicate m n)
    * 4) DefCallSub m1 m2 -> DefCallSub (dup m1) (dup m2)
    *)
+  Section Facts.
+
+    Lemma duplicate_ModEquiv:
+      forall n,
+        ModEquiv type typeUT m ->
+        ModEquiv type typeUT (duplicate n).
+    Proof.
+      induction n; simpl; intros;
+        [apply specializeMod_ModEquiv; auto|].
+      apply ModEquiv_modular; auto.
+      apply specializeMod_ModEquiv; auto.
+    Qed.
+
+  End Facts.
 
 End Duplicate.
 

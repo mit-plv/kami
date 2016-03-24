@@ -415,7 +415,19 @@ Section GetCalls.
     
 End GetCalls.
 
-Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies.
+Definition getExtDefsBodies (m: Modules) :=
+  filter (fun dm => negb (string_in (attrName dm) (getCalls m))) (getDefsBodies m).
+
+Definition getExtDefs (m: Modules) :=
+  filter (fun d => negb (string_in d (getCalls m))) (getDefs m).
+
+Definition getExtCalls (m: Modules) :=
+  filter (fun c => negb (string_in c (getDefs m))) (getCalls m).
+
+Definition getExtMeths (m: Modules) := getExtDefs m ++ getExtCalls m.
+
+Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
+     getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
 (* Notations: registers and methods declaration *)
 Notation Default := (getDefaultConst _).

@@ -1,4 +1,4 @@
-Require Import String List Program.Equality Program.Basics Classes.Morphisms.
+Require Import Bool String List Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics Equiv StaticDynamic.
 
@@ -522,6 +522,66 @@ Proof.
   - eapply step_calls_disj; eauto.
   - eapply IHll.
     econstructor; eauto.
+Qed.
+
+Lemma step_defs_extDefs_in:
+  forall m (Hequiv: ModEquiv type typeUT m) o u l,
+    Step m o u l ->
+    M.KeysSubset (defs l) (getExtDefs m).
+Proof.
+  intros.
+  pose proof (step_defs_in Hequiv H).
+  pose proof (step_defs_disj H).
+
+  unfold M.KeysSubset, M.KeysDisj in *; intros.
+  specialize (H0 k H2).
+  specialize (H1 k).
+  destruct (in_dec string_dec k (getCalls m)); intuition idtac.
+  apply filter_In; split; auto.
+  apply negb_true_iff.
+  remember (string_in k (getCalls m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; elim n; auto.
+Qed.
+
+Lemma step_defs_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) o u l,
+    Step m o u l ->
+    M.KeysSubset (defs l) (getExtMeths m).
+Proof.
+  intros.
+  pose proof (step_defs_extDefs_in Hequiv H).
+  eapply M.KeysSubset_SubList; eauto.
+  apply SubList_app_1, SubList_refl.
+Qed.
+
+Lemma step_calls_extCalls_in:
+  forall m (Hequiv: ModEquiv type typeUT m) o u l,
+    Step m o u l ->
+    M.KeysSubset (calls l) (getExtCalls m).
+Proof.
+  intros.
+  pose proof (step_calls_in Hequiv H).
+  pose proof (step_calls_disj H).
+
+  unfold M.KeysSubset, M.KeysDisj in *; intros.
+  specialize (H0 k H2).
+  specialize (H1 k).
+  destruct (in_dec string_dec k (getDefs m)); intuition idtac.
+  apply filter_In; split; auto.
+  apply negb_true_iff.
+  remember (string_in k (getDefs m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; elim n; auto.
+Qed.
+
+Lemma step_calls_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) o u l,
+    Step m o u l ->
+    M.KeysSubset (calls l) (getExtMeths m).
+Proof.
+  intros.
+  pose proof (step_calls_extCalls_in Hequiv H).
+  eapply M.KeysSubset_SubList; eauto.
+  apply SubList_app_2, SubList_refl.
 Qed.
 
 Lemma filterDms_getCalls:
