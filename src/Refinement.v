@@ -436,6 +436,13 @@ Section Facts.
     SubList (getDefs spec) (getDefs impl) /\
     SubList (getCalls spec) (getCalls impl).
 
+  Lemma DefCallSub_refl:
+    forall m, DefCallSub m m.
+  Proof.
+    intros; split; apply SubList_refl.
+  Qed.
+  Hint Immediate DefCallSub_refl.
+
   Lemma interacting_implies_wellHiddenModular:
     forall ma mb mc md vp,
       DefCallSub ma mb -> DefCallSub mc md ->

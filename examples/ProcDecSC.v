@@ -103,10 +103,12 @@ Section ProcDecSC.
     - admit.
     - admit.
     - admit.
-    - admit.
-    - admit.
+    - apply duplicate_defCallSub.
+      vm_compute; split; intros; intuition idtac.
+    - apply DefCallSub_refl.
     - repeat split.
-    - induction n; simpl; intros.
+    - (* TODO: a general lemma for duplication-refinement: implement in Specialize.v *)
+      induction n; simpl; intros.
       + apply specialized_2.
         * intros; vm_compute.
           (* intro; dest. *)
@@ -117,7 +119,9 @@ Section ProcDecSC.
           (* TODO: takes a time ... *)
           admit.
         * intros; vm_compute; admit.
-        * admit.
+        * apply traceRefines_label_map with (p:= liftToMap1 (@idElementwise _)); auto.
+          { admit. }
+          { apply pdec_refines_pinst. }
       + admit. (* apply traceRefines_modular_noninteracting. *)
     - rewrite idElementwiseId; apply traceRefines_refl.
 

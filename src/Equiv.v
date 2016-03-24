@@ -177,6 +177,21 @@ Section Equiv.
     - apply IHHequiv; assumption.
   Qed.
 
+  Lemma RulesEquiv_sub:
+    forall rules1 rules2,
+      RulesEquiv rules1 ->
+      SubList rules2 rules1 ->
+      RulesEquiv rules2.
+  Proof.
+    induction rules2; simpl; intros; [constructor|].
+    destruct a; constructor.
+    - intros; eapply RulesEquiv_in.
+      + exact H.
+      + apply H0; left; auto.
+    - apply IHrules2; auto.
+      apply SubList_cons_inv in H0; dest; auto.
+  Qed.
+
   Lemma RulesEquiv_app:
     forall rules1 rules2
            (Hequiv1: RulesEquiv rules1)
@@ -213,6 +228,18 @@ Section Equiv.
     induction 1; intros; inv Hin.
     - simpl in *; apply H.
     - apply IHHequiv; auto.
+  Qed.
+
+  Lemma MethsEquiv_sub:
+    forall meths1 meths2,
+      MethsEquiv meths1 ->
+      SubList meths2 meths1 ->
+      MethsEquiv meths2.
+  Proof.
+    induction meths2; simpl; intros; [constructor|].
+    apply SubList_cons_inv in H0; dest.
+    destruct a as [? [? ?]]; constructor; auto.
+    intros; pose proof (MethsEquiv_in _ H H0); auto.
   Qed.
 
   Lemma MethsEquiv_app:
@@ -259,6 +286,24 @@ Section Facts.
       unfold SubList; intros; inv H2; intuition.
   Qed.
 
+  Lemma ModEquiv_split:
+    forall t1 t2 m1 m2,
+      ModEquiv t1 t2 (ConcatMod m1 m2) ->
+      ModEquiv t1 t2 m1 /\ ModEquiv t1 t2 m2.
+  Proof.
+    intros; inv H; split.
+    - constructor.
+      + eapply RulesEquiv_sub; eauto.
+        apply SubList_app_1, SubList_refl.
+      + eapply MethsEquiv_sub; eauto.
+        apply SubList_app_1, SubList_refl.
+    - constructor.
+      + eapply RulesEquiv_sub; eauto.
+        apply SubList_app_2, SubList_refl.
+      + eapply MethsEquiv_sub; eauto.
+        apply SubList_app_2, SubList_refl.
+  Qed.
+      
   Lemma ModEquiv_modular:
     forall t1 t2 m1 m2,
       ModEquiv t1 t2 m1 ->

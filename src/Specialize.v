@@ -1,6 +1,8 @@
 Require Import Bool String List.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.StringEq.
-Require Import Syntax Semantics Refinement Renaming Equiv.
+Require Import Syntax Semantics Refinement Renaming Equiv Wf.
+
+Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
 
@@ -87,19 +89,64 @@ Section SpecializeModule.
 End SpecializeModule.
 
 Section SpecializeFacts.
-  Variable m: Modules.
-  Variable i: nat.
 
-  Lemma specializeMod_ModEquiv:
-    ModEquiv type typeUT m ->
-    ModEquiv type typeUT (specializeMod m i).
+  Lemma renameAction_ActionEquiv:
+    forall G {retT} (ta: ActionT type retT) (ua: ActionT typeUT retT),
+      ActionEquiv G ta ua ->
+      forall f,
+        ActionEquiv G (renameAction f ta) (renameAction f ua).
   Proof.
-    admit.
+    induction 1; simpl; intros; try (constructor; auto).
+  Qed.
+
+  Lemma renameRules_RulesEquiv:
+    forall rules,
+      RulesEquiv type typeUT rules ->
+      forall f,
+        RulesEquiv type typeUT (renameRules f rules).
+  Proof.
+    induction rules; simpl; intros; [constructor|].
+    destruct a; constructor.
+    - inv H; intros; apply renameAction_ActionEquiv; auto.
+    - inv H; apply IHrules; auto.
+  Qed.
+
+  Lemma renameMeths_MethsEquiv:
+    forall meths,
+      MethsEquiv type typeUT meths ->
+      forall f,
+        MethsEquiv type typeUT (renameMeths f meths).
+  Proof.
+    induction meths; simpl; intros; [constructor|].
+    destruct a; constructor.
+    - inv H; destruct_existT; intros; apply renameAction_ActionEquiv; auto.
+    - inv H; apply IHmeths; auto.
+  Qed.
+    
+  Lemma renameModules_ModEquiv:
+    forall m,
+      ModEquiv type typeUT m ->
+      forall f,
+        ModEquiv type typeUT (renameModules f m).
+  Proof.
+    induction m; simpl; intros.
+    - inv H; simpl in *.
+      constructor; simpl.
+      + apply renameRules_RulesEquiv; auto.
+      + apply renameMeths_MethsEquiv; auto.
+    - apply ModEquiv_split in H; dest.
+      apply ModEquiv_modular; auto.
+  Qed.
+  
+  Lemma specializeMod_ModEquiv:
+    forall i m,
+      ModEquiv type typeUT m ->
+      ModEquiv type typeUT (specializeMod m i).
+  Proof.
+    intros; apply renameModules_ModEquiv; auto.
   Qed.
 
 End SpecializeFacts.
-
-Require Import FunctionalExtensionality.
 
 Section SpRefinement.
   Variables ma mb: Modules.
@@ -155,30 +202,44 @@ Section Duplicate.
     | S n' => ConcatMod (specializeMod m n) (duplicate n')
     end.
 
-  (* TODO: To automatically prove
-   * 1) ModEquiv m -> ModEquiv (duplicate m n)
-   * 2-1) DisjList(regs) m1 m2 -> DisjList(regs) (dup m1) (dup m2)
-   * 2-2) DisjList(defs) m1 m2 -> DisjList(defs) (dup m1) (dup m2)
-   * 2-3) DisjList(calls) m1 m2 -> DisjList(calls) (dup m1) (dup m2)
-   * 3) ValidRegsModules m -> ValidRegsModules (duplicate m n)
-   * 4) DefCallSub m1 m2 -> DefCallSub (dup m1) (dup m2)
-   *)
-  Section Facts.
-
-    Lemma duplicate_ModEquiv:
-      forall n,
-        ModEquiv type typeUT m ->
-        ModEquiv type typeUT (duplicate n).
-    Proof.
-      induction n; simpl; intros;
-        [apply specializeMod_ModEquiv; auto|].
-      apply ModEquiv_modular; auto.
-      apply specializeMod_ModEquiv; auto.
-    Qed.
-
-  End Facts.
-
 End Duplicate.
+
+Section DuplicateFacts.
+
+  Lemma duplicate_ModEquiv:
+    forall m n,
+      ModEquiv type typeUT m ->
+      ModEquiv type typeUT (duplicate m n).
+  Proof.
+    induction n; simpl; intros;
+      [apply specializeMod_ModEquiv; auto|].
+    apply ModEquiv_modular; auto.
+    apply specializeMod_ModEquiv; auto.
+  Qed.
+
+  Lemma duplicate_validRegsModules:
+    forall m n,
+      ValidRegsModules type m ->
+      ValidRegsModules type (duplicate m n).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma duplicate_defCallSub:
+    forall m1 m2 n,
+      DefCallSub m1 m2 ->
+      DefCallSub (duplicate m1 n) (duplicate m2 n).
+  Proof.
+    admit.
+  Qed.
+
+  (* Lemma duplicate_traceRefines: *)
+  (*   forall m1 m2 n, *)
+  (*     (* TODO: requires a number of conditions *) *)
+  (*     traceRefines id m1 m2 -> *)
+  (*     traceRefines id (duplicate m1 n) (duplicate m2 n). *)
+
+End DuplicateFacts.
 
 Hint Unfold specializeMod duplicate: ModuleDefs.
 
