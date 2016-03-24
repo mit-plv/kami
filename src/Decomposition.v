@@ -92,8 +92,50 @@ Section Decomposition.
 
   Variable specRegsCanCombine:
     forall o (s1 s2: SubstepRec imp o) d,
+      (unitAnnot s1 = Meth (Some d) \/ unitAnnot s2 = Meth (Some d)) ->
+      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
+
+  Lemma emptyRuleNoUpd m o u:
+    Substep m o u (Rle None) (M.empty _) ->
+    u = M.empty _.
+  Proof.
+    clear.
+    intros ss.
+    dependent induction ss; reflexivity.
+  Qed.
+  
+  Lemma emptyMethNoUpd m o u:
+    Substep m o u (Meth None) (M.empty _) ->
+    u = M.empty _.
+  Proof.
+    clear.
+    intros ss.
+    dependent induction ss; reflexivity.
+  Qed.
+  
+  Lemma specRegsCanCombineAnyMeth:
+    forall o (s1 s2: SubstepRec imp o) d,
       (unitAnnot s1 = Meth d \/ unitAnnot s2 = Meth d) ->
       M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
+  Proof.
+    intros.
+    destruct d.
+    eapply specRegsCanCombine; eauto.
+    destruct s1, s2; simpl in *.
+    destruct (substepMap substep), (substepMap substep0);
+      destruct a, a0; simpl in *.
+    dependent induction substep;
+    dependent induction substep0;
+    try rewrite liftToMap1Empty in *;
+    destruct H; try discriminate;
+    simpl in s, s0;
+    repeat match goal with
+             | H: Substep spec (theta o) ?P (Rle None) (M.empty _) |- _ =>
+               apply emptyRuleNoUpd in H
+             | H: Substep spec (theta o) ?P (Meth None) (M.empty _) |- _ =>
+               apply emptyMethNoUpd in H
+           end; subst; (apply M.Disj_empty_1 || apply M.Disj_empty_2).
+  Qed.
 
   Definition specCanCombine:
     forall o (s1 s2: SubstepRec imp o),
@@ -102,7 +144,7 @@ Section Decomposition.
     intros.
     unfold canCombine in *.
     dest.
-    specialize (specRegsCanCombine _ _ H1).
+    pose proof (specRegsCanCombineAnyMeth _ _ H1) as useful; clear specRegsCanCombine.
     constructor.
     - intuition.
     - constructor.
