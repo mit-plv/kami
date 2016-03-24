@@ -84,9 +84,90 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
+    Lemma pdec_decompose_rule:
+      forall (oImp : RegsT) (uImp : UpdatesT) (rule : string) (csImp : MethsT),
+        Substep (fst (inlineF pdec)) oImp uImp (Rle (Some rule)) csImp ->
+        {uSpec : UpdatesT |
+         Substep pinst (pdec_pinst_regMap oImp) uSpec (Rle (pdec_pinst_ruleMap oImp rule))
+                 (liftToMap1 (@idElementwise _) csImp) /\
+         (forall o : RegsT, M.union uSpec (pdec_pinst_regMap o) =
+                            pdec_pinst_regMap (M.union uImp o))}.
+    Proof.
+      admit.
+    Qed.
+
+    Lemma pdec_decompose_meth:
+      forall (oImp : RegsT) (uImp : UpdatesT) 
+             (meth : Attribute (sigT SignT)) 
+             (csImp : MethsT),
+        Substep (fst (inlineF pdec)) oImp uImp (Meth (Some meth)) csImp ->
+        {uSpec : UpdatesT |
+         Substep pinst (pdec_pinst_regMap oImp) uSpec (Meth (liftP (@idElementwise _) meth))
+                 (liftToMap1 (@idElementwise _) csImp) /\
+         (forall o : RegsT, M.union uSpec (pdec_pinst_regMap o) =
+                            pdec_pinst_regMap (M.union uImp o))}.
+    Proof.
+      admit.
+    Qed.
+
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
-      (* kinline_left. *)
+      kinline_left.
+
+      (* haha this is so tricky :P *)
+      match goal with
+      | [ |- ?lm' <<== ?rm' ] =>
+        (let Hlm := fresh "Hlm" in
+         let lm := fresh "lm" in
+         pose (lm := lm'); assert (Hlm: lm = lm') by reflexivity;
+         rewrite <-Hlm; clear Hlm);
+          (let Hrm := fresh "Hrm" in
+           let rm := fresh "rm" in
+           pose (rm := rm'); assert (Hrm: rm = rm') by reflexivity;
+           rewrite <-Hrm; clear Hrm)
+      end.
+
+      match goal with
+      | [ |- ?lm <<== ?rm ] =>
+        assert (forall (oImp : RegsT) (uImp : UpdatesT) (rule : string) (csImp : MethsT),
+                   Substep lm oImp uImp (Rle (Some rule)) csImp ->
+                   {uSpec : UpdatesT |
+                    Substep rm (pdec_pinst_regMap oImp) uSpec (Rle (pdec_pinst_ruleMap oImp rule))
+                            (liftToMap1 (@idElementwise _) csImp) /\
+                    (forall o : RegsT, M.union uSpec (pdec_pinst_regMap o) =
+                                       pdec_pinst_regMap (M.union uImp o))})
+          as HssRuleMap
+      end.
+      { admit.
+        (* intros; eexists. *)
+        (* inv H. *)
+        (* CommonTactics.dest_in. *)
+        (* { clear lm. inv H. *)
+        (*   invertActionRep. *)
+      }
+
+      match goal with
+      | [ |- ?lm <<== ?rm ] =>
+        assert (forall (oImp : RegsT) (uImp : UpdatesT) 
+                       (meth : Attribute (sigT SignT)) 
+                       (csImp : MethsT),
+                   Substep lm oImp uImp (Meth (Some meth)) csImp ->
+                   {uSpec : UpdatesT |
+                    Substep rm (pdec_pinst_regMap oImp) uSpec (Meth (liftP (@idElementwise _) meth))
+                            (liftToMap1 (@idElementwise _) csImp) /\
+                    (forall o : RegsT, M.union uSpec (pdec_pinst_regMap o) =
+                                       pdec_pinst_regMap (M.union uImp o))})
+          as HssMethMap
+      end.
+      { admit. }
+
+      (* kdecompose pdec_pinst_regMap pdec_pinst_ruleMap HssRuleMap HssMethMap. *)
+      
+      (* - admit. *)
+      (* - admit. *)
+      (* - admit. *)
+      (* - admit. *)
+
       admit.
     Qed.
 
