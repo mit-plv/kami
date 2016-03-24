@@ -650,9 +650,9 @@ Section Decomposition.
   Qed.
 End Decomposition.
 
-
-Ltac decomposeT t r Hrm Hmm :=
+Ltac kdecompose t r Hrm Hmm :=
   eapply decomposition with (theta:= t)
                               (ruleMap:= r)
                               (substepRuleMap:= Hrm)
                               (substepMethMap:= Hmm); auto; intros.
+
