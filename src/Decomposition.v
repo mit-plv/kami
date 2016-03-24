@@ -91,7 +91,8 @@ Section Decomposition.
     end.
 
   Variable specRegsCanCombine:
-    forall o (s1 s2: SubstepRec imp o),
+    forall o (s1 s2: SubstepRec imp o) d,
+      (unitAnnot s1 = Meth d \/ unitAnnot s2 = Meth d) ->
       M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
 
   Definition specCanCombine:
@@ -101,8 +102,9 @@ Section Decomposition.
     intros.
     unfold canCombine in *.
     dest.
+    specialize (specRegsCanCombine _ _ H1).
     constructor.
-    intuition.
+    - intuition.
     - constructor.
       clear - H0; intros.
       unfold xformSubstepRec in *.
