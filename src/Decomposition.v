@@ -650,9 +650,51 @@ Section Decomposition.
   Qed.
 End Decomposition.
 
+Section NoDefs.
+  Variable imp spec: Modules.
+  Variable theta: RegsT -> RegsT.
+  Variable ruleMap: RegsT -> string -> option string.
+  Variable p: string -> (sigT SignT) -> option (sigT SignT).
+  Variable thetaInit: theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
+  Variable defSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
+  Variable callSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
+
+  Variable substepRuleMap:
+    forall oImp uImp rule csImp,
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
+      { uSpec |
+        Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
+        forall o, M.union uSpec (theta o) = theta (M.union uImp o) }.
+
+  Variable impEquiv: ModEquiv type typeUT imp.
+
+  Hypotheses HnoDefsImp: getDefsBodies imp = nil.
+  
+  Corollary decomposition_nodefs:
+    traceRefines (liftToMap1 p) imp spec.
+  Proof.
+    eapply decomposition with (theta:= theta)
+                                (ruleMap:= ruleMap)
+                                (substepRuleMap:= substepRuleMap); eauto.
+    intros; exfalso; destruct H.
+    - destruct s1 as [u ul calls Hss]; simpl in *; subst.
+      inv Hss; rewrite HnoDefsImp in HIn; inv HIn.
+    - destruct s2 as [u ul calls Hss]; simpl in *; subst.
+      inv Hss; rewrite HnoDefsImp in HIn; inv HIn.
+
+      Grab Existential Variables.
+      { intros; exfalso; inv H.
+        rewrite HnoDefsImp in HIn; inv HIn.
+      }
+  Qed.
+
+End NoDefs.
+
 Ltac kdecompose t r Hrm Hmm :=
   eapply decomposition with (theta:= t)
                               (ruleMap:= r)
                               (substepRuleMap:= Hrm)
                               (substepMethMap:= Hmm); auto; intros.
 
+Ltac kdecompose_nodefs t r :=
+  apply decomposition_nodefs with (theta:= t) (ruleMap:= r).
