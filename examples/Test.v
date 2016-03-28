@@ -61,6 +61,7 @@ Section Tests.
 
   Definition HssRuleMap:
     forall o u rule cs,
+      reachable o (fst (inlineF (ConcatMod ma mb))) ->
       Substep (fst (inlineF (ConcatMod ma mb))) o u (Rle (Some rule)) cs ->
       {uSpec : UpdatesT |
        Substep mc (id o) uSpec (Rle (Some rule))
@@ -71,17 +72,18 @@ Section Tests.
     simpl; intros.
     exists u; split; auto.
     rewrite idElementwiseId; unfold id.
-    inv H.
+    inv H0.
     inv HInRules.
     {
-      inv H; invertActionRep.
+      inv H0; invertActionRep.
       repeat (econstructor; eauto).
     }
-    { inv H. }
+    { inv H0. }
   Defined.
 
   Definition HssMethMap:
     forall o u meth cs,
+      reachable o (fst (inlineF (ConcatMod ma mb))) ->
       Substep (fst (inlineF (ConcatMod ma mb))) o u (Meth (Some meth)) cs ->
       {uSpec : UpdatesT |
        Substep mc (id o) uSpec (Meth (liftP (idElementwise (A:=sigT SignT)) meth))
@@ -92,7 +94,7 @@ Section Tests.
     simpl; intros.
     exists u; split; auto.
     rewrite idElementwiseId; unfold id.
-    inv H.
+    inv H0.
     inv HIn.
   Defined.
 
@@ -113,7 +115,7 @@ Section Tests.
   Proof.
     apply traceRefines_inlining_left; auto; [equiv_tac|].
     kinline_compute; split; [|reflexivity].
-    decomposeT (id (A:= RegsT))
+    kdecompose (id (A:= RegsT))
                (fun (r: RegsT) (rl: string) => Some rl)
                HssRuleMap HssMethMap;
       decompositionSimple.
