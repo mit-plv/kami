@@ -13,8 +13,11 @@ Section Decomposition.
   Variable defSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
   Variable callSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
 
+  Definition reachable o m := exists sigma, Behavior m o sigma.
+  
   Variable substepRuleMap:
     forall oImp uImp rule csImp,
+      reachable oImp imp ->
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
       { uSpec |
         Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
@@ -30,6 +33,7 @@ Section Decomposition.
 
   Variable substepMethMap:
     forall oImp uImp meth csImp,
+      reachable oImp imp ->
       Substep imp oImp uImp (Meth (Some meth)) csImp ->
       { uSpec |
         Substep spec (theta oImp) uSpec (Meth (liftP meth)) (liftToMap1 p csImp) /\
@@ -69,21 +73,21 @@ Section Decomposition.
       | Meth None => Meth None
     end.
 
-  Definition substepMap o u rm cs (s: Substep imp o u rm cs) :=
+  Definition substepMap o u rm cs reachO (s: Substep imp o u rm cs) :=
     match rm return Substep imp o u rm cs ->
                     { uSpec |
                       Substep spec (theta o) uSpec (xformUnitAnnot o rm) (liftToMap1 p cs) /\
                       forall o', M.union uSpec (theta o') = theta (M.union u o') } with
-      | Rle (Some rule) => fun s => substepRuleMap s
-      | Meth (Some meth) => fun s => substepMethMap s
+      | Rle (Some rule) => fun s => substepRuleMap reachO s
+      | Meth (Some meth) => fun s => substepMethMap reachO s
       | Rle None => fun s => ruleMapEmpty s
       | Meth None => fun s => methMapEmpty s
     end s.
 
-  Definition xformSubstepRec o (s': SubstepRec imp o) :=
+  Definition xformSubstepRec o reachO (s': SubstepRec imp o) :=
     match s' with
       | {| upd := u; unitAnnot := rm; cms := cs; substep := s |} =>
-        match substepMap s with
+        match substepMap reachO s with
           | exist uSpec (conj sSpec _) =>
             {| upd := uSpec; unitAnnot := xformUnitAnnot o rm;
                cms := liftToMap1 p cs; substep := sSpec |}
@@ -91,9 +95,10 @@ Section Decomposition.
     end.
 
   Variable specRegsCanCombine:
-    forall o (s1 s2: SubstepRec imp o) d,
+    forall o reachO (s1 s2: SubstepRec imp o) d,
       (unitAnnot s1 = Meth (Some d) \/ unitAnnot s2 = Meth (Some d)) ->
-      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
+      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec reachO s1))
+                                         (upd (xformSubstepRec reachO s2)).
 
   Lemma emptyRuleNoUpd m o u:
     Substep m o u (Rle None) (M.empty _) ->
@@ -114,15 +119,16 @@ Section Decomposition.
   Qed.
   
   Lemma specRegsCanCombineAnyMeth:
-    forall o (s1 s2: SubstepRec imp o) d,
+    forall o reachO (s1 s2: SubstepRec imp o) d,
       (unitAnnot s1 = Meth d \/ unitAnnot s2 = Meth d) ->
-      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec s1)) (upd (xformSubstepRec s2)).
+      M.Disj (upd s1) (upd s2) -> M.Disj (upd (xformSubstepRec reachO s1))
+                                         (upd (xformSubstepRec reachO s2)).
   Proof.
     intros.
     destruct d.
     eapply specRegsCanCombine; eauto.
     destruct s1, s2; simpl in *.
-    destruct (substepMap substep), (substepMap substep0);
+    destruct (substepMap reachO substep), (substepMap reachO substep0);
       destruct a, a0; simpl in *.
     dependent induction substep;
     dependent induction substep0;
@@ -138,20 +144,20 @@ Section Decomposition.
   Qed.
 
   Definition specCanCombine:
-    forall o (s1 s2: SubstepRec imp o),
-      canCombine s1 s2 -> canCombine (xformSubstepRec s1) (xformSubstepRec s2).
+    forall o reachO (s1 s2: SubstepRec imp o),
+      canCombine s1 s2 -> canCombine (xformSubstepRec reachO s1) (xformSubstepRec reachO s2).
   Proof.
     intros.
     unfold canCombine in *.
     dest.
-    pose proof (specRegsCanCombineAnyMeth _ _ H1) as useful; clear specRegsCanCombine.
+    pose proof (specRegsCanCombineAnyMeth reachO _ _ H1) as useful; clear specRegsCanCombine.
     constructor.
     - intuition.
     - constructor.
       clear - H0; intros.
       unfold xformSubstepRec in *.
       destruct s1, s2; simpl in *.
-      destruct (substepMap substep), (substepMap substep0); simpl in *.
+      destruct (substepMap reachO substep), (substepMap reachO substep0); simpl in *.
       destruct a, a0; simpl in *.
       unfold xformUnitAnnot in *.
       destruct unitAnnot, unitAnnot0.
@@ -187,7 +193,7 @@ Section Decomposition.
         clear -H1.
         unfold xformSubstepRec.
         destruct s1, s2; simpl in *.
-        destruct (substepMap substep), (substepMap substep0).
+        destruct (substepMap reachO substep), (substepMap reachO substep0).
         destruct a, a0; simpl in *.
         unfold xformUnitAnnot.
         destruct unitAnnot, unitAnnot0; destruct o0, o1; destruct H1; try discriminate;
@@ -196,7 +202,7 @@ Section Decomposition.
         clear -H2.
         unfold xformSubstepRec.
         destruct s1, s2; simpl in *.
-        destruct (substepMap substep), (substepMap substep0).
+        destruct (substepMap reachO substep), (substepMap reachO substep0).
         destruct a, a0; simpl in *.
         { clear - H2.
           unfold M.Disj in *; intros.
@@ -213,14 +219,14 @@ Section Decomposition.
         }
   Qed.
 
-  Theorem substepsSpecComb o:
+  Theorem substepsSpecComb o reachO:
     forall (ss: Substeps imp o), substepsComb ss ->
-                                 substepsComb (map (@xformSubstepRec o) ss).
+                                 substepsComb (map (@xformSubstepRec o reachO) ss).
   Proof.
     induction ss; intros; simpl in *; constructor; intros.
     - dependent destruction H; intuition.
     - dependent destruction H.
-      pose proof (proj1 (in_map_iff (@xformSubstepRec o) ss s') H1) as [sImp [eqS inS]].
+      pose proof (proj1 (in_map_iff (@xformSubstepRec o reachO) ss s') H1) as [sImp [eqS inS]].
       specialize (H0 _ inS); subst.
       apply specCanCombine; intuition.
   Qed.
@@ -381,11 +387,11 @@ Section Decomposition.
               repeat rewrite liftToMap1UnionCommute; intuition).
   Qed.
 
-  Lemma xformLabelGetSLabelCommute o a:
-    xformLabel o (getSLabel (o := o) a) = getSLabel (xformSubstepRec a).
+  Lemma xformLabelGetSLabelCommute o reachO a:
+    xformLabel o (getSLabel (o := o) a) = getSLabel (xformSubstepRec reachO a).
   Proof.
     destruct a; simpl in *.
-    destruct (substepMap substep).
+    destruct (substepMap reachO substep).
     destruct a.
     simpl.
     unfold xformLabel, xformUnitAnnot.
@@ -521,9 +527,9 @@ Section Decomposition.
     eapply callsDisjSs'; eauto.
   Qed.
   
-  Theorem xformLabelFoldCommute o ss:
+  Theorem xformLabelFoldCommute o reachO ss:
     substepsComb ss ->
-    xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _) ss).
+    xformLabel o (foldSSLabel (o := o) ss) = foldSSLabel (map (@xformSubstepRec _ reachO ) ss).
   Proof.
     induction ss; simpl in *; try rewrite liftToMap1Empty; intros.
     - reflexivity.
@@ -540,10 +546,10 @@ Section Decomposition.
 
   Variable impEquiv: ModEquiv type typeUT imp.
 
-  Theorem xformLabelHide o:
+  Theorem xformLabelHide o reachO:
     forall(ss: Substeps imp o) (ssGd: wellHidden imp (hide (foldSSLabel ss))),
       substepsComb ss ->
-      hide (foldSSLabel (map (@xformSubstepRec _) ss)) =
+      hide (foldSSLabel (map (@xformSubstepRec _ reachO) ss)) =
       xformLabel o (hide (foldSSLabel ss)).
   Proof.
     intros.
@@ -556,18 +562,19 @@ Section Decomposition.
     - intuition.
   Qed.
 
-  Lemma unionCommute' o a state:
-    M.union (upd (xformSubstepRec (o := o) a)) (theta state) = theta (M.union (upd a) state).
+  Lemma unionCommute' o reachO a state:
+    M.union (upd (@xformSubstepRec o reachO a)) (theta state) =
+    theta (M.union (upd a) state).
   Proof.
     destruct a; simpl in *.
-    destruct (substepMap substep).
+    destruct (substepMap reachO substep).
     destruct a; simpl in *.
     intuition.
   Qed.
 
-  Lemma unionCommute o ss:
+  Lemma unionCommute o reachO ss:
     forall state,
-      M.union (foldSSUpds (map (xformSubstepRec (o:=o)) ss)) (theta state) =
+      M.union (foldSSUpds (map (@xformSubstepRec o reachO) ss)) (theta state) =
       theta (M.union (foldSSUpds ss) state).
   Proof.
     induction ss; intros; simpl in *.
@@ -578,15 +585,15 @@ Section Decomposition.
       apply (IHss (M.union (upd a) state)).
   Qed.
 
-  Theorem stepMap o u l (s: Step imp o u l):
+  Theorem stepMap o (reachO: reachable o imp) u l (s: Step imp o u l):
     exists uSpec,
       Step spec (theta o) uSpec (xformLabel o l) /\
       M.union uSpec (theta o) = theta (M.union u o).
   Proof.
     destruct s as [ss ssGd].
-    exists (foldSSUpds (map (@xformSubstepRec _) ss)).
+    exists (foldSSUpds (map (@xformSubstepRec _ reachO) ss)).
     pose proof (wellHiddenSpec o HWellHidden) as sth.
-    pose proof (StepIntro (substepsSpecComb ssGd)) as final.
+    pose proof (StepIntro (substepsSpecComb reachO ssGd)) as final.
     rewrite xformLabelHide in *.
     specialize (final sth); clear sth.
     constructor.
@@ -625,7 +632,8 @@ Section Decomposition.
                                   callSubset defSubset thetaInit eq_refl).
       clear defSubset0 callSubset0 thetaInit0
             substepRuleMap0 substepMethMap0 specRegsCanCombine0.
-      pose proof (stepMap HStep) as [uSpec [stepSpec upd]].
+      assert(reachO: reachable n imp) by (eexists; econstructor; eauto).
+      pose proof (stepMap reachO HStep) as [uSpec [stepSpec upd]].
       destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].
       inversion behSpec; subst.
       pose proof (BehaviorIntro (Multi HMultistepBeh0 stepSpec)) as sth.
@@ -661,6 +669,7 @@ Section NoDefs.
 
   Variable substepRuleMap:
     forall oImp uImp rule csImp,
+      reachable oImp imp ->
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
       { uSpec |
         Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
@@ -683,7 +692,7 @@ Section NoDefs.
       inv Hss; rewrite HnoDefsImp in HIn; inv HIn.
 
       Grab Existential Variables.
-      { intros; exfalso; inv H.
+      { intros; exfalso; inv H0.
         rewrite HnoDefsImp in HIn; inv HIn.
       }
   Qed.
