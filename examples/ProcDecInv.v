@@ -79,19 +79,18 @@ Section Invariants.
       Multistep (fst pdecInl) init n ll ->
       procDec_inv_0 n.
   Proof.
-    admit.
-    (* induction 2. *)
+    induction 2.
 
-    (* - repeat subst. *)
-    (*   simpl; unfold procDec_inv_0. *)
+    - repeat subst.
+      simpl; unfold procDec_inv_0.
       
-    (*   repeat ( *)
-    (*       try eexists; *)
-    (*       repeat rewrite M.find_add_2 by discriminate; *)
-    (*       repeat rewrite M.find_add_1 by reflexivity). *)
+      repeat (
+          try eexists;
+          repeat rewrite M.find_add_2 by discriminate;
+          repeat rewrite M.find_add_1 by reflexivity).
 
-    (* - specialize (IHMultistep H); clear -IHMultistep HStep. *)
-    (*   admit. *)
+    - specialize (IHMultistep H); clear -IHMultistep HStep.
+      admit.
   Qed.
 
   Lemma procDec_inv_0_ok:

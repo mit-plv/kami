@@ -5,134 +5,6 @@ Require Import Syntax Wf.
 
 Set Implicit Arguments.
 
-Section PhoasUT.
-  Fixpoint getCallsFrom {retT} (a: ActionT typeUT retT) (cs: list DefMethT)
-  : list DefMethT :=
-    match a with
-      | MCall name _ _ cont =>
-        match getAttribute name cs with
-          | Some dm => dm :: (getCallsFrom (cont tt) cs)
-          | None => getCallsFrom (cont tt) cs
-        end
-      | Let_ _ ar cont => getCallsFrom (cont (getUT _)) cs
-      | ReadReg reg k cont => getCallsFrom (cont (getUT _)) cs
-      | WriteReg reg _ e cont => getCallsFrom cont cs
-      | IfElse ce _ ta fa cont =>
-        (getCallsFrom ta cs) ++ (getCallsFrom fa cs) ++ (getCallsFrom (cont tt) cs)
-      | Assert_ ae cont => getCallsFrom cont cs
-      | Return e => nil
-    end.
-
-  Lemma getCallsFrom_nil: forall {retT} (a: ActionT typeUT retT), getCallsFrom a nil = nil.
-  Proof.
-    induction a; intros; simpl; intuition.
-    rewrite IHa1, IHa2, (H tt); reflexivity.
-  Qed.
-
-  Lemma getCallsFrom_sub: forall {retT} (a: ActionT typeUT retT) cs ccs,
-                        getCallsFrom a cs = ccs -> SubList ccs cs.
-  Proof.
-    induction a; intros; simpl; intuition; try (eapply H; eauto; fail).
-    - simpl in H0.
-      remember (getAttribute meth cs); destruct o.
-      + pose proof (getAttribute_Some_body _ _ Heqo); subst.
-        unfold SubList; intros.
-        inv H0; [assumption|].
-        eapply H; eauto.
-      + eapply H; eauto.
-    - simpl in H0; subst.
-      unfold SubList; intros.
-      apply in_app_or in H0; destruct H0; [|apply in_app_or in H0; destruct H0].
-      + eapply IHa1; eauto.
-      + eapply IHa2; eauto.
-      + eapply H; eauto.
-    - simpl in H; subst.
-      unfold SubList; intros; inv H.
-  Qed.
-
-  Lemma getCallsFrom_sub_name: forall {retT} (a: ActionT typeUT retT) cs ccs,
-                             getCallsFrom a cs = ccs -> SubList (namesOf ccs) (namesOf cs).
-  Proof.
-    induction a; intros; simpl; intuition; try (eapply H; eauto; fail).
-    - simpl in H0.
-      remember (getAttribute meth cs); destruct o.
-      + pose proof (getAttribute_Some_body _ _ Heqo); subst.
-        unfold SubList; intros.
-        inv H0; [apply in_map; auto|].
-        eapply H; eauto.
-      + eapply H; eauto.
-    - simpl in H0; subst.
-      unfold SubList; intros.
-      unfold namesOf in H0; rewrite map_app in H0.
-      apply in_app_or in H0; destruct H0.
-      + eapply IHa1; eauto.
-      + rewrite map_app in H0; apply in_app_or in H0; destruct H0.
-        * eapply IHa2; eauto.
-        * eapply H; eauto.
-    - simpl in H; subst.
-      unfold SubList; intros; inv H.
-  Qed.
-
-  Section Exts.
-    Definition getRuleCalls (r: Attribute (Action Void)) (cs: list DefMethT)
-    : list DefMethT :=
-      getCallsFrom (attrType r typeUT) cs.
-
-    Fixpoint getMethCalls (dms: list DefMethT) (cs: list DefMethT)
-    : list DefMethT :=
-      match dms with
-        | nil => nil
-        | dm :: dms' =>
-          (getCallsFrom (projT2 (attrType dm) typeUT tt) cs)
-            ++ (getMethCalls dms' cs)
-      end.
-  End Exts.
-
-  Section Tree.
-    Fixpoint isLeaf {retT} (a: ActionT typeUT retT) (cs: list string) :=
-      match a with
-      | MCall name _ _ cont => (negb (string_in name cs)) && (isLeaf (cont tt) cs)
-      | Let_ _ ar cont => isLeaf (cont (getUT _)) cs
-      | ReadReg reg k cont => isLeaf (cont (getUT _)) cs
-      | WriteReg reg _ e cont => isLeaf cont cs
-      | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
-      | Assert_ ae cont => isLeaf cont cs
-      | Return e => true
-      end.
-
-    Definition noCallDm (dm: DefMethT) (tgt: DefMethT) :=
-      isLeaf (projT2 (attrType dm) typeUT tt) [attrName tgt].
-
-    Fixpoint noCallsDms (dms: list DefMethT) (calls: list string) :=
-      match dms with
-        | nil => true
-        | dm :: dms' =>
-          if isLeaf (projT2 (attrType dm) typeUT tt) calls
-          then noCallsDms dms' calls
-          else false
-      end.
-
-    Fixpoint noCallsRules (rules: list (Attribute (Action Void)))
-             (calls: list string) :=
-      match rules with
-        | nil => true
-        | r :: rules' =>
-          if isLeaf (attrType r typeUT) calls
-          then noCallsRules rules' calls
-          else false
-      end.
-
-    Definition noCalls' (m: Modules) (calls: list string) :=
-      (noCallsRules (getRules m) calls)
-        && (noCallsDms (getDefsBodies m) calls).
-
-    Definition noCalls (m: Modules) :=
-      noCalls' m (getDefs m).
-
-  End Tree.
-
-End PhoasUT.
-
 Section Base.
   Variable type: Kind -> Type.
 
@@ -236,7 +108,7 @@ Section Exts.
 
   Definition inlineF (m: Modules) :=
     let (im, ib) := inline m in
-    if noCalls im then
+    if noInternalCalls im then
       (Mod (getRegInits im) (getRules im)
            (filterDms (getDefsBodies im) (getCalls m)), ib)
     else

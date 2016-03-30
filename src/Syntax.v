@@ -422,6 +422,49 @@ Section GetCalls.
     
 End GetCalls.
 
+Section NoInternalCalls.
+  Fixpoint isLeaf {retT} (a: ActionT typeUT retT) (cs: list string) :=
+    match a with
+    | MCall name _ _ cont => (negb (string_in name cs)) && (isLeaf (cont tt) cs)
+    | Let_ _ ar cont => isLeaf (cont (getUT _)) cs
+    | ReadReg reg k cont => isLeaf (cont (getUT _)) cs
+    | WriteReg reg _ e cont => isLeaf cont cs
+    | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
+    | Assert_ ae cont => isLeaf cont cs
+    | Return e => true
+    end.
+
+  Definition noCallDm (dm: DefMethT) (tgt: DefMethT) :=
+    isLeaf (projT2 (attrType dm) typeUT tt) (attrName tgt :: nil).
+
+  Fixpoint noCallsDms (dms: list DefMethT) (calls: list string) :=
+    match dms with
+    | nil => true
+    | dm :: dms' =>
+      if isLeaf (projT2 (attrType dm) typeUT tt) calls
+      then noCallsDms dms' calls
+      else false
+    end.
+
+  Fixpoint noCallsRules (rules: list (Attribute (Action Void)))
+           (calls: list string) :=
+    match rules with
+    | nil => true
+    | r :: rules' =>
+      if isLeaf (attrType r typeUT) calls
+      then noCallsRules rules' calls
+      else false
+    end.
+
+  Definition noCalls (m: Modules) (calls: list string) :=
+    (noCallsRules (getRules m) calls)
+      && (noCallsDms (getDefsBodies m) calls).
+
+  Definition noInternalCalls (m: Modules) :=
+    noCalls m (getDefs m).
+
+End NoInternalCalls.
+
 Definition getExtDefsBodies (m: Modules) :=
   filter (fun dm => negb (string_in (attrName dm) (getCalls m))) (getDefsBodies m).
 

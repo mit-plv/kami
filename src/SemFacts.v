@@ -210,6 +210,79 @@ Proof.
   eapply step_hide; eauto.
 Qed.
 
+Lemma DisjList_string_cons:
+  forall l1 l2 (e: string),
+    ~ In e l2 -> DisjList l1 l2 -> DisjList (e :: l1) l2.
+Proof.
+  unfold DisjList; intros.
+  destruct (string_dec e e0); subst; auto.
+  pose proof (H0 e0); clear H0.
+  inv H1; auto.
+  left; intro Hx; inv Hx; auto.
+Qed.
+
+Lemma isLeaf_implies_disj:
+  forall {retK} (a: ActionT typeUT retK) calls,
+    true = isLeaf a calls -> DisjList (getCallsA a) calls.
+Proof.
+  induction a; simpl; intros; auto.
+  - apply eq_sym, andb_true_iff in H0; dest.
+    remember (string_in _ _) as sin; destruct sin; [inv H0|].
+    apply string_in_dec_not_in in Heqsin.
+    apply DisjList_string_cons; auto.
+  - apply eq_sym, andb_true_iff in H0; dest.
+    apply andb_true_iff in H0; dest.
+    apply DisjList_app_4; auto.
+    apply DisjList_app_4; auto.
+  - apply DisjList_nil_1.
+Qed.
+
+Lemma noCallsRules_implies_disj:
+  forall calls rules,
+    noCallsRules rules calls = true ->
+    DisjList (getCallsR rules) calls.
+Proof.
+  induction rules; simpl; intros; [apply DisjList_nil_1|].
+  remember (isLeaf (attrType a typeUT) calls) as blf; destruct blf; [|discriminate].
+  apply DisjList_app_4.
+  - apply isLeaf_implies_disj; auto.
+  - apply IHrules; auto.
+Qed.
+
+Lemma noCallsDms_implies_disj:
+  forall calls dms,
+    noCallsDms dms calls = true ->
+    DisjList (getCallsM dms) calls.
+Proof.
+  induction dms; simpl; intros; [apply DisjList_nil_1|].
+  remember (isLeaf (projT2 (attrType a) typeUT tt) calls) as blf; destruct blf; [|discriminate].
+  apply DisjList_app_4.
+  - apply isLeaf_implies_disj; auto.
+  - apply IHdms; auto.
+Qed.
+
+Lemma noInternalCalls_implies_disj:
+  forall m,
+    noInternalCalls m = true ->
+    DisjList (getCalls m) (getDefs m).
+Proof.
+  unfold noInternalCalls, noCalls, getCalls, getDefs; simpl; intros.
+  apply andb_true_iff in H; dest.
+  apply DisjList_app_4.
+  - apply noCallsRules_implies_disj; auto.
+  - apply noCallsDms_implies_disj; auto.
+Qed.
+
+Lemma step_substep:
+  forall m (Hnoint: DisjList (getCalls m) (getDefs m))
+         o u l,
+    Step m o u l ->
+    exists ul calls,
+      l = getLabel ul calls /\ Substep m o u ul calls.
+Proof.
+  admit.
+Qed.
+
 Section ModEquiv.
   Variable m: Modules.
   Variable mEquiv: ModEquiv type typeUT m.

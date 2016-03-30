@@ -847,72 +847,6 @@ Proof.
   apply inlineDms_correct; auto.
 Qed.
 
-Lemma DisjList_string_cons:
-  forall l1 l2 (e: string),
-    ~ In e l2 -> DisjList l1 l2 -> DisjList (e :: l1) l2.
-Proof.
-  unfold DisjList; intros.
-  destruct (string_dec e e0); subst; auto.
-  pose proof (H0 e0); clear H0.
-  inv H1; auto.
-  left; intro Hx; inv Hx; auto.
-Qed.
-
-Lemma isLeaf_implies_disj:
-  forall {retK} (a: ActionT typeUT retK) calls,
-    true = isLeaf a calls -> DisjList (getCallsA a) calls.
-Proof.
-  induction a; simpl; intros; auto.
-  - apply eq_sym, andb_true_iff in H0; dest.
-    remember (string_in _ _) as sin; destruct sin; [inv H0|].
-    apply string_in_dec_not_in in Heqsin.
-    apply DisjList_string_cons; auto.
-  - apply eq_sym, andb_true_iff in H0; dest.
-    apply andb_true_iff in H0; dest.
-    apply DisjList_app_4; auto.
-    apply DisjList_app_4; auto.
-  - apply DisjList_nil_1.
-Qed.
-
-Lemma noCallsRules_implies_disj:
-  forall calls rules,
-    noCallsRules rules calls = true ->
-    DisjList (getCallsR rules) calls.
-Proof.
-  induction rules; simpl; intros; [apply DisjList_nil_1|].
-  remember (isLeaf (attrType a typeUT) calls) as blf; destruct blf; [|discriminate].
-  apply DisjList_app_4.
-  - apply isLeaf_implies_disj; auto.
-  - apply IHrules; auto.
-Qed.
-
-Lemma noCallsDms_implies_disj:
-  forall calls dms,
-    noCallsDms dms calls = true ->
-    DisjList (getCallsM dms) calls.
-Proof.
-  induction dms; simpl; intros; [apply DisjList_nil_1|].
-  remember (isLeaf (projT2 (attrType a) typeUT tt) calls) as blf; destruct blf; [|discriminate].
-  apply DisjList_app_4.
-  - apply isLeaf_implies_disj; auto.
-  - apply IHdms; auto.
-Qed.
-
-Lemma noCalls_implies_disj:
-  forall m,
-    noCalls m = true ->
-    DisjList
-      (getCalls (Mod (getRegInits m) (getRules m)
-                            (getDefsBodies m)))
-      (getDefs (Mod (getRegInits m) (getRules m) (getDefsBodies m))).
-Proof.
-  unfold noCalls, noCalls', getCalls, getDefs; simpl; intros.
-  apply andb_true_iff in H; dest.
-  apply DisjList_app_4.
-  - apply noCallsRules_implies_disj; auto.
-  - apply noCallsDms_implies_disj; auto.
-Qed.
-
 Lemma inlineF_correct_Step:
   forall m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
@@ -923,7 +857,7 @@ Lemma inlineF_correct_Step:
 Proof.
   unfold inlineF; intros.
   remember (inline m) as imb; destruct imb as [im ib]; subst.
-  simpl; remember (noCalls im) as imc.
+  simpl; remember (noInternalCalls im) as imc.
   destruct imc; [|inv Hin].
   assert (Hit: snd (inline m) = true)
     by (rewrite <-Heqimb; inv Hin; auto).
@@ -933,7 +867,7 @@ Proof.
   apply step_dms_weakening; auto.
   - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
     apply inline_ModEquiv; auto.
-  - apply noCalls_implies_disj; auto.
+  - apply noInternalCalls_implies_disj; auto.
   - apply merge_preserves_step; auto.
 Qed.
   
@@ -966,7 +900,7 @@ Lemma inlineF_preserves_regInits:
 Proof.
   intros; unfold inlineF.
   remember (inline m) as imb; destruct imb as [im ib]; simpl.
-  destruct (noCalls im).
+  destruct (noInternalCalls im).
   - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
     apply inlineDms'_preserves_regInits.
   - simpl; replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
@@ -1025,7 +959,7 @@ Ltac kinline_compute :=
                inlineDmToMod inlineDmToRules inlineDmToRule
                inlineDmToDms inlineDmToDm inlineDm
                filterDms filter
-               noCalls noCalls'
+               noInternalCalls noCalls
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
@@ -1051,7 +985,7 @@ Ltac kinline_compute_in H :=
                inlineDmToMod inlineDmToRules inlineDmToRule
                inlineDmToDms inlineDmToDm inlineDm
                filterDms filter
-               noCalls noCalls'
+               noInternalCalls noCalls
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
