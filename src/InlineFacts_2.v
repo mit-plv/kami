@@ -1044,6 +1044,32 @@ Ltac kinline_compute :=
       rewrite (signature_eq s); unfold eq_rect
     end.
 
+Ltac kinline_compute_in H :=
+  repeat autounfold with ModuleDefs in H;
+  repeat autounfold with MethDefs in H;
+  cbv [inlineF inline inlineDms inlineDms'
+               inlineDmToMod inlineDmToRules inlineDmToRule
+               inlineDmToDms inlineDmToDm inlineDm
+               filterDms filter
+               noCalls noCalls'
+               noCallsRules noCallsDms noCallDm isLeaf
+               getBody inlineArg
+               appendAction getAttribute
+               makeModule makeModule'
+               wfModules wfRules wfDms wfAction wfActionC maxPathLength
+               getRegInits getDefs getDefsBodies getRules namesOf
+               map app attrName attrType
+               getCalls getCallsR getCallsM getCallsA
+               appendName append
+               ret arg fst snd projT1 projT2
+               string_in string_eq ascii_eq
+               eqb existsb andb orb negb] in H;
+  repeat
+    match type of H with
+    | context[SignatureT_dec ?s ?s] =>
+      rewrite (signature_eq s) in H; unfold eq_rect in H
+    end.
+
 Ltac kinline_left :=
   apply traceRefines_inlining_left; auto; kinline_compute;
   split; [|reflexivity].

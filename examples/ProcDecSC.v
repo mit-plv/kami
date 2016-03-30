@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2 Lts.Decomposition.
-Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec.
+Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
@@ -23,9 +23,9 @@ Section ProcDecSC.
   Definition scN := sc dec exec opLd opSt opHt n.
 
   Section SingleCore.
-    Definition pdec := pdecf fifoSize dec exec.
+    Definition pdec := ProcDecInv.pdec fifoSize dec exec.
     Definition pinst := pinst dec exec opLd opSt opHt.
-    Hint Unfold pdec pinst: ModuleDefs. (* for kinline_compute *)
+    Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
     Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for equiv_tac *)
     Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for equiv_tac *)
 
@@ -42,27 +42,12 @@ Section ProcDecSC.
     
     Definition pdec_pinst_regMap (r: RegsT): RegsT.
     Proof.
-      destruct (M.find "pc"%string r) as [[pck pcv]|]; [|exact (M.empty _)].
-      destruct pck as [pck|]; [|exact (M.empty _)].
-      destruct (decKind pck (Bit addrSize)); [subst|exact (M.empty _)].
-      
-      destruct (M.find "rf"%string r) as [[rfk rfv]|]; [|exact (M.empty _)].
-      destruct rfk as [rfk|]; [|exact (M.empty _)].
-      destruct (decKind rfk (Vector (Bit valSize) rfIdx)); [subst|exact (M.empty _)].
-      
-      destruct (M.find "Outs.empty"%string r) as [[oek oev]|]; [|exact (M.empty _)].
-      destruct oek as [oek|]; [|exact (M.empty _)].
-      destruct (decKind oek Bool); [subst|exact (M.empty _)].
-
-      destruct (M.find "Outs.elt"%string r) as [[oelk oelv]|]; [|exact (M.empty _)].
-      destruct oelk as [oelk|]; [|exact (M.empty _)].
-      destruct (decKind oelk (Vector (memAtomK addrSize valSize) fifoSize));
-        [subst|exact (M.empty _)].
-
-      destruct (M.find "Outs.deqP"%string r) as [[odk odv]|]; [|exact (M.empty _)].
-      destruct odk as [odk|]; [|exact (M.empty _)].
-      destruct (decKind odk (Bit fifoSize)); [subst|exact (M.empty _)].
-      
+      kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
+      kgetv "rf"%string rfv r (Vector (Bit valSize) rfIdx) (M.empty (sigT (fullType type))).
+      kgetv "Outs.empty"%string oev r Bool (M.empty (sigT (fullType type))).
+      kgetv "Outs.elt"%string oelv r (Vector (memAtomK addrSize valSize) fifoSize)
+            (M.empty (sigT (fullType type))).
+      kgetv "Outs.deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
       refine (if oev then _ else _).
 
       - refine (M.add "pc"%string _
@@ -86,30 +71,74 @@ Section ProcDecSC.
 
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
-      kinline_left.
-
-      (* haha this is so tricky :P *)
-      match goal with
-      | [ |- ?lm' <<== ?rm' ] =>
-        (let Hlm := fresh "Hlm" in
-         let lm := fresh "lm" in
-         pose (lm := lm'); assert (Hlm: lm = lm') by reflexivity;
-         rewrite <-Hlm; clear Hlm);
-          (let Hrm := fresh "Hrm" in
-           let rm := fresh "rm" in
-           pose (rm := rm'); assert (Hrm: rm = rm') by reflexivity;
-           rewrite <-Hrm; clear Hrm)
-      end.
-
+      apply traceRefines_inlining_left; auto.
+      unfold pdec; rewrite <-pdecInl_equal.
+      split; [|reflexivity].
       kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
 
-      - admit. (* initial registers *)
+      - unfold initRegs, getRegInits; simpl; clear.
+        unfold pdec_pinst_regMap.
+        repeat (
+            repeat rewrite M.find_add_2 by discriminate;
+            repeat rewrite M.find_add_1 by reflexivity;
+            try (rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym)).
+        reflexivity.
       - auto.
       - simpl; intros; clear -H; intuition.
-      - admit. (* rulemap *)
-      - admit. (* modequiv *)
+      - intros; eexists.
+
+        pose proof (procDec_inv_0_ok H).
+        pose proof (procDec_inv_1_ok H).
+        clear H.
+        
+        inv H0; CommonTactics.dest_in.
+
+        + inv H.
+          invertActionRep.
+          split.
+          * econstructor.
+          * intros.
+
+            unfold procDec_inv_0 in H1.
+            unfold procDec_inv_1 in H2.
+            dest.
+            
+            repeat
+              match goal with
+              | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] =>
+                rewrite H1 in H2
+              | [H: context[decKind ?k ?k] |- _] =>
+                rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
+              end.
+
+            repeat
+              match goal with
+              | [H: Some _ = Some _ |- _] => inv H
+              end.
+            destruct_existT.
+
+            unfold pdec_pinst_regMap.
+            repeat rewrite M.find_union.
+            repeat (
+                repeat rewrite M.find_add_2 by discriminate;
+                repeat rewrite M.find_add_1 by reflexivity;
+                try (rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym)).
+            repeat
+              match goal with
+              | [H: M.find ?k ?m = Some _ |- _] => rewrite H
+              end.
+            
+            
+            
+            
+        
+        
+
+
+        admit. (* rule map *)
+      - admit. (* modequiv: TODO2: try fixpoint def of equivalence *)
       - reflexivity.
-    Qed.
+    Abort.
 
   End SingleCore.
 
@@ -118,7 +147,7 @@ Section ProcDecSC.
     apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
     - admit.
     - admit.
-    - admit.
+    - admit. 
     - admit.
     - admit.
     - admit.

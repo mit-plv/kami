@@ -79,6 +79,13 @@ Proof.
   apply (string_dec).
 Defined.
 
+Lemma kind_eq: forall k, decKind k k = left eq_refl.
+Proof.
+  intros; destruct (decKind k k).
+  - rewrite UIP_refl with (p:= e); auto.
+  - elim n; auto.
+Qed.
+
 Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
 | ConstBit n: word n -> ConstT (Bit n)
