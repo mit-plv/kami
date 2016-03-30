@@ -273,16 +273,6 @@ Proof.
   - apply noCallsDms_implies_disj; auto.
 Qed.
 
-Lemma step_substep:
-  forall m (Hnoint: DisjList (getCalls m) (getDefs m))
-         o u l,
-    Step m o u l ->
-    exists ul calls,
-      l = getLabel ul calls /\ Substep m o u ul calls.
-Proof.
-  admit.
-Qed.
-
 Section ModEquiv.
   Variable m: Modules.
   Variable mEquiv: ModEquiv type typeUT m.
