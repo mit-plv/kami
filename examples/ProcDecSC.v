@@ -76,16 +76,11 @@ Section ProcDecSC.
       unfold pdec; rewrite <-pdecInl_equal.
       split; [|reflexivity].
 
-      apply decomposition with (theta:= pdec_pinst_regMap)
-                                 (ruleMap:= pdec_pinst_ruleMap).
-      (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
+      kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
 
       - unfold initRegs, getRegInits; simpl; clear.
         unfold pdec_pinst_regMap.
-        repeat (
-            repeat rewrite M.find_add_2 by discriminate;
-            repeat rewrite M.find_add_1 by reflexivity;
-            try (rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym)).
+        repeat (findReify; rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym).
         reflexivity.
       - auto.
       - auto.
@@ -94,14 +89,13 @@ Section ProcDecSC.
         pose proof (procDec_inv_0_ok H).
         pose proof (procDec_inv_1_ok H).
         clear H.
-        
         inv H0; CommonTactics.dest_in.
 
-        + inv H.
-          invertActionRep.
+        + inv H; invertActionRep.
           split.
           * econstructor.
-          * admit.
+          * unfold pdec_pinst_regMap.
+            admit.
 
         + admit.
         + admit.
