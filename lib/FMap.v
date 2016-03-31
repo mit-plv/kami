@@ -1359,6 +1359,14 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; auto; intro.
     eapply P.F.empty_in_iff; eauto.
   Qed.
+  
+  Lemma KeysDisj_nil A (x: t A):
+    KeysDisj x nil.
+  Proof.
+    unfold KeysDisj.
+    unfold not; intros.
+    intuition.
+  Qed.
 
   Lemma KeysDisj_add:
     forall {A} k v (m: t A) d,

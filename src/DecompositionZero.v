@@ -65,16 +65,6 @@ Section EmptyDefs.
     rewrite substepsIndZeroHide with (u := u); auto.
   Qed.
 
-  Lemma KeysDisj_nil A (x: M.t A):
-    M.KeysDisj x nil.
-  Proof.
-    M.mind x.
-    - apply M.KeysDisj_empty.
-    - unfold M.KeysDisj.
-      unfold not; intros.
-      intuition.
-  Qed.
-  
   Theorem substepZero_imp_step u a cs:
     Substep m o u a cs ->
     Step m o u (getLabel a cs).
