@@ -4,6 +4,68 @@ Require Import Syntax Semantics SemFacts Equiv.
 
 Set Implicit Arguments.
 
+Section EmptyDefs.
+  Variable m: Modules.
+  Variable o: RegsT.
+  Variable defsZero: getDefsBodies m = nil.
+  
+  Theorem substepsIndZero u l:
+    SubstepsInd m o u l ->
+    defs l = M.empty _ /\
+    Substep m o u match annot l with
+                    | None => Meth None
+                    | Some r => Rle r
+                  end (calls l).
+  Proof.
+    intros si.
+    dependent induction si.
+    - constructor; econstructor; eauto.
+    - dest; destruct l; subst.
+      inv H; simpl in *; repeat rewrite M.union_empty_L; constructor; auto;
+      repeat rewrite M.union_empty_R; unfold CanCombineUUL in *; simpl in *; dest.
+      + destruct annot; intuition.
+        inversion H4.
+        econstructor; eauto.
+      + destruct annot; auto.
+      + destruct annot.
+        * intuition.
+        * inversion H4.
+          rewrite M.union_empty_L, M.union_empty_R.
+          econstructor; eauto.
+      + rewrite defsZero in *.
+        intuition.
+      + rewrite defsZero in *.
+        intuition.
+  Qed.
+
+  Theorem substepsIndZeroHide u l:
+    SubstepsInd m o u l ->
+    hide l = l.
+  Proof.
+    intros si.
+    apply substepsIndZero in si; dest.
+    unfold hide; destruct l; simpl in *; subst.
+    rewrite M.subtractKV_empty_1.
+    rewrite M.subtractKV_empty_2.
+    reflexivity.
+  Qed.
+
+  Theorem stepIndZero u l:
+    Step m o u l ->
+    defs l = M.empty _ /\
+    Substep m o u match annot l with
+                    | None => Meth None
+                    | Some r => Rle r
+                  end (calls l).
+  Proof.
+    intros si.
+    apply step_consistent in si.
+    inv si.
+    apply substepsIndZero.
+    rewrite substepsIndZeroHide with (u := u); auto.
+  Qed.
+End EmptyDefs.
+
 Section Decomposition.
   Variable imp spec: Modules.
   Variable theta: RegsT -> RegsT.
