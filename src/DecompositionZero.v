@@ -119,7 +119,7 @@ Section EmptyDefs.
       destruct a;
       constructor;
       destruct o0; try destruct a;
-      try apply M.KeysDisj_empty; try apply KeysDisj_nil.
+      try apply M.KeysDisj_empty; try apply M.KeysDisj_nil.
       inversion si.
       rewrite defsZero in HIn.
       intuition.
