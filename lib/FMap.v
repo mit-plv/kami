@@ -1967,3 +1967,66 @@ Section MakeMap.
   Qed.
 End MakeMap.
 
+Require Import Lib.StringEq.
+
+Inductive MapR {A} : M.t A -> Type :=
+| MRUnknown: forall (m: M.t A), MapR m
+| MREmpty: MapR (M.empty _)
+| MRAdd:
+    forall k v {m},
+      MapR m -> MapR (M.add k v m)
+| MRUnion:
+    forall {m1 m2},
+      MapR m1 -> MapR m2 ->
+      MapR (M.union m1 m2).
+
+Fixpoint findMR {A} (k : string) {m} (mr : MapR (A:= A) m): option A :=
+  match mr with
+  | MRUnknown m' => M.find k m'
+  | MREmpty => None
+  | MRAdd k' v _ mr' => if string_eq k k' then Some v else findMR k mr'
+  | MRUnion _ _ mr1 mr2 =>
+    match findMR k mr1 with
+    | Some v => Some v
+    | _ => findMR k mr2
+    end
+  end.
+
+Lemma findMR_find:
+  forall {A} k (m: M.t A) (mr: MapR m),
+    findMR k mr = M.find k m.
+Proof.
+  induction mr; simpl; intros.
+  - reflexivity.
+  - rewrite M.find_empty; reflexivity.
+  - remember (string_eq k k0) as kb; destruct kb.
+    + apply string_eq_dec_eq in Heqkb; subst.
+      rewrite M.find_add_1; auto.
+    + apply string_eq_dec_neq in Heqkb.
+      rewrite M.find_add_2 by assumption; auto.
+  - rewrite M.find_union.
+    destruct (findMR k mr1).
+    + rewrite <-IHmr1; reflexivity.
+    + rewrite <-IHmr1; auto.
+Qed.
+
+Ltac mapReify m :=
+  match m with
+  | M.empty ?A => constr:(@MREmpty A)
+  | M.add ?k ?v ?m' =>
+    let mr' := mapReify m' in
+    constr:(MRAdd k v mr')
+  | M.union ?m1 ?m2 =>
+    let mr1 := mapReify m1 in
+    let mr2 := mapReify m2 in
+    constr:(MRUnion mr1 mr2)
+  | _ => constr:(MRUnknown m)
+  end.
+
+Ltac findReify :=
+  match goal with
+  | [ |- M.find ?k ?m = _ ] =>
+    let rfd := mapReify m in
+    rewrite <-findMR_find with (mr:= rfd)
+  end.
+

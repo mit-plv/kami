@@ -8,6 +8,17 @@ Require Import Eqdep.
 
 Set Implicit Arguments.
 
+Lemma step_no_defs_substep:
+  forall m (HnoDefs: getDefs m = nil)
+         o u l,
+    Step m o u l ->
+    exists ul calls,
+      l = getLabel ul calls /\
+      Substep m o u ul calls.
+Proof.
+  admit.
+Qed.
+
 Ltac kgetv k v m t f :=
   destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];
   destruct (decKind kind t); [subst|exact f].
@@ -81,16 +92,37 @@ Section Invariants.
   Proof.
     induction 2.
 
-    - repeat subst.
-      simpl; unfold procDec_inv_0.
-      
-      repeat (
-          try eexists;
-          repeat rewrite M.find_add_2 by discriminate;
-          repeat rewrite M.find_add_1 by reflexivity).
+    - admit.
+      (* repeat subst. *)
+      (* simpl; unfold procDec_inv_0. *)
+      (* repeat (eexists; split; [findReify; simpl; auto|]). *)
+      (* auto. *)
 
     - specialize (IHMultistep H); clear -IHMultistep HStep.
-      admit.
+      apply step_no_defs_substep in HStep; [|reflexivity].
+      destruct HStep as [ul [calls ?]]; dest; subst.
+
+      inv H0; try (mred; fail); [|inv HIn].
+      CommonTactics.dest_in.
+
+      + admit.
+        (* inv H. invertActionRep. *)
+        (* unfold procDec_inv_0 in *; dest. *)
+        (* repeat (eexists; split; [findReify; simpl; eauto|]). *)
+        (* auto. *)
+
+      + admit.
+        (* inv H0. invertActionRep. *)
+        (* unfold procDec_inv_0 in *; dest. *)
+        (* repeat (eexists; split; [findReify; simpl; eauto|]). *)
+        (* auto. *)
+
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
+      + admit.
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -102,12 +134,23 @@ Section Invariants.
     eapply procDec_inv_0_ok'; eauto.
   Qed.
 
+  Lemma procDec_inv_1_ok':
+    forall init n ll,
+      init = initRegs (getRegInits (fst pdecInl)) ->
+      Multistep (fst pdecInl) init n ll ->
+      procDec_inv_1 n.
+  Proof.
+    (* induction 2. *)
+    admit.
+  Qed.
+
   Lemma procDec_inv_1_ok:
     forall o,
       reachable o (fst pdecInl) ->
       procDec_inv_1 o.
   Proof.
-    admit.
+    intros; inv H; inv H0.
+    eapply procDec_inv_1_ok'; eauto.
   Qed.
 
 End Invariants.
