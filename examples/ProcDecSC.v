@@ -2,7 +2,8 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2 Lts.Decomposition.
+Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2.
+Require Import Lts.DecompositionZero.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInv.
 Require Import Eqdep.
 
@@ -74,7 +75,10 @@ Section ProcDecSC.
       apply traceRefines_inlining_left; auto.
       unfold pdec; rewrite <-pdecInl_equal.
       split; [|reflexivity].
-      kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
+
+      apply decomposition with (theta:= pdec_pinst_regMap)
+                                 (ruleMap:= pdec_pinst_ruleMap).
+      (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
 
       - unfold initRegs, getRegInits; simpl; clear.
         unfold pdec_pinst_regMap.
@@ -84,7 +88,7 @@ Section ProcDecSC.
             try (rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym)).
         reflexivity.
       - auto.
-      - simpl; intros; clear -H; intuition.
+      - auto.
       - intros; eexists.
 
         pose proof (procDec_inv_0_ok H).
@@ -97,47 +101,16 @@ Section ProcDecSC.
           invertActionRep.
           split.
           * econstructor.
-          * intros.
+          * admit.
 
-            unfold procDec_inv_0 in H1.
-            unfold procDec_inv_1 in H2.
-            dest.
-            
-            repeat
-              match goal with
-              | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] =>
-                rewrite H1 in H2
-              | [H: context[decKind ?k ?k] |- _] =>
-                rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
-              end.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
 
-            repeat
-              match goal with
-              | [H: Some _ = Some _ |- _] => inv H
-              end.
-            destruct_existT.
-
-            unfold pdec_pinst_regMap.
-            repeat rewrite M.find_union.
-            repeat (
-                repeat rewrite M.find_add_2 by discriminate;
-                repeat rewrite M.find_add_1 by reflexivity;
-                try (rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym)).
-            repeat
-              match goal with
-              | [H: M.find ?k ?m = Some _ |- _] => rewrite H
-              end.
-            
-            
-            
-            
-        
-        
-
-
-        admit. (* rule map *)
-      - admit. (* modequiv: TODO2: try fixpoint def of equivalence *)
-      - reflexivity.
     Abort.
 
   End SingleCore.
@@ -171,7 +144,7 @@ Section ProcDecSC.
         * intros; vm_compute; admit.
         * apply traceRefines_label_map with (p:= liftToMap1 (@idElementwise _)); auto.
           { admit. }
-          { apply pdec_refines_pinst. }
+          { admit. (* apply pdec_refines_pinst. *) }
       + admit. (* apply traceRefines_modular_noninteracting. *)
     - rewrite idElementwiseId; apply traceRefines_refl.
 
