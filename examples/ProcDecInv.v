@@ -13,15 +13,10 @@ Lemma substepsInd_no_defs_substep:
   forall m (HnoDefs: getDefs m = nil)
          o u l,
     SubstepsInd m o u l ->
-    wellHidden m (hide l) ->
     exists ul calls,
       hide l = getLabel ul calls /\ Substep m o u ul calls.
 Proof.
-  induction 2; simpl; intros.
-  - exists (Meth None), (M.empty _).
-    split; auto.
-    constructor.
-  - admit.
+  admit.
 Qed.
 
 Lemma step_no_defs_substep:
@@ -42,6 +37,7 @@ Ltac kgetv k v m t f :=
   destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];
   destruct (decKind kind t); [subst|exact f].
 
+(* TODO: "v" is not working *)
 Ltac kexistv k v m t :=
   refine (exists v: fullType type (SyntaxKind t),
              M.find k m = Some (existT _ _ v) /\ _).
@@ -70,17 +66,34 @@ Section Invariants.
     exact True.
   Defined.
 
-  Definition xor3 (b1 b2 b3: bool) :=
-    (b1 && (negb b2) && (negb b3))
-    || ((negb b1) && b2 && (negb b3))
-    || ((negb b1) && (negb b2) && b3).
+  Definition xor3 (b1 b2 b3: Prop) :=
+    (b1 /\ (~ b2) /\ (~ b3)) \/
+    ((~ b1) /\ b2 /\ (~ b3)) \/
+    ((~ b1) /\ (~ b2) /\ b3).
+
+  Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
+    fifoEmpty = true /\ fifoEnqP = fifoDeqP.
   
+  Definition fifo_not_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
+    fifoEmpty = false /\
+    ((fifoDeqP <> ^~ $1 /\ fifoEnqP = fifoDeqP ^+ $1) \/
+     (fifoDeqP = ^~ $1 /\ fifoEnqP = $0)).
+
+  Hint Unfold xor3 fifo_empty_inv fifo_not_empty_inv: InvDefs.
+
   Definition procDec_inv_1 (o: RegsT): Prop.
   Proof.
     kexistv "stall"%string stallv o Bool.
     kexistv "Ins.empty"%string iev o Bool.
+    kexistv "Ins.enqP"%string ienqP o (Bit fifoSize).
+    kexistv "Ins.deqP"%string ideqP o (Bit fifoSize).
     kexistv "Outs.empty"%string oev o Bool.
-    exact (xor3 (negb v) (negb v0) (negb v1) = true).
+    kexistv "Outs.enqP"%string oenqP o (Bit fifoSize).
+    kexistv "Outs.deqP"%string odeqP o (Bit fifoSize).
+    refine (xor3 _ _ _).
+    - exact (v = false /\ fifo_empty_inv v0 v1 v2 /\ fifo_empty_inv v3 v4 v5).
+    - exact (v = true /\ fifo_not_empty_inv v0 v1 v2 /\ fifo_empty_inv v3 v4 v5).
+    - exact (v = true /\ fifo_empty_inv v0 v1 v2 /\ fifo_not_empty_inv v3 v4 v5).
   Defined.
 
   Definition pdec := pdecf fifoSize dec exec.
@@ -114,6 +127,27 @@ Section Invariants.
   Ltac invReify :=
     repeat (eexists; split; [findReify; simpl; eauto|]).
 
+  Ltac inv_solve :=
+    abstract (
+        repeat autounfold with InvDefs in *;
+        repeat
+          (match goal with
+           (* Logic *)
+           | [ |- ~ _ ] => intro
+           | [H: _ \/ _ |- _] => destruct H
+           | [ |- _ /\ _ ] => split
+           | [H: ?t = ?t |- _] => clear H
+           (* Reducing boolean conditions *)
+           | [H: false = true |- _] => inversion H
+           | [H: true = false |- _] => inversion H
+           | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
+           | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
+           (* Destruction *)
+           | [H: context [weq ?w1 ?w2] |- _] => destruct (weq w1 w2)
+           | [ |- context [weq ?w1 ?w2] ] => destruct (weq w1 w2)
+           end; dest; try subst; intuition idtac)
+      ).
+
   Lemma procDec_inv_1_ok':
     forall init n ll,
       init = initRegs (getRegInits (fst pdecInl)) ->
@@ -125,7 +159,8 @@ Section Invariants.
 
     (* - repeat subst. *)
     (*   simpl; unfold procDec_inv_1. *)
-    (*   invReify; auto. *)
+    (*   invReify. *)
+    (*   left; inv_solve. *)
 
     (* - specialize (IHMultistep H); clear -IHMultistep HStep. *)
     (*   apply step_no_defs_substep in HStep; [|reflexivity]. *)
@@ -135,56 +170,34 @@ Section Invariants.
 
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify. *)
-    (*     simpl_find. *)
-    (*     rewrite H1 in H13; clear -H13. *)
-    (*     destruct x7, x8; auto. *)
-
+    (*     invReify; simpl_find. *)
+    (*     right; left; repeat split; inv_solve. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify. *)
-    (*     simpl_find. *)
-    (*     rewrite H1 in H13; clear -H13. *)
-    (*     destruct x7, x8; auto. *)
-
+    (*     invReify; simpl_find. *)
+    (*     right; left; repeat split; inv_solve. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify. *)
-    (*     simpl_find. *)
-    (*     admit. *)
-
+    (*     invReify; simpl_find. *)
+    (*     left; repeat split; inv_solve. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     repeat (eexists; split; [findReify; simpl; eauto|]). *)
-
-    (*     simpl_find. *)
-    (*     admit. *)
-
+    (*     invReify; simpl_find. *)
+    (*     left; repeat split; inv_solve. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     repeat (eexists; split; [findReify; simpl; eauto|]). *)
-
-    (*     simpl_find; auto. *)
-
+    (*     invReify; simpl_find; auto. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     repeat (eexists; split; [findReify; simpl; eauto|]). *)
-
-    (*     simpl_find; auto. *)
-
+    (*     invReify; simpl_find; auto. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     repeat (eexists; split; [findReify; simpl; eauto|]). *)
-
-    (*     simpl_find. *)
-    (*     admit. *)
-
+    (*     invReify; simpl_find. *)
+    (*     right; right; repeat split; inv_solve. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     repeat (eexists; split; [findReify; simpl; eauto|]). *)
-
-    (*     simpl_find. *)
-    (*     admit. *)
+    (*     invReify; simpl_find. *)
+    (*     right; right; repeat split; inv_solve. *)
   Qed.
 
   Lemma procDec_inv_1_ok:
@@ -205,27 +218,40 @@ Section Invariants.
     admit.
     (* induction 2. *)
 
-    (* - admit. *)
-    (*   (* repeat subst. *) *)
-    (*   (* simpl; unfold procDec_inv_0. *) *)
-    (*   (* repeat (eexists; split; [findReify; simpl; auto|]). *) *)
-    (*   (* auto. *) *)
+    (* - repeat subst. *)
+    (*   simpl; unfold procDec_inv_0. *)
+    (*   invReify; auto. *)
 
     (* - specialize (IHMultistep H); clear -IHMultistep HStep. *)
     (*   apply step_no_defs_substep in HStep; [|reflexivity]. *)
     (*   destruct HStep as [ul [calls ?]]; dest; subst. *)
-
     (*   inv H0; try (mred; fail); [|inv HIn]. *)
     (*   CommonTactics.dest_in. *)
 
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
-    (*   + admit. *)
+    (*   + inv H; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H0; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H0; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H0; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
+    (*   + inv H0; invertActionRep. *)
+    (*     unfold procDec_inv_0 in *; dest. *)
+    (*     invReify; simpl_find; auto. *)
   Qed.
 
   Lemma procDec_inv_0_ok:
