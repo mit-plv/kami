@@ -145,7 +145,13 @@ Section Invariants.
     kexistv "Ins.elt"%string ieltv o (Vector (memAtomK addrSize valSize) fifoSize).
     kexistv "Ins.deqP"%string ideqP o (Bit fifoSize).
     refine (if v1 then True else _).
-    exact (dec _ v0 v ``"opcode" = v2 v3 ``"type").
+    refine (_ /\ _ /\ _).
+    - exact (v2 v3 ``"type" = dec _ v0 v ``"opcode").
+    - exact (v2 v3 ``"addr" = dec _ v0 v ``"addr").
+    - refine (if weq (v2 v3 ``"type") (evalConstT memLd) then _ else _).
+      + exact (v2 v3 ``"value" = evalConstT (getDefaultConst (Bit valSize))).
+      + refine (if weq (v2 v3 ``"type") (evalConstT memSt) then _ else True).
+        exact (v2 v3 ``"value" = dec _ v0 v ``"value").
   Defined.
 
   Lemma procDec_inv_0_ok':
