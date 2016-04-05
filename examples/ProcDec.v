@@ -62,7 +62,8 @@ Section ProcDec.
     (Call val <- memRep();
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert #val@."type" == $$opLd;
+     (* Assert #val@."type" == $$opLd; *)
+     Assert #(dec _ st ppc)@."opcode" == $$opLd;
      Write "rf" <- #st@[#(dec _ st ppc)@."reg" <- #val@."value"];
      Write "stall" <- $$false;
      nextPc ppc st)%kami.
@@ -71,7 +72,8 @@ Section ProcDec.
     (Call val <- memRep();
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert #val@."type" == $$opSt;
+     (* Assert #val@."type" == $$opSt; *)
+     Assert #(dec _ st ppc)@."opcode" == $$opSt;
      Write "stall" <- $$false;
      nextPc ppc st)%kami.
 

@@ -4,7 +4,8 @@ Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2.
 Require Import Lts.DecompositionZero.
-Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInv.
+Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
+Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
@@ -24,7 +25,7 @@ Section ProcDecSC.
   Definition scN := sc dec exec opLd opSt opHt n.
 
   Section SingleCore.
-    Definition pdec := ProcDecInv.pdec fifoSize dec exec.
+    Definition pdec := ProcDecInl.pdec fifoSize dec exec.
     Definition pinst := pinst dec exec opLd opSt opHt.
     Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
     Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for equiv_tac *)
@@ -51,13 +52,15 @@ Section ProcDecSC.
       kgetv "Outs.deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
       refine (if oev then _ else _).
 
-      - refine (M.add "pc"%string _
+      - (* Outs.empty = true *)
+        refine (M.add "pc"%string _
                       (M.add "rf"%string _
                              (M.empty _))).
         + exact (existT _ _ pcv).
         + exact (existT _ _ rfv).
 
-      - refine (M.add "pc"%string _
+      - (* Outs.empty = false *)
+        refine (M.add "pc"%string _
                       (M.add "rf"%string _
                              (M.empty _))).
         + exact (existT _ _ (getNextPc exec _ pcv rfv (dec _ rfv pcv))).
@@ -70,42 +73,162 @@ Section ProcDecSC.
           * refine (existT _ _ rfv).
     Defined.
 
+    Ltac regMap_red :=
+      unfold pdec_pinst_regMap;
+      repeat
+        (try match goal with
+             | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
+             | [ |- context[decKind ?k ?k] ] =>
+               rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
+             end;
+         try findReify).
+
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
       apply traceRefines_inlining_left; auto.
       unfold pdec; rewrite <-pdecInl_equal.
       split; [|reflexivity].
 
-      kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
+      admit.
 
-      - unfold initRegs, getRegInits; simpl; clear.
-        unfold pdec_pinst_regMap.
-        repeat (findReify; rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym).
-        reflexivity.
-      - auto.
-      - auto.
-      - intros; eexists.
+      (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
 
-        pose proof (procDec_inv_0_ok H).
-        pose proof (procDec_inv_1_ok H).
-        clear H.
-        inv H0; CommonTactics.dest_in.
+      (* - unfold initRegs, getRegInits; simpl; clear. *)
+      (*   regMap_red. *)
+      (*   reflexivity. *)
+      (* - auto. *)
+      (* - auto. *)
+      (* - intros. *)
+      (*   pose proof (procDec_inv_0_ok H). *)
+      (*   pose proof (procDec_inv_1_ok H). *)
+      (*   pose proof (procDec_inv_2_ok H). *)
+      (*   clear H. *)
+      (*   inv H0; CommonTactics.dest_in. *)
 
-        + inv H; invertActionRep.
-          split.
-          * econstructor.
-          * unfold pdec_pinst_regMap.
-            admit.
+      (*   + inv H; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * econstructor. *)
+      (*     * inv_red; regMap_red. *)
+      (*       mred. *)
 
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
+      (*   + inv H0; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * econstructor. *)
+      (*     * inv_red; regMap_red. *)
+      (*       mred. *)
 
-    Abort.
+      (*   + inv H; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * econstructor. *)
+      (*     * inv_red; regMap_red. *)
+
+      (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
+      (*       clear -H10; meq. *)
+          
+      (*   + inv H0; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * econstructor. *)
+      (*     * inv_red; regMap_red. *)
+
+      (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
+      (*       clear -H10; meq. *)
+
+      (*       exfalso; clear -e e0. *)
+      (*       match type of e with *)
+      (*       | ?lh1 = _ => *)
+      (*         match type of e0 with *)
+      (*         | ?lh2 = _ => assert (lh1 = lh2) by reflexivity *)
+      (*         end *)
+      (*       end. *)
+      (*       rewrite H in e; rewrite e in e0; inv e0. *)
+          
+      (*   + inv H; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * eapply SingleRule; [simpl; tauto|]. *)
+      (*       repeat econstructor. *)
+      (*       { inv_red. *)
+      (*         regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { inv_red. *)
+      (*         regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { auto. } *)
+      (*     * meq. *)
+
+      (*   + inv H0; invertActionRep. *)
+      (*     eexists; split. *)
+      (*     * eapply SingleRule; [simpl; tauto|]. *)
+      (*       repeat econstructor. *)
+      (*       { inv_red. *)
+      (*         regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { inv_red. *)
+      (*         regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { auto. } *)
+      (*     * inv_red. *)
+      (*       regMap_red. *)
+      (*       meq. *)
+
+      (*   + inv H; invertActionRep. *)
+      (*     inv_red. *)
+              
+      (*     eexists; split. *)
+      (*     * eapply SingleRule; [simpl; tauto|]. *)
+      (*       repeat econstructor. *)
+      (*       { regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { simpl in *; clear -H8 H19. *)
+      (*         find_if_inside; auto. *)
+      (*         find_if_inside; auto. *)
+      (*         elim n; clear n; rewrite <-e. *)
+      (*         assumption. *)
+      (*       } *)
+      (*       { instantiate (1:= x4). *)
+      (*         admit. (* TODO: need an invariant *) *)
+      (*       } *)
+      (*     * unfold memAtomK, atomK in *. *)
+      (*       regMap_red. *)
+      (*       clear -H19 H8; meq. *)
+      (*       elim n; clear n. *)
+      (*       simpl; rewrite <-e. *)
+      (*       assumption. *)
+          
+      (*   + inv H0; invertActionRep. *)
+      (*     inv_red. *)
+
+      (*     eexists; split. *)
+      (*     * eapply SingleRule; [simpl; tauto|]. *)
+      (*       repeat econstructor. *)
+      (*       { regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { regMap_red. *)
+      (*         reflexivity. *)
+      (*       } *)
+      (*       { simpl in *; clear -H8 H19. *)
+      (*         find_if_inside; auto. *)
+      (*         find_if_inside; auto. *)
+      (*         elim n; clear n; rewrite <-e. *)
+      (*         assumption. *)
+      (*       } *)
+      (*       { instantiate (1:= x4). *)
+      (*         admit. (* TODO: need an invariant *) *)
+      (*       } *)
+      (*     * unfold memAtomK, atomK in *. *)
+      (*       regMap_red. *)
+      (*       clear -H19 H8; meq. *)
+      (*       admit. *)
+          
+    Qed.
 
   End SingleCore.
 

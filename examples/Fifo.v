@@ -13,8 +13,6 @@ Section Fifo.
 
   Notation "^ s" := (fifoName -n- s) (at level 0).
 
-  Definition max_index : ConstT (Bit sz) := ^~ $1.
-
   Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (Read isFull <- ^"full";
      Assert !#isFull;
@@ -23,7 +21,7 @@ Section Fifo.
      Read deqP <- ^"deqP";
      Write ^"elt" <- #elt@[#enqP <- #d];
      Write ^"empty" <- $$false;
-     LET next_enqP <- IF #enqP == $$max_index then $0 else #enqP + $1;
+     LET next_enqP <- (#enqP + $1) :: Bit sz;
      Write ^"full" <- (#deqP == #next_enqP);
      Write ^"enqP" <- #next_enqP;
      Retv)%kami.
@@ -35,7 +33,7 @@ Section Fifo.
      Read enqP <- ^"enqP";
      Read deqP <- ^"deqP";
      Write ^"full" <- $$false;
-     LET next_deqP <- (IF #deqP == $$max_index then $0 else #deqP + $1) :: Bit sz;
+     LET next_deqP <- (#deqP + $1) :: Bit sz;
      Write ^"empty" <- (#enqP == #next_deqP);
      Write ^"deqP" <- #next_deqP;
      Ret #elt@[#deqP])%kami.
@@ -80,4 +78,5 @@ Section Fifo.
 End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.
-Hint Unfold max_index enq deq : MethDefs.
+Hint Unfold enq deq : MethDefs.
+
