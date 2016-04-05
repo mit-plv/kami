@@ -263,7 +263,7 @@ Section Decomposition.
     inversion H; intuition.
   Qed.
 
-  Theorem decomposition':
+  Theorem decompositionZero':
     forall s sig, Behavior imp s sig ->
                   exists sigSpec, Behavior spec (theta s) sigSpec /\
                                   equivalentLabelSeq (liftToMap1 p) sig sigSpec.
@@ -289,15 +289,15 @@ Section Decomposition.
         * intuition.
   Qed.
 
-  Theorem decomposition:
+  Theorem decompositionZero:
     traceRefines (liftToMap1 p) imp spec.
   Proof.
     unfold traceRefines; intros.
-    pose proof (decomposition' H) as [sigSpec beh].
+    pose proof (decompositionZero' H) as [sigSpec beh].
     exists (theta s1); exists sigSpec.
     intuition.
   Qed.
 End Decomposition.
 
 Ltac kdecompose_nodefs t r :=
-  apply decomposition with (theta:= t) (ruleMap:= r).
+  apply decompositionZero with (theta:= t) (ruleMap:= r).
