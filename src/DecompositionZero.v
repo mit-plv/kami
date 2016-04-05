@@ -143,9 +143,9 @@ Section Decomposition.
     forall oImp uImp rule csImp,
       reachable oImp imp ->
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
-      { uSpec |
+      exists uSpec,
         Substep spec (theta oImp) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
-        M.union uSpec (theta oImp) = theta (M.union uImp oImp) }.
+        M.union uSpec (theta oImp) = theta (M.union uImp oImp) .
 
   Definition liftP meth :=
     match meth with
@@ -156,11 +156,11 @@ Section Decomposition.
     end.
 
   Definition ruleMapEmpty o u cs (s: Substep imp o u (Rle None) cs):
-    { uSpec |
+    exists uSpec,
       Substep spec (theta o) uSpec (Rle None) (liftToMap1 p cs) /\
-      M.union uSpec (theta o) = theta (M.union u o) }.
+      M.union uSpec (theta o) = theta (M.union u o).
   Proof.
-    refine (exist _ (M.empty _) _);
+    refine (ex_intro _ (M.empty _) _);
     abstract (
         inversion s; subst; rewrite liftToMap1Empty;
         constructor;
@@ -169,11 +169,11 @@ Section Decomposition.
   Defined.
 
   Definition methMapEmpty o u cs (s: Substep imp o u (Meth None) cs):
-    { uSpec |
+    exists uSpec,
       Substep spec (theta o) uSpec (Meth None) (liftToMap1 p cs) /\
-      M.union uSpec (theta o) = theta (M.union u o) }.
+      M.union uSpec (theta o) = theta (M.union u o).
   Proof.
-    refine (exist _ (M.empty _) _);
+    refine (ex_intro _ (M.empty _) _);
     abstract (
         inversion s; subst; rewrite liftToMap1Empty;
         constructor;
@@ -190,11 +190,11 @@ Section Decomposition.
   Qed.
 
   Definition substepMethMap o u f cs (s: Substep imp o u (Meth (Some f)) cs):
-    { uSpec |
+    exists uSpec,
       Substep spec (theta o) uSpec (Meth (liftP f)) (liftToMap1 p cs) /\
-      M.union uSpec (theta o) = theta (M.union u o) }.
+      M.union uSpec (theta o) = theta (M.union u o).
   Proof.
-    refine (exist _ (M.empty _) _).
+    refine (ex_intro _ (M.empty _) _).
     abstract (apply substepMethEmpty in s; dest; subst; discriminate).
   Defined.
 
@@ -208,9 +208,9 @@ Section Decomposition.
 
   Definition substepMap o u rm cs reachO (s: Substep imp o u rm cs) :=
     match rm return Substep imp o u rm cs ->
-                    { uSpec |
+                    exists uSpec,
                       Substep spec (theta o) uSpec (xformUnitAnnot o rm) (liftToMap1 p cs) /\
-                      M.union uSpec (theta o) = theta (M.union u o) } with
+                      M.union uSpec (theta o) = theta (M.union u o) with
       | Rle (Some rule) => fun s => substepRuleMap reachO s
       | Meth (Some meth) => fun s => substepMethMap s
       | Rle None => fun s => ruleMapEmpty s
@@ -237,7 +237,6 @@ Section Decomposition.
     apply stepZero in s; auto; dest.
     destruct l; simpl in *.
     pose proof (substepMap reachO H0); dest.
-    destruct X; dest.
     exists x.
     apply substepZero_imp_step in H1; auto.
     repeat (try constructor; auto).
