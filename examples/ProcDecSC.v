@@ -84,6 +84,16 @@ Section ProcDecSC.
          dest; try subst;
          try findReify).
 
+    Tactic Notation "brewrite" ident(H1) "in" ident(H2) :=
+      match type of H1 with
+      | context [{| bindex:= ?s; indexb:= ?ib1 |}] =>
+        match type of H2 with
+        | context [{| bindex:= ?s; indexb:= ?ib2 |}] =>
+          progress change {| bindex:= s; indexb:= ib2 |}
+          with {| bindex:= s; indexb:= ib1 |} in H2
+        end
+      end; rewrite H1 in H2.
+
     Lemma pdec_refines_pinst: pdec <<== pinst.
     Proof.
       admit.
@@ -127,7 +137,8 @@ Section ProcDecSC.
       (*       dest_or3; inv_contra. *)
       (*       regMap_red. *)
 
-      (*       inv_solve. *)
+      (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
+      (*       clear -H9; meq. *)
           
       (*   + inv H0; invertActionRep. *)
       (*     eexists; split. *)
@@ -139,14 +150,8 @@ Section ProcDecSC.
       (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
       (*       clear -H9; meq. *)
 
-      (*       exfalso; clear -e e0. *)
-      (*       match type of e with *)
-      (*       | ?lh1 = _ => *)
-      (*         match type of e0 with *)
-      (*         | ?lh2 = _ => assert (lh1 = lh2) by reflexivity *)
-      (*         end *)
-      (*       end. *)
-      (*       rewrite H in e; rewrite e in e0; inv e0. *)
+      (*       brewrite e in e0. *)
+      (*       inv e0. *)
           
       (*   + inv H; invertActionRep. *)
       (*     eexists; split. *)
@@ -180,28 +185,22 @@ Section ProcDecSC.
       (*     * eapply SingleRule; [simpl; tauto|]. *)
       (*       repeat econstructor. *)
       (*       { simpl in *; clear -H0 H7. *)
-      (*         find_if_inside; auto. *)
-      (*         find_if_inside; auto. *)
-      (*         elim n; clear n; rewrite <-e. *)
-      (*         auto. *)
+      (*         repeat find_if_inside; intuition idtac. *)
+      (*         elim n; clear n; rewrite <-e; auto. *)
       (*       } *)
       (*       { rewrite idElementwiseId; unfold id. *)
       (*         do 3 f_equal. *)
       (*         simpl; boundedMapTac. *)
       (*         { clear -H7. *)
-      (*           destruct (weq _ _); [|inv H7]. *)
-      (*           auto. *)
+      (*           find_if_inside; auto; inv H7. *)
       (*         } *)
       (*         { clear -H3 H7. *)
-      (*           destruct (weq _ WO~0~0); [|inv H7]. *)
-      (*           destruct (weq _ (evalConstT memLd)); auto. *)
-      (*           elim n; auto. *)
+      (*           repeat find_if_inside; intuition idtac; inv H7. *)
       (*         } *)
       (*       } *)
       (*     * clear -H0 H7; meq. *)
       (*       elim n; clear n. *)
-      (*       simpl; rewrite <-e. *)
-      (*       auto. *)
+      (*       simpl; rewrite <-e; auto. *)
 
       (*   + inv H0; invertActionRep. *)
       (*     inv_red; simpl_find. *)
@@ -213,47 +212,27 @@ Section ProcDecSC.
       (*     * eapply SingleRule; [simpl; tauto|]. *)
       (*       repeat econstructor. *)
       (*       { simpl in *; clear -H0 H7. *)
-      (*         find_if_inside; auto. *)
-      (*         find_if_inside; auto. *)
-      (*         elim n; clear n; rewrite <-e. *)
-      (*         auto. *)
+      (*         repeat find_if_inside; intuition idtac. *)
+      (*         elim n; clear n; rewrite <-e; auto. *)
       (*       } *)
       (*       { rewrite idElementwiseId; unfold id. *)
       (*         do 3 f_equal. *)
       (*         simpl; boundedMapTac. *)
       (*         { clear -H7. *)
-      (*           destruct (weq _ _); [|inv H7]. *)
-      (*           auto. *)
+      (*           find_if_inside; intuition idtac. *)
+      (*           inv H7. *)
       (*         } *)
       (*         { clear -H3 H7. *)
-      (*           simpl in *. *)
-      (*           destruct (weq _ WO~0~1); [|inv H7]. *)
-      (*           destruct (weq _ _); intuition auto. *)
-      (*           exfalso; clear -e e0. *)
-      (*           match type of e with *)
-      (*           | ?lhs1 = _ => *)
-      (*             match type of e0 with *)
-      (*             | ?lhs2 = _ => *)
-      (*               replace lhs1 with lhs2 in e by reflexivity *)
-      (*             end *)
-      (*           end. *)
-      (*           rewrite e in e0. *)
-      (*           inv e0. *)
+      (*           repeat find_if_inside; intuition idtac. *)
+      (*           { brewrite e0 in e; inv e. } *)
+      (*           { inv H7. } *)
+      (*           { inv H7. } *)
       (*         } *)
       (*       } *)
       (*     * clear -H0 H7; meq. *)
-      (*       clear -e H0 e0. *)
-      (*       exfalso. *)
-      (*       match type of e with *)
-      (*       | ?lhs1 = _ => *)
-      (*         match type of H0 with *)
-      (*         | ?lhs2 = _ => *)
-      (*           replace lhs1 with lhs2 in e by reflexivity *)
-      (*         end *)
-      (*       end. *)
-      (*       rewrite e in H0. *)
-      (*       rewrite <-H0 in e0. *)
-      (*       inv e0. *)
+      (*       rewrite e0 in H0. *)
+      (*       brewrite e in H0. *)
+      (*       inv H0. *)
     Qed.
 
   End SingleCore.
