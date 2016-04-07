@@ -123,11 +123,13 @@ Fixpoint string_of_nat (n: nat) :=
     | S n' => append "a"%string (string_of_nat n')
   end.
 
+Definition indexSymbol: string := "__"%string.
+
 Definition withIndex str idx := 
-  append (append (string_of_nat idx) ("_"%string)) str.
+  append (append (string_of_nat idx) indexSymbol) str.
 
 Theorem withIndex_eq : withIndex = fun str idx =>
-  append (append (string_of_nat idx) ("_"%string)) str.
+  append (append (string_of_nat idx) indexSymbol) str.
 Proof.
   reflexivity.
 Qed.

@@ -37,22 +37,7 @@ Section ProcDecSCN.
       vm_compute; split; intros; intuition idtac.
     - apply DefCallSub_refl.
     - repeat split.
-    - (* TODO: a general lemma for duplication-refinement: implement in Specialize.v *)
-      induction n; simpl; intros.
-      + apply specialized_2.
-        * intros; vm_compute.
-          (* intro; dest. *)
-          (* repeat *)
-          (*   match goal with *)
-          (*   | [H: _ \/ _ |- _] => destruct H *)
-          (*   end; subst; try discriminate; auto. *)
-          (* TODO: takes a time ... *)
-          admit.
-        * intros; vm_compute; admit.
-        * apply traceRefines_label_map with (p:= liftToMap1 (@idElementwise _)); auto.
-          { admit. }
-          { admit. (* apply pdec_refines_pinst. *) }
-      + admit. (* apply traceRefines_modular_noninteracting. *)
+    - apply duplicate_traceRefines; auto; admit.
     - rewrite idElementwiseId; apply traceRefines_refl.
   Qed.
 

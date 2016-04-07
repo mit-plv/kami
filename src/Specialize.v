@@ -148,11 +148,87 @@ Section SpecializeFacts.
 
 End SpecializeFacts.
 
+Section Specializable.
+
+  Fixpoint hasNoIndex (l: list string) :=
+    match l with
+    | nil => true
+    | h :: t =>
+      match index 0 "__"%string h with
+      | Some _ => false
+      | None => hasNoIndex t
+      end
+    end.
+
+  Lemma hasNoIndex_disj_dom_img:
+    forall l,
+      hasNoIndex l = true ->
+      forall i s,
+        In s l ->
+        In s (map (spf i) l) ->
+        False.
+  Proof.
+    induction l; simpl; intros; auto.
+    remember (index 0 "__" a) as idx; destruct idx; [inv H|].
+    destruct H0; [subst|].
+    - destruct H1.
+      + clear -H0; admit.
+      + clear -Heqidx H0; admit.
+    - admit. 
+  Qed.
+
+  Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
+
+  Variable (m: Modules).
+  Hypothesis (Hsp: Specializable m).
+
+  Lemma specializable_disj_dom_img:
+    forall i s, ~ (In s (spDom m) /\ In s (spImg m i)).
+  Proof.
+    unfold spImg; intros; intro Hx; dest.
+    unfold Specializable in H.
+    eapply hasNoIndex_disj_dom_img; eauto.
+  Qed.
+
+  Lemma specializable_disj_regs:
+    forall i j,
+      i <> j ->
+      DisjList (namesOf (getRegInits (specializeMod m i)))
+               (namesOf (getRegInits (specializeMod m j))).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma specializable_disj_defs:
+    forall i j,
+      i <> j ->
+      DisjList (getDefs (specializeMod m i))
+               (getDefs (specializeMod m j)).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma specializable_disj_calls:
+    forall i j,
+      i <> j ->
+      DisjList (getCalls (specializeMod m i))
+               (getCalls (specializeMod m j)).
+  Proof.
+    admit.
+  Qed.
+
+End Specializable.
+
+Hint Immediate specializable_disj_dom_img
+     specializable_disj_regs
+     specializable_disj_defs
+     specializable_disj_calls.
+
 Section SpRefinement.
   Variables ma mb: Modules.
   Variable i: nat.
-  Hypothesis (HdisjDomImgA: forall s, ~ (In s (spDom ma) /\ In s (spImg ma i))).
-  Hypothesis (HdisjDomImgB: forall s, ~ (In s (spDom mb) /\ In s (spImg mb i))).
+  Hypotheses (HspA: Specializable ma)
+             (HspB: Specializable mb).
   
   Lemma specialized_1:
     forall rp,
@@ -225,20 +301,131 @@ Section DuplicateFacts.
     admit.
   Qed.
 
-  Lemma duplicate_defCallSub:
-    forall m1 m2 n,
-      DefCallSub m1 m2 ->
-      DefCallSub (duplicate m1 n) (duplicate m2 n).
+  Lemma duplicate_disj_regs:
+    forall m,
+      Specializable m ->
+      forall n ln,
+        ln > n ->
+        DisjList (namesOf (getRegInits (specializeMod m ln)))
+                 (namesOf (getRegInits (duplicate m n))).
   Proof.
-    admit.
+    induction n; simpl; intros.
+    - apply specializable_disj_regs; auto; omega.
+    - unfold namesOf in *.
+      rewrite map_app.
+      apply DisjList_comm, DisjList_app_4.
+      + apply specializable_disj_regs; auto; omega.
+      + apply DisjList_comm, IHn; omega.
   Qed.
 
-  (* Lemma duplicate_traceRefines: *)
-  (*   forall m1 m2 n, *)
-  (*     (* TODO: requires a number of conditions *) *)
-  (*     traceRefines id m1 m2 -> *)
-  (*     traceRefines id (duplicate m1 n) (duplicate m2 n). *)
+  Lemma duplicate_disj_defs:
+    forall m,
+      Specializable m ->
+      forall n ln,
+        ln > n ->
+        DisjList (getDefs (specializeMod m ln))
+                 (getDefs (duplicate m n)).
+  Proof.
+    induction n; simpl; intros.
+    - apply specializable_disj_defs; auto; omega.
+    - apply DisjList_comm.
+      apply DisjList_SubList with (l1:= (getDefs (specializeMod m (S n)))
+                                          ++ (getDefs (duplicate m n))).
+      + unfold SubList; intros.
+        apply getDefs_in in H1; destruct H1;
+          apply in_or_app; auto.
+      + apply DisjList_app_4.
+        * apply specializable_disj_defs; auto; omega.
+        * apply DisjList_comm, IHn; omega.
+  Qed.
 
+  Lemma duplicate_disj_calls:
+    forall m,
+      Specializable m ->
+      forall n ln,
+        ln > n ->
+        DisjList (getCalls (specializeMod m ln))
+                 (getCalls (duplicate m n)).
+  Proof.
+    induction n; simpl; intros.
+    - apply specializable_disj_calls; auto; omega.
+    - apply DisjList_comm.
+      apply DisjList_SubList with (l1:= (getCalls (specializeMod m (S n)))
+                                          ++ (getCalls (duplicate m n))).
+      + unfold SubList; intros.
+        apply getCalls_in in H1; destruct H1;
+          apply in_or_app; auto.
+      + apply DisjList_app_4.
+        * apply specializable_disj_calls; auto; omega.
+        * apply DisjList_comm, IHn; omega.
+  Qed.
+
+  Section TwoModules.
+    Variables (m1 m2: Modules).
+    Hypotheses (Hsp1: Specializable m1)
+               (Hsp2: Specializable m2)
+               (Hequiv1: ModEquiv type typeUT m1)
+               (Hequiv2: ModEquiv type typeUT m2)
+               (Hvr1: ValidRegsModules type m1)
+               (Hvr2: ValidRegsModules type m2)
+               (Hexts: SubList (getExtMeths m1) (getExtMeths m2)).
+
+    Lemma duplicate_defCallSub:
+      forall n,
+        DefCallSub m1 m2 ->
+        DefCallSub (duplicate m1 n) (duplicate m2 n).
+    Proof.
+      admit.
+    Qed.
+
+    Lemma specializer_two_comm:
+      forall (m: MethsT),
+        M.KeysSubset m (getExtMeths m1) ->
+        forall i,
+          m = renameMap (specializer m2 i) (renameMap (specializer m1 i) m).
+    Proof.
+      admit.
+    Qed.
+
+    Lemma duplicate_traceRefines:
+      forall n,
+        (* TODO: requires a number of conditions *)
+        traceRefines (liftToMap1 (@idElementwise _)) m1 m2 ->
+        traceRefines (liftToMap1 (@idElementwise _)) (duplicate m1 n) (duplicate m2 n).
+    Proof.
+      induction n; simpl; intros.
+      - apply specialized_2 with (i:= O); auto.
+        eapply traceRefines_label_map; eauto using H.
+        clear; unfold EquivalentLabelMap; intros.
+        rewrite idElementwiseId; unfold id; simpl.
+        unfold liftPRename; simpl.
+        apply specializer_two_comm; auto.
+
+      - apply traceRefines_modular_noninteracting; auto.
+        + apply specializeMod_ModEquiv; auto.
+        + apply specializeMod_ModEquiv; auto.
+        + apply duplicate_ModEquiv; auto.
+        + apply duplicate_ModEquiv; auto.
+        + apply duplicate_disj_regs; auto.
+        + apply duplicate_disj_regs; auto.
+        + pose proof (duplicate_validRegsModules m1 (S n) Hvr1); auto.
+        + pose proof (duplicate_validRegsModules m2 (S n) Hvr2); auto.
+        + apply duplicate_disj_defs; auto.
+        + apply duplicate_disj_calls; auto.
+        + apply duplicate_disj_defs; auto.
+        + apply duplicate_disj_calls; auto.
+        + admit. (* NonInteracting *)
+        + admit. (* NonInteracting *)
+        + apply specialized_2 with (i:= S n); auto.
+          eapply traceRefines_label_map; eauto using H.
+          clear; unfold EquivalentLabelMap; intros.
+          rewrite idElementwiseId; unfold id; simpl.
+          unfold liftPRename; simpl.
+          apply specializer_two_comm; auto.
+    Qed.
+
+  End TwoModules.
+      
 End DuplicateFacts.
 
 Hint Unfold specializeMod duplicate: ModuleDefs.
