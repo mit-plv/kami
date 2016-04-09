@@ -23,7 +23,7 @@ Section Lists. (* For dealing with domains *)
     unfold SubList; intros; destruct l; auto.
     specialize (H a (or_introl eq_refl)); inv H.
   Qed.
-
+  
   Lemma SubList_cons: forall a l1 l2, In a l2 -> SubList l1 l2 -> SubList (a :: l1) l2.
   Proof. unfold SubList; intros; inv H1; auto. Qed.
 
@@ -34,6 +34,10 @@ Section Lists. (* For dealing with domains *)
   Proof. unfold SubList; intros; right; auto. Qed.
   
   Lemma SubList_refl: forall l, SubList l l.
+  Proof. unfold SubList; intros; auto. Qed.
+  
+  Lemma SubList_trans:
+    forall l1 l2 l3, SubList l1 l2 -> SubList l2 l3 -> SubList l1 l3.
   Proof. unfold SubList; intros; auto. Qed.
 
   Lemma SubList_app_1: forall l1 l2 l3, SubList l1 l2 -> SubList l1 (l2 ++ l3).

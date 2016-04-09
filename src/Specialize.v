@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.StringEq.
-Require Import Syntax Semantics Refinement Renaming Equiv Wf.
+Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf.
 
 Require Import FunctionalExtensionality.
 
@@ -23,6 +23,17 @@ Section SpecializeModule.
     simpl; remember (string_in a (makeNoDup l)) as sin; destruct sin; [auto|].
     apply string_in_dec_not_in in Heqsin.
     constructor; auto.
+  Qed.
+
+  Lemma makeNoDup_SubList: forall l, SubList l (makeNoDup l).
+  Proof.
+    induction l; simpl; intros.
+    - apply SubList_refl.
+    - remember (string_in a (makeNoDup l)) as ain; destruct ain.
+      + apply string_in_dec_in in Heqain.
+        apply SubList_cons; auto.
+      + apply SubList_cons; [left; auto|].
+        apply SubList_cons_right; auto.
   Qed.
 
   Definition spDom := makeNoDup ((namesOf (getRegInits m))
@@ -90,6 +101,16 @@ End SpecializeModule.
 
 Section SpecializeFacts.
 
+  Lemma specializer_equiv:
+    forall m1 m2 {A} (m: M.t A),
+      M.KeysSubset m (spDom m1) ->
+      M.KeysSubset m (spDom m2) ->
+      forall i,
+        renameMap (specializer m1 i) m = renameMap (specializer m2 i) m.
+  Proof.
+    admit.
+  Qed.
+
   Lemma renameAction_ActionEquiv:
     forall G {retT} (ta: ActionT type retT) (ua: ActionT typeUT retT),
       ActionEquiv G ta ua ->
@@ -146,6 +167,22 @@ Section SpecializeFacts.
     intros; apply renameModules_ModEquiv; auto.
   Qed.
 
+  Lemma specializeMod_validRegsModules:
+    forall m i,
+      ValidRegsModules type m ->
+      ValidRegsModules type (specializeMod m i).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma specializeMod_defCallSub:
+    forall m1 m2 i,
+      DefCallSub m1 m2 ->
+      DefCallSub (specializeMod m1 i) (specializeMod m2 i).
+  Proof.
+    admit.
+  Qed.
+
 End SpecializeFacts.
 
 Section Specializable.
@@ -154,11 +191,25 @@ Section Specializable.
     match l with
     | nil => true
     | h :: t =>
-      match index 0 "__"%string h with
+      match index 0 indexSymbol h with
       | Some _ => false
       | None => hasNoIndex t
       end
     end.
+
+  Lemma append_length:
+    forall s1 s2,
+      String.length (s1 ++ s2) = String.length s1 + String.length s2.
+  Proof. induction s1; simpl; intros; auto. Qed.
+
+  Lemma substring_append_1:
+    forall s1 s2 n,
+      substring (String.length s1) n (s1 ++ s2) = substring 0 n s2.
+  Proof. induction s1; simpl; intros; auto. Qed.
+
+  Lemma substring_empty:
+    forall s, substring 0 0 s = ""%string.
+  Proof. induction s; simpl; intros; auto. Qed.
 
   Lemma hasNoIndex_disj_dom_img:
     forall l,
@@ -169,12 +220,36 @@ Section Specializable.
         False.
   Proof.
     induction l; simpl; intros; auto.
-    remember (index 0 "__" a) as idx; destruct idx; [inv H|].
+    remember (index 0 indexSymbol a) as idx; destruct idx; [inv H|].
     destruct H0; [subst|].
     - destruct H1.
-      + clear -H0; admit.
-      + clear -Heqidx H0; admit.
-    - admit. 
+      + clear -H0.
+        assert (String.length (spf i s) = String.length s) by (rewrite H0; auto).
+        unfold spf in H; rewrite withIndex_eq in H.
+        do 2 rewrite append_length in H; simpl in H.
+        omega.
+      + clear -Heqidx H0.
+        apply in_map_iff in H0; dest; subst.
+        unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
+        apply eq_sym in Heqidx.
+        apply index_correct3 with (m:= String.length (string_of_nat i)) in Heqidx; auto.
+        * rewrite <-string_append_assoc in Heqidx.
+          rewrite substring_append_1 in Heqidx; simpl in Heqidx.
+          rewrite substring_empty in Heqidx; auto.
+        * omega.
+    - destruct H1; [subst|].
+      + clear -H H0; induction l; simpl; intros; auto.
+        simpl in H.
+        remember (index 0 indexSymbol a0) as idx; destruct idx; [inv H|].
+        inv H0; auto.
+        unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
+        apply eq_sym in Heqidx.
+        apply index_correct3 with (m:= String.length (string_of_nat i)) in Heqidx; auto.
+        * rewrite <-string_append_assoc in Heqidx.
+          rewrite substring_append_1 in Heqidx; simpl in Heqidx.
+          rewrite substring_empty in Heqidx; auto.
+        * omega.
+      + eauto.
   Qed.
 
   Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
@@ -213,6 +288,14 @@ Section Specializable.
       i <> j ->
       DisjList (getCalls (specializeMod m i))
                (getCalls (specializeMod m j)).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma specializable_noninteracting:
+    forall i j,
+      i <> j ->
+      NonInteracting (specializeMod m i) (specializeMod m j).
   Proof.
     admit.
   Qed.
@@ -298,7 +381,10 @@ Section DuplicateFacts.
       ValidRegsModules type m ->
       ValidRegsModules type (duplicate m n).
   Proof.
-    admit.
+    induction n; simpl; intros.
+    - apply specializeMod_validRegsModules; auto.
+    - split; auto.
+      apply specializeMod_validRegsModules; auto.
   Qed.
 
   Lemma duplicate_disj_regs:
@@ -360,6 +446,43 @@ Section DuplicateFacts.
         * apply DisjList_comm, IHn; omega.
   Qed.
 
+  Lemma duplicate_noninteracting:
+    forall m,
+      Specializable m ->
+      forall n ln,
+        ln > n ->
+        NonInteracting (specializeMod m ln)
+                       (duplicate m n).
+  Proof.
+    induction n; simpl; intros.
+    - apply specializable_noninteracting; omega.
+    - unfold NonInteracting in *.
+      assert (ln > n) by omega; specialize (IHn _ H1); clear H1; dest.
+      split.
+      + apply DisjList_comm.
+        apply DisjList_SubList with (l1:= (getCalls (specializeMod m (S n)))
+                                            ++ (getCalls (duplicate m n))).
+        * unfold SubList; intros.
+          apply getCalls_in in H3.
+          apply in_or_app; auto.
+        * apply DisjList_app_4.
+          { pose proof (specializable_noninteracting m).
+            apply H3; omega.
+          }
+          { apply DisjList_comm; auto. }
+      + apply DisjList_comm.
+        apply DisjList_SubList with (l1:= (getDefs (specializeMod m (S n)))
+                                            ++ (getDefs (duplicate m n))).
+        * unfold SubList; intros.
+          apply getDefs_in in H3.
+          apply in_or_app; auto.
+        * apply DisjList_app_4.
+          { pose proof (specializable_noninteracting m).
+            apply H3; omega.
+          }
+          { apply DisjList_comm; auto. }
+  Qed.
+
   Section TwoModules.
     Variables (m1 m2: Modules).
     Hypotheses (Hsp1: Specializable m1)
@@ -375,7 +498,10 @@ Section DuplicateFacts.
         DefCallSub m1 m2 ->
         DefCallSub (duplicate m1 n) (duplicate m2 n).
     Proof.
-      admit.
+      induction n; simpl; intros.
+      - apply specializeMod_defCallSub; auto.
+      - apply DefCallSub_modular; auto.
+        apply specializeMod_defCallSub; auto.
     Qed.
 
     Lemma specializer_two_comm:
@@ -384,7 +510,35 @@ Section DuplicateFacts.
         forall i,
           m = renameMap (specializer m2 i) (renameMap (specializer m1 i) m).
     Proof.
-      admit.
+      intros.
+      replace (renameMap (specializer m1 i) m) with (renameMap (specializer m2 i) m).
+      - rewrite renameMapFInvG; auto.
+        + apply specializer_bijective.
+          apply specializable_disj_dom_img; auto.
+        + apply specializer_bijective.
+          apply specializable_disj_dom_img; auto.
+      - apply specializer_equiv.
+        + apply M.KeysSubset_SubList with (d2:= getExtMeths m2) in H; auto.
+          eapply M.KeysSubset_SubList; eauto.
+          pose proof (getExtMeths_meths m2).
+          apply SubList_trans with (l2:= getDefs m2 ++ getCalls m2); auto.
+          unfold spDom.
+          eapply SubList_trans; [|eapply makeNoDup_SubList].
+          apply SubList_app_3.
+          * do 2 apply SubList_app_2.
+            apply SubList_app_1, SubList_refl.
+          * do 3 apply SubList_app_2.
+            apply SubList_refl.
+        + eapply M.KeysSubset_SubList; eauto.
+          pose proof (getExtMeths_meths m1).
+          apply SubList_trans with (l2:= getDefs m1 ++ getCalls m1); auto.
+          unfold spDom.
+          eapply SubList_trans; [|eapply makeNoDup_SubList].
+          apply SubList_app_3.
+          * do 2 apply SubList_app_2.
+            apply SubList_app_1, SubList_refl.
+          * do 3 apply SubList_app_2.
+            apply SubList_refl.
     Qed.
 
     Lemma duplicate_traceRefines:
@@ -414,8 +568,8 @@ Section DuplicateFacts.
         + apply duplicate_disj_calls; auto.
         + apply duplicate_disj_defs; auto.
         + apply duplicate_disj_calls; auto.
-        + admit. (* NonInteracting *)
-        + admit. (* NonInteracting *)
+        + apply duplicate_noninteracting; auto.
+        + apply duplicate_noninteracting; auto.
         + apply specialized_2 with (i:= S n); auto.
           eapply traceRefines_label_map; eauto using H.
           clear; unfold EquivalentLabelMap; intros.

@@ -1204,6 +1204,25 @@ Section RenameInv.
     f_equal; intuition.
   Qed.
 
+  Lemma renameMap_bijective_find:
+    forall {A} (m: M.t A) k,
+      M.find k (renameMap f m) = M.find (g k) m.
+  Proof.
+    intros; unfold renameMap; M.mind m.
+    - reflexivity.
+    - rewrite M.F.P.fold_add with (eqA:= eq); auto.
+      + destruct (string_dec k (f k0)); [subst|].
+        * rewrite gInvF.
+          do 2 rewrite M.find_add_1; reflexivity.
+        * assert (g k <> k0) by (intro Hx; elim n; subst; auto).
+          do 2 (rewrite M.find_add_2 by assumption); assumption.
+      + apply renameAdd_transpose_neqkey.
+        intros.
+        rewrite <-gInvF with (x:= s1).
+        rewrite <-gInvF with (x:= s2).
+        rewrite H1; auto.
+  Qed.
+
   Lemma renameMapGInvF A (m: M.t A): renameMap g (renameMap f m) = m.
   Proof.
     apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff; constructor; intros.

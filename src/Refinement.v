@@ -443,6 +443,23 @@ Section Facts.
   Qed.
   Hint Immediate DefCallSub_refl.
 
+  Lemma DefCallSub_modular:
+    forall m1 m2 m3 m4,
+      DefCallSub m1 m3 ->
+      DefCallSub m2 m4 ->
+      DefCallSub (ConcatMod m1 m2) (ConcatMod m3 m4).
+  Proof.
+    unfold DefCallSub, SubList; intros; dest; split; intros.
+    - specializeAll e.
+      apply getDefs_in in H3; destruct H3.
+      + apply getDefs_in_1; auto.
+      + apply getDefs_in_2; auto.
+    - specializeAll e.
+      apply getCalls_in in H3; destruct H3.
+      + apply getCalls_in_1; auto.
+      + apply getCalls_in_2; auto.
+  Qed.
+
   Lemma interacting_implies_wellHiddenModular:
     forall ma mb mc md vp,
       DefCallSub ma mb -> DefCallSub mc md ->

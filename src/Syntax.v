@@ -1,5 +1,6 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound Lib.StringEq Lib.ilist Lib.Word.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.StringEq Lib.ilist Lib.Word Lib.FMap.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
@@ -475,6 +476,28 @@ Definition getExtCalls (m: Modules) :=
   filter (fun c => negb (string_in c (getDefs m))) (getCalls m).
 
 Definition getExtMeths (m: Modules) := getExtDefs m ++ getExtCalls m.
+
+Lemma getExtDefs_getDefs:
+  forall m, SubList (getExtDefs m) (getDefs m).
+Proof.
+  unfold SubList, getExtDefs; intros.
+  apply filter_In in H; dest; auto.
+Qed.
+
+Lemma getExtCalls_getCalls:
+  forall m, SubList (getExtCalls m) (getCalls m).
+Proof.
+  unfold SubList, getExtCalls; intros.
+  apply filter_In in H; dest; auto.
+Qed.
+
+Lemma getExtMeths_meths:
+  forall m, SubList (getExtMeths m) (getDefs m ++ getCalls m).
+Proof.
+  intros; apply SubList_app_3.
+  - apply SubList_app_1, getExtDefs_getDefs.
+  - apply SubList_app_2, getExtCalls_getCalls.
+Qed.
 
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
