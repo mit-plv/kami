@@ -173,6 +173,9 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
 | Sub n: BinBitOp n n n.
 
+Inductive BinBitBoolOp: nat -> nat -> Set :=
+| Lt n: BinBitBoolOp n n.
+
 Section Phoas.
   Variable type: Kind -> Type.
   Definition fullType k := match k with
@@ -188,6 +191,8 @@ Section Phoas.
   | UniBit n1 n2: UniBitOp n1 n2 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2))
   | BinBit n1 n2 n3: BinBitOp n1 n2 n3 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
                      Expr (SyntaxKind (Bit n3))
+  | BinBitBool n1 n2: BinBitBoolOp n1 n2 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
+                      Expr (SyntaxKind Bool)
   | ITE k: Expr (SyntaxKind Bool) -> Expr k -> Expr k -> Expr k
   | Eq k: Expr (SyntaxKind k) -> Expr (SyntaxKind k) -> Expr (SyntaxKind Bool)
   | ReadIndex i k: Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
@@ -517,6 +522,11 @@ Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.
 Infix "+" := (BinBit (Add _)) : kami_scope.
+Infix "-" := (BinBit (Sub _)) : kami_scope.
+Infix "<" := (BinBitBool (Lt _)) : kami_scope.
+Notation "x > y" := (BinBitBool (Lt _) y x) : kami_scope.
+Notation "x >= y" := (UniBool Neg (BinBitBool (Lt _) x y)) : kami_scope.
+Notation "x <= y" := (UniBool Neg (BinBitBool (Lt _) y x)) : kami_scope.
 Infix "==" := Eq (at level 30, no associativity) : kami_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_scope.
 Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_scope.
@@ -698,3 +708,11 @@ Notation "'STRUCT' { s1 ; .. ; sN }" :=
   : kami_scope.
 
 Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_scope.
+
+Definition Maybe (t: Kind) := STRUCT {
+                                  "valid" :: Bool;
+                                  "value" :: t
+                                }.
+
+Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0) : kami_scope.
+
