@@ -91,13 +91,17 @@ Section CoherentMemory.
   Definition rqFromCPop := MethodSig "reqFromC.pop" (DirDirw): RqFromC.
   Definition cRqsIns := MethodSig "cRqs.ins" (RqFromC): Void.
   
-  Definition Mem: Modules.
-    refine (MODULE {
+  Definition Mem :=
+    MODULE {
         Register "dir": DirArray <- dirArrayInit
         with Register "data" : DataArray <- Default
 
-        with Rule "cTransfer" := _}).
-    apply ((Call rq <- rqFromCPop(); Call cRqsIns(rq); Retv)%kami).
+        with Rule "cTransfer" := 
+          Call rq <- rqFromCPop();
+          Call cRqsIns(#rq);
+          Retv
+      }.
+    
     
 
 End CoherentMemory.
