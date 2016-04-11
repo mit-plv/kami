@@ -196,6 +196,12 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Sub n => @wminus n
   end.
 
+Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
+  : word n1 -> word n2 -> bool :=
+  match op with
+    | Lt n => fun a b => if @wlt_dec n a b then true else false
+  end.
+
 Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
   fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
     mapAttrEq1 type attrs i
@@ -239,6 +245,7 @@ Section Semantics.
       | BinBool op e1 e2 => (evalBinBool op) (evalExpr e1) (evalExpr e2)
       | UniBit n1 n2 op e1 => (evalUniBit op) (evalExpr e1)
       | BinBit n1 n2 n3 op e1 e2 => (evalBinBit op) (evalExpr e1) (evalExpr e2)
+      | BinBitBool n1 n2 op e1 e2 => (evalBinBitBool op) (evalExpr e1) (evalExpr e2)
       | ITE _ p e1 e2 => if evalExpr p
                          then evalExpr e1
                          else evalExpr e2
