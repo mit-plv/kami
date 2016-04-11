@@ -337,6 +337,15 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma Equal_val: forall {A : Type} (m1 m2: t A) k, m1 = m2 -> find k m1 = find k m2.
   Proof. intros; subst; reflexivity. Qed.
 
+  Lemma elements_eq_leibniz:
+    forall {A : Type} (m1 m2: t A),
+      elements m1 = elements m2 -> m1 = m2.
+  Proof.
+    intros; ext y.
+    do 2 rewrite P.F.elements_o.
+    rewrite H; auto.
+  Qed.
+
   Theorem empty_canon {A : Type} : forall (m : t A), Empty m -> m = empty A.
   Proof.
     intros; ext k.
@@ -2042,4 +2051,9 @@ Ltac findReify :=
     rewrite <-findMR_find with (mr:= rfd)
   end;
   cbv [findMR string_eq ascii_eq eqb andb].
+
+Ltac meqReify :=
+  apply M.elements_eq_leibniz;
+  try reflexivity;
+  simpl; repeat f_equal.
 
