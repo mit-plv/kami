@@ -96,14 +96,8 @@ Section CoherentMemory.
         Register "dir": DirArray <- dirArrayInit
         with Register "data" : DataArray <- Default
 
-        with Rule "cTransfer" :=
-          (* Call rq <- rqFromCPop();
-          Call cRqsIns(rq); *)
-          LET x: SyntaxKind RqFromC <- $$ Default;
-        _
-          Retv
-              }).
-    apply Retv.
+        with Rule "cTransfer" := _}).
+    apply ((Call rq <- rqFromCPop(); Call cRqsIns(rq); Retv)%kami).
     
-  Print Mem.
+
 End CoherentMemory.
