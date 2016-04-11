@@ -191,7 +191,7 @@ Section ProcDecSC.
     (*     * eapply SingleRule; [simpl; tauto|]. *)
     (*       repeat econstructor. *)
     (*       simpl; apply negb_true_iff; auto. *)
-    (*     * meq. *)
+    (*     * meqReify. *)
 
     (*   + inv H; invertActionRep. *)
     (*     inv_red; simpl_find. *)
@@ -216,9 +216,14 @@ Section ProcDecSC.
     (*           repeat find_if_inside; intuition idtac; inv H7. *)
     (*         } *)
     (*       } *)
-    (*     * clear -H0 H7; meq. *)
-    (*       elim n; clear n. *)
-    (*       simpl; rewrite <-e; auto. *)
+    (*     * meqReify. *)
+
+    (*       clear -H0 H7; simpl in *. *)
+    (*       brewrite H0 in H7. *)
+    (*       find_if_inside; [|inv H7]. *)
+    (*       repeat f_equal. *)
+    (*       destruct (weq x9 x9); [|elim n; reflexivity]. *)
+    (*       reflexivity. *)
 
     (*   + inv H0; invertActionRep. *)
     (*     inv_red; simpl_find. *)
@@ -247,10 +252,16 @@ Section ProcDecSC.
     (*           { inv H7. } *)
     (*         } *)
     (*       } *)
-    (*     * clear -H0 H7; meq. *)
-    (*       rewrite e0 in H0. *)
-    (*       brewrite e in H0. *)
-    (*       inv H0. *)
+    (*     * meqReify. *)
+
+    (*       clear -H0 H7; simpl in *. *)
+    (*       brewrite H0 in H7. *)
+    (*       match goal with *)
+    (*       | [H: context[if ?c then _ else _] |- _] => *)
+    (*         destruct c *)
+    (*       end; [|inv H7]. *)
+    (*       rewrite e. simpl. *)
+    (*       reflexivity. *)
   Qed.
 
 End ProcDecSC.
