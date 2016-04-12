@@ -45,7 +45,8 @@ Section ProcDecSC.
 
   Variable n: nat.
 
-  Definition pdec := ProcDecInl.pdec fifoSize dec exec.
+  (* Definition pdec := ProcDecInl.pdec fifoSize dec exec. *)
+  Definition pdec := pdecf fifoSize dec exec.
   Definition pinst := pinst dec exec opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for equiv_tac *)
@@ -93,8 +94,8 @@ Section ProcDecSC.
         * refine (existT _ _ rfv).
   Defined.
 
-  Ltac regMap_red :=
-    unfold pdec_pinst_regMap;
+  Ltac regMap_red regMap :=
+    unfold regMap;
     repeat
       (try match goal with
            | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
@@ -104,164 +105,144 @@ Section ProcDecSC.
        dest; try subst;
        try findReify).
 
+  Ltac regMap_init regMap :=
+    unfold initRegs, getRegInits; simpl; clear;
+    regMap_red regMap; reflexivity.
+  
+  Ltac kinline_left im :=
+    match goal with
+    | [ |- traceRefines _ ?lm _ ] =>
+      apply traceRefines_inlining_left; auto;
+      let Heq := fresh "Heq" in
+      remember (inlineF lm) as im eqn:Heq;
+      kinline_compute_in Heq;
+      split; [|subst; reflexivity]
+    end.
+
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
-    (* apply traceRefines_inlining_left; auto. *)
-    (* unfold pdec; rewrite <-pdecInl_equal. *)
-    (* split; [|reflexivity]. *)
+    (* kinline_left pdeci. *)
+    (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap; *)
+    (*   subst; [regMap_init pdec_pinst_regMap|auto|auto|]. *)
 
-    (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
+    (* intros. *)
+    (* pose proof (procDec_inv_0_ok H). *)
+    (* pose proof (procDec_inv_1_ok H). *)
+    (* clear H. *)
+    (* inv H0; CommonTactics.dest_in. *)
 
-    (* - unfold initRegs, getRegInits; simpl; clear. *)
-    (*   regMap_red. *)
-    (*   reflexivity. *)
-    (* - auto. *)
-    (* - auto. *)
-    (* - intros. *)
-    (*   pose proof (procDec_inv_0_ok H). *)
-    (*   pose proof (procDec_inv_1_ok H). *)
-    (*   clear H. *)
-    (*   inv H0; CommonTactics.dest_in. *)
+    (* - invertActionRep. *)
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + inv_red; simpl_find. *)
+    (*     dest_or3; inv_contra. *)
+    (*     regMap_red pdec_pinst_regMap. *)
+    (*     mred. *)
 
-    (*   + inv H; invertActionRep. *)
-    (*     eexists; split. *)
-    (*     * econstructor. *)
-    (*     * inv_red; simpl_find. *)
-    (*       dest_or3; inv_contra. *)
-    (*       regMap_red. *)
-    (*       mred. *)
+    (* - invertActionRep. *)
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + inv_red; simpl_find. *)
+    (*     dest_or3; inv_contra. *)
+    (*     regMap_red pdec_pinst_regMap. *)
+    (*     mred. *)
 
-    (*   + inv H0; invertActionRep. *)
-    (*     eexists; split. *)
-    (*     * econstructor. *)
-    (*     * inv_red; simpl_find. *)
-    (*       dest_or3; inv_contra. *)
-    (*       regMap_red. *)
-    (*       mred. *)
+    (* - invertActionRep. *)
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + inv_red; simpl_find. *)
+    (*     dest_or3; inv_contra; inv_red. *)
+    (*     regMap_red pdec_pinst_regMap. *)
 
-    (*   + inv H; invertActionRep. *)
-    (*     eexists; split. *)
-    (*     * econstructor. *)
-    (*     * inv_red; simpl_find. *)
-    (*       dest_or3; inv_contra. *)
-    (*       regMap_red. *)
+    (*     brewrite e. *)
+    (*     reflexivity. *)
+        
+    (* - invertActionRep. *)
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + inv_red; simpl_find. *)
+    (*     dest_or3; inv_contra; inv_red. *)
+    (*     regMap_red pdec_pinst_regMap. *)
 
-    (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
-    (*       clear -H9. *)
-    (*       match goal with *)
-    (*       | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H] *)
-    (*       end. *)
-    (*       brewrite e. *)
-    (*       reflexivity. *)
-          
-    (*   + inv H0; invertActionRep. *)
-    (*     eexists; split. *)
-    (*     * econstructor. *)
-    (*     * inv_red; simpl_find. *)
-    (*       dest_or3; inv_contra. *)
-    (*       regMap_red. *)
+    (*     brewrite e. *)
+    (*     reflexivity. *)
+        
+    (* - invertActionRep. *)
+    (*   eexists; split. *)
+    (*   + inv_red; simpl_find. *)
+    (*     dest_or3; inv_contra; inv_red. *)
+    (*     regMap_red pdec_pinst_regMap. *)
 
-    (*       destruct (weq (x2 ^+ $ (1)) (x2 ^+ $ (1))); [|elim n0; reflexivity]. *)
-    (*       clear -H9. *)
-    (*       match goal with *)
-    (*       | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H] *)
-    (*       end. *)
-    (*       brewrite e. *)
-    (*       reflexivity. *)
-          
-    (*   + inv H; invertActionRep. *)
-    (*     eexists; split. *)
-    (*     * inv_red; simpl_find. *)
-    (*       dest_or3; inv_contra. *)
-    (*       regMap_red. *)
+    (*     econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor; auto. *)
+    (*     simpl; rewrite e; reflexivity. *)
+        
+    (*   + meqReify. *)
 
-    (*       eapply SingleRule; [simpl; tauto|]. *)
-    (*       repeat econstructor. *)
+    (* - invertActionRep. *)
+    (*   inv_red; simpl_find. *)
+    (*   dest_or3; inv_contra; inv_red. *)
+    (*   regMap_red pdec_pinst_regMap. *)
+      
+    (*   eexists; split. *)
+    (*   + econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor. *)
+    (*     simpl; apply negb_true_iff; auto. *)
+    (*   + meqReify. *)
+
+    (* - invertActionRep. *)
+    (*   inv_red; simpl_find. *)
+    (*   dest_or3; inv_contra. *)
+    (*   unfold memAtomK, atomK in *; inv_red. *)
+    (*   regMap_red pdec_pinst_regMap. *)
+      
+    (*   eexists; split. *)
+    (*   + econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor. *)
+    (*     * clear -H0 e; simpl in *. *)
+    (*       find_if_inside; intuition idtac. *)
+    (*       brewrite H0 in e; auto. *)
+    (*     * rewrite idElementwiseId; unfold id. *)
+    (*       meqReify. *)
+    (*       simpl; boundedMapTac. *)
+    (*       clear -H3 e. *)
+    (*       brewrite e in H3; simpl in H3. *)
     (*       auto. *)
-    (*     * do 2 rewrite M.union_empty_L. *)
-    (*       reflexivity. *)
+    (*   + meqReify. *)
 
-    (*   + inv H0; invertActionRep. *)
-    (*     inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra. *)
-    (*     regMap_red. *)
-        
-    (*     eexists; split. *)
-    (*     * eapply SingleRule; [simpl; tauto|]. *)
-    (*       repeat econstructor. *)
-    (*       simpl; apply negb_true_iff; auto. *)
-    (*     * meqReify. *)
+    (*     clear -H0 e; simpl in *. *)
+    (*     brewrite H0 in e. *)
+    (*     rewrite e; simpl. *)
+    (*     repeat f_equal. *)
+    (*     destruct (weq x9 x9); [|elim n; reflexivity]. *)
+    (*     reflexivity. *)
 
-    (*   + inv H; invertActionRep. *)
-    (*     inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra. *)
-    (*     unfold memAtomK, atomK in *. *)
-    (*     regMap_red. *)
-        
-    (*     eexists; split. *)
-    (*     * eapply SingleRule; [simpl; tauto|]. *)
-    (*       repeat econstructor. *)
-    (*       { simpl in *; clear -H0 H7. *)
-    (*         repeat find_if_inside; intuition idtac. *)
-    (*         elim n; clear n; rewrite <-e; auto. *)
-    (*       } *)
-    (*       { rewrite idElementwiseId; unfold id. *)
-    (*         do 3 f_equal. *)
-    (*         simpl; boundedMapTac. *)
-    (*         { clear -H7. *)
-    (*           find_if_inside; auto; inv H7. *)
-    (*         } *)
-    (*         { clear -H3 H7. *)
-    (*           repeat find_if_inside; intuition idtac; inv H7. *)
-    (*         } *)
-    (*       } *)
-    (*     * meqReify. *)
+    (* - invertActionRep. *)
+    (*   inv_red; simpl_find. *)
+    (*   dest_or3; inv_contra; inv_red. *)
+    (*   unfold memAtomK, atomK in *. *)
+    (*   regMap_red pdec_pinst_regMap. *)
 
-    (*       clear -H0 H7; simpl in *. *)
-    (*       brewrite H0 in H7. *)
-    (*       find_if_inside; [|inv H7]. *)
-    (*       repeat f_equal. *)
-    (*       destruct (weq x9 x9); [|elim n; reflexivity]. *)
-    (*       reflexivity. *)
+    (*   eexists; split. *)
+    (*   + econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor. *)
+    (*     * clear -H0 e; simpl in *. *)
+    (*       brewrite H0 in e. *)
+    (*       brewrite e. *)
+    (*       auto. *)
+    (*     * rewrite idElementwiseId; unfold id. *)
+    (*       meqReify. *)
+    (*       simpl; boundedMapTac. *)
+    (*       clear -H3 e; simpl in *. *)
+    (*       brewrite e in H3; simpl in H3. *)
+    (*       auto. *)
+    (*   + meqReify. *)
 
-    (*   + inv H0; invertActionRep. *)
-    (*     inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra. *)
-    (*     unfold memAtomK, atomK in *. *)
-    (*     regMap_red. *)
-
-    (*     eexists; split. *)
-    (*     * eapply SingleRule; [simpl; tauto|]. *)
-    (*       repeat econstructor. *)
-    (*       { simpl in *; clear -H0 H7. *)
-    (*         repeat find_if_inside; intuition idtac. *)
-    (*         elim n; clear n; rewrite <-e; auto. *)
-    (*       } *)
-    (*       { rewrite idElementwiseId; unfold id. *)
-    (*         do 3 f_equal. *)
-    (*         simpl; boundedMapTac. *)
-    (*         { clear -H7. *)
-    (*           find_if_inside; intuition idtac. *)
-    (*           inv H7. *)
-    (*         } *)
-    (*         { clear -H3 H7. *)
-    (*           repeat find_if_inside; intuition idtac. *)
-    (*           { brewrite e0 in e; inv e. } *)
-    (*           { inv H7. } *)
-    (*           { inv H7. } *)
-    (*         } *)
-    (*       } *)
-    (*     * meqReify. *)
-
-    (*       clear -H0 H7; simpl in *. *)
-    (*       brewrite H0 in H7. *)
-    (*       match goal with *)
-    (*       | [H: context[if ?c then _ else _] |- _] => *)
-    (*         destruct c *)
-    (*       end; [|inv H7]. *)
-    (*       rewrite e. simpl. *)
-    (*       reflexivity. *)
+    (*     clear -H0 e; simpl in *. *)
+    (*     brewrite H0 in e. *)
+    (*     rewrite e; simpl. *)
+    (*     reflexivity. *)
   Qed.
 
 End ProcDecSC.

@@ -389,6 +389,7 @@ Ltac invertActionFirst :=
 Ltac invertActionRep :=
   repeat
     match goal with
+    | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
     | [H: SemAction _ _ _ _ _ |- _] => invertAction H
     | [H: if ?c
           then

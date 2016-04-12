@@ -67,12 +67,16 @@ Ltac inv_contra :=
 Ltac inv_red :=
   repeat autounfold with InvDefs in *; dest;
   repeat
-    (match goal with
-     | [ |- ~ _ ] => intro
-     | [H: ?t = ?t |- _] => clear H
-     | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
-     | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
-     end; dest; try subst).
+    (try match goal with
+         | [H: ?t = ?t |- _] => clear H
+         | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
+         | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
+         | [ |- context [weq ?w ?w] ] =>
+           let n := fresh "n" in
+           destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
+         | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
+         end; dest; try subst).
 
 Lemma rewrite_not_weq: forall sz (a b: word sz) (pf: a <> b), weq a b = right _ pf.
 Proof.

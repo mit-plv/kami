@@ -1004,7 +1004,13 @@ Ltac kinline_compute_in H :=
       rewrite (signature_eq s) in H; unfold eq_rect in H
     end.
 
-Ltac kinline_left :=
-  apply traceRefines_inlining_left; auto; kinline_compute;
-  split; [|reflexivity].
+Ltac kinline_left im :=
+  match goal with
+  | [ |- traceRefines _ ?lm _ ] =>
+    apply traceRefines_inlining_left; auto;
+    let Heq := fresh "Heq" in
+    remember (inlineF lm) as im eqn:Heq;
+    kinline_compute_in Heq;
+    split; [|subst; reflexivity]
+  end.
 
