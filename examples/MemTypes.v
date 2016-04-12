@@ -38,6 +38,13 @@ Section MsgTypes.
                           "to" :: Msi
                         }.
 
+  Definition RsFromP := STRUCT {
+                          "addr" :: Addr;
+                          "to" :: Msi;
+                          "line" :: Line;
+                          "id" :: Id
+                        }.
+
   Definition RqToP := STRUCT {
                           "addr" :: Addr;
                           "from" :: Msi;
@@ -74,6 +81,7 @@ Definition WaitOldTag := 2.
 Definition WaitNewTag := 3.
 Definition WaitSt := 4.
 Definition Processing := 5.
-Definition Done := 6.
+Definition Depend := 6.
+Definition Done := 7.
 
 
