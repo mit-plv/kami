@@ -1,4 +1,4 @@
-Require Import Bool Ascii String List Eqdep.
+Require Import Bool Ascii String List Eqdep Omega.
 Require Import Logic.FunctionalExtensionality.
 
 Ltac isNew P :=
@@ -116,27 +116,6 @@ Notation "'nosimpl' t" := (match tt with tt => t end) (at level 10).
 
 Notation Yes := (left _).
 Notation "e1 ;; e2" := (if e1 then e2 else right _) (right associativity, at level 60).
-
-Fixpoint string_of_nat (n: nat) :=
-  match n with
-    | O => "a"%string
-    | S n' => append "a"%string (string_of_nat n')
-  end.
-
-Definition indexSymbol: string := "__"%string.
-
-Definition withIndex str idx := 
-  append (append (string_of_nat idx) indexSymbol) str.
-
-Theorem withIndex_eq : withIndex = fun str idx =>
-  append (append (string_of_nat idx) indexSymbol) str.
-Proof.
-  reflexivity.
-Qed.
-
-Global Opaque withIndex.
-
-Notation "str '__' idx" := (withIndex str idx) (at level 0).
 
 Axiom cheat: forall t, t.
 

@@ -108,6 +108,14 @@ Section Rename.
     | ConcatMod m1 m2 => ConcatMod (renameModules m1) (renameModules m2)
     end.
 
+  Lemma renameListAttr_namesOf:
+    forall {A} (l: list (Attribute A)),
+      namesOf (renameListAttr l) = map rename (namesOf l).
+  Proof.
+    induction l; simpl; intros; auto.
+    f_equal; auto.
+  Qed.
+
   Lemma renameGetRegInits m: getRegInits (renameModules m) = renameListAttr (getRegInits m).
   Proof.
     induction m.
@@ -1348,56 +1356,119 @@ Section RenameRefinement.
 
 End RenameRefinement.
 
-Definition bijective dom img s :=
+Fixpoint bijective dom img s :=
   match dom, img with
-    | d :: ds, i :: is =>
-      match string_dec s d, string_dec s i with
-        | left _, right _ => i
-        | right _, left _ => d
-        | _, _ => s
-      end
-    | _, _ => s
+  | d :: dt, i :: it =>
+    if string_dec s d then i
+    else if string_dec s i then d
+         else bijective dt it s
+  | _, _ => s
   end.
 
-Section MakeBijective.
-  Variable dom img: list string.
-  Variable lengthEq: length dom = length img.
-  Variable disjDomImg: forall i, ~ (In i dom /\ In i img).
-  Variable noDupDom: NoDup dom.
-  Variable noDupImg: NoDup img.
+Ltac bijective_correct_tac :=
+  repeat
+    match goal with
+    | [ |- context[string_dec ?s1 ?s2] ] =>
+      destruct (string_dec s1 s2); [subst|]; intuition
+    end.
 
-  Lemma bijectiveCorrect s: bijective dom img (bijective dom img s) = s.
-  Proof.
-    generalize img lengthEq disjDomImg noDupDom noDupImg s; clear.
-    induction dom; intros.
-    - destruct img; simpl in *.
-      + reflexivity.
-      + discriminate.
-    - destruct img.
-      + discriminate.
-      + inversion lengthEq.
-        specialize (IHl _ H0); clear H0 lengthEq.
-        inversion noDupDom; subst.
-        inversion noDupImg; subst.
-        assert (sth: forall i, ~ (In i l /\ In i l0)) by
-            (unfold not; intros; dest;
-             specialize (disjDomImg i);
-             clear - disjDomImg H H0; intuition).
-        specialize (IHl sth H2 H4).
-        simpl.
-        destruct (string_dec s s0); subst.
-        destruct (string_dec s0 a); subst;
-        destruct (string_dec a a); subst;
-        try reflexivity.
-        destruct (string_dec a s0); subst; intuition.
-        intuition.
-        destruct (string_dec s a); subst;
-        destruct (string_dec s0 a); subst;
-        destruct (string_dec a a); subst;
-        try destruct (string_dec s0 s0); subst; intuition.
-        destruct (string_dec s a); subst; try reflexivity.
-        destruct (string_dec s a); subst; try reflexivity; intuition.
-        destruct (string_dec s s0); subst; intuition.
-  Qed.
-End MakeBijective.
+Lemma bijective_dom_in:
+  forall dom img
+         (HlengthEq: length dom = length img)
+         (HdisjDomImg: forall i, ~ (In i dom /\ In i img))
+         s, In s dom -> In (bijective dom img s) img.
+Proof.
+  induction dom as [|d]; simpl; intros; [elim H|].
+  destruct img as [|i]; inv HlengthEq.
+  destruct H; subst.
+  - bijective_correct_tac.
+  - bijective_correct_tac.
+    + elim (HdisjDomImg i); intuition.
+    + right; apply IHdom; auto.
+      intros; apply (HdisjDomImg i0); intuition.
+Qed.
+
+Lemma bijective_img_in:
+  forall img dom
+         (HlengthEq: length dom = length img)
+         (HdisjDomImg: forall i, ~ (In i dom /\ In i img))
+         s, In s img -> In (bijective dom img s) dom.
+Proof.
+  induction img as [|i]; simpl; intros; [elim H|].
+  destruct dom as [|d]; inv HlengthEq.
+  destruct H; subst; simpl.
+  - bijective_correct_tac.
+  - bijective_correct_tac.
+    + elim (HdisjDomImg d); intuition.
+    + right; apply IHimg; auto.
+      intros; apply (HdisjDomImg i0); intuition.
+Qed.
+
+Lemma bijective_id:
+  forall dom img
+         (HlengthEq: length dom = length img)
+         (HdisjDomImg: forall i, ~ (In i dom /\ In i img))
+         s, ~ In s dom -> ~ In s img -> bijective dom img s = s.
+Proof.
+  induction dom as [|d]; simpl; intros; auto.
+  destruct img as [|i]; inv HlengthEq; simpl in *.
+  bijective_correct_tac.
+  apply IHdom; auto.
+  intros; apply (HdisjDomImg i0); intuition.
+Qed.
+
+Lemma bijectiveCorrect:
+  forall (dom img: list string)
+         (HlengthEq: length dom = length img)
+         (HdisjDomImg: forall i, ~ (In i dom /\ In i img))
+         (HnoDupDom: NoDup dom) (HnoDupImg: NoDup img),
+  forall s, bijective dom img (bijective dom img s) = s.
+Proof.
+  induction dom as [|d]; simpl; intros; auto.
+  destruct img as [|i]; auto.
+  inv HlengthEq; inv HnoDupDom; inv HnoDupImg.
+
+  assert (forall i, ~ (In i dom /\ In i img)).
+  { intros; intro Hx; elim (HdisjDomImg i0); intuition. }
+
+  destruct (string_dec s d); subst.
+  - bijective_correct_tac.
+  - destruct (string_dec s i); subst.
+    + bijective_correct_tac.
+    + assert (bijective dom img s <> d).
+      { intro Hx.
+        destruct (in_dec string_dec s dom) as [Hdin|Hdnin].
+        { pose proof (bijective_dom_in dom img H0 H _ Hdin).
+          rewrite Hx in H1.
+          elim (HdisjDomImg d); intuition.
+        }
+        { destruct (in_dec string_dec s img) as [Hiin|Hinin].
+          { pose proof (bijective_img_in img dom H0 H _ Hiin).
+            rewrite Hx in H1.
+            elim (HdisjDomImg d); intuition.
+          }
+          { pose proof (bijective_id dom img H0 H s).
+            elim n; rewrite <-H1, <-Hx; auto.
+          }
+        }
+      }
+      assert (bijective dom img s <> i).
+      { intro Hx.
+        destruct (in_dec string_dec s dom) as [Hdin|Hdnin].
+        { pose proof (bijective_dom_in dom img H0 H _ Hdin).
+          rewrite Hx in H6.
+          elim H4; auto.
+        }
+        { destruct (in_dec string_dec s img) as [Hiin|Hinin].
+          { pose proof (bijective_img_in img dom H0 H _ Hiin).
+            rewrite Hx in H6.
+            elim (HdisjDomImg i); intuition.
+          }
+          { pose proof (bijective_id dom img H0 H s).
+            elim n0; rewrite <-H6, <-Hx; auto.
+          }
+        }
+      }
+      bijective_correct_tac.
+Qed.
 

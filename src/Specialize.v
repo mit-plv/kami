@@ -1,8 +1,9 @@
 Require Import Bool String List.
-Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.StringEq.
+Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq.
 Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf.
 
 Require Import FunctionalExtensionality.
+Require Import Compare_dec.
 
 Set Implicit Arguments.
 
@@ -40,6 +41,40 @@ Section SpecializeModule.
                                    ++ (namesOf (getRules m))
                                    ++ (namesOf (getDefsBodies m))
                                    ++ (getCalls m)).
+
+  Lemma spDom_regs:
+    SubList (namesOf (getRegInits m)) spDom.
+  Proof.
+    unfold spDom.
+    eapply SubList_trans; [|apply makeNoDup_SubList].
+    apply SubList_app_1, SubList_refl.
+  Qed.
+
+  Lemma spDom_rules:
+    SubList (namesOf (getRules m)) spDom.
+  Proof.
+    unfold spDom.
+    eapply SubList_trans; [|apply makeNoDup_SubList].
+    apply SubList_app_2, SubList_app_1, SubList_refl.
+  Qed.
+
+  Lemma spDom_defs:
+    SubList (getDefs m) spDom.
+  Proof.
+    unfold spDom.
+    eapply SubList_trans; [|apply makeNoDup_SubList].
+    do 2 apply SubList_app_2.
+    apply SubList_app_1, SubList_refl.
+  Qed.
+
+  Lemma spDom_calls:
+    SubList (getCalls m) spDom.
+  Proof.
+    unfold spDom.
+    eapply SubList_trans; [|apply makeNoDup_SubList].
+    do 3 apply SubList_app_2.
+    apply SubList_refl.
+  Qed.
 
   Definition spf := fun e => e __ i.
 
@@ -97,19 +132,70 @@ Section SpecializeModule.
     - apply spImg_NoDup.
   Qed.
 
+  Lemma specializer_dom:
+    forall k, In k spDom -> specializer k = spf k.
+  Proof.
+    intros; unfold specializer.
+    assert (length spDom = length spImg) by apply sp_lengthEq.
+    assert (NoDup spDom) by apply makeNoDup_NoDup.
+    assert (NoDup spImg) by apply spImg_NoDup.
+    unfold spImg in *.
+
+    induction spDom; simpl; intros; [inv H|].
+    simpl in *.
+    inv H0; inv H1; inv H2.
+    assert (forall i, ~ (In i l /\ In i (map spf l))).
+    { intros; intro Hx; elim (HdisjDomImg i0); intuition. }
+
+    destruct H; subst.
+    - bijective_correct_tac.
+    - specialize (IHl H0 H H4 H6 H7).
+      bijective_correct_tac.
+      exfalso; elim (HdisjDomImg (spf a)); intuition.
+  Qed.
+
+  Lemma specializer_dom_list:
+    forall l, SubList l spDom -> map specializer l = map spf l.
+  Proof.
+    induction l; simpl; intros; auto.
+    f_equal.
+    - apply specializer_dom.
+      apply H; left; auto.
+    - apply IHl.
+      eapply SubList_cons_inv; eauto.
+  Qed.
+
+  Lemma specializer_map:
+    forall {A} (mp: M.t A),
+      M.KeysSubset mp spDom ->
+      renameMap specializer mp = renameMap spf mp.
+  Proof.
+    intros; M.mind mp; auto.
+
+    unfold specializer, renameMap.
+    rewrite M.F.P.fold_add; auto.
+    - rewrite M.F.P.fold_add; auto.
+      + f_equal.
+        * apply M.KeysSubset_add_2 in H1.
+          apply specializer_dom; auto.
+        * apply H.
+          eapply M.KeysSubset_add_1; eauto.
+      + apply renameAdd_transpose_neqkey.
+        apply spf_onto.
+    - apply renameAdd_transpose_neqkey.
+      intros.
+      rewrite <-specializer_bijective with (x:= s1).
+      rewrite <-specializer_bijective with (x:= s2).
+      unfold specializer.
+      rewrite H2; auto.
+  Qed.
+
 End SpecializeModule.
 
 Section SpecializeFacts.
-
-  Lemma specializer_equiv:
-    forall m1 m2 {A} (m: M.t A),
-      M.KeysSubset m (spDom m1) ->
-      M.KeysSubset m (spDom m2) ->
-      forall i,
-        renameMap (specializer m1 i) m = renameMap (specializer m2 i) m.
-  Proof.
-    admit.
-  Qed.
+  
+  Lemma spf_neq: forall a b i j, i <> j -> spf i a <> spf j b.
+  Proof. intros; apply withIndex_neq; auto. Qed.
 
   Lemma renameAction_ActionEquiv:
     forall G {retT} (ta: ActionT type retT) (ua: ActionT typeUT retT),
@@ -173,7 +259,7 @@ Section SpecializeFacts.
       ValidRegsModules type (specializeMod m i).
   Proof.
     admit.
-  Qed.
+  Qed.    
 
   Lemma specializeMod_defCallSub:
     forall m1 m2 i,
@@ -196,11 +282,6 @@ Section Specializable.
       | None => hasNoIndex t
       end
     end.
-
-  Lemma append_length:
-    forall s1 s2,
-      String.length (s1 ++ s2) = String.length s1 + String.length s2.
-  Proof. induction s1; simpl; intros; auto. Qed.
 
   Lemma substring_append_1:
     forall s1 s2 n,
@@ -252,6 +333,28 @@ Section Specializable.
       + eauto.
   Qed.
 
+  Lemma hasNoIndex_disj_imgs:
+    forall l,
+      hasNoIndex l = true ->
+      forall i j s,
+        i <> j ->
+        In s (map (spf i) l) ->
+        In s (map (spf j) l) ->
+        False.
+  Proof.
+    induction l; simpl; intros; auto.
+    remember (index 0 indexSymbol a) as idx; destruct idx; [inv H|].
+    destruct H1; [subst|].
+    - destruct H2.
+      + eapply spf_neq; eauto.
+      + apply in_map_iff in H1; dest; subst.
+        eapply spf_neq; eauto.
+    - destruct H2; [subst|].
+      + apply in_map_iff in H1; dest; subst.
+        eapply spf_neq; eauto.
+      + eauto.
+  Qed.
+
   Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
 
   Variable (m: Modules).
@@ -265,12 +368,28 @@ Section Specializable.
     eapply hasNoIndex_disj_dom_img; eauto.
   Qed.
 
+  Hint Immediate specializable_disj_dom_img.
+
+  Lemma specializeMod_regs:
+    forall i,
+      namesOf (getRegInits (specializeMod m i)) = map (spf i) (namesOf (getRegInits m)).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetRegInits.
+    rewrite renameListAttr_namesOf.
+    apply specializer_dom_list; auto.
+    apply spDom_regs.
+  Qed.
+
   Lemma specializable_disj_regs:
     forall i j,
       i <> j ->
       DisjList (namesOf (getRegInits (specializeMod m i)))
                (namesOf (getRegInits (specializeMod m j))).
   Proof.
+    intros; do 2 rewrite specializeMod_regs.
+    unfold DisjList; intros.
+    (* TODO: use spf_neq *)
     admit.
   Qed.
 
@@ -299,7 +418,7 @@ Section Specializable.
   Proof.
     admit.
   Qed.
-
+  
 End Specializable.
 
 Hint Immediate specializable_disj_dom_img
@@ -493,6 +612,14 @@ Section DuplicateFacts.
                (Hvr2: ValidRegsModules type m2)
                (Hexts: SubList (getExtMeths m1) (getExtMeths m2)).
 
+    Lemma specializer_equiv:
+      forall {A} (m: M.t A),
+        M.KeysSubset m (spDom m1) ->
+        M.KeysSubset m (spDom m2) ->
+        forall i,
+          renameMap (specializer m1 i) m = renameMap (specializer m2 i) m.
+    Proof. intros; do 2 (rewrite specializer_map; auto). Qed.
+
     Lemma duplicate_defCallSub:
       forall n,
         DefCallSub m1 m2 ->
@@ -517,28 +644,16 @@ Section DuplicateFacts.
           apply specializable_disj_dom_img; auto.
         + apply specializer_bijective.
           apply specializable_disj_dom_img; auto.
-      - apply specializer_equiv.
+      - apply eq_sym, specializer_equiv.
+        + eapply M.KeysSubset_SubList; eauto.
+          pose proof (getExtMeths_meths m1).
+          apply SubList_trans with (l2:= getDefs m1 ++ getCalls m1); auto.
+          apply SubList_app_3; [apply spDom_defs|apply spDom_calls].
         + apply M.KeysSubset_SubList with (d2:= getExtMeths m2) in H; auto.
           eapply M.KeysSubset_SubList; eauto.
           pose proof (getExtMeths_meths m2).
           apply SubList_trans with (l2:= getDefs m2 ++ getCalls m2); auto.
-          unfold spDom.
-          eapply SubList_trans; [|eapply makeNoDup_SubList].
-          apply SubList_app_3.
-          * do 2 apply SubList_app_2.
-            apply SubList_app_1, SubList_refl.
-          * do 3 apply SubList_app_2.
-            apply SubList_refl.
-        + eapply M.KeysSubset_SubList; eauto.
-          pose proof (getExtMeths_meths m1).
-          apply SubList_trans with (l2:= getDefs m1 ++ getCalls m1); auto.
-          unfold spDom.
-          eapply SubList_trans; [|eapply makeNoDup_SubList].
-          apply SubList_app_3.
-          * do 2 apply SubList_app_2.
-            apply SubList_app_1, SubList_refl.
-          * do 3 apply SubList_app_2.
-            apply SubList_refl.
+          apply SubList_app_3; [apply spDom_defs|apply spDom_calls].
     Qed.
 
     Lemma duplicate_traceRefines:

@@ -1316,6 +1316,20 @@ Module LeibnizFacts (M : MapLeibniz).
     subst. assumption. auto.
   Qed.
 
+  Lemma KeysSubset_add_1:
+    forall {A} (m: t A) k v d,
+      KeysSubset (add k v m) d -> KeysSubset m d.
+  Proof.
+    mintros; apply H; apply P.F.add_in_iff; auto.
+  Qed.
+
+  Lemma KeysSubset_add_2:
+    forall {A} (m: t A) k v d,
+      KeysSubset (add k v m) d -> List.In k d.
+  Proof.
+    mintros; apply H; apply P.F.add_in_iff; auto.
+  Qed.
+
   Lemma KeysSubset_remove:
     forall {A} (m: t A) k d,
       KeysSubset m (k :: d) -> KeysSubset (remove k m) d.
