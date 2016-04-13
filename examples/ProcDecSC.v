@@ -10,30 +10,6 @@ Require Import Eqdep.
 
 Set Implicit Arguments.
 
-(** TODO: move to proper sites *)
-
-Tactic Notation "brewrite" ident(H) :=
-  match type of H with
-  | context [{| bindex:= ?s; indexb:= ?ib1 |}] =>
-    match goal with
-    | [ |- context [{| bindex:= ?s; indexb:= ?ib2 |}] ] =>
-      progress change {| bindex:= s; indexb:= ib2 |}
-      with {| bindex:= s; indexb:= ib1 |}
-    end
-  end; rewrite H.
-
-Tactic Notation "brewrite" ident(H1) "in" ident(H2) :=
-  match type of H1 with
-  | context [{| bindex:= ?s; indexb:= ?ib1 |}] =>
-    match type of H2 with
-    | context [{| bindex:= ?s; indexb:= ?ib2 |}] =>
-      progress change {| bindex:= s; indexb:= ib2 |}
-      with {| bindex:= s; indexb:= ib1 |} in H2
-    end
-  end; rewrite H1 in H2.
-
-(** TODO end *)
-
 Section ProcDecSC.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
@@ -96,29 +72,23 @@ Section ProcDecSC.
 
   Ltac regMap_red regMap :=
     unfold regMap;
+    repeat autounfold with MethDefs in *;
     repeat
       (try match goal with
            | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
            | [ |- context[decKind ?k ?k] ] =>
              rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
            end;
-       dest; try subst;
-       try findReify).
+       dest; try subst; try findReify);
+    repeat
+      match goal with
+      | [H: M.find _ _ = _ |- _] => clear H
+      end.
 
   Ltac regMap_init regMap :=
     unfold initRegs, getRegInits; simpl; clear;
     regMap_red regMap; reflexivity.
   
-  Ltac kinline_left im :=
-    match goal with
-    | [ |- traceRefines _ ?lm _ ] =>
-      apply traceRefines_inlining_left; auto;
-      let Heq := fresh "Heq" in
-      remember (inlineF lm) as im eqn:Heq;
-      kinline_compute_in Heq;
-      split; [|subst; reflexivity]
-    end.
-
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
@@ -133,116 +103,73 @@ Section ProcDecSC.
     (* inv H0; CommonTactics.dest_in. *)
 
     (* - invertActionRep. *)
+    (*   inv_red; dest_or3; inv_contra. *)
+    (*   regMap_red pdec_pinst_regMap. *)
     (*   eexists; split. *)
     (*   + econstructor. *)
-    (*   + inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra. *)
-    (*     regMap_red pdec_pinst_regMap. *)
-    (*     mred. *)
-
-    (* - invertActionRep. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra. *)
-    (*     regMap_red pdec_pinst_regMap. *)
-    (*     mred. *)
-
-    (* - invertActionRep. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra; inv_red. *)
-    (*     regMap_red pdec_pinst_regMap. *)
-
-    (*     brewrite e. *)
-    (*     reflexivity. *)
-        
-    (* - invertActionRep. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra; inv_red. *)
-    (*     regMap_red pdec_pinst_regMap. *)
-
-    (*     brewrite e. *)
-    (*     reflexivity. *)
-        
-    (* - invertActionRep. *)
-    (*   eexists; split. *)
-    (*   + inv_red; simpl_find. *)
-    (*     dest_or3; inv_contra; inv_red. *)
-    (*     regMap_red pdec_pinst_regMap. *)
-
-    (*     econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor; auto. *)
-    (*     simpl; rewrite e; reflexivity. *)
-        
     (*   + meqReify. *)
 
     (* - invertActionRep. *)
-    (*   inv_red; simpl_find. *)
-    (*   dest_or3; inv_contra; inv_red. *)
+    (*   inv_red; dest_or3; inv_contra. *)
     (*   regMap_red pdec_pinst_regMap. *)
-      
     (*   eexists; split. *)
-    (*   + econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor. *)
-    (*     simpl; apply negb_true_iff; auto. *)
+    (*   + econstructor. *)
     (*   + meqReify. *)
 
     (* - invertActionRep. *)
-    (*   inv_red; simpl_find. *)
-    (*   dest_or3; inv_contra. *)
-    (*   unfold memAtomK, atomK in *; inv_red. *)
+    (*   inv_red; dest_or3; inv_contra. *)
     (*   regMap_red pdec_pinst_regMap. *)
-      
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + meqReify; inv_finish. *)
+        
+    (* - invertActionRep. *)
+    (*   inv_red; dest_or3; inv_contra. *)
+    (*   regMap_red pdec_pinst_regMap. *)
+    (*   eexists; split. *)
+    (*   + econstructor. *)
+    (*   + meqReify; inv_finish. *)
+        
+    (* - invertActionRep. *)
+    (*   inv_red; dest_or3; inv_contra. *)
+    (*   regMap_red pdec_pinst_regMap. *)
+    (*   eexists; split. *)
+    (*   + econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor; inv_finish. *)
+    (*   + meqReify. *)
+
+    (* - invertActionRep. *)
+    (*   inv_red; dest_or3; inv_contra. *)
+    (*   regMap_red pdec_pinst_regMap. *)
+    (*   eexists; split. *)
+    (*   + econstructor; [simpl; tauto|]. *)
+    (*     repeat econstructor; inv_finish. *)
+    (*   + meqReify. *)
+
+    (* - invertActionRep. *)
+    (*   inv_red; dest_or3; inv_contra. *)
+    (*   regMap_red pdec_pinst_regMap. *)
     (*   eexists; split. *)
     (*   + econstructor; [simpl; tauto|]. *)
     (*     repeat econstructor. *)
-    (*     * clear -H0 e; simpl in *. *)
-    (*       find_if_inside; intuition idtac. *)
-    (*       brewrite H0 in e; auto. *)
+    (*     * inv_finish. *)
     (*     * rewrite idElementwiseId; unfold id. *)
     (*       meqReify. *)
-    (*       simpl; boundedMapTac. *)
-    (*       clear -H3 e. *)
-    (*       brewrite e in H3; simpl in H3. *)
-    (*       auto. *)
+    (*       boundedMapTac; inv_finish. *)
     (*   + meqReify. *)
-
-    (*     clear -H0 e; simpl in *. *)
-    (*     brewrite H0 in e. *)
-    (*     rewrite e; simpl. *)
-    (*     repeat f_equal. *)
-    (*     destruct (weq x9 x9); [|elim n; reflexivity]. *)
-    (*     reflexivity. *)
+    (*     inv_finish. *)
 
     (* - invertActionRep. *)
-    (*   inv_red; simpl_find. *)
-    (*   dest_or3; inv_contra; inv_red. *)
-    (*   unfold memAtomK, atomK in *. *)
+    (*   inv_red; dest_or3; inv_contra. *)
     (*   regMap_red pdec_pinst_regMap. *)
-
     (*   eexists; split. *)
     (*   + econstructor; [simpl; tauto|]. *)
     (*     repeat econstructor. *)
-    (*     * clear -H0 e; simpl in *. *)
-    (*       brewrite H0 in e. *)
-    (*       brewrite e. *)
-    (*       auto. *)
+    (*     * inv_finish. *)
     (*     * rewrite idElementwiseId; unfold id. *)
     (*       meqReify. *)
-    (*       simpl; boundedMapTac. *)
-    (*       clear -H3 e; simpl in *. *)
-    (*       brewrite e in H3; simpl in H3. *)
-    (*       auto. *)
-    (*   + meqReify. *)
-
-    (*     clear -H0 e; simpl in *. *)
-    (*     brewrite H0 in e. *)
-    (*     rewrite e; simpl. *)
-    (*     reflexivity. *)
+    (*       boundedMapTac; inv_finish. *)
+    (*   + meqReify; inv_finish. *)
   Qed.
 
 End ProcDecSC.

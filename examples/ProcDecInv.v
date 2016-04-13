@@ -42,7 +42,7 @@ Ltac kexistv k v m t :=
   refine (exists v: fullType type (SyntaxKind t),
              M.find k m = Some (existT _ _ v) /\ _).
 
-Ltac simpl_find :=
+Ltac find_rewrite :=
   repeat
     match goal with
     | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] =>
@@ -64,19 +64,32 @@ Ltac inv_contra :=
           end; dest; try subst);
        fail).
 
-Ltac inv_red :=
-  repeat autounfold with InvDefs in *; dest;
+Ltac inv_simpl :=
   repeat
     (try match goal with
          | [H: ?t = ?t |- _] => clear H
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
          | [ |- context [weq ?w ?w] ] =>
-           let n := fresh "n" in
-           destruct (weq w w) as [|n]; [|elim n; reflexivity]
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: context [weq ?w ?w] |- _] =>
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
          | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
          | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
          end; dest; try subst).
+
+Ltac inv_red :=
+  repeat autounfold with InvDefs in *;
+  dest; try subst; find_rewrite; inv_simpl.
+
+Ltac inv_finish :=
+  unfold IndexBound_head, IndexBound_tail in *; simpl in *;
+  repeat
+    (try match goal with
+         | [H: _ = _ |- _] => rewrite H in *; simpl in *; clear H
+         | [H: _ = _ |- _] => rewrite <-H in *; simpl in *; clear H
+         end;
+     inv_simpl; auto).
 
 Lemma rewrite_not_weq: forall sz (a b: word sz) (pf: a <> b), weq a b = right _ pf.
 Proof.
@@ -84,38 +97,36 @@ Proof.
   f_equal; apply proof_irrelevance.
 Qed.
 
-Ltac inv_solve :=
+Ltac inv_analyze :=
   repeat
-    (inv_red;
-     repeat
-       match goal with
-       | [ |- _ /\ _ ] => split
-       (* For optimized destruction of "weq" *)
-       | [ |- context[weq ?w ?w] ] =>
-         let H := fresh "H" in
-         pose proof (@rewrite_weq _ w w eq_refl) as H; rewrite H; clear H
-       | [ |- context[weq ?w1 ?w2] ] =>
-         let H := fresh "H" in
-         let Hr := fresh "Hr" in
-         assert (w1 = w2) as H by reflexivity;
-         pose proof (@rewrite_weq _ w1 w2 H) as Hr;
-         rewrite Hr; clear Hr H
-       | [ |- context[weq ?w1 ?w2] ] =>
-         let H := fresh "H" in
-         let Hr := fresh "Hr" in
-         assert (w1 <> w2) as H by discriminate;
-         pose proof (@rewrite_not_weq _ w1 w2 H) as Hr;
-         rewrite Hr; clear Hr H
-       (* Normal destruction of "weq": it's slow *)
-       | [H: context [weq ?w1 ?w2] |- _] => destruct (weq w1 w2)
-       | [ |- context [weq ?w1 ?w2] ] => destruct (weq w1 w2)
-       | [ |- context [weq ?w ?w] ] =>
-         let n := fresh "n" in
-         destruct (weq w w) as [|n]; [|elim n; reflexivity]
-       end;
-     try subst;
-     inv_contra;
-     intuition auto).
+    match goal with
+    | [ |- _ /\ _ ] => split
+    (* For optimized destruction of "weq" *)
+    | [ |- context[weq ?w ?w] ] =>
+      let H := fresh "H" in
+      pose proof (@rewrite_weq _ w w eq_refl) as H; rewrite H; clear H
+    | [ |- context[weq ?w1 ?w2] ] =>
+      let H := fresh "H" in
+      let Hr := fresh "Hr" in
+      assert (w1 = w2) as H by reflexivity;
+      pose proof (@rewrite_weq _ w1 w2 H) as Hr;
+      rewrite Hr; clear Hr H
+    | [ |- context[weq ?w1 ?w2] ] =>
+      let H := fresh "H" in
+      let Hr := fresh "Hr" in
+      assert (w1 <> w2) as H by discriminate;
+      pose proof (@rewrite_not_weq _ w1 w2 H) as Hr;
+      rewrite Hr; clear Hr H
+    (* Normal destruction of "weq": it's slow *)
+    | [H: context [weq ?w1 ?w2] |- _] => destruct (weq w1 w2)
+    | [ |- context [weq ?w1 ?w2] ] => destruct (weq w1 w2)
+    | [ |- context [weq ?w ?w] ] =>
+      let n := fresh "n" in
+      destruct (weq w w) as [|n]; [|elim n; reflexivity]
+    end.
+
+Ltac inv_solve :=
+  repeat (inv_red; inv_analyze; try subst; inv_contra; intuition auto).
 
 Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
 Tactic Notation "or3_fst" := left.
@@ -217,28 +228,28 @@ Section Invariants.
 
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; simpl_find; auto. *)
+    (*     invReify; find_rewrite; auto. *)
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -272,56 +283,56 @@ Section Invariants.
 
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
         
     (*     dest_or3; inv_contra. *)
     (*     or3_snd; repeat split; inv_solve. *)
 
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_snd; repeat split; inv_solve. *)
         
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
 
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_thd; repeat split; inv_solve. *)
 
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; simpl_find. *)
+    (*     invReify; find_rewrite. *)
 
     (*     dest_or3; inv_contra. *)
     (*     or3_thd; repeat split; inv_solve. *)

@@ -2053,6 +2053,7 @@ Ltac findReify :=
   cbv [findMR string_eq ascii_eq eqb andb].
 
 Ltac meqReify :=
+  try reflexivity;
   apply M.elements_eq_leibniz;
   try reflexivity;
   simpl; repeat f_equal.
