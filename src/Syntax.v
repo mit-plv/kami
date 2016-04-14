@@ -171,7 +171,8 @@ Inductive UniBitOp: nat -> nat -> Set :=
 
 Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
-| Sub n: BinBitOp n n n.
+| Sub n: BinBitOp n n n
+| Concat n1 n2: BinBitOp n1 n2 (n1 + n2).
 
 Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n.

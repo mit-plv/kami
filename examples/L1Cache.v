@@ -8,10 +8,11 @@ Set Implicit Arguments.
 Section L1Cache.
   Variables IdxBits TagBits LgDataBytes LgNumDatas: nat.
   Variable Id: Kind.
-  Definition AddrBits := TagBits + (IdxBits + (LgNumDatas + LgDataBytes)).
+  Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
   Definition Addr := Bit AddrBits.
   Definition Tag := Bit TagBits.
   Definition Idx := Bit IdxBits.
+  Definition TagIdx := Bit (TagBits + IdxBits).
   Definition Data := Bit (LgDataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
@@ -36,18 +37,27 @@ Section L1Cache.
   Definition readTag := MethodSig "tag.read" (Idx): Tag.
   Definition writeTag := MethodSig "tag.write" (WritePort IdxBits Tag): Void.
   Definition readCs := MethodSig "cs.read" (Idx): Msi.
-  Definition writeCs := MethodSig "cs.write" (WritePort IdxBits Tag): Void.
+  Definition writeCs := MethodSig "cs.write" (WritePort IdxBits Msi): Void.
 
   Section UtilFunctions.
     Variable var: Kind -> Type.
+    Definition getTagIdx (x: (Addr @ var)%kami): (TagIdx @ var)%kami :=
+      UniBit (TruncLsb (TagBits + IdxBits) (LgNumDatas + LgDataBytes)) x.
+    
     Definition getTag (x: (Addr @ var)%kami): (Tag @ var)%kami :=
-      UniBit (TruncLsb TagBits (IdxBits + (LgNumDatas + LgDataBytes))) x.
+      UniBit (TruncLsb TagBits IdxBits) (getTagIdx x).
+
     Definition getIdx (x: (Addr @ var)%kami): (Idx @ var)%kami :=
-      UniBit (TruncLsb IdxBits (LgNumDatas + LgDataBytes)) (UniBit (ZeroExtendTrunc AddrBits (IdxBits + (LgNumDatas + LgDataBytes))) x).
+      UniBit (ZeroExtendTrunc (TagBits + IdxBits) IdxBits) (getTagIdx x).
+
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
       UniBit (TruncLsb LgNumDatas LgDataBytes) (UniBit (ZeroExtendTrunc AddrBits (LgNumDatas + LgDataBytes)) x).
-  End UtilFunctions.
     
+    Definition getAddr (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
+      BinBit (Concat (TagBits + IdxBits) (LgNumDatas + LgDataBytes)) (BinBit (Concat TagBits IdxBits) tag idx)
+             ($ 0)%kami.
+  End UtilFunctions.
+
   Definition L1Cache :=
     MODULE {
         Register "procRqValid": Bool <- @ConstBool false
@@ -75,7 +85,7 @@ Section L1Cache.
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
           Call cs <- readCs(#idx);  
-          Assert ((#cs == $ Mod) && #tag == getTag #rq@."addr");
+          Assert (#cs == $ Mod && #tag == getTag #rq@."addr");
           Call line <- readLine(#idx);
           LET offset <- getOffset #rq@."addr";
           Call rsToProcEnq(STRUCT{"data" ::= #line@[#offset]; "id" ::= #rq@."id"});
@@ -83,31 +93,133 @@ Section L1Cache.
           Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #updLine});
           Retv
 
-        with Rule "replacement" :=
-          Read valid <- "procRqValid";
-          Assert !#valid;
-          Call rq <- rqFromProcPop();
-          LET idx <- getIdx #rq@."addr";
-          Call tag <- readTag(#idx);
-          Assert (!(#tag == getTag #rq@."addr"));
-          Write "procRqValid" <- $$ true;
-          Write "procRqReplace" <- $$ true;
-          Write "procRqWait" <- $$ false;
-          Retv
-
-        with Rule "haveLine" :=
+        with Rule "l1MissByState" :=
           Read valid <- "procRqValid";
           Assert !#valid;
           Call rq <- rqFromProcPop();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
           Call cs <- readCs(#idx);  
-          Assert ((#tag == getTag #rq@."addr") &&
-                  ((!#rq@."op" && (#cs < $ Sh)) || (#rq@."op" && (#cs < $ Mod))));
+          Assert (#tag == getTag #rq@."addr" && #cs == $ Sh && #rq@."op");
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ false;
           Write "procRqWait" <- $$ false;
           Write "procRq" <- #rq;
+          Retv
+
+        with Rule "l1MissByLine" :=
+          Read valid <- "procRqValid";
+          Assert !#valid;
+          Call rq <- rqFromProcPop();
+          LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Call cs <- readCs(#idx);  
+          Assert (!(#tag == getTag #rq@."addr") || #cs == $ Inv);
+          Write "procRqValid" <- $$ true;
+          Write "procRqReplace" <- $$ true;
+          Write "procRqWait" <- $$ false;
+          Write "procRq" <- #rq;
+          Retv
+
+        with Rule "writeback" :=
+          Read valid <- "procRqValid";
+          Assert #valid;
+          Read replace <- "procRqReplace";
+          Assert #replace;
+          Read rq: RqFromProc <- "procRq";
+          LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Call cs <- readCs(#idx);
+          Call line <- readLine(#idx);
+          If !(#cs == $ Inv)
+          then (Call rsToPEnq(STRUCT{"addr" ::= getAddr #tag #idx; "to" ::= $ Inv; "line" ::= #line}); Retv)
+          else Retv as _;
+          Call writeCs(STRUCT{ "addr" ::= #idx; "data" ::= $ Inv});
+          Write "procRqReplace" <- $$ false;
+          Retv
+
+        with Rule "upgRq" :=
+          Read valid <- "procRqValid";
+          Assert #valid;
+          Read replace <- "procRqReplace";
+          Assert !#replace;
+          Read rq: RqFromProc <- "procRq";
+          LET idx <- getIdx #rq@."addr";
+          Call cs <- readCs(#idx);
+          LET toS: SyntaxKind Msi <- IF #rq@."op" then $ Mod else $ Sh;
+          Read wait <- "procRqWait";
+          Assert (!#wait && (#cs < #toS));
+          Call rqToPEnq(STRUCT{"addr" ::= #rq@."addr"; "from" ::= #cs; "to" ::= #toS; "id" ::= $$ Default});
+          Write "procRqWait" <- $$ true;
+          Retv
+
+        with Rule "upgRs" :=
+          Call fromP <- fromPPop();
+          Assert !#fromP@."isRq";
+          LET idx <- getIdx #fromP@."addr";
+          Call cs <- readCs(#idx);
+          Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
+          Write "procRqWait" <- $$ false;
+          If #cs == $ Inv then Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."line"}); Retv
+                          else Retv as _;
+          Retv
+
+        with Rule "ldDeferred" :=
+          Read valid <- "procRqValid";
+          Assert #valid;
+          Read replace <- "procRqReplace";
+          Assert !#replace;
+          Read rq: RqFromProc <- "procRq";
+          Assert !#rq@."op";
+          LET idx <- getIdx #rq@."addr";
+          Call cs <- readCs(#idx);
+          Assert #cs >= $ Sh;
+          Call line <- readLine(#idx);
+          Write "procRqValid" <- $$ false;
+          Call rsToProcEnq(STRUCT{"data" ::= #line@[getOffset #rq@."addr"]; "id" ::= #rq@."id"});
+          Retv
+
+        with Rule "stDeferred" :=
+          Read valid <- "procRqValid";
+          Assert #valid;
+          Read replace <- "procRqReplace";
+          Assert !#replace;
+          Read rq: RqFromProc <- "procRq";
+          Assert #rq@."op";
+          LET idx <- getIdx #rq@."addr";
+          Call cs <- readCs(#idx);
+          Assert #cs == $ Mod;
+          Call line <- readLine(#idx);
+          Write "procRqValid" <- $$ false;
+          LET offset <- getOffset #rq@."addr";
+          Call rsToProcEnq(STRUCT{"data" ::= #line@[#offset]; "id" ::= #rq@."id"});
+          Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #line@[#offset <- #rq@."data"]});
+          Retv
+
+        with Rule "drop" :=
+          Call fromP <- fromPPop();
+          Assert #fromP@."isRq";
+          LET idx <- getIdx #fromP@."addr";
+          Call cs <- readCs(#idx);
+          Call tag <- readTag(#idx);
+          Assert (#cs <= #fromP@."to") || !(#tag == getTag #fromP@."addr");
+          Retv
+
+        with Rule "pProcess" :=
+          Call fromP <- fromPPop();
+          Assert #fromP@."isRq";
+          LET idx <- getIdx #fromP@."addr";
+          Call cs <- readCs(#idx);
+          Call tag <- readTag(#idx);
+          Call line <- readLine(#idx);
+          Assert (#cs > #fromP@."to") && (#tag == getTag #fromP@."addr");
+          Read valid <- "procRqValid";
+          Read wait <- "procRqWait";
+          Read procRq: RqFromProc <- "procRq";
+          Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == getTagIdx #fromP@."addr" &&
+                  (#procRq@."op" && #cs == $ Mod || (!#procRq@."op" && #cs == $ Sh)));
+          Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line});
+          Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
           Retv
       }.
 End L1Cache.
