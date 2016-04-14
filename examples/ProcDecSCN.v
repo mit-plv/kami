@@ -37,7 +37,7 @@ Section ProcDecSCN.
       vm_compute; split; intros; intuition idtac.
     - apply DefCallSub_refl.
     - repeat split.
-    - apply duplicate_traceRefines; auto.
+    - kduplicated.
       + admit.
       + admit.
       + vm_compute; tauto.
