@@ -106,7 +106,7 @@ Section L1Cache.
                   ((!#rq@."op" && (#cs < $ Sh)) || (#rq@."op" && (#cs < $ Mod))));
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ false;
-          Write "procRqWait" <- $$ true;
+          Write "procRqWait" <- $$ false;
           Retv
       }.
 End L1Cache.
