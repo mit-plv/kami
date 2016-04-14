@@ -1,10 +1,27 @@
 Require Import Bool String List.
 Require Import Lib.Struct Lib.StringEq Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Wf Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2.
 Require Import Lts.Decomposition Lts.DecompositionZero.
 
 Set Implicit Arguments.
+
+Ltac kequiv_with tac :=
+  repeat
+    (repeat autounfold with MethDefs;
+     try tac;
+     match goal with
+     | [ |- ModEquiv _ _ _ ] => constructor; intros
+     | [ |- RulesEquiv _ _ _ ] => constructor; intros
+     | [ |- MethsEquiv _ _ _ ] => constructor; intros
+     | [ |- ActionEquiv _ _ _ ] => constructor; intros
+     | [ |- ExprEquiv _ _ _ ] => constructor; intros
+     | [ |- @ExprEquiv _ _ _ ?fk (ReadField ?a _) (ReadField ?a _) ] =>
+       change fk with (SyntaxKind (GetAttrType a)); constructor; intros
+     | [ |- In _ _] => simpl; tauto
+     end).
+
+Ltac kequiv := kequiv_with idtac.
 
 Ltac kinline_compute :=
   repeat autounfold with ModuleDefs;
@@ -73,6 +90,8 @@ Ltac kdecompose t r Hrm Hmm :=
                               (ruleMap:= r)
                               (substepRuleMap:= Hrm)
                               (substepMethMap:= Hmm); auto; intros.
+
+Ltac kspecializable := vm_compute; reflexivity.
 
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r).

@@ -74,9 +74,9 @@ Section Facts.
   Proof.
   Admitted.
   (*   induction n; simpl; intros. *)
-  (*   - equiv_tac. *)
+  (*   - kequiv. *)
   (*   - apply ModEquiv_modular. *)
-  (*     + equiv_tac. *)
+  (*     + kequiv. *)
   (*     + auto. *)
   (* Qed. *)
 

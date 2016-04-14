@@ -33,14 +33,11 @@ Section ProcDecSCN.
     - admit.
     - admit.
     - admit.
-    - apply duplicate_defCallSub.
+    - apply duplicate_defCallSub; auto.
       vm_compute; split; intros; intuition idtac.
     - apply DefCallSub_refl.
     - repeat split.
     - apply duplicate_traceRefines; auto.
-      + vm_compute; auto.
-      + vm_compute; auto.
-      + admit.
       + admit.
       + admit.
       + vm_compute; tauto.
