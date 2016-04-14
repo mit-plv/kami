@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2.
-Require Import Lts.DecompositionZero.
+Require Import Lts.DecompositionZero Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.

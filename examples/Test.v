@@ -5,7 +5,7 @@ Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.SemOp Lts.Equiv Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
 Require Import Lts.Refinement Lts.Decomposition.
-(* Require Import Lts.Renaming *)
+Require Import Lts.Tactics.
 
 Require Import FunctionalExtensionality.
 

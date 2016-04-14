@@ -3,6 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2 Lts.DecompositionZero.
+Require Import Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
 Require Import Eqdep ProofIrrelevance.
 
@@ -32,15 +33,6 @@ Proof.
 Qed.
 
 (** End of lemmas which should be moved *)
-
-Ltac kgetv k v m t f :=
-  destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];
-  destruct (decKind kind t); [subst|exact f].
-
-(* TODO: "v" is not working *)
-Ltac kexistv k v m t :=
-  refine (exists v: fullType type (SyntaxKind t),
-             M.find k m = Some (existT _ _ v) /\ _).
 
 Ltac find_rewrite :=
   repeat

@@ -1,5 +1,5 @@
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Inline Lts.InlineFacts_2.
+Require Import Lts.Inline Lts.InlineFacts_2 Lts.Tactics.
 Require Import Ex.SC Ex.ProcDec.
 
 Set Implicit Arguments.
