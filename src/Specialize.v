@@ -283,6 +283,26 @@ Section Specializable.
       end
     end.
 
+  Lemma hasNoIndex_in:
+    forall l, hasNoIndex l = true ->
+              forall a, In a l -> index 0 indexSymbol a = None.
+  Proof.
+    induction l; simpl; intros; [elim H0|].
+    destruct H0; subst.
+    - destruct (index _ _ _); intuition.
+    - apply IHl; auto.
+      destruct (index _ _ _); intuition.
+  Qed.
+
+  Lemma hasNoIndex_SubList:
+    forall l1 l2, SubList l1 l2 -> hasNoIndex l2 = true -> hasNoIndex l1 = true.
+  Proof.
+    induction l1; simpl; intros; auto.
+    apply SubList_cons_inv in H; dest.
+    rewrite hasNoIndex_in with (l:= l2) by assumption.
+    eapply IHl1; eauto.
+  Qed.
+
   Lemma substring_append_1:
     forall s1 s2 n,
       substring (String.length s1) n (s1 ++ s2) = substring 0 n s2.
@@ -334,25 +354,21 @@ Section Specializable.
   Qed.
 
   Lemma hasNoIndex_disj_imgs:
-    forall l,
-      hasNoIndex l = true ->
+    forall l1 l2,
+      hasNoIndex l1 = true ->
+      hasNoIndex l2 = true ->
       forall i j s,
         i <> j ->
-        In s (map (spf i) l) ->
-        In s (map (spf j) l) ->
+        In s (map (spf i) l1) ->
+        In s (map (spf j) l2) ->
         False.
   Proof.
-    induction l; simpl; intros; auto.
+    induction l1; simpl; intros; auto.
     remember (index 0 indexSymbol a) as idx; destruct idx; [inv H|].
-    destruct H1; [subst|].
-    - destruct H2.
-      + eapply spf_neq; eauto.
-      + apply in_map_iff in H1; dest; subst.
-        eapply spf_neq; eauto.
-    - destruct H2; [subst|].
-      + apply in_map_iff in H1; dest; subst.
-        eapply spf_neq; eauto.
-      + eauto.
+    destruct H2; [subst|].
+    - apply in_map_iff in H3; dest.
+      eapply spf_neq; eauto.
+    - eapply IHl1; eauto.
   Qed.
 
   Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
@@ -381,6 +397,26 @@ Section Specializable.
     apply spDom_regs.
   Qed.
 
+  Lemma specializeMod_defs:
+    forall i,
+      getDefs (specializeMod m i) = map (spf i) (getDefs m).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetDefs.
+    apply specializer_dom_list; auto.
+    apply spDom_defs.
+  Qed.
+
+  Lemma specializeMod_calls:
+    forall i,
+      getCalls (specializeMod m i) = map (spf i) (getCalls m).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetCalls.
+    apply specializer_dom_list; auto.
+    apply spDom_calls.
+  Qed.
+
   Lemma specializable_disj_regs:
     forall i j,
       i <> j ->
@@ -389,8 +425,18 @@ Section Specializable.
   Proof.
     intros; do 2 rewrite specializeMod_regs.
     unfold DisjList; intros.
-    (* TODO: use spf_neq *)
-    admit.
+    destruct (in_dec string_dec e (map (spf i) (namesOf (getRegInits m))));
+      destruct (in_dec string_dec e (map (spf j) (namesOf (getRegInits m))));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs
+    with (l1:= namesOf (getRegInits m)) (l2:= namesOf (getRegInits m)); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_regs.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_regs.
   Qed.
 
   Lemma specializable_disj_defs:
@@ -399,7 +445,19 @@ Section Specializable.
       DisjList (getDefs (specializeMod m i))
                (getDefs (specializeMod m j)).
   Proof.
-    admit.
+    intros; do 2 rewrite specializeMod_defs.
+    unfold DisjList; intros.
+    destruct (in_dec string_dec e (map (spf i) (getDefs m)));
+      destruct (in_dec string_dec e (map (spf j) (getDefs m)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getDefs m) (l2:= getDefs m); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_defs.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_defs.
   Qed.
 
   Lemma specializable_disj_calls:
@@ -408,7 +466,19 @@ Section Specializable.
       DisjList (getCalls (specializeMod m i))
                (getCalls (specializeMod m j)).
   Proof.
-    admit.
+    intros; do 2 rewrite specializeMod_calls.
+    unfold DisjList; intros.
+    destruct (in_dec string_dec e (map (spf i) (getCalls m)));
+      destruct (in_dec string_dec e (map (spf j) (getCalls m)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getCalls m) (l2:= getCalls m); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_calls.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_calls.
   Qed.
 
   Lemma specializable_noninteracting:
@@ -416,7 +486,32 @@ Section Specializable.
       i <> j ->
       NonInteracting (specializeMod m i) (specializeMod m j).
   Proof.
-    admit.
+    unfold NonInteracting; intros.
+    do 2 rewrite specializeMod_calls.
+    do 2 rewrite specializeMod_defs.
+    unfold DisjList; split; intros.
+    - destruct (in_dec string_dec e (map (spf i) (getDefs m)));
+        destruct (in_dec string_dec e (map (spf j) (getCalls m)));
+        intuition idtac.
+      exfalso.
+      eapply hasNoIndex_disj_imgs with (l1:= getDefs m) (l2:= getCalls m); eauto.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_defs.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_calls.
+    - destruct (in_dec string_dec e (map (spf i) (getCalls m)));
+        destruct (in_dec string_dec e (map (spf j) (getDefs m)));
+        intuition idtac.
+      exfalso.
+      eapply hasNoIndex_disj_imgs with (l1:= getCalls m) (l2:= getDefs m); eauto.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_calls.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_defs.
   Qed.
   
 End Specializable.
@@ -574,7 +669,7 @@ Section DuplicateFacts.
                        (duplicate m n).
   Proof.
     induction n; simpl; intros.
-    - apply specializable_noninteracting; omega.
+    - apply specializable_noninteracting; auto; omega.
     - unfold NonInteracting in *.
       assert (ln > n) by omega; specialize (IHn _ H1); clear H1; dest.
       split.
@@ -585,7 +680,7 @@ Section DuplicateFacts.
           apply getCalls_in in H3.
           apply in_or_app; auto.
         * apply DisjList_app_4.
-          { pose proof (specializable_noninteracting m).
+          { pose proof (specializable_noninteracting H).
             apply H3; omega.
           }
           { apply DisjList_comm; auto. }
@@ -596,7 +691,7 @@ Section DuplicateFacts.
           apply getDefs_in in H3.
           apply in_or_app; auto.
         * apply DisjList_app_4.
-          { pose proof (specializable_noninteracting m).
+          { pose proof (specializable_noninteracting H).
             apply H3; omega.
           }
           { apply DisjList_comm; auto. }
