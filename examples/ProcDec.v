@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
@@ -145,23 +145,20 @@ Section Facts.
   Lemma pdecf_ModEquiv:
     forall fsz, ModEquiv type typeUT (pdecf fsz dec exec).
   Proof.
+    (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
     admit.
-  Qed.    
-  (*   intros. *)
-  (*   equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-  (* Qed. *)
+  Qed.
+
+  Lemma pdecf_Specializable:
+    forall fsz, Specializable (pdecf fsz dec exec).
+  Proof. kspecializable. Qed.
   
   Lemma pdecfs_ModEquiv:
     forall fsz n, ModEquiv type typeUT (pdecfs fsz dec exec n).
   Proof.
-    admit.
+    intros; apply duplicate_ModEquiv.
+    apply pdecf_ModEquiv.
   Qed.
-  (*   induction n; simpl; intros. *)
-  (*   - equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-  (*   - apply ModEquiv_modular. *)
-  (*     + equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-  (*     + auto. *)
-  (* Qed. *)
 
   Lemma procDecM_ModEquiv:
     forall fsz n, ModEquiv type typeUT (procDecM fsz dec exec n).
@@ -174,4 +171,5 @@ Section Facts.
 End Facts.
 
 Hint Immediate pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
+Hint Immediate pdecf_Specializable.
 

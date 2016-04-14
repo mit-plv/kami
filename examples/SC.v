@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -210,18 +210,25 @@ Section Facts.
              (HexecEquiv_2: ExecEquiv_2 dec exec).
   
   Variables opLd opSt opHt: ConstT (Bit opIdx).
+
+  Lemma pinst_ModEquiv:
+    ModEquiv type typeUT (pinst dec exec opLd opSt opHt).
+  Proof.
+    admit.
+    (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
+  Qed.
+
+  Lemma pinst_Specializable:
+    Specializable (pinst dec exec opLd opSt opHt).
+  Proof. kspecializable. Qed.
   
   Lemma pinsts_ModEquiv:
     forall n, ModEquiv type typeUT (pinsts dec exec opLd opSt opHt n).
   Proof.
-    admit.
+    intros.
+    apply duplicate_ModEquiv.
+    apply pinst_ModEquiv.
   Qed.
-  (*   induction n; simpl; intros. *)
-  (*   - equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-  (*   - apply ModEquiv_modular. *)
-  (*     + equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-  (*     + auto. *)
-  (* Qed. *)
 
   Lemma memInst_ModEquiv:
     forall n a d, ModEquiv type typeUT (memInst n a d).
@@ -243,9 +250,9 @@ Section Facts.
   (*       unfold memInst in IHn; simpl in IHn; rewrite <-Heqnb in IHn; simpl in IHn. *)
   (*       rewrite app_nil_r in *. *)
   (*       Transparent map. *)
-  (*       equiv_tac_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
+  (*       kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
 
-  (*       * (* TODO: automate, should be a part of "equiv_tac" *) *)
+  (*       * (* TODO: automate, should be a part of "kequiv" *) *)
   (*         match goal with *)
   (*         | [H: In ?a _, H1: ilist_In ?e1 _, H2: ilist_In ?e2 _ |- ExprEquiv _ ?e1 ?e2 ] => *)
   (*           dest_in *)
@@ -254,19 +261,19 @@ Section Facts.
   (*             match goal with *)
   (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
   (*             end. *)
-  (*           equiv_tac. *)
+  (*           kequiv. *)
   (*         } *)
   (*         { repeat *)
   (*             match goal with *)
   (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
   (*             end. *)
-  (*           equiv_tac. *)
+  (*           kequiv. *)
   (*         } *)
   (*         { repeat *)
   (*             match goal with *)
   (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
   (*             end. *)
-  (*           equiv_tac. *)
+  (*           kequiv. *)
   (*         } *)
   (*       * clear -IHn. *)
   (*         replace nbc with (nbc ++ nil) in IHn by (rewrite app_nil_r; auto). *)
@@ -289,4 +296,8 @@ Section Facts.
 
 End Facts.
 
-Hint Immediate pinsts_ModEquiv memInst_ModEquiv minst_ModEquiv sc_ModEquiv.
+Hint Immediate pinst_ModEquiv pinsts_ModEquiv
+     memInst_ModEquiv minst_ModEquiv sc_ModEquiv.
+
+Hint Immediate pinst_Specializable.
+

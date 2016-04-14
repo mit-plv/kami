@@ -78,12 +78,6 @@ Section SpecializeModule.
 
   Definition spf := fun e => e __ i.
 
-  Lemma prepend_same: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
-  Proof.
-    induction x; intros; intuition.
-    inv H; auto.
-  Qed.
-
   Lemma spf_onto: forall a1 a2, spf a1 = spf a2 -> a1 = a2.
   Proof.
     unfold spf; intros.
@@ -253,20 +247,90 @@ Section SpecializeFacts.
     intros; apply renameModules_ModEquiv; auto.
   Qed.
 
+  Lemma specializer_validRegsAction:
+    forall m (regs: list RegInitT) {retT} (a: ActionT type retT) i,
+        ValidRegsAction (namesOf regs) a ->
+        ValidRegsAction (map (specializer m i) (namesOf regs))
+                        (renameAction (specializer m i) a).
+  Proof.
+    induction 1; simpl; intros; try (constructor; auto; fail).
+    - constructor; auto; apply in_map; auto.
+    - constructor; auto; apply in_map; auto.
+  Qed.
+
+  Lemma specializer_validRegsRules:
+    forall m (regs: list RegInitT) rules,
+      SubList rules (getRules m) ->
+      forall i,
+        ValidRegsRules type (namesOf regs) rules ->
+        ValidRegsRules type (namesOf (renameListAttr (specializer m i) regs))
+                       (renameRules (specializer m i) rules).
+  Proof.
+    induction rules; simpl; intros; [constructor|].
+    inv H0; destruct a as [rn rb]; simpl in *.
+    constructor.
+    - apply IHrules; auto.
+      eapply SubList_cons_inv; eauto.
+    - intros; rewrite renameListAttr_namesOf.
+      apply specializer_validRegsAction; auto.
+  Qed.
+
+  Lemma specializer_validRegsDms:
+    forall m (regs: list RegInitT) dms,
+      SubList dms (getDefsBodies m) ->
+      forall i,
+        ValidRegsDms type (namesOf regs) dms ->
+        ValidRegsDms type (namesOf (renameListAttr (specializer m i) regs))
+                     (renameMeths (specializer m i) dms).
+  Proof.
+    induction dms; simpl; intros; [constructor|].
+    inv H0; constructor.
+    - apply IHdms; auto.
+      eapply SubList_cons_inv; eauto.
+    - intros; rewrite renameListAttr_namesOf.
+      destruct a as [dmn [dsig dmb]]; simpl in *.
+      apply specializer_validRegsAction; auto.
+  Qed.
+
+  Lemma specializeMod_validRegsModules_weakening:
+    forall m1,
+      ValidRegsModules type m1 ->
+      forall m2 i,
+        SubList (getRules m1) (getRules m2) ->
+        SubList (getDefsBodies m1) (getDefsBodies m2) ->
+        ValidRegsModules type (renameModules (specializer m2 i) m1).
+  Proof.
+    induction m1; simpl; intros.
+    - dest; split.
+      + apply specializer_validRegsRules; auto.
+      + apply specializer_validRegsDms; auto.
+    - dest; split.
+      + apply IHm1_1; auto.
+        * eapply SubList_app_4; eauto.
+        * eapply SubList_app_4; eauto.
+      + apply IHm1_2; auto.
+        * eapply SubList_app_5; eauto.
+        * eapply SubList_app_5; eauto.
+  Qed.
+
   Lemma specializeMod_validRegsModules:
     forall m i,
       ValidRegsModules type m ->
       ValidRegsModules type (specializeMod m i).
   Proof.
-    admit.
-  Qed.    
-
-  Lemma specializeMod_defCallSub:
-    forall m1 m2 i,
-      DefCallSub m1 m2 ->
-      DefCallSub (specializeMod m1 i) (specializeMod m2 i).
-  Proof.
-    admit.
+    induction m; simpl; intros.
+    - dest; split.
+      + apply specializer_validRegsRules; auto.
+        apply SubList_refl.
+      + apply specializer_validRegsDms; auto.
+        apply SubList_refl.
+    - dest; split.
+      + apply specializeMod_validRegsModules_weakening; eauto.
+        * simpl; apply SubList_app_1, SubList_refl.
+        * simpl; apply SubList_app_1, SubList_refl.
+      + apply specializeMod_validRegsModules_weakening; eauto.
+        * simpl; apply SubList_app_2, SubList_refl.
+        * simpl; apply SubList_app_2, SubList_refl.
   Qed.
 
 End SpecializeFacts.
@@ -283,14 +347,25 @@ Section Specializable.
       end
     end.
 
-  Lemma substring_append_1:
-    forall s1 s2 n,
-      substring (String.length s1) n (s1 ++ s2) = substring 0 n s2.
-  Proof. induction s1; simpl; intros; auto. Qed.
+  Lemma hasNoIndex_in:
+    forall l, hasNoIndex l = true ->
+              forall a, In a l -> index 0 indexSymbol a = None.
+  Proof.
+    induction l; simpl; intros; [elim H0|].
+    destruct H0; subst.
+    - destruct (index _ _ _); intuition.
+    - apply IHl; auto.
+      destruct (index _ _ _); intuition.
+  Qed.
 
-  Lemma substring_empty:
-    forall s, substring 0 0 s = ""%string.
-  Proof. induction s; simpl; intros; auto. Qed.
+  Lemma hasNoIndex_SubList:
+    forall l1 l2, SubList l1 l2 -> hasNoIndex l2 = true -> hasNoIndex l1 = true.
+  Proof.
+    induction l1; simpl; intros; auto.
+    apply SubList_cons_inv in H; dest.
+    rewrite hasNoIndex_in with (l:= l2) by assumption.
+    eapply IHl1; eauto.
+  Qed.
 
   Lemma hasNoIndex_disj_dom_img:
     forall l,
@@ -334,25 +409,21 @@ Section Specializable.
   Qed.
 
   Lemma hasNoIndex_disj_imgs:
-    forall l,
-      hasNoIndex l = true ->
+    forall l1 l2,
+      hasNoIndex l1 = true ->
+      hasNoIndex l2 = true ->
       forall i j s,
         i <> j ->
-        In s (map (spf i) l) ->
-        In s (map (spf j) l) ->
+        In s (map (spf i) l1) ->
+        In s (map (spf j) l2) ->
         False.
   Proof.
-    induction l; simpl; intros; auto.
+    induction l1; simpl; intros; auto.
     remember (index 0 indexSymbol a) as idx; destruct idx; [inv H|].
-    destruct H1; [subst|].
-    - destruct H2.
-      + eapply spf_neq; eauto.
-      + apply in_map_iff in H1; dest; subst.
-        eapply spf_neq; eauto.
-    - destruct H2; [subst|].
-      + apply in_map_iff in H1; dest; subst.
-        eapply spf_neq; eauto.
-      + eauto.
+    destruct H2; [subst|].
+    - apply in_map_iff in H3; dest.
+      eapply spf_neq; eauto.
+    - eapply IHl1; eauto.
   Qed.
 
   Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
@@ -381,6 +452,26 @@ Section Specializable.
     apply spDom_regs.
   Qed.
 
+  Lemma specializeMod_defs:
+    forall i,
+      getDefs (specializeMod m i) = map (spf i) (getDefs m).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetDefs.
+    apply specializer_dom_list; auto.
+    apply spDom_defs.
+  Qed.
+
+  Lemma specializeMod_calls:
+    forall i,
+      getCalls (specializeMod m i) = map (spf i) (getCalls m).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetCalls.
+    apply specializer_dom_list; auto.
+    apply spDom_calls.
+  Qed.
+
   Lemma specializable_disj_regs:
     forall i j,
       i <> j ->
@@ -389,8 +480,18 @@ Section Specializable.
   Proof.
     intros; do 2 rewrite specializeMod_regs.
     unfold DisjList; intros.
-    (* TODO: use spf_neq *)
-    admit.
+    destruct (in_dec string_dec e (map (spf i) (namesOf (getRegInits m))));
+      destruct (in_dec string_dec e (map (spf j) (namesOf (getRegInits m))));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs
+    with (l1:= namesOf (getRegInits m)) (l2:= namesOf (getRegInits m)); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_regs.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_regs.
   Qed.
 
   Lemma specializable_disj_defs:
@@ -399,7 +500,19 @@ Section Specializable.
       DisjList (getDefs (specializeMod m i))
                (getDefs (specializeMod m j)).
   Proof.
-    admit.
+    intros; do 2 rewrite specializeMod_defs.
+    unfold DisjList; intros.
+    destruct (in_dec string_dec e (map (spf i) (getDefs m)));
+      destruct (in_dec string_dec e (map (spf j) (getDefs m)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getDefs m) (l2:= getDefs m); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_defs.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_defs.
   Qed.
 
   Lemma specializable_disj_calls:
@@ -408,7 +521,19 @@ Section Specializable.
       DisjList (getCalls (specializeMod m i))
                (getCalls (specializeMod m j)).
   Proof.
-    admit.
+    intros; do 2 rewrite specializeMod_calls.
+    unfold DisjList; intros.
+    destruct (in_dec string_dec e (map (spf i) (getCalls m)));
+      destruct (in_dec string_dec e (map (spf j) (getCalls m)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getCalls m) (l2:= getCalls m); eauto.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_calls.
+    - unfold Specializable in Hsp.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_calls.
   Qed.
 
   Lemma specializable_noninteracting:
@@ -416,7 +541,32 @@ Section Specializable.
       i <> j ->
       NonInteracting (specializeMod m i) (specializeMod m j).
   Proof.
-    admit.
+    unfold NonInteracting; intros.
+    do 2 rewrite specializeMod_calls.
+    do 2 rewrite specializeMod_defs.
+    unfold DisjList; split; intros.
+    - destruct (in_dec string_dec e (map (spf i) (getDefs m)));
+        destruct (in_dec string_dec e (map (spf j) (getCalls m)));
+        intuition idtac.
+      exfalso.
+      eapply hasNoIndex_disj_imgs with (l1:= getDefs m) (l2:= getCalls m); eauto.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_defs.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_calls.
+    - destruct (in_dec string_dec e (map (spf i) (getCalls m)));
+        destruct (in_dec string_dec e (map (spf j) (getDefs m)));
+        intuition idtac.
+      exfalso.
+      eapply hasNoIndex_disj_imgs with (l1:= getCalls m) (l2:= getDefs m); eauto.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_calls.
+      + unfold Specializable in Hsp.
+        eapply hasNoIndex_SubList; eauto.
+        apply spDom_defs.
   Qed.
   
 End Specializable.
@@ -431,7 +581,7 @@ Section SpRefinement.
   Variable i: nat.
   Hypotheses (HspA: Specializable ma)
              (HspB: Specializable mb).
-  
+
   Lemma specialized_1:
     forall rp,
       traceRefines rp ma mb ->
@@ -574,7 +724,7 @@ Section DuplicateFacts.
                        (duplicate m n).
   Proof.
     induction n; simpl; intros.
-    - apply specializable_noninteracting; omega.
+    - apply specializable_noninteracting; auto; omega.
     - unfold NonInteracting in *.
       assert (ln > n) by omega; specialize (IHn _ H1); clear H1; dest.
       split.
@@ -585,7 +735,7 @@ Section DuplicateFacts.
           apply getCalls_in in H3.
           apply in_or_app; auto.
         * apply DisjList_app_4.
-          { pose proof (specializable_noninteracting m).
+          { pose proof (specializable_noninteracting H).
             apply H3; omega.
           }
           { apply DisjList_comm; auto. }
@@ -596,7 +746,7 @@ Section DuplicateFacts.
           apply getDefs_in in H3.
           apply in_or_app; auto.
         * apply DisjList_app_4.
-          { pose proof (specializable_noninteracting m).
+          { pose proof (specializable_noninteracting H).
             apply H3; omega.
           }
           { apply DisjList_comm; auto. }
@@ -619,6 +769,18 @@ Section DuplicateFacts.
         forall i,
           renameMap (specializer m1 i) m = renameMap (specializer m2 i) m.
     Proof. intros; do 2 (rewrite specializer_map; auto). Qed.
+
+    Lemma specializeMod_defCallSub:
+      forall i,
+        DefCallSub m1 m2 ->
+        DefCallSub (specializeMod m1 i) (specializeMod m2 i).
+    Proof.
+      unfold DefCallSub; intros; dest; split.
+      - do 2 rewrite specializeMod_defs by assumption.
+        apply SubList_map; auto.
+      - do 2 rewrite specializeMod_calls by assumption.
+        apply SubList_map; auto.
+    Qed.
 
     Lemma duplicate_defCallSub:
       forall n,

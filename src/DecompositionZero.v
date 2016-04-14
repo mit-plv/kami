@@ -299,5 +299,3 @@ Section Decomposition.
   Qed.
 End Decomposition.
 
-Ltac kdecompose_nodefs t r :=
-  apply decompositionZero with (theta:= t) (ruleMap:= r).

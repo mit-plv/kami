@@ -1,6 +1,25 @@
 Require Import Bool Ascii String List Eqdep Omega.
 Require Import CommonTactics.
 
+(** Some string manipulation lemmas *)
+
+Lemma prepend_same: forall x a b, (x ++ a)%string = (x ++ b)%string -> a = b.
+Proof.
+  induction x; intros; intuition.
+  inv H; auto.
+Qed.
+
+Lemma substring_append_1:
+  forall s1 s2 n,
+    substring (String.length s1) n (s1 ++ s2) = substring 0 n s2.
+Proof. induction s1; simpl; intros; auto. Qed.
+
+Lemma substring_empty:
+  forall s, substring 0 0 s = ""%string.
+Proof. induction s; simpl; intros; auto. Qed.
+
+(** End of string manipulation lemmas *)
+
 Fixpoint string_of_nat (n: nat) :=
   match n with
     | O => "a"%string

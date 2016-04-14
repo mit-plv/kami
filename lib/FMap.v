@@ -56,6 +56,16 @@ Section Lists. (* For dealing with domains *)
     apply in_app_or in H1; destruct H1; intuition.
   Qed.
 
+  Lemma SubList_app_4: forall l1 l2 l3, SubList (l1 ++ l2) l3 -> SubList l1 l3.
+  Proof.
+    unfold SubList; intros; apply H; apply in_or_app; left; auto.
+  Qed.
+
+  Lemma SubList_app_5: forall l1 l2 l3, SubList (l1 ++ l2) l3 -> SubList l2 l3.
+  Proof.
+    unfold SubList; intros; apply H; apply in_or_app; right; auto.
+  Qed.
+
   Lemma SubList_app_comm:
     forall l1 l2 l3, SubList l1 (l2 ++ l3) -> SubList l1 (l3 ++ l2).
   Proof.

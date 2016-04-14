@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize.
+Require Import Lts.Renaming Lts.Specialize Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
@@ -33,14 +33,11 @@ Section ProcDecSCN.
     - admit.
     - admit.
     - admit.
-    - apply duplicate_defCallSub.
+    - apply duplicate_defCallSub; auto.
       vm_compute; split; intros; intuition idtac.
     - apply DefCallSub_refl.
     - repeat split.
     - apply duplicate_traceRefines; auto.
-      + vm_compute; auto.
-      + vm_compute; auto.
-      + admit.
       + admit.
       + admit.
       + vm_compute; tauto.

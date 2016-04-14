@@ -318,20 +318,3 @@ Section Facts.
 
 End Facts.
 
-Ltac equiv_tac_with tac :=
-  repeat
-    (repeat autounfold with MethDefs;
-     try tac;
-     match goal with
-     | [ |- ModEquiv _ _ _ ] => constructor; intros
-     | [ |- RulesEquiv _ _ _ ] => constructor; intros
-     | [ |- MethsEquiv _ _ _ ] => constructor; intros
-     | [ |- ActionEquiv _ _ _ ] => constructor; intros
-     | [ |- ExprEquiv _ _ _ ] => constructor; intros
-     | [ |- @ExprEquiv _ _ _ ?fk (ReadField ?a _) (ReadField ?a _) ] =>
-       change fk with (SyntaxKind (GetAttrType a)); constructor; intros
-     | [ |- In _ _] => simpl; tauto
-     end).
-
-Ltac equiv_tac := equiv_tac_with idtac.
-

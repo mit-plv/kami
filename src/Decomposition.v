@@ -699,11 +699,3 @@ Section NoDefs.
 
 End NoDefs.
 
-Ltac kdecompose t r Hrm Hmm :=
-  eapply decomposition with (theta:= t)
-                              (ruleMap:= r)
-                              (substepRuleMap:= Hrm)
-                              (substepMethMap:= Hmm); auto; intros.
-
-Ltac kdecompose_nodefs t r :=
-  apply decomposition_nodefs with (theta:= t) (ruleMap:= r).

@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2.
-Require Import Lts.DecompositionZero.
+Require Import Lts.DecompositionZero Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.
@@ -21,12 +21,11 @@ Section ProcDecSC.
 
   Variable n: nat.
 
-  (* Definition pdec := ProcDecInl.pdec fifoSize dec exec. *)
   Definition pdec := pdecf fifoSize dec exec.
   Definition pinst := pinst dec exec opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
-  Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for equiv_tac *)
-  Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for equiv_tac *)
+  Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
+  Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
   Definition pdec_pinst_ruleMap (_: RegsT) (s: string): option string :=
     if string_dec s "reqLd" then None
