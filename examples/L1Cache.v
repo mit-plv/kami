@@ -95,7 +95,7 @@ Section L1Cache.
           Write "procRqWait" <- $$ false;
           Retv
 
-        with Rule "waitSt" :=
+        with Rule "haveLine" :=
           Read valid <- "procRqValid";
           Assert !#valid;
           Call rq <- rqFromProcPop();
