@@ -107,6 +107,7 @@ Section L1Cache.
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ false;
           Write "procRqWait" <- $$ false;
+          Write "procRq" <- rq;
           Retv
       }.
 End L1Cache.
