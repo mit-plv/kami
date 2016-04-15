@@ -7,23 +7,28 @@ Require Import Lts.Decomposition Lts.DecompositionZero.
 Set Implicit Arguments.
 
 (**
-Kami Tactics
-- kequiv : prove any PHOAS equivalences defined in src/Equiv.v
-- kequiv_with _tactic_ : also try to apply _tactic_ alternately
-- kinline_compute : compute terms with _inlineF_
-- kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
-- kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
-- kdecompose : apply the decomposition theorem
-- kdecompose_nodefs : apply the decompositionZero theorem, for modules with no defined methods.
-- kspecializable : prove the Specializable predicate
-- kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
-- kgetv/kexistv : used to construct register or label mappings
+- Kami Tactics
+  + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
+  + kequiv_with _tactic_ : also try to apply _tactic_ alternately
+  + kvalid_regs : prove a well-formedness condition for valid register uses
+  + kinline_compute : compute terms with _inlineF_
+  + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
+  + kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
+  + kdecompose : apply the decomposition theorem
+  + kdecompose_nodefs : apply the decompositionZero theorem, for modules with no defined methods.
+  + kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
+  + kgetv/kexistv : used to construct register or label mappings
+
+- Kami Hints
+  + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
+  + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
+  + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 *)
 
 Ltac kequiv_with tac :=
+  repeat autounfold with MethDefs;
   repeat
-    (repeat autounfold with MethDefs;
-     try tac;
+    (try tac;
      match goal with
      | [ |- ModEquiv _ _ _ ] => constructor; intros
      | [ |- RulesEquiv _ _ _ ] => constructor; intros
@@ -36,6 +41,17 @@ Ltac kequiv_with tac :=
      end).
 
 Ltac kequiv := kequiv_with idtac.
+
+Ltac kvalid_regs :=
+  repeat autounfold with MethDefs;
+  repeat
+    match goal with
+    | [ |- ValidRegsModules _ _ ] => constructor; intros
+    | [ |- ValidRegsRules _ _ _ ] => constructor; intros
+    | [ |- ValidRegsDms _ _ _ ] => constructor; intros
+    | [ |- ValidRegsAction _ _ ] => constructor; intros
+    | [ |- In _ _] => simpl; tauto
+    end.
 
 Ltac kinline_compute :=
   repeat autounfold with ModuleDefs;
@@ -108,8 +124,6 @@ Ltac kdecompose t r Hrm Hmm :=
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r).
 
-Ltac kspecializable := vm_compute; reflexivity.
-
 Ltac kduplicated := apply duplicate_traceRefines; auto.
 
 Ltac kgetv k v m t f :=
@@ -120,4 +134,8 @@ Ltac kgetv k v m t f :=
 Ltac kexistv k v m t :=
   refine (exists v: fullType type (SyntaxKind t),
              M.find k m = Some (existT _ _ v) /\ _).
+
+Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
+Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
+Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 

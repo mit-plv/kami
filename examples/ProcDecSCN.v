@@ -38,10 +38,7 @@ Section ProcDecSCN.
     - apply DefCallSub_refl.
     - repeat split.
     - kduplicated.
-      + admit.
-      + admit.
-      + vm_compute; tauto.
-      + apply pdec_refines_pinst.
+      apply pdec_refines_pinst.
     - rewrite idElementwiseId; apply traceRefines_refl.
   Qed.
 
