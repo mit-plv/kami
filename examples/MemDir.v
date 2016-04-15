@@ -68,13 +68,13 @@ Section Mem.
     Definition othersCompat (c: (Child@var)%kami) (x: (Msi@var)%kami) (dir: (Dir@var)%kami) :=
       foldInc (fun idx old =>
                  IF !(c == idx)
-                 then isCompat var x (dir@[idx])%kami && old
+                 then isCompat x (dir@[idx])%kami && old
                  else old)%kami ($$ true)%kami.
 
     Definition findIncompat (c: (Child@var)%kami) (x: (Msi@var)%kami)
                (dir: (Dir@var)%kami) (dirw: (Dirw@var)%kami): ((Maybe Child)@var)%kami :=
       foldInc (fun idx (old: ((Maybe Child) @ var)%kami) =>
-                 IF !old@."valid" && !(c == idx) && !(isCompat var x (dir@[idx])%kami) && !(dirw@[idx])%kami
+                 IF !old@."valid" && !(c == idx) && !(isCompat x (dir@[idx])%kami) && !(dirw@[idx])%kami
                  then STRUCT{"valid" ::= $$ true ; "value" ::= idx}
                else old)%kami (STRUCT{"valid" ::= $$ false; "value" ::= $$ Default})%kami.
   End UtilFunctions.
@@ -129,7 +129,7 @@ Section Mem.
           Read dirw <- "cRqDirw";  
           LET i <- findIncompat #c #rq@."to" #dir #dirw;
           Assert #i@."valid";
-          LET rq': SyntaxKind FromP <- STRUCT{"isRq" ::= $$ true; "addr" ::= #rq@."addr"; "to" ::= toCompat _ #rq@."to"; "line" ::= $$ Default; "id" ::= $$ Default};
+          LET rq': SyntaxKind FromP <- STRUCT{"isRq" ::= $$ true; "addr" ::= #rq@."addr"; "to" ::= toCompat #rq@."to"; "line" ::= $$ Default; "id" ::= $$ Default};
           Call toCEnq(STRUCT{"child" ::= #c; "msg" ::= #rq'});
           LET dirw' <- #dirw@[#c <- $$ true];
           Write "cRqDirw" <- #dirw';
