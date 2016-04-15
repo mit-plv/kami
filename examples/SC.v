@@ -218,10 +218,6 @@ Section Facts.
     (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
   Qed.
 
-  Lemma pinst_Specializable:
-    Specializable (pinst dec exec opLd opSt opHt).
-  Proof. kspecializable. Qed.
-  
   Lemma pinsts_ModEquiv:
     forall n, ModEquiv type typeUT (pinsts dec exec opLd opSt opHt n).
   Proof.
@@ -298,6 +294,4 @@ End Facts.
 
 Hint Immediate pinst_ModEquiv pinsts_ModEquiv
      memInst_ModEquiv minst_ModEquiv sc_ModEquiv.
-
-Hint Immediate pinst_Specializable.
 

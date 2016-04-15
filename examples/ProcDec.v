@@ -149,10 +149,6 @@ Section Facts.
     admit.
   Qed.
 
-  Lemma pdecf_Specializable:
-    forall fsz, Specializable (pdecf fsz dec exec).
-  Proof. kspecializable. Qed.
-  
   Lemma pdecfs_ModEquiv:
     forall fsz n, ModEquiv type typeUT (pdecfs fsz dec exec n).
   Proof.
@@ -171,5 +167,4 @@ Section Facts.
 End Facts.
 
 Hint Immediate pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
-Hint Immediate pdecf_Specializable.
 
