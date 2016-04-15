@@ -1,5 +1,7 @@
 Require Import Lts.Syntax.
 
+Set Implicit Arguments.
+
 Definition Msi := Bit 2.
 Definition Mod := 3.
 Definition Sh := 1.

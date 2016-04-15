@@ -6,7 +6,7 @@ Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 Set Implicit Arguments.
 
 Section L1Cache.
-  Variables IdxBits TagBits LgDataBytes LgNumDatas: nat.
+  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
   Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
   Definition Addr := Bit AddrBits.
@@ -70,10 +70,11 @@ Section L1Cache.
           Assert !#valid;
           Call rq <- rqFromProcPop();
           Assert !#rq@."op";
-          Call tag <- readTag(getIdx #rq@."addr");
-          Call cs <- readCs(getIdx #rq@."addr");  
+          LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Call cs <- readCs(#idx);
           Assert ((#cs >= $ Sh) && #tag == getTag #rq@."addr");
-          Call line <- readLine(getIdx #rq@."addr");  
+          Call line <- readLine(#idx);
           Call rsToProcEnq(STRUCT{"data" ::= #line@[getOffset #rq@."addr"]; "id" ::= #rq@."id"});
           Retv
 
