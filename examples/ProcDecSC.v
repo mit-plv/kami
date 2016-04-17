@@ -68,12 +68,6 @@ Section ProcDecSC.
   Defined.
   Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
-  Ltac kinv_or3 :=
-    repeat
-      match goal with
-      | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
-      end.
-
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
@@ -83,7 +77,16 @@ Section ProcDecSC.
     (* kinv_add procDec_inv_0_ok. *)
     (* kinv_add procDec_inv_1_ok. *)
     (* kinv_add_end. *)
-    (* kss_invert; kinv_magic_with kinv_or3. *)
+
+    (* kinvert. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (* - kinv_magic_with kinv_or3. *)
   Qed.
 
 End ProcDecSC.

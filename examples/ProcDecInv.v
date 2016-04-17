@@ -9,71 +9,6 @@ Require Import Eqdep ProofIrrelevance.
 
 Set Implicit Arguments.
 
-(** TODO: Move to SemFacts.v *)
-Lemma substepsInd_no_defs_substep:
-  forall m (HnoDefs: getDefs m = nil)
-         o u l,
-    SubstepsInd m o u l ->
-    exists ul calls,
-      hide l = getLabel ul calls /\ Substep m o u ul calls.
-Proof.
-  admit.
-Qed.
-
-Lemma step_no_defs_substep:
-  forall m (HnoDefs: getDefs m = nil)
-         o u l,
-    Step m o u l ->
-    exists ul calls,
-      l = getLabel ul calls /\
-      Substep m o u ul calls.
-Proof.
-  intros; apply step_consistent in H; inv H.
-  apply substepsInd_no_defs_substep; auto.
-Qed.
-
-(** End of lemmas which should be moved *)
-
-Ltac invReify :=
-  repeat (eexists; split; [findReify; simpl; eauto|]).
-
-Lemma rewrite_not_weq: forall sz (a b: word sz) (pf: a <> b), weq a b = right _ pf.
-Proof.
-  intros; destruct (weq a b); try solve [ elimtype False; auto ].
-  f_equal; apply proof_irrelevance.
-Qed.
-
-Ltac inv_analyze :=
-  repeat
-    match goal with
-    | [ |- _ /\ _ ] => split
-    (* For optimized destruction of "weq" *)
-    | [ |- context[weq ?w ?w] ] =>
-      let H := fresh "H" in
-      pose proof (@rewrite_weq _ w w eq_refl) as H; rewrite H; clear H
-    | [ |- context[weq ?w1 ?w2] ] =>
-      let H := fresh "H" in
-      let Hr := fresh "Hr" in
-      assert (w1 = w2) as H by reflexivity;
-      pose proof (@rewrite_weq _ w1 w2 H) as Hr;
-      rewrite Hr; clear Hr H
-    | [ |- context[weq ?w1 ?w2] ] =>
-      let H := fresh "H" in
-      let Hr := fresh "Hr" in
-      assert (w1 <> w2) as H by discriminate;
-      pose proof (@rewrite_not_weq _ w1 w2 H) as Hr;
-      rewrite Hr; clear Hr H
-    (* Normal destruction of "weq": it's slow *)
-    | [H: context [weq ?w1 ?w2] |- _] => destruct (weq w1 w2)
-    | [ |- context [weq ?w1 ?w2] ] => destruct (weq w1 w2)
-    | [ |- context [weq ?w ?w] ] =>
-      let n := fresh "n" in
-      destruct (weq w w) as [|n]; [|elim n; reflexivity]
-    end.
-
-Ltac inv_solve :=
-  repeat (kinv_red; inv_analyze; try subst; kinv_contra; intuition auto).
-
 Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
 Tactic Notation "or3_fst" := left.
 Tactic Notation "or3_snd" := right; left.
@@ -82,6 +17,11 @@ Ltac dest_or3 :=
   match goal with
   | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
   end.
+Ltac kinv_or3 :=
+  repeat
+    match goal with
+    | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
+    end.
 
 Section Invariants.
   Variables addrSize fifoSize valSize rfIdx: nat.
@@ -108,6 +48,7 @@ Section Invariants.
     kexistv "Outs.elt"%string oeltv o (Vector (memAtomK addrSize valSize) fifoSize).
     exact True.
   Defined.
+  Hint Unfold procDec_inv_0: InvDefs.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -130,7 +71,6 @@ Section Invariants.
       + refine (if weq (insElt insDeqP ``"type") (evalConstT memSt) then _ else True).
         exact (insElt insDeqP ``"value" = dec _ rf pc ``"value").
   Defined.
-
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
   Definition procDec_inv_1 (o: RegsT): Prop.
@@ -152,6 +92,7 @@ Section Invariants.
       + exact (mem_request_inv v v0 v2 v5 v4).
     - exact (v1 = true /\ fifo_empty_inv v2 v3 v4 /\ fifo_not_empty_inv v6 v7 v8).
   Defined.
+  Hint Unfold procDec_inv_1: InvDefs.
 
   Lemma procDec_inv_0_ok':
     forall init n ll,
@@ -162,40 +103,19 @@ Section Invariants.
     admit.
     (* induction 2. *)
 
-    (* - repeat subst. *)
-    (*   simpl; unfold procDec_inv_0. *)
-    (*   invReify; auto. *)
+    (* - kinv_magic. *)
 
-    (* - specialize (IHMultistep H); clear -IHMultistep HStep. *)
-    (*   apply step_no_defs_substep in HStep; [|reflexivity]. *)
-    (*   destruct HStep as [ul [calls ?]]; dest; subst. *)
-    (*   inv H0; try (mred; fail); [|inv HIn]. *)
-    (*   CommonTactics.dest_in. *)
-
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_0 in *; dest. *)
-    (*     invReify; find_rewrite; auto. *)
+    (* - kinvert. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
+    (*   + kinv_magic. *)
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -216,64 +136,28 @@ Section Invariants.
     admit.
     (* induction 2. *)
 
-    (* - repeat subst. *)
-    (*   simpl; unfold procDec_inv_1. *)
-    (*   invReify. *)
-    (*   or3_fst; inv_solve. *)
+    (* - kinv_magic_with kinv_or3. *)
+    (*   or3_fst; kinv_magic. *)
 
-    (* - specialize (IHMultistep H); clear -IHMultistep HStep. *)
-    (*   apply step_no_defs_substep in HStep; [|reflexivity]. *)
-    (*   destruct HStep as [ul [calls ?]]; dest; subst. *)
-    (*   inv H0; try (mred; fail); [|inv HIn]. *)
-    (*   CommonTactics.dest_in. *)
-
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_snd; repeat split; inv_solve. *)
-
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_snd; repeat split; inv_solve. *)
-        
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_fst; repeat split; inv_solve. *)
-        
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_fst; repeat split; inv_solve. *)
-        
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_fst; repeat split; inv_solve. *)
-        
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_fst; repeat split; inv_solve. *)
-
-    (*   + inv H; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_thd; repeat split; inv_solve. *)
-
-    (*   + inv H0; invertActionRep. *)
-    (*     unfold procDec_inv_1 in *; dest. *)
-    (*     invReify; find_rewrite. *)
-    (*     dest_or3; inv_contra. *)
-    (*     or3_thd; repeat split; inv_solve. *)
+    (* - kinvert. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_snd; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_snd; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_fst; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_fst; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     (* or3_fst; kinv_magic. *) *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_fst; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_thd; kinv_magic. *)
+    (*   + kinv_magic_with kinv_or3. *)
+    (*     or3_thd; kinv_magic. *)
   Qed.
 
   Lemma procDec_inv_1_ok:

@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.StringEq Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Wf Lts.Equiv Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize.
 Require Import Lts.Decomposition Lts.DecompositionZero.
 
@@ -15,15 +15,25 @@ Set Implicit Arguments.
   + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
   + kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
   + kdecompose : apply the decomposition theorem
-  + kdecompose_nodefs : apply the decompositionZero theorem, for modules with no defined methods.
+  + kdecompose_nodefs : apply the decompositionZero theorem,
+    for modules with no defined methods.
   + kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
   + kgetv/kexistv : used to construct register or label mappings
+
+  + kinvert : invert Kami semantic definitions (Substep, Step, etc.)
+  + kinv_magic : try to solve invariant proofs
+    * kinv_simpl : simplify invariants
+    * kinv_red : reduce invariants
+    * kinv_contra : try to prove exfalso with invariants
+    * kinv_finish : try to prove invariants.
+  + kinv_magic_with _tactic_ : also try to apply _tactic_ alternately
 
 - Kami Hints
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
   + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-*)
+  + Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
+ *)
 
 Ltac kequiv_with tac :=
   repeat autounfold with MethDefs;
@@ -156,13 +166,21 @@ Ltac kinv_add_end :=
   | [H: reachable _ _ |- _] => clear H
   end.
 
-Ltac kss_invert :=
-  match goal with
-  | [H: Substep _ _ _ _ _ |- _] => inv H; CommonTactics.dest_in
-  end.
+Ltac kinvert :=
+  repeat
+    match goal with
+    | [H1: ?t, H2: ?t -> _ |- _] => specialize (H2 H1)
+    | [H: Substep _ _ _ _ _ |- _] => inv H; CommonTactics.dest_in
+    | [H: Step _ _ _ _ |- _] =>
+      apply step_no_defs_substep in H; [|reflexivity];
+      let ul := fresh "ul" in
+      let calls := fresh "calls" in
+      destruct H as [ul [calls ?]]; dest; subst
+    end.
 
 Ltac kinv_contra :=
-  try (exfalso; repeat autounfold with InvDefs in *; dest; subst;
+  try (exfalso;
+       repeat autounfold with InvDefs in *; dest; subst;
        repeat
          (match goal with
           | [H: false = true |- _] => inversion H
@@ -184,6 +202,8 @@ Ltac kinv_simpl :=
            let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
          | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
          | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
+         | [H: (if ?c then false else true) = true |- _] => destruct c; [inv H|]
+         | [H: (if ?c then false else true) = false |- _] => destruct c; [|inv H]
          | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] => rewrite H1 in H2
          | [H: Some _ = Some _ |- _] => inv H; destruct_existT
          end; dest; try subst).
@@ -204,29 +224,27 @@ Ltac kinv_finish :=
 Ltac kinv_magic_with tac :=
   repeat
     (try tac;
+     repeat (* reductions *)
+       (kinv_red;
+        try
+          match goal with
+          | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
+          | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
+          | [ |- Substep _ _ _ _ _ ] => econstructor
+          | [ |- In _ _ ] => simpl; tauto
+          | [ |- SemAction _ _ _ _ _ ] => econstructor
+          end);
+     try reflexivity; (* same after reduction? *)
      repeat
-       (match goal with
-        | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
-        (* | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra *)
-        | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
-        | [ |- Substep _ _ _ _ _ ] => econstructor
-        | [ |- In _ _ ] => simpl; tauto
-        | [ |- SemAction _ _ _ _ _ ] => econstructor
-        | [ |- ?m1 = ?m2 ] =>
-          match type of m1 with
-          | forall _: BoundedIndexFull _, _ => boundedMapTac
-          | _ => idtac
-          end
-        end; kinv_red);
-     try reflexivity;
-     try match goal with
-         | [ |- ?m1 = ?m2 ] =>
-           match type of m1 with
-           | M.t _ => meqReify
-           | _ => idtac
-           end
-         end;
-     try (kinv_finish; fail)).
+       match goal with (* need some equality tactics? *)
+       | [ |- ?m1 = ?m2 ] =>
+         match type of m1 with
+         | M.t _ => meqReify
+         | forall _: BoundedIndexFull _, _ => boundedMapTac
+         | _ => idtac
+         end
+       end;
+     try (kinv_finish; fail)). (* need element equalities? *)
 
 Ltac kinv_magic := kinv_magic_with idtac.
 

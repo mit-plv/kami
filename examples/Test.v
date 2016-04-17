@@ -59,7 +59,7 @@ Section Facts.
   Proof.
     kinline_left mabi.
     kdecompose_nodefs theta ruleMap.
-    kss_invert; kinv_magic.
+    kinvert; kinv_magic.
     admit.
   Qed.
   

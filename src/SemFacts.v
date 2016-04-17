@@ -210,6 +210,29 @@ Proof.
   eapply step_hide; eauto.
 Qed.
 
+Lemma substepsInd_no_defs_substep:
+  forall m (HnoDefs: getDefs m = nil)
+         o u l,
+    SubstepsInd m o u l ->
+    exists ul calls,
+      hide l = getLabel ul calls /\ Substep m o u ul calls.
+Proof.
+  (* TODO: prove this with pulling lemmas in DecompositionZero.v, which are very similar *)
+  admit. 
+Qed.
+
+Lemma step_no_defs_substep:
+  forall m (HnoDefs: getDefs m = nil)
+         o u l,
+    Step m o u l ->
+    exists ul calls,
+      l = getLabel ul calls /\
+      Substep m o u ul calls.
+Proof.
+  intros; apply step_consistent in H; inv H.
+  apply substepsInd_no_defs_substep; auto.
+Qed.
+
 Lemma DisjList_string_cons:
   forall l1 l2 (e: string),
     ~ In e l2 -> DisjList l1 l2 -> DisjList (e :: l1) l2.
