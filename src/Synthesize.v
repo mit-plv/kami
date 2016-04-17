@@ -1,0 +1,88 @@
+Require Import Lts.Syntax Lib.Struct List String Program.Equality.
+
+Set Implicit Arguments.
+
+Definition tyS: Kind -> Type := fun _ => nat.
+
+Definition ExprS := Expr tyS.
+
+Inductive ActionS (lretT: Kind) : Type :=
+  | MCallS (meth: string) s:
+      ExprS (SyntaxKind (arg s)) ->
+      nat ->
+      ActionS lretT ->
+      ActionS lretT
+  | LetS_ lretT': ExprS lretT' -> nat -> ActionS lretT -> ActionS lretT
+  | ReadRegS (r: string):
+      nat -> ActionS lretT -> ActionS lretT
+  | WriteRegS (r: string) k:
+      ExprS k -> ActionS lretT -> ActionS lretT
+  | IfElseS: ExprS (SyntaxKind Bool) -> forall k,
+                                        ActionS k ->
+                                        ActionS k ->
+                                        nat ->
+                                        ActionS lretT ->
+                                        ActionS lretT
+  | AssertS_: ExprS (SyntaxKind Bool) -> ActionS lretT -> ActionS lretT
+  | ReturnS: ExprS (SyntaxKind lretT) -> ActionS lretT.
+
+Axiom cheat: forall t, t.
+
+Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret): (nat * ActionS lret).
+Proof.
+  refine (match a with
+            | MCall meth s e c =>
+              let (m, a') := getActionS (S n) _ (c n) in
+              (m, MCallS meth s e n a')
+            | Let_ lret' e cn => _
+            | ReadReg r _ cn => _
+            | WriteReg r _ e c =>
+              let (m, a') := getActionS n _ c in
+              (m, WriteRegS r e a')
+            | IfElse e _ ta fa c =>
+              let (tm, ta') := getActionS n _ ta in
+              let (fm, fa') := getActionS tm _ fa in
+              let (m, a') := getActionS (S fm) _ (c fm) in
+              (m, IfElseS e ta' fa' fm a')
+            | Assert_ e c =>
+              let (m, a') := getActionS n _ c in
+              (m, AssertS_ e a')
+            | Return e => (n, ReturnS e)
+          end).
+  - destruct lret'.
+    + exact (getActionS (S n) _ (cn n)).
+    + exact (n, ReturnS (Const tyS Default)).
+  - destruct k.
+    + exact (getActionS (S n) _ (cn n)).
+    + exact (n, ReturnS (Const tyS Default)).
+Defined.
+  
+Definition MethodTS sig := ActionS (ret sig).
+
+Definition DefMethTS := Attribute (sigT MethodTS).
+
+Inductive ModulesS: Type :=
+| ModS (regs: list RegInitT)
+      (rules: list (Attribute (ActionS Void)))
+      (dms: list DefMethTS):
+    ModulesS
+| ConcatModsS (m1 m2: ModulesS):
+    ModulesS.
+
+Definition getMethS (x: sigT MethodT): sigT MethodTS :=
+  match x with
+    | existT arg meth => existT _ arg (snd (getActionS 1 (meth tyS 0)))
+  end.
+
+Fixpoint getModuleS (m: Modules): ModulesS.
+Proof.
+  refine (match m with
+            | Mod regs rules dms =>
+              ModS regs (map (fun a => {| attrName := attrName a;
+                                          attrType := snd (getActionS 0 _) |} ) rules)
+                   (map (fun a => {| attrName := attrName a;
+                                     attrType := getMethS (attrType a) |}) dms)
+            | ConcatMod m1 m2 => ConcatModsS (getModuleS m1) (getModuleS m2)
+          end).
+  exact (attrType a tyS).
+Defined.
