@@ -58,8 +58,8 @@ Section Facts.
   Lemma mab_mc: (ConcatMod ma mb) <<== mc.
   Proof.
     kinline_left mabi.
-    kdecompose_nodefs theta ruleMap; subst; [reflexivity|auto|auto|].
-    simpl; intros.
+    kdecompose_nodefs theta ruleMap.
+    kss_invert; kinv_magic.
     admit.
   Qed.
   

@@ -48,15 +48,13 @@ Section ProcDecSC.
     kgetv "Outs.deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
     refine (if oev then _ else _).
 
-    - (* Outs.empty = true *)
-      refine (M.add "pc"%string _
+    - refine (M.add "pc"%string _
                     (M.add "rf"%string _
                            (M.empty _))).
       + exact (existT _ _ pcv).
       + exact (existT _ _ rfv).
 
-    - (* Outs.empty = false *)
-      refine (M.add "pc"%string _
+    - refine (M.add "pc"%string _
                     (M.add "rf"%string _
                            (M.empty _))).
       + exact (existT _ _ (getNextPc exec _ pcv rfv (dec _ rfv pcv))).
@@ -68,107 +66,24 @@ Section ProcDecSC.
                           else rfv a).
         * refine (existT _ _ rfv).
   Defined.
+  Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
-  Ltac regMap_red regMap :=
-    unfold regMap;
-    repeat autounfold with MethDefs in *;
-    repeat
-      (try match goal with
-           | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
-           | [ |- context[decKind ?k ?k] ] =>
-             rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
-           end;
-       dest; try subst; try findReify);
+  Ltac kinv_or3 :=
     repeat
       match goal with
-      | [H: M.find _ _ = _ |- _] => clear H
+      | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
       end.
 
-  Ltac regMap_init regMap :=
-    unfold initRegs, getRegInits; simpl; clear;
-    regMap_red regMap; reflexivity.
-  
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
     (* kinline_left pdeci. *)
-    (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap; *)
-    (*   subst; [regMap_init pdec_pinst_regMap|auto|auto|]. *)
+    (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
 
-    (* intros. *)
-    (* pose proof (procDec_inv_0_ok H). *)
-    (* pose proof (procDec_inv_1_ok H). *)
-    (* clear H. *)
-    (* inv H0; CommonTactics.dest_in. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + meqReify. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + meqReify. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + meqReify; inv_finish. *)
-        
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor. *)
-    (*   + meqReify; inv_finish. *)
-        
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor; inv_finish. *)
-    (*   + meqReify. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor; inv_finish. *)
-    (*   + meqReify. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor. *)
-    (*     * inv_finish. *)
-    (*     * rewrite idElementwiseId; unfold id. *)
-    (*       meqReify. *)
-    (*       boundedMapTac; inv_finish. *)
-    (*   + meqReify. *)
-    (*     inv_finish. *)
-
-    (* - invertActionRep. *)
-    (*   inv_red; dest_or3; inv_contra. *)
-    (*   regMap_red pdec_pinst_regMap. *)
-    (*   eexists; split. *)
-    (*   + econstructor; [simpl; tauto|]. *)
-    (*     repeat econstructor. *)
-    (*     * inv_finish. *)
-    (*     * rewrite idElementwiseId; unfold id. *)
-    (*       meqReify. *)
-    (*       boundedMapTac; inv_finish. *)
-    (*   + meqReify; inv_finish. *)
+    (* kinv_add procDec_inv_0_ok. *)
+    (* kinv_add procDec_inv_1_ok. *)
+    (* kinv_add_end. *)
+    (* kss_invert; kinv_magic_with kinv_or3. *)
   Qed.
 
 End ProcDecSC.

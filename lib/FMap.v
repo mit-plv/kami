@@ -1799,6 +1799,17 @@ Module M.
   Include (LeibnizFacts Map).
 End M.
 
+(** FMap Notations *)
+(* Notation "'[]'" := (M.empty _) : fmap_scope. *)
+(* Notation "m '[' k '<-' v ']'" := (M.add k v m) (at level 40) : fmap_scope. *)
+(* Notation "m1 'U' m2" := (M.union m1 m2) (at level 42) : fmap_scope. *)
+(* Notation "m1 '<U' m2" := (M.update m1 m2) (at level 42) : fmap_scope. *)
+(* Notation "m1 '-k' m2" := (M.subtract m1 m2) (at level 41) : fmap_scope. *)
+(* Notation "m1 '-kv' m2" := (M.subtractKV m1 m2) (at level 41) : fmap_scope. *)
+(* Notation "m '<|' d" := (M.restrict m d) (at level 41) : fmap_scope. *)
+(* Notation "m '[' k ']'" := (M.find k m) (at level 40) : fmap_scope. *)
+(* Delimit Scope fmap_scope with fmap. *)
+
 Ltac dest_disj :=
   repeat
     match goal with
@@ -2077,7 +2088,7 @@ Ltac findReify :=
   cbv [findMR string_eq ascii_eq eqb andb].
 
 Ltac meqReify :=
-  try reflexivity;
+  simpl; try reflexivity;
   apply M.elements_eq_leibniz;
   try reflexivity;
   simpl; repeat f_equal.

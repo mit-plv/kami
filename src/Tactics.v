@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.Struct Lib.StringEq Lib.FMap.
+Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize.
 Require Import Lts.Decomposition Lts.DecompositionZero.
@@ -121,8 +121,114 @@ Ltac kdecompose t r Hrm Hmm :=
                               (substepRuleMap:= Hrm)
                               (substepMethMap:= Hmm); auto; intros.
 
+Ltac kregmap_red :=
+  repeat autounfold with MethDefs in *;
+  repeat
+    (try match goal with
+         | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
+         | [ |- context[decKind ?k ?k] ] =>
+           rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
+         end;
+     dest; try subst; try findReify);
+  repeat
+    match goal with
+    | [H: M.find _ _ = _ |- _] => clear H
+    end.
+
+Ltac kdecompose_regmap_init :=
+  unfold initRegs, getRegInits; simpl;
+  kregmap_red; reflexivity.
+
 Ltac kdecompose_nodefs t r :=
-  apply decompositionZero with (theta:= t) (ruleMap:= r).
+  apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
+  try reflexivity; (* "getDefsBodies _ = nil" conditions *)
+  auto. (* kdecompose_regMap_init *)
+
+Ltac kinv_add inv :=
+  let H := fresh "H" in
+  pose proof inv as H;
+  match goal with
+  | [Hr: reachable _ _ |- _] => specialize (H _ _ _ _ _ _ _ Hr)
+  end.
+
+Ltac kinv_add_end :=
+  match goal with
+  | [H: reachable _ _ |- _] => clear H
+  end.
+
+Ltac kss_invert :=
+  match goal with
+  | [H: Substep _ _ _ _ _ |- _] => inv H; CommonTactics.dest_in
+  end.
+
+Ltac kinv_contra :=
+  try (exfalso; repeat autounfold with InvDefs in *; dest; subst;
+       repeat
+         (match goal with
+          | [H: false = true |- _] => inversion H
+          | [H: true = false |- _] => inversion H
+          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
+          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
+          end; dest; try subst);
+       fail).
+
+Ltac kinv_simpl :=
+  repeat
+    (try match goal with
+         | [H: ?t = ?t |- _] => clear H
+         | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
+         | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
+         | [ |- context [weq ?w ?w] ] =>
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: context [weq ?w ?w] |- _] =>
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
+         | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
+         | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] => rewrite H1 in H2
+         | [H: Some _ = Some _ |- _] => inv H; destruct_existT
+         end; dest; try subst).
+
+Ltac kinv_red :=
+  repeat autounfold with InvDefs in *;
+  dest; try subst; kinv_simpl.
+
+Ltac kinv_finish :=
+  unfold IndexBound_head, IndexBound_tail in *; simpl in *;
+  repeat
+    (try match goal with
+         | [H: _ = _ |- _] => rewrite H in *; simpl in *; clear H
+         | [H: _ = _ |- _] => rewrite <-H in *; simpl in *; clear H
+         end;
+     kinv_simpl; auto).
+
+Ltac kinv_magic_with tac :=
+  repeat
+    (try tac;
+     repeat
+       (match goal with
+        | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
+        (* | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra *)
+        | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
+        | [ |- Substep _ _ _ _ _ ] => econstructor
+        | [ |- In _ _ ] => simpl; tauto
+        | [ |- SemAction _ _ _ _ _ ] => econstructor
+        | [ |- ?m1 = ?m2 ] =>
+          match type of m1 with
+          | forall _: BoundedIndexFull _, _ => boundedMapTac
+          | _ => idtac
+          end
+        end; kinv_red);
+     try reflexivity;
+     try match goal with
+         | [ |- ?m1 = ?m2 ] =>
+           match type of m1 with
+           | M.t _ => meqReify
+           | _ => idtac
+           end
+         end;
+     try (kinv_finish; fail)).
+
+Ltac kinv_magic := kinv_magic_with idtac.
 
 Ltac kduplicated := apply duplicate_traceRefines; auto.
 
@@ -138,4 +244,5 @@ Ltac kexistv k v m t :=
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
+Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
 

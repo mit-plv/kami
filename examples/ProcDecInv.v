@@ -34,54 +34,8 @@ Qed.
 
 (** End of lemmas which should be moved *)
 
-Ltac find_rewrite :=
-  repeat
-    match goal with
-    | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] =>
-      rewrite H1 in H2
-    | [H: Some _ = Some _ |- _] => inv H
-    end; destruct_existT.
-
 Ltac invReify :=
   repeat (eexists; split; [findReify; simpl; eauto|]).
-
-Ltac inv_contra :=
-  try (exfalso; repeat autounfold with InvDefs in *; dest; subst;
-       repeat
-         (match goal with
-          | [H: false = true |- _] => inversion H
-          | [H: true = false |- _] => inversion H
-          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
-          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
-          end; dest; try subst);
-       fail).
-
-Ltac inv_simpl :=
-  repeat
-    (try match goal with
-         | [H: ?t = ?t |- _] => clear H
-         | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
-         | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
-         | [ |- context [weq ?w ?w] ] =>
-           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
-         | [H: context [weq ?w ?w] |- _] =>
-           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
-         | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
-         | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
-         end; dest; try subst).
-
-Ltac inv_red :=
-  repeat autounfold with InvDefs in *;
-  dest; try subst; find_rewrite; inv_simpl.
-
-Ltac inv_finish :=
-  unfold IndexBound_head, IndexBound_tail in *; simpl in *;
-  repeat
-    (try match goal with
-         | [H: _ = _ |- _] => rewrite H in *; simpl in *; clear H
-         | [H: _ = _ |- _] => rewrite <-H in *; simpl in *; clear H
-         end;
-     inv_simpl; auto).
 
 Lemma rewrite_not_weq: forall sz (a b: word sz) (pf: a <> b), weq a b = right _ pf.
 Proof.
@@ -118,7 +72,7 @@ Ltac inv_analyze :=
     end.
 
 Ltac inv_solve :=
-  repeat (inv_red; inv_analyze; try subst; inv_contra; intuition auto).
+  repeat (kinv_red; inv_analyze; try subst; kinv_contra; intuition auto).
 
 Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
 Tactic Notation "or3_fst" := left.
@@ -276,56 +230,48 @@ Section Invariants.
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-        
     (*     dest_or3; inv_contra. *)
     (*     or3_snd; repeat split; inv_solve. *)
 
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_snd; repeat split; inv_solve. *)
         
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
         
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_fst; repeat split; inv_solve. *)
 
     (*   + inv H; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_thd; repeat split; inv_solve. *)
 
     (*   + inv H0; invertActionRep. *)
     (*     unfold procDec_inv_1 in *; dest. *)
     (*     invReify; find_rewrite. *)
-
     (*     dest_or3; inv_contra. *)
     (*     or3_thd; repeat split; inv_solve. *)
   Qed.
