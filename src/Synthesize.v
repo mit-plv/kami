@@ -26,8 +26,6 @@ Inductive ActionS (lretT: Kind) : Type :=
   | AssertS_: ExprS (SyntaxKind Bool) -> ActionS lretT -> ActionS lretT
   | ReturnS: ExprS (SyntaxKind lretT) -> ActionS lretT.
 
-Axiom cheat: forall t, t.
-
 Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret): (nat * ActionS lret).
 Proof.
   refine (match a with
