@@ -1,4 +1,4 @@
-Require Import Lts.Syntax Lib.Struct List String Program.Equality.
+Require Import Lts.Syntax Lib.Struct List String.
 
 Set Implicit Arguments.
 
