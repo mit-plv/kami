@@ -851,7 +851,81 @@ Module LeibnizFacts (M : MapLeibniz).
         else Some v1
       end.
   Proof.
-    admit.
+    mintros; unfold subtractKVD; mind m2.
+    - rewrite P.fold_Empty, find_empty; auto.
+      destruct (find k m1); auto.
+      destruct (in_dec _ _ _); auto.
+
+    - rewrite P.fold_add with (eqA:= eq); auto.
+      remember (fold
+                  (fun (k0 : key) (v2 : A) (m1' : t A) =>
+                     if in_dec P.F.eq_dec k0 d
+                     then
+                       match find k0 m1' with
+                       | Some v1 =>
+                         if deceqA v1 v2 then remove k0 m1' else m1'
+                       | None => m1'
+                       end
+                     else m1') m m1) as mprev; clear Heqmprev.
+      remember (find k0 mprev) as ov0; destruct ov0.
+
+      + destruct (in_dec P.F.eq_dec k0 d).
+        * destruct (deceqA a v); [subst|].
+          { cmp k k0.
+            { rewrite P.F.remove_eq_o by reflexivity.
+              destruct (find k0 m1); auto.
+              destruct (in_dec P.F.eq_dec k0 d); [|elim n; auto].
+              rewrite find_add_1.
+              destruct (deceqA a v); [subst|]; auto.
+              exfalso; rewrite <-Heqov0 in H.
+              destruct (find k0 m).
+              { destruct (deceqA a a0); inv H.
+                elim n; auto.
+              }
+              { elim n; inv H; auto. }
+            }
+            { rewrite P.F.remove_neq_o by auto.
+              destruct (find k m1); auto.
+              destruct (in_dec P.F.eq_dec k d); auto.
+              rewrite find_add_2 by auto.
+              destruct (find k m); auto.
+            }
+          }
+          { destruct (find k m1); auto.
+            destruct (in_dec P.F.eq_dec k d); auto.
+            cmp k k0.
+            { rewrite find_add_1.
+              apply P.F.not_find_in_iff in H0.
+              rewrite H0 in *.
+              destruct (deceqA a0 v); [subst|]; intuition.
+              rewrite <-Heqov0 in H; elim n; inv H; auto.
+            }
+            { rewrite find_add_2; auto. }
+          }
+        * destruct (find k m1); auto.
+          destruct (in_dec P.F.eq_dec k d); auto.
+          cmp k k0; intuition.
+          rewrite find_add_2; auto.
+
+      + destruct (in_dec P.F.eq_dec k0 d).
+        * cmp k k0.
+          { apply P.F.not_find_in_iff in H0.
+            rewrite H0 in *.
+            rewrite find_add_1.
+            destruct (find k0 m1); auto.
+            destruct (in_dec P.F.eq_dec k0 d); auto.
+            destruct (deceqA a v); auto.
+          }
+          { rewrite find_add_2; auto. }
+        * cmp k k0.
+          { apply P.F.not_find_in_iff in H0.
+            rewrite H0 in *.
+            rewrite find_add_1.
+            destruct (find k0 m1); auto.
+            destruct (in_dec P.F.eq_dec k0 d); auto.
+            destruct (deceqA a v); auto.
+          }
+          { rewrite find_add_2; auto. }
   Qed.
 
   Ltac subtractKVD_solve deceqA :=
