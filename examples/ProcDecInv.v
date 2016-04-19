@@ -101,21 +101,23 @@ Section Invariants.
       procDec_inv_0 n.
   Proof.
     admit.
-    (* induction 2. *)
+    (*
+    induction 2.
 
-    (* - kinv_magic. *)
+    - kinv_magic.
 
-    (* - kinvert. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
-    (*   + kinv_magic. *)
+    - kinvert.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+      + kinv_magic.
+     *)
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -134,30 +136,32 @@ Section Invariants.
       procDec_inv_1 n.
   Proof.
     admit.
-    (* induction 2. *)
+    (*
+    induction 2.
 
-    (* - kinv_magic_with kinv_or3. *)
-    (*   or3_fst; kinv_magic. *)
+    - kinv_magic_with kinv_or3.
+      or3_fst; kinv_magic.
 
-    (* - kinvert. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_snd; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_snd; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_fst; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_fst; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     (* or3_fst; kinv_magic. *) *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_fst; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_thd; kinv_magic. *)
-    (*   + kinv_magic_with kinv_or3. *)
-    (*     or3_thd; kinv_magic. *)
+    - kinvert.
+      + kinv_magic_with kinv_or3.
+      + kinv_magic_with kinv_or3.
+      + kinv_magic_with kinv_or3.
+        or3_snd; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        or3_snd; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        or3_fst; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        or3_fst; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        (* or3_fst; kinv_magic. *)
+      + kinv_magic_with kinv_or3.
+        or3_fst; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        or3_thd; kinv_magic.
+      + kinv_magic_with kinv_or3.
+        or3_thd; kinv_magic.
+     *)
   Qed.
 
   Lemma procDec_inv_1_ok:

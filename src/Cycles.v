@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap Program.Equality.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics SemFacts SemOp2 Wf.
+Require Export SemanticsExprAction Semantics SemFacts Wf.
 
 Set Implicit Arguments.
 

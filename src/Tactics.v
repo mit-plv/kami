@@ -172,10 +172,7 @@ Ltac kinvert :=
     | [H1: ?t, H2: ?t -> _ |- _] => specialize (H2 H1)
     | [H: Substep _ _ _ _ _ |- _] => inv H; CommonTactics.dest_in
     | [H: Step _ _ _ _ |- _] =>
-      apply step_no_defs_substep in H; [|reflexivity];
-      let ul := fresh "ul" in
-      let calls := fresh "calls" in
-      destruct H as [ul [calls ?]]; dest; subst
+      apply stepZero in H; [|reflexivity]; destruct H
     end.
 
 Ltac kinv_contra :=

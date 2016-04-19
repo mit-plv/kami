@@ -71,22 +71,24 @@ Section ProcDecSC.
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
-    (* kinline_left pdeci. *)
-    (* kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap. *)
+    (*
+    kinline_left pdeci.
+    kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
 
-    (* kinv_add procDec_inv_0_ok. *)
-    (* kinv_add procDec_inv_1_ok. *)
-    (* kinv_add_end. *)
+    kinv_add procDec_inv_0_ok.
+    kinv_add procDec_inv_1_ok.
+    kinv_add_end.
 
-    (* kinvert. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
-    (* - kinv_magic_with kinv_or3. *)
+    kinvert.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+    - kinv_magic_with kinv_or3.
+     *)
   Qed.
 
 End ProcDecSC.
