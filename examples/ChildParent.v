@@ -22,32 +22,32 @@ Section ChildParent.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqToPPop := MethodSig "rqToP.pop" (Void): RqToP.
+  Definition rqToPPop i := MethodSig "rqToP.pop" __ i (Void): RqToP.
   Definition rqFromCEnq := MethodSig "rqFromC.enq" (RqFromC): Void.
-  Definition rsToPPop := MethodSig "rsToP.pop" (Void): RsToP.
+  Definition rsToPPop i := MethodSig "rsToP.pop" __ i (Void): RsToP.
   Definition rsFromCEnq := MethodSig "rsFromC.enq" (RsFromC): Void.
 
   Definition toCPop := MethodSig "toC.pop" (Void): ToC.
-  Definition fromPEnq := MethodSig "fromP.pop" (FromP): Void.
+  Definition fromPEnq i := MethodSig "fromP.pop" __ i (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
   Definition ChildParent :=
     MODULE {
         Repeat n as i {
           Rule ("rqFromCToP"__ i) :=
-            Call rq <- rqToPPop();
+            Call rq <- (rqToPPop i)();
             Call rqFromCEnq(STRUCT{"child" ::= $ i; "rq" ::= #rq});
             Retv
               
           with Rule ("rsFromCToP"__ i) :=
-            Call rs <- rsToPPop();
+            Call rs <- (rsToPPop i)();
             Call rsFromCEnq(STRUCT{"child" ::= $ i; "rs" ::= #rs});
             Retv
 
           with Rule ("fromPToC"__ i) :=
             Call msg <- toCPop();
             Assert $ i == #msg@."child";
-            Call fromPEnq(#msg@."msg");
+            Call (fromPEnq i)(#msg@."msg");
             Retv
                       }
       }.
