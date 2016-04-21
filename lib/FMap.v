@@ -157,6 +157,16 @@ Proof.
     intros; specialize (H e0); apply H; right; assumption.
 Qed.
 
+Lemma DisjList_logic:
+  forall (l1 l2: list string),
+    (forall e, In e l1 -> In e l2 -> False) ->
+    DisjList l1 l2.
+Proof.
+  unfold DisjList; intros.
+  specialize (H e).
+  destruct (in_dec string_dec e l1); intuition.
+Qed.
+
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 

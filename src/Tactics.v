@@ -8,9 +8,13 @@ Set Implicit Arguments.
 
 (**
 - Kami Tactics
+  + kmodular : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
+  + krefl : prove (a <<== a)
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
   + kequiv_with _tactic_ : also try to apply _tactic_ alternately
-  + kvalid_regs : prove a well-formedness condition for valid register uses
+  + kvalid_regs : prove well-formedness conditions for valid register uses
+  + kdisj_list : prove DisjList conditions
+  + kdef_call_sub : prove DefCallSub conditions
   + kinline_compute : compute terms with _inlineF_
   + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
   + kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
@@ -33,7 +37,16 @@ Set Implicit Arguments.
   + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
   + Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
+  + Hint Extern 1 (DisjList _ _) => kdisj_list.
+  + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
+  + Hint Extern 1 (Interacting _ _ _) => repeat split.
  *)
+
+Ltac kmodular :=
+  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
+
+Ltac krefl :=
+  try rewrite idElementwiseId; apply traceRefines_refl.
 
 Ltac kequiv_with tac :=
   repeat autounfold with MethDefs;
@@ -56,11 +69,30 @@ Ltac kvalid_regs :=
   repeat autounfold with MethDefs;
   repeat
     match goal with
+    | [ |- ValidRegsModules _ _ ] => apply duplicate_validRegsModules
     | [ |- ValidRegsModules _ _ ] => constructor; intros
     | [ |- ValidRegsRules _ _ _ ] => constructor; intros
     | [ |- ValidRegsDms _ _ _ ] => constructor; intros
     | [ |- ValidRegsAction _ _ ] => constructor; intros
     | [ |- In _ _] => simpl; tauto
+    end.
+
+Ltac kdisj_list :=
+  abstract (
+      apply DisjList_logic; vm_compute; intros;
+      repeat
+        match goal with
+        | [H: _ \/ _ |- _] => inv H
+        | [H: False |- _] => inv H
+        | [H: _ = _%string |- _] => inv H
+        end).
+
+Ltac kdef_call_sub :=
+  repeat
+    match goal with
+    | [ |- DefCallSub _ _ ] => apply DefCallSub_refl
+    | [ |- DefCallSub _ _ ] => apply duplicate_defCallSub; auto
+    | [ |- DefCallSub _ _ ] => vm_compute; split; intros; intuition idtac
     end.
 
 Ltac kinline_compute :=
@@ -260,4 +292,7 @@ Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
+Hint Extern 1 (DisjList _ _) => kdisj_list.
+Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
+Hint Extern 1 (Interacting _ _ _) => repeat split.
 
