@@ -101,6 +101,16 @@ Proof.
     inv H0.
 Qed.
 
+Lemma withIndex_neq_prefix:
+  forall a b i j,
+    a <> b ->
+    withIndex a i <> withIndex b j.
+Proof.
+  intros; destruct (eq_nat_dec i j); [subst|].
+  - apply discr_var; auto.
+  - apply withIndex_neq; auto.
+Qed.
+
 Global Opaque withIndex.
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).

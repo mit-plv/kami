@@ -170,9 +170,6 @@ Section ProcInst.
              || #(dec _ st ppc)@."opcode" == $$opHt);
       Write "rf" <- #(getNextState _ ppc st);
       nextPc ppc st
-
-    (* with Rule "voidRule" := *)
-    (*   Retv *)
   }.
 
 End ProcInst.

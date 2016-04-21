@@ -642,7 +642,7 @@ Fixpoint makeModule' (im : InModule) :=
     | NumberedInModule f n => numbered makeModule' f n
   end.
 
-Fixpoint makeModule (im : InModule) :=
+Definition makeModule (im : InModule) :=
   let '(a, b, c) := makeModule' im in
   Mod a b c.
 
