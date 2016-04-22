@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
 Set Implicit Arguments.
@@ -24,6 +24,7 @@ End Fold.
 Section Mem.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
+
   Definition AddrBits := IdxBits + (LgNumDatas + LgDataBytes).
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
@@ -81,7 +82,7 @@ Section Mem.
 
   Definition dirwInit: ConstT Dirw := ConstVector (replicate (@ConstBool false) _).
 
-  Definition Mem :=
+  Definition memDir :=
     MODULE {
         Register "cRqValid": Bool <- @ConstBool false
         with Register "cRq": RqFromC <- Default
@@ -170,3 +171,26 @@ Section Mem.
           Retv
       }.
 End Mem.
+
+Hint Unfold AddrBits Addr Idx Data Offset Line : MethDefs.
+Hint Unfold RqToP RqFromC RsToP RsFromC FromP ToC : MethDefs.
+Hint Unfold rqFromCPop rsFromCPop toCEnq Dir Dirw : MethDefs.
+Hint Unfold readLine writeLine readDir writeDir Child : MethDefs.
+Hint Unfold getIdx getOffset getAddr othersCompat findIncompat dirwInit : MethDefs.
+
+Hint Unfold memDir : ModuleDefs.
+
+Section Facts.
+  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variable Id: Kind.
+
+  Lemma memDir_ModEquiv:
+    ModEquiv type typeUT (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+  Proof.
+    admit.
+  Qed.
+
+End Facts.
+
+Hint Immediate memDir_ModEquiv.
+

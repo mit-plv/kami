@@ -34,16 +34,16 @@ Section MsgTypes.
                         }.
 
   Definition RqFromP := STRUCT {
-                          "addr" :: Addr;
-                          "to" :: Msi
-                        }.
+                            "addr" :: Addr;
+                            "to" :: Msi
+                          }.
 
   Definition RsFromP := STRUCT {
-                          "addr" :: Addr;
-                          "to" :: Msi;
-                          "line" :: Line;
-                          "id" :: Id
-                        }.
+                            "addr" :: Addr;
+                            "to" :: Msi;
+                            "line" :: Line;
+                            "id" :: Id
+                          }.
 
   Definition RqToP := STRUCT {
                           "addr" :: Addr;
@@ -84,4 +84,9 @@ Definition Processing := 5.
 Definition Depend := 6.
 Definition Done := 7.
 
+Hint Unfold MemOp toMsi Child Data Line : MethDefs.
+Hint Unfold RqFromProc RsToProc FromP RqFromP RsFromP RqToP
+     RsToP RqFromC RsFromC ToC : MethDefs.
+Hint Unfold RqState Empty Init WaitOldTag WaitNewTag WaitSt
+     Processing Depend Done : MethDefs.
 

@@ -1,10 +1,11 @@
-Require Import Lts.Syntax Lts.Semantics String Lib.Struct.
+Require Import String Lib.Struct.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Section RegFile.
   Variable name: string.
-  
   Variable IdxBits: nat.
   Variable Data: Kind.
+
   Definition DataArray := Vector Data IdxBits.
   Definition Addr := Bit IdxBits.
 
@@ -16,7 +17,7 @@ Section RegFile.
 
   Variable init: ConstT DataArray.
   
-  Definition RegFile :=
+  Definition regFile :=
     MODULE {
         Register ^"dataArray": DataArray <- init
 
@@ -30,3 +31,23 @@ Section RegFile.
           Retv
       }.
 End RegFile.
+
+Hint Unfold DataArray Addr WritePort : MethDefs.
+Hint Unfold regFile : ModuleDefs.
+
+Section Facts.
+  Variable name: string.
+  Variable IdxBits: nat.
+  Variable Data: Kind.
+  Variable init: ConstT (DataArray IdxBits Data).
+
+  Lemma regFile_ModEquiv:
+    ModEquiv type typeUT (regFile name _ _ init).
+  Proof.
+    kequiv.
+  Qed.
+
+End Facts.
+
+Hint Immediate regFile_ModEquiv.
+

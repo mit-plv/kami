@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
 Set Implicit Arguments.
@@ -8,6 +8,7 @@ Set Implicit Arguments.
 Section L1Cache.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
+
   Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
   Definition Addr := Bit AddrBits.
   Definition Tag := Bit TagBits.
@@ -58,7 +59,7 @@ Section L1Cache.
              ($ 0)%kami.
   End UtilFunctions.
 
-  Definition L1Cache :=
+  Definition l1Cache :=
     MODULE {
         Register "procRqValid": Bool <- @ConstBool false
         with Register "procRq": RqFromProc <- Default
@@ -224,3 +225,26 @@ Section L1Cache.
           Retv
       }.
 End L1Cache.
+
+Hint Unfold AddrBits Addr Tag Idx TagIdx Data Offset Line : MethDefs.
+Hint Unfold RqFromProc RsToProc FromP RqFromP RsFromP RqToP RsToP : MethDefs.
+Hint Unfold rqFromProcPop fromPPop rsToProcEnq rqToPEnq rsToPEnq : MethDefs.
+Hint Unfold readLine writeLine readTag writeTag readCs writeCs : MethDefs.
+Hint Unfold getTagIdx getTag getIdx getOffset getAddr : MethDefs.
+
+Hint Unfold l1Cache : ModuleDefs.
+
+Section Facts.
+  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variable Id: Kind.
+
+  Lemma l1Cache_ModEquiv:
+    ModEquiv type typeUT (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
+  Proof.
+    admit.
+  Qed.
+
+End Facts.
+
+Hint Immediate l1Cache_ModEquiv.
+

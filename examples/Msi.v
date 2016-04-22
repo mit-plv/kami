@@ -20,5 +20,6 @@ Section HelperFunctions.
   Definition isCompat (x y: (Msi @ var)%kami) := (x <= toCompat y)%kami.
 End HelperFunctions.
 
-
+Hint Unfold Msi Mod Sh Inv : MethDefs.
+Hint Unfold toCompat isCompat : MethDefs.
 

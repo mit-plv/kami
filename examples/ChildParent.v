@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
@@ -8,6 +8,7 @@ Set Implicit Arguments.
 Section ChildParent.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
+
   Definition AddrBits := IdxBits + (LgNumDatas + LgDataBytes).
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
@@ -31,7 +32,7 @@ Section ChildParent.
   Definition fromPEnq i := MethodSig "fromP.pop" __ i (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
-  Definition ChildParent :=
+  Definition childParent :=
     MODULE {
         Repeat n as i {
           Rule ("rqFromCToP"__ i) :=
@@ -52,3 +53,24 @@ Section ChildParent.
                       }
       }.
 End ChildParent.
+
+Hint Unfold AddrBits Addr Idx Data Offset Line : MethDefs.
+Hint Unfold RqToP RqFromC RsToP RsFromC FromP ToC : MethDefs.
+Hint Unfold rqToPPop rqFromCEnq rsToPPop rsFromCEnq toCPop fromPEnq n : MethDefs.
+
+Hint Unfold childParent : ModuleDefs.
+
+Section Facts.
+  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variable Id: Kind.
+
+  Lemma childParent_ModEquiv:
+    ModEquiv type typeUT (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+  Proof.
+    admit.
+  Qed.
+
+End Facts.
+
+Hint Immediate childParent_ModEquiv.
+
