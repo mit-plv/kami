@@ -1,4 +1,5 @@
-Require Import Bool String List Program.Equality Program.Basics Classes.Morphisms.
+Require Import Bool String List Program.Equality Program.Basics.
+Require Import FunctionalExtensionality Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics Equiv StaticDynamic.
 
@@ -9,6 +10,213 @@ Ltac specializeAll k :=
     match goal with
     | [H: forall _, _ |- _] => specialize (H k)
     end.
+
+Section MapSet.
+  Variable A: Type.
+  Variable p: M.key -> A -> option A.
+
+  Lemma transpose_neqkey_rmModify:
+    M.F.P.transpose_neqkey eq (rmModify p).
+  Proof.
+    unfold M.F.P.transpose_neqkey; intros.
+    unfold rmModify.
+    destruct (p k e), (p k' e'); intuition.
+  Qed.
+
+  Theorem liftToMap1Empty: liftToMap1 p (M.empty _) = M.empty _.
+  Proof.
+    unfold liftToMap1, M.fold; reflexivity.
+  Qed.
+
+  Theorem liftToMap1MapsTo:
+    forall m k v, M.MapsTo k v (liftToMap1 p m) <->
+                  exists v', p k v' = Some v /\ M.MapsTo k v' m.
+  Proof.
+    intros m; M.mind m.
+    - constructor; intros.
+      + apply M.F.P.F.empty_mapsto_iff in H; intuition.
+      + dest; subst.
+        apply M.F.P.F.empty_mapsto_iff in H0; intuition.
+    - constructor; intros.
+      unfold liftToMap1 in H1.
+      rewrite (M.F.P.fold_add (eqA := eq)) in H1; try apply transpose_neqkey_rmModify; intuition.
+      fold (liftToMap1 p m) in H1.
+      unfold rmModify in H1.
+      case_eq (p k v); intros; subst.
+      rewrite H2 in H1.
+      + apply M.F.P.F.add_mapsto_iff in H1; dest.
+        destruct H1; dest; subst.
+        * exists v; intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+        * destruct (H k0 v0); dest; subst.
+          specialize (H4 H3); dest; subst.
+          exists x.
+          intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+      + rewrite H2 in H1.
+        destruct (H k0 v0); dest; subst.
+        specialize (H3 H1); dest; subst.
+        exists x.
+        intuition.
+        apply M.F.P.F.add_mapsto_iff; right; intuition.
+        subst.
+        apply M.MapsToIn1 in H5.
+        intuition.
+      + dest; subst.
+        apply M.F.P.F.add_mapsto_iff in H2; dest.
+        destruct H2; dest; try subst.
+        * unfold liftToMap1.
+          rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
+          unfold rmModify at 1.
+          rewrite H1.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+        * unfold liftToMap1.
+          rewrite (M.F.P.fold_add (eqA := eq)); try apply transpose_neqkey_rmModify; intuition.
+          unfold rmModify at 1.
+          fold (liftToMap1 p m).
+          specialize (H k0 v0).
+          assert (sth: exists x, p k0 x = Some v0 /\ M.MapsTo k0 x m) by (eexists; eauto).
+          apply H in sth.
+          destruct (p k v); intuition.
+          apply M.F.P.F.add_mapsto_iff; intuition.
+  Qed.
+
+  Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 p s) s.
+  Proof.
+    apply (M.map_induction (P := fun s => M.DomainSubset (liftToMap1 p s) s));
+      unfold M.DomainSubset; intros.
+    - rewrite liftToMap1Empty in *.
+      intuition.
+    - unfold liftToMap1 in H1.
+      rewrite M.F.P.fold_add in H1; fold (liftToMap1 p m) in *; unfold rmModify.
+      + apply M.F.P.F.add_in_iff.
+        unfold rmModify in *.
+        destruct (p k v).
+        apply M.F.P.F.add_in_iff in H1.
+        destruct H1; intuition.
+        right; apply (H _ H1).
+      + intuition.
+      + clear; unfold Morphisms.Proper, Morphisms.respectful; intros; subst.
+        apply M.leibniz in H1; subst.
+        intuition.
+      + clear; unfold M.F.P.transpose_neqkey; intros.
+        unfold rmModify.
+        destruct (p k e), (p k' e');
+          try apply M.transpose_neqkey_Equal_add; intuition.
+      + intuition.
+  Qed.
+        
+  Theorem liftToMap1AddOne k v:
+    liftToMap1 p (M.add k v (M.empty _)) =
+    match p k v with
+      | Some argRet => M.add k argRet (M.empty _)
+      | None => M.empty _
+    end.
+  Proof.
+    case_eq (p k v); unfold liftToMap1, rmModify, M.fold; simpl.
+    intros a H.
+    rewrite H; reflexivity.
+    intros H.
+    rewrite H; reflexivity.
+  Qed.
+
+End MapSet.
+
+Lemma liftToMap1_find:
+  forall {A} vp (m: M.t A) k,
+    M.find k (liftToMap1 vp m) = match M.find k m with
+                                 | Some v => vp k v
+                                 | None => None
+                                 end.
+Proof.
+  intros.
+  case_eq (M.find k (liftToMap1 vp m)); intros.
+  - apply M.Facts.P.F.find_mapsto_iff in H.
+    apply liftToMap1MapsTo in H; dest; subst.
+    apply M.F.P.F.find_mapsto_iff in H0.
+    rewrite H0; auto.
+  - apply M.F.P.F.not_find_in_iff in H.
+    case_eq (M.find k m); intros; auto.
+    apply M.Facts.P.F.find_mapsto_iff in H0.
+    case_eq (vp k a); intros; auto.
+    assert (exists v', vp k v' = Some a0 /\ M.MapsTo k v' m).
+    { eexists; eauto. }
+    apply liftToMap1MapsTo in H2.
+    elim H. 
+    eapply M.MapsToIn1; eauto.
+Qed.
+
+Ltac liftToMap1_find_tac :=
+  repeat
+    match goal with
+    | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
+      rewrite liftToMap1_find in H
+    | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
+      rewrite liftToMap1_find
+    end.
+
+Lemma liftToMap1_union:
+  forall {A} vp (m1 m2: M.t A),
+    M.Disj m1 m2 ->
+    liftToMap1 vp (M.union m1 m2) = M.union (liftToMap1 vp m1) (liftToMap1 vp m2).
+Proof.
+  intros; M.ext y.
+  findeq.
+  findeq_custom liftToMap1_find_tac.
+  - exfalso; eapply M.Disj_find_union_3; eauto.
+  - destruct (vp y a); auto.
+Qed.
+
+Lemma liftToMap1_subtractKV:
+  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
+    M.Disj m1 m2 ->
+    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
+    liftToMap1 vp (M.subtractKV deceqA m1 m2).
+Proof.
+  intros; M.ext y.
+  findeq.
+  findeq_custom liftToMap1_find_tac.
+  - exfalso; eapply M.Disj_find_union_3; eauto.
+  - destruct (vp y a); auto.
+Qed.
+
+Lemma liftToMap1IdElementwiseAdd A m:
+  forall k (v: A),
+    liftToMap1 (@idElementwise _) (M.add k v m) =
+    rmModify (@idElementwise _) k v (liftToMap1 (@idElementwise _) m).
+Proof.
+  intros; remember (M.find k m) as okm. destruct okm.
+  - apply eq_sym, M.find_add_3 in Heqokm.
+    destruct Heqokm as [sm [? ?]]; subst.
+    rewrite M.add_idempotent.
+    unfold liftToMap1.
+    rewrite M.F.P.fold_add; auto.
+    rewrite M.F.P.fold_add; auto.
+    unfold rmModify; simpl in *.
+    rewrite M.add_idempotent; reflexivity.
+    + apply M.transpose_neqkey_eq_add; intuition.
+    + apply M.transpose_neqkey_eq_add; intuition.
+  - unfold liftToMap1, rmModify; simpl in *.
+    rewrite M.F.P.fold_add; auto.
+    apply M.F.P.F.not_find_in_iff; auto.
+Qed.
+
+Lemma liftToMap1IdElementwiseId A m:
+  liftToMap1 (@idElementwise A) m = m.
+Proof.
+  M.mind m; simpl in *.
+  - rewrite liftToMap1Empty; reflexivity.
+  - rewrite liftToMap1IdElementwiseAdd.
+    unfold rmModify; simpl in *.
+    rewrite H.
+    reflexivity.
+Qed.
+
+Lemma idElementwiseId A: liftToMap1 (@idElementwise A) = id.
+Proof.
+  apply functional_extensionality; intros.
+  apply liftToMap1IdElementwiseId.
+Qed.
 
 Lemma wellHidden_split:
   forall ma mb la lb,

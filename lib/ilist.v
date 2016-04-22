@@ -185,19 +185,6 @@ Section ilist.
         | nil     , S n' => fun il => default_B
     end il.
 
-  (* TODO: prove equivalence of the two indexed lookup functions.
-  Lemma ith_error_eq_ith_default
-  : forall (As : list A) (il : ilist As) (n : nat) (b : B _),
-      (forall nth_eq : nth_error As n = Some a,
-         match nth_eq as in (_ = y) return
-               Dep_Option  -> Dep_Option y -> Prop
-         with
-           | eq_refl => fun opt_b' b' => opt_b' = b'
-         end (ith_error il n)) <->
-      (forall default_A (default_B : B default_A),
-         ith_default default_B il n = b).
-   *)
-
   Lemma ilist_invert (As : list A) (il : ilist As) :
     match As as As' return ilist As' -> Prop with
       | a :: As' => fun il => exists b il', il = icons b il'
@@ -239,20 +226,6 @@ Section ilist.
   Proof.
     ith_induction n As; simpl; constructor; eauto with arith.
   Qed.
-
-  (* TODO: Implement this lemma too.
-
-    Lemma ith_default_overflow :
-    forall (n : nat)
-           (As : list A)
-           (il : ilist As)
-           (default_A : A)
-           (default_B : B default_A),
-      List.length As <= n ->
-      ith_default default_B il n = default_B.
-  Proof.
-    ith_induction n As; simpl; constructor; eauto with arith.
-  Qed. *)
 
   Lemma ith_default_indep :
     forall (n : nat)

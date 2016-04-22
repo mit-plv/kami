@@ -4,10 +4,6 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
-(* TODO: may move to lib/Struct.v *)
-Lemma opt_some_eq: forall {A} (v1 v2: A), Some v1 = Some v2 -> v1 = v2.
-Proof. intros; inv H; reflexivity. Qed.
-
 (* concrete representations of data kinds *)
 Fixpoint type (t: Kind): Type :=
   match t with

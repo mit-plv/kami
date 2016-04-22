@@ -820,7 +820,6 @@ Section DuplicateFacts.
 
     Lemma duplicate_traceRefines:
       forall n,
-        (* TODO: requires a number of conditions *)
         traceRefines (liftToMap1 (@idElementwise _)) m1 m2 ->
         traceRefines (liftToMap1 (@idElementwise _)) (duplicate m1 n) (duplicate m2 n).
     Proof.

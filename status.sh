@@ -1,1 +1,1 @@
-egrep -R "admit|Admitted|cheat" */*.v
+egrep -R "admit|Admitted|cheat|TODO" */*.v

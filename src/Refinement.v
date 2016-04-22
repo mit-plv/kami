@@ -5,65 +5,6 @@ Require Import Syntax Semantics SemFacts Wf Equiv Split.
 
 Set Implicit Arguments.
 
-(* TODO: should move to proper file *)
-Lemma liftToMap1_find:
-  forall {A} vp (m: M.t A) k,
-    M.find k (liftToMap1 vp m) = match M.find k m with
-                                 | Some v => vp k v
-                                 | None => None
-                                 end.
-Proof.
-  intros.
-  case_eq (M.find k (liftToMap1 vp m)); intros.
-  - apply M.Facts.P.F.find_mapsto_iff in H.
-    apply liftToMap1MapsTo in H; dest; subst.
-    apply M.F.P.F.find_mapsto_iff in H0.
-    rewrite H0; auto.
-  - apply M.F.P.F.not_find_in_iff in H.
-    case_eq (M.find k m); intros; auto.
-    apply M.Facts.P.F.find_mapsto_iff in H0.
-    case_eq (vp k a); intros; auto.
-    assert (exists v', vp k v' = Some a0 /\ M.MapsTo k v' m).
-    { eexists; eauto. }
-    apply liftToMap1MapsTo in H2.
-    elim H. 
-    eapply M.MapsToIn1; eauto.
-Qed.
-
-Ltac liftToMap1_find_tac :=
-  repeat
-    match goal with
-    | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
-      rewrite liftToMap1_find in H
-    | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
-      rewrite liftToMap1_find
-    end.
-
-Lemma liftToMap1_union:
-  forall {A} vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    liftToMap1 vp (M.union m1 m2) = M.union (liftToMap1 vp m1) (liftToMap1 vp m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  findeq_custom liftToMap1_find_tac.
-  - exfalso; eapply M.Disj_find_union_3; eauto. (* TODO: should be handled by mcontra *)
-  - destruct (vp y a); auto.
-Qed.
-
-Lemma liftToMap1_subtractKV:
-  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
-    liftToMap1 vp (M.subtractKV deceqA m1 m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  findeq_custom liftToMap1_find_tac.
-  - exfalso; eapply M.Disj_find_union_3; eauto.
-  - destruct (vp y a); auto.
-Qed.
-
 Section StepToRefinement.
   Variable imp spec: Modules.
   Variable p: MethsT -> MethsT.
