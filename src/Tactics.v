@@ -296,3 +296,11 @@ Hint Extern 1 (DisjList _ _) => kdisj_list.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.
 
+(** Notations for rule maps *)
+Notation "from '|->' to ; cont" :=
+  (fun s => if string_dec s from
+            then Some to%string
+            else (cont s)) (at level 12, right associativity).
+Notation "||" := (fun _ => None) (at level 12).
+
+

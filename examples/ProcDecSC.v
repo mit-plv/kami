@@ -27,16 +27,11 @@ Section ProcDecSC.
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
-  Definition pdec_pinst_ruleMap (_: RegsT) (s: string): option string :=
-    if string_dec s "reqLd" then None
-    else if string_dec s "reqSt" then None
-    else if string_dec s "repLd" then None
-    else if string_dec s "repSt" then None
-    else if string_dec s "execHt" then Some "execHt"%string
-    else if string_dec s "execNm" then Some "execNm"%string
-    else if string_dec s "processLd" then Some "execLd"%string
-    else if string_dec s "processSt" then Some "execSt"%string
-    else None.
+  Definition pdec_pinst_ruleMap (_: RegsT): string -> option string :=
+    "execHt"    |-> "execHt";
+    "execNm"    |-> "execNm";
+    "processLd" |-> "execLd";
+    "processSt" |-> "execSt"; ||.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT.
   Proof.
@@ -46,32 +41,31 @@ Section ProcDecSC.
     kgetv "Outs.elt"%string oelv r (Vector (memAtomK addrSize valSize) fifoSize)
           (M.empty (sigT (fullType type))).
     kgetv "Outs.deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
-    refine (if oev then _ else _).
 
-    - refine (M.add "pc"%string _
+    refine (
+        if oev
+        then (M.add "pc"%string (existT _ _ pcv)
+                    (M.add "rf"%string (existT _ _ rfv)
+                           (M.empty _)))
+        else (M.add "pc"%string (existT _ _ (getNextPc exec _ pcv rfv (dec _ rfv pcv)))
                     (M.add "rf"%string _
-                           (M.empty _))).
-      + exact (existT _ _ pcv).
-      + exact (existT _ _ rfv).
+                           (M.empty _)))
+      ).
 
-    - refine (M.add "pc"%string _
-                    (M.add "rf"%string _
-                           (M.empty _))).
-      + exact (existT _ _ (getNextPc exec _ pcv rfv (dec _ rfv pcv))).
-      + pose proof (dec _ rfv pcv ``"opcode") as opc.
-        destruct (weq opc (evalConstT opLd)).
-        * refine (existT _ (SyntaxKind (Vector (Bit valSize) rfIdx)) _); simpl.
-          exact (fun a => if weq a (dec _ rfv pcv ``"reg")
-                          then (oelv odv) ``"value"
-                          else rfv a).
-        * refine (existT _ _ rfv).
+    pose proof (dec _ rfv pcv ``"opcode") as opc.
+    destruct (weq opc (evalConstT opLd)).
+    - refine (existT _ (SyntaxKind (Vector (Bit valSize) rfIdx)) _); simpl.
+      exact (fun a => if weq a (dec _ rfv pcv ``"reg")
+                      then (oelv odv) ``"value"
+                      else rfv a).
+    - refine (existT _ _ rfv).
   Defined.
   Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
     admit.
-    (*
+  (*
     kinline_left pdeci.
     kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
 
@@ -79,16 +73,8 @@ Section ProcDecSC.
     kinv_add procDec_inv_1_ok.
     kinv_add_end.
 
-    kinvert.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-     *)
+    kinvert; kinv_magic_with kinv_or3.
+   *)
   Qed.
 
 End ProcDecSC.
