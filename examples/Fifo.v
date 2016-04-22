@@ -45,13 +45,13 @@ Section Fifo.
     with Register ^"empty" : Bool <- true
     with Register ^"full" : Bool <- Default
 
-    with Method ^"notFull"() : Bool :=
-      Read isFull <- ^"full";
-      Ret !#isFull
+    (* with Method ^"notFull"() : Bool := *)
+    (*   Read isFull <- ^"full"; *)
+    (*   Ret !#isFull *)
 
-    with Method ^"notEmpty"() : Bool :=
-      Read isEmpty <- ^"empty";
-      Ret !#isEmpty
+    (* with Method ^"notEmpty"() : Bool := *)
+    (*   Read isEmpty <- ^"empty"; *)
+    (*   Ret !#isEmpty *)
 
     with Method ^"enq"(d : dType) : Void := (enq d)
     with Method ^"deq"() : dType := deq

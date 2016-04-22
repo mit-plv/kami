@@ -23,7 +23,7 @@ Section L1Cache.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition RqFromP := Ex.MemTypes.RqFromP Addr.
   Definition RsFromP := Ex.MemTypes.RsFromP LgDataBytes LgNumDatas Addr Id.
-  Definition RqToP := Ex.MemTypes.RqToP  Addr Id.
+  Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
   Definition rqFromProcPop := MethodSig "rqFromProc.pop" (Void): RqFromProc.

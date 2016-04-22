@@ -717,3 +717,5 @@ Definition Maybe (t: Kind) := STRUCT {
 
 Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0) : kami_scope.
 
+Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
+
