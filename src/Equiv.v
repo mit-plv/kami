@@ -23,66 +23,85 @@ Section Equiv.
   Hint Unfold ft1 ft2.
 
   Inductive ExprEquiv: ctxt ft1 ft2 -> forall {k}, Expr t1 k -> Expr t2 k -> Prop :=
-  | EEVar: forall G {k} (x1: fullType t1 k) (x2: fullType t2 k),
-             In (vars (x1, x2)) G ->
-             ExprEquiv G (Var _ _ x1) (Var _ _ x2)
-  | EEConst: forall G {k} (c: ConstT k),
-               ExprEquiv G (Const _ c) (Const _ c)
-  | EEUniBool: forall G uop (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool)),
-                 ExprEquiv G e1 e2 ->
-                 ExprEquiv G (UniBool uop e1) (UniBool uop e2)
-  | EEBinBool: forall G bop (e11 e12: Expr t1 (SyntaxKind Bool))
-                      (e21 e22: Expr t2 (SyntaxKind Bool)),
-                 ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
-                 ExprEquiv G (BinBool bop e11 e12) (BinBool bop e21 e22)
-  | EEUniBit: forall G {n1 n2} (uop: UniBitOp n1 n2)
-                     (e1: Expr t1 (SyntaxKind (Bit n1))) (e2: Expr t2 (SyntaxKind (Bit n1))),
-                ExprEquiv G e1 e2 ->
-                ExprEquiv G (UniBit uop e1) (UniBit uop e2)
-  | EEBinBit: forall G {n1 n2 n3} (bop: BinBitOp n1 n2 n3)
-                     (e11: Expr t1 (SyntaxKind (Bit n1))) (e12: Expr t1 (SyntaxKind (Bit n2)))
-                     (e21: Expr t2 (SyntaxKind (Bit n1))) (e22: Expr t2 (SyntaxKind (Bit n2))),
-                ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
-                ExprEquiv G (BinBit bop e11 e12) (BinBit bop e21 e22)
-  | EEITE: forall G {k} (ce1: Expr t1 (SyntaxKind Bool)) (ce2: Expr t2 (SyntaxKind Bool))
-                  (te1 fe1: Expr t1 k) (te2 fe2: Expr t2 k),
-             ExprEquiv G ce1 ce2 -> ExprEquiv G te1 te2 -> ExprEquiv G fe1 fe2 ->
-             ExprEquiv G (ITE ce1 te1 fe1) (ITE ce2 te2 fe2)
-  | EEEq: forall G {k} (e11 e12: Expr t1 (SyntaxKind k)) (e21 e22: Expr t2 (SyntaxKind k)),
-            ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
-            ExprEquiv G (Eq e11 e12) (Eq e21 e22)
-  | EEReadIndex: forall G {i k} (e11: Expr t1 (SyntaxKind (Bit i)))
-                        (e12: Expr t1 (SyntaxKind (Vector k i)))
-                        (e21: Expr t2 (SyntaxKind (Bit i)))
-                        (e22: Expr t2 (SyntaxKind (Vector k i))),
-                   ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
-                   ExprEquiv G (ReadIndex e11 e12) (ReadIndex e21 e22)
-  | EEReadField: forall G {attrs} attr (e1: Expr t1 (SyntaxKind (Struct attrs)))
-                        (e2: Expr t2 (SyntaxKind (Struct attrs))),
-                   ExprEquiv G e1 e2 ->
-                   ExprEquiv G (ReadField attr e1) (ReadField attr e2)
-  | EEBuildVector: forall G {n k}
-                          (v1: Vec (Expr t1 (SyntaxKind n)) k)
-                          (v2: Vec (Expr t2 (SyntaxKind n)) k),
-                     (forall w: word k, ExprEquiv G (evalVec v1 w) (evalVec v2 w)) ->
-                     ExprEquiv G (BuildVector v1) (BuildVector v2)
-  | EEBuildStruct: forall G {attrs: list (Attribute Kind)}
-                          (s1: ilist (fun a => Expr t1 (SyntaxKind (attrType a))) attrs)
-                          (s2: ilist (fun a => Expr t2 (SyntaxKind (attrType a))) attrs),
-                     (forall a, In a attrs ->
-                                forall (e1: Expr t1 (SyntaxKind (attrType a)))
-                                       (e2: Expr t2 (SyntaxKind (attrType a))),
-                                  ilist_In e1 s1 -> ilist_In e2 s2 ->
-                                  ExprEquiv G e1 e2) ->
-                     ExprEquiv G (BuildStruct s1) (BuildStruct s2)
-  | EEUpdateVector: forall G {i k} (e11: Expr t1 (SyntaxKind (Vector k i)))
-                           (e12: Expr t1 (SyntaxKind (Bit i)))
-                           (e13: Expr t1 (SyntaxKind k))
-                           (e21: Expr t2 (SyntaxKind (Vector k i)))
-                           (e22: Expr t2 (SyntaxKind (Bit i)))
-                           (e23: Expr t2 (SyntaxKind k)),
-                      ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 -> ExprEquiv G e13 e23 ->
-                      ExprEquiv G (UpdateVector e11 e12 e13) (UpdateVector e21 e22 e23).
+  | EEVar:
+      forall G {k} (x1: fullType t1 k) (x2: fullType t2 k),
+        In (vars (x1, x2)) G ->
+        ExprEquiv G (Var _ _ x1) (Var _ _ x2)
+  | EEConst:
+      forall G {k} (c: ConstT k),
+        ExprEquiv G (Const _ c) (Const _ c)
+  | EEUniBool:
+      forall G uop (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool)),
+        ExprEquiv G e1 e2 ->
+        ExprEquiv G (UniBool uop e1) (UniBool uop e2)
+  | EEBinBool:
+      forall G bop (e11 e12: Expr t1 (SyntaxKind Bool))
+             (e21 e22: Expr t2 (SyntaxKind Bool)),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
+        ExprEquiv G (BinBool bop e11 e12) (BinBool bop e21 e22)
+  | EEUniBit:
+      forall G {n1 n2} (uop: UniBitOp n1 n2)
+             (e1: Expr t1 (SyntaxKind (Bit n1))) (e2: Expr t2 (SyntaxKind (Bit n1))),
+        ExprEquiv G e1 e2 ->
+        ExprEquiv G (UniBit uop e1) (UniBit uop e2)
+  | EEBinBit:
+      forall G {n1 n2 n3} (bop: BinBitOp n1 n2 n3)
+             (e11: Expr t1 (SyntaxKind (Bit n1))) (e12: Expr t1 (SyntaxKind (Bit n2)))
+             (e21: Expr t2 (SyntaxKind (Bit n1))) (e22: Expr t2 (SyntaxKind (Bit n2))),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
+        ExprEquiv G (BinBit bop e11 e12) (BinBit bop e21 e22)
+  | EEBinBitBool:
+      forall G {n1 n2} (bop: BinBitBoolOp n1 n2)
+             (e11: Expr t1 (SyntaxKind (Bit n1))) (e12: Expr t1 (SyntaxKind (Bit n2)))
+             (e21: Expr t2 (SyntaxKind (Bit n1))) (e22: Expr t2 (SyntaxKind (Bit n2))),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
+        ExprEquiv G (BinBitBool bop e11 e12) (BinBitBool bop e21 e22)
+  | EEITE:
+      forall G {k} (ce1: Expr t1 (SyntaxKind Bool)) (ce2: Expr t2 (SyntaxKind Bool))
+             (te1 fe1: Expr t1 k) (te2 fe2: Expr t2 k),
+        ExprEquiv G ce1 ce2 -> ExprEquiv G te1 te2 -> ExprEquiv G fe1 fe2 ->
+        ExprEquiv G (ITE ce1 te1 fe1) (ITE ce2 te2 fe2)
+  | EEEq:
+      forall G {k} (e11 e12: Expr t1 (SyntaxKind k)) (e21 e22: Expr t2 (SyntaxKind k)),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
+        ExprEquiv G (Eq e11 e12) (Eq e21 e22)
+  | EEReadIndex:
+      forall G {i k} (e11: Expr t1 (SyntaxKind (Bit i)))
+             (e12: Expr t1 (SyntaxKind (Vector k i)))
+             (e21: Expr t2 (SyntaxKind (Bit i)))
+             (e22: Expr t2 (SyntaxKind (Vector k i))),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 ->
+        ExprEquiv G (ReadIndex e11 e12) (ReadIndex e21 e22)
+  | EEReadField:
+      forall G {attrs} attr (e1: Expr t1 (SyntaxKind (Struct attrs)))
+             (e2: Expr t2 (SyntaxKind (Struct attrs))),
+        ExprEquiv G e1 e2 ->
+        ExprEquiv G (ReadField attr e1) (ReadField attr e2)
+  | EEBuildVector:
+      forall G {n k}
+             (v1: Vec (Expr t1 (SyntaxKind n)) k)
+             (v2: Vec (Expr t2 (SyntaxKind n)) k),
+        (forall w: word k, ExprEquiv G (evalVec v1 w) (evalVec v2 w)) ->
+        ExprEquiv G (BuildVector v1) (BuildVector v2)
+  | EEBuildStruct:
+      forall G {attrs: list (Attribute Kind)}
+             (s1: ilist (fun a => Expr t1 (SyntaxKind (attrType a))) attrs)
+             (s2: ilist (fun a => Expr t2 (SyntaxKind (attrType a))) attrs),
+        (forall a, In a attrs ->
+                   forall (e1: Expr t1 (SyntaxKind (attrType a)))
+                          (e2: Expr t2 (SyntaxKind (attrType a))),
+                     ilist_In e1 s1 -> ilist_In e2 s2 ->
+                     ExprEquiv G e1 e2) ->
+        ExprEquiv G (BuildStruct s1) (BuildStruct s2)
+  | EEUpdateVector:
+      forall G {i k} (e11: Expr t1 (SyntaxKind (Vector k i)))
+             (e12: Expr t1 (SyntaxKind (Bit i)))
+             (e13: Expr t1 (SyntaxKind k))
+             (e21: Expr t2 (SyntaxKind (Vector k i)))
+             (e22: Expr t2 (SyntaxKind (Bit i)))
+             (e23: Expr t2 (SyntaxKind k)),
+        ExprEquiv G e11 e21 -> ExprEquiv G e12 e22 -> ExprEquiv G e13 e23 ->
+        ExprEquiv G (UpdateVector e11 e12 e13) (UpdateVector e21 e22 e23).
 
   Lemma ExprEquiv_ctxt:
     forall G1 G2 {k} (e1: Expr t1 k) e2,
