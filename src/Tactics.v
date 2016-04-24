@@ -113,7 +113,7 @@ Ltac kinline_compute :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               withPrefix append
+               withPrefix prefixSymbol append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb];
@@ -139,7 +139,7 @@ Ltac kinline_compute_in H :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               withPrefix append
+               withPrefix prefixSymbol append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb] in H;
