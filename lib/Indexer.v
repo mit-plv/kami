@@ -18,6 +18,15 @@ Lemma substring_empty:
   forall s, substring 0 0 s = ""%string.
 Proof. induction s; simpl; intros; auto. Qed.
 
+Lemma string_append_assoc:
+  forall {a b c : string}, (a ++ b ++ c)%string = ((a ++ b) ++ c)%string.
+Proof.
+  intros.
+  induction a.
+  simpl. reflexivity.
+  simpl. rewrite IHa. reflexivity.
+Qed.
+
 (** End of string manipulation lemmas *)
 
 Fixpoint string_of_nat (n: nat) :=
@@ -30,9 +39,12 @@ Lemma string_of_nat_length: forall i, String.length (string_of_nat i) = S i.
 Proof. induction i; simpl; intros; auto. Qed.
 
 Definition indexSymbol: string := "__"%string.
+Definition prefixSymbol: string := "."%string.
 
 Definition withIndex str idx := 
   append (append (string_of_nat idx) indexSymbol) str.
+Definition withPrefix pre str :=
+  append (append pre prefixSymbol) str.
 
 Theorem withIndex_eq : withIndex = fun str idx =>
   append (append (string_of_nat idx) indexSymbol) str.
@@ -114,4 +126,5 @@ Qed.
 Global Opaque withIndex.
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).
-
+Notation "pre '..' str" := (withPrefix pre str) (at level 0).
+                           

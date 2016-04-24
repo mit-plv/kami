@@ -192,41 +192,41 @@ End BoundedIndexFull.
 Definition namesOf {A} (attrs: list (Attribute A)) := map (@attrName _) attrs.
 Hint Unfold attrName attrType namesOf.
 
-Definition appendName nm s := (nm ++ "." ++ s)%string.
-Definition appendAttr nm t (a: Attribute t) :=
-  {| attrName := appendName nm (attrName a); attrType := attrType a |}.
-Definition mapAppendAttr nm t (ls: list (Attribute t)) :=
-  map (fun a => appendAttr nm a) ls.
+(* Definition appendName nm s := (nm ++ "." ++ s)%string. *)
+(* Definition appendAttr nm t (a: Attribute t) := *)
+(*   {| attrName := appendName nm (attrName a); attrType := attrType a |}. *)
+(* Definition mapAppendAttr nm t (ls: list (Attribute t)) := *)
+(*   map (fun a => appendAttr nm a) ls. *)
 
-Infix "-n-" := appendName (at level 20, left associativity).
-Infix "-a-" := appendAttr (at level 21, right associativity).
-Infix "-m-" := mapAppendAttr (at level 22, right associativity).
+(* Infix "-n-" := appendName (at level 20, left associativity). *)
+(* Infix "-a-" := appendAttr (at level 21, right associativity). *)
+(* Infix "-m-" := mapAppendAttr (at level 22, right associativity). *)
 
-Lemma appendName_neq: forall p s1 s2, s1 = s2 <-> p -n- s1 = p -n- s2.
-Proof.
-  intros; split; intros.
-  - subst; reflexivity.
-  - induction p; [inv H; reflexivity|].
-    apply IHp; inv H; assumption.
-Qed.
+(* Lemma appendName_neq: forall p s1 s2, s1 = s2 <-> p -n- s1 = p -n- s2. *)
+(* Proof. *)
+(*   intros; split; intros. *)
+(*   - subst; reflexivity. *)
+(*   - induction p; [inv H; reflexivity|]. *)
+(*     apply IHp; inv H; assumption. *)
+(* Qed. *)
 
-Local Open Scope string.
-Lemma string_append_assoc : forall {a b c : string},
-  a ++ b ++ c = (a ++ b) ++ c.
-Proof.
-intros.
-induction a.
-simpl. reflexivity.
-simpl. rewrite IHa. reflexivity.
-Qed.
+(* Local Open Scope string. *)
+(* Lemma string_append_assoc : forall {a b c : string}, *)
+(*   a ++ b ++ c = (a ++ b) ++ c. *)
+(* Proof. *)
+(* intros. *)
+(* induction a. *)
+(* simpl. reflexivity. *)
+(* simpl. rewrite IHa. reflexivity. *)
+(* Qed. *)
 
-Lemma appendName_assoc : forall {a b c},
-  a -n- b -n- c = a -n- (b -n- c).
-Proof.
-intros. unfold appendName. simpl.
-rewrite <- string_append_assoc.
-simpl. reflexivity.
-Qed.
+(* Lemma appendName_assoc : forall {a b c}, *)
+(*   a -n- b -n- c = a -n- (b -n- c). *)
+(* Proof. *)
+(* intros. unfold appendName. simpl. *)
+(* rewrite <- string_append_assoc. *)
+(* simpl. reflexivity. *)
+(* Qed. *)
 
 Section BoundedProp.
   Definition boundedPropIdx (A: Type) (l: list A) (P: BoundedIndex l -> Prop)

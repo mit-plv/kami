@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 
@@ -25,8 +25,8 @@ Section ProcDec.
   Definition opHt : ConstT (Bit 2) := WO~1~0.
 
   (* Called method signatures *)
-  Definition memReq := MethodSig (inName -n- "enq")(memAtomK addrSize valSize) : Void.
-  Definition memRep := MethodSig (outName -n- "deq")() : memAtomK addrSize valSize.
+  Definition memReq := MethodSig (inName .. "enq")(memAtomK addrSize valSize) : Void.
+  Definition memRep := MethodSig (outName .. "deq")() : memAtomK addrSize valSize.
   Definition halt := MethodSig "HALT"() : Void.
 
   Definition nextPc {ty} ppc st : ActionT ty Void := (

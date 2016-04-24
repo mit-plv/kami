@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
@@ -26,19 +26,19 @@ Section L1Cache.
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
-  Definition rqFromProcPop := MethodSig "rqFromProc.pop" (Void): RqFromProc.
-  Definition fromPPop := MethodSig "fromP.pop" (Void): FromP.
+  Definition rqFromProcPop := MethodSig "rqFromProc".."pop" (Void): RqFromProc.
+  Definition fromPPop := MethodSig "fromP".."pop" (Void): FromP.
 
-  Definition rsToProcEnq := MethodSig "rsToProc.enq" (RsToProc): Void.
-  Definition rqToPEnq := MethodSig "rqToP.enq" (RqToP): Void.
-  Definition rsToPEnq := MethodSig "rsToP.enq" (RsToP): Void.
+  Definition rsToProcEnq := MethodSig "rsToProc".."enq" (RsToProc): Void.
+  Definition rqToPEnq := MethodSig "rqToP".."enq" (RqToP): Void.
+  Definition rsToPEnq := MethodSig "rsToP".."enq" (RsToP): Void.
 
-  Definition readLine := MethodSig "line.read" (Idx): Line.
-  Definition writeLine := MethodSig "line.write" (WritePort IdxBits Line): Void.
-  Definition readTag := MethodSig "tag.read" (Idx): Tag.
-  Definition writeTag := MethodSig "tag.write" (WritePort IdxBits Tag): Void.
-  Definition readCs := MethodSig "cs.read" (Idx): Msi.
-  Definition writeCs := MethodSig "cs.write" (WritePort IdxBits Msi): Void.
+  Definition readLine := MethodSig "line".."read" (Idx): Line.
+  Definition writeLine := MethodSig "line".."write" (WritePort IdxBits Line): Void.
+  Definition readTag := MethodSig "tag".."read" (Idx): Tag.
+  Definition writeTag := MethodSig "tag".."write" (WritePort IdxBits Tag): Void.
+  Definition readCs := MethodSig "cs".."read" (Idx): Msi.
+  Definition writeCs := MethodSig "cs".."write" (WritePort IdxBits Msi): Void.
 
   Section UtilFunctions.
     Variable var: Kind -> Type.
@@ -241,7 +241,7 @@ Section Facts.
   Lemma l1Cache_ModEquiv:
     ModEquiv type typeUT (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
   Proof.
-    admit.
+    admit. (* kequiv. *)
   Qed.
 
 End Facts.

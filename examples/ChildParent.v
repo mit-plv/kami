@@ -23,13 +23,13 @@ Section ChildParent.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqToPPop i := MethodSig "rqToP.pop" __ i (Void): RqToP.
-  Definition rqFromCEnq := MethodSig "rqFromC.enq" (RqFromC): Void.
-  Definition rsToPPop i := MethodSig "rsToP.pop" __ i (Void): RsToP.
-  Definition rsFromCEnq := MethodSig "rsFromC.enq" (RsFromC): Void.
+  Definition rqToPPop i := MethodSig "rqToP".."pop"__ i (Void): RqToP.
+  Definition rqFromCEnq := MethodSig "rqFromC".."enq" (RqFromC): Void.
+  Definition rsToPPop i := MethodSig "rsToP".."pop"__ i (Void): RsToP.
+  Definition rsFromCEnq := MethodSig "rsFromC".."enq" (RsFromC): Void.
 
-  Definition toCPop := MethodSig "toC.pop" (Void): ToC.
-  Definition fromPEnq i := MethodSig "fromP.pop" __ i (FromP): Void.
+  Definition toCPop := MethodSig "toC".."pop" (Void): ToC.
+  Definition fromPEnq i := MethodSig "fromP".."pop"__ i (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
   Definition childParent :=
@@ -67,7 +67,7 @@ Section Facts.
   Lemma childParent_ModEquiv:
     ModEquiv type typeUT (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof.
-    admit.
+    admit. (* ModEquiv for repetition *)
   Qed.
 
 End Facts.

@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.StringEq Lib.FMap.
+Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize.
 Require Import Lts.Decomposition Lts.DecompositionZero.
@@ -53,6 +53,8 @@ Ltac kequiv_with tac :=
   repeat
     (try tac;
      match goal with
+     | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv
+     | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
      | [ |- ModEquiv _ _ _ ] => constructor; intros
      | [ |- RulesEquiv _ _ _ ] => constructor; intros
      | [ |- MethsEquiv _ _ _ ] => constructor; intros
@@ -111,7 +113,7 @@ Ltac kinline_compute :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               appendName append
+               withPrefix append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb];
@@ -137,7 +139,7 @@ Ltac kinline_compute_in H :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               appendName append
+               withPrefix append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb] in H;

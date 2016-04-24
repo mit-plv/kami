@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv.
 
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
@@ -11,7 +11,7 @@ Section Fifo.
   Variable sz: nat.
   Variable dType: Kind.
 
-  Notation "^ s" := (fifoName -n- s) (at level 0).
+  Notation "^ s" := (fifoName .. s) (at level 0).
 
   Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (Read isFull <- ^"full";

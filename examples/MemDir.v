@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
@@ -39,19 +39,19 @@ Section Mem.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqFromCPop := MethodSig "rqFromC.pop" (Void): RqFromC.
-  Definition rsFromCPop := MethodSig "rsFromC.pop" (Void): RsFromC.
+  Definition rqFromCPop := MethodSig "rqFromC".."pop" (Void): RqFromC.
+  Definition rsFromCPop := MethodSig "rsFromC".."pop" (Void): RsFromC.
 
-  Definition toCEnq := MethodSig "toC.enq" (ToC): Void.
+  Definition toCEnq := MethodSig "toC".."enq" (ToC): Void.
 
   Definition Dir := Vector Msi LgNumChildren.
   
   Definition Dirw := Vector Bool LgNumChildren.
   
-  Definition readLine := MethodSig "line.read" (Idx): Line.
-  Definition writeLine := MethodSig "line.write" (WritePort IdxBits Line): Void.
-  Definition readDir := MethodSig "cs.read" (Idx): Dir.
-  Definition writeDir := MethodSig "cs.write" (WritePort IdxBits Dir): Void.
+  Definition readLine := MethodSig "line".."read" (Idx): Line.
+  Definition writeLine := MethodSig "line".."write" (WritePort IdxBits Line): Void.
+  Definition readDir := MethodSig "cs".."read" (Idx): Dir.
+  Definition writeDir := MethodSig "cs".."write" (WritePort IdxBits Dir): Void.
 
   Definition Child := MemTypes.Child LgNumChildren.
   

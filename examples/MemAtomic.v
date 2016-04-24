@@ -1,6 +1,6 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 Require Import Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
@@ -10,8 +10,8 @@ Section Middleman.
   Variable addrSize: nat.
   Variable dType: Kind.
 
-  Definition getReq := MethodSig (inName -n- "deq")() : atomK addrSize dType.
-  Definition setRep := MethodSig (outName -n- "enq")(atomK addrSize dType) : Void.
+  Definition getReq := MethodSig (inName .. "deq")() : atomK addrSize dType.
+  Definition setRep := MethodSig (outName .. "enq")(atomK addrSize dType) : Void.
   Definition exec := MethodSig "exec"(atomK addrSize dType) : atomK addrSize dType.
 
   Definition processLd {ty} : ActionT ty Void :=
@@ -72,13 +72,8 @@ Section Facts.
   Lemma ioms_ModEquiv:
     forall a sz d n, ModEquiv type typeUT (ioms a sz d n).
   Proof.
-  Admitted.
-  (*   induction n; simpl; intros. *)
-  (*   - kequiv. *)
-  (*   - apply ModEquiv_modular. *)
-  (*     + kequiv. *)
-  (*     + auto. *)
-  (* Qed. *)
+    intros; kequiv.
+  Qed.
 
   Lemma memAtomic_ModEquiv:
     forall a sz d n, ModEquiv type typeUT (memAtomic a sz d n).

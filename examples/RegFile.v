@@ -1,4 +1,4 @@
-Require Import String Lib.Struct.
+Require Import String Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Section RegFile.
@@ -13,7 +13,7 @@ Section RegFile.
                               "addr" :: Addr;
                               "data" :: Data
                             }.
-  Notation "^ s" := (name -n- s) (at level 0).
+  Notation "^ s" := (name .. s) (at level 0).
 
   Variable init: ConstT DataArray.
   
