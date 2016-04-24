@@ -23,11 +23,5 @@ Section Inlined.
     end.
   Defined.
 
-  Lemma pdecInl_equal: pdecInl = inlineF pdec.
-  Proof.
-    kinline_compute.
-    reflexivity.
-  Qed.
-
 End Inlined.
 

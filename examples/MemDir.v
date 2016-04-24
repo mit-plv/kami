@@ -48,10 +48,10 @@ Section Mem.
   
   Definition Dirw := Vector Bool LgNumChildren.
   
-  Definition readLine := MethodSig "line".."read" (Idx): Line.
-  Definition writeLine := MethodSig "line".."write" (WritePort IdxBits Line): Void.
-  Definition readDir := MethodSig "cs".."read" (Idx): Dir.
-  Definition writeDir := MethodSig "cs".."write" (WritePort IdxBits Dir): Void.
+  Definition readLine := MethodSig "mline".."read" (Idx): Line.
+  Definition writeLine := MethodSig "mline".."write" (WritePort IdxBits Line): Void.
+  Definition readDir := MethodSig "mcs".."read" (Idx): Dir.
+  Definition writeDir := MethodSig "mcs".."write" (WritePort IdxBits Dir): Void.
 
   Definition Child := MemTypes.Child LgNumChildren.
   

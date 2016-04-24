@@ -11,7 +11,7 @@ Section MemCache.
 
   Variable FifoSize: nat.
 
-  Definition n := 2. (* number of l1 caches (cores) *)
+  Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition l1Cache := l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id.
   (* TODO: fix default values *)
@@ -42,8 +42,9 @@ Section MemCache.
   Definition childParentC := (childParent ++ fifoRqFromC ++ fifoRsFromC ++ fifoToC)%kami.
 
   Definition memDir := memDir IdxBits LgNumDatas LgDataBytes n Id.
-  Definition mline := regFile "line"%string IdxBits (MemDir.Line LgNumDatas LgDataBytes) Default.
-  Definition mdir := regFile "cs"%string IdxBits (MemDir.Dir n) Default.
+  Definition mline := regFile "mline"%string IdxBits
+                              (MemDir.Line LgNumDatas LgDataBytes) Default.
+  Definition mdir := regFile "mcs"%string IdxBits (MemDir.Dir n) Default.
 
   Definition memDirC := (memDir ++ mline ++ mdir)%kami.
 
@@ -62,9 +63,10 @@ Section Facts.
   Variable Id: Kind.
   
   Variable FifoSize: nat.
+  Variable n: nat.
 
   Lemma memCache_ModEquiv:
-    ModEquiv type typeUT (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize).
+    ModEquiv type typeUT (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n).
   Proof.
     admit.
   Qed.

@@ -11,13 +11,14 @@ Section MemCorrect.
   Variable Id: Kind.
   Variable FifoSize: nat.
 
-  Definition memCache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize.
+  Definition n := 1. (* number of caches (cores) *)
+
+  Definition memCache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
 
   (* TODO: fix parameters *)
   Definition memAtomic := memAtomic (AddrBits IdxBits LgNumDatas LgDataBytes) FifoSize
                                     (memAtomK (AddrBits IdxBits LgNumDatas LgDataBytes)
-                                              (LgDataBytes * 8))
-                                    MemCache.n.
+                                              (LgDataBytes * 8)) n.
 
   Hint Unfold memCache: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT memCache) => unfold memCache. (* for kequiv *)
