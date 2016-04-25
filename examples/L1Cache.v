@@ -26,8 +26,8 @@ Section L1Cache.
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
-  Definition rqFromProcPop := MethodSig "rqFromProc".."pop" (Void): RqFromProc.
-  Definition fromPPop := MethodSig "fromP".."pop" (Void): FromP.
+  Definition rqFromProcPop := MethodSig "rqFromProc".."deq" (Void): RqFromProc.
+  Definition fromPPop := MethodSig "fromP".."deq" (Void): FromP.
 
   Definition rsToProcEnq := MethodSig "rsToProc".."enq" (RsToProc): Void.
   Definition rqToPEnq := MethodSig "rqToP".."enq" (RqToP): Void.
@@ -86,7 +86,7 @@ Section L1Cache.
           Assert #rq@."op";
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
-          Call cs <- readCs(#idx);  
+          Call cs <- readCs(#idx);
           Assert (#cs == $ Mod && #tag == getTag #rq@."addr");
           Call line <- readLine(#idx);
           LET offset <- getOffset #rq@."addr";
@@ -101,7 +101,7 @@ Section L1Cache.
           Call rq <- rqFromProcPop();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
-          Call cs <- readCs(#idx);  
+          Call cs <- readCs(#idx);
           Assert (#tag == getTag #rq@."addr" && #cs == $ Sh && #rq@."op");
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ false;
@@ -115,7 +115,7 @@ Section L1Cache.
           Call rq <- rqFromProcPop();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
-          Call cs <- readCs(#idx);  
+          Call cs <- readCs(#idx);
           Assert (!(#tag == getTag #rq@."addr") || #cs == $ Inv);
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ true;

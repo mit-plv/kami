@@ -109,7 +109,8 @@ Ltac kinline_compute :=
                getBody inlineArg
                appendAction getAttribute
                makeModule makeModule'
-               wfModules wfRules wfDms wfAction wfActionC maxPathLength
+               wfModules wfRules wfDms wfAction wfActionC
+               maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
@@ -135,7 +136,8 @@ Ltac kinline_compute_in H :=
                getBody inlineArg
                appendAction getAttribute
                makeModule makeModule'
-               wfModules wfRules wfDms wfAction wfActionC maxPathLength
+               wfModules wfRules wfDms wfAction wfActionC
+               maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA

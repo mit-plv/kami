@@ -13,7 +13,7 @@ Section MemCorrect.
 
   Definition n := 1. (* number of caches (cores) *)
 
-  Definition memCache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
+  Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
 
   (* TODO: fix parameters *)
   Definition memAtomic := memAtomic (AddrBits IdxBits LgNumDatas LgDataBytes) FifoSize

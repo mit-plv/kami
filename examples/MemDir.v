@@ -39,8 +39,8 @@ Section Mem.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqFromCPop := MethodSig "rqFromC".."pop" (Void): RqFromC.
-  Definition rsFromCPop := MethodSig "rsFromC".."pop" (Void): RsFromC.
+  Definition rqFromCPop := MethodSig "rqFromC".."deq" (Void): RqFromC.
+  Definition rsFromCPop := MethodSig "rsFromC".."deq" (Void): RsFromC.
 
   Definition toCEnq := MethodSig "toC".."enq" (ToC): Void.
 

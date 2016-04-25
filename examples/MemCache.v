@@ -19,7 +19,7 @@ Section MemCache.
   Definition l1tag := regFile "tag"%string IdxBits (L1Cache.Tag TagBits) Default.
   Definition l1line := regFile "line"%string IdxBits (L1Cache.Line LgNumDatas LgDataBytes) Default.
 
-  Definition l1 := ConcatMod l1Cache (ConcatMod l1cs (ConcatMod l1tag l1line)).
+  Definition l1 := (l1Cache ++ l1cs ++ l1tag ++ l1line)%kami.
 
   Definition fifoRqFromProc := fifo "rqFromProc" FifoSize
                                     (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes Id).
