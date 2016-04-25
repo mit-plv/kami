@@ -21,30 +21,31 @@ Section MemCache.
 
   Definition l1 := (l1Cache ++ l1cs ++ l1tag ++ l1line)%kami.
 
+  Definition MIdxBits := TagBits + IdxBits.
+
   Definition fifoRqFromProc := fifo "rqFromProc" FifoSize
                                     (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes Id).
   Definition fifoRsToProc := fifo "rsToProc" FifoSize (RsToProc LgDataBytes Id).
-  Definition fifoRqToP := fifo "rqToP" FifoSize (RqToP IdxBits LgNumDatas LgDataBytes Id).
-  Definition fifoRsToP := fifo "rsToP" FifoSize (RsToP IdxBits LgNumDatas LgDataBytes).
-  Definition fifoFromP := fifo "fromP" FifoSize (FromP IdxBits LgNumDatas LgDataBytes Id).
+  Definition fifoRqToP := fifo "rqToP" FifoSize (RqToP MIdxBits LgNumDatas LgDataBytes Id).
+  Definition fifoRsToP := fifo "rsToP" FifoSize (RsToP MIdxBits LgNumDatas LgDataBytes).
+  Definition fifoFromP := fifo "fromP" FifoSize (FromP MIdxBits LgNumDatas LgDataBytes Id).
 
   Definition l1C :=
     (l1 ++ fifoRqFromProc ++ fifoRsToProc ++ fifoRqToP ++ fifoRsToP ++ fifoFromP)%kami.
   
   Definition l1s := duplicate l1C n.
 
-  Definition childParent := childParent IdxBits LgNumDatas LgDataBytes n Id.
+  Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
-  Definition fifoRqFromC := fifo "rqFromC" FifoSize (RqFromC IdxBits LgNumDatas LgDataBytes n Id).
-  Definition fifoRsFromC := fifo "rsFromC" FifoSize (RsFromC IdxBits LgNumDatas LgDataBytes n).
-  Definition fifoToC := fifo "toC" FifoSize (ToC IdxBits LgNumDatas LgDataBytes n Id).
+  Definition fifoRqFromC := fifo "rqFromC" FifoSize (RqFromC MIdxBits LgNumDatas LgDataBytes n Id).
+  Definition fifoRsFromC := fifo "rsFromC" FifoSize (RsFromC MIdxBits LgNumDatas LgDataBytes n).
+  Definition fifoToC := fifo "toC" FifoSize (ToC MIdxBits LgNumDatas LgDataBytes n Id).
 
   Definition childParentC := (childParent ++ fifoRqFromC ++ fifoRsFromC ++ fifoToC)%kami.
 
-  Definition memDir := memDir IdxBits LgNumDatas LgDataBytes n Id.
-  Definition mline := regFile "mline"%string IdxBits
-                              (MemDir.Line LgNumDatas LgDataBytes) Default.
-  Definition mdir := regFile "mcs"%string IdxBits (MemDir.Dir n) Default.
+  Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes n Id.
+  Definition mline := regFile "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes) Default.
+  Definition mdir := regFile "mcs"%string MIdxBits (MemDir.Dir n) Default.
 
   Definition memDirC := (memDir ++ mline ++ mdir)%kami.
 
@@ -52,6 +53,7 @@ Section MemCache.
               
 End MemCache.
 
+Hint Unfold MIdxBits: MethDefs.
 Hint Unfold l1Cache l1cs l1tag l1line l1
      fifoRqFromProc fifoRsToProc fifoRqToP fifoRsToP fifoFromP
      l1C l1s

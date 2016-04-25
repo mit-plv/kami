@@ -11,7 +11,7 @@ Section MemCacheInl.
   Variable Id: Kind.
   Variable FifoSize: nat.
   
-  Definition n := 1. (* number of caches (cores) *)
+  Definition n := 1. (* 1 actually means "two" caches *)
   Hint Unfold n: ModulesDefs.
 
   (* Definition memCache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n. *)

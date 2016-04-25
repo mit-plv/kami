@@ -108,7 +108,7 @@ Ltac kinline_compute :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeModule makeModule'
+               makeModule makeModule' numbered
                wfModules wfRules wfDms wfAction wfActionC
                maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf
@@ -135,7 +135,7 @@ Ltac kinline_compute_in H :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeModule makeModule'
+               makeModule makeModule' numbered
                wfModules wfRules wfDms wfAction wfActionC
                maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf
