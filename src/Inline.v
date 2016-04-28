@@ -99,7 +99,7 @@ Section Exts.
         if ib then
           inlineDms' im dms'
         else
-          (im, false)
+          (m, false)
     end.
 
   Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDefsBodies m)).
@@ -112,7 +112,7 @@ Section Exts.
       (Mod (getRegInits im) (getRules im)
            (filterDms (getDefsBodies im) (getCalls m)), ib)
     else
-      (im, false).
+      (m, false).
 
 End Exts.
 

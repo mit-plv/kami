@@ -393,8 +393,7 @@ Proof.
   - apply IHdms.
     replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
     apply inlineDmToMod_ModEquiv; auto.
-  - replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
-    apply inlineDmToMod_ModEquiv; auto.
+  - intuition.
 Qed.
 
 Lemma inlineDms_ModEquiv:
@@ -903,8 +902,7 @@ Proof.
   destruct (noInternalCalls im).
   - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
     apply inlineDms'_preserves_regInits.
-  - simpl; replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
-    apply inlineDms'_preserves_regInits.
+  - simpl; reflexivity.
 Qed.
 
 Require Import Refinement.
