@@ -5,7 +5,7 @@ Require Import Lts.Syntax Lts.Semantics Lts.Equiv.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
-
+  
 Section Fifo.
   Variable fifoName: string.
   Variable sz: nat.

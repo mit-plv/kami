@@ -125,10 +125,8 @@ Lemma inlineDmToMod_getDmsMod:
   forall m a,
     getDefs (fst (inlineDmToMod m a)) = getDefs m.
 Proof.
-  intros; unfold inlineDmToMod.
-  destruct (wfModules _); [|auto].
+  intros; unfold inlineDmToMod; simpl.
   destruct (getAttribute _ _); [|auto].
-  destruct (noCallDm _ _); [|auto].
   simpl.
 
   clear; induction m; unfold getDefs in *; simpl in *.
@@ -240,11 +238,9 @@ Lemma inlineDmToMod_calls:
     SubList (getCalls (fst (inlineDmToMod m a)))
             (getCalls m).
 Proof.
-  intros; unfold inlineDmToMod.
-  destruct (wfModules _); [|apply SubList_refl].
+  intros; unfold inlineDmToMod; simpl.
   remember (getAttribute _ _) as odm; destruct odm;
-  [|apply SubList_refl].
-  destruct (noCallDm _ _); [|apply SubList_refl].
+  [|apply SubList_refl]; simpl.
   unfold getCalls; simpl.
   apply SubList_app_3.
   - eapply inlineDmToRule_calls; eauto.
@@ -273,17 +269,12 @@ Lemma inlineDms_wellHidden:
 Proof.
   intros; unfold inlineDms.
   remember (namesOf (getDefsBodies m)) as dms; clear Heqdms.
-  generalize dependent m; induction dms; intros; [assumption|].
-  simpl; remember (inlineDmToMod m a) as imb; destruct imb; simpl.
-  destruct b.
-  - apply IHdms; auto.
-    replace m0 with (fst (inlineDmToMod m a)) by (rewrite <-Heqimb; reflexivity).
-    apply inlineDmToMod_wellHidden; auto.
-  - unfold inlineDmToMod in Heqimb.
-    destruct (wfModules _); [|inv Heqimb; assumption].
-    destruct (getAttribute _ _); [|inv Heqimb; assumption].
-    destruct (noCallDm _ _); [|inv Heqimb; assumption].
-    inv Heqimb.
+  generalize dependent m; induction dms; intros; [assumption|]; simpl.
+  pose proof (inlineDmToMod_wellHidden m l a H) as iwh.
+  simpl; remember (inlineDmToMod m a) as imb; destruct imb; simpl in *.
+  pose proof (IHdms _ iwh) as sth.
+  remember (inlineDms' m0 dms) as imb'; destruct imb'; simpl in *.
+  intuition.
 Qed.
 
 Lemma hideMeths_Substeps_hide:
@@ -370,11 +361,9 @@ Lemma inlineDmToMod_ModEquiv:
 Proof.
   intros.
   unfold inlineDmToMod.
-  destruct (wfModules _); [|auto].
   remember (getAttribute _ _) as oattr; destruct oattr; [|auto].
   simpl in Heqoattr.
   apply getAttribute_Some_body in Heqoattr.
-  destruct (noCallDm _ _); [|auto].
   simpl; inv H.
   pose proof (MethsEquiv_in _ H1 Heqoattr).
   constructor.
@@ -389,11 +378,11 @@ Lemma inlineDms'_ModEquiv:
 Proof.
   induction dms; simpl; intros; auto.
   case_eq (inlineDmToMod m a); intros.
-  destruct b; simpl in *.
-  - apply IHdms.
-    replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
-    apply inlineDmToMod_ModEquiv; auto.
-  - intuition.
+  case_eq (inlineDms' m0 dms); intros; simpl.
+  replace m1 with (fst (inlineDms' m0 dms)) by (rewrite H1; auto).
+  apply IHdms.
+  replace m0 with (fst (inlineDmToMod m a)) by (rewrite H0; auto).
+  apply inlineDmToMod_ModEquiv; auto.
 Qed.
 
 Lemma inlineDms_ModEquiv:
@@ -415,7 +404,7 @@ Lemma inlineDmToMod_dms_names:
 Proof.
   destruct m; intros; simpl in *.
   - unfold inlineDmToMod.
-    destruct (wfModules _); try destruct (getAttribute _ _); try destruct (noCallDm _ _);
+    try destruct (getAttribute _ _);
     try (reflexivity; fail).
     simpl; clear.
 
@@ -423,7 +412,7 @@ Proof.
     simpl; f_equal; auto.
 
   - unfold inlineDmToMod.
-    destruct (wfModules _); try destruct (getAttribute _ _); try destruct (noCallDm _ _);
+    try destruct (getAttribute _ _);
     try reflexivity.
     apply inlineDmToDms_names.
 Qed.
@@ -736,7 +725,7 @@ Proof.
     + eapply inlineDmToMod_Substep_intact; eauto.
     + destruct (M.find (attrName a) ds); repeat split; simpl; auto.
     + destruct (M.find (attrName a) ds); reflexivity.
-
+  - destruct (getAttribute dm (getDefsBodies m)); simpl in *; discriminate.
       Grab Existential Variables.
       exact nil.
 Qed.
@@ -769,9 +758,10 @@ Proof.
   intros; simpl.
   apply SubList_cons_inv in Hcdms; dest.
   remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl.
-  destruct ib.
-
-  - assert (im = fst (inlineDmToMod m a)) by (rewrite <-Heqimb; reflexivity); subst.
+  remember (inlineDms' im cdms) as imc; destruct imc as [im' ib']; simpl.
+  destruct ib; simpl in *.
+  - assert (im' = fst (inlineDms' im cdms)) by (rewrite <- Heqimc; reflexivity); subst; simpl in *.
+    assert (im = fst (inlineDmToMod m a)) by (rewrite <-Heqimb; reflexivity); subst; simpl in *.
     apply IHcdms; auto.
     + apply inlineDmToMod_ModEquiv; auto.
     + rewrite inlineDmToMod_dms_names; auto.
@@ -783,14 +773,13 @@ Proof.
     + apply inlineDmToMod_wellHidden.
       rewrite hideMeth_preserves_hide; auto.
     + simpl in H1; destruct (inlineDmToMod m a); simpl in *.
+      destruct (inlineDms' m0 cdms); simpl in *.
       destruct b; [auto|inv Heqimb].
-
-  - simpl in *; unfold inlineDmToMod in *.
-    destruct (wfModules m); [|discriminate].
-    destruct (getAttribute _ _); [|discriminate].
-    destruct (noCallDm _ _); [|discriminate].
-    destruct m; [|discriminate].
-    inv Heqimb.
+  - destruct (inlineDmToMod m a).
+    destruct (inlineDms' m0 cdms); simpl in *.
+    inversion Heqimb; subst.
+    simpl in *.
+    discriminate.
 Qed.
 
 Lemma inlineDms_correct_SubstepsInd:
@@ -875,19 +864,14 @@ Lemma inlineDms'_preserves_regInits:
 Proof.
   induction dms; [reflexivity|].
   intros; simpl; remember (inlineDmToMod m a) as ima; destruct ima.
-  destruct b.
-  - rewrite <-IHdms.
-    unfold inlineDmToMod in Heqima.
-    destruct (wfModules _); [|inv Heqima; auto].
-    destruct (getAttribute _ _); [|inv Heqima; auto].
-    destruct (noCallDm _ _); [|inv Heqima; auto].
-    inv Heqima; auto.
-    
-  - unfold inlineDmToMod in Heqima.
-    destruct (wfModules _); [|inv Heqima; auto].
-    destruct (getAttribute _ _); [|inv Heqima; auto].
-    destruct (noCallDm _ _); [|inv Heqima; auto].
-    inv Heqima.
+  remember (inlineDms' m0 dms) as imb; destruct imb; simpl in *.
+  specialize (IHdms m0).
+  destruct (inlineDms' m0 dms).
+  simpl in *.
+  inv Heqimb.
+  unfold inlineDmToMod in *.
+  destruct (getAttribute _ _);
+  inv Heqima; simpl in *; intuition.
 Qed.
 
 Lemma inline_preserves_regInits:
@@ -899,12 +883,9 @@ Lemma inlineF_preserves_regInits:
 Proof.
   intros; unfold inlineF.
   remember (inline m) as imb; destruct imb as [im ib]; simpl.
-  destruct (noInternalCalls im).
-  - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
-    apply inlineDms'_preserves_regInits.
-  - simpl; reflexivity.
+  replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
+  apply inlineDms'_preserves_regInits.
 Qed.
-
 Require Import Refinement.
 
 Theorem inline_refines:

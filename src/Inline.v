@@ -80,26 +80,20 @@ Section Exts.
   Proof. intros; apply map_app. Qed.
 
   Definition inlineDmToMod (m: Modules) (leaf: string) :=
-    if wfModules m then
-      match getAttribute leaf (getDefsBodies m) with
-        | Some dm =>
-          if noCallDm dm dm then
-            (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
-                 (inlineDmToDms (getDefsBodies m) dm), true)
-          else (m, false)
-        | None => (m, false)
-      end
-    else (m, false).
-  
+    match getAttribute leaf (getDefsBodies m) with
+      | Some dm =>
+        (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
+             (inlineDmToDms (getDefsBodies m) dm), wfModules m && noCallDm dm dm)
+      | None => (m, false)
+    end.
+
   Fixpoint inlineDms' (m: Modules) (dms: list string) :=
     match dms with
       | nil => (m, true)
       | dm :: dms' =>
         let (im, ib) := inlineDmToMod m dm in
-        if ib then
-          inlineDms' im dms'
-        else
-          (m, false)
+        let (im', ib') := inlineDms' im dms' in
+        (im', ib && ib')
     end.
 
   Definition inlineDms (m: Modules) := inlineDms' m (namesOf (getDefsBodies m)).
@@ -108,11 +102,7 @@ Section Exts.
 
   Definition inlineF (m: Modules) :=
     let (im, ib) := inline m in
-    if noInternalCalls im then
-      (Mod (getRegInits im) (getRules im)
-           (filterDms (getDefsBodies im) (getCalls m)), ib)
-    else
-      (m, false).
-
+    (Mod (getRegInits im) (getRules im)
+         (filterDms (getDefsBodies im) (getCalls m)), noInternalCalls im && ib).
 End Exts.
 
