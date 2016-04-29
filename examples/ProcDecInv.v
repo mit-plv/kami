@@ -135,7 +135,6 @@ Section Invariants.
       Multistep (fst pdecInl) init n ll ->
       procDec_inv_1 n.
   Proof.
-    admit.
     (*
     induction 2.
 
@@ -162,6 +161,7 @@ Section Invariants.
       + kinv_magic_with kinv_or3.
         or3_thd; kinv_magic.
      *)
+    admit.
   Qed.
 
   Lemma procDec_inv_1_ok:

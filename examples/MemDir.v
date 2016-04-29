@@ -93,13 +93,13 @@ Section Mem.
           Assert !#valid;
           Call rqChild <- rqFromCPop();
           LET c <- #rqChild@."child";
-          LET rq: SyntaxKind RqToP <- #rqChild@."rq";
+          LET rq: RqToP <- #rqChild@."rq";
           LET idx <- getIdx (#rq@."addr");
           Call dir <- readDir(#idx);
           Assert #dir@[#c] <= #rq@."from";
           Assert (othersCompat #c #rq@."to" #dir);
           Call line <- readLine(#idx);
-          LET rs: SyntaxKind FromP <- STRUCT{"isRq" ::= $$ false; "addr" ::= #rq@."addr"; "to" ::= #rq@."to"; "line" ::= #line; "id" ::= #rq@."id"};
+          LET rs: FromP <- STRUCT{"isRq" ::= $$ false; "addr" ::= #rq@."addr"; "to" ::= #rq@."to"; "line" ::= #line; "id" ::= #rq@."id"};
           Call toCEnq(STRUCT{"child" ::= #c; "msg" ::= #rs});
           LET dir' <- #dir@[#c <- #rq@."to"];
           Call writeDir(STRUCT{"addr" ::= #idx; "data" ::= #dir'});
@@ -110,13 +110,13 @@ Section Mem.
           Assert !#valid;
           Call rqChild <- rqFromCPop();
           LET c <- #rqChild@."child";
-          LET rq: SyntaxKind RqToP <- #rqChild@."rq";
+          LET rq: RqToP <- #rqChild@."rq";
           LET idx <- getIdx (#rq@."addr");
           Call dir <- readDir(#idx);
           Assert !((#dir@[#c] <= #rq@."from") && (othersCompat #c #rq@."to" #dir));
           Write "cRqValid" <- $$ true;
           Write "cRq" <- #rqChild;
-          LET dirw: SyntaxKind Dirw <- VEC (replicate ($$ false) _);
+          LET dirw: Dirw <- VEC (replicate ($$ false) _);
           Write "cRqDirw" <- #dirw;
           Retv
 
@@ -125,12 +125,12 @@ Section Mem.
           Assert #valid;
           Read rqChild: RqFromC <- "cRq";
           LET c <- #rqChild@."child";
-          LET rq: SyntaxKind RqToP <- #rqChild@."rq";
+          LET rq: RqToP <- #rqChild@."rq";
           Call dir <- readDir(getIdx #rq@."addr");
           Read dirw <- "cRqDirw";  
           LET i <- findIncompat #c #rq@."to" #dir #dirw;
           Assert #i@."valid";
-          LET rq': SyntaxKind FromP <- STRUCT{"isRq" ::= $$ true; "addr" ::= #rq@."addr"; "to" ::= toCompat #rq@."to"; "line" ::= $$ Default; "id" ::= $$ Default};
+          LET rq': FromP <- STRUCT{"isRq" ::= $$ true; "addr" ::= #rq@."addr"; "to" ::= toCompat #rq@."to"; "line" ::= $$ Default; "id" ::= $$ Default};
           Call toCEnq(STRUCT{"child" ::= #c; "msg" ::= #rq'});
           LET dirw' <- #dirw@[#c <- $$ true];
           Write "cRqDirw" <- #dirw';
@@ -139,7 +139,7 @@ Section Mem.
         with Rule "dwnRs" :=
           Call rsChild <- rsFromCPop();
           LET c <- #rsChild@."child";
-          LET rs: SyntaxKind RsToP <- #rsChild@."rs";
+          LET rs: RsToP <- #rsChild@."rs";
           LET idx <- getIdx #rs@."addr";
           Call dir <- readDir(#idx);
           LET dir' <- #dir@[#c <- #rs@."to"];
@@ -157,13 +157,13 @@ Section Mem.
           Assert #valid;
           Call rqChild <- rqFromCPop();
           LET c <- #rqChild@."child";
-          LET rq: SyntaxKind RqToP <- #rqChild@."rq";
+          LET rq: RqToP <- #rqChild@."rq";
           LET idx <- getIdx (#rq@."addr");
           Call dir <- readDir(#idx);
           Assert #dir@[#c] <= #rq@."from";
           Assert (othersCompat #c #rq@."to" #dir);
           Call line <- readLine(#idx);
-          LET rs: SyntaxKind FromP <- STRUCT{"isRq" ::= $$ false; "addr" ::= #rq@."addr"; "to" ::= #rq@."to"; "line" ::= #line; "id" ::= #rq@."id"};
+          LET rs: FromP <- STRUCT{"isRq" ::= $$ false; "addr" ::= #rq@."addr"; "to" ::= #rq@."to"; "line" ::= #line; "id" ::= #rq@."id"};
           Call toCEnq(STRUCT{"child" ::= #c; "msg" ::= #rs});
           LET dir' <- #dir@[#c <- #rq@."to"];
           Call writeDir(STRUCT{"addr" ::= #idx; "data" ::= #dir'});

@@ -64,7 +64,6 @@ Section ProcDecSC.
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof.
-    admit.
     (*
     kinline_left pdeci.
     kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
@@ -75,6 +74,7 @@ Section ProcDecSC.
 
     kinvert; kinv_magic_with kinv_or3.
      *)
+    admit.
   Qed.
 
 End ProcDecSC.

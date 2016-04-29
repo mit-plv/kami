@@ -148,7 +148,7 @@ Section L1Cache.
           Read rq: RqFromProc <- "procRq";
           LET idx <- getIdx #rq@."addr";
           Call cs <- readCs(#idx);
-          LET toS: SyntaxKind Msi <- IF #rq@."op" then $ Mod else $ Sh;
+          LET toS: Msi <- IF #rq@."op" then $ Mod else $ Sh;
           Read wait <- "procRqWait";
           Assert (!#wait && (#cs < #toS));
           Call rqToPEnq(STRUCT{"addr" ::= #rq@."addr"; "from" ::= #cs; "to" ::= #toS; "id" ::= $$ Default});

@@ -518,8 +518,10 @@ Notation "'MethodSig' name ( argT ) : retT" :=
   (at level 0, name at level 0, argT at level 200, retT at level 200).
 
 (* Notations: expression *)
+Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_scope.
+
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
-Notation "## v :< kind" := (Var _ kind v) (at level 0) : kami_scope.
+(* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_scope. *)
 Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.
@@ -577,7 +579,10 @@ Notation "'LET' name <- expr ; cont " :=
   (Let_ expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'LET' name : t <- expr ; cont " :=
-  (Let_ (lretT' := t) expr (fun name => cont))
+  (Let_ (lretT' := SyntaxKind t) expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'LETN' name : kind <- expr ; cont " :=
+  (Let_ (lretT' := kind) expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Read' name <- reg ; cont" :=
   (ReadReg reg _ (fun name => cont))
@@ -585,7 +590,7 @@ Notation "'Read' name <- reg ; cont" :=
 Notation "'Read' name : kind <- reg ; cont " :=
   (ReadReg reg (SyntaxKind kind) (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Read' name :< kind <- reg ; cont " :=
+Notation "'ReadN' name : kind <- reg ; cont " :=
   (ReadReg reg kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Write' reg <- expr ; cont " :=
@@ -594,7 +599,7 @@ Notation "'Write' reg <- expr ; cont " :=
 Notation "'Write' reg <- expr : kind ; cont " :=
   (@WriteReg _ _ reg (SyntaxKind kind) expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'Write' reg <- expr :< kind ; cont " :=
+Notation "'WriteN' reg <- expr : kind ; cont " :=
   (@WriteReg _ _ reg kind expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
