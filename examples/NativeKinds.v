@@ -31,3 +31,13 @@ Section StreamMod.
   (* End Spec. *)
 
 End StreamMod.
+
+Section Fifo.
+  Variable A: Kind.
+  Definition f := MODULE {
+                      RegisterN "x": NativeKind (type A) <- (NativeConst _ (ConstT A))
+                      with Method "enq"(d: A): Void :=
+                        Write "x" <- #d;
+                        Retv
+                    }.
+End Fifo.
