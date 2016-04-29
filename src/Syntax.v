@@ -519,6 +519,7 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 
 (* Notations: expression *)
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
+Notation "## v :< kind" := (Var _ kind v) (at level 0) : kami_scope.
 Notation "!" := (UniBool Neg) : kami_scope.
 Infix "&&" := (BinBool And) : kami_scope.
 Infix "||" := (BinBool Or) : kami_scope.
@@ -584,11 +585,17 @@ Notation "'Read' name <- reg ; cont" :=
 Notation "'Read' name : kind <- reg ; cont " :=
   (ReadReg reg (SyntaxKind kind) (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_scope.
+Notation "'Read' name :< kind <- reg ; cont " :=
+  (ReadReg reg kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_scope.
 Notation "'Write' reg <- expr ; cont " :=
   (WriteReg reg expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
 Notation "'Write' reg <- expr : kind ; cont " :=
   (@WriteReg _ _ reg (SyntaxKind kind) expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_scope.
+Notation "'Write' reg <- expr :< kind ; cont " :=
+  (@WriteReg _ _ reg kind expr cont)
     (at level 12, right associativity, reg at level 0) : kami_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (IfElse cexpr tact fact (fun name => cont))
@@ -599,7 +606,6 @@ Notation "'Assert' expr ; cont " :=
 Notation "'Ret' expr" :=
   (Return expr) (at level 12) : kami_scope.
 Notation Retv := (Return (Const _ (k := Void) Default)).
-
 
 (* * Modules *)
 
