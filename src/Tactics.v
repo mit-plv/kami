@@ -175,7 +175,9 @@ Ltac kregmap_red :=
          | [ |- context[decKind ?k ?k] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
          end;
-     dest; try subst; try findReify);
+     dest; try subst;
+     cbv [withPrefix prefixSymbol append];
+     try findReify);
   repeat
     match goal with
     | [H: M.find _ _ = _ |- _] => clear H
@@ -183,7 +185,7 @@ Ltac kregmap_red :=
 
 Ltac kdecompose_regmap_init :=
   unfold initRegs, getRegInits; simpl;
-  kregmap_red; reflexivity.
+  kregmap_red; try reflexivity.
 
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;

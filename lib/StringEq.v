@@ -34,6 +34,12 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma ascii_eq_true: forall a, ascii_eq a a = true.
+Proof.
+  induction a; simpl; intros; auto.
+  repeat rewrite andb_true_iff; repeat split; apply eqb_reflx.
+Qed.
+
 Lemma ascii_eq_dec_neq: forall a1 a2, false = ascii_eq a1 a2 -> a1 <> a2.
 Proof.
   intros; destruct a1, a2.
@@ -55,6 +61,13 @@ Proof.
     apply eq_sym, andb_true_iff in H; destruct H.
     apply eq_sym, ascii_eq_dec_eq in H; subst.
     rewrite (IHs1 s2); auto.
+Qed.
+
+Lemma string_eq_true: forall s, string_eq s s = true.
+Proof.
+  induction s; simpl; intros; auto.
+  apply andb_true_iff; intuition.
+  apply ascii_eq_true.
 Qed.
 
 Lemma string_eq_dec_neq: forall s1 s2, false = string_eq s1 s2 -> s1 <> s2.

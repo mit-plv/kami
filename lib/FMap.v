@@ -2168,8 +2168,12 @@ Ltac findReify :=
   | [ |- context[M.find ?k ?m] ] =>
     let rfd := mapReify m in
     rewrite <-findMR_find with (mr:= rfd)
-  end;
-  cbv [findMR string_eq ascii_eq eqb andb].
+  end; unfold findMR;
+  repeat
+    match goal with
+    | [ |- context[string_eq ?s ?s] ] =>
+      rewrite string_eq_true
+    end; cbv [string_eq ascii_eq eqb andb].
 
 Ltac meqReify :=
   simpl; try reflexivity;

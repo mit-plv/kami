@@ -82,7 +82,7 @@ Section SpecializeModule.
   Proof.
     unfold spf; intros.
     rewrite withIndex_eq in H.
-    eapply prepend_same; eauto.
+    eapply append_same; eauto.
   Qed.
 
   Lemma spf_in: forall a l, In (spf a) (map spf l) -> In a l.
@@ -388,9 +388,8 @@ Section Specializable.
         apply in_map_iff in H0; dest; subst.
         unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
         apply eq_sym in Heqidx.
-        apply index_correct3 with (m:= String.length (string_of_nat i)) in Heqidx; auto.
-        * rewrite <-string_append_assoc in Heqidx.
-          rewrite substring_append_1 in Heqidx; simpl in Heqidx.
+        apply index_correct3 with (m:= String.length x) in Heqidx; auto.
+        * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
         * omega.
     - destruct H1; [subst|].
@@ -400,9 +399,8 @@ Section Specializable.
         inv H0; auto.
         unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
         apply eq_sym in Heqidx.
-        apply index_correct3 with (m:= String.length (string_of_nat i)) in Heqidx; auto.
-        * rewrite <-string_append_assoc in Heqidx.
-          rewrite substring_append_1 in Heqidx; simpl in Heqidx.
+        apply index_correct3 with (m:= String.length a) in Heqidx; auto.
+        * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
         * omega.
       + eauto.
@@ -684,8 +682,8 @@ Section DuplicateFacts.
     induction n; simpl; intros.
     - apply specializable_disj_defs; auto; omega.
     - apply DisjList_comm.
-      apply DisjList_SubList with (l1:= (getDefs (specializeMod m (S n)))
-                                          ++ (getDefs (duplicate m n))).
+      apply DisjList_SubList with (l1:= app (getDefs (specializeMod m (S n)))
+                                            (getDefs (duplicate m n))).
       + unfold SubList; intros.
         apply getDefs_in in H1; destruct H1;
           apply in_or_app; auto.
@@ -705,8 +703,8 @@ Section DuplicateFacts.
     induction n; simpl; intros.
     - apply specializable_disj_calls; auto; omega.
     - apply DisjList_comm.
-      apply DisjList_SubList with (l1:= (getCalls (specializeMod m (S n)))
-                                          ++ (getCalls (duplicate m n))).
+      apply DisjList_SubList with (l1:= app (getCalls (specializeMod m (S n)))
+                                            (getCalls (duplicate m n))).
       + unfold SubList; intros.
         apply getCalls_in in H1; destruct H1;
           apply in_or_app; auto.
@@ -729,8 +727,8 @@ Section DuplicateFacts.
       assert (ln > n) by omega; specialize (IHn _ H1); clear H1; dest.
       split.
       + apply DisjList_comm.
-        apply DisjList_SubList with (l1:= (getCalls (specializeMod m (S n)))
-                                            ++ (getCalls (duplicate m n))).
+        apply DisjList_SubList with (l1:= app (getCalls (specializeMod m (S n)))
+                                              (getCalls (duplicate m n))).
         * unfold SubList; intros.
           apply getCalls_in in H3.
           apply in_or_app; auto.
@@ -740,8 +738,8 @@ Section DuplicateFacts.
           }
           { apply DisjList_comm; auto. }
       + apply DisjList_comm.
-        apply DisjList_SubList with (l1:= (getDefs (specializeMod m (S n)))
-                                            ++ (getDefs (duplicate m n))).
+        apply DisjList_SubList with (l1:= app (getDefs (specializeMod m (S n)))
+                                              (getDefs (duplicate m n))).
         * unfold SubList; intros.
           apply getDefs_in in H3.
           apply in_or_app; auto.
@@ -809,12 +807,12 @@ Section DuplicateFacts.
       - apply eq_sym, specializer_equiv.
         + eapply M.KeysSubset_SubList; eauto.
           pose proof (getExtMeths_meths m1).
-          apply SubList_trans with (l2:= getDefs m1 ++ getCalls m1); auto.
+          apply SubList_trans with (l2:= app (getDefs m1) (getCalls m1)); auto.
           apply SubList_app_3; [apply spDom_defs|apply spDom_calls].
         + apply M.KeysSubset_SubList with (d2:= getExtMeths m2) in H; auto.
           eapply M.KeysSubset_SubList; eauto.
           pose proof (getExtMeths_meths m2).
-          apply SubList_trans with (l2:= getDefs m2 ++ getCalls m2); auto.
+          apply SubList_trans with (l2:= app (getDefs m2) (getCalls m2)); auto.
           apply SubList_app_3; [apply spDom_defs|apply spDom_calls].
     Qed.
 
