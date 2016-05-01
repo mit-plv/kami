@@ -170,18 +170,14 @@ Ltac kdecompose t r Hrm Hmm :=
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
   repeat
-    (try match goal with
+    (cbv [withPrefix prefixSymbol append] in *;
+     try match goal with
          | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
          | [ |- context[decKind ?k ?k] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
          end;
      dest; try subst;
-     cbv [withPrefix prefixSymbol append] in *;
-     try findReify);
-  repeat
-    match goal with
-    | [H: M.find _ _ = _ |- _] => clear H
-    end.
+     try findReify).
 
 Ltac kdecompose_regmap_init :=
   unfold initRegs, getRegInits; simpl;
