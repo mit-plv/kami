@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
+Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2.
 Require Import Lts.DecompositionZero Lts.Tactics.
@@ -37,10 +37,10 @@ Section ProcDecSC.
   Proof.
     kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
     kgetv "rf"%string rfv r (Vector (Bit valSize) rfIdx) (M.empty (sigT (fullType type))).
-    kgetv "Outs.empty"%string oev r Bool (M.empty (sigT (fullType type))).
-    kgetv "Outs.elt"%string oelv r (Vector (memAtomK addrSize valSize) fifoSize)
+    kgetv "Outs".."empty"%string oev r Bool (M.empty (sigT (fullType type))).
+    kgetv "Outs".."elt"%string oelv r (Vector (memAtomK addrSize valSize) fifoSize)
           (M.empty (sigT (fullType type))).
-    kgetv "Outs.deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
+    kgetv "Outs".."deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
 
     refine (
         if oev
