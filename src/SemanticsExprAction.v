@@ -4,15 +4,6 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
-(* concrete representations of data kinds *)
-Fixpoint type (t: Kind): Type :=
-  match t with
-    | Bool => bool
-    | Bit n => word n
-    | Vector nt n => word n -> type nt
-    | Struct attrs => forall i, @GetAttrType _ (map (mapAttr type) attrs) i
-  end.
-
 (*
 Fixpoint fullType (k : FullKind) : Type := match k with
   | SyntaxKind t => type t
@@ -168,11 +159,6 @@ Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
     | Lt n => fun a b => if @wlt_dec n a b then true else false
   end.
 
-Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
-  fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
-    mapAttrEq1 type attrs i
-               (ith_Bounded _ ils (getNewIdx1 type attrs i)).
-
 (* evaluate any constant operation *)
 Fixpoint evalConstT k (e: ConstT k): type k :=
   match e in ConstT k return type k with
@@ -203,9 +189,54 @@ Section Semantics.
     fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
       mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
 
+  Lemma nativeTypeEq k: fullType type (SyntaxKind k) = fullType type (@NativeKind (type k) (getDefaultConstNative k)).
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma nativeTypeEq' k: fullType type (@NativeKind (type k) (getDefaultConstNative k)) = type k.
+  Proof.
+    reflexivity.
+  Qed.
+
+  Fixpoint typeToConst k: type k -> ConstT k.
+  refine (fun v =>
+            match k return type k -> ConstT k with
+              | Bool => fun v => ConstBool v
+              | Bit n => fun v => ConstBit v
+              | Vector k' n => fun v => _
+              | Struct attrs => fun v => _
+            end v).
+  induction n.
+  exact (ConstVector (Vec0 (@typeToConst _ (v0 WO)))).
+  pose proof (IHn (fun w => v0 (WS false w))) as v1.
+  pose proof (IHn (fun w => v0 (WS false w))) as v2.
+  dependent destruction v1; dependent destruction v2.
+  exact (ConstVector (VecNext v1 v2)).
+  induction attrs.
+  exact (ConstStruct (inil _)).
+  specialize (IHattrs (fun i => v0 (addFirstBoundedIndex _ i))).
+  apply ConstStruct.
+  dependent destruction IHattrs.
+  constructor.
+  specialize (v0 {| indexb := IndexBound_head (attrName (mapAttr type a)) (map (@attrName _) (map (mapAttr type) attrs)) |}).
+  exact (@typeToConst _ v0).
+  exact i.
+  Defined.
+
+  Definition typeToExpr k
+    (v: fullType type (@NativeKind (type k) (getDefaultConstNative k))) ty: 
+    Expr ty (SyntaxKind k) := Const ty (@typeToConst _ v).
+  
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
     match e in Expr _ exprT return fullType type exprT with
       | Var _ v => v
+(*    
+      | Native k e =>
+        match nativeTypeEq k in _ = t return fullType type (SyntaxKind k) -> t with
+          | eq_refl => fun e => e
+        end (evalExpr e)
+*)
       | Const _ v => evalConstT v
       | UniBool op e1 => (evalUniBool op) (evalExpr e1)
       | BinBool op e1 e2 => (evalBinBool op) (evalExpr e1) (evalExpr e2)

@@ -42,7 +42,7 @@ Section VecFunc.
                    | WS b m w' =>
                      if b
                      then fun _ => evalVec _ v2 (_ w')
-                     else fun _ => evalVec _ v2 (_ w')
+                     else fun _ => evalVec _ v1 (_ w')
                  end eq_refl
            end;
     clear evalVec.
@@ -65,6 +65,14 @@ Inductive Kind: Type :=
 | Bit     : nat -> Kind
 | Vector  : Kind -> nat -> Kind
 | Struct  : list (Attribute Kind) -> Kind.
+
+Fixpoint type (t: Kind): Type :=
+  match t with
+    | Bool => bool
+    | Bit n => word n
+    | Vector nt n => word n -> type nt
+    | Struct attrs => forall i, @GetAttrType _ (map (mapAttr type) attrs) i
+  end.
 
 Inductive FullKind: Type :=
 | SyntaxKind: Kind -> FullKind
@@ -111,6 +119,26 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
                         | nil => inil _
                         | x :: xs => icons x (getDefaultConst (attrType x)) (help xs)
                       end) ls)
+  end.
+
+Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
+  fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
+    mapAttrEq1 type attrs i
+               (ith_Bounded _ ils (getNewIdx1 type attrs i)).
+
+Fixpoint getDefaultConstNative (k: Kind): type k :=
+  match k as k0 return type k0 with
+    | Bool => false
+    | Bit n => getDefaultConstBit n
+    | Vector k n => fun _ => getDefaultConstNative k
+    | Struct attrs =>
+      fun i =>
+        evalConstStruct ((fix help ls :=
+                            match ls return ilist (fun a => type (attrType a)) ls with
+                              | nil => inil _
+                              | x :: xs =>
+                                icons x (getDefaultConstNative (attrType x)) (help xs)
+                            end) attrs) i
   end.
 
 Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
@@ -178,14 +206,15 @@ Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n.
 
 Section Phoas.
-  Variable type: Kind -> Type.
+  Variable ty: Kind -> Type.
   Definition fullType k := match k with
-                             | SyntaxKind k' => type k'
+                             | SyntaxKind k' => ty k'
                              | NativeKind k' _ => k'
                            end.
   
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
+(*  | Native k: Expr (SyntaxKind k) -> Expr (@NativeKind (type k) (getDefaultConstNative k)) *)
   | Const k: ConstT k -> Expr (SyntaxKind k)
   | UniBool: UniBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
   | BinBool: BinBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
@@ -207,7 +236,7 @@ Section Phoas.
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
       Expr (SyntaxKind (arg s)) ->
-      (type (ret s) -> ActionT lretT) ->
+      (ty (ret s) -> ActionT lretT) ->
       ActionT lretT
   | Let_ lretT': Expr lretT' -> (fullType lretT' -> ActionT lretT) -> ActionT lretT
   | ReadReg (r: string):
@@ -217,7 +246,7 @@ Section Phoas.
   | IfElse: Expr (SyntaxKind Bool) -> forall k,
                                         ActionT k ->
                                         ActionT k ->
-                                        (type k -> ActionT lretT) ->
+                                        (ty k -> ActionT lretT) ->
                                         ActionT lretT
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
@@ -291,10 +320,10 @@ Proof.
 Qed.
 
 Section AppendAction.
-  Variable type: Kind -> Type.
+  Variable ty: Kind -> Type.
   
-  Fixpoint appendAction {retT1 retT2} (a1: ActionT type retT1)
-           (a2: type retT1 -> ActionT type retT2): ActionT type retT2 :=
+  Fixpoint appendAction {retT1 retT2} (a1: ActionT ty retT1)
+           (a2: ty retT1 -> ActionT ty retT2): ActionT ty retT2 :=
     match a1 with
       | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
       | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
@@ -307,8 +336,8 @@ Section AppendAction.
 
   Lemma appendAction_assoc:
     forall {retT1 retT2 retT3}
-           (a1: ActionT type retT1) (a2: type retT1 -> ActionT type retT2)
-           (a3: type retT2 -> ActionT type retT3),
+           (a1: ActionT ty retT1) (a2: ty retT1 -> ActionT ty retT2)
+           (a3: ty retT2 -> ActionT ty retT3),
       appendAction a1 (fun t => appendAction (a2 t) a3) = appendAction (appendAction a1 a2) a3.
   Proof.
     induction a1; simpl; intuition idtac; f_equal; try extensionality x; eauto.
