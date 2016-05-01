@@ -42,6 +42,9 @@ Set Implicit Arguments.
   + Hint Extern 1 (Interacting _ _ _) => repeat split.
  *)
 
+Ltac kstring_simpl :=
+  cbv [withPrefix prefixSymbol append] in *.
+
 Ltac kmodular :=
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
 
@@ -114,10 +117,10 @@ Ltac kinline_compute :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               withPrefix prefixSymbol append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb];
+  kstring_simpl;
   repeat
     match goal with
     | [ |- context[SignatureT_dec ?s ?s] ] =>
@@ -141,10 +144,10 @@ Ltac kinline_compute_in H :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               withPrefix prefixSymbol append
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb] in H;
+  kstring_simpl;
   repeat
     match type of H with
     | context[SignatureT_dec ?s ?s] =>
@@ -170,14 +173,18 @@ Ltac kdecompose t r Hrm Hmm :=
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
   repeat
-    (cbv [withPrefix prefixSymbol append] in *;
+    (kstring_simpl;
      try match goal with
          | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
          | [ |- context[decKind ?k ?k] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
          end;
      dest; try subst;
-     try findReify).
+     try findReify);
+  repeat
+    match goal with
+    | [H: M.find _ _ = _ |- _] => clear H
+    end.
 
 Ltac kdecompose_regmap_init :=
   unfold initRegs, getRegInits; simpl;
@@ -222,6 +229,7 @@ Ltac kinv_contra :=
        fail).
 
 Ltac kinv_simpl :=
+  kstring_simpl;
   repeat
     (try match goal with
          | [H: ?t = ?t |- _] => clear H

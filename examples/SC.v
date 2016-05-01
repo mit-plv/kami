@@ -60,6 +60,8 @@ Section DecExec.
 
 End DecExec.
 
+Hint Unfold StateK StateT DecInstK DecInstT : MethDefs.
+
 Ltac dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2 :=
   match goal with
   | [ |- ExprEquiv _ (#(dec _ _ _))%kami (#(dec _ _ _))%kami ] =>
