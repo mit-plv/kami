@@ -176,7 +176,7 @@ Ltac kregmap_red :=
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
          end;
      dest; try subst;
-     cbv [withPrefix prefixSymbol append];
+     cbv [withPrefix prefixSymbol append] in *;
      try findReify);
   repeat
     match goal with
