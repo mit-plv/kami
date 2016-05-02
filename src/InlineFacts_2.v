@@ -897,7 +897,8 @@ Proof.
   intros.
   apply stepRefinement with (ruleMap:= fun o r => Some r) (theta:= id).
   - erewrite inlineDms'_preserves_regInits; reflexivity.
-  - intros; apply inline_correct_Step in H; unfold id in *; auto.
+  - intros.
+    apply inline_correct_Step in H0; unfold id in *; auto.
     exists u; split; auto.
     destruct l as [ann ds cs]; simpl in *.
     destruct ann as [[|]|]; auto.

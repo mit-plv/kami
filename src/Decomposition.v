@@ -13,8 +13,6 @@ Section Decomposition.
   Variable defSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
   Variable callSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
 
-  Definition reachable o m := exists sigma, Behavior m o sigma.
-  
   Variable substepRuleMap:
     forall oImp uImp rule csImp,
       reachable oImp imp ->

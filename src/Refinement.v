@@ -25,7 +25,9 @@ Section StepToRefinement.
     end.
 
   Variable stepMap:
-    forall o u l, Step imp o u l ->
+    forall o u l,
+      reachable o imp ->
+      Step imp o u l ->
              exists uspec, Step spec (theta o) uspec (liftPLabel o l) /\
                       theta (M.union u o) = M.union uspec (theta o).
 
@@ -39,7 +41,8 @@ Section StepToRefinement.
     dependent induction HMultistepBeh; subst.
     - exists nil; rewrite thetaInit; repeat constructor.
     - specialize (IHHMultistepBeh thetaInit stepMap eq_refl).
-      pose proof (stepMap HStep) as [uSpec [stepSpec upd]].
+      assert (reachable n imp) by (eexists; constructor; eauto).
+      pose proof (stepMap H HStep) as [uSpec [stepSpec upd]].
       destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].
       inversion behSpec; subst.
       pose proof (BehaviorIntro (Multi HMultistepBeh0 stepSpec)) as sth.

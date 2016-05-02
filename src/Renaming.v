@@ -824,7 +824,7 @@ Section Rename.
       exists (renameMap u).
       constructor.
       + unfold liftPLabel.
-        pose proof (renameStep H).
+        pose proof (renameStep H0).
         destruct l; simpl in *.
         destruct annot;
           try destruct o0; simpl in *; intuition.
