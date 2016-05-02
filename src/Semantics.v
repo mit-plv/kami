@@ -392,6 +392,8 @@ Inductive equivalentLabelSeq p: LabelSeqT -> LabelSeqT -> Prop :=
 | EquivalentSeq x xs y ys: equivalentLabel p x y -> equivalentLabelSeq p xs ys ->
                            equivalentLabelSeq p (x :: xs) (y :: ys).
 
+Definition reachable o m := exists sigma, Behavior m o sigma.
+
 Definition traceRefines p m1 m2 :=
   forall s1 sig1, Behavior m1 s1 sig1 ->
                   exists s2 sig2, Behavior m2 s2 sig2 /\
