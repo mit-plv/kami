@@ -7,7 +7,6 @@ Set Implicit Arguments.
 
 Section NativeFifo.
   Variable fifoName: string.
-  Variable sz: nat.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
@@ -17,10 +16,8 @@ Section NativeFifo.
   Definition listEltK ty := @NativeKind (listEltT ty) nil.
   Definition listElt ty := (^"elt" :: (@NativeConst (listEltT ty) nil nil))%struct.
 
-  Definition listIsFull {ty} (l: fullType ty (listEltK ty)) :=
-    if eq_nat_dec (length l) (sz - 1) then true else false.
   Definition listIsEmpty {ty} (l: fullType ty (listEltK ty)) :=
-    if eq_nat_dec (length l) 1 then true else false.
+    if eq_nat_dec (length l) 1 then ConstBool true else ConstBool false.
   Definition listEnq {ty} (a: ty dType) (l: fullType ty (listEltK ty)) :=
     a :: l.
   Definition listDeq {ty} (l: fullType ty (listEltK ty)) :=
@@ -36,27 +33,19 @@ Section NativeFifo.
 
   (* defined methods *)
   Definition nativeEnq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
-    (Read isFull <- ^"full";
-     Assert !#isFull;
-     ReadN elt : listEltK ty <- ^"elt";
+    (ReadN elt : listEltK ty <- ^"elt";
      Write ^"elt" <- (Var _ (listEltK ty) (listEnq d elt));
-     Write ^"empty" <- $$false;
-     Write ^"full" <- $$(listIsFull elt);
      Retv)%kami.
 
   Definition nativeDeq {ty} : ActionT ty dType :=
-    (Read isEmpty <- ^"empty";
-     Assert !#isEmpty;
-     ReadN elt : listEltK ty <- ^"elt";
-     Write ^"full" <- $$false;
-     Write ^"empty" <- $$(listIsEmpty elt);
+    (ReadN elt : listEltK ty <- ^"elt";
+     Assert !$$(listIsEmpty elt);
      Write ^"elt" <- (Var _ (listEltK ty) (listDeq elt));
      Ret (listFirstElt elt))%kami.
 
   Definition nativeFirstElt {ty} : ActionT ty dType :=
-    (Read isEmpty <- ^"empty";
-     Assert !#isEmpty;
-     ReadN elt : listEltK ty <- ^"elt";
+    (ReadN elt : listEltK ty <- ^"elt";
+     Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami.
 
   Definition nativeFifo := MODULE {
@@ -82,10 +71,71 @@ End NativeFifo.
 
 Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
 Hint Unfold listEltT listEltK listElt
-     listIsFull listIsEmpty listEnq listDeq listFirstElt
+     listIsEmpty listEnq listDeq listFirstElt
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
-Require Import Decomposition Refinement Tactics Lib.FMap.
+Require Import SemFacts Decomposition Refinement Tactics Lib.Struct Lib.FMap.
+
+(* Inductive SubstepsDet: list (Attribute (Action Void)) -> *)
+(*                        list DefMethT -> RegsT -> UpdatesT -> LabelT -> Prop := *)
+(* | SDEmptyMeth: forall o, SubstepsDet nil nil o (M.empty _) *)
+(*                                      {| annot := None; defs := M.empty _; calls := M.empty _ |} *)
+(* | SDEmptyRule: forall rules o, *)
+(*     rules <> nil -> *)
+(*     SubstepsDet rules nil o (M.empty _) *)
+(*                 {| annot := Some None; *)
+(*                    defs := M.empty _; calls := M.empty _ |} *)
+(* | SDAddRule: forall (rules: list (Attribute (Action Void))) dms o pu pl, *)
+(*     SubstepsDet nil dms o pu pl -> *)
+(*     forall rn rb ru rul rcs, *)
+(*       In (rn :: rb)%struct rules -> *)
+(*       SemAction o (rb type) ru rcs WO -> *)
+(*       rul = Rle (Some rn) -> *)
+(*       CanCombineUUL pu pl ru rcs rul -> *)
+(*       forall u l, *)
+(*         u = M.union pu ru -> *)
+(*         l = mergeLabel (getLabel rul rcs) pl -> *)
+(*         SubstepsDet rules dms o u l *)
+(* | SDSkipRule: forall rules dms o pu pl, *)
+(*     rules <> nil -> *)
+(*     SubstepsDet nil dms o pu pl -> *)
+(*     SubstepsDet rules dms o pu pl *)
+(* | SDAddMeth: forall dms o pu pl, *)
+(*     SubstepsDet nil dms o pu pl -> *)
+(*     forall (dm: DefMethT) du dul dcs argV retV, *)
+(*       SemAction o (projT2 (attrType dm) type argV) du dcs retV -> *)
+(*       dul = (Meth (Some (attrName dm :: existT SignT (projT1 (attrType dm)) (argV, retV))%struct)) -> *)
+(*       CanCombineUUL pu pl du dcs dul -> *)
+(*       forall u l, *)
+(*         u = M.union pu du -> *)
+(*         l = mergeLabel (getLabel dul dcs) pl -> *)
+(*         SubstepsDet nil (dm :: dms) o u l *)
+(* | SDSkipMeth: forall dms o pu pl, *)
+(*     SubstepsDet nil dms o pu pl -> *)
+(*     forall dm, SubstepsDet nil (dm :: dms) o pu pl. *)
+
+(* Lemma substepsInd_implies_substepsDet: *)
+(*   forall m o u l, *)
+(*     SubstepsInd m o u l -> *)
+(*     SubstepsDet (getRules m) (getDefsBodies m) o u l. *)
+(* Proof. *)
+(*   admit. *)
+(* Qed. *)
+
+(* Lemma substepsInd_substep_meth: *)
+(*   forall m o u l, *)
+(*     SubstepsInd m o u l -> *)
+(*     annot l = None -> *)
+(*     u = M.empty _ /\ l = {| annot := None; defs := M.empty _; calls := M.empty _ |} \/ *)
+(*     exists u1 l1 u2 ul2 cs2, *)
+(*       SubstepsInd m o u1 l1 /\ annot l1 = None /\ *)
+(*       Substep m o u2 ul2 cs2 /\ match ul2 with Meth (Some _)  => True | _ => False end /\ *)
+(*       CanCombineUUL u1 l1 u2 cs2 ul2 /\ *)
+(*       u = M.union u1 u2 /\ *)
+(*       l = mergeLabel (getLabel ul2 cs2) l1. *)
+(* Proof. *)
+(*   admit. *)
+(* Qed. *)
 
 Section Facts.
   Variable fifoName: string.
@@ -94,7 +144,7 @@ Section Facts.
   Variable default: ConstT dType.
 
   Definition fifo := fifo fifoName sz dType.
-  Definition nfifo := @nativeFifo fifoName sz dType default.
+  Definition nfifo := @nativeFifo fifoName dType default.
   Hint Unfold fifo nfifo: ModuleDefs.
 
   Notation "^ s" := (fifoName .. s) (at level 0).
@@ -180,78 +230,116 @@ Section Facts.
     eapply fifo_inv_0_ok'; eauto.
   Qed.
 
+  Lemma liftPLabel_id:
+    forall r l,
+      liftPLabel id (fun _ rl => Some rl) r l = l.
+  Proof.
+    unfold liftPLabel; intros.
+    destruct l as [[[|]|] d c]; auto.
+  Qed.
+
+  (* TODO: better to find a lemma (or an ltac) to generate 2^n subgoals *)
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
   Proof.
-    apply stepRefinement with (theta:= fifo_nfifo_regMap) (ruleMap:= fifo_nfifo_ruleMap);
-      [kdecompose_regmap_init; kinv_finish|].
+    admit.
+    (* apply stepRefinement with (theta:= fifo_nfifo_regMap) (ruleMap:= fifo_nfifo_ruleMap); *)
+    (*   [kdecompose_regmap_init; kinv_finish|]. *)
 
-    intros.
-    pose proof (@fifo_inv_0_ok o H).
-    
-    exists (fifo_nfifo_regMap u).
-    split.
+    (* intros; pose proof (@fifo_inv_0_ok o H). *)
 
-    - apply step_consistent; apply step_consistent in H0.
-      inv H0.
-      match goal with
-      | [ |- StepInd _ _ _ ?l ] =>
-        replace l with (hide l0) by admit
-      end.
-      constructor; [|admit].
+    (* apply step_consistent in H0; inv H0. *)
+    (* clear HWellHidden. *)
 
-      clear HWellHidden.
+    (* (* apply substepsInd_substep_meth in HSubSteps; auto; clear H0. *) *)
+    (* Opaque liftPLabel hide mergeLabel getLabel. *)
+    (* apply substepsInd_implies_substepsDet in HSubSteps. *)
+    (* repeat *)
+    (*   lazymatch goal with *)
+    (*   | [H: False |- _] => inv H *)
+    (*   | [H: In _ _ |- _] => inv H; fail *)
+    (*   | [H: _ <> _ |- _] => elim H; reflexivity *)
+    (*   | [H: SubstepsDet _ _ _ _ _ |- _] => inv H; simpl in * *)
+    (*   end. *)
+    (* Transparent liftPLabel hide mergeLabel getLabel. *)
 
-      induction HSubSteps; [constructor|subst].
-      inv H0.
-
-      + econstructor.
-        * eassumption.
-        * apply EmptyRule.
-        * admit.
-        * mred.
-        * reflexivity.
-      + econstructor.
-        * eassumption.
-        * apply EmptyMeth.
-        * unfold CanCombineUUL; repeat split; auto.
-          destruct (annot l); auto.
-        * mred.
-        * reflexivity.
-      + inv HInRules.
-      + CommonTactics.dest_in; simpl in *.
-        * invertActionRep.
-          econstructor.
-          { eassumption. }
-          { apply SingleMeth.
-            { left; reflexivity. }
-            { simpl.
-              instantiate (1:= WO).
-              instantiate (1:= M.empty _).
-              instantiate (2:= argV).
-              repeat econstructor.
-              { kinv_red.
-                kregmap_red.
-                reflexivity.
-              }
-              { kinv_finish. }
-              { kinv_red.
-                kregmap_red.
-                reflexivity.
-              }
-            }
-          }
-          { admit. }
-          { admit. }
-          { reflexivity. }
-        * admit.
-        * admit.
-
-    - apply step_consistent in H0; inv H0.
-      clear HWellHidden.
-      induction HSubSteps; [reflexivity|].
-      admit.
-    
-  Abort.
+    (* - exfalso. *)
+    (*   invertActionRep. *)
+    (*   clear -H6; inv H6; dest; clear -H. *)
+    (*   eapply M.Disj_find_union_3 with (k:= ^"full"); [exact H| |]. *)
+    (*   + findeq. *)
+    (*   + findeq. *)
+      
+    (* - exfalso. *)
+    (*   invertActionRep. *)
+    (*   clear -H6; inv H6; dest; clear -H. *)
+    (*   eapply M.Disj_find_union_3 with (k:= ^"full"); [exact H| |]. *)
+    (*   + findeq. *)
+    (*   + findeq. *)
+      
+    (* - invertActionRep. *)
+    (*   clear H6 H9. *)
+    (*   kregmap_red. *)
+    (*   kinv_red. *)
+    (*   eexists; split. *)
+    (*   + rewrite idElementwiseId. *)
+    (*     rewrite liftPLabel_id. *)
+    (*     apply step_consistent. *)
+    (*     constructor. *)
+    (*     eapply SubstepsCons. *)
+    (*     * eapply SubstepsCons. *)
+    (*       { eapply SubstepsNil. } *)
+    (*       { eapply SingleMeth. *)
+    (*         { left; reflexivity. } *)
+    (*         { instantiate (4:= argV). *)
+    (*           repeat econstructor. *)
+    (*           { rewrite M.find_add_2 by discriminate. *)
+    (*             rewrite M.find_add_2 by discriminate. *)
+    (*             rewrite M.find_add_1 by reflexivity. *)
+    (*             reflexivity. *)
+    (*           } *)
+    (*           { reflexivity. } *)
+    (*           { rewrite M.find_add_1 by reflexivity. *)
+    (*             reflexivity. *)
+    (*           } *)
+    (*         } *)
+    (*       } *)
+    (*       { repeat split; simpl; auto. *)
+    (*         intro Hx; eapply M.F.P.F.empty_in_iff; eauto. *)
+    (*       } *)
+    (*       { reflexivity. } *)
+    (*       { reflexivity. } *)
+    (*     * eapply SingleMeth. *)
+    (*       { right; right; left; reflexivity. } *)
+    (*       { instantiate (4:= argV0). *)
+    (*         repeat econstructor. *)
+    (*         { rewrite M.find_add_2 by discriminate. *)
+    (*           rewrite M.find_add_1 by reflexivity. *)
+    (*           reflexivity. *)
+    (*         } *)
+    (*         { reflexivity. } *)
+    (*         { rewrite M.find_add_1 by reflexivity. *)
+    (*           reflexivity. *)
+    (*         } *)
+    (*       } *)
+    (*     * repeat split; simpl; auto. *)
+    (*       intro Hx. admit. *)
+    (*     * reflexivity. *)
+    (*     * kinv_red; simpl. *)
+    (*       f_equal. *)
+    (*       meqReify. *)
+    (*       admit. *)
+    (*     * unfold wellHidden, hide; simpl. *)
+    (*       mred; split; auto. *)
+    (*       unfold getCalls; simpl. *)
+    (*       apply M.KeysDisj_empty. *)
+      
+    (* - admit. *)
+    (* - admit. *)
+    (* - admit. *)
+    (* - admit. *)
+    (* - exists (M.empty _); split; auto. *)
+    (*   admit. *)
+  Qed.
 
 End Facts.
 
