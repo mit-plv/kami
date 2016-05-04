@@ -215,15 +215,52 @@ Proof.
   assumption.
 Qed.
 
-Definition simpleInlineDms m := simpleInlineDmsToMod m (getDefsBodies m).
+Definition simpleInline m := simpleInlineDmsToMod m (getDefsBodies m).
 
-Lemma simpleInlineDms_matches m:
+Lemma simpleInline_matches1 m:
   (forall i, ~ (In i (getCallsM (getDefsBodies m)) /\ In i (getDefs m))) ->
   NoDup (getDefs m) ->
   (forall ty, ModEquiv ty typeUT m) ->
-  simpleInlineDms m = fst (inlineDms m).
+  simpleInline m = fst (inlineDms m).
 Proof.
   intros.
-  unfold simpleInlineDms, inlineDms.
+  unfold simpleInline, inlineDms.
   apply simpleInlineDmsToMod_matches; auto.
+Qed.
+
+Lemma inNamesInList A name (l: list (Attribute A)):
+  In name (namesOf l) ->
+  exists v, In {| attrName := name; attrType := v |} l.
+Proof.
+  induction l; intros; simpl in *.
+  - intuition.
+  - destruct a; simpl in *.
+    destruct H; simpl in *; subst.
+    + exists attrType.
+      intuition.
+    + specialize (IHl H); destruct IHl.
+      exists x.
+      right; intuition.
+Qed.
+
+Lemma simpleInline_matches2 m:
+  (forall dm dmBody, In dm (getDefsBodies m) ->
+                     In dmBody (getDefsBodies m) ->
+                     In (attrName dmBody) (getCallsDm dm) ->
+                     False) ->
+  NoDup (getDefs m) ->
+  (forall ty, ModEquiv ty typeUT m) ->
+  simpleInline m = fst (inlineDms m).
+Proof.
+  intros.
+  apply simpleInline_matches1; auto.
+  clear H0 H1; unfold not; intros.
+  destruct H0.
+  unfold getDefs in H1.
+  apply inNamesInList in H1.
+  destruct H1.
+  apply getCallsM_implies_getCallsDm in H0.
+  destruct H0.
+  destruct H0.
+  apply (H _ _ H0 H1 H2).
 Qed.
