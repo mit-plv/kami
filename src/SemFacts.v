@@ -167,7 +167,7 @@ Proof.
   - destruct (vp y a); auto.
 Qed.
 
-Lemma liftToMap1_subtractKV:
+Lemma liftToMap1_subtractKV_1:
   forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
     M.Disj m1 m2 ->
     M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
@@ -177,6 +177,23 @@ Proof.
   findeq.
   findeq_custom liftToMap1_find_tac.
   - exfalso; eapply M.Disj_find_union_3; eauto.
+  - destruct (vp y a); auto.
+Qed.
+
+Lemma liftToMap1_subtractKV_2:
+  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
+    (forall k v1 v2, M.find k m1 = Some v1 -> M.find k m2 = Some v2 -> v1 = v2) ->
+    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
+    liftToMap1 vp (M.subtractKV deceqA m1 m2).
+Proof.
+  intros; M.ext y.
+  findeq.
+  findeq_custom liftToMap1_find_tac.
+  - specialize (H _ _ _ (eq_sym Heqv) (eq_sym Heqv0)); subst.
+    destruct (vp y a0).
+    + destruct (deceqA a a); [|elim f; reflexivity].
+      destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
+    + destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
   - destruct (vp y a); auto.
 Qed.
 

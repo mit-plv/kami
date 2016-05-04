@@ -262,43 +262,6 @@ Section Decomposition.
       specialize (cHid _ defSubset cH).
       intuition.
   Qed.
-
-  Lemma subtractKVMapSet l1:
-    forall l2,
-      (forall x v1 v2, M.find x l1 = Some v1 -> M.find x l2 = Some v2 -> v1 = v2) ->
-      liftToMap1 p (M.subtractKV signIsEq l1 l2) =
-      M.subtractKV signIsEq (liftToMap1 p l1) (liftToMap1 p l2).
-  Proof.
-    clear; intros.
-    assert (sth: forall x v1 v2, M.MapsTo x v1 l1 -> M.MapsTo x v2 l2 -> v1 = v2) by
-        (intros;
-         apply M.F.P.F.find_mapsto_iff in H0;
-         apply M.F.P.F.find_mapsto_iff in H1; apply (H x); intuition); clear H.
-    apply M.leibniz.
-    apply M.F.P.F.Equal_mapsto_iff; intros.
-    constructor; intros.
-    - apply M.subtractKV_mapsto.
-      apply liftToMap1MapsTo in H; dest.
-      apply M.subtractKV_mapsto in H0; dest.
-      constructor.
-      apply liftToMap1MapsTo.
-      eexists; eauto.
-      unfold not; intros.
-      apply liftToMap1MapsTo in H2; dest.
-      specialize (sth _ _ _ H0 H3).
-      subst.
-      intuition.
-    - apply liftToMap1MapsTo.
-      apply M.subtractKV_mapsto in H; dest.
-      apply liftToMap1MapsTo in H; dest.
-      exists x.
-      intuition.
-      apply M.subtractKV_mapsto.
-      constructor; intuition.
-      assert (sth2: exists x, p k x = Some e /\ M.MapsTo k x l2) by (eexists; eauto).
-      apply liftToMap1MapsTo in sth2.
-      intuition.
-  Qed.
   
   Theorem wellHiddenEq1 m l:
     M.KeysSubset (defs l) (getDefs m) ->
@@ -328,8 +291,8 @@ Section Decomposition.
     intros Hyp.
     unfold xformLabel, hide.
     destruct l as [ann ds cs]; simpl in *; f_equal.
-    - apply subtractKVMapSet; auto.
-    - apply subtractKVMapSet.
+    - apply eq_sym, liftToMap1_subtractKV_2; auto.
+    - apply eq_sym, liftToMap1_subtractKV_2.
       intros; apply eq_sym.
       eapply Hyp; eauto.
   Qed.

@@ -22,7 +22,7 @@ Section StepToRefinement.
                   end;
          defs := p dfs;
          calls := p clls |}
-    end.
+    end.    
 
   Variable stepMap:
     forall o u l,

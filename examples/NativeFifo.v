@@ -50,8 +50,6 @@ Section NativeFifo.
 
   Definition nativeFifo := MODULE {
     RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)
-    with Register ^"empty" : Bool <- true
-    with Register ^"full" : Bool <- Default
 
     with Method ^"enq"(d : dType) : Void := (nativeEnq d)
     with Method ^"deq"() : dType := nativeDeq
@@ -60,8 +58,6 @@ Section NativeFifo.
 
   Definition nativeSimpleFifo := MODULE {
     RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)
-    with Register ^"empty" : Bool <- true
-    with Register ^"full" : Bool <- Default
 
     with Method ^"enq"(d : dType) : Void := (nativeEnq d)
     with Method ^"deq"() : dType := nativeDeq
@@ -74,7 +70,8 @@ Hint Unfold listEltT listEltK listElt
      listIsEmpty listEnq listDeq listFirstElt
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
-Require Import SemFacts Decomposition Refinement Tactics Lib.Struct Lib.FMap.
+Require Import SemFacts Refinement Tactics Lib.Struct Lib.FMap.
+Require Import DecompositionOne.
 
 (* Inductive SubstepsDet: list (Attribute (Action Void)) -> *)
 (*                        list DefMethT -> RegsT -> UpdatesT -> LabelT -> Prop := *)
@@ -160,23 +157,29 @@ Section Facts.
         :: (fifo_nfifo_elt_not_full eltv enqPv ed)
     end.
 
-  Definition fifo_nfifo_regMap (r: RegsT): RegsT.
+  Definition fifo_nfifo_eta (r: RegsT): option (sigT (fullType type)).
   Proof.
-    kgetv ^"elt"%string eltv r (Vector dType sz) (M.empty (sigT (fullType type))).
-    kgetv ^"empty"%string emptyv r Bool (M.empty (sigT (fullType type))).
-    kgetv ^"full"%string fullv r Bool (M.empty (sigT (fullType type))).
-    kgetv ^"enqP"%string enqPv r (Bit sz) (M.empty (sigT (fullType type))).
-    kgetv ^"deqP"%string deqPv r (Bit sz) (M.empty (sigT (fullType type))).
+    kgetv ^"elt"%string eltv r (Vector dType sz) (None (A:= sigT (fullType type))).
+    kgetv ^"empty"%string emptyv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^"full"%string fullv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^"enqP"%string enqPv r (Bit sz) (None (A:= sigT (fullType type))).
+    kgetv ^"deqP"%string deqPv r (Bit sz) (None (A:= sigT (fullType type))).
 
-    refine (M.add ^"elt" (existT _ (listEltK dType type) _) _).
-    - destruct (weq enqPv deqPv).
-      + refine (if fullv then _ else _).
-        * exact ((eltv deqPv) :: (fifo_nfifo_elt_not_full eltv enqPv (wordToNat (wones sz)))).
-        * exact nil.
-      + exact (fifo_nfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
-    - exact (M.add ^"empty" (existT _ _ emptyv) (M.add ^"full" (existT _ _ fullv) (M.empty _))).
+    refine (Some (existT _ (listEltK dType type) _)).
+    destruct (weq enqPv deqPv).
+    - refine (if fullv then _ else _).
+      + exact ((eltv deqPv) :: (fifo_nfifo_elt_not_full eltv enqPv (wordToNat (wones sz)))).
+      + exact nil.
+    - exact (fifo_nfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
   Defined.
-  Hint Unfold fifo_nfifo_regMap: MethDefs.
+  Hint Unfold fifo_nfifo_eta: MethDefs.
+
+  Definition fifo_nfifo_theta (r: RegsT): RegsT :=
+    match fifo_nfifo_eta r with
+    | Some er => M.add ^"elt" er (M.empty _)
+    | None => M.empty _
+    end.
+  Hint Unfold fifo_nfifo_theta: MethDefs.
   
   Definition fifo_nfifo_ruleMap (_: RegsT) (r: string): option string := Some r.
   Hint Unfold fifo_nfifo_ruleMap: MethDefs.
@@ -238,6 +241,48 @@ Section Facts.
     destruct l as [[[|]|] d c]; auto.
   Qed.
 
+  (* Lemma fifo_refines_nativefifo: fifo <<== nfifo. *)
+  (* Proof. *)
+  (*   apply decomposition_singleton *)
+  (*   with (eta:= fifo_nfifo_eta) *)
+  (*          (ruleMap:= fifo_nfifo_ruleMap) *)
+  (*          (specRegName:= ^"elt"); *)
+  (*     [unfold theta; kdecompose_regmap_init; kinv_finish| | | | |]. *)
+
+  (*   - kequiv. *)
+  (*   - unfold theta; kdecompose_regmap_init; kinv_finish. *)
+  (*   - auto. *)
+  (*   - auto. *)
+  (*   - intros; inv H0; inv HInRules. *)
+  (*   - intros; inv H0. *)
+  (*     CommonTactics.dest_in; simpl in *; invertActionRep. *)
+  (*     + admit. *)
+  (*     + admit. *)
+  (*     + admit. *)
+
+  (*   - intros; subst. *)
+  (*     inv H0; inv H1; inv H6; inv H7. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto. *)
+  (*     + clear HIn1 HIn2. *)
+  (*       admit. *)
+  (*       (* CommonTactics.dest_in. *) *)
+
+  (* Qed. *)
+  
   (* TODO: better to find a lemma (or an ltac) to generate 2^n subgoals *)
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
   Proof.
