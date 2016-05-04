@@ -394,12 +394,31 @@ Section GetCalls.
       | r :: rl' => (getCallsA (attrType r typeUT)) ++ (getCallsR rl')
     end.
 
+  Definition getCallsDm (dm: DefMethT): list string :=
+    getCallsA (projT2 (attrType dm) typeUT tt).
+               
   Fixpoint getCallsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
       | m :: ms' => (getCallsA ((projT2 (attrType m)) typeUT tt))
                       ++ (getCallsM ms')
     end.
+
+  Lemma getCallsM_implies_getCallsDm s ms: In s (getCallsM ms) ->
+                                           exists dm, In dm ms /\ In s (getCallsDm dm).
+  Proof.
+    induction ms; intros; simpl in *.
+    - intuition.
+    - apply in_app_or in H.
+      destruct H.
+      + exists a.
+        intuition.
+      + specialize (IHms H).
+        destruct IHms.
+        destruct H0.
+        exists x.
+        intuition.
+  Qed.
 
   Lemma getCallsM_app: forall ms1 ms2, getCallsM (ms1 ++ ms2) = getCallsM ms1 ++ getCallsM ms2.
   Proof.
