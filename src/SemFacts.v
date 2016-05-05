@@ -360,6 +360,36 @@ Proof.
     + elim H; [apply H4; findeq|findeq].
     + elim H; [apply H4; findeq|findeq].
 Qed.
+
+Lemma canCombine_CanCombineUL:
+  forall m o u1 u2 ul1 ul2 cs1 cs2
+         (Hss1: Substep m o u1 ul1 cs1)
+         (Hss2: Substep m o u2 ul2 cs2),
+    canCombine {| substep := Hss1 |} {| substep := Hss2 |} <->
+    CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2).
+Proof.
+  unfold canCombine, CanCombineUL, CanCombineLabel; simpl; intros; split; intros; dest.
+  - repeat split; auto.
+    + destruct ul1 as [[r1|]|[[dmn1 dmb1]|]], ul2 as [[r2|]|[[dmn2 dmb2]|]]; auto.
+      specialize (H0 _ _ eq_refl eq_refl); simpl in H0.
+      auto.
+    + destruct ul1 as [[r1|]|[[dmn1 dmb1]|]], ul2 as [[r2|]|[[dmn2 dmb2]|]]; auto;
+        try (destruct H1; discriminate; fail).
+  - repeat split; auto.
+    + intros; destruct ul1 as [[r1|]|[[dmn1 dmb1]|]], ul2 as [[r2|]|[[dmn2 dmb2]|]];
+        try discriminate.
+      inv H3; inv H4; simpl.
+      intro Hx; subst.
+      specialize (H0 dmn2); destruct H0; findeq.
+    + intros; destruct ul1 as [[r1|]|[[dmn1 dmb1]|]], ul2 as [[r2|]|[[dmn2 dmb2]|]];
+        eexists; intuition idtac.
+
+      Grab Existential Variables.
+      exact None.
+      exact None.
+      exact None.
+      exact None.
+Qed.
    
 Lemma CanCombineLabel_hide:
   forall la lb,

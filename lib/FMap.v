@@ -536,6 +536,41 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma union_empty_R {A : Type} : forall m, union m (empty A) = m.
   Proof. mintros; apply leibniz, P.fold_identity. Qed.
 
+  Lemma find_union {A}:
+    forall {m m' : t A} k,
+      find k (union m m') = match find k m with
+                            | Some v => Some v
+                            | None => find k m'
+                            end.
+  Proof.
+    intros m m'. pattern m.
+    apply map_induction; simpl; intros.
+    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
+    - rewrite union_add by assumption. 
+      do 2 rewrite P.F.add_o.
+      cmp k k0; auto.
+  Qed.
+
+  Lemma union_empty:
+    forall {A} (m1 m2: t A),
+      union m1 m2 = empty _ -> m1 = empty _ /\ m2 = empty _.
+  Proof.
+    intros; split.
+    - ext y.
+      rewrite find_empty.
+      assert (find y (union m1 m2) = find y (empty A)) by (rewrite H; reflexivity).
+      rewrite find_union in H0.
+      destruct (find y m1); auto.
+      rewrite find_empty in H0; auto.
+    - ext y.
+      rewrite find_empty.
+      assert (find y (union m1 m2) = find y (empty A)) by (rewrite H; reflexivity).
+      rewrite find_union in H0.
+      destruct (find y m2); auto.
+      rewrite find_empty in H0.
+      destruct (find y m1); inv H0.
+  Qed.
+
   Lemma union_smothered {A : Type}:
     forall (m m' : t A), Sub m m' -> union m m' = m'.
   Proof. 
@@ -554,21 +589,6 @@ Module LeibnizFacts (M : MapLeibniz).
           }
           { rewrite find_add_2; auto. }
       + apply P.F.add_m_Proper.
-  Qed.
-
-  Lemma find_union {A}:
-    forall {m m' : t A} k,
-      find k (union m m') = match find k m with
-                              | Some v => Some v
-                              | None => find k m'
-                            end.
-  Proof.
-    intros m m'. pattern m.
-    apply map_induction; simpl; intros.
-    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
-    - rewrite union_add by assumption. 
-      do 2 rewrite P.F.add_o.
-      cmp k k0; auto.
   Qed.
 
   Lemma MapsToIn1 A m k (v: A):
@@ -1973,6 +1993,8 @@ Ltac mred_unit :=
     rewrite M.find_add_1 in H
   | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
     rewrite M.find_add_2 in H by auto
+  | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+    rewrite M.find_add_2 in H by auto
   | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
     rewrite M.restrict_in_find in H2 by auto
   | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
@@ -2000,10 +2022,18 @@ Ltac mred_unit :=
     rewrite M.F.P.F.remove_neq_o by intuition auto
   | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
     rewrite M.F.P.F.remove_neq_o by intuition auto
+  | [H: ?y = ?k -> False |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_neq_o by intuition auto
+  | [H: ?k = ?y -> False |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_neq_o by intuition auto
   | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
   | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
     rewrite M.find_add_2 by intuition idtac
   | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
+    rewrite M.find_add_2 by intuition idtac
+  | [H: ?y = ?k -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
+    rewrite M.find_add_2 by intuition idtac
+  | [H: ?k = ?y -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
     rewrite M.find_add_2 by intuition idtac
   | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
     M.cmp y k; [rewrite M.find_add_1|

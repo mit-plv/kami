@@ -312,7 +312,19 @@ Section GivenModule.
       apply canCombine_consistent_2; intuition.
     Qed.
 
-    Lemma substeps_annot:
+    Lemma substepsComb_substepsInd:
+      forall ss,
+        substepsComb ss ->
+        SubstepsInd (foldSSUpds ss) (foldSSLabel ss).
+    Proof.
+      induction 1; simpl in *; [constructor|].
+
+      destruct s as [su sul scs Hss]; simpl in *.
+      econstructor; eauto.
+      eapply canCombine_consistent; eauto.
+    Qed.
+
+    Lemma substepsInd_substepsComb:
       forall u l,
         SubstepsInd u l ->
         exists ss, SubstepsIndAnnot u l ss /\
@@ -339,14 +351,9 @@ Section GivenModule.
     Proof.
       split; intros.
       - inv H; constructor; auto.
-        clear HWellHidden.
-        induction HSubsteps; simpl in *; [constructor|].
-
-        destruct s as [su sul scs Hss]; simpl in *.
-        econstructor; eauto.
-        eapply canCombine_consistent; eauto.
+        apply substepsComb_substepsInd; auto.
       - inv H.
-        apply substeps_annot in HSubSteps.
+        apply substepsInd_substepsComb in HSubSteps.
         destruct HSubSteps as [ss [? [? [? ?]]]]; subst.
         econstructor; eauto.
     Qed.
