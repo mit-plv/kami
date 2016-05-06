@@ -36,10 +36,10 @@ Section GivenModule.
     | SingleMeth (f: DefMethT)
                  (HIn: In f (getDefsBodies m))
                  u cs argV retV
-                 (HAction: SemAction o ((projT2 (attrType f)) type argV) u cs retV):
-        Substep u
-                (Meth (Some {| attrName := attrName f;
-                               attrType := (existT _ _ (argV, retV)) |})) cs.
+                 (HAction: SemAction o ((projT2 (attrType f)) type argV) u cs retV)
+                 sig (Hsig: sig = {| attrName := attrName f;
+                                     attrType := (existT _ _ (argV, retV)) |}):
+        Substep u (Meth (Some sig)) cs.
 
     Record SubstepRec :=
       { upd: UpdatesT;

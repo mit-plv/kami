@@ -514,9 +514,8 @@ Section Rename.
       apply renameInMeths in HIn.
       rewrite <- renameGetMeths in *.
       destruct f; simpl in *.
-      pose proof (SingleMeth (o := renameMap o) (u := renameMap u) (cs := renameMap cs)
-                             (renameModules m) _ HIn argV) as sth; simpl in *.
-      apply (sth retV HAction).
+      subst; eapply SingleMeth; eauto.
+      simpl; auto.
   Qed.
 
   Definition renameSubstepRec m o (sr: SubstepRec m o) :=
@@ -897,8 +896,7 @@ Section Rename.
       exists (Meth (Some (attrName :: existT SignT (projT1 attrType) (argV, retV))%struct)).
       exists x0.
       intuition.
-      apply (SingleMeth m' (attrName :: attrType)%struct) in H2; simpl in *;
-        intuition.
+      eapply SingleMeth; eauto.
   Qed.
 
   Lemma renameSubstepRecRev m' o'

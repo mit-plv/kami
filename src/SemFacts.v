@@ -1111,7 +1111,7 @@ Lemma substep_dms_weakening:
 Proof.
   induction 1; simpl; intros; try (econstructor; eauto; fail).
 
-  eapply SingleMeth; eauto.
+  eapply SingleMeth; eauto; subst.
   clear -H HIn; simpl in *.
   specialize (H (attrName f)).
   apply filter_In.

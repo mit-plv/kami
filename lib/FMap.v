@@ -1991,6 +1991,8 @@ Ltac mred_unit :=
     rewrite M.find_union in H
   | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
     rewrite M.find_add_1 in H
+  | [H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+    rewrite M.find_add_2 in H by discriminate
   | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
     rewrite M.find_add_2 in H by auto
   | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
@@ -2027,6 +2029,7 @@ Ltac mred_unit :=
   | [H: ?k = ?y -> False |- context [M.find ?y (M.remove ?k ?m)] ] =>
     rewrite M.F.P.F.remove_neq_o by intuition auto
   | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
+  | [ |- context [M.find ?y (M.add ?k _ _)] ] => rewrite M.find_add_2 by discriminate
   | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
     rewrite M.find_add_2 by intuition idtac
   | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>

@@ -62,7 +62,7 @@ Section SubstepFacts.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
         inv Hwf; eapply wfRules_rule; eauto.
 
-    - apply SingleMeth with (f:= inlineDmToDm f dm); auto.
+    - eapply SingleMeth with (f:= inlineDmToDm f dm); eauto.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
         inv Hwf; eapply wfDms_dms; eauto.
@@ -83,7 +83,7 @@ Section SubstepFacts.
       + apply in_map with (f:= fun r => inlineDmToRule r dm) in HInRules; auto.
       + simpl; destruct dm; apply inlineDm_SemAction_intact; auto.
 
-    - apply SingleMeth with (f:= inlineDmToDm f dm); auto.
+    - eapply SingleMeth with (f:= inlineDmToDm f dm); eauto.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; destruct dm; apply inlineDm_SemAction_intact; auto.
   Qed.
@@ -479,7 +479,7 @@ Section SubstepsFacts.
       + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
-        * inv H1.
+        * inv H1; inv Hsig.
           assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
           eapply inlineDmToMod_correct_Substep; eauto.
         * repeat split; simpl; auto.
@@ -539,7 +539,7 @@ Section SubstepsFacts.
       + inv H2; dest; simpl in *.
         eapply SubstepsCons.
         * eapply inlineDmToMod_Substeps_intact; eauto; findeq.
-        * inv H1.
+        * inv H1; inv Hsig.
           assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
           eapply inlineDmToMod_correct_Substep; eauto.
         * repeat split; simpl; auto.
@@ -592,7 +592,7 @@ Section SubstepsFacts.
     - inv H8; inv H2; dest; simpl in *.
       eapply SubstepsCons.
       + eapply inlineDmToMod_Substeps_intact; eauto; findeq.
-      + inv H.
+      + inv H; inv Hsig.
         assert (f = dm) by (eapply in_NoDup_attr; eauto); subst.
         eapply inlineDmToMod_correct_Substep; eauto.
       + repeat split; simpl; auto.
@@ -662,7 +662,7 @@ Proof.
       * M.cmp (attrName a) sdmn.
         { (* Substep(head)-inlined: impossible *)
           mred; exfalso.
-          inv H1.
+          inv H1; inv Hsig.
           assert (f = a) by (apply in_NoDup_attr with (attrs:= getDefsBodies m); auto);
             subst.
           assert (M.find (attrName a) scs = None).
