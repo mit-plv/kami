@@ -394,6 +394,7 @@ Section Facts.
                 admit.
               }
             }
+          }
 
       + eexists; split.
         * kinv_red; eapply SingleMeth.
@@ -469,9 +470,9 @@ Section Facts.
       + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto.
       + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto.
       + simpl in *; inv H2; inv H1; dest; repeat split; unfold getLabel; simpl; auto.
-      + CommonTactics.dest_in; try discriminate; simpl in *; admit.
-        
-  Qed.
+      + (* CommonTactics.dest_in; try discriminate; simpl in *; admit. *)
+        admit.
+  Abort.
   
 End Facts.
 
