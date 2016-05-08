@@ -16,9 +16,12 @@ Section NativeFifo.
   Definition listElt ty := (^"elt" :: (@NativeConst (listEltT ty) nil nil))%struct.
 
   Definition listIsEmpty {ty} (l: fullType ty (listEltK ty)) :=
-    if eq_nat_dec (length l) 1 then ConstBool true else ConstBool false.
+    match l with
+    | nil => ConstBool true
+    | _ => ConstBool false
+    end.
   Definition listEnq {ty} (a: ty dType) (l: fullType ty (listEltK ty)) :=
-    a :: l.
+    l ++ [a].
   Definition listDeq {ty} (l: fullType ty (listEltK ty)) :=
     match l with
     | nil => nil

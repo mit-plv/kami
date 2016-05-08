@@ -9,20 +9,6 @@ Require Import Eqdep ProofIrrelevance.
 
 Set Implicit Arguments.
 
-Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
-Tactic Notation "or3_fst" := left.
-Tactic Notation "or3_snd" := right; left.
-Tactic Notation "or3_thd" := right; right.
-Ltac dest_or3 :=
-  match goal with
-  | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
-  end.
-Ltac kinv_or3 :=
-  repeat
-    match goal with
-    | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
-    end.
-
 Section Invariants.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
