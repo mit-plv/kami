@@ -1,4 +1,4 @@
-IGNORE:=src/RenamingIfc
+IGNORE:=src/MetaSyntax
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))
