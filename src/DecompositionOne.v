@@ -405,3 +405,5 @@ Section Decomposition.
       
 End Decomposition.
 
+Hint Unfold theta: MethDefs.
+
