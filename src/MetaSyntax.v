@@ -75,10 +75,18 @@ Section NoBadCalls.
     forall r fr n,
       r = RepeatRule fr n ->
       forall i s j,
-        j <> i ->
-        ~ In (s __ j) (getCallsA (attrType (fr i) typeUT)).
+        In (s __ j) (getCallsA (attrType (fr i) typeUT)) -> i = j.
 
-  Lemma metaInlineDmToRule_matches inDm r:
+  Lemma test:
+    forall r fr n ff,
+      r = RepeatRule fr n ->
+      forall i, fold_left inlineDmToRule (getList ff n) (fr i) =
+                inlineDmToRule (fr i) (ff i).
+  Proof.
+    admit.
+  Qed.
+
+    Lemma metaInlineDmToRule_matches inDm r:
     concat (map getRulesFromMeta (metaInlineDmToRule inDm r)) =
     fold_left inlineDmToRules (getMethsFromMeta inDm) (getRulesFromMeta r).
   Proof.
