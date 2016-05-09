@@ -92,9 +92,7 @@ Qed.
 
 Section NoBadCalls.
   Variable noBadCalls:
-    forall r fr n,
-      r = RepeatRule fr n ->
-      forall i s j,
+    forall (fr: nat -> Attribute (Action Void)) i s j,
         In (s __ j) (getCallsA (attrType (fr i) typeUT)) -> i = j.
 
   Lemma onlyOneInline:
@@ -111,7 +109,6 @@ Section NoBadCalls.
     fold_left inlineDmToRules (getMethsFromMeta inDm) (getRulesFromMeta r).
   Proof.
     unfold metaInlineDmToRule.
-    specialize (@noBadCalls r).
     destruct inDm, r; subst; auto; simpl in *.
     - clear noBadCalls; rewrite app_nil_r.
       induction n; simpl in *.
@@ -123,7 +120,7 @@ Section NoBadCalls.
       + reflexivity.
       + apply (IHl (inlineDmToRule a0 a)).
     - destruct (eq_nat_dec n0 n); subst; simpl in *.
-      specialize (@noBadCalls a n eq_refl).
+      specialize (@noBadCalls a).
       + rewrite app_nil_r.
         rewrite commuteInline.
         rewrite onlyOneInline with (n:=n).
