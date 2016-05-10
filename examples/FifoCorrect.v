@@ -5,140 +5,7 @@ Require Import Syntax Semantics SemFacts Equiv Refinement Tactics.
 Require Import DecompositionOne DecompositionInv.
 Require Import Ex.Fifo Ex.NativeFifo.
 
-Lemma word_plus_one_neq: forall {sz} (w: word (S sz)), w ^+ $1 <> w.
-Proof.
-  intros; intro Hx.
-  rewrite wplus_comm in Hx.
-  assert ($1 ^+ w ^- w = w ^- w) by (rewrite Hx; reflexivity).
-  clear Hx.
-  do 2 rewrite wminus_def in H.
-  rewrite <-wplus_assoc in H.
-  rewrite wminus_inv in H.
-  rewrite wplus_comm, wplus_unit in H.
-  inv H.
-Qed.
-
-Lemma wordToNat_natToWord_2: forall sz w : nat,
-    (w < pow2 sz)%nat -> wordToNat (natToWord sz w) = w.
-Proof.
-  intros.
-  pose proof (wordToNat_natToWord sz w); dest.
-  rewrite H0 in *; clear H0.
-  destruct x; try omega.
-  exfalso; simpl in H1.
-
-  pose proof (Lt.le_lt_trans _ _ _ H1 H).
-  pose proof (Plus.le_plus_l (pow2 sz) (x * pow2 sz)).
-  pose proof (Lt.le_lt_trans _ _ _ H2 H0).
-  omega.
-Qed.
-
-Lemma pow2_zero: forall sz, (pow2 sz > 0)%nat.
-Proof.
-  induction sz; simpl; auto; omega.
-Qed.
-
-Lemma wneg_one_pow2_minus_one: forall {sz}, wordToNat (^~ (natToWord sz 1)) = pow2 sz - 1.
-Proof.
-  destruct sz; auto.
-  unfold wneg; intros.
-  rewrite wordToN_nat, roundTrip_1.
-  simpl BinNat.N.of_nat.
-  rewrite NToWord_nat, Nnat.N2Nat.inj_sub, Npow2_nat.
-  apply wordToNat_natToWord_2.
-  pose (pow2_zero (S sz)).
-  omega.
-Qed.
-
-Lemma wones_pow2_minus_one: forall {sz}, wordToNat (wones sz) = pow2 sz - 1.
-Proof.
-  induction sz; simpl; auto.
-  rewrite IHsz; pose (pow2_zero sz).
-  omega.
-Qed.
-
-Lemma wordToNat_inj: forall {sz} (w1 w2: word sz),
-    wordToNat w1 = wordToNat w2 -> w1 = w2.
-Proof.
-  intros; apply wordToN_inj; rewrite ! wordToN_nat; auto.
-Qed.
-
-Lemma pow2_minus_one_wones: forall {sz} (w: word sz),
-    wordToNat w = pow2 sz - 1 -> w = wones sz.
-Proof.
-  intros; rewrite <-wones_pow2_minus_one in H.
-  apply wordToNat_inj; auto.
-Qed.
-
-Lemma wones_wneg_one: forall {sz}, wones sz = ^~ $1.
-Proof.
-  intros; apply wordToNat_inj.
-  rewrite wneg_one_pow2_minus_one.
-  rewrite wones_pow2_minus_one.
-  reflexivity.
-Qed.
-
-Lemma wordToNat_natToWord_pred:
-  forall {sz} (w: word sz), w <> wzero sz -> pred (wordToNat w) = wordToNat (w ^- $1).
-Proof.
-  intros; remember (wordToNat w) as wn; destruct wn; simpl in *.
-  - elim H.
-    apply wordToNat_inj.
-    rewrite roundTrip_0; auto.
-  - apply natToWord_inj with (sz:= sz).
-    + rewrite natToWord_wordToNat.
-      apply wplus_cancel with (c:= $1).
-      rewrite wminus_def, <-wplus_assoc.
-      rewrite wplus_comm with (x:= ^~ $1).
-      rewrite wminus_inv.
-      rewrite wplus_comm with (x:= w).
-      rewrite wplus_unit.
-      rewrite wplus_comm, <-natToWord_S.
-      apply wordToNat_inj.
-      rewrite wordToNat_natToWord_2; auto.
-      rewrite Heqwn.
-      apply wordToNat_bound.
-    + pose proof (wordToNat_bound w); omega.
-    + apply wordToNat_bound.
-Qed.
-
-Lemma wminus_plus_distr:
-  forall {sz} (x y z: word sz), x ^- (y ^+ z) = x ^- y ^- z.
-Proof.
-  intros.
-  apply wplus_cancel with (c:= y ^+ z).
-  rewrite wminus_def, <-wplus_assoc.
-  rewrite wplus_comm with (y:= y ^+ z), wminus_inv.
-  rewrite wplus_comm with (x:= x), wplus_unit.
-  rewrite !wminus_def, <-wplus_assoc.
-  rewrite wplus_assoc with (x:= ^~ z).
-  rewrite wplus_comm with (x:= ^~ z).
-  rewrite <-wplus_assoc with (x:= y).
-  rewrite wplus_comm with (x:= ^~ z), wminus_inv.
-  rewrite wplus_comm with (x:= y), wplus_unit.
-  rewrite <-wplus_assoc.
-  rewrite wplus_comm with (x:= ^~ y), wminus_inv.
-  rewrite wplus_comm, wplus_unit.
-  reflexivity.
-Qed.
-
-Lemma wneg_zero:
-  forall {sz} (w: word sz), ^~ w = $0 -> w = $0.
-Proof.
-  intros.
-  apply wplus_cancel with (c:= ^~ w).
-  rewrite wminus_inv, wplus_unit; auto.
-Qed.
-
-Lemma wneg_idempotent:
-  forall {sz} (w: word sz), ^~ (^~ w) = w.
-Proof.
-  intros.
-  apply sub_0_eq.
-  rewrite wminus_def.
-  rewrite wplus_comm.
-  apply wminus_inv.
-Qed.
+Set Implicit Arguments.
 
 Section Facts.
   Variable fifoName: string.
@@ -349,10 +216,10 @@ Section Facts.
       + simpl in *; kinv_magic_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
-            exfalso; eapply word_plus_one_neq; eauto.
+            exfalso; eapply wplus_one_neq; eauto.
           }
           { destruct (weq _ _); auto.
-            exfalso; eapply word_plus_one_neq; eauto.
+            exfalso; eapply wplus_one_neq; eauto.
           }
         * destruct (weq x6 (x5 ^+ $0~1)).
           { or3_snd; repeat split.
@@ -365,10 +232,10 @@ Section Facts.
       + simpl in *; kinv_magic_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
-            exfalso; eapply word_plus_one_neq; eauto.
+            exfalso; eapply wplus_one_neq; eauto.
           }
           { destruct (weq _ _); auto.
-            exfalso; eapply word_plus_one_neq; eauto.
+            exfalso; eapply wplus_one_neq; eauto.
           }
         * destruct (weq x5 (x6 ^+ $0~1)).
           { or3_fst; auto. }
@@ -390,24 +257,27 @@ Section Facts.
     - intros; inv H0; inv HInRules.
     - intros; inv H0.
 
-      pose proof (fifo_inv_0_ok _ H).
-      pose proof (fifo_inv_1_ok _ H).
+      pose proof (fifo_inv_0_ok H).
+      pose proof (fifo_inv_1_ok H).
       CommonTactics.dest_in; simpl in *; invertActionRep.
 
-      + eexists; split.
-        * kinv_red; eapply SingleMeth.
+      + kinv_red; clear H10.
+        eexists; split.
+        * eapply SingleMeth.
           { left; reflexivity. }
-          { instantiate (3:= argV); simpl; repeat econstructor.
+          { instantiate (3:= argV).
+            simpl; repeat econstructor.
             kregmap_red; reflexivity.
           }
           { reflexivity. }
+
         * kinv_red.
           repeat split.
           { intros; inv H1. }
           { intros; inv H1. }
           { kregmap_red; meq.
             { repeat f_equal.
-              destruct (weq (x2 ^+ _) x2); [exfalso; eapply word_plus_one_neq; eauto|].
+              destruct (weq (x2 ^+ _) x2); [exfalso; eapply wplus_one_neq; eauto|].
               simpl; replace (wordToNat _) with 1.
               { rewrite fifo_nfifo_elt_not_full_prop_1.
                 destruct (weq x2 x2); intuition idtac.
@@ -545,7 +415,7 @@ Section Facts.
             { intros; inv H2. }
             { intros; inv H2. }
             { kregmap_red; meq.
-              destruct (weq x2 (x2 ^+ _)); [exfalso; eapply word_plus_one_neq; eauto|].
+              destruct (weq x2 (x2 ^+ _)); [exfalso; eapply wplus_one_neq; eauto|].
               replace (x2 ^- (x2 ^+ $0~1)) with (wones (S sz)); auto.
               apply wplus_cancel with (c:= x2 ^+ $0~1).
               rewrite wminus_def, <-wplus_assoc.
@@ -558,7 +428,7 @@ Section Facts.
               apply wplus_comm.
             }
           }
-              
+          
         * eexists; split.
           { unfold rsz in *.
             destruct (weq x1 x2); [inv H3|].
@@ -568,7 +438,7 @@ Section Facts.
               repeat econstructor.
               { kregmap_red; reflexivity. }
               { destruct (weq x1 x2); [elim n; auto|].
-                pose proof (fifo_nfifo_elt_not_full_prop_2 x0 x1 (wordToNat (x1 ^- x2))).
+                pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x1 (wordToNat (x1 ^- x2))).
                 assert (wordToNat (x1 ^- x2) <> 0).
                 { intro Hx.
                   assert ($ (wordToNat (x1 ^- x2)) = natToWord rsz 0)
@@ -583,7 +453,7 @@ Section Facts.
             }
             { destruct (weq x1 x2); [elim n; auto|].
               simpl; repeat f_equal.
-              pose proof (fifo_nfifo_elt_not_full_prop_2 x0 x1 (wordToNat (x1 ^- x2))).
+              pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x1 (wordToNat (x1 ^- x2))).
               assert (wordToNat (x1 ^- x2) <> 0).
               { intro Hx.
                 assert ($ (wordToNat (x1 ^- x2)) = natToWord rsz 0)
@@ -641,7 +511,7 @@ Section Facts.
               { unfold rsz in *.
                 destruct (weq x4 x1); [inv H3|].
                 simpl; apply negb_true_iff.
-                pose proof (fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).
+                pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).
                 assert (wordToNat (x4 ^- x1) <> 0).
                 { intro Hx.
                   assert ($ (wordToNat (x4 ^- x1)) = natToWord rsz 0)
@@ -663,7 +533,8 @@ Section Facts.
             }
             { unfold rsz in *.
               destruct (weq x4 x1); [inv H3|].
-              pose proof (fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).                             assert (wordToNat (x4 ^- x1) <> 0).
+              pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).
+              assert (wordToNat (x4 ^- x1) <> 0).
               { intro Hx.
                 assert ($ (wordToNat (x4 ^- x1)) = natToWord rsz 0)
                   by (rewrite Hx; reflexivity).
@@ -719,8 +590,7 @@ Section Facts.
         * clear HAction HAction0 Hsig Hsig0.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          
-  Abort.
-  
+  Qed.
+
 End Facts.
 

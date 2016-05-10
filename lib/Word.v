@@ -208,8 +208,25 @@ Lemma wordToNat_natToWord' : forall sz w, exists k, wordToNat (natToWord sz w) +
   symmetry; apply div2_even; auto.
 Qed.
 
-Theorem wordToNat_natToWord : forall sz w, exists k, wordToNat (natToWord sz w) = w - k * pow2 sz /\ k * pow2 sz <= w.
+Theorem wordToNat_natToWord : forall sz w,
+    exists k, wordToNat (natToWord sz w) = w - k * pow2 sz /\ k * pow2 sz <= w.
   intros; destruct (wordToNat_natToWord' sz w) as [k]; exists k; intuition.
+Qed.
+
+Lemma wordToNat_natToWord_2: forall sz w : nat,
+    (w < pow2 sz)%nat -> wordToNat (natToWord sz w) = w.
+Proof.
+  intros.
+  pose proof (wordToNat_natToWord sz w).
+  destruct H0; destruct H0.
+  rewrite H0 in *; clear H0.
+  destruct x; try omega.
+  exfalso; simpl in H1.
+
+  pose proof (Lt.le_lt_trans _ _ _ H1 H).
+  pose proof (Plus.le_plus_l (pow2 sz) (x * pow2 sz)).
+  pose proof (Lt.le_lt_trans _ _ _ H2 H0).
+  omega.
 Qed.
 
 Definition wone sz := natToWord sz 1.
@@ -583,6 +600,11 @@ Theorem wmult_alt : forall sz (x y : word sz), wmult x y = wmultN x y.
   rewrite nat_of_Nmult.
   repeat rewrite nat_of_N_of_nat.
   reflexivity.
+Qed.
+
+Lemma pow2_zero: forall sz, (pow2 sz > 0)%nat.
+Proof.
+  induction sz; simpl; auto; omega.
 Qed.
 
 Theorem Npow2_nat : forall n, nat_of_N (Npow2 n) = pow2 n.
@@ -1152,6 +1174,12 @@ Theorem natToWord_inj : forall sz n m, natToWord sz n = natToWord sz m
   subst; simpl in *; omega.
 Qed.
 
+Lemma wordToNat_inj: forall {sz} (w1 w2: word sz),
+    wordToNat w1 = wordToNat w2 -> w1 = w2.
+Proof.
+  intros; apply wordToN_inj; rewrite ! wordToN_nat; auto.
+Qed.
+
 Lemma wordToNat_natToWord_idempotent : forall sz n,
   (N.of_nat n < Npow2 sz)%N
   -> wordToNat (natToWord sz n) = n.
@@ -1178,3 +1206,115 @@ Lemma wplus_cancel : forall sz (a b c : word sz),
   repeat rewrite wplus_unit in H.
   assumption.
 Qed.
+
+Lemma wminus_plus_distr:
+  forall {sz} (x y z: word sz), x ^- (y ^+ z) = x ^- y ^- z.
+Proof.
+  intros.
+  apply wplus_cancel with (c:= y ^+ z).
+  rewrite wminus_def, <-wplus_assoc.
+  rewrite wplus_comm with (y:= y ^+ z), wminus_inv.
+  rewrite wplus_comm with (x:= x), wplus_unit.
+  rewrite !wminus_def, <-wplus_assoc.
+  rewrite wplus_assoc with (x:= ^~ z).
+  rewrite wplus_comm with (x:= ^~ z).
+  rewrite <-wplus_assoc with (x:= y).
+  rewrite wplus_comm with (x:= ^~ z), wminus_inv.
+  rewrite wplus_comm with (x:= y), wplus_unit.
+  rewrite <-wplus_assoc.
+  rewrite wplus_comm with (x:= ^~ y), wminus_inv.
+  rewrite wplus_comm, wplus_unit.
+  reflexivity.
+Qed.
+
+Lemma wneg_zero:
+  forall {sz} (w: word sz), ^~ w = (natToWord sz 0) -> w = natToWord sz 0.
+Proof.
+  intros.
+  apply wplus_cancel with (c:= ^~ w).
+  rewrite wminus_inv, wplus_unit; auto.
+Qed.
+
+Lemma wneg_idempotent:
+  forall {sz} (w: word sz), ^~ (^~ w) = w.
+Proof.
+  intros.
+  apply sub_0_eq.
+  rewrite wminus_def.
+  rewrite wplus_comm.
+  apply wminus_inv.
+Qed.
+
+Lemma wplus_one_neq: forall {sz} (w: word (S sz)), w ^+ (natToWord (S sz) 1) <> w.
+Proof.
+  intros; intro Hx.
+  rewrite wplus_comm in Hx.
+  assert ((natToWord (S sz) 1) ^+ w ^- w = w ^- w) by (rewrite Hx; reflexivity).
+  clear Hx.
+  do 2 rewrite wminus_def in H.
+  rewrite <-wplus_assoc in H.
+  rewrite wminus_inv in H.
+  rewrite wplus_comm, wplus_unit in H.
+  inversion H.
+Qed.
+
+Lemma wneg_one_pow2_minus_one: forall {sz}, wordToNat (^~ (natToWord sz 1)) = pow2 sz - 1.
+Proof.
+  destruct sz; auto.
+  unfold wneg; intros.
+  rewrite wordToN_nat, roundTrip_1.
+  simpl BinNat.N.of_nat.
+  rewrite NToWord_nat, Nnat.N2Nat.inj_sub, Npow2_nat.
+  apply wordToNat_natToWord_2.
+  pose (pow2_zero (S sz)).
+  omega.
+Qed.
+
+Lemma wones_pow2_minus_one: forall {sz}, wordToNat (wones sz) = pow2 sz - 1.
+Proof.
+  induction sz; simpl; auto.
+  rewrite IHsz; pose (pow2_zero sz).
+  omega.
+Qed.
+
+Lemma pow2_minus_one_wones: forall {sz} (w: word sz),
+    wordToNat w = pow2 sz - 1 -> w = wones sz.
+Proof.
+  intros; rewrite <-wones_pow2_minus_one in H.
+  apply wordToNat_inj; auto.
+Qed.
+
+Lemma wones_wneg_one: forall {sz}, wones sz = ^~ (natToWord sz 1).
+Proof.
+  intros; apply wordToNat_inj.
+  rewrite wneg_one_pow2_minus_one.
+  rewrite wones_pow2_minus_one.
+  reflexivity.
+Qed.
+
+Lemma wordToNat_natToWord_pred:
+  forall {sz} (w: word sz), w <> wzero sz ->
+                            pred (wordToNat w) =
+                            wordToNat (w ^- (natToWord sz 1)).
+Proof.
+  intros; remember (wordToNat w) as wn; destruct wn; simpl in *.
+  - elim H.
+    apply wordToNat_inj.
+    rewrite roundTrip_0; auto.
+  - apply natToWord_inj with (sz:= sz).
+    + rewrite natToWord_wordToNat.
+      apply wplus_cancel with (c:= (natToWord sz 1)).
+      rewrite wminus_def, <-wplus_assoc.
+      rewrite wplus_comm with (x:= ^~ (natToWord sz 1)).
+      rewrite wminus_inv.
+      rewrite wplus_comm with (x:= w).
+      rewrite wplus_unit.
+      rewrite wplus_comm, <-natToWord_S.
+      apply wordToNat_inj.
+      rewrite wordToNat_natToWord_2; auto.
+      rewrite Heqwn.
+      apply wordToNat_bound.
+    + pose proof (wordToNat_bound w); omega.
+    + apply wordToNat_bound.
+Qed.
+
