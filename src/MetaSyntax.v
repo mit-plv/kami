@@ -1,4 +1,5 @@
-Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer.
+Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
+FunctionalExtensionality.
 
 Set Implicit Arguments.
 
@@ -70,28 +71,44 @@ Definition metaInlineDmToRule (inDm: MetaMeths) (r': MetaRules) :=
     | OneRule r, RepeatMeth ff m => OneRule (fold_left inlineDmToRule (getMethsFromMeta inDm) r) :: nil
   end.
 
+Lemma commuteInline:
+  forall rules meths,
+    fold_left inlineDmToRules meths rules =
+    map (fun rule => fold_left inlineDmToRule meths rule) rules.
+Proof.
+  induction rules; simpl in *; intros.
+  - induction meths; simpl in *.
+    + reflexivity.
+    + assumption.
+  - specialize (IHrules meths).
+    rewrite <- IHrules.
+    clear IHrules.
+    generalize a rules; clear.
+    induction meths; simpl in *; intros.
+    + reflexivity.
+    + specialize (IHmeths (inlineDmToRule a0 a) (inlineDmToRules rules a)).
+      assumption.
+Qed.
+
 Section NoBadCalls.
   Variable noBadCalls:
-    forall r fr n,
-      r = RepeatRule fr n ->
-      forall i s j,
+    forall (fr: nat -> Attribute (Action Void)) i s j,
         In (s __ j) (getCallsA (attrType (fr i) typeUT)) -> i = j.
 
-  Lemma test:
-    forall r fr n ff,
-      r = RepeatRule fr n ->
-      forall i, fold_left inlineDmToRule (getList ff n) (fr i) =
-                inlineDmToRule (fr i) (ff i).
+  Lemma onlyOneInline:
+    forall fr n ff,
+      (fun i => inlineDmToRule (fr i) (ff i)) =
+      fun i => fold_left inlineDmToRule (getList ff n) (fr i).
   Proof.
+    intros; extensionality i.
     admit.
   Qed.
 
-    Lemma metaInlineDmToRule_matches inDm r:
+  Lemma metaInlineDmToRule_matches inDm r:
     concat (map getRulesFromMeta (metaInlineDmToRule inDm r)) =
     fold_left inlineDmToRules (getMethsFromMeta inDm) (getRulesFromMeta r).
   Proof.
     unfold metaInlineDmToRule.
-    specialize (@noBadCalls r).
     destruct inDm, r; subst; auto; simpl in *.
     - clear noBadCalls; rewrite app_nil_r.
       induction n; simpl in *.
@@ -103,9 +120,15 @@ Section NoBadCalls.
       + reflexivity.
       + apply (IHl (inlineDmToRule a0 a)).
     - destruct (eq_nat_dec n0 n); subst; simpl in *.
-      specialize (@noBadCalls a n eq_refl).
+      specialize (@noBadCalls a).
       + rewrite app_nil_r.
-        admit.
+        rewrite commuteInline.
+        rewrite onlyOneInline with (n:=n).
+        generalize (getList d n); clear d.
+        induction n; intros; simpl in *.
+        * reflexivity.
+        * f_equal.
+          apply IHn.
       + clear.
         induction (fold_left inlineDmToRules (getList d n) (getList a n0)); simpl in *.
         * reflexivity.
