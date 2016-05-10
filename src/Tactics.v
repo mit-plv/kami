@@ -9,6 +9,7 @@ Set Implicit Arguments.
 (**
 - Kami Tactics
   + kmodular : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
+  + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
   + krefl : prove (a <<== a)
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
   + kequiv_with _tactic_ : also try to apply _tactic_ alternately
@@ -40,6 +41,7 @@ Set Implicit Arguments.
   + Hint Extern 1 (DisjList _ _) => kdisj_list.
   + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
   + Hint Extern 1 (Interacting _ _ _) => repeat split.
+  + Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
  *)
 
 Ltac kstring_simpl :=
@@ -47,6 +49,9 @@ Ltac kstring_simpl :=
 
 Ltac kmodular :=
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
+
+Ltac kmodularn :=
+  apply traceRefines_modular_noninteracting; auto.
 
 Ltac krefl :=
   try rewrite idElementwiseId; apply traceRefines_refl.
@@ -56,7 +61,12 @@ Ltac kequiv_with tac :=
   repeat
     (try tac;
      match goal with
-     | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv
+     | [ |- ModEquiv _ _ _ ] => progress auto
+     | [ |- ModEquiv _ _ ?m ] =>
+       let H := fresh "H" in
+       assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
+       clear H;
+       apply duplicate_ModEquiv
      | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
      | [ |- ModEquiv _ _ _ ] => constructor; intros
      | [ |- RulesEquiv _ _ _ ] => constructor; intros
@@ -305,6 +315,7 @@ Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
 Hint Extern 1 (DisjList _ _) => kdisj_list.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.
+Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
 
 (** Notations for rule maps *)
 Notation "from '|->' to ; cont" :=

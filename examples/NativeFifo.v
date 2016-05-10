@@ -1,6 +1,6 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -71,4 +71,25 @@ Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
 Hint Unfold listEltT listEltK listElt
      listIsEmpty listEnq listDeq listFirstElt
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
+
+Section Facts.
+  Variable fifoName: string.
+  Variable dType: Kind.
+  Variable default: ConstT dType.
+
+  Lemma nativeFifo_ModEquiv:
+    ModEquiv type typeUT (nativeFifo fifoName default).
+  Proof.
+    admit.
+  Qed.
+
+  Lemma nativeSimpleFifo_ModEquiv:
+    ModEquiv type typeUT (nativeSimpleFifo fifoName default).
+  Proof.
+    admit.
+  Qed.
+
+End Facts.
+
+Hint Immediate nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
 

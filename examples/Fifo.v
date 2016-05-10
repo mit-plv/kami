@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
@@ -79,4 +79,25 @@ End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.
 Hint Unfold enq deq : MethDefs.
+
+Section Facts.
+  Variable fifoName: string.
+  Variable sz: nat.
+  Variable dType: Kind.
+
+  Lemma fifo_ModEquiv:
+    ModEquiv type typeUT (fifo fifoName sz dType).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma simpleFifo_ModEquiv:
+    ModEquiv type typeUT (simpleFifo fifoName sz dType).
+  Proof.
+    kequiv.
+  Qed.
+
+End Facts.
+
+Hint Immediate fifo_ModEquiv simpleFifo_ModEquiv.
 
