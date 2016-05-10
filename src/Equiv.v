@@ -27,12 +27,12 @@ Section Equiv.
 
   Inductive ExprEquiv: ctxt ft1 ft2 -> forall {k1 k2}, Expr t1 k1 -> Expr t2 k2 -> Prop :=
   | EEVar:
-      forall G {k} (x1: fullType t1 k) (x2: fullType t2 k),
+      forall G {k1 k2} (x1: fullType t1 k1) (x2: fullType t2 k2),
         In (vars x1 x2) G ->
         ExprEquiv G (Var _ _ x1) (Var _ _ x2)
   | EEConst:
-      forall G {k} (c: ConstT k),
-        ExprEquiv G (Const _ c) (Const _ c)
+      forall G {k1 k2} (c1: ConstT k1) (c2: ConstT k2),
+        ExprEquiv G (Const _ c1) (Const _ c2)
   | EEUniBool:
       forall G uop (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool)),
         ExprEquiv G e1 e2 ->

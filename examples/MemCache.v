@@ -132,7 +132,7 @@ End MemCacheNativeFifo.
 (*       <<== (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id). *)
 (*   Proof. *)
 (*     kmodular. *)
-(*     - *)
+(*     - admit. *)
 (*     - admit. *)
 (*     - admit. *)
 (*     - admit. *)
