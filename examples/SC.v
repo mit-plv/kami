@@ -33,7 +33,7 @@ Section DecExec.
            (v1': fullType typeUT StateK)
            (v2: fullType type (SyntaxKind (Bit addrSize)))
            (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
-      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      In ((vars v1 v1')) G -> In ((vars v2 v2')) G ->
       ExprEquiv G
                 (#(dec (fullType type) v1 v2))%kami
                 (#(dec (fullType typeUT) v1' v2'))%kami.
@@ -43,7 +43,7 @@ Section DecExec.
            (v1': fullType typeUT StateK)
            (v2: fullType type (SyntaxKind (Bit addrSize)))
            (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
-      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      In ((vars v1 v1')) G -> In ((vars v2 v2')) G ->
       ExprEquiv G
                 #(fst (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami
                 #(fst (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami.
@@ -53,7 +53,7 @@ Section DecExec.
            (v1': fullType typeUT StateK)
            (v2: fullType type (SyntaxKind (Bit addrSize)))
            (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G,
-      In (vars (v1, v1')) G -> In (vars (v2, v2')) G ->
+      In ((vars v1 v1')) G -> In ((vars v2 v2')) G ->
       ExprEquiv G
                 #(snd (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami
                 #(snd (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami.

@@ -304,7 +304,7 @@ Lemma inlineDm_ActionEquiv:
          (aU: ActionT type1 retT) (aT: ActionT type2 retT) (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv (vars (argV1, argV2) :: nil)
+       ActionEquiv ((vars argV1 argV2) :: nil)
                    (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
     ActionEquiv G aU aT ->
     ActionEquiv G (inlineDm aU dm) (inlineDm aT dm).
@@ -332,7 +332,7 @@ Lemma inlineDmToRules_RulesEquiv:
   forall {type1 type2} rules (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv (vars (argV1, argV2) :: nil)
+       ActionEquiv ((vars argV1 argV2) :: nil)
                    (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
     RulesEquiv type1 type2 rules ->
     RulesEquiv type1 type2 (inlineDmToRules rules dm).
@@ -345,7 +345,7 @@ Lemma inlineDmToDms_MethsEquiv:
   forall {type1 type2} dms (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv (vars (argV1, argV2) :: nil)
+       ActionEquiv ((vars argV1 argV2) :: nil)
                    (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
     MethsEquiv type1 type2 dms ->
     MethsEquiv type1 type2 (inlineDmToDms dms dm).

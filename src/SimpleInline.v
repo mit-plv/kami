@@ -35,13 +35,13 @@ Section ActionNoCall.
       + f_equal; extensionality v1.
         apply H0 with (v2 := tt); intuition auto.
     - f_equal; extensionality v1.
-      destruct k'; simpl in *.
-      + apply (H0 v1 tt noCalls).
-      + apply (H0 v1 c noCalls).
+      destruct k1'; simpl in *.
+      + eapply H0; eauto.
+      + eapply H0; eauto.
     - f_equal; extensionality v1.
-      destruct k'; simpl in *.
-      + apply (H0 v1 tt noCalls).
-      + apply (H0 v1 c noCalls).
+      destruct k1'; simpl in *.
+      + eapply H0; eauto.
+      + eapply H0; eauto.
     - f_equal; intuition.
     - f_equal.
       + assert (In (attrName dm) (getCallsA ta2) -> False) by intuition.

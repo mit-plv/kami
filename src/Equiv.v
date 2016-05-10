@@ -8,12 +8,15 @@ Section Context.
   Variable type: Type.
   Variables t1 t2: type -> Type.
   
-  Definition ctxt := list { t : type & (t1 t * t2 t)%type }.
-  Definition vars := existT (fun t => (t1 t * t2 t)%type).
+  Definition ctxt := list { k1: type & { k2: type & (t1 k1 * t2 k2)%type } }.
+  Definition vars:
+    forall {k1} (v1: t1 k1) {k2} (v2: t2 k2),
+      { k1: type & { k2: type & (t1 k1 * t2 k2)%type } } :=
+    fun {k1} (v1: t1 k1) {k2} (v2: t2 k2) => existT _ _ (existT _ _ (v1, v2)).
 
 End Context.
 
-Implicit Arguments vars [type t1 t2 x].
+Implicit Arguments vars [type k1 t1 k2 t2].
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.
@@ -22,10 +25,10 @@ Section Equiv.
   Definition ft2 := fullType t2.
   Hint Unfold ft1 ft2.
 
-  Inductive ExprEquiv: ctxt ft1 ft2 -> forall {k}, Expr t1 k -> Expr t2 k -> Prop :=
+  Inductive ExprEquiv: ctxt ft1 ft2 -> forall {k1 k2}, Expr t1 k1 -> Expr t2 k2 -> Prop :=
   | EEVar:
       forall G {k} (x1: fullType t1 k) (x2: fullType t2 k),
-        In (vars (x1, x2)) G ->
+        In (vars x1 x2) G ->
         ExprEquiv G (Var _ _ x1) (Var _ _ x2)
   | EEConst:
       forall G {k} (c: ConstT k),
@@ -104,7 +107,7 @@ Section Equiv.
         ExprEquiv G (UpdateVector e11 e12 e13) (UpdateVector e21 e22 e23).
 
   Lemma ExprEquiv_ctxt:
-    forall G1 G2 {k} (e1: Expr t1 k) e2,
+    forall G1 G2 {k1 k2} (e1: Expr t1 k1) (e2: Expr t2 k2),
       ExprEquiv G1 e1 e2 -> SubList G1 G2 -> ExprEquiv G2 e1 e2.
   Proof. induction 1; intros; constructor; auto. Qed.
 
@@ -115,21 +118,21 @@ Section Equiv.
                     (cont2: t2 (ret s) -> ActionT t2 k),
                (forall (v1: ft1 (SyntaxKind (ret s)))
                        (v2: ft2 (SyntaxKind (ret s))),
-                  ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2)) ->
+                  ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
                ActionEquiv G (MCall n s e1 cont1) (MCall n s e2 cont2)
-  | AELet: forall G {k k'} (e1: Expr t1 k') (e2: Expr t2 k')
-                  (cont1: fullType t1 k' -> ActionT t1 k)
-                  (cont2: fullType t2 k' -> ActionT t2 k),
-             (forall (v1: ft1 k') (v2: ft2 k'),
-                ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2)) ->
+  | AELet: forall G {k k1' k2'} (e1: Expr t1 k1') (e2: Expr t2 k2')
+                  (cont1: fullType t1 k1' -> ActionT t1 k)
+                  (cont2: fullType t2 k2' -> ActionT t2 k),
+             (forall (v1: ft1 k1') (v2: ft2 k2'),
+                ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
              ActionEquiv G (Let_ e1 cont1) (Let_ e2 cont2)
-  | AEReadReg: forall G {k k'} rn
-                      (cont1: fullType t1 k' -> ActionT t1 k)
-                      (cont2: fullType t2 k' -> ActionT t2 k),
-                 (forall (v1: ft1 k') (v2: ft2 k'),
-                    ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2)) ->
+  | AEReadReg: forall G {k k1' k2'} rn
+                      (cont1: fullType t1 k1' -> ActionT t1 k)
+                      (cont2: fullType t2 k2' -> ActionT t2 k),
+                 (forall (v1: ft1 k1') (v2: ft2 k2'),
+                    ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
                  ActionEquiv G (ReadReg rn _ cont1) (ReadReg rn _ cont2)
-  | AEWriteReg: forall G {k k'} rn (e1: Expr t1 k') (e2: Expr t2 k')
+  | AEWriteReg: forall G {k k1' k2'} rn (e1: Expr t1 k1') (e2: Expr t2 k2')
                        (cont1: ActionT t1 k) (cont2: ActionT t2 k),
                   ExprEquiv G e1 e2 -> ActionEquiv G cont1 cont2 ->
                   ActionEquiv G (WriteReg rn e1 cont1) (WriteReg rn e2 cont2)
@@ -138,7 +141,7 @@ Section Equiv.
                      (cont1: t1 k' -> ActionT t1 k) (cont2: t2 k' -> ActionT t2 k),
                 ExprEquiv G e1 e2 -> ActionEquiv G ta1 ta2 -> ActionEquiv G fa1 fa2 ->
                 (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
-                   ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2)) ->
+                   ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
                 ActionEquiv G (IfElse e1 ta1 fa1 cont1) (IfElse e2 ta2 fa2 cont2)
   | AEAssert: forall G {k} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
                      (cont1: ActionT t1 k) (cont2: ActionT t2 k),
@@ -228,7 +231,7 @@ Section Equiv.
       forall dmn dsig (dm: forall ty, ty (arg dsig) -> ActionT ty (ret dsig)),
         (forall (argV1: fullType t1 (SyntaxKind (arg dsig)))
                 (argV2: fullType t2 (SyntaxKind (arg dsig))) G,
-            ActionEquiv (vars (argV1, argV2) :: G)
+            ActionEquiv ((vars argV1 argV2) :: G)
                         (dm t1 argV1) (dm t2 argV2)) ->
         forall meths,
           MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
@@ -241,7 +244,7 @@ Section Equiv.
            (Hin: In m meths),
     forall (v1: ft1 (SyntaxKind (arg (projT1 (attrType m)))))
            (v2: ft2 (SyntaxKind (arg (projT1 (attrType m))))) G,
-      ActionEquiv (vars (v1, v2) :: G)
+      ActionEquiv ((vars v1 v2) :: G)
                   (projT2 (attrType m) t1 v1) (projT2 (attrType m) t2 v2).
   Proof.
     induction 1; intros; inv Hin.
@@ -286,7 +289,7 @@ Section Facts.
            (a22: type2 retT1 -> ActionT type2 retT2)
            (Hequiv2: forall (argV1: ft1 type1 (SyntaxKind retT1))
                             (argV2: ft2 type2 (SyntaxKind retT1)),
-                       ActionEquiv (vars (argV1, argV2) :: G) (a12 argV1) (a22 argV2)),
+                       ActionEquiv ((vars argV1 argV2) :: G) (a12 argV1) (a22 argV2)),
       ActionEquiv G (appendAction a11 a12) (appendAction a21 a22).
   Proof.
     induction 1; intros; try (simpl; constructor; intros; eauto).

@@ -73,7 +73,7 @@ Ltac kequiv_with tac :=
      | [ |- MethsEquiv _ _ _ ] => constructor; intros
      | [ |- ActionEquiv _ _ _ ] => constructor; intros
      | [ |- ExprEquiv _ _ _ ] => constructor; intros
-     | [ |- @ExprEquiv _ _ _ ?fk (ReadField ?a _) (ReadField ?a _) ] =>
+     | [ |- @ExprEquiv _ _ _ ?fk ?fk (ReadField ?a _) (ReadField ?a _) ] =>
        change fk with (SyntaxKind (GetAttrType a)); constructor; intros
      | [ |- In _ _] => simpl; tauto
      end).

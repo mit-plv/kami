@@ -156,7 +156,7 @@ Section WfEval1.
   Lemma wfActionC_WfAction_appendAction:
     forall G {retT retT'} (cont1: ft1 type (SyntaxKind retT) -> ActionT type retT')
            (cont2: ft2 typeUT (SyntaxKind retT) -> ActionT typeUT retT')
-           (Hcequiv: forall v1 v2, ActionEquiv (vars (v1, v2) :: G) (cont1 v1) (cont2 v2))
+           (Hcequiv: forall v1 v2, ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2))
            (Hcwf: forall v1 v2 wr cc cdn,
                     wfActionC wr cc (cont2 v2) cdn = true -> WfAction wr cc (cont1 v1)),
     forall a1 a2 (Hequiv: ActionEquiv G a1 a2),
