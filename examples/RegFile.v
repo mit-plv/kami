@@ -42,12 +42,14 @@ Section Facts.
   Variable init: ConstT (DataArray IdxBits Data).
 
   Lemma regFile_ModEquiv:
-    ModEquiv type typeUT (regFile name _ _ init).
+    forall m,
+      m = regFile name _ _ init ->
+      ModEquiv type typeUT m.
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate regFile_ModEquiv.
+Hint Resolve regFile_ModEquiv.
 

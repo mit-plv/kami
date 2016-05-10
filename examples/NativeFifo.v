@@ -78,18 +78,22 @@ Section Facts.
   Variable default: ConstT dType.
 
   Lemma nativeFifo_ModEquiv:
-    ModEquiv type typeUT (nativeFifo fifoName default).
+    forall m,
+      m = nativeFifo fifoName default ->
+      ModEquiv type typeUT m.
   Proof.
     admit.
   Qed.
 
   Lemma nativeSimpleFifo_ModEquiv:
-    ModEquiv type typeUT (nativeSimpleFifo fifoName default).
+    forall m,
+      m = nativeSimpleFifo fifoName default ->
+      ModEquiv type typeUT m.
   Proof.
     admit.
   Qed.
 
 End Facts.
 
-Hint Immediate nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
+Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
 

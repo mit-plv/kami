@@ -143,28 +143,33 @@ Section Facts.
              (HexecEquiv_2: ExecEquiv_2 dec exec).
 
   Lemma pdecf_ModEquiv:
-    forall fsz, ModEquiv type typeUT (pdecf fsz dec exec).
+    forall fsz m,
+      m = pdecf fsz dec exec ->
+      ModEquiv type typeUT m.
   Proof.
     (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
     admit.
   Qed.
+  Hint Resolve pdecf_ModEquiv.
 
   Lemma pdecfs_ModEquiv:
-    forall fsz n, ModEquiv type typeUT (pdecfs fsz dec exec n).
+    forall fsz n m,
+      m = pdecfs fsz dec exec n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros; apply duplicate_ModEquiv.
-    apply pdecf_ModEquiv.
+    kequiv.
   Qed.
+  Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall fsz n, ModEquiv type typeUT (procDecM fsz dec exec n).
+    forall fsz n m,
+      m = procDecM fsz dec exec n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros; apply ModEquiv_modular.
-    - apply pdecfs_ModEquiv.
-    - apply memInst_ModEquiv.
+    kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
+Hint Resolve pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
 

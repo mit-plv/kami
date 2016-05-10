@@ -18,7 +18,7 @@ Section ProcDecSCN.
              (HexecEquiv_2: ExecEquiv_2 dec exec).
 
   (* Variable n: nat. *)
-  Definition n := 2.
+  Definition n := 2. (* TODO: should work for general n *)
   
   Definition pdecN := procDecM fifoSize dec exec n.
   Definition scN := sc dec exec opLd opSt opHt n.
@@ -26,8 +26,14 @@ Section ProcDecSCN.
   Lemma pdecN_refines_scN: traceRefines (liftToMap1 (@idElementwise _)) pdecN scN.
   Proof.
     kmodular.
+    - kequiv.
+    - kequiv.
+    - kequiv.
+    - kequiv.
     - kduplicated.
-      apply pdec_refines_pinst.
+      + kequiv.
+      + kequiv.
+      + apply pdec_refines_pinst.
     - krefl.
   Qed.
 

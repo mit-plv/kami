@@ -42,6 +42,7 @@ Set Implicit Arguments.
   + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
   + Hint Extern 1 (Interacting _ _ _) => repeat split.
   + Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
+  + Hint Extern 1 (_ = _: Modules) => apply eq_refl.
  *)
 
 Ltac kstring_simpl :=
@@ -56,27 +57,30 @@ Ltac kmodularn :=
 Ltac krefl :=
   try rewrite idElementwiseId; apply traceRefines_refl.
 
+Ltac kequiv_unit tac :=
+  try tac;
+  match goal with
+  | [ |- ModEquiv _ _ _ ] => progress eauto
+  | [ |- ModEquiv _ _ ?m ] =>
+    let H := fresh "H" in
+    assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
+    clear H;
+    apply duplicate_ModEquiv
+  | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
+  | [ |- ModEquiv _ _ _ ] => constructor; intros
+  | [ |- RulesEquiv _ _ _ ] => constructor; intros
+  | [ |- MethsEquiv _ _ _ ] => constructor; intros
+  | [ |- ActionEquiv _ _ _ ] => constructor; intros
+  | [ |- ExprEquiv _ _ _ ] => constructor; intros
+  | [ |- @ExprEquiv _ _ _ ?fk ?fk (ReadField ?a _) (ReadField ?a _) ] =>
+    change fk with (SyntaxKind (GetAttrType a)); constructor; intros
+  | [ |- In _ _] => simpl; tauto
+  end.
+
 Ltac kequiv_with tac :=
+  intros; subst;
   repeat autounfold with MethDefs;
-  repeat
-    (try tac;
-     match goal with
-     | [ |- ModEquiv _ _ _ ] => progress auto
-     | [ |- ModEquiv _ _ ?m ] =>
-       let H := fresh "H" in
-       assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
-       clear H;
-       apply duplicate_ModEquiv
-     | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
-     | [ |- ModEquiv _ _ _ ] => constructor; intros
-     | [ |- RulesEquiv _ _ _ ] => constructor; intros
-     | [ |- MethsEquiv _ _ _ ] => constructor; intros
-     | [ |- ActionEquiv _ _ _ ] => constructor; intros
-     | [ |- ExprEquiv _ _ _ ] => constructor; intros
-     | [ |- @ExprEquiv _ _ _ ?fk ?fk (ReadField ?a _) (ReadField ?a _) ] =>
-       change fk with (SyntaxKind (GetAttrType a)); constructor; intros
-     | [ |- In _ _] => simpl; tauto
-     end).
+  repeat (kequiv_unit tac).
 
 Ltac kequiv := kequiv_with idtac.
 
@@ -316,6 +320,7 @@ Hint Extern 1 (DisjList _ _) => kdisj_list.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.
 Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
+Hint Extern 1 (_ = _: Modules) => apply eq_refl.
 
 (** Notations for rule maps *)
 Notation "from '|->' to ; cont" :=

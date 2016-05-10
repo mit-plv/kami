@@ -239,12 +239,14 @@ Section Facts.
   Variable Id: Kind.
 
   Lemma l1Cache_ModEquiv:
-    ModEquiv type typeUT (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
+    forall m,
+      m = l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id ->
+      ModEquiv type typeUT m.
   Proof.
-    admit. (* kequiv. *)
+    admit. (* kequiv should work; but a bit slow *)
   Qed.
 
 End Facts.
 
-Hint Immediate l1Cache_ModEquiv.
+Hint Resolve l1Cache_ModEquiv.
 

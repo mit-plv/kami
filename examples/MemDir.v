@@ -185,12 +185,14 @@ Section Facts.
   Variable Id: Kind.
 
   Lemma memDir_ModEquiv:
-    ModEquiv type typeUT (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    forall m,
+      m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
+      ModEquiv type typeUT m.
   Proof.
-    admit.
+    admit. (* TODO: foldInc equivalence *)
   Qed.
 
 End Facts.
 
-Hint Immediate memDir_ModEquiv.
+Hint Resolve memDir_ModEquiv.
 

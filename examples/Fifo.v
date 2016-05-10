@@ -86,18 +86,22 @@ Section Facts.
   Variable dType: Kind.
 
   Lemma fifo_ModEquiv:
-    ModEquiv type typeUT (fifo fifoName sz dType).
+    forall m,
+      m = fifo fifoName sz dType ->
+      ModEquiv type typeUT m.
   Proof.
     kequiv.
   Qed.
 
   Lemma simpleFifo_ModEquiv:
-    ModEquiv type typeUT (simpleFifo fifoName sz dType).
+    forall m,
+      m = simpleFifo fifoName sz dType ->
+      ModEquiv type typeUT m.
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate fifo_ModEquiv simpleFifo_ModEquiv.
+Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv.
 
