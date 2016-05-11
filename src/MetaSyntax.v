@@ -1,5 +1,5 @@
 Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
-FunctionalExtensionality String Equiv.
+FunctionalExtensionality String Equiv Program.Equality.
 
 Set Implicit Arguments.
 
@@ -35,6 +35,17 @@ Section MetaDefns.
       | nil => nil
     end.
 
+  Lemma getFullListFromMeta_app m1: forall m2, getFullListFromMeta (m1 ++ m2) =
+                                               getFullListFromMeta m1 ++ getFullListFromMeta m2.
+  Proof.
+    induction m1; intros.
+    - reflexivity.
+    - simpl.
+      rewrite <- app_assoc.
+      f_equal.
+      apply IHm1; intuition.
+  Qed.
+  
   Fixpoint getNamesOfMeta m :=
     match m with
       | One a => attrName a
@@ -303,8 +314,31 @@ Section NoBadCalls.
     {| metaRegs := metaRegs m;
        metaRules := concat (map (metaInlineDmToRule inDm) (metaRules m));
        metaMeths := concat (map (metaInlineDmToDm inDm) (metaMeths m)) |}.
-
 End NoBadCalls.
+
+Lemma metaInlineDmToRules_matches (rules: list MetaRule) :
+  forall (regs: list MetaReg) a (meths: list MetaMeth),
+    (forall sr fr n , In (Rep sr fr n) rules ->
+                      forall s i j,
+                        In (s __ j) (getCallsA (fr i typeUT)) ->
+                        i = j) ->
+    In a meths ->
+    getFullListFromMeta (concat (map (metaInlineDmToRule a) rules)) =
+    fold_left inlineDmToRules (getListFromMeta a)
+              (getFullListFromMeta rules).
+Proof.
+  dependent induction rules; simpl in *; intros.
+  - clear; induction (getListFromMeta a); simpl in *; auto.
+  - rewrite commuteInlineDmRules.
+    rewrite map_app.
+    rewrite <- !commuteInlineDmRules.
+    rewrite getFullListFromMeta_app.
+    f_equal.
+    apply metaInlineDmToRule_matches with (m := {| metaRegs := regs;
+                                                   metaRules := a :: rules;
+                                                   metaMeths := meths |}); simpl in *; intuition.
+    eapply IHrules; eauto.
+Qed.
 
 Fixpoint metaInlineDmsToMod m (inDms: list MetaMeth) :=
   match inDms with
@@ -315,34 +349,49 @@ Fixpoint metaInlineDmsToMod m (inDms: list MetaMeth) :=
 Definition metaInline m :=
   metaInlineDmsToMod m (metaMeths m).
 
-(*
 Lemma simpleInlineDmsToMod_app dms1:
-  forall dms2 m,
-    simpleInlineDmsToMod (Modm (dms1 ++ dms2) =
-    simpleInlineDmsToMod (simpleInlineDmsToMod m dms1) dms2.
+  forall dms2 regs rules meths,
+    simpleInlineDmsToMod (Mod regs rules meths) (dms1 ++ dms2) =
+    simpleInlineDmsToMod (simpleInlineDmsToMod (Mod regs rules meths) dms1) dms2.
 Proof.
   induction dms1; simpl in *; intros.
   - intuition.
-  - specialize (IHdms1 dms2 (simpleInlineDmToMod m a)).
+  - specialize (IHdms1 dms2).
+    unfold simpleInlineDmToMod at 1.
+    simpl in *.
+    specialize (@IHdms1 regs (inlineDmToRules rules a) meths).
     assumption.
 Qed.
-*)
+
+Lemma inlineDmsInMod_app dms1:
+  forall dms2 regs rules meths,
+    inlineDmsInMod (Mod regs rules meths) (dms1 ++ dms2) =
+    inlineDmsInMod (inlineDmsInMod (Mod regs rules meths) dms1) dms2.
+Proof.
+  induction dms1; simpl in *; intros.
+  - intuition.
+  - specialize (IHdms1 dms2).
+    unfold inlineDmsInMod in *; simpl in *.
+    apply IHdms1.
+Qed.
 
 Section MetaModule.
   Lemma metaInline_matches dms:
     forall m,
       makeModule (metaInlineDmsToMod m dms) =
-      simpleInlineDmsToMod (makeModule m) (getFullListFromMeta dms).
+      inlineDmsInMod (makeModule m) (getFullListFromMeta dms).
   Proof.
     unfold makeModule; simpl in *.
     induction dms; simpl in *; intros.
     - reflexivity.
-    - (* rewrite simpleInlineDmsToMod_app.
+    - rewrite inlineDmsInMod_app; simpl in *.
       specialize (IHdms (metaInlineDmToMod m a)); simpl in *.
       rewrite IHdms.
       f_equal.
+      unfold inlineDmsInMod; simpl in *.
       clear.
-      unfold simpleInlineDmsToMod, simpleInlineDmToMod. *)
+      f_equal.
+      admit.
       admit.
   Qed.
 
