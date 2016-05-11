@@ -61,24 +61,6 @@ Hint Unfold l1Cache l1cs l1tag l1line l1
      childParent fifoRqFromC fifoRsFromC fifoToC childParentC
      memDir mline mdir memDirC memCache: ModuleDefs.
 
-Section Facts.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
-  Variable Id: Kind.
-  
-  Variable FifoSize: nat.
-  Variable n: nat.
-
-  Lemma memCache_ModEquiv:
-    ModEquiv type typeUT
-             (memCache IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n).
-  Proof.
-    admit.
-  Qed.
-
-End Facts.
-
-Hint Immediate memCache_ModEquiv.
-
 Section MemCacheNativeFifo.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.

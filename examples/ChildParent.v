@@ -65,12 +65,14 @@ Section Facts.
   Variable Id: Kind.
 
   Lemma childParent_ModEquiv:
-    ModEquiv type typeUT (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    forall m,
+      m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
+      ModEquiv type typeUT m.
   Proof.
     admit. (* ModEquiv for repetition *)
   Qed.
 
 End Facts.
 
-Hint Immediate childParent_ModEquiv.
+Hint Resolve childParent_ModEquiv.
 

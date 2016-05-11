@@ -63,27 +63,24 @@ Hint Unfold minst inQ outQ ioQ midQ iom ioms memAtomic : ModuleDefs.
 
 Section Facts.
 
-  Lemma minst_ModEquiv:
-    forall a d n, ModEquiv type typeUT (minst a d n).
-  Proof.
-    intros; apply memInst_ModEquiv.
-  Qed.
-  
   Lemma ioms_ModEquiv:
-    forall a sz d n, ModEquiv type typeUT (ioms a sz d n).
+    forall a sz d n m,
+      m = ioms a sz d n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros; kequiv.
+    kequiv.
   Qed.
+  Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomic_ModEquiv:
-    forall a sz d n, ModEquiv type typeUT (memAtomic a sz d n).
+    forall a sz d n m,
+      m = memAtomic a sz d n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros; apply ModEquiv_modular.
-    - apply ioms_ModEquiv.
-    - apply minst_ModEquiv.
+    kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate minst_ModEquiv ioms_ModEquiv memAtomic_ModEquiv.
+Hint Immediate ioms_ModEquiv memAtomic_ModEquiv.
 

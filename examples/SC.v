@@ -211,26 +211,32 @@ Section Facts.
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Lemma pinst_ModEquiv:
-    ModEquiv type typeUT (pinst dec exec opLd opSt opHt).
+    forall m,
+      m = pinst dec exec opLd opSt opHt ->
+      ModEquiv type typeUT m.
   Proof.
     admit.
     (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
   Qed.
-
+  Hint Resolve pinst_ModEquiv.
+  
   Lemma pinsts_ModEquiv:
-    forall n, ModEquiv type typeUT (pinsts dec exec opLd opSt opHt n).
+    forall n m,
+      m = pinsts dec exec opLd opSt opHt n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros.
-    apply duplicate_ModEquiv.
-    apply pinst_ModEquiv.
+    kequiv.
   Qed.
+  Hint Resolve pinsts_ModEquiv.
 
   Lemma memInst_ModEquiv:
-    forall n a d, ModEquiv type typeUT (memInst n a d).
+    forall n a d m,
+      m = memInst n a d ->
+      ModEquiv type typeUT m.
   Proof.
     admit.
   Qed.
-  (*   intros; constructor. *)
+  (*   intros; subst; constructor. *)
   (*   - induction n; simpl. *)
   (*     + constructor. *)
   (*     + unfold memInst; simpl. *)
@@ -274,23 +280,17 @@ Section Facts.
   (*         replace nbc with (nbc ++ nil) in IHn by (rewrite app_nil_r; auto). *)
   (*         auto. *)
   (* Qed. *)
-
-  Lemma minst_ModEquiv:
-    forall n a d, ModEquiv type typeUT (minst n a d).
-  Proof.
-    intros; apply memInst_ModEquiv.
-  Qed.
+  Hint Resolve memInst_ModEquiv.
 
   Lemma sc_ModEquiv:
-    forall n, ModEquiv type typeUT (sc dec exec opLd opSt opHt n).
+    forall n m,
+      m = sc dec exec opLd opSt opHt n ->
+      ModEquiv type typeUT m.
   Proof.
-    intros; apply ModEquiv_modular.
-    - apply pinsts_ModEquiv.
-    - apply minst_ModEquiv.
+    kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate pinst_ModEquiv pinsts_ModEquiv
-     memInst_ModEquiv minst_ModEquiv sc_ModEquiv.
+Hint Resolve pinst_ModEquiv pinsts_ModEquiv memInst_ModEquiv sc_ModEquiv.
 
