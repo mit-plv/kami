@@ -315,9 +315,10 @@ Fixpoint metaInlineDmsToMod m (inDms: list MetaMeth) :=
 Definition metaInline m :=
   metaInlineDmsToMod m (metaMeths m).
 
+(*
 Lemma simpleInlineDmsToMod_app dms1:
   forall dms2 m,
-    simpleInlineDmsToMod m (dms1 ++ dms2) =
+    simpleInlineDmsToMod (Modm (dms1 ++ dms2) =
     simpleInlineDmsToMod (simpleInlineDmsToMod m dms1) dms2.
 Proof.
   induction dms1; simpl in *; intros.
@@ -325,6 +326,7 @@ Proof.
   - specialize (IHdms1 dms2 (simpleInlineDmToMod m a)).
     assumption.
 Qed.
+*)
 
 Section MetaModule.
   Lemma metaInline_matches dms:
@@ -335,15 +337,16 @@ Section MetaModule.
     unfold makeModule; simpl in *.
     induction dms; simpl in *; intros.
     - reflexivity.
-    - rewrite simpleInlineDmsToMod_app.
+    - (* rewrite simpleInlineDmsToMod_app.
       specialize (IHdms (metaInlineDmToMod m a)); simpl in *.
       rewrite IHdms.
       f_equal.
       clear.
-      unfold simpleInlineDmsToMod, simpleInlineDmToMod.
+      unfold simpleInlineDmsToMod, simpleInlineDmToMod. *)
       admit.
   Qed.
 
+  Variable m: MetaModule.
   Variable rulesEquiv: forall ty r, In r (metaRules m) -> metaRuleEquiv ty typeUT r.
   Variable methsEquiv: forall ty f, In f (metaMeths m) -> metaMethEquiv ty typeUT f.
 
