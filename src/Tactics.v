@@ -171,7 +171,7 @@ Ltac kinline_compute_in H :=
 Ltac kinline_left im :=
   match goal with
   | [ |- traceRefines _ ?lm _ ] =>
-    apply traceRefines_inlining_left; auto;
+    apply traceRefines_inlining_left; eauto;
     let Heq := fresh "Heq" in
     remember (inlineF lm) as im eqn:Heq;
     kinline_compute_in Heq;
