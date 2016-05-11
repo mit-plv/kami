@@ -79,8 +79,7 @@ Ltac kequiv_unit tac :=
 
 Ltac kequiv_with tac :=
   intros; subst;
-  repeat autounfold with MethDefs;
-  repeat (kequiv_unit tac).
+  repeat (repeat autounfold with MethDefs; kequiv_unit tac).
 
 Ltac kequiv := kequiv_with idtac.
 

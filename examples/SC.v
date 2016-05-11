@@ -215,8 +215,7 @@ Section Facts.
       m = pinst dec exec opLd opSt opHt ->
       ModEquiv type typeUT m.
   Proof.
-    admit.
-    (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
+    kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
   Qed.
   Hint Resolve pinst_ModEquiv.
   
@@ -234,7 +233,7 @@ Section Facts.
       m = memInst n a d ->
       ModEquiv type typeUT m.
   Proof.
-    admit.
+    admit. (* TODO: repetition equiv *)
   Qed.
   (*   intros; subst; constructor. *)
   (*   - induction n; simpl. *)
