@@ -1069,48 +1069,45 @@ Qed.
 
 Lemma module_structure_indep_substep:
   forall m1 m2 or u ul cs,
-    getRegInits m1 = getRegInits m2 ->
     getRules m1 = getRules m2 ->
     getDefsBodies m1 = getDefsBodies m2 ->
     Substep m1 or u ul cs ->
     Substep m2 or u ul cs.
 Proof.
-  induction 4; simpl; intros; try (econstructor; eauto).
+  induction 3; simpl; intros; try (econstructor; eauto).
+  - rewrite <-H; auto.
   - rewrite <-H0; auto.
-  - rewrite <-H1; auto.
 Qed.
 
 Lemma module_structure_indep_substepsInd:
   forall m1 m2 or u l,
-    getRegInits m1 = getRegInits m2 ->
     getRules m1 = getRules m2 ->
     getDefsBodies m1 = getDefsBodies m2 ->
     SubstepsInd m1 or u l ->
     SubstepsInd m2 or u l.
 Proof.
-  induction 4; simpl; intros; [constructor|].
+  induction 3; simpl; intros; [constructor|].
   subst; econstructor; eauto.
   eapply module_structure_indep_substep; eauto.
 Qed.
 
 Lemma module_structure_indep_step:
   forall m1 m2 or u l,
-    getRegInits m1 = getRegInits m2 ->
     getRules m1 = getRules m2 ->
     getDefsBodies m1 = getDefsBodies m2 ->
     Step m1 or u l ->
     Step m2 or u l.
 Proof.
   intros.
-  apply step_consistent in H2.
+  apply step_consistent in H1.
   apply step_consistent.
-  inv H2; constructor.
+  inv H1; constructor.
   - eapply module_structure_indep_substepsInd; eauto.
   - destruct (hide l0) as [a d c].
     unfold wellHidden in *; simpl in *.
     rewrite <-module_structure_indep_getCalls with (ma:= m1); auto.
     unfold getDefs in *.
-    rewrite <-H1; auto.
+    rewrite <-H0; auto.
 Qed.
 
 Lemma flatten_preserves_substep:

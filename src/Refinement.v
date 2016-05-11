@@ -124,7 +124,7 @@ Section Facts.
 
   Lemma traceRefines_assoc_1:
     forall ma mb mc,
-      traceRefines id  ((ma ++ mb) ++ mc)%kami (ma ++ (mb ++ mc))%kami.
+      traceRefines id ((ma ++ mb) ++ mc)%kami (ma ++ (mb ++ mc))%kami.
   Proof.
     unfold traceRefines; intros.
     exists s1, sig1; split.
@@ -137,7 +137,6 @@ Section Facts.
       + constructor; auto.
         clear -HStep.
         apply module_structure_indep_step with (m1:= ((ma ++ mb) ++ mc)%kami); auto.
-        * simpl; rewrite app_assoc; auto.
         * simpl; rewrite app_assoc; auto.
         * simpl; rewrite app_assoc; auto.
       
@@ -160,7 +159,6 @@ Section Facts.
       + constructor; auto.
         clear -HStep.
         apply module_structure_indep_step with (m1:= (ma ++ mb ++ mc)%kami); auto.
-        * simpl; rewrite app_assoc; auto.
         * simpl; rewrite app_assoc; auto.
         * simpl; rewrite app_assoc; auto.
           
