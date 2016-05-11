@@ -6,3 +6,4 @@ Makefile.coq
 *~
 .coq-native
 *.DS_Store
+src/crap

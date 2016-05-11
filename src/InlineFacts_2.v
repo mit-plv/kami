@@ -754,7 +754,8 @@ Lemma inlineDms'_correct_Substeps:
     SubstepsInd (fst (inlineDms' m cdms)) or nr (hideMeths l cdms).
 Proof.
   induction cdms; auto.
-  
+  intros; simpl.
+  apply merge_preserves_substepsInd; assumption.
   intros; simpl.
   apply SubList_cons_inv in Hcdms; dest.
   remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl.

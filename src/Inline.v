@@ -89,7 +89,7 @@ Section Exts.
 
   Fixpoint inlineDms' (m: Modules) (dms: list string) :=
     match dms with
-      | nil => (m, true)
+      | nil => (Mod (getRegInits m) (getRules m) (getDefsBodies m), true)
       | dm :: dms' =>
         let (im, ib) := inlineDmToMod m dm in
         let (im', ib') := inlineDms' im dms' in
