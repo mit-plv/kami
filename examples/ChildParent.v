@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations.
+Require Import Lts.Semantics Lts.Equiv Lts.Tactics.
 Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
@@ -34,24 +35,23 @@ Section ChildParent.
   Definition n := wordToNat (wones LgNumChildren).
   Definition childParent :=
     MODULE {
-        Repeat n as i {
-          Rule ("rqFromCToP"__ i) :=
-            Call rq <- (rqToPPop i)();
-            Call rqFromCEnq(STRUCT{"child" ::= $ i; "rq" ::= #rq});
-            Retv
+      Repeat Rule as i till n by "rqFromCToP" :=
+        Call rq <- (rqToPPop i)();
+        Call rqFromCEnq(STRUCT{"child" ::= $ i; "rq" ::= #rq});
+        Retv
               
-          with Rule ("rsFromCToP"__ i) :=
-            Call rs <- (rsToPPop i)();
-            Call rsFromCEnq(STRUCT{"child" ::= $ i; "rs" ::= #rs});
-            Retv
+      with Repeat Rule as i till n by "rsFromCToP" :=
+        Call rs <- (rsToPPop i)();
+        Call rsFromCEnq(STRUCT{"child" ::= $ i; "rs" ::= #rs});
+        Retv
 
-          with Rule ("fromPToC"__ i) :=
-            Call msg <- toCPop();
-            Assert $ i == #msg@."child";
-            Call (fromPEnq i)(#msg@."msg");
-            Retv
-                      }
-      }.
+      with Repeat Rule as i till n by "fromPToC" :=
+        Call msg <- toCPop();
+        Assert $ i == #msg@."child";
+        Call (fromPEnq i)(#msg@."msg");
+        Retv
+    }.
+  
 End ChildParent.
 
 Hint Unfold AddrBits Addr Idx Data Offset Line : MethDefs.
@@ -69,7 +69,7 @@ Section Facts.
       m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
       ModEquiv type typeUT m.
   Proof.
-    admit. (* ModEquiv for repetition *)
+    admit. (* ModEquiv for repetition (meta-syntax) *)
   Qed.
 
 End Facts.

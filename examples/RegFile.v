@@ -1,5 +1,5 @@
 Require Import String Lib.Indexer.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Section RegFile.
   Variable name: string.

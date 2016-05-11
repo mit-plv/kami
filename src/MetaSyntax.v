@@ -1,5 +1,7 @@
-Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
-FunctionalExtensionality String Equiv.
+Require Import Coq.Arith.Peano_dec String List.
+Require Import Lib.Indexer Lib.Struct.
+Require Import Lts.Syntax Lts.Wf Lts.Equiv Lts.Inline Lts.SimpleInline.
+Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
 

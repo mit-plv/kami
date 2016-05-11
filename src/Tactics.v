@@ -1,6 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Wf Lts.Equiv Lts.Refinement.
+Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
+Require Import Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize.
 Require Import Lts.Decomposition Lts.DecompositionZero.
 
@@ -124,7 +125,10 @@ Ltac kinline_compute :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeModule makeModule' numbered
+               makeMetaModule
+               getListFromRep getListFromMeta
+               getFullListFromMeta getNamesOfMeta
+               metaRegs metaRules metaMeths makeModule
                wfModules wfRules wfDms wfAction wfActionC
                maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf
@@ -151,7 +155,10 @@ Ltac kinline_compute_in H :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeModule makeModule' numbered
+               makeMetaModule
+               getListFromRep getListFromMeta
+               getFullListFromMeta getNamesOfMeta
+               metaRegs metaRules metaMeths makeModule
                wfModules wfRules wfDms wfAction wfActionC
                maxPathLength max plus
                getRegInits getDefs getDefsBodies getRules namesOf

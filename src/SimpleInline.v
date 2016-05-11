@@ -1,5 +1,7 @@
-Require Import Syntax Inline List Lib.Struct Program.Equality Equiv
-        String FunctionalExtensionality InlineFacts_2.
+Require Import List String.
+Require Import Lib.Struct.
+Require Import Lts.Equiv Lts.Syntax Lts.Inline Lts.InlineFacts_2.
+Require Import Program.Equality FunctionalExtensionality.
 
 Set Implicit Arguments.
 

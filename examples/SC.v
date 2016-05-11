@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -92,21 +92,20 @@ Section MemInst.
   Definition memInst := MODULE {
     Register "mem" : Vector dType addrSize <- Default
 
-    with Repeat n as i {
-      Method ("exec"__ i)(a : atomK) : atomK :=
-        If (#a@."type" == $$memLd) then
-          Read memv <- "mem";
-          LET ldval <- #memv@[#a@."addr"];
-          Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
-               :: atomK)
-        else
-          Read memv <- "mem";
-          Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
-          Ret #a
-        as na;
-        Ret #na
-    }
+    with Repeat Method as i till n by "exec" (a : atomK) : atomK :=
+      If (#a@."type" == $$memLd) then
+        Read memv <- "mem";
+        LET ldval <- #memv@[#a@."addr"];
+        Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
+                    :: atomK)
+      else
+        Read memv <- "mem";
+        Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
+        Ret #a
+      as na;
+      Ret #na
   }.
+  
 End MemInst.
 
 Hint Unfold atomK memLd memSt : MethDefs.

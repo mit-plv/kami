@@ -567,7 +567,9 @@ Qed.
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
-(* Notations: registers and methods declaration *)
+(** * Notation corner! *)
+
+(** Notations for registers and methods declaration *)
 Notation Default := (getDefaultConst _).
 Notation "'MethodSig' name () : retT" :=
   (Build_Attribute name {| arg := Void; ret := retT |})
@@ -576,7 +578,7 @@ Notation "'MethodSig' name ( argT ) : retT" :=
   (Build_Attribute name {| arg := argT; ret := retT |})
   (at level 0, name at level 0, argT at level 200, retT at level 200).
 
-(* Notations: expression *)
+(** Notations for expressions *)
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_scope.
 
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
@@ -615,13 +617,9 @@ Delimit Scope kami_struct_scope with struct.
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Struct (cons s1%struct .. (cons sN%struct nil) ..)).
 
-
-(** * Notation corner! *)
-
-(* Notations: action *)
+(** Notations for action *)
 
 (* Coercion attrName : Attribute >-> string. *)
-
 Notation "'Call' meth ( arg ) ; cont " :=
   (MCall (attrName meth) (attrType meth) arg (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_scope.
@@ -671,97 +669,7 @@ Notation "'Ret' expr" :=
   (Return expr) (at level 12) : kami_scope.
 Notation Retv := (Return (Const _ (k := Void) Default)).
 
-(* * Modules *)
-
-Inductive InModule :=
-| NilInModule
-| RegisterInModule (_ : RegInitT)
-| RuleInModule (_ : Attribute (Action Void))
-| MethodInModule (_ : DefMethT)
-| ConcatInModule (_ _ : InModule)
-| NumberedInModule (f : nat -> InModule) (n : nat).
-
-Section numbered.
-  Variable makeModule' : InModule
-                         -> list RegInitT
-                            * list (Attribute (Action Void))
-                            * list DefMethT.
-
-  Variable f : nat -> InModule.
-
-  Fixpoint numbered (n : nat) :=
-    match n with
-      | O => (nil, nil, nil)
-      | S n' =>
-        let '(a, b, c) := makeModule' (f n') in
-        let '(a', b', c') := numbered n' in
-        (a ++ a', b ++ b', c ++ c')
-    end.
-End numbered.
-
-Fixpoint makeModule' (im : InModule) := 
-  match im with
-    | NilInModule => (nil, nil, nil)
-    | RegisterInModule r => (r :: nil, nil, nil)
-    | RuleInModule r => (nil, r :: nil, nil)
-    | MethodInModule r => (nil, nil, r :: nil)
-    | ConcatInModule im1 im2 =>
-      let '(a1, b1, c1) := makeModule' im1 in
-      let '(a2, b2, c2) := makeModule' im2 in
-      (a1 ++ a2, b1 ++ b2, c1 ++ c2)
-    | NumberedInModule f n => numbered makeModule' f n
-  end.
-
-Definition makeModule (im : InModule) :=
-  let '(a, b, c) := makeModule' im in
-  Mod a b c.
-
-Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c.
-
-Notation DefaultFull := (makeConst Default).
-
-Definition firstAction {T} (ls : list (Action T)) : Action T :=
-  match ls with
-  | a :: _ => a
-  | _ => fun _ => Return (Const _ Default)
-  end.
-
-(*
-Notation "'ACTION' { a1 'with' .. 'with' aN }" := (firstAction (cons (fun _ => a1%kami) .. (cons (fun _ => aN%kami) nil) ..))
-  (at level 0, only parsing, a at level 200). *)
-
-Notation "'ACTION' { a }" := (fun ty => a%kami : ActionT ty _)
-  (at level 0, only parsing, a at level 0).
-
-Notation "'Register' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (existT ConstFullT (SyntaxKind type) (makeConst init))))
-  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
-
-Notation "'RegisterN' name : type <- init" :=
-  (RegisterInModule (Build_Attribute name (existT ConstFullT (type) (init))))
-  (at level 0, name at level 0, type at level 0, init at level 0) : kami_method_scope.
-
-Notation "'Method' name () : retT := c" :=
-  (MethodInModule (Build_Attribute name (existT MethodT {| arg := Void; ret := retT |}
-     (fun ty => fun _ : ty Void => (c)%kami : ActionT ty retT))))
-  (at level 0, name at level 0) : kami_method_scope.
-
-Notation "'Method' name ( param : dom ) : retT := c" :=
-  (MethodInModule (Build_Attribute name (existT MethodT {| arg := dom; ret := retT |}
-     (fun ty => fun param : ty dom => (c)%kami : ActionT ty retT))))
-  (at level 0, name at level 0, param at level 0, dom at level 0) : kami_method_scope.
-
-Notation "'Rule' name := c" :=
-  (RuleInModule (Build_Attribute name (fun ty => c%kami : ActionT ty Void)))
-  (at level 0, name at level 0) : kami_method_scope.
-
-Delimit Scope kami_method_scope with method.
-
-Notation "'Repeat' count 'as' n { m1 'with' .. 'with' mN }" :=
-  (NumberedInModule (fun n => ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..) count)
-  (at level 0, count at level 0, n at level 0) : kami_method_scope.
-
-Notation "'MODULE' { m1 'with' .. 'with' mN }" := (makeModule (ConcatInModule m1%method .. (ConcatInModule mN%method NilInModule) ..)) (at level 0, only parsing).
+(** Miscellaneous Notations *)
 
 Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
            {attrs}
