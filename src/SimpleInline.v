@@ -171,7 +171,7 @@ End NoCallsInDefs.
 
 Fixpoint simpleInlineDmsToMod m dms :=
   match dms with
-    | nil => m
+    | nil => Mod (getRegInits m) (getRules m) (getDefsBodies m)
     | x :: xs => simpleInlineDmsToMod (simpleInlineDmToMod m x) xs
   end.
 
@@ -215,6 +215,127 @@ Proof.
   assumption.
 Qed.
 
+Lemma commuteInlineDmMeths:
+  forall rs meths,
+    fold_left inlineDmToDms meths rs =
+    map (fun r => fold_left inlineDmToDm meths r) rs.
+Proof.
+  induction rs; simpl in *; intros.
+  - induction meths; simpl in *.
+    + reflexivity.
+    + assumption.
+  - specialize (IHrs meths).
+    rewrite <- IHrs.
+    clear IHrs.
+    generalize a rs; clear.
+    induction meths; simpl in *; intros.
+    + reflexivity.
+    + specialize (IHmeths (inlineDmToDm a0 a) (inlineDmToDms rs a)).
+      assumption.
+Qed.
+
+
+Section MethNoCalls.
+  Variable dms1 dms2: list DefMethT.
+  Variable notInCalls: forall dm, ~ (In (attrName dm) (getCallsM dms1) /\ In dm dms2).
+  Theorem inlineNoCallsMeths_matches (equiv: forall ty, MethsEquiv ty typeUT dms1)
+  : fold_left inlineDmToDms dms2 dms1 = dms1.
+  Proof.
+    rewrite commuteInlineDmMeths.
+    induction dms1; simpl in *.
+    - intuition.
+    - f_equal.
+      + clear IHl dms1.
+        assert (sth: forall dm,
+                       ~ (In (attrName dm)
+                             (getCallsA (projT2 (attrType a) typeUT tt)) /\ In dm dms2))
+          by (intros; specialize (notInCalls dm); intuition).
+        induction dms2; simpl in *.
+        * reflexivity.
+        * assert
+            (sth2:
+               forall (dm: Attribute (sigT MethodT)),
+                 ~ (In (attrName dm) (getCallsA (projT2 (attrType a) typeUT tt) ++ getCallsM l)
+                    /\ In dm l0)) by
+              (intros; specialize (notInCalls dm); intuition).
+          specialize (IHl0 sth2).
+          assert
+            (sth3:
+               forall dm, ~ (In (attrName dm) (getCallsA (projT2 (attrType a) typeUT tt)) /\
+                             In dm l0)) by (intros; specialize (sth dm); intuition).
+          specialize (IHl0 sth3).
+          rewrite <- IHl0 at 2.
+          f_equal.
+          assert
+            (sth4:
+               forall dm,
+                 ~ (In (attrName dm) (getCallsA (projT2 (attrType a) typeUT tt))
+                    /\ a0 = dm)) by (intros; specialize (sth dm); intuition).
+          specialize (sth4 a0).
+          assert (sth5: ~ In (attrName a0) (getCallsA (projT2 (attrType a) typeUT tt))) by
+              intuition.
+          destruct a; unfold inlineDmToDm; simpl in *.
+          f_equal.
+          destruct attrType; simpl in *.
+          f_equal.
+          extensionality ty.
+          extensionality v.
+          specialize (equiv ty).
+          dependent destruction equiv.
+          specialize (H v tt nil).
+          eapply inlineNoCallsAction_matches; eauto.
+      + apply IHl; intros.
+        * specialize (notInCalls dm); intuition.
+        * specialize (equiv ty).
+          dependent destruction equiv.
+          assumption.
+  Qed.
+End MethNoCalls.
+
+Definition inlineDmsInMod m dms :=
+  Mod (getRegInits m) (fold_left inlineDmToRules dms (getRules m))
+      (fold_left inlineDmToDms dms (getDefsBodies m)).
+
+Lemma inlineDmsInMod_correct ds:
+  forall m,
+    (forall dm, In dm ds -> In dm (getDefsBodies m)) ->
+    (forall i, ~ (In i (getCallsM (getDefsBodies m)) /\ In i (getDefs m))) ->
+    NoDup (getDefs m) ->
+    (forall ty, ModEquiv ty typeUT m) ->
+    inlineDmsInMod m ds =
+    fst (inlineDms' m (namesOf ds)).
+Proof.
+  intros; rewrite <- simpleInlineDmsToMod_matches; auto.
+  unfold inlineDmsInMod; simpl in *.
+  generalize m H H0 H1 H2; clear.
+  induction ds; intros; simpl in *.
+  - reflexivity.
+  - specialize (IHds (simpleInlineDmToMod m a)).
+    unfold getDefs in IHds; simpl in *.
+    assert (forall dm, In dm ds -> In dm (getDefsBodies m))
+      by (intros;
+          specialize (H dm); intuition).
+    assert (sth: In a (getDefsBodies m)) by (specialize (H a); intuition).
+    specialize (IHds H3 H0 H1 (simpleInlineModEquiv H0 H1 H2 _ sth)).
+    rewrite inlineNoCallMeths_matches; auto.
+
+    assert (sth2: In (attrName a) (getDefs m)).
+    { unfold getDefs.
+      clear - sth.
+      induction (getDefsBodies m).
+      - intuition.
+      - destruct sth; subst; simpl in *.
+        intuition.
+        intuition.
+    }
+    specialize (H0 (attrName a)).
+    intuition.
+    intros.
+    specialize (H2 ty).
+    destruct H2.
+    assumption.
+Qed.
+
 Definition simpleInline m := simpleInlineDmsToMod m (getDefsBodies m).
 
 Lemma simpleInline_matches1 m:
@@ -254,6 +375,31 @@ Lemma simpleInline_matches2 m:
 Proof.
   intros.
   apply simpleInline_matches1; auto.
+  clear H0 H1; unfold not; intros.
+  destruct H0.
+  unfold getDefs in H1.
+  apply inNamesInList in H1.
+  destruct H1.
+  apply getCallsM_implies_getCallsDm in H0.
+  destruct H0.
+  destruct H0.
+  apply (H _ _ H0 H1 H2).
+Qed.
+
+Definition inlineDmsIn m := inlineDmsInMod m (getDefsBodies m).
+
+Lemma inlineDmsIn_matches m:
+  (forall dm dmBody, In dm (getDefsBodies m) ->
+                     In dmBody (getDefsBodies m) ->
+                     In (attrName dmBody) (getCallsDm dm) ->
+                     False) ->
+  NoDup (getDefs m) ->
+  (forall ty, ModEquiv ty typeUT m) ->
+  inlineDmsIn m = fst (inlineDms m).
+Proof.
+  intros.
+  unfold inlineDmsIn.
+  rewrite inlineDmsInMod_correct; auto.
   clear H0 H1; unfold not; intros.
   destruct H0.
   unfold getDefs in H1.
