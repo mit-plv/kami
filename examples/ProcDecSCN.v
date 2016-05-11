@@ -17,8 +17,7 @@ Section ProcDecSCN.
              (HexecEquiv_1: ExecEquiv_1 dec exec)
              (HexecEquiv_2: ExecEquiv_2 dec exec).
 
-  (* Variable n: nat. *)
-  Definition n := 2. (* TODO: should work for general n *)
+  Variable n: nat.
   
   Definition pdecN := procDecM fifoSize dec exec n.
   Definition scN := sc dec exec opLd opSt opHt n.
@@ -30,6 +29,14 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
     - kduplicated.
       + kequiv.
       + kequiv.

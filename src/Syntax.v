@@ -474,7 +474,18 @@ Section GetCalls.
     - right; simpl; rewrite getCallsM_app.
       apply in_or_app; auto.
   Qed.
-    
+
+  Lemma module_structure_indep_getCalls:
+    forall ma mb,
+      getRules ma = getRules mb ->
+      getDefsBodies ma = getDefsBodies mb ->
+      getCalls ma = getCalls mb.
+  Proof.
+    intros.
+    unfold getCalls.
+    rewrite H, H0; auto.
+  Qed.
+
 End GetCalls.
 
 Section NoInternalCalls.

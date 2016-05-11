@@ -1067,39 +1067,74 @@ Proof.
         apply SubList_cons_right; auto.
 Qed.
 
-Lemma merge_preserves_substep:
+Lemma module_structure_indep_substep:
+  forall m1 m2 or u ul cs,
+    getRegInits m1 = getRegInits m2 ->
+    getRules m1 = getRules m2 ->
+    getDefsBodies m1 = getDefsBodies m2 ->
+    Substep m1 or u ul cs ->
+    Substep m2 or u ul cs.
+Proof.
+  induction 4; simpl; intros; try (econstructor; eauto).
+  - rewrite <-H0; auto.
+  - rewrite <-H1; auto.
+Qed.
+
+Lemma module_structure_indep_substepsInd:
+  forall m1 m2 or u l,
+    getRegInits m1 = getRegInits m2 ->
+    getRules m1 = getRules m2 ->
+    getDefsBodies m1 = getDefsBodies m2 ->
+    SubstepsInd m1 or u l ->
+    SubstepsInd m2 or u l.
+Proof.
+  induction 4; simpl; intros; [constructor|].
+  subst; econstructor; eauto.
+  eapply module_structure_indep_substep; eauto.
+Qed.
+
+Lemma module_structure_indep_step:
+  forall m1 m2 or u l,
+    getRegInits m1 = getRegInits m2 ->
+    getRules m1 = getRules m2 ->
+    getDefsBodies m1 = getDefsBodies m2 ->
+    Step m1 or u l ->
+    Step m2 or u l.
+Proof.
+  intros.
+  apply step_consistent in H2.
+  apply step_consistent.
+  inv H2; constructor.
+  - eapply module_structure_indep_substepsInd; eauto.
+  - destruct (hide l0) as [a d c].
+    unfold wellHidden in *; simpl in *.
+    rewrite <-module_structure_indep_getCalls with (ma:= m1); auto.
+    unfold getDefs in *.
+    rewrite <-H1; auto.
+Qed.
+
+Lemma flatten_preserves_substep:
   forall m or u ul cs,
     Substep m or u ul cs ->
     Substep (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or u ul cs.
-Proof. induction 1; simpl; intros; try (econstructor; eauto). Qed.
+Proof.
+  intros; apply module_structure_indep_substep with (m1:= m); auto.
+Qed.
 
-Lemma merge_preserves_substepsInd:
+Lemma flatten_preserves_substepsInd:
   forall m or u l,
     SubstepsInd m or u l ->
     SubstepsInd (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or u l.
 Proof.
-  induction 1; intros; [constructor|].
-  subst; eapply SubstepsCons; eauto.
-  apply merge_preserves_substep; auto.
+  intros; apply module_structure_indep_substepsInd with (m1:= m); auto.
 Qed.
 
-Lemma merge_preserves_stepInd:
-  forall m or nr l,
-    StepInd m or nr l ->
-    StepInd (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or nr l.
-Proof.
-  intros; inv H.
-  constructor; auto.
-  apply merge_preserves_substepsInd; auto.
-Qed.
-
-Lemma merge_preserves_step:
+Lemma flatten_preserves_step:
   forall m or nr l,
     Step m or nr l ->
     Step (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or nr l.
 Proof.
-  intros; apply step_consistent; apply step_consistent in H.
-  apply merge_preserves_stepInd; auto.
+  intros; apply module_structure_indep_step with (m1:= m); auto.
 Qed.
 
 Lemma substep_dms_weakening:
@@ -1272,4 +1307,5 @@ Proof.
   eapply SubstepsCons; eauto.
   eapply substep_oldRegs_weakening; eauto.
 Qed.
+
 

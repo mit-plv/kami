@@ -753,10 +753,7 @@ Lemma inlineDms'_correct_Substeps:
     snd (inlineDms' m cdms) = true ->
     SubstepsInd (fst (inlineDms' m cdms)) or nr (hideMeths l cdms).
 Proof.
-  induction cdms; auto.
-  intros; simpl.
-  apply merge_preserves_substepsInd; assumption.
-  intros; simpl.
+  induction cdms; intros; simpl; [apply flatten_preserves_substepsInd; auto|].
   apply SubList_cons_inv in Hcdms; dest.
   remember (inlineDmToMod m a) as imb; destruct imb as [im ib]; simpl.
   remember (inlineDms' im cdms) as imc; destruct imc as [im' ib']; simpl.
@@ -857,7 +854,7 @@ Proof.
   - replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
     apply inline_ModEquiv; auto.
   - apply noInternalCalls_implies_disj; auto.
-  - apply merge_preserves_step; auto.
+  - apply flatten_preserves_step; auto.
 Qed.
   
 Lemma inlineDms'_preserves_regInits:

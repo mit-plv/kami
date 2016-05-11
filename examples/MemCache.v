@@ -99,33 +99,45 @@ Section MemCacheNativeFifo.
               
 End MemCacheNativeFifo.
 
-(* Require Import Lib.FMap Lts.Refinement FifoCorrect. *)
+Require Import Lib.FMap Lts.Refinement FifoCorrect.
 
-(* Section Refinement. *)
-(*   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. *)
-(*   Variable Id: Kind. *)
+Section Refinement.
+  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variable Id: Kind.
 
-(*   Variable FifoSize: nat. *)
+  Variable FifoSize: nat.
 
-(*   Variable n: nat. (* number of l1 caches (cores) *) *)
+  Variable n: nat. (* number of l1 caches (cores) *)
 
-(*   Lemma l1C_refines_nl1C: *)
-(*     (l1C IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize)) *)
-(*       <<== (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id). *)
-(*   Proof. *)
-(*     kmodular. *)
-(*     - admit. *)
-(*     - admit. *)
-(*     - admit. *)
-(*     - admit. *)
-(*     - krefl. *)
-(*     - kmodularn. *)
-(*       + admit. *)
-(*       + admit. *)
-(*       + admit. *)
-(*       + admit. *)
-(*       + apply fifo_refines_nativefifo. *)
-(*   Abort. *)
+  Lemma l1C_refines_nl1C:
+    (l1C IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize))
+      <<== (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id).
+  Proof.
+    admit.
+    (* kmodular; [kequiv|kequiv|kequiv|kequiv| |]. *)
+    (* - krefl. *)
+    (* - kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
+    (*   + apply fifo_refines_nativefifo. *)
+    (*   + kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
+    (*     * apply fifo_refines_nativefifo. *)
+    (*     * kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
+    (*       { apply fifo_refines_nativefifo. } *)
+    (*       { kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
+    (*         { apply fifo_refines_nativefifo. } *)
+    (*         { apply fifo_refines_nativefifo. } *)
+    (*       } *)
+  Qed.
 
-(* End Refinement. *)
+  Lemma l1s_refines_nl1s:
+    (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
+      <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
+  Proof.
+    admit.
+    (* kduplicated. *)
+    (* - kequiv. *)
+    (* - kequiv. *)
+    (* - apply l1C_refines_nl1C. *)
+  Qed.
+
+End Refinement.
 
