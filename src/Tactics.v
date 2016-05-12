@@ -1,5 +1,6 @@
-Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.Word Lib.StringBound Lib.Struct Lib.Indexer Lib.StringEq Lib.FMap.
+Require Import Bool String List Eqdep.
+Require Import Lib.CommonTactics Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
+Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize.
@@ -58,6 +59,10 @@ Ltac kmodularn :=
 Ltac krefl :=
   try rewrite idElementwiseId; apply traceRefines_refl.
 
+(* CAUTION: do not use the "simpl" tactic during kequiv_unit;
+ *          "simpl" will destruct all BoundedIndexFull information, 
+ *          which is needed for the Struct equivalence
+ *)
 Ltac kequiv_unit tac :=
   try tac;
   match goal with
@@ -76,6 +81,12 @@ Ltac kequiv_unit tac :=
   | [ |- @ExprEquiv _ _ _ ?fk ?fk (ReadField ?a _) (ReadField ?a _) ] =>
     change fk with (SyntaxKind (GetAttrType a)); constructor; intros
   | [ |- In _ _] => simpl; tauto
+  (* For dealing with BuildStruct *)
+  | [H: Some _ = nth_error _ ?i |- _] =>
+    destruct i; [inversion H; subst; rewrite (UIP_refl _ _ H) in *
+                |unfold nth_error in H; fold (nth_error (A:= Attribute Kind)) in H]
+  | [H: context [ith_error _ ?i] |- _] => first [is_var i | inv H; destruct_existT]
+  | [H: Some _ = error |- _] => inv H
   end.
 
 Ltac kequiv_with tac :=

@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations.
+Require Import Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -198,6 +199,8 @@ End SC.
 
 Hint Unfold pinst pinsts minst sc : ModuleDefs.
 
+Require Import MetaSyntax.
+
 Section Facts.
   Variables opIdx addrSize valSize rfIdx : nat.
 
@@ -232,52 +235,17 @@ Section Facts.
       m = memInst n a d ->
       ModEquiv type typeUT m.
   Proof.
-    admit. (* TODO: repetition equiv *)
-  Qed.
-  (*   intros; subst; constructor. *)
-  (*   - induction n; simpl. *)
-  (*     + constructor. *)
-  (*     + unfold memInst; simpl. *)
-  (*       remember (numbered _ _ _) as nb; destruct nb as [[nba nbb] nbc]; simpl. *)
-  (*       unfold memInst in IHn; simpl in IHn; rewrite <-Heqnb in IHn; simpl in IHn. *)
-  (*       auto. *)
-  (*   - induction n. *)
-  (*     + constructor. *)
-  (*     + Opaque map. (* when map is done with "simpl", we lose information from BoundedIndexFull *) *)
-  (*       unfold memInst; simpl. *)
-  (*       remember (numbered _ _ _) as nb; destruct nb as [[nba nbb] nbc]. *)
-  (*       unfold memInst in IHn; simpl in IHn; rewrite <-Heqnb in IHn; simpl in IHn. *)
-  (*       rewrite app_nil_r in *. *)
-  (*       Transparent map. *)
-  (*       kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
+    (* TODO: extend kequiv for meta-syntax (repetition) *)
+    intros; subst.
+    unfold memInst, makeMetaModule, makeModule.
+    constructor; [constructor|].
+    apply MethsEquiv_app; [|constructor].
 
-  (*       * (* TODO: automate, should be a part of "kequiv" *) *)
-  (*         match goal with *)
-  (*         | [H: In ?a _, H1: ilist_In ?e1 _, H2: ilist_In ?e2 _ |- ExprEquiv _ ?e1 ?e2 ] => *)
-  (*           dest_in *)
-  (*         end. *)
-  (*         { repeat *)
-  (*             match goal with *)
-  (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
-  (*             end. *)
-  (*           kequiv. *)
-  (*         } *)
-  (*         { repeat *)
-  (*             match goal with *)
-  (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
-  (*             end. *)
-  (*           kequiv. *)
-  (*         } *)
-  (*         { repeat *)
-  (*             match goal with *)
-  (*             | [H: ilist_In _ _ |- _] => inv H; destruct_existT *)
-  (*             end. *)
-  (*           kequiv. *)
-  (*         } *)
-  (*       * clear -IHn. *)
-  (*         replace nbc with (nbc ++ nil) in IHn by (rewrite app_nil_r; auto). *)
-  (*         auto. *)
-  (* Qed. *)
+    induction n; intros.
+    - constructor.
+    - constructor; [|assumption].
+      kequiv.
+  Qed.
   Hint Resolve memInst_ModEquiv.
 
   Lemma sc_ModEquiv:

@@ -90,11 +90,12 @@ Section Equiv.
       forall G {attrs: list (Attribute Kind)}
              (s1: ilist (fun a => Expr t1 (SyntaxKind (attrType a))) attrs)
              (s2: ilist (fun a => Expr t2 (SyntaxKind (attrType a))) attrs),
-        (forall a, In a attrs ->
-                   forall (e1: Expr t1 (SyntaxKind (attrType a)))
-                          (e2: Expr t2 (SyntaxKind (attrType a))),
-                     ilist_In e1 s1 -> ilist_In e2 s2 ->
-                     ExprEquiv G e1 e2) ->
+        (forall i a (Ha: Some a = nth_error attrs i)
+                (e1: Expr t1 (SyntaxKind (attrType a)))
+                (e2: Expr t2 (SyntaxKind (attrType a))),
+            ith_error s1 i = match Ha with eq_refl => Dep_Some _ _ e1 end ->
+            ith_error s2 i = match Ha with eq_refl => Dep_Some _ _ e2 end ->
+            ExprEquiv G e1 e2) ->
         ExprEquiv G (BuildStruct s1) (BuildStruct s2)
   | EEUpdateVector:
       forall G {i k} (e11: Expr t1 (SyntaxKind (Vector k i)))
@@ -109,7 +110,7 @@ Section Equiv.
   Lemma ExprEquiv_ctxt:
     forall G1 G2 {k1 k2} (e1: Expr t1 k1) (e2: Expr t2 k2),
       ExprEquiv G1 e1 e2 -> SubList G1 G2 -> ExprEquiv G2 e1 e2.
-  Proof. induction 1; intros; constructor; auto. Qed.
+  Proof. induction 1; intros; constructor; eauto. Qed.
 
   Inductive ActionEquiv: forall {k}, ctxt ft1 ft2 -> ActionT t1 k -> ActionT t2 k -> Prop :=
   | AEMCall: forall G {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
