@@ -15,10 +15,8 @@ Section ProcDec.
   Variables addrSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
-
-  Definition getNextPc ty ppc st inst := fst (exec ty st ppc inst).
-  Definition getNextState ty ppc st := snd (exec ty st ppc (dec ty st ppc)).
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
 
   Definition opLd : ConstT (Bit 2) := WO~0~0.
   Definition opSt : ConstT (Bit 2) := WO~0~1.
@@ -29,19 +27,19 @@ Section ProcDec.
   Definition memRep := MethodSig (outName .. "deq")() : memAtomK addrSize valSize.
   Definition halt := MethodSig "HALT"() : Void.
 
-  Definition nextPc {ty} ppc st : ActionT ty Void := (
-    Write "pc" <- #(getNextPc _ ppc st (dec _ st ppc));
-    Retv
-  )%kami.
+  Definition nextPc {ty} ppc st inst :=
+    (Write "pc" <- execNextPc ty st ppc inst;
+     Retv)%kami.
 
   Definition reqLd {ty} : ActionT ty Void :=
     (Read stall <- "stall";
      Assert !#stall;
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert #(dec _ st ppc)@."opcode" == $$opLd;
+     LET inst <- dec _ st ppc;
+     Assert #inst@."opcode" == $$opLd;
      Call memReq(STRUCT {  "type" ::= $$memLd;
-                           "addr" ::= #(dec _ st ppc)@."addr";
+                           "addr" ::= #inst@."addr";
                            "value" ::= $$Default });
      Write "stall" <- $$true;
      Retv)%kami.
@@ -51,10 +49,11 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert #(dec _ st ppc)@."opcode" == $$opSt;
+     LET inst <- dec _ st ppc;
+     Assert #inst@."opcode" == $$opSt;
      Call memReq(STRUCT {  "type" ::= $$opSt;
-                           "addr" ::= #(dec _ st ppc)@."addr";
-                           "value" ::= #(dec _ st ppc)@."value" });
+                           "addr" ::= #inst@."addr";
+                           "value" ::= #inst@."value" });
      Write "stall" <- $$true;
      Retv)%kami.
 
@@ -62,27 +61,30 @@ Section ProcDec.
     (Call val <- memRep();
      Read ppc <- "pc";
      Read st <- "rf";
+     LET inst <- dec _ st ppc;
      (* Assert #val@."type" == $$opLd; *)
-     Assert #(dec _ st ppc)@."opcode" == $$opLd;
-     Write "rf" <- #st@[#(dec _ st ppc)@."reg" <- #val@."value"];
+     Assert #inst@."opcode" == $$opLd;
+     Write "rf" <- #st@[#inst@."reg" <- #val@."value"];
      Write "stall" <- $$false;
-     nextPc ppc st)%kami.
+     nextPc ppc st inst)%kami.
 
   Definition repSt {ty} : ActionT ty Void :=
     (Call val <- memRep();
      Read ppc <- "pc";
      Read st <- "rf";
+     LET inst <- dec _ st ppc;
      (* Assert #val@."type" == $$opSt; *)
-     Assert #(dec _ st ppc)@."opcode" == $$opSt;
+     Assert #inst@."opcode" == $$opSt;
      Write "stall" <- $$false;
-     nextPc ppc st)%kami.
+     nextPc ppc st inst)%kami.
 
   Definition execHt {ty} : ActionT ty Void :=
     (Read stall <- "stall";
      Assert !#stall;
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert #(dec _ st ppc)@."opcode" == $$opHt;
+     LET inst <- dec _ st ppc;
+     Assert #inst@."opcode" == $$opHt;
      Call halt();
      Retv)%kami.
 
@@ -91,11 +93,12 @@ Section ProcDec.
      Assert !#stall;
      Read ppc <- "pc";
      Read st <- "rf";
-     Assert !(#(dec _ st ppc)@."opcode" == $$opLd
-           || #(dec _ st ppc)@."opcode" == $$opSt
-           || #(dec _ st ppc)@."opcode" == $$opHt);
-     Write "rf" <- #(getNextState _ ppc st);
-     nextPc ppc st)%kami.
+     LET inst <- dec _ st ppc;
+     Assert !(#inst@."opcode" == $$opLd
+           || #inst@."opcode" == $$opSt
+           || #inst@."opcode" == $$opHt);
+     Write "rf" <- execState _ st ppc inst;
+     nextPc ppc st inst)%kami.
 
   Definition procDec := MODULE {
     Register "pc" : Bit addrSize <- Default
@@ -113,7 +116,7 @@ Section ProcDec.
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold getNextPc getNextState opLd opSt opHt
+Hint Unfold opLd opSt opHt
      memReq memRep halt nextPc
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
@@ -121,9 +124,10 @@ Section ProcDecM.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
 
-  Definition pdec := procDec "Ins"%string "Outs"%string dec exec.
+  Definition pdec := procDec "Ins"%string "Outs"%string dec execState execNextPc.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize (Bit valSize)).
   Definition pdecfs (i: nat) := duplicate pdecf i.
@@ -137,14 +141,15 @@ Section Facts.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
-  Hypotheses (HdecEquiv: DecEquiv dec)
-             (HexecEquiv_1: ExecEquiv_1 dec exec)
-             (HexecEquiv_2: ExecEquiv_2 dec exec).
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
+  (* Hypotheses (HdecEquiv: DecEquiv dec) *)
+  (*            (HexecEquiv_1: ExecEquiv_1 dec exec) *)
+  (*            (HexecEquiv_2: ExecEquiv_2 dec exec). *)
 
   Lemma pdecf_ModEquiv:
     forall fsz m,
-      m = pdecf fsz dec exec ->
+      m = pdecf fsz dec execState execNextPc ->
       ModEquiv type typeUT m.
   Proof.
     kequiv.
@@ -153,7 +158,7 @@ Section Facts.
 
   Lemma pdecfs_ModEquiv:
     forall fsz n m,
-      m = pdecfs fsz dec exec n ->
+      m = pdecfs fsz dec execState execNextPc n ->
       ModEquiv type typeUT m.
   Proof.
     kequiv.
@@ -162,7 +167,7 @@ Section Facts.
 
   Lemma procDecM_ModEquiv:
     forall fsz n m,
-      m = procDecM fsz dec exec n ->
+      m = procDecM fsz dec execState execNextPc n ->
       ModEquiv type typeUT m.
   Proof.
     kequiv.

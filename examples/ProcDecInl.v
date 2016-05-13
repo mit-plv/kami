@@ -8,9 +8,10 @@ Section Inlined.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
 
-  Definition pdec := pdecf fifoSize dec exec.
+  Definition pdec := pdecf fifoSize dec execState execNextPc.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: Modules * bool.

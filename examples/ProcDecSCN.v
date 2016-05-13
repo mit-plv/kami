@@ -12,15 +12,16 @@ Section ProcDecSCN.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
-  Hypotheses (HdecEquiv: DecEquiv dec)
-             (HexecEquiv_1: ExecEquiv_1 dec exec)
-             (HexecEquiv_2: ExecEquiv_2 dec exec).
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
+  (* Hypotheses (HdecEquiv: DecEquiv dec) *)
+  (*            (HexecEquiv_1: ExecEquiv_1 dec exec) *)
+  (*            (HexecEquiv_2: ExecEquiv_2 dec exec). *)
 
   Variable n: nat.
   
-  Definition pdecN := procDecM fifoSize dec exec n.
-  Definition scN := sc dec exec opLd opSt opHt n.
+  Definition pdecN := procDecM fifoSize dec execState execNextPc n.
+  Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
   Lemma pdecN_refines_scN: traceRefines (liftToMap1 (@idElementwise _)) pdecN scN.
   Proof.

@@ -226,13 +226,6 @@ Ltac kdecompose_nodefs t r :=
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
   auto. (* kdecompose_regMap_init *)
 
-Ltac kinv_add inv :=
-  let H := fresh "H" in
-  pose proof inv as H;
-  match goal with
-  | [Hr: reachable _ _ |- _] => specialize (H _ _ _ _ _ _ _ Hr)
-  end.
-
 Ltac kinv_add_end :=
   match goal with
   | [H: reachable _ _ |- _] => clear H
@@ -283,13 +276,15 @@ Ltac kinv_red :=
   dest; try subst; kinv_simpl.
 
 Ltac kinv_finish :=
-  unfold IndexBound_head, IndexBound_tail in *; simpl in *;
+  unfold IndexBound_head, IndexBound_tail in *;
+  repeat autounfold with MethDefs;
+  simpl in *;
   repeat
     (try match goal with
-         | [H: _ = _ |- _] => rewrite H in *; simpl in *; clear H
-         | [H: _ = _ |- _] => rewrite <-H in *; simpl in *; clear H
+         | [H: _ = _ |- _] => rewrite H in *; clear H
+         | [H: _ = _ |- _] => rewrite <-H in *; clear H
          end;
-     kinv_simpl; auto).
+     simpl in *; kinv_simpl; auto).
 
 Ltac kinv_magic_with tac :=
   repeat
