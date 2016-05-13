@@ -4,11 +4,26 @@ Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib
 
 Set Implicit Arguments.
 
-Fixpoint concat A (ls: list (list A)) :=
-  match ls with
-    | x :: xs => x ++ concat xs
-    | nil => nil
-  end.
+Section Concat.
+  Fixpoint concat A (ls: list (list A)) :=
+    match ls with
+      | x :: xs => x ++ concat xs
+      | nil => nil
+    end.
+
+  Variable A B: Type.
+  Variable f: A -> list B.
+  Lemma in_concat (ls: list A):
+    forall b, In b (concat (map f ls)) -> exists a, In a ls /\ In b (f a).
+  Proof.
+    induction ls; intros; simpl in *.
+    - intuition.
+    - apply in_app_or in H.
+      destruct H; [exists a; intuition auto | ].
+      specialize (IHls _ H).
+      dest; eexists; eauto.
+  Qed.
+End Concat.
 
 Section MetaDefns.
   Variable A: Type.
@@ -598,130 +613,170 @@ Proof.
     apply IHdms1.
 Qed.
 
-(*
-Section MetaModule.
-  Lemma metaInline_matches dms:
-    forall m,
-      SubList dms (metaMeths m) ->
-      (forall dm ty, In dm (metaMeths m) -> metaMethEquiv ty typeUT dm) ->
-      (forall dm1 dm2, In dm1 (metaMeths m) -> In dm2 (metaMeths m) ->
-                       In (attrName dm1) (getCallsMAction (attrType dm2))) ->
-      (forall sr fr n, In (Rep sr fr n) (metaRules m) ->
-                       forall s i j,
-                         In (s __ j) (getCallsA (fr i typeUT)) ->
-                         i = j) ->
-      (forall sr fr n, In (Rep sr fr n) (metaMeths m) ->
-                       forall s i j,
-                         In (s __ j) (getCallsMAction (fr i)) ->
-                         i = j) ->
-      (forall r, In r (metaRules m) -> forall ty, metaRuleEquiv ty typeUT r) ->
-      (forall dm, In dm (metaMeths m) -> forall ty, metaMethEquiv ty typeUT dm) ->
-      makeModule (metaInlineDmsToMod m dms) =
-      inlineDmsInMod (makeModule m) (getFullListFromMeta dms).
-  Proof.
-    unfold makeModule; simpl in *.
-    induction dms; simpl in *; intros; auto.
-    rewrite inlineDmsInMod_app; simpl in *.
-    specialize (IHdms (metaInlineDmToMod m a)); simpl in *.
-    rewrite IHdms.
-    - f_equal.
-      unfold inlineDmsInMod; simpl in *.
-      f_equal.           (mEquiv: forall ),
+Lemma metaInlineDmToRule_equiv dm r:
+  (forall ty, metaMethEquiv ty typeUT dm) ->
+  (forall ty, metaRuleEquiv ty typeUT r) ->
+  forall r', In r' (metaInlineDmToRule dm r) ->
+             forall ty, metaRuleEquiv ty typeUT r'.
+Proof.
+  intros.
+  specialize (H ty); specialize (H0 ty).
+  unfold metaInlineDmToRule, metaMethEquiv, metaRuleEquiv in *; simpl in *.
+  destruct r, dm, r'; simpl in *.
+  - destruct H1; intuition auto.
+    inv H1.
+    unfold inlineDmToRule; simpl in *.
+    apply inlineDm_ActionEquiv; auto.
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    inv H1.
+    generalize dependent a.
+    induction n; simpl in *; intros.
+    + apply inlineDm_ActionEquiv; simpl in *; auto.
+    + unfold inlineDmToRule at 2; unfold inlineDmToRule at 3; simpl in *.
+      match goal with
+        | [|- context [fold_left inlineDmToRule _ (attrName a :: ?P)%struct]] =>
+          pose P as sth; simpl in sth
+      end.
+      assert (sth2: forall G, ActionEquiv G (attrType (attrName a :: sth)%struct ty)
+                                         (attrType (attrName a :: sth)%struct typeUT)).
+      { unfold sth; simpl in *; intros; apply inlineDm_ActionEquiv; auto.
+        intuition; simpl in *; auto.
+      }
+      apply (IHn _ sth2).
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    inv H1.
+    apply inlineDm_ActionEquiv; simpl in *; auto.
+  - destruct (eq_nat_dec n n0); simpl in *; subst.
+    + destruct H1; intuition auto.
+      discriminate.
+    + rewrite commuteInlineDmRules in H1.
+      apply in_map_iff in H1; dest.
+      inv H1.
+      clear n1.
+      assert (sth: exists i, fold_left inlineDmToRule (getListFromRep s0 s1 n0)
+                                       (s __ i :: a i)%struct = a0).
+      { clear - H2; induction n; simpl in *; intuition auto.
+        - exists 0; auto.
+        - exists (S n); auto.
+      }
+      dest.
+      clear H2; subst.
+      { specialize (H0 x); generalize dependent a; induction n0; simpl in *; intros.
+        - apply inlineDm_ActionEquiv; simpl in *; auto.
+        - unfold inlineDmToRule at 2; unfold inlineDmToRule at 3; simpl in *.
+          match goal with
+            | [|- context [fold_left inlineDmToRule _ (_ :: ?P)%struct]] =>
+              pose P as sth; simpl in sth
+          end.
+          assert (sth2: forall G, ActionEquiv G (attrType (s __ x :: sth)%struct ty)
+                                              (attrType (s __ x :: sth)%struct typeUT)).
+          { unfold sth; simpl in *; intros; apply inlineDm_ActionEquiv; auto.
+            intuition; simpl in *; auto.
+          }
+          specialize (IHn0 (fun x => sth) sth2 G).
+          fold sth.
+          assumption.
+      }
+  - destruct (eq_nat_dec n n0); simpl in *; subst.
+    + destruct H1; intuition auto.
+      inv H1.
+      apply inlineDm_ActionEquiv; simpl in *; auto.
+    + rewrite commuteInlineDmRules in H1.
+      match goal with
+        | [H: In _ (map _ ?P) |- _] => clear -H; induction P; simpl in *; intuition (try discriminate; auto)
+      end.
+Qed.
 
-      apply metaInlineDmToRules_matches; auto.
-      unfold SubList in H; specialize (H a); simpl in H.
-      assert (In a (metaMeths m)) by intuition.
-      eapply H3; eauto.
-      intros.
-      rewrite H4 in H.
-      assert (In (Rep sr fr n) (metaMeths m)) by intuition.
-      eapply H1; eauto.
-      apply metaInlineDmToDms_matches; auto.
-      assert (In a (metaMeths m)) by intuition.
-      eapply H3; eauto.
-      intros.
-      rewrite H4 in H.
-      assert (In (Rep sr fr n) (metaMeths m)) by intuition.
-      eapply H1; eauto.
-    - 
-    - admit.
-    - clear IHdms dms; intros.
-      intros.
-      destruct a; simpl in *.
-      remember (metaRules m) as sth.
-      remember (metaMeths m) as nth.
-      clear Heqsth Heqnth m.
-      induction sth; simpl in *.
-      + intuition.
-      + assert (sth1:
-                  forall sr fr n,
-                    In (Rep sr fr n) sth ->
-                    forall s i j, In (s __ j) (getCallsA (fr i typeUT)) -> i = j).
-        { intros.
-          specialize (H sr0 fr0 n0).
-          specialize (H (or_intror H3)). admit.
-    
-          specialize (H s0 i0 j0 H4).
-          intuition.
-        }
-        specialize (IHsth sth1).
-        assert (sth2:
-                  forall sr fr n,
-                    a0 = Rep sr fr n ->
-                    forall s i j, In (s __ j) (getCallsA (fr i typeUT)) -> i = j).
-        { intros.
-          specialize (H sr0 fr0 n0).
-          specialize (H (or_introl H3)).
-          specialize (H s0 i0 j0 H4).
-          intuition.
-        }
-        apply in_app_or in H1.
-        unfold metaInlineDmToRule in H1 at 1; simpl in *.
-        destruct H1; [|apply IHsth; assumption].
-        destruct a0; simpl in *.
-        destruct H1; [discriminate| intuition].
-        destruct H1; [| intuition].
-        inversion H1; subst; clear H1.
-        specialize (H sr fr n).
-        specialize (H (or_introl eq_refl)).
-        clear sth1 IHsth.
-        inversion H0; subst.
-        specialize (sth2 sr a0 n).
-        apply eq_sym in H0; inversion H0; subst.
-        inversion H0; subst.
-        
-        specialize (sth2 sr fr n).
-        destruct H1; [try discriminate; intuition|].
-        discriminate.
-        apply IHsth; assumption.
-        
-        unfold metaInlineDmToRule in H0; simpl in *.
-        simpl in *.
-        specialize (sth1 _ _ _ 
-        destruct H1.
-        unfold metaInlineDmToRule in H0; simpl in *.
-        destruct a0; simpl in *.
-        destruct H0; try discriminate; intuition.
-        specialize (sth3 _ _ _ eq_refl s i j).
-        inversion H0; subst.
-        destruct H0.
-        inversion H0.
-        inversion H0; subst.
-        
-          try match goal with
-                           | [H: False |- _] => apply H
-                         end.
-        simpl in H0.
-        specialize (sth3 sr fr n 
-        apply IHsth.
-        apply in_app_or in H1.
-        specialize (
-          (or_intror H0)).
-        admit.
-    - intros.
-      admit.
-  Qed.
+Ltac changeType p :=
+  match type of p with
+    | ?t ?k =>
+      change (t k) with (fullType t (SyntaxKind k)) in p
+  end.
 
+Lemma metaInlineDmToDm_equiv dm r:
+  (forall ty, metaMethEquiv ty typeUT dm) ->
+  (forall ty, metaMethEquiv ty typeUT r) ->
+  forall r', In r' (metaInlineDmToDm dm r) ->
+             forall ty, metaMethEquiv ty typeUT r'.
+Proof.
+  intros.
+  specialize (H ty); specialize (H0 ty).
+  unfold metaInlineDmToDm, metaMethEquiv, metaRuleEquiv in *; simpl in *.
+  destruct r, dm, r'; simpl in *.
+  - destruct H1; intuition auto.
+    inv H1.
+    unfold inlineDmToDm; simpl in *.
+    apply inlineDm_ActionEquiv; auto.
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    inv H1.
+    generalize dependent a.
+    induction n; simpl in *; intros.
+    + apply inlineDm_ActionEquiv; simpl in *; auto.
+    + unfold inlineDmToDm at 2; unfold inlineDmToDm at 3; simpl in *.
+      match goal with
+        | [|- context [fold_left inlineDmToDm _ (attrName a :: ?P)%struct]] =>
+          pose P as sth; simpl in sth
+      end.
+      apply IHn.
+      intros.
+      unfold sth; simpl in *; apply inlineDm_ActionEquiv; auto.
+      intuition; simpl in *; auto.
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    discriminate.
+  - destruct H1; intuition auto.
+    inv H1.
+    apply inlineDm_ActionEquiv; simpl in *; auto.
+  - destruct (eq_nat_dec n n0); simpl in *; subst.
+    + destruct H1; intuition auto.
+      discriminate.
+    + rewrite commuteInlineDmMeths in H1.
+      apply in_map_iff in H1; dest.
+      inv H1.
+      clear n1.
+      assert (sth: exists i, fold_left inlineDmToDm (getListFromRep s1 s2 n0)
+                                       (s __ i :: s0 i)%struct = a).
+      { clear - H2; induction n; simpl in *; intuition auto.
+        - exists 0; auto.
+        - exists (S n); auto.
+      }
+      dest.
+      clear H2; subst.
+      { specialize (H0 x).
+        generalize dependent s0; induction n0; simpl in *; intros.
+        - apply inlineDm_ActionEquiv; simpl in *; auto.
+        - unfold inlineDmToDm at 2; unfold inlineDmToDm at 3; simpl in *.
+          match goal with
+            | [|- context [fold_left inlineDmToDm _ (_ :: ?P)%struct]] =>
+              pose P as sth; simpl in sth
+          end.
+          specialize (IHn0 (fun x => sth)).
+          apply IHn0.
+          intros.
+          unfold sth; simpl in *; intros; apply inlineDm_ActionEquiv; auto.
+          intuition; simpl in *; auto.
+      }
+  - destruct (eq_nat_dec n n0); simpl in *; subst.
+    + destruct H1; intuition auto.
+      inv H1.
+      apply inlineDm_ActionEquiv; simpl in *; auto.
+    + rewrite commuteInlineDmMeths in H1.
+      match goal with
+        | [H: In _ (map _ ?P) |- _] => clear -H; induction P; simpl in *; intuition (try discriminate; auto)
+      end.
+Qed.
+
+
+Section MetaModuleEz.
   Variable m: MetaModule.
   Variable rulesEquiv: forall ty r, In r (metaRules m) -> metaRuleEquiv ty typeUT r.
   Variable methsEquiv: forall ty f, In f (metaMeths m) -> metaMethEquiv ty typeUT f.
@@ -766,5 +821,39 @@ Section MetaModule.
                 In s (map (@getNamesOfMeta _) (metaMeths m)) ->
                 False.
 
-End MetaModule.
-*)
+  Lemma metaInline_matches dms:
+    SubList dms (metaMeths m) ->
+    makeModule (metaInlineDmsToMod m dms) =
+    inlineDmsInMod (makeModule m) (getFullListFromMeta dms).
+  Proof.
+    generalize dependent m.
+    clear.
+    induction dms; simpl in *; intros; auto.
+    specialize (IHdms (metaInlineDmToMod m a)); simpl in *.
+    assert (In a (metaMeths m)) by intuition.
+    rewrite IHdms; simpl in *.
+    - unfold makeModule at 2; rewrite inlineDmsInMod_app.
+      fold (makeModule m).
+      f_equal.
+      unfold makeModule, metaInlineDmToMod, inlineDmsInMod; simpl in *.
+      f_equal; [apply metaInlineDmToRules_matches | apply metaInlineDmToDms_matches]; auto;
+      intros; subst; eapply noBadCallsInMeths; eauto.
+    - intros.
+      apply in_concat in H1; dest.
+      unfold SubList in H; specialize (H a); simpl in H.
+      assert (In a (metaMeths m)) by intuition.
+      eapply metaInlineDmToRule_equiv; eauto.
+    - intros.
+      apply in_concat in H1; dest.
+      unfold SubList in H; specialize (H a); simpl in H.
+      assert (In a (metaMeths m)) by intuition.
+      eapply metaInlineDmToDm_equiv with (r := x); eauto.
+    - apply (cheat _).
+    - apply (cheat _).
+    - apply (cheat _).
+    - apply (cheat _).
+    - apply (cheat _).
+    - apply (cheat _).
+    - apply (cheat _).
+  Qed.
+End MetaModuleEz.
