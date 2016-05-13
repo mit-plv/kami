@@ -240,8 +240,8 @@ Section Facts.
     apply MethsEquiv_app; [|constructor].
 
     induction n; intros.
-    - constructor.
-    - constructor; [|assumption].
+    - kequiv.
+    - constructor; [|auto].
       kequiv.
   Qed.
   Hint Resolve memInst_ModEquiv.
