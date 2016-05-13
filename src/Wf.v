@@ -344,6 +344,15 @@ Section WfInd2.
           ValidRegsAction ((attrType rule) type) ->
           ValidRegsRules (rule :: rules).
 
+    Lemma validRegsRules_app:
+      forall r1 r2,
+        ValidRegsRules r1 -> ValidRegsRules r2 ->
+        ValidRegsRules (r1 ++ r2).
+    Proof.
+      induction r1; simpl; intros; auto.
+      inv H; constructor; auto.
+    Qed.
+
     Inductive ValidRegsDms: list DefMethT -> Prop :=
     | ValidRegsDmsNil: ValidRegsDms nil
     | ValidRegsDmsCons:
@@ -352,6 +361,15 @@ Section WfInd2.
           (forall argV,
               ValidRegsAction (projT2 (attrType dm) type argV)) ->
           ValidRegsDms (dm :: dms).
+
+    Lemma validRegsDms_app:
+      forall dms1 dms2,
+        ValidRegsDms dms1 -> ValidRegsDms dms2 ->
+        ValidRegsDms (dms1 ++ dms2).
+    Proof.
+      induction dms1; simpl; intros; auto.
+      inv H; constructor; auto.
+    Qed.
 
   End Regs.
 

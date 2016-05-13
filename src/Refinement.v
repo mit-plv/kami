@@ -122,48 +122,58 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
+  Lemma traceRefines_same_module_structure:
+    forall ma mb,
+      SubList (getRegInits ma) (getRegInits mb) ->
+      SubList (getRegInits mb) (getRegInits ma) ->
+      SubList (getRules ma) (getRules mb) ->
+      SubList (getRules mb) (getRules ma) ->
+      SubList (getDefsBodies ma) (getDefsBodies mb) ->
+      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      traceRefines id ma mb.
+  Proof.
+    unfold traceRefines; intros.
+    assert (initRegs (getRegInits ma) = initRegs (getRegInits mb)).
+    { admit. }
+    
+    exists s1, sig1; split.
+    - inv H5; constructor.
+      remember (initRegs (getRegInits ma)).
+      induction HMultistepBeh.
+      + subst; constructor.
+        rewrite <-H6; auto.
+      + constructor; auto.
+        apply module_structure_indep_step with (m1:= ma); auto;
+          simpl; rewrite app_assoc; apply SubList_refl.
+        
+    - clear; induction sig1; constructor; auto.
+      constructor; destruct (annot a); auto.
+  Qed.
+
   Lemma traceRefines_assoc_1:
     forall ma mb mc,
       traceRefines id ((ma ++ mb) ++ mc)%kami (ma ++ (mb ++ mc))%kami.
   Proof.
-    unfold traceRefines; intros.
-    exists s1, sig1; split.
-    - inv H; constructor.
-      remember (initRegs (getRegInits ((ma ++ mb) ++ mc)%kami)).
-      induction HMultistepBeh.
-      + subst; constructor.
-        p_equal H; f_equal.
-        simpl; rewrite app_assoc; auto.
-      + constructor; auto.
-        clear -HStep.
-        apply module_structure_indep_step with (m1:= ((ma ++ mb) ++ mc)%kami); auto.
-        * simpl; rewrite app_assoc; auto.
-        * simpl; rewrite app_assoc; auto.
-      
-    - clear; induction sig1; constructor; auto.
-      constructor; destruct (annot a); auto.
+    intros; apply traceRefines_same_module_structure.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
   Qed.
 
   Lemma traceRefines_assoc_2:
     forall ma mb mc,
       traceRefines id (ma ++ (mb ++ mc))%kami ((ma ++ mb) ++ mc)%kami.
   Proof.
-    unfold traceRefines; intros.
-    exists s1, sig1; split.
-    - inv H; constructor.
-      remember (initRegs (getRegInits (ma ++ mb ++ mc)%kami)).
-      induction HMultistepBeh.
-      + subst; constructor.
-        p_equal H; f_equal.
-        simpl; rewrite app_assoc; auto.
-      + constructor; auto.
-        clear -HStep.
-        apply module_structure_indep_step with (m1:= (ma ++ mb ++ mc)%kami); auto.
-        * simpl; rewrite app_assoc; auto.
-        * simpl; rewrite app_assoc; auto.
-          
-    - clear; induction sig1; constructor; auto.
-      constructor; destruct (annot a); auto.
+    intros; apply traceRefines_same_module_structure.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
+    - simpl; rewrite app_assoc; apply SubList_refl.
   Qed.    
 
   Corollary traceRefines_trans_conj:

@@ -13,9 +13,10 @@ Section Invariants.
   Variables addrSize fifoSize valSize rfIdx: nat.
 
   Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable exec: ExecT 2 addrSize valSize rfIdx.
+  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
 
-  Definition pdecInl := pdecInl fifoSize dec exec.
+  Definition pdecInl := pdecInl fifoSize dec execState execNextPc.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.
@@ -50,12 +51,12 @@ Section Invariants.
   Proof.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
-    - exact (insElt insDeqP ``"type" = dec _ rf pc ``"opcode").
-    - exact (insElt insDeqP ``"addr" = dec _ rf pc ``"addr").
+    - exact (insElt insDeqP ``"type" = evalExpr (dec _ rf pc) ``"opcode").
+    - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf pc) ``"addr").
     - refine (if weq (insElt insDeqP ``"type") (evalConstT memLd) then _ else _).
       + exact (insElt insDeqP ``"value" = evalConstT (getDefaultConst (Bit valSize))).
       + refine (if weq (insElt insDeqP ``"type") (evalConstT memSt) then _ else True).
-        exact (insElt insDeqP ``"value" = dec _ rf pc ``"value").
+        exact (insElt insDeqP ``"value" = evalExpr (dec _ rf pc) ``"value").
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 

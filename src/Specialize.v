@@ -856,5 +856,61 @@ Section DuplicateFacts.
       
 End DuplicateFacts.
 
+Require Import MetaSyntax.
+
+Section DupRep.
+  Variable m: Modules.
+  Variable n: nat.
+
+  Fixpoint regsToRep (regs: list RegInitT) :=
+    match regs with
+    | nil => nil
+    | r :: rs =>
+      (Rep (attrName r) (fun _ => (attrType r)) n)
+        :: (regsToRep rs)
+    end.
+
+  Fixpoint rulesToRep (rules: list (Attribute (Action Void))) :=
+    match rules with
+    | nil => nil
+    | r :: rs =>
+      (Rep (attrName r) (fun i => (fun ty => renameAction (specializer m i) (attrType r ty))) n)
+        :: (rulesToRep rs)
+    end.
+
+  Fixpoint methsToRep (meths: list DefMethT): list MetaMeth :=
+    match meths with
+    | nil => nil
+    | dm :: dms =>
+      (Rep (attrName dm) (fun i : nat =>
+                            existT MethodT _ (fun ty arg =>
+                                                renameAction (specializer m i)
+                                                             (projT2 (attrType dm) ty arg))) n)
+        :: (methsToRep dms)
+    end.
+
+  Definition duplicateByRep := 
+    makeModule {| metaRegs := regsToRep (getRegInits m);
+                  metaRules := rulesToRep (getRules m);
+                  metaMeths := methsToRep (getDefsBodies m) |}.
+  
+  Lemma duplicate_refines_repeat:
+    duplicate m n <<== makeModule {| metaRegs := regsToRep (getRegInits m);
+                                     metaRules := rulesToRep (getRules m);
+                                     metaMeths := methsToRep (getDefsBodies m) |}.
+  Proof.
+    unfold makeModule; simpl.
+    rewrite idElementwiseId.
+    apply traceRefines_same_module_structure; simpl.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+  Qed.
+
+End DupRep.
+
 Hint Unfold specializeMod duplicate: ModuleDefs.
 

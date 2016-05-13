@@ -72,15 +72,18 @@ Section Facts.
     kequiv.
     unfold childParent; simpl.
     apply RulesEquiv_app; [|apply RulesEquiv_app].
-    - induction (n LgNumChildren); [constructor|].
-      constructor; [|auto].
-      kequiv.
-    - induction (n LgNumChildren); [constructor|].
-      constructor; [|auto].
-      kequiv.
-    - induction (n LgNumChildren); [constructor|].
-      constructor; [|auto].
-      kequiv.
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
   Qed.
 
 End Facts.
