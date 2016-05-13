@@ -30,14 +30,14 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
+    - admit. (* duplicated regs -*- normal regs *)
+    - admit. (* duplicated regs -*- normal regs *)
+    - admit. 
     - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
+    - admit. (* duplicated defs -*- repeated defs *)
+    - admit. (* duplicated calls -*- repeated calls *)
+    - admit. (* duplicated defs -*- repeated defs *)
+    - admit. (* duplicated calls -*- repeated calls *)
     - kduplicated.
       + kequiv.
       + kequiv.

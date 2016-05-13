@@ -475,15 +475,49 @@ Section GetCalls.
       apply in_or_app; auto.
   Qed.
 
+  Lemma getCallsR_SubList:
+    forall ra rb,
+      SubList ra rb ->
+      SubList (getCallsR ra) (getCallsR rb).
+  Proof.
+    induction ra; simpl; intros.
+    - apply SubList_nil.
+    - apply SubList_cons_inv in H; dest.
+      apply SubList_app_3; auto.
+      clear -H; induction rb; simpl; [inv H|].
+      inv H.
+      + apply SubList_app_1, SubList_refl.
+      + apply SubList_app_2; auto.
+  Qed.
+
+  Lemma getCallsM_SubList:
+    forall ra rb,
+      SubList ra rb ->
+      SubList (getCallsM ra) (getCallsM rb).
+  Proof.
+    induction ra; simpl; intros.
+    - apply SubList_nil.
+    - apply SubList_cons_inv in H; dest.
+      apply SubList_app_3; auto.
+      clear -H; induction rb; simpl; [inv H|].
+      inv H.
+      + apply SubList_app_1, SubList_refl.
+      + apply SubList_app_2; auto.
+  Qed.
+
   Lemma module_structure_indep_getCalls:
     forall ma mb,
-      getRules ma = getRules mb ->
-      getDefsBodies ma = getDefsBodies mb ->
-      getCalls ma = getCalls mb.
+      SubList (getRules ma) (getRules mb) ->
+      SubList (getDefsBodies ma) (getDefsBodies mb) ->
+      SubList (getCalls ma) (getCalls mb).
   Proof.
     intros.
     unfold getCalls.
-    rewrite H, H0; auto.
+    apply SubList_app_3.
+    - apply SubList_app_1.
+      apply getCallsR_SubList; auto.
+    - apply SubList_app_2.
+      apply getCallsM_SubList; auto.
   Qed.
 
 End GetCalls.
