@@ -860,6 +860,7 @@ Require Import MetaSyntax.
 
 Section DupRep.
   Variable m: Modules.
+  Hypothesis (Hmregs: NoDup (namesOf (getRegInits m))).
   Variable n: nat.
 
   Fixpoint regsToRep (regs: list RegInitT) :=
@@ -901,13 +902,7 @@ Section DupRep.
   Proof.
     unfold makeModule; simpl.
     rewrite idElementwiseId.
-    apply traceRefines_same_module_structure; simpl.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
+    apply traceRefines_same_module_structure; simpl; auto; admit.
   Qed.
 
 End DupRep.

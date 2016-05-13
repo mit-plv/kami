@@ -2102,7 +2102,7 @@ Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
 Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
 
-Require Import Lib.Struct.
+Require Import Lib.Struct Lib.StringEq.
 
 Section MakeMap.
   Variable A: Type.
@@ -2116,6 +2116,24 @@ Section MakeMap.
       M.add n (existT _ _ (f rv)) (makeMap xs)
     end.
 
+  Lemma makeMap_find:
+    forall l (Hl: NoDup (namesOf l)) k,
+      M.find k (makeMap l) =
+      match getAttribute k l with
+      | None => None
+      | Some {| attrType := existT _ rv |} => Some (existT _ _ (f rv))
+      end.
+  Proof.
+    induction l; simpl; intros; [reflexivity|].
+    destruct a as [an [asig av]]; simpl in *.
+    inv Hl; specialize (IHl H2).
+    remember (string_eq k an) as ka; destruct ka.
+    - apply string_eq_dec_eq in Heqka; subst.
+      rewrite M.find_add_1; auto.
+    - apply string_eq_dec_neq in Heqka.
+      rewrite M.find_add_2; auto.
+  Qed.
+  
   Lemma makeMap_KeysSubset:
     forall m, M.KeysSubset (makeMap m) (namesOf m).
   Proof.
