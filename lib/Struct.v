@@ -57,6 +57,14 @@ Section BoundedIndexFull.
     { attrName : string;
       attrType : Kind }.
 
+  Lemma attribute_inv:
+    forall n1 n2 k1 k2,
+      {| attrName := n1; attrType := k1 |} = {| attrName := n2; attrType := k2 |} ->
+      n1 = n2 /\ k1 = k2.
+  Proof.
+    intros; inv H; auto.
+  Qed.
+
   Definition Attribute_dec (kdec: forall (k1 k2: Kind), {k1 = k2} + {k1 <> k2})
   : forall (a1 a2: Attribute), {a1 = a2} + {a1 <> a2}.
   Proof. intros; repeat decide equality. Qed.

@@ -90,11 +90,12 @@ Section Equiv.
       forall G {attrs: list (Attribute Kind)}
              (s1: ilist (fun a => Expr t1 (SyntaxKind (attrType a))) attrs)
              (s2: ilist (fun a => Expr t2 (SyntaxKind (attrType a))) attrs),
-        (forall a, In a attrs ->
-                   forall (e1: Expr t1 (SyntaxKind (attrType a)))
-                          (e2: Expr t2 (SyntaxKind (attrType a))),
-                     ilist_In e1 s1 -> ilist_In e2 s2 ->
-                     ExprEquiv G e1 e2) ->
+        (forall i a (Ha: Some a = nth_error attrs i)
+                (e1: Expr t1 (SyntaxKind (attrType a)))
+                (e2: Expr t2 (SyntaxKind (attrType a))),
+            ith_error s1 i = match Ha with eq_refl => Dep_Some _ _ e1 end ->
+            ith_error s2 i = match Ha with eq_refl => Dep_Some _ _ e2 end ->
+            ExprEquiv G e1 e2) ->
         ExprEquiv G (BuildStruct s1) (BuildStruct s2)
   | EEUpdateVector:
       forall G {i k} (e11: Expr t1 (SyntaxKind (Vector k i)))
@@ -109,48 +110,51 @@ Section Equiv.
   Lemma ExprEquiv_ctxt:
     forall G1 G2 {k1 k2} (e1: Expr t1 k1) (e2: Expr t2 k2),
       ExprEquiv G1 e1 e2 -> SubList G1 G2 -> ExprEquiv G2 e1 e2.
-  Proof. induction 1; intros; constructor; auto. Qed.
+  Proof. induction 1; intros; constructor; eauto. Qed.
 
   Inductive ActionEquiv: forall {k}, ctxt ft1 ft2 -> ActionT t1 k -> ActionT t2 k -> Prop :=
   | AEMCall: forall G {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
                     (e2: Expr t2 (SyntaxKind (arg s)))
                     (cont1: t1 (ret s) -> ActionT t1 k)
                     (cont2: t2 (ret s) -> ActionT t2 k),
-               (forall (v1: ft1 (SyntaxKind (ret s)))
-                       (v2: ft2 (SyntaxKind (ret s))),
-                  ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
-               ActionEquiv G (MCall n s e1 cont1) (MCall n s e2 cont2)
+      (forall (v1: ft1 (SyntaxKind (ret s)))
+              (v2: ft2 (SyntaxKind (ret s))),
+          ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
+      ActionEquiv G (MCall n s e1 cont1) (MCall n s e2 cont2)
   | AELet: forall G {k k1' k2'} (e1: Expr t1 k1') (e2: Expr t2 k2')
                   (cont1: fullType t1 k1' -> ActionT t1 k)
                   (cont2: fullType t2 k2' -> ActionT t2 k),
-             (forall (v1: ft1 k1') (v2: ft2 k2'),
-                ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
-             ActionEquiv G (Let_ e1 cont1) (Let_ e2 cont2)
+      (forall (v1: ft1 k1') (v2: ft2 k2'),
+          ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
+      ActionEquiv G (Let_ e1 cont1) (Let_ e2 cont2)
   | AEReadReg: forall G {k k1' k2'} rn
                       (cont1: fullType t1 k1' -> ActionT t1 k)
                       (cont2: fullType t2 k2' -> ActionT t2 k),
-                 (forall (v1: ft1 k1') (v2: ft2 k2'),
-                    ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
-                 ActionEquiv G (ReadReg rn _ cont1) (ReadReg rn _ cont2)
+      (forall (v1: ft1 k1') (v2: ft2 k2'),
+          ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
+      ActionEquiv G (ReadReg rn _ cont1) (ReadReg rn _ cont2)
   | AEWriteReg: forall G {k k1' k2'} rn (e1: Expr t1 k1') (e2: Expr t2 k2')
                        (cont1: ActionT t1 k) (cont2: ActionT t2 k),
-                  ExprEquiv G e1 e2 -> ActionEquiv G cont1 cont2 ->
-                  ActionEquiv G (WriteReg rn e1 cont1) (WriteReg rn e2 cont2)
+      (* ExprEquiv G e1 e2 -> *)
+      ActionEquiv G cont1 cont2 ->
+      ActionEquiv G (WriteReg rn e1 cont1) (WriteReg rn e2 cont2)
   | AEIfElse: forall G {k k'} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
                      (ta1 fa1: ActionT t1 k') (ta2 fa2: ActionT t2 k')
                      (cont1: t1 k' -> ActionT t1 k) (cont2: t2 k' -> ActionT t2 k),
-                ExprEquiv G e1 e2 -> ActionEquiv G ta1 ta2 -> ActionEquiv G fa1 fa2 ->
-                (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
-                   ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
-                ActionEquiv G (IfElse e1 ta1 fa1 cont1) (IfElse e2 ta2 fa2 cont2)
+      (* ExprEquiv G e1 e2 -> *)
+      ActionEquiv G ta1 ta2 -> ActionEquiv G fa1 fa2 ->
+      (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
+          ActionEquiv ((vars v1 v2) :: G) (cont1 v1) (cont2 v2)) ->
+      ActionEquiv G (IfElse e1 ta1 fa1 cont1) (IfElse e2 ta2 fa2 cont2)
   | AEAssert: forall G {k} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
                      (cont1: ActionT t1 k) (cont2: ActionT t2 k),
-                ExprEquiv G e1 e2 -> ActionEquiv G cont1 cont2 ->
-                ActionEquiv G (Assert_ e1 cont1) (Assert_ e2 cont2)
+      (* ExprEquiv G e1 e2 -> *)
+      ActionEquiv G cont1 cont2 ->
+      ActionEquiv G (Assert_ e1 cont1) (Assert_ e2 cont2)
   | AERet: forall G {k} (e1: Expr t1 (SyntaxKind k))
                   (e2: Expr t2 (SyntaxKind k)),
-             ExprEquiv G e1 e2 ->
-             ActionEquiv G (Return e1) (Return e2).
+      (* ExprEquiv G e1 e2 -> *)
+      ActionEquiv G (Return e1) (Return e2).
 
   Lemma ActionEquiv_ctxt:
     forall G1 {k} (a1: ActionT t1 k) a2,
@@ -168,16 +172,16 @@ Section Equiv.
       apply H0.
       unfold SubList; intros; inv H2; [left; reflexivity|right; auto].
     - constructor; intros.
-      + eapply ExprEquiv_ctxt; eauto.
+      (* + eapply ExprEquiv_ctxt; eauto. *)
       + apply IHActionEquiv; auto.
     - constructor; auto.
-      + eapply ExprEquiv_ctxt; eauto.
-      + intros; apply H3.
-        unfold SubList; intros; inv H5; [left; reflexivity|right; auto].
+      (* + eapply ExprEquiv_ctxt; eauto. *)
+      + intros; apply H2.
+        unfold SubList; intros; inv H4; [left; reflexivity|right; auto].
     - constructor; auto.
-      eapply ExprEquiv_ctxt; eauto.
+      (* eapply ExprEquiv_ctxt; eauto. *)
     - constructor; auto.
-      eapply ExprEquiv_ctxt; eauto.
+      (* eapply ExprEquiv_ctxt; eauto. *)
   Qed.
 
   Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
@@ -303,9 +307,9 @@ Section Facts.
     - eapply H0; eauto.
       intros; eapply ActionEquiv_ctxt; eauto.
       unfold SubList; intros; inv H1; intuition.
-    - eapply H1; eauto.
+    - eapply H0; eauto.
       intros; eapply ActionEquiv_ctxt; eauto.
-      unfold SubList; intros; inv H2; intuition.
+      unfold SubList; intros; inv H1; intuition.
   Qed.
 
   Lemma ModEquiv_split:

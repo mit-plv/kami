@@ -1,5 +1,7 @@
-Require Import Syntax Inline List Lib.Struct Program.Equality Equiv
-        String FunctionalExtensionality InlineFacts_2.
+Require Import List String.
+Require Import Lib.Struct.
+Require Import Lts.Equiv Lts.Syntax Lts.Inline Lts.InlineFacts_2.
+Require Import Program.Equality FunctionalExtensionality.
 
 Set Implicit Arguments.
 
@@ -52,7 +54,7 @@ Section ActionNoCall.
       + assert (In (attrName dm) (getCallsA fa2 ++ getCallsA (cont2 tt)) -> False) by intuition.
         assert (In (attrName dm) (getCallsA (cont2 tt)) -> False) by intuition.
         extensionality v1.
-        apply (H1 v1 tt H3).
+        apply (H0 v1 tt H2).
     - f_equal; auto.
   Qed.
 End ActionNoCall.

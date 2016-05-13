@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
         FunctionalExtensionality String Equiv Program.Equality Lib.FMap CommonTactics StringEq
         InlineFacts_2.
+=======
+Require Import Coq.Arith.Peano_dec String List.
+Require Import Lib.Indexer Lib.Struct.
+Require Import Lts.Syntax Lts.Wf Lts.Equiv Lts.Inline Lts.SimpleInline.
+Require Import FunctionalExtensionality Program.Equality.
+>>>>>>> e91b1e23d67ee94f7e9eaeba1324ba79dee21644
 
 Set Implicit Arguments.
 

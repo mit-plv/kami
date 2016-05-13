@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
 
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
@@ -38,6 +38,13 @@ Section Fifo.
      Write ^"deqP" <- #next_deqP;
      Ret #elt@[#deqP])%kami.
 
+  Definition firstElt {ty} : ActionT ty dType :=
+    (Read isEmpty <- ^"empty";
+     Assert !#isEmpty;
+     Read elt : Vector dType sz <- ^"elt";
+     Read deqP <- ^"deqP";
+     Ret #elt@[#deqP])%kami.
+  
   Definition fifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default
     with Register ^"enqP" : Bit sz <- Default
@@ -45,23 +52,9 @@ Section Fifo.
     with Register ^"empty" : Bool <- true
     with Register ^"full" : Bool <- Default
 
-    (* with Method ^"notFull"() : Bool := *)
-    (*   Read isFull <- ^"full"; *)
-    (*   Ret !#isFull *)
-
-    (* with Method ^"notEmpty"() : Bool := *)
-    (*   Read isEmpty <- ^"empty"; *)
-    (*   Ret !#isEmpty *)
-
     with Method ^"enq"(d : dType) : Void := (enq d)
     with Method ^"deq"() : dType := deq
-
-    with Method ^"firstElt"() : dType :=
-      Read isEmpty <- ^"empty";
-      Assert !#isEmpty;
-      Read elt : Vector dType sz <- ^"elt";
-      Read deqP <- ^"deqP";
-      Ret #elt@[#deqP]
+    with Method ^"firstElt"() : dType := firstElt
   }.
 
   Definition simpleFifo := MODULE {
@@ -78,7 +71,7 @@ Section Fifo.
 End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.
-Hint Unfold enq deq : MethDefs.
+Hint Unfold enq deq firstElt : MethDefs.
 
 Section Facts.
   Variable fifoName: string.

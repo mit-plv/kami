@@ -1,6 +1,6 @@
 Require Import String Streams.
 Require Import Lib.Indexer List.
-Require Import Lts.Syntax Lts.Semantics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics.
 
 Set Implicit Arguments.
 
@@ -23,25 +23,5 @@ Section StreamMod.
      (Ret $$(Streams.hd s))))%kami
   }.
 
-  (* Section Spec. *)
-  (*   Lemma regsInDomain_streamMod: RegsInDomain streamMod. *)
-  (*   Proof. *)
-  (*     regsInDomain_tac. *)
-  (*   Qed. *)
-  (* End Spec. *)
-
 End StreamMod.
 
-Section Fifo.
-  Variable A: Kind.
-  Definition f :=
-    MODULE {
-        RegisterN "x": NativeKind nil <-
-                         (@NativeConst (list (sigT (fun ty => ty A))) nil nil)
-        with Method "enq"(d: A): Void :=
-          ReadN old : (list (sigT (fun ty => ty A))) #< nil <- "x";
-          Write "x" <-
-                Var _ ((list (sigT (fun ty => ty A))) #< nil) ((existT (fun ty => ty A) _ d) :: old)%list;
-          Retv
-      }.
-End Fifo.
