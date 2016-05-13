@@ -184,31 +184,31 @@ Section WfEval1.
       intros; eapply ActionEquiv_ctxt; eauto.
       unfold SubList; intros; inv H2; intuition.
 
-    - rewrite andb_true_iff in H0; dest.
+    - rewrite andb_true_iff in H; dest.
       remember (string_in _ _) as sin; destruct sin; [discriminate|].
       apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
 
-    - apply andb_true_iff in H2; dest.
+    - apply andb_true_iff in H1; dest.
       constructor.
       + eapply IHHequiv1; eauto.
         * intros; simpl.
           eapply actionEquiv_appendAction; eauto.
           intros; eapply ActionEquiv_ctxt; eauto.
-          unfold SubList; intros; inv H4; intuition.
-        * intros; simpl in H4.
-          apply H1 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
+          unfold SubList; intros; inv H3; intuition.
+        * intros; simpl in H3.
+          apply H0 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
           intros; eapply ActionEquiv_ctxt; eauto.
-          unfold SubList; intros; inv H5; intuition.
+          unfold SubList; intros; inv H4; intuition.
       + eapply IHHequiv2; eauto.
         * intros; simpl.
           eapply actionEquiv_appendAction; eauto.
           intros; eapply ActionEquiv_ctxt; eauto.
-          unfold SubList; intros; inv H4; intuition.
-        * intros; simpl in H4.
-          apply H1 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
+          unfold SubList; intros; inv H3; intuition.
+        * intros; simpl in H3.
+          apply H0 with (v2:= v2) (cont2:= cont2) (cdn:= cdn0); auto.
           intros; eapply ActionEquiv_ctxt; eauto.
-          unfold SubList; intros; inv H5; intuition.
+          unfold SubList; intros; inv H4; intuition.
 
     - constructor; eauto.
     - constructor; eauto.
@@ -227,11 +227,11 @@ Section WfEval1.
       remember (string_in _ _) as sin; destruct sin; [discriminate|].
       apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
-    - apply andb_true_iff in H0; dest.
+    - apply andb_true_iff in H; dest.
       remember (string_in _ _) as sin; destruct sin; [discriminate|].
       apply string_in_dec_not_in in Heqsin.
       constructor; eauto.
-    - apply andb_true_iff in H2; dest.
+    - apply andb_true_iff in H1; dest.
       constructor; eapply wfActionC_WfAction_appendAction; eauto.
   Qed.
 

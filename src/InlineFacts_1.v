@@ -271,19 +271,19 @@ Proof.
   - inv H2; destruct_existT.
     simpl in H1.
     eapply H0; eauto.
-  - inv H2; destruct_existT.
-    simpl in H1.
+  - inv H1; destruct_existT.
+    simpl in H0.
     eapply IHActionEquiv; eauto.
-  - inv H4.
-    apply andb_true_iff in H8; dest.
-    apply andb_true_iff in H4; dest.
-    inv H5; destruct_existT; rewrite M.find_union.
+  - inv H3.
+    apply andb_true_iff in H7; dest.
+    apply andb_true_iff in H3; dest.
+    inv H4; destruct_existT; rewrite M.find_union.
     + erewrite IHActionEquiv1; eauto.
     + erewrite IHActionEquiv2; eauto.
-  - inv H2; destruct_existT.
-    simpl in H1.
-    eapply IHActionEquiv; eauto.
   - inv H1; destruct_existT.
+    simpl in H0.
+    eapply IHActionEquiv; eauto.
+  - inv H0; destruct_existT.
     rewrite M.find_empty; auto.
 Qed.
 

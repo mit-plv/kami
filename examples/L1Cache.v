@@ -55,7 +55,8 @@ Section L1Cache.
       UniBit (TruncLsb LgNumDatas LgDataBytes) (UniBit (ZeroExtendTrunc AddrBits (LgNumDatas + LgDataBytes)) x).
     
     Definition getAddr (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
-      BinBit (Concat (TagBits + IdxBits) (LgNumDatas + LgDataBytes)) (BinBit (Concat TagBits IdxBits) tag idx)
+      BinBit (Concat (TagBits + IdxBits) (LgNumDatas + LgDataBytes))
+             (BinBit (Concat TagBits IdxBits) tag idx)
              ($ 0)%kami.
   End UtilFunctions.
 
@@ -243,7 +244,8 @@ Section Facts.
       m = l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id ->
       ModEquiv type typeUT m.
   Proof.
-    admit. (* kequiv should work; but a bit slow *)
+    admit.
+    (* kequiv. *)
   Qed.
 
 End Facts.

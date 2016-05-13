@@ -217,7 +217,7 @@ Section Facts.
       m = pinst dec exec opLd opSt opHt ->
       ModEquiv type typeUT m.
   Proof.
-    kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2).
+    kequiv.
   Qed.
   Hint Resolve pinst_ModEquiv.
   
@@ -235,10 +235,8 @@ Section Facts.
       m = memInst n a d ->
       ModEquiv type typeUT m.
   Proof.
-    (* TODO: extend kequiv for meta-syntax (repetition) *)
-    intros; subst.
-    unfold memInst, makeMetaModule, makeModule.
-    constructor; [constructor|].
+    kequiv.
+    unfold memInst; simpl.
     apply MethsEquiv_app; [|constructor].
 
     induction n; intros.

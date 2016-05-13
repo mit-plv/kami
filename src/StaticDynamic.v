@@ -46,32 +46,32 @@ Section EquivMod.
       apply (H0 _ _ _ _ _ H1 x H2).
     - dependent destruction H1.
       apply (H0 _ _ _ _ _ _ H1 x H2).
-    - dependent destruction H0.
-      specialize (@IHae _ _ _ _ H0 x).
-      apply M.F.P.F.add_in_iff in H1.
+    - dependent destruction H.
+      specialize (@IHae _ _ _ _ H x).
+      apply M.F.P.F.add_in_iff in H0.
       simpl in *.
-      destruct H1; subst; intuition.
-    - dependent destruction H2.
-      apply M.union_In in H3.
+      destruct H0; subst; intuition.
+    - dependent destruction H1.
+      apply M.union_In in H2.
       simpl in *.
-      specialize (IHae1 _ _ _ _ H2_ x).
-      specialize (H1 _ tt _ _ _ _ H2_0 x).
-      destruct H3.
+      specialize (IHae1 _ _ _ _ H1_ x).
+      specialize (H0 _ tt _ _ _ _ H1_0 x).
+      destruct H2.
       + apply in_or_app.
         intuition.
       + apply in_or_app; right; apply in_or_app.
         intuition.
-      + specialize (IHae2 _ _ _ _ H2_ x).
-        specialize (H1 _ tt _ _ _ _ H2_0 x).
+      + specialize (IHae2 _ _ _ _ H1_ x).
+        specialize (H0 _ tt _ _ _ _ H1_0 x).
         simpl in *.
-        apply M.union_In in H3.
-        destruct H3;
+        apply M.union_In in H2.
+        destruct H2;
           apply in_or_app; right; apply in_or_app;
             intuition.
-    - dependent destruction H0.
-      apply (IHae _ _ _ _ H0 x H1).
-    - dependent destruction H0.
-      apply M.F.P.F.empty_in_iff in H1; intuition.
+    - dependent destruction H.
+      apply (IHae _ _ _ _ H x H0).
+    - dependent destruction H.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
   Qed.
 
   Lemma callsSubsetA k ct (a1: ActionT type k) (a2: ActionT typeUT k):
@@ -92,29 +92,29 @@ Section EquivMod.
       apply (H0 _ _ _ _ _ H1 x H2).
     - dependent destruction H1.
       apply (H0 _ _ _ _ _ _ H1 x H2).
-    - dependent destruction H0.
-      apply (@IHae _ _ _ _ H0 x H1).
-    - dependent destruction H2.
-      apply M.union_In in H3.
+    - dependent destruction H.
+      apply (@IHae _ _ _ _ H x H0).
+    - dependent destruction H1.
+      apply M.union_In in H2.
       simpl in *.
-      specialize (IHae1 _ _ _ _ H2_ x).
-      specialize (H1 _ tt _ _ _ _ H2_0 x).
-      destruct H3.
+      specialize (IHae1 _ _ _ _ H1_ x).
+      specialize (H0 _ tt _ _ _ _ H1_0 x).
+      destruct H2.
       + apply in_or_app.
         intuition.
       + apply in_or_app; right; apply in_or_app.
         intuition.
-      + specialize (IHae2 _ _ _ _ H2_ x).
-        specialize (H1 _ tt _ _ _ _ H2_0 x).
+      + specialize (IHae2 _ _ _ _ H1_ x).
+        specialize (H0 _ tt _ _ _ _ H1_0 x).
         simpl in *.
-        apply M.union_In in H3.
-        destruct H3;
+        apply M.union_In in H2.
+        destruct H2;
           apply in_or_app; right; apply in_or_app;
             intuition.
-    - dependent destruction H0.
-      apply (IHae _ _ _ _ H0 x H1).
-    - dependent destruction H0.
-      apply M.F.P.F.empty_in_iff in H1; intuition.
+    - dependent destruction H.
+      apply (IHae _ _ _ _ H x H0).
+    - dependent destruction H.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
   Qed.
 
   Variable m: Modules.

@@ -82,7 +82,7 @@ Section Facts.
       m = nativeFifo fifoName default ->
       ModEquiv type typeUT m.
   Proof.
-    admit.
+    kequiv.
   Qed.
 
   Lemma nativeSimpleFifo_ModEquiv:
@@ -90,7 +90,7 @@ Section Facts.
       m = nativeSimpleFifo fifoName default ->
       ModEquiv type typeUT m.
   Proof.
-    admit.
+    kequiv.
   Qed.
 
 End Facts.

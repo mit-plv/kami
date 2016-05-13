@@ -69,7 +69,18 @@ Section Facts.
       m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
       ModEquiv type typeUT m.
   Proof.
-    admit. (* ModEquiv for repetition (meta-syntax) *)
+    kequiv.
+    unfold childParent; simpl.
+    apply RulesEquiv_app; [|apply RulesEquiv_app].
+    - induction (n LgNumChildren); [constructor|].
+      constructor; [|auto].
+      kequiv.
+    - induction (n LgNumChildren); [constructor|].
+      constructor; [|auto].
+      kequiv.
+    - induction (n LgNumChildren); [constructor|].
+      constructor; [|auto].
+      kequiv.
   Qed.
 
 End Facts.

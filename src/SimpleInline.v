@@ -54,7 +54,7 @@ Section ActionNoCall.
       + assert (In (attrName dm) (getCallsA fa2 ++ getCallsA (cont2 tt)) -> False) by intuition.
         assert (In (attrName dm) (getCallsA (cont2 tt)) -> False) by intuition.
         extensionality v1.
-        apply (H1 v1 tt H3).
+        apply (H0 v1 tt H2).
     - f_equal; auto.
   Qed.
 End ActionNoCall.

@@ -147,8 +147,7 @@ Section Facts.
       m = pdecf fsz dec exec ->
       ModEquiv type typeUT m.
   Proof.
-    (* kequiv_with ltac:(idtac; dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2). *)
-    admit.
+    kequiv.
   Qed.
   Hint Resolve pdecf_ModEquiv.
 
