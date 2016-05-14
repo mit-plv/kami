@@ -632,6 +632,14 @@ End Duplicate.
 
 Section DuplicateFacts.
 
+  Lemma duplicate_NoDup_regs:
+    forall m n,
+      NoDup (namesOf (getRegInits m)) ->
+      NoDup (namesOf (getRegInits (duplicate m n))).
+  Proof.
+    admit.
+  Qed.
+
   Lemma duplicate_ModEquiv:
     forall m n,
       ModEquiv type typeUT m ->
@@ -890,22 +898,32 @@ Section DupRep.
         :: (methsToRep dms)
     end.
 
+  Lemma regsToRep_regs_equiv:
+    SubList (getRegInits (duplicate m n)) (getFullListFromMeta (regsToRep (getRegInits m))) /\
+    SubList (getFullListFromMeta (regsToRep (getRegInits m))) (getRegInits (duplicate m n)).
+  Proof.
+    admit.
+  Qed.
+
   Definition duplicateByRep := 
     makeModule {| metaRegs := regsToRep (getRegInits m);
                   metaRules := rulesToRep (getRules m);
                   metaMeths := methsToRep (getDefsBodies m) |}.
   
   Lemma duplicate_refines_repeat:
-    duplicate m n <<== makeModule {| metaRegs := regsToRep (getRegInits m);
-                                     metaRules := rulesToRep (getRules m);
-                                     metaMeths := methsToRep (getDefsBodies m) |}.
+    duplicate m n <<== duplicateByRep.
   Proof.
     unfold makeModule; simpl.
     rewrite idElementwiseId.
     apply traceRefines_same_module_structure; simpl; auto; admit.
+    (* - apply duplicate_NoDup_regs; auto. *)
+    (* - admit. *)
+    (* - apply regsToRep_regs_equiv. *)
+    (* - apply regsToRep_regs_equiv. *)
   Qed.
 
 End DupRep.
 
 Hint Unfold specializeMod duplicate: ModuleDefs.
+Hint Unfold regsToRep rulesToRep methsToRep duplicateByRep: ModuleDefs.
 

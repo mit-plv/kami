@@ -96,6 +96,11 @@ Section MemCacheNativeFifo.
 
   Definition nmemCache :=
     (nl1s ++ nchildParentC ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
+
+  Definition nmemCacheRep :=
+    ((duplicateByRep nl1C n)
+       ++ nchildParentC
+       ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
               
 End MemCacheNativeFifo.
 
