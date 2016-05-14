@@ -14,14 +14,22 @@ Section Concat.
   Variable A B: Type.
   Variable f: A -> list B.
   Lemma in_concat (ls: list A):
-    forall b, In b (concat (map f ls)) -> exists a, In a ls /\ In b (f a).
+    forall b, In b (concat (map f ls)) <-> exists a, In a ls /\ In b (f a).
   Proof.
     induction ls; intros; simpl in *.
     - intuition.
-    - apply in_app_or in H.
-      destruct H; [exists a; intuition auto | ].
-      specialize (IHls _ H).
-      dest; eexists; eauto.
+      dest; intuition.
+    - constructor; intros.
+      + apply in_app_or in H.
+        destruct H; [exists a; intuition auto | ].
+        apply IHls in H.
+        dest; eexists; eauto.
+      + dest.
+        apply in_or_app.
+        destruct H; subst; intuition auto.
+        pose proof (ex_intro (fun x => In x ls /\ In b (f x)) x (conj H H0)).
+        apply IHls in H1.
+        intuition.
   Qed.
 End Concat.
 
@@ -39,6 +47,18 @@ Section MetaDefns.
                                | S i => getListFromRep s f i
                              end.
 
+  Lemma in_getListFromRep n:
+    forall dm s (f: nat -> A),
+      In dm (getListFromRep s f n) ->
+      exists i, i <= n /\ dm = (s __ i :: f i)%struct.
+  Proof.
+    induction n; intros; simpl in *; intuition auto.
+    - exists 0; intuition auto.
+    - exists (S n); intuition auto.
+    - apply IHn in H0; dest.
+      repeat (econstructor; eauto).
+  Qed.
+  
   Definition getListFromMeta m :=
     match m with
       | One a => a :: nil
@@ -781,47 +801,42 @@ Section MetaModuleEz.
   Variable rulesEquiv: forall ty r, In r (metaRules m) -> metaRuleEquiv ty typeUT r.
   Variable methsEquiv: forall ty f, In f (metaMeths m) -> metaMethEquiv ty typeUT f.
 
-  Variable noBadCallsInRules:
+  Variable noBadCallsInRepRules:
     forall sr fr n , In (Rep sr fr n) (metaRules m) ->
                      forall s i j,
                        In (s __ j) (getCallsA (fr i typeUT)) ->
                        i = j.
 
-  Variable noBadCallsInMeths:
-    forall sr fr n , In (Rep sr fr n) (metaMeths m) ->
-                     forall s i j,
-                       In (s __ j) (getCallsMAction (fr i)) ->
-                       i = j.
-
-  Variable noOneInteralCallsInRepMeth:
-    forall sr fr n, In (Rep sr fr n) (metaMeths m) ->
-                    forall s i,
-                      In s (getCallsMAction (fr i)) ->
-                      In s (map (@getNamesOfMeta _) (metaMeths m)) ->
-                      False.
-
-  Variable noRepInteralCallsInRepMeth:
-    forall sr fr n, In (Rep sr fr n) (metaMeths m) ->
-                    forall s i,
-                      In (s __ i) (getCallsMAction (fr i)) ->
-                      In s (map (@getNamesOfMeta _) (metaMeths m)) ->
-                      False.
-
-  Variable noOneInteralCallsInOneMeth:
-    forall r, In (One r) (metaMeths m) ->
-              forall s,
-                In s (getCallsMAction (attrType r)) ->
-                In s (map (@getNamesOfMeta _) (metaMeths m)) ->
-                False.
-
-  Variable noRepInteralCallsInOneMeth:
-    forall r, In (One r) (metaMeths m) ->
+  Variable noBadCallsInOneRules:
+    forall r, In (One r) (metaRules m) ->
               forall s i,
-                In (s __ i) (getCallsMAction (attrType r)) ->
-                In s (map (@getNamesOfMeta _) (metaMeths m)) ->
+                In (s __ i) (getCallsA (attrType r typeUT)) ->
                 False.
 
-  Lemma metaInline_matches dms:
+  Variable noCallsInRepMeths:
+    forall sr fr n ,
+      In (Rep sr fr n) (metaMeths m) ->
+      forall i, getCallsMAction (fr i) = nil.
+
+  Variable noCallsInOneMeths:
+    forall f ,
+      In (One f) (metaMeths m) ->
+      getCallsMAction (attrType f) = nil.
+
+  Variable sameN:
+    forall sr1 fr1 n1 sr2 fr2 n2,
+      In (Rep sr1 fr1 n1) (metaMeths m) ->
+      In (Rep sr2 fr2 n2) (metaMeths m) ->
+      n1 = n2.
+
+  Variable sameN':
+    forall sr1 fr1 n1 sr2 fr2 n2,
+      In (Rep sr1 fr1 n1) (metaRules m) ->
+      In (Rep sr2 fr2 n2) (metaMeths m) ->
+      n1 = n2.
+
+
+  Lemma metaInline_matches_ez' dms:
     SubList dms (metaMeths m) ->
     makeModule (metaInlineDmsToMod m dms) =
     inlineDmsInMod (makeModule m) (getFullListFromMeta dms).
@@ -831,13 +846,17 @@ Section MetaModuleEz.
     induction dms; simpl in *; intros; auto.
     specialize (IHdms (metaInlineDmToMod m a)); simpl in *.
     assert (In a (metaMeths m)) by intuition.
-    rewrite IHdms; simpl in *.
+    rewrite IHdms; simpl in *; clear IHdms; auto.
     - unfold makeModule at 2; rewrite inlineDmsInMod_app.
       fold (makeModule m).
       f_equal.
       unfold makeModule, metaInlineDmToMod, inlineDmsInMod; simpl in *.
       f_equal; [apply metaInlineDmToRules_matches | apply metaInlineDmToDms_matches]; auto;
-      intros; subst; eapply noBadCallsInMeths; eauto.
+      intros; subst;
+      match goal with
+        | [H: In (Rep _ _ _) (metaMeths m) |- _] =>
+          specialize (noCallsInRepMeths _ _ _ H i)
+      end; rewrite noCallsInRepMeths in *; intuition.
     - intros.
       apply in_concat in H1; dest.
       unfold SubList in H; specialize (H a); simpl in H.
@@ -848,12 +867,242 @@ Section MetaModuleEz.
       unfold SubList in H; specialize (H a); simpl in H.
       assert (In a (metaMeths m)) by intuition.
       eapply metaInlineDmToDm_equiv with (r := x); eauto.
-    - apply (cheat _).
-    - apply (cheat _).
-    - apply (cheat _).
-    - apply (cheat _).
-    - apply (cheat _).
-    - apply (cheat _).
-    - apply (cheat _).
+    - intros.
+      apply in_concat in H1; dest.
+      destruct a, x; simpl in *.
+      destruct H3; try discriminate; intuition auto.
+      destruct H3; intuition auto.
+      inv H3.
+      apply (inlineDm_calls a (a :: nil)) in H2; intuition.
+      apply in_app_or in H2; simpl in *.
+      rewrite app_nil_r in H2; simpl in *.
+      destruct H2.
+      apply (noBadCallsInRepRules _ _ _ H1 s i j H2).
+      specialize (noCallsInOneMeths _ H0); subst.
+      unfold getCallsMAction in *.
+      rewrite noCallsInOneMeths in *.
+      intuition.
+      destruct H3; try discriminate; intuition auto.
+      destruct (eq_nat_dec n1 n0); subst.
+      simpl in *.
+      destruct H3; intuition auto.
+      inv H3.
+      apply (inlineDm_calls (s0 __ i :: s1 i)%struct ((s0 __ i :: s1 i)%struct :: nil)) in H2.
+      apply in_app_or in H2.
+      simpl in *.
+      rewrite app_nil_r in H2.
+      destruct H2.
+      apply (noBadCallsInRepRules _ _ _ H1 s i j H2).
+      specialize (noCallsInRepMeths _ _ _ H0 i).
+      unfold getCallsMAction in *.
+      rewrite noCallsInRepMeths in *.
+      intuition.
+      intuition.
+      apply in_map_iff in H3; dest; discriminate.
+    - intros.
+      apply in_concat in H1; dest.
+      destruct a, x; simpl in *; intuition auto.
+      inv H4.
+      unfold inlineDmToRule in H2; simpl in *.
+      apply (inlineDm_calls a (a :: nil) (@in_eq _ _ _) (attrType a0 typeUT) (s __ i)) in H2.
+      apply in_app_or in H2; simpl in *.
+      rewrite app_nil_r in H2; simpl in *.
+      destruct H2.
+      apply noBadCallsInOneRules in H2; auto.
+      specialize (noCallsInOneMeths _ H0).
+      unfold getCallsMAction in *; rewrite noCallsInOneMeths in H2.
+      intuition.
+      discriminate.
+      inv H4.
+      rewrite inlineNoCallsRule_matches in H2.
+      apply noBadCallsInOneRules in H2; auto.
+      intros.
+      specialize (rulesEquiv ty (One a) H1).
+      unfold metaRuleEquiv in *; simpl in *.
+      apply rulesEquiv; auto.
+      intros.
+      apply in_getListFromRep in H3; dest.
+      subst; simpl in *.
+      apply (noBadCallsInOneRules _ H1 s0 x H4).
+      destruct (eq_nat_dec n0 n); simpl in *.
+      destruct H3; try discriminate; intuition auto.
+      specialize (sameN' _ _ _ _ _ _ H1 H0).
+      intuition.
+    - intros.
+      apply in_concat in H1; dest.
+      destruct a, x; simpl in *; intuition auto; try discriminate.
+      inv H3.
+      unfold getCallsMAction in *; simpl in *.
+      assert (getCallsA (projT2 (s0 i) typeUT tt) = nil).
+      apply noCallsInRepMeths with (i := i) in H1.
+      intuition.
+      assert (getCallsMAction (attrType a) = nil).
+      apply noCallsInOneMeths in H0.
+      intuition.
+      unfold getCallsMAction in *.
+      pose proof (inlineDm_calls a (a :: nil) (@in_eq _ _ _) (projT2 (s0 i) typeUT tt)).
+      simpl in *.
+      rewrite H2, H3 in H4; simpl in *.
+      apply SubList_nil_inv in H4.
+      intuition.
+      destruct (eq_nat_dec n1 n0); simpl in *; intuition auto.
+      inv H3; subst.
+      unfold getCallsMAction; simpl in *.
+      assert (getCallsA (projT2 (s2 i) typeUT tt) = nil).
+      apply noCallsInRepMeths with (i := i) in H1.
+      intuition.
+      assert (getCallsMAction (s0 i) = nil).
+      apply noCallsInRepMeths with (i := i) in H0.
+      intuition.
+      unfold getCallsMAction in *.
+      pose proof (inlineDm_calls (s __ i :: s0 i)%struct ((s __ i :: s0 i)%struct :: nil)
+                                 (@in_eq _ _ _) (projT2 (s2 i) typeUT tt)).
+      simpl in *.
+      rewrite H2, H3 in H4.
+      simpl in *.
+      apply SubList_nil_inv in H4.
+      intuition.
+      specialize (sameN _ _ _ _ _ _ H1 H0).
+      intuition.
+    - intros.
+      apply in_concat in H1; dest.
+      destruct a, x; simpl in *; intuition auto; unfold getCallsMAction in *.
+      inv H3.
+      unfold inlineDmToDm; simpl in *; unfold getCallsMAction; simpl in *.
+      specialize (noCallsInOneMeths _ H1).
+      pose (tt: fullType typeUT (SyntaxKind (arg (projT1 (attrType a0))))) as f.
+      rewrite inlineNoCallAction_matches with
+      (aUT := projT2 (attrType a0) typeUT tt)
+        (c := vars f f :: nil); auto.
+      unfold getCallsMAction in *.
+      rewrite noCallsInOneMeths.
+      intuition.
+      specialize (methsEquiv typeUT _ H1).
+      intuition.
+      discriminate.
+      inv H3.
+      rewrite inlineNoCallsMeth_matches; auto.
+      intros.
+      specialize (methsEquiv ty _ H1).
+      unfold metaMethEquiv in *.
+      apply methsEquiv; auto.
+      intros.
+      specialize (noCallsInOneMeths _ H1).
+      rewrite noCallsInOneMeths in H3.
+      intuition.
+      destruct (eq_nat_dec n0 n); subst.
+      simpl in *; destruct H2; try discriminate; intuition.
+      specialize (sameN _ _ _ _ _ _ H1 H0).
+      intuition.
+    - intros.
+      apply in_concat in H1.
+      apply in_concat in H2.
+      dest.
+      destruct x, x0, a; simpl in *; intuition (try discriminate || auto).
+      inv H5; inv H4.
+      eapply sameN; eauto.
+      destruct (eq_nat_dec n n3); simpl in H3; intuition auto.
+      destruct (eq_nat_dec n0 n3); simpl in H4; intuition auto.
+      inv H5; inv H3.
+      intuition.
+      inv H5.
+      apply in_map_iff in H4; dest.
+      discriminate.
+      apply in_map_iff in H3; dest.
+      discriminate.
+    - intros.
+      apply in_concat in H1; dest.
+      apply in_concat in H2; dest.
+      destruct x, x0, a; simpl in *; intuition (try discriminate || auto).
+      inv H5; inv H3.
+      eapply sameN'; eauto.
+      destruct (eq_nat_dec n0 n3); simpl in *; intuition auto.
+      destruct (eq_nat_dec n n3); simpl in *; intuition auto.
+      inv H5; inv H4.
+      intuition.
+      apply in_map_iff in H3; dest.
+      discriminate.
+      apply in_map_iff in H4; dest; discriminate.
+    - assert (SubList dms (metaMeths m)) by (unfold SubList in *; intuition).
+      unfold SubList; intros.
+      specialize (H1 e H2).
+      apply in_concat.
+      destruct e, a; simpl in *.
+      + unfold metaInlineDmToDm; simpl in *; exists (One a0); intuition auto; left; f_equal.
+        specialize (noCallsInOneMeths _ H1).
+        unfold inlineDmToDm.
+        assert (forall ty, metaMethEquiv ty typeUT (One a0)) by
+            (intros; specialize (methsEquiv ty); intuition); simpl in *.
+        destruct a0; simpl in *.
+        f_equal.
+        destruct attrType.
+        f_equal.
+        extensionality ty; extensionality argV; simpl in *.
+        pose argV as f0.
+        changeType f0.
+        pose (tt: fullType typeUT (SyntaxKind (arg x))).
+        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        unfold getCallsMAction in *; simpl in *.
+        rewrite noCallsInOneMeths.
+        intuition.
+        apply H3.
+      + unfold metaInlineDmToDm; simpl in *; exists (One a0); intuition auto; left; f_equal.
+        apply inlineNoCallsMeth_matches; auto.
+        assert (forall ty, metaMethEquiv ty typeUT (One a0)) by
+            (intros; specialize (methsEquiv ty); intuition); simpl in *.
+        destruct a0; simpl in *.
+        assumption.
+        intros.
+        specialize (noCallsInOneMeths _ H1).
+        unfold getCallsMAction in *; rewrite noCallsInOneMeths in *.
+        intuition.
+      + unfold metaInlineDmToDm; simpl in *; exists (Rep s s0 n); intuition auto; left; f_equal.
+        extensionality i.
+        case_eq (s0 i); intros; subst; f_equal.
+        extensionality ty; extensionality argV; simpl in *.
+        pose argV as f0.
+        changeType f0.
+        pose (tt: fullType typeUT (SyntaxKind (arg x))).
+        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        unfold getCallsMAction in *; simpl in *.
+        specialize (noCallsInRepMeths _ _ _ H1 i).
+        rewrite H3 in *; simpl in *.
+        rewrite noCallsInRepMeths.
+        intuition.
+        specialize (methsEquiv ty _ H1 i).
+        rewrite H3 in methsEquiv; simpl in *.
+        apply methsEquiv; auto.
+      + exists (Rep s s0 n); simpl in *; intuition auto.
+        destruct (eq_nat_dec n n0); subst; simpl in *; intuition auto.
+        left.
+        f_equal.
+        extensionality i.
+        case_eq (s0 i); intros.
+        f_equal.
+        extensionality ty; extensionality argV; simpl in *.
+        pose argV as f0.
+        changeType f0.
+        pose (tt: fullType typeUT (SyntaxKind (arg x))).
+        apply inlineNoCallAction_matches with
+        (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        specialize (noCallsInRepMeths _ _ _ H1 i).
+        rewrite H3 in *.
+        unfold getCallsMAction in *; simpl in *; rewrite noCallsInRepMeths.
+        intuition.
+        specialize (methsEquiv ty _ H1 i).
+        rewrite H3 in methsEquiv; simpl in *.
+        apply methsEquiv; auto.
+        specialize (sameN _ _ _ _ _ _ H1 H0).
+        intuition.
+  Qed.
+
+  Lemma metaInline_matches_ez:
+    makeModule (metaInline m) =
+    inlineDmsInMod (makeModule m) (getFullListFromMeta (metaMeths m)).
+  Proof.
+    unfold metaInline.
+    pose proof (SubList_refl (metaMeths m)) as sth.
+    apply metaInline_matches_ez'; intuition.
   Qed.
 End MetaModuleEz.
+
