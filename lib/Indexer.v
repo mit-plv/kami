@@ -161,6 +161,18 @@ Proof.
   simpl; f_equal; auto.
 Qed.
 
+Lemma withIndex_index_eq:
+  forall s i j,
+    withIndex s i = withIndex s j -> i = j.
+Proof.
+  unfold withIndex; intros.
+  do 2 apply prepend_same in H.
+  assert (length (string_of_nat i) = length (string_of_nat j)) by (rewrite H; reflexivity).
+  clear H.
+  do 2 rewrite string_of_nat_length in H0.
+  inv H0; auto.
+Qed.
+  
 Lemma withIndex_neq:
   forall a b i j,
     i <> j ->
