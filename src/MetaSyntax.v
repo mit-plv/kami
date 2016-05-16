@@ -1286,7 +1286,7 @@ Section MetaModuleEz.
   Qed.
 
   Variable noDups: NoDup (map (@getNamesOfMeta _) (metaMeths m)).
-  (*
+
   Variable noBadNamesOrig: hasNoIndex (map (@getNamesOfMeta _) (metaMeths m)) = true.
 
   Lemma noBadNames:
@@ -1297,13 +1297,11 @@ Section MetaModuleEz.
     clear - noBadNamesOrig.
     unfold not; intros; subst.
     apply index_correct3 with (m := (length s')) in noBadNamesOrig; auto; try omega; simpl in *.
-    rewrite withIndex_eq in noBadNamesOrig; unfold indexSymbol, substring in *; simpl in *.
-    induction s'; simpl in *.
-    unfold substring in *.
-   *)
-
-  Variable noBadNames:
-    forall s, In s (map (@getNamesOfMeta _) (metaMeths m)) -> forall s' i, s <> s' __ i.    
+    rewrite withIndex_eq in noBadNamesOrig; simpl in *.
+    rewrite substring_append_1 in noBadNamesOrig; simpl in *.
+    rewrite substring_empty in *.
+    intuition.
+  Qed.
   
   Lemma metaInline_matches_ez:
     makeModule (metaInlineNoFilt m) =
@@ -1324,7 +1322,8 @@ Section MetaModuleEz.
       rewrite H in *.
       intuition.
     - unfold makeModule, getDefs; simpl.
-      clear - noDups noBadNames.
+      clear - noDups.
+      pose proof noBadNames as noBadNames.
       apply aboutNoDups; auto.
     - unfold ModEquiv; clear - rulesEquiv methsEquiv; unfold makeModule; simpl.
       constructor.
