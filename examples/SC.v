@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations.
-Require Import Lts.Semantics Lts.Specialize Lts.Equiv Lts.Tactics.
+Require Import Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
 
 Set Implicit Arguments.
 
