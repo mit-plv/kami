@@ -319,6 +319,15 @@ Proof.
   apply in_or_app; auto.
 Qed.
 
+Lemma getDefs_app:
+  forall ma mb,
+    getDefs (ConcatMod ma mb) = getDefs ma ++ getDefs mb.
+Proof.
+  intros.
+  unfold getDefs; simpl.
+  unfold namesOf; rewrite map_app; reflexivity.
+Qed.
+
 Section AppendAction.
   Variable ty: Kind -> Type.
   

@@ -30,14 +30,24 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
-    - admit. (* duplicated regs -*- normal regs *)
-    - admit. (* duplicated regs -*- normal regs *)
-    - admit. 
-    - admit.
-    - admit. (* duplicated defs -*- repeated defs *)
-    - admit. (* duplicated calls -*- repeated calls *)
-    - admit. (* duplicated defs -*- repeated defs *)
-    - admit. (* duplicated calls -*- repeated calls *)
+    - apply duplicate_meta_disj_regs_one; auto.
+    - apply duplicate_meta_disj_regs_one; auto.
+    - split.
+      + apply duplicate_validRegsModules; auto.
+      + constructor; [constructor|].
+        simpl; rewrite app_nil_r.
+        induction n; simpl; [repeat constructor|].
+        repeat constructor; auto.
+    - split.
+      + apply duplicate_validRegsModules; auto.
+      + constructor; [constructor|].
+        simpl; rewrite app_nil_r.
+        induction n; simpl; [repeat constructor|].
+        repeat constructor; auto.
+    - apply duplicate_meta_disj_defs_rep; auto.
+    - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
+    - apply duplicate_meta_disj_defs_rep; auto.
+    - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
     - kduplicated.
       + kequiv.
       + kequiv.
