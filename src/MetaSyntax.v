@@ -1,8 +1,74 @@
 Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
         FunctionalExtensionality String Equiv Program.Equality Lib.FMap CommonTactics StringEq
-        InlineFacts_2.
+        InlineFacts_2 Specialize.
 
 Set Implicit Arguments.
+
+Lemma RulesEquiv_app t1 t2 r1: forall r2, RulesEquiv t1 t2 r1 ->
+                                          RulesEquiv t1 t2 r2 ->
+                                          RulesEquiv t1 t2 (r1 ++ r2).
+Proof.
+  induction r1; simpl in *; intros.
+  - intuition.
+  - dependent destruction H.
+    constructor; auto.
+Qed.
+
+Lemma RulesEquiv_in t1 t2 (r: list (Attribute (Action Void))):
+  (forall i, In i r ->
+             forall (G: ctxt (ft1 t1) (ft2 t2)),
+               ActionEquiv G (attrType i t1) (attrType i t2)) ->
+  RulesEquiv t1 t2 r.
+Proof.
+  induction r; simpl in *; intros.
+  - constructor.
+  - assert (sth1: forall i, In i r -> forall G, ActionEquiv G (attrType i t1) (attrType i t2))
+      by (intros; apply H; auto).
+    assert (sth2: forall G, ActionEquiv G (attrType a t1) (attrType a t2))
+      by (intros; apply H; auto).
+    specialize (IHr sth1).
+    destruct a.
+    econstructor; eauto.
+Qed.
+
+Lemma MethsEquiv_app t1 t2 r1: forall r2, MethsEquiv t1 t2 r1 ->
+                                          MethsEquiv t1 t2 r2 ->
+                                          MethsEquiv t1 t2 (r1 ++ r2).
+Proof.
+  induction r1; simpl in *; intros.
+  - intuition.
+  - dependent destruction H.
+    constructor; auto.
+Qed.
+
+Lemma MethsEquiv_in t1 t2 (r: list DefMethT):
+  (forall i, In i r ->
+             forall (argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType i)))))
+                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))) G,
+               ActionEquiv ((vars argV1 argV2) :: G)
+                           (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2)) ->
+  MethsEquiv t1 t2 r.
+Proof.
+  induction r; simpl in *; intros.
+  - constructor.
+  - assert (sth1: forall i,
+                    In i r ->
+                    forall(argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType i)))))
+                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))) G,
+                      ActionEquiv ((vars argV1 argV2) :: G)
+                                  (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2))
+      by (intros; apply H; auto).
+    assert (sth2: forall(argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType a)))))
+                        (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType a))))) G,
+                    ActionEquiv ((vars argV1 argV2) :: G)
+                                (projT2 (attrType a) t1 argV1) (projT2 (attrType a) t2 argV2))
+      by (intros; apply H; auto).
+    specialize (IHr sth1).
+    destruct a.
+    destruct attrType.
+    econstructor; eauto.
+Qed.
+
 
 Section Concat.
   Fixpoint concat A (ls: list (list A)) :=
@@ -33,6 +99,25 @@ Section Concat.
   Qed.
 End Concat.
 
+Section NoDup.
+  Variable A: Type.
+  Lemma noDupApp l1: forall l2, NoDup l1 -> NoDup l2 ->
+                                (forall i: A, In i l1 -> ~ In i l2) ->
+                                NoDup (l1 ++ l2).
+  Proof.
+    induction l1; simpl in *; intros.
+    - intuition.
+    - inv H.
+      specialize (IHl1 _ H5 H0).
+      assert (forall i, In i l1 -> ~ In i l2) by (intros; apply H1; intuition).
+      specialize (IHl1 H).
+      assert (~ In a l2) by (intros; apply H1; auto).
+      constructor; auto.
+      unfold not; intros K; apply in_app_or in K.
+      destruct K; intuition auto.
+  Qed.
+End NoDup.
+
 Section MetaDefns.
   Variable A: Type.
 
@@ -58,6 +143,19 @@ Section MetaDefns.
     - apply IHn in H0; dest.
       repeat (econstructor; eauto).
   Qed.
+
+  Lemma in_getListFromRepNames n:
+    forall dmName s (f: nat -> A),
+      In dmName (namesOf (getListFromRep s f n)) ->
+      exists i, i <= n /\ dmName = s __ i.
+  Proof.
+    induction n; intros; simpl in *; intuition auto.
+    - exists 0; intuition auto.
+    - exists (S n); intuition auto.
+    - apply IHn in H0; dest.
+      exists x.
+      constructor; auto.
+  Qed.
   
   Definition getListFromMeta m :=
     match m with
@@ -81,12 +179,94 @@ Section MetaDefns.
       f_equal.
       apply IHm1; intuition.
   Qed.
+
+  Lemma inFullList ls:
+    forall x,
+      In x (getFullListFromMeta ls) ->
+      exists y, In y ls /\ In x (getListFromMeta y).
+  Proof.
+    induction ls; simpl in *; intros.
+    - intuition auto.
+    - apply in_app_or in H.
+      destruct H.
+      + exists a; intuition.
+      + apply IHls in H; dest.
+        exists x0; intuition.
+  Qed.
   
   Fixpoint getNamesOfMeta m :=
     match m with
       | One a => attrName a
       | Rep s _ _ => s
     end.
+
+  Lemma aboutNoDups ls:
+    NoDup (map getNamesOfMeta ls) ->
+    (forall s, In s (map getNamesOfMeta ls) -> forall s' i, s <> s' __ i) ->
+    NoDup (namesOf (getFullListFromMeta ls)).
+  Proof.
+    induction ls; simpl in *; intros.
+    - intuition.
+    - dependent destruction H.
+      specialize (IHls H0).
+      assert (sth1: forall s, In s (map getNamesOfMeta ls) -> forall s' i, s <> s' __ i) by
+          (intros; specialize (H1 s); apply H1; intuition).
+      apply IHls in sth1.
+      assert (sth2: forall s' i, getNamesOfMeta a <> s' __ i) by
+          (specialize (H1 (getNamesOfMeta a)); apply H1; intuition).
+      unfold namesOf.
+      rewrite map_app.
+      fold (namesOf (getListFromMeta a)).
+      fold (namesOf (getFullListFromMeta ls)).
+      apply noDupApp; auto; intros.
+      destruct a; simpl in *.
+      intuition.
+      assert (sth: forall n i, In (s __ i) (namesOf (getListFromRep s a n)) -> i <= n).
+      { clear; induction n; intros; simpl in *; intuition auto.
+        apply withIndex_index_eq in H0; dest; subst; auto.
+        apply withIndex_index_eq in H0; dest; subst; auto.
+      }
+      { clear - sth. induction n; simpl in *.
+        intuition.
+        constructor.
+        unfold not; intros.
+        specialize (sth n (S n) H).
+        omega.
+        assumption.
+      }
+      unfold not; intros.
+      assert (sth3: forall s, In s (map getNamesOfMeta ls) -> forall s' i, s <> s' __ i)
+        by (intros; apply H1; intuition).
+      clear - sth3 sth2 H2 H3 H.
+      induction ls; simpl in *.
+      + intuition.
+      + assert (sth4: ~ In (getNamesOfMeta a) (map getNamesOfMeta ls)) by intuition.
+        specialize (IHls sth4); clear sth4.
+        assert (sth5: forall s, In s (map getNamesOfMeta ls) -> forall s' i0, s <> s' __ i0)
+          by (intros; apply sth3; intuition).
+        assert (sth6: getNamesOfMeta a0 <> getNamesOfMeta a) by intuition.
+        clear H.
+        unfold namesOf in H3.
+        rewrite map_app in H3.
+        apply in_app_or in H3.
+        fold (namesOf (getListFromMeta a0)) in H3.
+        fold (namesOf (getFullListFromMeta ls)) in H3.
+        destruct H3; [| apply IHls; auto].
+        assert (sth7: forall s' i0, getNamesOfMeta a0 <> s' __ i0) by (apply sth3; intuition).
+        clear - sth2 H2 H sth6 sth7.
+        destruct a, a0; simpl in *; subst; intuition auto; subst; intuition auto.
+        pose proof (in_getListFromRepNames n (attrName a) s a0 H); dest.
+        eapply sth2; eauto.
+        pose proof (in_getListFromRepNames n (attrName a0) s a H2); dest.
+        eapply sth7; eauto.
+        
+        apply in_getListFromRepNames in H2.
+        apply in_getListFromRepNames in H.
+        dest.
+        subst.
+        pose proof (withIndex_index_eq _ _ _ _ H0); dest.
+        intuition.
+  Qed.
 End MetaDefns.
 
 Definition MetaReg := MetaDefn (sigT ConstFullT).
@@ -604,7 +784,7 @@ Fixpoint metaInlineDmsToMod m (inDms: list MetaMeth) :=
     | nil => m
   end.
 
-Definition metaInline m :=
+Definition metaInlineNoFilt m :=
   metaInlineDmsToMod m (metaMeths m).
 
 Lemma simpleInlineDmsToMod_app dms1:
@@ -836,7 +1016,7 @@ Section MetaModuleEz.
       n1 = n2.
 
 
-  Lemma metaInline_matches_ez' dms:
+  Lemma metaInline_matches_ez1 dms:
     SubList dms (metaMeths m) ->
     makeModule (metaInlineDmsToMod m dms) =
     inlineDmsInMod (makeModule m) (getFullListFromMeta dms).
@@ -1096,13 +1276,73 @@ Section MetaModuleEz.
         intuition.
   Qed.
 
-  Lemma metaInline_matches_ez:
-    makeModule (metaInline m) =
+  Lemma metaInline_matches_ez2:
+    makeModule (metaInlineNoFilt m) =
     inlineDmsInMod (makeModule m) (getFullListFromMeta (metaMeths m)).
   Proof.
-    unfold metaInline.
+    unfold metaInlineNoFilt.
     pose proof (SubList_refl (metaMeths m)) as sth.
-    apply metaInline_matches_ez'; intuition.
+    apply metaInline_matches_ez1; intuition.
+  Qed.
+
+  Variable noDups: NoDup (map (@getNamesOfMeta _) (metaMeths m)).
+  Variable noBadNamesOrig: hasNoIndex (map (@getNamesOfMeta _) (metaMeths m)) = true.
+
+  Variable noBadNames:
+    forall s, In s (map (@getNamesOfMeta _) (metaMeths m)) -> forall s' i, s <> s' __ i.    
+  
+  Lemma metaInline_matches_ez:
+    makeModule (metaInlineNoFilt m) =
+    fst (inlineDms (makeModule m)).
+  Proof.
+    rewrite metaInline_matches_ez2.
+    apply inlineDmsIn_matches; intros.
+    - unfold makeModule in *; simpl in *.
+      unfold getCallsDm in H1.
+      apply inFullList in H; dest.
+      destruct x; simpl in *; intuition auto; subst.
+      apply noCallsInOneMeths in H.
+      unfold getCallsMAction in H; rewrite H in *.
+      intuition.
+      apply in_getListFromRep in H2; dest; subst.
+      apply noCallsInRepMeths with (i := x) in H.
+      unfold getCallsMAction in H; simpl in *.
+      rewrite H in *.
+      intuition.
+    - unfold makeModule, getDefs; simpl.
+      clear - noDups noBadNames.
+      apply aboutNoDups; auto.
+    - unfold ModEquiv; clear - rulesEquiv methsEquiv; unfold makeModule; simpl.
+      constructor.
+      + induction (metaRules m); simpl in *.
+        * constructor.
+        * assert (sth1: metaRuleEquiv ty typeUT a) by
+              (intros; apply rulesEquiv; intuition).
+          assert (sth2: forall ty r, In r l -> metaRuleEquiv ty typeUT r) by
+              (intros; apply rulesEquiv; intuition).
+          apply IHl in sth2.
+          apply RulesEquiv_app; auto.
+          clear - sth1.
+          destruct a; simpl in *.
+          destruct a.
+          repeat (econstructor; eauto).
+          apply RulesEquiv_in; intros.
+          apply in_getListFromRep in H; dest; subst; simpl; auto.
+      + induction (metaMeths m); simpl in *.
+        * constructor.
+        * assert (sth1: metaMethEquiv ty typeUT a) by
+              (intros; apply methsEquiv; intuition).
+          assert (sth2: forall ty r, In r l -> metaMethEquiv ty typeUT r) by
+              (intros; apply methsEquiv; intuition).
+          apply IHl in sth2.
+          apply MethsEquiv_app; auto.
+          clear - sth1.
+          destruct a; simpl in *.
+          destruct a.
+          destruct attrType; simpl in *.
+          repeat (econstructor; eauto).
+          apply MethsEquiv_in; intros.
+          apply in_getListFromRep in H; dest; subst; simpl; auto.
   Qed.
 End MetaModuleEz.
 
