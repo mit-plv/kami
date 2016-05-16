@@ -161,28 +161,6 @@ Proof.
   simpl; f_equal; auto.
 Qed.
 
-Lemma withIndex_index_eq:
-  forall s i j,
-    withIndex s i = withIndex s j -> i = j.
-Proof.
-  unfold withIndex; intros.
-  do 2 apply prepend_same in H.
-  assert (length (string_of_nat i) = length (string_of_nat j)) by (rewrite H; reflexivity).
-  clear H.
-  do 2 rewrite string_of_nat_length in H0.
-  inv H0; auto.
-Qed.
-
-Lemma withIndex_index_eq_strong:
-  forall s1 s2 i j,
-    (forall s1' i', s1 <> withIndex s1' i') ->
-    (forall s2' j', s2 <> withIndex s2' j') ->
-    withIndex s1 i = withIndex s2 j ->
-    s1 = s2 /\ i = j.
-Proof.
-  admit.
-Qed.
-
 Lemma withIndex_neq:
   forall a b i j,
     i <> j ->
@@ -211,6 +189,23 @@ Proof.
     end; clear H.
     rewrite string_of_nat_index_2 in H0; simpl in H0.
     rewrite string_of_nat_index_1 in H0; inv H0; omega.
+Qed.
+
+Lemma withIndex_index_eq:
+  forall s t i j,
+    withIndex s i = withIndex t j -> s = t /\ i = j.
+Proof.
+  unfold withIndex; intros.
+  destruct (eq_nat_dec i j).
+  - subst; split; auto.
+    assert (string_rev (s ++ indexSymbol ++ string_of_nat j) =
+            string_rev (t ++ indexSymbol ++ string_of_nat j))
+      by (rewrite H; reflexivity).
+    repeat rewrite string_rev_app in H0.
+    apply string_rev_same.
+    eapply prepend_same; eauto.
+  - apply withIndex_neq with (a:= s) (b:= t) in n.
+    elim n; auto.
 Qed.
 
 Global Opaque withIndex.
