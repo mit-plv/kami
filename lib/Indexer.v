@@ -172,7 +172,17 @@ Proof.
   do 2 rewrite string_of_nat_length in H0.
   inv H0; auto.
 Qed.
-  
+
+Lemma withIndex_index_eq_strong:
+  forall s1 s2 i j,
+    (forall s1' i', s1 <> withIndex s1' i') ->
+    (forall s2' j', s2 <> withIndex s2' j') ->
+    withIndex s1 i = withIndex s2 j ->
+    s1 = s2 /\ i = j.
+Proof.
+  admit.
+Qed.
+
 Lemma withIndex_neq:
   forall a b i j,
     i <> j ->
