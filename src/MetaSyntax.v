@@ -1286,7 +1286,21 @@ Section MetaModuleEz.
   Qed.
 
   Variable noDups: NoDup (map (@getNamesOfMeta _) (metaMeths m)).
+  (*
   Variable noBadNamesOrig: hasNoIndex (map (@getNamesOfMeta _) (metaMeths m)) = true.
+
+  Lemma noBadNames:
+    forall s, In s (map (@getNamesOfMeta _) (metaMeths m)) -> forall s' i, s <> s' __ i.
+  Proof.
+    clear - noBadNamesOrig; intros.
+    apply hasNoIndex_in with (a := s) in noBadNamesOrig; auto.
+    clear - noBadNamesOrig.
+    unfold not; intros; subst.
+    apply index_correct3 with (m := (length s')) in noBadNamesOrig; auto; try omega; simpl in *.
+    rewrite withIndex_eq in noBadNamesOrig; unfold indexSymbol, substring in *; simpl in *.
+    induction s'; simpl in *.
+    unfold substring in *.
+   *)
 
   Variable noBadNames:
     forall s, In s (map (@getNamesOfMeta _) (metaMeths m)) -> forall s' i, s <> s' __ i.    
