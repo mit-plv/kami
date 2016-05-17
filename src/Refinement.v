@@ -151,6 +151,19 @@ Section Facts.
       constructor; destruct (annot a); auto.
   Qed.
 
+  Lemma traceRefines_comm:
+    forall ma mb,
+      NoDup (namesOf (getRegInits (ma ++ mb)%kami)) ->
+      traceRefines id (ma ++ mb)%kami (mb ++ ma)%kami.
+  Proof.
+    intros; apply traceRefines_same_module_structure;
+      auto; try (apply SubList_app_3;
+                 [apply SubList_app_2, SubList_refl
+                 |apply SubList_app_1, SubList_refl]; fail).
+    unfold namesOf in *; simpl in *; rewrite map_app in *.
+    apply NoDup_app_comm; auto.
+  Qed.
+
   Lemma traceRefines_assoc_1:
     forall ma mb mc,
       traceRefines id ((ma ++ mb) ++ mc)%kami (ma ++ (mb ++ mc))%kami.

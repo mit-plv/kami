@@ -26,7 +26,17 @@ Section SpecializeModule.
     constructor; auto.
   Qed.
 
-  Lemma makeNoDup_SubList: forall l, SubList l (makeNoDup l).
+  Lemma makeNoDup_SubList_1: forall l, SubList (makeNoDup l) l.
+  Proof.
+    induction l; simpl; intros.
+    - apply SubList_refl.
+    - destruct (string_in _ _).
+      + apply SubList_cons_right; auto.
+      + unfold SubList; intros.
+        inv H; [left; auto|right; auto].
+  Qed.
+
+  Lemma makeNoDup_SubList_2: forall l, SubList l (makeNoDup l).
   Proof.
     induction l; simpl; intros.
     - apply SubList_refl.
@@ -46,7 +56,7 @@ Section SpecializeModule.
     SubList (namesOf (getRegInits m)) spDom.
   Proof.
     unfold spDom.
-    eapply SubList_trans; [|apply makeNoDup_SubList].
+    eapply SubList_trans; [|apply makeNoDup_SubList_2].
     apply SubList_app_1, SubList_refl.
   Qed.
 
@@ -54,7 +64,7 @@ Section SpecializeModule.
     SubList (namesOf (getRules m)) spDom.
   Proof.
     unfold spDom.
-    eapply SubList_trans; [|apply makeNoDup_SubList].
+    eapply SubList_trans; [|apply makeNoDup_SubList_2].
     apply SubList_app_2, SubList_app_1, SubList_refl.
   Qed.
 
@@ -62,7 +72,7 @@ Section SpecializeModule.
     SubList (getDefs m) spDom.
   Proof.
     unfold spDom.
-    eapply SubList_trans; [|apply makeNoDup_SubList].
+    eapply SubList_trans; [|apply makeNoDup_SubList_2].
     do 2 apply SubList_app_2.
     apply SubList_app_1, SubList_refl.
   Qed.
@@ -71,7 +81,7 @@ Section SpecializeModule.
     SubList (getCalls m) spDom.
   Proof.
     unfold spDom.
-    eapply SubList_trans; [|apply makeNoDup_SubList].
+    eapply SubList_trans; [|apply makeNoDup_SubList_2].
     do 3 apply SubList_app_2.
     apply SubList_refl.
   Qed.
@@ -187,6 +197,58 @@ Section SpecializeModule.
 End SpecializeModule.
 
 Section SpecializeFacts.
+
+  Lemma spDom_concatMod_1:
+    forall m1 m2, SubList (spDom m1) (spDom (m1 ++ m2)%kami).
+  Proof.
+    unfold SubList, spDom; intros.
+    apply makeNoDup_SubList_1 in H.
+    apply makeNoDup_SubList_2; simpl.
+    unfold namesOf in *.
+    repeat rewrite map_app.
+    Opaque getCalls.
+    repeat (apply in_app_or in H; destruct H).
+    - apply in_or_app; left.
+      apply in_or_app; left; auto.
+    - apply in_or_app; right.
+      apply in_or_app; left.
+      apply in_or_app; left; auto.
+    - apply in_or_app; right.
+      apply in_or_app; right.
+      apply in_or_app; left.
+      apply in_or_app; left; auto.
+    - apply in_or_app; right.
+      apply in_or_app; right.
+      apply in_or_app; right.
+      apply getCalls_in_1; auto.
+      Transparent getCalls.
+  Qed.
+
+  Lemma spDom_concatMod_2:
+    forall m1 m2, SubList (spDom m2) (spDom (m1 ++ m2)%kami).
+  Proof.
+    unfold SubList, spDom; intros.
+    apply makeNoDup_SubList_1 in H.
+    apply makeNoDup_SubList_2; simpl.
+    unfold namesOf in *.
+    repeat rewrite map_app.
+    Opaque getCalls.
+    repeat (apply in_app_or in H; destruct H).
+    - apply in_or_app; left.
+      apply in_or_app; right; auto.
+    - apply in_or_app; right.
+      apply in_or_app; left.
+      apply in_or_app; right; auto.
+    - apply in_or_app; right.
+      apply in_or_app; right.
+      apply in_or_app; left.
+      apply in_or_app; right; auto.
+    - apply in_or_app; right.
+      apply in_or_app; right.
+      apply in_or_app; right.
+      apply getCalls_in_2; auto.
+      Transparent getCalls.
+  Qed.
   
   Lemma spf_neq: forall a b i j, i <> j -> spf i a <> spf j b.
   Proof. intros; apply withIndex_neq; auto. Qed.
@@ -333,6 +395,152 @@ Section SpecializeFacts.
         * simpl; apply SubList_app_2, SubList_refl.
   Qed.
 
+  Lemma renameAction_spDom_weakening:
+    forall f g ty {retT} (aty: ActionT ty retT)
+           regs (Hvr: ValidRegsAction regs aty)
+           au G (Hequiv: ActionEquiv G aty au),
+      (forall s : string, In s (regs ++ (getCallsA au)) -> f s = g s) ->
+      renameAction f aty = renameAction g aty.
+  Proof.
+    induction 2; simpl; intros; auto.
+    - inv Hvr; destruct_existT.
+      f_equal; auto.
+      + apply H1, in_or_app; right; simpl; tauto.
+      + extensionality v; eapply H0; [auto|].
+        intros; apply H1; apply in_app_or in H2; destruct H2.
+        * apply in_or_app; auto.
+        * apply in_or_app; right; right; eauto.
+    - inv Hvr; destruct_existT; f_equal; extensionality v; eauto.
+    - inv Hvr; destruct_existT.
+      f_equal; [|extensionality v; eauto].
+      apply H1, in_or_app; auto.
+    - inv Hvr; destruct_existT.
+      f_equal; auto.
+      apply H, in_or_app; auto.
+    - inv Hvr; destruct_existT.
+      f_equal.
+      + apply IHHequiv1; intros; auto; apply H1.
+        rewrite app_assoc; apply in_or_app; left; auto.
+      + apply IHHequiv2; intros; auto; apply H1.
+        apply in_app_or in H2; destruct H2.
+        * apply in_or_app; auto.
+        * do 2 (apply in_or_app; right).
+          apply in_or_app; left; auto.
+      + extensionality v.
+        eapply H0; auto.
+        intros; apply H1.
+        apply in_app_or in H2; destruct H2.
+        * apply in_or_app; auto.
+        * do 3 (apply in_or_app; right); eauto.
+    - inv Hvr; destruct_existT.
+      f_equal; auto.
+  Qed.
+
+  Lemma renameModules_spDom_weakening:
+    forall f g m
+           (Hvr: forall ty, ValidRegsModules ty m)
+           (Hequiv: forall ty, ModEquiv ty typeUT m),
+      (forall s, In s (spDom m) -> f s = g s) ->
+      renameModules f m = renameModules g m.
+  Proof.
+    induction m; simpl; intros.
+    - f_equal.
+      + assert (forall s, In s (namesOf regs) -> f s = g s)
+          by (intros; apply H; apply spDom_regs; auto).
+        clear -H0; induction regs; simpl; auto.
+        f_equal.
+        * unfold renameAttr; f_equal.
+          apply H0; simpl; tauto.
+        * apply IHregs; intros; apply H0; simpl; auto.
+      + assert (forall s, In s (namesOf rules) -> f s = g s)
+          by (intros; apply H; apply spDom_rules; auto).
+        assert (forall s, In s (namesOf regs ++ getCallsR rules) -> f s = g s).
+        { intros; apply H.
+          apply in_app_or in H1; destruct H1.
+          { apply spDom_regs; auto. }
+          { apply spDom_calls; apply in_or_app; auto. }
+        }
+        assert (forall ty, RulesEquiv ty typeUT rules)
+          by (intros; specialize (Hequiv ty); inv Hequiv; auto).
+        assert (forall ty, ValidRegsRules ty (namesOf regs) rules)
+          by (intros; specialize (Hvr ty); dest; auto).
+        clear -H0 H1 H2 H3; induction rules; simpl; auto.
+        f_equal.
+        * destruct a as [an ab]; f_equal.
+          { apply H0; simpl; tauto. }
+          { extensionality ty.
+            specialize (H3 ty); inv H3.
+            apply renameAction_spDom_weakening with
+            (au:= ab typeUT) (G:= nil) (regs:= namesOf regs).
+            { auto. }
+            { specialize (H2 ty); inv H2; auto. }
+            { intros; apply H1.
+              simpl; rewrite app_assoc; apply in_or_app; auto.
+            }
+          }
+        * apply IHrules; intros.
+          { apply H0; simpl; auto. }
+          { apply H1; simpl.
+            apply in_app_or in H; destruct H.
+            { apply in_or_app; auto. }
+            { apply in_or_app; right; apply in_or_app; auto. }
+          }
+          { specialize (H2 ty); inv H2; auto. }
+          { specialize (H3 ty); inv H3; auto. }
+      + assert (forall s, In s (namesOf dms) -> f s = g s)
+          by (intros; apply H; apply spDom_defs; auto).
+        assert (forall s, In s (namesOf regs ++ getCallsM dms) -> f s = g s).
+        { intros; apply H.
+          apply in_app_or in H1; destruct H1.
+          { apply spDom_regs; auto. }
+          { apply spDom_calls; apply in_or_app; auto. }
+        }
+        assert (forall ty, MethsEquiv ty typeUT dms)
+          by (intros; specialize (Hequiv ty); inv Hequiv; auto).
+        assert (forall ty, ValidRegsDms ty (namesOf regs) dms)
+          by (intros; specialize (Hvr ty); dest; auto).
+        clear -H0 H1 H2 H3; induction dms; simpl; auto.
+        f_equal.
+        * unfold renameMeth; destruct a as [an ab]; f_equal.
+          { apply H0; simpl; tauto. }
+          { f_equal.
+            extensionality ty; extensionality v.
+            specialize (H2 ty); inv H2.
+            specialize (H3 ty); inv H3.
+            simpl; eapply renameAction_spDom_weakening.
+            { eapply H6. }
+            { eapply H5. }
+            { simpl in H1; intros; apply H1.
+              rewrite app_assoc; apply in_or_app; eauto.
+            }
+          }
+        * apply IHdms; intros.
+          { apply H0; simpl; auto. }
+          { apply H1; simpl.
+            apply in_app_or in H; destruct H.
+            { apply in_or_app; auto. }
+            { apply in_or_app; right; apply in_or_app; auto. }
+          }
+          { specialize (H2 ty); inv H2; auto. }
+          { specialize (H3 ty); inv H3; auto. }
+    - f_equal.
+      + apply IHm1; intros.
+        { specialize (Hvr ty); dest; auto. }
+        { specialize (Hequiv ty).
+          apply ModEquiv_split in Hequiv; dest; auto.
+        }
+        { apply H; apply spDom_concatMod_1; auto. }
+      + apply IHm2; intros.
+        { specialize (Hvr ty); dest; auto. }
+        { specialize (Hequiv ty).
+          apply ModEquiv_split in Hequiv; dest; auto.
+        }
+        { apply H; apply spDom_concatMod_2; auto. }
+
+        Grab Existential Variables.
+        exact nil.
+  Qed.
+
 End SpecializeFacts.
 
 Section Specializable.
@@ -356,6 +564,28 @@ Section Specializable.
     - destruct (index _ _ _); intuition.
     - apply IHl; auto.
       destruct (index _ _ _); intuition.
+  Qed.
+
+  Lemma hasNoIndex_app:
+    forall l1 l2,
+      hasNoIndex l1 = true ->
+      hasNoIndex l2 = true ->
+      hasNoIndex (l1 ++ l2) = true.
+  Proof.
+    induction l1; simpl; intros; auto.
+    destruct (index _ _ _); auto.
+  Qed.
+
+  Lemma hasNoIndex_makeNoDup:
+    forall l, hasNoIndex l = hasNoIndex (makeNoDup l).
+  Proof.
+    induction l; simpl; auto.
+    remember (string_in a (makeNoDup l)) as al; destruct al; [|simpl; rewrite IHl; auto].
+    apply string_in_dec_in in Heqal.
+    destruct (hasNoIndex (makeNoDup l)).
+    - rewrite (hasNoIndex_in _ IHl); auto.
+      apply makeNoDup_SubList_1; auto.
+    - rewrite IHl; destruct (index _ _ _); auto.
   Qed.
 
   Lemma hasNoIndex_SubList:
@@ -426,6 +656,41 @@ Section Specializable.
 
   Definition Specializable (m: Modules) := hasNoIndex (spDom m) = true.
 
+  Lemma specializable_concatMod:
+    forall m1 m2,
+      Specializable m1 ->
+      Specializable m2 ->
+      Specializable (m1 ++ m2)%kami.
+  Proof.
+    unfold Specializable, spDom, namesOf; intros.
+    simpl; repeat rewrite map_app.
+    rewrite <-hasNoIndex_makeNoDup in *.
+    match type of H with
+    | hasNoIndex ?i1 = true =>
+      match type of H0 with
+      | hasNoIndex ?i2 = true =>
+        apply hasNoIndex_SubList with (l2 := (i1 ++ i2))
+      end
+    end.                                
+
+    - Opaque getCalls.
+      repeat apply SubList_app_3.
+      + apply SubList_app_1, SubList_app_1, SubList_refl.
+      + apply SubList_app_2, SubList_app_1, SubList_refl.
+      + apply SubList_app_1, SubList_app_2, SubList_app_1, SubList_refl.
+      + apply SubList_app_2, SubList_app_2, SubList_app_1, SubList_refl.
+      + apply SubList_app_1, SubList_app_2, SubList_app_2, SubList_app_1, SubList_refl.
+      + apply SubList_app_2, SubList_app_2, SubList_app_2, SubList_app_1, SubList_refl.
+      + Transparent getCalls.
+        clear; unfold SubList; intros.
+        apply getCalls_in in H; destruct H.
+        * apply in_or_app; left.
+          do 3 (apply in_or_app; right); auto.
+        * apply in_or_app; right.
+          do 3 (apply in_or_app; right); auto.
+    - apply hasNoIndex_app; auto.
+  Qed.
+
   Variable (m: Modules).
   Hypothesis (Hsp: Specializable m).
 
@@ -468,6 +733,19 @@ Section Specializable.
     rewrite renameGetCalls.
     apply specializer_dom_list; auto.
     apply spDom_calls.
+  Qed.
+
+  Lemma specializeMod_regs_NoDup:
+    forall i,
+      NoDup (namesOf (getRegInits m)) ->
+      NoDup (namesOf (getRegInits (specializeMod m i))).
+  Proof.
+    intros; rewrite specializeMod_regs; auto.
+    induction (namesOf (getRegInits m)); [simpl; auto|].
+    inv H; simpl; constructor; auto.
+    intro Hx; elim H2.
+    apply in_map_iff in Hx; dest.
+    apply spf_onto in H; subst; auto.
   Qed.
 
   Lemma specializable_disj_regs:
@@ -568,6 +846,35 @@ Section Specializable.
   Qed.
   
 End Specializable.
+
+Lemma specializeMod_concatMod:
+  forall m1 m2
+         (Hvr1: forall ty, ValidRegsModules ty m1)
+         (Hvr2: forall ty, ValidRegsModules ty m2)
+         (Hequiv1: forall ty, ModEquiv ty typeUT m1)
+         (Hequiv2: forall ty, ModEquiv ty typeUT m2) i,
+    Specializable m1 -> Specializable m2 ->
+    specializeMod (m1 ++ m2)%kami i = ((specializeMod m1 i) ++ (specializeMod m2 i))%kami.
+Proof.
+  unfold specializeMod; intros.
+  rewrite renameModulesConcat; f_equal.
+  - apply renameModules_spDom_weakening; auto.
+    intros.
+    rewrite specializer_dom with (m:= (m1 ++ m2)%kami).
+    + rewrite specializer_dom with (m:= m1); auto.
+      apply specializable_disj_dom_img; auto.
+    + apply specializable_disj_dom_img.
+      apply specializable_concatMod; auto.
+    + apply spDom_concatMod_1; auto.
+  - apply renameModules_spDom_weakening; auto.
+    intros.
+    rewrite specializer_dom with (m:= (m1 ++ m2)%kami).
+    + rewrite specializer_dom with (m:= m2); auto.
+      apply specializable_disj_dom_img; auto.
+    + apply specializable_disj_dom_img.
+      apply specializable_concatMod; auto.
+    + apply spDom_concatMod_2; auto.
+Qed.
 
 Hint Immediate specializable_disj_dom_img
      specializable_disj_regs

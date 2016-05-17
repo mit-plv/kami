@@ -21,14 +21,6 @@ End Duplicate.
 
 Section DuplicateFacts.
 
-  Lemma duplicate_NoDup_regs:
-    forall m n,
-      NoDup (namesOf (getRegInits m)) ->
-      NoDup (namesOf (getRegInits (duplicate m n))).
-  Proof.
-    admit.
-  Qed.
-
   Lemma duplicate_ModEquiv:
     forall m n,
       ModEquiv type typeUT m ->
@@ -147,7 +139,19 @@ Section DuplicateFacts.
           { apply DisjList_comm; auto. }
   Qed.
 
-  Section TwoModules.
+  Lemma duplicate_regs_NoDup:
+    forall m (Hsp: Specializable m) n,
+      NoDup (namesOf (getRegInits m)) ->
+      NoDup (namesOf (getRegInits (duplicate m n))).
+  Proof.
+    induction n; simpl; intros; [apply specializeMod_regs_NoDup; auto|].
+    unfold namesOf in *; simpl in *.
+    rewrite map_app; apply NoDup_DisjList; auto.
+    - apply specializeMod_regs_NoDup; auto.
+    - apply duplicate_disj_regs; auto.
+  Qed.
+
+  Section TwoModules1.
     Variables (m1 m2: Modules).
     Hypotheses (Hsp1: Specializable m1)
                (Hsp2: Specializable m2)
@@ -249,8 +253,245 @@ Section DuplicateFacts.
           apply specializer_two_comm; auto.
     Qed.
 
-  End TwoModules.
-      
+  End TwoModules1.
+
+  Section TwoModules2.
+    Variables (m1 m2: Modules).
+    Hypotheses (Hequiv1: forall ty, ModEquiv ty typeUT m1)
+               (Hequiv2: forall ty, ModEquiv ty typeUT m2)
+               (Hvr1: forall ty, ValidRegsModules ty m1)
+               (Hvr2: forall ty, ValidRegsModules ty m2)
+               (Hsp1: Specializable m1)
+               (Hsp2: Specializable m2).
+
+    Lemma duplicate_regs_ConcatMod_1:
+      forall n,
+        SubList (getRegInits (duplicate (m1 ++ m2)%kami n))
+                (getRegInits (duplicate m1 n ++ duplicate m2 n)%kami).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2, SubList_app_1, SubList_refl.
+        + unfold SubList in *; intros.
+          specialize (IHn e H).
+          apply in_app_or in IHn; destruct IHn.
+          * apply in_or_app; left; apply in_or_app; auto.
+          * apply in_or_app; right; apply in_or_app; auto.
+            Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_regs_ConcatMod_2:
+      forall n,
+        SubList (getRegInits (duplicate m1 n ++ duplicate m2 n)%kami)
+                (getRegInits (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2; apply SubList_app_4 in IHn; auto.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_2, SubList_refl.
+          * apply SubList_app_2; apply SubList_app_5 in IHn; auto.
+            Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_regs_NoDup_2:
+      NoDup (namesOf (getRegInits (m1 ++ m2)%kami)) ->
+      forall n,
+        NoDup (namesOf (getRegInits (duplicate m1 n ++ duplicate m2 n)%kami)).
+    Proof.
+      Opaque specializeMod.
+      intros.
+      pose proof H; apply duplicate_regs_NoDup with (n:= n) in H0.
+      induction n; simpl; intros.
+      - simpl in *; rewrite specializeMod_concatMod in H0; auto.
+      - assert (NoDup (namesOf (getRegInits (duplicate (m1 ++ m2)%kami n)))).
+        { apply duplicate_regs_NoDup; auto.
+          apply specializable_concatMod; auto.
+        }
+        specialize (IHn H1); clear H1.
+        unfold namesOf; repeat rewrite map_app.
+        rewrite app_assoc.
+        rewrite <-app_assoc with (l:= map (attrName (Kind:=sigT ConstFullT))
+                                          (getRegInits (specializeMod m1 (S n)))).
+        rewrite <-app_assoc with (l:= map (attrName (Kind:=sigT ConstFullT))
+                                          (getRegInits (specializeMod m1 (S n)))).
+        apply NoDup_app_comm_ext.
+        rewrite app_assoc.
+        rewrite app_assoc.
+        rewrite <-app_assoc with (n:= map (attrName (Kind:=sigT ConstFullT))
+                                          (getRegInits (duplicate m2 n))).
+        apply NoDup_DisjList.
+        + apply specializeMod_regs_NoDup with (i:= S n) in H;
+            [|apply specializable_concatMod; auto].
+          rewrite specializeMod_concatMod in H; auto.
+          rewrite <-map_app; auto.
+        + rewrite <-map_app; auto.
+        + do 2 rewrite <-map_app.
+          pose proof (duplicate_regs_ConcatMod_2 n).
+          apply SubList_map with (f:= @attrName _) in H1.
+          eapply DisjList_comm, DisjList_SubList; eauto.
+          pose proof (specializeMod_concatMod Hvr1 Hvr2 Hequiv1 Hequiv2 (S n) Hsp1 Hsp2).
+          change (getRegInits (specializeMod m1 (S n)) ++ getRegInits (specializeMod m2 (S n)))
+          with (getRegInits (specializeMod m1 (S n) ++ (specializeMod m2 (S n)))%kami).
+          rewrite <-H2.
+          apply DisjList_comm, duplicate_disj_regs; auto.
+          apply specializable_concatMod; auto.
+      - apply specializable_concatMod; auto.
+    Qed.
+
+    Lemma duplicate_rules_ConcatMod_1:
+      forall n,
+        SubList (getRules (duplicate (m1 ++ m2)%kami n))
+                (getRules (duplicate m1 n ++ duplicate m2 n)%kami).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2, SubList_app_1, SubList_refl.
+        + unfold SubList in *; intros.
+          specialize (IHn e H).
+          apply in_app_or in IHn; destruct IHn.
+          * apply in_or_app; left; apply in_or_app; auto.
+          * apply in_or_app; right; apply in_or_app; auto.
+            Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_rules_ConcatMod_2:
+      forall n,
+        SubList (getRules (duplicate m1 n ++ duplicate m2 n)%kami)
+                (getRules (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2; apply SubList_app_4 in IHn; auto.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_2, SubList_refl.
+          * apply SubList_app_2; apply SubList_app_5 in IHn; auto.
+            Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_defs_ConcatMod_1:
+      forall n,
+        SubList (getDefsBodies (duplicate (m1 ++ m2)%kami n))
+                (getDefsBodies (duplicate m1 n ++ duplicate m2 n)%kami).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2, SubList_app_1, SubList_refl.
+        + unfold SubList in *; intros.
+          specialize (IHn e H).
+          apply in_app_or in IHn; destruct IHn.
+          * apply in_or_app; left; apply in_or_app; auto.
+          * apply in_or_app; right; apply in_or_app; auto.
+            Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_defs_ConcatMod_2:
+      forall n,
+        SubList (getDefsBodies (duplicate m1 n ++ duplicate m2 n)%kami)
+                (getDefsBodies (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      Opaque specializeMod.
+      induction n; intros.
+      - unfold duplicate.
+        rewrite specializeMod_concatMod; auto.
+        apply SubList_refl.
+      - simpl in *; apply SubList_app_3.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * do 2 apply SubList_app_1; apply SubList_refl.
+          * apply SubList_app_2; apply SubList_app_4 in IHn; auto.
+        + rewrite specializeMod_concatMod; auto.
+          simpl; apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_2, SubList_refl.
+          * apply SubList_app_2; apply SubList_app_5 in IHn; auto.
+            Transparent specializeMod.
+    Qed.
+
+  End TwoModules2.
+
+  Section TwoModules3.
+    Variables (m1 m2: Modules).
+    Hypotheses (Hsp1: Specializable m1)
+               (Hsp2: Specializable m2)
+               (Hvr1: forall ty, ValidRegsModules ty m1)
+               (Hvr2: forall ty, ValidRegsModules ty m2)
+               (Hequiv1: forall ty, ModEquiv ty typeUT m1)
+               (Hequiv2: forall ty, ModEquiv ty typeUT m2)
+               (HnoDup: NoDup (namesOf (getRegInits (m1 ++ m2)%kami))).
+
+    Lemma duplicate_concatMod_comm_1:
+      forall n,
+        duplicate (m1 ++ m2)%kami n <<== ((duplicate m1 n) ++ (duplicate m2 n))%kami.
+    Proof.
+      intros; rewrite idElementwiseId.
+      apply traceRefines_same_module_structure.
+      - apply duplicate_regs_NoDup; auto.
+        apply specializable_concatMod; auto.
+      - apply duplicate_regs_NoDup_2; auto.
+      - apply duplicate_regs_ConcatMod_1; auto.
+      - apply duplicate_regs_ConcatMod_2; auto.
+      - apply duplicate_rules_ConcatMod_1; auto.
+      - apply duplicate_rules_ConcatMod_2; auto.
+      - apply duplicate_defs_ConcatMod_1; auto.
+      - apply duplicate_defs_ConcatMod_2; auto.
+    Qed.
+
+    Lemma duplicate_concatMod_comm_2:
+      forall n,
+        ((duplicate m1 n) ++ (duplicate m2 n))%kami <<== duplicate (m1 ++ m2)%kami n.
+    Proof.
+      intros; rewrite idElementwiseId.
+      apply traceRefines_same_module_structure.
+      - apply duplicate_regs_NoDup_2; auto.
+      - apply duplicate_regs_NoDup; auto.
+        apply specializable_concatMod; auto.
+      - apply duplicate_regs_ConcatMod_2; auto.
+      - apply duplicate_regs_ConcatMod_1; auto.
+      - apply duplicate_rules_ConcatMod_2; auto.
+      - apply duplicate_rules_ConcatMod_1; auto.
+      - apply duplicate_defs_ConcatMod_2; auto.
+      - apply duplicate_defs_ConcatMod_1; auto.
+    Qed.
+
+  End TwoModules3.
+
 End DuplicateFacts.
 
 Lemma duplicate_meta_disj_regs_one:
@@ -395,28 +636,15 @@ Section DupRep.
         :: (methsToRep dms)
     end.
 
-  Lemma regsToRep_regs_equiv:
-    SubList (getRegInits (duplicate m n)) (getFullListFromMeta (regsToRep (getRegInits m))) /\
-    SubList (getFullListFromMeta (regsToRep (getRegInits m))) (getRegInits (duplicate m n)).
-  Proof.
-    admit.
-  Qed.
-
-  Definition duplicateByRep := 
+  Definition duplicateByRep :=
     makeModule {| metaRegs := regsToRep (getRegInits m);
                   metaRules := rulesToRep (getRules m);
                   metaMeths := methsToRep (getDefsBodies m) |}.
   
-  Lemma duplicate_refines_repeat:
-    duplicate m n <<== duplicateByRep.
-  Proof.
-    unfold makeModule; simpl.
-    rewrite idElementwiseId.
-    apply traceRefines_same_module_structure; simpl; auto; admit.
-    (* - apply duplicate_NoDup_regs; auto. *)
-    (* - apply regsToRep_regs_equiv. *)
-    (* - apply regsToRep_regs_equiv. *)
-  Qed.
+  (* Lemma duplicate_refines_repeat: *)
+  (*   duplicate m n <<== duplicateByRep. *)
+  (* Proof. *)
+  (* Abort. *)
 
 End DupRep.
 

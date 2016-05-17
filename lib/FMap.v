@@ -106,6 +106,20 @@ Section Lists. (* For dealing with domains *)
     specialize (H e). specialize (H0 e). intuition.
   Qed.
 
+  Lemma NoDup_DisjList:
+    forall l1 l2,
+      NoDup l1 -> NoDup l2 -> DisjList l1 l2 ->
+      NoDup (l1 ++ l2).
+  Proof.
+    induction l1; simpl; intros; auto.
+    inv H; constructor.
+    - intro Hx; apply in_app_or in Hx; destruct Hx; [auto|].
+      specialize (H1 a); destruct H1; auto.
+      elim H1; simpl; tauto.
+    - apply IHl1; auto.
+      eapply DisjList_cons; eauto.
+  Qed.
+
   Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
   Proof. 
     intros. unfold DisjList in *. intros e.

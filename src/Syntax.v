@@ -259,6 +259,9 @@ Definition MethodT (sig : SignatureT) := forall ty,
 Definition RegInitT := Attribute (sigT ConstFullT).
 Definition DefMethT := Attribute (sigT MethodT).
 
+Definition filterDm (dms: list DefMethT) (filt: string) :=
+  filter (fun dm => if string_dec (attrName dm) filt then false else true) dms.
+
 Definition filterDms (dms: list DefMethT) (filt: list string) :=
   filter (fun dm => if string_in (attrName dm) filt then false else true) dms.
 
