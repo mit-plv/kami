@@ -1,3 +1,10 @@
+Require Import Bool List String.
+Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
+Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2.
+
+Require Import FunctionalExtensionality.
+
 
 (* Partial inlining interfaces *)
 Section Partial.
