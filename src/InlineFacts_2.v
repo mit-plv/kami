@@ -623,7 +623,6 @@ Proof.
   induction 3; intros; [constructor|].
 
   subst; unfold inlineDmToMod in *.
-(*  remember (wfModules _) as owf; destruct owf; [|inv H6]. *)
   remember (getAttribute _ _) as odm; destruct odm; [|inv H6].
   remember (noCallDm _ _) as onc; destruct onc; [|inv H6].
   destruct l as [ann ds cs]; simpl in *.
@@ -950,12 +949,17 @@ Section Partial.
     apply step_consistent; apply step_consistent in H0.
     inv H0; constructor.
 
-    - admit.
+    - clear HWellHidden.
+      induction HSubSteps; [constructor|].
+      admit.
+      
     - unfold wellHidden in *; dest; split.
-      + admit.
+      + pose proof Hdm; pose proof Hrule; admit.
       + unfold getDefs; simpl; auto.
   Qed.
 
+  Hypotheses (HnoDupRules: NoDup (namesOf (getRules m)))
+             (HnoDupMeths: NoDup (namesOf (getDefsBodies m))).
   Hypothesis (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
@@ -972,6 +976,12 @@ Section Partial.
                         else newr) (getRules m))
                 (filterDm (getDefsBodies m) (attrName dm))).
   Proof.
+    pose proof Hdm.
+    pose proof Hrule.
+    pose proof HnoDupRules.
+    pose proof HnoDupMeths.
+    pose proof HnoRuleCalls.
+    pose proof HnoMethCalls.
     admit.
   Qed.
 
