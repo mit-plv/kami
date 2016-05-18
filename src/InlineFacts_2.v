@@ -926,7 +926,8 @@ Section Partial.
   Variable m: Modules.
 
   Variable dm: DefMethT. (* a method to be inlined *)
-  Hypothesis Hdm: In dm (getDefsBodies m).
+  Hypotheses (Hdm: In dm (getDefsBodies m))
+             (HnoDupMeths: NoDup (namesOf (getDefsBodies m))).
   Variable r: Attribute (Action Void). (* a rule calling dm *)
   Hypothesis Hrule: In r (getRules m).
 
@@ -954,12 +955,11 @@ Section Partial.
       admit.
       
     - unfold wellHidden in *; dest; split.
-      + pose proof Hdm; pose proof Hrule; admit.
+      + pose proof Hdm; pose proof HnoDupMeths; pose proof Hrule; admit.
       + unfold getDefs; simpl; auto.
   Qed.
 
-  Hypotheses (HnoDupRules: NoDup (namesOf (getRules m)))
-             (HnoDupMeths: NoDup (namesOf (getDefsBodies m))).
+  Hypothesis (HnoDupRules: NoDup (namesOf (getRules m))).
   Hypothesis (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
