@@ -2,6 +2,7 @@ Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1.
+Require Import Refinement.
 
 Require Import FunctionalExtensionality.
 
@@ -875,7 +876,6 @@ Proof.
   replace im with (fst (inline m)) by (rewrite <-Heqimb; auto).
   apply inlineDms'_preserves_regInits.
 Qed.
-Require Import Refinement.
 
 Theorem inline_refines:
   forall m (Hequiv: ModEquiv type typeUT m)
