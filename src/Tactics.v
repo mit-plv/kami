@@ -274,7 +274,7 @@ Ltac kinv_red :=
   dest; try subst; kinv_simpl.
 
 Ltac kinv_finish :=
-  unfold IndexBound_head, IndexBound_tail in *;
+  unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *;
   repeat autounfold with MethDefs;
   simpl in *;
   repeat

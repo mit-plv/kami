@@ -24,7 +24,7 @@ Section Invariants.
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.
     kexistv "pc"%string pcv o (Bit addrSize).
-    kexistv "rf"%string rfv o (Vector (Bit lgDataBytes) rfIdx).
+    kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
     kexistv "Ins".."empty"%string iev o Bool.
     kexistv "Ins".."full"%string ifv o Bool.
@@ -54,8 +54,11 @@ Section Invariants.
   Proof.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
-    - exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opLd)
-              then false else true) = insElt insDeqP ``"op").
+    - refine (_ /\ _).
+      + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opLd)
+                then false else true) = insElt insDeqP ``"op").
+      + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opSt)
+                then true else false) = insElt insDeqP ``"op").
     - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf pc) ``"addr").
     - refine (if (insElt insDeqP ``"op") : bool then _ else _).
       + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf pc) ``"value").
@@ -126,7 +129,7 @@ Section Invariants.
       procDec_inv_1 n.
   Proof.
     admit.
-  (*
+    (*
     induction 2.
 
     - kinv_magic_with kinv_or3.
@@ -151,7 +154,7 @@ Section Invariants.
         or3_thd; kinv_magic.
       + kinv_magic_with kinv_or3.
         or3_thd; kinv_magic.
-   *)
+     *)
   Qed.
 
   Lemma procDec_inv_1_ok:
