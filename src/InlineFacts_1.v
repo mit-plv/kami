@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax SemanticsExprAction Wf Equiv Inline.
+Require Import Syntax SemanticsExprAction Equiv Inline.
 
 Require Import FunctionalExtensionality.
 
@@ -58,7 +58,7 @@ Qed.
 Lemma inlineDm_correct_SemAction:
   forall (meth: DefMethT) or u1 cm1 argV retV1,
     SemAction or (projT2 (attrType meth) type argV) u1 cm1 retV1 ->
-    forall {retK2} a (Ha: WfAction nil nil a)
+    forall {retK2} a
            u2 cm2 (retV2: type retK2),
       M.Disj u1 u2 -> M.Disj cm1 cm2 ->
       Some (existT _ (projT1 (attrType meth))
@@ -69,7 +69,7 @@ Lemma inlineDm_correct_SemAction:
                 (M.union cm1 (M.remove (attrName meth) cm2))
                 retV2.
 Proof.
-  induction a; intros; simpl.
+  induction a; intros; simpl in *.
 
   - inv H4; destruct_existT.
     remember (getBody meth0 meth s) as ob; destruct ob.
@@ -83,10 +83,7 @@ Proof.
       simpl; constructor.
 
       eapply appendAction_SemAction; eauto.
-      inv Ha; destruct_existT.
-      pose proof (wfAction_SemAction_calls
-                    (H7 mret) HSemAction
-                    (attrName meth) (or_introl eq_refl)).
+      
       rewrite M.remove_add.
       rewrite M.remove_find_None by assumption.
 
@@ -98,67 +95,72 @@ Proof.
       * apply string_eq_dec_eq in Heqseq; subst.
         destruct (SignatureT_dec _ _); [inv Heqob|].
 
-        econstructor.
-        { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
-          instantiate (1:= mret).
-          meq.
-          elim n. clear -H3.
-          inv H3; destruct_existT; auto.
-        }
-        { apply H0; auto.
-          { inv Ha; destruct_existT.
-            eapply wfAction_calls_weakening; eauto.
-            apply SubList_nil.
-          }
-          { elim n.
+        { constructor 1 with
+          (mret := mret)
+            (calls := M.union cm1 (M.remove (attrName meth) calls)).
+          - apply M.F.P.F.not_find_in_iff.
+            unfold not; intros.
+            apply M.F.P.F.not_find_in_iff in HDisjCalls.
+            apply M.union_In in H4.
+            dest_disj.
+            destruct H4; auto.
+            rewrite M.F.P.F.remove_in_iff in H4; intuition.
+          - meq; clear - n H3; inv H3; destruct_existT; intuition auto.
+          - apply H0; auto.
+            elim n.
             rewrite M.find_add_1 in H3.
             clear -H3; inv H3; destruct_existT; auto.
-          }
         }
 
-      * apply string_eq_dec_neq in Heqseq.
-        econstructor.
-        { instantiate (1:= M.union cm1 (M.remove (attrName meth) calls)).
-          instantiate (1:= mret).
-          meq.
-        }
-        { apply H0; auto.
-          { inv Ha; destruct_existT.
-            eapply wfAction_calls_weakening; eauto.
-            apply SubList_nil.
-          }
-          { rewrite M.find_add_2 in H3 by auto; auto. }
-        }
+      * apply string_eq_dec_neq in Heqseq; subst.
+        { constructor 1 with
+          (mret := mret)
+            (calls := M.union cm1 (M.remove (attrName meth) calls)).
+          - apply M.F.P.F.not_find_in_iff.
+            unfold not; intros.
+            apply M.F.P.F.not_find_in_iff in HDisjCalls.
+            apply M.union_In in H4.
+            dest_disj.
+            destruct H4; auto.
+            rewrite M.F.P.F.remove_in_iff in H4; intuition.
+          - meq; clear - n H3; inv H3; destruct_existT; intuition auto.
+          - apply H0; auto.
+            rewrite M.find_add_2 in H3; auto.
+        } 
         
-  - inv H4; inv Ha; destruct_existT.
+  - inv H4; destruct_existT.
     constructor; auto.
-  - inv H4; inv Ha; destruct_existT.
+  - inv H4; destruct_existT.
     econstructor; eauto.
-  - inv H3; inv Ha; destruct_existT.
-    econstructor; eauto.
-
-    + instantiate (1:= M.union u1 newRegs).
-      meq.
+  - inv H3; destruct_existT.
+    constructor 4 with (newRegs := M.union u1 newRegs).
+    + apply M.F.P.F.not_find_in_iff.
+      apply M.F.P.F.not_find_in_iff in HDisjRegs.
+      unfold not; intros.
+      apply M.union_In in H3.
+      dest_disj.
+      intuition.
+    + meq.
     + apply IHa; auto.
-      * eapply wfAction_regs_weakening; eauto.
-        apply SubList_nil.
 
-  - inv Ha; destruct_existT.
-    inv H4; destruct_existT.
+  - inv H4; destruct_existT.
     + rewrite M.find_union in H3.
       remember (M.find (attrName meth) calls1) as omv1; destruct omv1.
       * remember (M.find (attrName meth) calls2) as omv2; destruct omv2.
         { exfalso.
-          pose proof (wfAction_appendAction_calls_disj _ H10 HAction HSemAction).
-          specialize (H4 (attrName meth)); destruct H4; elim H4.
+          specialize (HDisjCalls (attrName meth)); destruct HDisjCalls; elim H4.
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv1; discriminate. }
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv2; discriminate. }
         }
         { inv H3.
           rewrite M.union_assoc, M.remove_union, M.union_assoc.
-          eapply SemIfElseTrue; eauto.
-          { eapply IHa1; eauto.
-            eapply wfAction_appendAction_calls_1; eauto.
+          eapply SemIfElseTrue with
+          (newRegs1 := M.union u1 newRegs1)
+            (calls1 := M.union cm1 (M.Map.remove (attrName meth) calls1)); eauto.
+          { dest_disj; solve_disj. }
+          { dest_disj.
+            apply M.Disj_remove_2.
+            solve_disj.
           }
           { rewrite M.remove_find_None by auto.
             destruct meth; apply inlineDm_SemAction_intact; auto.
@@ -181,28 +183,37 @@ Proof.
           rewrite <-M.union_assoc; auto.
         }
         rewrite H4; clear H4.
-        eapply SemIfElseTrue; eauto.
+        eapply SemIfElseTrue with
+        (newRegs1 := newRegs1)
+          (newRegs2 := M.union u1 newRegs2)
+          (calls1 := M.remove (attrName meth) calls1)
+          (calls2 := M.union cm1 (M.remove (attrName meth) calls2))
+        ; eauto.
+        { dest_disj.
+          apply M.Disj_remove_1.
+          solve_disj.
+        }
         { rewrite M.remove_find_None by auto.
           destruct meth; eapply inlineDm_SemAction_intact; eauto.
         }
-        { apply H0; auto.
-          eapply wfAction_appendAction_calls_2; eauto.
-        }
-        
+
     + rewrite M.find_union in H3.
       remember (M.find (attrName meth) calls1) as omv1; destruct omv1.
       * remember (M.find (attrName meth) calls2) as omv2; destruct omv2.
         { exfalso.
-          pose proof (wfAction_appendAction_calls_disj _ H14 HAction HSemAction).
-          specialize (H4 (attrName meth)); destruct H4; elim H4.
+          specialize (HDisjCalls (attrName meth)); destruct HDisjCalls; elim H4.
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv1; discriminate. }
           { apply M.F.P.F.in_find_iff; rewrite <-Heqomv2; discriminate. }
         }
         { inv H3.
           rewrite M.union_assoc, M.remove_union, M.union_assoc.
-          eapply SemIfElseFalse; eauto.
-          { eapply IHa2; eauto.
-            eapply wfAction_appendAction_calls_1; eauto.
+          eapply SemIfElseFalse with
+          (newRegs1 := M.union u1 newRegs1)
+            (calls1 := M.union cm1 (M.Map.remove (attrName meth) calls1)); eauto.
+          { dest_disj; solve_disj. }
+          { dest_disj.
+            apply M.Disj_remove_2.
+            solve_disj.
           }
           { rewrite M.remove_find_None by auto.
             destruct meth; apply inlineDm_SemAction_intact; auto.
@@ -225,18 +236,23 @@ Proof.
           rewrite <-M.union_assoc; auto.
         }
         rewrite H4; clear H4.
-        eapply SemIfElseFalse; eauto.
+        eapply SemIfElseFalse with
+        (newRegs1 := newRegs1)
+          (newRegs2 := M.union u1 newRegs2)
+          (calls1 := M.remove (attrName meth) calls1)
+          (calls2 := M.union cm1 (M.remove (attrName meth) calls2))
+        ; eauto.
+        { dest_disj.
+          apply M.Disj_remove_1.
+          solve_disj.
+        }
         { rewrite M.remove_find_None by auto.
           destruct meth; eapply inlineDm_SemAction_intact; eauto.
         }
-        { apply H0; auto.
-          eapply wfAction_appendAction_calls_2; eauto.
-        }
-
-  - inv H3; inv Ha; destruct_existT.
+  - inv H3; destruct_existT.
     constructor; auto.
 
-  - inv H3; inv Ha; destruct_existT.
+  - inv H3; destruct_existT.
     rewrite M.find_empty in H2; inv H2.
 Qed.
 

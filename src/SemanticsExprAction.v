@@ -271,6 +271,7 @@ Section Semantics.
       retK (fret: type retK)
       (cont: type (ret s) -> ActionT type retK)
       newRegs (calls: MethsT) acalls
+      (HDisjCalls: M.find meth calls = None)
       (HAcalls: acalls = M.add meth (existT _ _ (evalExpr marg, mret)) calls)
       (HSemAction: SemAction (cont mret) newRegs calls fret):
       SemAction (MCall meth s marg cont) newRegs acalls fret
@@ -291,6 +292,7 @@ Section Semantics.
       (e: Expr type k)
       retK (fret: type retK)
       (cont: ActionT type retK) newRegs calls anewRegs
+      (HDisjRegs: M.find r newRegs = None)
       (HANewRegs: anewRegs = M.add r (existT _ _ (evalExpr e)) newRegs)
       (HSemAction: SemAction cont newRegs calls fret):
       SemAction (WriteReg r e cont) anewRegs calls fret
@@ -301,6 +303,8 @@ Section Semantics.
       (r1: type k1)
       k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
+      (HDisjRegs: M.Disj newRegs1 newRegs2)
+      (HDisjCalls: M.Disj calls1 calls2)
       (HTrue: evalExpr p = true)
       (HAction: SemAction a newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
@@ -315,6 +319,8 @@ Section Semantics.
       (r1: type k1)
       k2 (cont: type k1 -> ActionT type k2)
       newRegs1 newRegs2 calls1 calls2 (r2: type k2)
+      (HDisjRegs: M.Disj newRegs1 newRegs2)
+      (HDisjCalls: M.Disj calls1 calls2)
       (HFalse: evalExpr p = false)
       (HAction: SemAction a' newRegs1 calls1 r1)
       (HSemAction: SemAction (cont r1) newRegs2 calls2 r2)
@@ -339,6 +345,7 @@ Section Semantics.
     match a with
     | MCall m s e c =>
       exists mret pcalls,
+      M.find m pcalls = None /\
       SemAction (c mret) news pcalls retC /\
       calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
     | Let_ _ e cont =>
@@ -349,10 +356,13 @@ Section Semantics.
       SemAction (c rv) news calls retC
     | WriteReg r _ e a =>
       exists pnews,
+      M.find r pnews = None /\
       SemAction a pnews calls retC /\
       news = M.add r (existT _ _ (evalExpr e)) pnews
     | IfElse p _ aT aF c =>
       exists news1 calls1 news2 calls2 r1,
+      M.Disj news1 news2 /\
+      M.Disj calls1 calls2 /\  
       match evalExpr p with
       | true =>
         SemAction aT news1 calls1 r1 /\
@@ -401,37 +411,50 @@ Section AppendAction.
   Lemma appendAction_SemAction:
     forall retK1 retK2 a1 a2 olds news1 news2 calls1 calls2
            (retV1: type retK1) (retV2: type retK2),
+      M.Disj news1 news2 ->
+      M.Disj calls1 calls2 ->
       SemAction olds a1 news1 calls1 retV1 ->
       SemAction olds (a2 retV1) news2 calls2 retV2 ->
       SemAction olds (appendAction a1 a2) (M.union news1 news2) (M.union calls1 calls2) retV2.
   Proof.
     induction a1; intros.
 
-    - invertAction H0; specialize (H _ _ _ _ _ _ _ _ _ H0 H1);
+    - invertAction H2.
+      dest_disj.
+      rewrite M.union_add.
+      simpl in *.
+      specialize (@H _ _ _ _ _ _ _ _ _ H0 H1 H4 H3); simpl in *.
+      constructor 1 with (mret := x) (calls := M.union x0 calls2); auto.
+      apply M.F.P.F.not_find_in_iff.
+      apply M.F.P.F.not_find_in_iff in H2.
+      unfold not; intros.
+      apply M.union_In in H6; intuition.
+    - invertAction H2; econstructor; eauto. 
+    - invertAction H2; econstructor; eauto.
+    - invertAction H1.
+      dest_disj.
+      rewrite M.union_add.
+      simpl in *.
+      specialize (@IHa1 _ _ _ _ _ _ _ _ H H0 H3 H2); simpl in *.
+      constructor 4 with (newRegs := M.union x news2); auto.
+      apply M.F.P.F.not_find_in_iff.
+      apply M.F.P.F.not_find_in_iff in H1.
+      unfold not; intros.
+      apply M.union_In in H5; intuition.
+    - invertAction H2.
+      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst; simpl in *.
+      + repeat rewrite <- M.union_assoc.
+        eapply SemIfElseTrue with (newRegs1 := x) (newRegs2 := M.union x1 news2)
+                                                  (calls1 := x0)
+                                                  (calls2 := M.union x2 calls2); eauto.
+      + repeat rewrite <- M.union_assoc.
+        eapply SemIfElseFalse with (newRegs1 := x) (newRegs2 := M.union x1 news2)
+                                                   (calls1 := x0)
+                                                   (calls2 := M.union x2 calls2); eauto.
+    - invertAction H1.
+      specialize (@IHa1 _ _ _ _ _ _ _ _ H H0 H1 H2);
         econstructor; eauto.
-      apply M.union_add.
-    - invertAction H0; econstructor; eauto. 
-    - invertAction H0; econstructor; eauto.
-    - invertAction H; econstructor; eauto.
-      apply M.union_add.
-    - invertAction H0.
-      simpl; remember (evalExpr e) as cv; destruct cv; dest; subst.
-      + eapply SemIfElseTrue.
-        * eauto.
-        * eassumption.
-        * eapply H; eauto.
-        * rewrite M.union_assoc; reflexivity.
-        * rewrite M.union_assoc; reflexivity.
-      + eapply SemIfElseFalse.
-        * eauto.
-        * eassumption.
-        * eapply H; eauto.
-        * rewrite M.union_assoc; reflexivity.
-        * rewrite M.union_assoc; reflexivity.
-
-    - invertAction H; specialize (IHa1 _ _ _ _ _ _ _ _ H H0);
-        econstructor; eauto.
-    - invertAction H; econstructor; eauto.
+    - invertAction H1; econstructor; eauto.
   Qed.
 
 End AppendAction.

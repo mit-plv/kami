@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.FMap Program.Equality.
 Require Import Syntax.
-Require Export SemanticsExprAction Semantics SemFacts Wf.
+Require Export SemanticsExprAction Semantics SemFacts.
 
 Set Implicit Arguments.
 
@@ -94,7 +94,6 @@ Section GivenModule.
   Definition NoModulesCycle := forall meth, In meth (getDefs m) -> MethCycle (meth :: nil).
 
   Variable noModulesCycle: NoModulesCycle.
-  Variable wfModules: WfModules type m.
 
   Record MethOpRec :=
     { mAttr: Attribute (sigT MethodT);

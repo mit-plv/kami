@@ -1,7 +1,7 @@
 Require Import List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
-Require Import Syntax Semantics SemFacts Wf Equiv Split.
+Require Import Syntax Semantics SemFacts Equiv Split Wf.
 
 Set Implicit Arguments.
 

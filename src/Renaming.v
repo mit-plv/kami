@@ -242,6 +242,54 @@ Section Rename.
       f_equal.
       apply (H m2).
   Qed.
+
+  Lemma renameMapDisj A (m1: M.t A):
+    forall m2,
+      M.Disj m1 m2 -> M.Disj (renameMap m1) (renameMap m2).
+  Proof.
+    M.mind m1; simpl in *.
+    - rewrite renameMapEmpty; apply M.Disj_empty_1.
+    - dest_disj.
+      specialize (H _ H1).
+      rewrite renameMapAdd.
+      solve_disj.
+      unfold not; intros.
+      apply M.F.P.F.not_find_in_iff in H2.
+      apply M.F.P.F.in_find_iff in H3.
+      rewrite <- renameMapFind in H3.
+      intuition.
+  Qed.
+
+
+
+  
+  Lemma renameMapIn A (m: M.t A):
+    forall i, M.In i m <-> M.In (rename i) (renameMap m).
+  Proof.
+    constructor; intros;
+    apply M.F.P.F.in_find_iff in H;
+      [rewrite renameMapFind in * | rewrite <- renameMapFind in *];
+      apply M.F.P.F.in_find_iff in H;
+      auto.
+  Qed.
+  
+  Lemma renameMapNotIn A (m: M.t A):
+    forall i, ~ M.In i m <-> ~ M.In (rename i) (renameMap m).
+  Proof.
+    unfold not; constructor; intros H H0; apply renameMapIn in H0; intuition.
+  Qed.
+
+  Lemma renameMapDisjInv A (m1: M.t A):
+    forall m2,
+      M.Disj (renameMap m1) (renameMap m2) -> M.Disj m1 m2.
+  Proof.
+    M.mind m1; simpl in *.
+    - rewrite renameMapEmpty in *; apply M.Disj_empty_1.
+    - rewrite renameMapAdd in H1; dest_disj.
+      specialize (H _ H1).
+      solve_disj.
+      apply renameMapNotIn in H2; auto.
+  Qed.
   
   Lemma renameSemAction o k a u cs r (sa: @SemAction o k a u cs r):
     SemAction (renameMap o) (renameAction a) (renameMap u) (renameMap cs) r.
@@ -249,19 +297,35 @@ Section Rename.
     dependent induction sa; simpl in *.
     - rewrite HAcalls; simpl in *.
       rewrite renameMapAdd.
-      eapply SemMCall; eauto; intuition.
+      apply M.F.P.F.not_find_in_iff in HDisjCalls.
+      eapply SemMCall; eauto.
+      apply M.F.P.F.not_find_in_iff.
+      unfold not; intros H; apply renameMapIn in H; auto.
     - eapply SemLet; eauto; intuition.
     - rewrite renameMapFind in HRegVal.
       eapply SemReadReg; eauto.
-    - eapply SemWriteReg; eauto.
+    - apply M.F.P.F.not_find_in_iff in HDisjRegs.
+      eapply SemWriteReg; eauto.
+      apply M.F.P.F.not_find_in_iff.
+      unfold not; intros H; apply renameMapIn in H; auto.
       rewrite <- renameMapAdd.
       f_equal; intuition.
-    - eapply SemIfElseTrue; eauto.
+    - constructor 5 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
+                                                          (calls1 := renameMap calls1)
+                                                          (calls2 := renameMap calls2)
+                                                          (r1 := r1); auto.
+      apply renameMapDisj; auto.
+      apply renameMapDisj; auto.
       rewrite <- renameMapUnion.
       f_equal; intuition.
       rewrite <- renameMapUnion.
       f_equal; intuition.
-    - eapply SemIfElseFalse; eauto.
+    - constructor 6 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
+                                                          (calls1 := renameMap calls1)
+                                                          (calls2 := renameMap calls2)
+                                                          (r1 := r1); auto.
+      apply renameMapDisj; auto.
+      apply renameMapDisj; auto.
       rewrite <- renameMapUnion.
       f_equal; intuition.
       rewrite <- renameMapUnion.
@@ -435,7 +499,10 @@ Section Rename.
         inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' (a mret) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
+      apply M.F.P.F.not_find_in_iff in HDisjCalls.
+      apply renameMapNotIn in HDisjCalls.
       repeat (econstructor; eauto).
+      apply M.F.P.F.not_find_in_iff; eauto.
     - inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' (a (evalExpr e0)) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
@@ -449,7 +516,10 @@ Section Rename.
     - inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
+      apply M.F.P.F.not_find_in_iff in HDisjRegs.
+      apply renameMapNotIn in HDisjRegs.
       repeat (econstructor; eauto).
+      apply M.F.P.F.not_find_in_iff; auto.
     - generalize dependent r1.
       inv x; destruct_existT; intros.
       destruct (IHsa1 rename1To1 o' a'1 JMeq_refl eq_refl) as
@@ -457,13 +527,13 @@ Section Rename.
         clear IHsa1.
       destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
           [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
-        clear IHsa2.
-      repeat econstructor.
-      + rewrite renameMapUnion; eauto.
-      + rewrite renameMapUnion; eauto.
-      + eauto.
-      + eauto.
-      + eauto.
+      clear IHsa2.
+      apply renameMapDisjInv in HDisjCalls.
+      apply renameMapDisjInv in HDisjRegs.
+      exists (M.union u1' u2'), (M.union cs1' cs2').
+      constructor; rewrite renameMapUnion; auto.
+      constructor; auto.
+      econstructor; eauto.
     - generalize dependent r1.
       inv x; destruct_existT; intros.
       destruct (IHsa1 rename1To1 o' a'2 JMeq_refl eq_refl) as
@@ -471,13 +541,12 @@ Section Rename.
         clear IHsa1.
       destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
           [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
-        clear IHsa2.
-      econstructor.
-      econstructor.
-      econstructor.
-      rewrite renameMapUnion; eauto.
-      econstructor.
-      rewrite renameMapUnion; eauto.
+      clear IHsa2.
+      apply renameMapDisjInv in HDisjCalls.
+      apply renameMapDisjInv in HDisjRegs.
+      exists (M.union u1' u2'), (M.union cs1' cs2').
+      constructor; rewrite renameMapUnion; auto.
+      constructor; auto.
       econstructor 6; eauto.
     - inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as

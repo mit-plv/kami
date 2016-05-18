@@ -77,3 +77,6 @@ Delimit Scope kami_action_scope with action.
 Notation "'MODULE' { m1 'with' .. 'with' mN }" :=
   (makeModule (makeMetaModule (ConsInMetaModule m1%action .. (ConsInMetaModule mN%action NilInMetaModule) ..))) (at level 0, only parsing).
 
+Notation "'META' { m1 'with' .. 'with' mN }" :=
+  (makeMetaModule (ConsInMetaModule m1%action .. (ConsInMetaModule mN%action NilInMetaModule) ..)) (at level 0, only parsing).
+

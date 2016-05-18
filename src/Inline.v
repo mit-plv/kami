@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Wf.
+Require Import Syntax.
 
 Set Implicit Arguments.
 
@@ -83,7 +83,7 @@ Section Exts.
     match getAttribute leaf (getDefsBodies m) with
       | Some dm =>
         (Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
-             (inlineDmToDms (getDefsBodies m) dm), wfModules m && noCallDm dm dm)
+             (inlineDmToDms (getDefsBodies m) dm), noCallDm dm dm)
       | None => (m, false)
     end.
 

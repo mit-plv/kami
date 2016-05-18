@@ -140,8 +140,7 @@ Ltac kinline_compute :=
                getListFromRep getListFromMeta
                getFullListFromMeta getNamesOfMeta
                metaRegs metaRules metaMeths makeModule
-               wfModules wfRules wfDms wfAction wfActionC
-               maxPathLength max plus
+               max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
@@ -170,8 +169,7 @@ Ltac kinline_compute_in H :=
                getListFromRep getListFromMeta
                getFullListFromMeta getNamesOfMeta
                metaRegs metaRules metaMeths makeModule
-               wfModules wfRules wfDms wfAction wfActionC
-               maxPathLength max plus
+               max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA

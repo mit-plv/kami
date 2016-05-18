@@ -1357,5 +1357,19 @@ Section MetaModuleEz.
           apply MethsEquiv_in; intros.
           apply in_getListFromRep in H; dest; subst; simpl; auto.
   Qed.
+
+  Definition getCallsMetaRule i (r: MetaRule) :=
+    match r with
+      | One r' => getCallsA (attrType r' typeUT)
+      | Rep sr fr n => getCallsA (fr i typeUT)
+    end.
+
+  Fixpoint getCallsMetaRules i rs :=
+    match rs with
+      | nil => nil
+      | x :: xs => getCallsMetaRule i x :: getCallsMetaRules i xs
+    end.
+
+  Definition getCallsMetaModuleEz i := getCallsMetaRules i (metaRules m).
 End MetaModuleEz.
 

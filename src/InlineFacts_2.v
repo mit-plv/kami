@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts Wf Equiv Inline InlineFacts_1.
+Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1.
 
 Require Import FunctionalExtensionality.
 
@@ -40,8 +40,7 @@ End HideExts.
 
 Section SubstepFacts.
   Variable m: Modules.
-  Hypotheses (Hwf: WfModules type m)
-             (Hequiv: ModEquiv type typeUT m)
+  Hypotheses (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
   
@@ -60,12 +59,10 @@ Section SubstepFacts.
     - eapply SingleRule with (a:= attrType (inlineDmToRule (k :: a)%struct dm)); eauto.
       + apply in_map with (f:= fun r => inlineDmToRule r dm) in HInRules; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
-        inv Hwf; eapply wfRules_rule; eauto.
 
     - eapply SingleMeth with (f:= inlineDmToDm f dm); eauto.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
-        inv Hwf; eapply wfDms_dms; eauto.
   Qed.  
 
   Lemma inlineDmToMod_Substep_intact:
@@ -419,8 +416,7 @@ Qed.
 
 Section SubstepsFacts.
   Variable m: Modules.
-  Hypotheses (Hwf: WfModules type m)
-             (Hequiv: ModEquiv type typeUT m)
+  Hypotheses (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
   Hypotheses (Hdm: In dm (getDefsBodies m)).
@@ -627,7 +623,7 @@ Proof.
   induction 3; intros; [constructor|].
 
   subst; unfold inlineDmToMod in *.
-  remember (wfModules _) as owf; destruct owf; [|inv H6].
+(*  remember (wfModules _) as owf; destruct owf; [|inv H6]. *)
   remember (getAttribute _ _) as odm; destruct odm; [|inv H6].
   remember (noCallDm _ _) as onc; destruct onc; [|inv H6].
   destruct l as [ann ds cs]; simpl in *.
@@ -658,7 +654,6 @@ Proof.
         rewrite H5 in IHSubstepsInd.
         destruct ann; [intuition idtac|].
         eapply inlineDmToMod_correct_Substeps_called_rule; eauto.
-        apply wfModules_WfModules; auto.
       * M.cmp (attrName a) sdmn.
         { (* Substep(head)-inlined: impossible *)
           mred; exfalso.
@@ -677,7 +672,6 @@ Proof.
           assert (~ M.In sdmn ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_called_meth; eauto.
-          apply wfModules_WfModules; auto.
         }
       * exfalso; inv H1; mred.
 
@@ -695,7 +689,6 @@ Proof.
           assert (~ M.In (attrName a) ds)
             by (destruct ann; auto).
           eapply inlineDmToMod_correct_Substeps_calling; eauto.
-          apply wfModules_WfModules; auto.
         }
         { mred; mcontra. }
 
@@ -725,7 +718,6 @@ Proof.
     + eapply inlineDmToMod_Substep_intact; eauto.
     + destruct (M.find (attrName a) ds); repeat split; simpl; auto.
     + destruct (M.find (attrName a) ds); reflexivity.
-  - destruct (getAttribute dm (getDefsBodies m)); simpl in *; discriminate.
       Grab Existential Variables.
       exact nil.
 Qed.
@@ -929,59 +921,4 @@ Proof.
   - apply inlineF_refines; auto.
   - auto.
 Qed.
-
-(* Partial inlining interfaces *)
-Section Partial.
-  Variable m: Modules.
-
-  Variable dm: DefMethT. (* a method to be inlined *)
-  Hypothesis Hdm: In dm (getDefsBodies m).
-  Variable r: Attribute (Action Void). (* a rule calling dm *)
-  Hypothesis Hrule: In r (getRules m).
-
-  Lemma inlineDmToRule_traceRefines_1:
-    m <<== (Mod (getRegInits m)
-                (map (fun newr =>
-                        if string_dec (attrName r) (attrName newr)
-                        then inlineDmToRule newr dm
-                        else newr) (getRules m))
-                (getDefsBodies m)).
-  Proof.
-    apply stepRefinement with (ruleMap:= fun _ s => Some s) (theta:= id); auto.
-    intros; exists u; split; auto.
-
-    rewrite idElementwiseId.
-    replace (liftPLabel _ _ _ _) with l; [|destruct l as [[[|]|] ? ?]; simpl; f_equal].
-    unfold id.
-
-    clear H.
-    apply step_consistent; apply step_consistent in H0.
-    inv H0; constructor.
-
-    - admit.
-    - unfold wellHidden in *; dest; split.
-      + admit.
-      + unfold getDefs; simpl; auto.
-  Qed.
-
-  Hypothesis (HnoRuleCalls: forall rule,
-                 In rule (getRules m) ->
-                 attrName rule <> attrName r ->
-                 ~ In (attrName dm) (getCallsA (attrType rule typeUT))).
-  Hypothesis (HnoMethCalls: forall meth,
-                 In meth (getDefsBodies m) ->
-                 ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))).
-
-  Lemma inlineDmToRule_traceRefines_2:
-    m <<== (Mod (getRegInits m)
-                (map (fun newr =>
-                        if string_dec (attrName r) (attrName newr)
-                        then inlineDmToRule newr dm
-                        else newr) (getRules m))
-                (filterDm (getDefsBodies m) (attrName dm))).
-  Proof.
-    admit.
-  Qed.
-
-End Partial.
 
