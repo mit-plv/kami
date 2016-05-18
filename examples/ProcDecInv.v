@@ -4,35 +4,38 @@ Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2 Lts.DecompositionZero.
 Require Import Lts.Tactics.
-Require Import Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
 Require Import Eqdep ProofIrrelevance.
 
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize fifoSize valSize rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
+  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+
+  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   Definition pdecInl := pdecInl fifoSize dec execState execNextPc.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.
     kexistv "pc"%string pcv o (Bit addrSize).
-    kexistv "rf"%string rfv o (Vector (Bit valSize) rfIdx).
+    kexistv "rf"%string rfv o (Vector (Bit lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
     kexistv "Ins".."empty"%string iev o Bool.
     kexistv "Ins".."full"%string ifv o Bool.
     kexistv "Ins".."enqP"%string ienqpv o (Bit fifoSize).
     kexistv "Ins".."deqP"%string ideqpv o (Bit fifoSize).
-    kexistv "Ins".."elt"%string ieltv o (Vector (memAtomK addrSize valSize) fifoSize).
+    kexistv "Ins".."elt"%string ieltv o (Vector RqFromProc fifoSize).
     kexistv "Outs".."empty"%string oev o Bool.
     kexistv "Outs".."full"%string ofv o Bool.
     kexistv "Outs".."enqP"%string oenqpv o (Bit fifoSize).
     kexistv "Outs".."deqP"%string odeqpv o (Bit fifoSize).
-    kexistv "Outs".."elt"%string oeltv o (Vector (memAtomK addrSize valSize) fifoSize).
+    kexistv "Outs".."elt"%string oeltv o (Vector RsToProc fifoSize).
     exact True.
   Defined.
   Hint Unfold procDec_inv_0: InvDefs.
@@ -45,30 +48,30 @@ Section Invariants.
 
   Definition mem_request_inv
              (pc: fullType type (SyntaxKind (Bit addrSize)))
-             (rf: fullType type (SyntaxKind (Vector (Bit valSize) rfIdx)))
-             (insEmpty: bool) (insElt: type (Vector (memAtomK addrSize valSize) fifoSize))
+             (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
+             (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
   Proof.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
-    - exact (insElt insDeqP ``"type" = evalExpr (dec _ rf pc) ``"opcode").
+    - exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opLd)
+              then false else true) = insElt insDeqP ``"op").
     - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf pc) ``"addr").
-    - refine (if weq (insElt insDeqP ``"type") (evalConstT memLd) then _ else _).
-      + exact (insElt insDeqP ``"value" = evalConstT (getDefaultConst (Bit valSize))).
-      + refine (if weq (insElt insDeqP ``"type") (evalConstT memSt) then _ else True).
-        exact (insElt insDeqP ``"value" = evalExpr (dec _ rf pc) ``"value").
+    - refine (if (insElt insDeqP ``"op") : bool then _ else _).
+      + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf pc) ``"value").
+      + exact (insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))).
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
   Definition procDec_inv_1 (o: RegsT): Prop.
   Proof.
     kexistv "pc"%string pcv o (Bit addrSize).
-    kexistv "rf"%string rfv o (Vector (Bit valSize) rfIdx).
+    kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
     kexistv "Ins".."empty"%string iev o Bool.
     kexistv "Ins".."enqP"%string ienqP o (Bit fifoSize).
     kexistv "Ins".."deqP"%string ideqP o (Bit fifoSize).
-    kexistv "Ins".."elt"%string ieltv o (Vector (memAtomK addrSize valSize) fifoSize).
+    kexistv "Ins".."elt"%string ieltv o (Vector RqFromProc fifoSize).
     kexistv "Outs".."empty"%string oev o Bool.
     kexistv "Outs".."enqP"%string oenqP o (Bit fifoSize).
     kexistv "Outs".."deqP"%string odeqP o (Bit fifoSize).
@@ -88,7 +91,7 @@ Section Invariants.
       procDec_inv_0 n.
   Proof.
     admit.
-  (*
+    (*
     induction 2.
 
     - kinv_magic.
@@ -104,7 +107,7 @@ Section Invariants.
       + kinv_magic.
       + kinv_magic.
       + kinv_magic.
-   *)
+     *)
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -162,6 +165,7 @@ Section Invariants.
 
 End Invariants.
 
+Hint Unfold RqFromProc RsToProc: MethDefs.
 Hint Unfold procDec_inv_0 procDec_inv_1
      fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 

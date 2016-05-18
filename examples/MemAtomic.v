@@ -1,32 +1,32 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
-Require Import Ex.SC Ex.Fifo.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
 
 Section Middleman.
   Variable inName outName: string.
-  Variable addrSize: nat.
-  Variable dType: Kind.
+  Variable addrSize lgDataBytes: nat.
 
-  Definition getReq := MethodSig (inName .. "deq")() : atomK addrSize dType.
-  Definition setRep := MethodSig (outName .. "enq")(atomK addrSize dType) : Void.
-  Definition exec := MethodSig "exec"(atomK addrSize dType) : atomK addrSize dType.
+  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
+
+  Definition getReq := MethodSig (inName .. "deq")() : RqFromProc.
+  Definition setRep := MethodSig (outName .. "enq")(RsToProc) : Void.
+  Definition exec := MethodSig "exec"(RqFromProc) : RsToProc.
 
   Definition processLd {ty} : ActionT ty Void :=
     (Call req <- getReq();
-     Assert #req@."type" == $$memLd;
+     Assert !#req@."op";
      Call rep <- exec(#req);
-     Assert #rep@."type" == $$memLd;
      Call setRep(#rep);
      Retv)%kami.
 
   Definition processSt {ty} : ActionT ty Void :=
     (Call req <- getReq();
-     Assert #req@."type" == $$memSt;
+     Assert #req@."op";
      Call rep <- exec(#req);
-     Assert #rep@."type" == $$memSt;
      Call setRep(#rep);
      Retv)%kami.
 
@@ -38,21 +38,21 @@ Section Middleman.
 End Middleman.
 
 Hint Unfold mid : ModuleDefs.
-Hint Unfold getReq setRep exec processLd processSt : MethDefs.
+Hint Unfold RqFromProc RsToProc getReq setRep exec processLd processSt : MethDefs.
 
 Section MemAtomic.
   Variable addrSize fifoSize : nat.
-  Variable dType : Kind.
+  Variable lgDataBytes : nat.
 
   Variable n: nat.
 
-  Definition minst := memInst n addrSize dType.
+  Definition minst := memInst n addrSize lgDataBytes.
 
-  Definition inQ := simpleFifo "Ins" fifoSize (atomK addrSize dType).
-  Definition outQ := simpleFifo "Outs" fifoSize (atomK addrSize dType).
+  Definition inQ := simpleFifo "Ins" fifoSize (RqFromProc addrSize lgDataBytes).
+  Definition outQ := simpleFifo "Outs" fifoSize (RsToProc lgDataBytes).
   Definition ioQ := ConcatMod inQ outQ.
 
-  Definition midQ := mid "Ins" "Outs" addrSize dType.
+  Definition midQ := mid "Ins" "Outs" addrSize lgDataBytes.
   Definition iom := ConcatMod ioQ midQ.
   Definition ioms (i: nat) := duplicate iom i.
   Definition memAtomic := ConcatMod (ioms n) minst.

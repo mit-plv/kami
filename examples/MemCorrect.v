@@ -15,19 +15,17 @@ Section MemCorrect.
 
   Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
 
-  (* TODO: fix parameters *)
   Definition memAtomic := memAtomic (AddrBits IdxBits LgNumDatas LgDataBytes) FifoSize
-                                    (memAtomK (AddrBits IdxBits LgNumDatas LgDataBytes)
-                                              (LgDataBytes * 8)) n.
+                                    LgDataBytes n.
 
   Hint Unfold memCache: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT memCache) => unfold memCache. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT memAtomic) => unfold memAtomic. (* for kequiv *)
 
-  (* TODO: need a mapping which drops cache-related communications *)
   Theorem memCache_refines_memAtomic: memCache <<== memAtomic.
   Proof.
     admit.
   Qed.
 
 End MemCorrect.
+

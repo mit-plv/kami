@@ -15,14 +15,14 @@ Section MsgTypes.
   Definition RqFromProc := STRUCT {
                                "addr" :: Addr;
                                "op" :: MemOp;
-                               "byteEn" :: Vector Bool LgDataBytes;
-                               "data" :: Data;
-                               "id" :: Id
+                               (* "byteEn" :: Vector Bool LgDataBytes; *)
+                               "data" :: Data
+                               (* "id" :: Id *)
                              }.
 
   Definition RsToProc := STRUCT {
-                             "data" :: Data;
-                             "id" :: Id
+                             "data" :: Data
+                             (* "id" :: Id *)
                            }.
 
   Definition FromP := STRUCT {

@@ -2,6 +2,7 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations.
 Require Import Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
+Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
 
@@ -12,9 +13,9 @@ Set Implicit Arguments.
 
 (* Abstract ISA *)
 Section DecExec.
-  Variables opIdx addrSize valSize rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Definition StateK := SyntaxKind (Vector (Bit valSize) rfIdx).
+  Definition StateK := SyntaxKind (Vector (Data lgDataBytes) rfIdx).
   Definition StateT (ty : Kind -> Type) := fullType ty StateK.
   Definition StateE (ty : Kind -> Type) := Expr ty StateK.
 
@@ -23,7 +24,7 @@ Section DecExec.
         "opcode" :: Bit opIdx;
         "reg" :: Bit rfIdx;
         "addr" :: Bit addrSize;
-        "value" :: Bit valSize
+        "value" :: Data lgDataBytes
       }.
   Definition DecInstT (ty : Kind -> Type) := fullType ty (SyntaxKind DecInstK).
   Definition DecInstE (ty : Kind -> Type) := Expr ty (SyntaxKind DecInstK).
@@ -37,103 +38,52 @@ Section DecExec.
                                        DecInstT ty ->
                                        Expr ty (SyntaxKind (Bit addrSize)).
 
-  (* Definition DecEquiv (dec: DecT) := *)
-  (*   forall (v1: fullType type StateK) *)
-  (*          (v1': fullType typeUT StateK) *)
-  (*          (v2: fullType type (SyntaxKind (Bit addrSize))) *)
-  (*          (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G, *)
-  (*     In ((vars v1 v1')) G -> In ((vars v2 v2')) G -> *)
-  (*     ExprEquiv G *)
-  (*               (#(dec (fullType type) v1 v2))%kami *)
-  (*               (#(dec (fullType typeUT) v1' v2'))%kami. *)
-
-  (* Definition ExecEquiv_1 (dec: DecT) (exec: ExecT) := *)
-  (*   forall (v1: fullType type StateK) *)
-  (*          (v1': fullType typeUT StateK) *)
-  (*          (v2: fullType type (SyntaxKind (Bit addrSize))) *)
-  (*          (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G, *)
-  (*     In ((vars v1 v1')) G -> In ((vars v2 v2')) G -> *)
-  (*     ExprEquiv G *)
-  (*               #(fst (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami *)
-  (*               #(fst (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami. *)
-
-  (* Definition ExecEquiv_2 (dec: DecT) (exec: ExecT) := *)
-  (*   forall (v1: fullType type StateK) *)
-  (*          (v1': fullType typeUT StateK) *)
-  (*          (v2: fullType type (SyntaxKind (Bit addrSize))) *)
-  (*          (v2': fullType typeUT (SyntaxKind (Bit addrSize))) G, *)
-  (*     In ((vars v1 v1')) G -> In ((vars v2 v2')) G -> *)
-  (*     ExprEquiv G *)
-  (*               #(snd (exec (fullType type) v1 v2 (dec (fullType type) v1 v2)))%kami *)
-  (*               #(snd (exec (fullType typeUT) v1' v2' (dec (fullType typeUT) v1' v2')))%kami. *)
-
 End DecExec.
 
 Hint Unfold StateK StateT StateE DecInstK DecInstT DecInstE : MethDefs.
-
-(* Ltac dec_exec_equiv dec exec HdecEquiv HexecEquiv_1 HexecEquiv_2 := *)
-(*   match goal with *)
-(*   | [ |- ExprEquiv _ (#(dec _ _ _))%kami (#(dec _ _ _))%kami ] => *)
-(*     apply HdecEquiv *)
-(*   | [ |- ExprEquiv _ (#(fst (exec _ _ _ (dec _ _ _))))%kami *)
-(*                    (#(fst (exec _ _ _ (dec _ _ _))))%kami ] => *)
-(*     apply HexecEquiv_1 *)
-(*   | [ |- ExprEquiv _ (#(snd (exec _ _ _ (dec _ _ _))))%kami *)
-(*                    (#(snd (exec _ _ _ (dec _ _ _))))%kami ] => *)
-(*     apply HexecEquiv_2 *)
-(*   end. *)
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
   Variable n : nat.
   Variable addrSize : nat.
-  Variable dType : Kind.
+  Variable lgDataBytes : nat.
 
-  Definition atomK := STRUCT {
-    "type" :: Bit 2;
-    "addr" :: Bit addrSize;
-    "value" :: dType
-  }.
-
-  Definition memLd : ConstT (Bit 2) := WO~0~0.
-  Definition memSt : ConstT (Bit 2) := WO~0~1.
+  Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
+  Definition RsToProc := RsToProc lgDataBytes.
 
   Definition memInst := MODULE {
-    Register "mem" : Vector dType addrSize <- Default
+    Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
-    with Repeat Method as i till n by "exec" (a : atomK) : atomK :=
-      If (#a@."type" == $$memLd) then
+    with Repeat Method as i till n by "exec" (a : RqFromProc) : RsToProc :=
+      If !#a@."op" then (* load *)
         Read memv <- "mem";
         LET ldval <- #memv@[#a@."addr"];
-        Ret (STRUCT { "type" ::= #a@."type"; "addr" ::= #a@."addr"; "value" ::= #ldval }
-                    :: atomK)
-      else
+        Ret (STRUCT { "data" ::= #ldval } :: RsToProc)
+      else (* store *)
         Read memv <- "mem";
-        Write "mem" <- #memv@[ #a@."addr" <- #a@."value" ];
-        Ret #a
+        Write "mem" <- #memv@[ #a@."addr" <- #a@."data" ];
+        Ret (STRUCT { "data" ::= $$Default } :: RsToProc)
       as na;
       Ret #na
   }.
   
 End MemInst.
 
-Hint Unfold atomK memLd memSt : MethDefs.
+Hint Unfold RqFromProc RsToProc : MethDefs.
 Hint Unfold memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variables opIdx addrSize valSize rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
   (* External abstract ISA: dec and exec *)
-  Variable dec: DecT opIdx addrSize valSize rfIdx.
-  Variable execState: ExecStateT opIdx addrSize valSize rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize valSize rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
-  Definition memAtomK := atomK addrSize (Bit valSize).
-
-  Definition execCm := MethodSig "exec"(memAtomK) : memAtomK.
+  Definition execCm := MethodSig "exec"(RqFromProc addrSize lgDataBytes) : RsToProc lgDataBytes.
   Definition haltCm := MethodSig "HALT"(Bit 0) : Bit 0.
 
   Definition nextPc {ty} ppc st inst :=
@@ -142,17 +92,17 @@ Section ProcInst.
 
   Definition procInst := MODULE {
     Register "pc" : Bit addrSize <- Default
-    with Register "rf" : Vector (Bit valSize) rfIdx <- Default
+    with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
 
     with Rule "execLd" :=
       Read ppc <- "pc";
       Read st <- "rf";
       LET inst <- dec _ st ppc;
       Assert #inst@."opcode" == $$opLd;
-      Call ldRep <- execCm(STRUCT {  "type" ::= $$memLd;
-                                     "addr" ::= #inst@."addr";
-                                    "value" ::= $$Default });
-      Write "rf" <- #st@[#inst@."reg" <- #ldRep@."value"];
+      Call ldRep <- execCm(STRUCT { "addr" ::= #inst@."addr";
+                                    "op" ::= $$false;
+                                    "data" ::= $$Default });
+      Write "rf" <- #st@[#inst@."reg" <- #ldRep@."data"];
       nextPc ppc st inst
 
     with Rule "execSt" :=
@@ -160,9 +110,9 @@ Section ProcInst.
       Read st <- "rf";
       LET inst <- dec _ st ppc;
       Assert #inst@."opcode" == $$opSt;
-      Call execCm(STRUCT {  "type" ::= $$memSt;
-                            "addr" ::= #inst@."addr";
-                           "value" ::= #inst@."value" });
+      Call execCm(STRUCT { "addr" ::= #inst@."addr";
+                           "op" ::= $$true;
+                           "data" ::= #inst@."value" });
       nextPc ppc st inst
 
     with Rule "execHt" :=
@@ -186,15 +136,15 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold memAtomK execCm haltCm nextPc : MethDefs.
+Hint Unfold execCm haltCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables opIdx addrSize valSize rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
-  Variable dec: DecT opIdx addrSize valSize rfIdx.
-  Variable execState: ExecStateT opIdx addrSize valSize rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize valSize rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
@@ -202,7 +152,7 @@ Section SC.
 
   Definition pinst := procInst dec execState execNextPc opLd opSt opHt.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
-  Definition minst := memInst n addrSize (Bit valSize).
+  Definition minst := memInst n addrSize lgDataBytes.
 
   Definition sc := ConcatMod (pinsts n) minst.
 
@@ -213,14 +163,11 @@ Hint Unfold pinst pinsts minst sc : ModuleDefs.
 Require Import MetaSyntax.
 
 Section Facts.
-  Variables opIdx addrSize valSize rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
-  Variable dec: DecT opIdx addrSize valSize rfIdx.
-  Variable execState: ExecStateT opIdx addrSize valSize rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize valSize rfIdx.
-  (* Hypotheses (HdecEquiv: DecEquiv dec) *)
-  (*            (HexecEquiv_1: ExecEquiv_1 dec exec) *)
-  (*            (HexecEquiv_2: ExecEquiv_2 dec exec). *)
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
   
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 

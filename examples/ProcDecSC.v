@@ -4,23 +4,21 @@ Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2.
 Require Import Lts.DecompositionZero Lts.Tactics.
-Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables addrSize fifoSize valSize rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize valSize rfIdx.
-  Variable execState: ExecStateT 2 addrSize valSize rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize valSize rfIdx.
-  (* Hypotheses (HdecEquiv: DecEquiv dec) *)
-  (*            (HexecEquiv_1: ExecEquiv_1 dec exec) *)
-  (*            (HexecEquiv_2: ExecEquiv_2 dec exec). *)
+  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
 
-  Variable n: nat.
+  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   Definition pdec := pdecf fifoSize dec execState execNextPc.
   Definition pinst := pinst dec execState execNextPc opLd opSt opHt.
@@ -37,9 +35,9 @@ Section ProcDecSC.
   Definition pdec_pinst_regMap (r: RegsT): RegsT.
   Proof.
     kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
-    kgetv "rf"%string rfv r (Vector (Bit valSize) rfIdx) (M.empty (sigT (fullType type))).
+    kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
     kgetv "Outs".."empty"%string oev r Bool (M.empty (sigT (fullType type))).
-    kgetv "Outs".."elt"%string oelv r (Vector (memAtomK addrSize valSize) fifoSize)
+    kgetv "Outs".."elt"%string oelv r (Vector RsToProc fifoSize)
           (M.empty (sigT (fullType type))).
     kgetv "Outs".."deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
 
@@ -55,9 +53,9 @@ Section ProcDecSC.
 
     pose proof (inst ``"opcode") as opc.
     destruct (weq opc (evalConstT opLd)).
-    - refine (existT _ (SyntaxKind (Vector (Bit valSize) rfIdx)) _); simpl.
+    - refine (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx)) _); simpl.
       exact (fun a => if weq a (inst ``"reg")
-                      then (oelv odv) ``"value"
+                      then (oelv odv) ``"data"
                       else rfv a).
     - refine (existT _ _ rfv).
   Defined.

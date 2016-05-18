@@ -23,8 +23,8 @@ Section MemCache.
   Definition MIdxBits := TagBits + IdxBits.
 
   Definition fifoRqFromProc := fifo "rqFromProc" (rsz FifoSize)
-                                    (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes Id).
-  Definition fifoRsToProc := fifo "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes Id).
+                                    (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes).
+  Definition fifoRsToProc := fifo "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes).
   Definition fifoRqToP := fifo "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id).
   Definition fifoRsToP := fifo "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes).
   Definition fifoFromP := fifo "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id).
@@ -68,8 +68,8 @@ Section MemCacheNativeFifo.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition nfifoRqFromProc :=
-    @nativeFifo "rqFromProc" (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes Id) Default.
-  Definition nfifoRsToProc := @nativeFifo "rsToProc" (RsToProc LgDataBytes Id) Default.
+    @nativeFifo "rqFromProc" (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) Default.
+  Definition nfifoRsToProc := @nativeFifo "rsToProc" (RsToProc LgDataBytes) Default.
   Definition nfifoRqToP :=
     @nativeFifo "rqToP" (RqToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id) Default.
   Definition nfifoRsToP :=
@@ -131,17 +131,6 @@ Section Refinement.
     (*         { apply fifo_refines_nativefifo. } *)
     (*         { apply fifo_refines_nativefifo. } *)
     (*       } *)
-  Qed.
-
-  Lemma l1s_refines_nl1s:
-    (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
-      <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
-  Proof.
-    admit.
-    (* kduplicated. *)
-    (* - kequiv. *)
-    (* - kequiv. *)
-    (* - apply l1C_refines_nl1C. *)
   Qed.
 
 End Refinement.

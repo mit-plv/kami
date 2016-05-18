@@ -18,8 +18,8 @@ Section L1Cache.
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
  
-  Definition RqFromProc := Ex.MemTypes.RqFromProc LgDataBytes Addr Id.
-  Definition RsToProc := Ex.MemTypes.RsToProc LgDataBytes Id.
+  Definition RqFromProc := Ex.MemTypes.RqFromProc LgDataBytes Addr.
+  Definition RsToProc := Ex.MemTypes.RsToProc LgDataBytes.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition RqFromP := Ex.MemTypes.RqFromP Addr.
   Definition RsFromP := Ex.MemTypes.RsFromP LgDataBytes LgNumDatas Addr Id.
@@ -77,7 +77,10 @@ Section L1Cache.
           Call cs <- readCs(#idx);
           Assert ((#cs >= $ Sh) && #tag == getTag #rq@."addr");
           Call line <- readLine(#idx);
-          Call rsToProcEnq(STRUCT{"data" ::= #line@[getOffset #rq@."addr"]; "id" ::= #rq@."id"});
+          Call rsToProcEnq(STRUCT {
+                               "data" ::= #line@[getOffset #rq@."addr"]
+                               (* "id" ::= #rq@."id" *)
+                          });
           Retv
 
         with Rule "stHit" :=
@@ -91,7 +94,10 @@ Section L1Cache.
           Assert (#cs == $ Mod && #tag == getTag #rq@."addr");
           Call line <- readLine(#idx);
           LET offset <- getOffset #rq@."addr";
-          Call rsToProcEnq(STRUCT{"data" ::= #line@[#offset]; "id" ::= #rq@."id"});
+          Call rsToProcEnq(STRUCT {
+                               "data" ::= $$Default
+                               (* "id" ::= #rq@."id" *)
+                          });
           LET updLine <- #line@[#offset <- #rq@."data"];
           Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #updLine});
           Retv
@@ -179,7 +185,10 @@ Section L1Cache.
           Assert #cs >= $ Sh;
           Call line <- readLine(#idx);
           Write "procRqValid" <- $$ false;
-          Call rsToProcEnq(STRUCT{"data" ::= #line@[getOffset #rq@."addr"]; "id" ::= #rq@."id"});
+          Call rsToProcEnq(STRUCT {
+                               "data" ::= #line@[getOffset #rq@."addr"]
+                               (* "id" ::= #rq@."id" *)
+                          });
           Retv
 
         with Rule "stDeferred" :=
@@ -195,7 +204,10 @@ Section L1Cache.
           Call line <- readLine(#idx);
           Write "procRqValid" <- $$ false;
           LET offset <- getOffset #rq@."addr";
-          Call rsToProcEnq(STRUCT{"data" ::= #line@[#offset]; "id" ::= #rq@."id"});
+          Call rsToProcEnq(STRUCT {
+                               "data" ::= $$Default
+                               (* "id" ::= #rq@."id" *)
+                          });
           Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #line@[#offset <- #rq@."data"]});
           Retv
 
