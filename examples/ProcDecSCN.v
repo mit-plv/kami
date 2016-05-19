@@ -20,7 +20,7 @@ Section ProcDecSCN.
   Definition pdecN := procDecM fifoSize dec execState execNextPc n.
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
-  Lemma pdecN_refines_scN: traceRefines (liftToMap1 (@idElementwise _)) pdecN scN.
+  Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof.
     kmodular.
     - kequiv.
@@ -52,5 +52,27 @@ Section ProcDecSCN.
     - krefl.
   Qed.
 
+  Definition procDecN := pdecs dec execState execNextPc n.
+  Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
+  Definition pdecAN := (procDecN ++ memAtomic)%kami.
+
+  Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
+  Proof.
+    apply traceRefines_trans with (mb:= pdecN); [|apply pdecN_refines_scN].
+
+    replace (fun f : MethsT => f) with (liftToMap1 (idElementwise (A:= sigT SignT)))
+      by apply SemFacts.idElementwiseId.
+    unfold pdecAN, procDecN, memAtomic, MemAtomic.memAtomic.
+    
+    apply traceRefines_trans with
+    (mb:= ((pdecs dec execState execNextPc n ++ ioms addrSize fifoSize lgDataBytes n)
+             ++ minst addrSize lgDataBytes n)%kami);
+      [apply traceRefines_assoc_2|].
+
+    unfold pdecN, procDecM.
+    (* kmodular *)
+    admit.
+  Qed.
+  
 End ProcDecSCN.
 

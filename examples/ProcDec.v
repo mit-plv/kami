@@ -129,6 +129,7 @@ Section ProcDecM.
   Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
 
   Definition pdec := procDec "Ins"%string "Outs"%string dec execState execNextPc.
+  Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
   Definition pdecfs (i: nat) := duplicate pdecf i.
