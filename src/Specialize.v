@@ -1,4 +1,4 @@
-Require Import Bool String List.
+Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq.
 Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf.
 
@@ -254,7 +254,7 @@ Section SpecializeFacts.
   Proof. intros; apply withIndex_neq; auto. Qed.
 
   Lemma renameAction_ActionEquiv:
-    forall G {retT} (ta: ActionT type retT) (ua: ActionT typeUT retT),
+    forall ty1 ty2 G {retT} (ta: ActionT ty1 retT) (ua: ActionT ty2 retT),
       ActionEquiv G ta ua ->
       forall f,
         ActionEquiv G (renameAction f ta) (renameAction f ua).
@@ -263,10 +263,10 @@ Section SpecializeFacts.
   Qed.
 
   Lemma renameRules_RulesEquiv:
-    forall rules,
-      RulesEquiv type typeUT rules ->
+    forall ty1 ty2 rules,
+      RulesEquiv ty1 ty2 rules ->
       forall f,
-        RulesEquiv type typeUT (renameRules f rules).
+        RulesEquiv ty1 ty2 (renameRules f rules).
   Proof.
     induction rules; simpl; intros; [constructor|].
     destruct a; constructor.
@@ -275,22 +275,22 @@ Section SpecializeFacts.
   Qed.
 
   Lemma renameMeths_MethsEquiv:
-    forall meths,
-      MethsEquiv type typeUT meths ->
+    forall ty1 ty2 meths,
+      MethsEquiv ty1 ty2 meths ->
       forall f,
-        MethsEquiv type typeUT (renameMeths f meths).
+        MethsEquiv ty1 ty2 (renameMeths f meths).
   Proof.
     induction meths; simpl; intros; [constructor|].
     destruct a; constructor.
     - inv H; destruct_existT; intros; apply renameAction_ActionEquiv; auto.
     - inv H; apply IHmeths; auto.
   Qed.
-    
+
   Lemma renameModules_ModEquiv:
-    forall m,
-      ModEquiv type typeUT m ->
+    forall ty1 ty2 m,
+      ModEquiv ty1 ty2 m ->
       forall f,
-        ModEquiv type typeUT (renameModules f m).
+        ModEquiv ty1 ty2 (renameModules f m).
   Proof.
     induction m; simpl; intros.
     - inv H; simpl in *.
@@ -302,9 +302,9 @@ Section SpecializeFacts.
   Qed.
   
   Lemma specializeMod_ModEquiv:
-    forall i m,
-      ModEquiv type typeUT m ->
-      ModEquiv type typeUT (specializeMod m i).
+    forall ty1 ty2 i m,
+      ModEquiv ty1 ty2 m ->
+      ModEquiv ty1 ty2 (specializeMod m i).
   Proof.
     intros; apply renameModules_ModEquiv; auto.
   Qed.
@@ -846,6 +846,30 @@ Section Specializable.
   Qed.
   
 End Specializable.
+
+Lemma specializeMod_disj_regs_2:
+  forall m1 m2,
+    Specializable m1 ->
+    Specializable m2 ->
+    DisjList (namesOf (getRegInits m1))
+             (namesOf (getRegInits m2)) ->
+    forall i j,
+      DisjList (namesOf (getRegInits (specializeMod m1 i)))
+               (namesOf (getRegInits (specializeMod m2 j))).
+Proof.
+  intros; do 2 (rewrite specializeMod_regs; auto).
+  unfold DisjList in *; intros.
+  destruct (in_dec string_dec e (map (spf i) (namesOf (getRegInits m1)))); auto.
+  destruct (in_dec string_dec e (map (spf j) (namesOf (getRegInits m2)))); auto.
+  exfalso.
+  apply in_map_iff in i0; apply in_map_iff in i1; dest.
+  rewrite <-H2 in H4.
+  destruct (string_dec x x0); subst.
+  - specialize (H1 x0); destruct H1; auto.
+  - destruct (dec_eq_nat i j); subst.
+    + apply spf_onto in H4; auto.
+    + apply spf_neq with (a:= x0) (b:= x) in H2; auto.
+Qed.    
 
 Lemma specializeMod_concatMod:
   forall m1 m2

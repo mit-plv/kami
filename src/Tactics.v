@@ -50,15 +50,26 @@ Set Implicit Arguments.
 Ltac kstring_simpl :=
   cbv [withPrefix prefixSymbol append] in *.
 
-Ltac kmodular :=
-  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
-
-Ltac kmodularn :=
-  apply traceRefines_modular_noninteracting; auto.
-
 Ltac krefl :=
   try rewrite idElementwiseId; apply traceRefines_refl.
 
+Ltac ktrans m :=
+  try rewrite idElementwiseId; apply traceRefines_trans with (p:= id) (q:= id) (mb:= m).
+
+Ltac kmodular :=
+  try rewrite <-idElementwiseId;
+  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
+
+Ltac kmodularn :=
+  try rewrite <-idElementwiseId;
+  apply traceRefines_modular_noninteracting; auto.
+
+Ltac kmodular_sim_l :=
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1.
+
+Ltac kmodular_sim_r :=
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
+  
 (* CAUTION: do not use the "simpl" tactic during kequiv_unit;
  *          "simpl" will destruct all BoundedIndexFull information, 
  *          which is needed for the Struct equivalence
@@ -70,8 +81,7 @@ Ltac kequiv_unit tac :=
   | [ |- ModEquiv _ _ ?m ] =>
     let H := fresh "H" in
     assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
-    clear H;
-    apply duplicate_ModEquiv
+    clear H; apply duplicate_ModEquiv
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => constructor; intros
   | [ |- RulesEquiv _ _ _ ] => constructor; intros

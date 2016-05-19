@@ -187,9 +187,9 @@ Section Facts.
   Lemma memDir_ModEquiv:
     forall m,
       m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
-    admit. (* TODO: foldInc equivalence *)
+    admit. (* kequiv. *)
   Qed.
 
 End Facts.

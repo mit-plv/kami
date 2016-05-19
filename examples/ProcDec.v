@@ -146,10 +146,19 @@ Section Facts.
   Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
 
+  Lemma pdec_ModEquiv:
+    forall m,
+      m = pdec dec execState execNextPc ->
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+  Proof.
+    kequiv.
+  Qed.
+  Hint Resolve pdec_ModEquiv.
+
   Lemma pdecf_ModEquiv:
     forall fsz m,
       m = pdecf fsz dec execState execNextPc ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -158,7 +167,7 @@ Section Facts.
   Lemma pdecfs_ModEquiv:
     forall fsz n m,
       m = pdecfs fsz dec execState execNextPc n ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -167,12 +176,12 @@ Section Facts.
   Lemma procDecM_ModEquiv:
     forall fsz n m,
       m = procDecM fsz dec execState execNextPc n ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
+Hint Resolve pdec_ModEquiv pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
 

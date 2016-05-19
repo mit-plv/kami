@@ -254,10 +254,9 @@ Section Facts.
   Lemma l1Cache_ModEquiv:
     forall m,
       m = l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
-    admit.
-    (* kequiv. *)
+    admit. (* kequiv. *)
   Qed.
 
 End Facts.

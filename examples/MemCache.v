@@ -81,7 +81,8 @@ Section MemCacheNativeFifo.
     ((l1 IdxBits TagBits LgNumDatas LgDataBytes Id)
        ++ nfifoRqFromProc ++ nfifoRsToProc ++ nfifoRqToP ++ nfifoRsToP ++ nfifoFromP)%kami.
 
-  Definition nl1s := duplicate nl1C n.
+  (* Definition nl1s := duplicate nl1C n. *)
+  Definition nl1s := duplicateByRep nl1C n.
 
   Definition nfifoRqFromC :=
     @nativeFifo "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.

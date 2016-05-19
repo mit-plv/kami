@@ -145,29 +145,26 @@ Section Facts.
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
   Proof.
-    admit.
-  (*
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
     - exfalso.
-      inv H1; inv H11; simpl in *.
+      inv H1; inv H19; simpl in *.
       clear -H1; findeq.
     - exfalso.
       inv H1; simpl in *.
-      clear -H10; findeq.
+      clear -H17; findeq.
     - left; reflexivity.
     - exfalso.
       inv H1; simpl in *.
-      clear -H10; findeq.
+      clear -H17; findeq.
     - exfalso.
-      inv H1; inv H11; simpl in *.
+      inv H1; inv H17; simpl in *.
       clear -H1; findeq.
     - left; reflexivity.
     - right; reflexivity.
     - right; reflexivity.
     - left; reflexivity.
-   *)
   Qed.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
@@ -184,8 +181,6 @@ Section Facts.
   Lemma fifo_inv_0_ok:
     forall o, reachable o fifo -> fifo_inv_0 o.
   Proof.
-    admit.
-  (*
     apply decompositionInv.
     - simpl; kinv_magic.
     - intros; inv H0; inv HInRules.
@@ -194,7 +189,6 @@ Section Facts.
       + kinv_magic.
       + kinv_magic.
     - apply fifo_substeps_updates.
-   *)
   Qed.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
@@ -215,8 +209,6 @@ Section Facts.
       reachable o fifo ->
       fifo_inv_1 o.
   Proof.
-    admit.
-  (*
     apply decompositionInv.
     - simpl; kinv_magic; or3_fst; auto.
     - intros; inv H0; inv HInRules.
@@ -250,7 +242,6 @@ Section Facts.
           { or3_thd; auto. }
       + simpl in *; kinv_magic_with kinv_or3.
     - apply fifo_substeps_updates.
-   *)
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
@@ -272,13 +263,14 @@ Section Facts.
       pose proof (fifo_inv_1_ok H).
       CommonTactics.dest_in; simpl in *; invertActionRep.
 
-      + kinv_red; clear H10.
+      + kinv_red.
         eexists; split.
         * eapply SingleMeth.
           { left; reflexivity. }
           { instantiate (3:= argV).
             simpl; repeat econstructor.
             kregmap_red; reflexivity.
+            findeq.
           }
           { reflexivity. }
 
@@ -405,7 +397,7 @@ Section Facts.
           }
 
       + kinv_red.
-        destruct H10 as [|[|]]; dest; subst; [inv H1| |].
+        destruct H13 as [|[|]]; dest; subst; [inv H1| |].
         * eexists; split.
           { unfold rsz in *.
             destruct (weq x1 x2); [|inv H3]; subst.
@@ -417,6 +409,7 @@ Section Facts.
               { destruct (weq x2 x2); [|elim n; reflexivity].
                 reflexivity.
               }
+              { findeq. }
             }
             { destruct (weq x2 x2); [|elim n; reflexivity].
               reflexivity.
@@ -461,6 +454,7 @@ Section Facts.
                 specialize (H2 H4); clear H4; dest.
                 rewrite H2; reflexivity.
               }
+              { findeq. }
             }
             { destruct (weq x1 x2); [elim n; auto|].
               simpl; repeat f_equal.

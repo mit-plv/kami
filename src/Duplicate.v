@@ -1,4 +1,4 @@
-Require Import Bool String List.
+Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq.
 Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf.
 Require Import Specialize MetaSyntax.
@@ -22,9 +22,9 @@ End Duplicate.
 Section DuplicateFacts.
 
   Lemma duplicate_ModEquiv:
-    forall m n,
-      ModEquiv type typeUT m ->
-      ModEquiv type typeUT (duplicate m n).
+    forall ty1 ty2 m n,
+      ModEquiv ty1 ty2 m ->
+      ModEquiv ty1 ty2 (duplicate m n).
   Proof.
     induction n; simpl; intros;
       [apply specializeMod_ModEquiv; auto|].
@@ -43,7 +43,7 @@ Section DuplicateFacts.
       apply specializeMod_validRegsModules; auto.
   Qed.
 
-  Lemma duplicate_disj_regs:
+  Lemma duplicate_specializeMod_disj_regs:
     forall m,
       Specializable m ->
       forall n ln,
@@ -60,7 +60,7 @@ Section DuplicateFacts.
       + apply DisjList_comm, IHn; omega.
   Qed.
 
-  Lemma duplicate_disj_defs:
+  Lemma duplicate_specializeMod_disj_defs:
     forall m,
       Specializable m ->
       forall n ln,
@@ -81,7 +81,7 @@ Section DuplicateFacts.
         * apply DisjList_comm, IHn; omega.
   Qed.
 
-  Lemma duplicate_disj_calls:
+  Lemma duplicate_specializeMod_disj_calls:
     forall m,
       Specializable m ->
       forall n ln,
@@ -100,6 +100,36 @@ Section DuplicateFacts.
       + apply DisjList_app_4.
         * apply specializable_disj_calls; auto; omega.
         * apply DisjList_comm, IHn; omega.
+  Qed.
+  
+  Lemma duplicate_disj_regs:
+    forall m1 m2,
+      Specializable m1 ->
+      Specializable m2 ->
+      DisjList (namesOf (getRegInits m1))
+               (namesOf (getRegInits m2)) ->
+      forall n,
+        DisjList (namesOf (getRegInits (duplicate m1 n)))
+                 (namesOf (getRegInits (duplicate m2 n))).
+  Proof.
+    induction n; simpl; intros.
+    - apply specializeMod_disj_regs_2; auto.
+    - unfold namesOf; do 2 rewrite map_app; apply DisjList_app_4.
+      + apply DisjList_comm, DisjList_app_4.
+        * apply DisjList_comm, specializeMod_disj_regs_2; auto.
+        * clear IHn; generalize (S n); intros; induction n; simpl.
+          { apply DisjList_comm, specializeMod_disj_regs_2; auto. }
+          { rewrite map_app; apply DisjList_app_4; auto.
+            apply DisjList_comm, specializeMod_disj_regs_2; auto.
+          }
+      + apply DisjList_comm, DisjList_app_4.
+        * clear IHn; generalize (S n); intros; induction n; simpl.
+          { apply DisjList_comm, specializeMod_disj_regs_2; auto. }
+          { rewrite map_app; apply DisjList_comm, DisjList_app_4.
+            { apply specializeMod_disj_regs_2; auto. }
+            { apply DisjList_comm; auto. }
+          }
+        * apply DisjList_comm; auto.
   Qed.
 
   Lemma duplicate_noninteracting:
@@ -148,7 +178,7 @@ Section DuplicateFacts.
     unfold namesOf in *; simpl in *.
     rewrite map_app; apply NoDup_DisjList; auto.
     - apply specializeMod_regs_NoDup; auto.
-    - apply duplicate_disj_regs; auto.
+    - apply duplicate_specializeMod_disj_regs; auto.
   Qed.
 
   Section TwoModules1.
@@ -235,14 +265,14 @@ Section DuplicateFacts.
         + apply specializeMod_ModEquiv; auto.
         + apply duplicate_ModEquiv; auto.
         + apply duplicate_ModEquiv; auto.
-        + apply duplicate_disj_regs; auto.
-        + apply duplicate_disj_regs; auto.
+        + apply duplicate_specializeMod_disj_regs; auto.
+        + apply duplicate_specializeMod_disj_regs; auto.
         + pose proof (duplicate_validRegsModules m1 (S n) Hvr1); auto.
         + pose proof (duplicate_validRegsModules m2 (S n) Hvr2); auto.
-        + apply duplicate_disj_defs; auto.
-        + apply duplicate_disj_calls; auto.
-        + apply duplicate_disj_defs; auto.
-        + apply duplicate_disj_calls; auto.
+        + apply duplicate_specializeMod_disj_defs; auto.
+        + apply duplicate_specializeMod_disj_calls; auto.
+        + apply duplicate_specializeMod_disj_defs; auto.
+        + apply duplicate_specializeMod_disj_calls; auto.
         + apply duplicate_noninteracting; auto.
         + apply duplicate_noninteracting; auto.
         + apply specialized_2 with (i:= S n); auto.
@@ -349,7 +379,7 @@ Section DuplicateFacts.
           change (getRegInits (specializeMod m1 (S n)) ++ getRegInits (specializeMod m2 (S n)))
           with (getRegInits (specializeMod m1 (S n) ++ (specializeMod m2 (S n)))%kami).
           rewrite <-H2.
-          apply DisjList_comm, duplicate_disj_regs; auto.
+          apply DisjList_comm, duplicate_specializeMod_disj_regs; auto.
           apply specializable_concatMod; auto.
       - apply specializable_concatMod; auto.
     Qed.

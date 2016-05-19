@@ -81,7 +81,7 @@ Section Facts.
   Lemma fifo_ModEquiv:
     forall m,
       m = fifo fifoName sz dType ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -89,7 +89,7 @@ Section Facts.
   Lemma simpleFifo_ModEquiv:
     forall m,
       m = simpleFifo fifoName sz dType ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.

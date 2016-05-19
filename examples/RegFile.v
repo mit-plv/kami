@@ -44,7 +44,7 @@ Section Facts.
   Lemma regFile_ModEquiv:
     forall m,
       m = regFile name _ _ init ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.

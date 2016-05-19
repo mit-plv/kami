@@ -80,7 +80,7 @@ Section Facts.
   Lemma nativeFifo_ModEquiv:
     forall m,
       m = nativeFifo fifoName default ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -88,7 +88,7 @@ Section Facts.
   Lemma nativeSimpleFifo_ModEquiv:
     forall m,
       m = nativeSimpleFifo fifoName default ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.

@@ -150,6 +150,38 @@ Section Facts.
     - clear; induction sig1; constructor; auto.
       constructor; destruct (annot a); auto.
   Qed.
+  
+  Lemma traceRefines_same_module_structure_modular_1:
+    forall ma mb mc,
+      NoDup (namesOf (getRegInits (ma ++ mc)%kami)) ->
+      NoDup (namesOf (getRegInits (mb ++ mc)%kami)) ->
+      SubList (getRegInits ma) (getRegInits mb) ->
+      SubList (getRegInits mb) (getRegInits ma) ->
+      SubList (getRules ma) (getRules mb) ->
+      SubList (getRules mb) (getRules ma) ->
+      SubList (getDefsBodies ma) (getDefsBodies mb) ->
+      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      traceRefines id (ma ++ mc)%kami (mb ++ mc)%kami.
+  Proof.
+    intros; apply traceRefines_same_module_structure; auto;
+      try (apply SubList_app_3; [apply SubList_app_1; auto|apply SubList_app_2, SubList_refl]).
+  Qed.
+
+  Lemma traceRefines_same_module_structure_modular_2:
+    forall ma mb mc,
+      NoDup (namesOf (getRegInits (mc ++ ma)%kami)) ->
+      NoDup (namesOf (getRegInits (mc ++ mb)%kami)) ->
+      SubList (getRegInits ma) (getRegInits mb) ->
+      SubList (getRegInits mb) (getRegInits ma) ->
+      SubList (getRules ma) (getRules mb) ->
+      SubList (getRules mb) (getRules ma) ->
+      SubList (getDefsBodies ma) (getDefsBodies mb) ->
+      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      traceRefines id (mc ++ ma)%kami (mc ++ mb)%kami.
+  Proof.
+    intros; apply traceRefines_same_module_structure; auto;
+      try (apply SubList_app_3; [apply SubList_app_1, SubList_refl|apply SubList_app_2; auto]).
+  Qed.
 
   Lemma traceRefines_comm:
     forall ma mb,

@@ -51,7 +51,8 @@ Section Facts.
   Definition ruleMap : RegsT -> string -> option string :=
     fun _ r => Some r.
 
-  Lemma mab_ModEquiv: ModEquiv type typeUT (ConcatMod ma mb).
+  Lemma mab_ModEquiv:
+    forall ty1 ty2, ModEquiv ty1 ty2 (ConcatMod ma mb).
   Proof. kequiv. Qed.
   Hint Resolve mab_ModEquiv.
 

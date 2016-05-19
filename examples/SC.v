@@ -174,7 +174,7 @@ Section Facts.
   Lemma pinst_ModEquiv:
     forall m,
       m = pinst dec execState execNextPc opLd opSt opHt ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -183,7 +183,7 @@ Section Facts.
   Lemma pinsts_ModEquiv:
     forall n m,
       m = pinsts dec execState execNextPc opLd opSt opHt n ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.
@@ -192,7 +192,7 @@ Section Facts.
   Lemma memInst_ModEquiv:
     forall n a d m,
       m = memInst n a d ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
     unfold memInst; simpl.
@@ -208,7 +208,7 @@ Section Facts.
   Lemma sc_ModEquiv:
     forall n m,
       m = sc dec execState execNextPc opLd opSt opHt n ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
   Qed.

@@ -67,7 +67,7 @@ Section Facts.
   Lemma childParent_ModEquiv:
     forall m,
       m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
-      ModEquiv type typeUT m.
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
     unfold childParent; simpl.
