@@ -57,11 +57,11 @@ Ltac ktrans m :=
   try rewrite idElementwiseId; apply traceRefines_trans with (p:= id) (q:= id) (mb:= m).
 
 Ltac kmodular :=
-  try rewrite <-idElementwiseId;
+  try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
 
 Ltac kmodularn :=
-  try rewrite <-idElementwiseId;
+  try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting; auto.
 
 Ltac kmodular_sim_l :=

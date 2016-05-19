@@ -32,7 +32,8 @@ Section MemCache.
   Definition l1C :=
     (l1 ++ fifoRqFromProc ++ fifoRsToProc ++ fifoRqToP ++ fifoRsToP ++ fifoFromP)%kami.
   
-  Definition l1s := duplicate l1C n.
+  (* Definition l1s := duplicate l1C n. *)
+  Definition l1s := duplicateByRep l1C n.
 
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 

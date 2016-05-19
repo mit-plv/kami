@@ -14,7 +14,7 @@ Section MemCorrect.
   Variable n: nat. (* number of caches (cores) *)
 
   Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
-  Definition memAtomic := memAtomic (AddrBits IdxBits LgNumDatas LgDataBytes)
+  Definition memAtomic := memAtomic (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
                                     FifoSize LgDataBytes n.
 
   Lemma memCache_refines_memAtomic: memCache <<== memAtomic.

@@ -20,11 +20,11 @@ Section ProcDecSCN.
   Definition pdecN := procDecM fifoSize dec execState execNextPc n.
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
-  Lemma pdecN_refines_scN: traceRefines id pdecN scN.
+  Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof.
     admit.
   (*
-    unfold MethsT; kmodular.
+    kmodular.
     - kequiv.
     - kequiv.
     - kequiv.
@@ -63,7 +63,7 @@ Section ProcDecSCN.
   Proof.
     admit.
   (*
-    ktrans pdecN; [|apply pdecN_refines_scN].
+    ktrans pdecN; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
     ktrans ((pdecs dec execState execNextPc n ++ ioms addrSize fifoSize lgDataBytes n)
               ++ minst addrSize lgDataBytes n)%kami; [apply traceRefines_assoc_2|].
 
@@ -109,7 +109,7 @@ Section ProcDecSCN.
     - apply duplicate_rules_ConcatMod_1; auto; kequiv.
     - apply duplicate_defs_ConcatMod_2; auto; kequiv.
     - apply duplicate_defs_ConcatMod_1; auto; kequiv.
-   *)    
+   *)
   Qed.
   
 End ProcDecSCN.
