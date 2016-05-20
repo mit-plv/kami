@@ -24,7 +24,7 @@ Section ProcDecSCN.
   Proof.
     admit.
   (*
-    kmodular.
+    simple kmodular.
     - kequiv.
     - kequiv.
     - kequiv.
@@ -47,6 +47,9 @@ Section ProcDecSCN.
     - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
     - apply duplicate_meta_disj_defs_rep; auto.
     - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
+    - auto.
+    - auto.
+    - auto.
     - kduplicated.
       + kequiv.
       + kequiv.

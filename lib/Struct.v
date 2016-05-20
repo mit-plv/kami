@@ -248,6 +248,14 @@ End BoundedIndexFull.
 Definition namesOf {A} (attrs: list (Attribute A)) := map (@attrName _) attrs.
 Hint Unfold attrName attrType namesOf.
 
+Lemma namesOf_app:
+  forall {A} (l1 l2: list (Attribute A)),
+    namesOf (l1 ++ l2) = namesOf l1 ++ namesOf l2.
+Proof.
+  unfold namesOf; simpl; intros.
+  rewrite map_app; reflexivity.
+Qed.
+
 (* Definition appendName nm s := (nm ++ "." ++ s)%string. *)
 (* Definition appendAttr nm t (a: Attribute t) := *)
 (*   {| attrName := appendName nm (attrName a); attrType := attrType a |}. *)

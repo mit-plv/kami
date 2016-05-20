@@ -32,12 +32,51 @@ Section ProcMem.
   Proof.
     ktrans (pdecN ++ memAtomic AddrSize FifoSize LgDataBytes n)%kami.
 
-    - unfold MethsT; rewrite <-idElementwiseId.
-      apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
-      + admit.
-      + admit.
-      + admit.
-      + admit.
+    - simple kmodular.
+      + apply duplicate_ModEquiv.
+        eapply pdec_ModEquiv; eauto.
+      + apply duplicate_ModEquiv.
+        eapply pdec_ModEquiv; eauto.
+      + repeat apply ModEquiv_modular.
+        * apply duplicateByRep_ModEquiv.
+          repeat apply ModEquiv_modular.
+          { eapply l1Cache_ModEquiv; eauto. }
+          { eapply RegFile.regFile_ModEquiv; eauto. }
+          { eapply RegFile.regFile_ModEquiv; eauto. }
+          { eapply RegFile.regFile_ModEquiv; eauto. }
+          { eapply Fifo.fifo_ModEquiv; eauto. }
+          { eapply Fifo.fifo_ModEquiv; eauto. }
+          { eapply Fifo.fifo_ModEquiv; eauto. }
+          { eapply Fifo.fifo_ModEquiv; eauto. }
+          { eapply Fifo.fifo_ModEquiv; eauto. }
+        * unfold childParent, ChildParent.childParent.
+          unfold MetaSyntax.makeModule; simpl.
+          constructor; simpl.
+          { repeat apply RulesEquiv_app.
+            { induction (ChildParent.n n); [kequiv|].
+              simpl; constructor; auto.
+              kequiv.
+            }
+            { induction (ChildParent.n n); [kequiv|].
+              simpl; constructor; auto.
+              kequiv.
+            }
+            { induction (ChildParent.n n); [kequiv|].
+              simpl; constructor; auto.
+              kequiv.
+            }
+            { constructor. }
+          }
+          { constructor. }
+        * eapply Fifo.fifo_ModEquiv; eauto.
+        * eapply Fifo.fifo_ModEquiv; eauto.
+        * eapply Fifo.fifo_ModEquiv; eauto.
+        * eapply MemDir.memDir_ModEquiv; eauto.
+        * eapply RegFile.regFile_ModEquiv; eauto.
+        * eapply RegFile.regFile_ModEquiv; eauto.
+          
+      + eapply MemAtomic.memAtomic_ModEquiv; eauto.
+        
       + admit.
       + admit.
       + admit.

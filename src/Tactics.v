@@ -10,9 +10,13 @@ Set Implicit Arguments.
 
 (**
 - Kami Tactics
+  + krefl : prove (a <<== a)
+  + ktrans : for given "b", convert (a <<== c) into two subgoals (a <<== b) and (b <<== c)
   + kmodular : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
   + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
-  + krefl : prove (a <<== a)
+  + kmodular_sim_l : convert (a + c) <<== (b + c) to (a <<== b)
+  + kmodular_sim_r : convert (c + a) <<== (c + b) to (a <<== b)
+  + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
   + kequiv_with _tactic_ : also try to apply _tactic_ alternately
   + kvalid_regs : prove well-formedness conditions for valid register uses
@@ -60,9 +64,17 @@ Ltac kmodular :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
 
+Tactic Notation "simple" "kmodular" :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
+
 Ltac kmodularn :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting; auto.
+
+Tactic Notation "simple" "kmodularn" :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_noninteracting.
 
 Ltac kmodular_sim_l :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1.
@@ -78,6 +90,10 @@ Ltac kequiv_unit tac :=
   try tac;
   match goal with
   | [ |- ModEquiv _ _ _ ] => progress eauto
+  | [ |- ModEquiv _ _ ?m ] =>
+    let H := fresh "H" in
+    assert (H: exists sm n, m = duplicateByRep sm n) by (do 2 eexists; reflexivity);
+    clear H; apply duplicateByRep_ModEquiv
   | [ |- ModEquiv _ _ ?m ] =>
     let H := fresh "H" in
     assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);

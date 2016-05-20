@@ -670,11 +670,75 @@ Section DupRep.
     makeModule {| metaRegs := regsToRep (getRegInits m);
                   metaRules := rulesToRep (getRules m);
                   metaMeths := methsToRep (getDefsBodies m) |}.
+
+  Lemma rulesToRep_RulesEquiv:
+    forall ty1 ty2 rules,
+      RulesEquiv ty1 ty2 rules ->
+      RulesEquiv ty1 ty2 (getFullListFromMeta (rulesToRep rules)).
+  Proof.
+    induction rules; simpl; intros; [constructor|].
+    inv H; simpl.
+    apply RulesEquiv_app; auto.
+    clear -H2.
+
+    induction n; simpl.
+    - constructor; [|constructor].
+      intros; apply renameAction_ActionEquiv; auto.
+    - constructor; auto.
+      intros; apply renameAction_ActionEquiv; auto.
+  Qed.
+
+  Lemma methsToRep_MethsEquiv:
+    forall ty1 ty2 meths,
+      MethsEquiv ty1 ty2 meths ->
+      MethsEquiv ty1 ty2 (getFullListFromMeta (methsToRep meths)).
+  Proof.
+    induction meths; simpl; intros; [constructor|].
+    inv H; simpl.
+    apply MethsEquiv_app; auto.
+    clear -H2.
+
+    induction n; simpl.
+    - constructor; [|constructor].
+      intros; apply renameAction_ActionEquiv; auto.
+    - constructor; auto.
+      intros; apply renameAction_ActionEquiv; auto.
+  Qed.
+    
+  Lemma duplicateByRep_ModEquiv:
+    forall ty1 ty2,
+      ModEquiv ty1 ty2 m ->
+      ModEquiv ty1 ty2 duplicateByRep.
+  Proof.
+    unfold duplicateByRep, regsToRep, rulesToRep, methsToRep.
+    unfold makeModule; simpl; intros.
+    inv H; constructor.
+    - apply rulesToRep_RulesEquiv; auto.
+    - apply methsToRep_MethsEquiv; auto.
+  Qed.
+
+  Hypothesis (Hsp: Specializable m).
   
-  (* Lemma duplicate_refines_repeat: *)
-  (*   duplicate m n <<== duplicateByRep. *)
-  (* Proof. *)
-  (* Abort. *)
+  Lemma duplicate_duplicateByRep_same_structure:
+    NoDup (namesOf (getRegInits (duplicate m n))) /\
+    NoDup (namesOf (getRegInits duplicateByRep)) /\
+    SubList (getRegInits (duplicate m n)) (getRegInits duplicateByRep) /\
+    SubList (getRegInits duplicateByRep) (getRegInits (duplicate m n)) /\
+    SubList (getRules (duplicate m n)) (getRules duplicateByRep) /\
+    SubList (getRules duplicateByRep) (getRules (duplicate m n)) /\
+    SubList (getDefsBodies (duplicate m n)) (getDefsBodies duplicateByRep) /\
+    SubList (getDefsBodies duplicateByRep) (getDefsBodies (duplicate m n)).
+  Proof.
+    admit.
+  Qed.
+      
+  Lemma duplicate_refines_repeat:
+    duplicate m n <<== duplicateByRep.
+  Proof.
+    pose proof duplicate_duplicateByRep_same_structure; dest.
+    rewrite idElementwiseId.
+    apply traceRefines_same_module_structure; auto.
+  Qed.
 
 End DupRep.
 
