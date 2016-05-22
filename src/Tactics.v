@@ -102,10 +102,7 @@ Ltac kequiv_unit tac :=
   | [ |- ModEquiv _ _ _ ] => constructor; intros
   | [ |- RulesEquiv _ _ _ ] => constructor; intros
   | [ |- MethsEquiv _ _ _ ] => constructor; intros
-  | [ |- ActionEquiv _ _ _ ] => constructor; intros
-  | [ |- ExprEquiv _ _ _ ] => constructor; intros
-  | [ |- @ExprEquiv _ _ _ ?fk ?fk (ReadField ?a _) (ReadField ?a _) ] =>
-    change fk with (SyntaxKind (GetAttrType a)); constructor; intros
+  | [ |- ActionEquiv _ _ ] => constructor; intros
   | [ |- In _ _] => simpl; tauto
   (* For dealing with BuildStruct *)
   | [H: Some _ = nth_error _ ?i |- _] =>

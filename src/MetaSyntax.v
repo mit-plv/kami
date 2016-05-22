@@ -16,15 +16,14 @@ Qed.
 
 Lemma RulesEquiv_in t1 t2 (r: list (Attribute (Action Void))):
   (forall i, In i r ->
-             forall (G: ctxt (ft1 t1) (ft2 t2)),
-               ActionEquiv G (attrType i t1) (attrType i t2)) ->
+             ActionEquiv (attrType i t1) (attrType i t2)) ->
   RulesEquiv t1 t2 r.
 Proof.
   induction r; simpl in *; intros.
   - constructor.
-  - assert (sth1: forall i, In i r -> forall G, ActionEquiv G (attrType i t1) (attrType i t2))
+  - assert (sth1: forall i, In i r -> ActionEquiv (attrType i t1) (attrType i t2))
       by (intros; apply H; auto).
-    assert (sth2: forall G, ActionEquiv G (attrType a t1) (attrType a t2))
+    assert (sth2: ActionEquiv (attrType a t1) (attrType a t2))
       by (intros; apply H; auto).
     specialize (IHr sth1).
     destruct a.
@@ -44,9 +43,8 @@ Qed.
 Lemma MethsEquiv_in t1 t2 (r: list DefMethT):
   (forall i, In i r ->
              forall (argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType i)))))
-                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))) G,
-               ActionEquiv ((vars argV1 argV2) :: G)
-                           (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2)) ->
+                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))),
+               ActionEquiv (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2)) ->
   MethsEquiv t1 t2 r.
 Proof.
   induction r; simpl in *; intros.
@@ -54,14 +52,12 @@ Proof.
   - assert (sth1: forall i,
                     In i r ->
                     forall(argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType i)))))
-                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))) G,
-                      ActionEquiv ((vars argV1 argV2) :: G)
-                                  (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2))
+                    (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType i))))),
+                      ActionEquiv (projT2 (attrType i) t1 argV1) (projT2 (attrType i) t2 argV2))
       by (intros; apply H; auto).
     assert (sth2: forall(argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType a)))))
-                        (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType a))))) G,
-                    ActionEquiv ((vars argV1 argV2) :: G)
-                                (projT2 (attrType a) t1 argV1) (projT2 (attrType a) t2 argV2))
+                        (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType a))))),
+                    ActionEquiv (projT2 (attrType a) t1 argV1) (projT2 (attrType a) t2 argV2))
       by (intros; apply H; auto).
     specialize (IHr sth1).
     destruct a.
@@ -363,23 +359,20 @@ Qed.
 
 Definition metaRuleEquiv (t1 t2: Kind -> Type) (r: MetaRule) : Prop :=
   match r with
-    | One r' => forall G,
-                  ActionEquiv G (attrType r' t1) (attrType r' t2)
-    | Rep s f n => forall i G, ActionEquiv G (f i t1) (f i t2)
+    | One r' => ActionEquiv (attrType r' t1) (attrType r' t2)
+    | Rep s f n => forall i, ActionEquiv (f i t1) (f i t2)
   end.
 
 Definition metaMethEquiv (t1 t2: Kind -> Type) (f: MetaMeth) : Prop :=
   match f with
     | One g => forall (argV1: fullType t1 (SyntaxKind (arg (projT1 (attrType g)))))
-                      (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType g))))) G,
-                 ActionEquiv (vars argV1 argV2 :: G)
-                             (projT2 (attrType g) t1 argV1)
+                      (argV2: fullType t2 (SyntaxKind (arg (projT1 (attrType g))))),
+                 ActionEquiv (projT2 (attrType g) t1 argV1)
                              (projT2 (attrType g) t2 argV2)
     | Rep s g n => forall i
                           (argV1: fullType t1 (SyntaxKind (arg (projT1 (g i)))))
-                          (argV2: fullType t2 (SyntaxKind (arg (projT1 (g i))))) G,
-                     ActionEquiv (vars argV1 argV2 :: G)
-                                 (projT2 (g i) t1 argV1)
+                          (argV2: fullType t2 (SyntaxKind (arg (projT1 (g i))))),
+                     ActionEquiv (projT2 (g i) t1 argV1)
                                  (projT2 (g i) t2 argV2)
   end.
 
@@ -515,8 +508,8 @@ Section NoBadCalls.
             unfold inlineDmToRule; simpl in *; f_equal.
           destruct H0.
           extensionality ty; intros.
-          specialize (rEquiv ty x nil).
-          apply inlineNoCallAction_matches with (c := nil) (aUT := fr x typeUT); simpl in *.
+          specialize (rEquiv ty x).
+          apply inlineNoCallAction_matches with (aUT := fr x typeUT); simpl in *.
           unfold not; intros.
           specialize (@noBadCallsInR sg x (S n) H1).
           dest; omega.
@@ -628,7 +621,7 @@ Section NoBadCalls.
           assert (x0 = projT1 (fr x)) by (rewrite <- H4; reflexivity).
           specialize (rEquiv' ty x).
           rewrite <- H4 in rEquiv'; simpl in *.
-          specialize (rEquiv' argv f nil).
+          specialize (rEquiv' argv f).
           eapply inlineNoCallAction_matches with
             (aUT := m typeUT tt); simpl in *; eauto.
           unfold not; intros.
@@ -839,8 +832,8 @@ Proof.
         | [|- context [fold_left inlineDmToRule _ (attrName a :: ?P)%struct]] =>
           pose P as sth; simpl in sth
       end.
-      assert (sth2: forall G, ActionEquiv G (attrType (attrName a :: sth)%struct ty)
-                                         (attrType (attrName a :: sth)%struct typeUT)).
+      assert (sth2: ActionEquiv (attrType (attrName a :: sth)%struct ty)
+                                (attrType (attrName a :: sth)%struct typeUT)).
       { unfold sth; simpl in *; intros; apply inlineDm_ActionEquiv; auto.
         intuition; simpl in *; auto.
       }
@@ -874,12 +867,12 @@ Proof.
             | [|- context [fold_left inlineDmToRule _ (_ :: ?P)%struct]] =>
               pose P as sth; simpl in sth
           end.
-          assert (sth2: forall G, ActionEquiv G (attrType (s __ x :: sth)%struct ty)
-                                              (attrType (s __ x :: sth)%struct typeUT)).
+          assert (sth2: ActionEquiv (attrType (s __ x :: sth)%struct ty)
+                                    (attrType (s __ x :: sth)%struct typeUT)).
           { unfold sth; simpl in *; intros; apply inlineDm_ActionEquiv; auto.
             intuition; simpl in *; auto.
           }
-          specialize (IHn0 (fun x => sth) sth2 G).
+          specialize (IHn0 (fun x => sth) sth2).
           fold sth.
           assumption.
       }
@@ -1152,8 +1145,7 @@ Section MetaModuleEz.
       specialize (noCallsInOneMeths _ H1).
       pose (tt: fullType typeUT (SyntaxKind (arg (projT1 (attrType a0))))) as f.
       rewrite inlineNoCallAction_matches with
-      (aUT := projT2 (attrType a0) typeUT tt)
-        (c := vars f f :: nil); auto.
+      (aUT := projT2 (attrType a0) typeUT tt); auto.
       unfold getCallsMAction in *.
       rewrite noCallsInOneMeths.
       intuition.
@@ -1221,7 +1213,7 @@ Section MetaModuleEz.
         pose argV as f0.
         changeType f0.
         pose (tt: fullType typeUT (SyntaxKind (arg x))).
-        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)).
         unfold getCallsMAction in *; simpl in *.
         rewrite noCallsInOneMeths.
         intuition.
@@ -1243,7 +1235,7 @@ Section MetaModuleEz.
         pose argV as f0.
         changeType f0.
         pose (tt: fullType typeUT (SyntaxKind (arg x))).
-        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        apply inlineNoCallAction_matches with (aUT := (m0 typeUT tt)).
         unfold getCallsMAction in *; simpl in *.
         specialize (noCallsInRepMeths _ _ _ H1 i).
         rewrite H3 in *; simpl in *.
@@ -1264,7 +1256,7 @@ Section MetaModuleEz.
         changeType f0.
         pose (tt: fullType typeUT (SyntaxKind (arg x))).
         apply inlineNoCallAction_matches with
-        (aUT := (m0 typeUT tt)) (c := vars f0 f :: nil).
+        (aUT := (m0 typeUT tt)).
         specialize (noCallsInRepMeths _ _ _ H1 i).
         rewrite H3 in *.
         unfold getCallsMAction in *; simpl in *; rewrite noCallsInRepMeths.

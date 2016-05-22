@@ -24,9 +24,8 @@ Section ActionNoCall.
   Variable aUT: ActionT typeUT k.
   Variable dm: DefMethT.
   Variable noCalls: ~ In (attrName dm) (getCallsA aUT).
-  Variable c: ctxt (fullType ty) (fullType typeUT).
 
-  Theorem inlineNoCallAction_matches a (aEquiv: ActionEquiv c a aUT): inlineDm a dm = a.
+  Theorem inlineNoCallAction_matches a (aEquiv: ActionEquiv (t1 := ty) a aUT): inlineDm a dm = a.
   Proof.
     dependent induction aEquiv; simpl in *; intuition auto.
     - unfold getBody.
@@ -63,10 +62,9 @@ Section ActionNoCalls.
   Variable dms: list DefMethT.
 
   Theorem inlineNoCallsAction_matches:
-    forall k ty a (aUT: ActionT typeUT k)
-      (c: ctxt (fullType ty) (fullType typeUT)),
+    forall k ty a (aUT: ActionT typeUT k),
       (forall dm, In dm dms -> In (attrName dm) (getCallsA aUT) -> False) ->
-      ActionEquiv c a aUT ->
+      ActionEquiv (t1 := ty) a aUT ->
       fold_left (@inlineDm _ _) dms a = a.
   Proof.
     induction dms; simpl in *; intros.
@@ -75,7 +73,7 @@ Section ActionNoCalls.
           (intros; specialize (H dm); intuition).
       assert (sth2: In (attrName a) (getCallsA aUT) -> False) by
           (specialize (H a); intuition).
-      specialize (IHl _ _ _ aUT c sth H0).
+      specialize (IHl _ _ _ aUT sth H0).
       pose proof (inlineNoCallAction_matches a sth2 H0) as sth3.
       rewrite sth3.
       assumption.
@@ -85,7 +83,7 @@ End ActionNoCalls.
 Section MethNoCallsInRules.
   Variable dms: list DefMethT.
   Variable r: Attribute (Action Void).
-  Variable rEquiv: forall ty G,  ActionEquiv G (attrType r ty) (attrType r typeUT).
+  Variable rEquiv: forall ty,  ActionEquiv (attrType r ty) (attrType r typeUT).
   
   Theorem inlineNoCallsRule_matches:
     (forall dm, In dm dms -> In (attrName dm) (getCallsA (attrType r typeUT)) -> False) ->
@@ -102,7 +100,7 @@ Section MethNoCallsInRules.
       rewrite <- IHl at 2; f_equal.
       unfold inlineDmToRule; simpl; destruct r; simpl in *; f_equal.
       extensionality ty.
-      rewrite inlineNoCallAction_matches with (aUT := attrType typeUT) (c := nil); auto.
+      rewrite inlineNoCallAction_matches with (aUT := attrType typeUT); auto.
   Qed.
 End MethNoCallsInRules.
 
@@ -111,9 +109,8 @@ Section MethNoCallsInMeths.
   Variable r: DefMethT.
   Variable rEquiv:
     forall ty (argV1: fullType ty (SyntaxKind (arg (projT1 (attrType r)))))
-           (argV2: fullType typeUT (SyntaxKind (arg (projT1 (attrType r))))) G,
-      ActionEquiv (vars argV1 argV2 :: G)
-                  (projT2 (attrType r) ty argV1)
+           (argV2: fullType typeUT (SyntaxKind (arg (projT1 (attrType r))))),
+      ActionEquiv (projT2 (attrType r) ty argV1)
                   (projT2 (attrType r) typeUT argV2).
   
   Theorem inlineNoCallsMeth_matches:
@@ -140,8 +137,7 @@ Section MethNoCallsInMeths.
       extensionality argv.
       pose (tt: fullType typeUT (SyntaxKind (arg x))) as f.
       pose (argv: fullType ty (SyntaxKind (arg x))) as f0.
-      rewrite inlineNoCallAction_matches with (aUT := m typeUT tt)
-                                                (c := vars f0 f :: nil); auto.
+      rewrite inlineNoCallAction_matches with (aUT := m typeUT tt); auto.
   Qed.
 End MethNoCallsInMeths.
 
@@ -179,8 +175,6 @@ Section MethNoCall.
       dependent destruction equiv.
       specialize (H arg1 tt).
       eapply inlineNoCallAction_matches; eauto.
-      Grab Existential Variables.
-      constructor.
   Qed.
 End MethNoCall.
 
@@ -370,7 +364,7 @@ Section MethNoCalls.
           extensionality v.
           specialize (equiv ty).
           dependent destruction equiv.
-          specialize (H v tt nil).
+          specialize (H v tt).
           eapply inlineNoCallAction_matches; eauto.
       + apply IHl; intros.
         * specialize (notInCalls dm); intuition.

@@ -31,8 +31,8 @@ Fixpoint getRegWritesMeth (m: DefMethT): list string :=
   (getRegWritesA ((projT2 (attrType m)) typeUT tt)).
 
 Section EquivMod.
-  Lemma regWritesSubsetA k ct (a1: ActionT type k) (a2: ActionT typeUT k):
-    ActionEquiv ct a1 a2 ->
+  Lemma regWritesSubsetA k (a1: ActionT type k) (a2: ActionT typeUT k):
+    ActionEquiv a1 a2 ->
     forall o u cs r,
       SemAction o a1 u cs r ->
       forall x, M.In x u -> In x (getRegWritesA a2).
@@ -74,8 +74,8 @@ Section EquivMod.
       apply M.F.P.F.empty_in_iff in H0; intuition.
   Qed.
 
-  Lemma callsSubsetA k ct (a1: ActionT type k) (a2: ActionT typeUT k):
-    ActionEquiv ct a1 a2 ->
+  Lemma callsSubsetA k (a1: ActionT type k) (a2: ActionT typeUT k):
+    ActionEquiv a1 a2 ->
     forall o u cs r,
       SemAction o a1 u cs r ->
       forall x, M.In x cs -> In x (getCallsA a2).
@@ -180,7 +180,7 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    pose proof (RulesEquiv_in _ _ nil H HInRules).
+    pose proof (RulesEquiv_in _ _ H HInRules).
     apply (regWritesSubsetA H0 HAction); intuition.
   Qed.
 
@@ -197,7 +197,7 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    pose proof (RulesEquiv_in _ _ nil H HInRules).
+    pose proof (RulesEquiv_in _ _ H HInRules).
     apply (callsSubsetA H0 HAction); intuition.
   Qed.
 
@@ -215,7 +215,7 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    pose proof (MethsEquiv_in _ H0 HIn argV tt nil).
+    pose proof (MethsEquiv_in _ H0 HIn argV tt).
     apply (regWritesSubsetA H HAction); intuition.
   Qed.
 
@@ -233,7 +233,7 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    pose proof (MethsEquiv_in _ H0 HIn argV tt nil).
+    pose proof (MethsEquiv_in _ H0 HIn argV tt).
     apply (callsSubsetA H HAction); intuition.
   Qed.
 End EquivMod.

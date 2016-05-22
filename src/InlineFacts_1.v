@@ -257,8 +257,8 @@ Proof.
 Qed.
 
 Lemma isLeaf_SemAction_calls:
-  forall {retK} G aU aT,
-    ActionEquiv (k:= retK) G aT aU ->
+  forall {retK} aU aT,
+    ActionEquiv (k:= retK) aT aU ->
     forall lcalls or nr calls retV,
       isLeaf aU lcalls = true ->
       SemAction or aT nr calls retV ->
@@ -304,8 +304,8 @@ Proof.
 Qed.
 
 Lemma noCallDm_SemAction_calls:
-  forall mn (mb: sigT MethodT) G or nr calls argV retV
-         (Hmb: ActionEquiv G (projT2 mb type argV) (projT2 mb typeUT tt)),
+  forall mn (mb: sigT MethodT) or nr calls argV retV
+         (Hmb: ActionEquiv (projT2 mb type argV) (projT2 mb typeUT tt)),
     noCallDm (mn :: mb)%struct (mn :: mb)%struct = true ->
     SemAction or (projT2 mb type argV) nr calls retV ->
     M.find (elt:=sigT SignT) mn calls = None.

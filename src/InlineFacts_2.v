@@ -298,14 +298,13 @@ Proof.
 Qed.
 
 Lemma inlineDm_ActionEquiv:
-  forall type1 type2 {retT} G
+  forall type1 type2 {retT}
          (aU: ActionT type1 retT) (aT: ActionT type2 retT) (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv ((vars argV1 argV2) :: nil)
-                   (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
-    ActionEquiv G aU aT ->
-    ActionEquiv G (inlineDm aU dm) (inlineDm aT dm).
+       ActionEquiv (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
+    ActionEquiv aU aT ->
+    ActionEquiv (inlineDm aU dm) (inlineDm aT dm).
 Proof.
   induction 2; intros; try (constructor; auto).
 
@@ -319,19 +318,16 @@ Proof.
 
   constructor; intros.
   apply actionEquiv_appendAction.
-  + eapply ActionEquiv_ctxt; eauto.
-    unfold SubList; intros; inv H2; intuition.
+  + apply H; auto.
   + intros.
-    eapply ActionEquiv_ctxt; eauto.
-    unfold SubList; intros; inv H2; intuition.
+    apply H1; auto.
 Qed.
 
 Lemma inlineDmToRules_RulesEquiv:
   forall {type1 type2} rules (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv ((vars argV1 argV2) :: nil)
-                   (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
+       ActionEquiv (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
     RulesEquiv type1 type2 rules ->
     RulesEquiv type1 type2 (inlineDmToRules rules dm).
 Proof.
@@ -343,8 +339,7 @@ Lemma inlineDmToDms_MethsEquiv:
   forall {type1 type2} dms (dm: DefMethT),
     (forall (argV1: ft1 type1 (SyntaxKind _))
             (argV2: ft2 type2 (SyntaxKind _)),
-       ActionEquiv ((vars argV1 argV2) :: nil)
-                   (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
+       ActionEquiv (projT2 (attrType dm) type1 argV1) (projT2 (attrType dm) type2 argV2)) ->
     MethsEquiv type1 type2 dms ->
     MethsEquiv type1 type2 (inlineDmToDms dms dm).
 Proof.
@@ -718,8 +713,6 @@ Proof.
     + eapply inlineDmToMod_Substep_intact; eauto.
     + destruct (M.find (attrName a) ds); repeat split; simpl; auto.
     + destruct (M.find (attrName a) ds); reflexivity.
-      Grab Existential Variables.
-      exact nil.
 Qed.
 
 Lemma wellHidden_find:

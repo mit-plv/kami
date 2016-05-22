@@ -254,10 +254,10 @@ Section SpecializeFacts.
   Proof. intros; apply withIndex_neq; auto. Qed.
 
   Lemma renameAction_ActionEquiv:
-    forall ty1 ty2 G {retT} (ta: ActionT ty1 retT) (ua: ActionT ty2 retT),
-      ActionEquiv G ta ua ->
+    forall ty1 ty2 {retT} (ta: ActionT ty1 retT) (ua: ActionT ty2 retT),
+      ActionEquiv ta ua ->
       forall f,
-        ActionEquiv G (renameAction f ta) (renameAction f ua).
+        ActionEquiv (renameAction f ta) (renameAction f ua).
   Proof.
     induction 1; simpl; intros; try (constructor; auto).
   Qed.
@@ -398,7 +398,7 @@ Section SpecializeFacts.
   Lemma renameAction_spDom_weakening:
     forall f g ty {retT} (aty: ActionT ty retT)
            regs (Hvr: ValidRegsAction regs aty)
-           au G (Hequiv: ActionEquiv G aty au),
+           au (Hequiv: ActionEquiv aty au),
       (forall s : string, In s (regs ++ (getCallsA au)) -> f s = g s) ->
       renameAction f aty = renameAction g aty.
   Proof.
@@ -471,7 +471,7 @@ Section SpecializeFacts.
           { extensionality ty.
             specialize (H3 ty); inv H3.
             apply renameAction_spDom_weakening with
-            (au:= ab typeUT) (G:= nil) (regs:= namesOf regs).
+            (au:= ab typeUT) (regs:= namesOf regs).
             { auto. }
             { specialize (H2 ty); inv H2; auto. }
             { intros; apply H1.
@@ -536,9 +536,6 @@ Section SpecializeFacts.
           apply ModEquiv_split in Hequiv; dest; auto.
         }
         { apply H; apply spDom_concatMod_2; auto. }
-
-        Grab Existential Variables.
-        exact nil.
   Qed.
 
 End SpecializeFacts.
