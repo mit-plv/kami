@@ -100,6 +100,8 @@ Ltac kequiv_unit tac :=
     clear H; apply duplicate_ModEquiv
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => constructor; intros
+  | [ |- RuleEquiv _ _ _ ] => unfold RuleEquiv; intros
+  | [ |- MethEquiv _ _ _ ] => unfold MethEquiv; intros
   | [ |- RulesEquiv _ _ _ ] => constructor; intros
   | [ |- MethsEquiv _ _ _ ] => constructor; intros
   | [ |- ActionEquiv _ _ ] => constructor; intros

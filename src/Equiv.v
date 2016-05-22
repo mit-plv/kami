@@ -139,13 +139,16 @@ Section Equiv.
       (* ExprEquiv G e1 e2 -> *)
       ActionEquiv (Return e1) (Return e2).
 
+  Definition RuleEquiv (r: Attribute (Action Void)) : Prop :=
+    ActionEquiv (attrType r t1) (attrType r t2).
+  
   Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
   | RulesEquivNil: RulesEquiv nil
   | RulesEquivCons:
-      forall r ar,
-        (ActionEquiv (ar t1) (ar t2)) ->
+      forall r,
+        RuleEquiv r ->
         forall rules,
-          RulesEquiv rules -> RulesEquiv ({| attrName:= r; attrType:= ar |} :: rules).
+          RulesEquiv rules -> RulesEquiv (r :: rules).
 
   Lemma RulesEquiv_in:
     forall rules r ar
@@ -153,9 +156,12 @@ Section Equiv.
            (Hin: In (r :: ar)%struct rules),
       ActionEquiv (ar t1) (ar t2).
   Proof.
-    induction 1; intros; inv Hin.
-    - inv H0; auto.
-    - apply IHHequiv; assumption.
+    induction 1; intros; inv Hin; unfold RuleEquiv in *;
+    try (inv H; destruct_existT;
+      match goal with
+        | [H1: _ = ?P, H2: _ = ?Q |- ActionEquiv ?P ?Q] => rewrite <- H1, <- H2; constructor; auto
+      end).
+    apply IHHequiv; auto.
   Qed.
 
   Lemma RulesEquiv_sub:
@@ -184,17 +190,16 @@ Section Equiv.
     constructor; auto.
   Qed.
 
+  Definition MethEquiv (dm: DefMethT) : Prop :=
+    forall arg1 arg2,
+      ActionEquiv (projT2 (attrType dm) t1 arg1) (projT2 (attrType dm) t2 arg2).
+
   Inductive MethsEquiv: list DefMethT -> Prop :=
   | MethsEquivNil: MethsEquiv nil
   | MethsEquivCons:
-      forall dmn dsig (dm: forall ty, ty (arg dsig) -> ActionT ty (ret dsig)),
-        (forall (argV1: fullType t1 (SyntaxKind (arg dsig)))
-                (argV2: fullType t2 (SyntaxKind (arg dsig))),
-            ActionEquiv (dm t1 argV1) (dm t2 argV2)) ->
-        forall meths,
-          MethsEquiv meths -> MethsEquiv ({| attrName := dmn;
-                                             attrType := existT _ dsig dm
-                                          |} :: meths).
+      forall dm, MethEquiv dm ->
+                 forall meths,
+                   MethsEquiv meths -> MethsEquiv (dm :: meths).
 
   Lemma MethsEquiv_in:
     forall meths m

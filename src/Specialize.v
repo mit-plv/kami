@@ -282,7 +282,7 @@ Section SpecializeFacts.
   Proof.
     induction meths; simpl; intros; [constructor|].
     destruct a; constructor.
-    - inv H; destruct_existT; intros; apply renameAction_ActionEquiv; auto.
+    - unfold MethEquiv; inv H; destruct_existT; intros; apply renameAction_ActionEquiv; auto.
     - inv H; apply IHmeths; auto.
   Qed.
 
@@ -508,7 +508,7 @@ Section SpecializeFacts.
             specialize (H2 ty); inv H2.
             specialize (H3 ty); inv H3.
             simpl; eapply renameAction_spDom_weakening.
-            { eapply H6. }
+            { eapply H7. }
             { eapply H5. }
             { simpl in H1; intros; apply H1.
               rewrite app_assoc; apply in_or_app; eauto.

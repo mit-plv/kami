@@ -700,8 +700,10 @@ Section DupRep.
 
     induction n; simpl.
     - constructor; [|constructor].
+      unfold MethEquiv in *.
       intros; apply renameAction_ActionEquiv; auto.
     - constructor; auto.
+      unfold MethEquiv in *.
       intros; apply renameAction_ActionEquiv; auto.
   Qed.
     

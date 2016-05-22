@@ -343,7 +343,8 @@ Lemma inlineDmToDms_MethsEquiv:
     MethsEquiv type1 type2 dms ->
     MethsEquiv type1 type2 (inlineDmToDms dms dm).
 Proof.
-  induction 2; intros; simpl in *; constructor; auto.
+  induction 2; intros; unfold MethEquiv in *; simpl in *; constructor; auto.
+  unfold MethEquiv in *.
   intros; simpl in *; apply inlineDm_ActionEquiv; auto.
 Qed.
 
