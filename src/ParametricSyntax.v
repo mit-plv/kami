@@ -1,6 +1,13 @@
-Require Import Syntax String Lib.Struct List Inline InlineFacts_2 CommonTactics Program.Equality StringEq FunctionalExtensionality Bool Lib.Indexer.
+Require Import Syntax String Lib.Struct List Inline InlineFacts_2
+        CommonTactics Program.Equality StringEq FunctionalExtensionality Bool Lib.Indexer.
 
 Set Implicit Arguments.
+
+Fixpoint concat A (ls: list (list A)) :=
+  match ls with
+    | x :: xs => x ++ concat xs
+    | nil => nil
+  end.
 
 Section AboutFold1.
   Variable A B: Type.
@@ -713,3 +720,67 @@ Section MoreThm.
     Qed.
   End FoldSimpleGenSin.
 End MoreThm.
+
+Inductive MetaReg :=
+| OneReg (b: sigT ConstFullT) (s: string)
+| RepReg A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
+         (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                        si = sj /\ i = j)
+         (bgen: A -> sigT ConstFullT) (s: string) (ls: list A).
+
+Definition getListFromMetaReg m :=
+  match m with
+    | OneReg b s => (s :: b)%struct :: nil
+    | RepReg A strA goodStrFn goodStrFn2 bgen s ls => getListFromRep strA bgen s ls
+  end.
+
+Inductive MetaRule :=
+| OneRule (b: SinAction Void) (s: string)
+| RepRule A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
+          (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                         si = sj /\ i = j)
+          (bgen: GenAction Void) (s: string) (ls: list A).
+
+Definition getListFromMetaRule m :=
+  match m with
+    | OneRule b s => (s :: getActionFromSin b)%struct :: nil
+    | RepRule A strA goodStrFn goodStrFn2 bgen s ls => repRule strA bgen s ls
+  end.
+
+Inductive MetaMeth :=
+| OneMeth (b: sigT SinMethodT) (s: string)
+| RepMeth A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
+          (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                         si = sj /\ i = j)
+          (bgen: sigT GenMethodT) (s: string) (ls: list A).
+
+Definition getListFromMetaMeth m :=
+  match m with
+    | OneMeth b s => (s :: getMethFromSin b)%struct :: nil
+    | RepMeth A strA goodStrFn goodStrFn2 bgen s ls => repMeth strA bgen s ls
+  end.
+
+Record MetaModule :=
+  { metaRegs: list MetaReg;
+    metaRules: list MetaRule;
+    metaMeths: list MetaMeth
+  }.
+
+Record RegMulti A :=
+  { regGen: A -> sigT ConstFullT;
+    regName: string }.
+
+Record RuleMulti :=
+  { ruleGen: SinAction Void;
+    ruleName: string }.
+
+Record MethMulti :=
+  { methGen: sigT SinMethodT;
+    methName: string }.
+
+Record ModMulti A :=
+  { regsMulti: list (RegMulti A);
+    rulesMulti: list RuleMulti;
+    methsMulti: list MethMulti
+  }.
+    
