@@ -22,9 +22,9 @@ Section Partial.
   Variable m: Modules.
 
   Variable dm: DefMethT. (* a method to be inlined *)
-  Hypotheses (Hdm: In dm (getDefsBodies m))
+  Hypotheses (Hdm: In dm (getDefsBodies m)).
              (* (HnoCallDm: noCallDm dm dm = true) *)
-             (HnoDupMeths: NoDup (namesOf (getDefsBodies m))).
+             (* (HnoDupMeths: NoDup (namesOf (getDefsBodies m))). *)
   Variable r: Attribute (Action Void). (* a rule calling dm *)
   Hypothesis Hrule: In r (getRules m).
 
@@ -99,24 +99,62 @@ Section Partial.
   Qed.
 
   Lemma inlineDmToRule_substepsInd_sub_1:
-    forall o u ds cs su scs s l,
-      l = {| annot := None; defs:= ds; calls := cs |} ->
-      SubstepsInd m o u l ->
-      M.Disj su u -> M.Disj scs cs ->
-      M.find (elt:=sigT SignT) (attrName dm) scs = Some s ->
-      M.find (elt:=sigT SignT) (attrName dm) ds = Some s ->
+    forall o u su scs s l,
       Substep m o su (Rle (Some (attrName r))) scs ->
-      SubstepsInd
-        (Mod (getRegInits m)
-             (map
-                (fun newr =>
-                   if string_dec (attrName r) (attrName newr)
-                   then inlineDmToRule newr dm else newr)
-                (getRules m)) (getDefsBodies m)) o (M.union u su)
-        {| annot := Some (Some (attrName r)); defs := ds; calls := M.union scs cs |}.
+      M.find (elt:=sigT SignT) (attrName dm) scs = Some s ->
+      SubstepsInd m o u l ->
+      forall ds cs,
+        l = {| annot := None; defs:= ds; calls := cs |} ->
+        M.Disj su u -> M.Disj scs cs ->
+        M.find (elt:=sigT SignT) (attrName dm) ds = Some s ->
+        SubstepsInd
+          (Mod (getRegInits m)
+               (map
+                  (fun newr =>
+                     if string_dec (attrName r) (attrName newr)
+                     then inlineDmToRule newr dm else newr)
+                  (getRules m)) (getDefsBodies m)) o (M.union u su)
+          {| annot := Some (Some (attrName r)); defs := ds; calls := M.union scs cs |}.
   Proof.
-    induction 2; simpl; intros; [exfalso; inv H; mred|].
-    admit.
+    induction 3; simpl; intros; [exfalso; inv H1; mred|].
+
+    subst; destruct l as [pann pds pcs].
+    destruct pann as [|]; [exfalso; destruct sul; inv H6|].
+    specialize (IHSubstepsInd _ _ eq_refl).
+
+    remember (M.find (attrName dm) pds) as odp; destruct odp.
+
+    - assert (s = s0); subst.
+      { clear -Heqodp H3 H6 H9.
+        inv H3; dest; simpl in *.
+        inv H6.
+        destruct sul as [|[[dmn dmb]|]]; simpl in *; findeq.
+        destruct (string_dec (attrName dm) dmn).
+        { subst; exfalso; mcontra. }
+        { mred. }
+      }
+
+      econstructor.
+      + apply IHSubstepsInd; auto.
+        inv H6; auto.
+      + instantiate (1:= scs0); instantiate (1:= sul); instantiate (1:= su0).
+        destruct sul as [|]; [exfalso; inv H6|].
+        clear -H2.
+        inv H2; [constructor|].
+        econstructor; eauto.
+      + inv H6; inv H3; dest; simpl in *.
+        repeat split; simpl; auto.
+        destruct sul as [|[|]]; auto.
+        inv H5.
+      + meq.
+      + clear -H6 H8; inv H6.
+        simpl; f_equal.
+        * destruct sul as [|[|]]; auto; inv H0.
+        * meq.
+
+    - clear IHSubstepsInd.
+      admit.
+
   Qed.
 
   Lemma inlineDmToRule_substepsInd_sub_2:
