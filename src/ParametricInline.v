@@ -1,4 +1,4 @@
-Require Import InlineFacts_2 ParametricSyntax ParametricEquiv Syntax String List Semantics.
+Require Import PartialInline ParametricSyntax ParametricEquiv Syntax String List Semantics.
 
 Section GenGen.
   Variable m: MetaModule.
