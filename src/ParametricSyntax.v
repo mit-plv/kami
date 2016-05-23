@@ -1,5 +1,6 @@
 Require Import Syntax String Lib.Struct List Inline InlineFacts_2
-        CommonTactics Program.Equality StringEq FunctionalExtensionality Bool Lib.Indexer.
+        CommonTactics Program.Equality StringEq FunctionalExtensionality
+        Bool Lib.Indexer Semantics.
 
 Set Implicit Arguments.
 
@@ -195,7 +196,38 @@ Section Rep.
 
   Definition GenAction (retTy : Kind) := forall ty, GenActionT ty retTy.
   Definition GenMethodT (sig : SignatureT) := forall ty, ty (arg sig) -> GenActionT ty (ret sig).
+
+  Fixpoint getCallsGenA k (a: GenActionT typeUT k) :=
+    match a with
+      | GMCall meth s e c => meth :: getCallsGenA (c tt)
+      | GLet_ fk e c => getCallsGenA (c match fk as fk' return fullType typeUT fk' with
+                                          | SyntaxKind _ => tt
+                                          | NativeKind _ c' => c'
+                                        end)
+      | GReadReg _ fk c => getCallsGenA
+                             (c match fk as fk' return fullType typeUT fk' with
+                                  | SyntaxKind _ => tt
+                                  | NativeKind _ c' => c'
+                                end)
+      | GWriteReg r k e c => getCallsGenA c
+      | GIfElse e k aT aF c => getCallsGenA aT ++ getCallsGenA aF ++ getCallsGenA (c tt)
+      | GAssert_ e c => getCallsGenA c
+      | GReturn e => nil
+    end.
   
+  Definition getFullCallsGenA k (gr: GenActionT typeUT k) ls :=
+    concat (map (fun i => map (strFromName i) (getCallsGenA gr)) ls).
+
+  Lemma getCallsGenA_matches (i: A) k (a: GenActionT typeUT k):
+    getCallsA (getGenAction i a) = map (strFromName i) (getCallsGenA a).
+  Proof.
+    induction a; simpl in *; auto.
+    - f_equal; auto.
+    - repeat rewrite map_app.
+      rewrite IHa1, IHa2, H.
+      reflexivity.
+  Qed.
+
   Definition getGenGenBody (n: NameRecIdx) dn (dm: sigT GenMethodT)
              (sig: SignatureT):
     option (sigT (fun x: sigT GenMethodT => projT1 x = sig)) :=
@@ -391,6 +423,34 @@ Section Sin.
 
   Definition SinAction (retTy : Kind) := forall ty, SinActionT ty retTy.
   Definition SinMethodT (sig : SignatureT) := forall ty, ty (arg sig) -> SinActionT ty (ret sig).
+
+  Fixpoint getCallsSinA k (a: SinActionT typeUT k) :=
+    match a with
+      | SMCall meth s e c => meth :: getCallsSinA (c tt)
+      | SLet_ fk e c => getCallsSinA (c match fk as fk' return fullType typeUT fk' with
+                                          | SyntaxKind _ => tt
+                                          | NativeKind _ c' => c'
+                                        end)
+      | SReadReg _ fk c => getCallsSinA
+                             (c match fk as fk' return fullType typeUT fk' with
+                                  | SyntaxKind _ => tt
+                                  | NativeKind _ c' => c'
+                                end)
+      | SWriteReg r k e c => getCallsSinA c
+      | SIfElse e k aT aF c => getCallsSinA aT ++ getCallsSinA aF ++ getCallsSinA (c tt)
+      | SAssert_ e c => getCallsSinA c
+      | SReturn e => nil
+    end.
+
+  Lemma getCallsSinA_matches k (a: SinActionT typeUT k):
+    getCallsA (getSinAction a) = map nameVal (getCallsSinA a).
+  Proof.
+    induction a; simpl in *; auto.
+    - f_equal; auto.
+    - repeat rewrite map_app.
+      rewrite IHa1, IHa2, H.
+      reflexivity.
+  Qed.
   
   Definition getGenSinBody (n: NameRecIdx) dn (dm: sigT SinMethodT)
              (sig: SignatureT):
@@ -552,9 +612,29 @@ Section MoreThm.
   Definition repRule (gr: GenAction Void) :=
     getListFromRep (getActionFromGen strA gr).
 
+  Lemma getFullCallsGenRule_matches (gr: GenAction Void) s ls:
+    concat (map (fun (r: Attribute (forall ty, ActionT ty Void)) => getCallsA ((attrType r) typeUT)) (repRule gr s ls)) =
+    getFullCallsGenA strA (gr typeUT) ls.
+  Proof.
+    unfold getFullCallsGenA, repRule, getListFromRep; f_equal.
+    rewrite map_map; f_equal.
+    extensionality v.
+    apply getCallsGenA_matches.
+  Qed.
+
   Definition repMeth (gf: sigT GenMethodT) :=
     getListFromRep (getMethFromGen strA gf).
 
+  Lemma getFullCallsGenMeth_matches (gr: sigT GenMethodT) s ls:
+    concat (map (fun (r: Attribute (sigT MethodT)) => getCallsA (projT2 (attrType r) typeUT tt)) (repMeth gr s ls)) =
+    getFullCallsGenA strA (projT2 gr typeUT tt) ls.
+  Proof.
+    unfold getFullCallsGenA, repMeth, getListFromRep; f_equal.
+    rewrite map_map; f_equal.
+    extensionality v; simpl in *.
+    apply getCallsGenA_matches.
+  Qed.
+  
   Section BadInline.
     Variable ty: Kind -> Type.
     Variable gf: sigT GenMethodT.
@@ -741,6 +821,19 @@ Inductive MetaRule :=
                                          si = sj /\ i = j)
           (bgen: GenAction Void) (s: string) (ls: list A).
 
+Definition getMetaRuleName m :=
+  match m with
+    | OneRule _ s => s
+    | RepRule _ _ _ _ _ s _ => s
+  end.
+
+Definition getCallsMetaRule r :=
+  match r with
+    | OneRule b _ => map (fun a => {| isRep := false;
+                                      nameRec := a |}) (getCallsSinA (b typeUT))
+    | RepRule _ _ _ _ bgen _ _ => getCallsGenA (bgen typeUT)
+  end.
+
 Definition getListFromMetaRule m :=
   match m with
     | OneRule b s => (s :: getActionFromSin b)%struct :: nil
@@ -754,6 +847,19 @@ Inductive MetaMeth :=
                                          si = sj /\ i = j)
           (bgen: sigT GenMethodT) (s: string) (ls: list A).
 
+Definition getMetaMethName m :=
+  match m with
+    | OneMeth _ s => s
+    | RepMeth _ _ _ _ _ s _ => s
+  end.
+
+Definition getCallsMetaMeth dm :=
+  match dm with
+    | OneMeth b _ => map (fun a => {| isRep := false;
+                                      nameRec := a |}) (getCallsSinA (projT2 b typeUT tt))
+    | RepMeth _ _ _ _ bgen _ _ => getCallsGenA (projT2 bgen typeUT tt)
+  end.
+
 Definition getListFromMetaMeth m :=
   match m with
     | OneMeth b s => (s :: getMethFromSin b)%struct :: nil
@@ -765,6 +871,10 @@ Record MetaModule :=
     metaRules: list MetaRule;
     metaMeths: list MetaMeth
   }.
+
+Definition makeModule m := Mod (concat (map getListFromMetaReg (metaRegs m)))
+                               (concat (map getListFromMetaRule (metaRules m)))
+                               (concat (map getListFromMetaMeth (metaMeths m))).
 
 Record RegMulti A :=
   { regGen: A -> sigT ConstFullT;

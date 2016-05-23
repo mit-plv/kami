@@ -189,7 +189,7 @@ Proof.
   simpl in Heqoattr.
   apply getAttribute_Some_body in Heqoattr.
   simpl; inversion H.
-  pose proof (MethsEquiv_in _ H1 Heqoattr).
+  pose proof (proj1 (MethsEquiv_in ty typeUT (getDefsBodies m)) H1 _ Heqoattr).
   constructor.
   - apply inlineDmToRules_RulesEquiv; auto.
   - apply inlineDmToDms_MethsEquiv; auto.

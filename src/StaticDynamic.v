@@ -180,7 +180,7 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    pose proof (RulesEquiv_in _ _ H HInRules).
+    pose proof (proj1 (RulesEquiv_in type typeUT (getRules m)) H _ HInRules).
     apply (regWritesSubsetA H0 HAction); intuition.
   Qed.
 
@@ -197,7 +197,7 @@ Section EquivMod.
     exists a.
     constructor.
     intuition.
-    pose proof (RulesEquiv_in _ _ H HInRules).
+    pose proof (proj1 (RulesEquiv_in type typeUT (getRules m)) H _ HInRules).
     apply (callsSubsetA H0 HAction); intuition.
   Qed.
 
@@ -215,7 +215,7 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    pose proof (MethsEquiv_in _ H0 HIn argV tt).
+    pose proof (proj1 (MethsEquiv_in type typeUT (getDefsBodies m)) H0  _ HIn argV tt).
     apply (regWritesSubsetA H HAction); intuition.
   Qed.
 
@@ -233,7 +233,7 @@ Section EquivMod.
     exists attrType.
     constructor.
     intuition.
-    pose proof (MethsEquiv_in _ H0 HIn argV tt).
+    pose proof (proj1 (MethsEquiv_in type typeUT (getDefsBodies m)) H0  _ HIn argV tt).
     apply (callsSubsetA H HAction); intuition.
   Qed.
 End EquivMod.

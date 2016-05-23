@@ -151,17 +151,16 @@ Section Equiv.
           RulesEquiv rules -> RulesEquiv (r :: rules).
 
   Lemma RulesEquiv_in:
-    forall rules r ar
-           (Hequiv: RulesEquiv rules)
-           (Hin: In (r :: ar)%struct rules),
-      ActionEquiv (ar t1) (ar t2).
+    forall rules,
+      RulesEquiv rules <-> (forall r, In r rules -> RuleEquiv r).
   Proof.
-    induction 1; intros; inv Hin; unfold RuleEquiv in *;
-    try (inv H; destruct_existT;
-      match goal with
-        | [H1: _ = ?P, H2: _ = ?Q |- ActionEquiv ?P ?Q] => rewrite <- H1, <- H2; constructor; auto
-      end).
-    apply IHHequiv; auto.
+    intros; constructor.
+    - induction 1; simpl in *; intros.
+      + intuition.
+      + destruct H1; subst; auto.
+    - induction rules; intros; simpl in *.
+      + constructor.
+      + constructor; auto.
   Qed.
 
   Lemma RulesEquiv_sub:
@@ -202,16 +201,16 @@ Section Equiv.
                    MethsEquiv meths -> MethsEquiv (dm :: meths).
 
   Lemma MethsEquiv_in:
-    forall meths m
-           (Hequiv: MethsEquiv meths)
-           (Hin: In m meths),
-    forall (v1: ft1 (SyntaxKind (arg (projT1 (attrType m)))))
-           (v2: ft2 (SyntaxKind (arg (projT1 (attrType m))))),
-      ActionEquiv (projT2 (attrType m) t1 v1) (projT2 (attrType m) t2 v2).
+    forall meths,
+      MethsEquiv meths <-> (forall m, In m meths -> MethEquiv m).
   Proof.
-    induction 1; intros; inv Hin.
-    - simpl in *; apply H.
-    - apply IHHequiv; auto.
+    intros; constructor.
+    - induction 1; simpl in *; intros.
+      + intuition.
+      + destruct H1; subst; auto.
+    - induction meths; intros; simpl in *.
+      + constructor.
+      + constructor; auto.
   Qed.
 
   Lemma MethsEquiv_sub:
@@ -223,7 +222,7 @@ Section Equiv.
     induction meths2; simpl; intros; [constructor|].
     apply SubList_cons_inv in H0; dest.
     destruct a as [? [? ?]]; constructor; auto.
-    intros; pose proof (MethsEquiv_in _ H H0); auto.
+    intros; apply (MethsEquiv_in meths1); auto.
   Qed.
 
   Lemma MethsEquiv_app:
