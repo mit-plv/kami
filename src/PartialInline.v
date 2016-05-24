@@ -4,18 +4,18 @@ Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2 Tactics.
 Require Import Refinement.
 
-Lemma filterDm_filterDms_singleton:
-  forall dms s, filterDm dms s = filterDms dms [s].
-Proof.
-  induction dms; simpl; intros; auto.
-  remember (string_eq s (attrName a)) as sa; destruct sa.
-  - apply string_eq_dec_eq in Heqsa; subst.
-    destruct (string_dec _ _); [|elim n; reflexivity].
-    simpl; auto.
-  - apply string_eq_dec_neq in Heqsa.
-    destruct (string_dec _ _); [elim Heqsa; auto|].
-    simpl; f_equal; auto.
-Qed.
+(* Lemma filterDm_filterDms_singleton: *)
+(*   forall dms s, filterDm dms s = filterDms dms [s]. *)
+(* Proof. *)
+(*   induction dms; simpl; intros; auto. *)
+(*   remember (string_eq s (attrName a)) as sa; destruct sa. *)
+(*   - apply string_eq_dec_eq in Heqsa; subst. *)
+(*     destruct (string_dec _ _); [|elim n; reflexivity]. *)
+(*     simpl; auto. *)
+(*   - apply string_eq_dec_neq in Heqsa. *)
+(*     destruct (string_dec _ _); [elim Heqsa; auto|]. *)
+(*     simpl; f_equal; auto. *)
+(* Qed. *)
 
 Lemma substepsInd_rule_split:
   forall m o u l,
@@ -61,6 +61,49 @@ Proof.
     + simpl; auto.
     + f_equal; auto.
       
+Qed.
+
+Lemma substep_filterDm:
+  forall regs rules dms o u ul cs dmn,
+    Substep (Mod regs rules dms) o u ul cs ->
+    (forall s, ul <> Meth (Some (dmn :: s)%struct)) ->
+    Substep (Mod regs rules (filterDm dms dmn)) o u ul cs.
+Proof.
+  intros; inv H; try (econstructor; eauto; fail).
+  destruct f as [fn fb]; simpl in *.
+  destruct (string_dec fn dmn).
+
+  - subst; exfalso; eapply H0; eauto.
+  - econstructor.
+    + simpl; apply filter_In; split.
+      * exact HIn.
+      * simpl; destruct (string_dec _ _); [elim n; auto|]; auto.
+    + simpl; eassumption.
+    + reflexivity.
+Qed.
+
+Lemma substepsInd_filterDm:
+  forall regs rules dms o u l dmn,
+    SubstepsInd (Mod regs rules dms) o u l ->
+    M.find dmn (defs l) = None ->
+    SubstepsInd (Mod regs rules (filterDm dms dmn)) o u l.
+Proof.
+  induction 1; simpl; intros; [constructor|].
+
+  subst; econstructor.
+  - apply IHSubstepsInd.
+    destruct l as [ann ds cs]; simpl in *; findeq.
+  - apply substep_filterDm; eauto.
+    intros.
+    destruct sul as [|]; [discriminate|].
+    destruct o0 as [[dmn' dmb]|]; [|discriminate].
+    destruct (string_dec dmn dmn').
+    + subst; destruct l as [ann ds cs]; simpl in *; mred.
+    + intro Hx; elim n; clear n.
+      inv Hx; reflexivity.
+  - assumption.
+  - reflexivity.
+  - reflexivity.
 Qed.
 
 (* Partial inlining interfaces *)
@@ -439,7 +482,8 @@ Section Partial.
     apply inlineDmToRule_stepInd; auto.
   Qed.
 
-  Hypothesis (HnoDupRules: NoDup (namesOf (getRules m))).
+  (* Hypothesis (HnoDupRules: NoDup (namesOf (getRules m))). *)
+  Hypothesis (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT))).
   Hypothesis (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
@@ -470,7 +514,15 @@ Section Partial.
 
     pose proof (inlineDmToRule_stepInd _ _ _ H0).
 
-    admit.
+    inv H; constructor.
+
+    - apply substepsInd_filterDm; auto.
+      admit.
+
+    - pose proof HrCalls.
+      pose proof HnoRuleCalls.
+      pose proof HnoMethCalls.
+      admit.
     
   Qed.
 
