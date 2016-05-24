@@ -4,101 +4,79 @@ Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2 Tactics.
 Require Import Refinement.
 
-Lemma substepsInd_rule_split:
-  forall m o u l,
-    SubstepsInd m o u l ->
-    forall or,
-      annot l = Some or ->
-      exists ru rcs pu pl,
-        Substep m o ru (Rle or) rcs /\
-        SubstepsInd m o pu pl /\
-        CanCombineUUL pu pl ru rcs (Rle or) /\
-        u = M.union pu ru /\
-        l = mergeLabel (getLabel (Rle or) rcs) pl.
+Set Implicit Arguments.
+
+Fixpoint ValidCall (dm: DefMethT) {retT} (a: ActionT typeUT retT) :=
+  match a with
+  | MCall m sig _ c =>
+    if string_eq m (attrName dm) then
+      if SignatureT_dec (projT1 (attrType dm)) sig then
+        ValidCall dm (c tt)
+      else false
+    else false
+  | Let_ fk e c => ValidCall dm
+                             (c match fk as fk' return fullType typeUT fk' with
+                                | SyntaxKind _ => tt
+                                | NativeKind _ c' => c'
+                                end)
+  | ReadReg _ fk c => ValidCall dm
+                                (c match fk as fk' return fullType typeUT fk' with
+                                   | SyntaxKind _ => tt
+                                   | NativeKind _ c' => c'
+                                   end)
+  | WriteReg _ _ _ c => ValidCall dm c
+  | IfElse _ _ aT aF c => (ValidCall dm aT) && (ValidCall dm aF) && (ValidCall dm (c tt))
+  | Assert_ _ c => ValidCall dm c
+  | Return _ => true
+  end.
+
+Lemma inlineDm_not_in_calls:
+  forall dm {retK} (a: ActionT typeUT retK),
+    ValidCall dm a = true ->
+    noCallDm dm dm = true ->
+    ~ In (attrName dm) (getCallsA (inlineDm a dm)).
 Proof.
-  induction 1; simpl; intros; [inv H|].
+  intros; induction a; auto.
+  - simpl in *.
+    unfold getBody.
+    destruct (string_eq meth (attrName dm)); [|inv H].
+    destruct (SignatureT_dec _ _); [|inv H].
+    simpl; rewrite getCallsA_appendAction.
 
-  subst; destruct sul as [|].
+    intro Hx; apply in_app_or in Hx; destruct Hx;
+      [|generalize H2; apply H1; auto].
 
-  - clear IHSubstepsInd.
-    exists su, scs, u, l.
-
-    destruct l as [ann ds cs]; inv H1; dest; simpl in *.
-    destruct ann; [inv H3|].
-    inv H4.
-    repeat split; auto.
-
-  - clear H.
-    destruct l as [ann ds cs]; simpl in *; subst.
-    specialize (IHSubstepsInd _ eq_refl).
-    destruct IHSubstepsInd as [ru [rcs [pu [pl ?]]]]; dest; subst.
-
-    exists ru, rcs, (M.union pu su), (mergeLabel (getLabel (Meth o0) scs) pl).
+    rewrite <-e0 in H2; simpl in H2.
+    clear -H0 H2.
+    unfold noCallDm in H0.
+    apply eq_sym, isLeaf_implies_disj in H0.
+    specialize (H0 (attrName dm)); destruct H0; auto.
+    elim H; simpl; tauto.
     
-    destruct pl as [pann pds pcs]; inv H1; inv H3; dest; simpl in *.
-    destruct pann as [|]; [inv H7|]; inv H5.
-
-    repeat split; auto.
-    + econstructor.
-      * exact H2.
-      * exact H0.
-      * repeat split; auto.
-      * reflexivity.
-      * reflexivity.
-    + simpl; auto.
-    + f_equal; auto.
-      
-Qed.
-
-Lemma substep_filterDm:
-  forall regs rules dms o u ul cs dmn,
-    Substep (Mod regs rules dms) o u ul cs ->
-    (forall s, ul <> Meth (Some (dmn :: s)%struct)) ->
-    Substep (Mod regs rules (filterDm dms dmn)) o u ul cs.
-Proof.
-  intros; inv H; try (econstructor; eauto; fail).
-  destruct f as [fn fb]; simpl in *.
-  destruct (string_dec fn dmn).
-
-  - subst; exfalso; eapply H0; eauto.
-  - econstructor.
-    + simpl; apply filter_In; split.
-      * exact HIn.
-      * simpl; destruct (string_dec _ _); [elim n; auto|]; auto.
-    + simpl; eassumption.
-    + reflexivity.
-Qed.
-
-Lemma substepsInd_filterDm:
-  forall regs rules dms o u l dmn,
-    SubstepsInd (Mod regs rules dms) o u l ->
-    M.find dmn (defs l) = None ->
-    SubstepsInd (Mod regs rules (filterDm dms dmn)) o u l.
-Proof.
-  induction 1; simpl; intros; [constructor|].
-
-  subst; econstructor.
-  - apply IHSubstepsInd.
-    destruct l as [ann ds cs]; simpl in *; findeq.
-  - apply substep_filterDm; eauto.
-    intros.
-    destruct sul as [|]; [discriminate|].
-    destruct o0 as [[dmn' dmb]|]; [|discriminate].
-    destruct (string_dec dmn dmn').
-    + subst; destruct l as [ann ds cs]; simpl in *; mred.
-    + intro Hx; elim n; clear n.
-      inv Hx; reflexivity.
-  - assumption.
-  - reflexivity.
-  - reflexivity.
+  - apply H1; auto.
+  - apply H1; auto.
+  - simpl in H.
+    apply andb_true_iff in H; dest.
+    apply andb_true_iff in H; dest.
+    simpl; intro Hx.
+    apply in_app_or in Hx; destruct Hx.
+    + apply IHa1; auto.
+    + apply in_app_or in H4; destruct H4.
+      * apply IHa2; auto.
+      * generalize H4; apply H1; auto.
 Qed.
 
 Lemma inlineDmToRule_not_in_calls:
-  forall r dm regs (rules: list (Attribute (Action Void))) (dms: list DefMethT),
+  forall (r: Attribute (Action Void))
+         dm regs (rules: list (Attribute (Action Void)))
+         (Hrule: In r rules)
+         (HnoDupRules: NoDup (namesOf rules))
+         (dms: list DefMethT),
+    ValidCall dm (attrType r typeUT) = true ->
     noCallDm dm dm = true ->
     (forall rule,
         In rule rules ->
-        attrName rule <> r -> ~ In (attrName dm) (getCallsA (attrType rule typeUT))) ->
+        attrName rule <> attrName r -> ~ In (attrName dm) (getCallsA (attrType rule typeUT))) ->
     (forall meth,
         In meth dms ->
         ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))) ->
@@ -106,36 +84,77 @@ Lemma inlineDmToRule_not_in_calls:
       (getCalls
         (Mod regs
              (map (fun newr =>
-                     if string_dec r (attrName newr)
+                     if string_dec (attrName r) (attrName newr)
                      then inlineDmToRule newr dm
                      else newr) rules) dms)).
 Proof.
   intros; intro Hx.
   apply in_app_or in Hx; destruct Hx.
 
-  - simpl in *; clear H1.
+  - simpl in *; clear H2.
     induction rules; simpl; intros; auto.
+    simpl in H3.
+    apply in_app_or in H3; destruct H3.
+    + destruct (string_dec (attrName r) (attrName a)); [subst|].
+      * assert (r = a); subst.
+        { eapply in_NoDup_attr; eauto.
+          left; auto.
+        }
+        simpl in H2; generalize H2.
+        apply inlineDm_not_in_calls; auto.
+      * generalize H2; apply H1; intuition.
+    + destruct (string_dec (attrName r) (attrName a)); [subst|].
+      * assert (r = a); subst.
+        { eapply in_NoDup_attr; eauto.
+          left; auto.
+        }
+        clear IHrules.
+        replace (map
+                   (fun newr =>
+                      if string_dec (attrName a) (attrName newr)
+                      then inlineDmToRule newr dm else newr)
+                   rules) with rules in H2.
+        { inv HnoDupRules. clear -H1 H2 H5.
+          induction rules; [auto|].
+          simpl in H2; apply in_app_or in H2; destruct H2.
+          { generalize H; apply H1.
+            { simpl; tauto. }
+            { intro Hx; elim H5; left; auto. }
+          }
+          { apply IHrules; auto.
+            { intros; apply H1; auto.
+              inv H0; simpl; tauto.
+            }
+            { intro Hx; elim H5; simpl; tauto. }
+          }
+        }
+        { inv HnoDupRules; clear -H5.
+          induction rules; [auto|].
+          simpl; f_equal.
+          { destruct (string_dec (attrName a) (attrName a0)).
+            { elim H5; simpl; left; auto. }
+            { auto. }
+          }
+          { apply IHrules; intro Hx; elim H5.
+            simpl; tauto.
+          }
+        }
+      * generalize H2; apply IHrules; auto.
+        { destruct Hrule; auto.
+          subst; elim n; reflexivity.
+        }
+        { inv HnoDupRules; auto. }
+        { intros; apply H1; auto.
+          simpl; tauto.
+        }
 
-    simpl in H2.
-    destruct (string_dec r (attrName a)); [subst|].
-
-    + apply in_app_or in H2; destruct H2.
-      * admit.
-      * generalize H1; apply IHrules.
-        intros; apply H0; intuition.
-
-    + apply in_app_or in H2; destruct H2.
-      * generalize H1; apply H0; intuition.
-      * generalize H1; apply IHrules; auto.
-        intros; apply H0; intuition.
-
-  - simpl in *; clear H0.
+  - simpl in *; clear H1.
     induction dms; simpl; intros; auto.
-    simpl in H2.
-    apply in_app_or in H2; destruct H2.
-    + generalize H0; apply H1; intuition.
-    + generalize H0; apply IHdms; auto.
-      intros; apply H1; intuition.
+    simpl in H3.
+    apply in_app_or in H3; destruct H3.
+    + generalize H1; apply H2; intuition.
+    + generalize H1; apply IHdms; auto.
+      intros; apply H2; intuition.
 Qed.
 
 (* Partial inlining interfaces *)
@@ -380,6 +399,19 @@ Section Partial.
 
   Qed.
 
+  Lemma wellHidden_weakening:
+    forall l m1 m2,
+      SubList (getCalls m1) (getCalls m2) ->
+      SubList (getDefs m1) (getDefs m2) ->
+      wellHidden m2 l ->
+      wellHidden m1 l.
+  Proof.
+    unfold wellHidden; intros.
+    dest; split.
+    - eapply M.KeysDisj_SubList; eauto.
+    - eapply M.KeysDisj_SubList; eauto.
+  Qed.
+
   Lemma inlineDmToRule_wellHidden:
     forall l,
       wellHidden m l ->
@@ -391,11 +423,8 @@ Section Partial.
                    then inlineDmToRule newr dm else newr)
                 (getRules m)) (getDefsBodies m)) l.
   Proof.
-    unfold wellHidden; intros.
-    dest; split.
-
-    - apply M.KeysDisj_SubList with (d1:= getCalls m); auto.
-      unfold getCalls; simpl.
+    intros; apply wellHidden_weakening with (m2:= m); auto.
+    - unfold getCalls; simpl.
       apply SubList_app_3; [|apply SubList_app_2, SubList_refl].
       clear -Hdm.
       induction (getRules m); [apply SubList_nil|].
@@ -415,8 +444,7 @@ Section Partial.
         apply SubList_app_3.
         * apply SubList_app_1, SubList_app_2, SubList_refl.
         * apply SubList_app_2, SubList_refl.
-
-    - unfold getDefs; simpl; auto.
+    - apply SubList_refl.
   Qed.
 
   Lemma inlineDmToRule_stepInd:
@@ -444,7 +472,7 @@ Section Partial.
     destruct H.
 
     - subst.
-      pose proof (substepsInd_rule_split _ _ _ _ HSubSteps) as Hsp.
+      pose proof (substepsInd_rule_split HSubSteps) as Hsp.
       clear HSubSteps.
       specialize (Hsp _ eq_refl).
       destruct Hsp as [ru [rcs [pu [pl ?]]]]; dest; subst.
@@ -459,7 +487,7 @@ Section Partial.
           eapply inlineDmToRule_substepsInd_sub; eauto.
 
           clear -Hdm Heqodr HWellHidden.
-          apply wellHidden_find with (a:= attrName dm) in HWellHidden.
+          apply wellHidden_find_1 with (a:= attrName dm) in HWellHidden.
           { simpl in *; destruct HWellHidden; mred. }
           { apply in_map; auto. }
           
@@ -514,16 +542,88 @@ Section Partial.
     apply inlineDmToRule_stepInd; auto.
   Qed.
 
-  Hypothesis (Hequiv: ModEquiv type typeUT m).
-  Hypothesis (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT))).
-  Hypothesis (HnoCallDm: noCallDm dm dm = true).
-  Hypothesis (HnoRuleCalls: forall rule,
+  Hypotheses (Hequiv: ModEquiv type typeUT m)
+             (HvCalls: ValidCall dm (attrType r typeUT) = true)
+             (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT)))
+             (HnoDupRules: NoDup (namesOf (getRules m)))
+             (HnoCallDm: noCallDm dm dm = true)
+             (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
-                 ~ In (attrName dm) (getCallsA (attrType rule typeUT))).
-  Hypothesis (HnoMethCalls: forall meth,
+                 ~ In (attrName dm) (getCallsA (attrType rule typeUT)))
+             (HnoMethCalls: forall meth,
                  In meth (getDefsBodies m) ->
                  ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))).
+
+  Lemma getCallsA_getCalls_In:
+    In (attrName dm) (getCalls m).
+  Proof.
+    unfold getCalls.
+    apply in_or_app; left.
+    clear -Hrule HrCalls.
+    induction (getRules m); auto.
+    destruct Hrule; [subst|].
+    - simpl; apply in_or_app; left; auto.
+    - simpl; apply in_or_app; right; auto.
+  Qed.
+
+  Lemma inlineDmToRule_filtered_wellHidden:
+    forall l,
+      wellHidden
+        (Mod (getRegInits m)
+             (map
+                (fun newr =>
+                   if string_dec (attrName r) (attrName newr)
+                   then inlineDmToRule newr dm else newr)
+                (getRules m))
+             (getDefsBodies m)) l ->
+      wellHidden
+        (Mod (getRegInits m)
+             (map
+                (fun newr =>
+                   if string_dec (attrName r) (attrName newr)
+                   then inlineDmToRule newr dm else newr)
+                (getRules m))
+             (filterDm (getDefsBodies m) (attrName dm))) l.
+  Proof.
+    intros.
+    intros; eapply wellHidden_weakening; eauto.
+    - apply SubList_app_3.
+      + apply SubList_app_1, SubList_refl.
+      + apply SubList_app_2; simpl.
+        clear; induction (getDefsBodies m); simpl; [apply SubList_nil|].
+        destruct (string_dec _ _).
+        * apply SubList_app_2; auto.
+        * simpl; apply SubList_app_3.
+          { apply SubList_app_1, SubList_refl. }
+          { apply SubList_app_2; auto. }
+    - unfold getDefs; simpl.
+      apply SubList_map.
+      unfold SubList; intros.
+      unfold filterDm in H0; apply filter_In in H0; dest; auto.
+  Qed.
+
+  Lemma inlineDmToRule_ModEquiv:
+    ModEquiv type typeUT (Mod (getRegInits m)
+                              (map (fun newr =>
+                                      if string_dec (attrName r) (attrName newr)
+                                      then inlineDmToRule newr dm
+                                      else newr) (getRules m))
+                              (getDefsBodies m)).
+  Proof.
+    clear -Hequiv Hdm.
+    assert (MethEquiv type typeUT dm).
+    { inv Hequiv.
+      rewrite MethsEquiv_in in H0.
+      apply H0; auto.
+    }
+    inv Hequiv.
+    constructor; simpl; auto; clear H1.
+    induction H0; simpl; [constructor|].
+    constructor; auto.
+    destruct (string_dec _ _); auto.
+    apply inlineDm_ActionEquiv; auto.
+  Qed.
 
   Lemma inlineDmToRule_traceRefines_2:
     m <<== (Mod (getRegInits m)
@@ -543,31 +643,36 @@ Section Partial.
     clear H.
     apply step_consistent; apply step_consistent in H0.
 
-    pose proof (inlineDmToRule_stepInd _ _ _ H0).
+    pose proof (inlineDmToRule_stepInd H0).
 
     inv H; constructor.
 
     - match goal with
-      | [ |- SubstepsInd ?im _ _ _ ] =>
+      | [H: SubstepsInd ?im _ _ _ |- _] =>
         assert (~ In (attrName dm) (getCalls im))
       end.
-      { apply inlineDmToRule_not_in_calls; auto.
-        intros; apply HnoMethCalls.
-        unfold filterDm in H; apply filter_In in H; dest; auto.
-      }
+      { apply inlineDmToRule_not_in_calls; auto. }
 
       assert (M.find (attrName dm) (calls l0) = None).
-      { admit. }
+      { pose proof (substepsInd_calls_in inlineDmToRule_ModEquiv HSubSteps).
+        remember (M.find (attrName dm) (calls l0)) as odc; destruct odc; auto.
+        elim H; apply H1; findeq.
+      }
 
       assert (M.find (attrName dm) (defs l0) = None).
-      { admit. }
+      { rewrite <-H1.
+        clear HWellHidden; inv H0.
+        apply wellHidden_find_2 with (m:= m); auto.
+        { simpl; apply in_map; auto. }
+        { apply getCallsA_getCalls_In. }
+        { unfold wellHidden, hide; simpl.
+          rewrite <-H5, <-H6; auto.
+        }
+      }
 
       apply substepsInd_filterDm; auto.
 
-    - pose proof HrCalls.
-      pose proof HnoRuleCalls.
-      pose proof HnoMethCalls.
-      admit.
+    - apply inlineDmToRule_filtered_wellHidden; auto.
     
   Qed.
 

@@ -235,6 +235,44 @@ Proof.
   apply liftToMap1IdElementwiseId.
 Qed.
 
+Lemma wellHidden_find_1:
+  forall m a (l: LabelT),
+    In a (namesOf (getDefsBodies m)) ->
+    wellHidden m (hide l) ->
+    M.find a (calls l) = None \/ M.find a (defs l) = M.find a (calls l).
+Proof.
+  unfold wellHidden, hide; intros.
+  destruct l as [rm dm cm]; simpl in *; dest.
+  specialize (H1 _ H).
+  findeq.
+Qed.
+
+Lemma wellHidden_find_2:
+  forall m a (l: LabelT),
+    In a (namesOf (getDefsBodies m)) ->
+    In a (getCalls m) ->
+    wellHidden m (hide l) ->
+    M.find a (defs l) = M.find a (calls l).
+Proof.
+  unfold wellHidden, hide; intros.
+  destruct l as [rm dm cm]; simpl in *; dest.
+  specialize (H1 _ H0); specialize (H2 _ H).
+  findeq.
+Qed.
+
+Lemma wellHidden_weakening:
+  forall l m1 m2,
+    SubList (getCalls m1) (getCalls m2) ->
+    SubList (getDefs m1) (getDefs m2) ->
+    wellHidden m2 l ->
+    wellHidden m1 l.
+Proof.
+  unfold wellHidden; intros.
+  dest; split.
+  - eapply M.KeysDisj_SubList; eauto.
+  - eapply M.KeysDisj_SubList; eauto.
+Qed.
+
 Lemma wellHidden_split:
   forall ma mb la lb,
     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) ->
@@ -1025,6 +1063,95 @@ Proof.
   pose proof (step_calls_extCalls_in Hequiv H).
   eapply M.KeysSubset_SubList; eauto.
   apply SubList_app_2, SubList_refl.
+Qed.
+
+Lemma substepsInd_rule_split:
+  forall m o u l,
+    SubstepsInd m o u l ->
+    forall or,
+      annot l = Some or ->
+      exists ru rcs pu pl,
+        Substep m o ru (Rle or) rcs /\
+        SubstepsInd m o pu pl /\
+        CanCombineUUL pu pl ru rcs (Rle or) /\
+        u = M.union pu ru /\
+        l = mergeLabel (getLabel (Rle or) rcs) pl.
+Proof.
+  induction 1; simpl; intros; [inv H|].
+
+  subst; destruct sul as [|].
+
+  - clear IHSubstepsInd.
+    exists su, scs, u, l.
+
+    destruct l as [ann ds cs]; inv H1; dest; simpl in *.
+    destruct ann; [inv H3|].
+    inv H4.
+    repeat split; auto.
+
+  - clear H.
+    destruct l as [ann ds cs]; simpl in *; subst.
+    specialize (IHSubstepsInd _ eq_refl).
+    destruct IHSubstepsInd as [ru [rcs [pu [pl ?]]]]; dest; subst.
+
+    exists ru, rcs, (M.union pu su), (mergeLabel (getLabel (Meth o0) scs) pl).
+    
+    destruct pl as [pann pds pcs]; inv H1; inv H3; dest; simpl in *.
+    destruct pann as [|]; [inv H7|]; inv H5.
+
+    repeat split; auto.
+    + econstructor.
+      * exact H2.
+      * exact H0.
+      * repeat split; auto.
+      * reflexivity.
+      * reflexivity.
+    + simpl; auto.
+    + f_equal; auto.
+      
+Qed.
+
+Lemma substep_filterDm:
+  forall regs rules dms o u ul cs dmn,
+    Substep (Mod regs rules dms) o u ul cs ->
+    (forall s, ul <> Meth (Some (dmn :: s)%struct)) ->
+    Substep (Mod regs rules (filterDm dms dmn)) o u ul cs.
+Proof.
+  intros; inv H; try (econstructor; eauto; fail).
+  destruct f as [fn fb]; simpl in *.
+  destruct (string_dec fn dmn).
+
+  - subst; exfalso; eapply H0; eauto.
+  - econstructor.
+    + simpl; apply filter_In; split.
+      * exact HIn.
+      * simpl; destruct (string_dec _ _); [elim n; auto|]; auto.
+    + simpl; eassumption.
+    + reflexivity.
+Qed.
+
+Lemma substepsInd_filterDm:
+  forall regs rules dms o u l dmn,
+    SubstepsInd (Mod regs rules dms) o u l ->
+    M.find dmn (defs l) = None ->
+    SubstepsInd (Mod regs rules (filterDm dms dmn)) o u l.
+Proof.
+  induction 1; simpl; intros; [constructor|].
+
+  subst; econstructor.
+  - apply IHSubstepsInd.
+    destruct l as [ann ds cs]; simpl in *; findeq.
+  - apply substep_filterDm; eauto.
+    intros.
+    destruct sul as [|]; [discriminate|].
+    destruct o0 as [[dmn' dmb]|]; [|discriminate].
+    destruct (string_dec dmn dmn').
+    + subst; destruct l as [ann ds cs]; simpl in *; mred.
+    + intro Hx; elim n; clear n.
+      inv Hx; reflexivity.
+  - assumption.
+  - reflexivity.
+  - reflexivity.
 Qed.
 
 Lemma filterDms_getCalls:

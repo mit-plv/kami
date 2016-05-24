@@ -213,6 +213,9 @@ Section Partial.
     rewrite <- sth2.
     apply inlineDmToRule_traceRefines_2; intuition auto.
     rewrite Hdm; intuition.
+    admit. (* In r (getRules m) *)
+    admit. (* ModEquiv type typeUT m *)
+    admit. (* ValidCall dm (attrType r typeUT) = true *)
     apply HdmNoRule with (r := rule); auto.
     rewrite Hrule in H.
     apply in_app_or in H;

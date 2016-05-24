@@ -716,19 +716,6 @@ Proof.
     + destruct (M.find (attrName a) ds); reflexivity.
 Qed.
 
-Lemma wellHidden_find:
-  forall m a (l: LabelT),
-    In a (namesOf (getDefsBodies m)) ->
-    wellHidden m (hide l) ->
-    M.find a (calls l) = None \/ M.find a (defs l) = M.find a (calls l).
-Proof.
-  unfold wellHidden, hide; intros.
-  destruct l as [rm dm cm]; simpl in *; dest.
-  specialize (H1 _ H).
-  remember (M.find a cm) as ocm; destruct ocm; auto.
-  right; eapply M.subtractKV_not_In_find; eauto.
-Qed.
-
 Lemma inlineDms'_correct_Substeps:
   forall cdms m (Hequiv: ModEquiv type typeUT m)
          (Hdms: NoDup (namesOf (getDefsBodies m)))
@@ -751,7 +738,7 @@ Proof.
     + rewrite inlineDmToMod_dms_names; auto.
     + rewrite inlineDmToMod_dms_names; auto.
     + apply inlineDmToMod_correct_Substeps; auto.
-      * eapply wellHidden_find; eauto.
+      * eapply wellHidden_find_1; eauto.
       * simpl in H0; destruct (inlineDmToMod m a); simpl in *.
         destruct b; [auto|inv Heqimb].
     + apply inlineDmToMod_wellHidden.
