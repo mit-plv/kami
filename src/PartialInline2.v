@@ -237,6 +237,8 @@ Section Partial.
     auto.
   Qed.
 
+  Hypothesis mEquiv: ModEquiv type typeUT m.
+
   Hypothesis HdmNoRule: forall r, In r (prefix ++ suffix) ->
                                   ~ In (attrName dm) (getCallsA (attrType r typeUT)).
   Hypothesis HdmNoMeth: forall d, In d (getDefsBodies m) ->
@@ -260,9 +262,8 @@ Section Partial.
     rewrite <- sth2.
     apply inlineDmToRule_traceRefines_2; intuition auto.
     rewrite Hdm; intuition.
-    admit. (* In r (getRules m) *)
-    admit. (* ModEquiv type typeUT m *)
-    admit. (* ValidCall dm (attrType r typeUT) = true *)
+    rewrite Hrule; apply in_or_app; right; intuition.
+    admit. (* ValidCall *)
     apply HdmNoRule with (r := rule); auto.
     rewrite Hrule in H.
     apply in_app_or in H;
@@ -276,7 +277,7 @@ End Partial.
 
 Section PartialMultiDm.
   Variable m: Modules.
-
+  
   Variable dms: list DefMethT. (* a method to be inlined *)
   Variable preDm sufDm: list DefMethT.
   Variable Hdm: getDefsBodies m = preDm ++ dms ++ sufDm.
@@ -320,6 +321,7 @@ Section PartialMultiDm.
       assumption.
   Qed.
 
+  Variable mEquiv: ModEquiv type typeUT m.
   Hypothesis HdmNoRule: forall r,
                           In r (prefix ++ suffix) ->
                           forall dm, In dm dms ->
@@ -410,6 +412,36 @@ Section PartialMultiDm.
       }
       rewrite <- sth5.
       assumption.
+      destruct mEquiv as [rEquiv dmEquiv].
+      rewrite Hrule in rEquiv; rewrite Hdm in dmEquiv.
+      pose proof (proj1 (RulesEquiv_in _ _ _) rEquiv) as rEquiv'; clear rEquiv.
+      pose proof (proj1 (MethsEquiv_in _ _ _) dmEquiv) as dEquiv'; clear dmEquiv.
+      constructor; simpl in *.
+      apply RulesEquiv_in; intros.
+      apply in_app_or in H; simpl in *.
+      destruct H; [apply rEquiv'; apply in_or_app; auto|].
+      destruct H; [|apply rEquiv'; apply in_or_app; auto].
+      assert (sth9: RuleEquiv type typeUT r) by (apply rEquiv'; apply in_or_app; intuition).
+      assert (sth10: forall x, In x l -> MethEquiv type typeUT x).
+      { intros; apply dEquiv'; apply in_or_app; simpl; right; right;
+        apply in_or_app; left; auto.
+      }
+      clear - H sth9 sth10.
+      { subst.
+        generalize sth10; clear sth10.
+        induction l; simpl in *; intros; auto.
+        assert (forall x, In x l -> MethEquiv type typeUT x) by (intros; apply sth10; auto).
+        assert (MethEquiv type typeUT a) by (apply sth10; auto).
+        specialize (IHl H).
+        unfold inlineDmToRule at 1; unfold RuleEquiv in *; simpl in *.
+        apply inlineDm_ActionEquiv; auto.
+      } 
+      intuition.
+      apply MethsEquiv_in; intros.
+      repeat (apply in_app_or in H; destruct H);
+        (apply dEquiv'; apply in_or_app; intuition auto).
+      right; simpl in *; intuition auto.
+      right; right; apply in_or_app; intuition auto.
       intros; apply HdmNoMeth; auto.
       rewrite sth2.
       repeat (try apply in_app_or in H; try apply in_or_app; try destruct H; intuition auto).
