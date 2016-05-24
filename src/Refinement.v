@@ -855,6 +855,21 @@ Section Facts.
     End Interacting.
 
   End Modularity.
+
+
+  Lemma flatten_traceRefines: forall m, m <<== Mod (getRegInits m) (getRules m)
+                                          (getDefsBodies m).
+  Proof.
+    intros.
+    apply stepRefinement with (ruleMap := fun _ s => Some s) (theta := id); eauto; simpl in *.
+    unfold id; simpl in *; intros.
+    exists u; constructor; auto.
+    apply flatten_preserves_step.
+    rewrite idElementwiseId.
+    unfold liftPLabel.
+    destruct l; destruct annot; try destruct o0; auto.
+  Qed.
+
   
 End Facts.
 
