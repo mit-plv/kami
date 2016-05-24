@@ -1961,6 +1961,8 @@ Ltac solve_disj :=
        apply M.Disj_union
      | [ |- M.Disj (M.union _ _) _ ] =>
        apply M.Disj_comm, M.Disj_union
+     | [ |- M.Disj (M.remove _ _) _ ] =>
+       try (apply M.Disj_remove_1; solve_disj; fail)
      | [ |- M.Disj _ (M.remove _ _) ] =>
        try (apply M.Disj_remove_2; solve_disj; fail)
      end).

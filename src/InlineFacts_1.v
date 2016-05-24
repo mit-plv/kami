@@ -187,15 +187,9 @@ Proof.
         (newRegs1 := newRegs1)
           (newRegs2 := M.union u1 newRegs2)
           (calls1 := M.remove (attrName meth) calls1)
-          (calls2 := M.union cm1 (M.remove (attrName meth) calls2))
-        ; eauto.
-        { dest_disj.
-          apply M.Disj_remove_1.
-          solve_disj.
-        }
-        { rewrite M.remove_find_None by auto.
-          destruct meth; eapply inlineDm_SemAction_intact; eauto.
-        }
+          (calls2 := M.union cm1 (M.remove (attrName meth) calls2)); eauto.
+        rewrite M.remove_find_None by auto.
+        destruct meth; eapply inlineDm_SemAction_intact; eauto.
 
     + rewrite M.find_union in H3.
       remember (M.find (attrName meth) calls1) as omv1; destruct omv1.
@@ -240,15 +234,10 @@ Proof.
         (newRegs1 := newRegs1)
           (newRegs2 := M.union u1 newRegs2)
           (calls1 := M.remove (attrName meth) calls1)
-          (calls2 := M.union cm1 (M.remove (attrName meth) calls2))
-        ; eauto.
-        { dest_disj.
-          apply M.Disj_remove_1.
-          solve_disj.
-        }
-        { rewrite M.remove_find_None by auto.
-          destruct meth; eapply inlineDm_SemAction_intact; eauto.
-        }
+          (calls2 := M.union cm1 (M.remove (attrName meth) calls2)); eauto.
+        rewrite M.remove_find_None by auto.
+        destruct meth; eapply inlineDm_SemAction_intact; eauto.
+
   - inv H3; destruct_existT.
     constructor; auto.
 
