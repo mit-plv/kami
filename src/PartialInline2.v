@@ -224,7 +224,6 @@ Section Partial.
   Qed.
 End Partial.
 
-(*
 Section PartialMultiDm.
   Variable m: Modules.
 
@@ -258,7 +257,7 @@ Section PartialMultiDm.
       end.
       rewrite <- idElementwiseId.
       match goal with
-        | [|- ?m <<== _] => pose proof (inlineDmToRule_traceRefines_NoFilt m a preDm (l ++ sufDm) Hdm prefix suffix (fold_right (fun dm' r' => inlineDmToRule r' dm') r l) eq_refl) as sth3; simpl in *
+        | [|- ?m <<== _] => pose proof (inlineDmToRule_traceRefines_NoFilt m a preDm (l ++ sufDm) Hdm HnoDupMeths prefix suffix (fold_right (fun dm' r' => inlineDmToRule r' dm') r l) eq_refl) as sth3; simpl in *
       end.
       apply sth3.
       unfold namesOf in *; rewrite Hrule in HnoDupRules; repeat rewrite map_app in *; simpl in *.
@@ -281,6 +280,9 @@ Section PartialMultiDm.
       forall dm, In dm dms ->
                  ~ In (attrName dm) (getCallsA (projT2 (attrType d) typeUT tt)).
 
+  Hypothesis HDmsInR: forall dm, In dm dms -> In (attrName dm) (getCallsA (attrType r typeUT)).
+  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
+
   Lemma NoDup_app_rm A: forall (l1 l2 l3: list A), NoDup (l1 ++ l2 ++ l3) -> NoDup (l1 ++ l3).
   Proof.
     clear.
@@ -300,8 +302,8 @@ Section PartialMultiDm.
                 (prefix ++ fold_right (fun dm' r' => inlineDmToRule r' dm') r dms :: suffix)
                 (preDm ++ sufDm)).
   Proof.
-    generalize dms preDm Hdm HdmNoRule HdmNoMeth.
-    clear dms preDm Hdm HdmNoRule HdmNoMeth.
+    generalize dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR HnoCall.
+    clear dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR HnoCall.
     induction dms; simpl in *; intros.
     - rewrite <- Hrule.
       rewrite <- Hdm.
@@ -316,12 +318,20 @@ Section PartialMultiDm.
                                forall dm, In dm l -> ~ In (attrName dm)
                                                        (getCallsA (attrType r0 typeUT)))
         by (intros; apply HdmNoRule; auto).
+      assert (HDmsInR1: forall dm, In dm l -> In (attrName dm) (getCallsA (attrType r typeUT)))
+        by (intros; apply HDmsInR; auto).
+      assert (HDmsInR2: In (attrName a) (getCallsA (attrType r typeUT)))
+        by (intros; apply HDmsInR; auto).
+      assert (HnoCall1: forall dm, In dm l -> noCallDm dm dm = true) by
+          (intros; apply HnoCall; auto).
+      assert (HnoCall2: noCallDm a a = true) by
+          (intros; apply HnoCall; auto).
       assert (sth4:
                 forall d, In d (getDefsBodies m) ->
                           forall dm, In dm l -> ~ In (attrName dm)
                                                   (getCallsA (projT2 (attrType d) typeUT tt)))
         by (intros; apply HdmNoMeth; auto).
-      specialize (IHl (preDm ++ [a]) sth2 sth3 sth4); clear sth3 sth4.
+      specialize (IHl (preDm ++ [a]) sth2 sth3 sth4 HDmsInR1 HnoCall1); clear sth3 sth4.
       rewrite idElementwiseId in *.
       match goal with
         | [H: traceRefines id m ?P |- _] => apply traceRefines_trans with (mb := P); auto
@@ -341,7 +351,7 @@ Section PartialMultiDm.
                         prefix suffix (fold_right (fun dm' r' => inlineDmToRule r' dm') r l)
                         eq_refl) as sth4; simpl in *
       end.
-      apply sth4.
+      apply sth4; auto.
       unfold namesOf in *; rewrite Hrule in HnoDupRules; repeat rewrite map_app in *; simpl in *.
       assert (sth5: attrName r =
                     attrName (fold_right (fun dm' r' => inlineDmToRule r' dm') r l)).
@@ -350,9 +360,15 @@ Section PartialMultiDm.
       }
       rewrite <- sth5.
       assumption.
+      intros; apply HdmNoMeth; auto.
+      rewrite sth2.
+      repeat (try apply in_app_or in H; try apply in_or_app; try destruct H; intuition auto).
+      right; apply in_or_app; right; auto.
+      apply cheat.
   Qed.
 End PartialMultiDm.
 
+(*
 Section PartialMultiDmMultiR.
   Variable m: Modules.
 
