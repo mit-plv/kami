@@ -186,13 +186,16 @@ Section Partial.
     rewrite sth.
     rewrite <- map_equiv with (ls := getRules m); auto.
     apply inlineDmToRule_traceRefines_1.
-    apply inDmGetDefsBodies.
+    apply inDmGetDefsBodies; auto.
+    auto.
   Qed.
 
   Hypothesis HdmNoRule: forall r, In r (prefix ++ suffix) ->
                                   ~ In (attrName dm) (getCallsA (attrType r typeUT)).
   Hypothesis HdmNoMeth: forall d, In d (getDefsBodies m) ->
-                                  ~ In (attrName d) (getCallsA (projT2 (attrType d) typeUT tt)).
+                                  ~ In (attrName dm) (getCallsA (projT2 (attrType d) typeUT tt)).
+  Hypothesis HDmInR: In (attrName dm) (getCallsA (attrType r typeUT)).
+  Hypothesis HnoCall: noCallDm dm dm = true.
   
   Lemma inlineDmToRule_traceRefines_Filt:
     m <<== (Mod (getRegInits m)
@@ -208,11 +211,20 @@ Section Partial.
       apply filter_equiv; auto.
     }
     rewrite <- sth2.
-    apply inlineDmToRule_traceRefines_2.
-    apply inDmGetDefsBodies.
+    apply inlineDmToRule_traceRefines_2; intuition auto.
+    rewrite Hdm; intuition.
+    apply HdmNoRule with (r := rule); auto.
+    rewrite Hrule in H.
+    apply in_app_or in H;
+      apply in_or_app; intuition auto.
+    simpl in H2.
+    destruct H2.
+    subst; intuition auto.
+    intuition auto.
   Qed.
 End Partial.
 
+(*
 Section PartialMultiDm.
   Variable m: Modules.
 
@@ -424,3 +436,4 @@ Section PartialMultiDmMultiR.
     admit.
   Qed.
 End PartialMultiDmMultiR.
+*)
