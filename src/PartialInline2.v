@@ -31,6 +31,53 @@ Section AboutFilter.
   Qed.
 End AboutFilter.
 
+Lemma inlineDmCalls c dm k (a: ActionT typeUT k): In c (getCallsA a) -> c <> (attrName dm) ->
+                                                  In c (getCallsA (inlineDm a dm)).
+Proof.
+  induction a; intros; simpl in *; auto.
+  - case_eq (getBody meth dm s); intros; simpl in *; unfold getBody in *.
+    + destruct s0; simpl in *.
+      destruct x; simpl in *.
+      destruct dm; simpl in *.
+      destruct attrType; simpl in *.
+      subst.
+      rewrite getCallsA_appendAction.
+      simpl in *.
+      apply in_or_app.
+      case_eq (string_eq meth attrName0); intros; rewrite H3 in H2.
+      * apply eq_sym in H3; apply string_eq_dec_eq in H3; subst.
+        destruct H0; [intuition|].
+        destruct (SignatureT_dec (projT1 attrType0) s); [| discriminate].
+        inversion H2; clear H2.
+        rewrite <- H4, <- H5.
+        right; apply H; intuition auto.
+      * discriminate.
+    + intuition auto.
+  - apply in_app_or in H0.
+    apply in_or_app.
+    destruct H0; [left; apply IHa1; auto|].
+    right; apply in_or_app.
+    apply in_app_or in H0; destruct H0; [left; apply IHa2; auto|].
+    right; apply H; auto.
+Qed.
+
+Section InlineDmsCalls.
+  Variable n : string.
+  Variable r : Attribute (Action Void).
+  Variable HDmInR : In n (getCallsA (attrType r typeUT)).
+
+  Lemma inlineDmsCalls l:
+    ~ In n (namesOf l) ->
+    In n (getCallsA (attrType (fold_right (fun dm' r' => inlineDmToRule r' dm') r l) typeUT)).
+  Proof.
+    induction l; simpl in *; intros; auto.
+    assert (sth1: attrName a <> n) by intuition auto.
+    assert (sth2: ~ In n (namesOf l)) by intuition auto.
+    specialize (IHl sth2).
+    apply inlineDmCalls; auto.
+  Qed.
+End InlineDmsCalls.
+  
 Section AboutList.
   Variable A: Type.
   Variable ls: list (Attribute A).
@@ -364,11 +411,27 @@ Section PartialMultiDm.
       rewrite sth2.
       repeat (try apply in_app_or in H; try apply in_or_app; try destruct H; intuition auto).
       right; apply in_or_app; right; auto.
-      apply cheat.
+      rewrite Hdm in HnoDupMeths.
+      clear - HnoDupMeths HDmsInR2.
+      unfold namesOf in *.
+      rewrite map_app in *; simpl in *.
+      apply NoDup_app_2 in HnoDupMeths; simpl in *.
+      pose proof HnoDupMeths as sth.
+      dependent destruction sth.
+      clear HnoDupMeths.
+      rewrite map_app in *; simpl in *.
+      assert (sth2: ~ In (attrName a) (map (@attrName _) l)).
+      { unfold not; intros.
+        assert (In (attrName a) (map (@attrName _) l ++ map (@attrName _) sufDm))
+          by (apply in_or_app; intuition auto).
+        intuition auto.
+      }
+      destruct a as [n nt]; simpl in *.
+      clear - sth2 HDmsInR2.
+      apply inlineDmsCalls; auto.
   Qed.
 End PartialMultiDm.
 
-(*
 Section PartialMultiDmMultiR.
   Variable m: Modules.
 
@@ -405,7 +468,7 @@ Section PartialMultiDmMultiR.
       match goal with
         | [|- ?m <<== _] =>
           pose proof (inlineDmsToRule_traceRefines_NoFilt
-                        m dms preDm sufDm Hdm prefix
+                        m dms preDm sufDm Hdm HnoDupMeths prefix
                         (map (fun r =>
                                 fold_right (fun dm' r' => inlineDmToRule r' dm') r dms) l ++
                              suffix) a) as sth3; simpl in *
@@ -443,6 +506,12 @@ Section PartialMultiDmMultiR.
       forall dm, In dm dms ->
                  ~ In (attrName dm) (getCallsA (projT2 (attrType d) typeUT tt)).
 
+  Hypothesis HDmsInRs: forall dm,
+                         In dm dms ->
+                         exists r, In r rs /\
+                                   In (attrName dm) (getCallsA (attrType r typeUT)).
+  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
+
   Lemma inlineDmsToRules_traceRefines_Filt:
     m <<==
       (Mod (getRegInits m)
@@ -452,4 +521,3 @@ Section PartialMultiDmMultiR.
     admit.
   Qed.
 End PartialMultiDmMultiR.
-*)
