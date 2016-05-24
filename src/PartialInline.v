@@ -4,19 +4,6 @@ Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2 Tactics.
 Require Import Refinement.
 
-(* Lemma filterDm_filterDms_singleton: *)
-(*   forall dms s, filterDm dms s = filterDms dms [s]. *)
-(* Proof. *)
-(*   induction dms; simpl; intros; auto. *)
-(*   remember (string_eq s (attrName a)) as sa; destruct sa. *)
-(*   - apply string_eq_dec_eq in Heqsa; subst. *)
-(*     destruct (string_dec _ _); [|elim n; reflexivity]. *)
-(*     simpl; auto. *)
-(*   - apply string_eq_dec_neq in Heqsa. *)
-(*     destruct (string_dec _ _); [elim Heqsa; auto|]. *)
-(*     simpl; f_equal; auto. *)
-(* Qed. *)
-
 Lemma substepsInd_rule_split:
   forall m o u l,
     SubstepsInd m o u l ->
@@ -104,6 +91,51 @@ Proof.
   - assumption.
   - reflexivity.
   - reflexivity.
+Qed.
+
+Lemma inlineDmToRule_not_in_calls:
+  forall r dm regs (rules: list (Attribute (Action Void))) (dms: list DefMethT),
+    noCallDm dm dm = true ->
+    (forall rule,
+        In rule rules ->
+        attrName rule <> r -> ~ In (attrName dm) (getCallsA (attrType rule typeUT))) ->
+    (forall meth,
+        In meth dms ->
+        ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))) ->
+    ~ In (attrName dm)
+      (getCalls
+        (Mod regs
+             (map (fun newr =>
+                     if string_dec r (attrName newr)
+                     then inlineDmToRule newr dm
+                     else newr) rules) dms)).
+Proof.
+  intros; intro Hx.
+  apply in_app_or in Hx; destruct Hx.
+
+  - simpl in *; clear H1.
+    induction rules; simpl; intros; auto.
+
+    simpl in H2.
+    destruct (string_dec r (attrName a)); [subst|].
+
+    + apply in_app_or in H2; destruct H2.
+      * admit.
+      * generalize H1; apply IHrules.
+        intros; apply H0; intuition.
+
+    + apply in_app_or in H2; destruct H2.
+      * generalize H1; apply H0; intuition.
+      * generalize H1; apply IHrules; auto.
+        intros; apply H0; intuition.
+
+  - simpl in *; clear H0.
+    induction dms; simpl; intros; auto.
+    simpl in H2.
+    apply in_app_or in H2; destruct H2.
+    + generalize H0; apply H1; intuition.
+    + generalize H0; apply IHdms; auto.
+      intros; apply H1; intuition.
 Qed.
 
 (* Partial inlining interfaces *)
@@ -482,8 +514,9 @@ Section Partial.
     apply inlineDmToRule_stepInd; auto.
   Qed.
 
-  (* Hypothesis (HnoDupRules: NoDup (namesOf (getRules m))). *)
+  Hypothesis (Hequiv: ModEquiv type typeUT m).
   Hypothesis (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT))).
+  Hypothesis (HnoCallDm: noCallDm dm dm = true).
   Hypothesis (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
@@ -500,8 +533,6 @@ Section Partial.
                         else newr) (getRules m))
                 (filterDm (getDefsBodies m) (attrName dm))).
   Proof.
-    (* rewrite filterDm_filterDms_singleton. *)
-    
     apply stepRefinement with (ruleMap:= fun _ s => Some s) (theta:= id); auto.
     intros; exists u; split; auto.
 
@@ -516,8 +547,22 @@ Section Partial.
 
     inv H; constructor.
 
-    - apply substepsInd_filterDm; auto.
-      admit.
+    - match goal with
+      | [ |- SubstepsInd ?im _ _ _ ] =>
+        assert (~ In (attrName dm) (getCalls im))
+      end.
+      { apply inlineDmToRule_not_in_calls; auto.
+        intros; apply HnoMethCalls.
+        unfold filterDm in H; apply filter_In in H; dest; auto.
+      }
+
+      assert (M.find (attrName dm) (calls l0) = None).
+      { admit. }
+
+      assert (M.find (attrName dm) (defs l0) = None).
+      { admit. }
+
+      apply substepsInd_filterDm; auto.
 
     - pose proof HrCalls.
       pose proof HnoRuleCalls.
