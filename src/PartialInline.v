@@ -154,6 +154,89 @@ Proof.
   - eapply IHSubstepsInd; eauto.
 Qed.
 
+Lemma substep_label_weakening:
+  forall regs rules dms dmn o u ul cs,
+    Substep (Mod regs rules dms) o u ul cs ->
+    None = M.find (elt:=sigT SignT) dmn (defs (getLabel ul cs)) ->
+    None = M.find (elt:=sigT SignT) dmn (calls (getLabel ul cs)) ->
+    Substep (Mod regs rules (filterDm dms dmn)) o u ul cs.
+Proof.
+  induction 1; simpl; intros; try (econstructor; eauto; fail).
+
+  econstructor; eauto.
+  simpl; apply filter_In; split; auto.
+  destruct (string_dec _ _); subst; auto.
+  mred.
+Qed.
+
+Lemma substepsInd_label_weakening:
+  forall regs rules dms dmn o u l,
+    SubstepsInd (Mod regs rules dms) o u l ->
+    None = M.find (elt:=sigT SignT) dmn (defs l) ->
+    None = M.find (elt:=sigT SignT) dmn (calls l) ->
+    SubstepsInd (Mod regs rules (filterDm dms dmn)) o u l.
+Proof.
+  induction 1; simpl; intros; [constructor|subst].
+
+  destruct l as [a d c]; simpl in *.
+  econstructor.
+  - apply IHSubstepsInd.
+    + rewrite M.find_union in H4.
+      match goal with
+      | [H: None = match M.find dmn ?lm with Some _ => _ | None => _ end |- _] =>
+        destruct (M.find dmn lm); [inv H|]
+      end.
+      auto.
+    + rewrite M.find_union in H5.
+      destruct (M.find dmn scs); [inv H5|]; auto.
+  - apply substep_label_weakening; eauto.
+    + rewrite M.find_union in H4; simpl.
+      match goal with
+      | [H: None = match M.find dmn ?lm with Some _ => _ | None => _ end |- _] =>
+        destruct (M.find dmn lm); [inv H|]
+      end.
+      auto.
+    + simpl; findeq.
+  - inv H1; dest; simpl in *.
+    repeat split; auto.
+  - reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma wellHidden_weakening:
+  forall l m1 m2,
+    SubList (getCalls m1) (getCalls m2) ->
+    SubList (getDefs m1) (getDefs m2) ->
+    wellHidden m2 l ->
+    wellHidden m1 l.
+Proof.
+  unfold wellHidden; intros.
+  dest; split.
+  - eapply M.KeysDisj_SubList; eauto.
+  - eapply M.KeysDisj_SubList; eauto.
+Qed.
+
+Lemma filterDm_wellHidden:
+  forall regs rules dms dmn l,
+    wellHidden (Mod regs rules dms) l ->
+    wellHidden (Mod regs rules (filterDm dms dmn)) l.
+Proof.
+  intros; eapply wellHidden_weakening; eauto.
+  - apply SubList_app_3.
+    + apply SubList_app_1, SubList_refl.
+    + apply SubList_app_2; simpl.
+      clear; induction dms; simpl; [apply SubList_nil|].
+      destruct (string_dec _ _).
+      * apply SubList_app_2; auto.
+      * simpl; apply SubList_app_3.
+        { apply SubList_app_1, SubList_refl. }
+        { apply SubList_app_2; auto. }
+  - unfold getDefs; simpl.
+    apply SubList_map.
+    unfold SubList; intros.
+    unfold filterDm in H0; apply filter_In in H0; dest; auto.
+Qed.
+
 Lemma stepInd_filterDm:
   forall regs rules dms o u l,
     ModEquiv type typeUT (Mod regs rules dms) ->
@@ -165,8 +248,8 @@ Lemma stepInd_filterDm:
       noCallDmSig (Mod regs rules dms) dm ->
       StepInd (Mod regs rules (filterDm dms (attrName dm))) o u l.
 Proof.
-  intros; inv H1; constructor; [|admit (* wellHidden; easy *)].
-  
+  intros; inv H1; constructor; [|apply filterDm_wellHidden; auto].
+
   remember (M.find (attrName dm) (defs l0)) as odl; destruct odl.
 
   - pose proof (substepsInd_defs_sig _ H0 H2 HSubSteps Heqodl).
@@ -190,9 +273,7 @@ Proof.
       }
       { simpl; apply in_map; auto. }
     }
-
-    clear -HSubSteps Heqodl H1.
-    admit.
+    apply substepsInd_label_weakening; auto.
 Qed.
 
 (* Partial inlining interfaces *)
@@ -437,19 +518,6 @@ Section Partial.
 
   Qed.
 
-  Lemma wellHidden_weakening:
-    forall l m1 m2,
-      SubList (getCalls m1) (getCalls m2) ->
-      SubList (getDefs m1) (getDefs m2) ->
-      wellHidden m2 l ->
-      wellHidden m1 l.
-  Proof.
-    unfold wellHidden; intros.
-    dest; split.
-    - eapply M.KeysDisj_SubList; eauto.
-    - eapply M.KeysDisj_SubList; eauto.
-  Qed.
-
   Lemma inlineDmToRule_wellHidden:
     forall l,
       wellHidden m l ->
@@ -586,10 +654,14 @@ Section Partial.
              (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->
-                 ~ In (attrName dm) (getCallsA (attrType rule typeUT)))
+                 noCallDmSigA (attrType rule typeUT)
+                              (attrName dm) (projT1 (attrType dm)) = true)
+                 (* ~ In (attrName dm) (getCallsA (attrType rule typeUT))) *)
              (HnoMethCalls: forall meth,
                  In meth (getDefsBodies m) ->
-                 ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))).
+                 noCallDmSigA (projT2 (attrType meth) typeUT tt)
+                              (attrName dm) (projT1 (attrType dm)) = true).
+                 (* ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))). *)
 
   Lemma getCallsA_getCalls_In:
     In (attrName dm) (getCalls m).
@@ -622,42 +694,6 @@ Section Partial.
                                  (getRules m))
                               (getDefsBodies m))).
   Proof. simpl; auto. Qed.
-
-  Lemma inlineDmToRule_filtered_wellHidden:
-    forall l,
-      wellHidden
-        (Mod (getRegInits m)
-             (map
-                (fun newr =>
-                   if string_dec (attrName r) (attrName newr)
-                   then inlineDmToRule newr dm else newr)
-                (getRules m))
-             (getDefsBodies m)) l ->
-      wellHidden
-        (Mod (getRegInits m)
-             (map
-                (fun newr =>
-                   if string_dec (attrName r) (attrName newr)
-                   then inlineDmToRule newr dm else newr)
-                (getRules m))
-             (filterDm (getDefsBodies m) (attrName dm))) l.
-  Proof.
-    intros.
-    intros; eapply wellHidden_weakening; eauto.
-    - apply SubList_app_3.
-      + apply SubList_app_1, SubList_refl.
-      + apply SubList_app_2; simpl.
-        clear; induction (getDefsBodies m); simpl; [apply SubList_nil|].
-        destruct (string_dec _ _).
-        * apply SubList_app_2; auto.
-        * simpl; apply SubList_app_3.
-          { apply SubList_app_1, SubList_refl. }
-          { apply SubList_app_2; auto. }
-    - unfold getDefs; simpl.
-      apply SubList_map.
-      unfold SubList; intros.
-      unfold filterDm in H0; apply filter_In in H0; dest; auto.
-  Qed.
 
   Lemma inlineDmToRule_ModEquiv:
     ModEquiv type typeUT (Mod (getRegInits m)
