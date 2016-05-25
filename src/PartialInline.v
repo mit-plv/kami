@@ -115,7 +115,32 @@ Lemma appendAction_noCallDmSigA:
     noCallDmSigA (appendAction a1 a2) dmn dsig =
     noCallDmSigA a1 dmn dsig && noCallDmSigA (a2 tt) dmn dsig.
 Proof.
-  admit.
+  induction a1; simpl; intros; auto.
+  - rewrite <-andb_assoc; f_equal; auto.
+  - do 3 rewrite <-andb_assoc; repeat f_equal; auto.
+Qed.
+
+Lemma noCallDm_noCallDmSigA:
+  forall tdm dm,
+    noCallDm tdm dm = true ->
+    noCallDmSigA (projT2 (attrType tdm) typeUT tt)
+                 (attrName dm) (projT1 (attrType dm)) = true.
+Proof.
+  unfold noCallDm; intros.
+  generalize dependent (projT2 (attrType tdm) typeUT tt).
+  clear; intros.
+  induction a; simpl; intros; auto; simpl in *.
+  - apply andb_true_iff in H; dest.
+    apply andb_true_iff; split; auto.
+    remember (string_eq meth (attrName dm)) as md; destruct md.
+    + apply string_eq_dec_eq in Heqmd; subst.
+      exfalso; rewrite string_eq_true in H.
+      inv H.
+    + auto.
+  - apply andb_true_iff in H; dest.
+    apply andb_true_iff in H; dest.
+    apply andb_true_iff; split; auto.
+    apply andb_true_iff; split; auto.
 Qed.
 
 Lemma inlineDm_noCallDmSigA:
@@ -130,15 +155,13 @@ Proof.
   remember (string_eq meth (attrName dm)) as md; destruct md;
     [|simpl; rewrite <-Heqmd; simpl; auto].
   destruct (SignatureT_dec _ _).
-
   - simpl; rewrite appendAction_noCallDmSigA.
     apply andb_true_iff; split; auto.
-    admit.
-
+    subst; simpl.
+    apply noCallDm_noCallDmSigA; auto.
   - simpl; rewrite <-Heqmd; simpl.
     destruct (SignatureT_dec _ _); [elim n; auto|].
     simpl; auto.
-
 Qed.
 
 Lemma inlineDmToRule_noCallDmSigA:
