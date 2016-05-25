@@ -143,6 +143,29 @@ Proof.
     apply andb_true_iff; split; auto.
 Qed.
 
+Lemma noCalls_noCallDmSigATrue:
+  forall k (a: ActionT typeUT k) dmName dmBody,
+    ~ In dmName (getCallsA a) -> noCallDmSigA a dmName dmBody = true.
+Proof.
+  induction a; simpl in *; auto; intros.
+  - assert (sth1: meth <> dmName) by intuition auto.
+    assert (sth2: ~ In dmName (getCallsA (a tt))) by intuition auto.
+    unfold negb, orb, andb.
+    case_eq (string_eq meth dmName); intros.
+    + apply eq_sym in H1; apply string_eq_dec_eq in H1; subst; intuition.
+    + apply H; auto.
+  - rewrite IHa1, IHa2, H; auto; unfold not; intros.
+    + assert (In dmName (getCallsA a1 ++ getCallsA a2 ++ getCallsA (a3 tt)))
+        by (apply in_or_app; right; apply in_or_app; right; intuition auto).
+      auto.
+    + assert (In dmName (getCallsA a1 ++ getCallsA a2 ++ getCallsA (a3 tt)))
+        by (apply in_or_app; right; apply in_or_app; left; intuition auto).
+      auto.
+    + assert (In dmName (getCallsA a1 ++ getCallsA a2 ++ getCallsA (a3 tt)))
+        by (apply in_or_app; left; intuition auto).
+      auto.
+Qed.
+
 Lemma inlineDm_noCallDmSigA:
   forall (dm: DefMethT) (Hdm: noCallDm dm dm = true)
          {retK} (a: ActionT typeUT retK),
