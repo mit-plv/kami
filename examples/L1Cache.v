@@ -255,8 +255,9 @@ Section Facts.
     forall m,
       m = l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
-  Proof.
-    admit. (* kequiv. *)
+  Proof. (* SKIP_PROOF_ON
+    kequiv.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End Facts.

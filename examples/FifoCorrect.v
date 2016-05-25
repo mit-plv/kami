@@ -245,9 +245,7 @@ Section Facts.
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
-  Proof.
-    admit.
-  (*
+  Proof. (* SKIP_PROOF_ON
     apply decompositionOne with (eta:= fifo_nfifo_eta)
                                   (ruleMap:= fifo_nfifo_ruleMap)
                                   (specRegName:= ^"elt").
@@ -595,7 +593,7 @@ Section Facts.
         * clear HAction HAction0 Hsig Hsig0.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-        *)
+          END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End Facts.

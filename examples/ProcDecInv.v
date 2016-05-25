@@ -92,9 +92,7 @@ Section Invariants.
       init = initRegs (getRegInits (fst pdecInl)) ->
       Multistep (fst pdecInl) init n ll ->
       procDec_inv_0 n.
-  Proof.
-    admit.
-    (*
+  Proof. (* SKIP_PROOF_ON
     induction 2.
 
     - kinv_magic.
@@ -110,7 +108,7 @@ Section Invariants.
       + kinv_magic.
       + kinv_magic.
       + kinv_magic.
-     *)
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma procDec_inv_0_ok:
@@ -127,9 +125,7 @@ Section Invariants.
       init = initRegs (getRegInits (fst pdecInl)) ->
       Multistep (fst pdecInl) init n ll ->
       procDec_inv_1 n.
-  Proof.
-    admit.
-    (*
+  Proof. (* SKIP_PROOF_ON
     induction 2.
 
     - kinv_magic_with kinv_or3.
@@ -154,7 +150,7 @@ Section Invariants.
         or3_thd; kinv_magic.
       + kinv_magic_with kinv_or3.
         or3_thd; kinv_magic.
-     *)
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma procDec_inv_1_ok:

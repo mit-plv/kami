@@ -188,8 +188,9 @@ Section Facts.
     forall m,
       m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
-  Proof.
-    (* kequiv. *) admit.
+  Proof. (* SKIP_PROOF_ON
+    kequiv.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End Facts.

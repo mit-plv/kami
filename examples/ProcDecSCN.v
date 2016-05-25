@@ -21,9 +21,7 @@ Section ProcDecSCN.
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
-  Proof.
-    admit.
-  (*
+  Proof. (* SKIP_PROOF_ON
     simple kmodular.
     - kequiv.
     - kequiv.
@@ -55,7 +53,7 @@ Section ProcDecSCN.
       + kequiv.
       + apply pdec_refines_pinst.
     - krefl.
-   *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Definition procDecN := pdecs dec execState execNextPc n.
@@ -63,9 +61,7 @@ Section ProcDecSCN.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
-  Proof.
-    admit.
-  (*
+  Proof. (* SKIP_PROOF_ON
     ktrans pdecN; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
     ktrans ((pdecs dec execState execNextPc n ++ ioms addrSize fifoSize lgDataBytes n)
               ++ minst addrSize lgDataBytes n)%kami; [apply traceRefines_assoc_2|].
@@ -106,7 +102,7 @@ Section ProcDecSCN.
     - apply duplicate_rules_ConcatMod_1; auto; kequiv.
     - apply duplicate_defs_ConcatMod_2; auto; kequiv.
     - apply duplicate_defs_ConcatMod_1; auto; kequiv.
-   *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
   
 End ProcDecSCN.
