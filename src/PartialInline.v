@@ -109,6 +109,46 @@ Proof.
   - inv H0; destruct_existT; mred.
 Qed.
 
+Lemma appendAction_noCallDmSigA:
+  forall {retK1 retK2} (a1: ActionT typeUT retK1)
+         (a2: typeUT retK1 -> ActionT typeUT retK2) dmn dsig,
+    noCallDmSigA (appendAction a1 a2) dmn dsig =
+    noCallDmSigA a1 dmn dsig && noCallDmSigA (a2 tt) dmn dsig.
+Proof.
+  admit.
+Qed.
+
+Lemma inlineDm_noCallDmSigA:
+  forall (dm: DefMethT) (Hdm: noCallDm dm dm = true)
+         {retK} (a: ActionT typeUT retK),
+    noCallDmSigA (inlineDm a dm) (attrName dm) (projT1 (attrType dm)) = true.
+Proof.
+  induction a; simpl; intros; auto;
+    [|do 2 (apply andb_true_iff; split; auto)].
+
+  unfold getBody.
+  remember (string_eq meth (attrName dm)) as md; destruct md;
+    [|simpl; rewrite <-Heqmd; simpl; auto].
+  destruct (SignatureT_dec _ _).
+
+  - simpl; rewrite appendAction_noCallDmSigA.
+    apply andb_true_iff; split; auto.
+    admit.
+
+  - simpl; rewrite <-Heqmd; simpl.
+    destruct (SignatureT_dec _ _); [elim n; auto|].
+    simpl; auto.
+
+Qed.
+
+Lemma inlineDmToRule_noCallDmSigA:
+  forall (dm: DefMethT) (Hdm: noCallDm dm dm = true) r,
+    noCallDmSigA (attrType (inlineDmToRule r dm) typeUT)
+                 (attrName dm) (projT1 (attrType dm)) = true.
+Proof.
+  intros; apply inlineDm_noCallDmSigA; auto.
+Qed.
+
 Lemma noCallDmSig_substep_calls:
   forall m o u ul cs,
     ModEquiv type typeUT m ->
@@ -740,8 +780,24 @@ Section Partial.
     apply stepInd_filterDm; auto.
 
     - apply inlineDmToRule_ModEquiv.
-    - pose proof HrCalls; admit.
-    - pose proof HnoCallDm; admit.
+    - inv H0; pose proof getCallsA_getCalls_In.
+      clear -HWellHidden H0.
+      destruct (hide l0) as [ann ds cs].
+      unfold wellHidden in HWellHidden; dest; simpl in *.
+      specialize (H (attrName dm) H0).
+      findeq.
+    - constructor; simpl.
+      + apply Forall_forall; intros.
+        destruct (string_dec (attrName r) (attrName x)).
+        * apply in_map_iff in H1; dest.
+          destruct (string_dec _ _); subst; auto.
+          apply inlineDmToRule_noCallDmSigA; auto.
+        * apply HnoRuleCalls; auto.
+          apply in_map_iff in H1; dest.
+          destruct (string_dec _ _); subst; auto.
+          elim n; auto.
+      + apply Forall_forall; intros.
+        apply HnoMethCalls; auto.
   Qed.
 
 End Partial.
