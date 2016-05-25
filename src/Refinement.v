@@ -122,6 +122,15 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
+  Corollary traceRefines_trans_conj:
+    forall ma mb mc p q,
+      traceRefines p ma mb /\
+      traceRefines q mb mc ->
+      traceRefines (fun f => q (p f)) ma mc.
+  Proof.
+    intros; dest; eapply traceRefines_trans; eauto.
+  Qed.
+
   Lemma traceRefines_same_module_structure:
     forall ma mb,
       NoDup (namesOf (getRegInits ma)) ->
@@ -153,8 +162,11 @@ Section Facts.
   
   Lemma traceRefines_same_module_structure_modular_1:
     forall ma mb mc,
-      NoDup (namesOf (getRegInits (ma ++ mc)%kami)) ->
-      NoDup (namesOf (getRegInits (mb ++ mc)%kami)) ->
+      NoDup (namesOf (getRegInits ma)) ->
+      NoDup (namesOf (getRegInits mb)) ->
+      NoDup (namesOf (getRegInits mc)) ->
+      DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mc)) ->
+      DisjList (namesOf (getRegInits mb)) (namesOf (getRegInits mc)) ->
       SubList (getRegInits ma) (getRegInits mb) ->
       SubList (getRegInits mb) (getRegInits ma) ->
       SubList (getRules ma) (getRules mb) ->
@@ -165,12 +177,19 @@ Section Facts.
   Proof.
     intros; apply traceRefines_same_module_structure; auto;
       try (apply SubList_app_3; [apply SubList_app_1; auto|apply SubList_app_2, SubList_refl]).
+    - simpl; unfold RegInitT; rewrite namesOf_app.
+      apply NoDup_DisjList; auto.
+    - simpl; unfold RegInitT; rewrite namesOf_app.
+      apply NoDup_DisjList; auto.
   Qed.
 
   Lemma traceRefines_same_module_structure_modular_2:
     forall ma mb mc,
-      NoDup (namesOf (getRegInits (mc ++ ma)%kami)) ->
-      NoDup (namesOf (getRegInits (mc ++ mb)%kami)) ->
+      NoDup (namesOf (getRegInits ma)) ->
+      NoDup (namesOf (getRegInits mb)) ->
+      NoDup (namesOf (getRegInits mc)) ->
+      DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mc)) ->
+      DisjList (namesOf (getRegInits mb)) (namesOf (getRegInits mc)) ->
       SubList (getRegInits ma) (getRegInits mb) ->
       SubList (getRegInits mb) (getRegInits ma) ->
       SubList (getRules ma) (getRules mb) ->
@@ -181,6 +200,12 @@ Section Facts.
   Proof.
     intros; apply traceRefines_same_module_structure; auto;
       try (apply SubList_app_3; [apply SubList_app_1, SubList_refl|apply SubList_app_2; auto]).
+    - simpl; unfold RegInitT; rewrite namesOf_app.
+      apply NoDup_DisjList; auto.
+      apply DisjList_comm; auto.
+    - simpl; unfold RegInitT; rewrite namesOf_app.
+      apply NoDup_DisjList; auto.
+      apply DisjList_comm; auto.
   Qed.
 
   Lemma traceRefines_comm:
@@ -237,15 +262,6 @@ Section Facts.
     - clear; induction sig1; constructor; auto.
       constructor; destruct (annot a); auto.
   Qed.    
-
-  Corollary traceRefines_trans_conj:
-    forall ma mb mc p q,
-      traceRefines p ma mb /\
-      traceRefines q mb mc ->
-      traceRefines (fun f => q (p f)) ma mc.
-  Proof.
-    intros; dest; eapply traceRefines_trans; eauto.
-  Qed.
 
   Definition EquivalentLabelMap (p q: MethsT -> MethsT) (dom: list M.key) :=
     forall m, M.KeysSubset m dom -> p m = q m.
