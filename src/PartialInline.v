@@ -6,155 +6,193 @@ Require Import Refinement.
 
 Set Implicit Arguments.
 
-Fixpoint ValidCall (dm: DefMethT) {retT} (a: ActionT typeUT retT) :=
-  match a with
-  | MCall m sig _ c =>
-    if string_eq m (attrName dm) then
-      if SignatureT_dec (projT1 (attrType dm)) sig then
-        ValidCall dm (c tt)
-      else false
-    else false
-  | Let_ fk e c => ValidCall dm
-                             (c match fk as fk' return fullType typeUT fk' with
-                                | SyntaxKind _ => tt
-                                | NativeKind _ c' => c'
-                                end)
-  | ReadReg _ fk c => ValidCall dm
-                                (c match fk as fk' return fullType typeUT fk' with
-                                   | SyntaxKind _ => tt
-                                   | NativeKind _ c' => c'
-                                   end)
-  | WriteReg _ _ _ c => ValidCall dm c
-  | IfElse _ _ aT aF c => (ValidCall dm aT) && (ValidCall dm aF) && (ValidCall dm (c tt))
-  | Assert_ _ c => ValidCall dm c
-  | Return _ => true
-  end.
-
-Lemma inlineDm_not_in_calls:
-  forall dm {retK} (a: ActionT typeUT retK),
-    ValidCall dm a = true ->
-    noCallDm dm dm = true ->
-    ~ In (attrName dm) (getCallsA (inlineDm a dm)).
+Lemma substepsInd_defs_sig:
+  forall m dm,
+    NoDup (getDefs m) ->
+    In dm (getDefsBodies m) ->
+    forall o u l,
+      SubstepsInd m o u l ->
+      forall s,
+        Some s = M.find (elt:=sigT SignT) (attrName dm) (defs l) ->
+        projT1 s = projT1 (attrType dm).
 Proof.
-  intros; induction a; auto.
-  - simpl in *.
-    unfold getBody.
-    destruct (string_eq meth (attrName dm)); [|inv H].
-    destruct (SignatureT_dec _ _); [|inv H].
-    simpl; rewrite getCallsA_appendAction.
+  induction 3; simpl; intros; [mred|].
+  subst; destruct sul as [|odm].
 
-    intro Hx; apply in_app_or in Hx; destruct Hx;
-      [|generalize H2; apply H1; auto].
+  - apply IHSubstepsInd.
+    destruct l as [ann ds cs]; simpl in *; findeq.
 
-    rewrite <-e0 in H2; simpl in H2.
-    clear -H0 H2.
-    unfold noCallDm in H0.
-    apply eq_sym, isLeaf_implies_disj in H0.
-    specialize (H0 (attrName dm)); destruct H0; auto.
-    elim H; simpl; tauto.
-    
-  - apply H1; auto.
-  - apply H1; auto.
-  - simpl in H.
-    apply andb_true_iff in H; dest.
-    apply andb_true_iff in H; dest.
-    simpl; intro Hx.
-    apply in_app_or in Hx; destruct Hx.
-    + apply IHa1; auto.
-    + apply in_app_or in H4; destruct H4.
-      * apply IHa2; auto.
-      * generalize H4; apply H1; auto.
+  - destruct odm as [dm'|].
+    + destruct dm as [dmn dmb], dm' as [dmn' dmb'], l as [ann ds cs]; simpl in *.
+      destruct (string_dec dmn dmn').
+      * subst; mred.
+        inv H2; inv Hsig; simpl in *.
+        destruct f as [fn fb]; simpl in *.
+        f_equal.
+        assert ((fn :: fb)%struct = (fn :: dmb)%struct).
+        { eapply in_NoDup_attr; eauto. }
+        inv H2; auto.
+      * apply IHSubstepsInd; findeq.
+    + apply IHSubstepsInd.
+      destruct l as [ann ds cs]; simpl in *; findeq.
 Qed.
 
-Lemma inlineDmToRule_not_in_calls:
-  forall (r: Attribute (Action Void))
-         dm regs (rules: list (Attribute (Action Void)))
-         (Hrule: In r rules)
-         (HnoDupRules: NoDup (namesOf rules))
-         (dms: list DefMethT),
-    ValidCall dm (attrType r typeUT) = true ->
-    noCallDm dm dm = true ->
-    (forall rule,
-        In rule rules ->
-        attrName rule <> attrName r -> ~ In (attrName dm) (getCallsA (attrType rule typeUT))) ->
-    (forall meth,
-        In meth dms ->
-        ~ In (attrName dm) (getCallsA (projT2 (attrType meth) typeUT tt))) ->
-    ~ In (attrName dm)
-      (getCalls
-        (Mod regs
-             (map (fun newr =>
-                     if string_dec (attrName r) (attrName newr)
-                     then inlineDmToRule newr dm
-                     else newr) rules) dms)).
+Section NoCallDmSig.
+  Fixpoint noCallDmSigA {retT} (a: ActionT typeUT retT) (dmn: string) (dsig: SignatureT) :=
+    match a with
+    | MCall name sig _ cont =>
+      ((negb (string_eq name dmn))
+       || (if SignatureT_dec sig dsig then false else true))
+        && (noCallDmSigA (cont tt) dmn dsig)
+    | Let_ _ ar cont => noCallDmSigA (cont (getUT _)) dmn dsig
+    | ReadReg reg k cont => noCallDmSigA (cont (getUT _)) dmn dsig
+    | WriteReg reg _ e cont => noCallDmSigA cont dmn dsig
+    | IfElse ce _ ta fa cont =>
+      (noCallDmSigA ta dmn dsig) && (noCallDmSigA fa dmn dsig) && (noCallDmSigA (cont tt) dmn dsig)
+    | Assert_ ae cont => noCallDmSigA cont dmn dsig
+    | Return e => true
+    end.
+
+  Definition noCallDmSigDms (dms: list DefMethT) (ndm: DefMethT) :=
+    Forall (fun dm: DefMethT =>
+              noCallDmSigA (projT2 (attrType dm) typeUT tt) (attrName ndm)
+                           (projT1 (attrType ndm)) = true) dms.
+
+  Definition noCallDmSigRules (rules: list (Attribute (Action Void))) (ndm: DefMethT) :=
+    Forall (fun r: Attribute (Action Void) =>
+              noCallDmSigA (attrType r typeUT) (attrName ndm)
+                           (projT1 (attrType ndm)) = true) rules.
+
+  Definition noCallDmSig (m: Modules) (ndm: DefMethT) :=
+    (noCallDmSigRules (getRules m) ndm) /\ (noCallDmSigDms (getDefsBodies m) ndm).
+
+End NoCallDmSig.
+
+Lemma noCallDmSigA_semAction_calls:
+  forall {retK} (aty: ActionT type retK) aut (Hequiv: ActionEquiv aty aut)
+         (dm: DefMethT),
+    noCallDmSigA aut (attrName dm) (projT1 (attrType dm)) = true ->
+    forall s o u cs retv,
+      SemAction o aty u cs retv ->
+      Some s = M.find (attrName dm) cs ->
+      projT1 s = projT1 (attrType dm) ->
+      False.
 Proof.
-  intros; intro Hx.
-  apply in_app_or in Hx; destruct Hx.
+  induction 1; simpl; intros; auto.
 
-  - simpl in *; clear H2.
-    induction rules; simpl; intros; auto.
-    simpl in H3.
-    apply in_app_or in H3; destruct H3.
-    + destruct (string_dec (attrName r) (attrName a)); [subst|].
-      * assert (r = a); subst.
-        { eapply in_NoDup_attr; eauto.
-          left; auto.
-        }
-        simpl in H2; generalize H2.
-        apply inlineDm_not_in_calls; auto.
-      * generalize H2; apply H1; intuition.
-    + destruct (string_dec (attrName r) (attrName a)); [subst|].
-      * assert (r = a); subst.
-        { eapply in_NoDup_attr; eauto.
-          left; auto.
-        }
-        clear IHrules.
-        replace (map
-                   (fun newr =>
-                      if string_dec (attrName a) (attrName newr)
-                      then inlineDmToRule newr dm else newr)
-                   rules) with rules in H2.
-        { inv HnoDupRules. clear -H1 H2 H5.
-          induction rules; [auto|].
-          simpl in H2; apply in_app_or in H2; destruct H2.
-          { generalize H; apply H1.
-            { simpl; tauto. }
-            { intro Hx; elim H5; left; auto. }
-          }
-          { apply IHrules; auto.
-            { intros; apply H1; auto.
-              inv H0; simpl; tauto.
-            }
-            { intro Hx; elim H5; simpl; tauto. }
-          }
-        }
-        { inv HnoDupRules; clear -H5.
-          induction rules; [auto|].
-          simpl; f_equal.
-          { destruct (string_dec (attrName a) (attrName a0)).
-            { elim H5; simpl; left; auto. }
-            { auto. }
-          }
-          { apply IHrules; intro Hx; elim H5.
-            simpl; tauto.
-          }
-        }
-      * generalize H2; apply IHrules; auto.
-        { destruct Hrule; auto.
-          subst; elim n; reflexivity.
-        }
-        { inv HnoDupRules; auto. }
-        { intros; apply H1; auto.
-          simpl; tauto.
-        }
+  - inv H2; destruct_existT.
+    apply andb_true_iff in H1; dest.
+    remember (string_eq n (attrName dm)) as ndeq; destruct ndeq.
+    + apply string_eq_dec_eq in Heqndeq; subst; mred.
+      simpl in H4; clear -H1 H4; subst.
+      destruct (SignatureT_dec _ _); auto.
+      discriminate.
+    + apply string_eq_dec_neq in Heqndeq.
+      rewrite M.find_add_2 in H3 by intuition.
+      eapply H0; eauto.
 
-  - simpl in *; clear H1.
-    induction dms; simpl; intros; auto.
-    simpl in H3.
-    apply in_app_or in H3; destruct H3.
-    + generalize H1; apply H2; intuition.
-    + generalize H1; apply IHdms; auto.
-      intros; apply H2; intuition.
+  - inv H2; destruct_existT; eapply H0; eauto.
+  - inv H2; destruct_existT; eapply H0; eauto.
+  - inv H0; destruct_existT; eapply IHHequiv; eauto.
+  - apply andb_true_iff in H1; dest.
+    apply andb_true_iff in H1; dest.
+    inv H2; destruct_existT.
+    + rewrite M.find_union in H3.
+      remember (M.find (attrName dm) calls1) as odc1; destruct odc1.
+      * inv H3; eapply IHHequiv1; eauto.
+      * eapply H0; eauto.
+    + rewrite M.find_union in H3.
+      remember (M.find (attrName dm) calls1) as odc1; destruct odc1.
+      * inv H3; eapply IHHequiv2; eauto.
+      * eapply H0; eauto.
+  - inv H0; destruct_existT; eapply IHHequiv; eauto.
+  - inv H0; destruct_existT; mred.
+Qed.
+
+Lemma noCallDmSig_substep_calls:
+  forall m o u ul cs,
+    ModEquiv type typeUT m ->
+    Substep m o u ul cs ->
+    forall dm s,
+      noCallDmSig m dm ->
+      Some s = M.find (elt:=sigT SignT) (attrName dm) cs ->
+      projT1 s = projT1 (attrType dm) ->
+      False.
+Proof.
+  intros; inv H0; try (mred; fail).
+
+  - inv H; rewrite RulesEquiv_in in H0.
+    specialize (H0 _ HInRules); unfold RuleEquiv in H0; simpl in H0.
+    unfold noCallDmSig in H1; dest.
+    unfold noCallDmSigRules in H; rewrite Forall_forall in H.
+    specialize (H _ HInRules); simpl in H.
+    eapply noCallDmSigA_semAction_calls; eauto.
+
+  - inv H; rewrite MethsEquiv_in in H4.
+    specialize (H4 _ HIn); unfold MethEquiv in H4; simpl in H4.
+    unfold noCallDmSig in H1; dest.
+    unfold noCallDmSigDms in H1; rewrite Forall_forall in H1.
+    specialize (H1 _ HIn); simpl in H1.
+    eapply noCallDmSigA_semAction_calls; eauto.
+Qed.
+
+Lemma noCallDmSig_substepsInd_calls:
+  forall m o u l,
+    ModEquiv type typeUT m ->
+    SubstepsInd m o u l ->
+    forall dm s,
+      noCallDmSig m dm ->
+      Some s = M.find (elt:=sigT SignT) (attrName dm) (calls l) ->
+      projT1 s = projT1 (attrType dm) ->
+      False.
+Proof.
+  induction 2; simpl; intros; [mred|].
+  subst; destruct l as [ann ds cs]; simpl in *.
+  rewrite M.find_union in H6.
+  remember (M.find (attrName dm) scs) as odsc; destruct odsc.
+  - inv H6; apply noCallDmSig_substep_calls with (dm:= dm) (s:= s0) in H1; auto.
+  - eapply IHSubstepsInd; eauto.
+Qed.
+
+Lemma stepInd_filterDm:
+  forall regs rules dms o u l,
+    ModEquiv type typeUT (Mod regs rules dms) ->
+    NoDup (getDefs (Mod regs rules dms)) ->
+    StepInd (Mod regs rules dms) o u l ->
+    forall (dm: DefMethT),
+      In dm dms ->
+      M.find (attrName dm) (defs l) = None ->
+      noCallDmSig (Mod regs rules dms) dm ->
+      StepInd (Mod regs rules (filterDm dms (attrName dm))) o u l.
+Proof.
+  intros; inv H1; constructor; [|admit (* wellHidden; easy *)].
+  
+  remember (M.find (attrName dm) (defs l0)) as odl; destruct odl.
+
+  - pose proof (substepsInd_defs_sig _ H0 H2 HSubSteps Heqodl).
+    remember (M.find (attrName dm) (calls l0)) as ocl; destruct ocl.
+
+    + assert (s = s0); subst.
+      { clear -H3 Heqodl Heqocl.
+        destruct l0 as [ann ds cs]; simpl in *.
+        findeq.
+      }
+      exfalso; eapply noCallDmSig_substepsInd_calls; eauto.
+
+    + exfalso; clear -H3 Heqodl Heqocl.
+      destruct l0 as [ann ds cs]; simpl in *.
+      findeq.
+
+  - assert (None = M.find (attrName dm) (calls l0)).
+    { apply wellHidden_find_1 with (a:= attrName dm) in HWellHidden.
+      { destruct HWellHidden; auto.
+        rewrite Heqodl; auto.
+      }
+      { simpl; apply in_map; auto. }
+    }
+
+    clear -HSubSteps Heqodl H1.
+    admit.
 Qed.
 
 (* Partial inlining interfaces *)
@@ -543,9 +581,7 @@ Section Partial.
   Qed.
 
   Hypotheses (Hequiv: ModEquiv type typeUT m)
-             (HvCalls: ValidCall dm (attrType r typeUT) = true)
              (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT)))
-             (HnoDupRules: NoDup (namesOf (getRules m)))
              (HnoCallDm: noCallDm dm dm = true)
              (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
@@ -566,6 +602,26 @@ Section Partial.
     - simpl; apply in_or_app; left; auto.
     - simpl; apply in_or_app; right; auto.
   Qed.
+
+  Lemma inlineDmToRule_noDup:
+    NoDup (namesOf (getDefsBodies (Mod (getRegInits m)
+                                       (map
+                                          (fun newr =>
+                                             if string_dec (attrName r) (attrName newr)
+                                             then inlineDmToRule newr dm else newr)
+                                          (getRules m))
+                                       (getDefsBodies m)))).
+  Proof. simpl; auto. Qed.
+
+  Lemma inlineDmToRule_In:
+    In dm (getDefsBodies (Mod (getRegInits m)
+                              (map
+                                 (fun newr =>
+                                    if string_dec (attrName r) (attrName newr)
+                                    then inlineDmToRule newr dm else newr)
+                                 (getRules m))
+                              (getDefsBodies m))).
+  Proof. simpl; auto. Qed.
 
   Lemma inlineDmToRule_filtered_wellHidden:
     forall l,
@@ -644,36 +700,12 @@ Section Partial.
     apply step_consistent; apply step_consistent in H0.
 
     pose proof (inlineDmToRule_stepInd H0).
-
-    inv H; constructor.
-
-    - match goal with
-      | [H: SubstepsInd ?im _ _ _ |- _] =>
-        assert (~ In (attrName dm) (getCalls im))
-      end.
-      { apply inlineDmToRule_not_in_calls; auto. }
-
-      assert (M.find (attrName dm) (calls l0) = None).
-      { pose proof (substepsInd_calls_in inlineDmToRule_ModEquiv HSubSteps).
-        remember (M.find (attrName dm) (calls l0)) as odc; destruct odc; auto.
-        elim H; apply H1; findeq.
-      }
-
-      assert (M.find (attrName dm) (defs l0) = None).
-      { rewrite <-H1.
-        clear HWellHidden; inv H0.
-        apply wellHidden_find_2 with (m:= m); auto.
-        { simpl; apply in_map; auto. }
-        { apply getCallsA_getCalls_In. }
-        { unfold wellHidden, hide; simpl.
-          rewrite <-H5, <-H6; auto.
-        }
-      }
-
-      apply substepsInd_filterDm; auto.
-
-    - apply inlineDmToRule_filtered_wellHidden; auto.
     
+    apply stepInd_filterDm; auto.
+
+    - apply inlineDmToRule_ModEquiv.
+    - pose proof HrCalls; admit.
+    - pose proof HnoCallDm; admit.
   Qed.
 
 End Partial.

@@ -719,28 +719,27 @@ Section DupRep.
     - apply methsToRep_MethsEquiv; auto.
   Qed.
 
-  Hypothesis (Hsp: Specializable m).
+  (* Hypothesis (Hsp: Specializable m). *)
   
-  Lemma duplicate_duplicateByRep_same_structure:
-    NoDup (namesOf (getRegInits (duplicate m n))) /\
-    NoDup (namesOf (getRegInits duplicateByRep)) /\
-    SubList (getRegInits (duplicate m n)) (getRegInits duplicateByRep) /\
-    SubList (getRegInits duplicateByRep) (getRegInits (duplicate m n)) /\
-    SubList (getRules (duplicate m n)) (getRules duplicateByRep) /\
-    SubList (getRules duplicateByRep) (getRules (duplicate m n)) /\
-    SubList (getDefsBodies (duplicate m n)) (getDefsBodies duplicateByRep) /\
-    SubList (getDefsBodies duplicateByRep) (getDefsBodies (duplicate m n)).
-  Proof.
-    admit.
-  Qed.
+  (* Lemma duplicate_duplicateByRep_same_structure: *)
+  (*   NoDup (namesOf (getRegInits (duplicate m n))) /\ *)
+  (*   NoDup (namesOf (getRegInits duplicateByRep)) /\ *)
+  (*   SubList (getRegInits (duplicate m n)) (getRegInits duplicateByRep) /\ *)
+  (*   SubList (getRegInits duplicateByRep) (getRegInits (duplicate m n)) /\ *)
+  (*   SubList (getRules (duplicate m n)) (getRules duplicateByRep) /\ *)
+  (*   SubList (getRules duplicateByRep) (getRules (duplicate m n)) /\ *)
+  (*   SubList (getDefsBodies (duplicate m n)) (getDefsBodies duplicateByRep) /\ *)
+  (*   SubList (getDefsBodies duplicateByRep) (getDefsBodies (duplicate m n)). *)
+  (* Proof. *)
+  (* Qed. *)
       
-  Lemma duplicate_refines_repeat:
-    duplicate m n <<== duplicateByRep.
-  Proof.
-    pose proof duplicate_duplicateByRep_same_structure; dest.
-    rewrite idElementwiseId.
-    apply traceRefines_same_module_structure; auto.
-  Qed.
+  (* Lemma duplicate_refines_repeat: *)
+  (*   duplicate m n <<== duplicateByRep. *)
+  (* Proof. *)
+  (*   pose proof duplicate_duplicateByRep_same_structure; dest. *)
+  (*   rewrite idElementwiseId. *)
+  (*   apply traceRefines_same_module_structure; auto. *)
+  (* Qed. *)
 
 End DupRep.
 
