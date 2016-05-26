@@ -533,6 +533,15 @@ Section PartialMultiR.
   Qed.
 End PartialMultiR.
 
+Lemma inlineDmToRule_preserveName r l:
+  attrName
+    (fold_right
+       (fun dm' r' =>
+          inlineDmToRule r' dm') r l) = attrName r.
+Proof.
+  induction l; simpl in *; auto.
+Qed.
+
 Section PartialMultiR2.
   Variable m: Modules.
   Variable mEquiv: forall ty, ModEquiv ty typeUT m.
@@ -727,6 +736,28 @@ Section PartialMultiR2.
   Qed.
 End PartialMultiR2.
 
+Section inlineDmToRule_hasInCalls.
+  Variable a: DefMethT.
+  Variable r: Attribute (Action Void).
+  Variable inaR: In (attrName a) (getCallsA (attrType r typeUT)).
+  Variable l: list DefMethT.
+  Variable notAL: ~ In (attrName a) (namesOf l).
+  
+  Lemma inlineDmToRule_hasInCalls:
+    In (attrName a)
+       (getCallsA
+          (attrType
+             (fold_right
+                (fun dm' r' =>
+                   inlineDmToRule r' dm') r l) typeUT)).
+  Proof.
+    induction l; simpl in *; auto.
+    assert (attrName a0 <> attrName a) by intuition.
+    assert (~ In (attrName a) (namesOf l0)) by intuition.
+    specialize (IHl0 H0).
+    apply inlineDmCalls; auto.
+  Qed.
+End inlineDmToRule_hasInCalls.
 
 Section PartialMultiDmMultiR.
   Variable m: Modules.
@@ -791,6 +822,8 @@ Section PartialMultiDmMultiR.
       rewrite sth.
       assumption.
   Qed.
+
+  Hypothesis mEquiv: forall t, ModEquiv t typeUT m.
 
   Hypothesis HdmNoRule: forall r,
                           In r (prefix ++ suffix) ->
@@ -885,6 +918,57 @@ Section PartialMultiDmMultiR.
             rewrite sth2 at 2
       end.
       rewrite <- map_map with (g := fun r => inlineDmToRule r a).
-      apply inlineDmToRules_traceRefines_Filt; simpl in *; auto; apply cheat.
+      apply inlineDmToRules_traceRefines_Filt; simpl in *; auto.
+      + apply cheat.
+      + rewrite Hdm in HnoDupMeths; clear - HnoDupMeths.
+        unfold namesOf in *.
+        repeat (rewrite map_app in *; simpl in *).
+        rewrite <- app_nil_r in HnoDupMeths.
+        rewrite <- app_assoc with (n := nil) in HnoDupMeths.
+        apply NoDup_app_comm_ext in HnoDupMeths.
+        rewrite app_nil_r in HnoDupMeths.
+        rewrite app_assoc in HnoDupMeths.
+        apply NoDup_app_1 in HnoDupMeths.
+        rewrite <- app_assoc in HnoDupMeths; simpl in *.
+        assumption.
+      + rewrite Hrule in HnoDupRules; clear - HnoDupRules.
+        unfold namesOf in *; repeat (rewrite map_app in *; simpl in *).
+        rewrite map_map.
+        match goal with
+          | H: NoDup (_ ++ ?l ++ _) |- NoDup (_ ++ ?x ++ _) =>
+            assert (sth: x = l)
+        end.
+        (f_equal;
+         extensionality x;
+         apply inlineDmToRule_preserveName).
+        rewrite sth; auto.
+      + intros.
+        rewrite sth in Hdm.
+        rewrite Hdm in HdmNoMeth2.
+        apply in_app_or in H; simpl in *.
+        apply HdmNoMeth2; auto.
+        apply in_or_app; simpl in *.
+        intuition auto.
+        right; right; apply in_or_app; auto.
+      + destruct HDmsInRs2 as [r [inR inaR]].
+        remember (fun x => fold_right (fun dm' r' => inlineDmToRule r' dm') x l) as f.
+        exists (f r).
+        constructor.
+        apply in_map; auto.
+        rewrite Heqf.
+        apply inlineDmToRule_hasInCalls; auto.
+        rewrite sth in Hdm.
+        rewrite Hdm in HnoDupMeths.
+        clear - HnoDupMeths.
+        unfold namesOf in *.
+        rewrite map_app in *.
+        apply NoDup_app_2 in HnoDupMeths; simpl in *.
+        rewrite map_app in *.
+        pose proof HnoDupMeths as sth; clear HnoDupMeths.
+        dependent destruction sth; clear sth.
+        unfold not; intros.
+        assert (In (attrName a) (map (@attrName _) l ++ map (@attrName _) sufDm))
+          by (apply in_or_app; left; auto).
+        intuition auto.
   Qed.
 End PartialMultiDmMultiR.
