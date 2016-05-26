@@ -827,115 +827,64 @@ Section PartialMultiDmMultiR.
       rewrite <- Hrule.
       rewrite <- Hdm.
       apply flatten_traceRefines.
-    - apply cheat.
-      (*
-    - assert (sth: (preDm ++ [a]) ++ l ++ sufDm = preDm ++ a :: l ++ sufDm) by
-          (rewrite <- app_assoc; reflexivity).
-      assert (sth1: (preDm ++ [a]) ++ sufDm = preDm ++ a :: sufDm) by
-          (rewrite <- app_assoc; reflexivity).
-      assert (sth2: getDefsBodies m = (preDm ++ [a]) ++ l ++ sufDm) by
-          (rewrite sth, Hdm; reflexivity).
-      assert (sth3: forall r0, In r0 (prefix ++ suffix) ->
-                               forall dm, In dm l ->
-                                     noCallDmSigA (attrType r0 typeUT) (attrName dm)
-                                                  (projT1 (attrType dm)) = true)
+    - assert (HdmNoMeth1:
+                forall d,
+                  In d (getDefsBodies m) ->
+                  forall dm,
+                    In dm l ->
+                    noCallDmSigA (projT2 (attrType d) typeUT tt)
+                                 (attrName dm) (projT1 (attrType dm)) = true)
+        by (intros; apply HdmNoMeth; auto).
+      assert (HdmNoMeth2: forall d, In d (getDefsBodies m) ->
+                                    noCallDmSigA (projT2 (attrType d) typeUT tt)
+                                                 (attrName a) (projT1 (attrType a)) = true)
+        by (intros; apply HdmNoMeth; auto).
+      clear HdmNoMeth.
+      assert (HdmNoRule1:
+                forall r : Attribute (Action Void),
+                  In r (prefix ++ suffix) ->
+                  forall dm : DefMethT,
+                    In dm l ->
+                    noCallDmSigA (attrType r typeUT) (attrName dm)
+                                 (projT1 (attrType dm)) = true)
         by (intros; apply HdmNoRule; auto).
-      assert (HDmsInR1: forall dm, In dm l -> In (attrName dm) (getCallsA (attrType r typeUT)))
-        by (intros; apply HDmsInR; auto).
-      assert (HDmsInR2: In (attrName a) (getCallsA (attrType r typeUT)))
-        by (intros; apply HDmsInR; auto).
+      assert (HdmNoRule2:
+                forall r : Attribute (Action Void),
+                  In r (prefix ++ suffix) ->
+                  noCallDmSigA (attrType r typeUT) (attrName a)
+                               (projT1 (attrType a)) = true)
+        by (intros; apply HdmNoRule; auto).
+      clear HdmNoRule.
+      assert (HDmsInRs1:
+                forall dm,
+                  In dm l ->
+                  exists r, In r rs /\ In (attrName dm) (getCallsA (attrType r typeUT)))
+        by (intros; apply HDmsInRs; auto).
+      assert (HDmsInRs2:
+                exists r, In r rs /\ In (attrName a) (getCallsA (attrType r typeUT)))
+        by (intros; apply HDmsInRs; auto).
+      clear HDmsInRs.
       assert (HnoCall1: forall dm, In dm l -> noCallDm dm dm = true) by
           (intros; apply HnoCall; auto).
-      assert (HnoCall2: noCallDm a a = true) by
-          (intros; apply HnoCall; auto).
-      assert (sth4:
-                forall d, In d (getDefsBodies m) ->
-                          forall dm, In dm l ->
-                                     noCallDmSigA (projT2 (attrType d) typeUT tt)
-                                                  (attrName dm) (projT1 (attrType dm)) = true)
-        by (intros; apply HdmNoMeth; auto).
-      specialize (IHl (preDm ++ [a]) sth2 sth3 sth4 HDmsInR1 HnoCall1); clear sth3 sth4.
-      rewrite idElementwiseId in *.
+      assert (HnoCall2: noCallDm a a = true) by (intros; apply HnoCall; auto).
+      clear HnoCall.
+      assert (sth: (preDm ++ [a]) ++ l ++ sufDm = preDm ++ a :: l ++ sufDm)
+        by (rewrite <- app_assoc; simpl; reflexivity).
+      rewrite <- sth in *.
+      specialize (IHl _ Hdm HdmNoMeth1 HdmNoRule1 HDmsInRs1 HnoCall1).
+      rewrite <- app_assoc in IHl; simpl in IHl.
       match goal with
-        | [H: traceRefines id m ?P |- _] => apply traceRefines_trans with (mb := P); auto
+        | H: m <<== ?m2 |- _ => apply traceRefines_trans with (mb := m2)
       end.
-      rewrite <- idElementwiseId.
-      assert (sth3: NoDup (namesOf ((preDm ++ [a]) ++ sufDm))).
-      { unfold namesOf; repeat rewrite map_app.
-        apply NoDup_app_rm with (l2 := map (@attrName _) l).
-        repeat rewrite <- map_app.
-        rewrite <- sth2.
-        assumption.
-      } 
-      match goal with
-        | [|- ?m <<== _] =>
-          pose proof (inlineDmToRule_traceRefines_Filt
-                        m a preDm sufDm sth1 sth3
-                        prefix suffix (fold_right (fun dm' r' => inlineDmToRule r' dm') r l)
-                        eq_refl) as sth4; simpl in *
-      end.
-      apply sth4; auto.
-      unfold namesOf in *; rewrite Hrule in HnoDupRules; repeat rewrite map_app in *; simpl in *.
-      assert (sth5: attrName r =
-                    attrName (fold_right (fun dm' r' => inlineDmToRule r' dm') r l)).
-      { clear;
-        induction l; simpl in *; auto.
-      }
-      rewrite <- sth5.
-      assumption.
-      destruct mEquiv as [rEquiv dmEquiv].
-      rewrite Hrule in rEquiv; rewrite Hdm in dmEquiv.
-      pose proof (proj1 (RulesEquiv_in _ _ _) rEquiv) as rEquiv'; clear rEquiv.
-      pose proof (proj1 (MethsEquiv_in _ _ _) dmEquiv) as dEquiv'; clear dmEquiv.
-      constructor; simpl in *.
-      apply RulesEquiv_in; intros.
-      apply in_app_or in H; simpl in *.
-      destruct H; [apply rEquiv'; apply in_or_app; auto|].
-      destruct H; [|apply rEquiv'; apply in_or_app; auto].
-      assert (sth9: RuleEquiv type typeUT r) by (apply rEquiv'; apply in_or_app; intuition).
-      assert (sth10: forall x, In x l -> MethEquiv type typeUT x).
-      { intros; apply dEquiv'; apply in_or_app; simpl; right; right;
-        apply in_or_app; left; auto.
-      }
-      clear - H sth9 sth10.
-      { subst.
-        generalize sth10; clear sth10.
-        induction l; simpl in *; intros; auto.
-        assert (forall x, In x l -> MethEquiv type typeUT x) by (intros; apply sth10; auto).
-        assert (MethEquiv type typeUT a) by (apply sth10; auto).
-        specialize (IHl H).
-        unfold inlineDmToRule at 1; unfold RuleEquiv in *; simpl in *.
-        apply inlineDm_ActionEquiv; auto.
-      } 
-      intuition.
-      apply MethsEquiv_in; intros.
-      repeat (apply in_app_or in H; destruct H);
-        (apply dEquiv'; apply in_or_app; intuition auto).
-      right; simpl in *; intuition auto.
-      right; right; apply in_or_app; intuition auto.
-      intros; apply HdmNoMeth; auto.
+      assert (sth2: (fun f: MethsT => f) = id) by (extensionality f; reflexivity).
       rewrite sth2.
-      repeat (try apply in_app_or in H; try apply in_or_app; try destruct H; intuition auto).
-      right; apply in_or_app; right; auto.
-      rewrite Hdm in HnoDupMeths.
-      clear - HnoDupMeths HDmsInR2.
-      unfold namesOf in *.
-      rewrite map_app in *; simpl in *.
-      apply NoDup_app_2 in HnoDupMeths; simpl in *.
-      pose proof HnoDupMeths as sth.
-      dependent destruction sth.
-      clear HnoDupMeths.
-      rewrite map_app in *; simpl in *.
-      assert (sth2: ~ In (attrName a) (map (@attrName _) l)).
-      { unfold not; intros.
-        assert (In (attrName a) (map (@attrName _) l ++ map (@attrName _) sufDm))
-          by (apply in_or_app; intuition auto).
-        intuition auto.
-      }
-      destruct a as [n nt]; simpl in *.
-      clear - sth2 HDmsInR2.
-      apply inlineDmsCalls; auto.
-    admit.
-       *)
+      unfold MethsT; rewrite <- idElementwiseId.
+      auto.
+      match goal with
+        | |- ?m2 <<== _ => assert (sth2: getRegInits m = getRegInits m2) by reflexivity;
+            rewrite sth2 at 2
+      end.
+      rewrite <- map_map with (g := fun r => inlineDmToRule r a).
+      apply inlineDmToRules_traceRefines_Filt; simpl in *; auto; apply cheat.
   Qed.
 End PartialMultiDmMultiR.
