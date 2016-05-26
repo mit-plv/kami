@@ -759,6 +759,26 @@ Section inlineDmToRule_hasInCalls.
   Qed.
 End inlineDmToRule_hasInCalls.
 
+Section rEquivAfterInline.
+  Variable ty: Kind -> Type.
+  Variable r: Attribute (Action Void).
+  Variable rEquiv: RuleEquiv ty typeUT r.
+  Variable ls: list DefMethT.
+
+  Lemma ruleEquiv_fold:
+    (forall d, In d ls -> MethEquiv ty typeUT d) ->
+    RuleEquiv ty typeUT
+              (fold_right
+                 (fun dm' r' => inlineDmToRule r' dm') r ls).
+  Proof.
+    induction ls; simpl in *; auto; intros.
+    assert (sth1: MethEquiv ty typeUT a) by (apply H; auto).
+    assert (sth2: forall d, In d l -> MethEquiv ty typeUT d) by (intros; apply H; auto).
+    specialize (IHl sth2).
+    apply inlineDm_ActionEquiv; auto.
+  Qed.
+End rEquivAfterInline.
+  
 Section PartialMultiDmMultiR.
   Variable m: Modules.
 
@@ -919,7 +939,39 @@ Section PartialMultiDmMultiR.
       end.
       rewrite <- map_map with (g := fun r => inlineDmToRule r a).
       apply inlineDmToRules_traceRefines_Filt; simpl in *; auto.
-      + apply cheat.
+      + intros.
+        specialize (mEquiv ty).
+        destruct mEquiv as [rEquiv dEquiv].
+        rewrite sth in Hdm.
+        rewrite Hrule in rEquiv.
+        rewrite Hdm in dEquiv.
+        pose proof (proj1 (RulesEquiv_in _ _ _) rEquiv) as rEquiv'; clear rEquiv.
+        pose proof (proj1 (MethsEquiv_in _ _ _) dEquiv) as dEquiv'; clear dEquiv.
+        constructor; simpl in *.
+        * apply RulesEquiv_in; intros.
+          apply in_app_or in H.
+          destruct H; [apply rEquiv'; apply in_or_app; left; intuition auto|].
+          apply in_app_or in H.
+          destruct H;
+            [| apply rEquiv'; apply in_or_app; right; apply in_or_app; right; intuition auto].
+          assert (sth4: forall r, In r rs -> RuleEquiv ty typeUT r)
+            by (intros; apply rEquiv'; apply in_or_app; right; apply in_or_app; left;
+                intuition auto).
+          apply in_map_iff in H; dest; subst.
+          specialize (sth4 _ H0).
+          assert (sth5: forall m, In m l -> MethEquiv ty typeUT m)
+            by (intros; apply dEquiv'; apply in_or_app; simpl; right; right; apply in_or_app;
+                left; intuition auto).
+          apply ruleEquiv_fold; auto.
+        * apply MethsEquiv_in; intros.
+          apply dEquiv'.
+          apply in_or_app.
+          apply in_app_or in H.
+          destruct H; [left; intuition auto|].
+          right; simpl in *.
+          destruct H; [left; intuition auto|].
+          right; apply in_or_app.
+          intuition auto.
       + rewrite Hdm in HnoDupMeths; clear - HnoDupMeths.
         unfold namesOf in *.
         repeat (rewrite map_app in *; simpl in *).
