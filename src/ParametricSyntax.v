@@ -35,6 +35,31 @@ Section AboutFold1.
   Qed.
 End AboutFold1.
 
+Section AboutFoldRight1.
+  Variable A B: Type.
+  Variable ls: list A.
+  Variable b: B.
+  Variable f: A -> B -> B.
+  Variable a: A.
+  Variable Hb: forall a', a <> a' -> f a' b = b.
+
+  Variable HNotIn: ~ In a ls.
+
+  Lemma fold_same': fold_right f b ls = b.
+  Proof.
+    generalize b Hb.
+    clear b Hb.
+    induction ls; simpl in *; intros.
+    - intuition.
+    - assert (s1: a0 <> a) by intuition.
+      assert (s2: ~ In a l) by intuition.
+      specialize (IHl s2 _ Hb).
+      rewrite <- IHl at 2.
+      rewrite IHl in *.
+      apply Hb; auto.
+  Qed.
+End AboutFoldRight1.
+
 Lemma badIndex:
   forall a c, index 0 indexSymbol (a ++ indexSymbol ++ c) <> None.
 Proof.
@@ -74,6 +99,33 @@ Section AboutFold2.
   Qed.
 End AboutFold2.
 
+Section AboutFoldRight2.
+  Variable A B: Type.
+  Variable ls: list A.
+  Variable b: B.
+  Variable f: A -> B -> B.
+  Variable a: A.
+  Variable Hb: forall a', a <> a' -> f a' b = b.
+  Variable Hfb: forall a', a <> a' -> f a' (f a b) = f a b.
+
+  Variable HIn: In a ls.
+  Variable HNoDups: NoDup ls.
+  
+  Lemma fold_single': fold_right f b ls = f a b.
+  Proof.
+    generalize b Hb Hfb HNoDups.
+    clear b Hb Hfb HNoDups.
+    induction ls; simpl in *; intros.
+    - intuition.
+    - inv HNoDups.
+      inv HIn; subst.
+      f_equal; apply fold_same' with (a := a); auto.
+      rewrite IHl; auto.
+      apply Hfb; auto.
+      unfold not; intros; subst; intuition.
+  Qed.
+End AboutFoldRight2.
+
 Section AboutFold3.
   Variable A B C: Type.
   Variable ls: list C.
@@ -90,6 +142,23 @@ Section AboutFold3.
     - apply (IHl (f init (m a))).
   Qed.
 End AboutFold3.
+
+Section AboutFoldRight3.
+  Variable A B C: Type.
+  Variable ls: list C.
+  Variable f: A -> B -> B.
+  Variable m: C -> A.
+  
+  Lemma fold_map': forall init,
+                     fold_right f init (map m ls) = fold_right
+                                                      (fun c b =>
+                                                         f (m c) b) init ls.
+  Proof.
+    induction ls; simpl in *; intros.
+    - reflexivity.
+    - f_equal. apply IHl; auto.
+  Qed.
+End AboutFoldRight3.
 
 Section AboutFold4.
   Variable A B C: Type.
@@ -702,9 +771,11 @@ Section MoreThm.
       forall gr rname i,
         In i is ->
         NoDup is ->
-        fold_left inlineDmToRule (repMeth gf fname is)
-                  (addIndexToStr strA i rname ::
-                                 getActionFromGen strA getConstK gr i)%struct =
+        fold_right (fun dm' r' => inlineDmToRule r' dm')
+                   (addIndexToStr strA i rname ::
+                                  getActionFromGen strA getConstK gr i)%struct
+                   (repMeth gf fname is)
+        =
         inlineDmToRule (addIndexToStr strA i rname ::
                                       getActionFromGen strA getConstK gr i)%struct
                        (addIndexToStr strA i fname ::
@@ -712,11 +783,11 @@ Section MoreThm.
     Proof.
       intros.
       unfold repMeth, getListFromRep.
-      rewrite fold_map.
+      rewrite fold_map'.
       match goal with
-        | [|- fold_left ?f is ?init = ?q] =>
+        | [|- fold_right ?f ?init is = ?q] =>
           remember f as sth;
-          assert (sth2: f init i =
+          assert (sth2: f i init =
                         inlineDmToRule
                           init (addIndexToStr strA i fname ::
                                               getMethFromGen strA getConstK gf i)%struct)
@@ -724,7 +795,7 @@ Section MoreThm.
       end.
       rewrite <- Heqsth in sth2.
       rewrite <- sth2.
-      apply fold_single with (ls := is); auto; subst; clear sth2; intros; simpl in *.
+      apply fold_single' with (ls := is); auto; subst; clear sth2; intros; simpl in *.
       - unfold inlineDmToRule; simpl in *; f_equal; extensionality ty.
         apply badGenInlineGenGen_matches; auto.
       - unfold inlineDmToRule; simpl in *; f_equal; extensionality ty.
@@ -738,9 +809,10 @@ Section MoreThm.
         (addIndexToStr strA i rname ::
                        getActionFromGen strA getConstK
                        (fun ty => inlineGenGenDm (gr ty) fname gf) i)%struct =
-        fold_left inlineDmToRule (repMeth gf fname is)
-                  (addIndexToStr strA i rname :: getActionFromGen strA
-                                 getConstK gr i)%struct.
+        fold_right (fun dm' r' => inlineDmToRule r' dm')
+                   (addIndexToStr strA i rname :: getActionFromGen strA
+                                  getConstK gr i)%struct
+                   (repMeth gf fname is).
     Proof.
       intros.
       rewrite foldInlineDmsGenGen_matches; auto; unfold inlineDmToRule; simpl.
@@ -752,7 +824,8 @@ Section MoreThm.
   Lemma mapFoldInlineDmsGenGen_matches is:
     forall gr rname gf fname,
       NoDup is ->
-      map (fold_left inlineDmToRule (repMeth gf fname is))
+      map (fun rule' =>
+             fold_right (fun dm' r' => inlineDmToRule r' dm') rule' (repMeth gf fname is))
           (repRule gr rname is) =
       map (fun i =>
              inlineDmToRule (addIndexToStr strA i rname ::
@@ -775,7 +848,8 @@ Section MoreThm.
       map (fun i => addIndexToStr strA i rname ::
                                   getActionFromGen strA getConstK
                                   (fun ty => inlineGenGenDm (gr ty) fname gf) i)%struct is =
-      map (fold_left inlineDmToRule (repMeth gf fname is))
+      map (fun rule' =>
+             fold_right (fun dm' r' => inlineDmToRule r' dm') rule' (repMeth gf fname is))
           (repRule gr rname is).
   Proof.
     intros.
