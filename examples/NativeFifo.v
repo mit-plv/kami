@@ -9,7 +9,7 @@ Section NativeFifo.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
-  Notation "^ s" := (fifoName .. s) (at level 0).
+  Notation "^ s" := (fifoName -- s) (at level 0).
 
   Definition listEltT ty := list (ty dType).
   Definition listEltK ty := @NativeKind (listEltT ty) nil.
@@ -29,26 +29,26 @@ Section NativeFifo.
     end.
   Definition listFirstElt {ty} (l: fullType ty (listEltK ty)): Expr ty (SyntaxKind dType) :=
     match l with
-    | nil => ($$default)%kami
-    | h :: t => (#h)%kami
+    | nil => ($$default)%kami_expr
+    | h :: t => (#h)%kami_expr
     end.
 
   (* defined methods *)
   Definition nativeEnq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (ReadN elt : listEltK ty <- ^"elt";
      Write ^"elt" <- (Var _ (listEltK ty) (listEnq d elt));
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition nativeDeq {ty} : ActionT ty dType :=
     (ReadN elt : listEltK ty <- ^"elt";
      Assert !$$(listIsEmpty elt);
      Write ^"elt" <- (Var _ (listEltK ty) (listDeq elt));
-     Ret (listFirstElt elt))%kami.
+     Ret (listFirstElt elt))%kami_action.
 
   Definition nativeFirstElt {ty} : ActionT ty dType :=
     (ReadN elt : listEltK ty <- ^"elt";
      Assert !$$(listIsEmpty elt);
-     Ret (listFirstElt elt))%kami.
+     Ret (listFirstElt elt))%kami_action.
 
   Definition nativeFifo := MODULE {
     RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)

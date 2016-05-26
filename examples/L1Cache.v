@@ -26,19 +26,19 @@ Section L1Cache.
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
-  Definition rqFromProcPop := MethodSig "rqFromProc".."deq" (Void): RqFromProc.
-  Definition fromPPop := MethodSig "fromP".."deq" (Void): FromP.
+  Definition rqFromProcPop := MethodSig "rqFromProc"--"deq" (Void): RqFromProc.
+  Definition fromPPop := MethodSig "fromP"--"deq" (Void): FromP.
 
-  Definition rsToProcEnq := MethodSig "rsToProc".."enq" (RsToProc): Void.
-  Definition rqToPEnq := MethodSig "rqToP".."enq" (RqToP): Void.
-  Definition rsToPEnq := MethodSig "rsToP".."enq" (RsToP): Void.
+  Definition rsToProcEnq := MethodSig "rsToProc"--"enq" (RsToProc): Void.
+  Definition rqToPEnq := MethodSig "rqToP"--"enq" (RqToP): Void.
+  Definition rsToPEnq := MethodSig "rsToP"--"enq" (RsToP): Void.
 
-  Definition readLine := MethodSig "line".."read" (Idx): Line.
-  Definition writeLine := MethodSig "line".."write" (WritePort IdxBits Line): Void.
-  Definition readTag := MethodSig "tag".."read" (Idx): Tag.
-  Definition writeTag := MethodSig "tag".."write" (WritePort IdxBits Tag): Void.
-  Definition readCs := MethodSig "cs".."read" (Idx): Msi.
-  Definition writeCs := MethodSig "cs".."write" (WritePort IdxBits Msi): Void.
+  Definition readLine := MethodSig "line"--"read" (Idx): Line.
+  Definition writeLine := MethodSig "line"--"write" (WritePort IdxBits Line): Void.
+  Definition readTag := MethodSig "tag"--"read" (Idx): Tag.
+  Definition writeTag := MethodSig "tag"--"write" (WritePort IdxBits Tag): Void.
+  Definition readCs := MethodSig "cs"--"read" (Idx): Msi.
+  Definition writeCs := MethodSig "cs"--"write" (WritePort IdxBits Msi): Void.
 
   Section UtilFunctions.
     Variable var: Kind -> Type.
@@ -57,7 +57,8 @@ Section L1Cache.
     Definition getAddr (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
       BinBit (Concat (TagBits + IdxBits) (LgNumDatas + LgDataBytes))
              (BinBit (Concat TagBits IdxBits) tag idx)
-             ($ 0)%kami.
+             ($ 0)%kami_expr.
+    
   End UtilFunctions.
 
   Definition l1Cache :=

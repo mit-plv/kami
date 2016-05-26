@@ -615,131 +615,18 @@ Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
 
 (** * Notation corner! *)
 
-(** Notations for registers and methods declaration *)
-Notation Default := (getDefaultConst _).
-Notation "'MethodSig' name () : retT" :=
-  (Build_Attribute name {| arg := Void; ret := retT |})
-  (at level 0, name at level 0, retT at level 200).
-Notation "'MethodSig' name ( argT ) : retT" :=
-  (Build_Attribute name {| arg := argT; ret := retT |})
-  (at level 0, name at level 0, argT at level 200, retT at level 200).
-
-(** Notations for expressions *)
-Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_scope.
-
-Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_scope.
-(* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_scope. *)
-Notation "!" := (UniBool Neg) : kami_scope.
-Infix "&&" := (BinBool And) : kami_scope.
-Infix "||" := (BinBool Or) : kami_scope.
-Infix "+" := (BinBit (Add _)) : kami_scope.
-Infix "-" := (BinBit (Sub _)) : kami_scope.
-Infix "<" := (BinBitBool (Lt _)) : kami_scope.
-Notation "x > y" := (BinBitBool (Lt _) y x) : kami_scope.
-Notation "x >= y" := (UniBool Neg (BinBitBool (Lt _) x y)) : kami_scope.
-Notation "x <= y" := (UniBool Neg (BinBitBool (Lt _) y x)) : kami_scope.
-Infix "==" := Eq (at level 30, no associativity) : kami_scope.
-Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_scope.
-Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_scope.
-Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_scope.
-Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_scope.
-Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_scope.
-Notation "$$ e" := (Const _ e) (at level 0) : kami_scope.
-Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_scope.
-Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..).
-Notation "$ n" := (natToWord _ n) (at level 0).
-
-Delimit Scope kami_scope with kami.
+Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
 
 Notation "name :: ty" := (Build_Attribute name ty) : kami_struct_scope.
-
-Ltac deattr := repeat match goal with
-                      | [ H : Build_Attribute _ _ = Build_Attribute _ _ |- _ ] =>
-                        injection H; clear H; intros; try subst
-                      end.
 
 Delimit Scope kami_struct_scope with struct.
 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Struct (cons s1%struct .. (cons sN%struct nil) ..)).
 
-(** Notations for action *)
-
-(* Coercion attrName : Attribute >-> string. *)
-Notation "'Call' meth ( arg ) ; cont " :=
-  (MCall (attrName meth) (attrType meth) arg (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_scope.
-Notation "'Call' name <- meth ( arg ) ; cont " :=
-  (MCall (attrName meth) (attrType meth) arg (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
-Notation "'Call' meth () ; cont " :=
-  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_scope.
-Notation "'Call' name <- meth () ; cont " :=
-  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_scope.
-Notation "'LET' name <- expr ; cont " :=
-  (Let_ expr (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'LET' name : t <- expr ; cont " :=
-  (Let_ (lretT' := SyntaxKind t) expr (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'LETN' name : kind <- expr ; cont " :=
-  (Let_ (lretT' := kind) expr (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Read' name <- reg ; cont" :=
-  (ReadReg reg _ (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Read' name : kind <- reg ; cont " :=
-  (ReadReg reg (SyntaxKind kind) (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'ReadN' name : kind <- reg ; cont " :=
-  (ReadReg reg kind (fun name => cont))
-    (at level 12, right associativity, name at level 0) : kami_scope.
-Notation "'Write' reg <- expr ; cont " :=
-  (WriteReg reg expr cont)
-    (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'Write' reg <- expr : kind ; cont " :=
-  (@WriteReg _ _ reg (SyntaxKind kind) expr cont)
-    (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'WriteN' reg <- expr : kind ; cont " :=
-  (@WriteReg _ _ reg kind expr cont)
-    (at level 12, right associativity, reg at level 0) : kami_scope.
-Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
-  (IfElse cexpr tact fact (fun name => cont))
-    (at level 13, right associativity, name at level 0, cexpr at level 0, tact at next level, fact at next level) : kami_scope.
-Notation "'Assert' expr ; cont " :=
-  (Assert_ expr cont)
-    (at level 12, right associativity) : kami_scope.
-Notation "'Ret' expr" :=
-  (Return expr) (at level 12) : kami_scope.
-Notation Retv := (Return (Const _ (k := Void) Default)).
-
 (** Miscellaneous Notations *)
 
-Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
-           {attrs}
-           (tl : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) attrs)
-  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (projT1 na :: attrs) :=
-  icons (projT1 na) (projT2 na) tl.
-
-Notation "name ::= value" :=
-  (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a)))
-          (Build_Attribute name _) value) (at level 50) : init_scope.
-Delimit Scope init_scope with init.
-
-Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
-  : kami_scope.
-
-Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_scope.
-
-Definition Maybe (t: Kind) := STRUCT {
-                                  "valid" :: Bool;
-                                  "value" :: t
-                                }.
-
-Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0) : kami_scope.
-
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
+
+Delimit Scope kami_scope with kami.
 

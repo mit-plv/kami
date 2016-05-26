@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts_2 Lts.DecompositionZero.
-Require Import Lts.Tactics.
+Require Import Lts.Tactics Lts.Notations.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
 Require Import Eqdep ProofIrrelevance.
 
@@ -26,16 +26,16 @@ Section Invariants.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistv "Ins".."empty"%string iev o Bool.
-    kexistv "Ins".."full"%string ifv o Bool.
-    kexistv "Ins".."enqP"%string ienqpv o (Bit fifoSize).
-    kexistv "Ins".."deqP"%string ideqpv o (Bit fifoSize).
-    kexistv "Ins".."elt"%string ieltv o (Vector RqFromProc fifoSize).
-    kexistv "Outs".."empty"%string oev o Bool.
-    kexistv "Outs".."full"%string ofv o Bool.
-    kexistv "Outs".."enqP"%string oenqpv o (Bit fifoSize).
-    kexistv "Outs".."deqP"%string odeqpv o (Bit fifoSize).
-    kexistv "Outs".."elt"%string oeltv o (Vector RsToProc fifoSize).
+    kexistv "Ins"--"empty"%string iev o Bool.
+    kexistv "Ins"--"full"%string ifv o Bool.
+    kexistv "Ins"--"enqP"%string ienqpv o (Bit fifoSize).
+    kexistv "Ins"--"deqP"%string ideqpv o (Bit fifoSize).
+    kexistv "Ins"--"elt"%string ieltv o (Vector RqFromProc fifoSize).
+    kexistv "Outs"--"empty"%string oev o Bool.
+    kexistv "Outs"--"full"%string ofv o Bool.
+    kexistv "Outs"--"enqP"%string oenqpv o (Bit fifoSize).
+    kexistv "Outs"--"deqP"%string odeqpv o (Bit fifoSize).
+    kexistv "Outs"--"elt"%string oeltv o (Vector RsToProc fifoSize).
     exact True.
   Defined.
   Hint Unfold procDec_inv_0: InvDefs.
@@ -71,13 +71,13 @@ Section Invariants.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistv "Ins".."empty"%string iev o Bool.
-    kexistv "Ins".."enqP"%string ienqP o (Bit fifoSize).
-    kexistv "Ins".."deqP"%string ideqP o (Bit fifoSize).
-    kexistv "Ins".."elt"%string ieltv o (Vector RqFromProc fifoSize).
-    kexistv "Outs".."empty"%string oev o Bool.
-    kexistv "Outs".."enqP"%string oenqP o (Bit fifoSize).
-    kexistv "Outs".."deqP"%string odeqP o (Bit fifoSize).
+    kexistv "Ins"--"empty"%string iev o Bool.
+    kexistv "Ins"--"enqP"%string ienqP o (Bit fifoSize).
+    kexistv "Ins"--"deqP"%string ideqP o (Bit fifoSize).
+    kexistv "Ins"--"elt"%string ieltv o (Vector RqFromProc fifoSize).
+    kexistv "Outs"--"empty"%string oev o Bool.
+    kexistv "Outs"--"enqP"%string oenqP o (Bit fifoSize).
+    kexistv "Outs"--"deqP"%string odeqP o (Bit fifoSize).
     refine (or3 _ _ _).
     - exact (v1 = false /\ fifo_empty_inv v2 v3 v4 /\ fifo_empty_inv v6 v7 v8).
     - refine (_ /\ _).

@@ -1,7 +1,7 @@
 Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
 Require Import Lts.Decomposition Lts.DecompositionZero.
@@ -161,11 +161,7 @@ Ltac kinline_compute :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeMetaModule
-               getListFromRep getListFromMeta
-               getFullListFromMeta getNamesOfMeta
-               metaRegs metaRules metaMeths makeModule
-               max plus
+               makeModule makeModule' max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
@@ -190,11 +186,7 @@ Ltac kinline_compute_in H :=
                noCallsRules noCallsDms noCallDm isLeaf
                getBody inlineArg
                appendAction getAttribute
-               makeMetaModule
-               getListFromRep getListFromMeta
-               getFullListFromMeta getNamesOfMeta
-               metaRegs metaRules metaMeths makeModule
-               max plus
+               makeModule makeModule' max plus
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA

@@ -51,10 +51,10 @@ Section MemInst.
   Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := RsToProc lgDataBytes.
 
-  Definition memInst := MODULE {
+  Definition memInst := MODULEM {
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
-    with Repeat Method as i till n by "exec" (a : RqFromProc) : RsToProc :=
+    with Repeat Method as idx till n by "exec" (a : RqFromProc) : RsToProc :=
       If !#a@."op" then (* load *)
         Read memv <- "mem";
         LET ldval <- #memv@[#a@."addr"];
@@ -88,7 +88,7 @@ Section ProcInst.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition procInst := MODULE {
     Register "pc" : Bit addrSize <- Default

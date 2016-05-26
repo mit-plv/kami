@@ -12,8 +12,8 @@ Section Middleman.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition getReq := MethodSig (inName .. "deq")() : RqFromProc.
-  Definition setRep := MethodSig (outName .. "enq")(RsToProc) : Void.
+  Definition getReq := MethodSig (inName -- "deq")() : RqFromProc.
+  Definition setRep := MethodSig (outName -- "enq")(RsToProc) : Void.
   Definition exec := MethodSig "exec"(RqFromProc) : RsToProc.
 
   Definition processLd {ty} : ActionT ty Void :=
@@ -21,14 +21,14 @@ Section Middleman.
      Assert !#req@."op";
      Call rep <- exec(#req);
      Call setRep(#rep);
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition processSt {ty} : ActionT ty Void :=
     (Call req <- getReq();
      Assert #req@."op";
      Call rep <- exec(#req);
      Call setRep(#rep);
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition mid := MODULE {
     Rule "processLd" := processLd

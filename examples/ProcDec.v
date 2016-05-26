@@ -26,13 +26,13 @@ Section ProcDec.
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   (* Called method signatures *)
-  Definition memReq := MethodSig (inName .. "enq")(RqFromProc) : Void.
-  Definition memRep := MethodSig (outName .. "deq")() : RsToProc.
+  Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
+  Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
   Definition halt := MethodSig "HALT"() : Void.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition reqLd {ty} : ActionT ty Void :=
     (Read stall <- "stall";
@@ -45,7 +45,7 @@ Section ProcDec.
                           "op" ::= $$false;
                           "data" ::= $$Default });
      Write "stall" <- $$true;
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition reqSt {ty} : ActionT ty Void :=
     (Read stall <- "stall";
@@ -58,7 +58,7 @@ Section ProcDec.
                            "op" ::= $$true;
                            "data" ::= #inst@."value" });
      Write "stall" <- $$true;
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition repLd {ty} : ActionT ty Void :=
     (Call val <- memRep();
@@ -68,7 +68,7 @@ Section ProcDec.
      Assert #inst@."opcode" == $$opLd;
      Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
      Write "stall" <- $$false;
-     nextPc ppc st inst)%kami.
+     nextPc ppc st inst)%kami_action.
 
   Definition repSt {ty} : ActionT ty Void :=
     (Call val <- memRep();
@@ -77,7 +77,7 @@ Section ProcDec.
      LET inst <- dec _ st ppc;
      Assert #inst@."opcode" == $$opSt;
      Write "stall" <- $$false;
-     nextPc ppc st inst)%kami.
+     nextPc ppc st inst)%kami_action.
 
   Definition execHt {ty} : ActionT ty Void :=
     (Read stall <- "stall";
@@ -87,7 +87,7 @@ Section ProcDec.
      LET inst <- dec _ st ppc;
      Assert #inst@."opcode" == $$opHt;
      Call halt();
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition execNm {ty} : ActionT ty Void :=
     (Read stall <- "stall";
@@ -99,7 +99,7 @@ Section ProcDec.
            || #inst@."opcode" == $$opSt
            || #inst@."opcode" == $$opHt);
      Write "rf" <- execState _ st ppc inst;
-     nextPc ppc st inst)%kami.
+     nextPc ppc st inst)%kami_action.
 
   Definition procDec := MODULE {
     Register "pc" : Bit addrSize <- Default

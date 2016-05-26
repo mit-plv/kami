@@ -11,7 +11,7 @@ Section Fifo.
   Variable sz: nat.
   Variable dType: Kind.
 
-  Notation "^ s" := (fifoName .. s) (at level 0).
+  Notation "^ s" := (fifoName -- s) (at level 0).
 
   Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (Read isFull <- ^"full";
@@ -24,7 +24,7 @@ Section Fifo.
      LET next_enqP <- (#enqP + $1) :: Bit sz;
      Write ^"full" <- (#deqP == #next_enqP);
      Write ^"enqP" <- #next_enqP;
-     Retv)%kami.
+     Retv)%kami_action.
 
   Definition deq {ty} : ActionT ty dType :=
     (Read isEmpty <- ^"empty";
@@ -36,14 +36,14 @@ Section Fifo.
      LET next_deqP <- (#deqP + $1) :: Bit sz;
      Write ^"empty" <- (#enqP == #next_deqP);
      Write ^"deqP" <- #next_deqP;
-     Ret #elt@[#deqP])%kami.
+     Ret #elt@[#deqP])%kami_action.
 
   Definition firstElt {ty} : ActionT ty dType :=
     (Read isEmpty <- ^"empty";
      Assert !#isEmpty;
      Read elt : Vector dType sz <- ^"elt";
      Read deqP <- ^"deqP";
-     Ret #elt@[#deqP])%kami.
+     Ret #elt@[#deqP])%kami_action.
   
   Definition fifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default

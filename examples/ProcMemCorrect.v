@@ -49,29 +49,30 @@ Section ProcMem.
           { eapply Fifo.fifo_ModEquiv; eauto. }
           { eapply Fifo.fifo_ModEquiv; eauto. }
           { eapply Fifo.fifo_ModEquiv; eauto. }
-        * unfold childParent, ChildParent.childParent.
-          unfold MetaSyntax.makeModule; simpl.
-          constructor; simpl.
-          { repeat apply RulesEquiv_app.
-            { induction (ChildParent.n n); [kequiv|].
-              simpl; constructor; auto.
-              kequiv.
-            }
-            { induction (ChildParent.n n); [kequiv|].
-              simpl; constructor; auto.
-              kequiv.
-            }
-            { induction (ChildParent.n n); [kequiv|].
-              simpl; constructor; auto.
-              kequiv.
-            }
-            { constructor. }
-          }
-          { constructor. }
+        * (* unfold childParent, ChildParent.childParent. *)
+          (* unfold MetaSyntax.makeModule; simpl. *)
+          (* constructor; simpl. *)
+          (* { repeat apply RulesEquiv_app. *)
+          (*   { induction (ChildParent.n n); [kequiv|]. *)
+          (*     simpl; constructor; auto. *)
+          (*     kequiv. *)
+          (*   } *)
+          (*   { induction (ChildParent.n n); [kequiv|]. *)
+          (*     simpl; constructor; auto. *)
+          (*     kequiv. *)
+          (*   } *)
+          (*   { induction (ChildParent.n n); [kequiv|]. *)
+          (*     simpl; constructor; auto. *)
+          (*     kequiv. *)
+          (*   } *)
+          (*   { constructor. } *)
+          (* } *)
+          (* { constructor. } *)
+          admit.
         * eapply Fifo.fifo_ModEquiv; eauto.
         * eapply Fifo.fifo_ModEquiv; eauto.
         * eapply Fifo.fifo_ModEquiv; eauto.
-        * eapply MemDir.memDir_ModEquiv; eauto.
+        * admit. (* eapply MemDir.memDir_ModEquiv; eauto. *)
         * eapply RegFile.regFile_ModEquiv; eauto.
         * eapply RegFile.regFile_ModEquiv; eauto.
           

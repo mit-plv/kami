@@ -1,9 +1,10 @@
-Require Import Lts.Syntax.
+Require Import Lts.Syntax Lts.Notations.
 Require Import Ex.Msi.
 
 Definition MemOp := Bool.
 
-Definition toMsi var (x: (MemOp @ var)%kami): (Msi @ var)%kami := (IF x then $ Mod else $ Sh)%kami.
+Definition toMsi var (x: (MemOp @ var)%kami): (Msi @ var)%kami :=
+  (IF x then $ Mod else $ Sh)%kami_expr.
 
 Section MsgTypes.
   Variables LgDataBytes LgNumDatas LgNumChildren: nat.

@@ -36,10 +36,10 @@ Section ProcDecSC.
   Proof.
     kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
     kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
-    kgetv "Outs".."empty"%string oev r Bool (M.empty (sigT (fullType type))).
-    kgetv "Outs".."elt"%string oelv r (Vector RsToProc fifoSize)
+    kgetv "Outs"--"empty"%string oev r Bool (M.empty (sigT (fullType type))).
+    kgetv "Outs"--"elt"%string oelv r (Vector RsToProc fifoSize)
           (M.empty (sigT (fullType type))).
-    kgetv "Outs".."deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
+    kgetv "Outs"--"deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
 
     pose proof (evalExpr (dec _ rfv pcv)) as inst.
     refine (

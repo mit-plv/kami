@@ -12,7 +12,7 @@ Section StreamMod.
 
   Definition nk := NativeKind (const default).
 
-  Notation "^ s" := (modName .. s) (at level 0).
+  Notation "^ s" := (modName -- s) (at level 0).
 
   Definition streamMod := MODULE {
     RegisterN ^"stream" : nk <- (NativeConst _ stream)

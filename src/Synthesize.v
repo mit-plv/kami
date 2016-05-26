@@ -1,4 +1,4 @@
-Require Import Lts.Syntax Lib.Struct List String.
+Require Import Lts.Syntax Lib.Struct List String Notations.
 
 Set Implicit Arguments.
 

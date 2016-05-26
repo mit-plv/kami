@@ -123,6 +123,15 @@ Fixpoint string_of_nat (n: nat) :=
 Lemma string_of_nat_length: forall i, String.length (string_of_nat i) = S i.
 Proof. induction i; simpl; intros; auto. Qed.
 
+Lemma string_of_nat_into: forall i j, string_of_nat i = string_of_nat j -> i = j.
+Proof.
+  intros.
+  assert (length (string_of_nat i) = length (string_of_nat j))
+    by (rewrite H; reflexivity).
+  do 2 rewrite string_of_nat_length in H0.
+  inv H0; auto.
+Qed.
+
 Definition indexSymbol: string := "__"%string.
 Definition prefixSymbol: string := "."%string.
 
@@ -211,7 +220,7 @@ Qed.
 Global Opaque withIndex.
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).
-Notation "pre '..' str" := (withPrefix pre str) (at level 0).
+Notation "pre '--' str" := (withPrefix pre str) (at level 0).
 
 Close Scope string_scope.
 

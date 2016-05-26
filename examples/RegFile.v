@@ -13,7 +13,7 @@ Section RegFile.
                               "addr" :: Addr;
                               "data" :: Data
                             }.
-  Notation "^ s" := (name .. s) (at level 0).
+  Notation "^ s" := (name -- s) (at level 0).
 
   Variable init: ConstT DataArray.
   

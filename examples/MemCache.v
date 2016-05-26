@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Syntax Lts.Semantics Lts.Notations.
+Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect.
 
@@ -35,7 +36,7 @@ Section MemCache.
   (* Definition l1s := duplicate l1C n. *)
   Definition l1s := duplicateByRep l1C n.
 
-  Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
+  (* Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id. *)
 
   Definition fifoRqFromC :=
     fifo "rqFromC" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes n Id).
@@ -45,7 +46,7 @@ Section MemCache.
 
   Definition childParentC := (childParent ++ fifoRqFromC ++ fifoRsFromC ++ fifoToC)%kami.
 
-  Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes n Id.
+  (* Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes n Id. *)
   Definition mline := regFile "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes) Default.
   Definition mdir := regFile "mcs"%string MIdxBits (MemDir.Dir n) Default.
 
@@ -93,16 +94,16 @@ Section MemCacheNativeFifo.
     @nativeFifo "toC" (ToC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.
 
   Definition nchildParentC :=
-    ((childParent IdxBits TagBits LgNumDatas LgDataBytes Id n)
-       ++ nfifoRqFromC ++ nfifoRsFromC ++ nfifoToC)%kami.
+    (* ((childParent IdxBits TagBits LgNumDatas LgDataBytes Id n) *)
+    (childParent ++ nfifoRqFromC ++ nfifoRsFromC ++ nfifoToC)%kami.
 
   Definition nmemCache :=
-    (nl1s ++ nchildParentC ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
+    (nl1s ++ nchildParentC ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes (* Id *) n))%kami.
 
   Definition nmemCacheRep :=
     ((duplicateByRep nl1C n)
        ++ nchildParentC
-       ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
+       ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes (* Id *) n))%kami.
               
 End MemCacheNativeFifo.
 

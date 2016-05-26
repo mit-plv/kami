@@ -1,7 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
-Require Import Syntax Semantics SemFacts Equiv Refinement Tactics.
+Require Import Syntax Semantics Notations SemFacts Equiv Refinement Tactics.
 Require Import DecompositionOne DecompositionInv.
 Require Import Ex.Fifo Ex.NativeFifo.
 
@@ -20,7 +20,7 @@ Section Facts.
   Definition nfifo := @nativeFifo fifoName dType default.
   Hint Unfold fifo nfifo: ModuleDefs.
 
-  Notation "^ s" := (fifoName .. s) (at level 0).
+  Notation "^ s" := (fifoName -- s) (at level 0).
 
   Fixpoint fifo_nfifo_elt_not_full
            (eltv : word rsz -> type dType)
@@ -144,7 +144,7 @@ Section Facts.
       CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2) ->
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
@@ -165,6 +165,7 @@ Section Facts.
     - right; reflexivity.
     - right; reflexivity.
     - left; reflexivity.
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
@@ -180,7 +181,7 @@ Section Facts.
 
   Lemma fifo_inv_0_ok:
     forall o, reachable o fifo -> fifo_inv_0 o.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     apply decompositionInv.
     - simpl; kinv_magic.
     - intros; inv H0; inv HInRules.
@@ -189,6 +190,7 @@ Section Facts.
       + kinv_magic.
       + kinv_magic.
     - apply fifo_substeps_updates.
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
@@ -208,7 +210,7 @@ Section Facts.
     forall o,
       reachable o fifo ->
       fifo_inv_1 o.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     apply decompositionInv.
     - simpl; kinv_magic; or3_fst; auto.
     - intros; inv H0; inv HInRules.
@@ -242,6 +244,7 @@ Section Facts.
           { or3_thd; auto. }
       + simpl in *; kinv_magic_with kinv_or3.
     - apply fifo_substeps_updates.
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
