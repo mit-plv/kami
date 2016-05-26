@@ -126,7 +126,9 @@ Section Rep.
   Variable A: Type.
   Variable strA: A -> string.
   Variable goodStrFn: forall i j, strA i = strA j -> i = j.
-
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  
   Section Ty.
     Variable ty: Kind -> Type.
 
@@ -135,6 +137,7 @@ Section Rep.
         Expr ty (SyntaxKind (arg s)) ->
         (ty (ret s) -> GenActionT lretT) ->
         GenActionT lretT
+    | GIndex: (ty GenK -> GenActionT lretT) -> GenActionT lretT
     | GLet_ lretT': Expr ty lretT' -> (fullType ty lretT' -> GenActionT lretT) ->
                     GenActionT lretT
     | GReadReg (r: NameRecIdx):
@@ -153,6 +156,7 @@ Section Rep.
            (a2: ty retT1 -> GenActionT retT2): GenActionT retT2 :=
     match a1 with
       | GMCall name sig ar cont => GMCall name sig ar (fun a => appendGenGenAction (cont a) a2)
+      | GIndex cont => GIndex (fun a => appendGenGenAction (cont a) a2)
       | GLet_ _ ar cont => GLet_ ar (fun a => appendGenGenAction (cont a) a2)
       | GReadReg reg k cont => GReadReg reg k (fun a => appendGenGenAction (cont a) a2)
       | GWriteReg reg _ e cont => GWriteReg reg e (appendGenGenAction cont a2)
@@ -173,6 +177,7 @@ Section Rep.
       Fixpoint getGenAction k (a: GenActionT k): ActionT ty k :=
         match a with
           | GMCall meth s e c => MCall ^meth s e (fun v => getGenAction (c v))
+          | GIndex c => Let_ (Const ty (getConstK i)) (fun v => getGenAction (c v))
           | GLet_ k' e c => Let_ e (fun v => getGenAction (c v))
           | GReadReg r k c => ReadReg ^r k (fun v => getGenAction (c v))
           | GWriteReg r k e c => WriteReg ^r e (getGenAction c)
@@ -200,6 +205,7 @@ Section Rep.
   Fixpoint getCallsGenA k (a: GenActionT typeUT k) :=
     match a with
       | GMCall meth s e c => meth :: getCallsGenA (c tt)
+      | GIndex c => getCallsGenA (c tt)
       | GLet_ fk e c => getCallsGenA (c match fk as fk' return fullType typeUT fk' with
                                           | SyntaxKind _ => tt
                                           | NativeKind _ c' => c'
@@ -248,6 +254,7 @@ Section Rep.
                             (fun ak => inlineGenGenDm (cont ak) dn dm)
           | None => GMCall name sig ar (fun ak => inlineGenGenDm (cont ak) dn dm)
         end
+      | GIndex cont => GIndex (fun a => inlineGenGenDm (cont a) dn dm)
       | GLet_ _ ar cont => GLet_ ar (fun a => inlineGenGenDm (cont a) dn dm)
       | GReadReg reg k cont => GReadReg reg k (fun a => inlineGenGenDm (cont a) dn dm)
       | GWriteReg reg _ e cont => GWriteReg reg e (inlineGenGenDm cont dn dm)
@@ -341,22 +348,22 @@ Section Sin.
     | SAssert_: Expr ty (SyntaxKind Bool) -> SinActionT lretT -> SinActionT lretT
     | SReturn: Expr ty (SyntaxKind lretT) -> SinActionT lretT.
 
-    Fixpoint convSinToGen k (a: SinActionT k): GenActionT ty k :=
+    Fixpoint convSinToGen GenK k (a: SinActionT k): GenActionT GenK ty k :=
       match a with
         | SMCall name sig ar cont => GMCall (convNameRec name) sig ar
-                                            (fun a => convSinToGen (cont a))
-        | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen (cont a))
+                                            (fun a => convSinToGen GenK (cont a))
+        | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen GenK (cont a))
         | SReadReg reg k cont => GReadReg (convNameRec reg) k
-                                          (fun a => convSinToGen (cont a))
-        | SWriteReg reg _ e cont => GWriteReg (convNameRec reg) e (convSinToGen cont)
-        | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen ta) (convSinToGen fa)
-                                             (fun a => convSinToGen (cont a))
-        | SAssert_ ae cont => GAssert_ ae (convSinToGen cont)
-        | SReturn e => GReturn e
+                                          (fun a => convSinToGen GenK (cont a))
+        | SWriteReg reg _ e cont => GWriteReg (convNameRec reg) e (convSinToGen GenK cont)
+        | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
+                                             (fun a => convSinToGen GenK (cont a))
+        | SAssert_ ae cont => GAssert_ ae (convSinToGen GenK cont)
+        | SReturn e => GReturn _ e
       end.
     
-    Fixpoint appendSinGenAction {retT1 retT2} (a1: SinActionT retT1)
-           (a2: ty retT1 -> GenActionT ty retT2): GenActionT ty retT2 :=
+    Fixpoint appendSinGenAction GenK {retT1 retT2} (a1: SinActionT retT1)
+           (a2: ty retT1 -> GenActionT GenK ty retT2): GenActionT GenK ty retT2 :=
     match a1 with
       | SMCall name sig ar cont => GMCall (convNameRec name) sig ar
                                           (fun a => appendSinGenAction (cont a) a2)
@@ -364,7 +371,7 @@ Section Sin.
       | SReadReg reg k cont => GReadReg (convNameRec reg) k
                                         (fun a => appendSinGenAction (cont a) a2)
       | SWriteReg reg _ e cont => GWriteReg (convNameRec reg) e (appendSinGenAction cont a2)
-      | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen ta) (convSinToGen fa)
+      | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
                                            (fun a => appendSinGenAction (cont a) a2)
       | SAssert_ ae cont => GAssert_ ae (appendSinGenAction cont a2)
       | SReturn e => GLet_ e a2
@@ -400,16 +407,17 @@ Section Sin.
     Section SpecificIdx.
       Variable i: A.
 
-      Lemma genSinSame k (a: SinActionT k):
-        getGenAction strA i (convSinToGen a) = getSinAction a.
+      Lemma genSinSame GenK (getConstK: A -> ConstT GenK) k (a: SinActionT k):
+        getGenAction strA getConstK i (convSinToGen GenK a) = getSinAction a.
       Proof.
         induction a; simpl in *; f_equal; try extensionality v; auto.
       Qed.
 
-      Lemma appendSinGenAction_matches k1 k2 (a1: SinActionT k1):
-        forall (a2: ty k1 -> GenActionT ty k2),
-          (getGenAction strA i ((appendSinGenAction a1 a2): GenActionT ty k2)) =
-          (appendAction (getSinAction a1) (fun argv => getGenAction strA i (a2 argv))).
+      Lemma appendSinGenAction_matches GenK (getConstK: A -> ConstT GenK)
+            k1 k2 (a1: SinActionT k1):
+        forall (a2: ty k1 -> GenActionT GenK ty k2),
+          (getGenAction strA getConstK i ((appendSinGenAction a1 a2): GenActionT GenK ty k2)) =
+          (appendAction (getSinAction a1) (fun argv => getGenAction strA getConstK i (a2 argv))).
       Proof.
         induction a1; simpl in *; intros; f_equal;
         repeat let x := fresh in extensionality x; auto.
@@ -462,8 +470,8 @@ Section Sin.
       end
     else None.
 
-  Fixpoint inlineGenSinDm ty k (a: GenActionT ty k) dn (dm: sigT SinMethodT):
-    GenActionT ty k :=
+  Fixpoint inlineGenSinDm GenK ty k (a: GenActionT GenK ty k) dn (dm: sigT SinMethodT):
+    GenActionT GenK ty k :=
     match a with
       | GMCall name sig ar cont =>
         match getGenSinBody name dn dm sig with
@@ -472,6 +480,7 @@ Section Sin.
                                (fun ak => inlineGenSinDm (cont ak) dn dm)
           | None => GMCall name sig ar (fun ak => inlineGenSinDm (cont ak) dn dm)
         end
+      | GIndex cont => GIndex (fun a => inlineGenSinDm (cont a) dn dm)
       | GLet_ _ ar cont => GLet_ ar (fun a => inlineGenSinDm (cont a) dn dm)
       | GReadReg reg k cont => GReadReg reg k (fun a => inlineGenSinDm (cont a) dn dm)
       | GWriteReg reg _ e cont => GWriteReg reg e (inlineGenSinDm cont dn dm)
@@ -479,7 +488,7 @@ Section Sin.
         GIfElse ce (inlineGenSinDm ta dn dm) (inlineGenSinDm fa dn dm)
                 (fun a => inlineGenSinDm (cont a) dn dm)
       | GAssert_ ae cont => GAssert_ ae (inlineGenSinDm cont dn dm)
-      | GReturn e => GReturn e
+      | GReturn e => GReturn _ e
     end.
 
   Definition getActionFromSin (gr: SinAction Void) := fun ty => getSinAction (gr ty).
@@ -492,11 +501,12 @@ Section Sin.
          getSinAction (projT2 gf ty argv): ActionT ty (ret (projT1 gf))).
 
   
-  Lemma inlineGenSinDm_matches ty k (a: GenActionT ty k) dn
+  Lemma inlineGenSinDm_matches GenK (getConstK: A -> ConstT GenK) ty k
+        (a: GenActionT GenK ty k) dn
         (dnGood: index 0 indexSymbol dn = None) (dm: sigT SinMethodT):
     forall i,
-      getGenAction strA i (inlineGenSinDm a dn dm) =
-      inlineDm (getGenAction strA i a) (dn :: getMethFromSin dm)%struct.
+      getGenAction strA getConstK i (inlineGenSinDm a dn dm) =
+      inlineDm (getGenAction strA getConstK i a) (dn :: getMethFromSin dm)%struct.
   Proof.
     induction a; simpl in *; intros; auto; f_equal; try extensionality v; auto.
     unfold getGenSinBody, getBody, strFromName; simpl in *.
@@ -595,6 +605,8 @@ Section MoreThm.
   Variable A: Type.
   Variable strA: A -> string.
   Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
   Variable goodStrFn2: forall si sj i j,
                          addIndexToStr strA i si = addIndexToStr strA j sj ->
                          si = sj /\ i = j.
@@ -609,10 +621,10 @@ Section MoreThm.
       map (fun i => (addIndexToStr strA i s :: gen i)%struct) ls.
   End GetAttrList.
   
-  Definition repRule (gr: GenAction Void) :=
-    getListFromRep (getActionFromGen strA gr).
+  Definition repRule (gr: GenAction GenK Void) :=
+    getListFromRep (getActionFromGen strA getConstK gr).
 
-  Lemma getFullCallsGenRule_matches (gr: GenAction Void) s ls:
+  Lemma getFullCallsGenRule_matches (gr: GenAction GenK Void) s ls:
     concat (map (fun (r: Attribute (forall ty, ActionT ty Void)) => getCallsA ((attrType r) typeUT)) (repRule gr s ls)) =
     getFullCallsGenA strA (gr typeUT) ls.
   Proof.
@@ -622,10 +634,10 @@ Section MoreThm.
     apply getCallsGenA_matches.
   Qed.
 
-  Definition repMeth (gf: sigT GenMethodT) :=
-    getListFromRep (getMethFromGen strA gf).
+  Definition repMeth (gf: sigT (GenMethodT GenK)) :=
+    getListFromRep (getMethFromGen strA getConstK gf).
 
-  Lemma getFullCallsGenMeth_matches (gr: sigT GenMethodT) s ls:
+  Lemma getFullCallsGenMeth_matches (gr: sigT (GenMethodT GenK)) s ls:
     concat (map (fun (r: Attribute (sigT MethodT)) => getCallsA (projT2 (attrType r) typeUT tt)) (repMeth gr s ls)) =
     getFullCallsGenA strA (projT2 gr typeUT tt) ls.
   Proof.
@@ -637,7 +649,7 @@ Section MoreThm.
   
   Section BadInline.
     Variable ty: Kind -> Type.
-    Variable gf: sigT GenMethodT.
+    Variable gf: sigT (GenMethodT GenK).
     Variable fname: string.
     Variable fnameGood: index 0 indexSymbol fname = None.
 
@@ -645,10 +657,10 @@ Section MoreThm.
       Variable i i': A.
       Variable HNeq: i <> i'.
       
-      Lemma badGenInlineGenGen_matches k (a: GenActionT ty k):
-        inlineDm (getGenAction strA i a)
-                 (addIndexToStr strA i' fname :: getMethFromGen strA gf i')%struct =
-        getGenAction strA i a.
+      Lemma badGenInlineGenGen_matches k (a: GenActionT GenK ty k):
+        inlineDm (getGenAction strA getConstK i a)
+                 (addIndexToStr strA i' fname :: getMethFromGen strA getConstK gf i')%struct =
+        getGenAction strA getConstK i a.
       Proof.
         unfold getMethFromGen; simpl in *.
         induction a; simpl in *; subst; simpl in *; auto; intros;
@@ -667,12 +679,13 @@ Section MoreThm.
           + f_equal; extensionality v; auto.
       Qed.
 
-      Lemma badGenInlineGenGen2_matches k (a: GenActionT ty k):
-        inlineDm (inlineDm (getGenAction strA i a)
-                           (addIndexToStr strA i fname :: getMethFromGen strA gf i)%struct)
-                 (addIndexToStr strA i' fname :: getMethFromGen strA gf i')%struct =
-        inlineDm (getGenAction strA i a)
-                 (addIndexToStr strA i fname :: getMethFromGen strA gf i)%struct.
+      Lemma badGenInlineGenGen2_matches k (a: GenActionT GenK ty k):
+        inlineDm (inlineDm (getGenAction strA getConstK i a)
+                           (addIndexToStr strA i fname ::
+                                          getMethFromGen strA getConstK gf i)%struct)
+                 (addIndexToStr strA i' fname :: getMethFromGen strA getConstK gf i')%struct =
+        inlineDm (getGenAction strA getConstK i a)
+                 (addIndexToStr strA i fname :: getMethFromGen strA getConstK gf i)%struct.
       Proof.
         rewrite <- inlineGenGenDm_matches.
         apply badGenInlineGenGen_matches.
@@ -681,7 +694,7 @@ Section MoreThm.
   End BadInline.
     
   Section FoldSimpleGenGen.
-    Variable gf: sigT GenMethodT.
+    Variable gf: sigT (GenMethodT GenK).
     Variable fname: string.
     Variable fnameGood: index 0 indexSymbol fname = None.
 
@@ -690,9 +703,12 @@ Section MoreThm.
         In i is ->
         NoDup is ->
         fold_left inlineDmToRule (repMeth gf fname is)
-                  (addIndexToStr strA i rname :: getActionFromGen strA gr i)%struct =
-        inlineDmToRule (addIndexToStr strA i rname :: getActionFromGen strA gr i)%struct
-                       (addIndexToStr strA i fname :: getMethFromGen strA gf i)%struct.
+                  (addIndexToStr strA i rname ::
+                                 getActionFromGen strA getConstK gr i)%struct =
+        inlineDmToRule (addIndexToStr strA i rname ::
+                                      getActionFromGen strA getConstK gr i)%struct
+                       (addIndexToStr strA i fname ::
+                                      getMethFromGen strA getConstK gf i)%struct.
     Proof.
       intros.
       unfold repMeth, getListFromRep.
@@ -702,7 +718,8 @@ Section MoreThm.
           remember f as sth;
           assert (sth2: f init i =
                         inlineDmToRule
-                          init (addIndexToStr strA i fname :: getMethFromGen strA gf i)%struct)
+                          init (addIndexToStr strA i fname ::
+                                              getMethFromGen strA getConstK gf i)%struct)
             by reflexivity
       end.
       rewrite <- Heqsth in sth2.
@@ -719,10 +736,11 @@ Section MoreThm.
         In i is ->
         NoDup is ->
         (addIndexToStr strA i rname ::
-                       getActionFromGen strA
+                       getActionFromGen strA getConstK
                        (fun ty => inlineGenGenDm (gr ty) fname gf) i)%struct =
         fold_left inlineDmToRule (repMeth gf fname is)
-                  (addIndexToStr strA i rname :: getActionFromGen strA gr i)%struct.
+                  (addIndexToStr strA i rname :: getActionFromGen strA
+                                 getConstK gr i)%struct.
     Proof.
       intros.
       rewrite foldInlineDmsGenGen_matches; auto; unfold inlineDmToRule; simpl.
@@ -737,8 +755,10 @@ Section MoreThm.
       map (fold_left inlineDmToRule (repMeth gf fname is))
           (repRule gr rname is) =
       map (fun i =>
-             inlineDmToRule (addIndexToStr strA i rname :: getActionFromGen strA gr i)%struct
-                            (addIndexToStr strA i fname :: getMethFromGen strA gf i)%struct) is.
+             inlineDmToRule (addIndexToStr strA i rname ::
+                                           getActionFromGen strA getConstK gr i)%struct
+                            (addIndexToStr strA i fname ::
+                                           getMethFromGen strA getConstK gf i)%struct) is.
   Proof.
     intros.
     unfold repRule.
@@ -753,7 +773,7 @@ Section MoreThm.
     forall gr rname gf fname,
       NoDup is ->
       map (fun i => addIndexToStr strA i rname ::
-                                  getActionFromGen strA
+                                  getActionFromGen strA getConstK
                                   (fun ty => inlineGenGenDm (gr ty) fname gf) i)%struct is =
       map (fold_left inlineDmToRule (repMeth gf fname is))
           (repRule gr rname is).
@@ -775,7 +795,8 @@ Section MoreThm.
         map (fun r => inlineDmToRule r (fname :: getMethFromSin f)%struct)
             (repRule gr rname is) =
         map (fun i => inlineDmToRule
-                        (addIndexToStr strA i rname :: getActionFromGen strA gr i)%struct
+                        (addIndexToStr strA i rname ::
+                                       getActionFromGen strA getConstK gr i)%struct
                         (fname :: getMethFromSin f)%struct) is.
     Proof.
       intros.
@@ -785,7 +806,7 @@ Section MoreThm.
     Lemma mapInlineDmsGenSin_matchesGen is:
       forall gr rname,
         map (fun i => addIndexToStr strA i rname ::
-                                    getActionFromGen strA
+                                    getActionFromGen strA getConstK
                                     (fun ty => inlineGenSinDm (gr ty) fname f) i)%struct is =
         map (fun r => inlineDmToRule r (fname :: getMethFromSin f)%struct)
             (repRule gr rname is).
@@ -817,53 +838,57 @@ Definition getListFromMetaReg m :=
 Inductive MetaRule :=
 | OneRule (b: SinAction Void) (s: string)
 | RepRule A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
+          (GenK: Kind) (getConstK: A -> ConstT GenK)
           (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                          si = sj /\ i = j)
-          (bgen: GenAction Void) (s: string) (ls: list A).
+          (bgen: GenAction GenK Void) (s: string) (ls: list A).
 
 Definition getMetaRuleName m :=
   match m with
     | OneRule _ s => s
-    | RepRule _ _ _ _ _ s _ => s
+    | RepRule _ _ _ _ _ _ _ s _ => s
   end.
 
 Definition getCallsMetaRule r :=
   match r with
     | OneRule b _ => map (fun a => {| isRep := false;
                                       nameRec := a |}) (getCallsSinA (b typeUT))
-    | RepRule _ _ _ _ bgen _ _ => getCallsGenA (bgen typeUT)
+    | RepRule _ _ _ _ _ _ bgen _ _ => getCallsGenA (bgen typeUT)
   end.
 
 Definition getListFromMetaRule m :=
   match m with
     | OneRule b s => (s :: getActionFromSin b)%struct :: nil
-    | RepRule A strA goodStrFn goodStrFn2 bgen s ls => repRule strA bgen s ls
+    | RepRule A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls =>
+      repRule strA getConstK bgen s ls
   end.
 
 Inductive MetaMeth :=
 | OneMeth (b: sigT SinMethodT) (s: string)
 | RepMeth A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
+          (GenK: Kind) (getConstK: A -> ConstT GenK)
           (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                          si = sj /\ i = j)
-          (bgen: sigT GenMethodT) (s: string) (ls: list A).
+          (bgen: sigT (GenMethodT GenK)) (s: string) (ls: list A).
 
 Definition getMetaMethName m :=
   match m with
     | OneMeth _ s => s
-    | RepMeth _ _ _ _ _ s _ => s
+    | RepMeth _ _ _ _ _ _ _ s _ => s
   end.
 
 Definition getCallsMetaMeth dm :=
   match dm with
     | OneMeth b _ => map (fun a => {| isRep := false;
                                       nameRec := a |}) (getCallsSinA (projT2 b typeUT tt))
-    | RepMeth _ _ _ _ bgen _ _ => getCallsGenA (projT2 bgen typeUT tt)
+    | RepMeth _ _ _ _ _ _ bgen _ _ => getCallsGenA (projT2 bgen typeUT tt)
   end.
 
 Definition getListFromMetaMeth m :=
   match m with
     | OneMeth b s => (s :: getMethFromSin b)%struct :: nil
-    | RepMeth A strA goodStrFn goodStrFn2 bgen s ls => repMeth strA bgen s ls
+    | RepMeth A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls =>
+      repMeth strA getConstK bgen s ls
   end.
 
 Record MetaModule :=
