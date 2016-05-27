@@ -186,10 +186,10 @@ Notation "'MODULE' { m1 'with' .. 'with' mN }" :=
 (** Notations for SinAction *)
 
 Notation "'Call' meth ( arg ) ; cont " :=
-  (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg (fun _ => cont))
+  (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg%kami_expr (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_sin_scope.
 Notation "'Call' name <- meth ( arg ) ; cont " :=
-  (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg (fun name => cont))
+  (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'Call' meth () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth)
@@ -243,11 +243,11 @@ Delimit Scope kami_sin_scope with kami_sin.
 
 Notation "'Call' meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl))
-          (attrType meth) arg (fun _ => cont))
+          (attrType meth) arg%kami_expr (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_gen_scope.
 Notation "'Call' name <- meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl))
-          (attrType meth) arg (fun name => cont))
+          (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Call' meth () ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
@@ -259,11 +259,11 @@ Notation "'Call' name <- meth () ; cont " :=
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Calli' meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl))
-          (attrType meth) arg (fun _ => cont))
+          (attrType meth) arg%kami_expr (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_gen_scope.
 Notation "'Calli' name <- meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl))
-          (attrType meth) arg (fun name => cont))
+          (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Calli' meth () ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
@@ -273,6 +273,9 @@ Notation "'Calli' name <- meth () ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'ILET' name ; cont " :=
+  (GIndex (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_gen_scope.
 Notation "'LET' name <- expr ; cont " :=
   (GLet_ expr%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
@@ -395,9 +398,10 @@ Notation "'Method' name ( param : dom ) : retT := c" :=
                             (fun ty => fun param : ty dom => (c)%kami_sin : ActionT ty retT)) name))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
-Definition natToVoid (_: nat): ConstT Void := WO.
+Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
+Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
 
-Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name () : retT := c" :=
+Notation "'Repeat' 'Method' 'till' n 'by' name () : retT := c" :=
   (MMEMeth (RepMeth string_of_nat
                     string_of_nat_into
                     natToVoid
@@ -408,10 +412,32 @@ Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name () : retT := c" :=
                     (getNatListToN n)))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
-Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name ( param : dom ) : retT := c" :=
+Notation "'Repeat' 'Method' 'till' n 'by' name ( param : dom ) : retT := c" :=
   (MMEMeth (RepMeth string_of_nat
                     string_of_nat_into
                     natToVoid
+                    withIndex_index_eq
+                    (existT (GenMethodT Void) {| arg:= dom; ret:= retT |}
+                            (fun ty (param: ty dom) => c%kami_gen))
+                    name
+                    (getNatListToN n)))
+    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
+
+Notation "'Repeat' 'Method' 'till' n 'with' sz 'by' name () : retT := c" :=
+  (MMEMeth (RepMeth string_of_nat
+                    string_of_nat_into
+                    (natToWordConst sz)
+                    withIndex_index_eq
+                    (existT (GenMethodT Void) {| arg:= Void; ret:= retT |}
+                            (fun ty (_: ty Void) => c%kami_gen))
+                    name
+                    (getNatListToN n)))
+    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
+
+Notation "'Repeat' 'Method' 'till' n 'with' sz 'by' name ( param : dom ) : retT := c" :=
+  (MMEMeth (RepMeth string_of_nat
+                    string_of_nat_into
+                    (natToWordConst sz)
                     withIndex_index_eq
                     (existT (GenMethodT Void) {| arg:= dom; ret:= retT |}
                             (fun ty (param: ty dom) => c%kami_gen))
@@ -423,12 +449,22 @@ Notation "'Rule' name := c" :=
   (MMERule (OneRule (fun ty => c%kami_sin : ActionT ty Void) name))
     (at level 0, name at level 0) : kami_meta_scope.
 
-Notation "'Repeat' 'Rule' 'as' 'idx' 'till' n 'by' name := c" :=
+Notation "'Repeat' 'Rule' 'till' n 'by' name := c" :=
   (MMERule (RepRule string_of_nat
                     string_of_nat_into
                     natToVoid
                     withIndex_index_eq
-                    (fun ty => c%kami_gen : GenActionT ty Void)
+                    (fun ty => c%kami_gen : GenActionT Void ty Void)
+                    name
+                    (getNatListToN n)))
+    (at level 0, name at level 0) : kami_meta_scope.
+
+Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
+  (MMERule (RepRule string_of_nat
+                    string_of_nat_into
+                    (natToWordConst sz)
+                    withIndex_index_eq
+                    (fun ty => c%kami_gen : GenActionT (Bit sz) ty Void)
                     name
                     (getNatListToN n)))
     (at level 0, name at level 0) : kami_meta_scope.

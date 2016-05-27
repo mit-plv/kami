@@ -54,7 +54,7 @@ Section MemInst.
   Definition memInst := MODULEM {
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
-    with Repeat Method as idx till n by "exec" (a : RqFromProc) : RsToProc :=
+    with Repeat Method till n by "exec" (a : RqFromProc) : RsToProc :=
       If !#a@."op" then (* load *)
         Read memv <- "mem";
         LET ldval <- #memv@[#a@."addr"];
