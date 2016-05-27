@@ -24,33 +24,36 @@ Section ChildParent.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqToPPop i := MethodSig "rqToP"--"deq"__ i (Void): RqToP.
+  Definition rqToPPop := MethodSig "rqToP"--"deq" (Void): RqToP.
   Definition rqFromCEnq := MethodSig "rqFromC"--"enq" (RqFromC): Void.
-  Definition rsToPPop i := MethodSig "rsToP"--"deq"__ i (Void): RsToP.
+  Definition rsToPPop := MethodSig "rsToP"--"deq" (Void): RsToP.
   Definition rsFromCEnq := MethodSig "rsFromC"--"enq" (RsFromC): Void.
 
   Definition toCPop := MethodSig "toC"--"deq" (Void): ToC.
-  Definition fromPEnq i := MethodSig "fromP"--"deq"__ i (FromP): Void.
+  Definition fromPEnq := MethodSig "fromP"--"deq" (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
-  Definition childParent : Modules := cheat _.
-    (* MODULE { *)
-    (*   Repeat Rule as idx till n by "rqFromCToP" := *)
-    (*     Call rq <- (rqToPPop i)(); *)
-    (*     Call rqFromCEnq(STRUCT{"child" ::= $ i; "rq" ::= #rq}); *)
-    (*     Retv *)
+  Definition childParent : Modules :=
+    MODULEM {
+      Repeat Rule till n with LgNumChildren by "rqFromCToP" :=
+        ILET i;  
+        Calli rq <- rqToPPop();
+        Call rqFromCEnq(STRUCT{"child" ::= #i; "rq" ::= #rq});
+        Retv
               
-    (*   with Repeat Rule as idx till n by "rsFromCToP" := *)
-    (*     Call rs <- (rsToPPop i)(); *)
-    (*     Call rsFromCEnq(STRUCT{"child" ::= $ i; "rs" ::= #rs}); *)
-    (*     Retv *)
+      with Repeat Rule till n with LgNumChildren by "rsFromCToP" :=
+        ILET i;  
+        Calli rs <- rsToPPop();
+        Call rsFromCEnq(STRUCT{"child" ::= #i; "rs" ::= #rs});
+        Retv
 
-    (*   with Repeat Rule as idx till n by "fromPToC" := *)
-    (*     Call msg <- toCPop(); *)
-    (*     Assert $ i == #msg@."child"; *)
-    (*     Call (fromPEnq i)(#msg@."msg"); *)
-    (*     Retv *)
-    (* }. *)
+      with Repeat Rule till n with LgNumChildren by "fromPToC" :=
+        ILET i;
+        Call msg <- toCPop();
+        Assert # i == #msg@."child";
+        Calli fromPEnq(#msg@."msg");
+        Retv
+    }.
   
 End ChildParent.
 
