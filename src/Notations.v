@@ -487,6 +487,18 @@ Notation "'Repeat' 'Rule' 'till' n 'by' name := c" :=
                     (getNatListToN_NoDup n)))
     (at level 0, name at level 0) : kami_meta_scope.
 
+
+Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
+  (MMERule (RepRule string_of_nat
+                    string_of_nat_into
+                    (natToWordConst sz)
+                    withIndex_index_eq
+                    (fun ty => c%kami_gen : GenActionT (Bit sz) ty Void)
+                    {| nameVal := name; goodName := eq_refl |}
+                    (getNatListToN_NoDup n)))
+     (at level 0, name at level 0) : kami_meta_scope.
+
+
 Delimit Scope kami_meta_scope with kami_meta.
 
 Notation "'MODULEM' { m1 'with' .. 'with' mN }" :=
