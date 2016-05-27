@@ -1,6 +1,6 @@
 Require Import Syntax Wf Struct List Inline SimpleInline Coq.Arith.Peano_dec Lib.Indexer
         FunctionalExtensionality String Equiv Program.Equality Lib.FMap CommonTactics StringEq
-        InlineFacts_2 Specialize.
+        InlineFacts_2 Specialize Lib.StringExtension.
 
 Set Implicit Arguments.
 

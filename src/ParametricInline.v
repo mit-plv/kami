@@ -1,6 +1,6 @@
 Require Import PartialInline
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
-        Lib.Struct Program.Equality Lib.CommonTactics.
+        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension.
 
 Section concat_app.
   Variable A: Type.
@@ -72,10 +72,25 @@ Section AboutConcat.
   Qed.
 End AboutConcat.
 
+Section IndexSymbol.
+  Lemma namesMatch:
+    forall s1 s2 a l1 l2, ~ S_In a s1 -> ~ S_In a s2 ->
+                          (s1 ++ String a l1 = s2 ++ String a l2)%string -> s1 = s2.
+  Proof.
+    induction s1; destruct s2; simpl in *; auto; intros.
+    inv H1; intuition auto.
+    inv H1; intuition auto.
+    inv H1.
+    assert (~ S_In a1 s1) by intuition auto.
+    assert (~ S_In a1 s2) by intuition auto.
+    f_equal; eapply IHs1; eauto.
+  Qed.
+End IndexSymbol.
+
 Section NoDup2.
   Variable l: list MetaMeth.
-  Lemma noDup_preserve: NoDup (map getMetaMethName l) ->
-                        NoDup (namesOf (concat (map getListFromMetaMeth l))).
+  Lemma noDup_preserveMeth: NoDup (map getMetaMethName l) ->
+                            NoDup (namesOf (concat (map getListFromMetaMeth l))).
   Proof.
     induction l; simpl in *; auto; intros.
     dependent destruction H.
@@ -158,15 +173,101 @@ Section NoDup2.
       }
       clear - H5 H1.
       destruct s, s0; simpl in *.
-      match goal with
-        | H: ?s1 = ?s2 |- _ => assert (substring 0 (String.length nameVal0) s1 =
-                                       substring 0 (String.length nameVal0) s2)
-                                      by (f_equal; auto)
-      end.
-                                                                      
-    
+      apply index_not_in in goodName; apply index_not_in in goodName0.
+      assert (nameVal = nameVal0) by (eapply namesMatch; eauto).
+      intuition auto.
   Qed.
 End NoDup2.
+
+Section NoDup3.
+  Variable l: list MetaRule.
+  Lemma noDup_preserveRule: NoDup (map getMetaRuleName l) ->
+                            NoDup (namesOf (concat (map getListFromMetaRule l))).
+  Proof.
+    induction l; simpl in *; auto; intros.
+    dependent destruction H.
+    specialize (IHl0 H0).
+    unfold namesOf; rewrite map_app;
+    fold (namesOf (getListFromMetaRule a));
+    fold (namesOf (concat (map getListFromMetaRule l0))).
+    apply noDupApp; auto; unfold not; intros.
+    - destruct a; simpl in *; auto.
+      unfold repRule, getListFromRep, namesOf; simpl.
+      rewrite map_map; simpl.
+      clear - goodStrFn2 ls noDup.
+      induction ls; simpl; intros; [auto|].
+      inv noDup; constructor; auto.
+      unfold not; intros.
+      apply in_map_iff in H; dest.
+      specialize (goodStrFn2 _ _ _ _ H); dest; subst.
+      auto.
+    - destruct a; simpl in *; auto.
+      destruct H1; auto; subst.
+      unfold namesOf in H2; apply in_map_iff in H2; dest; subst.
+
+      destruct x; simpl in *.
+      apply in_concat_iff in H2; dest.
+      apply in_map_iff in H2; dest; subst.
+      unfold getListFromMetaRule in H3; simpl in H3.
+
+      
+      destruct x0; simpl in *; auto.
+      inv H3; subst; auto.
+      destruct s0, s; simpl in *.
+      inv H1.
+      destruct_existT.
+      assert (In nameVal0 (map getMetaRuleName l0)).
+      { apply in_map_iff.
+        exists (OneRule b0 {| nameVal := nameVal0; goodName := goodName |}); simpl; auto.
+      }
+      intuition auto.
+
+      
+      unfold repRule, getListFromRep in H3.
+      apply in_map_iff in H3; dest.
+      inv H1; destruct_existT.
+      destruct s0, s; simpl in *.
+      rewrite <- H5 in *.
+      unfold addIndexToStr in goodName0.
+      apply (badIndex _ _ goodName0).
+
+      
+      unfold repRule, getListFromRep in H1.
+      unfold namesOf in H1, H2.
+      
+      apply in_map_iff in H1.
+      apply in_map_iff in H2.
+      dest; subst.
+      destruct x0, x.
+      simpl in *.
+      apply in_map_iff in H4; dest.
+      apply in_concat_iff in H3; dest.
+      apply in_map_iff in H3; dest; subst.
+      unfold getListFromMetaRule in H5.
+      inv H1; destruct_existT; subst.
+      destruct x1; simpl in *.
+      destruct H5; [|auto].
+      inv H1; destruct_existT; subst.
+      destruct s0; simpl in *; subst.
+      unfold addIndexToStr in goodName.
+      apply (badIndex _ _ goodName).
+      unfold repRule, getListFromRep in H5.
+      apply in_map_iff in H5; dest; subst.
+      inv H1; destruct_existT; subst.
+      unfold addIndexToStr in H5.
+      assert (nameVal s <> nameVal s0).
+      { unfold not; intros.
+        rewrite H1 in H.
+        apply in_map with (f := getMetaRuleName) in H6; simpl in H6.
+        auto.
+      }
+      clear - H5 H1.
+      destruct s, s0; simpl in *.
+      apply index_not_in in goodName; apply index_not_in in goodName0.
+      assert (nameVal = nameVal0) by (eapply namesMatch; eauto).
+      intuition auto.
+  Qed.
+End NoDup3.
 
 Section GenGen.
   Variable m: MetaModule.
@@ -180,18 +281,18 @@ Section GenGen.
   Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                          si = sj /\ i = j.
   Variable dm: sigT (GenMethodT GenK).
-  Variable dmName: string.
+  Variable dmName: NameRec.
   Variable preDm sufDm: list MetaMeth.
   Variable ls: list A.
   Variable noDupLs: NoDup ls.
   Variable Hdm: metaMeths m =
-                preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName ls :: sufDm.
+                preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs :: sufDm.
 
   Variable r: GenAction GenK Void.
-  Variable rName: string.
+  Variable rName: NameRec.
   Variable preR sufR: list MetaRule.
   Variable Hrule: metaRules m =
-                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName ls :: sufR.
+                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs :: sufR.
 
   Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
@@ -202,7 +303,8 @@ Section GenGen.
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ RepRule strA goodStrFn getConstK goodStrFn2
-                         (fun ty => inlineGenGenDm (r ty) dmName dm) rName ls :: sufR;
+                         (fun ty => inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
                   metaMeths := metaMeths m |}.
   Proof.
     unfold makeModule; simpl.
@@ -234,9 +336,35 @@ Section GenGen.
     with (preDm := concat (map getListFromMetaMeth preDm))
            (sufDm := concat (map getListFromMetaMeth sufDm)); auto; simpl;
     [rewrite <- sth1 | rewrite <- sth2].
+    apply noDup_preserveMeth; auto.
+    apply noDup_preserveRule; auto.
   Qed.
 
+  (*
+  Hypothesis HdmNoRule: forall r,
+                          In r (prefix ++ suffix) ->
+                          forall dm, In dm dms ->
+                                     noCallDmSigA (attrType r typeUT) (attrName dm)
+                                                  (projT1 (attrType dm)) = true.
+
+  Hypothesis HdmNoMeth:
+    forall d,
+      In d (getDefsBodies m) ->
+      forall dm, In dm dms ->
+                 noCallDmSigA (projT2 (attrType d) typeUT tt)
+                              (attrName dm) (projT1 (attrType dm)) = true.
+
+  Hypothesis HDmsInRs: forall dm,
+                         In dm dms ->
+                         exists r, In r rs /\
+                                   In (attrName dm) (getCallsA (attrType r typeUT)).
+  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
+
+
+  
   Hypothesis HnoRuleCalls: forall rule,
+  Hypothesis mEquiv: forall t, MetaModEquiv t typeUT m.
+
                              In rule (metaRules m) ->
                              getMetaRuleName rule <> rName ->
                              ~ In dmName (map (fun n => nameVal (nameRec n))
@@ -267,8 +395,10 @@ Section GenGen.
   Proof.
     admit.
   Qed.
+*)
 End GenGen.
 
+(*
 Section GenSin.
   Variable m: MetaModule.
   Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
@@ -337,3 +467,4 @@ Section GenSin.
     admit.
   Qed.
 End GenSin.
+*)

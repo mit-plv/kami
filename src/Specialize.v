@@ -1,6 +1,6 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq.
-Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf.
+Require Import Syntax Semantics SemFacts Refinement Renaming Equiv Wf Lib.StringExtension.
 
 Require Import FunctionalExtensionality.
 Require Import Compare_dec.
@@ -665,10 +665,10 @@ Section Specializable.
     match type of H with
     | hasNoIndex ?i1 = true =>
       match type of H0 with
-      | hasNoIndex ?i2 = true =>
-        apply hasNoIndex_SubList with (l2 := (i1 ++ i2))
+        | hasNoIndex ?i2 = true =>
+          apply hasNoIndex_SubList with (l2 := (i1 ++ i2))
       end
-    end.                                
+    end.
 
     - Opaque getCalls.
       repeat apply SubList_app_3.

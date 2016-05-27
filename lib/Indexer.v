@@ -1,5 +1,5 @@
 Require Import Bool Ascii String Eqdep Omega.
-Require Import CommonTactics.
+Require Import CommonTactics StringExtension.
 
 (** Some string manipulation lemmas *)
 
@@ -107,10 +107,6 @@ Lemma substring_append_1:
   forall s1 s2 n,
     substring (String.length s1) n (s1 ++ s2) = substring 0 n s2.
 Proof. induction s1; simpl; intros; auto. Qed.
-
-Lemma substring_empty:
-  forall s, substring 0 0 s = ""%string.
-Proof. induction s; simpl; intros; auto. Qed.
 
 (** End of string manipulation lemmas *)
 
