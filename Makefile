@@ -1,4 +1,4 @@
-IGNORE:=src/ParametricInline src/ParametricEquiv
+IGNORE:=src/ParametricInline
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))

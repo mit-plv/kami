@@ -368,8 +368,28 @@ Fixpoint getNatListToN (n: nat) :=
 
 Require Import Lib.Indexer.
 
+Lemma getNatListToN_NoDup n:
+  NoDup (getNatListToN n).
+Proof.
+  assert (NoDup (getNatListToN n) /\ forall i, In i (getNatListToN n) -> le i n).
+  { induction n; simpl in *; auto.
+    - constructor; intros; intuition auto; omega.
+    - destruct IHn.
+      constructor; auto.
+      constructor; unfold not; intros; auto.
+      specialize (H0 _ H1).
+      omega.
+      intros.
+      destruct H1; auto.
+      omega.
+  }
+  destruct H; intuition auto.
+Qed.
+
 Notation "'Register' name : type <- init" :=
-  (MMERegister (OneReg (existT ConstFullT (SyntaxKind type) (makeConst init)) name))
+  (MMERegister (OneReg (existT ConstFullT (SyntaxKind type) (makeConst init))
+                       {| nameVal := name;
+                          goodName := eq_refl |} ))
     (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Register' 'as' i 'till' n 'by' name : type <- init" :=
@@ -377,22 +397,28 @@ Notation "'Repeat' 'Register' 'as' i 'till' n 'by' name : type <- init" :=
                        string_of_nat_into
                        withIndex_index_eq
                        (fun i => (makeConst (k:= type) init))
-                       name
-                       (getNatListToN n)))
+                       {| nameVal := name; goodName := eq_refl |}
+                       (getNatListToN_NoDup n)))
     (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
 
 Notation "'RegisterN' name : type <- init" :=
-  (MMERegister (OneReg (existT ConstFullT (type) (init)) name))
+  (MMERegister (OneReg (existT ConstFullT (type) (init))
+                       {| nameVal := name;
+                          goodName := eq_refl |} ))
     (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
 
 Notation "'Method' name () : retT := c" :=
   (MMEMeth (OneMeth (existT MethodT {| arg := Void; ret := retT |}
-                            (fun ty => fun _ : ty Void => (c)%kami_sin : ActionT ty retT)) name))
+                            (fun ty => fun _ : ty Void => (c)%kami_sin : ActionT ty retT))
+                    {| nameVal := name;
+                       goodName := eq_refl |} ))
     (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Method' name ( param : dom ) : retT := c" :=
   (MMEMeth (OneMeth (existT MethodT {| arg := dom; ret := retT |}
-                            (fun ty => fun param : ty dom => (c)%kami_sin : ActionT ty retT)) name))
+                            (fun ty => fun param : ty dom => (c)%kami_sin : ActionT ty retT))
+                    {| nameVal := name;
+                       goodName := eq_refl |} ))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
 Definition natToVoid (_: nat): ConstT Void := WO.
@@ -404,8 +430,8 @@ Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name () : retT := c" :=
                     withIndex_index_eq
                     (existT (GenMethodT Void) {| arg:= Void; ret:= retT |}
                             (fun ty (_: ty Void) => c%kami_gen))
-                    name
-                    (getNatListToN n)))
+                    {| nameVal := name; goodName := eq_refl |}
+                    (getNatListToN_NoDup n)))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name ( param : dom ) : retT := c" :=
@@ -415,12 +441,14 @@ Notation "'Repeat' 'Method' 'as' 'idx' 'till' n 'by' name ( param : dom ) : retT
                     withIndex_index_eq
                     (existT (GenMethodT Void) {| arg:= dom; ret:= retT |}
                             (fun ty (param: ty dom) => c%kami_gen))
-                    name
-                    (getNatListToN n)))
+                    {| nameVal := name; goodName := eq_refl |}
+                    (getNatListToN_NoDup n)))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
 Notation "'Rule' name := c" :=
-  (MMERule (OneRule (fun ty => c%kami_sin : ActionT ty Void) name))
+  (MMERule (OneRule (fun ty => c%kami_sin : ActionT ty Void)
+                    {| nameVal := name;
+                       goodName := eq_refl |} ))
     (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Rule' 'as' 'idx' 'till' n 'by' name := c" :=
@@ -429,8 +457,8 @@ Notation "'Repeat' 'Rule' 'as' 'idx' 'till' n 'by' name := c" :=
                     natToVoid
                     withIndex_index_eq
                     (fun ty => c%kami_gen : GenActionT ty Void)
-                    name
-                    (getNatListToN n)))
+                    {| nameVal := name; goodName := eq_refl |}
+                    (getNatListToN_NoDup n)))
     (at level 0, name at level 0) : kami_meta_scope.
 
 Delimit Scope kami_meta_scope with kami_meta.

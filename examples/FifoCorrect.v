@@ -144,7 +144,7 @@ Section Facts.
       CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2) ->
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
@@ -165,7 +165,7 @@ Section Facts.
     - right; reflexivity.
     - right; reflexivity.
     - left; reflexivity.
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
@@ -181,7 +181,7 @@ Section Facts.
 
   Lemma fifo_inv_0_ok:
     forall o, reachable o fifo -> fifo_inv_0 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionInv.
     - simpl; kinv_magic.
     - intros; inv H0; inv HInRules.
@@ -190,7 +190,7 @@ Section Facts.
       + kinv_magic.
       + kinv_magic.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
@@ -210,7 +210,7 @@ Section Facts.
     forall o,
       reachable o fifo ->
       fifo_inv_1 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionInv.
     - simpl; kinv_magic; or3_fst; auto.
     - intros; inv H0; inv HInRules.
@@ -244,11 +244,11 @@ Section Facts.
           { or3_thd; auto. }
       + simpl in *; kinv_magic_with kinv_or3.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionOne with (eta:= fifo_nfifo_eta)
                                   (ruleMap:= fifo_nfifo_ruleMap)
                                   (specRegName:= ^"elt").
@@ -596,7 +596,7 @@ Section Facts.
         * clear HAction HAction0 Hsig Hsig0.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) admit.
+          (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End Facts.

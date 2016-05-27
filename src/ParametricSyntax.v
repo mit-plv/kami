@@ -897,72 +897,72 @@ Section MoreThm.
 End MoreThm.
 
 Inductive MetaReg :=
-| OneReg (b: sigT ConstFullT) (s: string)
+| OneReg (b: sigT ConstFullT) (s: NameRec)
 | RepReg A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
          (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                         si = sj /\ i = j)
-         (bgen: A -> sigT ConstFullT) (s: string) (ls: list A).
+         (bgen: A -> sigT ConstFullT) (s: NameRec) (ls: list A) (noDup: NoDup ls).
 
 Definition getListFromMetaReg m :=
   match m with
-    | OneReg b s => (s :: b)%struct :: nil
-    | RepReg A strA goodStrFn goodStrFn2 bgen s ls => getListFromRep strA bgen s ls
+    | OneReg b s => (nameVal s :: b)%struct :: nil
+    | RepReg A strA goodStrFn goodStrFn2 bgen s ls _ => getListFromRep strA bgen (nameVal s) ls
   end.
 
 Inductive MetaRule :=
-| OneRule (b: SinAction Void) (s: string)
+| OneRule (b: SinAction Void) (s: NameRec)
 | RepRule A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
           (GenK: Kind) (getConstK: A -> ConstT GenK)
           (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                          si = sj /\ i = j)
-          (bgen: GenAction GenK Void) (s: string) (ls: list A).
+          (bgen: GenAction GenK Void) (s: NameRec) (ls: list A) (noDup: NoDup ls).
 
 Definition getMetaRuleName m :=
   match m with
-    | OneRule _ s => s
-    | RepRule _ _ _ _ _ _ _ s _ => s
+    | OneRule _ s => nameVal s
+    | RepRule _ _ _ _ _ _ _ s _ _ => nameVal s
   end.
 
 Definition getCallsMetaRule r :=
   match r with
     | OneRule b _ => map (fun a => {| isRep := false;
                                       nameRec := a |}) (getCallsSinA (b typeUT))
-    | RepRule _ _ _ _ _ _ bgen _ _ => getCallsGenA (bgen typeUT)
+    | RepRule _ _ _ _ _ _ bgen _ _ _ => getCallsGenA (bgen typeUT)
   end.
 
 Definition getListFromMetaRule m :=
   match m with
-    | OneRule b s => (s :: getActionFromSin b)%struct :: nil
-    | RepRule A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls =>
-      repRule strA getConstK bgen s ls
+    | OneRule b s => (nameVal s :: getActionFromSin b)%struct :: nil
+    | RepRule A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls _ =>
+      repRule strA getConstK bgen (nameVal s) ls
   end.
 
 Inductive MetaMeth :=
-| OneMeth (b: sigT SinMethodT) (s: string)
+| OneMeth (b: sigT SinMethodT) (s: NameRec)
 | RepMeth A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
           (GenK: Kind) (getConstK: A -> ConstT GenK)
           (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                          si = sj /\ i = j)
-          (bgen: sigT (GenMethodT GenK)) (s: string) (ls: list A).
+          (bgen: sigT (GenMethodT GenK)) (s: NameRec) (ls: list A) (noDup: NoDup ls).
 
 Definition getMetaMethName m :=
   match m with
-    | OneMeth _ s => s
-    | RepMeth _ _ _ _ _ _ _ s _ => s
+    | OneMeth _ s => nameVal s
+    | RepMeth _ _ _ _ _ _ _ s _ _ => nameVal s
   end.
 
 Definition getCallsMetaMeth dm :=
   match dm with
     | OneMeth b _ => map (fun a => {| isRep := false;
                                       nameRec := a |}) (getCallsSinA (projT2 b typeUT tt))
-    | RepMeth _ _ _ _ _ _ bgen _ _ => getCallsGenA (projT2 bgen typeUT tt)
+    | RepMeth _ _ _ _ _ _ bgen _ _ _ => getCallsGenA (projT2 bgen typeUT tt)
   end.
 
 Definition getListFromMetaMeth m :=
   match m with
-    | OneMeth b s => (s :: getMethFromSin b)%struct :: nil
-    | RepMeth A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls =>
-      repMeth strA getConstK bgen s ls
+    | OneMeth b s => (nameVal s :: getMethFromSin b)%struct :: nil
+    | RepMeth A strA goodStrFn GenK getConstK goodStrFn2 bgen s ls _ =>
+      repMeth strA getConstK bgen (nameVal s) ls
   end.
 
 Record MetaModule :=
@@ -992,4 +992,3 @@ Record ModMulti A :=
     rulesMulti: list RuleMulti;
     methsMulti: list MethMulti
   }.
-    

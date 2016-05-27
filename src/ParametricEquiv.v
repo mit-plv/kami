@@ -1,4 +1,4 @@
-Require Import ParametricSyntax Syntax List Lib.CommonTactics.
+Require Import ParametricSyntax Syntax List Lib.CommonTactics Equiv.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.
@@ -7,50 +7,60 @@ Section Equiv.
   Definition ft2 := fullType t2.
   Hint Unfold ft1 ft2.
 
-  Inductive GenActionEquiv: forall {k}, GenActionT t1 k -> GenActionT t2 k -> Prop :=
-  | GAEMCall: forall {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
-                     (e2: Expr t2 (SyntaxKind (arg s)))
-                     (cont1: t1 (ret s) -> GenActionT t1 k)
-                     (cont2: t2 (ret s) -> GenActionT t2 k),
-                (forall (v1: ft1 (SyntaxKind (ret s)))
-                        (v2: ft2 (SyntaxKind (ret s))),
-                   GenActionEquiv (cont1 v1) (cont2 v2)) ->
-                GenActionEquiv (GMCall n s e1 cont1) (GMCall n s e2 cont2)
-  | GAELet: forall {k k1' k2'} (e1: Expr t1 k1') (e2: Expr t2 k2')
-                   (cont1: fullType t1 k1' -> GenActionT t1 k)
-                   (cont2: fullType t2 k2' -> GenActionT t2 k),
-              (forall (v1: ft1 k1') (v2: ft2 k2'),
-                 GenActionEquiv (cont1 v1) (cont2 v2)) ->
-              GenActionEquiv (GLet_ e1 cont1) (GLet_ e2 cont2)
-  | GAEReadReg: forall {k k1' k2'} rn
-                       (cont1: fullType t1 k1' -> GenActionT t1 k)
-                       (cont2: fullType t2 k2' -> GenActionT t2 k),
-                  (forall (v1: ft1 k1') (v2: ft2 k2'),
+  Section ForGenK.
+    Variable GenK: Kind.
+    Inductive GenActionEquiv: forall {k}, GenActionT GenK t1 k -> GenActionT GenK t2 k -> Prop :=
+    | GAEMCall: forall {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
+                       (e2: Expr t2 (SyntaxKind (arg s)))
+                       (cont1: t1 (ret s) -> GenActionT GenK t1 k)
+                       (cont2: t2 (ret s) -> GenActionT GenK t2 k),
+                  (forall (v1: ft1 (SyntaxKind (ret s)))
+                          (v2: ft2 (SyntaxKind (ret s))),
                      GenActionEquiv (cont1 v1) (cont2 v2)) ->
-                  GenActionEquiv (GReadReg rn _ cont1) (GReadReg rn _ cont2)
-  | GAEWriteReg: forall {k k1' k2'} rn (e1: Expr t1 k1') (e2: Expr t2 k2')
-                        (cont1: GenActionT t1 k) (cont2: GenActionT t2 k),
+                  GenActionEquiv (GMCall n s e1 cont1) (GMCall n s e2 cont2)
+    | GAEIndex: forall k
+                       (cont1: t1 GenK -> GenActionT GenK t1 k)
+                       (cont2: t2 GenK -> GenActionT GenK t2 k),
+                  (forall (v1: t1 GenK) (v2: t2 GenK),
+                     GenActionEquiv (cont1 v1) (cont2 v2)) ->
+                  GenActionEquiv (GIndex cont1) (GIndex cont2)
+    | GAELet: forall {k k1' k2'} (e1: Expr t1 k1') (e2: Expr t2 k2')
+                     (cont1: fullType t1 k1' -> GenActionT GenK t1 k)
+                     (cont2: fullType t2 k2' -> GenActionT GenK t2 k),
+                (forall (v1: ft1 k1') (v2: ft2 k2'),
+                   GenActionEquiv (cont1 v1) (cont2 v2)) ->
+                GenActionEquiv (GLet_ e1 cont1) (GLet_ e2 cont2)
+    | GAEReadReg: forall {k k1' k2'} rn
+                         (cont1: fullType t1 k1' -> GenActionT GenK t1 k)
+                         (cont2: fullType t2 k2' -> GenActionT GenK t2 k),
+                    (forall (v1: ft1 k1') (v2: ft2 k2'),
+                       GenActionEquiv (cont1 v1) (cont2 v2)) ->
+                    GenActionEquiv (GReadReg rn _ cont1) (GReadReg rn _ cont2)
+    | GAEWriteReg: forall {k k1' k2'} rn (e1: Expr t1 k1') (e2: Expr t2 k2')
+                          (cont1: GenActionT GenK t1 k) (cont2: GenActionT GenK t2 k),
+                     (* ExprEquiv G e1 e2 -> *)
+                     GenActionEquiv cont1 cont2 ->
+                     GenActionEquiv (GWriteReg rn e1 cont1) (GWriteReg rn e2 cont2)
+    | GAEIfElse: forall {k k'} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
+                        (ta1 fa1: GenActionT GenK t1 k') (ta2 fa2: GenActionT GenK t2 k')
+                        (cont1: t1 k' -> GenActionT GenK t1 k) (cont2: t2 k' ->
+                                                                       GenActionT GenK t2 k),
+                   (* ExprEquiv G e1 e2 -> *)
+                   GenActionEquiv ta1 ta2 -> GenActionEquiv fa1 fa2 ->
+                   (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
+                      GenActionEquiv (cont1 v1) (cont2 v2)) ->
+                   GenActionEquiv (GIfElse e1 ta1 fa1 cont1) (GIfElse e2 ta2 fa2 cont2)
+    | GAEAssert: forall {k} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
+                        (cont1: GenActionT GenK t1 k) (cont2: GenActionT GenK t2 k),
                    (* ExprEquiv G e1 e2 -> *)
                    GenActionEquiv cont1 cont2 ->
-                   GenActionEquiv (GWriteReg rn e1 cont1) (GWriteReg rn e2 cont2)
-  | GAEIfElse: forall {k k'} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
-                      (ta1 fa1: GenActionT t1 k') (ta2 fa2: GenActionT t2 k')
-                      (cont1: t1 k' -> GenActionT t1 k) (cont2: t2 k' -> GenActionT t2 k),
-                 (* ExprEquiv G e1 e2 -> *)
-                 GenActionEquiv ta1 ta2 -> GenActionEquiv fa1 fa2 ->
-                 (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
-                    GenActionEquiv (cont1 v1) (cont2 v2)) ->
-                 GenActionEquiv (GIfElse e1 ta1 fa1 cont1) (GIfElse e2 ta2 fa2 cont2)
-  | GAEAssert: forall {k} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
-                      (cont1: GenActionT t1 k) (cont2: GenActionT t2 k),
-                 (* ExprEquiv G e1 e2 -> *)
-                 GenActionEquiv cont1 cont2 ->
-                 GenActionEquiv (GAssert_ e1 cont1) (GAssert_ e2 cont2)
-  | GAERet: forall {k} (e1: Expr t1 (SyntaxKind k))
-                   (e2: Expr t2 (SyntaxKind k)),
-              (* ExprEquiv G e1 e2 -> *)
-              GenActionEquiv (GReturn e1) (GReturn e2).
-  
+                   GenActionEquiv (GAssert_ e1 cont1) (GAssert_ e2 cont2)
+    | GAERet: forall {k} (e1: Expr t1 (SyntaxKind k))
+                     (e2: Expr t2 (SyntaxKind k)),
+                (* ExprEquiv G e1 e2 -> *)
+                GenActionEquiv (GReturn GenK e1) (GReturn GenK e2).
+  End ForGenK.
+    
   Inductive SinActionEquiv: forall {k}, SinActionT t1 k -> SinActionT t2 k -> Prop :=
   | SAEMCall: forall {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
                      (e2: Expr t2 (SyntaxKind (arg s)))
@@ -98,7 +108,7 @@ Section Equiv.
   Definition MetaRuleEquiv r :=
     match r with
       | OneRule b s => SinActionEquiv (b t1) (b t2)
-      | RepRule _ _ _ _ bgen s _ => GenActionEquiv (bgen t1) (bgen t2)
+      | RepRule _ _ _ GenK _ _ bgen s _ _ => GenActionEquiv GenK (bgen t1) (bgen t2)
     end.
 
   Inductive MetaRulesEquiv: list MetaRule -> Prop :=
@@ -127,8 +137,8 @@ Section Equiv.
   Definition MetaMethEquiv r :=
     match r with
       | OneMeth b s => forall v1 v2, SinActionEquiv (projT2 b t1 v1) (projT2 b t2 v2)
-      | RepMeth _ _ _ _ bgen s _ => forall v1 v2, GenActionEquiv (projT2 bgen t1 v1)
-                                                                 (projT2 bgen t2 v2)
+      | RepMeth _ _ _ _ _ _ bgen s _ _ => forall v1 v2, GenActionEquiv _ (projT2 bgen t1 v1)
+                                                                     (projT2 bgen t2 v2)
     end.
 
   Inductive MetaMethsEquiv: list MetaMeth -> Prop :=
@@ -154,4 +164,10 @@ Section Equiv.
   Qed.
   
   Definition MetaModEquiv m := MetaRulesEquiv (metaRules m) /\ MetaMethsEquiv (metaMeths m).
+
+  Lemma metaModEquiv_modEquiv m:
+    MetaModEquiv m -> ModEquiv t1 t2 (makeModule m).
+  Proof.
+    admit.
+  Qed.
 End Equiv.

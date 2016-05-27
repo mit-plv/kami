@@ -62,7 +62,7 @@ Section ProcDecSC.
   Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kinline_left pdeci.
     kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
 
@@ -71,7 +71,7 @@ Section ProcDecSC.
     kinv_add_end.
 
     kinvert; kinv_magic_with kinv_or3.
-    END_SKIP_PROOF_ON *) admit.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End ProcDecSC.
