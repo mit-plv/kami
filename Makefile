@@ -1,4 +1,4 @@
-IGNORE:=src/ParametricInline examples/ProcMemCorrect
+IGNORE:=src/ParametricInline
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))

@@ -38,7 +38,7 @@ Section ProcMem.
       + apply duplicate_ModEquiv.
         eapply pdec_ModEquiv; eauto.
       + repeat apply ModEquiv_modular.
-        * apply duplicateByRep_ModEquiv.
+        * apply duplicate_ModEquiv.
           repeat apply ModEquiv_modular.
           { eapply l1Cache_ModEquiv; eauto. }
           { eapply RegFile.regFile_ModEquiv; eauto. }
