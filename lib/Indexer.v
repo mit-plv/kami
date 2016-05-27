@@ -132,7 +132,7 @@ Proof.
   inv H0; auto.
 Qed.
 
-Definition indexSymbol: string := "__"%string.
+Definition indexSymbol: string := "$"%string.
 Definition prefixSymbol: string := "."%string.
 
 Definition withIndex str idx := 
