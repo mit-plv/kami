@@ -326,7 +326,32 @@ Ltac kinv_magic_with tac :=
        end;
      try (kinv_finish; fail)). (* need element equalities? *)
 
+Ltac kinv_magic_light_with tac :=
+  repeat
+    (try tac;
+     repeat (* reductions *)
+       (kinv_red;
+        try
+          match goal with
+          | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
+          | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
+          | [ |- Substep _ _ _ _ _ ] => econstructor
+          | [ |- In _ _ ] => simpl; tauto
+          | [ |- SemAction _ _ _ _ _ ] => econstructor
+          end);
+     try reflexivity; (* same after reduction? *)
+     repeat
+       match goal with (* need some equality tactics? *)
+       | [ |- ?m1 = ?m2 ] =>
+         match type of m1 with
+         | M.t _ => meqReify
+         | forall _: BoundedIndexFull _, _ => boundedMapTac
+         | _ => idtac
+         end
+       end).
+
 Ltac kinv_magic := kinv_magic_with idtac.
+Ltac kinv_magic_light := kinv_magic_light_with idtac.
 
 Ltac kduplicated := apply duplicate_traceRefines; auto.
 
@@ -337,6 +362,9 @@ Ltac kgetv k v m t f :=
 (* TODO: "v" is not working *)
 Ltac kexistv k v m t :=
   refine (exists v: fullType type (SyntaxKind t),
+             M.find k m = Some (existT _ _ v) /\ _).
+Ltac kexistnv k v m t :=
+  refine (exists v: fullType type t,
              M.find k m = Some (existT _ _ v) /\ _).
 
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.

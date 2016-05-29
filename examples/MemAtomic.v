@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.Fifo.
+Require Import Ex.MemTypes Ex.SC Ex.NativeFifo.
 
 Set Implicit Arguments.
 
@@ -48,8 +48,8 @@ Section MemAtomic.
 
   Definition minst := memInst n addrSize lgDataBytes.
 
-  Definition inQ := simpleFifo "Ins" fifoSize (RqFromProc addrSize lgDataBytes).
-  Definition outQ := simpleFifo "Outs" fifoSize (RsToProc lgDataBytes).
+  Definition inQ := @nativeSimpleFifo "Ins" (RqFromProc addrSize lgDataBytes) Default.
+  Definition outQ := @nativeSimpleFifo "Outs" (RsToProc lgDataBytes) Default.
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition midQ := mid "Ins" "Outs" addrSize lgDataBytes.
@@ -64,8 +64,8 @@ Hint Unfold minst inQ outQ ioQ midQ iom ioms memAtomic : ModuleDefs.
 Section Facts.
 
   Lemma iom_ModEquiv:
-    forall a sz d m,
-      m = iom a sz d ->
+    forall a d m,
+      m = iom a d ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
@@ -73,8 +73,8 @@ Section Facts.
   Hint Resolve iom_ModEquiv.
 
   Lemma ioms_ModEquiv:
-    forall a sz d n m,
-      m = ioms a sz d n ->
+    forall a d n m,
+      m = ioms a d n ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
@@ -82,8 +82,8 @@ Section Facts.
   Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomic_ModEquiv:
-    forall a sz d n m,
-      m = memAtomic a sz d n ->
+    forall a d n m,
+      m = memAtomic a d n ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.

@@ -14,14 +14,15 @@ Section MemCorrect.
   Variable n: nat. (* number of caches (cores) *)
 
   Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
+  Definition nmemCache := MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n.
   Definition memAtomic := memAtomic (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
-                                    FifoSize LgDataBytes n.
+                                    LgDataBytes n.
 
   Lemma memCache_refines_memAtomic: memCache <<== memAtomic.
   Proof.
-    unfold memCache, MemCache.memCache.
-    unfold memAtomic, MemAtomic.memAtomic.
-    admit.
+    ktrans nmemCache.
+    - admit. (* joonwonc TODO *)
+    - admit. (* vmurali TODO *)
   Qed.
 
 End MemCorrect.

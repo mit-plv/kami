@@ -12,8 +12,6 @@ Section Decomposition.
   Variable thetaInit: theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
   Variable defsImpZero: getDefsBodies imp = nil.
   Variable defsSpecZero: getDefsBodies spec = nil.
-
-  Definition reachable o m := exists sigma, Behavior m o sigma.
   
   Variable substepRuleMap:
     forall oImp uImp rule csImp,
@@ -174,4 +172,266 @@ Section Decomposition.
     intuition.
   Qed.
 End Decomposition.
+
+Section ThetaExt.
+  Variable imp spec: Modules.
+  Variable thetaE: forall (r: RegsT), reachable r imp -> RegsT.
+  Variable ruleMap: RegsT -> string -> option string.
+  Variable p: string -> (sigT SignT) -> option (sigT SignT).
+  Variable thetaInit:
+    forall (HreachI: reachable (initRegs (getRegInits imp)) imp),
+      thetaE HreachI = (initRegs (getRegInits spec)).
+  Variable defsImpZero: getDefsBodies imp = nil.
+  Variable defsSpecZero: getDefsBodies spec = nil.
+
+  Variable substepRuleMap:
+    forall oImp uImp rule csImp
+           (Hreach: reachable oImp imp),
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
+      exists uSpec,
+        Substep spec (thetaE Hreach) uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
+        exists (HreachN: reachable (M.union uImp oImp) imp),
+          thetaE HreachN = (M.union uSpec (thetaE Hreach)).
+
+  Definition liftPE meth :=
+    match meth with
+    | (n :: t)%struct => match p n t with
+                         | None => None
+                         | Some v => Some (n :: v)%struct
+                         end
+    end.
+
+  Definition xformLabelE o l :=
+    match l with
+      | {| annot := a; defs := dfs; calls := clls |} =>
+        {| annot := match a with
+                      | Some (Some r) => Some (ruleMap o r)
+                      | Some None => Some None
+                      | None => None
+                    end;
+           defs := liftToMap1 p dfs;
+           calls := liftToMap1 p clls |}
+    end.
+
+  Lemma stepMapE:
+    forall o (reachO: reachable o imp)
+           u l (s: Step imp o u l),
+    exists uSpec,
+      Step spec (thetaE reachO) uSpec (xformLabelE o l) /\
+      exists (HreachN: reachable (M.union u o) imp),
+        thetaE HreachN = (M.union uSpec (thetaE reachO)).
+  Proof.
+    intros; apply stepZero in s; auto; dest.
+    destruct l as [ann ds cs]; simpl in *; subst.
+
+    destruct ann as [[r|]|].
+
+    - pose proof (substepRuleMap reachO H0).
+      destruct H as [uSpec [? [HreachN ?]]].
+      exists uSpec; split.
+      + apply substepZero_imp_step in H; auto.
+      + exists HreachN; auto.
+
+    - inv H0; exists (M.empty _); split.
+      + match goal with
+        | [ |- Step _ _ _ ?l ] =>
+          change l with (getLabel (Rle None) (M.empty _))
+        end.
+        apply substepZero_imp_step; auto.
+        constructor.
+      + mred; eauto.
+
+    - inv H0; exists (M.empty _); split.
+      + match goal with
+        | [ |- Step _ _ _ ?l ] =>
+          change l with (getLabel (Meth None) (M.empty _))
+        end.
+        apply substepZero_imp_step; auto.
+        constructor.
+      + mred; eauto.
+  Qed.
+
+  Lemma multistep_init_reachable:
+    forall o u l,
+      o = initRegs (getRegInits imp) ->
+      Multistep imp o u l ->
+      reachable u imp.
+  Proof.
+    intros; subst.
+    eexists; constructor; eauto.
+  Qed.
+
+  Lemma multistepMapE:
+    forall o u l,
+      o = initRegs (getRegInits imp) ->
+      Multistep imp o u l ->
+      exists (HreachU: reachable u imp) ll,
+        equivalentLabelSeq (liftToMap1 p) l ll /\
+        Multistep spec (initRegs (getRegInits spec)) (thetaE HreachU) ll.
+  Proof.
+    induction 2; simpl; intros; repeat subst.
+
+    - assert (reachable (initRegs (getRegInits imp)) imp).
+      { exists nil; repeat constructor. }
+      exists H; eexists; repeat split.
+      + instantiate (1:= nil); constructor.
+      + constructor; auto.
+
+    - specialize (IHMultistep eq_refl).
+      destruct IHMultistep as [HreachU [pll ?]]; dest.
+      apply stepMapE with (reachO:= HreachU) in HStep; auto.
+      destruct HStep as [uSpec [? [HreachN ?]]].
+
+      exists HreachN, (xformLabelE n l :: pll).
+      repeat split; auto.
+      + constructor; auto.
+        unfold equivalentLabel, xformLabel; simpl.
+        destruct l; destruct annot; simpl; intuition.
+        destruct o; simpl; intuition.
+      + rewrite H3; constructor; auto.
+  Qed.
+
+  Theorem decompositionZeroE:
+    traceRefines (liftToMap1 p) imp spec.
+  Proof.
+    unfold traceRefines; intros.
+    inv H.
+    apply multistepMapE in HMultistepBeh; auto.
+    destruct HMultistepBeh as [HreachU [ll ?]]; dest.
+    exists (thetaE HreachU), ll.
+    split; auto.
+    constructor; auto.
+  Qed.
+
+End ThetaExt.
+
+Section ThetaRel.
+  Variable imp spec: Modules.
+  Variable thetaR: forall (r: RegsT), reachable r imp -> RegsT -> Prop.
+  Variable ruleMap: RegsT -> string -> option string.
+  Variable p: string -> (sigT SignT) -> option (sigT SignT).
+  Variable thetaInit:
+    forall (HreachI: reachable (initRegs (getRegInits imp)) imp),
+      thetaR HreachI (initRegs (getRegInits spec)).
+  Variable thetaInitU:
+    forall (HreachI: reachable (initRegs (getRegInits imp)) imp) s,
+      thetaR HreachI s -> s = initRegs (getRegInits spec).
+  Variable defsImpZero: getDefsBodies imp = nil.
+  Variable defsSpecZero: getDefsBodies spec = nil.
+
+  Variable substepRuleMap:
+    forall oImp uImp rule csImp
+           (Hreach: reachable oImp imp),
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
+      forall oSpec,
+        thetaR Hreach oSpec ->
+        exists uSpec,
+          Substep spec oSpec uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
+          exists (HreachN: reachable (M.union uImp oImp) imp),
+            thetaR HreachN (M.union uSpec oSpec).
+
+  Definition liftPR meth :=
+    match meth with
+    | (n :: t)%struct => match p n t with
+                         | None => None
+                         | Some v => Some (n :: v)%struct
+                         end
+    end.
+
+  Definition xformLabelR o l :=
+    match l with
+      | {| annot := a; defs := dfs; calls := clls |} =>
+        {| annot := match a with
+                      | Some (Some r) => Some (ruleMap o r)
+                      | Some None => Some None
+                      | None => None
+                    end;
+           defs := liftToMap1 p dfs;
+           calls := liftToMap1 p clls |}
+    end.
+
+  Lemma stepMapR:
+    forall o (reachO: reachable o imp)
+           u l (s: Step imp o u l) oSpec,
+      thetaR reachO oSpec ->
+      exists uSpec,
+        Step spec oSpec uSpec (xformLabelR o l) /\
+        exists (HreachN: reachable (M.union u o) imp),
+          thetaR HreachN (M.union uSpec oSpec).
+  Proof.
+    intros; apply stepZero in s; auto; dest.
+    destruct l as [ann ds cs]; simpl in *; subst.
+
+    destruct ann as [[r|]|].
+
+    - pose proof (substepRuleMap H1 H).
+      destruct H0 as [uSpec [? [HreachN ?]]].
+      exists uSpec; split.
+      + apply substepZero_imp_step in H0; auto.
+      + exists HreachN; auto.
+
+    - inv H1; exists (M.empty _); split.
+      + match goal with
+        | [ |- Step _ _ _ ?l ] =>
+          change l with (getLabel (Rle None) (M.empty _))
+        end.
+        apply substepZero_imp_step; auto.
+        constructor.
+      + mred; eauto.
+
+    - inv H1; exists (M.empty _); split.
+      + match goal with
+        | [ |- Step _ _ _ ?l ] =>
+          change l with (getLabel (Meth None) (M.empty _))
+        end.
+        apply substepZero_imp_step; auto.
+        constructor.
+      + mred; eauto.
+  Qed.
+
+  Lemma multistepMapR:
+    forall o u l,
+      o = initRegs (getRegInits imp) ->
+      Multistep imp o u l ->
+      exists (HreachU: reachable u imp) uSpec ll,
+        thetaR HreachU uSpec /\
+        equivalentLabelSeq (liftToMap1 p) l ll /\
+        Multistep spec (initRegs (getRegInits spec)) uSpec ll.
+  Proof.
+    induction 2; simpl; intros; repeat subst.
+
+    - assert (reachable (initRegs (getRegInits imp)) imp).
+      { exists nil; repeat constructor. }
+      exists H; do 2 eexists; repeat split.
+      + instantiate (1:= initRegs (getRegInits spec)); auto.
+      + instantiate (1:= nil); constructor.
+      + constructor; auto.
+
+    - specialize (IHMultistep eq_refl).
+      destruct IHMultistep as [HreachU [puSpec [pll ?]]]; dest.
+      apply stepMapR with (reachO:= HreachU) (oSpec:= puSpec) in HStep; auto.
+      destruct HStep as [uSpec [? [HreachN ?]]].
+
+      exists HreachN, (M.union uSpec puSpec), (xformLabelR n l :: pll).
+      repeat split; auto.
+      + constructor; auto.
+        unfold equivalentLabel, xformLabel; simpl.
+        destruct l; destruct annot; simpl; intuition.
+        destruct o; simpl; intuition.
+      + constructor; auto.
+  Qed.
+
+  Theorem decompositionZeroR:
+    traceRefines (liftToMap1 p) imp spec.
+  Proof.
+    unfold traceRefines; intros.
+    inv H.
+    apply multistepMapR in HMultistepBeh; auto.
+    destruct HMultistepBeh as [HreachU [uSpec [ll ?]]]; dest.
+    exists uSpec, ll.
+    split; auto.
+    constructor; auto.
+  Qed.
+
+End ThetaRel.
 
