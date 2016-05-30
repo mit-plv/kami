@@ -30,69 +30,9 @@ Section ProcMem.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ mcache)%kami <<== scN.
   Proof.
-    ktrans (pdecN ++ memAtomic AddrSize FifoSize LgDataBytes n)%kami.
+    ktrans (pdecN ++ memAtomic AddrSize LgDataBytes n)%kami.
 
-    - simple kmodular.
-      + apply duplicate_ModEquiv.
-        eapply pdec_ModEquiv; eauto.
-      + apply duplicate_ModEquiv.
-        eapply pdec_ModEquiv; eauto.
-      + repeat apply ModEquiv_modular.
-        * apply duplicate_ModEquiv.
-          repeat apply ModEquiv_modular.
-          { eapply l1Cache_ModEquiv; eauto. }
-          { eapply RegFile.regFile_ModEquiv; eauto. }
-          { eapply RegFile.regFile_ModEquiv; eauto. }
-          { eapply RegFile.regFile_ModEquiv; eauto. }
-          { eapply Fifo.fifo_ModEquiv; eauto. }
-          { eapply Fifo.fifo_ModEquiv; eauto. }
-          { eapply Fifo.fifo_ModEquiv; eauto. }
-          { eapply Fifo.fifo_ModEquiv; eauto. }
-          { eapply Fifo.fifo_ModEquiv; eauto. }
-        * (* unfold childParent, ChildParent.childParent. *)
-          (* unfold MetaSyntax.makeModule; simpl. *)
-          (* constructor; simpl. *)
-          (* { repeat apply RulesEquiv_app. *)
-          (*   { induction (ChildParent.n n); [kequiv|]. *)
-          (*     simpl; constructor; auto. *)
-          (*     kequiv. *)
-          (*   } *)
-          (*   { induction (ChildParent.n n); [kequiv|]. *)
-          (*     simpl; constructor; auto. *)
-          (*     kequiv. *)
-          (*   } *)
-          (*   { induction (ChildParent.n n); [kequiv|]. *)
-          (*     simpl; constructor; auto. *)
-          (*     kequiv. *)
-          (*   } *)
-          (*   { constructor. } *)
-          (* } *)
-          (* { constructor. } *)
-          admit.
-        * eapply Fifo.fifo_ModEquiv; eauto.
-        * eapply Fifo.fifo_ModEquiv; eauto.
-        * eapply Fifo.fifo_ModEquiv; eauto.
-        * admit. (* eapply MemDir.memDir_ModEquiv; eauto. *)
-        * eapply RegFile.regFile_ModEquiv; eauto.
-        * eapply RegFile.regFile_ModEquiv; eauto.
-          
-      + eapply MemAtomic.memAtomic_ModEquiv; eauto.
-        
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + auto.
-
-      + krefl.
-      + apply memCache_refines_memAtomic.
-
+    - admit.
     - unfold MethsT; rewrite <-idElementwiseId.
       apply pdecN_memAtomic_refines_scN.
   Qed.

@@ -122,7 +122,7 @@ Hint Unfold RqFromProc RsToProc opLd opSt opHt
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
@@ -131,7 +131,7 @@ Section ProcDecM.
   Definition pdec := procDec "Ins"%string "Outs"%string dec execState execNextPc.
   Definition pdecs (i: nat) := duplicate pdec i.
 
-  Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
+  Definition pdecf := ConcatMod pdec (iom addrSize lgDataBytes).
   Definition pdecfs (i: nat) := duplicate pdecf i.
   Definition procDecM (n: nat) := ConcatMod (pdecfs n) (minst addrSize lgDataBytes n).
 
@@ -140,7 +140,7 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
@@ -156,8 +156,8 @@ Section Facts.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall fsz m,
-      m = pdecf fsz dec execState execNextPc ->
+    forall m,
+      m = pdecf dec execState execNextPc ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
@@ -165,8 +165,8 @@ Section Facts.
   Hint Resolve pdecf_ModEquiv.
 
   Lemma pdecfs_ModEquiv:
-    forall fsz n m,
-      m = pdecfs fsz dec execState execNextPc n ->
+    forall n m,
+      m = pdecfs dec execState execNextPc n ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
@@ -174,8 +174,8 @@ Section Facts.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall fsz n m,
-      m = procDecM fsz dec execState execNextPc n ->
+    forall n m,
+      m = procDecM dec execState execNextPc n ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.

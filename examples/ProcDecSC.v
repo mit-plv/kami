@@ -3,15 +3,15 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Inline Lts.InlineFacts_2.
-Require Import Lts.DecompositionZero Lts.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
+Require Import Lts.DecompositionZero Lts.Notations Lts.Tactics.
+Require Import Ex.MemTypes Ex.SC Ex.NativeFifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
@@ -20,7 +20,7 @@ Section ProcDecSC.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdec := pdecf fifoSize dec execState execNextPc.
+  Definition pdec := pdecf dec execState execNextPc.
   Definition pinst := pinst dec execState execNextPc opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
@@ -32,42 +32,40 @@ Section ProcDecSC.
     "processLd" |-> "execLd";
     "processSt" |-> "execSt"; ||.
 
-  Definition pdec_pinst_regMap (r: RegsT): RegsT.
+  Definition pdec_pinst_regRel (ir sr: RegsT): Prop.
   Proof.
-    kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
-    kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
-    kgetv "Outs"--"empty"%string oev r Bool (M.empty (sigT (fullType type))).
-    kgetv "Outs"--"elt"%string oelv r (Vector RsToProc fifoSize)
-          (M.empty (sigT (fullType type))).
-    kgetv "Outs"--"deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
+    kgetv "pc"%string pcv ir (Bit addrSize) False.
+    kgetv "rf"%string rfv ir (Vector (Data lgDataBytes) rfIdx) False.
+    refine (exists oeltv: fullType type (listEltK RsToProc type),
+               M.find "Outs"--"elt" ir = Some (existT _ _ oeltv) /\ _).
 
     pose proof (evalExpr (dec _ rfv pcv)) as inst.
-    refine (
-        if oev
-        then (M.add "pc"%string (existT _ _ pcv)
-                    (M.add "rf"%string (existT _ _ rfv)
-                           (M.empty _)))
-        else (M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
-                    (M.add "rf"%string _ (M.empty _)))
-      ).
+    refine (match oeltv with
+            | nil => sr = M.add "pc"%string (existT _ _ pcv)
+                                (M.add "rf"%string (existT _ _ rfv)
+                                       (M.empty _))
+            | _ => sr = M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
+                              (M.add "rf"%string _ (M.empty _))
+            end).
 
     pose proof (inst ``"opcode") as opc.
     destruct (weq opc (evalConstT opLd)).
     - refine (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx)) _); simpl.
       exact (fun a => if weq a (inst ``"reg")
-                      then (oelv odv) ``"data"
+                      then hd (evalConstT Default) oeltv ``"data"
                       else rfv a).
     - refine (existT _ _ rfv).
   Defined.
-  Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
+  Hint Unfold pdec_pinst_regRel: MethDefs. (* for kdecompose_regMap_init *)
+  Hint Unfold evalConstT: MethDefs.
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
     kinline_left pdeci.
-    kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
+    kdecomposeR_nodefs pdec_pinst_regRel pdec_pinst_ruleMap.
 
-    pose proof (procDec_inv_0_ok H).
-    pose proof (procDec_inv_1_ok H).
+    pose proof (procDec_inv_0_ok Hreach).
+    pose proof (procDec_inv_1_ok Hreach).
     kinv_add_end.
 
     kinvert; kinv_magic_with kinv_or3.
