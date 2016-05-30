@@ -307,15 +307,12 @@ End ThetaExt.
 
 Section ThetaRel.
   Variable imp spec: Modules.
-  Variable thetaR: forall (r: RegsT), reachable r imp -> RegsT -> Prop.
+  Variable thetaR: RegsT -> RegsT -> Prop.
   Variable ruleMap: RegsT -> string -> option string.
   Variable p: string -> (sigT SignT) -> option (sigT SignT).
-  Variable thetaInit:
-    forall (HreachI: reachable (initRegs (getRegInits imp)) imp),
-      thetaR HreachI (initRegs (getRegInits spec)).
+  Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
   Variable thetaInitU:
-    forall (HreachI: reachable (initRegs (getRegInits imp)) imp) s,
-      thetaR HreachI s -> s = initRegs (getRegInits spec).
+    forall s, thetaR (initRegs (getRegInits imp)) s -> s = initRegs (getRegInits spec).
   Variable defsImpZero: getDefsBodies imp = nil.
   Variable defsSpecZero: getDefsBodies spec = nil.
 
@@ -324,11 +321,10 @@ Section ThetaRel.
            (Hreach: reachable oImp imp),
       Substep imp oImp uImp (Rle (Some rule)) csImp ->
       forall oSpec,
-        thetaR Hreach oSpec ->
+        thetaR oImp oSpec ->
         exists uSpec,
           Substep spec oSpec uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
-          exists (HreachN: reachable (M.union uImp oImp) imp),
-            thetaR HreachN (M.union uSpec oSpec).
+          thetaR (M.union uImp oImp) (M.union uSpec oSpec).
 
   Definition liftPR meth :=
     match meth with
@@ -353,22 +349,21 @@ Section ThetaRel.
   Lemma stepMapR:
     forall o (reachO: reachable o imp)
            u l (s: Step imp o u l) oSpec,
-      thetaR reachO oSpec ->
+      thetaR o oSpec ->
       exists uSpec,
         Step spec oSpec uSpec (xformLabelR o l) /\
-        exists (HreachN: reachable (M.union u o) imp),
-          thetaR HreachN (M.union uSpec oSpec).
+        thetaR (M.union u o) (M.union uSpec oSpec).
   Proof.
     intros; apply stepZero in s; auto; dest.
     destruct l as [ann ds cs]; simpl in *; subst.
 
     destruct ann as [[r|]|].
 
-    - pose proof (substepRuleMap H1 H).
-      destruct H0 as [uSpec [? [HreachN ?]]].
+    - pose proof (substepRuleMap reachO H1 H).
+      destruct H0 as [uSpec ?]; dest.
       exists uSpec; split.
       + apply substepZero_imp_step in H0; auto.
-      + exists HreachN; auto.
+      + auto.
 
     - inv H1; exists (M.empty _); split.
       + match goal with
@@ -393,26 +388,25 @@ Section ThetaRel.
     forall o u l,
       o = initRegs (getRegInits imp) ->
       Multistep imp o u l ->
-      exists (HreachU: reachable u imp) uSpec ll,
-        thetaR HreachU uSpec /\
+      exists uSpec ll,
+        thetaR u uSpec /\
         equivalentLabelSeq (liftToMap1 p) l ll /\
         Multistep spec (initRegs (getRegInits spec)) uSpec ll.
   Proof.
     induction 2; simpl; intros; repeat subst.
 
-    - assert (reachable (initRegs (getRegInits imp)) imp).
-      { exists nil; repeat constructor. }
-      exists H; do 2 eexists; repeat split.
+    - do 2 eexists; repeat split.
       + instantiate (1:= initRegs (getRegInits spec)); auto.
       + instantiate (1:= nil); constructor.
       + constructor; auto.
 
     - specialize (IHMultistep eq_refl).
-      destruct IHMultistep as [HreachU [puSpec [pll ?]]]; dest.
-      apply stepMapR with (reachO:= HreachU) (oSpec:= puSpec) in HStep; auto.
-      destruct HStep as [uSpec [? [HreachN ?]]].
+      destruct IHMultistep as [puSpec [pll ?]]; dest.
+      apply stepMapR with (oSpec:= puSpec) in HStep; auto;
+        [|eexists; constructor; eauto].
+      destruct HStep as [uSpec ?]; dest.
 
-      exists HreachN, (M.union uSpec puSpec), (xformLabelR n l :: pll).
+      exists (M.union uSpec puSpec), (xformLabelR n l :: pll).
       repeat split; auto.
       + constructor; auto.
         unfold equivalentLabel, xformLabel; simpl.
@@ -427,7 +421,7 @@ Section ThetaRel.
     unfold traceRefines; intros.
     inv H.
     apply multistepMapR in HMultistepBeh; auto.
-    destruct HMultistepBeh as [HreachU [uSpec [ll ?]]]; dest.
+    destruct HMultistepBeh as [uSpec [ll ?]]; dest.
     exists uSpec, ll.
     split; auto.
     constructor; auto.

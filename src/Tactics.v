@@ -222,8 +222,11 @@ Ltac kregmap_red :=
     (kstring_simpl;
      try match goal with
          | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
+         | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] => rewrite H1 in H2
          | [ |- context[decKind ?k ?k] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
+         | [H: context[decKind ?k ?k] |- _] =>
+           rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
          end;
      dest; try subst;
      try findReify);
@@ -267,6 +270,11 @@ Ltac kinv_contra :=
           end; dest; try subst);
        fail).
 
+Lemma Some_inv: forall A (s t: A), Some s = Some t -> s = t.
+Proof.
+  intros; inv H; reflexivity.
+Qed.
+
 Ltac kinv_simpl :=
   kstring_simpl;
   repeat
@@ -283,7 +291,7 @@ Ltac kinv_simpl :=
          | [H: (if ?c then false else true) = true |- _] => destruct c; [inv H|]
          | [H: (if ?c then false else true) = false |- _] => destruct c; [|inv H]
          | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] => rewrite H1 in H2
-         | [H: Some _ = Some _ |- _] => inv H; destruct_existT
+         | [H: Some _ = Some _ |- _] => apply Some_inv in H; destruct_existT
          end; dest; try subst).
 
 Ltac kinv_red :=
