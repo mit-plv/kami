@@ -186,9 +186,9 @@ Section Facts.
     - simpl; kinv_magic.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
-      + kinv_magic.
-      + kinv_magic.
-      + kinv_magic.
+      + kinv_magic_light.
+      + kinv_magic_light.
+      + kinv_magic_light.
     - apply fifo_substeps_updates.
       END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -215,7 +215,7 @@ Section Facts.
     - simpl; kinv_magic; or3_fst; auto.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
-      + simpl in *; kinv_magic_with kinv_or3.
+      + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
@@ -231,7 +231,7 @@ Section Facts.
             destruct (weq _ _); auto.
             elim n0; auto.
           }
-      + simpl in *; kinv_magic_with kinv_or3.
+      + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
@@ -242,7 +242,10 @@ Section Facts.
         * destruct (weq x5 (x6 ^+ $0~1)).
           { or3_fst; auto. }
           { or3_thd; auto. }
-      + simpl in *; kinv_magic_with kinv_or3.
+      + simpl in *; kinv_magic_light_with kinv_or3.
+        * or3_snd; auto.
+        * or3_thd; repeat split; auto.
+          destruct (weq _ _); auto; elim n; auto.
     - apply fifo_substeps_updates.
       END_SKIP_PROOF_ON *) admit.
   Qed.
