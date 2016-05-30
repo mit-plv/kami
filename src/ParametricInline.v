@@ -340,42 +340,31 @@ Section GenGen.
     apply noDup_preserveRule; auto.
   Qed.
 
-  (*
-  Hypothesis HdmNoRule: forall r,
-                          In r (prefix ++ suffix) ->
-                          forall dm, In dm dms ->
-                                     noCallDmSigA (attrType r typeUT) (attrName dm)
-                                                  (projT1 (attrType dm)) = true.
+  Hypothesis HdmNoRule:
+    forall r',
+      In r' (preR ++ sufR) ->
+      match r' with
+        | OneRule a _ => noCallDmSigSinA (a typeUT) dmName (projT1 dm) = true
+        | RepRule _ _ _ _ _ _ bgen _ _ _ =>
+          noCallDmSigGenA (bgen typeUT) {| isRep := true; nameRec := dmName |} (projT1 dm) = true
+      end.
 
   Hypothesis HdmNoMeth:
     forall d,
-      In d (getDefsBodies m) ->
-      forall dm, In dm dms ->
-                 noCallDmSigA (projT2 (attrType d) typeUT tt)
-                              (attrName dm) (projT1 (attrType dm)) = true.
+      In d (metaMeths m) ->
+      match d with
+        | OneMeth a _ => noCallDmSigSinA (projT2 a typeUT tt) dmName (projT1 dm) = true
+        | RepMeth _ _ _ _ _ _ bgen _ _ _ =>
+          noCallDmSigGenA (projT2 bgen typeUT tt) {| isRep := true; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
 
-  Hypothesis HDmsInRs: forall dm,
-                         In dm dms ->
-                         exists r, In r rs /\
-                                   In (attrName dm) (getCallsA (attrType r typeUT)).
-  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
-
-
+  Hypothesis HDmInR:
+    In (nameVal dmName) (map (fun n => nameVal (nameRec n)) (getCallsGenA (r typeUT))).
   
-  Hypothesis HnoRuleCalls: forall rule,
-  Hypothesis mEquiv: forall t, MetaModEquiv t typeUT m.
+  Hypothesis HnoCall: noCallGenDm dm dm = true.
 
-                             In rule (metaRules m) ->
-                             getMetaRuleName rule <> rName ->
-                             ~ In dmName (map (fun n => nameVal (nameRec n))
-                                              (getCallsMetaRule rule)).
 
-  Hypothesis HnoMethCalls: forall meth,
-                             In meth (metaMeths m) ->
-                             getMetaMethName meth <> dmName ->
-                             ~ In dmName (map (fun n => nameVal (nameRec n))
-                                              (getCallsMetaMeth meth)).
-  
   Lemma inlineGenGenDmToRule_traceRefines_2:
     makeModule m <<==
                makeModule

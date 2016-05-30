@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2 Tactics.
+Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts_1 InlineFacts_2.
 Require Import Refinement.
 
 Set Implicit Arguments.
@@ -167,7 +167,9 @@ Proof.
 Qed.
 
 Lemma inlineDm_noCallDmSigA:
-  forall (dm: DefMethT) (Hdm: noCallDm dm dm = true)
+  forall (dm: DefMethT)
+         (Hdm: noCallDmSigA (projT2 (attrType dm) typeUT tt)
+                            (attrName dm) (projT1 (attrType dm)) = true)
          {retK} (a: ActionT typeUT retK),
     noCallDmSigA (inlineDm a dm) (attrName dm) (projT1 (attrType dm)) = true.
 Proof.
@@ -181,14 +183,16 @@ Proof.
   - simpl; rewrite appendAction_noCallDmSigA.
     apply andb_true_iff; split; auto.
     subst; simpl.
-    apply noCallDm_noCallDmSigA; auto.
+    assumption.
   - simpl; rewrite <-Heqmd; simpl.
     destruct (SignatureT_dec _ _); [elim n; auto|].
     simpl; auto.
 Qed.
 
 Lemma inlineDmToRule_noCallDmSigA:
-  forall (dm: DefMethT) (Hdm: noCallDm dm dm = true) r,
+  forall (dm: DefMethT)
+         (Hdm: noCallDmSigA (projT2 (attrType dm) typeUT tt)
+                            (attrName dm) (projT1 (attrType dm)) = true) r,
     noCallDmSigA (attrType (inlineDmToRule r dm) typeUT)
                  (attrName dm) (projT1 (attrType dm)) = true.
 Proof.
@@ -736,7 +740,6 @@ Section Partial.
 
   Hypotheses (Hequiv: ModEquiv type typeUT m)
              (HrCalls: In (attrName dm) (getCallsA (attrType r typeUT)))
-             (HnoCallDm: noCallDm dm dm = true)
              (HnoRuleCalls: forall rule,
                  In rule (getRules m) ->
                  attrName rule <> attrName r ->

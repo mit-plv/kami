@@ -1,8 +1,25 @@
 Require Import Syntax String Lib.Struct List Inline InlineFacts_2
         CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics.
+        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension.
 
 Set Implicit Arguments.
+
+Ltac dest_str :=
+  match goal with
+    | |- context[string_eq ?p ?q] =>
+      case_eq (string_eq p q);
+        [let x := fresh in intros x; apply eq_sym in x;
+                           apply string_eq_dec_eq in x; subst|
+         let x := fresh in intros x; apply eq_sym in x;
+                           apply string_eq_dec_neq in x; subst]
+    | H: context[string_eq ?p ?q] |- _ =>
+      case_eq (string_eq p q);
+        [let x := fresh in intros x; apply eq_sym in x;
+                           apply string_eq_dec_eq in x; subst|
+         let x := fresh in intros x; apply eq_sym in x;
+                           apply string_eq_dec_neq in x; subst]
+  end.
+
 
 Fixpoint concat A (ls: list (list A)) :=
   match ls with
@@ -289,7 +306,27 @@ Section Rep.
       | GAssert_ e c => getCallsGenA c
       | GReturn e => nil
     end.
-  
+
+  Fixpoint noCallDmSigGenA {retT} (a: GenActionT typeUT retT) (dmn: NameRecIdx)
+           (dsig: SignatureT) :=
+    match a with
+    | GMCall name sig _ cont =>
+      ((negb (string_eq (nameVal (nameRec name)) (nameVal (nameRec dmn)) &&
+                        eqb (isRep name) (isRep dmn)))
+       || (if SignatureT_dec sig dsig then false else true))
+        && (noCallDmSigGenA (cont tt) dmn dsig)
+    | GIndex c => noCallDmSigGenA (c tt) dmn dsig
+    | GLet_ _ ar cont => noCallDmSigGenA (cont (getUT _)) dmn dsig
+    | GReadReg reg k cont => noCallDmSigGenA (cont (getUT _)) dmn dsig
+    | GWriteReg reg _ e cont => noCallDmSigGenA cont dmn dsig
+    | GIfElse ce _ ta fa cont =>
+      (noCallDmSigGenA ta dmn dsig) &&
+                                    (noCallDmSigGenA fa dmn dsig) &&
+                                    (noCallDmSigGenA (cont tt) dmn dsig)
+    | GAssert_ ae cont => noCallDmSigGenA cont dmn dsig
+    | GReturn e => true
+    end.
+
   Definition getFullCallsGenA k (gr: GenActionT typeUT k) ls :=
     concat (map (fun i => map (strFromName i) (getCallsGenA gr)) ls).
 
@@ -303,6 +340,49 @@ Section Rep.
       reflexivity.
   Qed.
 
+  Lemma noCallDmSigGenA_matches (i: A) dmn dsig k (a: GenActionT typeUT k):
+    noCallDmSigA (getGenAction i a) (strFromName i dmn) dsig =
+    noCallDmSigGenA a dmn dsig.
+  Proof.
+    induction a; simpl in *; auto; unfold strFromName.
+    - rewrite H.
+      repeat dest_str; simpl in *; auto.
+      + rewrite H1 in *;
+        destruct (isRep meth), (isRep dmn); simpl in *; auto;
+        try (match goal with
+               | H: addIndexToStr ?i ?l1 = ?l2 |- _ =>
+                 assert (sth: String.length (addIndexToStr i l1) =
+                              String.length l2) by (f_equal; auto)
+               | H: ?l2 = addIndexToStr ?i ?l1 |- _ =>
+                 assert (sth: String.length l2 =
+                              String.length (addIndexToStr i l1)) by (f_equal; auto)
+             end;
+             unfold addIndexToStr in *;
+               rewrite S_app_length in sth; simpl in *; omega).
+      + destruct meth as [mRep [mNm mPf]];
+        destruct dmn as [nRep [nNm nPf]]; simpl in *;
+        pose proof (proj1 (index_not_in _ _) mPf) as mPf1;
+        pose proof (proj1 (index_not_in _ _) nPf) as nPf1.
+        destruct mRep, nRep; simpl in *; auto; unfold addIndexToStr in *; simpl in *;
+        repeat match goal with
+                 | H: (?l1 ++ ?l2)%string = (?l3 ++ ?l2)%string |- _ =>
+                   apply S_app_inv_tail in H; intuition auto
+                 | H: ?l3 = (?l1 ++ String ?a ?l2)%string |- _ => apply eq_sym in H
+                 | H: (?l1 ++ String ?a ?l2)%string = ?l3 |- _ =>
+                   assert (S_In a l3) by (rewrite <- H; apply S_in_or_app; simpl in *; right;
+                                          intuition auto); intuition auto
+                 | _ => idtac
+               end; intuition auto.
+      + destruct meth as [mRep [mNm mPf]];
+        destruct dmn as [nRep [nNm nPf]]; simpl in *;
+        pose proof (proj1 (index_not_in _ _) mPf) as mPf1;
+        pose proof (proj1 (index_not_in _ _) nPf) as nPf1.
+        destruct mRep, nRep; simpl in *; auto; unfold addIndexToStr in *; simpl in *; subst;
+        intuition auto.
+    - rewrite <- H, <- IHa1, <- IHa2; simpl in *; unfold strFromName;
+      destruct (isRep dmn); simpl in *; reflexivity.
+  Qed.
+  
   Definition getGenGenBody (n: NameRecIdx) dn (dm: sigT GenMethodT)
              (sig: SignatureT):
     option (sigT (fun x: sigT GenMethodT => projT1 x = sig)) :=
@@ -519,6 +599,24 @@ Section Sin.
       | SReturn e => nil
     end.
 
+  Fixpoint noCallDmSigSinA {retT} (a: SinActionT typeUT retT) (dmn: NameRec)
+           (dsig: SignatureT) :=
+    match a with
+    | SMCall name sig _ cont =>
+      ((negb (string_eq (nameVal name) (nameVal dmn)))
+       || (if SignatureT_dec sig dsig then false else true))
+        && (noCallDmSigSinA (cont tt) dmn dsig)
+    | SLet_ _ ar cont => noCallDmSigSinA (cont (getUT _)) dmn dsig
+    | SReadReg reg k cont => noCallDmSigSinA (cont (getUT _)) dmn dsig
+    | SWriteReg reg _ e cont => noCallDmSigSinA cont dmn dsig
+    | SIfElse ce _ ta fa cont =>
+      (noCallDmSigSinA ta dmn dsig) &&
+                                    (noCallDmSigSinA fa dmn dsig) &&
+                                    (noCallDmSigSinA (cont tt) dmn dsig)
+    | SAssert_ ae cont => noCallDmSigSinA cont dmn dsig
+    | SReturn e => true
+    end.
+  
   Lemma getCallsSinA_matches k (a: SinActionT typeUT k):
     getCallsA (getSinAction a) = map nameVal (getCallsSinA a).
   Proof.
@@ -528,7 +626,17 @@ Section Sin.
       rewrite IHa1, IHa2, H.
       reflexivity.
   Qed.
-  
+
+  Lemma noCallDmSigSinA_matches (i: A) dmn dsig k (a: SinActionT typeUT k):
+    noCallDmSigA (getSinAction a) (nameVal dmn) dsig =
+    noCallDmSigSinA a dmn dsig.
+  Proof.
+    induction a; simpl in *; auto; unfold strFromName.
+    - rewrite H.
+      repeat dest_str; simpl in *; auto.
+    - rewrite <- H, <- IHa1, <- IHa2; reflexivity.
+  Qed.  
+
   Definition getGenSinBody (n: NameRecIdx) dn (dm: sigT SinMethodT)
              (sig: SignatureT):
     option (sigT (fun x: sigT SinMethodT => projT1 x = sig)) :=
@@ -975,6 +1083,7 @@ Definition makeModule m := Mod (concat (map getListFromMetaReg (metaRegs m)))
                                (concat (map getListFromMetaRule (metaRules m)))
                                (concat (map getListFromMetaMeth (metaMeths m))).
 
+(*
 Record RegMulti A :=
   { regGen: A -> sigT ConstFullT;
     regName: string }.
@@ -992,3 +1101,4 @@ Record ModMulti A :=
     rulesMulti: list RuleMulti;
     methsMulti: list MethMulti
   }.
+*)
