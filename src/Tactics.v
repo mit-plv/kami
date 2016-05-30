@@ -268,6 +268,7 @@ Ltac kinvert :=
 
 Ltac kinv_contra :=
   try (exfalso;
+       repeat autounfold with MethDefs in *;
        repeat autounfold with InvDefs in *; dest; subst;
        repeat
          (match goal with
@@ -317,56 +318,44 @@ Ltac kinv_finish :=
          end;
      simpl in *; kinv_simpl; auto).
 
-Ltac kinv_magic_with tac :=
+Ltac kinv_action_dest := kinv_red; invertActionRep.
+Ltac kinv_custom tac := kinv_red; try tac; kinv_red; kinv_contra.
+Ltac kinv_regmap_red := kinv_red; kregmap_red.
+Ltac kinv_constr :=
   repeat
-    (try tac;
-     repeat (* reductions *)
-       (kinv_red;
-        try
-          match goal with
-          | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
-          | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
-          | [ |- Substep _ _ _ _ _ ] => econstructor
-          | [ |- In _ _ ] => simpl; tauto
-          | [ |- SemAction _ _ _ _ _ ] => econstructor
-          end);
-     try reflexivity; (* same after reduction? *)
-     repeat
-       match goal with (* need some equality tactics? *)
-       | [ |- ?m1 = ?m2 ] =>
-         match type of m1 with
-         | M.t _ => meqReify
-         | forall _: BoundedIndexFull _, _ => boundedMapTac
-         | _ => idtac
-         end
-       end;
-     try (kinv_finish; fail)). (* need element equalities? *)
+    (kinv_red;
+     repeat match goal with
+            | [ |- exists _, _ /\ _ ] => eexists; split
+            | [ |- Substep _ _ _ _ _ ] => econstructor
+            | [ |- In _ _ ] => simpl; tauto
+            | [ |- SemAction _ _ _ _ _ ] => econstructor
+            | [ |- _ = _ ] => reflexivity
+            end
+    ).
+Ltac kinv_eq :=
+  repeat
+    (first [reflexivity
+           |meqReify
+           |boundedMapTac
+    ]).
 
-Ltac kinv_magic_light_with tac :=
-  repeat
-    (try tac;
-     repeat (* reductions *)
-       (kinv_red;
-        try
-          match goal with
-          | [H: SemAction _ _ _ _ _ |- _] => invertActionRep
-          | [ |- exists _, _ /\ _ ] => kregmap_red; eexists; split
-          | [ |- Substep _ _ _ _ _ ] => econstructor
-          | [ |- In _ _ ] => simpl; tauto
-          | [ |- SemAction _ _ _ _ _ ] => econstructor
-          end);
-     try reflexivity; (* same after reduction? *)
-     repeat
-       match goal with (* need some equality tactics? *)
-       | [ |- ?m1 = ?m2 ] =>
-         match type of m1 with
-         | M.t _ => meqReify
-         | forall _: BoundedIndexFull _, _ => boundedMapTac
-         | _ => idtac
-         end
-       end).
+Ltac kinv_magic_with tac :=
+  kinv_action_dest;
+  kinv_custom tac;
+  kinv_regmap_red;
+  kinv_constr;
+  kinv_eq;
+  kinv_finish.
 
 Ltac kinv_magic := kinv_magic_with idtac.
+
+Ltac kinv_magic_light_with tac :=
+  kinv_action_dest;
+  kinv_custom tac;
+  kinv_regmap_red;
+  kinv_constr;
+  kinv_eq.
+
 Ltac kinv_magic_light := kinv_magic_light_with idtac.
 
 Ltac kduplicated := apply duplicate_traceRefines; auto.

@@ -126,11 +126,11 @@ Section Invariants.
     induction 2.
 
     - kinv_magic_light_with procDec_inv_1_tac.
-      or3_fst; kinv_magic.
+      or3_fst; kinv_magic_light_with procDec_inv_1_tac.
 
     - kinvert.
-      + kinv_magic_with procDec_inv_1_tac.
-      + kinv_magic_with procDec_inv_1_tac.
+      + mred.
+      + mred.
       + kinv_magic_light_with kinv_or3.
         or3_snd; kinv_magic_light_with procDec_inv_1_tac.
         * kinv_finish.

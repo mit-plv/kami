@@ -58,7 +58,7 @@ Section ProcDecSC.
   Defined.
   Hint Unfold pdec_pinst_regRel: MethDefs. (* for kdecompose_regMap_init *)
   Hint Unfold evalConstT: MethDefs.
-  
+
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
     kinline_left pdeci.
@@ -68,35 +68,8 @@ Section ProcDecSC.
     pose proof (procDec_inv_1_ok Hreach).
     kinv_add_end.
 
-    kinvert.
-    - kinv_magic_light_with kinv_or3.
-    - kinv_magic_light_with kinv_or3.
-    - kinv_magic_light_with kinv_or3.
-      kinv_finish.
-    - kinv_magic_light_with kinv_or3.
-      kinv_finish.
-    - kinv_magic_light_with kinv_or3.
-      kinv_finish.
-    - kinv_magic_light_with kinv_or3.
-      kinv_finish.
-    - kinv_red.
-      invertActionRep.
-      kinv_or3.
-      + kinv_red.
-        kregmap_red.
-        kinv_contra.
-      + kinv_magic_light_with kinv_or3.
-        { kinv_finish. }
-        { boundedMapTac; kinv_finish. }
-        { kinv_finish. }
-      + kinv_red.
-        kregmap_red.
-        kinv_contra.
-    - kinv_magic_light_with kinv_or3.
-      + kinv_finish.
-      + boundedMapTac; kinv_finish.
-      + kinv_finish.
-        END_SKIP_PROOF_ON *) admit.
+    kinvert; kinv_magic_with kinv_or3.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcDecSC.
