@@ -43,7 +43,6 @@ Set Implicit Arguments.
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
   + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-  + Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
   + Hint Extern 1 (DisjList _ _) => kdisj_list.
   + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
   + Hint Extern 1 (Interacting _ _ _) => repeat split.
@@ -239,10 +238,19 @@ Ltac kdecompose_regmap_init :=
   unfold initRegs, getRegInits; simpl;
   kregmap_red; try reflexivity.
 
+Ltac kdecompose_regrel_init :=
+  unfold initRegs, getRegInits; simpl;
+  kregmap_red; eexists; split; reflexivity.
+
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
-  auto. (* kdecompose_regMap_init *)
+  try kdecompose_regmap_init.
+
+Ltac kdecomposeR_nodefs t r :=
+  apply decompositionZeroR with (thetaR:= t) (ruleMap:= r); intros; subst;
+  try reflexivity; (* "getDefsBodies _ = nil" conditions *)
+  try kdecompose_regrel_init.
 
 Ltac kinv_add_end :=
   match goal with
@@ -378,7 +386,6 @@ Ltac kexistnv k v m t :=
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-Hint Extern 1 (_ (initRegs _) = initRegs _) => kdecompose_regmap_init.
 Hint Extern 1 (DisjList _ _) => kdisj_list.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.

@@ -60,43 +60,43 @@ Section ProcDecSC.
   Hint Unfold evalConstT: MethDefs.
   
   Lemma pdec_refines_pinst: pdec <<== pinst.
-  Proof. (* SKIP_PROOF_ON *)
+  Proof. (* SKIP_PROOF_ON
     kinline_left pdeci.
+    kdecomposeR_nodefs pdec_pinst_regRel pdec_pinst_ruleMap.
 
-    apply decompositionZeroR
-    with (thetaR:= pdec_pinst_regRel) (ruleMap:= pdec_pinst_ruleMap);
-      intros; subst.
+    pose proof (procDec_inv_0_ok Hreach).
+    pose proof (procDec_inv_1_ok Hreach).
+    kinv_add_end.
 
-    - unfold initRegs, getRegInits; simpl.
-      kregmap_red.
-      kinv_magic_light_with pdec_refines_pinst_tac.
-
-    - admit.
-      
-    - auto.
-    - auto.
-
-    - pose proof (procDec_inv_0_ok Hreach).
-      pose proof (procDec_inv_1_ok Hreach).
-      kinv_add_end.
-
-      kinvert.
+    kinvert.
+    - kinv_magic_light_with kinv_or3.
+    - kinv_magic_light_with kinv_or3.
+    - kinv_magic_light_with kinv_or3.
+      kinv_finish.
+    - kinv_magic_light_with kinv_or3.
+      kinv_finish.
+    - kinv_magic_light_with kinv_or3.
+      kinv_finish.
+    - kinv_magic_light_with kinv_or3.
+      kinv_finish.
+    - kinv_red.
+      invertActionRep.
+      kinv_or3.
+      + kinv_red.
+        kregmap_red.
+        kinv_contra.
       + kinv_magic_light_with kinv_or3.
-      + kinv_magic_light_with kinv_or3.
-      + kinv_magic_light_with kinv_or3.
-        kinv_finish.
-      + kinv_magic_light_with kinv_or3.
-        kinv_finish.
-      + kinv_magic_light_with kinv_or3.
-        kinv_finish.
-      + kinv_magic_light_with kinv_or3.
-        kinv_finish.
-      + admit.
-      + kinv_magic_light_with kinv_or3.
-        * kinv_finish.
-        * boundedMapTac; kinv_finish.
-        * kinv_finish.
-          (* END_SKIP_PROOF_ON *) admit.
+        { kinv_finish. }
+        { boundedMapTac; kinv_finish. }
+        { kinv_finish. }
+      + kinv_red.
+        kregmap_red.
+        kinv_contra.
+    - kinv_magic_light_with kinv_or3.
+      + kinv_finish.
+      + boundedMapTac; kinv_finish.
+      + kinv_finish.
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcDecSC.
