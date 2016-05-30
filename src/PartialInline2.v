@@ -246,7 +246,6 @@ Section Partial.
                                                (attrName dm) (projT1 (attrType dm)) = true.
   
   Hypothesis HDmInR: In (attrName dm) (getCallsA (attrType r typeUT)).
-  Hypothesis HnoCall: noCallDm dm dm = true.
   
   Lemma inlineDmToRule_traceRefines_Filt:
     m <<== (Mod (getRegInits m)
@@ -334,7 +333,6 @@ Section PartialMultiDm.
                               (attrName dm) (projT1 (attrType dm)) = true.
 
   Hypothesis HDmsInR: forall dm, In dm dms -> In (attrName dm) (getCallsA (attrType r typeUT)).
-  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
 
   Lemma NoDup_app_rm A: forall (l1 l2 l3: list A), NoDup (l1 ++ l2 ++ l3) -> NoDup (l1 ++ l3).
   Proof.
@@ -355,8 +353,8 @@ Section PartialMultiDm.
                 (prefix ++ fold_right (fun dm' r' => inlineDmToRule r' dm') r dms :: suffix)
                 (preDm ++ sufDm)).
   Proof.
-    generalize dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR HnoCall.
-    clear dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR HnoCall.
+    generalize dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR.
+    clear dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR.
     induction dms; simpl in *; intros.
     - rewrite <- Hrule.
       rewrite <- Hdm.
@@ -376,17 +374,13 @@ Section PartialMultiDm.
         by (intros; apply HDmsInR; auto).
       assert (HDmsInR2: In (attrName a) (getCallsA (attrType r typeUT)))
         by (intros; apply HDmsInR; auto).
-      assert (HnoCall1: forall dm, In dm l -> noCallDm dm dm = true) by
-          (intros; apply HnoCall; auto).
-      assert (HnoCall2: noCallDm a a = true) by
-          (intros; apply HnoCall; auto).
       assert (sth4:
                 forall d, In d (getDefsBodies m) ->
                           forall dm, In dm l ->
                                      noCallDmSigA (projT2 (attrType d) typeUT tt)
                                                   (attrName dm) (projT1 (attrType dm)) = true)
         by (intros; apply HdmNoMeth; auto).
-      specialize (IHl (preDm ++ [a]) sth2 sth3 sth4 HDmsInR1 HnoCall1); clear sth3 sth4.
+      specialize (IHl (preDm ++ [a]) sth2 sth3 sth4 HDmsInR1); clear sth3 sth4.
       rewrite idElementwiseId in *.
       match goal with
         | [H: traceRefines id m ?P |- _] => apply traceRefines_trans with (mb := P); auto
@@ -568,7 +562,6 @@ Section PartialMultiR2.
 
   Hypothesis HDmsInRs: exists r, In r rs /\
                                  In (attrName dm) (getCallsA (attrType r typeUT)).
-  Hypothesis HnoCall: noCallDm dm dm = true.
 
   Lemma inlineDmToRules_traceRefines_Filt:
     m <<==
@@ -639,6 +632,8 @@ Section PartialMultiR2.
       destruct H; [|apply HdmNoRule; apply in_or_app; intuition auto].
       apply in_map_iff in H; dest; subst.
       apply inlineDmToRule_noCallDmSigA; auto.
+      apply HdmNoMeth; auto.
+      rewrite Hdm; apply in_or_app; simpl; intuition auto.
     - destruct InRRs; subst.
       match goal with
         | |- _ <<== Mod ?regs (?pre ++ inlineDmToRule ?r dm :: ?rest) _ =>
@@ -862,7 +857,6 @@ Section PartialMultiDmMultiR.
                          In dm dms ->
                          exists r, In r rs /\
                                    In (attrName dm) (getCallsA (attrType r typeUT)).
-  Hypothesis HnoCall: forall dm, In dm dms -> noCallDm dm dm = true.
 
   Lemma inlineDmsToRules_traceRefines_Filt:
     m <<==
@@ -870,8 +864,8 @@ Section PartialMultiDmMultiR.
            (prefix ++ map (fun r => fold_right (fun dm' r' => inlineDmToRule r' dm') r dms) rs ++ suffix)
            (preDm ++ sufDm)).
   Proof.
-    generalize dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs HnoCall.
-    clear dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs HnoCall.
+    generalize dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs.
+    clear dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs.
     induction dms; simpl in *; intros.
     - assert (sth: (fun r: Attribute (Action Void) => r) = id) by
           (extensionality r; reflexivity).
@@ -917,14 +911,10 @@ Section PartialMultiDmMultiR.
                 exists r, In r rs /\ In (attrName a) (getCallsA (attrType r typeUT)))
         by (intros; apply HDmsInRs; auto).
       clear HDmsInRs.
-      assert (HnoCall1: forall dm, In dm l -> noCallDm dm dm = true) by
-          (intros; apply HnoCall; auto).
-      assert (HnoCall2: noCallDm a a = true) by (intros; apply HnoCall; auto).
-      clear HnoCall.
       assert (sth: (preDm ++ [a]) ++ l ++ sufDm = preDm ++ a :: l ++ sufDm)
         by (rewrite <- app_assoc; simpl; reflexivity).
       rewrite <- sth in *.
-      specialize (IHl _ Hdm HdmNoMeth1 HdmNoRule1 HDmsInRs1 HnoCall1).
+      specialize (IHl _ Hdm HdmNoMeth1 HdmNoRule1 HDmsInRs1).
       rewrite <- app_assoc in IHl; simpl in IHl.
       match goal with
         | H: m <<== ?m2 |- _ => apply traceRefines_trans with (mb := m2)

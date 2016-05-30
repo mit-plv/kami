@@ -361,10 +361,8 @@ Section GenGen.
 
   Hypothesis HDmInR:
     In (nameVal dmName) (map (fun n => nameVal (nameRec n)) (getCallsGenA (r typeUT))).
-  
-  Hypothesis HnoCall: noCallGenDm dm dm = true.
 
-
+  (*
   Lemma inlineGenGenDmToRule_traceRefines_2:
     makeModule m <<==
                makeModule
