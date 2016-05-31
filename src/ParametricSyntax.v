@@ -1,6 +1,7 @@
 Require Import Syntax String Lib.Struct List Inline InlineFacts_2
         CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension Ascii.
+        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension Ascii
+        Lib.Concat.
 
 Set Implicit Arguments.
 
@@ -20,12 +21,6 @@ Ltac dest_str :=
                            apply string_eq_dec_neq in x; subst]
   end.
 
-
-Fixpoint concat A (ls: list (list A)) :=
-  match ls with
-    | x :: xs => x ++ concat xs
-    | nil => nil
-  end.
 
 Section AboutFold1.
   Variable A B: Type.

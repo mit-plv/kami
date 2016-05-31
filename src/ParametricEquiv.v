@@ -1,4 +1,4 @@
-Require Import ParametricSyntax Syntax List Lib.CommonTactics Equiv.
+Require Import ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.
@@ -59,6 +59,18 @@ Section Equiv.
                      (e2: Expr t2 (SyntaxKind k)),
                 (* ExprEquiv G e1 e2 -> *)
                 GenActionEquiv (GReturn GenK e1) (GReturn GenK e2).
+
+    Lemma GenActionEquiv_ActionEquiv A k str getConstK:
+      forall a1 a2,
+        GenActionEquiv (k := k) a1 a2 ->
+        forall i: A,
+          ActionEquiv (getGenAction str getConstK i a1)
+                      (getGenAction str getConstK i a2).
+    Proof.
+      intros.
+      dependent induction H; simpl in *; constructor; intuition auto.
+    Qed.
+      
   End ForGenK.
     
   Inductive SinActionEquiv: forall {k}, SinActionT t1 k -> SinActionT t2 k -> Prop :=
@@ -105,6 +117,16 @@ Section Equiv.
               (* ExprEquiv G e1 e2 -> *)
               SinActionEquiv (SReturn e1) (SReturn e2).
 
+  Lemma SinActionEquiv_ActionEquiv k:
+    forall a1 a2,
+      SinActionEquiv (k := k) a1 a2 ->
+      ActionEquiv (getSinAction a1)
+                  (getSinAction a2).
+  Proof.
+    intros.
+    dependent induction H; simpl in *; constructor; intuition auto.
+  Qed.
+
   Definition MetaRuleEquiv r :=
     match r with
       | OneRule b s => SinActionEquiv (b t1) (b t2)
@@ -132,6 +154,26 @@ Section Equiv.
         specialize (IHrules sth).
         assert (sth2: MetaRuleEquiv a) by intuition.
         constructor; auto.
+  Qed.
+
+  Lemma MetaRulesEquiv_RulesEquiv rs:
+    MetaRulesEquiv rs ->
+    RulesEquiv t1 t2 (concat (map getListFromMetaRule rs)).
+  Proof.
+    intros.
+    apply RulesEquiv_in; intros.
+    pose proof (proj1 (MetaRulesEquiv_in rs) H) as sth; clear H.
+    apply in_concat_iff in H0; dest.
+    apply in_map_iff in H; dest.
+    unfold getListFromMetaRule in H.
+    specialize (sth _ H1).
+    subst.
+    destruct x0; simpl in *; auto.
+    + destruct H0; [| intuition auto]; subst.
+      apply SinActionEquiv_ActionEquiv; auto.
+    + unfold repRule, getListFromRep in H0.
+      apply in_map_iff in H0; dest; subst.
+      apply GenActionEquiv_ActionEquiv; auto.
   Qed.
   
   Definition MetaMethEquiv r :=
@@ -162,12 +204,38 @@ Section Equiv.
         assert (sth2: MetaMethEquiv a) by intuition.
         constructor; auto.
   Qed.
+
+  Lemma MetaMethsEquiv_MethsEquiv rs:
+    MetaMethsEquiv rs ->
+    MethsEquiv t1 t2 (concat (map getListFromMetaMeth rs)).
+  Proof.
+    intros.
+    apply MethsEquiv_in; intros.
+    pose proof (proj1 (MetaMethsEquiv_in rs) H) as sth; clear H.
+    apply in_concat_iff in H0; dest.
+    apply in_map_iff in H; dest.
+    unfold getListFromMetaMeth in H.
+    specialize (sth _ H1).
+    subst.
+    destruct x0; simpl in *; auto.
+    + destruct H0; [| intuition auto]; subst.
+      unfold MethEquiv; intros; simpl in *.
+      apply SinActionEquiv_ActionEquiv; auto.
+    + unfold repMeth, getListFromRep in H0.
+      apply in_map_iff in H0; dest; subst.
+      unfold MethEquiv; intros; simpl in *.
+      apply GenActionEquiv_ActionEquiv; auto.
+  Qed.
   
   Definition MetaModEquiv m := MetaRulesEquiv (metaRules m) /\ MetaMethsEquiv (metaMeths m).
 
   Lemma metaModEquiv_modEquiv m:
     MetaModEquiv m -> ModEquiv t1 t2 (makeModule m).
   Proof.
-    admit.
+    intros.
+    destruct H.
+    apply MetaRulesEquiv_RulesEquiv in H.
+    apply MetaMethsEquiv_MethsEquiv in H0.
+    constructor; auto.
   Qed.
 End Equiv.

@@ -1,86 +1,6 @@
 Require Import PartialInline Equiv
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
-        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension.
-
-Section concat_app.
-  Variable A: Type.
-  Lemma concat_app: forall l1 l2: list (list A), concat (l1 ++ l2) = concat l1 ++ concat l2.
-  Proof.
-    induction l1; simpl in *; auto; intros.
-    rewrite <- app_assoc.
-    f_equal; auto.
-  Qed.
-End concat_app.
-
-Section NoDup.
-  Variable A: Type.
-  Lemma noDupApp l1: forall l2, NoDup l1 -> NoDup l2 ->
-                                (forall i: A, In i l1 -> ~ In i l2) ->
-                                NoDup (l1 ++ l2).
-  Proof.
-    induction l1; simpl in *; intros.
-    - intuition.
-    - inv H.
-      specialize (IHl1 _ H5 H0).
-      assert (forall i, In i l1 -> ~ In i l2) by (intros; apply H1; intuition).
-      specialize (IHl1 H).
-      assert (~ In a l2) by (intros; apply H1; auto).
-      constructor; auto.
-      unfold not; intros K; apply in_app_or in K.
-      destruct K; intuition auto.
-  Qed.
-End NoDup.
-
-Section AboutConcat.
-  Variable A: Type.
-
-  Lemma in_concat_iff (ls: list (list A)):
-    forall x,
-      In x (concat ls) <-> exists l, In l ls /\ In x l.
-  Proof.
-    induction ls; simpl in *; auto; intros; intuition auto.
-    dest; auto.
-    apply in_app_or in H.
-    destruct H.
-    exists a; intuition auto.
-    pose proof (proj1 (IHls _) H); dest.
-    exists x0; auto.
-    dest.
-    destruct H; subst; auto; apply in_or_app; auto.
-    pose proof (proj2 (IHls _) (ex_intro _ x0 (conj H H0))).
-    auto.
-  Qed.
-
-  Lemma in_concat_iff2 (ls: list (list A)):
-    forall x,
-      In x (concat ls) <-> exists i, In x (nth i ls nil).
-  Proof.
-    induction ls; simpl in *; auto; intros; intuition auto.
-    dest; destruct x0; intuition auto.
-    apply in_app_or in H.
-    destruct H.
-    exists 0; intuition auto.
-    pose proof (proj1 (IHls _) H); dest.
-    exists (S x0); auto.
-    destruct H; subst; auto; apply in_or_app; auto.
-    destruct x0; auto.
-    pose proof (proj2 (IHls _) (ex_intro _ x0 H)).
-    auto.
-  Qed.
-
-
-  Variable B: Type.
-  Variable f: A -> B.
-  Lemma map_concat: forall (l: list (list A)) x, In x (map f (concat l)) ->
-                                                 In x (concat (map (map f) l)).
-  Proof.
-    induction l; simpl in *; auto; intros.
-    rewrite map_app in *.
-    apply in_app_or in H.
-    apply in_or_app.
-    destruct H; auto.
-  Qed.
-End AboutConcat.
+        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension Lib.Concat.
 
 Section IndexSymbol.
   Lemma namesMatch:
@@ -416,7 +336,7 @@ Section GenGen.
       apply noDup_preserveRule; auto.
     - clear HDmInR.
       rewrite <- concat_app in H.
-      pose proof (proj1 (in_concat_iff _ _ _) H);
+      pose proof (proj1 (in_concat_iff _ _) H);
         clear H; dest.
       rewrite <- map_app in H.
       apply in_map_iff in H; dest; subst.
@@ -433,7 +353,7 @@ Section GenGen.
         apply noCallDmSigGenA_implies; auto.
     - clear HDmInR.
       rewrite <- sth1 in H.
-      pose proof (proj1 (in_concat_iff _ _ _) H); clear H; dest.
+      pose proof (proj1 (in_concat_iff _ _) H); clear H; dest.
       apply in_map_iff in H; dest; subst.
       destruct x0; simpl in *; intuition auto; subst; simpl in *.
       + unfold repMeth, getListFromRep in H0.
@@ -615,7 +535,7 @@ Section GenSin.
       apply noDup_preserveRule; auto.
     - clear HDmInR.
       rewrite <- concat_app in H.
-      pose proof (proj1 (in_concat_iff _ _ _) H);
+      pose proof (proj1 (in_concat_iff _ _) H);
         clear H; dest.
       rewrite <- map_app in H.
       apply in_map_iff in H; dest; subst.
@@ -633,7 +553,7 @@ Section GenSin.
         rewrite noCallDmSigGenA_matches; auto.
     - clear HDmInR.
       rewrite <- sth1 in H.
-      pose proof (proj1 (in_concat_iff _ _ _) H); clear H; dest.
+      pose proof (proj1 (in_concat_iff _ _) H); clear H; dest.
       apply in_map_iff in H; dest; subst.
       destruct x0; simpl in *; intuition auto; subst; simpl in *.
       + apply HdmNoMeth1 in H1.
