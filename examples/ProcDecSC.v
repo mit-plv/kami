@@ -64,8 +64,8 @@ Section ProcDecSC.
     kinline_left pdeci.
     kdecomposeR_nodefs pdec_pinst_regRel pdec_pinst_ruleMap.
 
-    pose proof (procDec_inv_0_ok Hreach).
-    pose proof (procDec_inv_1_ok Hreach).
+    kinv_add procDec_inv_0_ok.
+    kinv_add procDec_inv_1_ok.
     kinv_add_end.
 
     kinvert; kinv_magic_with kinv_or3.

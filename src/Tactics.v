@@ -252,6 +252,13 @@ Ltac kdecomposeR_nodefs t r :=
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
   try kdecompose_regrel_init.
 
+Ltac kinv_add inv :=
+  match goal with
+  | [H: reachable _ _ |- _] =>
+    let Hr := fresh "Hr" in
+    pose proof H as Hr; apply inv in Hr
+  end.
+
 Ltac kinv_add_end :=
   match goal with
   | [H: reachable _ _ |- _] => clear H
