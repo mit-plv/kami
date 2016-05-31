@@ -1,4 +1,4 @@
-Require Import PartialInline
+Require Import PartialInline Equiv
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
         Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension.
 
@@ -36,26 +36,36 @@ Section AboutConcat.
 
   Lemma in_concat_iff (ls: list (list A)):
     forall x,
-      In x (concat ls) -> exists l, In l ls /\ In x l.
+      In x (concat ls) <-> exists l, In l ls /\ In x l.
   Proof.
     induction ls; simpl in *; auto; intros; intuition auto.
+    dest; auto.
     apply in_app_or in H.
     destruct H.
     exists a; intuition auto.
-    specialize (IHls _ H); dest.
+    pose proof (proj1 (IHls _) H); dest.
     exists x0; auto.
+    dest.
+    destruct H; subst; auto; apply in_or_app; auto.
+    pose proof (proj2 (IHls _) (ex_intro _ x0 (conj H H0))).
+    auto.
   Qed.
 
   Lemma in_concat_iff2 (ls: list (list A)):
     forall x,
-      In x (concat ls) -> exists i, In x (nth i ls nil).
+      In x (concat ls) <-> exists i, In x (nth i ls nil).
   Proof.
     induction ls; simpl in *; auto; intros; intuition auto.
+    dest; destruct x0; intuition auto.
     apply in_app_or in H.
     destruct H.
     exists 0; intuition auto.
-    specialize (IHls _ H); dest.
+    pose proof (proj1 (IHls _) H); dest.
     exists (S x0); auto.
+    destruct H; subst; auto; apply in_or_app; auto.
+    destruct x0; auto.
+    pose proof (proj2 (IHls _) (ex_intro _ x0 H)).
+    auto.
   Qed.
 
 
@@ -278,8 +288,9 @@ Section GenGen.
   Variable goodStrFn: forall i j, strA i = strA j -> i = j.
   Variable GenK: Kind.
   Variable getConstK: A -> ConstT GenK.
-  Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
-                                         si = sj /\ i = j.
+  Variable goodStrFn2: forall si sj i j,
+                         addIndexToStr strA i si = addIndexToStr strA j sj ->
+                         si = sj /\ i = j.
   Variable dm: sigT (GenMethodT GenK).
   Variable dmName: NameRec.
   Variable preDm sufDm: list MetaMeth.
@@ -297,7 +308,7 @@ Section GenGen.
   Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
 
-  Lemma InlineGenGenDmToRule_traceRefines_NoFilt:
+  Lemma inlineGenGenDmToRule_traceRefines_NoFilt:
     makeModule m <<==
                makeModule
                {| metaRegs := metaRegs m;
@@ -341,51 +352,123 @@ Section GenGen.
   Qed.
 
   Hypothesis HdmNoRule:
-    forall r',
-      In r' (preR ++ sufR) ->
-      match r' with
-        | OneRule a _ => noCallDmSigSinA (a typeUT) dmName (projT1 dm) = true
-        | RepRule _ _ _ _ _ _ bgen _ _ _ =>
-          noCallDmSigGenA (bgen typeUT) {| isRep := true; nameRec := dmName |} (projT1 dm) = true
-      end.
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |} (projT1 dm) = true.
 
   Hypothesis HdmNoMeth:
-    forall d,
-      In d (metaMeths m) ->
-      match d with
-        | OneMeth a _ => noCallDmSigSinA (projT2 a typeUT tt) dmName (projT1 dm) = true
-        | RepMeth _ _ _ _ _ _ bgen _ _ _ =>
-          noCallDmSigGenA (projT2 bgen typeUT tt) {| isRep := true; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
+                      (projT1 dm) = true.
 
   Hypothesis HDmInR:
-    In (nameVal dmName) (map (fun n => nameVal (nameRec n)) (getCallsGenA (r typeUT))).
-
-  (*
-  Lemma inlineGenGenDmToRule_traceRefines_2:
+    exists call, 
+      In call (getCallsGenA (r typeUT)) /\
+      nameVal (nameRec call) = nameVal dmName /\ isRep call = true.
+    
+  Lemma inlineGenGenDmToRule_traceRefines_Filt:
     makeModule m <<==
                makeModule
                {| metaRegs := metaRegs m;
                   metaRules :=
-                    map (fun newr =>
-                           if string_dec rName (getMetaRuleName newr)
-                           then RepRule strA goodStrFn goodStrFn2
-                                        (fun ty => inlineGenGenDm (r ty) dmName dm) rName ls
-                           else newr) (metaRules m);
-                  metaMeths :=
-                    filter
-                      (fun dm' =>
-                         if string_dec dmName (getMetaMethName dm')
-                         then false
-                         else true) (metaMeths m) |}.
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
   Proof.
-    admit.
+    unfold makeModule; simpl.
+    rewrite Hrule.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    unfold repRule at 2; unfold getListFromRep.
+    rewrite mapFoldInlineDmsGenGen_matchesGen; auto.
+    rewrite Hdm.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    match goal with
+      | H: metaMeths m = ?l |- _ =>
+        assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
+                concat (map getListFromMetaMeth l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth1; simpl in sth1; repeat rewrite concat_app in sth1;
+          simpl in sth1
+    end.
+    match goal with
+      | H: metaRules m = ?l |- _ =>
+        assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
+                concat (map getListFromMetaRule l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
+          simpl in sth2
+    end.
+    assert (mEquiv': forall ty, ModEquiv ty typeUT (makeModule m)) by
+        (intros; apply metaModEquiv_modEquiv; auto); unfold makeModule in mEquiv';
+    rewrite sth1 in *; rewrite sth2 in *.
+    apply inlineDmsToRules_traceRefines_Filt
+    with (preDm := concat (map getListFromMetaMeth preDm))
+           (sufDm := concat (map getListFromMetaMeth sufDm)); auto; simpl in *; intros.
+    - rewrite <- sth1.
+      apply noDup_preserveMeth; auto.
+    - rewrite <- sth2.
+      apply noDup_preserveRule; auto.
+    - clear HDmInR.
+      rewrite <- concat_app in H.
+      pose proof (proj1 (in_concat_iff _ _ _) H);
+        clear H; dest.
+      rewrite <- map_app in H.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + unfold repMeth, getListFromRep in H0.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        apply noCallDmSigA_forSin_true.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; apply in_map_iff in H1; dest; subst; simpl in *.
+        unfold getActionFromGen.
+        apply HdmNoRule in H2.
+        assert (sth: strFromName strA x0 {| isRep := true; nameRec := dmName |} =
+                     addIndexToStr strA x0 (nameVal dmName)) by reflexivity.
+        apply noCallDmSigGenA_implies; auto.
+    - clear HDmInR.
+      rewrite <- sth1 in H.
+      pose proof (proj1 (in_concat_iff _ _ _) H); clear H; dest.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + unfold repMeth, getListFromRep in H0.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        apply noCallDmSigA_forSin_true.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; apply in_map_iff in H1; dest; subst; simpl in *.
+        unfold getActionFromGen.
+        apply HdmNoMeth in H2.
+        assert (sth: strFromName strA x0 {| isRep := true; nameRec := dmName |} =
+                     addIndexToStr strA x0 (nameVal dmName)) by reflexivity.
+        apply noCallDmSigGenA_implies; auto.
+    - destruct HDmInR as [call [inCall [nameMatch rep]]]; clear HDmInR.
+      unfold repMeth, getListFromRep in H.
+      apply in_map_iff in H; dest.
+      exists (addIndexToStr strA x (nameVal rName) ::
+                            getActionFromGen strA getConstK r x)%struct;
+        simpl.
+      constructor; auto.
+      unfold getActionFromGen.
+      unfold repRule, getListFromRep.
+      apply in_map_iff; simpl.
+      exists x; simpl; unfold getActionFromGen.
+      constructor; auto.
+      rewrite <- H; simpl.
+      unfold getActionFromGen.
+      rewrite getCallsGenA_matches.
+      unfold strFromName; simpl.
+      apply in_map_iff; simpl.
+      exists call; subst; simpl.
+      rewrite rep, nameMatch; simpl.
+      constructor; auto.
   Qed.
-*)
 End GenGen.
 
-(*
 Section GenSin.
   Variable m: MetaModule.
   Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
@@ -393,65 +476,186 @@ Section GenSin.
   Variable A: Type.
   Variable strA: A -> string.
   Variable goodStrFn: forall i j, strA i = strA j -> i = j.
-  Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
-                                         si = sj /\ i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2: forall si sj i j,
+                         addIndexToStr strA i si = addIndexToStr strA j sj ->
+                         si = sj /\ i = j.
   Variable dm: sigT SinMethodT.
-  Variable dmName: string.
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
   Variable ls: list A.
+  Variable lsNotNil: ls <> nil.
+  Variable noDupLs: NoDup ls.
+  Variable Hdm: metaMeths m =
+                preDm ++ OneMeth dm dmName :: sufDm.
 
-  Variable r: GenAction Void.
-  Variable rName: string.
+  Variable r: GenAction GenK Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs :: sufR.
 
-  Hypotheses (Hdm: In (OneMeth dm dmName) (metaMeths m))
-             (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
-  Hypothesis Hrule: In (RepRule strA goodStrFn goodStrFn2 r rName ls) (metaRules m).
 
-  Lemma InlineGenSinDmToRule_traceRefines_1:
+  Lemma inlineGenSinDmToRule_traceRefines_NoFilt:
     makeModule m <<==
                makeModule
                {| metaRegs := metaRegs m;
                   metaRules :=
-                    map (fun newr =>
-                           if string_dec rName (getMetaRuleName newr)
-                           then RepRule strA goodStrFn goodStrFn2
-                                        (fun ty => inlineGenSinDm (r ty) dmName dm) rName ls
-                           else newr) (metaRules m);
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
                   metaMeths := metaMeths m |}.
   Proof.
-    admit.
+    unfold makeModule; simpl.
+    rewrite Hrule.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    unfold repRule at 2; unfold getListFromRep.
+    rewrite mapInlineDmsGenSin_matchesGen; auto; [| destruct dmName; simpl; auto].
+    rewrite Hdm.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    match goal with
+      | H: metaMeths m = ?l |- _ =>
+        assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
+                concat (map getListFromMetaMeth l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth1; simpl in sth1; repeat rewrite concat_app in sth1;
+          simpl in sth1
+    end.
+    match goal with
+      | H: metaRules m = ?l |- _ =>
+        assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
+                concat (map getListFromMetaRule l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
+          simpl in sth2
+    end.
+    apply inlineDmToRules_traceRefines_NoFilt
+    with (preDm := concat (map getListFromMetaMeth preDm))
+           (sufDm := concat (map getListFromMetaMeth sufDm)); auto; simpl;
+    [rewrite <- sth1 | rewrite <- sth2].
+    apply noDup_preserveMeth; auto.
+    apply noDup_preserveRule; auto.
   Qed.
 
-  Hypothesis HnoRuleCalls: forall rule,
-                             In rule (metaRules m) ->
-                             getMetaRuleName rule <> rName ->
-                             ~ In dmName (map (fun n => nameVal (nameRec n))
-                                              (getCallsMetaRule rule)).
-
-  Hypothesis HnoMethCalls: forall meth,
-                             In meth (metaMeths m) ->
-                             getMetaMethName meth <> dmName ->
-                             ~ In dmName (map (fun n => nameVal (nameRec n))
-                                              (getCallsMetaMeth meth)).
+  Hypothesis HdmNoRule1:
+    forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
+                     noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
   
-  Lemma inlineGenSinDmToRule_traceRefines_2:
+  Hypothesis HdmNoRule2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |} (projT1 dm) = true.
+
+  Hypothesis HdmNoMeth1:
+    forall dbody db, In (@OneMeth dbody db) (metaMeths m) ->
+                     noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true.
+  
+  Hypothesis HdmNoMeth2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                      (projT1 dm) = true.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsGenA (r typeUT)) /\
+      nameVal (nameRec call) = nameVal dmName /\ isRep call = false.
+    
+  Lemma inlineGenSinDmToRule_traceRefines_Filt:
     makeModule m <<==
                makeModule
                {| metaRegs := metaRegs m;
                   metaRules :=
-                    map (fun newr =>
-                           if string_dec rName (getMetaRuleName newr)
-                           then RepRule strA goodStrFn goodStrFn2
-                                        (fun ty => inlineGenSinDm (r ty) dmName dm) rName ls
-                           else newr) (metaRules m);
-                  metaMeths :=
-                    filter
-                      (fun dm' =>
-                         if string_dec dmName (getMetaMethName dm')
-                         then false
-                         else true) (metaMeths m) |}.
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
   Proof.
-    admit.
+    unfold makeModule; simpl.
+    rewrite Hrule.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    unfold repRule at 2; unfold getListFromRep.
+    rewrite mapInlineDmsGenSin_matchesGen; auto.
+    rewrite Hdm.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    match goal with
+      | H: metaMeths m = ?l |- _ =>
+        assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
+                concat (map getListFromMetaMeth l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth1; simpl in sth1; repeat rewrite concat_app in sth1;
+          simpl in sth1
+    end.
+    match goal with
+      | H: metaRules m = ?l |- _ =>
+        assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
+                concat (map getListFromMetaRule l))
+          by (rewrite H; reflexivity);
+          repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
+          simpl in sth2
+    end.
+    assert (mEquiv': forall ty, ModEquiv ty typeUT (makeModule m)) by
+        (intros; apply metaModEquiv_modEquiv; auto); unfold makeModule in mEquiv';
+    rewrite sth1 in *; rewrite sth2 in *.
+    apply inlineDmToRules_traceRefines_Filt
+    with (preDm := concat (map getListFromMetaMeth preDm))
+           (sufDm := concat (map getListFromMetaMeth sufDm)); auto; simpl in *; intros.
+    - rewrite <- sth1.
+      apply noDup_preserveMeth; auto.
+    - rewrite <- sth2.
+      apply noDup_preserveRule; auto.
+    - clear HDmInR.
+      rewrite <- concat_app in H.
+      pose proof (proj1 (in_concat_iff _ _ _) H);
+        clear H; dest.
+      rewrite <- map_app in H.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + apply HdmNoRule1 in H1.
+        unfold getActionFromSin.
+        erewrite noCallDmSigSinA_matches; eauto.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        unfold getActionFromGen.
+        apply HdmNoRule2 in H1.
+        assert (sth: strFromName strA0 x {| isRep := false; nameRec := dmName |} =
+                     nameVal dmName) by reflexivity.
+        rewrite <- sth.
+        rewrite noCallDmSigGenA_matches; auto.
+    - clear HDmInR.
+      rewrite <- sth1 in H.
+      pose proof (proj1 (in_concat_iff _ _ _) H); clear H; dest.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + apply HdmNoMeth1 in H1.
+        erewrite noCallDmSigSinA_matches; eauto.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        unfold getActionFromGen in *.
+        apply HdmNoMeth2 in H1.
+        assert (sth: strFromName strA0 x {| isRep := false; nameRec := dmName |} =
+                     nameVal dmName) by reflexivity.
+        rewrite <- sth.
+        rewrite noCallDmSigGenA_matches; auto.
+    - destruct HDmInR as [call [inCall [nameMatch rep]]]; clear HDmInR.
+      destruct ls; intuition auto.
+      exists (addIndexToStr strA a (nameVal rName) ::
+                            getActionFromGen strA getConstK r a)%struct; simpl.
+      constructor; auto.
+      unfold getActionFromGen.
+      rewrite getCallsGenA_matches.
+      apply in_map_iff; simpl.
+      exists call; constructor; unfold strFromName; subst; auto.
+      rewrite rep; auto.
+    - destruct dmName; simpl in *; auto.
   Qed.
 End GenSin.
-*)
