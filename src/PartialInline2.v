@@ -756,17 +756,16 @@ End inlineDmToRule_hasInCalls.
 
 Section rEquivAfterInline.
   Variable ty: Kind -> Type.
-  Variable r: Attribute (Action Void).
-  Variable rEquiv: RuleEquiv ty typeUT r.
   Variable ls: list DefMethT.
 
-  Lemma ruleEquiv_fold:
+  Lemma inlineDmsToRule_Equiv r:
+    RuleEquiv ty typeUT r ->
     (forall d, In d ls -> MethEquiv ty typeUT d) ->
     RuleEquiv ty typeUT
               (fold_right
                  (fun dm' r' => inlineDmToRule r' dm') r ls).
   Proof.
-    induction ls; simpl in *; auto; intros.
+    intro rEquiv; induction ls; simpl in *; auto; intros.
     assert (sth1: MethEquiv ty typeUT a) by (apply H; auto).
     assert (sth2: forall d, In d l -> MethEquiv ty typeUT d) by (intros; apply H; auto).
     specialize (IHl sth2).
@@ -952,7 +951,7 @@ Section PartialMultiDmMultiR.
           assert (sth5: forall m, In m l -> MethEquiv ty typeUT m)
             by (intros; apply dEquiv'; apply in_or_app; simpl; right; right; apply in_or_app;
                 left; intuition auto).
-          apply ruleEquiv_fold; auto.
+          apply inlineDmsToRule_Equiv; auto.
         * apply MethsEquiv_in; intros.
           apply dEquiv'.
           apply in_or_app.
@@ -1014,3 +1013,23 @@ Section PartialMultiDmMultiR.
         intuition auto.
   Qed.
 End PartialMultiDmMultiR.
+
+Section rsEquivAfterInline.
+  Variable ty: Kind -> Type.
+  
+  Lemma inlineDmsToRules_Equiv rs ls:
+    RulesEquiv ty typeUT rs ->
+    MethsEquiv ty typeUT ls ->
+    RulesEquiv ty typeUT 
+               (map (fun r => (fold_right
+                                 (fun dm' r' => inlineDmToRule r' dm') r ls)) rs).
+  Proof.
+    induction rs; simpl in *; auto; intros.
+    dependent destruction H.
+    apply IHrs in H0; auto.
+    constructor; auto.
+    apply inlineDmsToRule_Equiv; auto.
+    apply MethsEquiv_in; auto.
+  Qed.
+End rsEquivAfterInline.
+  

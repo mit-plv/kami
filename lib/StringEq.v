@@ -82,6 +82,13 @@ Proof.
       inversion Hx; auto.
 Qed.
 
+Lemma string_eq_dec_false: forall s1 s2, s1 <> s2 -> string_eq s1 s2 = false.
+Proof.
+  intros.
+  case_eq (string_eq s1 s2); intros; auto.
+  apply eq_sym in H0; apply string_eq_dec_eq in H0; intuition auto.
+Qed.
+
 Lemma string_in_dec_in: forall s l, true = string_in s l -> In s l.
 Proof.
   induction l; simpl; intros; [inversion H|].
