@@ -1,6 +1,7 @@
 Require Import Syntax String Lib.Struct List Inline InlineFacts_2
         CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension.
+        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension Ascii
+        Lib.Concat.
 
 Set Implicit Arguments.
 
@@ -20,12 +21,6 @@ Ltac dest_str :=
                            apply string_eq_dec_neq in x; subst]
   end.
 
-
-Fixpoint concat A (ls: list (list A)) :=
-  match ls with
-    | x :: xs => x ++ concat xs
-    | nil => nil
-  end.
 
 Section AboutFold1.
   Variable A B: Type.
@@ -382,7 +377,7 @@ Section Rep.
     - rewrite <- H, <- IHa1, <- IHa2; simpl in *; unfold strFromName;
       destruct (isRep dmn); simpl in *; reflexivity.
   Qed.
-  
+
   Definition getGenGenBody (n: NameRecIdx) dn (dm: sigT GenMethodT)
              (sig: SignatureT):
     option (sigT (fun x: sigT GenMethodT => projT1 x = sig)) :=
@@ -469,6 +464,107 @@ Section Rep.
           f_equal; extensionality v; auto.
   Qed.
 End Rep.
+
+Lemma noCallDmSigGenA_implies_true GenK k
+      (a: GenActionT GenK typeUT k):
+  forall dmn dsig,
+    noCallDmSigGenA a dmn dsig = true ->
+    forall dmn',
+      isRep dmn' = isRep dmn ->
+      nameVal (nameRec dmn') = nameVal (nameRec dmn) ->
+      noCallDmSigGenA a dmn' dsig = true.
+Proof.
+  induction a; simpl in *; auto; intros.
+  - dest_str; simpl in *; auto;
+    apply andb_true_iff in H0; dest.
+    + rewrite <- H2, H3 in H0.
+      rewrite string_eq_true in H0.
+      rewrite <- H1 in H0.
+      apply andb_true_iff.
+      constructor; auto.
+      eapply H; eauto.
+    + eapply H; eauto.
+  - eapply H; eauto.
+  - eapply H; eauto.
+  - eapply H; eauto.
+  - repeat (apply andb_true_iff in H0; dest);
+    repeat (apply andb_true_iff; constructor).
+    + eapply IHa1; eauto.
+    + eapply IHa2; eauto.
+    + eapply H; eauto.
+Qed.
+
+Lemma index_addIndexToStr_notNone A str i n:
+  index 0 indexSymbol (@addIndexToStr A str i n) <> None.
+Proof.
+  unfold not, addIndexToStr; intros.
+  apply index_not_in in H.
+  assert (S_In "$"%char (n ++ indexSymbol ++ str i)) by
+      (apply S_in_or_app; right; simpl; auto).
+  intuition auto.
+Qed.  
+
+Lemma prefixNoMatch A A' strA strA' n1 n2 i i':
+  @addIndexToStr A strA i (nameVal n1) = @addIndexToStr A' strA' i' (nameVal n2) ->
+  nameVal n1 = nameVal n2 /\
+  strA i = strA' i'.
+Proof.
+  intros.
+  unfold addIndexToStr in H.
+  destruct n1, n2; simpl in *.
+  apply index_not_in in goodName0.
+  apply index_not_in in goodName1.
+  remember (strA i) as sth1.
+  remember (strA' i') as sth2.
+  clear i i' A A' strA strA' Heqsth1 Heqsth2.
+  generalize goodName0 nameVal1 goodName1 sth1 sth2 H.
+  clear goodName0 nameVal1 goodName1 sth1 sth2 H.
+  induction nameVal0; destruct nameVal1; simpl in *; intuition auto.
+  - inv H; auto.
+  - inv H1; intuition auto.
+  - inv H1; intuition auto.
+  - inv H2; intuition auto.
+  - inv H2; intuition auto.
+  - inv H4.
+    specialize (H1 _ H3 _ _ H7); dest.
+    f_equal; auto.
+  - inv H4.
+    specialize (H1 _ H3 _ _ H7); dest.
+    auto.
+Qed.
+
+Lemma noCallDmSigGenA_implies GenK k (a: GenActionT GenK typeUT k) A A' strA strA' getConstK:
+  forall dmn dsig,
+    noCallDmSigGenA a {| isRep := true; nameRec := dmn |} dsig = true ->
+    forall (i: A) (i': A'),
+    noCallDmSigA (getGenAction strA getConstK i a)
+                 (addIndexToStr strA' i' (nameVal dmn)) dsig = true.
+Proof.
+  dependent induction a; simpl in *; auto; simpl in *; intros.
+  - dest_str; simpl in *; unfold strFromName in *.
+    + case_eq (isRep meth); intros X; rewrite X in *.
+      * { dest_str; simpl in *; rewrite <- H1.
+          - rewrite H2 in *; rewrite string_eq_true in *; simpl in *.
+            apply andb_true_iff in H0; dest.
+            rewrite <- noCallDmSigGenA_matches
+            with
+            (strA := strA)
+              (getConstK := getConstK) (i := i) in H3.
+            unfold strFromName in *; simpl in *.
+            rewrite H0, H3; auto.
+          - apply prefixNoMatch in H1; dest; auto.
+        }
+      * pose proof (goodName (nameRec meth)).
+        rewrite H1 in H2.
+        apply index_addIndexToStr_notNone in H2; intuition auto.
+    + apply H.
+      apply andb_true_iff in H0; dest; auto.
+  - repeat (apply andb_true_iff in H0; dest).
+    repeat (apply andb_true_iff; constructor).
+    apply IHa1; auto.
+    apply IHa2; auto.
+    apply H; auto.
+Qed.
 
 Section Sin.
   Variable A: Type.
@@ -626,7 +722,7 @@ Section Sin.
       rewrite IHa1, IHa2, H.
       reflexivity.
   Qed.
-
+  
   Lemma noCallDmSigSinA_matches (i: A) dmn dsig k (a: SinActionT typeUT k):
     noCallDmSigA (getSinAction a) (nameVal dmn) dsig =
     noCallDmSigSinA a dmn dsig.
@@ -637,6 +733,21 @@ Section Sin.
     - rewrite <- H, <- IHa1, <- IHa2; reflexivity.
   Qed.  
 
+  Lemma noCallDmSigA_forSin_true:
+    forall k (a: SinActionT typeUT k) n dmBody i,
+      noCallDmSigA (getSinAction a) (addIndexToStr strA i n) dmBody = true.
+  Proof.
+    induction a; simpl in *; auto; intros.
+    dest_str; simpl in *;
+    destruct meth; simpl in *;
+    unfold addIndexToStr, indexSymbol in *; subst.
+    apply index_not_in in goodName0.
+    assert (S_In "$"%char (n ++ "$" ++ strA i)) by
+        (apply S_in_or_app; right; left; intuition auto); intuition auto.
+    apply H; auto.
+    rewrite H, IHa1, IHa2; auto.
+  Qed.
+    
   Definition getGenSinBody (n: NameRecIdx) dn (dm: sigT SinMethodT)
              (sig: SignatureT):
     option (sigT (fun x: sigT SinMethodT => projT1 x = sig)) :=
