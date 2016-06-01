@@ -59,16 +59,17 @@ Section ProcDecSC.
   Hint Unfold pdec_pinst_regRel: MethDefs. (* for kdecompose_regMap_init *)
   Hint Unfold evalConstT: MethDefs.
 
+  Definition decInstConfig :=
+    {| inlining := true;
+       decomposition :=
+         DTRelational pdec_pinst_regRel pdec_pinst_ruleMap;
+       invariants :=
+         IVCons procDec_inv_0_ok (IVCons procDec_inv_1_ok IVNil)
+    |}.
+
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
-    kinline_left pdeci.
-    kdecomposeR_nodefs pdec_pinst_regRel pdec_pinst_ruleMap.
-
-    kinv_add procDec_inv_0_ok.
-    kinv_add procDec_inv_1_ok.
-    kinv_add_end.
-
-    kinvert; kinv_magic_with kinv_or3.
+    kami_ok decInstConfig kinv_or3.
     END_SKIP_PROOF_ON *) admit.
   Qed.
 
