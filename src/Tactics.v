@@ -252,6 +252,13 @@ Ltac kdecomposeR_nodefs t r :=
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
   try kdecompose_regrel_init.
 
+Ltac kinv_add inv :=
+  match goal with
+  | [H: reachable _ _ |- _] =>
+    let Hr := fresh "Hr" in
+    pose proof H as Hr; apply inv in Hr
+  end.
+
 Ltac kinv_add_end :=
   match goal with
   | [H: reachable _ _ |- _] => clear H
@@ -380,6 +387,50 @@ Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.
 Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
 Hint Extern 1 (_ = _: Modules) => apply eq_refl.
+
+(** Final Kami proof configuration *)
+
+Inductive DecompositionType :=
+| DTFunctional:
+    forall (theta: RegsT -> RegsT)
+           (ruleMap: RegsT -> string -> option string),
+      DecompositionType
+| DTRelational:
+    forall (thetaR: RegsT -> RegsT -> Prop)
+           (ruleMap: RegsT -> string -> option string),
+      DecompositionType.
+
+Inductive Invariants :=
+| IVNil: Invariants
+| IVCons: forall InvT, InvT -> Invariants -> Invariants.
+
+Ltac kinv_add_rep' invs :=
+  lazymatch invs with
+  | IVNil => idtac
+  | IVCons ?inv ?invs' => kinv_add inv; kinv_add_rep' invs'
+  end.
+Ltac kinv_add_rep invs :=
+  kinv_add_rep' invs; kinv_add_end.
+
+Record ProofConfig := { inlining : bool;
+                        decomposition : DecompositionType;
+                        invariants : Invariants
+                      }.
+
+Ltac kami_ok cfg inv_util :=
+  match eval hnf in (inlining cfg) with
+  | true =>
+    let im := fresh "im" in
+    kinline_left im
+  | false => idtac
+  end;
+  match eval hnf in (decomposition cfg) with
+  | DTFunctional ?sm ?rm => kdecompose_nodefs sm rm
+  | DTRelational ?sr ?rm => kdecomposeR_nodefs sr rm
+  end;
+  let invs := (eval hnf in (invariants cfg)) in
+  kinv_add_rep invs;
+  kinvert; kinv_magic_with inv_util.
 
 (** Notations for rule maps *)
 Notation "from '|->' to ; cont" :=
