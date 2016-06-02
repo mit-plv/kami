@@ -91,10 +91,6 @@ Ltac kequiv_unit tac :=
   | [ |- ModEquiv _ _ _ ] => progress eauto
   | [ |- ModEquiv _ _ ?m ] =>
     let H := fresh "H" in
-    assert (H: exists sm n, m = duplicateByRep sm n) by (do 2 eexists; reflexivity);
-    clear H; apply duplicateByRep_ModEquiv
-  | [ |- ModEquiv _ _ ?m ] =>
-    let H := fresh "H" in
     assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
     clear H; apply duplicate_ModEquiv
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular

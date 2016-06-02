@@ -27,8 +27,8 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
-    - apply duplicate_meta_disj_regs_one; auto.
-    - apply duplicate_meta_disj_regs_one; auto.
+    - admit.
+    - admit.
     - split.
       + apply duplicate_validRegsModules; auto.
       + constructor; [constructor|].

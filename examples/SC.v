@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.MetaSyntax Lts.Notations.
+Require Import Lts.Syntax Lts.Notations.
 Require Import Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
 Require Import Ex.MemTypes.
 
@@ -159,8 +159,6 @@ Section SC.
 End SC.
 
 Hint Unfold pinst pinsts minst sc : ModuleDefs.
-
-Require Import MetaSyntax.
 
 Section Facts.
   Variables opIdx addrSize lgDataBytes rfIdx : nat.
