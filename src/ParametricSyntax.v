@@ -1,4 +1,4 @@
-Require Import Syntax String Lib.Struct List Inline InlineFacts_2
+Require Import Syntax String Lib.Word Lib.Struct List Inline InlineFacts_2
         CommonTactics Program.Equality StringEq FunctionalExtensionality
         Bool Lib.Indexer Semantics PartialInline Lib.StringExtension Ascii
         Lib.Concat.
@@ -1212,6 +1212,107 @@ Definition concatMetaMod (m1 m2: MetaModule) :=
      metaMeths := metaMeths m1 ++ metaMeths m2 |}.
 
 Notation "m1 +++ m2" := (concatMetaMod m1 m2) (at level 0).
+
+Fixpoint getNatListToN (n: nat) :=
+  match n with
+  | O => [ O ]
+  | S n' => n :: getNatListToN n'
+  end.
+
+Lemma getNatListToN_NoDup n:
+  NoDup (getNatListToN n).
+Proof.
+  assert (NoDup (getNatListToN n) /\ forall i, In i (getNatListToN n) -> le i n).
+  { induction n; simpl in *; auto.
+    - constructor; intros; intuition auto; omega.
+    - destruct IHn.
+      constructor; auto.
+      constructor; unfold not; intros; auto.
+      specialize (H0 _ H1).
+      omega.
+      intros.
+      destruct H1; auto.
+      omega.
+  }
+  destruct H; intuition auto.
+Qed.
+
+Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
+Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
+
+Section MetaModuleToRep.
+  Variable n: nat.
+
+  Fixpoint regsToRep (rs: list MetaReg) :=
+    match rs with
+    | nil => nil
+    | OneReg init name :: rs' =>
+      RepReg string_of_nat
+             string_of_nat_into
+             withIndex_index_eq
+             (fun i => init)
+             name
+             (getNatListToN_NoDup n) :: regsToRep rs'
+    | r :: rs' => r :: regsToRep rs'
+    end.
+
+  Definition convNameRecR (name: NameRec) :=
+    {| isRep := true; nameRec := name |}.
+
+  Fixpoint convSinToGenTR ty {GenK k} (a: SinActionT ty k): GenActionT GenK ty k :=
+    match a with
+    | SMCall name sig ar cont => GMCall (convNameRecR name) sig ar
+                                        (fun a => convSinToGen GenK (cont a))
+    | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen GenK (cont a))
+    | SReadReg reg k cont => GReadReg (convNameRecR reg) k
+                                      (fun a => convSinToGen GenK (cont a))
+    | SWriteReg reg _ e cont => GWriteReg (convNameRecR reg) e (convSinToGen GenK cont)
+    | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
+                                         (fun a => convSinToGen GenK (cont a))
+    | SAssert_ ae cont => GAssert_ ae (convSinToGen GenK cont)
+    | SReturn e => GReturn _ e
+    end.
+
+  Definition convSinToGenR {GenK k} (a: SinAction k): GenAction GenK k :=
+    fun ty => (convSinToGenTR (a ty)).
+
+  Definition convSinToGenM {GenK k} (a: SinMethodT k): GenMethodT GenK k :=
+    fun ty ar => (convSinToGenTR (a ty ar)).
+
+  Fixpoint rulesToRep (ls: list MetaRule) :=
+    match ls with
+    | nil => nil
+    | OneRule r name :: ls' =>
+      RepRule string_of_nat
+              string_of_nat_into
+              natToVoid
+              withIndex_index_eq
+              (convSinToGenR r)
+              name
+              (getNatListToN_NoDup n) :: rulesToRep ls'
+    | l :: ls' => l :: rulesToRep ls'
+    end.
+
+  Fixpoint methsToRep (ms: list MetaMeth) :=
+    match ms with
+    | nil => nil
+    | OneMeth dm name :: ms' =>
+      RepMeth string_of_nat
+              string_of_nat_into
+              natToVoid
+              withIndex_index_eq
+              (existT _ (projT1 dm) (convSinToGenM (projT2 dm)))
+              name
+              (getNatListToN_NoDup n) :: methsToRep ms'
+    | mm :: ms' => mm :: methsToRep ms'
+    end.
+
+  Definition metaModuleToRep (m: MetaModule) :=
+    {| metaRegs := regsToRep (metaRegs m);
+       metaRules := rulesToRep (metaRules m);
+       metaMeths := methsToRep (metaMeths m) |}.
+
+End MetaModuleToRep.
 
 (*
 Record RegMulti A :=

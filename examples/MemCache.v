@@ -38,8 +38,7 @@ Section MemCache.
   Definition l1C :=
     l1 +++ fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP.
 
-  (* TODO: l1C -> repeated l1C *)
-  Definition l1s := ParametricSyntax.makeModule l1C.
+  Definition l1s := ParametricSyntax.makeModule (metaModuleToRep n l1C).
 
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
@@ -92,8 +91,7 @@ Section MemCacheNativeFifo.
     (l1 IdxBits TagBits LgNumDatas LgDataBytes Id)
       +++ nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP.
 
-  (* TODO: nl1C -> repeated nl1C *)
-  Definition nl1s := ParametricSyntax.makeModule nl1C.
+  Definition nl1s := ParametricSyntax.makeModule (metaModuleToRep n nl1C).
 
   Definition nfifoRqFromC :=
     @nativeFifo "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.

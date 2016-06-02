@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.Word Lib.ilist.
+Require Import Lib.Struct Lib.Word Lib.ilist Lib.Indexer.
 Require Import Lts.Syntax Lts.ParametricSyntax.
 
 Set Implicit Arguments.
@@ -395,32 +395,6 @@ Fixpoint makeMetaModule (im : InMetaModule) :=
     end
   end.
 
-Fixpoint getNatListToN (n: nat) :=
-  match n with
-  | O => [ O ]
-  | S n' => n :: getNatListToN n'
-  end.
-
-Require Import Lib.Indexer.
-
-Lemma getNatListToN_NoDup n:
-  NoDup (getNatListToN n).
-Proof.
-  assert (NoDup (getNatListToN n) /\ forall i, In i (getNatListToN n) -> le i n).
-  { induction n; simpl in *; auto.
-    - constructor; intros; intuition auto; omega.
-    - destruct IHn.
-      constructor; auto.
-      constructor; unfold not; intros; auto.
-      specialize (H0 _ H1).
-      omega.
-      intros.
-      destruct H1; auto.
-      omega.
-  }
-  destruct H; intuition auto.
-Qed.
-
 Notation "'Register' name : type <- init" :=
   (MMERegister (OneReg (existT ConstFullT (SyntaxKind type) (makeConst init))
                        {| nameVal := name;
@@ -477,9 +451,6 @@ Notation "'Method' { name | pf } ( param : dom ) : retT := c" :=
                     {| nameVal := name;
                        goodName := pf |} ))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
-
-Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
-Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
 
 Notation "'Repeat' 'Method' 'till' n 'by' name () : retT := c" :=
   (MMEMeth (RepMeth string_of_nat
