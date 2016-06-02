@@ -30,16 +30,47 @@ Section RegFile.
           Write ^"dataArray" <- #full@[ #w@."addr" <- #w@."data" ];
           Retv
       }.
+
+  (** SinAction version *)
+  Hypothesis Hname: index 0 indexSymbol name = None.
+  Lemma rfgn:
+    forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
+  Proof.
+    pose proof Hname.
+    admit.
+  Qed.
+
+  Definition regFileS :=
+    META {
+        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
+
+        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Ret (#full@[#a])
+            
+        with Method { ^"write" | rfgn "write" eq_refl } (w: WritePort): Void :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w@."addr" <- #w@."data" ];
+          Retv
+      }.
+
 End RegFile.
 
 Hint Unfold DataArray Addr WritePort : MethDefs.
-Hint Unfold regFile : ModuleDefs.
+Hint Unfold regFile regFileS : ModuleDefs.
 
 Section Facts.
   Variable name: string.
   Variable IdxBits: nat.
   Variable Data: Kind.
   Variable init: ConstT (DataArray IdxBits Data).
+
+  Hypothesis Hname: index 0 indexSymbol name = None.
+
+  Lemma regFile_regFileS:
+    regFile name _ _ init =
+    ParametricSyntax.makeModule (regFileS name _ _ init Hname).
+  Proof. reflexivity. Qed.
 
   Lemma regFile_ModEquiv:
     forall m,

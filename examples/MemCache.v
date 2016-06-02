@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Notations.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations.
 Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect.
@@ -15,25 +15,31 @@ Section MemCache.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition l1Cache := l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id.
-  Definition l1cs := regFile "cs"%string IdxBits Msi Default.
-  Definition l1tag := regFile "tag"%string IdxBits (L1Cache.Tag TagBits) Default.
-  Definition l1line := regFile "line"%string IdxBits (L1Cache.Line LgNumDatas LgDataBytes) Default.
+  Definition l1cs := regFileS "cs"%string IdxBits Msi Default eq_refl.
+  Definition l1tag := regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl.
+  Definition l1line := regFileS "line"%string IdxBits
+                                (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl.
 
-  Definition l1 := (l1Cache ++ l1cs ++ l1tag ++ l1line)%kami.
+  Definition l1 := l1Cache +++ l1cs +++ l1tag +++ l1line.
 
   Definition MIdxBits := TagBits + IdxBits.
 
-  Definition fifoRqFromProc := fifo "rqFromProc" (rsz FifoSize)
-                                    (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes).
-  Definition fifoRsToProc := fifo "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes).
-  Definition fifoRqToP := fifo "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id).
-  Definition fifoRsToP := fifo "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes).
-  Definition fifoFromP := fifo "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id).
+  Definition fifoRqFromProc :=
+    fifoS "rqFromProc" (rsz FifoSize)
+          (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) eq_refl.
+  Definition fifoRsToProc := fifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl.
+  Definition fifoRqToP :=
+    fifoS "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl.
+  Definition fifoRsToP :=
+    fifoS "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl.
+  Definition fifoFromP :=
+    fifoS "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl.
 
   Definition l1C :=
-    (l1 ++ fifoRqFromProc ++ fifoRsToProc ++ fifoRqToP ++ fifoRsToP ++ fifoFromP)%kami.
-  
-  Definition l1s := duplicate l1C n.
+    l1 +++ fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP.
+
+  (* TODO: l1C -> repeated l1C *)
+  Definition l1s := ParametricSyntax.makeModule l1C.
 
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
@@ -69,21 +75,25 @@ Section MemCacheNativeFifo.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition nfifoRqFromProc :=
-    @nativeFifo "rqFromProc" (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) Default.
-  Definition nfifoRsToProc := @nativeFifo "rsToProc" (RsToProc LgDataBytes) Default.
+    @nativeFifoS "rqFromProc" (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) Default eq_refl.
+  Definition nfifoRsToProc :=
+    @nativeFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl.
   Definition nfifoRqToP :=
-    @nativeFifo "rqToP" (RqToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id) Default.
+    @nativeFifoS "rqToP" (RqToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id)
+                 Default eq_refl.
   Definition nfifoRsToP :=
-    @nativeFifo "rsToP" (RsToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes) Default.
+    @nativeFifoS "rsToP" (RsToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes)
+                 Default eq_refl.
   Definition nfifoFromP :=
-    @nativeFifo "fromP" (FromP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id) Default.
+    @nativeFifoS "fromP" (FromP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id)
+                 Default eq_refl.
 
   Definition nl1C :=
-    ((l1 IdxBits TagBits LgNumDatas LgDataBytes Id)
-       ++ nfifoRqFromProc ++ nfifoRsToProc ++ nfifoRqToP ++ nfifoRsToP ++ nfifoFromP)%kami.
+    (l1 IdxBits TagBits LgNumDatas LgDataBytes Id)
+      +++ nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP.
 
-  (* Definition nl1s := duplicate nl1C n. *)
-  Definition nl1s := duplicateByRep nl1C n.
+  (* TODO: nl1C -> repeated nl1C *)
+  Definition nl1s := ParametricSyntax.makeModule nl1C.
 
   Definition nfifoRqFromC :=
     @nativeFifo "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.
@@ -98,11 +108,6 @@ Section MemCacheNativeFifo.
 
   Definition nmemCache :=
     (nl1s ++ nchildParentC ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
-
-  Definition nmemCacheRep :=
-    ((duplicateByRep nl1C n)
-       ++ nchildParentC
-       ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
               
 End MemCacheNativeFifo.
 
@@ -116,24 +121,7 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
-  Lemma l1C_refines_nl1C:
-    (l1C IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize))
-      <<== (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id).
-  Proof.
-    admit.
-    (* kmodular; [kequiv|kequiv|kequiv|kequiv| |]. *)
-    (* - krefl. *)
-    (* - kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
-    (*   + apply fifo_refines_nativefifo. *)
-    (*   + kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
-    (*     * apply fifo_refines_nativefifo. *)
-    (*     * kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
-    (*       { apply fifo_refines_nativefifo. } *)
-    (*       { kmodularn; [kequiv|kequiv|kequiv|kequiv| |]. *)
-    (*         { apply fifo_refines_nativefifo. } *)
-    (*         { apply fifo_refines_nativefifo. } *)
-    (*       } *)
-  Qed.
+  (* TODO: memCache <= nmemCache, from the fact: fifoS <= nativeFifoS *)
 
 End Refinement.
 

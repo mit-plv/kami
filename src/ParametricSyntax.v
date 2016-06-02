@@ -1194,6 +1194,13 @@ Definition makeModule m := Mod (concat (map getListFromMetaReg (metaRegs m)))
                                (concat (map getListFromMetaRule (metaRules m)))
                                (concat (map getListFromMetaMeth (metaMeths m))).
 
+Definition concatMetaMod (m1 m2: MetaModule) :=
+  {| metaRegs := metaRegs m1 ++ metaRegs m2;
+     metaRules := metaRules m1 ++ metaRules m2;
+     metaMeths := metaMeths m1 ++ metaMeths m2 |}.
+
+Notation "m1 +++ m2" := (concatMetaMod m1 m2) (at level 0).
+
 (*
 Record RegMulti A :=
   { regGen: A -> sigT ConstFullT;

@@ -62,7 +62,7 @@ Section L1Cache.
   End UtilFunctions.
 
   Definition l1Cache :=
-    MODULE {
+    META {
         Register "procRqValid": Bool <- @ConstBool false
         with Register "procRq": RqFromProc <- Default
         with Register "procRqReplace": Bool <- @ConstBool false
@@ -254,7 +254,7 @@ Section Facts.
 
   Lemma l1Cache_ModEquiv:
     forall m,
-      m = l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id ->
+      m = ParametricSyntax.makeModule (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id) ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof. (* SKIP_PROOF_ON
     kequiv.

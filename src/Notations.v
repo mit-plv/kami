@@ -199,6 +199,20 @@ Notation "'Call' name <- meth () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' { meth | pf } ( arg ) ; cont " :=
+  (SMCall (Build_NameRec (attrName meth) pf) (attrType meth) arg%kami_expr (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_sin_scope.
+Notation "'Call' name <- { meth | pf } ( arg ) ; cont " :=
+  (SMCall (Build_NameRec (attrName meth) pf) (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' { meth | pf } () ; cont " :=
+  (SMCall (Build_NameRec (attrName meth) pf) (attrType meth)
+          (Const _ Default) (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_sin_scope.
+Notation "'Call' name <- { meth | pf } () ; cont " :=
+  (SMCall (Build_NameRec (attrName meth) pf) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'LET' name <- expr ; cont " :=
   (SLet_ expr%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_sin_scope.
@@ -217,6 +231,15 @@ Notation "'Read' name : kind <- reg ; cont " :=
 Notation "'ReadN' name : kind <- reg ; cont " :=
   (SReadReg (Build_NameRec reg eq_refl) kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_sin_scope.
+Notation "'Read' name <- { reg | pf } ; cont" :=
+  (SReadReg (Build_NameRec reg pf) _ (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_sin_scope.
+Notation "'Read' name : kind <- { reg | pf } ; cont " :=
+  (SReadReg (Build_NameRec reg pf) (SyntaxKind kind) (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_sin_scope.
+Notation "'ReadN' name : kind <- { reg | pf } ; cont " :=
+  (SReadReg (Build_NameRec reg pf) kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_sin_scope.
 Notation "'Write' reg <- expr ; cont " :=
   (SWriteReg (Build_NameRec reg eq_refl) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
@@ -225,6 +248,15 @@ Notation "'Write' reg <- expr : kind ; cont " :=
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
 Notation "'WriteN' reg <- expr : kind ; cont " :=
   (@SWriteReg _ _ (Build_NameRec reg eq_refl) kind expr%kami_expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_sin_scope.
+Notation "'Write' { reg | pf } <- expr ; cont " :=
+  (SWriteReg (Build_NameRec reg pf) expr%kami_expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_sin_scope.
+Notation "'Write' { reg | pf } <- expr : kind ; cont " :=
+  (@SWriteReg _ _ (Build_NameRec reg pf) (SyntaxKind kind) expr%kami_expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_sin_scope.
+Notation "'WriteN' { reg | pf } <- expr : kind ; cont " :=
+  (@SWriteReg _ _ (Build_NameRec reg pf) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (SIfElse cexpr%kami_expr tact fact (fun name => cont))
@@ -394,6 +426,11 @@ Notation "'Register' name : type <- init" :=
                        {| nameVal := name;
                           goodName := eq_refl |} ))
     (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+Notation "'Register' { name | pf } : type <- init" :=
+  (MMERegister (OneReg (existT ConstFullT (SyntaxKind type) (makeConst init))
+                       {| nameVal := name;
+                          goodName := pf |} ))
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Register' 'as' i 'till' n 'by' name : type <- init" :=
   (MMERegister (RepReg string_of_nat
@@ -409,19 +446,36 @@ Notation "'RegisterN' name : type <- init" :=
                        {| nameVal := name;
                           goodName := eq_refl |} ))
     (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+Notation "'RegisterN' { name | pf } : type <- init" :=
+  (MMERegister (OneReg (existT ConstFullT (type) (init))
+                       {| nameVal := name;
+                          goodName := pf |} ))
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
 
 Notation "'Method' name () : retT := c" :=
-  (MMEMeth (OneMeth (existT MethodT {| arg := Void; ret := retT |}
-                            (fun ty => fun _ : ty Void => (c)%kami_sin : ActionT ty retT))
+  (MMEMeth (OneMeth (existT SinMethodT {| arg := Void; ret := retT |}
+                            (fun ty => fun _ : ty Void => (c)%kami_sin : SinActionT ty retT))
                     {| nameVal := name;
                        goodName := eq_refl |} ))
     (at level 0, name at level 0) : kami_meta_scope.
+Notation "'Method' { name | pf } () : retT := c" :=
+  (MMEMeth (OneMeth (existT SinMethodT {| arg := Void; ret := retT |}
+                            (fun ty => fun _ : ty Void => (c)%kami_sin : SinActionT ty retT))
+                    {| nameVal := name;
+                       goodName := pf |} ))
+    (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Method' name ( param : dom ) : retT := c" :=
-  (MMEMeth (OneMeth (existT MethodT {| arg := dom; ret := retT |}
-                            (fun ty => fun param : ty dom => (c)%kami_sin : ActionT ty retT))
+  (MMEMeth (OneMeth (existT SinMethodT {| arg := dom; ret := retT |}
+                            (fun ty => fun param : ty dom => (c)%kami_sin : SinActionT ty retT))
                     {| nameVal := name;
                        goodName := eq_refl |} ))
+    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
+Notation "'Method' { name | pf } ( param : dom ) : retT := c" :=
+  (MMEMeth (OneMeth (existT SinMethodT {| arg := dom; ret := retT |}
+                            (fun ty => fun param : ty dom => (c)%kami_sin : SinActionT ty retT))
+                    {| nameVal := name;
+                       goodName := pf |} ))
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
 Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
@@ -472,9 +526,14 @@ Notation "'Repeat' 'Method' 'till' n 'with' sz 'by' name ( param : dom ) : retT 
     (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
 
 Notation "'Rule' name := c" :=
-  (MMERule (OneRule (fun ty => c%kami_sin : ActionT ty Void)
+  (MMERule (OneRule (fun ty => c%kami_sin : SinActionT ty Void)
                     {| nameVal := name;
                        goodName := eq_refl |} ))
+    (at level 0, name at level 0) : kami_meta_scope.
+Notation "'Rule' { name | pf } := c" :=
+  (MMERule (OneRule (fun ty => c%kami_sin : SinActionT ty Void)
+                    {| nameVal := name;
+                       goodName := pf |} ))
     (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Rule' 'till' n 'by' name := c" :=
@@ -487,7 +546,6 @@ Notation "'Repeat' 'Rule' 'till' n 'by' name := c" :=
                     (getNatListToN_NoDup n)))
     (at level 0, name at level 0) : kami_meta_scope.
 
-
 Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
   (MMERule (RepRule string_of_nat
                     string_of_nat_into
@@ -497,7 +555,6 @@ Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
                     {| nameVal := name; goodName := eq_refl |}
                     (getNatListToN_NoDup n)))
      (at level 0, name at level 0) : kami_meta_scope.
-
 
 Delimit Scope kami_meta_scope with kami_meta.
 
