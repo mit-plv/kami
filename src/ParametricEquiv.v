@@ -1,4 +1,4 @@
-Require Import ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat.
+Require Import String ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringExtension.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.
@@ -117,6 +117,40 @@ Section Equiv.
               (* ExprEquiv G e1 e2 -> *)
               SinActionEquiv (SReturn e1) (SReturn e2).
 
+  Lemma convSinToGen_Equiv GenK k a1 a2:
+    SinActionEquiv (k := k) a1 a2 ->
+    GenActionEquiv GenK (k := k) (convSinToGen GenK a1) (convSinToGen GenK a2).
+  Proof.
+    induction 1; intros; simpl in *; try (constructor; auto).
+  Qed.
+  
+  Lemma appendSinGenAction_Equiv GenK kd d1 d2 k a1 a2:
+    SinActionEquiv (k := kd) d1 d2 ->
+    (forall v1 v2, GenActionEquiv GenK (k := k) (a1 v1) (a2 v2)) ->
+    GenActionEquiv GenK (k := k)
+                   (appendSinGenAction d1 a1) (appendSinGenAction d2 a2).
+  Proof.
+    induction 1; intros; simpl in *; try (constructor; auto); try apply convSinToGen_Equiv; auto.
+  Qed.
+
+  Lemma appendGenGenAction_Equiv GenK kd d1 d2 k a1 a2:
+    GenActionEquiv GenK (k := kd) d1 d2 ->
+    (forall v1 v2, GenActionEquiv GenK (k := k) (a1 v1) (a2 v2)) ->
+    GenActionEquiv GenK (k := k)
+                   (appendGenGenAction d1 a1) (appendGenGenAction d2 a2).
+  Proof.
+    induction 1; intros; simpl in *; try (constructor; auto); auto.
+  Qed.
+  
+  Lemma appendSinSinAction_Equiv kd d1 d2 k a1 a2:
+    SinActionEquiv (k := kd) d1 d2 ->
+    (forall v1 v2, SinActionEquiv (k := k) (a1 v1) (a2 v2)) ->
+    SinActionEquiv (k := k)
+                   (appendSinSinAction d1 a1) (appendSinSinAction d2 a2).
+  Proof.
+    induction 1; intros; simpl in *; try (constructor; auto); auto.
+  Qed.
+
   Lemma SinActionEquiv_ActionEquiv k:
     forall a1 a2,
       SinActionEquiv (k := k) a1 a2 ->
@@ -182,6 +216,84 @@ Section Equiv.
       | RepMeth _ _ _ _ _ _ bgen s _ _ => forall v1 v2, GenActionEquiv _ (projT2 bgen t1 v1)
                                                                      (projT2 bgen t2 v2)
     end.
+
+  Lemma inlineGenSinDm_Equiv GenK k a1 a2 dmName dmBody:
+    GenActionEquiv GenK (k := k) a1 a2 ->
+    MetaMethEquiv (OneMeth dmBody dmName) ->
+    GenActionEquiv GenK (k := k) (inlineGenSinDm a1 (nameVal dmName) dmBody)
+                   (inlineGenSinDm a2 (nameVal dmName) dmBody).
+  Proof.
+    simpl in *.
+    induction 1; simpl in *; try (constructor; auto); intros.
+    case_eq (getGenSinBody n (nameVal dmName) dmBody s); intros; simpl in *.
+    - unfold getGenSinBody in H2.
+      destruct n; simpl in *.
+      destruct isRep; simpl in *;
+      unfold andb in H2; simpl in *.
+      + destruct (string_eq (nameVal nameRec) (nameVal dmName)); simpl in *; discriminate.
+      + dest_str; simpl in *.
+        * rewrite H3 in H2.
+          rewrite string_eq_true in H2.
+          destruct (SignatureT_dec (projT1 dmBody) s); [| discriminate].
+          inv H2; simpl in *.
+          constructor; auto; intros.
+          simpl in *.
+          apply appendSinGenAction_Equiv; auto.
+        * apply string_eq_dec_false in H3.
+          rewrite H3 in H2; discriminate.
+    - constructor; auto.
+  Qed.
+
+  Lemma inlineGenGenDm_Equiv GenK k a1 a2 A strA goodFn1 getConstK goodFn2
+        dmBody dmName ls noDup:
+    GenActionEquiv GenK (k := k) a1 a2 ->
+    MetaMethEquiv
+      (@RepMeth A strA goodFn1 GenK getConstK goodFn2 dmBody dmName ls noDup) ->
+    GenActionEquiv GenK (k := k) (inlineGenGenDm a1 (nameVal dmName) dmBody)
+                   (inlineGenGenDm a2 (nameVal dmName) dmBody).
+  Proof.
+    simpl in *.
+    induction 1; simpl in *; try (constructor; auto); intros.
+    case_eq (getGenGenBody n (nameVal dmName) dmBody s); intros; simpl in *.
+    - unfold getGenGenBody in H2; destruct n; simpl in *.
+      destruct isRep; simpl in *; unfold andb in *; simpl in *.
+      + dest_str; simpl in *.
+        * rewrite H3 in H2.
+          rewrite string_eq_true in H2.
+          destruct (SignatureT_dec (projT1 dmBody) s); [| discriminate].
+          inv H2; simpl in *.
+          constructor; auto; intros.
+          simpl in *.
+          apply appendGenGenAction_Equiv; auto.
+        * apply string_eq_dec_false in H3.
+          rewrite H3 in *; discriminate.
+      + destruct (string_eq (nameVal nameRec) (nameVal dmName)); simpl in *; discriminate.
+    - constructor; auto.
+  Qed.
+
+  Lemma inlineSinSinDm_Equiv k a1 a2
+        dmBody dmName:
+    SinActionEquiv (k := k) a1 a2 ->
+    MetaMethEquiv
+      (@OneMeth dmBody dmName) ->
+    SinActionEquiv (k := k) (inlineSinSinDm a1 (nameVal dmName) dmBody)
+                   (inlineSinSinDm a2 (nameVal dmName) dmBody).
+  Proof.
+    induction 1; simpl in *; try (constructor; auto); intros.
+    case_eq (getSinSinBody n (nameVal dmName) dmBody s); intros; simpl in *.
+    - unfold getSinSinBody in H2; simpl in *.
+      dest_str; simpl in *.
+      * rewrite H3 in H2.
+        rewrite string_eq_true in H2.
+        destruct (SignatureT_dec (projT1 dmBody) s); [| discriminate].
+        inv H2; simpl in *.
+        constructor; auto; intros.
+        simpl in *.
+        apply appendSinSinAction_Equiv; auto.
+      * apply string_eq_dec_false in H3.
+        rewrite H3 in *; discriminate.
+    - constructor; auto.
+  Qed.
 
   Inductive MetaMethsEquiv: list MetaMeth -> Prop :=
   | MetaMethsEquivNil: MetaMethsEquiv nil

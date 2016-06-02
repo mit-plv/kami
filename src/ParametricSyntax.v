@@ -889,6 +889,18 @@ Section Sin.
   Qed.
 End Sin.
 
+Lemma inlineSinSinDmFn_matches:
+  forall (k : Kind) (a : SinAction k) (dn : string),
+    index 0 indexSymbol dn = None ->
+    forall dm : sigT SinMethodT,
+      (fun ty => getSinAction (inlineSinSinDm (a ty) dn dm)) =
+      fun ty => inlineDm (getSinAction (a ty)) (dn :: getMethFromSin dm)%struct.
+Proof.
+  intros.
+  extensionality ty.
+  apply inlineSinSinDm_matches; auto.
+Qed.
+
 Section MoreThm.
   Variable A: Type.
   Variable strA: A -> string.

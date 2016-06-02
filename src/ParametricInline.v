@@ -271,6 +271,42 @@ Section GenGen.
     apply noDup_preserveRule; auto.
   Qed.
 
+  Lemma inlineGenGenDmToRule_ModEquiv_NoFilt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := metaMeths m |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs)).
+          apply inlineGenGenDm_Equiv with (strA := strA) (goodFn1 := goodStrFn)
+                                                         (getConstK := getConstK) (goodFn2 := goodStrFn2) (noDup := noDupLs); auto.
+          assert (sth: In (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs) (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                                                                              :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs)
+                          (preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'; auto.
+  Qed.
+  
   Hypothesis HdmNoRule:
     forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
       In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
@@ -387,6 +423,46 @@ Section GenGen.
       rewrite rep, nameMatch; simpl.
       constructor; auto.
   Qed.
+
+  Lemma inlineGenGenDmToRule_ModEquiv_Filt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs)).
+          apply inlineGenGenDm_Equiv with (strA := strA) (goodFn1 := goodStrFn)
+                                                         (getConstK := getConstK) (goodFn2 := goodStrFn2) (noDup := noDupLs); auto.
+          assert (sth: In (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs) (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                                                                              :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs)
+                          (preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'.
+      apply in_app_or in H.
+      apply in_or_app; simpl.
+      intuition auto.
+  Qed.
+
 End GenGen.
 
 Section GenSin.
@@ -462,6 +538,44 @@ Section GenSin.
     apply noDup_preserveRule; auto.
   Qed.
 
+  Lemma inlineGenSinDmToRule_ModEquiv_NoFilt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := metaMeths m |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs)).
+          apply inlineGenSinDm_Equiv; auto.
+          assert (sth: In (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs) (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                                                                              :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (OneMeth dm dmName)
+                          (preDm ++ OneMeth dm dmName :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'.
+      apply in_app_or in H.
+      apply in_or_app; simpl.
+      intuition auto.
+  Qed.
+  
   Hypothesis HdmNoRule1:
     forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
                      noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
@@ -578,4 +692,302 @@ Section GenSin.
       rewrite rep; auto.
     - destruct dmName; simpl in *; auto.
   Qed.
+
+  Lemma inlineGenSinDmToRule_ModEquiv_Filt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs)).
+          apply inlineGenSinDm_Equiv; auto.
+          assert (sth: In (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs) (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                                                                              :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (OneMeth dm dmName)
+                          (preDm ++ OneMeth dm dmName :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'.
+      apply in_app_or in H.
+      apply in_or_app; simpl.
+      intuition auto.
+  Qed.
+  
+
 End GenSin.
+
+Section SinSin.
+  Variable m: MetaModule.
+  Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
+
+  Variable dm: sigT SinMethodT.
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
+  Variable Hdm: metaMeths m =
+                preDm ++ OneMeth dm dmName :: sufDm.
+
+  Variable r: SinAction Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ OneRule r rName :: sufR.
+
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+             (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
+
+  Lemma inlineSinSinDmToRule_traceRefines_NoFilt:
+    makeModule m <<==
+               makeModule
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ OneRule
+                         (fun ty => inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                         sufR;
+                  metaMeths := metaMeths m |}.
+  Proof.
+    unfold makeModule; simpl.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    unfold getActionFromSin; simpl in *.
+    destruct dmName as [dName dGood].
+    rewrite inlineSinSinDmFn_matches; auto; simpl in *.
+    assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
+                  (concat (map getListFromMetaMeth preDm) ++
+                          (dName :: getMethFromSin dm)%struct ::
+                          concat (map getListFromMetaMeth sufDm))).
+    { rewrite Hdm; simpl.
+      rewrite map_app; simpl.
+      rewrite concat_app; simpl.
+      reflexivity.
+    } 
+    assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
+                  (concat (map getListFromMetaRule preR) ++
+                          (nameVal rName :: getActionFromSin r)%struct ::
+                          concat (map getListFromMetaRule sufR))).
+    { rewrite Hrule; simpl.
+      rewrite map_app; simpl.
+      rewrite concat_app; simpl.
+      reflexivity.
+    }
+    match goal with
+      | |- ?m2 <<== ?m3 =>
+        apply (inlineDmToRule_traceRefines_NoFilt
+                      m2 (dName :: getMethFromSin dm)%struct
+                      (concat (map getListFromMetaMeth preDm)) 
+                      (concat (map getListFromMetaMeth sufDm))
+                      sth1 (noDup_preserveMeth _ HnoDupMeths)
+                      (concat (map getListFromMetaRule preR))
+                      (concat (map getListFromMetaRule sufR))
+                      _ sth2 (noDup_preserveRule _ HnoDupRules)
+                   )
+    end.
+  Qed.
+
+  Lemma inlineSinnSinDmToRule_ModEquiv_NoFilt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ OneRule
+                                    (fun ty =>
+                                       inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                                    sufR;
+                             metaMeths := metaMeths m |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ OneRule r rName
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (OneRule r rName)).
+          apply inlineSinSinDm_Equiv; auto.
+          assert (sth: In (OneRule r rName) (preR ++ OneRule r rName :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (OneMeth dm dmName)
+                          (preDm ++ OneMeth dm dmName :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ OneRule r rName
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'.
+      apply in_app_or in H.
+      apply in_or_app; simpl.
+      intuition auto.
+  Qed.
+  
+
+  
+  Hypothesis HdmNoRule1:
+    forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
+                     noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
+  
+  Hypothesis HdmNoRule2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |} (projT1 dm) = true.
+
+  Hypothesis HdmNoMeth1:
+    forall dbody db, In (@OneMeth dbody db) (metaMeths m) ->
+                     noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true.
+  
+  Hypothesis HdmNoMeth2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                      (projT1 dm) = true.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsSinA (r typeUT)) /\
+      nameVal call = nameVal dmName.
+    
+  Lemma inlineSinSinDmToRule_traceRefines_Filt:
+    makeModule m <<==
+               makeModule
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ OneRule
+                         (fun ty => inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
+  Proof.
+    unfold makeModule; simpl.
+    repeat rewrite map_app; simpl.
+    repeat rewrite concat_app; simpl.
+    unfold getActionFromSin; simpl in *.
+    rewrite inlineSinSinDmFn_matches; auto; simpl in *.
+    assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
+                  (concat (map getListFromMetaMeth preDm) ++
+                          (nameVal dmName :: getMethFromSin dm)%struct ::
+                          concat (map getListFromMetaMeth sufDm))).
+    { rewrite Hdm; simpl.
+      rewrite map_app; simpl.
+      rewrite concat_app; simpl.
+      reflexivity.
+    } 
+    assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
+                  (concat (map getListFromMetaRule preR) ++
+                          (nameVal rName :: getActionFromSin r)%struct ::
+                          concat (map getListFromMetaRule sufR))).
+    { rewrite Hrule; simpl.
+      rewrite map_app; simpl.
+      rewrite concat_app; simpl.
+      reflexivity.
+    }
+    match goal with
+      | |- ?m2 <<== ?m3 =>
+        apply (inlineDmToRule_traceRefines_Filt
+                      m2 (nameVal dmName :: getMethFromSin dm)%struct
+                      (concat (map getListFromMetaMeth preDm)) 
+                      (concat (map getListFromMetaMeth sufDm))
+                      sth1 (noDup_preserveMeth _ HnoDupMeths)
+                      (concat (map getListFromMetaRule preR))
+                      (concat (map getListFromMetaRule sufR))
+                      _ sth2 (noDup_preserveRule _ HnoDupRules)
+              ); auto
+    end; intros.
+    - apply metaModEquiv_modEquiv; auto.
+    - clear HDmInR.
+      rewrite <- concat_app in H.
+      pose proof (proj1 (in_concat_iff _ _) H);
+        clear H; dest.
+      rewrite <- map_app in H.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + apply HdmNoRule1 in H1.
+        unfold getActionFromSin.
+        erewrite noCallDmSigSinA_matches; eauto.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        unfold getActionFromGen.
+        apply HdmNoRule2 in H1.
+        assert (sth: strFromName strA x {| isRep := false; nameRec := dmName |} =
+                     nameVal dmName) by reflexivity.
+        rewrite <- sth.
+        rewrite noCallDmSigGenA_matches; auto.
+    - clear HDmInR.
+      simpl in H.
+      pose proof (proj1 (in_concat_iff _ _) H); clear H; dest.
+      apply in_map_iff in H; dest; subst.
+      destruct x0; simpl in *; intuition auto; subst; simpl in *.
+      + apply HdmNoMeth1 in H1.
+        erewrite noCallDmSigSinA_matches; eauto.
+      + unfold repRule, repMeth, getListFromRep in H0, H1.
+        apply in_map_iff in H0; dest; subst; simpl in *.
+        unfold getActionFromGen in *.
+        apply HdmNoMeth2 in H1.
+        assert (sth: strFromName strA x {| isRep := false; nameRec := dmName |} =
+                     nameVal dmName) by reflexivity.
+        rewrite <- sth.
+        rewrite noCallDmSigGenA_matches; auto.
+    - destruct HDmInR as [call [incall nameeq]]; subst; simpl.
+      unfold getActionFromSin.
+      rewrite getCallsSinA_matches.
+      apply in_map_iff.
+      exists call; auto.
+    - destruct dmName; auto.
+  Qed.
+
+  Lemma inlineSinnSinDmToRule_ModEquiv_Filt ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ OneRule
+                                    (fun ty =>
+                                       inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
+    rewrite Hrule, Hdm in *.
+    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
+    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
+    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
+    - apply in_app_or in H.
+      destruct H; simpl in *.
+      + specialize (rEquiv' r0).
+        assert (sth: In r0 (preR ++ OneRule r rName
+                                 :: sufR)) by (apply in_or_app; left; auto).
+        apply rEquiv'; auto.
+      + destruct H; subst.
+        * specialize (rEquiv' (OneRule r rName)).
+          apply inlineSinSinDm_Equiv; auto.
+          assert (sth: In (OneRule r rName) (preR ++ OneRule r rName :: sufR)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (rEquiv' sth); intuition auto.
+          assert (sth: In (OneMeth dm dmName)
+                          (preDm ++ OneMeth dm dmName :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
+          specialize (dEquiv' _ sth); auto.
+        * assert (sth: In r0 (preR ++ OneRule r rName
+                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
+          apply rEquiv'; auto.
+    - apply dEquiv'.
+      apply in_app_or in H.
+      apply in_or_app; simpl.
+      intuition auto.
+  Qed.
+End SinSin.
+
