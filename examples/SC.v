@@ -51,7 +51,7 @@ Section MemInst.
   Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := RsToProc lgDataBytes.
 
-  Definition memInst := MODULEM {
+  Definition memInstM := META {
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
     with Repeat Method till n by "exec" (a : RqFromProc) : RsToProc :=
@@ -66,11 +66,13 @@ Section MemInst.
       as na;
       Ret #na
   }.
+    
+  Definition memInst := ParametricSyntax.makeModule memInstM.
   
 End MemInst.
 
 Hint Unfold RqFromProc RsToProc : MethDefs.
-Hint Unfold memInst : ModuleDefs.
+Hint Unfold memInstM memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.

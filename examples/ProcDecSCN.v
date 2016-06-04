@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
+Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ModuleBound.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
@@ -27,24 +27,104 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
-    - admit.
-    - admit.
+    - apply boundedModule_disj_regs
+      with (mb1:= getModuleBound (pdecf dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
+    - apply boundedModule_disj_regs
+      with (mb1:= getModuleBound (pinst dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
     - split.
       + apply duplicate_validRegsModules; auto.
       + constructor; [constructor|].
         simpl; rewrite app_nil_r.
         induction n; simpl; [repeat constructor|].
         repeat constructor; auto.
+        
     - split.
       + apply duplicate_validRegsModules; auto.
       + constructor; [constructor|].
         simpl; rewrite app_nil_r.
         induction n; simpl; [repeat constructor|].
         repeat constructor; auto.
-    - apply duplicate_meta_disj_defs_rep; auto.
-    - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
-    - apply duplicate_meta_disj_defs_rep; auto.
-    - apply duplicate_meta_disj_meth_calls_rep with (mregso:= nil); auto.
+        
+    - apply boundedModule_disj_dms
+      with (mb1:= getModuleBound (pdecf dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
+    - apply boundedModule_disj_calls
+      with (mb1:= getModuleBound (pdecf dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
+    - apply boundedModule_disj_dms
+      with (mb1:= getModuleBound (pinst dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
+    - apply boundedModule_disj_calls
+      with (mb1:= getModuleBound (pinst dec execState execNextPc))
+             (mb2:= getMetaModuleBound (memInstM n addrSize lgDataBytes)).
+
+      + unfold getModuleBound; simpl.
+        unfold getDefs, getCalls; simpl.
+        unfold getMetaModuleBound; simpl.
+        unfold getMetaModuleCmsBound; simpl.
+        unfold DisjBounds; simpl; repeat split;
+          CommonTactics.dest_in; auto.
+
+      + apply getModuleBound_duplicate.
+      + apply getMetaModuleBound_bounded.
+
     - auto.
     - auto.
     - auto.
@@ -63,7 +143,7 @@ Section ProcDecSCN.
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
     ktrans pdecN; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
-    ktrans ((pdecs dec execState execNextPc n ++ ioms addrSize fifoSize lgDataBytes n)
+    ktrans ((pdecs dec execState execNextPc n ++ ioms addrSize lgDataBytes n)
               ++ minst addrSize lgDataBytes n)%kami; [apply traceRefines_assoc_2|].
 
     kmodular_sim_l.
@@ -82,15 +162,15 @@ Section ProcDecSCN.
         repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
         auto.
       + clear; induction n; simpl; [auto|].
-        assert (forall s, ~ (In s (spDom (iom addrSize fifoSize lgDataBytes)) /\
-                             In s (spImg (iom addrSize fifoSize lgDataBytes) (S n0)))).
+        assert (forall s, ~ (In s (spDom (iom addrSize lgDataBytes)) /\
+                             In s (spImg (iom addrSize lgDataBytes) (S n0)))).
         { apply specializable_disj_dom_img; auto. }
         repeat (rewrite specializer_dom; [|auto|vm_compute; tauto]).
         repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
         auto.
     - clear; induction n; simpl; [auto|].
-      assert (forall s, ~ (In s (spDom (pdecf fifoSize dec execState execNextPc)) /\
-                           In s (spImg (pdecf fifoSize dec execState execNextPc) (S n0)))).
+      assert (forall s, ~ (In s (spDom (pdecf dec execState execNextPc)) /\
+                           In s (spImg (pdecf dec execState execNextPc) (S n0)))).
       { apply specializable_disj_dom_img; auto. }
       repeat (rewrite specializer_dom; [|auto|vm_compute; tauto]).
       repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
