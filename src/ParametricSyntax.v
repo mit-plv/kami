@@ -1244,22 +1244,69 @@ Qed.
 Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
 Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
 
-Section MetaModuleToRep.
-  Variable n: nat.
+Record SinReg A :=
+  { regGen: A -> sigT ConstFullT;
+    regName: NameRec }.
 
-  Fixpoint regsToRep (rs: list MetaReg) :=
+Record SinRule :=
+  { ruleGen: SinAction Void;
+    ruleName: NameRec }.
+
+Record SinMeth :=
+  { methGen: sigT SinMethodT;
+    methName: NameRec }.
+
+Record SinModule A :=
+  { sinRegs: list (SinReg A);
+    sinRules: list SinRule;
+    sinMeths: list SinMeth
+  }.
+
+Section SinModuleToMeta.
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                         si = sj /\ i = j.
+  Variable ls: list A.
+  Variable noDupLs: NoDup ls.
+  
+  Fixpoint regsToRep (rs: list (SinReg A)) :=
     match rs with
-    | nil => nil
-    | OneReg init name :: rs' =>
-      RepReg string_of_nat
-             string_of_nat_into
-             withIndex_index_eq
-             (fun i => init)
-             name
-             (getNatListToN_NoDup n) :: regsToRep rs'
-    | r :: rs' => r :: regsToRep rs'
+      | nil => nil
+      | {| regGen := rg; regName := rn |} :: rs' =>
+        RepReg strA goodStrFn goodStrFn2 rg rn noDupLs :: regsToRep rs'
     end.
 
+  Fixpoint rulesToRep (rs: list SinRule) :=
+    match rs with
+      | nil => nil
+      | {| ruleGen := rg; ruleName := rn |} :: rs' =>
+        RepRule strA goodStrFn getConstK goodStrFn2
+                (fun ty => convSinToGen true _ (rg ty)) rn noDupLs ::
+                rulesToRep rs'
+    end.
+
+  Fixpoint methsToRep (rs: list SinMeth) :=
+    match rs with
+      | nil => nil
+      | {| methGen := rg; methName := rn |} :: rs' =>
+        RepMeth strA goodStrFn getConstK goodStrFn2
+                (existT (fun sig: SignatureT =>
+                           GenMethodT GenK sig) (projT1 rg)
+                        (fun ty argv => convSinToGen true GenK (projT2 rg ty argv)))
+                rn noDupLs :: methsToRep rs'
+    end.
+
+  Definition getMetaFromSin m :=
+    {| metaRegs := regsToRep (sinRegs m);
+       metaRules := rulesToRep (sinRules m);
+       metaMeths := methsToRep (sinMeths m) |}.
+End SinModuleToMeta.
+
+(*
   (*
   Definition convNameRecR (name: NameRec) :=
     {| isRep := true; nameRec := name |}.
@@ -1320,22 +1367,4 @@ Section MetaModuleToRep.
 
 End MetaModuleToRep.
 
-(*
-Record RegMulti A :=
-  { regGen: A -> sigT ConstFullT;
-    regName: string }.
-
-Record RuleMulti :=
-  { ruleGen: SinAction Void;
-    ruleName: string }.
-
-Record MethMulti :=
-  { methGen: sigT SinMethodT;
-    methName: string }.
-
-Record ModMulti A :=
-  { regsMulti: list (RegMulti A);
-    rulesMulti: list RuleMulti;
-    methsMulti: list MethMulti
-  }.
 *)

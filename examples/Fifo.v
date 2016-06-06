@@ -109,7 +109,7 @@ Section Fifo.
      Read deqP <- { ^"deqP" | fgn "deqP" eq_refl };
      Ret #elt@[#deqP])%kami_sin.
   
-  Definition fifoS := META {
+  Definition fifoS := SIN {
     Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
     with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
     with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
@@ -121,7 +121,7 @@ Section Fifo.
     with Method { ^"firstElt" | fgn "firstElt" eq_refl }() : dType := firstEltS
   }.
 
-  Definition simpleFifoS := META {
+  Definition simpleFifoS := SIN {
     Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
     with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
     with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
@@ -147,6 +147,7 @@ Section Facts.
 
   Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
 
+  (*
   Lemma fifo_fifoS:
     fifo fifoName sz dType = ParametricSyntax.makeModule (fifoS fifoName sz dType HfifoName).
   Proof. reflexivity. Qed.
@@ -155,6 +156,7 @@ Section Facts.
     simpleFifo fifoName sz dType =
     ParametricSyntax.makeModule (simpleFifoS fifoName sz dType HfifoName).
   Proof. reflexivity. Qed.
+   *)
 
   Lemma fifo_ModEquiv:
     forall m,

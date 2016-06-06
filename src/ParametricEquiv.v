@@ -119,7 +119,7 @@ Section Equiv.
 
   Lemma convSinToGen_Equiv GenK k a1 a2:
     SinActionEquiv (k := k) a1 a2 ->
-    GenActionEquiv GenK (k := k) (convSinToGen GenK a1) (convSinToGen GenK a2).
+    GenActionEquiv GenK (k := k) (convSinToGen false GenK a1) (convSinToGen false GenK a2).
   Proof.
     induction 1; intros; simpl in *; try (constructor; auto).
   Qed.

@@ -34,7 +34,7 @@ Section ChildParent.
 
   Definition n := wordToNat (wones LgNumChildren).
   Definition childParent : Modules :=
-    MODULEM {
+    MODULEMETA {
       Repeat Rule till n with LgNumChildren by "rqFromCToP" :=
         ILET i;  
         Calli rq <- rqToPPop();

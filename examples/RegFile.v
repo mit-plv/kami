@@ -41,7 +41,7 @@ Section RegFile.
   Qed.
 
   Definition regFileS :=
-    META {
+    SIN {
         Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
 
         with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
@@ -67,10 +67,12 @@ Section Facts.
 
   Hypothesis Hname: index 0 indexSymbol name = None.
 
+  (*
   Lemma regFile_regFileS:
     regFile name _ _ init =
     ParametricSyntax.makeModule (regFileS name _ _ init Hname).
   Proof. reflexivity. Qed.
+   *)
 
   Lemma regFile_ModEquiv:
     forall m,

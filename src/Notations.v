@@ -529,7 +529,7 @@ Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
 
 Delimit Scope kami_meta_scope with kami_meta.
 
-Notation "'MODULEM' { m1 'with' .. 'with' mN }" :=
+Notation "'MODULEMETA' { m1 'with' .. 'with' mN }" :=
   (ParametricSyntax.makeModule
      (makeMetaModule
         (ConsInMetaModule m1%kami_meta .. (ConsInMetaModule mN%kami_meta NilInMetaModule) ..)))
@@ -540,3 +540,123 @@ Notation "'META' { m1 'with' .. 'with' mN }" :=
      (ConsInMetaModule m1%kami_meta .. (ConsInMetaModule mN%kami_meta NilInMetaModule) ..))
     (at level 0, only parsing).
 
+
+(** Notation for sin-modules *)
+
+Inductive SinModuleElt :=
+| SMERegister (_ : SinReg nat)
+| SMERule (_ : SinRule)
+| SMEMeth (_ : SinMeth).
+
+Inductive InSinModule :=
+| NilInSinModule
+| ConsInSinModule (_ : SinModuleElt) (_ : InSinModule).
+
+Fixpoint makeSinModule (im : InSinModule) :=
+  match im with
+  | NilInSinModule => {| sinRegs:= nil;
+                         sinRules:= nil;
+                         sinMeths:= nil |}
+  | ConsInSinModule e i =>
+    let '(Build_SinModule iregs irules imeths) := makeSinModule i in
+    match e with
+    | SMERegister mreg => Build_SinModule (mreg :: iregs) irules imeths
+    | SMERule mrule => Build_SinModule iregs (mrule :: irules) imeths
+    | SMEMeth mmeth => Build_SinModule iregs irules (mmeth :: imeths)
+    end
+  end.
+
+Notation "'Register' name : type <- init" :=
+  (SMERegister {| regGen := fun _ => (existT ConstFullT (SyntaxKind type) (makeConst init));
+                  regName := {| nameVal := name;
+                                goodName := eq_refl |} |})
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+Notation "'Register' { name | pf } : type <- init" :=
+  (SMERegister {| regGen := fun _ => (existT ConstFullT (SyntaxKind type) (makeConst init));
+                  regName := {| nameVal := name;
+                                goodName := pf |} |})
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+
+Notation "'RegisterN' name : type <- init" :=
+  (SMERegister {| regGen := fun _ => (existT ConstFullT (type) (init));
+                  regName := {| nameVal := name;
+                                goodName := eq_refl |} |})
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+
+Notation "'RegisterN' { name | pf } : type <- init" :=
+  (SMERegister {| regGen := fun _ => (existT ConstFullT (type) (init));
+                  regName := {| nameVal := name;
+                                goodName := pf |} |})
+    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+
+Notation "'Method' name () : retT := c" :=
+  (SMEMeth {| methGen :=
+                (existT SinMethodT {| arg := Void; ret := retT |}
+                        (fun ty => fun _ : ty Void => (c)%kami_sin : SinActionT ty retT));
+              methName := {| nameVal := name;
+                             goodName := eq_refl |} |})
+    (at level 0, name at level 0) : kami_sin_scope.
+Notation "'Method' { name | pf } () : retT := c" :=
+  (SMEMeth {| methGen :=
+                (existT SinMethodT {| arg := Void; ret := retT |}
+                        (fun ty => fun _ : ty Void => (c)%kami_sin : SinActionT ty retT));
+              methName := {| nameVal := name;
+                             goodName := pf |} |})
+    (at level 0, name at level 0) : kami_sin_scope.
+
+Notation "'Method' name ( param : dom ) : retT := c" :=
+  (SMEMeth {| methGen :=
+                (existT SinMethodT {| arg := dom; ret := retT |}
+                        (fun ty => fun param : ty dom => (c)%kami_sin : SinActionT ty retT));
+              methName := {| nameVal := name;
+                             goodName := eq_refl |} |})
+    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_sin_scope.
+Notation "'Method' { name | pf } ( param : dom ) : retT := c" :=
+  (SMEMeth {| methGen :=
+                (existT SinMethodT {| arg := dom; ret := retT |}
+                        (fun ty => fun param : ty dom => (c)%kami_sin : SinActionT ty retT));
+              methName := {| nameVal := name;
+                             goodName := pf |} |})
+    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_sin_scope.
+
+Notation "'Rule' name := c" :=
+  (SMERule {| ruleGen := (fun ty => c%kami_sin : SinActionT ty Void);
+              ruleName := {| nameVal := name;
+                             goodName := eq_refl |} |})
+    (at level 0, name at level 0) : kami_sin_scope.
+Notation "'Rule' { name | pf } := c" :=
+  (SMERule {| ruleGen := (fun ty => c%kami_sin : SinActionT ty Void);
+              ruleName := {| nameVal := name;
+                             goodName := pf |} |})
+    (at level 0, name at level 0) : kami_sin_scope.
+
+Delimit Scope kami_sin_scope with kami_sin.
+
+Notation "'MODULESIN' n 'where' { m1 'with' .. 'with' mN }" :=
+  (ParametricSyntax.makeModule
+     (getMetaFromSin
+        string_of_nat string_of_nat_into natToVoid withIndex_index_eq
+        (getNatListToN_NoDup n)
+        (makeSinModule 
+           (ConsInSinModule
+              m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..))))
+    (at level 0, only parsing).
+
+Notation "'METASIN' n 'where' { m1 'with' .. 'with' mN }" :=
+  (getMetaFromSin
+     string_of_nat string_of_nat_into natToVoid withIndex_index_eq
+     (getNatListToN_NoDup n)
+     (makeSinModule 
+        (ConsInSinModule
+           m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..)))
+    (at level 0, only parsing).
+
+Notation "'SIN' { m1 'with' .. 'with' mN }" :=
+  (makeSinModule 
+     (ConsInSinModule
+        m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..))
+    (at level 0, only parsing).
+
+Definition getMetaFromSinNat n s :=
+  getMetaFromSin string_of_nat string_of_nat_into natToVoid withIndex_index_eq
+                 (getNatListToN_NoDup n) s.

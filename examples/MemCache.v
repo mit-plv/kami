@@ -14,31 +14,39 @@ Section MemCache.
   Variable FifoSize: nat.
   Variable n: nat. (* number of l1 caches (cores) *)
 
-  Definition l1Cache := l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id.
-  Definition l1cs := regFileS "cs"%string IdxBits Msi Default eq_refl.
-  Definition l1tag := regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl.
-  Definition l1line := regFileS "line"%string IdxBits
-                                (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl.
+  Definition l1Cache := getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
+  Definition l1cs := getMetaFromSinNat n (regFileS "cs"%string IdxBits Msi Default eq_refl).
+  Definition l1tag :=
+    getMetaFromSinNat n (regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl).
+  Definition l1line :=
+    getMetaFromSinNat n (regFileS "line"%string IdxBits
+                                  (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl).
 
   Definition l1 := l1Cache +++ l1cs +++ l1tag +++ l1line.
 
   Definition MIdxBits := TagBits + IdxBits.
 
   Definition fifoRqFromProc :=
-    fifoS "rqFromProc" (rsz FifoSize)
-          (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) eq_refl.
-  Definition fifoRsToProc := fifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl.
+    getMetaFromSinNat n
+                      (fifoS "rqFromProc" (rsz FifoSize)
+                             (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) eq_refl).
+  Definition fifoRsToProc :=
+    getMetaFromSinNat
+      n (fifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl).
   Definition fifoRqToP :=
-    fifoS "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl.
+    getMetaFromSinNat
+      n (fifoS "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
   Definition fifoRsToP :=
-    fifoS "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl.
+    getMetaFromSinNat
+      n (fifoS "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl).
   Definition fifoFromP :=
-    fifoS "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl.
+    getMetaFromSinNat
+      n (fifoS "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
 
   Definition l1C :=
     l1 +++ fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP.
 
-  Definition l1s := ParametricSyntax.makeModule (metaModuleToRep n l1C).
+  Definition l1s := ParametricSyntax.makeModule l1C.
 
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
@@ -88,10 +96,10 @@ Section MemCacheNativeFifo.
                  Default eq_refl.
 
   Definition nl1C :=
-    (l1 IdxBits TagBits LgNumDatas LgDataBytes Id)
+    (l1 IdxBits TagBits LgNumDatas LgDataBytes Id n)
       +++ nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP.
 
-  Definition nl1s := ParametricSyntax.makeModule (metaModuleToRep n nl1C).
+  Definition nl1s := ParametricSyntax.makeModule nl1C.
 
   Definition nfifoRqFromC :=
     @nativeFifo "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.
