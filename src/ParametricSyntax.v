@@ -200,8 +200,8 @@ Record NameRecIdx :=
   { isRep: bool;
     nameRec: NameRec }.
 
-Definition convNameRec n := {| isRep := false;
-                               nameRec := n |}.
+Definition convNameRec rep n := {| isRep := rep;
+                                   nameRec := n |}.
 
 Section Rep.
   Variable A: Type.
@@ -593,30 +593,34 @@ Section Sin.
     | SAssert_: Expr ty (SyntaxKind Bool) -> SinActionT lretT -> SinActionT lretT
     | SReturn: Expr ty (SyntaxKind lretT) -> SinActionT lretT.
 
-    Fixpoint convSinToGen GenK k (a: SinActionT k): GenActionT GenK ty k :=
+    Fixpoint convSinToGen rep GenK k (a: SinActionT k): GenActionT GenK ty k :=
       match a with
-        | SMCall name sig ar cont => GMCall (convNameRec name) sig ar
-                                            (fun a => convSinToGen GenK (cont a))
-        | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen GenK (cont a))
-        | SReadReg reg k cont => GReadReg (convNameRec reg) k
-                                          (fun a => convSinToGen GenK (cont a))
-        | SWriteReg reg _ e cont => GWriteReg (convNameRec reg) e (convSinToGen GenK cont)
-        | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
-                                             (fun a => convSinToGen GenK (cont a))
-        | SAssert_ ae cont => GAssert_ ae (convSinToGen GenK cont)
+        | SMCall name sig ar cont => GMCall (convNameRec rep name) sig ar
+                                            (fun a => convSinToGen rep GenK (cont a))
+        | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen rep GenK (cont a))
+        | SReadReg reg k cont => GReadReg (convNameRec rep reg) k
+                                          (fun a => convSinToGen rep GenK (cont a))
+        | SWriteReg reg _ e cont => GWriteReg (convNameRec rep reg) e
+                                              (convSinToGen rep GenK cont)
+        | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen rep GenK ta)
+                                             (convSinToGen rep GenK fa)
+                                             (fun a => convSinToGen rep GenK (cont a))
+        | SAssert_ ae cont => GAssert_ ae (convSinToGen rep GenK cont)
         | SReturn e => GReturn _ e
       end.
     
     Fixpoint appendSinGenAction GenK {retT1 retT2} (a1: SinActionT retT1)
            (a2: ty retT1 -> GenActionT GenK ty retT2): GenActionT GenK ty retT2 :=
     match a1 with
-      | SMCall name sig ar cont => GMCall (convNameRec name) sig ar
+      | SMCall name sig ar cont => GMCall (convNameRec false name) sig ar
                                           (fun a => appendSinGenAction (cont a) a2)
       | SLet_ _ ar cont => GLet_ ar (fun a => appendSinGenAction (cont a) a2)
-      | SReadReg reg k cont => GReadReg (convNameRec reg) k
+      | SReadReg reg k cont => GReadReg (convNameRec false reg) k
                                         (fun a => appendSinGenAction (cont a) a2)
-      | SWriteReg reg _ e cont => GWriteReg (convNameRec reg) e (appendSinGenAction cont a2)
-      | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
+      | SWriteReg reg _ e cont => GWriteReg (convNameRec false reg) e
+                                            (appendSinGenAction cont a2)
+      | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen false GenK ta)
+                                           (convSinToGen false GenK fa)
                                            (fun a => appendSinGenAction (cont a) a2)
       | SAssert_ ae cont => GAssert_ ae (appendSinGenAction cont a2)
       | SReturn e => GLet_ e a2
@@ -653,7 +657,7 @@ Section Sin.
       Variable i: A.
 
       Lemma genSinSame GenK (getConstK: A -> ConstT GenK) k (a: SinActionT k):
-        getGenAction strA getConstK i (convSinToGen GenK a) = getSinAction a.
+        getGenAction strA getConstK i (convSinToGen false GenK a) = getSinAction a.
       Proof.
         induction a; simpl in *; f_equal; try extensionality v; auto.
       Qed.
@@ -1276,10 +1280,10 @@ Section MetaModuleToRep.
    *)
 
   Definition convSinToGenR {GenK k} (a: SinAction k): GenAction GenK k :=
-    fun ty => (convSinToGen _ (a ty)).
+    fun ty => (convSinToGen true _ (a ty)).
 
   Definition convSinToGenM {GenK k} (a: SinMethodT k): GenMethodT GenK k :=
-    fun ty ar => (convSinToGen _ (a ty ar)).
+    fun ty ar => (convSinToGen true _ (a ty ar)).
 
   Fixpoint rulesToRep (ls: list MetaRule) :=
     match ls with
