@@ -4,7 +4,7 @@ Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.Equiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
-Require Import Lts.Decomposition Lts.DecompositionZero.
+Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound.
 
 Set Implicit Arguments.
 

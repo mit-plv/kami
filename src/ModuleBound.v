@@ -5,6 +5,12 @@ Require Import Specialize Duplicate.
 
 Set Implicit Arguments.
 
+Lemma prefix_refl: forall s, prefix s s = true.
+Proof.
+  induction s; auto; simpl.
+  destruct (Ascii.ascii_dec a a); [auto|elim n; reflexivity].
+Qed.
+
 Section ModuleBound.
   Variable m: Modules.
 
@@ -17,7 +23,7 @@ Section ModuleBound.
   Proof.
     unfold Abstracted; intros.
     exists s; split; auto.
-    admit.
+    apply prefix_refl.
   Qed.
 
   Definition RegsBound (regss: Prefixes) := Abstracted regss (namesOf (getRegInits m)).
@@ -94,6 +100,7 @@ Section Bounds.
       BoundedModule m2 (getModuleBound m2) ->
       BoundedModule (m1 ++ m2)%kami (getModuleBound (m1 ++ m2)%kami).
   Proof.
+    unfold BoundedModule, getModuleBound; simpl; intros; dest.
     admit.
   Qed.
 
