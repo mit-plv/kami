@@ -1256,6 +1256,7 @@ Section MetaModuleToRep.
     | r :: rs' => r :: regsToRep rs'
     end.
 
+  (*
   Definition convNameRecR (name: NameRec) :=
     {| isRep := true; nameRec := name |}.
 
@@ -1272,12 +1273,13 @@ Section MetaModuleToRep.
     | SAssert_ ae cont => GAssert_ ae (convSinToGen GenK cont)
     | SReturn e => GReturn _ e
     end.
+   *)
 
   Definition convSinToGenR {GenK k} (a: SinAction k): GenAction GenK k :=
-    fun ty => (convSinToGenTR (a ty)).
+    fun ty => (convSinToGen _ (a ty)).
 
   Definition convSinToGenM {GenK k} (a: SinMethodT k): GenMethodT GenK k :=
-    fun ty ar => (convSinToGenTR (a ty ar)).
+    fun ty ar => (convSinToGen _ (a ty ar)).
 
   Fixpoint rulesToRep (ls: list MetaRule) :=
     match ls with
