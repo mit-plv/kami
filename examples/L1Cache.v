@@ -257,9 +257,8 @@ Section Facts.
       m = ParametricSyntax.makeModule
             (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)) ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
-  Proof. (* SKIP_PROOF_ON
-    kequiv.
-    END_SKIP_PROOF_ON *) admit.
+  Proof.
+    admit.
   Qed.
 
 End Facts.

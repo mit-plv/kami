@@ -9,80 +9,6 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
 Set Implicit Arguments.
 
-Ltac unfold_head m :=
-  match m with
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ =>
-    let m' := eval cbv [hdef] in m in m'
-  end.
-
-Ltac get_minimal_module_bound m :=
-  match m with
-  | duplicate ?sm _ => constr:(getModuleBound sm)
-  | makeModule ?mm => constr:(getMetaModuleBound mm)
-  | _ =>
-    let m' := unfold_head m in
-    get_minimal_module_bound m'
-  end.
-
-Ltac red_to_module_bound :=
-  match goal with
-  | [ |- DisjList (namesOf (getRegInits ?m1))
-                  (namesOf (getRegInits ?m2)) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
-    apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
-  | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
-    apply boundedModule_disj_dms with (mb1 := mb1') (mb2 := mb2')
-  | [ |- DisjList (getCalls ?m1) (getCalls ?m2) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
-    apply boundedModule_disj_calls with (mb1 := mb1') (mb2 := mb2')
-  end.
-
-Ltac bounded_module_tac :=
-  repeat (
-      apply getModuleBound_bounded
-      || apply getModuleBound_modular
-      || apply getModuleBound_duplicate
-      || apply getMetaModuleBound_bounded
-      || apply getMetaModuleBound_modular).
-
-Ltac disj_module_tac :=
-  red_to_module_bound; (* always reduces to three subgoals *)
-  [repeat split; CommonTactics.dest_in; auto
-  |bounded_module_tac
-  |bounded_module_tac].
-
 Section ProcDecSCN.
   Variables addrSize lgDataBytes rfIdx: nat.
 
@@ -116,7 +42,6 @@ Section ProcDecSCN.
         simpl; rewrite app_nil_r.
         induction n; simpl; [repeat constructor|].
         repeat constructor; auto.
-        
     - disj_module_tac.
     - disj_module_tac.
     - disj_module_tac.
