@@ -82,18 +82,26 @@ Section MemCacheNativeFifo.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition nfifoRqFromProc :=
-    @nativeFifoS "rqFromProc" (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) Default eq_refl.
+    getMetaFromSinNat n (@nativeFifoS "rqFromProc"
+                                      (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes)
+                                      Default eq_refl).
   Definition nfifoRsToProc :=
-    @nativeFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl.
+    getMetaFromSinNat n (@nativeFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl).
   Definition nfifoRqToP :=
-    @nativeFifoS "rqToP" (RqToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id)
-                 Default eq_refl.
+    getMetaFromSinNat n (@nativeFifoS "rqToP"
+                                      (RqToP (MIdxBits IdxBits TagBits)
+                                             LgNumDatas LgDataBytes Id)
+                                      Default eq_refl).
   Definition nfifoRsToP :=
-    @nativeFifoS "rsToP" (RsToP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes)
-                 Default eq_refl.
+    getMetaFromSinNat n (@nativeFifoS "rsToP"
+                                      (RsToP (MIdxBits IdxBits TagBits)
+                                             LgNumDatas LgDataBytes)
+                                      Default eq_refl).
   Definition nfifoFromP :=
-    @nativeFifoS "fromP" (FromP (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes Id)
-                 Default eq_refl.
+    getMetaFromSinNat n (@nativeFifoS "fromP"
+                                      (FromP (MIdxBits IdxBits TagBits)
+                                             LgNumDatas LgDataBytes Id)
+                                      Default eq_refl).
 
   Definition nl1C :=
     (l1 IdxBits TagBits LgNumDatas LgDataBytes Id n)

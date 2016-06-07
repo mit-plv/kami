@@ -46,8 +46,8 @@ Section ProcDecSCN.
     - kdisj_list.
     - kdisj_list.
     - kdisj_list.
-    - auto.
-    - auto.
+    - kdef_call_sub.
+    - kdef_call_sub.
     - auto.
     - kduplicated.
       + kequiv.

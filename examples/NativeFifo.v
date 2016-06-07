@@ -91,7 +91,7 @@ Section NativeFifo.
      Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami_sin.
   
-  Definition nativeFifoS := META {
+  Definition nativeFifoS := SIN {
     RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
     with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
@@ -99,7 +99,7 @@ Section NativeFifo.
     with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
   }.
 
-  Definition nativeSimpleFifoS := META {
+  Definition nativeSimpleFifoS := SIN {
     RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
     with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
@@ -123,15 +123,15 @@ Section Facts.
 
   Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
 
-  Lemma nativeFifo_nativeFifoS:
-    nativeFifo fifoName default =
-    ParametricSyntax.makeModule (nativeFifoS fifoName default HfifoName).
-  Proof. reflexivity. Qed.
+  (* Lemma nativeFifo_nativeFifoS: *)
+  (*   nativeFifo fifoName default = *)
+  (*   ParametricSyntax.makeModule (nativeFifoS fifoName default HfifoName). *)
+  (* Proof. reflexivity. Qed. *)
 
-  Lemma nativeSimpleFifo_nativeSimpleFifoS:
-    nativeSimpleFifo fifoName default =
-    ParametricSyntax.makeModule (nativeSimpleFifoS fifoName default HfifoName).
-  Proof. reflexivity. Qed.
+  (* Lemma nativeSimpleFifo_nativeSimpleFifoS: *)
+  (*   nativeSimpleFifo fifoName default = *)
+  (*   ParametricSyntax.makeModule (nativeSimpleFifoS fifoName default HfifoName). *)
+  (* Proof. reflexivity. Qed. *)
 
   Lemma nativeFifo_ModEquiv:
     forall m,
