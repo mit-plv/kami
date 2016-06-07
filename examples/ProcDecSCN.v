@@ -74,29 +74,8 @@ Section ProcDecSCN.
       + apply duplicate_disj_regs; auto.
     - apply duplicate_regs_NoDup; auto.
     - auto.
-    - simpl; unfold namesOf; rewrite map_app; apply DisjList_app_4.
-      + clear; induction n; simpl; [auto|].
-        assert (forall s, ~ (In s (spDom (ProcDec.pdec dec execState execNextPc)) /\
-                             In s (spImg (ProcDec.pdec dec execState execNextPc) (S n0)))).
-        { apply specializable_disj_dom_img; auto. }
-        repeat (rewrite specializer_dom; [|auto|vm_compute; tauto]).
-        repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
-        auto.
-      + clear; induction n; simpl; [auto|].
-        assert (forall s, ~ (In s (spDom (iom addrSize lgDataBytes)) /\
-                             In s (spImg (iom addrSize lgDataBytes) (S n0)))).
-        { apply specializable_disj_dom_img; auto. }
-        repeat (rewrite specializer_dom; [|auto|vm_compute; tauto]).
-        repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
-        auto.
-    - clear; induction n; simpl; [auto|].
-      assert (forall s, ~ (In s (spDom (pdecf dec execState execNextPc)) /\
-                           In s (spImg (pdecf dec execState execNextPc) (S n0)))).
-      { apply specializable_disj_dom_img; auto. }
-      repeat (rewrite specializer_dom; [|auto|vm_compute; tauto]).
-      repeat (apply DisjList_string_cons; [intro Hx; CommonTactics.dest_in; discriminate|]).
-      auto.
-      
+    - disj_module_tac.
+    - disj_module_tac.
     - apply duplicate_regs_ConcatMod_2; auto; kequiv.
     - apply duplicate_regs_ConcatMod_1; auto; kequiv.
     - apply duplicate_rules_ConcatMod_2; auto; kequiv.

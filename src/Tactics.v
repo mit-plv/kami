@@ -162,9 +162,13 @@ Ltac unfold_head m :=
   end.
 
 Ltac get_minimal_module_bound m :=
-  match m with
+  lazymatch m with
   | duplicate ?sm _ => constr:(getModuleBound sm)
   | ParametricSyntax.makeModule ?mm => constr:(getMetaModuleBound mm)
+  | ConcatMod ?m1 ?m2 =>
+    let mb1 := get_minimal_module_bound m1 in
+    let mb2 := get_minimal_module_bound m2 in
+    constr:(concatModuleBound mb1 mb2)
   | _ =>
     let m' := unfold_head m in
     get_minimal_module_bound m'
@@ -191,6 +195,7 @@ Ltac bounded_module_tac :=
   repeat (
       apply getModuleBound_bounded
       || apply getModuleBound_modular
+      || apply concatMod_concatModuleBound
       || (apply getModuleBound_duplicate; auto)
       || apply getMetaModuleBound_bounded).
 

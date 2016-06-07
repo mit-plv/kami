@@ -134,6 +134,11 @@ Section ModuleBound.
                           dmss : Prefixes;
                           cmss : Prefixes }.
 
+  Definition concatModuleBound (mb1 mb2: ModuleBound) :=
+    {| regss := regss mb1 ++ regss mb2;
+       dmss := dmss mb1 ++ dmss mb2;
+       cmss := cmss mb1 ++ cmss mb2 |}.
+
   Definition BoundedModule (mb: ModuleBound) :=
     RegsBound (regss mb) /\ DmsBound (dmss mb) /\ CmsBound (cmss mb).
 
@@ -152,6 +157,31 @@ Section ModuleBound.
 End ModuleBound.
 
 Section Bounds.
+
+  Lemma concatMod_concatModuleBound:
+    forall m1 m2 mb1 mb2,
+      BoundedModule m1 mb1 ->
+      BoundedModule m2 mb2 ->
+      BoundedModule (m1 ++ m2)%kami (concatModuleBound mb1 mb2).
+  Proof.
+    unfold BoundedModule, concatModuleBound; simpl; intros; dest.
+    repeat split.
+    - unfold RegsBound; simpl.
+      unfold RegInitT; rewrite namesOf_app.
+      apply abstracted_app_1; auto.
+    - unfold DmsBound; simpl.
+      rewrite getDefs_app.
+      apply abstracted_app_1; auto.
+    - clear -H2 H4; unfold CmsBound, Abstracted in *; simpl; intros.
+      specializeAll s.
+      apply getCalls_in in H; destruct H.
+      + specialize (H4 H); destruct H4 as [abss ?]; dest.
+        exists abss; split; auto.
+        apply in_or_app; auto.
+      + specialize (H2 H); destruct H2 as [abss ?]; dest.
+        exists abss; split; auto.
+        apply in_or_app; auto.
+  Qed.
 
   Definition getModuleBound (m: Modules) :=
     {| regss := namesOf (getRegInits m);
