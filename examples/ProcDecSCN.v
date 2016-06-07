@@ -28,8 +28,8 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
-    - disj_module_tac.
-    - disj_module_tac.
+    - kdisj_list.
+    - kdisj_list.
     - split.
       + apply duplicate_validRegsModules; auto.
       + constructor; [constructor|].
@@ -42,10 +42,10 @@ Section ProcDecSCN.
         simpl; rewrite app_nil_r.
         induction n; simpl; [repeat constructor|].
         repeat constructor; auto.
-    - disj_module_tac.
-    - disj_module_tac.
-    - disj_module_tac.
-    - disj_module_tac.
+    - kdisj_list.
+    - kdisj_list.
+    - kdisj_list.
+    - kdisj_list.
     - auto.
     - auto.
     - auto.
@@ -71,11 +71,11 @@ Section ProcDecSCN.
     - simpl; unfold namesOf; rewrite map_app; apply NoDup_DisjList.
       + apply duplicate_regs_NoDup; auto.
       + apply duplicate_regs_NoDup; auto.
-      + apply duplicate_disj_regs; auto.
+      + kdisj_list.
     - apply duplicate_regs_NoDup; auto.
     - auto.
-    - disj_module_tac.
-    - disj_module_tac.
+    - kdisj_list.
+    - kdisj_list.
     - apply duplicate_regs_ConcatMod_2; auto; kequiv.
     - apply duplicate_regs_ConcatMod_1; auto; kequiv.
     - apply duplicate_rules_ConcatMod_2; auto; kequiv.

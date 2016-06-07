@@ -181,6 +181,11 @@ Ltac red_to_module_bound :=
     let mb1' := get_minimal_module_bound m1 in
     let mb2' := get_minimal_module_bound m2 in
     apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
+  | [ |- DisjList (map _ (getRegInits ?m1))
+                  (map _ (getRegInits ?m2)) ] =>
+    let mb1' := get_minimal_module_bound m1 in
+    let mb2' := get_minimal_module_bound m2 in
+    apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
     let mb1' := get_minimal_module_bound m1 in
     let mb2' := get_minimal_module_bound m2 in
@@ -205,15 +210,7 @@ Ltac disj_module_tac :=
   |bounded_module_tac
   |bounded_module_tac].
 
-Ltac kdisj_list :=
-  abstract (
-      apply DisjList_logic; vm_compute; intros;
-      repeat
-        match goal with
-        | [H: _ \/ _ |- _] => inv H
-        | [H: False |- _] => inv H
-        | [H: _ = _%string |- _] => inv H
-        end).
+Ltac kdisj_list := disj_module_tac.
 
 Ltac kdef_call_sub :=
   repeat
