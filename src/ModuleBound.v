@@ -62,6 +62,9 @@ Section ModuleBound.
   Definition Abstracted (abs: Prefixes) (ls: list string) :=
     forall s, In s ls -> exists abss, In abss abs /\ prefix abss s = true.
 
+  Lemma abstracted_nil: forall a, Abstracted a nil.
+  Proof. unfold Abstracted; intros; inv H. Qed.
+
   Lemma abstracted_refl: forall l, Abstracted l l.
   Proof.
     unfold Abstracted; intros.
@@ -367,7 +370,61 @@ Section Bounds.
   Proof.
     unfold CmsBound, makeModule, getMetaModuleCmsBound, getCalls; simpl; intros.
     rewrite map_app.
-    admit.
+    apply abstracted_app_1.
+    - clear; induction mrules; [apply abstracted_refl|].
+      simpl; rewrite map_app; rewrite getCallsR_app.
+      apply abstracted_app_1; auto.
+      destruct a.
+      + simpl.
+        match goal with
+        | [ |- Abstracted ?abs _ ] =>
+          replace abs with (map nameVal (getCallsSinA (b typeUT)))
+            by (clear; induction (getCallsSinA (b typeUT)); simpl; [auto|f_equal; auto])
+        end.
+        rewrite app_nil_r, <-getCallsSinA_matches.
+        apply abstracted_refl.
+      + simpl; induction ls; [apply abstracted_nil|].
+        simpl; apply abstracted_app_3; [|inv noDup; auto].
+        unfold getActionFromGen.
+        rewrite getCallsGenA_matches.
+        clear; induction (getCallsGenA (bgen typeUT)); simpl; [apply abstracted_refl|].
+        unfold Abstracted in *; intros.
+        inv H.
+        * exists (nameVal (nameRec a0)); split; [left; auto|].
+          destruct a0 as [[|] [? ?]]; unfold strFromName; simpl.
+          { apply prefix_append. }
+          { apply prefix_refl. }
+        * specialize (IHl _ H0); destruct IHl as [abss ?]; dest.
+          exists abss; split; auto.
+          right; auto.
+    - clear; induction mdms; [apply abstracted_refl|].
+      simpl; rewrite map_app; rewrite getCallsM_app.
+      apply abstracted_app_1; auto.
+      destruct a.
+      + simpl.
+        match goal with
+        | [ |- Abstracted ?abs _ ] =>
+          replace abs with (map nameVal (getCallsSinA (projT2 b typeUT tt)))
+            by (clear; induction (getCallsSinA (projT2 b typeUT tt));
+                simpl; [auto|f_equal; auto])
+        end.
+        rewrite app_nil_r, <-getCallsSinA_matches.
+        apply abstracted_refl.
+      + simpl; induction ls; [apply abstracted_nil|].
+        simpl; apply abstracted_app_3; [|inv noDup; auto].
+        unfold getActionFromGen.
+        rewrite getCallsGenA_matches.
+        clear; induction (getCallsGenA (projT2 bgen typeUT tt)); simpl;
+          [apply abstracted_refl|].
+        unfold Abstracted in *; intros.
+        inv H.
+        * exists (nameVal (nameRec a0)); split; [left; auto|].
+          destruct a0 as [[|] [? ?]]; unfold strFromName; simpl.
+          { apply prefix_append. }
+          { apply prefix_refl. }
+        * specialize (IHl _ H0); destruct IHl as [abss ?]; dest.
+          exists abss; split; auto.
+          right; auto.
   Qed.
 
   Lemma getMetaModuleBound_bounded:
@@ -379,16 +436,6 @@ Section Bounds.
     - apply abstracted_metaMeths.
     - apply abstracted_metaCms. 
   Qed.
-
-  (* TODO: Check whether it should be proved *)
-  (* Lemma getMetaModuleBound_modular: *)
-  (*   forall mm1 mm2, *)
-  (*     BoundedModule (makeModule mm1) (getMetaModuleBound mm1) -> *)
-  (*     BoundedModule (makeModule mm2) (getMetaModuleBound mm2) -> *)
-  (*     BoundedModule (makeModule (mm1 +++ mm2)) *)
-  (*                   (getMetaModuleBound (mm1 +++ mm2)). *)
-  (* Proof. *)
-  (* Qed. *)
 
 End Bounds.
 
