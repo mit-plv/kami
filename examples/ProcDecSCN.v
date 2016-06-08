@@ -30,18 +30,8 @@ Section ProcDecSCN.
     - kequiv.
     - kdisj_list.
     - kdisj_list.
-    - split.
-      + apply duplicate_validRegsModules; auto.
-      + constructor; [constructor|].
-        simpl; rewrite app_nil_r.
-        induction n; simpl; [repeat constructor|].
-        repeat constructor; auto.
-    - split.
-      + apply duplicate_validRegsModules; auto.
-      + constructor; [constructor|].
-        simpl; rewrite app_nil_r.
-        induction n; simpl; [repeat constructor|].
-        repeat constructor; auto.
+    - kvalid_regs.
+    - kvalid_regs.
     - kdisj_list.
     - kdisj_list.
     - kdisj_list.

@@ -115,19 +115,41 @@ Ltac kequiv_with tac :=
 
 Ltac kequiv := kequiv_with idtac.
 
-Ltac kvalid_regs :=
-  repeat autounfold with MethDefs;
-  repeat
-    match goal with
-    | [ |- ValidRegsModules _ _ ] => apply duplicate_validRegsModules
-    | [ |- ValidRegsModules _ _ ] => constructor; intros
-    | [ |- ValidRegsRules _ _ _ ] => constructor; intros
-    | [ |- ValidRegsDms _ _ _ ] => constructor; intros
-    | [ |- ValidRegsAction _ _ ] => constructor; intros
-    | [ |- In _ _] => simpl; tauto
-    end.
-
 Ltac unfold_head m :=
+  match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ =>
+    unfold hdef
+  | ?hdef _ =>
+    unfold hdef
+  end.
+
+Ltac unfold_head_ret m :=
   match m with
   | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
     let m' := eval cbv [hdef] in m in m'
@@ -161,6 +183,33 @@ Ltac unfold_head m :=
     let m' := eval cbv [hdef] in m in m'
   end.
 
+Ltac kvalid_regs :=
+  repeat autounfold with MethDefs;
+  repeat (* 1) try to use existing lemmas *)
+    match goal with
+    | [ |- ValidRegsModules _ (ConcatMod _ _) ] => split
+    | [ |- ValidRegsModules _ (duplicate _ _) ] =>
+      apply duplicate_validRegsModules; auto
+    | [ |- ValidRegsModules _ ?m ] => unfold_head m
+    end;
+  repeat (* 2) for constant modules *)
+    match goal with
+    | [ |- ValidRegsModules _ _ ] => apply duplicate_validRegsModules
+    | [ |- ValidRegsModules _ _ ] => constructor; intros
+    | [ |- ValidRegsRules _ _ _ ] => constructor; intros
+    | [ |- ValidRegsDms _ _ _ ] => constructor; intros
+    | [ |- ValidRegsAction _ _ ] => constructor; intros
+    | [ |- In _ _] => simpl; tauto
+    end;
+  simpl; (* 3) for things which need induction *)
+  repeat 
+    match goal with
+    | [ |- ValidRegsDms _ _ (_ ++ _) ] => apply validRegsDms_app
+    | [ |- ValidRegsDms _ _ nil ] => constructor
+    | [ |- ValidRegsDms _ _ (repMeth _ _ _ _ (getNatListToN ?n)) ] =>
+      try (induction n; simpl; repeat constructor; auto; fail)
+    end.
+
 Ltac get_minimal_module_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getModuleBound sm)
@@ -170,7 +219,7 @@ Ltac get_minimal_module_bound m :=
     let mb2 := get_minimal_module_bound m2 in
     constr:(concatModuleBound mb1 mb2)
   | _ =>
-    let m' := unfold_head m in
+    let m' := unfold_head_ret m in
     get_minimal_module_bound m'
   end.
 
