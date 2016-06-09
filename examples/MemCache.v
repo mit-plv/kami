@@ -135,6 +135,18 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
+  Lemma l1C_refines_nl1C:
+    (ParametricSyntax.makeModule (l1C IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n))
+      <<== (ParametricSyntax.makeModule (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id n)).
+  Proof.
+    evar (im1: Modules); ktrans im1; unfold im1;
+      [unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_1|].
+    evar (im2: Modules); ktrans im2; unfold im2;
+      [|unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_2].
+    clear im1 im2.
+    admit.
+  Qed.
+  
   (* TODO: memCache <= nmemCache, from the fact: fifoS <= nativeFifoS *)
 
 End Refinement.

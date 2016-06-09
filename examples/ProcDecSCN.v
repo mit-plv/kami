@@ -28,14 +28,14 @@ Section ProcDecSCN.
     - kequiv.
     - kequiv.
     - kequiv.
-    - kdisj_list.
-    - kdisj_list.
+    - kdisj_regs.
+    - kdisj_regs.
     - kvalid_regs.
     - kvalid_regs.
-    - kdisj_list.
-    - kdisj_list.
-    - kdisj_list.
-    - kdisj_list.
+    - kdisj_dms.
+    - kdisj_cms.
+    - kdisj_dms.
+    - kdisj_cms.
     - kdef_call_sub.
     - kdef_call_sub.
     - auto.
@@ -61,11 +61,11 @@ Section ProcDecSCN.
     - simpl; unfold namesOf; rewrite map_app; apply NoDup_DisjList.
       + apply duplicate_regs_NoDup; auto.
       + apply duplicate_regs_NoDup; auto.
-      + kdisj_list.
+      + kdisj_regs.
     - apply duplicate_regs_NoDup; auto.
     - auto.
-    - kdisj_list.
-    - kdisj_list.
+    - kdisj_regs.
+    - kdisj_regs.
     - apply duplicate_regs_ConcatMod_2; auto; kequiv.
     - apply duplicate_regs_ConcatMod_1; auto; kequiv.
     - apply duplicate_rules_ConcatMod_2; auto; kequiv.

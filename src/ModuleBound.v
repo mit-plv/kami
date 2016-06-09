@@ -133,17 +133,17 @@ Section ModuleBound.
   Definition DmsBound (dmss: Prefixes) := Abstracted dmss (getDefs m).
   Definition CmsBound (cmss: Prefixes) := Abstracted cmss (getCalls m).
 
-  Record ModuleBound := { regss : Prefixes;
-                          dmss : Prefixes;
-                          cmss : Prefixes }.
+  (* Record ModuleBound := { regss : Prefixes; *)
+  (*                         dmss : Prefixes; *)
+  (*                         cmss : Prefixes }. *)
 
-  Definition concatModuleBound (mb1 mb2: ModuleBound) :=
-    {| regss := regss mb1 ++ regss mb2;
-       dmss := dmss mb1 ++ dmss mb2;
-       cmss := cmss mb1 ++ cmss mb2 |}.
+  (* Definition concatModuleBound (mb1 mb2: ModuleBound) := *)
+  (*   {| regss := regss mb1 ++ regss mb2; *)
+  (*      dmss := dmss mb1 ++ dmss mb2; *)
+  (*      cmss := cmss mb1 ++ cmss mb2 |}. *)
 
-  Definition BoundedModule (mb: ModuleBound) :=
-    RegsBound (regss mb) /\ DmsBound (dmss mb) /\ CmsBound (cmss mb).
+  (* Definition BoundedModule (mb: ModuleBound) := *)
+  (*   RegsBound (regss mb) /\ DmsBound (dmss mb) /\ CmsBound (cmss mb). *)
 
   Definition DisjPrefixes (ss1 ss2: Prefixes) :=
     forall p1,
@@ -152,160 +152,241 @@ Section ModuleBound.
         In p2 ss2 ->
         prefix p1 p2 = false /\ prefix p2 p1 = false.
 
-  Definition DisjBounds (mb1 mb2: ModuleBound) :=
-    DisjPrefixes (regss mb1) (regss mb2) /\
-    DisjPrefixes (dmss mb1) (dmss mb2) /\
-    DisjPrefixes (cmss mb1) (cmss mb2).
+  (* Definition DisjBounds (mb1 mb2: ModuleBound) := *)
+  (*   DisjPrefixes (regss mb1) (regss mb2) /\ *)
+  (*   DisjPrefixes (dmss mb1) (dmss mb2) /\ *)
+  (*   DisjPrefixes (cmss mb1) (cmss mb2). *)
 
 End ModuleBound.
 
 Section Bounds.
 
-  Lemma concatMod_concatModuleBound:
-    forall m1 m2 mb1 mb2,
-      BoundedModule m1 mb1 ->
-      BoundedModule m2 mb2 ->
-      BoundedModule (m1 ++ m2)%kami (concatModuleBound mb1 mb2).
+  Lemma concatMod_regsBound_1:
+    forall m1 m2 rb1 rb2,
+      RegsBound m1 rb1 ->
+      RegsBound m2 rb2 ->
+      RegsBound (m1 ++ m2)%kami (rb1 ++ rb2).
   Proof.
-    unfold BoundedModule, concatModuleBound; simpl; intros; dest.
-    repeat split.
-    - unfold RegsBound; simpl.
-      unfold RegInitT; rewrite namesOf_app.
-      apply abstracted_app_1; auto.
-    - unfold DmsBound; simpl.
-      rewrite getDefs_app.
-      apply abstracted_app_1; auto.
-    - clear -H2 H4; unfold CmsBound, Abstracted in *; simpl; intros.
-      specializeAll s.
-      apply getCalls_in in H; destruct H.
-      + specialize (H4 H); destruct H4 as [abss ?]; dest.
-        exists abss; split; auto.
-        apply in_or_app; auto.
-      + specialize (H2 H); destruct H2 as [abss ?]; dest.
-        exists abss; split; auto.
-        apply in_or_app; auto.
+    unfold RegsBound; simpl; intros.
+    unfold RegInitT; rewrite namesOf_app.
+    apply abstracted_app_1; auto.
   Qed.
 
-  Definition getModuleBound (m: Modules) :=
-    {| regss := namesOf (getRegInits m);
-       dmss := getDefs m;
-       cmss := getCalls m |}.
+  Lemma concatMod_regsBound_2:
+    forall m1 m2 rb,
+      RegsBound m1 rb ->
+      RegsBound m2 rb ->
+      RegsBound (m1 ++ m2)%kami rb.
+  Proof.
+    unfold RegsBound; simpl; intros.
+    unfold RegInitT; rewrite namesOf_app.
+    apply abstracted_app_3; auto.
+  Qed.
 
-  Fixpoint getMetaModuleRegsBound (rs: list MetaReg) :=
+  Lemma concatMod_dmsBound_1:
+    forall m1 m2 db1 db2,
+      DmsBound m1 db1 ->
+      DmsBound m2 db2 ->
+      DmsBound (m1 ++ m2)%kami (db1 ++ db2).
+  Proof.
+    unfold DmsBound; simpl; intros.
+    rewrite getDefs_app.
+    apply abstracted_app_1; auto.
+  Qed.
+
+  Lemma concatMod_dmsBound_2:
+    forall m1 m2 db,
+      DmsBound m1 db ->
+      DmsBound m2 db ->
+      DmsBound (m1 ++ m2)%kami db.
+  Proof.
+    unfold DmsBound; simpl; intros.
+    rewrite getDefs_app.
+    apply abstracted_app_3; auto.
+  Qed.
+
+  Lemma concatMod_cmsBound_1:
+    forall m1 m2 cb1 cb2,
+      CmsBound m1 cb1 ->
+      CmsBound m2 cb2 ->
+      CmsBound (m1 ++ m2)%kami (cb1 ++ cb2).
+  Proof.
+    unfold CmsBound, Abstracted in *; simpl; intros.
+    specializeAll s.
+    apply getCalls_in in H1; destruct H1.
+    - specialize (H H1); destruct H as [abss ?]; dest.
+      exists abss; split; auto.
+      apply in_or_app; auto.
+    - specialize (H0 H1); destruct H0 as [abss ?]; dest.
+      exists abss; split; auto.
+      apply in_or_app; auto.
+  Qed.
+
+  Lemma concatMod_cmsBound_2:
+    forall m1 m2 cb,
+      CmsBound m1 cb ->
+      CmsBound m2 cb ->
+      CmsBound (m1 ++ m2)%kami cb.
+  Proof.
+    unfold CmsBound, Abstracted in *; simpl; intros.
+    specializeAll s.
+    apply getCalls_in in H1; destruct H1.
+    - specialize (H H1); destruct H as [abss ?]; dest.
+      exists abss; split; auto.
+    - specialize (H0 H1); destruct H0 as [abss ?]; dest.
+      exists abss; split; auto.
+  Qed.
+
+  (* normal boundaries *)
+  Definition getRegsBound (m: Modules) := namesOf (getRegInits m).
+  Definition getDmsBound (m: Modules) := getDefs m.
+  Definition getCmsBound (m: Modules) := getCalls m.
+
+  Fixpoint getMetaRegsBound (rs: list MetaReg) :=
     match rs with
     | nil => nil
     | OneReg _ {| nameVal := n |} :: rs' =>
-      n :: (getMetaModuleRegsBound rs')
+      n :: (getMetaRegsBound rs')
     | RepReg _ _ _ _ _ {| nameVal := n |} _ _ :: rs' =>
-      n :: (getMetaModuleRegsBound rs')
+      n :: (getMetaRegsBound rs')
     end.
 
-  Fixpoint getMetaModuleDmsBound (ms: list MetaMeth) :=
+  Definition getRegsBoundM (mm: MetaModule) := getMetaRegsBound (metaRegs mm).
+
+  Fixpoint getMetaDmsBound (ms: list MetaMeth) :=
     match ms with
     | nil => nil
     | OneMeth _ {| nameVal := n |} :: ms' =>
-      n :: (getMetaModuleDmsBound ms')
+      n :: (getMetaDmsBound ms')
     | RepMeth _ _ _ _ _ _ _ {| nameVal := n |} _ _ :: ms' =>
-      n :: (getMetaModuleDmsBound ms')
+      n :: (getMetaDmsBound ms')
     end.
 
-  (* TODO: is this the best definition? *)
-  Definition getMetaModuleCmsBound (mm: MetaModule) :=
+  Definition getDmsBoundM (mm: MetaModule) := getMetaDmsBound (metaMeths mm).
+
+  Definition getCmsBoundM (mm: MetaModule) :=
     map (fun n => nameVal (nameRec n))
         ((concat (map getCallsMetaRule (metaRules mm)))
            ++ (concat (map getCallsMetaMeth (metaMeths mm)))).
 
-  Definition getMetaModuleBound (mm: MetaModule) :=
-    {| regss := getMetaModuleRegsBound (metaRegs mm);
-       dmss := getMetaModuleDmsBound (metaMeths mm);
-       cmss := getMetaModuleCmsBound mm |}.
+  Lemma getRegsBound_bounded:
+    forall m, RegsBound m (getRegsBound m).
+  Proof. intros; apply abstracted_refl. Qed.
 
-  Lemma getModuleBound_bounded:
-    forall m, BoundedModule m (getModuleBound m).
-  Proof.
-    unfold BoundedModule, getModuleBound; simpl; intros.
-    repeat split; apply abstracted_refl.
-  Qed.
+  Lemma getDmsBound_bounded:
+    forall m, DmsBound m (getDmsBound m).
+  Proof. intros; apply abstracted_refl. Qed.
+  
+  Lemma getCmsBound_bounded:
+    forall m, CmsBound m (getCmsBound m).
+  Proof. intros; apply abstracted_refl. Qed.
 
-  Lemma boundedModule_concatMod:
-    forall m1 m2 l,
-      BoundedModule m1 l ->
-      BoundedModule m2 l ->
-      BoundedModule (m1 ++ m2)%kami l.
-  Proof.
-    unfold BoundedModule; simpl; intros; dest.
-    repeat split.
-    - clear -H H0; unfold RegsBound in *.
-      simpl; unfold RegInitT; rewrite namesOf_app.
-      apply abstracted_app_3; auto.
-    - clear -H1 H3; unfold DmsBound in *.
-      simpl; rewrite getDefs_app.
-      apply abstracted_app_3; auto.
-    - clear -H2 H4; unfold CmsBound in *.
-      unfold Abstracted in *; intros.
-      specializeAll s.
-      apply getCalls_in in H; destruct H.
-      + specialize (H4 H); destruct H4 as [abss ?]; dest.
-        exists abss; split; auto.
-      + specialize (H2 H); destruct H2 as [abss ?]; dest.
-        exists abss; split; auto.
-  Qed.
-
-  Lemma getModuleBound_modular:
+  Lemma getRegsBound_modular:
     forall m1 m2,
-      BoundedModule m1 (getModuleBound m1) ->
-      BoundedModule m2 (getModuleBound m2) ->
-      BoundedModule (m1 ++ m2)%kami (getModuleBound (m1 ++ m2)%kami).
+      RegsBound m1 (getRegsBound m1) ->
+      RegsBound m2 (getRegsBound m2) ->
+      RegsBound (m1 ++ m2)%kami (getRegsBound (m1 ++ m2)%kami).
   Proof.
-    unfold BoundedModule, getModuleBound; simpl; intros; dest.
-    repeat split.
-    - clear -H H0; unfold RegsBound in *.
-      simpl; unfold RegInitT; rewrite namesOf_app.
-      apply abstracted_app_1; auto.
-    - clear -H1 H3; unfold DmsBound in *.
-      simpl; rewrite getDefs_app.
-      apply abstracted_app_1; auto.
-    - clear -H2 H4; unfold CmsBound in *.
-      unfold Abstracted in *; intros.
-      specializeAll s.
-      apply getCalls_in in H; destruct H.
-      + specialize (H4 H); destruct H4 as [abss ?]; dest.
-        exists abss; split; auto.
-        apply getCalls_in_1; auto.
-      + specialize (H2 H); destruct H2 as [abss ?]; dest.
-        exists abss; split; auto.
-        apply getCalls_in_2; auto.
+    intros.
+    replace (getRegsBound (m1 ++ m2)%kami) with (getRegsBound m1 ++ getRegsBound m2).
+    - apply concatMod_regsBound_1; auto.
+    - unfold getRegsBound; simpl.
+      unfold RegInitT; rewrite namesOf_app; reflexivity.
   Qed.
   
-  Lemma getModuleBound_specialize:
-    forall m i,
-      Specializable m ->
-      BoundedModule (specializeMod m i) (getModuleBound m).
+  Lemma getDmsBound_modular:
+    forall m1 m2,
+      DmsBound m1 (getDmsBound m1) ->
+      DmsBound m2 (getDmsBound m2) ->
+      DmsBound (m1 ++ m2)%kami (getDmsBound (m1 ++ m2)%kami).
   Proof.
-    unfold getModuleBound; intros; repeat split; simpl.
-    - unfold RegsBound.
-      rewrite specializeMod_regs; auto.
-      apply abstracted_withIndex.
-    - unfold DmsBound.
-      rewrite specializeMod_defs; auto.
-      apply abstracted_withIndex.
-    - unfold CmsBound.
-      rewrite specializeMod_calls; auto.
-      apply abstracted_withIndex.
+    intros.
+    replace (getDmsBound (m1 ++ m2)%kami) with (getDmsBound m1 ++ getDmsBound m2).
+    - apply concatMod_dmsBound_1; auto.
+    - unfold getDmsBound; simpl.
+      rewrite getDefs_app; reflexivity.
   Qed.
 
-  Lemma getModuleBound_duplicate:
-    forall m (Hsp: Specializable m) n,
-      BoundedModule (duplicate m n) (getModuleBound m).
+  Lemma getCmsBound_modular:
+    forall m1 m2,
+      CmsBound m1 (getCmsBound m1) ->
+      CmsBound m2 (getCmsBound m2) ->
+      CmsBound (m1 ++ m2)%kami (getCmsBound (m1 ++ m2)%kami).
   Proof.
-    induction n; simpl; intros; [apply getModuleBound_specialize; auto|].
-    apply boundedModule_concatMod; auto.
-    apply getModuleBound_specialize; auto.
+    unfold CmsBound, Abstracted in *; intros.
+    specializeAll s.
+    apply getCalls_in in H1; destruct H1.
+    + specialize (H H1); destruct H as [abss ?]; dest.
+      exists abss; split; auto.
+      apply getCalls_in_1; auto.
+    + specialize (H0 H1); destruct H0 as [abss ?]; dest.
+      exists abss; split; auto.
+      apply getCalls_in_2; auto.
+  Qed.
+
+  Lemma getRegsBound_specialize:
+    forall m i,
+      Specializable m ->
+      RegsBound (specializeMod m i) (getRegsBound m).
+  Proof.
+    unfold RegsBound; intros.
+    rewrite specializeMod_regs; auto.
+    apply abstracted_withIndex.
+  Qed.
+
+  Lemma getDmsBound_specialize:
+    forall m i,
+      Specializable m ->
+      DmsBound (specializeMod m i) (getDmsBound m).
+  Proof.
+    unfold DmsBound; intros.
+    rewrite specializeMod_defs; auto.
+    apply abstracted_withIndex.
+  Qed.
+
+  Lemma getCmsBound_specialize:
+    forall m i,
+      Specializable m ->
+      CmsBound (specializeMod m i) (getCmsBound m).
+  Proof.
+    unfold CmsBound; intros.
+    rewrite specializeMod_calls; auto.
+    apply abstracted_withIndex.
+  Qed.
+
+  Lemma getRegsBound_duplicate:
+    forall m n,
+      Specializable m ->
+      RegsBound (duplicate m n) (getRegsBound m).
+  Proof.
+    induction n; simpl; intros; [apply getRegsBound_specialize; auto|].
+    apply concatMod_regsBound_2; auto.
+    apply getRegsBound_specialize; auto.
+  Qed.
+
+  Lemma getDmsBound_duplicate:
+    forall m n,
+      Specializable m ->
+      DmsBound (duplicate m n) (getDmsBound m).
+  Proof.
+    induction n; simpl; intros; [apply getDmsBound_specialize; auto|].
+    apply concatMod_dmsBound_2; auto.
+    apply getDmsBound_specialize; auto.
+  Qed.
+
+  Lemma getCmsBound_duplicate:
+    forall m n,
+      Specializable m ->
+      CmsBound (duplicate m n) (getCmsBound m).
+  Proof.
+    induction n; simpl; intros; [apply getCmsBound_specialize; auto|].
+    apply concatMod_cmsBound_2; auto.
+    apply getCmsBound_specialize; auto.
   Qed.
 
   Lemma abstracted_metaRegs:
     forall mregs,
-      Abstracted (getMetaModuleRegsBound mregs)
+      Abstracted (getMetaRegsBound mregs)
                  (namesOf (concat (map getListFromMetaReg mregs))).
   Proof.
     induction mregs; simpl; [apply abstracted_refl|].
@@ -333,7 +414,7 @@ Section Bounds.
 
   Lemma abstracted_metaMeths:
     forall mdms,
-      Abstracted (getMetaModuleDmsBound mdms)
+      Abstracted (getMetaDmsBound mdms)
                  (namesOf (concat (map getListFromMetaMeth mdms))).
   Proof.
     induction mdms; simpl; [apply abstracted_refl|].
@@ -365,10 +446,10 @@ Section Bounds.
       CmsBound
         (makeModule
            {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |})
-        (getMetaModuleCmsBound
+        (getCmsBoundM
            {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |}).
   Proof.
-    unfold CmsBound, makeModule, getMetaModuleCmsBound, getCalls; simpl; intros.
+    unfold CmsBound, makeModule, getCmsBoundM, getCalls; simpl; intros.
     rewrite map_app.
     apply abstracted_app_1.
     - clear; induction mrules; [apply abstracted_refl|].
@@ -427,15 +508,17 @@ Section Bounds.
           right; auto.
   Qed.
 
-  Lemma getMetaModuleBound_bounded:
-    forall mm, BoundedModule (makeModule mm) (getMetaModuleBound mm).
-  Proof.
-    intros; destruct mm as [mregs mrules mdms].
-    repeat split; simpl.
-    - apply abstracted_metaRegs.
-    - apply abstracted_metaMeths.
-    - apply abstracted_metaCms. 
-  Qed.
+  Lemma getRegsBoundM_bounded:
+    forall mm, RegsBound (makeModule mm) (getRegsBoundM mm).
+  Proof. intros; apply abstracted_metaRegs. Qed.
+    
+  Lemma getDmsBoundM_bounded:
+    forall mm, DmsBound (makeModule mm) (getDmsBoundM mm).
+  Proof. intros; apply abstracted_metaMeths. Qed.
+
+  Lemma getCmsBoundM_bounded:
+    forall mm, CmsBound (makeModule mm) (getCmsBoundM mm).
+  Proof. intros; apply abstracted_metaCms. Qed.
 
 End Bounds.
 
@@ -463,36 +546,34 @@ Section Correctness.
 
   Lemma boundedModule_disj_regs:
     forall mb1 mb2,
-      DisjBounds mb1 mb2 ->
+      DisjPrefixes mb1 mb2 ->
       forall m1 m2,
-        BoundedModule m1 mb1 -> BoundedModule m2 mb2 ->
+        RegsBound m1 mb1 -> RegsBound m2 mb2 ->
         DisjList (namesOf (getRegInits m1)) (namesOf (getRegInits m2)).
   Proof.
-    unfold DisjBounds, BoundedModule; intros; dest.
-    apply disjPrefixes_DisjList with (ss1:= regss mb1) (ss2:= regss mb2); auto.
+    intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.
 
   Lemma boundedModule_disj_dms:
     forall mb1 mb2,
-      DisjBounds mb1 mb2 ->
+      DisjPrefixes mb1 mb2 ->
       forall m1 m2,
-        BoundedModule m1 mb1 -> BoundedModule m2 mb2 ->
+        DmsBound m1 mb1 -> DmsBound m2 mb2 ->
         DisjList (getDefs m1) (getDefs m2).
   Proof.
-    unfold DisjBounds, BoundedModule; intros; dest.
-    apply disjPrefixes_DisjList with (ss1:= dmss mb1) (ss2:= dmss mb2); auto.
+    intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.
 
   Lemma boundedModule_disj_calls:
     forall mb1 mb2,
-      DisjBounds mb1 mb2 ->
+      DisjPrefixes mb1 mb2 ->
       forall m1 m2,
-        BoundedModule m1 mb1 -> BoundedModule m2 mb2 ->
+        CmsBound m1 mb1 -> CmsBound m2 mb2 ->
         DisjList (getCalls m1) (getCalls m2).
   Proof.
-    unfold DisjBounds, BoundedModule; intros; dest.
-    apply disjPrefixes_DisjList with (ss1:= cmss mb1) (ss2:= cmss mb2); auto.
+    intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.
 
 End Correctness.
+
 

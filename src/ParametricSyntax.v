@@ -1,6 +1,6 @@
-Require Import Syntax String Lib.Word Lib.Struct List Inline InlineFacts_2
+Require Import Syntax String Lib.Word Lib.Struct Lib.FMap List Inline InlineFacts_2
         CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics PartialInline Lib.StringExtension Ascii
+        Bool Lib.Indexer Semantics SemFacts Refinement PartialInline Lib.StringExtension Ascii
         Lib.Concat.
 
 Set Implicit Arguments.
@@ -1216,6 +1216,85 @@ Definition concatMetaMod (m1 m2: MetaModule) :=
      metaMeths := metaMeths m1 ++ metaMeths m2 |}.
 
 Notation "m1 +++ m2" := (concatMetaMod m1 m2) (at level 0).
+
+Lemma map_getListFromMetaReg_comm:
+  forall r1 r2,
+    map getListFromMetaReg r1 ++ map getListFromMetaReg r2 =
+    map getListFromMetaReg (r1 ++ r2).
+Proof.
+  induction r1; simpl; intros; auto.
+  rewrite IHr1; auto.
+Qed.
+
+Lemma map_getListFromMetaRule_comm:
+  forall r1 r2,
+    map getListFromMetaRule r1 ++ map getListFromMetaRule r2 =
+    map getListFromMetaRule (r1 ++ r2).
+Proof.
+  induction r1; simpl; intros; auto.
+  rewrite IHr1; auto.
+Qed.
+
+Lemma map_getListFromMetaMeth_comm:
+  forall r1 r2,
+    map getListFromMetaMeth r1 ++ map getListFromMetaMeth r2 =
+    map getListFromMetaMeth (r1 ++ r2).
+Proof.
+  induction r1; simpl; intros; auto.
+  rewrite IHr1; auto.
+Qed.
+
+Lemma makeModule_comm_1:
+  forall m1 m2,
+    makeModule (m1 +++ m2) <<== (makeModule m1 ++ makeModule m2)%kami.
+Proof.
+  unfold traceRefines; intros.
+  exists s1, sig1; split.
+  - inv H; constructor.
+    remember (initRegs (getRegInits (makeModule (m1 +++ m2)))).
+    induction HMultistepBeh.
+    + subst; constructor.
+      subst; simpl.
+      rewrite <-concat_app; repeat f_equal.
+      apply map_getListFromMetaReg_comm.
+    + constructor; auto.
+      clear -HStep.
+      apply module_structure_indep_step with (m1:= makeModule m1 +++ m2); auto.
+      * simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
+      
+  - clear; induction sig1; constructor; auto.
+    rewrite idElementwiseId.
+    constructor; destruct (annot a); auto.
+Qed.
+
+Lemma makeModule_comm_2:
+  forall m1 m2,
+    (makeModule m1 ++ makeModule m2)%kami <<== makeModule (m1 +++ m2).
+Proof.
+  unfold traceRefines; intros.
+  exists s1, sig1; split.
+  - inv H; constructor.
+    remember (initRegs (getRegInits (makeModule m1 ++ makeModule m2)%kami)).
+    induction HMultistepBeh.
+    + subst; constructor.
+      subst; simpl.
+      rewrite <-concat_app; repeat f_equal.
+      rewrite map_getListFromMetaReg_comm; auto.
+    + constructor; auto.
+      clear -HStep.
+      apply module_structure_indep_step with (m1:= (makeModule m1 ++ makeModule m2)%kami); auto.
+      * simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
+      * simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
+        
+  - clear; induction sig1; constructor; auto.
+    rewrite idElementwiseId.
+    constructor; destruct (annot a); auto.
+Qed.
 
 Fixpoint getNatListToN (n: nat) :=
   match n with

@@ -210,56 +210,116 @@ Ltac kvalid_regs :=
       try (induction n; simpl; repeat constructor; auto; fail)
     end.
 
-Ltac get_minimal_module_bound m :=
+Ltac get_minimal_regs_bound m :=
   lazymatch m with
-  | duplicate ?sm _ => constr:(getModuleBound sm)
-  | ParametricSyntax.makeModule ?mm => constr:(getMetaModuleBound mm)
+  | duplicate ?sm _ => constr:(getRegsBound sm)
+  | ParametricSyntax.makeModule ?mm => constr:(getRegsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
-    let mb1 := get_minimal_module_bound m1 in
-    let mb2 := get_minimal_module_bound m2 in
-    constr:(concatModuleBound mb1 mb2)
+    let mb1 := get_minimal_regs_bound m1 in
+    let mb2 := get_minimal_regs_bound m2 in
+    constr:(mb1 ++ mb2)
   | _ =>
     let m' := unfold_head_ret m in
-    get_minimal_module_bound m'
+    get_minimal_regs_bound m'
   end.
 
-Ltac red_to_module_bound :=
+Ltac get_minimal_dms_bound m :=
+  lazymatch m with
+  | duplicate ?sm _ => constr:(getDmsBound sm)
+  | ParametricSyntax.makeModule ?mm => constr:(getDmsBoundM mm)
+  | ConcatMod ?m1 ?m2 =>
+    let mb1 := get_minimal_dms_bound m1 in
+    let mb2 := get_minimal_dms_bound m2 in
+    constr:(mb1 ++ mb2)
+  | _ =>
+    let m' := unfold_head_ret m in
+    get_minimal_dms_bound m'
+  end.
+
+Ltac get_minimal_cms_bound m :=
+  lazymatch m with
+  | duplicate ?sm _ => constr:(getCmsBound sm)
+  | ParametricSyntax.makeModule ?mm => constr:(getCmsBoundM mm)
+  | ConcatMod ?m1 ?m2 =>
+    let mb1 := get_minimal_cms_bound m1 in
+    let mb2 := get_minimal_cms_bound m2 in
+    constr:(mb1 ++ mb2)
+  | _ =>
+    let m' := unfold_head_ret m in
+    get_minimal_cms_bound m'
+  end.
+
+Ltac red_to_regs_bound :=
   match goal with
   | [ |- DisjList (namesOf (getRegInits ?m1))
                   (namesOf (getRegInits ?m2)) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
+    let mb1' := get_minimal_regs_bound m1 in
+    let mb2' := get_minimal_regs_bound m2 in
     apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (map _ (getRegInits ?m1))
                   (map _ (getRegInits ?m2)) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
+    let mb1' := get_minimal_regs_bound m1 in
+    let mb2' := get_minimal_regs_bound m2 in
     apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
+  end.
+
+Ltac red_to_dms_bound :=
+  match goal with
   | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
+    let mb1' := get_minimal_dms_bound m1 in
+    let mb2' := get_minimal_dms_bound m2 in
     apply boundedModule_disj_dms with (mb1 := mb1') (mb2 := mb2')
+  end.
+
+Ltac red_to_cms_bound :=
+  match goal with
   | [ |- DisjList (getCalls ?m1) (getCalls ?m2) ] =>
-    let mb1' := get_minimal_module_bound m1 in
-    let mb2' := get_minimal_module_bound m2 in
+    let mb1' := get_minimal_cms_bound m1 in
+    let mb2' := get_minimal_cms_bound m2 in
     apply boundedModule_disj_calls with (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac bounded_module_tac :=
+Ltac regs_bound_tac :=
   repeat (
-      apply getModuleBound_bounded
-      || apply getModuleBound_modular
-      || apply concatMod_concatModuleBound
-      || (apply getModuleBound_duplicate; auto)
-      || apply getMetaModuleBound_bounded).
+      apply getRegsBoundM_bounded
+      || apply getRegsBound_modular
+      || apply concatMod_regsBound_1
+      || (apply getRegsBound_duplicate; auto)
+      || apply getRegsBound_bounded).
 
-Ltac disj_module_tac :=
-  red_to_module_bound; (* always reduces to three subgoals *)
+Ltac dms_bound_tac :=
+  repeat (
+      apply getDmsBoundM_bounded
+      || apply getDmsBound_modular
+      || apply concatMod_dmsBound_1
+      || (apply getDmsBound_duplicate; auto)
+      || apply getDmsBound_bounded).
+
+Ltac cms_bound_tac :=
+  repeat (
+      apply getCmsBoundM_bounded
+      || apply getCmsBound_modular
+      || apply concatMod_cmsBound_1
+      || (apply getCmsBound_duplicate; auto)
+      || apply getCmsBound_bounded).
+
+Ltac kdisj_regs :=
+  red_to_regs_bound; (* always reduces to three subgoals *)
   [repeat split; CommonTactics.dest_in; auto
-  |bounded_module_tac
-  |bounded_module_tac].
+  |regs_bound_tac
+  |regs_bound_tac].
 
-Ltac kdisj_list := disj_module_tac.
+Ltac kdisj_dms :=
+  red_to_dms_bound; (* always reduces to three subgoals *)
+  [repeat split; CommonTactics.dest_in; auto
+  |dms_bound_tac
+  |dms_bound_tac].
+
+Ltac kdisj_cms :=
+  red_to_cms_bound; (* always reduces to three subgoals *)
+  [repeat split; CommonTactics.dest_in; auto
+  |cms_bound_tac
+  |cms_bound_tac].
 
 Ltac kdef_call_sub :=
   repeat
@@ -502,7 +562,6 @@ Ltac kexistnv k v m t :=
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-Hint Extern 1 (DisjList _ _) => kdisj_list.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (Interacting _ _ _) => repeat split.
 Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
