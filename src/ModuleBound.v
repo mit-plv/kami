@@ -544,7 +544,7 @@ Section Correctness.
     - rewrite H4 in H5; inv H5.
   Qed.
 
-  Lemma boundedModule_disj_regs:
+  Lemma regsBound_disj_regs:
     forall mb1 mb2,
       DisjPrefixes mb1 mb2 ->
       forall m1 m2,
@@ -554,7 +554,7 @@ Section Correctness.
     intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.
 
-  Lemma boundedModule_disj_dms:
+  Lemma dmsBound_disj_dms:
     forall mb1 mb2,
       DisjPrefixes mb1 mb2 ->
       forall m1 m2,
@@ -564,12 +564,32 @@ Section Correctness.
     intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.
 
-  Lemma boundedModule_disj_calls:
+  Lemma cmsBound_disj_calls:
     forall mb1 mb2,
       DisjPrefixes mb1 mb2 ->
       forall m1 m2,
         CmsBound m1 mb1 -> CmsBound m2 mb2 ->
         DisjList (getCalls m1) (getCalls m2).
+  Proof.
+    intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+  Qed.
+
+  Lemma bound_disj_dms_calls:
+    forall mb1 mb2,
+      DisjPrefixes mb1 mb2 ->
+      forall m1 m2,
+        DmsBound m1 mb1 -> CmsBound m2 mb2 ->
+        DisjList (getDefs m1) (getCalls m2).
+  Proof.
+    intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+  Qed.
+
+  Lemma bound_disj_calls_dms:
+    forall mb1 mb2,
+      DisjPrefixes mb1 mb2 ->
+      forall m1 m2,
+        CmsBound m1 mb1 -> DmsBound m2 mb2 ->
+        DisjList (getCalls m1) (getDefs m2).
   Proof.
     intros; apply disjPrefixes_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
   Qed.

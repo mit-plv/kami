@@ -20,7 +20,9 @@ Set Implicit Arguments.
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
   + kequiv_with _tactic_ : also try to apply _tactic_ alternately
   + kvalid_regs : prove well-formedness conditions for valid register uses
-  + kdisj_list : prove DisjList conditions
+  + kdisj_regs : prove DisjList conditions of regs
+  + kdisj_dms : prove DisjList conditions of dms
+  + kdisj_cms : prove DisjList conditions of cms
   + kdef_call_sub : prove DefCallSub conditions
   + kinline_compute : compute terms with _inlineF_
   + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
@@ -43,10 +45,7 @@ Set Implicit Arguments.
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
   + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-  + Hint Extern 1 (DisjList _ _) => kdisj_list.
   + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
-  + Hint Extern 1 (Interacting _ _ _) => repeat split.
-  + Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
   + Hint Extern 1 (_ = _: Modules) => apply eq_refl.
  *)
 
@@ -262,12 +261,12 @@ Ltac red_to_regs_bound :=
                   (namesOf (getRegInits ?m2)) ] =>
     let mb1' := get_minimal_regs_bound m1 in
     let mb2' := get_minimal_regs_bound m2 in
-    apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
+    apply regsBound_disj_regs with (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (map _ (getRegInits ?m1))
                   (map _ (getRegInits ?m2)) ] =>
     let mb1' := get_minimal_regs_bound m1 in
     let mb2' := get_minimal_regs_bound m2 in
-    apply boundedModule_disj_regs with (mb1 := mb1') (mb2 := mb2')
+    apply regsBound_disj_regs with (mb1 := mb1') (mb2 := mb2')
   end.
 
 Ltac red_to_dms_bound :=
@@ -275,7 +274,7 @@ Ltac red_to_dms_bound :=
   | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
     let mb1' := get_minimal_dms_bound m1 in
     let mb2' := get_minimal_dms_bound m2 in
-    apply boundedModule_disj_dms with (mb1 := mb1') (mb2 := mb2')
+    apply dmsBound_disj_dms with (mb1 := mb1') (mb2 := mb2')
   end.
 
 Ltac red_to_cms_bound :=
@@ -283,7 +282,23 @@ Ltac red_to_cms_bound :=
   | [ |- DisjList (getCalls ?m1) (getCalls ?m2) ] =>
     let mb1' := get_minimal_cms_bound m1 in
     let mb2' := get_minimal_cms_bound m2 in
-    apply boundedModule_disj_calls with (mb1 := mb1') (mb2 := mb2')
+    apply cmsBound_disj_calls with (mb1 := mb1') (mb2 := mb2')
+  end.
+
+Ltac red_to_dc_bound :=
+  match goal with
+  | [ |- DisjList (getDefs ?m1) (getCalls ?m2) ] =>
+    let mb1' := get_minimal_dms_bound m1 in
+    let mb2' := get_minimal_cms_bound m2 in
+    apply bound_disj_dms_calls with (mb1 := mb1') (mb2 := mb2')
+  end.
+
+Ltac red_to_cd_bound :=
+  match goal with
+  | [ |- DisjList (getCalls ?m1) (getDefs ?m2) ] =>
+    let mb1' := get_minimal_cms_bound m1 in
+    let mb2' := get_minimal_dms_bound m2 in
+    apply bound_disj_calls_dms with (mb1 := mb1') (mb2 := mb2')
   end.
 
 Ltac regs_bound_tac :=
@@ -327,6 +342,23 @@ Ltac kdisj_cms :=
   [repeat split; CommonTactics.dest_in; auto
   |cms_bound_tac
   |cms_bound_tac].
+
+Ltac kdisj_dms_cms :=
+  red_to_dc_bound;
+  [repeat split; CommonTactics.dest_in; auto
+  |dms_bound_tac
+  |cms_bound_tac].
+
+Ltac kdisj_cms_dms :=
+  red_to_cd_bound;
+  [repeat split; CommonTactics.dest_in; auto
+  |cms_bound_tac
+  |dms_bound_tac].
+
+Ltac kinteracting := repeat split.
+
+Ltac knoninteracting :=
+  split; [kdisj_dms_cms|kdisj_cms_dms].
 
 Ltac kdef_call_sub :=
   repeat
@@ -570,8 +602,6 @@ Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
-Hint Extern 1 (Interacting _ _ _) => repeat split.
-Hint Extern 1 (NonInteracting _ _) => repeat split; auto.
 Hint Extern 1 (_ = _: Modules) => apply eq_refl.
 
 (** Final Kami proof configuration *)

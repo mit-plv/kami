@@ -135,8 +135,6 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
-  Require Import ParametricEquiv.
-
   Lemma l1s_refines_nl1s:
     (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
       <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
@@ -148,7 +146,6 @@ Section Refinement.
     clear im1 im2.
 
     admit.
-
     (* simple kmodular. *)
     (* - admit. (* kequiv for metamodule / automation *) *)
     (* - admit. (* ditto *) *)
@@ -172,33 +169,30 @@ Section Refinement.
   Lemma childParencC_refines_nchildParentC:
     (childParentC IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
       <<== (nchildParentC IdxBits TagBits LgNumDatas LgDataBytes Id n).
-  Proof.
-    admit.
-    
-    (* simple kmodular; *)
-    (*   [kequiv|kequiv|kequiv|kequiv *)
-    (*    |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
-    (*    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
-    (*    |kdef_call_sub|kdef_call_sub *)
-    (*    |auto| |]. *)
-    (* - krefl. *)
-    (* - simple kmodularn; *)
-    (*     [kequiv|kequiv|kequiv|kequiv *)
-    (*      |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
-    (*      |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
-    (*      | | | |]. *)
-    (*   + admit. (* need kdisj_dms_cms *) *)
-    (*   + admit. (* ditto *) *)
-    (*   + apply fifo_refines_nativefifo. *)
-    (*   + simple kmodularn; *)
-    (*       [kequiv|kequiv|kequiv|kequiv *)
-    (*        |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
-    (*        |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
-    (*        | | | |]. *)
-    (*     * admit. (* need kdisj_dms_cms *) *)
-    (*     * admit. (* ditto *) *)
-    (*     * apply fifo_refines_nativefifo. *)
-    (*     * apply fifo_refines_nativefifo. *)
+  Proof. (* SKIP_PROOF_ON
+    simple kmodular;
+      [kequiv|kequiv|kequiv|kequiv
+       |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
+       |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+       |kdef_call_sub|kdef_call_sub
+       |kinteracting| |].
+    - krefl.
+    - simple kmodularn;
+        [kequiv|kequiv|kequiv|kequiv
+         |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
+         |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+         |knoninteracting|knoninteracting
+         | |].
+      + apply fifo_refines_nativefifo.
+      + simple kmodularn;
+          [kequiv|kequiv|kequiv|kequiv
+           |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
+           |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+           |knoninteracting|knoninteracting
+           | |].
+        * apply fifo_refines_nativefifo.
+        * apply fifo_refines_nativefifo.
+          END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma memCache_refines_nmemCache:
@@ -206,6 +200,42 @@ Section Refinement.
       <<== (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
   Proof.
     admit.
+    
+    (* simple kmodular. *)
+    (* - admit. (* need kequiv for metamodule / automation *) *)
+    (* - admit. (* ditto *) *)
+    (* - admit. (* ditto *) *)
+    (* - admit. (* ditto *) *)
+    (* - kdisj_regs *)
+    (* - kdisj_regs *)
+    (* - admit. (* need to extend kvalid_regs *) *)
+    (* - admit. (* need to extend kvalid_regs *) *)
+    (* - kdisj_dms *)
+    (* - kdisj_cms *)
+    (* - kdisj_dms *)
+    (* - kdisj_cms *)
+    (* - admit. (* need to extend kdef_call_sub *) *)
+    (* - admit. (* need to extend kdef_call_sub *) *)
+    (* - kinteracting. *)
+    (* - apply l1s_refines_nl1s. *)
+    (* - simple kmodular. *)
+    (*   + admit. (* need kequiv for metamodule / automation *) *)
+    (*   + admit. (* ditto *) *)
+    (*   + admit. (* ditto *) *)
+    (*   + admit. (* ditto *) *)
+    (*   + kdisj_regs *)
+    (*   + kdisj_regs *)
+    (*   + admit. (* extend kvalid_regs *) *)
+    (*   + admit. (* extend kvalid_regs *) *)
+    (*   + kdisj_dms *)
+    (*   + kdisj_cms *)
+    (*   + kdisj_dms *)
+    (*   + kdisj_cms *)
+    (*   + admit. (* need to extend kdef_call_sub *) *)
+    (*   + admit. (* need to extend kdef_call_sub *) *)
+    (*   + kinteracting. *)
+    (*   + apply childParencC_refines_nchildParentC. *)
+    (*   + krefl. *)
   Qed.
 
 End Refinement.

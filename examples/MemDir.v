@@ -186,15 +186,16 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  (* Lemma memDir_ModEquiv: *)
-  (*   forall m, *)
-  (*     m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id -> *)
-  (*     (forall ty1 ty2, ModEquiv ty1 ty2 m). *)
-  (* Proof. *)
-  (*   admit. *)
-  (* Qed. *)
+  Lemma memDir_ModEquiv:
+    forall m,
+      m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+  Proof. (* SKIP_PROOF_ON
+    kequiv.
+    END_SKIP_PROOF_ON *) admit.
+  Qed.
 
 End Facts.
 
-(* Hint Resolve memDir_ModEquiv. *)
+Hint Resolve memDir_ModEquiv.
 
