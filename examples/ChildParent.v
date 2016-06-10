@@ -67,29 +67,29 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  (* Lemma childParent_ModEquiv: *)
-  (*   forall m, *)
-  (*     m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id -> *)
-  (*     (forall ty1 ty2, ModEquiv ty1 ty2 m). *)
-  (* Proof. *)
-  (*   kequiv. *)
-  (*   unfold childParent; simpl. *)
-  (*   apply RulesEquiv_app; [|apply RulesEquiv_app]. *)
-  (*   - induction (n LgNumChildren). *)
-  (*     + kequiv. *)
-  (*     + constructor; [|auto]. *)
-  (*       kequiv. *)
-  (*   - induction (n LgNumChildren). *)
-  (*     + kequiv. *)
-  (*     + constructor; [|auto]. *)
-  (*       kequiv. *)
-  (*   - induction (n LgNumChildren). *)
-  (*     + kequiv. *)
-  (*     + constructor; [|auto]. *)
-  (*       kequiv. *)
-  (* Qed. *)
+  Lemma childParent_ModEquiv:
+    forall m,
+      m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
+      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+  Proof.
+    kequiv.
+    unfold childParent; simpl.
+    apply RulesEquiv_app; [|apply RulesEquiv_app].
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
+    - induction (n LgNumChildren).
+      + kequiv.
+      + constructor; [|auto].
+        kequiv.
+  Qed.
 
 End Facts.
 
-(* Hint Resolve childParent_ModEquiv. *)
+Hint Resolve childParent_ModEquiv.
 

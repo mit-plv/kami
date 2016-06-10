@@ -208,6 +208,10 @@ Ltac kvalid_regs :=
     | [ |- ValidRegsDms _ _ nil ] => constructor
     | [ |- ValidRegsDms _ _ (repMeth _ _ _ _ (getNatListToN ?n)) ] =>
       try (induction n; simpl; repeat constructor; auto; fail)
+    | [ |- ValidRegsRules _ _ (_ ++ _) ] => apply validRegsRules_app
+    | [ |- ValidRegsRules _ _ nil ] => constructor
+    | [ |- ValidRegsRules _ _ (repRule _ _ _ _ (getNatListToN ?n)) ] =>
+      try (induction n; simpl; repeat constructor; auto; fail)
     end.
 
 Ltac get_minimal_regs_bound m :=
@@ -221,6 +225,7 @@ Ltac get_minimal_regs_bound m :=
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_regs_bound m'
+  | _ => constr:(getRegsBound m)
   end.
 
 Ltac get_minimal_dms_bound m :=
@@ -234,7 +239,8 @@ Ltac get_minimal_dms_bound m :=
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_dms_bound m'
-  end.
+  | _ => constr:(getDmsBound m)
+end.
 
 Ltac get_minimal_cms_bound m :=
   lazymatch m with
@@ -247,6 +253,7 @@ Ltac get_minimal_cms_bound m :=
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_cms_bound m'
+  | _ => constr:(getCmsBound m)
   end.
 
 Ltac red_to_regs_bound :=

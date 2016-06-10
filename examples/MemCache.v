@@ -169,7 +169,44 @@ Section Refinement.
     (* - admit. *)
   Qed.
 
-  (* TODO: memCache <= nmemCache, from the fact: fifoS <= nativeFifoS *)
+  Lemma childParencC_refines_nchildParentC:
+    (childParentC IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
+      <<== (nchildParentC IdxBits TagBits LgNumDatas LgDataBytes Id n).
+  Proof.
+    admit.
+    
+    (* simple kmodular; *)
+    (*   [kequiv|kequiv|kequiv|kequiv *)
+    (*    |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
+    (*    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
+    (*    |kdef_call_sub|kdef_call_sub *)
+    (*    |auto| |]. *)
+    (* - krefl. *)
+    (* - simple kmodularn; *)
+    (*     [kequiv|kequiv|kequiv|kequiv *)
+    (*      |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
+    (*      |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
+    (*      | | | |]. *)
+    (*   + admit. (* need kdisj_dms_cms *) *)
+    (*   + admit. (* ditto *) *)
+    (*   + apply fifo_refines_nativefifo. *)
+    (*   + simple kmodularn; *)
+    (*       [kequiv|kequiv|kequiv|kequiv *)
+    (*        |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs *)
+    (*        |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms *)
+    (*        | | | |]. *)
+    (*     * admit. (* need kdisj_dms_cms *) *)
+    (*     * admit. (* ditto *) *)
+    (*     * apply fifo_refines_nativefifo. *)
+    (*     * apply fifo_refines_nativefifo. *)
+  Qed.
+
+  Lemma memCache_refines_nmemCache:
+    (memCache IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
+      <<== (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
+  Proof.
+    admit.
+  Qed.
 
 End Refinement.
 
