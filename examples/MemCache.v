@@ -22,7 +22,7 @@ Section MemCache.
     getMetaFromSinNat n (regFileS "line"%string IdxBits
                                   (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl).
 
-  Definition l1 := l1Cache +++ l1cs +++ l1tag +++ l1line.
+  Definition l1 := l1Cache +++ (l1cs +++ l1tag +++ l1line).
 
   Definition MIdxBits := TagBits + IdxBits.
 
@@ -44,7 +44,7 @@ Section MemCache.
       n (fifoS "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
 
   Definition l1C :=
-    l1 +++ fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP.
+    l1 +++ (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP).
 
   Definition l1s := ParametricSyntax.makeModule l1C.
 
@@ -105,7 +105,7 @@ Section MemCacheNativeFifo.
 
   Definition nl1C :=
     (l1 IdxBits TagBits LgNumDatas LgDataBytes Id n)
-      +++ nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP.
+      +++ (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP).
 
   Definition nl1s := ParametricSyntax.makeModule nl1C.
 
@@ -135,18 +135,40 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
-  Lemma l1C_refines_nl1C:
-    (ParametricSyntax.makeModule (l1C IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n))
-      <<== (ParametricSyntax.makeModule (nl1C IdxBits TagBits LgNumDatas LgDataBytes Id n)).
+  Require Import ParametricEquiv.
+
+  Lemma l1s_refines_nl1s:
+    (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
+      <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
   Proof.
     evar (im1: Modules); ktrans im1; unfold im1;
       [unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_1|].
     evar (im2: Modules); ktrans im2; unfold im2;
       [|unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_2].
     clear im1 im2.
+
     admit.
+
+    (* simple kmodular. *)
+    (* - admit. (* kequiv for metamodule / automation *) *)
+    (* - admit. (* ditto *) *)
+    (* - admit. (* ditto *) *)
+    (* - admit. (* ditto *) *)
+    (* - kdisj_regs. *)
+    (* - kdisj_regs. *)
+    (* - admit. (* need to extend kvalid_regs *) *)
+    (* - admit. (* ditto *) *)
+    (* - kdisj_dms. *)
+    (* - kdisj_cms. *)
+    (* - kdisj_dms. *)
+    (* - kdisj_cms. *)
+    (* - admit. (* need to extend kdef_call_sub *) *)
+    (* - admit. (* ditto *) *)
+    (* - auto. *)
+    (* - krefl. *)
+    (* - admit. *)
   Qed.
-  
+
   (* TODO: memCache <= nmemCache, from the fact: fifoS <= nativeFifoS *)
 
 End Refinement.
