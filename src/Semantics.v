@@ -374,7 +374,7 @@ Section GivenModule.
     forall r1 r2,
       NoDup (namesOf r1) ->
       NoDup (namesOf r2) ->
-      SubList r1 r2 -> SubList r2 r1 ->
+      EquivList r1 r2 ->
       initRegs r1 = initRegs r2.
   Proof.
     unfold initRegs; intros; M.ext y.
@@ -387,20 +387,19 @@ Section GivenModule.
         apply getAttribute_Some_body in Heqyr1.
         pose proof (getAttribute_Some_name _ _ Heqyr2).
         apply getAttribute_Some_body in Heqyr2.
-        apply in_NoDup_attr with (attrs:= r2); auto.
-        rewrite H3; auto.
+        inv H1; apply in_NoDup_attr with (attrs:= r2); auto.
       }
       subst; auto.
     - exfalso.
       apply getAttribute_Some in Heqyr1.
       apply getAttribute_None in Heqyr2.
       elim Heqyr2.
-      apply SubList_map with (f:= @attrName _) in H1; auto.
+      inv H1; apply SubList_map with (f:= @attrName _) in H2; auto.
     - exfalso.
       apply getAttribute_None in Heqyr1.
       apply getAttribute_Some in Heqyr2.
       elim Heqyr1.
-      apply SubList_map with (f:= @attrName _) in H2; auto.
+      inv H1; apply SubList_map with (f:= @attrName _) in H3; auto.
     - auto.
   Qed.
 
