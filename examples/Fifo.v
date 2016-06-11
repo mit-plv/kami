@@ -121,6 +121,18 @@ Section Fifo.
     with Method { ^"firstElt" | fgn "firstElt" eq_refl }() : dType := firstEltS
   }.
 
+  Definition fifoM := META {
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
+
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
+    with Method { ^"firstElt" | fgn "firstElt" eq_refl }() : dType := firstEltS
+  }.
+
   Definition simpleFifoS := SIN {
     Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
     with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
@@ -131,7 +143,19 @@ Section Fifo.
     with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
     with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
   }.
+
+  Definition simpleFifoM := META {
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
+
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
+  }.
   
+
 End Fifo.
 
 Hint Unfold fifo simpleFifo : ModuleDefs.

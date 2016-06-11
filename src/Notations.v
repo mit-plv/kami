@@ -327,6 +327,9 @@ Notation "'Read' name : kind <- reg ; cont " :=
 Notation "'ReadN' name : kind <- reg ; cont " :=
   (GReadReg (Build_NameRecIdx false (Build_NameRec reg eq_refl)) kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
+Notation "'ReadN' name : kind <- { reg | pf } ; cont " :=
+  (GReadReg (Build_NameRecIdx false (Build_NameRec reg pf)) kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_gen_scope.
 Notation "'Readi' name <- reg ; cont" :=
   (GReadReg (Build_NameRecIdx true (Build_NameRec reg eq_refl)) _ (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
@@ -342,6 +345,13 @@ Notation "'Write' reg <- expr ; cont " :=
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' reg <- expr : kind ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl))
+              (SyntaxKind kind) expr%kami_expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_gen_scope.
+Notation "'Write' { reg | pf } <- expr ; cont " :=
+  (GWriteReg (Build_NameRecIdx false (Build_NameRec reg pf)) expr%kami_expr cont)
+    (at level 12, right associativity, reg at level 0) : kami_gen_scope.
+Notation "'Write' { reg | pf } <- expr : kind ; cont " :=
+  (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg pf))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'WriteN' reg <- expr : kind ; cont " :=

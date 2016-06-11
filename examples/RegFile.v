@@ -54,6 +54,20 @@ Section RegFile.
           Retv
       }.
 
+  Definition regFileM :=
+    META {
+        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
+
+        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Ret (#full@[#a])
+            
+        with Method { ^"write" | rfgn "write" eq_refl } (w: WritePort): Void :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w@."addr" <- #w@."data" ];
+          Retv
+      }.
+
 End RegFile.
 
 Hint Unfold DataArray Addr WritePort : MethDefs.

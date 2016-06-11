@@ -2,6 +2,8 @@ Require Import PartialInline Equiv
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
         Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension Lib.Concat.
 
+Set Implicit Arguments.
+
 Section IndexSymbol.
   Lemma namesMatch:
     forall s1 s2 a l1 l2, ~ S_In a s1 -> ~ S_In a s2 ->
@@ -953,7 +955,7 @@ Section SinSin.
     - destruct dmName; auto.
   Qed.
 
-  Lemma inlineSinnSinDmToRule_ModEquiv_Filt ty:
+  Lemma inlineSinSinDmToRule_ModEquiv_Filt ty:
     MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
                              metaRules :=
                                preR ++ OneRule
@@ -991,3 +993,162 @@ Section SinSin.
   Qed.
 End SinSin.
 
+Fixpoint findDm dm pre ls :=
+  match ls with
+    | nil => None
+    | OneMeth bd {| nameVal := dmName; goodName := pf |} :: xs =>
+      match string_dec dmName dm with
+        | left isEq =>
+          Some (pre, OneMeth bd {| nameVal := dm; goodName := match isEq with
+                                                                | eq_refl => pf
+                                                              end |}, xs)
+        | right _ =>
+          findDm dm (pre ++ OneMeth bd {| nameVal := dmName; goodName := pf |} :: nil) xs
+      end
+    | RepMeth A strA goodFn GenK getConstK goodFn2 bd
+              {| nameVal := dmName; goodName := pf |} _ noDup :: xs =>
+      match string_dec dmName dm with
+        | left isEq =>
+          Some (pre, RepMeth strA goodFn getConstK
+                             goodFn2 bd {| nameVal := dm; goodName :=
+                                                            match isEq with
+                                                              | eq_refl => pf
+                                                            end |} noDup, xs)
+        | right _ =>
+          findDm dm (pre ++ RepMeth strA goodFn getConstK goodFn2
+                         bd {| nameVal := dmName; goodName := pf |} noDup :: nil) xs
+      end
+  end.
+
+Fixpoint findR dm pre ls :=
+  match ls with
+    | nil => None
+    | OneRule bd {| nameVal := dmName; goodName := pf |} :: xs =>
+      match string_dec dmName dm with
+        | left isEq =>
+          Some (pre, OneRule bd {| nameVal := dm; goodName := match isEq with
+                                                                | eq_refl => pf
+                                                              end |}, xs)
+        | right _ =>
+          findR dm (pre ++ OneRule bd {| nameVal := dmName; goodName := pf |} :: nil) xs
+      end
+    | RepRule A strA goodFn GenK getConstK goodFn2 bd
+              {| nameVal := dmName; goodName := pf |} _ noDup :: xs =>
+      match string_dec dmName dm with
+        | left isEq =>
+          Some (pre, RepRule strA goodFn getConstK
+                             goodFn2 bd {| nameVal := dm; goodName :=
+                                                            match isEq with
+                                                              | eq_refl => pf
+                                                            end |} noDup, xs)
+        | right _ =>
+          findR dm (pre ++ RepRule strA goodFn getConstK goodFn2
+                        bd {| nameVal := dmName; goodName := pf |} noDup :: nil) xs
+      end
+  end.
+
+Ltac noDupLtac :=  repeat (
+                       apply NoDup_cons;
+                       [unfold not; let H := fresh in
+                                    intros H;
+                                      repeat (destruct H; [discriminate | ]); assumption| ]);
+    apply NoDup_nil.
+
+Theorem test1 x (isIn: In x [8;8;8;8;8;8;8;8;8;8]): x = 8.
+Proof.
+  repeat (destruct isIn as [? | isIn]; [subst; reflexivity|]);
+  destruct isIn.
+Qed.
+
+Theorem test2: exists x, In x [(3, true); (4, true); (5, false)] /\ fst x = 4.
+Proof.
+  eexists (4, _);
+  split;
+  [simpl; tauto | reflexivity].
+Qed.
+
+Ltac inlineGenDmGenRule m mEquiv dm r :=
+  let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
+      let rTriple := eval simpl in (findR r nil (metaRules m)) in
+          match dmTriple with
+            | Some (?preDm, RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                    ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+              match rTriple with
+                | (?preR, RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                  ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                  let H1 := fresh in
+                  let H2 := fresh in
+                  let H3 := fresh in
+                  let H4 := fresh in
+                  let H5 := fresh in
+                  assert (H1: NoDup (map getMetaMethName (metaMeths m))) by
+                      noDupLtac;
+                    assert (H2: NoDup (map getMetaRuleName (metaRules m))) by
+                      noDupLtac;
+                    assert (H3:
+                              forall (B : Type) (strB : B -> string)
+                                     (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
+                                     (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
+                                     (goodStrFn2B : forall (si sj : string) (i j : B),
+                                                      addIndexToStr strB i si =
+                                                      addIndexToStr strB j sj ->
+                                                      si = sj /\ i = j)
+                                     (bgenB : GenAction GenKB Void)
+                                     (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
+                                In
+                                  (RepRule strB goodStrFnB getConstKB
+                                           goodStrFn2B bgenB rb noDupLsB)
+                                  (preR ++ sufR) ->
+                                noCallDmSigGenA (bgenB typeUT)
+                                                {| isRep := true; nameRec := dmn |}
+                                                (projT1 dm) = true) by
+                        (let isIn := fresh in
+                         intro isIn;
+                         repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                         destruct isIn);
+                    assert (H4:
+                              forall (B : Type) (strB : B -> string)
+                                     (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
+                                     (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
+                                     (goodStrFn2B : forall (si sj : string) (i j : B),
+                                                      addIndexToStr strB i si =
+                                                      addIndexToStr strB j sj ->
+                                                      si = sj /\ i = j)
+                                     (bgenB : sigT (GenMethodT GenKB))
+                                     (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
+                                In
+                                  (RepMeth strB goodStrFnB getConstKB
+                                           goodStrFn2B bgenB rb noDupLsB)
+                                  (metaMeths m) ->
+                                noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                {| isRep := true; nameRec := dmn |}
+                                                (projT1 dm) = true) by
+                        (let isIn := fresh in
+                         intro isIn;
+                         repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                         destruct isIn);
+                    assert
+                      (H5: exists call : NameRecIdx,
+                             In call (getCallsGenA (r typeUT)) /\
+                             nameVal (nameRec call) = nameVal dmn /\ isRep call = true) by
+                        (eexists {| isRep := true;
+                                    nameRec := {| nameVal := nameVal dmn;
+                                                  goodName := _ |} |};
+                         split; [simpl; tauto | reflexivity]);
+                    constr:({| metaRegs := metaRegs m;
+                               metaRules :=
+                                 preR ++ RepRule strA goodFn getConstK goodFn2
+                                      (fun ty => inlineGenGenDm (bdr ty) dm bdm)
+                                      rn noDup :: sufR;
+                                     metaMeths := preDm ++ sufDm |},
+                            inlineGenGenDmToRule_traceRefines_Filt
+                              mEquiv strA goodFn getConstK goodFn2
+                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
+                              sufR eq_refl H1 H2 H3 H4 H5,
+                            inlineGenGenDmToRule_ModEquiv_Filt
+                              mEquiv strA goodFn getConstK goodFn2
+                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
+                              sufR eq_refl H1 H2 H4
+                           )
+              end
+          end.

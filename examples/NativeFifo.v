@@ -105,6 +105,24 @@ Section NativeFifo.
     with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
     with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
   }.
+
+  
+  Definition nativeFifoM := META {
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
+
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
+    with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
+  }.
+
+  Definition nativeSimpleFifoM := META {
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
+
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
+  }.
+  
+
   
 End NativeFifo.
 

@@ -84,8 +84,8 @@ Section Mem.
 
   Definition dirwInit: ConstT Dirw := ConstVector (replicate (@ConstBool false) _).
 
-  Definition memDir: Modules :=
-    MODULE {
+  Definition memDir :=
+    META {
         Register "cRqValid": Bool <- @ConstBool false
         with Register "cRq": RqFromC <- Default
         with Register "cRqDirw": Dirw <- dirwInit
@@ -186,6 +186,7 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
+  (*
   Lemma memDir_ModEquiv:
     forall m,
       m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
@@ -194,8 +195,10 @@ Section Facts.
     kequiv.
     END_SKIP_PROOF_ON *) admit.
   Qed.
+   *)
 
 End Facts.
 
+(*
 Hint Resolve memDir_ModEquiv.
-
+*)

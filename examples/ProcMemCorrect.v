@@ -28,7 +28,7 @@ Section ProcMem.
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n. 
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
-  Theorem pdecN_mcache_refines_scN: (pdecN ++ mcache)%kami <<== scN.
+  Theorem pdecN_mcache_refines_scN: (pdecN ++ ParametricSyntax.makeModule mcache)%kami <<== scN.
   Proof.
     ktrans (pdecN ++ memAtomic AddrSize LgDataBytes n)%kami.
 

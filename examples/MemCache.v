@@ -46,32 +46,32 @@ Section MemCache.
   Definition l1C :=
     l1 +++ (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP).
 
-  Definition l1s := ParametricSyntax.makeModule l1C.
-
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
   Definition fifoRqFromC :=
-    fifo "rqFromC" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes n Id).
+    fifoM "rqFromC" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes n Id) eq_refl.
   Definition fifoRsFromC :=
-    fifo "rsFromC" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes n).
-  Definition fifoToC := fifo "toC" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes n Id).
+    fifoM "rsFromC" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes n) eq_refl.
+  Definition fifoToC := fifoM "toC" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes n Id)
+                              eq_refl.
 
-  Definition childParentC := (childParent ++ fifoRqFromC ++ fifoRsFromC ++ fifoToC)%kami.
+  Definition childParentC := (childParent +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC)%kami.
 
   Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes n Id.
-  Definition mline := regFile "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes) Default.
-  Definition mdir := regFile "mcs"%string MIdxBits (MemDir.Dir n) Default.
+  Definition mline := regFileM "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes)
+                               Default eq_refl.
+  Definition mdir := regFileM "mcs"%string MIdxBits (MemDir.Dir n) Default eq_refl.
 
-  Definition memDirC := (memDir ++ mline ++ mdir)%kami.
+  Definition memDirC := (memDir +++ mline +++ mdir)%kami.
 
-  Definition memCache := (l1s ++ childParentC ++ memDirC)%kami.
+  Definition memCache := (l1C +++ childParentC +++ memDirC)%kami.
               
 End MemCache.
 
 Hint Unfold MIdxBits: MethDefs.
 Hint Unfold l1Cache l1cs l1tag l1line l1
      fifoRqFromProc fifoRsToProc fifoRqToP fifoRsToP fifoFromP
-     l1C l1s
+     l1C
      childParent fifoRqFromC fifoRsFromC fifoToC childParentC
      memDir mline mdir memDirC memCache: ModuleDefs.
 
@@ -107,21 +107,24 @@ Section MemCacheNativeFifo.
     (l1 IdxBits TagBits LgNumDatas LgDataBytes Id n)
       +++ (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP).
 
-  Definition nl1s := ParametricSyntax.makeModule nl1C.
-
   Definition nfifoRqFromC :=
-    @nativeFifo "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.
+    @nativeFifoM "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id)
+                 Default eq_refl.
+  
   Definition nfifoRsFromC :=
-    @nativeFifo "rsFromC" (RsFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n) Default.
+    @nativeFifoM "rsFromC" (RsFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n) Default
+                 eq_refl.
+  
   Definition nfifoToC :=
-    @nativeFifo "toC" (ToC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default.
+    @nativeFifoM "toC" (ToC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default
+                 eq_refl.
 
   Definition nchildParentC :=
     ((childParent IdxBits TagBits LgNumDatas LgDataBytes Id n)
-       ++ nfifoRqFromC ++ nfifoRsFromC ++ nfifoToC)%kami.
+       +++ nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)%kami.
 
   Definition nmemCache :=
-    (nl1s ++ nchildParentC ++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
+    (nl1C +++ nchildParentC +++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
               
 End MemCacheNativeFifo.
 
@@ -135,6 +138,7 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
+  (*
   Lemma l1s_refines_nl1s:
     (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
       <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
@@ -165,8 +169,9 @@ Section Refinement.
     (* - krefl. *)
     (* - admit. *)
   Qed.
+  
 
-  Lemma childParencC_refines_nchildParentC:
+  Lemma childParentC_refines_nchildParentC:
     (childParentC IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
       <<== (nchildParentC IdxBits TagBits LgNumDatas LgDataBytes Id n).
   Proof. (* SKIP_PROOF_ON
@@ -237,6 +242,7 @@ Section Refinement.
     (*   + apply childParencC_refines_nchildParentC. *)
     (*   + krefl. *)
   Qed.
+   *)
 
 End Refinement.
 

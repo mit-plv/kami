@@ -33,8 +33,8 @@ Section ChildParent.
   Definition fromPEnq := MethodSig "fromP"--"deq" (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
-  Definition childParent : Modules :=
-    MODULEMETA {
+  Definition childParent :=
+    META {
       Repeat Rule till n with LgNumChildren by "rqFromCToP" :=
         ILET i;  
         Calli rq <- rqToPPop();
@@ -67,9 +67,10 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
+  (*
   Lemma childParent_ModEquiv:
     forall m,
-      m = childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
+      m = makeModule (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id) ->
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
@@ -88,8 +89,11 @@ Section Facts.
       + constructor; [|auto].
         kequiv.
   Qed.
+   *)
 
 End Facts.
 
+(*
 Hint Resolve childParent_ModEquiv.
+*)
 
