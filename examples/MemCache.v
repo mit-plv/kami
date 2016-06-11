@@ -125,8 +125,18 @@ Section MemCacheNativeFifo.
 
   Definition nmemCache :=
     (nl1C +++ nchildParentC +++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
-              
 End MemCacheNativeFifo.
+
+Ltac unfold_ncaches :=
+  unfold nmemCache,
+  nl1C, nchildParentC, memDirC,
+  l1, nfifoRqFromProc, nfifoRsToProc, nfifoRqToP, nfifoRsToP, childParent,
+  memDir, mdir, MemDir.memDir, l1Cache, l1cs, l1line, mline, regFileM, nfifoFromP,
+  ChildParent.childParent, nfifoRqFromC, l1tag, nativeFifoM, nfifoRsFromC, nfifoToC,
+  nativeFifoM,
+  getMetaFromSinNat, getMetaFromSin, nativeFifoS in *;
+  simpl in *;
+  unfold concatMetaMod in *; simpl in *.
 
 Require Import Lib.FMap Lts.Refinement FifoCorrect.
 
