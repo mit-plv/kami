@@ -18,9 +18,9 @@ Section MemCorrect.
   Definition memAtomic := memAtomic (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
                                     LgDataBytes n.
 
-  Lemma memCache_refines_memAtomic: makeModule memCache <<== memAtomic.
+  Lemma memCache_refines_memAtomic: modFromMeta memCache <<== memAtomic.
   Proof.
-    ktrans (makeModule nmemCache);
+    ktrans (modFromMeta nmemCache);
       [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
        apply memCache_refines_nmemCache|].
     
