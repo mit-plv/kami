@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations.
 Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
-Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect.
+Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv.
 
 Set Implicit Arguments.
 
@@ -136,7 +136,21 @@ Ltac unfold_ncaches :=
   nativeFifoM,
   getMetaFromSinNat, getMetaFromSin, nativeFifoS in *;
   simpl in *;
-  unfold concatMetaMod in *; simpl in *.
+  unfold concatMetaMod, Indexer.withPrefix in *; simpl in *.
+
+(*
+Section MemCacheInl.
+  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variable Id: Kind.
+
+  Variable FifoSize: nat.
+
+  Definition nmemCacheInl: MetaModule.
+    remember (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
+    unfold_ncaches.
+    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
+    inlineGenDmRule m mEquiv 
+*)
 
 Require Import Lib.FMap Lts.Refinement FifoCorrect.
 
