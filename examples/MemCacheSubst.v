@@ -6,11 +6,11 @@ Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
 Require Import Ex.MemCache.
 
-Lemma getRegInits_makeModule_concat:
+Lemma getRegInits_modFromMeta_concat:
   forall mm1 mm2,
-    getRegInits (ParametricSyntax.makeModule (mm1 +++ mm2)) =
-    (getRegInits (ParametricSyntax.makeModule mm1))
-      ++ (getRegInits (ParametricSyntax.makeModule mm2)).
+    getRegInits (modFromMeta (mm1 +++ mm2)) =
+    (getRegInits (modFromMeta mm1))
+      ++ (getRegInits (modFromMeta mm2)).
 Proof.
   intros; simpl; rewrite map_app.
   apply Concat.concat_app.
@@ -19,7 +19,7 @@ Qed.
 Lemma noDup_metaRegs:
   forall mm,
     NoDup (map getMetaRegName (metaRegs mm)) ->
-    NoDup (namesOf (getRegInits (ParametricSyntax.makeModule mm))).
+    NoDup (namesOf (getRegInits (modFromMeta mm))).
 Proof.
   admit.
 Qed.
@@ -29,8 +29,8 @@ Ltac knodup_regs :=
     match goal with
     | [ |- NoDup (namesOf (getRegInits _)) ] =>
       progress (unfold getRegInits; fold getRegInits)
-    | [ |- NoDup (namesOf (getRegInits (ParametricSyntax.makeModule (_ +++ _)))) ] =>
-      rewrite getRegInits_makeModule_concat
+    | [ |- NoDup (namesOf (getRegInits (modFromMeta (_ +++ _)))) ] =>
+      rewrite getRegInits_modFromMeta_concat
     | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
     | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
     | [ |- NoDup (namesOf (getRegInits ?m)) ] => unfold_head m
@@ -50,9 +50,9 @@ Section Refinement.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Lemma memCache_refines_nmemCache:
-    (ParametricSyntax.makeModule
+    (modFromMeta
        (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
-      <<== (ParametricSyntax.makeModule
+      <<== (modFromMeta
               (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
   Proof.
     ketrans.

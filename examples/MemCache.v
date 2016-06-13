@@ -210,16 +210,8 @@ Section MemCacheInl.
                      forall ty, MetaModEquiv ty typeUT m
                   ) moduleItself (cheat _)).
   Defined.
-    {m: MetaModule &
-       (modFromMeta m <<==
-        modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                               LgDataBytes Id FifoSize)) /\
-        forall ty, MetaModEquiv ty typeUT m}.
-    
-    Print Ltac ketrans.
-    
-    inlineGenDmGenRule_NoFilt m mEquiv "read.cs"%string "ldHit"%string.
-<<<<<<< HEAD
+
+End MemCacheInl.
 
 Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
 
@@ -264,9 +256,4 @@ Section Refinement.
   Qed.
 
 End Refinement.
-=======
-   *)
-
-End MemCacheInl.
->>>>>>> 644f9491ca8c6bc24493222bacb062023536a846
 
