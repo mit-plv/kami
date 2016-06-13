@@ -1218,21 +1218,21 @@ Qed.
 
 Lemma module_structure_indep_step:
   forall m1 m2 or u l,
-    SubList (getRules m1) (getRules m2) ->
-    SubList (getRules m2) (getRules m1) ->
-    SubList (getDefsBodies m1) (getDefsBodies m2) ->
-    SubList (getDefsBodies m2) (getDefsBodies m1) ->
+    EquivList (getRules m1) (getRules m2) ->
+    EquivList (getDefsBodies m1) (getDefsBodies m2) ->
     Step m1 or u l ->
     Step m2 or u l.
 Proof.
   intros.
-  apply step_consistent in H3.
+  apply step_consistent in H1.
   apply step_consistent.
-  inv H3; constructor.
-  - eapply module_structure_indep_substepsInd; eauto.
+  inv H1; constructor.
+  - inv H; inv H0.
+    eapply module_structure_indep_substepsInd; eauto.
   - destruct (hide l0) as [a d c].
     unfold wellHidden in *; simpl in *.
-    pose proof (module_structure_indep_getCalls _ _ H0 H2); dest; split.
+    inv H; inv H0.
+    pose proof (module_structure_indep_getCalls _ _ H2 H3); dest; split.
     + eapply M.KeysDisj_SubList; eauto.
     + eapply M.KeysDisj_SubList; eauto.
       apply SubList_map; auto.
@@ -1262,7 +1262,7 @@ Lemma flatten_preserves_step:
     Step (Mod (getRegInits m) (getRules m) (getDefsBodies m)) or nr l.
 Proof.
   intros; apply module_structure_indep_step with (m1:= m);
-    auto; apply SubList_refl.
+    auto; apply EquivList_refl.
 Qed.
 
 Lemma substep_dms_weakening:

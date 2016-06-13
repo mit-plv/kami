@@ -14,6 +14,7 @@ Section Lists. (* For dealing with domains *)
   
   Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+  Definition EquivList (l1 l2: list A) := SubList l1 l2 /\ SubList l2 l1.
 
   Lemma SubList_nil: forall l, SubList nil l.
   Proof. unfold SubList; intros; inv H. Qed.
@@ -80,6 +81,58 @@ Section Lists. (* For dealing with domains *)
     unfold SubList; intros.
     specialize (H e H0).
     apply in_app_or in H; intuition.
+  Qed.
+
+  Lemma EquivList_nil: EquivList nil nil.
+  Proof. split; unfold SubList; intros; inv H. Qed.
+
+  Lemma EquivList_nil_inv_1: forall l, EquivList l nil -> l = nil.
+  Proof. intros; inv H; apply SubList_nil_inv; auto. Qed.
+
+  Lemma EquivList_nil_inv_2: forall l, EquivList nil l -> l = nil.
+  Proof. intros; inv H; apply SubList_nil_inv; auto. Qed.
+
+  Lemma EquivList_refl: forall l, EquivList l l.
+  Proof. intros; split; apply SubList_refl. Qed.
+  
+  Lemma EquivList_comm: forall l1 l2, EquivList l1 l2 -> EquivList l2 l1.
+  Proof. unfold EquivList; intros; dest; split; auto. Qed.
+
+  Lemma EquivList_trans:
+    forall l1 l2 l3, EquivList l1 l2 -> EquivList l2 l3 -> EquivList l1 l3.
+  Proof. intros; inv H; inv H0; split; eapply SubList_trans; eauto. Qed.
+
+  Lemma EquivList_app:
+    forall l1 l2 l3 l4,
+      EquivList l1 l2 -> EquivList l3 l4 ->
+      EquivList (l1 ++ l3) (l2 ++ l4).
+  Proof.
+    unfold EquivList; intros; dest; split.
+    - apply SubList_app_3.
+      + apply SubList_app_1; auto.
+      + apply SubList_app_2; auto.
+    - apply SubList_app_3.
+      + apply SubList_app_1; auto.
+      + apply SubList_app_2; auto.
+  Qed.
+
+  Lemma EquivList_app_comm: forall l1 l2, EquivList (l1 ++ l2) (l2 ++ l1).
+  Proof.
+    unfold EquivList; intros; split.
+    - apply SubList_app_3.
+      + apply SubList_app_2, SubList_refl; auto.
+      + apply SubList_app_1, SubList_refl; auto.
+    - apply SubList_app_3.
+      + apply SubList_app_2, SubList_refl; auto.
+      + apply SubList_app_1, SubList_refl; auto.
+  Qed.
+
+  Lemma EquivList_app_idempotent:
+    forall l1 l2, EquivList l1 (l2 ++ l2) -> EquivList l1 l2.
+  Proof.
+    unfold EquivList; intros; dest; split.
+    - apply SubList_app_idempotent; auto.
+    - eapply SubList_app_4; eauto.
   Qed.
 
   Lemma DisjList_nil_1: forall l, DisjList nil l.

@@ -1260,10 +1260,8 @@ Proof.
     + constructor; auto.
       clear -HStep.
       apply module_structure_indep_step with (m1:= makeModule m1 +++ m2); auto.
-      * simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
+      * split; simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
+      * split; simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
       
   - clear; induction sig1; constructor; auto.
     rewrite idElementwiseId.
@@ -1286,10 +1284,8 @@ Proof.
     + constructor; auto.
       clear -HStep.
       apply module_structure_indep_step with (m1:= (makeModule m1 ++ makeModule m2)%kami); auto.
-      * simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
-      * simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
+      * split; simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
+      * split; simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
         
   - clear; induction sig1; constructor; auto.
     rewrite idElementwiseId.

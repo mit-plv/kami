@@ -495,12 +495,15 @@ Section DuplicateFacts.
       - apply duplicate_regs_NoDup; auto.
         apply specializable_concatMod; auto.
       - apply duplicate_regs_NoDup_2; auto.
-      - apply duplicate_regs_ConcatMod_1; auto.
-      - apply duplicate_regs_ConcatMod_2; auto.
-      - apply duplicate_rules_ConcatMod_1; auto.
-      - apply duplicate_rules_ConcatMod_2; auto.
-      - apply duplicate_defs_ConcatMod_1; auto.
-      - apply duplicate_defs_ConcatMod_2; auto.
+      - split.
+        + apply duplicate_regs_ConcatMod_1; auto.
+        + apply duplicate_regs_ConcatMod_2; auto.
+      - split.
+        + apply duplicate_rules_ConcatMod_1; auto.
+        + apply duplicate_rules_ConcatMod_2; auto.
+      - split.
+        + apply duplicate_defs_ConcatMod_1; auto.
+        + apply duplicate_defs_ConcatMod_2; auto.
     Qed.
 
     Lemma duplicate_concatMod_comm_2:
@@ -512,12 +515,15 @@ Section DuplicateFacts.
       - apply duplicate_regs_NoDup_2; auto.
       - apply duplicate_regs_NoDup; auto.
         apply specializable_concatMod; auto.
-      - apply duplicate_regs_ConcatMod_2; auto.
-      - apply duplicate_regs_ConcatMod_1; auto.
-      - apply duplicate_rules_ConcatMod_2; auto.
-      - apply duplicate_rules_ConcatMod_1; auto.
-      - apply duplicate_defs_ConcatMod_2; auto.
-      - apply duplicate_defs_ConcatMod_1; auto.
+      - split.
+        + apply duplicate_regs_ConcatMod_2; auto.
+        + apply duplicate_regs_ConcatMod_1; auto.
+      - split.
+        + apply duplicate_rules_ConcatMod_2; auto.
+        + apply duplicate_rules_ConcatMod_1; auto.
+      - split.
+        + apply duplicate_defs_ConcatMod_2; auto.
+        + apply duplicate_defs_ConcatMod_1; auto.
     Qed.
 
   End TwoModules3.

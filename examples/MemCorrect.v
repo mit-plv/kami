@@ -20,9 +20,11 @@ Section MemCorrect.
 
   Lemma memCache_refines_memAtomic: makeModule memCache <<== memAtomic.
   Proof.
-    ktrans (makeModule nmemCache).
-    - admit. (* joonwonc TODO *)
-    - admit. (* vmurali TODO *)
+    ktrans (makeModule nmemCache);
+      [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+       apply memCache_refines_nmemCache|].
+    
+    admit. (* vmurali TODO *)
   Qed.
 
 End MemCorrect.

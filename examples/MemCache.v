@@ -65,7 +65,16 @@ Section MemCache.
   Definition memDirC := (memDir +++ mline +++ mdir)%kami.
 
   Definition memCache := (l1C +++ childParentC +++ memDirC)%kami.
-              
+
+  (* For applying a substitution lemma *)
+  Definition fifosInMemCache :=
+    ParametricSyntax.makeModule
+      (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP
+                      +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC).
+
+  Definition othersInMemCache :=
+    ParametricSyntax.makeModule (l1 +++ childParent +++ memDirC).
+
 End MemCache.
 
 Hint Unfold MIdxBits: MethDefs.
@@ -125,6 +134,13 @@ Section MemCacheNativeFifo.
 
   Definition nmemCache :=
     (nl1C +++ nchildParentC +++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id n))%kami.
+
+  (* For applying a substitution lemma *)
+  Definition nfifosInNMemCache :=
+    ParametricSyntax.makeModule
+      (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP
+                       +++ nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC).
+  
 End MemCacheNativeFifo.
 
 Ltac unfold_ncaches :=
@@ -152,7 +168,7 @@ Section MemCacheInl.
     inlineGenDmRule m mEquiv 
 *)
 
-Require Import Lib.FMap Lts.Refinement FifoCorrect.
+Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
 
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
@@ -162,111 +178,37 @@ Section Refinement.
 
   Variable n: nat. (* number of l1 caches (cores) *)
 
-  (*
-  Lemma l1s_refines_nl1s:
-    (l1s IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
-      <<== (nl1s IdxBits TagBits LgNumDatas LgDataBytes Id n).
-  Proof.
-    evar (im1: Modules); ktrans im1; unfold im1;
-      [unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_1|].
-    evar (im2: Modules); ktrans im2; unfold im2;
-      [|unfold MethsT; rewrite <-SemFacts.idElementwiseId; apply makeModule_comm_2].
-    clear im1 im2.
-
-    admit.
-    (* simple kmodular. *)
-    (* - admit. (* kequiv for metamodule / automation *) *)
-    (* - admit. (* ditto *) *)
-    (* - admit. (* ditto *) *)
-    (* - admit. (* ditto *) *)
-    (* - kdisj_regs. *)
-    (* - kdisj_regs. *)
-    (* - admit. (* need to extend kvalid_regs *) *)
-    (* - admit. (* ditto *) *)
-    (* - kdisj_dms. *)
-    (* - kdisj_cms. *)
-    (* - kdisj_dms. *)
-    (* - kdisj_cms. *)
-    (* - admit. (* need to extend kdef_call_sub *) *)
-    (* - admit. (* ditto *) *)
-    (* - auto. *)
-    (* - krefl. *)
-    (* - admit. *)
-  Qed.
-  
-
-  Lemma childParentC_refines_nchildParentC:
-    (childParentC IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
-      <<== (nchildParentC IdxBits TagBits LgNumDatas LgDataBytes Id n).
-  Proof. (* SKIP_PROOF_ON
-    simple kmodular;
-      [kequiv|kequiv|kequiv|kequiv
-       |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
-       |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-       |kdef_call_sub|kdef_call_sub
-       |kinteracting| |].
-    - krefl.
-    - simple kmodularn;
-        [kequiv|kequiv|kequiv|kequiv
-         |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
-         |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-         |knoninteracting|knoninteracting
-         | |].
-      + apply fifo_refines_nativefifo.
-      + simple kmodularn;
-          [kequiv|kequiv|kequiv|kequiv
-           |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
-           |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-           |knoninteracting|knoninteracting
-           | |].
-        * apply fifo_refines_nativefifo.
-        * apply fifo_refines_nativefifo.
-          END_SKIP_PROOF_ON *) admit.
-  Qed.
-
   Lemma memCache_refines_nmemCache:
-    (memCache IdxBits TagBits LgNumDatas LgDataBytes Id (rsz FifoSize) n)
-      <<== (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
+    (ParametricSyntax.makeModule
+       (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
+      <<== (ParametricSyntax.makeModule
+              (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
   Proof.
-    admit.
-    
-    (* simple kmodular. *)
-    (* - admit. (* need kequiv for metamodule / automation *) *)
-    (* - admit. (* ditto *) *)
-    (* - admit. (* ditto *) *)
-    (* - admit. (* ditto *) *)
-    (* - kdisj_regs *)
-    (* - kdisj_regs *)
-    (* - admit. (* need to extend kvalid_regs *) *)
-    (* - admit. (* need to extend kvalid_regs *) *)
-    (* - kdisj_dms *)
-    (* - kdisj_cms *)
-    (* - kdisj_dms *)
-    (* - kdisj_cms *)
-    (* - admit. (* need to extend kdef_call_sub *) *)
-    (* - admit. (* need to extend kdef_call_sub *) *)
-    (* - kinteracting. *)
-    (* - apply l1s_refines_nl1s. *)
-    (* - simple kmodular. *)
-    (*   + admit. (* need kequiv for metamodule / automation *) *)
-    (*   + admit. (* ditto *) *)
-    (*   + admit. (* ditto *) *)
-    (*   + admit. (* ditto *) *)
-    (*   + kdisj_regs *)
-    (*   + kdisj_regs *)
-    (*   + admit. (* extend kvalid_regs *) *)
-    (*   + admit. (* extend kvalid_regs *) *)
-    (*   + kdisj_dms *)
-    (*   + kdisj_cms *)
-    (*   + kdisj_dms *)
-    (*   + kdisj_cms *)
-    (*   + admit. (* need to extend kdef_call_sub *) *)
-    (*   + admit. (* need to extend kdef_call_sub *) *)
-    (*   + kinteracting. *)
-    (*   + apply childParencC_refines_nchildParentC. *)
-    (*   + krefl. *)
+    unfold ParametricSyntax.makeModule.
+
+    evar (im1: Modules); ktrans im1; unfold im1; clear im1.
+
+    - unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+
+      pose (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
+                            Id (rsz FifoSize) n) as fifos.
+      pose (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as nfifos.
+      pose (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as others.
+
+      apply substitute_flattened_refines_interacting
+      with (regs := (getRegInits fifos))
+             (rules := (getRules fifos))
+             (dms := (getDefsBodies fifos))
+             (sregs := (getRegInits nfifos))
+             (srules := (getRules nfifos))
+             (sdms := (getDefsBodies nfifos))
+             (regs' := (getRegInits others))
+             (rules' := (getRules others))
+             (dms' := (getDefsBodies others)); admit. (* 23 subgoals haha *)
+
+    - apply traceRefines_same_module_structure; admit. (* 5 subgoals *)
+
   Qed.
-   *)
 
 End Refinement.
 

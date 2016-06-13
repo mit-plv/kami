@@ -135,27 +135,21 @@ Section Facts.
     forall ma mb,
       NoDup (namesOf (getRegInits ma)) ->
       NoDup (namesOf (getRegInits mb)) ->
-      SubList (getRegInits ma) (getRegInits mb) ->
-      SubList (getRegInits mb) (getRegInits ma) ->
-      SubList (getRules ma) (getRules mb) ->
-      SubList (getRules mb) (getRules ma) ->
-      SubList (getDefsBodies ma) (getDefsBodies mb) ->
-      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      EquivList (getRegInits ma) (getRegInits mb) ->
+      EquivList (getRules ma) (getRules mb) ->
+      EquivList (getDefsBodies ma) (getDefsBodies mb) ->
       traceRefines id ma mb.
   Proof.
     unfold traceRefines; intros.
-    pose proof (initRegs_eq H H0 H1 H2).
-    
+    pose proof (initRegs_eq H H0 H1).
     exists s1, sig1; split.
-    - inv H7; constructor.
+    - inv H4; constructor.
       remember (initRegs (getRegInits ma)).
       induction HMultistepBeh.
       + subst; constructor.
-        rewrite <-H8; auto.
+        rewrite <-H5; auto.
       + constructor; auto.
-        apply module_structure_indep_step with (m1:= ma); auto;
-          simpl; rewrite app_assoc; apply SubList_refl.
-        
+        apply module_structure_indep_step with (m1:= ma); auto.
     - clear; induction sig1; constructor; auto.
       constructor; destruct (annot a); auto.
   Qed.
@@ -167,20 +161,19 @@ Section Facts.
       NoDup (namesOf (getRegInits mc)) ->
       DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mc)) ->
       DisjList (namesOf (getRegInits mb)) (namesOf (getRegInits mc)) ->
-      SubList (getRegInits ma) (getRegInits mb) ->
-      SubList (getRegInits mb) (getRegInits ma) ->
-      SubList (getRules ma) (getRules mb) ->
-      SubList (getRules mb) (getRules ma) ->
-      SubList (getDefsBodies ma) (getDefsBodies mb) ->
-      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      EquivList (getRegInits ma) (getRegInits mb) ->
+      EquivList (getRules ma) (getRules mb) ->
+      EquivList (getDefsBodies ma) (getDefsBodies mb) ->
       traceRefines id (ma ++ mc)%kami (mb ++ mc)%kami.
   Proof.
-    intros; apply traceRefines_same_module_structure; auto;
-      try (apply SubList_app_3; [apply SubList_app_1; auto|apply SubList_app_2, SubList_refl]).
+    intros; apply traceRefines_same_module_structure; auto.
     - simpl; unfold RegInitT; rewrite namesOf_app.
       apply NoDup_DisjList; auto.
     - simpl; unfold RegInitT; rewrite namesOf_app.
       apply NoDup_DisjList; auto.
+    - apply EquivList_app; [auto|apply EquivList_refl].
+    - apply EquivList_app; [auto|apply EquivList_refl].
+    - apply EquivList_app; [auto|apply EquivList_refl].
   Qed.
 
   Lemma traceRefines_same_module_structure_modular_2:
@@ -190,22 +183,21 @@ Section Facts.
       NoDup (namesOf (getRegInits mc)) ->
       DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mc)) ->
       DisjList (namesOf (getRegInits mb)) (namesOf (getRegInits mc)) ->
-      SubList (getRegInits ma) (getRegInits mb) ->
-      SubList (getRegInits mb) (getRegInits ma) ->
-      SubList (getRules ma) (getRules mb) ->
-      SubList (getRules mb) (getRules ma) ->
-      SubList (getDefsBodies ma) (getDefsBodies mb) ->
-      SubList (getDefsBodies mb) (getDefsBodies ma) ->
+      EquivList (getRegInits ma) (getRegInits mb) ->
+      EquivList (getRules ma) (getRules mb) ->
+      EquivList (getDefsBodies ma) (getDefsBodies mb) ->
       traceRefines id (mc ++ ma)%kami (mc ++ mb)%kami.
   Proof.
-    intros; apply traceRefines_same_module_structure; auto;
-      try (apply SubList_app_3; [apply SubList_app_1, SubList_refl|apply SubList_app_2; auto]).
+    intros; apply traceRefines_same_module_structure; auto.
     - simpl; unfold RegInitT; rewrite namesOf_app.
       apply NoDup_DisjList; auto.
       apply DisjList_comm; auto.
     - simpl; unfold RegInitT; rewrite namesOf_app.
       apply NoDup_DisjList; auto.
       apply DisjList_comm; auto.
+    - apply EquivList_app; [apply EquivList_refl|auto].
+    - apply EquivList_app; [apply EquivList_refl|auto].
+    - apply EquivList_app; [apply EquivList_refl|auto].
   Qed.
 
   Lemma traceRefines_comm:
@@ -213,12 +205,12 @@ Section Facts.
       NoDup (namesOf (getRegInits (ma ++ mb)%kami)) ->
       traceRefines id (ma ++ mb)%kami (mb ++ ma)%kami.
   Proof.
-    intros; apply traceRefines_same_module_structure;
-      auto; try (apply SubList_app_3;
-                 [apply SubList_app_2, SubList_refl
-                 |apply SubList_app_1, SubList_refl]; fail).
-    unfold namesOf in *; simpl in *; rewrite map_app in *.
-    apply NoDup_app_comm; auto.
+    intros; apply traceRefines_same_module_structure; auto.
+    - unfold namesOf in *; simpl in *; rewrite map_app in *.
+      apply NoDup_app_comm; auto.
+    - apply EquivList_app_comm.
+    - apply EquivList_app_comm.
+    - apply EquivList_app_comm.
   Qed.
 
   Lemma traceRefines_assoc_1:
@@ -236,7 +228,7 @@ Section Facts.
       + constructor; auto.
         clear -HStep.
         apply module_structure_indep_step with (m1:= ((ma ++ mb) ++ mc)%kami); auto;
-          simpl; rewrite app_assoc; apply SubList_refl.
+          simpl; split; rewrite app_assoc; apply SubList_refl.
           
     - clear; induction sig1; constructor; auto.
       constructor; destruct (annot a); auto.
@@ -257,7 +249,7 @@ Section Facts.
       + constructor; auto.
         clear -HStep.
         apply module_structure_indep_step with (m1:= (ma ++ mb ++ mc)%kami); auto;
-          simpl; rewrite app_assoc; apply SubList_refl.
+          simpl; split; rewrite app_assoc; apply SubList_refl.
         
     - clear; induction sig1; constructor; auto.
       constructor; destruct (annot a); auto.
@@ -872,9 +864,8 @@ Section Facts.
 
   End Modularity.
 
-
   Lemma flatten_traceRefines: forall m, m <<== Mod (getRegInits m) (getRules m)
-                                          (getDefsBodies m).
+                                              (getDefsBodies m).
   Proof.
     intros.
     apply stepRefinement with (ruleMap := fun _ s => Some s) (theta := id); eauto; simpl in *.
@@ -886,6 +877,27 @@ Section Facts.
     destruct l; destruct annot; try destruct o0; auto.
   Qed.
 
-  
+  Lemma deflatten_traceRefines:
+    forall regs1 regs2 rules1 rules2 dms1 dms2,
+      Mod (regs1 ++ regs2) (rules1 ++ rules2) (dms1 ++ dms2)
+          <<== ConcatMod (Mod regs1 rules1 dms1) (Mod regs2 rules2 dms2).
+  Proof.
+    unfold traceRefines; intros.
+    exists s1, sig1; split.
+    - inv H; constructor; simpl in *.
+      remember (initRegs (regs1 ++ regs2)).
+      induction HMultistepBeh.
+      + subst; constructor.
+        p_equal H; f_equal.
+      + constructor; auto.
+        clear -HStep.
+        apply module_structure_indep_step with
+        (m1:= Mod (regs1 ++ regs2) (rules1 ++ rules2) (dms1 ++ dms2)); auto;
+          simpl; apply EquivList_refl.
+    - clear; induction sig1; constructor; auto.
+      rewrite idElementwiseId.
+      constructor; destruct (annot a); auto.
+  Qed.
+
 End Facts.
 
