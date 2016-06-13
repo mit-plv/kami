@@ -2,7 +2,7 @@ Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
-Require Import Lts.Wf Lts.Equiv Lts.Refinement.
+Require Import Lts.Wf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
 Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
 
@@ -83,39 +83,36 @@ Ltac kmodular_sim_l :=
 Ltac kmodular_sim_r :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
   
-(* CAUTION: do not use the "simpl" tactic during kequiv_unit;
- *          "simpl" will destruct all BoundedIndexFull information, 
- *          which is needed for the Struct equivalence
- *)
-Ltac kequiv_unit tac :=
-  try tac;
+Ltac kequiv_unit :=
   match goal with
   | [ |- ModEquiv _ _ _ ] => progress eauto
   | [ |- ModEquiv _ _ ?m ] =>
     let H := fresh "H" in
     assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
     clear H; apply duplicate_ModEquiv
+  | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => constructor; intros
   | [ |- RuleEquiv _ _ _ ] => unfold RuleEquiv; intros
   | [ |- MethEquiv _ _ _ ] => unfold MethEquiv; intros
+  | [ |- RulesEquiv _ _ _ ] => apply MetaRulesEquiv_RulesEquiv
   | [ |- RulesEquiv _ _ _ ] => constructor; intros
+  | [ |- MethsEquiv _ _ _ ] => apply MetaMethsEquiv_MethsEquiv
   | [ |- MethsEquiv _ _ _ ] => constructor; intros
   | [ |- ActionEquiv _ _ ] => constructor; intros
+  | [ |- MetaModEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaRulesEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaRuleEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaMethsEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaMethEquiv _ _ _ ] => constructor; intros
+  | [ |- SinActionEquiv _ _ _ _ ] => constructor; intros
+  | [ |- GenActionEquiv _ _ _ _ _ ] => constructor; intros
   | [ |- In _ _] => simpl; tauto
-  (* For dealing with BuildStruct *)
-  | [H: Some _ = nth_error _ ?i |- _] =>
-    destruct i; [inversion H; subst; rewrite (UIP_refl _ _ H) in *
-                |unfold nth_error in H; fold (nth_error (A:= Attribute Kind)) in H]
-  | [H: context [ith_error _ ?i] |- _] => first [is_var i | inv H; destruct_existT]
-  | [H: Some _ = error |- _] => inv H
   end.
 
-Ltac kequiv_with tac :=
+Ltac kequiv :=
   intros; subst;
-  repeat (repeat autounfold with MethDefs; kequiv_unit tac).
-
-Ltac kequiv := kequiv_with idtac.
+  repeat (repeat autounfold with MethDefs; kequiv_unit).
 
 Ltac unfold_head m :=
   match m with

@@ -195,13 +195,6 @@ Section Facts.
       (forall ty1 ty2, ModEquiv ty1 ty2 m).
   Proof.
     kequiv.
-    unfold memInst; simpl.
-    apply MethsEquiv_app; [|constructor].
-
-    induction n; intros.
-    - kequiv.
-    - constructor; [|auto].
-      kequiv.
   Qed.
   Hint Resolve memInst_ModEquiv.
 

@@ -35,13 +35,13 @@ Section MemCache.
       n (fifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl).
   Definition fifoRqToP :=
     getMetaFromSinNat
-      n (fifoS "rqToP" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
+      n (fifoS "rqToParent" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
   Definition fifoRsToP :=
     getMetaFromSinNat
-      n (fifoS "rsToP" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl).
+      n (fifoS "rsToParent" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl).
   Definition fifoFromP :=
     getMetaFromSinNat
-      n (fifoS "fromP" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
+      n (fifoS "fromParent" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
 
   Definition l1C :=
     l1 +++ (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP).
@@ -49,10 +49,10 @@ Section MemCache.
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes n Id.
 
   Definition fifoRqFromC :=
-    fifoM "rqFromC" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes n Id) eq_refl.
+    fifoM "rqFromChild" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes n Id) eq_refl.
   Definition fifoRsFromC :=
-    fifoM "rsFromC" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes n) eq_refl.
-  Definition fifoToC := fifoM "toC" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes n Id)
+    fifoM "rsFromChild" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes n) eq_refl.
+  Definition fifoToC := fifoM "toChild" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes n Id)
                               eq_refl.
 
   Definition childParentC := (childParent +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC)%kami.
@@ -69,8 +69,8 @@ Section MemCache.
   (* For applying a substitution lemma *)
   Definition fifosInMemCache :=
     modFromMeta
-      (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP
-                      +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC).
+      ((fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP)
+         +++ (fifoRqFromC +++ fifoRsFromC +++ fifoToC)).
 
   Definition othersInMemCache :=
     modFromMeta (l1 +++ childParent +++ memDirC).
@@ -97,17 +97,17 @@ Section MemCacheNativeFifo.
   Definition nfifoRsToProc :=
     getMetaFromSinNat n (@nativeFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl).
   Definition nfifoRqToP :=
-    getMetaFromSinNat n (@nativeFifoS "rqToP"
+    getMetaFromSinNat n (@nativeFifoS "rqToParent"
                                       (RqToP (MIdxBits IdxBits TagBits)
                                              LgNumDatas LgDataBytes Id)
                                       Default eq_refl).
   Definition nfifoRsToP :=
-    getMetaFromSinNat n (@nativeFifoS "rsToP"
+    getMetaFromSinNat n (@nativeFifoS "rsToParent"
                                       (RsToP (MIdxBits IdxBits TagBits)
                                              LgNumDatas LgDataBytes)
                                       Default eq_refl).
   Definition nfifoFromP :=
-    getMetaFromSinNat n (@nativeFifoS "fromP"
+    getMetaFromSinNat n (@nativeFifoS "fromParent"
                                       (FromP (MIdxBits IdxBits TagBits)
                                              LgNumDatas LgDataBytes Id)
                                       Default eq_refl).
@@ -117,15 +117,15 @@ Section MemCacheNativeFifo.
       +++ (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP).
 
   Definition nfifoRqFromC :=
-    @nativeFifoM "rqFromC" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id)
+    @nativeFifoM "rqFromChild" (RqFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id)
                  Default eq_refl.
   
   Definition nfifoRsFromC :=
-    @nativeFifoM "rsFromC" (RsFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n) Default
+    @nativeFifoM "rsFromChild" (RsFromC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n) Default
                  eq_refl.
   
   Definition nfifoToC :=
-    @nativeFifoM "toC" (ToC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default
+    @nativeFifoM "toChild" (ToC (MIdxBits IdxBits TagBits) LgNumDatas LgDataBytes n Id) Default
                  eq_refl.
 
   Definition nchildParentC :=
@@ -138,8 +138,8 @@ Section MemCacheNativeFifo.
   (* For applying a substitution lemma *)
   Definition nfifosInNMemCache :=
     modFromMeta
-      (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP
-                       +++ nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC).
+      ((nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP)
+         +++ (nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)).
   
 End MemCacheNativeFifo.
 
@@ -219,6 +219,7 @@ Section MemCacheInl.
     Print Ltac ketrans.
     
     inlineGenDmGenRule_NoFilt m mEquiv "read.cs"%string "ldHit"%string.
+<<<<<<< HEAD
 
 Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
 
@@ -263,4 +264,9 @@ Section Refinement.
   Qed.
 
 End Refinement.
+=======
+   *)
+
+End MemCacheInl.
+>>>>>>> 644f9491ca8c6bc24493222bacb062023536a846
 

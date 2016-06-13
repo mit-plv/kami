@@ -1138,6 +1138,12 @@ Inductive MetaReg :=
                                         si = sj /\ i = j)
          (bgen: A -> sigT ConstFullT) (s: NameRec) (ls: list A) (noDup: NoDup ls).
 
+Definition getMetaRegName m :=
+  match m with
+  | OneReg b s => nameVal s
+  | RepReg _ _ _ _ _ s _ _ => nameVal s
+  end.
+
 Definition getListFromMetaReg m :=
   match m with
     | OneReg b s => (nameVal s :: b)%struct :: nil

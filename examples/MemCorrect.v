@@ -1,8 +1,8 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Tactics Lts.Specialize.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Equiv Lts.Tactics Lts.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
-Require Import Ex.SC Ex.MemAtomic Ex.MemCache ParametricSyntax Lib.Indexer.
+Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
 
 Set Implicit Arguments.
 
