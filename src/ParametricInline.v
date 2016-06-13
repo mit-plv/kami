@@ -1071,11 +1071,11 @@ Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+            | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                     ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
               match rTriple with
-                | (?preR, RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                  ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   let H3 := fresh in
@@ -1157,11 +1157,11 @@ Ltac inlineGenDmGenRule_NoFilt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+            | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                     ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
               match rTriple with
-                | (?preR, RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                  ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   assert (H1: NoDup (map getMetaMethName (metaMeths m))) by
@@ -1190,10 +1190,10 @@ Ltac inlineSinDmGenRule_Filt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, OneMeth ?bdm ?dmn, ?sufDm) =>
+            | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
               match rTriple with
-                | (?preR, RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                  ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   let H3 := fresh in
@@ -1297,10 +1297,10 @@ Ltac inlineSinDmGenRule_NoFilt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, OneMeth ?bdm ?dmn, ?sufDm) =>
+            | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
               match rTriple with
-                | (?preR, RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                  ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   assert (H1: NoDup (map getMetaMethName (metaMeths m))) by
@@ -1329,9 +1329,9 @@ Ltac inlineSinDmSinRule_Filt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, OneMeth ?bdm ?dmn, ?sufDm) =>
+            | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
               match rTriple with
-                | (?preR, OneRule ?bdr ?rn, ?sufR) =>
+                | Some (?preR, @OneRule ?bdr ?rn, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   let H3 := fresh in
@@ -1430,9 +1430,9 @@ Ltac inlineSinDmSinRule_NoFilt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
           match dmTriple with
-            | Some (?preDm, OneMeth ?bdm ?dmn, ?sufDm) =>
+            | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
               match rTriple with
-                | (?preR, OneRule ?bdr ?rn, ?sufR) =>
+                | Some (?preR, @OneRule ?bdr ?rn, ?sufR) =>
                   let H1 := fresh in
                   let H2 := fresh in
                   assert (H1: NoDup (map getMetaMethName (metaMeths m))) by

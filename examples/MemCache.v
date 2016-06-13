@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations.
 Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
-Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv.
+Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
 
 Set Implicit Arguments.
 
@@ -154,18 +154,52 @@ Ltac unfold_ncaches :=
   simpl in *;
   unfold concatMetaMod, Indexer.withPrefix in *; simpl in *.
 
-(*
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
   Variable FifoSize: nat.
 
+  (*
   Definition nmemCacheInl: MetaModule.
-    remember (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
+    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
     unfold_ncaches.
     assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
-    inlineGenDmRule m mEquiv 
+    pose "read.cs"%string as dm.
+    pose "ldHit"%string as r.
+    let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
+    let rTriple := eval simpl in (findR r nil (metaRules m)) in
+          match dmTriple with
+            | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                    ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+              match rTriple with
+                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                  let H1 := fresh in
+                  let H2 := fresh in
+                  assert (H1: NoDup (map getMetaMethName (metaMeths m))) by
+                      noDupLtac;
+                    assert (H2: NoDup (map getMetaRuleName (metaRules m))) by
+                      noDupLtac;
+                    pose ({| metaRegs := metaRegs m;
+                               metaRules :=
+                                 preR ++ RepRule strA goodFn getConstK goodFn2
+                                      (fun ty => inlineGenGenDm (bdr ty) dm bdm)
+                                      rn noDup :: sufR;
+                                     metaMeths := metaMeths m |},
+                            inlineGenGenDmToRule_traceRefines_NoFilt
+                              strA goodFn getConstK goodFn2
+                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
+                              sufR eq_refl H1 H2,
+                            inlineGenGenDmToRule_ModEquiv_NoFilt
+                              mEquiv strA goodFn getConstK goodFn2
+                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
+                              sufR eq_refl H1 H2
+                           )
+              end
+          end.
+
+    inlineGenDmGenRule_NoFilt m mEquiv "read.cs"%string "ldHit"%string.
 *)
 
 Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
