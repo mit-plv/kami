@@ -24,24 +24,6 @@ Proof.
   admit.
 Qed.
 
-Fixpoint noDupStr (l: list string) :=
-  match l with
-  | nil => true
-  | h :: t =>
-    if in_dec string_dec h t then false else noDupStr t
-  end.
-
-Lemma noDupStr_NoDup:
-  forall l, noDupStr l = true -> NoDup l.
-Proof.
-  induction l; simpl; intros; [constructor|].
-  destruct (in_dec string_dec _ _); [inv H|].
-  constructor; auto.
-Qed.
-
-Ltac noDup_tac :=
-  vm_compute; apply noDupStr_NoDup; reflexivity; fail.
-
 Ltac knodup_regs :=
   repeat (* Separating NoDup proofs by small modules *)
     match goal with
@@ -90,7 +72,14 @@ Section Refinement.
              (sdms := getDefsBodies nfifos)
              (regs' := getRegInits others)
              (rules' := getRules others)
-             (dms' := getDefsBodies others); admit.
+             (dms' := getDefsBodies others).
+
+      + kequiv.
+      + kequiv.
+      + kequiv.
+      + kequiv.
+      + kequiv.
+      + kequiv.
   
     - apply traceRefines_same_module_structure.
       + knodup_regs.
