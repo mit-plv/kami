@@ -231,8 +231,8 @@ Section GenGen.
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
 
   Lemma inlineGenGenDmToRule_traceRefines_NoFilt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ RepRule strA goodStrFn getConstK goodStrFn2
@@ -240,7 +240,7 @@ Section GenGen.
                          sufR;
                   metaMeths := metaMeths m |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     rewrite Hrule.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
@@ -328,8 +328,8 @@ Section GenGen.
       nameVal (nameRec call) = nameVal dmName /\ isRep call = true.
     
   Lemma inlineGenGenDmToRule_traceRefines_Filt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ RepRule strA goodStrFn getConstK goodStrFn2
@@ -337,7 +337,7 @@ Section GenGen.
                          sufR;
                   metaMeths := preDm ++ sufDm |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     rewrite Hrule.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
@@ -362,8 +362,8 @@ Section GenGen.
           repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
           simpl in sth2
     end.
-    assert (mEquiv': forall ty, ModEquiv ty typeUT (makeModule m)) by
-        (intros; apply metaModEquiv_modEquiv; auto); unfold makeModule in mEquiv';
+    assert (mEquiv': forall ty, ModEquiv ty typeUT (modFromMeta m)) by
+        (intros; apply metaModEquiv_modEquiv; auto); unfold modFromMeta in mEquiv';
     rewrite sth1 in *; rewrite sth2 in *.
     apply inlineDmsToRules_traceRefines_Filt
     with (preDm := concat (map getListFromMetaMeth preDm))
@@ -498,8 +498,8 @@ Section GenSin.
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
 
   Lemma inlineGenSinDmToRule_traceRefines_NoFilt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ RepRule strA goodStrFn getConstK goodStrFn2
@@ -507,7 +507,7 @@ Section GenSin.
                          sufR;
                   metaMeths := metaMeths m |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     rewrite Hrule.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
@@ -605,8 +605,8 @@ Section GenSin.
       nameVal (nameRec call) = nameVal dmName /\ isRep call = false.
     
   Lemma inlineGenSinDmToRule_traceRefines_Filt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ RepRule strA goodStrFn getConstK goodStrFn2
@@ -614,7 +614,7 @@ Section GenSin.
                          sufR;
                   metaMeths := preDm ++ sufDm |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     rewrite Hrule.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
@@ -639,8 +639,8 @@ Section GenSin.
           repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
           simpl in sth2
     end.
-    assert (mEquiv': forall ty, ModEquiv ty typeUT (makeModule m)) by
-        (intros; apply metaModEquiv_modEquiv; auto); unfold makeModule in mEquiv';
+    assert (mEquiv': forall ty, ModEquiv ty typeUT (modFromMeta m)) by
+        (intros; apply metaModEquiv_modEquiv; auto); unfold modFromMeta in mEquiv';
     rewrite sth1 in *; rewrite sth2 in *.
     apply inlineDmToRules_traceRefines_Filt
     with (preDm := concat (map getListFromMetaMeth preDm))
@@ -756,8 +756,8 @@ Section SinSin.
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
 
   Lemma inlineSinSinDmToRule_traceRefines_NoFilt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ OneRule
@@ -765,7 +765,7 @@ Section SinSin.
                          sufR;
                   metaMeths := metaMeths m |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
     unfold getActionFromSin; simpl in *.
@@ -869,8 +869,8 @@ Section SinSin.
       nameVal call = nameVal dmName.
     
   Lemma inlineSinSinDmToRule_traceRefines_Filt:
-    makeModule m <<==
-               makeModule
+    modFromMeta m <<==
+               modFromMeta
                {| metaRegs := metaRegs m;
                   metaRules :=
                     preR ++ OneRule
@@ -878,7 +878,7 @@ Section SinSin.
                          sufR;
                   metaMeths := preDm ++ sufDm |}.
   Proof.
-    unfold makeModule; simpl.
+    unfold modFromMeta; simpl.
     repeat rewrite map_app; simpl.
     repeat rewrite concat_app; simpl.
     unfold getActionFromSin; simpl in *.

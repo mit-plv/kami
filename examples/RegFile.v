@@ -71,7 +71,7 @@ Section RegFile.
 End RegFile.
 
 Hint Unfold DataArray Addr WritePort : MethDefs.
-Hint Unfold regFile regFileS : ModuleDefs.
+Hint Unfold regFile regFileM regFileS : ModuleDefs.
 
 Section Facts.
   Variable name: string.

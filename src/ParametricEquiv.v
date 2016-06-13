@@ -342,7 +342,7 @@ Section Equiv.
   Definition MetaModEquiv m := MetaRulesEquiv (metaRules m) /\ MetaMethsEquiv (metaMeths m).
 
   Lemma metaModEquiv_modEquiv m:
-    MetaModEquiv m -> ModEquiv t1 t2 (makeModule m).
+    MetaModEquiv m -> ModEquiv t1 t2 (modFromMeta m).
   Proof.
     intros.
     destruct H.

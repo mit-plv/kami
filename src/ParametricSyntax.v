@@ -1206,7 +1206,7 @@ Record MetaModule :=
     metaMeths: list MetaMeth
   }.
 
-Definition makeModule m := Mod (concat (map getListFromMetaReg (metaRegs m)))
+Definition modFromMeta m := Mod (concat (map getListFromMetaReg (metaRegs m)))
                                (concat (map getListFromMetaRule (metaRules m)))
                                (concat (map getListFromMetaMeth (metaMeths m))).
 
@@ -1244,14 +1244,14 @@ Proof.
   rewrite IHr1; auto.
 Qed.
 
-Lemma makeModule_comm_1:
+Lemma modFromMeta_comm_1:
   forall m1 m2,
-    makeModule (m1 +++ m2) <<== (makeModule m1 ++ makeModule m2)%kami.
+    modFromMeta (m1 +++ m2) <<== (modFromMeta m1 ++ modFromMeta m2)%kami.
 Proof.
   unfold traceRefines; intros.
   exists s1, sig1; split.
   - inv H; constructor.
-    remember (initRegs (getRegInits (makeModule (m1 +++ m2)))).
+    remember (initRegs (getRegInits (modFromMeta (m1 +++ m2)))).
     induction HMultistepBeh.
     + subst; constructor.
       subst; simpl.
@@ -1259,7 +1259,7 @@ Proof.
       apply map_getListFromMetaReg_comm.
     + constructor; auto.
       clear -HStep.
-      apply module_structure_indep_step with (m1:= makeModule m1 +++ m2); auto.
+      apply module_structure_indep_step with (m1:= modFromMeta m1 +++ m2); auto.
       * split; simpl; rewrite <-concat_app, <-map_getListFromMetaRule_comm; apply SubList_refl.
       * split; simpl; rewrite <-concat_app, <-map_getListFromMetaMeth_comm; apply SubList_refl.
       
@@ -1268,14 +1268,14 @@ Proof.
     constructor; destruct (annot a); auto.
 Qed.
 
-Lemma makeModule_comm_2:
+Lemma modFromMeta_comm_2:
   forall m1 m2,
-    (makeModule m1 ++ makeModule m2)%kami <<== makeModule (m1 +++ m2).
+    (modFromMeta m1 ++ modFromMeta m2)%kami <<== modFromMeta (m1 +++ m2).
 Proof.
   unfold traceRefines; intros.
   exists s1, sig1; split.
   - inv H; constructor.
-    remember (initRegs (getRegInits (makeModule m1 ++ makeModule m2)%kami)).
+    remember (initRegs (getRegInits (modFromMeta m1 ++ modFromMeta m2)%kami)).
     induction HMultistepBeh.
     + subst; constructor.
       subst; simpl.
@@ -1283,7 +1283,7 @@ Proof.
       rewrite map_getListFromMetaReg_comm; auto.
     + constructor; auto.
       clear -HStep.
-      apply module_structure_indep_step with (m1:= (makeModule m1 ++ makeModule m2)%kami); auto.
+      apply module_structure_indep_step with (m1:= (modFromMeta m1 ++ modFromMeta m2)%kami); auto.
       * split; simpl; rewrite <-concat_app, map_getListFromMetaRule_comm; apply SubList_refl.
       * split; simpl; rewrite <-concat_app, map_getListFromMetaMeth_comm; apply SubList_refl.
         
