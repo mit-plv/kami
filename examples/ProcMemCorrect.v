@@ -5,7 +5,7 @@ Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lt
 Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
 
 Require Import Ex.SC Ex.ProcDec Ex.MemCache Ex.L1Cache.
-Require Import Ex.MemCorrect Ex.ProcDecSCN.
+Require Import Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
 
 Set Implicit Arguments.
 
@@ -28,7 +28,7 @@ Section ProcMem.
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n. 
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
-  Theorem pdecN_mcache_refines_scN: (pdecN ++ ParametricSyntax.makeModule mcache)%kami <<== scN.
+  Theorem pdecN_mcache_refines_scN: (pdecN ++ modFromMeta mcache)%kami <<== scN.
   Proof.
     ktrans (pdecN ++ memAtomic AddrSize LgDataBytes n)%kami.
 
