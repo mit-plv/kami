@@ -68,12 +68,12 @@ Section MemCache.
 
   (* For applying a substitution lemma *)
   Definition fifosInMemCache :=
-    ParametricSyntax.makeModule
+    modFromMeta
       ((fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP)
          +++ (fifoRqFromC +++ fifoRsFromC +++ fifoToC)).
 
   Definition othersInMemCache :=
-    ParametricSyntax.makeModule (l1 +++ childParent +++ memDirC).
+    modFromMeta (l1 +++ childParent +++ memDirC).
 
 End MemCache.
 
@@ -137,22 +137,13 @@ Section MemCacheNativeFifo.
 
   (* For applying a substitution lemma *)
   Definition nfifosInNMemCache :=
-    ParametricSyntax.makeModule
+    modFromMeta
       ((nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP)
          +++ (nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)).
   
 End MemCacheNativeFifo.
 
-Ltac unfold_ncaches :=
-  unfold nmemCache,
-  nl1C, nchildParentC, memDirC,
-  l1, nfifoRqFromProc, nfifoRsToProc, nfifoRqToP, nfifoRsToP, childParent,
-  memDir, mdir, MemDir.memDir, l1Cache, l1cs, l1line, mline, regFileM, nfifoFromP,
-  ChildParent.childParent, nfifoRqFromC, l1tag, nativeFifoM, nfifoRsFromC, nfifoToC,
-  nativeFifoM,
-  getMetaFromSinNat, getMetaFromSin, nativeFifoS in *;
-  simpl in *;
-  unfold concatMetaMod, Indexer.withPrefix in *; simpl in *.
+Hint Unfold nl1C nmemCache: ModuleDefs.
 
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
@@ -160,47 +151,122 @@ Section MemCacheInl.
 
   Variable FifoSize: nat.
 
-  (*
-  Definition nmemCacheInl: MetaModule.
-    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
-    unfold_ncaches.
-    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
+  Notation "'LargeMetaModule'" := {| metaRegs := _; metaRules := _; metaMeths := _ |}.
+  
+  Definition nmemCacheInl:
+    {m: MetaModule &
+       (modFromMeta m <<==
+        modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                               LgDataBytes Id FifoSize)) /\
+        forall ty, MetaModEquiv ty typeUT m}.
+  Proof.
+    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as Heqm.
+    repeat autounfold with ModuleDefs in Heqm;
+    cbv [makeMetaModule getMetaFromSinNat makeSinModule getMetaFromSin
+                        sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
+                        convSinToGen] in Heqm;
+    simpl in Heqm;
+    unfold concatMetaMod in Heqm; simpl in Heqm;
+    unfold Indexer.withPrefix in Heqm; simpl in Heqm.
+    assert (mEquiv: forall ty, MetaModEquiv ty typeUT Heqm) by admit.
+    
+    assert (H1: NoDup (map getMetaMethName (metaMeths Heqm))) by
+        (subst; simpl; clear; noDupLtac).
+    assert (H2: NoDup (map getMetaRuleName (metaRules Heqm))) by
+        (subst; simpl; clear; noDupLtac).
     pose "read.cs"%string as dm.
     pose "ldHit"%string as r.
-    let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
-    let rTriple := eval simpl in (findR r nil (metaRules m)) in
+    subst.
+    let dmTriple := eval simpl in (findDm dm nil (metaMeths Heqm)) in
+        let rTriple := eval simpl in (findR r nil (metaRules Heqm)) in
           match dmTriple with
             | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+                                     ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
               match rTriple with
                 | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
                                         ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                  let H1 := fresh in
-                  let H2 := fresh in
-                  assert (H1: NoDup (map getMetaMethName (metaMeths m))) by
-                      noDupLtac;
-                    assert (H2: NoDup (map getMetaRuleName (metaRules m))) by
-                      noDupLtac;
-                    pose ({| metaRegs := metaRegs m;
-                               metaRules :=
-                                 preR ++ RepRule strA goodFn getConstK goodFn2
-                                      (fun ty => inlineGenGenDm (bdr ty) dm bdm)
-                                      rn noDup :: sufR;
-                                     metaMeths := metaMeths m |},
-                            inlineGenGenDmToRule_traceRefines_NoFilt
-                              strA goodFn getConstK goodFn2
-                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
-                              sufR eq_refl H1 H2,
-                            inlineGenGenDmToRule_ModEquiv_NoFilt
-                              mEquiv strA goodFn getConstK goodFn2
-                              bdm dmn preDm sufDm noDup eq_refl bdr rn preR
-                              sufR eq_refl H1 H2
-                           )
+                  pose ({| metaRegs := metaRegs Heqm;
+                           metaRules :=
+                             preR ++ RepRule strA goodFn getConstK goodFn2
+                                  (fun ty => inlineGenGenDm (bdr ty) dm bdm)
+                                  rn noDup :: sufR;
+                           metaMeths := metaMeths Heqm |}) as moduleItself;
+                    pose proof (@inlineGenGenDmToRule_traceRefines_NoFilt
+                                  Heqm A strA goodFn GenK getConstK goodFn2
+                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                  sufR eq_refl H1 H2) as inlinePf;
+                    pose proof
+                         (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                            Heqm mEquiv A strA goodFn GenK getConstK goodFn2
+                            bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                            sufR eq_refl H1 H2
+                         ) as equivPf
               end
           end.
-
+    exact (existT (fun m =>
+                     (modFromMeta m <<==
+                                  modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                                                         LgDataBytes Id FifoSize)) /\
+                     forall ty, MetaModEquiv ty typeUT m
+                  ) moduleItself (cheat _)).
+  Defined.
+    {m: MetaModule &
+       (modFromMeta m <<==
+        modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                               LgDataBytes Id FifoSize)) /\
+        forall ty, MetaModEquiv ty typeUT m}.
+    
+    Print Ltac ketrans.
+    
     inlineGenDmGenRule_NoFilt m mEquiv "read.cs"%string "ldHit"%string.
+<<<<<<< HEAD
+
+Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
+
+Section Refinement.
+  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variable Id: Kind.
+
+  Variable FifoSize: nat.
+
+  Variable n: nat. (* number of l1 caches (cores) *)
+
+  Lemma memCache_refines_nmemCache:
+    (modFromMeta
+       (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
+      <<== (modFromMeta
+              (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
+  Proof.
+    unfold modFromMeta.
+
+    evar (im1: Modules); ktrans im1; unfold im1; clear im1.
+
+    - unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+
+      pose (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
+                            Id (rsz FifoSize) n) as fifos.
+      pose (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as nfifos.
+      pose (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as others.
+
+      apply substitute_flattened_refines_interacting
+      with (regs := (getRegInits fifos))
+             (rules := (getRules fifos))
+             (dms := (getDefsBodies fifos))
+             (sregs := (getRegInits nfifos))
+             (srules := (getRules nfifos))
+             (sdms := (getDefsBodies nfifos))
+             (regs' := (getRegInits others))
+             (rules' := (getRules others))
+             (dms' := (getDefsBodies others)); admit. (* 23 subgoals haha *)
+
+    - apply traceRefines_same_module_structure; admit. (* 5 subgoals *)
+
+  Qed.
+
+End Refinement.
+=======
    *)
 
 End MemCacheInl.
+>>>>>>> 644f9491ca8c6bc24493222bacb062023536a846
 

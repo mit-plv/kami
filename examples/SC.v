@@ -2,7 +2,7 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations.
 Require Import Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
-Require Import Ex.MemTypes.
+Require Import Ex.MemTypes Lts.ParametricSyntax.
 
 Set Implicit Arguments.
 
@@ -67,7 +67,7 @@ Section MemInst.
       Ret #na
   }.
     
-  Definition memInst := ParametricSyntax.makeModule memInstM.
+  Definition memInst := modFromMeta memInstM.
   
 End MemInst.
 

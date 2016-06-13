@@ -444,12 +444,12 @@ Section Bounds.
   Lemma abstracted_metaCms:
     forall mregs mrules mdms,
       CmsBound
-        (makeModule
+        (modFromMeta
            {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |})
         (getCmsBoundM
            {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |}).
   Proof.
-    unfold CmsBound, makeModule, getCmsBoundM, getCalls; simpl; intros.
+    unfold CmsBound, modFromMeta, getCmsBoundM, getCalls; simpl; intros.
     rewrite map_app.
     apply abstracted_app_1.
     - clear; induction mrules; [apply abstracted_refl|].
@@ -509,15 +509,15 @@ Section Bounds.
   Qed.
 
   Lemma getRegsBoundM_bounded:
-    forall mm, RegsBound (makeModule mm) (getRegsBoundM mm).
+    forall mm, RegsBound (modFromMeta mm) (getRegsBoundM mm).
   Proof. intros; apply abstracted_metaRegs. Qed.
     
   Lemma getDmsBoundM_bounded:
-    forall mm, DmsBound (makeModule mm) (getDmsBoundM mm).
+    forall mm, DmsBound (modFromMeta mm) (getDmsBoundM mm).
   Proof. intros; apply abstracted_metaMeths. Qed.
 
   Lemma getCmsBoundM_bounded:
-    forall mm, CmsBound (makeModule mm) (getCmsBoundM mm).
+    forall mm, CmsBound (modFromMeta mm) (getCmsBoundM mm).
   Proof. intros; apply abstracted_metaCms. Qed.
 
 End Bounds.

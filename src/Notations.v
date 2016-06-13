@@ -540,7 +540,7 @@ Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
 Delimit Scope kami_meta_scope with kami_meta.
 
 Notation "'MODULEMETA' { m1 'with' .. 'with' mN }" :=
-  (ParametricSyntax.makeModule
+  (modFromMeta
      (makeMetaModule
         (ConsInMetaModule m1%kami_meta .. (ConsInMetaModule mN%kami_meta NilInMetaModule) ..)))
     (at level 0, only parsing).
@@ -643,7 +643,7 @@ Notation "'Rule' { name | pf } := c" :=
 Delimit Scope kami_sin_scope with kami_sin.
 
 Notation "'MODULESIN' n 'where' { m1 'with' .. 'with' mN }" :=
-  (ParametricSyntax.makeModule
+  (modFromMeta
      (getMetaFromSin
         string_of_nat string_of_nat_into natToVoid withIndex_index_eq
         (getNatListToN_NoDup n)

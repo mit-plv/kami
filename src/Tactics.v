@@ -4,7 +4,7 @@ Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
-Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound.
+Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
 
 Set Implicit Arguments.
 
@@ -216,7 +216,7 @@ Ltac kvalid_regs :=
 Ltac get_minimal_regs_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getRegsBound sm)
-  | ParametricSyntax.makeModule ?mm => constr:(getRegsBoundM mm)
+  | modFromMeta ?mm => constr:(getRegsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_regs_bound m1 in
     let mb2 := get_minimal_regs_bound m2 in
@@ -230,7 +230,7 @@ Ltac get_minimal_regs_bound m :=
 Ltac get_minimal_dms_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getDmsBound sm)
-  | ParametricSyntax.makeModule ?mm => constr:(getDmsBoundM mm)
+  | modFromMeta ?mm => constr:(getDmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_dms_bound m1 in
     let mb2 := get_minimal_dms_bound m2 in
@@ -244,7 +244,7 @@ end.
 Ltac get_minimal_cms_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getCmsBound sm)
-  | ParametricSyntax.makeModule ?mm => constr:(getCmsBoundM mm)
+  | modFromMeta ?mm => constr:(getCmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_cms_bound m1 in
     let mb2 := get_minimal_cms_bound m2 in
