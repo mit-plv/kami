@@ -1,7 +1,8 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations.
-Require Import Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
+Require Import Lts.Semantics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes Lts.ParametricSyntax.
 
 Set Implicit Arguments.
@@ -172,41 +173,35 @@ Section Facts.
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Lemma pinst_ModEquiv:
-    forall m,
-      m = pinst dec execState execNextPc opLd opSt opHt ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pinst dec execState execNextPc opLd opSt opHt).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pinst_ModEquiv.
+
+  Variable n: nat.
   
   Lemma pinsts_ModEquiv:
-    forall n m,
-      m = pinsts dec execState execNextPc opLd opSt opHt n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pinsts dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pinsts_ModEquiv.
 
-  Lemma memInst_ModEquiv:
-    forall n a d m,
-      m = memInst n a d ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+  Lemma memInstM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (memInstM n addrSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve memInst_ModEquiv.
+  Hint Resolve memInstM_ModEquiv.
 
   Lemma sc_ModEquiv:
-    forall n m,
-      m = sc dec execState execNextPc opLd opSt opHt n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (sc dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve pinst_ModEquiv pinsts_ModEquiv memInst_ModEquiv sc_ModEquiv.
+Hint Resolve pinst_ModEquiv pinsts_ModEquiv memInstM_ModEquiv sc_ModEquiv.
 

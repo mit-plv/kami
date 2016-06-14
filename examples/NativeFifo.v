@@ -1,6 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -106,7 +107,6 @@ Section NativeFifo.
     with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
   }.
 
-  
   Definition nativeFifoM := META {
     RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
@@ -121,8 +121,6 @@ Section NativeFifo.
     with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
     with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
   }.
-  
-
   
 End NativeFifo.
 
@@ -139,35 +137,50 @@ Section Facts.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
-  Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
-
-  (* Lemma nativeFifo_nativeFifoS: *)
-  (*   nativeFifo fifoName default = *)
-  (*   ParametricSyntax.makeModule (nativeFifoS fifoName default HfifoName). *)
-  (* Proof. reflexivity. Qed. *)
-
-  (* Lemma nativeSimpleFifo_nativeSimpleFifoS: *)
-  (*   nativeSimpleFifo fifoName default = *)
-  (*   ParametricSyntax.makeModule (nativeSimpleFifoS fifoName default HfifoName). *)
-  (* Proof. reflexivity. Qed. *)
-
   Lemma nativeFifo_ModEquiv:
-    forall m,
-      m = nativeFifo fifoName default ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (nativeFifo fifoName default).
   Proof.
     kequiv.
   Qed.
 
   Lemma nativeSimpleFifo_ModEquiv:
-    forall m,
-      m = nativeSimpleFifo fifoName default ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (nativeSimpleFifo fifoName default).
+  Proof.
+    kequiv.
+  Qed.
+
+  Variable n: nat.
+  Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
+
+  Lemma nativeFifoS_ModEquiv:
+    forall ty1 ty2,
+      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma nativeFifoM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (nativeFifoM fifoName default Hgood).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma nativeSimpleFifoS_ModEquiv:
+    forall ty1 ty2,
+      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma nativeSimpleFifoM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (nativeSimpleFifoM fifoName default Hgood).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
+Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv
+     nativeFifoS_ModEquiv nativeFifoM_ModEquiv
+     nativeSimpleFifoS_ModEquiv nativeSimpleFifoM_ModEquiv.
 

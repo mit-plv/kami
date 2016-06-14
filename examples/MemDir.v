@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
 Set Implicit Arguments.
@@ -186,19 +186,14 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  (*
   Lemma memDir_ModEquiv:
-    forall m,
-      m = memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
   Qed.
-   *)
 
 End Facts.
 
-(*
 Hint Resolve memDir_ModEquiv.
-*)
+

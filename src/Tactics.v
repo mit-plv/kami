@@ -82,37 +82,6 @@ Ltac kmodular_sim_l :=
 
 Ltac kmodular_sim_r :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
-  
-Ltac kequiv_unit :=
-  match goal with
-  | [ |- ModEquiv _ _ _ ] => progress eauto
-  | [ |- ModEquiv _ _ ?m ] =>
-    let H := fresh "H" in
-    assert (H: exists sm n, m = duplicate sm n) by (do 2 eexists; reflexivity);
-    clear H; apply duplicate_ModEquiv
-  | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
-  | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
-  | [ |- ModEquiv _ _ _ ] => constructor; intros
-  | [ |- RuleEquiv _ _ _ ] => unfold RuleEquiv; intros
-  | [ |- MethEquiv _ _ _ ] => unfold MethEquiv; intros
-  | [ |- RulesEquiv _ _ _ ] => apply MetaRulesEquiv_RulesEquiv
-  | [ |- RulesEquiv _ _ _ ] => constructor; intros
-  | [ |- MethsEquiv _ _ _ ] => apply MetaMethsEquiv_MethsEquiv
-  | [ |- MethsEquiv _ _ _ ] => constructor; intros
-  | [ |- ActionEquiv _ _ ] => constructor; intros
-  | [ |- MetaModEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaRulesEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaRuleEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaMethsEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaMethEquiv _ _ _ ] => constructor; intros
-  | [ |- SinActionEquiv _ _ _ _ ] => constructor; intros
-  | [ |- GenActionEquiv _ _ _ _ _ ] => constructor; intros
-  | [ |- In _ _] => simpl; tauto
-  end.
-
-Ltac kequiv :=
-  intros; subst;
-  repeat (repeat autounfold with MethDefs; kequiv_unit).
 
 Ltac unfold_head m :=
   match m with
@@ -181,6 +150,44 @@ Ltac unfold_head_ret m :=
   | ?hdef _ =>
     let m' := eval cbv [hdef] in m in m'
   end.
+
+Ltac kequiv_red :=
+  eauto;
+  match goal with
+  | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv
+  | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
+  | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
+  | [ |- MetaModEquiv _ _ _ ] => apply metaModEquiv_modular
+  | [ |- ModEquiv _ _ ?m ] => unfold_head m
+  end.
+ 
+Ltac kequiv_unit :=
+  match goal with
+  (* for normal modules *)
+  | [ |- ModEquiv _ _ _ ] => constructor; intros
+  | [ |- RuleEquiv _ _ _ ] => unfold RuleEquiv; intros
+  | [ |- MethEquiv _ _ _ ] => unfold MethEquiv; intros
+  | [ |- RulesEquiv _ _ _ ] => apply MetaRulesEquiv_RulesEquiv
+  | [ |- RulesEquiv _ _ _ ] => constructor; intros
+  | [ |- MethsEquiv _ _ _ ] => apply MetaMethsEquiv_MethsEquiv
+  | [ |- MethsEquiv _ _ _ ] => constructor; intros
+  | [ |- ActionEquiv _ _ ] => constructor; intros
+  (* for meta modules *)
+  | [ |- MetaModEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaRulesEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaRuleEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaMethsEquiv _ _ _ ] => constructor; intros
+  | [ |- MetaMethEquiv _ _ _ ] => constructor; intros
+  | [ |- SinActionEquiv _ _ _ _ ] => constructor; intros
+  | [ |- GenActionEquiv _ _ _ _ _ ] => constructor; intros
+  | [ |- In _ _] => simpl; tauto
+  end.
+
+Ltac kequiv :=
+  intros;
+  (* repeat autounfold with MethDefs; *)
+  repeat kequiv_red;
+  repeat kequiv_unit.
 
 Ltac kvalid_regs :=
   repeat autounfold with MethDefs;
