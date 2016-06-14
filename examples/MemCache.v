@@ -1,9 +1,10 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations.
-Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations Lts.SemFacts.
+Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate Lts.Refinement.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
+Require Import Lts.ParametricInlineLtac.
 
 Set Implicit Arguments.
 
@@ -145,75 +146,73 @@ End MemCacheNativeFifo.
 
 Hint Unfold nl1C nmemCache: ModuleDefs.
 
+Theorem traceRefines_trans_elem: forall m1 m2 m3: Modules,
+                                   (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
+Proof.
+  intros.
+  unfold MethsT in *; rewrite idElementwiseId in *.
+  eapply traceRefines_trans; eauto.
+Qed.
+
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
   Variable FifoSize: nat.
 
-  Notation "'LargeMetaModule'" := {| metaRegs := _; metaRules := _; metaMeths := _ |}.
+  Open Scope string.
+
+  Ltac changeNames mod modRef modEquiv dmod dmodRef dmodEquiv :=
+    let ddmodRef := fresh in
+    pose proof (traceRefines_trans_elem modRef dmodRef) as ddmodRef;
+    unfold mod in dmod;
+    clear dmodRef mod modRef modEquiv;
+    pose dmod as mod; unfold dmod in mod;
+    pose proof dmodEquiv as modEquiv; clear dmodEquiv;
+    replace dmod with mod in modEquiv by reflexivity;
+    pose proof ddmodRef as modRef; clear ddmodRef;
+    replace dmod with mod in modRef by reflexivity.
+
+  Ltac ggNoFilt mod modRef modEquiv dm r :=
+    let dmod := fresh in
+    let dmodRef := fresh in
+    let dmodEquiv := fresh in
+    inlineGenDmGenRule_NoFilt mod modEquiv dm r dmod dmodRef dmodEquiv;
+    changeNames mod modRef modEquiv dmod dmodRef dmodEquiv.
+    
   
   Definition nmemCacheInl:
     {m: MetaModule &
-       (modFromMeta m <<==
-        modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                               LgDataBytes Id FifoSize)) /\
+       (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                               LgDataBytes Id FifoSize) <<== modFromMeta m) /\
         forall ty, MetaModEquiv ty typeUT m}.
   Proof.
-    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as Heqm.
-    repeat autounfold with ModuleDefs in Heqm;
+    assert (startEquiv: forall ty, MetaModEquiv ty typeUT
+                                                (nmemCache IdxBits TagBits LgNumDatas
+                                                LgDataBytes Id FifoSize)) by admit.
+    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as mod.
+    assert (modRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                                <<== modFromMeta mod) by
+        (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
+
+    repeat autounfold with ModuleDefs in mod;
     cbv [makeMetaModule getMetaFromSinNat makeSinModule getMetaFromSin
                         sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
-                        convSinToGen] in Heqm;
-    simpl in Heqm;
-    unfold concatMetaMod in Heqm; simpl in Heqm;
-    unfold Indexer.withPrefix in Heqm; simpl in Heqm.
-    assert (mEquiv: forall ty, MetaModEquiv ty typeUT Heqm) by admit.
-    
-    assert (H1: NoDup (map getMetaMethName (metaMeths Heqm))) by
-        (subst; simpl; clear; noDupLtac).
-    assert (H2: NoDup (map getMetaRuleName (metaRules Heqm))) by
-        (subst; simpl; clear; noDupLtac).
-    pose "read.cs"%string as dm.
-    pose "ldHit"%string as r.
-    subst.
-    let dmTriple := eval simpl in (findDm dm nil (metaMeths Heqm)) in
-        let rTriple := eval simpl in (findR r nil (metaRules Heqm)) in
-          match dmTriple with
-            | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                     ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
-              match rTriple with
-                | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                        ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                  pose ({| metaRegs := metaRegs Heqm;
-                           metaRules :=
-                             preR ++ RepRule strA goodFn getConstK goodFn2
-                                  (fun ty => inlineGenGenDm (bdr ty) dm bdm)
-                                  rn noDup :: sufR;
-                           metaMeths := metaMeths Heqm |}) as moduleItself;
-                    pose proof (@inlineGenGenDmToRule_traceRefines_NoFilt
-                                  Heqm A strA goodFn GenK getConstK goodFn2
-                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
-                                  sufR eq_refl H1 H2) as inlinePf;
-                    pose proof
-                         (@inlineGenGenDmToRule_ModEquiv_NoFilt
-                            Heqm mEquiv A strA goodFn GenK getConstK goodFn2
-                            bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
-                            sufR eq_refl H1 H2
-                         ) as equivPf
-              end
-          end.
-    exact (existT (fun m =>
-                     (modFromMeta m <<==
-                                  modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                                                         LgDataBytes Id FifoSize)) /\
-                     forall ty, MetaModEquiv ty typeUT m
-                  ) moduleItself (cheat _)).
+                        convSinToGen] in mod;
+    simpl in mod;
+    unfold concatMetaMod in mod; simpl in mod;
+    unfold Indexer.withPrefix in mod; simpl in mod.
+    assert (modEquiv: forall ty, MetaModEquiv ty typeUT mod) by (unfold mod; apply startEquiv).
+
+    ggNoFilt mod modRef modEquiv "read.cs" "ldHit".
+    exact (existT _ mod (conj modRef modEquiv)).
   Defined.
 
+  Close Scope string.
+  
 End MemCacheInl.
 
-Require Import Lib.FMap Lts.Refinement Lts.Substitute FifoCorrect.
+Require Import Lib.FMap Lts.Substitute FifoCorrect.
 
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
