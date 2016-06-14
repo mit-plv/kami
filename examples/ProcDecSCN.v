@@ -30,7 +30,7 @@ Section ProcDecSCN.
        |kdef_call_sub|kdef_call_sub
        |kinteracting
        | |].
-    - kduplicated; [kequiv|kequiv|].
+    - kduplicated.
       apply pdec_refines_pinst.
     - krefl.
       END_SKIP_PROOF_ON *) admit.
@@ -42,9 +42,8 @@ Section ProcDecSCN.
 
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
-    ktrans pdecN; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
-    ktrans ((pdecs dec execState execNextPc n ++ ioms addrSize lgDataBytes n)
-              ++ minst addrSize lgDataBytes n)%kami; [apply traceRefines_assoc_2|].
+    ketrans; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
+    ketrans; [apply traceRefines_assoc_2|].
 
     kmodular_sim_l.
     - simpl; unfold namesOf; rewrite map_app; apply NoDup_DisjList.
@@ -55,12 +54,15 @@ Section ProcDecSCN.
     - auto.
     - kdisj_regs.
     - kdisj_regs.
-    - apply duplicate_regs_ConcatMod_2; auto; kequiv.
-    - apply duplicate_regs_ConcatMod_1; auto; kequiv.
-    - apply duplicate_rules_ConcatMod_2; auto; kequiv.
-    - apply duplicate_rules_ConcatMod_1; auto; kequiv.
-    - apply duplicate_defs_ConcatMod_2; auto; kequiv.
-    - apply duplicate_defs_ConcatMod_1; auto; kequiv.
+    - split.
+      + apply duplicate_regs_ConcatMod_2; auto.
+      + apply duplicate_regs_ConcatMod_1; auto.
+    - split.
+      + apply duplicate_rules_ConcatMod_2; auto.
+      + apply duplicate_rules_ConcatMod_1; auto.
+    - split.
+      + apply duplicate_defs_ConcatMod_2; auto.
+      + apply duplicate_defs_ConcatMod_1; auto.
       END_SKIP_PROOF_ON *) admit.
   Qed.
   

@@ -9,12 +9,9 @@ Section Interacting.
   Variables (rules rules' srules orules: list (Attribute (Action Void))).
   Variables (dms dms' sdms odms: list DefMethT).
 
-  Hypotheses (Hequivr: RulesEquiv type typeUT rules)
-             (Hequivd: MethsEquiv type typeUT dms)
-             (Hequivsr: RulesEquiv type typeUT srules)
-             (Hequivsd: MethsEquiv type typeUT sdms)
-             (Hequivr': RulesEquiv type typeUT rules')
-             (Hequivd': MethsEquiv type typeUT dms').
+  Hypotheses (Hequiv: ModEquiv type typeUT (Mod regs rules dms))
+             (Hequiv': ModEquiv type typeUT (Mod regs' rules' dms'))
+             (Hequivs: ModEquiv type typeUT (Mod sregs srules sdms)).
 
   Hypotheses (Hnodupr: NoDup (namesOf regs))
              (Hnodupr': NoDup (namesOf regs'))

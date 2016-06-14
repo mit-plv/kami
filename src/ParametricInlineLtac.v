@@ -188,13 +188,6 @@ Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
                 end
             end.
 
-Lemma inversionRepRule:
-  forall A str goodStrFn GenK getConstK goodStrFn2 bgen rb ls noDupLs
-         A' str' goodStrFn' GenK' getConstK' goodStrFn2' bgen' rb' ls' noDupLs',
-    @RepRule A str goodStrFn GenK getConstK goodStrFn2 bgen rb ls noDupLs =
-    @RepRule A' str' goodStrFn' GenK' getConstK' goodStrFn2' bgen' rb' ls' noDupLs' ->
-    bgen = bgen'.
-
 Ltac inlineSinDmGenRule_Filt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in

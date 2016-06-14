@@ -6,24 +6,6 @@ Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
 Require Import Ex.MemCache.
 
-Lemma getRegInits_modFromMeta_concat:
-  forall mm1 mm2,
-    getRegInits (modFromMeta (mm1 +++ mm2)) =
-    (getRegInits (modFromMeta mm1))
-      ++ (getRegInits (modFromMeta mm2)).
-Proof.
-  intros; simpl; rewrite map_app.
-  apply Concat.concat_app.
-Qed.
-
-Lemma noDup_metaRegs:
-  forall mm,
-    NoDup (map getMetaRegName (metaRegs mm)) ->
-    NoDup (namesOf (getRegInits (modFromMeta mm))).
-Proof.
-  admit.
-Qed.
-
 Ltac knodup_regs :=
   repeat (* Separating NoDup proofs by small modules *)
     match goal with
@@ -76,12 +58,9 @@ Section Refinement.
              (rules' := getRules others)
              (dms' := getDefsBodies others);
         unfold fifos, nfifos, others; clear fifos nfifos others.
-      + admit. (* PHOAS equivalence *)
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
+      + kequiv.
+      + kequiv.
+      + kequiv.
       + knodup_regs.
       + knodup_regs.
       + knodup_regs.

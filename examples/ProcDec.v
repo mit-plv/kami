@@ -1,6 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
@@ -147,36 +148,30 @@ Section Facts.
   Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
 
   Lemma pdec_ModEquiv:
-    forall m,
-      m = pdec dec execState execNextPc ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall m,
-      m = pdecf dec execState execNextPc ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf dec execState execNextPc).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecf_ModEquiv.
 
+  Variable n: nat.
+
   Lemma pdecfs_ModEquiv:
-    forall n m,
-      m = pdecfs dec execState execNextPc n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs dec execState execNextPc n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall n m,
-      m = procDecM dec execState execNextPc n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM dec execState execNextPc n).
   Proof.
     kequiv.
   Qed.

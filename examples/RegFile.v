@@ -1,5 +1,8 @@
 Require Import String Lib.Indexer.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+
+Set Implicit Arguments.
 
 Section RegFile.
   Variable name: string.
@@ -79,24 +82,28 @@ Section Facts.
   Variable Data: Kind.
   Variable init: ConstT (DataArray IdxBits Data).
 
-  Hypothesis Hname: index 0 indexSymbol name = None.
-
-  (*
-  Lemma regFile_regFileS:
-    regFile name _ _ init =
-    ParametricSyntax.makeModule (regFileS name _ _ init Hname).
-  Proof. reflexivity. Qed.
-   *)
-
   Lemma regFile_ModEquiv:
-    forall m,
-      m = regFile name _ _ init ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (regFile name init).
+  Proof.
+    kequiv.
+  Qed.
+
+  Variable n: nat.
+  Hypothesis (Hgood: index 0 indexSymbol name = None).
+  
+  Lemma regFileS_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (regFileS name init Hgood)).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma regFileM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (regFileM name init Hgood).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve regFile_ModEquiv.
+Hint Resolve regFile_ModEquiv regFileS_ModEquiv regFileM_ModEquiv.
 

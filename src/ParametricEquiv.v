@@ -190,6 +190,14 @@ Section Equiv.
         constructor; auto.
   Qed.
 
+  Lemma MetaRulesEquiv_app:
+    forall r1 r2,
+      MetaRulesEquiv r1 -> MetaRulesEquiv r2 -> MetaRulesEquiv (r1 ++ r2).
+  Proof.
+    induction r1; simpl; intros; auto.
+    inv H; constructor; auto.
+  Qed.
+
   Lemma MetaRulesEquiv_RulesEquiv rs:
     MetaRulesEquiv rs ->
     RulesEquiv t1 t2 (concat (map getListFromMetaRule rs)).
@@ -317,6 +325,14 @@ Section Equiv.
         constructor; auto.
   Qed.
 
+  Lemma MetaMethsEquiv_app:
+    forall r1 r2,
+      MetaMethsEquiv r1 -> MetaMethsEquiv r2 -> MetaMethsEquiv (r1 ++ r2).
+  Proof.
+    induction r1; simpl; intros; auto.
+    inv H; constructor; auto.
+  Qed.
+
   Lemma MetaMethsEquiv_MethsEquiv rs:
     MetaMethsEquiv rs ->
     MethsEquiv t1 t2 (concat (map getListFromMetaMeth rs)).
@@ -350,4 +366,18 @@ Section Equiv.
     apply MetaMethsEquiv_MethsEquiv in H0.
     constructor; auto.
   Qed.
+
+  Lemma metaModEquiv_modular:
+    forall m1 m2,
+      MetaModEquiv m1 ->
+      MetaModEquiv m2 ->
+      MetaModEquiv (m1 +++ m2).
+  Proof.
+    destruct m1 as [r1 l1 d1], m2 as [r2 l2 d2]; simpl; intros.
+    inv H; inv H0; simpl in *.
+    constructor; simpl.
+    - apply MetaRulesEquiv_app; auto.
+    - apply MetaMethsEquiv_app; auto.
+  Qed.
+
 End Equiv.

@@ -1,6 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.NativeFifo.
 
 Set Implicit Arguments.
@@ -41,8 +42,7 @@ Hint Unfold mid : ModuleDefs.
 Hint Unfold RqFromProc RsToProc getReq setRep exec processLd processSt : MethDefs.
 
 Section MemAtomic.
-  Variable addrSize fifoSize : nat.
-  Variable lgDataBytes : nat.
+  Variables (addrSize lgDataBytes: nat).
 
   Variable n: nat.
 
@@ -62,29 +62,26 @@ End MemAtomic.
 Hint Unfold minst inQ outQ ioQ midQ iom ioms memAtomic : ModuleDefs.
 
 Section Facts.
+  Variables (addrSize lgDataBytes: nat).
 
   Lemma iom_ModEquiv:
-    forall a d m,
-      m = iom a d ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
   Hint Resolve iom_ModEquiv.
 
+  Variable n: nat.
+
   Lemma ioms_ModEquiv:
-    forall a d n m,
-      m = ioms a d n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomic_ModEquiv:
-    forall a d n m,
-      m = memAtomic a d n ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.

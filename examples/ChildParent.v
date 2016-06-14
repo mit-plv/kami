@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
-Require Import Lts.Syntax Lts.Wf Lts.Notations.
-Require Import Lts.Semantics Lts.Equiv Lts.Tactics.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Wf Lts.Notations.
+Require Import Lts.Semantics Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
@@ -67,33 +67,15 @@ Section Facts.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  (*
   Lemma childParent_ModEquiv:
-    forall m,
-      m = makeModule (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id) ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2,
+      MetaModEquiv ty1 ty2
+                   (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof.
     kequiv.
-    unfold childParent; simpl.
-    apply RulesEquiv_app; [|apply RulesEquiv_app].
-    - induction (n LgNumChildren).
-      + kequiv.
-      + constructor; [|auto].
-        kequiv.
-    - induction (n LgNumChildren).
-      + kequiv.
-      + constructor; [|auto].
-        kequiv.
-    - induction (n LgNumChildren).
-      + kequiv.
-      + constructor; [|auto].
-        kequiv.
   Qed.
-   *)
 
 End Facts.
 
-(*
 Hint Resolve childParent_ModEquiv.
-*)
 

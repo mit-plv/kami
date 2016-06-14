@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Tactics.
-
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -154,7 +154,6 @@ Section Fifo.
     with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
     with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
   }.
-  
 
 End Fifo.
 
@@ -171,34 +170,48 @@ Section Facts.
 
   Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
 
-  (*
-  Lemma fifo_fifoS:
-    fifo fifoName sz dType = ParametricSyntax.makeModule (fifoS fifoName sz dType HfifoName).
-  Proof. reflexivity. Qed.
-
-  Lemma simpleFifo_simpleFifoS:
-    simpleFifo fifoName sz dType =
-    ParametricSyntax.makeModule (simpleFifoS fifoName sz dType HfifoName).
-  Proof. reflexivity. Qed.
-   *)
-
   Lemma fifo_ModEquiv:
-    forall m,
-      m = fifo fifoName sz dType ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (fifo fifoName sz dType).
   Proof.
     kequiv.
   Qed.
 
   Lemma simpleFifo_ModEquiv:
-    forall m,
-      m = simpleFifo fifoName sz dType ->
-      (forall ty1 ty2, ModEquiv ty1 ty2 m).
+    forall ty1 ty2, ModEquiv ty1 ty2 (simpleFifo fifoName sz dType).
+  Proof.
+    kequiv.
+  Qed.
+
+  Variable n: nat.
+  Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
+
+  Lemma fifoS_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (fifoS fifoName sz dType Hgood)).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma fifoM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (fifoM fifoName sz dType Hgood).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma simpleFifoS_ModEquiv:
+    forall ty1 ty2,
+      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (simpleFifoS fifoName sz dType Hgood)).
+  Proof.
+    kequiv.
+  Qed.
+
+  Lemma simpleFifoM_ModEquiv:
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (simpleFifoM fifoName sz dType Hgood).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv.
+Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv
+     fifoS_ModEquiv fifoM_ModEquiv simpleFifoS_ModEquiv simpleFifoM_ModEquiv.
 

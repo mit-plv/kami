@@ -15,11 +15,11 @@ Section MemCache.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Definition l1Cache := getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
-  Definition l1cs := getMetaFromSinNat n (regFileS "cs"%string IdxBits Msi Default eq_refl).
+  Definition l1cs := getMetaFromSinNat n (@regFileS "cs"%string IdxBits Msi Default eq_refl).
   Definition l1tag :=
-    getMetaFromSinNat n (regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl).
+    getMetaFromSinNat n (@regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl).
   Definition l1line :=
-    getMetaFromSinNat n (regFileS "line"%string IdxBits
+    getMetaFromSinNat n (@regFileS "line"%string IdxBits
                                   (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl).
 
   Definition l1 := l1Cache +++ (l1cs +++ l1tag +++ l1line).
@@ -58,9 +58,9 @@ Section MemCache.
   Definition childParentC := (childParent +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC)%kami.
 
   Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes n Id.
-  Definition mline := regFileM "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes)
-                               Default eq_refl.
-  Definition mdir := regFileM "mcs"%string MIdxBits (MemDir.Dir n) Default eq_refl.
+  Definition mline := @regFileM "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes)
+                                Default eq_refl.
+  Definition mdir := @regFileM "mcs"%string MIdxBits (MemDir.Dir n) Default eq_refl.
 
   Definition memDirC := (memDir +++ mline +++ mdir)%kami.
 
@@ -226,7 +226,7 @@ Section MemCacheInl.
     simpl in m;
     unfold concatMetaMod in m; simpl in m;
     unfold Indexer.withPrefix in m; simpl in m.
-    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
+    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by kequiv.
 
     
     Reset Profile.
@@ -244,7 +244,6 @@ Section MemCacheInl.
     Stop Profiling.
     Show Profile.
 
-    (*
 Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
   let noDupMeth := fresh in
   let noDupRule := fresh in

@@ -286,5 +286,17 @@ Section Facts.
     - apply MethsEquiv_app; auto.
   Qed.
 
+  Lemma ModEquiv_flatten:
+    forall t1 t2 m,
+      ModEquiv t1 t2 m ->
+      ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)).
+  Proof. auto. Qed.
+              
+  Lemma ModEquiv_deflatten:
+    forall t1 t2 m,
+      ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)) ->
+      ModEquiv t1 t2 m.
+  Proof. auto. Qed.
+
 End Facts.
 

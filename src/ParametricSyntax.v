@@ -1322,6 +1322,65 @@ Proof.
   destruct H; intuition auto.
 Qed.
 
+Lemma getRegInits_modFromMeta_concat:
+  forall mm1 mm2,
+    getRegInits (modFromMeta (mm1 +++ mm2)) =
+    (getRegInits (modFromMeta mm1))
+      ++ (getRegInits (modFromMeta mm2)).
+Proof.
+  intros; simpl; rewrite map_app.
+  apply Concat.concat_app.
+Qed.
+
+Lemma getListFromRep_In:
+  forall {A} (strA: A -> string)
+         (Hgood: forall (si sj : string) (i j : A),
+             addIndexToStr strA i si = addIndexToStr strA j sj -> si = sj /\ i = j)
+         {B} (bgen: A -> B) a s ls,
+    In (addIndexToStr strA a s) (namesOf (getListFromRep strA bgen s ls)) ->
+    In a ls.
+Proof.
+  induction ls; simpl; intros; [inv H|].
+  destruct H.
+  - specialize (Hgood _ _ _ _ H); dest; auto.
+  - right; auto.
+Qed.
+  
+Lemma getListFromRep_NoDup:
+  forall {A} (strA: A -> string)
+         (Hgood: forall (si sj : string) (i j : A),
+             addIndexToStr strA i si = addIndexToStr strA j sj -> si = sj /\ i = j)
+         {B} (bgen: A -> B) s ls,
+    NoDup ls ->
+    NoDup (namesOf (getListFromRep strA bgen (nameVal s) ls)).
+Proof.
+  induction ls; simpl; intros; auto.
+  inv H; constructor; auto.
+  intro Hx; elim H2; clear H2.
+  eapply getListFromRep_In; eauto.
+Qed.
+
+Lemma getListFromMetaReg_NoDup:
+  forall mr, NoDup (namesOf (getListFromMetaReg mr)).
+Proof.
+  destruct mr; simpl; auto.
+  apply getListFromRep_NoDup; auto.
+Qed.
+
+Lemma noDup_metaRegs:
+  forall mm,
+    NoDup (map getMetaRegName (metaRegs mm)) ->
+    NoDup (namesOf (getRegInits (modFromMeta mm))).
+Proof.
+  simpl; intros.
+  induction (metaRegs mm); intros; auto.
+  inv H; specialize (IHl H3); clear H3.
+  simpl; rewrite namesOf_app.
+  apply NoDup_DisjList; auto.
+  - apply getListFromMetaReg_NoDup.
+  - admit.
+Qed.
+
 Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
 Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
 
