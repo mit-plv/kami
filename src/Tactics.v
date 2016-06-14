@@ -159,6 +159,7 @@ Ltac kequiv_red :=
   | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
   | [ |- MetaModEquiv _ _ _ ] => apply metaModEquiv_modular
   | [ |- ModEquiv _ _ ?m ] => unfold_head m
+  | [ |- MetaModEquiv _ _ ?m ] => unfold_head m
   end.
  
 Ltac kequiv_unit :=

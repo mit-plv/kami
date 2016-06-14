@@ -58,9 +58,9 @@ Section Refinement.
              (rules' := getRules others)
              (dms' := getDefsBodies others);
         unfold fifos, nfifos, others; clear fifos nfifos others.
-      + admit.
-      + admit.
-      + admit.
+      + kequiv.
+      + kequiv.
+      + kequiv.
       + knodup_regs.
       + knodup_regs.
       + knodup_regs.
