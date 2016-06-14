@@ -24,13 +24,13 @@ Section ChildParent.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqToPPop := MethodSig "rqToP"--"deq" (Void): RqToP.
-  Definition rqFromCEnq := MethodSig "rqFromC"--"enq" (RqFromC): Void.
-  Definition rsToPPop := MethodSig "rsToP"--"deq" (Void): RsToP.
-  Definition rsFromCEnq := MethodSig "rsFromC"--"enq" (RsFromC): Void.
+  Definition rqToPPop := MethodSig "rqToParent"--"deq" (Void): RqToP.
+  Definition rqFromCEnq := MethodSig "rqFromChild"--"enq" (RqFromC): Void.
+  Definition rsToPPop := MethodSig "rsToParent"--"deq" (Void): RsToP.
+  Definition rsFromCEnq := MethodSig "rsFromChild"--"enq" (RsFromC): Void.
 
-  Definition toCPop := MethodSig "toC"--"deq" (Void): ToC.
-  Definition fromPEnq := MethodSig "fromP"--"deq" (FromP): Void.
+  Definition toCPop := MethodSig "toChild"--"deq" (Void): ToC.
+  Definition fromPEnq := MethodSig "fromParent"--"deq" (FromP): Void.
 
   Definition n := wordToNat (wones LgNumChildren).
   Definition childParent :=

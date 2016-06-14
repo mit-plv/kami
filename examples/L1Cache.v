@@ -27,11 +27,11 @@ Section L1Cache.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
   Definition rqFromProcPop := MethodSig "rqFromProc"--"deq" (Void): RqFromProc.
-  Definition fromPPop := MethodSig "fromP"--"deq" (Void): FromP.
+  Definition fromPPop := MethodSig "fromParent"--"deq" (Void): FromP.
 
   Definition rsToProcEnq := MethodSig "rsToProc"--"enq" (RsToProc): Void.
-  Definition rqToPEnq := MethodSig "rqToP"--"enq" (RqToP): Void.
-  Definition rsToPEnq := MethodSig "rsToP"--"enq" (RsToP): Void.
+  Definition rqToPEnq := MethodSig "rqToParent"--"enq" (RqToP): Void.
+  Definition rsToPEnq := MethodSig "rsToParent"--"enq" (RsToP): Void.
 
   Definition readLine := MethodSig "line"--"read" (Idx): Line.
   Definition writeLine := MethodSig "line"--"write" (WritePort IdxBits Line): Void.
