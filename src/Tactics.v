@@ -115,6 +115,8 @@ Ltac unfold_head m :=
     unfold hdef
   | ?hdef _ =>
     unfold hdef
+  | ?hdef =>
+    unfold hdef
   end.
 
 Ltac unfold_head_ret m :=
@@ -148,6 +150,8 @@ Ltac unfold_head_ret m :=
   | ?hdef _ _ =>
     let m' := eval cbv [hdef] in m in m'
   | ?hdef _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef =>
     let m' := eval cbv [hdef] in m in m'
   end.
 
