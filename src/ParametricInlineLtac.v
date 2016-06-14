@@ -56,7 +56,7 @@ Fixpoint findR dm pre ls :=
 
 Local  Notation "'LargeMetaModule'" := {| metaRegs := _; metaRules := _; metaMeths := _ |}.
 
-Ltac inlineGenDmGenRule_NoFilt m mEquiv dm r dmod dmodRef dmodEquiv :=
+Ltac inlineGenDmGenRule_NoFilt m mEquiv dm r (*dmod dmodRef dmodEquiv*) :=
   let noDupMeth := fresh in
   let noDupRule := fresh in
   assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
@@ -71,6 +71,17 @@ Ltac inlineGenDmGenRule_NoFilt m mEquiv dm r dmod dmodRef dmodEquiv :=
                 match rTriple with
                   | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
                                           ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                    let m'Ref := fresh in
+                    let m'Equiv := fresh in
+                    pose proof (@inlineGenGenDmToRule_traceRefines_NoFilt
+                                  m A strA goodFn GenK getConstK goodFn2
+                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                  sufR eq_refl noDupMeth noDupRule) as m'Ref;
+                      pose proof (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                                    m mEquiv A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule) as m'Equiv;
+                    (*
                     pose {| metaRegs := metaRegs m;
                             metaRules :=
                               preR ++ RepRule strA goodFn getConstK goodFn2
@@ -89,11 +100,12 @@ Ltac inlineGenDmGenRule_NoFilt m mEquiv dm r dmod dmodRef dmodEquiv :=
                               bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
                               sufR eq_refl noDupMeth noDupRule) as dmodEquiv;
                       replace LargeMetaModule with dmod in dmodEquiv by reflexivity;
+                     *)
                       clear noDupMeth noDupRule
                 end
             end.
 
-Ltac inlineGenDmGenRule_Filt m mEquiv dm r dmod dmodRef dmodEquiv :=
+Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
   let noDupMeth := fresh in
   let noDupRule := fresh in
   assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
@@ -162,25 +174,17 @@ Ltac inlineGenDmGenRule_Filt m mEquiv dm r dmod dmodRef dmodEquiv :=
                                       nameRec := {| nameVal := nameVal dmn;
                                                     goodName := _ |} |};
                            split; [simpl; tauto | split; reflexivity]);
-                      pose {| metaRegs := metaRegs m;
-                              metaRules :=
-                                preR ++ RepRule strA goodFn getConstK goodFn2
-                                     (fun ty => inlineGenGenDm (bdr ty) dm bdm)
-                                     rn noDup :: sufR;
-                              metaMeths := metaMeths m |} as dmod;
-                      pose proof
-                           (@inlineGenGenDmToRule_traceRefines_NoFilt
-                              m A strA goodFn GenK getConstK goodFn2
-                              bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
-                              sufR eq_refl noDupMeth noDupRule H3 H4 H5) as dmodRef;
-                      replace LargeMetaModule with dmod in dmodRef by reflexivity;
-                      pose proof
-                           (@inlineGenGenDmToRule_ModEquiv_Filt
-                              m mEquiv A strA goodFn GenK getConstK goodFn2
-                              bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
-                              sufR eq_refl noDupMeth noDupRule H4) as dmodEquiv;
-                      replace LargeMetaModule with dmod in dmodEquiv by reflexivity;
-                      clear noDupMeth noDupRule
+                      let m'Ref := fresh in
+                      let m'Equiv := fresh in
+                      pose proof (@inlineGenGenDmToRule_traceRefines_Filt
+                                    m A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule H3 H4 H5) as m'Ref;
+                        pose proof (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                                      m mEquiv A strA goodFn GenK getConstK goodFn2
+                                      bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                      sufR eq_refl noDupMeth noDupRule H4) as m'Equiv;
+                        clear noDupMeth noDupRule H3 H4 H5
                 end
             end.
 

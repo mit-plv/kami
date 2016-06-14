@@ -467,6 +467,114 @@ Section GenGen.
 
 End GenGen.
 
+Section GenGen2.
+  Variable m: MetaModule.
+  Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
+
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2: forall si sj i j,
+                         addIndexToStr strA i si = addIndexToStr strA j sj ->
+                         si = sj /\ i = j.
+  Variable dm: sigT (GenMethodT GenK).
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
+  Variable ls: list A.
+  Variable noDupLs: NoDup ls.
+  Variable Hdm: metaMeths m =
+                preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs :: sufDm.
+
+  Variable r: GenAction GenK Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs :: sufR.
+
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+             (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
+
+  Hypothesis HdmNoRule:
+    forall r',
+      In r' (preR ++ sufR) ->
+      match r' with
+        | OneRule _ _ => True
+        | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+  Theorem HdmNoRule':
+    forall
+      B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |} (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule (RepRule strB goodStrFnB getConstKB goodStrFn2B bgenB rb
+                              noDupLsB) H).
+  Qed.
+
+  Hypothesis HdmNoMeth:
+    forall dm',
+      In dm' (metaMeths m) ->
+      match dm' with
+        | OneMeth _ _ => True
+        | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+
+  Theorem HdmNoMeth':
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
+                      (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth (RepMeth strB goodStrFnB getConstKB goodStrFn2B bgenB rb
+                              noDupLsB) H).
+  Qed.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsGenA (r typeUT)) /\
+      nameVal (nameRec call) = nameVal dmName /\ isRep call = true.
+    
+  Lemma inlineGenGenDmToRule_traceRefines_Filt':
+    modFromMeta m <<==
+               modFromMeta
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenGenDmToRule_traceRefines_Filt; auto.
+    apply HdmNoRule'.
+    apply HdmNoMeth'.
+  Qed.
+
+  Lemma inlineGenGenDmToRule_ModEquiv_Filt' ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenGenDmToRule_ModEquiv_Filt; auto.
+    apply HdmNoMeth'.
+  Qed.
+End GenGen2.
+
 Section GenSin.
   Variable m: MetaModule.
   Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
@@ -497,91 +605,10 @@ Section GenSin.
   Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
              (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
 
-  Lemma inlineGenSinDmToRule_traceRefines_NoFilt:
-    modFromMeta m <<==
-               modFromMeta
-               {| metaRegs := metaRegs m;
-                  metaRules :=
-                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
-                         (fun ty => inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
-                         sufR;
-                  metaMeths := metaMeths m |}.
-  Proof.
-    unfold modFromMeta; simpl.
-    rewrite Hrule.
-    repeat rewrite map_app; simpl.
-    repeat rewrite concat_app; simpl.
-    unfold repRule at 2; unfold getListFromRep.
-    rewrite mapInlineDmsGenSin_matchesGen; auto; [| destruct dmName; simpl; auto].
-    rewrite Hdm.
-    repeat rewrite map_app; simpl.
-    repeat rewrite concat_app; simpl.
-    match goal with
-      | H: metaMeths m = ?l |- _ =>
-        assert (sth1: concat (map getListFromMetaMeth (metaMeths m)) =
-                concat (map getListFromMetaMeth l))
-          by (rewrite H; reflexivity);
-          repeat rewrite map_app in sth1; simpl in sth1; repeat rewrite concat_app in sth1;
-          simpl in sth1
-    end.
-    match goal with
-      | H: metaRules m = ?l |- _ =>
-        assert (sth2: concat (map getListFromMetaRule (metaRules m)) =
-                concat (map getListFromMetaRule l))
-          by (rewrite H; reflexivity);
-          repeat rewrite map_app in sth2; simpl in sth2; repeat rewrite concat_app in sth2;
-          simpl in sth2
-    end.
-    apply inlineDmToRules_traceRefines_NoFilt
-    with (preDm := concat (map getListFromMetaMeth preDm))
-           (sufDm := concat (map getListFromMetaMeth sufDm)); auto; simpl;
-    [rewrite <- sth1 | rewrite <- sth2].
-    apply noDup_preserveMeth; auto.
-    apply noDup_preserveRule; auto.
-  Qed.
-
-  Lemma inlineGenSinDmToRule_ModEquiv_NoFilt ty:
-    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
-                             metaRules :=
-                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
-                                    (fun ty =>
-                                       inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
-                                    sufR;
-                             metaMeths := metaMeths m |}.
-  Proof.
-    specialize (mEquiv ty); destruct mEquiv as [rEquiv dEquiv].
-    rewrite Hrule, Hdm in *.
-    pose proof (proj1 (@MetaRulesEquiv_in ty _ _) rEquiv) as rEquiv'; clear rEquiv.
-    pose proof (proj1 (@MetaMethsEquiv_in ty _ _) dEquiv) as dEquiv'; clear dEquiv.
-    constructor; simpl in *; [apply MetaRulesEquiv_in | apply MetaMethsEquiv_in]; intros.
-    - apply in_app_or in H.
-      destruct H; simpl in *.
-      + specialize (rEquiv' r0).
-        assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
-                                 :: sufR)) by (apply in_or_app; left; auto).
-        apply rEquiv'; auto.
-      + destruct H; subst.
-        * specialize (rEquiv' (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs)).
-          apply inlineGenSinDm_Equiv; auto.
-          assert (sth: In (RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs) (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
-                                                                                              :: sufR)) by (apply in_or_app; right; simpl; left; auto).
-          specialize (rEquiv' sth); intuition auto.
-          assert (sth: In (OneMeth dm dmName)
-                          (preDm ++ OneMeth dm dmName :: sufDm)) by (apply in_or_app; right; simpl; left; auto).
-          specialize (dEquiv' _ sth); auto.
-        * assert (sth: In r0 (preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs
-                                   :: sufR)) by (apply in_or_app; right; simpl; right; auto).
-          apply rEquiv'; auto.
-    - apply dEquiv'.
-      apply in_app_or in H.
-      apply in_or_app; simpl.
-      intuition auto.
-  Qed.
-  
   Hypothesis HdmNoRule1:
     forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
                      noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
-  
+
   Hypothesis HdmNoRule2:
     forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
       In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
@@ -735,6 +762,134 @@ Section GenSin.
   
 
 End GenSin.
+
+
+
+Section GenSin2.
+  Variable m: MetaModule.
+  Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
+
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2: forall si sj i j,
+                         addIndexToStr strA i si = addIndexToStr strA j sj ->
+                         si = sj /\ i = j.
+  Variable dm: sigT SinMethodT.
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
+  Variable ls: list A.
+  Variable lsNotNil: ls <> nil.
+  Variable noDupLs: NoDup ls.
+  Variable Hdm: metaMeths m =
+                preDm ++ OneMeth dm dmName :: sufDm.
+
+  Variable r: GenAction GenK Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs :: sufR.
+
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+             (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
+
+  Hypothesis HdmNoRule:
+    forall r',
+      In r' (preR ++ sufR) ->
+      match r' with
+        | OneRule rb _ => noCallDmSigSinA (rb typeUT) dmName (projT1 dm) = true
+        | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+
+  Lemma HdmNoRule1:
+    forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
+                     noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule _ H).
+  Qed.
+
+  Lemma HdmNoRule2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |} (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule _ H).
+  Qed.
+
+  Hypothesis HdmNoMeth:
+    forall dm',
+      In dm' (metaMeths m) ->
+      match dm' with
+        | OneMeth dbody _ => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true
+        | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+  Lemma HdmNoMeth1:
+    forall dbody db, In (@OneMeth dbody db) (metaMeths m) ->
+                     noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth _ H).
+  Qed.
+  
+  Lemma HdmNoMeth2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                      (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth _ H).
+  Qed.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsGenA (r typeUT)) /\
+      nameVal (nameRec call) = nameVal dmName /\ isRep call = false.
+    
+  Lemma inlineGenSinDmToRule_traceRefines_Filt':
+    modFromMeta m <<==
+               modFromMeta
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenSinDmToRule_traceRefines_Filt; auto.
+    apply HdmNoRule1.
+    apply HdmNoRule2.
+    apply HdmNoMeth1.
+    apply HdmNoMeth2.
+  Qed.
+
+  Lemma inlineGenSinDmToRule_ModEquiv_Filt' ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenSinDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenSinDmToRule_ModEquiv_Filt; auto.
+    apply HdmNoMeth1.
+    apply HdmNoMeth2.
+  Qed.
+End GenSin2.
+
 
 Section SinSin.
   Variable m: MetaModule.
@@ -992,3 +1147,117 @@ Section SinSin.
       intuition auto.
   Qed.
 End SinSin.
+
+Section SinSin2.
+  Variable m: MetaModule.
+  Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
+
+  Variable dm: sigT SinMethodT.
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
+  Variable Hdm: metaMeths m =
+                preDm ++ OneMeth dm dmName :: sufDm.
+
+  Variable r: SinAction Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ OneRule r rName :: sufR.
+
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+             (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
+
+  Hypothesis HdmNoRule:
+    forall r',
+      In r' (preR ++ sufR) ->
+      match r' with
+        | OneRule rbody rb => noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true
+        | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+  
+  Lemma HdmNoRule_1:
+    forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
+                     noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule _ H).
+  Qed.
+  
+  Lemma HdmNoRule_2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |} (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule _ H).
+  Qed.
+
+  Hypothesis HdmNoMeth:
+    forall dm',
+      In dm' (metaMeths m) ->
+      match dm' with
+        | OneMeth dbody db => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true
+        | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+                                                                                              
+
+  Lemma HdmNoMeth_1:
+    forall dbody db, In (@OneMeth dbody db) (metaMeths m) ->
+                     noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth _ H).
+  Qed.
+  
+  Lemma HdmNoMeth_2:
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
+                      (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth _ H).
+  Qed.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsSinA (r typeUT)) /\
+      nameVal call = nameVal dmName.
+    
+  Lemma inlineSinSinDmToRule_traceRefines_Filt':
+    modFromMeta m <<==
+               modFromMeta
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ OneRule
+                         (fun ty => inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineSinSinDmToRule_traceRefines_Filt; auto.
+    apply HdmNoRule_1.
+    apply HdmNoRule_2.
+    apply HdmNoMeth_1.
+    apply HdmNoMeth_2.
+  Qed.
+
+  Lemma inlineSinSinDmToRule_ModEquiv_Filt' ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ OneRule
+                                    (fun ty =>
+                                       inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineSinSinDmToRule_ModEquiv_Filt; auto.
+    apply HdmNoMeth_1.
+    apply HdmNoMeth_2.
+  Qed.
+End SinSin2.
