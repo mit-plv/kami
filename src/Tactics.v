@@ -275,6 +275,10 @@ Ltac red_to_dms_bound :=
     let mb1' := get_minimal_dms_bound m1 in
     let mb2' := get_minimal_dms_bound m2 in
     apply dmsBound_disj_dms with (mb1 := mb1') (mb2 := mb2')
+  | [ |- DisjList (namesOf (getDefsBodies ?m1)) (namesOf (getDefsBodies ?m2)) ] =>
+    let mb1' := get_minimal_dms_bound m1 in
+    let mb2' := get_minimal_dms_bound m2 in
+    apply dmsBound_disj_dms with (mb1 := mb1') (mb2 := mb2')
   end.
 
 Ltac red_to_cms_bound :=
@@ -327,31 +331,31 @@ Ltac cms_bound_tac :=
 
 Ltac kdisj_regs :=
   red_to_regs_bound; (* always reduces to three subgoals *)
-  [repeat split; CommonTactics.dest_in; auto
+  [apply disjPrefixes_DisjPrefixes; reflexivity
   |regs_bound_tac
   |regs_bound_tac].
 
 Ltac kdisj_dms :=
   red_to_dms_bound; (* always reduces to three subgoals *)
-  [repeat split; CommonTactics.dest_in; auto
+  [apply disjPrefixes_DisjPrefixes; reflexivity
   |dms_bound_tac
   |dms_bound_tac].
 
 Ltac kdisj_cms :=
   red_to_cms_bound; (* always reduces to three subgoals *)
-  [repeat split; CommonTactics.dest_in; auto
+  [apply disjPrefixes_DisjPrefixes; reflexivity
   |cms_bound_tac
   |cms_bound_tac].
 
 Ltac kdisj_dms_cms :=
   red_to_dc_bound;
-  [repeat split; CommonTactics.dest_in; auto
+  [apply disjPrefixes_DisjPrefixes; reflexivity
   |dms_bound_tac
   |cms_bound_tac].
 
 Ltac kdisj_cms_dms :=
   red_to_cd_bound;
-  [repeat split; CommonTactics.dest_in; auto
+  [apply disjPrefixes_DisjPrefixes; reflexivity
   |cms_bound_tac
   |dms_bound_tac].
 

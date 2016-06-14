@@ -152,10 +152,42 @@ Section ModuleBound.
         In p2 ss2 ->
         prefix p1 p2 = false /\ prefix p2 p1 = false.
 
-  (* Definition DisjBounds (mb1 mb2: ModuleBound) := *)
-  (*   DisjPrefixes (regss mb1) (regss mb2) /\ *)
-  (*   DisjPrefixes (dmss mb1) (dmss mb2) /\ *)
-  (*   DisjPrefixes (cmss mb1) (cmss mb2). *)
+  Fixpoint disjPrefix (s: string) (l: list string) :=
+    match l with
+    | nil => true
+    | h :: t =>
+      negb (prefix s h) && negb (prefix h s) && disjPrefix s t
+    end.
+
+  Fixpoint disjPrefixes (l1 l2: list string) :=
+    match l1 with
+    | nil => true
+    | h1 :: t1 => disjPrefix h1 l2 && disjPrefixes t1 l2
+    end.
+
+  Lemma disjPrefix_prefix:
+    forall s l,
+      disjPrefix s l = true ->
+      (forall t, In t l -> prefix s t = false /\ prefix t s = false).
+  Proof.
+    induction l; simpl; intros; [inv H0|].
+    destruct H0; subst.
+    - apply andb_true_iff in H; dest.
+      apply andb_true_iff in H; dest; auto.
+      rewrite negb_true_iff in H, H1; auto.
+    - apply andb_true_iff in H; dest; auto.
+  Qed.
+
+  Lemma disjPrefixes_DisjPrefixes:
+    forall l1 l2,
+      disjPrefixes l1 l2 = true -> DisjPrefixes l1 l2.
+  Proof.
+    induction l1; simpl; unfold DisjPrefixes; intros; [inv H0|].
+    apply andb_true_iff in H; dest.
+    destruct H0; subst.
+    - eapply disjPrefix_prefix; eauto.
+    - specialize (IHl1 _ H2); auto.
+  Qed.
 
 End ModuleBound.
 
