@@ -4,7 +4,6 @@ Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Notations Lts.S
 Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate Lts.Refinement.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
-Require Import Lts.ParametricInlineLtac.
 
 Set Implicit Arguments.
 
@@ -162,6 +161,7 @@ Section MemCacheInl.
 
   Open Scope string.
 
+  (*
   Ltac changeNames mod modRef modEquiv dmod dmodRef dmodEquiv :=
     let ddmodRef := fresh in
     pose proof (traceRefines_trans_elem modRef dmodRef) as ddmodRef;
@@ -169,20 +169,44 @@ Section MemCacheInl.
     clear dmodRef mod modRef modEquiv;
     pose dmod as mod; unfold dmod in mod;
     pose proof dmodEquiv as modEquiv; clear dmodEquiv;
-    replace dmod with mod in modEquiv by reflexivity;
+    replace dmod with mod in modEquiv by (apply eq_refl);
     pose proof ddmodRef as modRef; clear ddmodRef;
-    replace dmod with mod in modRef by reflexivity; clear dmod.
+    replace dmod with mod in modRef by (apply eq_refl); clear dmod.
+   *)
 
-  Ltac ggNoFilt mod modRef modEquiv dm r :=
+  Require Import Lts.ParametricInlineLtac.
+  Ltac ggNoFilt dm r :=
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        inlineGenDmGenRule_NoFilt m mEquiv dm r;
+          match goal with
+            | m'Ref:
+                modFromMeta ?m <<== modFromMeta ?m',
+                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+              apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
+              let newm := fresh in
+              pose m' as newm;
+                fold newm in m'Ref;
+                fold newm in m'Equiv;
+                simpl in newm;
+                clear mEquiv m
+          end
+    end.
+    (*
     let dmod := fresh in
     let dmodRef := fresh in
     let dmodEquiv := fresh in
     inlineGenDmGenRule_NoFilt mod modEquiv dm r dmod dmodRef dmodEquiv;
-    changeNames mod modRef modEquiv dmod dmodRef dmodEquiv.
+    changeNames mod modRef modEquiv dmod dmodRef dmodEquiv *)
 
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
+
+
   
   Definition nmemCacheInl:
     {m: MetaModule &
@@ -190,39 +214,239 @@ Section MemCacheInl.
                                LgDataBytes Id FifoSize) <<== modFromMeta m) /\
         forall ty, MetaModEquiv ty typeUT m}.
   Proof.
-    assert (startEquiv: forall ty, MetaModEquiv ty typeUT
-                                                (nmemCache IdxBits TagBits LgNumDatas
-                                                LgDataBytes Id FifoSize)) by admit.
-    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as mod.
-    assert (modRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                                <<== modFromMeta mod) by
+    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
+    assert (mRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                                <<== modFromMeta m) by
         (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
 
-    repeat autounfold with ModuleDefs in mod;
+    repeat autounfold with ModuleDefs in m;
     cbv [makeMetaModule getMetaFromSinNat makeSinModule getMetaFromSin
                         sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
-                        convSinToGen] in mod;
-    simpl in mod;
-    unfold concatMetaMod in mod; simpl in mod;
-    unfold Indexer.withPrefix in mod; simpl in mod.
-    assert (modEquiv: forall ty, MetaModEquiv ty typeUT mod) by (unfold mod; apply startEquiv).
+                        convSinToGen] in m;
+    simpl in m;
+    unfold concatMetaMod in m; simpl in m;
+    unfold Indexer.withPrefix in m; simpl in m.
+    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
 
-    ggNoFilt mod modRef modEquiv "read.cs" "ldHit".
-    ggNoFilt mod modRef modEquiv "read.cs" "stHit".
-    ggNoFilt mod modRef modEquiv "read.cs" "upgRq".
-    ggNoFilt mod modRef modEquiv "read.cs" "upgRs".
-    ggNoFilt mod modRef modEquiv "read.cs" "l1MissByState".
+    
+    Reset Profile.
+    Start Profiling.
+    ggNoFilt "read.cs" "ldHit".
+    ggNoFilt "read.cs" "stHit".
+    ggNoFilt "read.cs" "upgRq".
+    ggNoFilt "read.cs" "upgRs".
+    ggNoFilt "read.cs" "l1MissByState".
+    ggNoFilt "read.cs" "l1MissByLine".
+    ggNoFilt "read.cs" "ldDeferred".
+    ggNoFilt "read.cs" "stDeferred".
+    ggNoFilt "read.cs" "drop".
+    ggNoFilt "read.cs" "writeback".
+    Stop Profiling.
+    Show Profile.
+
+    (*
+Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
+  let noDupMeth := fresh in
+  let noDupRule := fresh in
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+      (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac);
+    let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR r nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                       ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                          ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+
+                    let H3 := fresh in
+                    let H4 := fresh in
+                    let H5 := fresh in 
+                    assert (H3:
+                              forall (B : Type) (strB : B -> string)
+                                     (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
+                                     (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
+                                     (goodStrFn2B : forall (si sj : string) (i j : B),
+                                                      addIndexToStr strB i si =
+                                                      addIndexToStr strB j sj ->
+                                                      si = sj /\ i = j)
+                                     (bgenB : GenAction GenKB Void)
+                                     (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
+                                In
+                                  (RepRule strB goodStrFnB getConstKB
+                                           goodStrFn2B bgenB rb noDupLsB)
+                                  (preR ++ sufR) ->
+                                noCallDmSigGenA (bgenB typeUT)
+                                                {| isRep := true; nameRec := dmn |}
+                                                (projT1 bdm) = true) (*by
+                        (let isIn := fresh in
+                         intros ? ? ? ? ? ? ? ? ? ? isIn;
+                         repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                         destruct isIn);
+                      assert (H4:
+                                forall (B : Type) (strB : B -> string)
+                                       (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
+                                       (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
+                                       (goodStrFn2B : forall (si sj : string) (i j : B),
+                                                        addIndexToStr strB i si =
+                                                        addIndexToStr strB j sj ->
+                                                        si = sj /\ i = j)
+                                       (bgenB : sigT (GenMethodT GenKB))
+                                       (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
+                                  In
+                                    (RepMeth strB goodStrFnB getConstKB
+                                             goodStrFn2B bgenB rb noDupLsB)
+                                    (metaMeths m) ->
+                                  noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                  {| isRep := true; nameRec := dmn |}
+                                                  (projT1 bdm) = true) by
+                          (let isIn := fresh in
+                           intros ? ? ? ? ? ? ? ? ? ? isIn;
+                           repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                           destruct isIn);
+                      assert
+                        (H5: exists call : NameRecIdx,
+                               In call (getCallsGenA (r typeUT)) /\
+                               nameVal (nameRec call) = nameVal dmn /\ isRep call = true) by
+                          (eexists {| isRep := true;
+                                      nameRec := {| nameVal := nameVal dmn;
+                                                    goodName := _ |} |};
+                           split; [simpl; tauto | split; reflexivity]);
+                      let m'Ref := fresh in
+                      let m'Equiv := fresh in
+                      pose proof (@inlineGenGenDmToRule_traceRefines_Filt
+                                    m A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule H3 H4 H5) as m'Ref;
+                        pose proof (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                                      m mEquiv A strA goodFn GenK getConstK goodFn2
+                                      bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                      sufR eq_refl noDupMeth noDupRule H4) as m'Equiv;
+                        clear noDupMeth noDupRule H3 H4 H5 *)
+                end
+            end.
+
+
+    
+    inlineGenDmGenRule_Filt H0 H5 "read.cs" "pProcess".
+    intros ? ? ? ? ? ? ? ? ? ? isIn; simpl in isIn.
+    destruct isIn as [murali | isIn].
+    
+    inversion murali.
+    injection murali as [_ _ _ _ bgen _ _].
+    inversion murali; subst; clear murali.
+    simpl.
+    inv murali.
+    [subst; reflexivity | ].
+    repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]).
+    repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]).
+    destruct isIn.
+                    asser
+    clear m.
+    match goal with
+      | m'Ref:
+          modFromMeta _ <<== modFromMeta ?m',
+          m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+        let newm := fresh in
+        pose m' as newm;
+          fold newm in m'Ref;
+          fold newm in m'Equiv;
+          simpl in newm;
+          clear m
+    end.
+    clear m.
+    inlineGenDmGenRule_NoFilt m mEquiv "read.cs" "ldHit".
+    Reset Profile.
+    Start Profiling.
+
+    let noDupMeth := fresh in
+  let noDupRule := fresh in
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+    (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac);
+    let dmTriple := eval simpl in (findDm "read.cs" nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR "ldHit" nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                       ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                          ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                    let m'Ref := fresh in
+                    let m'Equiv := fresh in
+                    pose proof (@inlineGenGenDmToRule_traceRefines_NoFilt
+                                  m A strA goodFn GenK getConstK goodFn2
+                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                  sufR eq_refl noDupMeth noDupRule) as m'Ref;
+                      pose proof (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                                    m mEquiv A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule) as m'Equiv;
+                      clear noDupMeth noDupRule
+                end
+            end.
+
+    
+    inlineGenDmGenRule_NoFilt m mEquiv "read.cs" "ldHit".
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        inlineGenDmGenRule_NoFilt m mEquiv dm r;
+          match goal with
+            | m'Ref:
+                modFromMeta ?m <<== modFromMeta ?m',
+              m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+              pose proof (traceRefines_trans_elem mRef m'Ref); clear mRef m'Ref;
+              pose m' as newm;
+              fold newm in m'Ref;
+              fold newm in m'Equiv;
+              clear m
+          end;
+          clear mEquiv
+    end.
+    
+    ggNoFilt "read.cs" "ldHit".
+
+    ggNoFilt "read.cs" "stHit".
+
+
+    ggNoFilt "read.cs" "upgRq".
+
+    Stop Profiling.
+    Show Profile.
+
+    Reset Profile.
+    Start Profiling.
+    ggNoFilt "read.cs" "upgRs".
+    Stop Profiling.
+    Show Profile.
+
+
+    ggNoFilt "read.cs" "l1MissByState".
+
+    Stop Profiling.
+    Show Profile.
+
+    Reset Profile.
+    Start Profiling.
     
     ggNoFilt mod modRef modEquiv "read.cs" "l1MissByLine".
-    idtac.
-    simpl.
+    Stop Profiling.
+    Show Profile.
+    
     ggNoFilt mod modRef modEquiv "read.cs" "ldDeferred".
     ggNoFilt mod modRef modEquiv "read.cs" "stDeferred".
     ggNoFilt mod modRef modEquiv "read.cs" "drop".
     ggNoFilt mod modRef modEquiv "read.cs" "writeback".
     ggFilt mod modRef modEquiv "read.cs" "pProcess".
     
-    exact (existT _ mod (conj modRef modEquiv)).
+    exact (existT _ mod (conj modRef modEquiv)). *)
+    admit.
   Defined.
 
   Close Scope string.

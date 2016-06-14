@@ -467,6 +467,114 @@ Section GenGen.
 
 End GenGen.
 
+Section GenGen2.
+  Variable m: MetaModule.
+  Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
+
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2: forall si sj i j,
+                         addIndexToStr strA i si = addIndexToStr strA j sj ->
+                         si = sj /\ i = j.
+  Variable dm: sigT (GenMethodT GenK).
+  Variable dmName: NameRec.
+  Variable preDm sufDm: list MetaMeth.
+  Variable ls: list A.
+  Variable noDupLs: NoDup ls.
+  Variable Hdm: metaMeths m =
+                preDm ++ RepMeth strA goodStrFn getConstK goodStrFn2 dm dmName noDupLs :: sufDm.
+
+  Variable r: GenAction GenK Void.
+  Variable rName: NameRec.
+  Variable preR sufR: list MetaRule.
+  Variable Hrule: metaRules m =
+                  preR ++ RepRule strA goodStrFn getConstK goodStrFn2 r rName noDupLs :: sufR.
+
+  Hypotheses (HnoDupMeths: NoDup (map getMetaMethName (metaMeths m)))
+             (HnoDupRules: NoDup (map getMetaRuleName (metaRules m))).
+
+  Hypothesis HdmNoRule:
+    forall r',
+      In r' (preR ++ sufR) ->
+      match r' with
+        | OneRule _ _ => True
+        | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+  Theorem HdmNoRule':
+    forall
+      B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepRule B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (preR ++ sufR) ->
+      noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |} (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoRule (RepRule strB goodStrFnB getConstKB goodStrFn2B bgenB rb
+                              noDupLsB) H).
+  Qed.
+
+  Hypothesis HdmNoMeth:
+    forall dm',
+      In dm' (metaMeths m) ->
+      match dm' with
+        | OneMeth _ _ => True
+        | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+          noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
+                          (projT1 dm) = true
+      end.
+
+
+  Theorem HdmNoMeth':
+    forall B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB,
+      In (@RepMeth B strB goodStrFnB GenKB getConstKB goodStrFn2B bgenB rb lsB noDupLsB)
+         (metaMeths m) ->
+      noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
+                      (projT1 dm) = true.
+  Proof.
+    intros.
+    apply (HdmNoMeth (RepMeth strB goodStrFnB getConstKB goodStrFn2B bgenB rb
+                              noDupLsB) H).
+  Qed.
+
+  Hypothesis HDmInR:
+    exists call, 
+      In call (getCallsGenA (r typeUT)) /\
+      nameVal (nameRec call) = nameVal dmName /\ isRep call = true.
+    
+  Lemma inlineGenGenDmToRule_traceRefines_Filt':
+    modFromMeta m <<==
+               modFromMeta
+               {| metaRegs := metaRegs m;
+                  metaRules :=
+                    preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                         (fun ty => inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                         sufR;
+                  metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenGenDmToRule_traceRefines_Filt; auto.
+    apply HdmNoRule'.
+    apply HdmNoMeth'.
+  Qed.
+
+  Lemma inlineGenGenDmToRule_ModEquiv_Filt' ty:
+    MetaModEquiv ty typeUT{| metaRegs := metaRegs m;
+                             metaRules :=
+                               preR ++ RepRule strA goodStrFn getConstK goodStrFn2
+                                    (fun ty =>
+                                       inlineGenGenDm (r ty) (nameVal dmName) dm) rName noDupLs ::
+                                    sufR;
+                             metaMeths := preDm ++ sufDm |}.
+  Proof.
+    apply inlineGenGenDmToRule_ModEquiv_Filt; auto.
+    apply HdmNoMeth'.
+  Qed.
+End GenGen2.
+
 Section GenSin.
   Variable m: MetaModule.
   Variable mEquiv: forall ty, MetaModEquiv ty typeUT m.
