@@ -27,6 +27,7 @@ Section L1Cache.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
 
   Definition rqFromProcPop := MethodSig "rqFromProc"--"deq" (Void): RqFromProc.
+  Definition rqFromProcFirst := MethodSig "rqFromProc"--"firstElt" (Void): RqFromProc.
   Definition fromPPop := MethodSig "fromParent"--"deq" (Void): FromP.
 
   Definition rsToProcEnq := MethodSig "rsToProc"--"enq" (RsToProc): Void.
@@ -64,7 +65,6 @@ Section L1Cache.
   Definition l1Cache :=
     SIN {
         Register "procRqValid": Bool <- @ConstBool false
-        with Register "procRq": RqFromProc <- Default
         with Register "procRqReplace": Bool <- @ConstBool false
         with Register "procRqWait": Bool <- @ConstBool false
 
@@ -106,7 +106,7 @@ Section L1Cache.
         with Rule "l1MissByState" :=
           Read valid <- "procRqValid";
           Assert !#valid;
-          Call rq <- rqFromProcPop();
+          Call rq <- rqFromProcFirst();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
           Call cs <- readCs(#idx);
@@ -114,13 +114,12 @@ Section L1Cache.
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ false;
           Write "procRqWait" <- $$ false;
-          Write "procRq" <- #rq;
           Retv
 
         with Rule "l1MissByLine" :=
           Read valid <- "procRqValid";
           Assert !#valid;
-          Call rq <- rqFromProcPop();
+          Call rq <- rqFromProcFirst();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
           Call cs <- readCs(#idx);
@@ -128,7 +127,6 @@ Section L1Cache.
           Write "procRqValid" <- $$ true;
           Write "procRqReplace" <- $$ true;
           Write "procRqWait" <- $$ false;
-          Write "procRq" <- #rq;
           Retv
 
         with Rule "writeback" :=
@@ -136,7 +134,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- "procRqReplace";
           Assert #replace;
-          Read rq: RqFromProc <- "procRq";
+          Call rq <- rqFromProcFirst();
           LET idx <- getIdx #rq@."addr";
           Call tag <- readTag(#idx);
           Call cs <- readCs(#idx);
@@ -153,7 +151,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- "procRqReplace";
           Assert !#replace;
-          Read rq: RqFromProc <- "procRq";
+          Call rq <- rqFromProcFirst();
           LET idx <- getIdx #rq@."addr";
           Call cs <- readCs(#idx);
           LET toS: Msi <- IF #rq@."op" then $ Mod else $ Sh;
@@ -179,7 +177,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- "procRqReplace";
           Assert !#replace;
-          Read rq: RqFromProc <- "procRq";
+          Call rq <- rqFromProcPop();
           Assert !#rq@."op";
           LET idx <- getIdx #rq@."addr";
           Call cs <- readCs(#idx);
@@ -197,7 +195,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- "procRqReplace";
           Assert !#replace;
-          Read rq: RqFromProc <- "procRq";
+          Call rq <- rqFromProcPop();
           Assert #rq@."op";
           LET idx <- getIdx #rq@."addr";
           Call cs <- readCs(#idx);
