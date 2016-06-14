@@ -295,6 +295,7 @@ Ltac inlineSinDmGenRule_Filt m mEquiv dm r :=
               end
           end.
 
+(*
 Ltac inlineSinDmGenRule_NoFilt m mEquiv dm r :=
   let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
       let rTriple := eval simpl in (findR r nil (metaRules m)) in
@@ -458,3 +459,4 @@ Ltac inlineSinDmSinRule_NoFilt m mEquiv dm r :=
               end
           end.
 
+*)

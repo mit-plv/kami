@@ -259,60 +259,47 @@ Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
                 match rTriple with
                   | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
                                           ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-
                     let H3 := fresh in
                     let H4 := fresh in
-                    let H5 := fresh in 
-                    assert (H3:
-                              forall (B : Type) (strB : B -> string)
-                                     (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
-                                     (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
-                                     (goodStrFn2B : forall (si sj : string) (i j : B),
-                                                      addIndexToStr strB i si =
-                                                      addIndexToStr strB j sj ->
-                                                      si = sj /\ i = j)
-                                     (bgenB : GenAction GenKB Void)
-                                     (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
-                                In
-                                  (RepRule strB goodStrFnB getConstKB
-                                           goodStrFn2B bgenB rb noDupLsB)
-                                  (preR ++ sufR) ->
-                                noCallDmSigGenA (bgenB typeUT)
-                                                {| isRep := true; nameRec := dmn |}
-                                                (projT1 bdm) = true) (*by
+                    let H5 := fresh in
+                    assert
+                      (H3:
+                         forall r',
+                           In r' (preR ++ sufR) ->
+                           match r' with
+                             | OneRule _ _ => True
+                             | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+                               noCallDmSigGenA (bgenB typeUT)
+                                               {| isRep := true; nameRec := dmn |}
+                                               (projT1 bdm) = true
+                           end) (* by
                         (let isIn := fresh in
-                         intros ? ? ? ? ? ? ? ? ? ? isIn;
+                         intros ? isIn;
                          repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
-                         destruct isIn);
-                      assert (H4:
-                                forall (B : Type) (strB : B -> string)
-                                       (goodStrFnB : forall i j : B, strB i = strB j -> i = j) 
-                                       (GenKB : Kind) (getConstKB : B -> ConstT GenKB)
-                                       (goodStrFn2B : forall (si sj : string) (i j : B),
-                                                        addIndexToStr strB i si =
-                                                        addIndexToStr strB j sj ->
-                                                        si = sj /\ i = j)
-                                       (bgenB : sigT (GenMethodT GenKB))
-                                       (rb : NameRec) (lsB : list B) (noDupLsB : NoDup lsB),
-                                  In
-                                    (RepMeth strB goodStrFnB getConstKB
-                                             goodStrFn2B bgenB rb noDupLsB)
-                                    (metaMeths m) ->
-                                  noCallDmSigGenA (projT2 bgenB typeUT tt)
-                                                  {| isRep := true; nameRec := dmn |}
-                                                  (projT1 bdm) = true) by
-                          (let isIn := fresh in
-                           intros ? ? ? ? ? ? ? ? ? ? isIn;
-                           repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
-                           destruct isIn);
+                         destruct isIn) *);
+                      assert
+                        (H4:
+                           forall dm',
+                             In dm' (metaMeths m) ->
+                             match dm' with
+                               | OneMeth _ _ => True
+                               | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+                                 noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                 {| isRep := true; nameRec := dmn |}
+                                                 (projT1 bdm) = true
+                             end) (* by
+                        (let isIn := fresh in
+                         intros ? isIn;
+                         repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                         destruct isIn) *);
                       assert
                         (H5: exists call : NameRecIdx,
-                               In call (getCallsGenA (r typeUT)) /\
+                               In call (getCallsGenA (bdr typeUT)) /\
                                nameVal (nameRec call) = nameVal dmn /\ isRep call = true) by
                           (eexists {| isRep := true;
                                       nameRec := {| nameVal := nameVal dmn;
                                                     goodName := _ |} |};
-                           split; [simpl; tauto | split; reflexivity]);
+                           split; [simpl; tauto | split; reflexivity]); (*
                       let m'Ref := fresh in
                       let m'Equiv := fresh in
                       pose proof (@inlineGenGenDmToRule_traceRefines_Filt
@@ -323,13 +310,21 @@ Ltac inlineGenDmGenRule_Filt m mEquiv dm r :=
                                       m mEquiv A strA goodFn GenK getConstK goodFn2
                                       bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
                                       sufR eq_refl noDupMeth noDupRule H4) as m'Equiv;
-                        clear noDupMeth noDupRule H3 H4 H5 *)
+                        clear noDupMeth noDupRule H3 H4 H5 *) idtac
                 end
             end.
-
+    inlineGenDmGenRule_Filt H0 H5 "read.cs" "pProcess".
+    progress let isIn := fresh in
+             intros ? isIn;
+               repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+               destruct isIn.
+    
+                        (*(let isIn := fresh in
+                         intros ? ? ? ? ? ? ? ? ? ? isIn;
+                         repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
+                         destruct isIn); *)
 
     
-    inlineGenDmGenRule_Filt H0 H5 "read.cs" "pProcess".
     intros ? ? ? ? ? ? ? ? ? ? isIn; simpl in isIn.
     destruct isIn as [murali | isIn].
     
