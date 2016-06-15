@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.ParametricEquiv.
+Require Import Lts.Wf Lts.ParametricWf Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
 Set Implicit Arguments.
@@ -193,7 +194,14 @@ Section Facts.
     END_SKIP_PROOF_ON *) admit.
   Qed.
 
+  Lemma memDir_ValidRegs:
+    forall ty, ValidRegsMetaModule ty (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+  Proof. (* SKIP_PROOF_ON
+    kvr.
+    END_SKIP_PROOF_ON *) admit.
+  Qed.
+
 End Facts.
 
-Hint Resolve memDir_ModEquiv.
+Hint Resolve memDir_ModEquiv memDir_ValidRegs.
 

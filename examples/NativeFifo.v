@@ -1,7 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringExtension Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -72,8 +72,13 @@ Section NativeFifo.
   Lemma ngn:
     forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
   Proof.
-    pose proof HfifoName.
-    admit.
+    unfold withPrefix; intros.
+    apply index_not_in; apply index_not_in in H; apply index_not_in in HfifoName.
+    intro Hx; elim H; clear H.
+    apply S_in_app_or in Hx; destruct Hx; auto.
+    apply S_in_app_or in H; destruct H.
+    - inv H; inv H0.
+    - elim HfifoName; auto.
   Qed.
 
   Definition nativeEnqS {ty} : forall (d: ty dType), SinActionT ty Void := fun d =>
@@ -149,6 +154,18 @@ Section Facts.
     kequiv.
   Qed.
 
+  Lemma nativeFifo_ValidRegs:
+    forall ty, ValidRegsModules ty (nativeFifo fifoName default).
+  Proof.
+    kvr.
+  Qed.
+
+  Lemma nativeSimpleFifo_ValidRegs:
+    forall ty, ValidRegsModules ty (nativeSimpleFifo fifoName default).
+  Proof.
+    kvr.
+  Qed.
+
   Variable n: nat.
   Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
 
@@ -178,9 +195,39 @@ Section Facts.
     kequiv.
   Qed.
 
+  Lemma nativeFifoS_ValidRegs:
+    forall ty,
+      ValidRegsMetaModule ty (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
+  Proof.
+    kvr.
+  Qed.
+
+  Lemma nativeFifoM_ValidRegs:
+    forall ty, ValidRegsMetaModule ty (nativeFifoM fifoName default Hgood).
+  Proof.
+    kvr.
+  Qed.
+
+  Lemma nativeSimpleFifoS_ValidRegs:
+    forall ty,
+      ValidRegsMetaModule ty (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
+  Proof.
+    kvr.
+  Qed.
+
+  Lemma nativeSimpleFifoM_ValidRegs:
+    forall ty, ValidRegsMetaModule ty (nativeSimpleFifoM fifoName default Hgood).
+  Proof.
+    kvr.
+  Qed.
+
 End Facts.
 
 Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv
      nativeFifoS_ModEquiv nativeFifoM_ModEquiv
      nativeSimpleFifoS_ModEquiv nativeSimpleFifoM_ModEquiv.
+
+Hint Resolve nativeFifo_ValidRegs nativeSimpleFifo_ValidRegs
+     nativeFifoS_ValidRegs nativeFifoM_ValidRegs
+     nativeSimpleFifoS_ValidRegs nativeSimpleFifoM_ValidRegs.
 

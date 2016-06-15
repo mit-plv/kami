@@ -1,10 +1,13 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement Lts.Notations.
-Require Import Lts.Equiv Lts.Tactics Lts.Specialize Lts.Duplicate Lts.Substitute Lts.ModuleBound.
+Require Import Lts.Equiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
+Require Import Lts.Duplicate Lts.Substitute Lts.ModuleBound.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
 Require Import Ex.MemCache.
+
+Set Implicit Arguments.
 
 Ltac knodup_regs :=
   repeat (* Separating NoDup proofs by small modules *)
@@ -174,9 +177,9 @@ Section Refinement.
         * repeat rewrite getCalls_flattened.
           rewrite getCalls_fifos_nfifos.
           apply SubList_refl.
-      + admit. (* ValidRegsModules for flattened modules *)
-      + admit.
-      + admit.
+      + kvr.
+      + kvr.
+      + kvr.
       + admit. (* EquivList *)
       + admit.
       + admit.

@@ -25,12 +25,12 @@ Section ProcDecSCN.
   Proof. (* SKIP_PROOF_ON
     simple kmodular;
       [kequiv|kequiv|kequiv|kequiv
-       |kdisj_regs|kdisj_regs|kvalid_regs|kvalid_regs
+       |kdisj_regs|kdisj_regs|kvr|kvr
        |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
        |kdef_call_sub|kdef_call_sub
        |kinteracting
        | |].
-    - kduplicated.
+    - kduplicated; [kvr|kvr|].
       apply pdec_refines_pinst.
     - krefl.
       END_SKIP_PROOF_ON *) admit.
@@ -55,14 +55,14 @@ Section ProcDecSCN.
     - kdisj_regs.
     - kdisj_regs.
     - split.
-      + apply duplicate_regs_ConcatMod_2; auto.
-      + apply duplicate_regs_ConcatMod_1; auto.
+      + apply duplicate_regs_ConcatMod_2; auto; kvr.
+      + apply duplicate_regs_ConcatMod_1; auto; kvr.
     - split.
-      + apply duplicate_rules_ConcatMod_2; auto.
-      + apply duplicate_rules_ConcatMod_1; auto.
+      + apply duplicate_rules_ConcatMod_2; auto; kvr.
+      + apply duplicate_rules_ConcatMod_1; auto; kvr.
     - split.
-      + apply duplicate_defs_ConcatMod_2; auto.
-      + apply duplicate_defs_ConcatMod_1; auto.
+      + apply duplicate_defs_ConcatMod_2; auto; kvr.
+      + apply duplicate_defs_ConcatMod_1; auto; kvr.
       END_SKIP_PROOF_ON *) admit.
   Qed.
   

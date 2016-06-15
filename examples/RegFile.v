@@ -1,6 +1,6 @@
-Require Import String Lib.Indexer.
+Require Import String Lib.CommonTactics Lib.Indexer Lib.StringExtension.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -39,8 +39,13 @@ Section RegFile.
   Lemma rfgn:
     forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
   Proof.
-    pose proof Hname.
-    admit.
+    unfold withPrefix; intros.
+    apply index_not_in; apply index_not_in in H; apply index_not_in in Hname.
+    intro Hx; elim H; clear H.
+    apply S_in_app_or in Hx; destruct Hx; auto.
+    apply S_in_app_or in H; destruct H.
+    - inv H; inv H0.
+    - elim Hname; auto.
   Qed.
 
   Definition regFileS :=
@@ -88,6 +93,12 @@ Section Facts.
     kequiv.
   Qed.
 
+  Lemma regFile_ValidRegs:
+    forall ty, ValidRegsModules ty (regFile name init).
+  Proof.
+    kvr.
+  Qed.
+
   Variable n: nat.
   Hypothesis (Hgood: index 0 indexSymbol name = None).
   
@@ -103,7 +114,20 @@ Section Facts.
     kequiv.
   Qed.
 
+  Lemma regFileS_ValidRegs:
+    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (regFileS name init Hgood)).
+  Proof.
+    kvr.
+  Qed.
+
+  Lemma regFileM_ValidRegs:
+    forall ty, ValidRegsMetaModule ty (regFileM name init Hgood).
+  Proof.
+    kvr.
+  Qed.
+
 End Facts.
 
 Hint Resolve regFile_ModEquiv regFileS_ModEquiv regFileM_ModEquiv.
+Hint Resolve regFile_ValidRegs regFileS_ValidRegs regFileM_ValidRegs.
 

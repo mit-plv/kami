@@ -1,6 +1,6 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Wf Lts.Notations.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Wf Lts.ParametricWf Lts.Notations.
 Require Import Lts.Semantics Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes.
 
@@ -75,7 +75,14 @@ Section Facts.
     kequiv.
   Qed.
 
+  Lemma childParent_ValidRegs:
+    forall ty,
+      ValidRegsMetaModule ty (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+  Proof.
+    kvr.
+  Qed.
+
 End Facts.
 
-Hint Resolve childParent_ModEquiv.
+Hint Resolve childParent_ModEquiv childParent_ValidRegs.
 

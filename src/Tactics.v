@@ -2,7 +2,7 @@ Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
-Require Import Lts.Wf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
+Require Import Lts.Wf Lts.ParametricWf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
 Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
 Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
 
@@ -18,8 +18,7 @@ Set Implicit Arguments.
   + kmodular_sim_r : convert (c + a) <<== (c + b) to (a <<== b)
   + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
-  + kequiv_with _tactic_ : also try to apply _tactic_ alternately
-  + kvalid_regs : prove well-formedness conditions for valid register uses
+  + kvr : prove well-formedness conditions for valid register uses
   + kdisj_regs : prove DisjList conditions of regs
   + kdisj_dms : prove DisjList conditions of dms
   + kdisj_cms : prove DisjList conditions of cms
@@ -43,9 +42,7 @@ Set Implicit Arguments.
 
 - Kami Hints
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
-  + Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-  + Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
   + Hint Extern 1 (_ = _: Modules) => apply eq_refl.
  *)
 
@@ -194,36 +191,42 @@ Ltac kequiv :=
   repeat kequiv_red;
   repeat kequiv_unit.
 
-Ltac kvalid_regs :=
-  repeat autounfold with MethDefs;
-  repeat (* 1) try to use existing lemmas *)
-    match goal with
-    | [ |- ValidRegsModules _ (ConcatMod _ _) ] => split
-    | [ |- ValidRegsModules _ (duplicate _ _) ] =>
-      apply duplicate_validRegsModules; auto
-    | [ |- ValidRegsModules _ ?m ] => unfold_head m
-    end;
-  repeat (* 2) for constant modules *)
-    match goal with
-    | [ |- ValidRegsModules _ _ ] => apply duplicate_validRegsModules
-    | [ |- ValidRegsModules _ _ ] => constructor; intros
-    | [ |- ValidRegsRules _ _ _ ] => constructor; intros
-    | [ |- ValidRegsDms _ _ _ ] => constructor; intros
-    | [ |- ValidRegsAction _ _ ] => constructor; intros
-    | [ |- In _ _] => simpl; tauto
-    end;
-  simpl; (* 3) for things which need induction *)
-  repeat 
-    match goal with
-    | [ |- ValidRegsDms _ _ (_ ++ _) ] => apply validRegsDms_app
-    | [ |- ValidRegsDms _ _ nil ] => constructor
-    | [ |- ValidRegsDms _ _ (repMeth _ _ _ _ (getNatListToN ?n)) ] =>
-      try (induction n; simpl; repeat constructor; auto; fail)
-    | [ |- ValidRegsRules _ _ (_ ++ _) ] => apply validRegsRules_app
-    | [ |- ValidRegsRules _ _ nil ] => constructor
-    | [ |- ValidRegsRules _ _ (repRule _ _ _ _ (getNatListToN ?n)) ] =>
-      try (induction n; simpl; repeat constructor; auto; fail)
-    end.
+Ltac kvr_red :=
+  eauto;
+  match goal with
+  | [ |- ValidRegsModules _ (ConcatMod _ _) ] => split
+  | [ |- ValidRegsModules _ (Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)) ] =>
+    apply validRegsModules_flatten
+  | [ |- ValidRegsModules _ (duplicate _ _) ] => apply duplicate_validRegsModules
+  | [ |- ValidRegsModules _ (modFromMeta _) ] => apply validRegsMetaModule_validRegsModules
+  | [ |- ValidRegsMetaModule _ (_ +++ _) ] => apply validRegsMetaModule_modular
+  | [ |- ValidRegsModules _ ?m ] => unfold_head m
+  | [ |- ValidRegsMetaModule _ ?mm ] => unfold_head mm
+  end.
+
+Ltac kvr_unit :=
+  match goal with
+  (* for normal modules *)
+  | [ |- ValidRegsModules _ _ ] => constructor; intros
+  | [ |- ValidRegsRules _ _ _ ] => constructor; intros
+  | [ |- ValidRegsDms _ _ _ ] => constructor; intros
+  | [ |- ValidRegsAction _ _ ] => constructor; intros
+  (* for meta modules *)
+  | [ |- ValidRegsMetaModule _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaRules _ _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaRule _ _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaMeths _ _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaMeth _ _ _ ] => constructor; intros
+  | [ |- ValidRegsSinAction _ _ ] => constructor; intros
+  | [ |- ValidRegsGenAction _ _ ] => constructor; intros
+  | [ |- In _ _] => simpl; tauto
+  end.
+
+Ltac kvr :=
+  intros;
+  (* repeat autounfold with MethDefs; *)
+  repeat kvr_red;
+  repeat kvr_unit.
 
 Ltac get_minimal_regs_bound m :=
   lazymatch m with
@@ -615,9 +618,7 @@ Ltac kexistnv k v m t :=
              M.find k m = Some (existT _ _ v) /\ _).
 
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
-Hint Extern 1 (ValidRegsModules _ _) => kvalid_regs.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-Hint Extern 1 (DefCallSub _ _) => kdef_call_sub.
 Hint Extern 1 (_ = _: Modules) => apply eq_refl.
 
 (** Final Kami proof configuration *)
