@@ -230,7 +230,7 @@ Section L1Cache.
           Assert (#cs > #fromP@."to") && (#tag == getTag #fromP@."addr");
           Read valid <- "procRqValid";
           Read wait <- "procRqWait";
-          Read procRq: RqFromProc <- "procRq";
+          Call procRq <- rqFromProcFirst();
           Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == getTagIdx #fromP@."addr" &&
                   (#procRq@."op" && #cs == $ Mod || (!#procRq@."op" && #cs == $ Sh)));
           Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line});
