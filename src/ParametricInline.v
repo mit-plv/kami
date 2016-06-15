@@ -500,11 +500,11 @@ Section GenGen2.
     forall r',
       In r' (preR ++ sufR) ->
       match r' with
-        | OneRule _ _ => True
+        | OneRule _ _ => true
         | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (bgenB typeUT) {| isRep := true; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
 
   Theorem HdmNoRule':
     forall
@@ -522,11 +522,11 @@ Section GenGen2.
     forall dm',
       In dm' (metaMeths m) ->
       match dm' with
-        | OneMeth _ _ => True
+        | OneMeth _ _ => true
         | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := true; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
 
 
   Theorem HdmNoMeth':
@@ -799,11 +799,11 @@ Section GenSin2.
     forall r',
       In r' (preR ++ sufR) ->
       match r' with
-        | OneRule rb _ => noCallDmSigSinA (rb typeUT) dmName (projT1 dm) = true
+        | OneRule rb _ => noCallDmSigSinA (rb typeUT) dmName (projT1 dm)
         | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
 
 
   Lemma HdmNoRule1:
@@ -828,11 +828,11 @@ Section GenSin2.
     forall dm',
       In dm' (metaMeths m) ->
       match dm' with
-        | OneMeth dbody _ => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true
+        | OneMeth dbody _ => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm)
         | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
 
   Lemma HdmNoMeth1:
     forall dbody db, In (@OneMeth dbody db) (metaMeths m) ->
@@ -1171,11 +1171,11 @@ Section SinSin2.
     forall r',
       In r' (preR ++ sufR) ->
       match r' with
-        | OneRule rbody rb => noCallDmSigSinA (rbody typeUT) dmName (projT1 dm) = true
+        | OneRule rbody rb => noCallDmSigSinA (rbody typeUT) dmName (projT1 dm)
         | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (bgenB typeUT) {| isRep := false; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
   
   Lemma HdmNoRule_1:
     forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
@@ -1199,11 +1199,11 @@ Section SinSin2.
     forall dm',
       In dm' (metaMeths m) ->
       match dm' with
-        | OneMeth dbody db => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm) = true
+        | OneMeth dbody db => noCallDmSigSinA (projT2 dbody typeUT tt) dmName (projT1 dm)
         | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
           noCallDmSigGenA (projT2 bgenB typeUT tt) {| isRep := false; nameRec := dmName |}
-                          (projT1 dm) = true
-      end.
+                          (projT1 dm)
+      end = true.
                                                                                               
 
   Lemma HdmNoMeth_1:
