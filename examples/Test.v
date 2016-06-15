@@ -42,27 +42,4 @@ Definition mc := MODULE {
     Retv
 }.
 
-Hint Unfold ma mb mc: ModuleDefs.
-Hint Unfold fbCm: MethDefs.
-
-Section Facts.
-
-  Definition theta : RegsT -> RegsT := id.
-  Definition ruleMap : RegsT -> string -> option string :=
-    fun _ r => Some r.
-
-  Lemma mab_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (ConcatMod ma mb).
-  Proof. kequiv. Qed.
-  Hint Resolve mab_ModEquiv.
-
-  Lemma mab_mc: (ConcatMod ma mb) <<== mc.
-  Proof.
-    kinline_left mabi.
-    kdecompose_nodefs theta ruleMap.
-    kinvert; kinv_magic.
-    admit.
-  Qed.
-  
-End Facts.
 

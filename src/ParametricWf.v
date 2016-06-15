@@ -151,38 +151,6 @@ End ValidRegs.
 
 Section Facts.
 
-  Lemma validRegsSinAction_validRegsAction:
-    forall regs {ty retK} (a: SinActionT ty retK),
-      ValidRegsSinAction (map getMetaRegName regs) a ->
-      ValidRegsAction (namesOf (Concat.concat (map getListFromMetaReg regs)))
-                      (getSinAction a).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma validRegsGenAction_validRegsRules:
-    forall regs {A} (strA: A -> string) {genK} Hgood1 getConstK Hgood2 s
-           {ls} (HnoDup: NoDup ls)
-           (a: GenAction genK Void) ty,
-      ValidRegsGenAction (map getMetaRegName regs) (a ty) ->
-      ValidRegsRules ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
-                     (getListFromMetaRule (RepRule strA Hgood1 getConstK Hgood2 a s HnoDup)).
-  Proof.
-    admit.
-  Qed.
-
-  Lemma validRegsGenAction_validRegsDms:
-    forall regs {A} (strA: A -> string) {genK} Hgood1 getConstK Hgood2 s
-           {ls} (HnoDup: NoDup ls)
-           (a: sigT (GenMethodT genK)) ty,
-      (forall v : ty (arg (projT1 a)),
-          ValidRegsGenAction (map getMetaRegName regs) (projT2 a ty v)) ->
-      ValidRegsDms ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
-                   (getListFromMetaMeth (RepMeth strA Hgood1 getConstK Hgood2 a s HnoDup)).
-  Proof.
-    admit.
-  Qed.
-
   Lemma validRegsMetaModule_validRegsModules:
     forall ty mm,
       ValidRegsMetaModule ty mm ->
@@ -191,19 +159,11 @@ Section Facts.
     destruct mm as [regs rules dms]; simpl; intros; dest; split.
     - clear -H; induction rules; [constructor|]; inv H.
       simpl; apply validRegsRules_app; auto.
-
-      clear -H3; destruct a.
-      + repeat constructor; simpl.
-        apply validRegsSinAction_validRegsAction; auto.
-      + apply validRegsGenAction_validRegsRules; auto.
+      admit.
 
     - clear -H0; induction dms; [constructor|]; inv H0.
       simpl; apply validRegsDms_app; auto.
-
-      clear -H3; destruct a.
-      + repeat constructor; simpl; intros.
-        apply validRegsSinAction_validRegsAction; auto.
-      + apply validRegsGenAction_validRegsDms; auto.
+      admit.
   Qed.
   
   Lemma validRegsMetaModule_modular:

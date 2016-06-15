@@ -1,4 +1,4 @@
-Require Import String Lib.Indexer.
+Require Import String Lib.CommonTactics Lib.Indexer Lib.StringExtension.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics.
 Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
 
@@ -39,8 +39,13 @@ Section RegFile.
   Lemma rfgn:
     forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
   Proof.
-    pose proof Hname.
-    admit.
+    unfold withPrefix; intros.
+    apply index_not_in; apply index_not_in in H; apply index_not_in in Hname.
+    intro Hx; elim H; clear H.
+    apply S_in_app_or in Hx; destruct Hx; auto.
+    apply S_in_app_or in H; destruct H.
+    - inv H; inv H0.
+    - elim Hname; auto.
   Qed.
 
   Definition regFileS :=
