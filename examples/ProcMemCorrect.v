@@ -30,11 +30,9 @@ Section ProcMem.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ modFromMeta mcache)%kami <<== scN.
   Proof.
-    ktrans (pdecN ++ memAtomic AddrSize LgDataBytes n)%kami.
-
-    - admit.
-    - unfold MethsT; rewrite <-idElementwiseId.
-      apply pdecN_memAtomic_refines_scN.
+    ketrans; [|unfold MethsT; rewrite <-idElementwiseId;
+               apply pdecN_memAtomic_refines_scN].
+    admit.
   Qed.
 
 End ProcMem.

@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Lts.ParametricSyntax.
 
 Set Implicit Arguments.
@@ -230,7 +230,7 @@ Section L1Cache.
           Assert (#cs > #fromP@."to") && (#tag == getTag #fromP@."addr");
           Read valid <- "procRqValid";
           Read wait <- "procRqWait";
-          Read procRq: RqFromProc <- "procRq";
+          Call procRq <- rqFromProcFirst();
           Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == getTagIdx #fromP@."addr" &&
                   (#procRq@."op" && #cs == $ Mod || (!#procRq@."op" && #cs == $ Sh)));
           Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line});
@@ -251,15 +251,27 @@ Section Facts.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
-  Lemma l1Cache_ModEquiv n:
+  Variable n: nat.
+
+  Lemma l1Cache_ModEquiv:
     forall ty1 ty2,
       MetaModEquiv ty1 ty2 (getMetaFromSinNat n (l1Cache IdxBits TagBits
                                                          LgNumDatas LgDataBytes Id)).
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     kequiv.
+    END_SKIP_PROOF_ON *) admit.
+  Qed.
+
+  Lemma l1Cache_ValidRegs:
+    forall ty,
+      ValidRegsMetaModule ty (getMetaFromSinNat n (l1Cache IdxBits TagBits
+                                                           LgNumDatas LgDataBytes Id)).
+  Proof. (* SKIP_PROOF_ON
+    kvr.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End Facts.
 
-Hint Resolve l1Cache_ModEquiv.
+Hint Resolve l1Cache_ModEquiv l1Cache_ValidRegs.
 

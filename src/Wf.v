@@ -6,9 +6,8 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
-
 (* Well-formedness w.r.t. valid register uses (read/writes) *)
-Section WfInd2.
+Section ValidRegs.
   Variable type: Kind -> Type.
 
   Section Regs.
@@ -96,9 +95,9 @@ Section WfInd2.
       ValidRegsModules ma /\ ValidRegsModules mb
     end.
 
-End WfInd2.
+End ValidRegs.
 
-Section SemProps2.    
+Section Facts.
 
   Lemma validRegsAction_regs_weakening:
     forall {retT type} (a: ActionT type retT) regs,
@@ -343,7 +342,31 @@ Section SemProps2.
       apply step_consistent in HStep.
       eapply validRegsModules_stepInd_newregs_subset; eauto.
   Qed.
-  
-End SemProps2.
 
+  Lemma validRegsModules_flatten:
+    forall ty m,
+      ValidRegsModules ty m ->
+      ValidRegsModules ty (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)).
+  Proof.
+    induction m; simpl; intros; auto.
+    dest; specialize (IHm1 H); specialize (IHm2 H0).
+    inv IHm1; inv IHm2.
+    split.
+    - apply validRegsRules_app.
+      + eapply validRegsRules_regs_weakening; eauto.
+        unfold RegInitT; rewrite namesOf_app.
+        apply SubList_app_1, SubList_refl.
+      + eapply validRegsRules_regs_weakening; eauto.
+        unfold RegInitT; rewrite namesOf_app.
+        apply SubList_app_2, SubList_refl.
+    - apply validRegsDms_app.
+      + eapply validRegsDms_regs_weakening; eauto.
+        unfold RegInitT; rewrite namesOf_app.
+        apply SubList_app_1, SubList_refl.
+      + eapply validRegsDms_regs_weakening; eauto.
+        unfold RegInitT; rewrite namesOf_app.
+        apply SubList_app_2, SubList_refl.
+  Qed.
+
+End Facts.
 
