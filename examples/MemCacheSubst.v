@@ -27,6 +27,78 @@ Lemma getCalls_flattened:
     getCalls m.
 Proof. reflexivity. Qed.
 
+Lemma getDefs_flattened:
+  forall m,
+    getDefs (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) =
+    getDefs m.
+Proof. reflexivity. Qed.
+
+Lemma getDefs_sinModule_eq':
+  forall n sm1 sm2,
+    map (fun dm => nameVal (methName dm)) sm1 =
+    map (fun dm => nameVal (methName dm)) sm2 ->
+    namesOf
+      (Concat.concat
+         (map getListFromMetaMeth
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into natToVoid
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup n) 
+                          sm1))) =
+    namesOf
+      (Concat.concat
+         (map getListFromMetaMeth
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into natToVoid
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup n) 
+                          sm2))).
+Proof.
+  induction sm1; intros; [destruct sm2; [auto|inv H]|].
+  destruct sm2; [inv H|].
+  inv H. specialize (IHsm1 _ H2).
+  destruct a as [sig1 n1], s as [sig2 n2]; simpl in *.
+  do 2 rewrite namesOf_app; f_equal; auto.
+
+  rewrite H1; clear.
+  induction (getNatListToN n); simpl; [reflexivity|].
+  f_equal; auto.
+Qed.
+
+Lemma getDefs_sinModule_eq:
+  forall sm1 sm2 n,
+    map (fun dm => nameVal (methName dm)) (sinMeths sm1) =
+    map (fun dm => nameVal (methName dm)) (sinMeths sm2) ->
+    getDefs (modFromMeta (getMetaFromSinNat n sm1)) =
+    getDefs (modFromMeta (getMetaFromSinNat n sm2)).
+Proof.
+  intros; apply getDefs_sinModule_eq'; auto.
+Qed.
+
+Lemma getDefs_modFromMeta_app:
+  forall mm1 mm2,
+    getDefs (modFromMeta (mm1 +++ mm2)) =
+    getDefs (modFromMeta mm1) ++ getDefs (modFromMeta mm2).
+Proof.
+  destruct mm1 as [? ? dm1], mm2 as [? ? dm2]; intros.
+  unfold getDefs, modFromMeta; simpl.
+  rewrite map_app, Concat.concat_app, namesOf_app; auto.
+Qed.
+
+(* fifo/nativeFifo facts *)
+
+Lemma getDefs_fifo_nativeFifo:
+  forall fifoName sz d1 {d2} (default: ConstT d2)  Hgood n,
+    getDefs (modFromMeta (getMetaFromSinNat n (nativeFifoS fifoName default Hgood))) =
+    getDefs (modFromMeta (getMetaFromSinNat n (fifoS fifoName sz d1 Hgood))).
+Proof.
+  intros; apply getDefs_sinModule_eq; reflexivity.
+Qed.
+
+Lemma getDefs_simpleFifo_nativeSimpleFifo:
+  forall fifoName sz d1 {d2} (default: ConstT d2)  Hgood n,
+    getDefs (modFromMeta (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood))) =
+    getDefs (modFromMeta (getMetaFromSinNat n (simpleFifoS fifoName sz d1 Hgood))).
+Proof.
+  intros; apply getDefs_sinModule_eq; reflexivity.
+Qed.
+
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
@@ -34,6 +106,31 @@ Section Refinement.
   Variable FifoSize: nat.
 
   Variable n: nat. (* number of l1 caches (cores) *)
+    
+  Lemma getDefs_fifos_nfifos:
+    getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas
+                               LgDataBytes Id n) =
+    getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
+                             Id (rsz FifoSize) n).
+  Proof.
+    unfold nfifosInNMemCache, fifosInMemCache.
+    repeat rewrite getDefs_modFromMeta_app.
+    f_equal.
+    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
+    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
+    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
+    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
+    apply getDefs_fifo_nativeFifo.
+  Qed.
+
+  Lemma getCalls_fifos_nfifos:
+    getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas
+                                LgDataBytes Id n) =
+    getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
+                              Id (rsz FifoSize) n).
+  Proof.
+    admit.
+  Qed.
 
   Lemma memCache_refines_nmemCache:
     (modFromMeta (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
@@ -70,7 +167,13 @@ Section Refinement.
       + kdisj_dms.
       + repeat rewrite getCalls_flattened; kdisj_cms.
       + repeat rewrite getCalls_flattened; kdisj_cms.
-      + admit. (* DefCallSub for flattened modules *)
+      + split.
+        * repeat rewrite getDefs_flattened.
+          rewrite getDefs_fifos_nfifos.
+          apply SubList_refl.
+        * repeat rewrite getCalls_flattened.
+          rewrite getCalls_fifos_nfifos.
+          apply SubList_refl.
       + admit. (* ValidRegsModules for flattened modules *)
       + admit.
       + admit.
