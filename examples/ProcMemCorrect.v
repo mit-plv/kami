@@ -22,10 +22,11 @@ Section ProcMem.
   Variable execState: ExecStateT 2 AddrSize LgDataBytes RfIdx.
   Variable execNextPc: ExecNextPcT 2 AddrSize LgDataBytes RfIdx.
 
-  Variable n: nat.
+  Variable LgNumChildren: nat.
+  Local Notation "'n'" := wordToNat (wones LgNumChildren).
 
   Definition pdecN := pdecs dec execState execNextPc n.
-  Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n. 
+  Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren. 
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ modFromMeta mcache)%kami <<== scN.
