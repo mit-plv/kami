@@ -43,14 +43,16 @@ Lemma getDefs_sinModule_eq':
     namesOf
       (Concat.concat
          (map getListFromMetaMeth
-              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into natToVoid
-                          Indexer.withIndex_index_eq (getNatListToN_NoDup n) 
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup
+                                                        (Word.wordToNat (Word.wones n))) 
                           sm1))) =
     namesOf
       (Concat.concat
          (map getListFromMetaMeth
-              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into natToVoid
-                          Indexer.withIndex_index_eq (getNatListToN_NoDup n) 
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup
+                                                        (Word.wordToNat (Word.wones n))) 
                           sm2))).
 Proof.
   induction sm1; intros; [destruct sm2; [auto|inv H]|].
@@ -60,7 +62,7 @@ Proof.
   do 2 rewrite namesOf_app; f_equal; auto.
 
   rewrite H1; clear.
-  induction (getNatListToN n); simpl; [reflexivity|].
+  induction (getNatListToN (Word.wordToNat (Word.wones n))); simpl; [reflexivity|].
   f_equal; auto.
 Qed.
 

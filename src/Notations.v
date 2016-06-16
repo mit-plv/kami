@@ -667,6 +667,6 @@ Notation "'SIN' { m1 'with' .. 'with' mN }" :=
         m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..))
     (at level 0, only parsing).
 
-Definition getMetaFromSinNat n s :=
-  getMetaFromSin string_of_nat string_of_nat_into natToVoid withIndex_index_eq
-                 (getNatListToN_NoDup n) s.
+Definition getMetaFromSinNat lgn s :=
+  getMetaFromSin string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
+                 (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.
