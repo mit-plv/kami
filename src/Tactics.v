@@ -1,5 +1,5 @@
 Require Import Bool String List Eqdep.
-Require Import Lib.CommonTactics Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
+Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.ParametricWf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
@@ -22,6 +22,7 @@ Set Implicit Arguments.
   + kdisj_regs : prove DisjList conditions of regs
   + kdisj_dms : prove DisjList conditions of dms
   + kdisj_cms : prove DisjList conditions of cms
+  + knodup_regs : prove (NoDup regs), where _regs_ are names of registers
   + kdef_call_sub : prove DefCallSub conditions
   + kinline_compute : compute terms with _inlineF_
   + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
@@ -374,6 +375,21 @@ Ltac kdisj_cms_dms :=
   |cms_bound_tac
   |dms_bound_tac].
 
+Ltac knodup_regs :=
+  repeat (* Separating NoDup proofs by small modules *)
+    match goal with
+    | [ |- NoDup (namesOf (getRegInits _)) ] =>
+      progress (unfold getRegInits; fold getRegInits)
+    | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
+    | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
+    | [ |- NoDup (namesOf (getRegInits ?m)) ] => unfold_head m
+    end;
+  repeat
+    match goal with
+    | _ => apply noDup_metaRegs
+    | _ => noDup_tac
+    end.
+
 Ltac kinteracting := repeat split.
 
 Ltac knoninteracting :=
@@ -687,50 +703,3 @@ Ltac kinv_or3 :=
     | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
     end.
 
-
-Section BoolListReflection.
-  Variable A: Type.
-  Variable f: A -> bool.
-
-  Definition evalBoolList ls := fold_left (fun b a => b && f a) ls true.
-
-  Lemma fold_left_true ls: forall v, fold_left (fun b a => b && f a) ls v = true -> v = true.
-  Proof.
-    induction ls; simpl in *; intros; auto.
-    specialize (IHls _ H).
-    destruct v; auto.
-  Qed.
-
-  Lemma fold_left_and_true ls: forall v1 v2,
-                                 fold_left (fun b a => b && f a) ls (v1 && v2) = true ->
-                                 v2 = true /\ fold_left (fun b a => b && f a) ls v1 = true.
-  Proof.
-    induction ls; simpl in *; intros; auto.
-    destruct v1, v2; auto.
-    assert (v1 && v2 && f a = (v1 && f a) && v2) by (destruct v1, v2, (f a); auto).
-    rewrite H0 in H.
-    specialize (IHls _ _ H); dest; auto.
-  Qed.
-
-  Lemma evalBoolList_cons ls: forall a, evalBoolList (a :: ls) = true ->
-                                        f a = true /\ evalBoolList ls = true.
-  Proof.
-    unfold evalBoolList.
-    induction ls; auto; intros; simpl in *.
-    pose proof (fold_left_true _ _ H).
-    apply andb_true_iff in H0; dest.
-    apply fold_left_and_true in H; dest.
-    constructor; auto; subst.
-    rewrite H1.
-    specialize (IHls _ H2); dest.
-    auto.
-  Qed.
-  
-  Lemma boolListReflection ls: evalBoolList ls = true -> forall x, In x ls -> f x = true.
-  Proof.
-    induction ls; simpl in *; auto; intros; simpl in *.
-    apply evalBoolList_cons in H; dest.
-    destruct H0; subst; auto.
-  Qed.
-    
-End BoolListReflection.    

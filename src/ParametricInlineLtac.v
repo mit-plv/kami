@@ -1,4 +1,5 @@
-Require Import ParametricInline List ParametricSyntax String Syntax Lib.CommonTactics Tactics.
+Require Import ParametricInline List ParametricSyntax String Syntax
+        Lib.CommonTactics Lib.Reflection Tactics.
 
 Fixpoint findDm dm pre ls :=
   match ls with

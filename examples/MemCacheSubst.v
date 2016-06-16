@@ -9,83 +9,6 @@ Require Import Ex.MemCache.
 
 Set Implicit Arguments.
 
-Ltac knodup_regs :=
-  repeat (* Separating NoDup proofs by small modules *)
-    match goal with
-    | [ |- NoDup (namesOf (getRegInits _)) ] =>
-      progress (unfold getRegInits; fold getRegInits)
-    | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
-    | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
-    | [ |- NoDup (namesOf (getRegInits ?m)) ] => unfold_head m
-    end;
-  repeat
-    match goal with
-    | _ => apply noDup_metaRegs
-    | _ => noDup_tac
-    end.
-
-Lemma getCalls_flattened:
-  forall m,
-    getCalls (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) =
-    getCalls m.
-Proof. reflexivity. Qed.
-
-Lemma getDefs_flattened:
-  forall m,
-    getDefs (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) =
-    getDefs m.
-Proof. reflexivity. Qed.
-
-Lemma getDefs_sinModule_eq':
-  forall n sm1 sm2,
-    map (fun dm => nameVal (methName dm)) sm1 =
-    map (fun dm => nameVal (methName dm)) sm2 ->
-    namesOf
-      (Concat.concat
-         (map getListFromMetaMeth
-              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
-                          Indexer.withIndex_index_eq (getNatListToN_NoDup
-                                                        (Word.wordToNat (Word.wones n))) 
-                          sm1))) =
-    namesOf
-      (Concat.concat
-         (map getListFromMetaMeth
-              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
-                          Indexer.withIndex_index_eq (getNatListToN_NoDup
-                                                        (Word.wordToNat (Word.wones n))) 
-                          sm2))).
-Proof.
-  induction sm1; intros; [destruct sm2; [auto|inv H]|].
-  destruct sm2; [inv H|].
-  inv H. specialize (IHsm1 _ H2).
-  destruct a as [sig1 n1], s as [sig2 n2]; simpl in *.
-  do 2 rewrite namesOf_app; f_equal; auto.
-
-  rewrite H1; clear.
-  induction (getNatListToN (Word.wordToNat (Word.wones n))); simpl; [reflexivity|].
-  f_equal; auto.
-Qed.
-
-Lemma getDefs_sinModule_eq:
-  forall sm1 sm2 n,
-    map (fun dm => nameVal (methName dm)) (sinMeths sm1) =
-    map (fun dm => nameVal (methName dm)) (sinMeths sm2) ->
-    getDefs (modFromMeta (getMetaFromSinNat n sm1)) =
-    getDefs (modFromMeta (getMetaFromSinNat n sm2)).
-Proof.
-  intros; apply getDefs_sinModule_eq'; auto.
-Qed.
-
-Lemma getDefs_modFromMeta_app:
-  forall mm1 mm2,
-    getDefs (modFromMeta (mm1 +++ mm2)) =
-    getDefs (modFromMeta mm1) ++ getDefs (modFromMeta mm2).
-Proof.
-  destruct mm1 as [? ? dm1], mm2 as [? ? dm2]; intros.
-  unfold getDefs, modFromMeta; simpl.
-  rewrite map_app, Concat.concat_app, namesOf_app; auto.
-Qed.
-
 (* fifo/nativeFifo facts *)
 
 Lemma getDefs_fifo_nativeFifo:
@@ -182,9 +105,9 @@ Section Refinement.
       + kvr.
       + kvr.
       + kvr.
-      + admit. (* EquivList *)
-      + admit.
-      + admit.
+      + admit. (* getRegInits EquivList *) 
+      + admit. (* getRules EquivList *)
+      + admit. (* getDefsBodies EquivList *)
 
       + admit. (* Real substitution proof -- from fifos to nativeFifos *)
 

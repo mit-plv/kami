@@ -292,7 +292,51 @@ Section Facts.
       simpl; apply validRegsDms_app; auto.
       apply validRegsMetaMeth_validRegsDms; auto.
   Qed.
-  
+
+  Lemma validRegsSinAction_regs_weakening:
+    forall regs eregs {ty retK} (a: SinActionT ty retK),
+      ValidRegsSinAction regs a ->
+      SubList regs eregs ->
+      ValidRegsSinAction eregs a.
+  Proof.
+    induction 1; simpl; intros; try (econstructor; eauto).
+  Qed.
+
+  Lemma validRegsGenAction_regs_weakening:
+    forall {A} (strA: A -> string) ls regs eregs {ty genK retK} (a: GenActionT genK ty retK),
+      ValidRegsGenAction regs strA ls a ->
+      SubList regs eregs ->
+      ValidRegsGenAction eregs strA ls a.
+  Proof.
+    induction 1; simpl; intros; try (econstructor; eauto).
+  Qed.
+
+  Lemma validRegsMetaRules_regs_weakening:
+    forall ty regs eregs rules,
+      ValidRegsMetaRules ty regs rules ->
+      SubList regs eregs ->
+      ValidRegsMetaRules ty eregs rules.
+  Proof.
+    induction rules; simpl; intros; [constructor|].
+    inv H; constructor; auto.
+    destruct a as [a|a]; unfold ValidRegsMetaRule in *.
+    - eapply validRegsSinAction_regs_weakening; eauto.
+    - eapply validRegsGenAction_regs_weakening; eauto.
+  Qed.
+
+  Lemma validRegsMetaMeths_regs_weakening:
+    forall ty regs eregs meths,
+      ValidRegsMetaMeths ty regs meths ->
+      SubList regs eregs ->
+      ValidRegsMetaMeths ty eregs meths.
+  Proof.
+    induction meths; simpl; intros; [constructor|].
+    inv H; constructor; auto.
+    destruct a as [a|a]; unfold ValidRegsMetaMeth in *; intros.
+    - eapply validRegsSinAction_regs_weakening; eauto.
+    - eapply validRegsGenAction_regs_weakening; eauto.
+  Qed.
+   
   Lemma validRegsMetaModule_modular:
     forall ty mm1 mm2,
       ValidRegsMetaModule ty mm1 ->
@@ -300,7 +344,17 @@ Section Facts.
       ValidRegsMetaModule ty (mm1 +++ mm2).
   Proof.
     destruct mm1 as [regs1 rules1 dms1], mm2 as [regs2 rules2 dms2].
-    simpl; intros; dest; split; admit.
+    simpl; intros; dest; split.
+    - apply validRegsMetaRules_app.
+      + eapply validRegsMetaRules_regs_weakening; eauto.
+        apply SubList_app_1, SubList_refl.
+      + eapply validRegsMetaRules_regs_weakening; eauto.
+        apply SubList_app_2, SubList_refl.
+    - apply validRegsMetaMeths_app.
+      + eapply validRegsMetaMeths_regs_weakening; eauto.
+        apply SubList_app_1, SubList_refl.
+      + eapply validRegsMetaMeths_regs_weakening; eauto.
+        apply SubList_app_2, SubList_refl.
   Qed.
 
 End Facts.

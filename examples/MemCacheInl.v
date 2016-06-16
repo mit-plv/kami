@@ -1,6 +1,6 @@
 Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
 Require Import Lts.ParametricEquiv Lts.ParametricInline Lts.ParametricInlineLtac String.
-Require Import Lts.ParametricSyntax Lib.CommonTactics Lts.Tactics.
+Require Import Lts.ParametricSyntax Lib.CommonTactics Lib.Reflection Lts.Tactics.
 
 Set Implicit Arguments.
 

@@ -610,6 +610,18 @@ Proof.
   - apply SubList_app_2, getExtCalls_getCalls.
 Qed.
 
+Lemma getCalls_flattened:
+  forall m,
+    getCalls (Mod (getRegInits m) (getRules m) (getDefsBodies m)) =
+    getCalls m.
+Proof. reflexivity. Qed.
+
+Lemma getDefs_flattened:
+  forall m,
+    getDefs (Mod (getRegInits m) (getRules m) (getDefsBodies m)) =
+    getDefs m.
+Proof. reflexivity. Qed.
+
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
