@@ -45,67 +45,6 @@ Section MemCacheInl.
   Ltac ssNoFilt dm r := noFilt inlineSinDmSinRule_NoFilt dm r.
 
   
-  Ltac ggNoFilt dm r :=
-    match goal with
-      | mRef:
-          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                      <<== modFromMeta ?m,
-          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineGenDmGenRule_NoFilt m mEquiv dm r;
-          match goal with
-            | m'Ref:
-                modFromMeta ?m <<== modFromMeta ?m',
-                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                let newm := fresh in
-                pose m' as newm;
-                  fold newm in m'Ref;
-                  fold newm in m'Equiv;
-                  simpl in newm; clear m mEquiv
-          end
-  end.
-
-  Ltac gsNoFilt dm r :=
-    match goal with
-      | mRef:
-          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                      <<== modFromMeta ?m,
-          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineSinDmGenRule_NoFilt m mEquiv dm r;
-          match goal with
-            | m'Ref:
-                modFromMeta ?m <<== modFromMeta ?m',
-                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                let newm := fresh in
-                pose m' as newm;
-                  fold newm in m'Ref;
-                  fold newm in m'Equiv;
-                  simpl in newm; clear m mEquiv
-          end
-    end.
-
-  Ltac ssNoFilt dm r :=
-    match goal with
-      | mRef:
-          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                      <<== modFromMeta ?m,
-          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineSinDmSinRule_NoFilt m mEquiv dm r;
-          match goal with
-            | m'Ref:
-                modFromMeta ?m <<== modFromMeta ?m',
-                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                let newm := fresh in
-                pose m' as newm;
-                  fold newm in m'Ref;
-                  fold newm in m'Equiv;
-                  simpl in newm; clear m mEquiv
-          end
-  end.
-
-
   
   Ltac simplifyMod :=
     match goal with
@@ -132,13 +71,13 @@ Section MemCacheInl.
           fold newm in mEquiv
     end.
   
-  Ltac ggFilt dm r :=
+  Ltac filt ltac dm r :=
     match goal with
       | mRef:
           modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
                       <<== modFromMeta ?m,
           mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineGenDmGenRule_Filt m mEquiv dm r;
+        ltac m mEquiv dm r;
           match goal with
             | m'Ref:
                 modFromMeta ?m <<== modFromMeta ?m',
@@ -152,54 +91,15 @@ Section MemCacheInl.
           end
     end; simplifyMod.
 
-  Ltac gsFilt dm r :=
-    match goal with
-      | mRef:
-          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                      <<== modFromMeta ?m,
-          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineSinDmGenRule_Filt m mEquiv dm r;
-          match goal with
-            | m'Ref:
-                modFromMeta ?m <<== modFromMeta ?m',
-                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                let newm := fresh in
-                pose m' as newm;
-                  fold newm in m'Ref;
-                  fold newm in m'Equiv;
-                  simpl in newm; clear m mEquiv
-          end
-    end; simplifyMod.
+  Ltac ggFilt dm r := filt inlineGenDmGenRule_Filt dm r.
+  Ltac gsFilt dm r := filt inlineSinDmGenRule_Filt dm r.
+  Ltac ssFilt dm r := filt inlineSinDmSinRule_Filt dm r.
 
-  Ltac ssFilt dm r :=
-    match goal with
-      | mRef:
-          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                      <<== modFromMeta ?m,
-          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-        inlineSinDmSinRule_Filt m mEquiv dm r;
-          match goal with
-            | m'Ref:
-                modFromMeta ?m <<== modFromMeta ?m',
-                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                let newm := fresh in
-                pose m' as newm;
-                  fold newm in m'Ref;
-                  fold newm in m'Equiv;
-                  simpl in newm; clear m mEquiv
-          end
-    end; simplifyMod.
-
-
-(*  
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
-*)
   
-  Definition nmemCacheInl:
+  Definition nmemCacheInl':
     {m: MetaModule &
        (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
                                LgDataBytes Id FifoSize) <<== modFromMeta m) /\
@@ -220,7 +120,7 @@ Section MemCacheInl.
     assert (mRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
                                 <<== modFromMeta m) by
         (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
-    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
+    assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by kequiv.
 
     ssNoFilt "read.mline" "hit".
     simplifyMod; ssFilt "read.mline" "deferred".
@@ -308,8 +208,33 @@ Section MemCacheInl.
     ggFilt "deq.rsToParent" "rsFromCToP".
     ggFilt "enq.fromParent" "fromPToC".
 
-    admit.
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        exact (existT _ m (conj mRef mEquiv))
+    end.
   Defined.
+
+  Definition nmemCacheInl := projT1 nmemCacheInl'.
+
+  Theorem nmemCacheInl_refines:
+    modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                           LgDataBytes Id FifoSize) <<== modFromMeta nmemCacheInl.
+  Proof.
+    pose proof (projT2 nmemCacheInl') as sth.
+    destruct sth.
+    assumption.
+  Qed.
+
+  Theorem nmemCacheInl_equiv:
+    forall ty, MetaModEquiv ty typeUT nmemCacheInl.
+  Proof.
+    pose proof (projT2 nmemCacheInl') as sth.
+    destruct sth.
+    assumption.
+  Qed.
 
   Close Scope string.
 End MemCacheInl.
