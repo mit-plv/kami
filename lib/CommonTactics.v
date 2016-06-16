@@ -112,24 +112,6 @@ Ltac destruct_existT :=
              (apply Eqdep.EqdepTheory.inj_pair2 in H; subst)
          end.
 
-Fixpoint noDupStr (l: list string) :=
-  match l with
-  | nil => true
-  | h :: t =>
-    if in_dec string_dec h t then false else noDupStr t
-  end.
-
-Lemma noDupStr_NoDup:
-  forall l, noDupStr l = true -> NoDup l.
-Proof.
-  induction l; simpl; intros; [constructor|].
-  destruct (in_dec string_dec _ _); [inv H|].
-  constructor; auto.
-Qed.
-
-Ltac noDup_tac :=
-  vm_compute; apply noDupStr_NoDup; reflexivity.
-
 Notation "'nosimpl' t" := (match tt with tt => t end) (at level 10).
 
 Notation Yes := (left _).

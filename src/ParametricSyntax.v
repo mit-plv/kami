@@ -1446,65 +1446,57 @@ Section SinModuleToMeta.
        metaMeths := methsToRep (sinMeths m) |}.
 End SinModuleToMeta.
 
-(*
-  (*
-  Definition convNameRecR (name: NameRec) :=
-    {| isRep := true; nameRec := name |}.
+Definition getMetaFromSinNat lgn s :=
+  getMetaFromSin string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
+                 (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.
 
-  Fixpoint convSinToGenTR ty {GenK k} (a: SinActionT ty k): GenActionT GenK ty k :=
-    match a with
-    | SMCall name sig ar cont => GMCall (convNameRecR name) sig ar
-                                        (fun a => convSinToGen GenK (cont a))
-    | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen GenK (cont a))
-    | SReadReg reg k cont => GReadReg (convNameRecR reg) k
-                                      (fun a => convSinToGen GenK (cont a))
-    | SWriteReg reg _ e cont => GWriteReg (convNameRecR reg) e (convSinToGen GenK cont)
-    | SIfElse ce _ ta fa cont => GIfElse ce (convSinToGen GenK ta) (convSinToGen GenK fa)
-                                         (fun a => convSinToGen GenK (cont a))
-    | SAssert_ ae cont => GAssert_ ae (convSinToGen GenK cont)
-    | SReturn e => GReturn _ e
-    end.
-   *)
+Lemma getDefs_sinModule_eq':
+  forall n sm1 sm2,
+    map (fun dm => nameVal (methName dm)) sm1 =
+    map (fun dm => nameVal (methName dm)) sm2 ->
+    namesOf
+      (Concat.concat
+         (map getListFromMetaMeth
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup
+                                                        (Word.wordToNat (Word.wones n))) 
+                          sm1))) =
+    namesOf
+      (Concat.concat
+         (map getListFromMetaMeth
+              (methsToRep Indexer.string_of_nat Indexer.string_of_nat_into (natToWordConst n)
+                          Indexer.withIndex_index_eq (getNatListToN_NoDup
+                                                        (Word.wordToNat (Word.wones n))) 
+                          sm2))).
+Proof.
+  induction sm1; intros; [destruct sm2; [auto|inv H]|].
+  destruct sm2; [inv H|].
+  inv H. specialize (IHsm1 _ H2).
+  destruct a as [sig1 n1], s as [sig2 n2]; simpl in *.
+  do 2 rewrite namesOf_app; f_equal; auto.
 
-  Definition convSinToGenR {GenK k} (a: SinAction k): GenAction GenK k :=
-    fun ty => (convSinToGen true _ (a ty)).
+  rewrite H1; clear.
+  induction (getNatListToN (Word.wordToNat (Word.wones n))); simpl; [reflexivity|].
+  f_equal; auto.
+Qed.
 
-  Definition convSinToGenM {GenK k} (a: SinMethodT k): GenMethodT GenK k :=
-    fun ty ar => (convSinToGen true _ (a ty ar)).
+Lemma getDefs_sinModule_eq:
+  forall sm1 sm2 n,
+    map (fun dm => nameVal (methName dm)) (sinMeths sm1) =
+    map (fun dm => nameVal (methName dm)) (sinMeths sm2) ->
+    getDefs (modFromMeta (getMetaFromSinNat n sm1)) =
+    getDefs (modFromMeta (getMetaFromSinNat n sm2)).
+Proof.
+  intros; apply getDefs_sinModule_eq'; auto.
+Qed.
 
-  Fixpoint rulesToRep (ls: list MetaRule) :=
-    match ls with
-    | nil => nil
-    | OneRule r name :: ls' =>
-      RepRule string_of_nat
-              string_of_nat_into
-              natToVoid
-              withIndex_index_eq
-              (convSinToGenR r)
-              name
-              (getNatListToN_NoDup n) :: rulesToRep ls'
-    | l :: ls' => l :: rulesToRep ls'
-    end.
+Lemma getDefs_modFromMeta_app:
+  forall mm1 mm2,
+    getDefs (modFromMeta (mm1 +++ mm2)) =
+    getDefs (modFromMeta mm1) ++ getDefs (modFromMeta mm2).
+Proof.
+  destruct mm1 as [? ? dm1], mm2 as [? ? dm2]; intros.
+  unfold getDefs, modFromMeta; simpl.
+  rewrite map_app, Concat.concat_app, namesOf_app; auto.
+Qed.
 
-  Fixpoint methsToRep (ms: list MetaMeth) :=
-    match ms with
-    | nil => nil
-    | OneMeth dm name :: ms' =>
-      RepMeth string_of_nat
-              string_of_nat_into
-              natToVoid
-              withIndex_index_eq
-              (existT _ (projT1 dm) (convSinToGenM (projT2 dm)))
-              name
-              (getNatListToN_NoDup n) :: methsToRep ms'
-    | mm :: ms' => mm :: methsToRep ms'
-    end.
-
-  Definition metaModuleToRep (m: MetaModule) :=
-    {| metaRegs := regsToRep (metaRegs m);
-       metaRules := rulesToRep (metaRules m);
-       metaMeths := methsToRep (metaMeths m) |}.
-
-End MetaModuleToRep.
-
-*)
