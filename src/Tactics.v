@@ -214,11 +214,11 @@ Ltac kvr_unit :=
   (* for meta modules *)
   | [ |- ValidRegsMetaModule _ _ ] => constructor; intros
   | [ |- ValidRegsMetaRules _ _ _ ] => constructor; intros
-  | [ |- ValidRegsMetaRule _ _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaRule _ _ _ ] => econstructor; intros
   | [ |- ValidRegsMetaMeths _ _ _ ] => constructor; intros
-  | [ |- ValidRegsMetaMeth _ _ _ ] => constructor; intros
-  | [ |- ValidRegsSinAction _ _ ] => constructor; intros
-  | [ |- ValidRegsGenAction _ _ ] => constructor; intros
+  | [ |- ValidRegsMetaMeth _ _ _ ] => econstructor; intros
+  | [ |- ValidRegsSinAction _ _ ] => econstructor; intros
+  | [ |- ValidRegsGenAction _ _ _ _ ] => econstructor; intros
   | [ |- In _ _] => simpl; tauto
   end.
 
