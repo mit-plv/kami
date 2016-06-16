@@ -12,7 +12,7 @@ Section ValidRegs.
   Variable type: Kind -> Type.
 
   Section Regs.
-    Variable regs: list string.
+    Variable regs: list NameRecIdx.
 
     Inductive ValidRegsSinAction:
       forall {retT}, SinActionT type retT -> Prop :=
@@ -26,12 +26,12 @@ Section ValidRegs.
           ValidRegsSinAction (SLet_ (lretT':= argT) (lretT:= retT) ar cont)
     | SVRReadReg:
         forall {retT} reg k cont,
-          In (nameVal reg) regs ->
+          In {| isRep:= false; nameRec:= reg |} regs ->
           (forall t, ValidRegsSinAction (cont t)) ->
           ValidRegsSinAction (SReadReg (lretT:= retT) reg k cont)
     | SVRWriteReg:
         forall {writeT retT} reg e cont,
-          In (nameVal reg) regs ->
+          In {| isRep:= false; nameRec:= reg|} regs ->
           ValidRegsSinAction cont ->
           ValidRegsSinAction (SWriteReg (k:= writeT) (lretT:= retT)
                                         reg e cont)
@@ -69,12 +69,12 @@ Section ValidRegs.
             ValidRegsGenAction (GLet_ (lretT':= argT) (lretT:= retT) ar cont)
       | GVRReadReg:
           forall {retT} reg k cont,
-            In (nameVal (nameRec reg)) regs ->
+            In reg regs ->
             (forall t, ValidRegsGenAction (cont t)) ->
             ValidRegsGenAction (GReadReg (lretT:= retT) reg k cont)
       | GVRWriteReg:
           forall {writeT retT} reg e cont,
-            In (nameVal (nameRec reg)) regs ->
+            In reg regs ->
             ValidRegsGenAction cont ->
             ValidRegsGenAction (GWriteReg (k:= writeT) (lretT:= retT)
                                           reg e cont)
@@ -143,9 +143,15 @@ Section ValidRegs.
 
   End Regs.
 
+  Definition getMetaRegNameIdx m :=
+    match m with
+    | OneReg b s => {| isRep:= false; nameRec:= s |}
+    | RepReg _ _ _ _ _ s _ _ => {| isRep:= true; nameRec:= s |}
+    end.
+
   Fixpoint ValidRegsMetaModule (mm: MetaModule): Prop :=
-    ValidRegsMetaRules (map getMetaRegName (metaRegs mm)) (metaRules mm) /\
-    ValidRegsMetaMeths (map getMetaRegName (metaRegs mm)) (metaMeths mm).
+    ValidRegsMetaRules (map getMetaRegNameIdx (metaRegs mm)) (metaRules mm) /\
+    ValidRegsMetaMeths (map getMetaRegNameIdx (metaRegs mm)) (metaMeths mm).
 
 End ValidRegs.
 
@@ -160,7 +166,6 @@ Section Facts.
     - clear -H; induction rules; [constructor|]; inv H.
       simpl; apply validRegsRules_app; auto.
       admit.
-
     - clear -H0; induction dms; [constructor|]; inv H0.
       simpl; apply validRegsDms_app; auto.
       admit.
