@@ -13,14 +13,13 @@ Section MemCache.
 
   Variable FifoSize: nat.
   Variable LgNumChildren: nat.
-  Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
 
-  Definition l1Cache := getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
-  Definition l1cs := getMetaFromSinNat n (@regFileS "cs"%string IdxBits Msi Default eq_refl).
+  Definition l1Cache := getMetaFromSinNat LgNumChildren (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id).
+  Definition l1cs := getMetaFromSinNat LgNumChildren (@regFileS "cs"%string IdxBits Msi Default eq_refl).
   Definition l1tag :=
-    getMetaFromSinNat n (@regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl).
+    getMetaFromSinNat LgNumChildren (@regFileS "tag"%string IdxBits (L1Cache.Tag TagBits) Default eq_refl).
   Definition l1line :=
-    getMetaFromSinNat n (@regFileS "line"%string IdxBits
+    getMetaFromSinNat LgNumChildren (@regFileS "line"%string IdxBits
                                   (L1Cache.Line LgNumDatas LgDataBytes) Default eq_refl).
 
   Definition l1 := l1Cache +++ (l1cs +++ l1tag +++ l1line).
@@ -28,21 +27,21 @@ Section MemCache.
   Definition MIdxBits := TagBits + IdxBits.
 
   Definition fifoRqFromProc :=
-    getMetaFromSinNat n
+    getMetaFromSinNat LgNumChildren
                       (fifoS "rqFromProc" (rsz FifoSize)
                              (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes) eq_refl).
   Definition fifoRsToProc :=
     getMetaFromSinNat
-      n (simpleFifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl).
+      LgNumChildren (simpleFifoS "rsToProc" (rsz FifoSize) (RsToProc LgDataBytes) eq_refl).
   Definition fifoRqToP :=
     getMetaFromSinNat
-      n (simpleFifoS "rqToParent" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
+      LgNumChildren (simpleFifoS "rqToParent" (rsz FifoSize) (RqToP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
   Definition fifoRsToP :=
     getMetaFromSinNat
-      n (simpleFifoS "rsToParent" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl).
+      LgNumChildren (simpleFifoS "rsToParent" (rsz FifoSize) (RsToP MIdxBits LgNumDatas LgDataBytes) eq_refl).
   Definition fifoFromP :=
     getMetaFromSinNat
-      n (simpleFifoS "fromParent" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
+      LgNumChildren (simpleFifoS "fromParent" (rsz FifoSize) (FromP MIdxBits LgNumDatas LgDataBytes Id) eq_refl).
 
   Definition l1C :=
     l1 +++ (fifoRqFromProc +++ fifoRsToProc +++ fifoRqToP +++ fifoRsToP +++ fifoFromP).
@@ -89,32 +88,31 @@ Section MemCacheNativeFifo.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
-  Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
 
   Definition nfifoRqFromProc :=
-    getMetaFromSinNat n (@nativeFifoS "rqFromProc"
+    getMetaFromSinNat LgNumChildren (@nativeFifoS "rqFromProc"
                                       (RqFromProc IdxBits TagBits LgNumDatas LgDataBytes)
                                       Default eq_refl).
   Definition nfifoRsToProc :=
-    getMetaFromSinNat n (@nativeSimpleFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl).
+    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "rsToProc" (RsToProc LgDataBytes) Default eq_refl).
   Definition nfifoRqToP :=
-    getMetaFromSinNat n (@nativeSimpleFifoS "rqToParent"
+    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "rqToParent"
                                             (RqToP (MIdxBits IdxBits TagBits)
                                                    LgNumDatas LgDataBytes Id)
                                             Default eq_refl).
   Definition nfifoRsToP :=
-    getMetaFromSinNat n (@nativeSimpleFifoS "rsToParent"
+    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "rsToParent"
                                             (RsToP (MIdxBits IdxBits TagBits)
                                                    LgNumDatas LgDataBytes)
                                             Default eq_refl).
   Definition nfifoFromP :=
-    getMetaFromSinNat n (@nativeSimpleFifoS "fromParent"
+    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "fromParent"
                                             (FromP (MIdxBits IdxBits TagBits)
                                                    LgNumDatas LgDataBytes Id)
                                             Default eq_refl).
 
   Definition nl1C :=
-    (l1 IdxBits TagBits LgNumDatas LgDataBytes Id n)
+    (l1 IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren)
       +++ (nfifoRqFromProc +++ nfifoRsToProc +++ nfifoRqToP +++ nfifoRsToP +++ nfifoFromP).
 
   Definition nfifoRqFromC :=

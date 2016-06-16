@@ -1,6 +1,6 @@
 Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
 Require Import Lts.ParametricEquiv Lts.ParametricInline Lts.ParametricInlineLtac String.
-Require Import Lts.ParametricSyntax Lib.CommonTactics Lts.Tactics List.
+Require Import Lts.ParametricSyntax Lib.CommonTactics Lts.Tactics.
 
 Set Implicit Arguments.
 
@@ -102,9 +102,9 @@ Section MemCacheInl.
     repeat autounfold with ModuleDefs in m;
     cbv [makeMetaModule getMetaFromSinNat makeSinModule getMetaFromSin
                         sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
-                        convSinToGen concatMetaMod Indexer.withPrefix app metaRegs
+                        convSinToGen concatMetaMod app metaRegs
                         metaRules metaMeths] in m.
-
+    repeat unfold Indexer.withPrefix in m.
     (*
     simpl in m; unfold concatMetaMod in m; simpl in m; unfold Indexer.withPrefix in m;
     simpl in m.
@@ -167,27 +167,34 @@ Section MemCacheInl.
     ggNoFilt "enq.rsToParent" "writeback".
     simplifyMod; ggFilt "enq.rsToParent" "pProcess".
 
-    (*
-    ggNoFilt "deq.rqToParent" "rqFromCToP".
 
-    
+    Require Import List.
     assert (noDupMeth: NoDup (map getMetaMethName (metaMeths H))) by
         (subst; simpl; clear; noDup_tac);
     assert (noDupRule: NoDup (map getMetaRuleName (metaRules H))) by
         (subst; simpl; clear; noDup_tac).
 
     let dmTriple := eval simpl in (findDm "deq.rqToParent" nil (metaMeths H)) in
-        pose dmTriple.
-    
-    let rTriple := eval simpl in (findR "rqFromCToP" nil (metaRules H)) in
-        pose rTriple.
+        let rTriple := eval simpl in (findR "rqFromCToP" nil (metaRules H)) in
             match dmTriple with
               | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
                                        ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
                 match rTriple with
                   | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
                                           ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                    idtac
+                    pose bdm;
+                    let m'Ref := fresh in
+                    let m'Equiv := fresh in
+                    pose proof (@inlineGenGenDmToRule_traceRefines_NoFilt
+                                  H A strA goodFn GenK getConstK goodFn2) (*
+                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                  sufR eq_refl noDupMeth noDupRule);
+                      pose proof (@inlineGenGenDmToRule_ModEquiv_NoFilt
+                                    H H8 A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule);
+                    clear noDupMeth noDupRule *)
+                                  
                 end
             end.
     
@@ -419,7 +426,7 @@ reflexivity.
                         (*(let isIn := fresh in
                          intros ? ? ? ? ? ? ? ? ? ? isIn;
                          repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
-                         destruct isIn);
+                         destruct isIn); *)
 
     
     intros ? ? ? ? ? ? ? ? ? ? isIn; simpl in isIn.
