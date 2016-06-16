@@ -282,9 +282,120 @@ Ltac inlineSinDmGenRule_Filt m mEquiv dm r :=
                                       m mEquiv A strA goodFn GenK getConstK goodFn2
                                       bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
                                       sufR eq_refl noDupMeth noDupRule H4);
+                        clear noDupMeth noDupRule H3 H4 H5 H6
+                end
+            end.
+
+Ltac inlineSinDmSinRule_NoFilt m mEquiv dm r :=
+  let noDupMeth := fresh in
+  let noDupRule := fresh in
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+      (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac);
+    let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR r nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @OneRule ?bdr ?rn, ?sufR) =>
+                    let m'Ref := fresh in
+                    let m'Equiv := fresh in
+                    pose proof (@inlineSinSinDmToRule_traceRefines_NoFilt
+                                  m
+                                  bdm dmn preDm sufDm eq_refl bdr rn preR
+                                  sufR eq_refl noDupMeth noDupRule);
+                      pose proof (@inlineSinSinDmToRule_ModEquiv_NoFilt
+                                    m mEquiv
+                                    bdm dmn preDm sufDm eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule);
+                      clear noDupMeth noDupRule
+                end
+            end.
+
+
+Ltac inlineSinDmSinRule_Filt m mEquiv dm r :=
+  let noDupMeth := fresh in
+  let noDupRule := fresh in
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+      (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac);
+    let dmTriple := eval simpl in (findDm dm nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR r nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @OneRule ?bdr ?rn, ?sufR) =>
+                    let H3 := fresh in
+                    let H4 := fresh in
+                    let H5 := fresh in
+                    assert
+                      (H3:
+                         forall r',
+                           In r' (preR ++ sufR) ->
+                           match r' with
+                             | OneRule bgenB _ =>
+                               noCallDmSigSinA (bgenB typeUT) dmn (projT1 bdm)
+                             | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+                               noCallDmSigGenA (bgenB typeUT)
+                                               {| isRep := false; nameRec := dmn |}
+                                               (projT1 bdm)
+                           end = true) by
+                        (intro;
+                         apply boolListReflection with
+                         (f := (fun r' =>
+                                  match r' with
+                                    | OneRule bgenB _ =>
+                                      noCallDmSigSinA (bgenB typeUT) dmn (projT1 bdm)
+                                    | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+                                      noCallDmSigGenA (bgenB typeUT)
+                                                      {| isRep := false; nameRec := dmn |}
+                                                      (projT1 bdm)
+                                  end)); apply eq_refl);
+                      assert
+                        (H4:
+                           forall dm',
+                             In dm' (metaMeths m) ->
+                             match dm' with
+                               | OneMeth bgenB _ =>
+                                 noCallDmSigSinA (projT2 bgenB typeUT tt) dmn (projT1 bdm)
+                               | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+                                 noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                 {| isRep := false; nameRec := dmn |}
+                                                 (projT1 bdm)
+                             end = true) by
+                        (intro;
+                         apply boolListReflection with
+                         (f := (fun dm' =>
+                                  match dm' with
+                                    | OneMeth bgenB _ =>
+                                      noCallDmSigSinA (projT2 bgenB typeUT tt) dmn (projT1 bdm)
+                                    | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+                                      noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                      {| isRep := false; nameRec := dmn |}
+                                                      (projT1 bdm)
+                                  end)); apply eq_refl);
+                      assert
+                        (H5: exists call : NameRec,
+                               In call (getCallsSinA (bdr typeUT)) /\
+                               nameVal call = nameVal dmn) by
+                          (eexists {| nameVal := nameVal dmn;
+                                      goodName := _ |};
+                           split; [
+                             simpl; tauto | reflexivity]);
+                      pose proof (@inlineSinSinDmToRule_traceRefines_Filt'
+                                    m mEquiv
+                                    bdm dmn preDm sufDm eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule H3 H4 H5);
+                        pose proof (@inlineSinSinDmToRule_ModEquiv_Filt'
+                                      m mEquiv
+                                      bdm dmn preDm sufDm eq_refl bdr rn preR
+                                      sufR eq_refl noDupMeth noDupRule H4);
                         clear noDupMeth noDupRule H3 H4 H5
                 end
             end.
+
 
 
 (*
