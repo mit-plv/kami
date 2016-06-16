@@ -23,7 +23,7 @@ Section ProcMem.
   Variable execNextPc: ExecNextPcT 2 AddrSize LgDataBytes RfIdx.
 
   Variable LgNumChildren: nat.
-  Local Notation "'n'" := wordToNat (wones LgNumChildren).
+  Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
 
   Definition pdecN := pdecs dec execState execNextPc n.
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren. 
