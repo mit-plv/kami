@@ -30,9 +30,9 @@ Section ChildParent.
   Definition rsFromCEnq := MethodSig "rsFromChild"--"enq" (RsFromC): Void.
 
   Definition toCPop := MethodSig "toChild"--"deq" (Void): ToC.
-  Definition fromPEnq := MethodSig "fromParent"--"deq" (FromP): Void.
+  Definition fromPEnq := MethodSig "fromParent"--"enq" (FromP): Void.
 
-  Definition n := wordToNat (wones LgNumChildren).
+  Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
   Definition childParent :=
     META {
       Repeat Rule till n with LgNumChildren by "rqFromCToP" :=
@@ -59,7 +59,7 @@ End ChildParent.
 
 Hint Unfold AddrBits Addr Idx Data Offset Line : MethDefs.
 Hint Unfold RqToP RqFromC RsToP RsFromC FromP ToC : MethDefs.
-Hint Unfold rqToPPop rqFromCEnq rsToPPop rsFromCEnq toCPop fromPEnq n : MethDefs.
+Hint Unfold rqToPPop rqFromCEnq rsToPPop rsFromCEnq toCPop fromPEnq : MethDefs.
 
 Hint Unfold childParent : ModuleDefs.
 

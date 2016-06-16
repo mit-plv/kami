@@ -42,6 +42,28 @@ Section MemCacheInl.
           end
   end.
 
+  Ltac gsNoFilt dm r :=
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        inlineSinDmGenRule_NoFilt m mEquiv dm r;
+          match goal with
+            | m'Ref:
+                modFromMeta ?m <<== modFromMeta ?m',
+                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
+                let newm := fresh in
+                pose m' as newm;
+                  fold newm in m'Ref;
+                  fold newm in m'Equiv;
+                  simpl in newm; clear m mEquiv
+          end
+    end.
+
+
+  
   Ltac simplifyMod :=
     match goal with
       | mRef:
@@ -86,6 +108,28 @@ Section MemCacheInl.
           end
     end; simplifyMod.
 
+  Ltac gsFilt dm r :=
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        inlineSinDmGenRule_Filt m mEquiv dm r;
+          match goal with
+            | m'Ref:
+                modFromMeta ?m <<== modFromMeta ?m',
+                m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
+                let newm := fresh in
+                pose m' as newm;
+                  fold newm in m'Ref;
+                  fold newm in m'Equiv;
+                  simpl in newm; clear m mEquiv
+          end
+    end; simplifyMod.
+
+
+  
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
@@ -114,6 +158,121 @@ Section MemCacheInl.
         (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
     assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
 
+    Require Import List.
+
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+      (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac).
+    let dmTriple := eval simpl in (findDm "enq.rqFromChild" nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR "rqFromCToP" nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                          ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                    let H3 := fresh in
+                    let H4 := fresh in
+                    let H5 := fresh in
+                    assert
+                      (H3:
+                         forall r',
+                           In r' (preR ++ sufR) ->
+                           match r' with
+                             | OneRule bgenB _ =>
+                               noCallDmSigSinA (bgenB typeUT) dmn (projT1 bdm)
+                             | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+                               noCallDmSigGenA (bgenB typeUT)
+                                               {| isRep := false; nameRec := dmn |}
+                                               (projT1 bdm)
+                           end = true) by
+                        (intro;
+                         apply boolListReflection with
+                         (f := (fun r' =>
+                                  match r' with
+                                    | OneRule bgenB _ =>
+                                      noCallDmSigSinA (bgenB typeUT) dmn (projT1 bdm)
+                                    | RepRule _ _ _ _ _ _ bgenB _ _ _ =>
+                                      noCallDmSigGenA (bgenB typeUT)
+                                                      {| isRep := false; nameRec := dmn |}
+                                                      (projT1 bdm)
+                                  end)); apply eq_refl);
+                      assert
+                        (H4:
+                           forall dm',
+                             In dm' (metaMeths m) ->
+                             match dm' with
+                               | OneMeth bgenB _ =>
+                                 noCallDmSigSinA (projT2 bgenB typeUT tt) dmn (projT1 bdm)
+                               | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+                                 noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                 {| isRep := false; nameRec := dmn |}
+                                                 (projT1 bdm)
+                             end = true) by
+                        (intro;
+                         apply boolListReflection with
+                         (f := (fun dm' =>
+                                  match dm' with
+                                    | OneMeth bgenB _ =>
+                                      noCallDmSigSinA (projT2 bgenB typeUT tt) dmn (projT1 bdm)
+                                    | RepMeth _ _ _ _ _ _ bgenB _ _ _ =>
+                                      noCallDmSigGenA (projT2 bgenB typeUT tt)
+                                                      {| isRep := false; nameRec := dmn |}
+                                                      (projT1 bdm)
+                                  end)); apply eq_refl);
+                      pose ls;
+                      assert
+                        (H5: exists call : NameRecIdx,
+                               In call (getCallsGenA (bdr typeUT)) /\
+                               nameVal (nameRec call) = nameVal dmn /\ isRep call = false) by
+                          (eexists {| isRep := false;
+                                      nameRec := {| nameVal := nameVal dmn;
+                                                    goodName := _ |} |};
+                           split; [
+                             simpl; tauto | split; reflexivity]); (*
+                      pose proof (@inlineGenSinDmToRule_traceRefines_Filt'
+                                    m mEquiv A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls _ noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule H3 H4 H5); *)
+                        pose proof (@inlineGenSinDmToRule_ModEquiv_Filt'
+                                      m mEquiv A strA goodFn GenK getConstK goodFn2
+                                      bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                      sufR eq_refl noDupMeth noDupRule H4);
+                        clear noDupMeth noDupRule H3 H4 H5
+                end
+            end.
+
+    
+  assert (noDupMeth: NoDup (map getMetaMethName (metaMeths m))) by
+    (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules m))) by
+      (subst; simpl; clear; noDup_tac).
+    let dmTriple := eval simpl in (findDm "enq.rqFromChild" nil (metaMeths m)) in
+        let rTriple := eval simpl in (findR "rqFromCToP" nil (metaRules m)) in
+            match dmTriple with
+              | Some (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                          ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                    let m'Ref := fresh in
+                    let m'Equiv := fresh in
+                    pose proof (@inlineGenSinDmToRule_traceRefines_NoFilt
+                                  m A strA goodFn GenK getConstK goodFn2
+                                  bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                  sufR eq_refl noDupMeth noDupRule);
+                      pose proof (@inlineGenSinDmToRule_ModEquiv_NoFilt
+                                    m mEquiv A strA goodFn GenK getConstK goodFn2
+                                    bdm dmn preDm sufDm ls noDup eq_refl bdr rn preR
+                                    sufR eq_refl noDupMeth noDupRule);
+                      clear noDupMeth noDupRule
+                end
+            end.
+
+    
+
+    
+    inlineSinDmGenRule_Filt m mEquiv "enq.rqFromChild" "rqFromCToP".
+    gsFilt "enq.rqFromChild" "rqFromCToP".
     ggNoFilt "read.cs" "ldHit".
     ggNoFilt "read.cs" "stHit".
     ggNoFilt "read.cs" "l1MissByState".
@@ -167,6 +326,9 @@ Section MemCacheInl.
     ggNoFilt "enq.rsToParent" "writeback".
     simplifyMod; ggFilt "enq.rsToParent" "pProcess".
 
+    ggFilt "deq.rqToParent" "rqFromCToP".
+    ggFilt "deq.rsToParent" "rsFromCToP".
+    ggFilt "enq.fromParent" "fromPToC".
 
     Require Import List.
     assert (noDupMeth: NoDup (map getMetaMethName (metaMeths H))) by
@@ -200,9 +362,6 @@ Section MemCacheInl.
     
     Unset Printing Notations.
     simpl.
-    ggNoFilt "deq.rqToParent" "rqFromCToP".
-
-    ggFilt "de"
 
     unfold H in H1, H2.
     unfold getGenGenBody, convNameRec, nameVal, nameRec, isRep, projT1 in H1, H2.
