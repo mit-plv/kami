@@ -1,6 +1,8 @@
 Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
 Require Import Lts.ParametricEquiv Lts.ParametricInline Lts.ParametricInlineLtac String.
-Require Import Lts.ParametricSyntax.
+Require Import Lts.ParametricSyntax Lib.CommonTactics Lts.Tactics List.
+
+Set Implicit Arguments.
 
 Theorem traceRefines_trans_elem: forall m1 m2 m3: Modules,
                                    (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
@@ -19,6 +21,7 @@ Section MemCacheInl.
   Open Scope string.
 
   Require Import Lts.ParametricInlineLtac.
+
   Ltac ggNoFilt dm r :=
     match goal with
       | mRef:
@@ -30,16 +33,39 @@ Section MemCacheInl.
             | m'Ref:
                 modFromMeta ?m <<== modFromMeta ?m',
                 m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-              clear mEquiv;
                 apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-                simpl in m'Ref, m'Equiv; clear m;
-                unfold getGenGenBody, convNameRec, nameVal, nameRec, isRep, projT1
-                  in m'Ref, m'Equiv;
-                repeat autounfold with MethDefs in m'Ref, m'Equiv;
-                rewrite signature_eq in m'Ref, m'Equiv
+                let newm := fresh in
+                pose m' as newm;
+                  fold newm in m'Ref;
+                  fold newm in m'Equiv;
+                  simpl in newm; clear m mEquiv
           end
   end.
 
+  Ltac simplifyMod :=
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        unfold m in mRef, mEquiv;
+        clear m;
+        repeat
+          unfold getGenGenBody, convNameRec, nameVal, nameRec, isRep, projT1 in mRef, mEquiv;
+        repeat autounfold with MethDefs in mRef, mEquiv;
+        rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv
+    end;
+    match goal with
+      | mRef:
+          modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                      <<== modFromMeta ?m,
+          mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+        let newm := fresh in
+        pose m as newm;
+          fold newm in mRef;
+          fold newm in mEquiv
+    end.
+  
   Ltac ggFilt dm r :=
     match goal with
       | mRef:
@@ -51,40 +77,18 @@ Section MemCacheInl.
             | m'Ref:
                 modFromMeta ?m <<== modFromMeta ?m',
                 m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-              unfold getGenGenBody, convNameRec, nameVal, nameRec, isRep, projT1 in
-                    m'Ref, m'Equiv;
-              repeat autounfold with MethDefs in m'Ref;
-              repeat autounfold with MethDefs in m'Equiv;
-              rewrite signature_eq in m'Ref, m'Equiv;
-              apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-              let newm := fresh in
-              pose m' as newm;
-                fold newm in m'Ref;
-                fold newm in m'Equiv;
-                unfold getGenGenBody, convNameRec, nameVal,
-                       nameRec, isRep, projT1 in newm;
-                repeat autounfold with MethDefs in newm;
-                match type of newm with
-                  | context[SignatureT_dec ?s ?s] =>
-                    rewrite (signature_eq s) in newm; unfold eq_rect in newm
-                end;
-                simpl in newm;
-                clear mEquiv m
+                apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
+                let newm := fresh in
+                pose m' as newm;
+                  fold newm in m'Ref;
+                  fold newm in m'Equiv;
+                  simpl in newm; clear m mEquiv
           end
-    end.
-
-  (*
-  (*
-    let dmod := fresh in
-    let dmodRef := fresh in
-    let dmodEquiv := fresh in
-    inlineGenDmGenRule_NoFilt mod modEquiv dm r dmod dmodRef dmodEquiv;
-    changeNames mod modRef modEquiv dmod dmodRef dmodEquiv *)
+    end; simplifyMod.
 
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
-
 
   
   Definition nmemCacheInl:
@@ -94,31 +98,111 @@ Section MemCacheInl.
         forall ty, MetaModEquiv ty typeUT m}.
   Proof.
     pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize) as m.
-    assert (mRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
-                                <<== modFromMeta m) by
-        (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
 
     repeat autounfold with ModuleDefs in m;
     cbv [makeMetaModule getMetaFromSinNat makeSinModule getMetaFromSin
                         sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
-                        convSinToGen] in m;
-    simpl in m;
-    unfold concatMetaMod in m; simpl in m;
-    unfold Indexer.withPrefix in m; simpl in m.
+                        convSinToGen concatMetaMod Indexer.withPrefix app metaRegs
+                        metaRules metaMeths] in m.
+
+    (*
+    simpl in m; unfold concatMetaMod in m; simpl in m; unfold Indexer.withPrefix in m;
+    simpl in m.
+     *)
+    assert (mRef: modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
+                                <<== modFromMeta m) by
+        (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
     assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by admit.
 
-    
-    Reset Profile.
-    Start Profiling.
     ggNoFilt "read.cs" "ldHit".
-    Stop Profiling.
-    Show Profile.
+    ggNoFilt "read.cs" "stHit".
+    ggNoFilt "read.cs" "l1MissByState".
+    ggNoFilt "read.cs" "l1MissByLine".
+    ggNoFilt "read.cs" "writeback".
+    ggNoFilt "read.cs" "upgRq".
+    ggNoFilt "read.cs" "upgRs".
+    ggNoFilt "read.cs" "ldDeferred".
+    ggNoFilt "read.cs" "stDeferred".
+    ggNoFilt "read.cs" "drop".
+    simplifyMod; ggFilt "read.cs" "pProcess".
+
+    ggNoFilt "read.tag" "ldHit".
+    ggNoFilt "read.tag" "stHit".
+    ggNoFilt "read.tag" "l1MissByState".
+    ggNoFilt "read.tag" "l1MissByLine".
+    ggNoFilt "read.tag" "writeback".
+    ggNoFilt "read.tag" "drop".
+    simplifyMod; ggFilt "read.tag" "pProcess".
+
+    ggNoFilt "read.line" "ldHit".
+    ggNoFilt "read.line" "stHit".
+    ggNoFilt "read.line" "writeback".
+    ggNoFilt "read.line" "ldDeferred".
+    ggNoFilt "read.line" "stDeferred".
+    ggNoFilt "read.line" "stDeferred".
+    simplifyMod; ggFilt "read.line" "pProcess".
+
+    ggNoFilt "write.cs" "writeback".
+    ggNoFilt "write.cs" "upgRs".
+
+    simplifyMod; ggFilt "write.cs" "pProcess".
+
+    ggFilt "write.tag" "upgRs".
+
+    ggNoFilt "write.line" "stHit".
+    ggNoFilt "write.line" "upgRs".
+    simplifyMod; ggFilt "write.line" "stDeferred".
+
+    ggNoFilt "deq.fromParent" "upgRs".
+    ggNoFilt "deq.fromParent" "drop".
+    simplifyMod; ggFilt "deq.fromParent" "pProcess".
+    
+    ggNoFilt "enq.rsToProc" "ldHit".
+    ggNoFilt "enq.rsToProc" "stHit".
+    ggNoFilt "enq.rsToProc" "ldDeferred".
+    simplifyMod; ggFilt "enq.rsToProc" "stDeferred".
+
+    ggFilt "enq.rqToParent" "upgRq".
+
+    ggNoFilt "enq.rsToParent" "writeback".
+    simplifyMod; ggFilt "enq.rsToParent" "pProcess".
+
+    (*
+    ggNoFilt "deq.rqToParent" "rqFromCToP".
+
+    
+    assert (noDupMeth: NoDup (map getMetaMethName (metaMeths H))) by
+        (subst; simpl; clear; noDup_tac);
+    assert (noDupRule: NoDup (map getMetaRuleName (metaRules H))) by
+        (subst; simpl; clear; noDup_tac).
+
+    let dmTriple := eval simpl in (findDm "deq.rqToParent" nil (metaMeths H)) in
+        pose dmTriple.
+    
+    let rTriple := eval simpl in (findR "rqFromCToP" nil (metaRules H)) in
+        pose rTriple.
+            match dmTriple with
+              | Some (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
+                                       ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
+                match rTriple with
+                  | Some (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
+                                          ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
+                    idtac
+                end
+            end.
+    
+    Unset Printing Notations.
+    simpl.
+    ggNoFilt "deq.rqToParent" "rqFromCToP".
+
+    ggFilt "de"
+
     unfold H in H1, H2.
     unfold getGenGenBody, convNameRec, nameVal, nameRec, isRep, projT1 in H1, H2.
     rewrite signature_eq in H2.
     rewrite signature_eq in H1.
     clear H.
-    
+
 
     Unset Printing Notations.
     unfold getGenGenBody, convNameRec, nameVal,
@@ -138,7 +222,8 @@ Section MemCacheInl.
     ggNoFilt "read.cs" "ldDeferred".
     ggNoFilt "read.cs" "stDeferred".
     ggNoFilt "read.cs" "drop".
-    Stop Profiling.
+    Stop Profiling.  (*
+
     Show Profile.
     ggFilt "read.cs" "pProcess".
     ggNoFilt "read.tag" "ldHit".
@@ -334,7 +419,7 @@ reflexivity.
                         (*(let isIn := fresh in
                          intros ? ? ? ? ? ? ? ? ? ? isIn;
                          repeat (destruct isIn as [? | isIn]; [subst; reflexivity | ]);
-                         destruct isIn); *)
+                         destruct isIn);
 
     
     intros ? ? ? ? ? ? ? ? ? ? isIn; simpl in isIn.

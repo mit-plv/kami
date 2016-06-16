@@ -168,6 +168,7 @@ Section L1Cache.
           LET idx <- getIdx #fromP@."addr";
           Call cs <- readCs(#idx);
           Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
+          Call writeTag(STRUCT{"addr" ::= #idx; "data" ::= getTag #fromP@."addr"});
           Write "procRqWait" <- $$ false;
           If #cs == $ Inv then Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."line"}); Retv
                           else Retv as _;
