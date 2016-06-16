@@ -12,7 +12,7 @@ Section ValidRegs.
   Variable type: Kind -> Type.
 
   Section Regs.
-    Variable regs: list string.
+    Variable regs: list NameRecIdx.
 
     Inductive ValidRegsSinAction:
       forall {retT}, SinActionT type retT -> Prop :=
@@ -26,12 +26,12 @@ Section ValidRegs.
           ValidRegsSinAction (SLet_ (lretT':= argT) (lretT:= retT) ar cont)
     | SVRReadReg:
         forall {retT} reg k cont,
-          In (nameVal reg) regs ->
+          In {| isRep:= false; nameRec:= reg |} regs ->
           (forall t, ValidRegsSinAction (cont t)) ->
           ValidRegsSinAction (SReadReg (lretT:= retT) reg k cont)
     | SVRWriteReg:
         forall {writeT retT} reg e cont,
-          In (nameVal reg) regs ->
+          In {| isRep:= false; nameRec:= reg|} regs ->
           ValidRegsSinAction cont ->
           ValidRegsSinAction (SWriteReg (k:= writeT) (lretT:= retT)
                                         reg e cont)
@@ -69,12 +69,12 @@ Section ValidRegs.
             ValidRegsGenAction (GLet_ (lretT':= argT) (lretT:= retT) ar cont)
       | GVRReadReg:
           forall {retT} reg k cont,
-            In (nameVal (nameRec reg)) regs ->
+            In reg regs ->
             (forall t, ValidRegsGenAction (cont t)) ->
             ValidRegsGenAction (GReadReg (lretT:= retT) reg k cont)
       | GVRWriteReg:
           forall {writeT retT} reg e cont,
-            In (nameVal (nameRec reg)) regs ->
+            In reg regs ->
             ValidRegsGenAction cont ->
             ValidRegsGenAction (GWriteReg (k:= writeT) (lretT:= retT)
                                           reg e cont)
@@ -143,13 +143,97 @@ Section ValidRegs.
 
   End Regs.
 
+  Definition getMetaRegNameIdx m :=
+    match m with
+    | OneReg b s => {| isRep:= false; nameRec:= s |}
+    | RepReg _ _ _ _ _ s _ _ => {| isRep:= true; nameRec:= s |}
+    end.
+
   Fixpoint ValidRegsMetaModule (mm: MetaModule): Prop :=
-    ValidRegsMetaRules (map getMetaRegName (metaRegs mm)) (metaRules mm) /\
-    ValidRegsMetaMeths (map getMetaRegName (metaRegs mm)) (metaMeths mm).
+    ValidRegsMetaRules (map getMetaRegNameIdx (metaRegs mm)) (metaRules mm) /\
+    ValidRegsMetaMeths (map getMetaRegNameIdx (metaRegs mm)) (metaMeths mm).
 
 End ValidRegs.
 
 Section Facts.
+
+  Lemma map_getMetaRegNameIdx_In:
+    forall reg regs,
+      In {| isRep := false; nameRec := reg |} (map getMetaRegNameIdx regs) ->
+      In (nameVal reg) (namesOf (Concat.concat (map getListFromMetaReg regs))).
+  Proof.
+    induction regs; simpl; intros; auto.
+    rewrite namesOf_app; destruct H; apply in_or_app.
+    - left; destruct a as [a|a]; [|inv H].
+      inv H; simpl; auto.
+    - right; auto.
+  Qed.
+
+  Lemma validRegsSinAction_validRegsAction:
+    forall regs {ty retK} (a: SinActionT ty retK),
+      ValidRegsSinAction (map getMetaRegNameIdx regs) a ->
+      ValidRegsAction (namesOf (Concat.concat (map getListFromMetaReg regs))) (getSinAction a).
+  Proof.
+    induction 1; simpl; intros; try (constructor; auto);
+      apply map_getMetaRegNameIdx_In; auto.
+  Qed.
+
+  Lemma validRegsGenAction_validRegsAction:
+    forall regs {A} strA {ty genK retK} getConstK (i: A) (a: GenActionT genK ty retK),
+      ValidRegsGenAction (map getMetaRegNameIdx regs) a ->
+      ValidRegsAction (namesOf (Concat.concat (map getListFromMetaReg regs)))
+                      (getGenAction strA getConstK i a).
+  Proof.
+    induction 1; simpl; intros; try (constructor; auto);
+      admit. (* TODO: wrong; need to have a stronger ValidRegs predicate *)
+  Qed.
+
+  Lemma validRegsGenAction_validRegsRules:
+    forall regs {genK} (a: GenAction genK Void) ty {A} (strA: A -> string) getConstK s ls,
+      ValidRegsGenAction (map getMetaRegNameIdx regs) (a ty) ->
+      ValidRegsRules ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
+                     (repRule strA getConstK a (nameVal s) ls).
+  Proof.
+    induction ls; simpl; intros; [constructor|].
+    constructor; auto; simpl.
+    apply validRegsGenAction_validRegsAction; auto.
+  Qed.
+
+  Lemma validRegsMetaRule_validRegsRules:
+    forall ty regs a,
+      ValidRegsMetaRule ty (map getMetaRegNameIdx regs) a ->
+      ValidRegsRules ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
+                     (getListFromMetaRule a).
+  Proof.
+    destruct a as [a|a]; simpl; intros.
+    - repeat constructor; simpl.
+      apply validRegsSinAction_validRegsAction; auto.
+    - apply validRegsGenAction_validRegsRules; auto.
+  Qed.
+
+  Lemma validRegsGenAction_validRegsDms:
+    forall ty regs {genK} (a: sigT (GenMethodT genK))  {A} (strA: A -> string) getConstK s ls,
+      (forall v : ty (arg (projT1 a)),
+          ValidRegsGenAction (map getMetaRegNameIdx regs) (projT2 a ty v)) ->
+      ValidRegsDms ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
+                   (repMeth strA getConstK a (nameVal s) ls).
+  Proof.
+    induction ls; simpl; intros; [constructor|].
+    constructor; auto; simpl; intros.
+    apply validRegsGenAction_validRegsAction; auto.
+  Qed.
+
+  Lemma validRegsMetaMeth_validRegsDms:
+    forall ty regs a,
+      ValidRegsMetaMeth ty (map getMetaRegNameIdx regs) a ->
+      ValidRegsDms ty (namesOf (Concat.concat (map getListFromMetaReg regs)))
+                   (getListFromMetaMeth a).
+  Proof.
+    destruct a as [a|a]; simpl; intros.
+    - repeat constructor; simpl; intros.
+      apply validRegsSinAction_validRegsAction; auto.
+    - apply validRegsGenAction_validRegsDms; auto.
+  Qed.
 
   Lemma validRegsMetaModule_validRegsModules:
     forall ty mm,
@@ -159,11 +243,10 @@ Section Facts.
     destruct mm as [regs rules dms]; simpl; intros; dest; split.
     - clear -H; induction rules; [constructor|]; inv H.
       simpl; apply validRegsRules_app; auto.
-      admit.
-
+      apply validRegsMetaRule_validRegsRules; auto.
     - clear -H0; induction dms; [constructor|]; inv H0.
       simpl; apply validRegsDms_app; auto.
-      admit.
+      apply validRegsMetaMeth_validRegsDms; auto.
   Qed.
   
   Lemma validRegsMetaModule_modular:
