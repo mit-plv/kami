@@ -95,13 +95,11 @@ Section MemCacheInl.
   Ltac gsFilt dm r := filt inlineSinDmGenRule_Filt dm r.
   Ltac ssFilt dm r := filt inlineSinDmSinRule_Filt dm r.
 
-  (*
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
-   *)
   
-  Definition nmemCacheInl':
+  Definition nmemCacheInl'':
     {m: MetaModule &
        (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
                                LgDataBytes Id FifoSize) <<== modFromMeta m) /\
@@ -124,7 +122,6 @@ Section MemCacheInl.
                                 <<== modFromMeta m) by
         (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
     assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by kequiv.
-
 
     ssNoFilt "read.mline" "hit".
     simplifyMod; ssFilt "read.mline" "deferred".
@@ -156,7 +153,7 @@ Section MemCacheInl.
     gsFilt "enq.rqFromChild" "rqFromCToP".
     
     gsFilt "deq.toChild" "fromPToC".
-
+    
     ggNoFilt "read.cs" "ldHit".
     ggNoFilt "read.cs" "stHit".
     ggNoFilt "read.cs" "l1MissByState".
@@ -213,7 +210,7 @@ Section MemCacheInl.
     ggFilt "deq.rqToParent" "rqFromCToP".
     ggFilt "deq.rsToParent" "rsFromCToP".
     ggFilt "enq.fromParent" "fromPToC".
-
+    
     match goal with
       | mRef:
           modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize)
@@ -221,15 +218,16 @@ Section MemCacheInl.
           mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
         exact (existT _ m (conj mRef mEquiv))
     end.
+
   Defined.
 
-  Definition nmemCacheInl := projT1 nmemCacheInl'.
+  Definition nmemCacheInl := projT1 nmemCacheInl''.
 
   Theorem nmemCacheInl_refines:
     modFromMeta (nmemCache IdxBits TagBits LgNumDatas
                            LgDataBytes Id FifoSize) <<== modFromMeta nmemCacheInl.
   Proof.
-    pose proof (projT2 nmemCacheInl') as sth.
+    pose proof (projT2 nmemCacheInl'') as sth.
     destruct sth.
     assumption.
   Qed.
@@ -237,7 +235,7 @@ Section MemCacheInl.
   Theorem nmemCacheInl_equiv:
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
-    pose proof (projT2 nmemCacheInl') as sth.
+    pose proof (projT2 nmemCacheInl'') as sth.
     destruct sth.
     assumption.
   Qed.
