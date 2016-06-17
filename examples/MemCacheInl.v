@@ -95,9 +95,11 @@ Section MemCacheInl.
   Ltac gsFilt dm r := filt inlineSinDmGenRule_Filt dm r.
   Ltac ssFilt dm r := filt inlineSinDmSinRule_Filt dm r.
 
+  (*
   Local Notation "'LargeMetaModule'" := {| metaRegs := _;
                                            metaRules := _;
                                            metaMeths := _ |}.
+   *)
   
   Definition nmemCacheInl':
     {m: MetaModule &
@@ -112,7 +114,8 @@ Section MemCacheInl.
                         sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
                         convSinToGen concatMetaMod app metaRegs
                         metaRules metaMeths] in m.
-    repeat unfold Indexer.withPrefix in m.
+    repeat (unfold Indexer.withPrefix, Indexer.prefixSymbol in m; simpl in m).
+                                                                                
     (*
     simpl in m; unfold concatMetaMod in m; simpl in m; unfold Indexer.withPrefix in m;
     simpl in m.
@@ -121,6 +124,7 @@ Section MemCacheInl.
                                 <<== modFromMeta m) by
         (unfold MethsT; rewrite @idElementwiseId; apply traceRefines_refl).
     assert (mEquiv: forall ty, MetaModEquiv ty typeUT m) by kequiv.
+
 
     ssNoFilt "read.mline" "hit".
     simplifyMod; ssFilt "read.mline" "deferred".
@@ -137,18 +141,20 @@ Section MemCacheInl.
     ssNoFilt "write.mcs" "dwnRs".
     simplifyMod; ssFilt "write.mcs" "deferred".
 
-    ssNoFilt "enq.toC" "hit".
-    ssNoFilt "enq.toC" "dwnRq".
-    simplifyMod; ssFilt "enq.toC" "deferred".
+    ssNoFilt "enq.toChild" "hit".
+    ssNoFilt "enq.toChild" "dwnRq".
+    simplifyMod; ssFilt "enq.toChild" "deferred".
     
-    ssNoFilt "deq.rqFromC" "hit".
-    ssNoFilt "deq.rqFromC" "missByState".
-    simplifyMod; ssFilt "deq.rqFromC" "deferred".
+    ssNoFilt "deq.rqFromChild" "hit".
+    ssNoFilt "deq.rqFromChild" "missByState".
+    simplifyMod; ssFilt "deq.rqFromChild" "deferred".
 
-    ssFilt "deq.rsFromC" "dwnRs".
+    ssFilt "deq.rsFromChild" "dwnRs".
     
     gsFilt "enq.rsFromChild" "rsFromCToP".
+
     gsFilt "enq.rqFromChild" "rqFromCToP".
+    
     gsFilt "deq.toChild" "fromPToC".
 
     ggNoFilt "read.cs" "ldHit".

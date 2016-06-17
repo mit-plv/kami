@@ -145,6 +145,7 @@ Section MemCacheNativeFifo.
   
 End MemCacheNativeFifo.
 
-Hint Unfold nl1C nmemCache: ModuleDefs.
+Hint Unfold nfifoRqFromProc nfifoRsToProc nfifoRqToP nfifoRsToP nfifoFromP
+     nl1C nfifoRqFromC nfifoRsFromC nfifoToC nchildParentC nmemCache: ModuleDefs.
 
 

@@ -134,7 +134,7 @@ Hint Unfold listEltT listEltK listElt
      listIsEmpty listEnq listDeq listFirstElt
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
-Hint Unfold nativeFifoS nativeSimpleFifoS : ModuleDefs.
+Hint Unfold nativeFifoS nativeSimpleFifoS nativeFifoM nativeSimpleFifoM : ModuleDefs.
 Hint Unfold nativeEnqS nativeDeqS nativeFirstEltS: MethDefs.
 
 Section Facts.
