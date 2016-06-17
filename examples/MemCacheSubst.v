@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement Lts.Notations.
 Require Import Lts.Equiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
 Require Import Lts.Duplicate Lts.Substitute Lts.ModuleBound.
@@ -27,6 +27,15 @@ Proof.
   intros; apply getDefs_sinModule_eq; reflexivity.
 Qed.
 
+Ltac subList_app_tac :=
+  repeat apply SubList_app_3;
+  match goal with
+  | _ => apply SubList_refl
+  | _ => apply SubList_app_1; subList_app_tac
+  | _ => apply SubList_app_2; subList_app_tac
+  end.
+Ltac equivList_app_tac := split; subList_app_tac.
+
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
@@ -39,7 +48,7 @@ Section Refinement.
     getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas
                                LgDataBytes Id n) =
     getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
-                             Id (rsz FifoSize) n).
+                             Id FifoSize n).
   Proof.
     unfold nfifosInNMemCache, fifosInMemCache.
     repeat rewrite getDefs_modFromMeta_app.
@@ -55,7 +64,7 @@ Section Refinement.
     getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas
                                 LgDataBytes Id n) =
     getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
-                              Id (rsz FifoSize) n).
+                              Id FifoSize n).
   Proof.
     admit.
   Qed.
@@ -68,7 +77,7 @@ Section Refinement.
 
     - unfold MethsT; rewrite <-SemFacts.idElementwiseId.
       pose (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
-                            Id (rsz FifoSize) n) as fifos.
+                            Id FifoSize n) as fifos.
       pose (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as nfifos.
       pose (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n) as others.
 
@@ -105,18 +114,60 @@ Section Refinement.
       + kvr.
       + kvr.
       + kvr.
-      + admit. (* getRegInits EquivList *) 
-      + admit. (* getRules EquivList *)
-      + admit. (* getDefsBodies EquivList *)
+      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
+        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
+      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
+        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
+      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
+        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
 
       + admit. (* Real substitution proof -- from fifos to nativeFifos *)
 
     - apply traceRefines_same_module_structure.
       + knodup_regs.
       + knodup_regs.
-      + admit. (* EquivList *)
-      + admit.
-      + admit.
+      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
+        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
+      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
+        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
+      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
+        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
+        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
+        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
+        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
+        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
+        simpl; repeat rewrite map_app, concat_app.
+        equivList_app_tac.
 
   Qed.
 
