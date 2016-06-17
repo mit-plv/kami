@@ -27,15 +27,6 @@ Proof.
   intros; apply getDefs_sinModule_eq; reflexivity.
 Qed.
 
-Ltac subList_app_tac :=
-  repeat apply SubList_app_3;
-  match goal with
-  | _ => apply SubList_refl
-  | _ => apply SubList_app_1; subList_app_tac
-  | _ => apply SubList_app_2; subList_app_tac
-  end.
-Ltac equivList_app_tac := split; subList_app_tac.
-
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
@@ -61,10 +52,8 @@ Section Refinement.
   Qed.
 
   Lemma getCalls_fifos_nfifos:
-    getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas
-                                LgDataBytes Id n) =
-    getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
-                              Id FifoSize n).
+    SubList (getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
+            (getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)).
   Proof.
     admit.
   Qed.
@@ -137,8 +126,7 @@ Section Refinement.
           rewrite getDefs_fifos_nfifos.
           apply SubList_refl.
         * repeat rewrite getCalls_flattened.
-          rewrite getCalls_fifos_nfifos.
-          apply SubList_refl.
+          apply getCalls_fifos_nfifos.
       + kvr.
       + kvr.
       + kvr.

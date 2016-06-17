@@ -1367,6 +1367,91 @@ Proof.
   apply getListFromRep_NoDup; auto.
 Qed.
 
+Lemma getListFromRep_In_exists:
+  forall e {A} (strA: A -> string) {B} (bgen: A -> B) s ls,
+    In e (namesOf (getListFromRep strA bgen s ls)) ->
+    exists ei, e = addIndexToStr strA ei s.
+Proof.
+  induction ls; simpl; intros; [inv H|].
+  destruct H; auto; subst.
+  eexists; auto.
+Qed.
+
+Lemma addIndexToStr_eq:
+  forall {A1} (strA1: A1 -> string) {A2} (strA2: A2 -> string) i1 i2 s1 s2,
+    index 0 indexSymbol s1 = None ->
+    index 0 indexSymbol s2 = None ->
+    addIndexToStr strA1 i1 s1 = addIndexToStr strA2 i2 s2 ->
+    s1 = s2.
+Proof.
+  induction s1; intros.
+  - destruct s2; auto.
+    unfold addIndexToStr in H1; simpl in H1; inv H1.
+    simpl in H0; rewrite prefix_empty in H0; inv H0.
+  - destruct s2.
+    + unfold addIndexToStr in H1; simpl in H1; inv H1.
+      simpl in H; rewrite prefix_empty in H; inv H.
+    + unfold addIndexToStr in H1; simpl in H1; inv H1.
+      f_equal; apply IHs1; auto.
+      * apply index_not_in in H; apply index_not_in.
+        simpl in H; auto.
+      * apply index_not_in in H0; apply index_not_in.
+        simpl in H0; auto.
+Qed.
+
+Lemma disjList_metaReg:
+  forall mr1 mr2,
+    getMetaRegName mr1 <> getMetaRegName mr2 ->
+    DisjList (namesOf (getListFromMetaReg mr1)) (namesOf (getListFromMetaReg mr2)).
+Proof.
+  destruct mr1 as [mr1|mr1], mr2 as [mr2|mr2]; simpl; intros.
+  - unfold DisjList; intros.
+    destruct (in_dec string_dec e [nameVal s]); auto.
+    destruct (in_dec string_dec e [nameVal s0]); auto.
+    inv i; auto.
+    inv i0; auto.
+  - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
+    unfold DisjList; intros.
+    specialize (IHls e); destruct IHls; auto.
+    destruct (in_dec string_dec e [nameVal s]); auto.
+    inv i; auto; right.
+    intro Hx; inv Hx; auto.
+    destruct s as [s]; simpl in *; subst.
+    generalize goodName0; apply index_addIndexToStr_notNone.
+  - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
+    unfold DisjList; intros.
+    specialize (IHls e); destruct IHls; auto.
+    destruct (in_dec string_dec e [nameVal s0]); auto.
+    inv i; auto; left.
+    intro Hx; inv Hx; auto.
+    destruct s0 as [s0]; simpl in *; subst.
+    generalize goodName0; apply index_addIndexToStr_notNone.
+  - unfold DisjList; intros.
+    destruct (in_dec string_dec e (namesOf (getListFromRep strA bgen (nameVal s) ls))); auto.
+    destruct (in_dec string_dec e (namesOf (getListFromRep strA0 bgen0 (nameVal s0) ls0))); auto.
+    exfalso.
+    apply getListFromRep_In_exists in i.
+    apply getListFromRep_In_exists in i0.
+    dest; subst; clear -H H0.
+
+    destruct s as [s], s0 as [t]; simpl in *.
+    apply addIndexToStr_eq in H0; auto.
+Qed.
+
+Lemma disjList_metaRegs:
+  forall mr ml,
+    ~ In (getMetaRegName mr) (map getMetaRegName ml) ->
+    DisjList (namesOf (getListFromMetaReg mr)) (namesOf (concat (map getListFromMetaReg ml))).
+Proof.
+  induction ml; simpl; intros; [unfold DisjList; intros; right; auto|].
+  destruct (string_dec (getMetaRegName a) (getMetaRegName mr)); [elim H; auto|].
+  destruct (in_dec string_dec (getMetaRegName mr) (map getMetaRegName ml)); [elim H; auto|].
+  clear H; specialize (IHml n0); clear n0.
+  rewrite namesOf_app.
+  apply DisjList_comm, DisjList_app_4, DisjList_comm; auto.
+  apply disjList_metaReg; auto.
+Qed.
+
 Lemma noDup_metaRegs:
   forall mm,
     NoDup (map getMetaRegName (metaRegs mm)) ->
@@ -1378,7 +1463,7 @@ Proof.
   simpl; rewrite namesOf_app.
   apply NoDup_DisjList; auto.
   - apply getListFromMetaReg_NoDup.
-  - admit.
+  - apply disjList_metaRegs; auto.
 Qed.
 
 Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
@@ -1498,5 +1583,17 @@ Proof.
   destruct mm1 as [? ? dm1], mm2 as [? ? dm2]; intros.
   unfold getDefs, modFromMeta; simpl.
   rewrite map_app, Concat.concat_app, namesOf_app; auto.
+Qed.
+
+Lemma getCalls_modFromMeta_app:
+  forall mm1 mm2,
+    EquivList (getCalls (modFromMeta (mm1 +++ mm2)))
+              (getCalls (modFromMeta mm1) ++ getCalls (modFromMeta mm2)).
+Proof.
+  destruct mm1 as [? rules1 dms1], mm2 as [? rules2 dms2]; intros.
+  unfold getCalls, modFromMeta; simpl.
+  repeat rewrite map_app, concat_app.
+  rewrite getCallsR_app, getCallsM_app.
+  equivList_app_tac.
 Qed.
 

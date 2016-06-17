@@ -215,6 +215,15 @@ Section Lists. (* For dealing with domains *)
 
 End Lists.
 
+Ltac subList_app_tac :=
+  repeat apply SubList_app_3;
+  match goal with
+  | _ => apply SubList_refl
+  | _ => apply SubList_app_1; subList_app_tac
+  | _ => apply SubList_app_2; subList_app_tac
+  end.
+Ltac equivList_app_tac := split; subList_app_tac.
+
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
                      SubList l1 l2 -> SubList (map f l1) (map f l2).
 Proof.
