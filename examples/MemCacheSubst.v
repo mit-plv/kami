@@ -69,6 +69,34 @@ Section Refinement.
     admit.
   Qed.
 
+  Ltac cluster_fifos_in_memCache :=
+    unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC;
+    let m := fresh in
+    set (_ +++ (fifoFromP _ _ _ _ _ _ _)) as m; clearbody m;
+    let m := fresh in
+    set (_ +++ (fifoToC _ _ _ _ _ _ _)) as m; clearbody m;
+    let m := fresh in
+    set (l1 _ _ _ _ _ _) as m; clearbody m;
+    let m := fresh in
+    set (childParent _ _ _ _ _ _) as m; clearbody m;
+    let m := fresh in
+    set (memDirC _ _ _ _ _ _) as m; clearbody m;
+    simpl; repeat rewrite map_app, concat_app.
+
+  Ltac cluster_fifos_in_nmemCache :=
+    unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC;
+    let m := fresh in
+    set (_ +++ (nfifoFromP _ _ _ _ _ _)) as m; clearbody m;
+    let m := fresh in
+    set (_ +++ (nfifoToC _ _ _ _ _ _)) as m; clearbody m;
+    let m := fresh in
+    set (l1 _ _ _ _ _ _) as m; clearbody m;
+    let m := fresh in
+    set (childParent _ _ _ _ _ _) as m; clearbody m;
+    let m := fresh in
+    set (memDirC _ _ _ _ _ _) as m; clearbody m;
+    simpl; repeat rewrite map_app, concat_app.
+
   Lemma memCache_refines_nmemCache:
     (modFromMeta (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
       <<== (modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
@@ -114,60 +142,18 @@ Section Refinement.
       + kvr.
       + kvr.
       + kvr.
-      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
-        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
-      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
-        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
-      + unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC.
-        remember (_ +++ (fifoFromP _ _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (fifoToC _ _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
+      + cluster_fifos_in_memCache; equivList_app_tac.
+      + cluster_fifos_in_memCache; equivList_app_tac.
+      + cluster_fifos_in_memCache; equivList_app_tac.
 
       + admit. (* Real substitution proof -- from fifos to nativeFifos *)
 
     - apply traceRefines_same_module_structure.
       + knodup_regs.
       + knodup_regs.
-      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
-        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
-      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
-        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
-      + unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC.
-        remember (_ +++ (nfifoFromP _ _ _ _ _ _)) as fifos1; clear Heqfifos1.
-        remember (_ +++ (nfifoToC _ _ _ _ _ _)) as fifos2; clear Heqfifos2.
-        remember (l1 _ _ _ _ _ _) as l1; clear Heql1.
-        remember (childParent _ _ _ _ _ _) as childParent; clear HeqchildParent.
-        remember (memDirC _ _ _ _ _ _) as memDirC; clear HeqmemDirC.
-        simpl; repeat rewrite map_app, concat_app.
-        equivList_app_tac.
+      + cluster_fifos_in_nmemCache; equivList_app_tac.
+      + cluster_fifos_in_nmemCache; equivList_app_tac.
+      + cluster_fifos_in_nmemCache; equivList_app_tac.
 
   Qed.
 
