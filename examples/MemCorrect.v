@@ -15,8 +15,8 @@ Section MemCorrect.
 
   Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
   Definition nmemCache := MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n.
-  Definition memAtomic := memAtomic (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
-                                    LgDataBytes n.
+  Definition memAtomic := memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
+                                       LgDataBytes n.
 
   Lemma memCache_refines_memAtomic: modFromMeta memCache <<== memAtomic.
   Proof.
