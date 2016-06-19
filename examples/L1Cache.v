@@ -69,6 +69,7 @@ Section L1Cache.
         with Register "procRqReplace": Bool <- @ConstBool false
         with Register "procRqWait": Bool <- @ConstBool false
 
+        (*                                 
         with Rule "ldHit" :=
           Read valid <- "procRqValid";
           Assert !#valid;
@@ -103,6 +104,7 @@ Section L1Cache.
           LET updLine <- #line@[#offset <- #rq@."data"];
           Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #updLine});
           Retv
+        *)
 
         with Rule "l1MissByState" :=
           Read valid <- "procRqValid";
@@ -129,6 +131,21 @@ Section L1Cache.
           Write "procRqReplace" <- $$ true;
           Write "procRqWait" <- $$ false;
           Retv
+
+        with Rule "l1Hit" :=
+          Read valid <- "procRqValid";
+          Assert !#valid;
+          Call rq <- rqFromProcFirst();
+          LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Call cs <- readCs(#idx);
+          Assert ((#tag == getTag #rq@."addr") &&
+                  (#cs == $ Sh && !#rq@."op" || #cs == $ Mod && #rq@."op"));
+          Write "procRqValid" <- $$ true;
+          Write "procRqReplace" <- $$ false;
+          Write "procRqWait" <- $$ false;
+          Retv
+
 
         with Rule "writeback" :=
           Read valid <- "procRqValid";
@@ -174,7 +191,7 @@ Section L1Cache.
                           else Retv as _;
           Retv
 
-        with Rule "ldDeferred" :=
+        with Rule "ld" :=
           Read valid <- "procRqValid";
           Assert #valid;
           Read replace <- "procRqReplace";
@@ -192,7 +209,7 @@ Section L1Cache.
                           });
           Retv
 
-        with Rule "stDeferred" :=
+        with Rule "st" :=
           Read valid <- "procRqValid";
           Assert #valid;
           Read replace <- "procRqReplace";
