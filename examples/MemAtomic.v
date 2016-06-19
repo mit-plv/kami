@@ -53,16 +53,27 @@ Section MemAtomic.
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition midQ := mid "Ins" "Outs" addrSize lgDataBytes.
+  Definition mids (i: nat) := duplicate midQ i.
+  
   Definition iom := ConcatMod ioQ midQ.
   Definition ioms (i: nat) := duplicate iom i.
+
+  Definition memAtomicWoQ := ConcatMod (mids n) minst.
   Definition memAtomic := ConcatMod (ioms n) minst.
 
 End MemAtomic.
 
-Hint Unfold minst inQ outQ ioQ midQ iom ioms memAtomic : ModuleDefs.
+Hint Unfold minst inQ outQ ioQ midQ mids iom ioms memAtomicWoQ memAtomic : ModuleDefs.
 
 Section Facts.
   Variables (addrSize lgDataBytes: nat).
+
+  Lemma midQ_ModEquiv:
+    forall ty1 ty2, ModEquiv ty1 ty2 (midQ addrSize lgDataBytes).
+  Proof.
+    kequiv.
+  Qed.
+  Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize lgDataBytes).
@@ -73,12 +84,25 @@ Section Facts.
 
   Variable n: nat.
 
+  Lemma mids_ModEquiv:
+    forall ty1 ty2, ModEquiv ty1 ty2 (mids addrSize lgDataBytes n).
+  Proof.
+    kequiv.
+  Qed.
+  Hint Resolve mids_ModEquiv.
+
   Lemma ioms_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve ioms_ModEquiv.
+
+  Lemma memAtomicWoQ_ModEquiv:
+    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomicWoQ addrSize lgDataBytes n).
+  Proof.
+    kequiv.
+  Qed.
 
   Lemma memAtomic_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize lgDataBytes n).
@@ -88,5 +112,6 @@ Section Facts.
 
 End Facts.
 
-Hint Immediate iom_ModEquiv ioms_ModEquiv memAtomic_ModEquiv.
+Hint Immediate midQ_ModEquiv iom_ModEquiv
+     mids_ModEquiv ioms_ModEquiv memAtomicWoQ_ModEquiv memAtomic_ModEquiv.
 

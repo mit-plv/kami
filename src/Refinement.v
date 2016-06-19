@@ -877,6 +877,22 @@ Section Facts.
     destruct l; destruct annot; try destruct o0; auto.
   Qed.
 
+  Lemma flatten_traceRefines_inv: forall m, Mod (getRegInits m) (getRules m)
+                                                (getDefsBodies m) <<== m.
+  Proof.
+    intros.
+    apply stepRefinement with (ruleMap := fun _ s => Some s) (theta := id); eauto; simpl in *.
+    unfold id; simpl in *; intros.
+    exists u; constructor; auto.
+    apply module_structure_indep_step
+    with (m1:= Mod (getRegInits m) (getRules m) (getDefsBodies m)).
+    - apply EquivList_refl.
+    - apply EquivList_refl.
+    - rewrite idElementwiseId.
+      unfold liftPLabel.
+      destruct l; destruct annot; try destruct o0; auto.
+  Qed.
+
   Lemma deflatten_traceRefines:
     forall regs1 regs2 rules1 rules2 dms1 dms2,
       Mod (regs1 ++ regs2) (rules1 ++ rules2) (dms1 ++ dms2)

@@ -48,9 +48,7 @@ Section Refinement.
     f_equal.
     f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
     f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
-    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
-    f_equal; [|apply getDefs_simpleFifo_nativeSimpleFifo].
-    apply getDefs_fifo_nativeFifo.
+    apply getDefs_simpleFifo_nativeSimpleFifo.
   Qed.
 
   Ltac getCalls_fifos_nfifos_tac :=
@@ -66,10 +64,6 @@ Section Refinement.
 
     getCalls_fifos_nfifos_tac.
     - getCalls_fifos_nfifos_tac;
-        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
-      getCalls_fifos_nfifos_tac;
-        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
-      getCalls_fifos_nfifos_tac;
         [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
       getCalls_fifos_nfifos_tac;
         [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
