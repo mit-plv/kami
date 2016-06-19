@@ -637,6 +637,13 @@ Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 Hint Extern 1 (_ = _: Modules) => apply eq_refl.
 
+(* Hint Extern 1 (ModEquiv _ _ _) => kequiv. *)
+(* Hint Extern 1 (NoDup (getRegInits _) (getRegInits _)) => knodup_regs. *)
+(* Hint Extern 1 (DisjList (getRegInits _) (getRegInits _)) => kdisj_regs. *)
+(* Hint Extern 1 (DisjList (getDefs _) (getDefs _)) => kdisj_dms. *)
+(* Hint Extern 1 (DisjList (getCalls _) (getCalls _)) => kdisj_cms. *)
+(* Hint Extern 1 (ValidRegsModules _ _) => kvr. *)
+
 (** Final Kami proof configuration *)
 
 Inductive DecompositionType :=

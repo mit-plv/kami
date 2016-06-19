@@ -213,6 +213,43 @@ Proof.
     elim n; auto.
 Qed.
 
+Lemma prefix_refl: forall s, prefix s s = true.
+Proof.
+  induction s; auto; simpl.
+  destruct (Ascii.ascii_dec a a); [auto|elim n; reflexivity].
+Qed.
+
+Lemma prefix_empty:
+  forall s, prefix ""%string s = true.
+Proof. intros; destruct s; auto. Qed.
+
+Lemma prefix_prefix:
+  forall p1 p2 s,
+    prefix p1 s = true -> prefix p2 s = true ->
+    prefix p1 p2 = true \/ prefix p2 p1 = true.
+Proof.
+  induction p1; intros; [left; apply prefix_empty|].
+  destruct s; [inv H|].
+  simpl in H; destruct (Ascii.ascii_dec a a0); [subst|inv H].
+  destruct p2; [right; apply prefix_empty|].
+  simpl in H0; destruct (Ascii.ascii_dec a a0); [subst|inv H0].
+  simpl; destruct (Ascii.ascii_dec a0 a0); [|elim n; reflexivity].
+  eauto.
+Qed.
+
+Lemma prefix_append: forall t s, prefix s (s ++ t) = true.
+Proof.
+  induction s; simpl; intros; [apply prefix_empty|].
+  destruct (Ascii.ascii_dec a a); [|elim n; reflexivity]; auto.
+Qed.
+
+Lemma prefix_withIndex: forall i s, prefix s (withIndex s i) = true.
+Proof.
+  intros.
+  unfold withIndex.
+  apply prefix_append.
+Qed.
+
 Global Opaque withIndex.
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).

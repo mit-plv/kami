@@ -36,6 +36,9 @@ Section Lists. (* For dealing with domains *)
   
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
+
+  Lemma SubList_refl': forall l1 l2, l1 = l2 -> SubList l1 l2.
+  Proof. intros; subst; apply SubList_refl. Qed.
   
   Lemma SubList_trans:
     forall l1 l2 l3, SubList l1 l2 -> SubList l2 l3 -> SubList l1 l3.
@@ -65,6 +68,14 @@ Section Lists. (* For dealing with domains *)
   Lemma SubList_app_5: forall l1 l2 l3, SubList (l1 ++ l2) l3 -> SubList l2 l3.
   Proof.
     unfold SubList; intros; apply H; apply in_or_app; right; auto.
+  Qed.
+
+  Lemma SubList_app_6:
+    forall l1 l2 l3 l4, SubList l1 l2 -> SubList l3 l4 -> SubList (l1 ++ l3) (l2 ++ l4).
+  Proof.
+    intros; apply SubList_app_3.
+    - apply SubList_app_1; auto.
+    - apply SubList_app_2; auto.
   Qed.
 
   Lemma SubList_app_comm:
@@ -214,6 +225,15 @@ Section Lists. (* For dealing with domains *)
   Qed.
 
 End Lists.
+
+Ltac subList_app_tac :=
+  repeat apply SubList_app_3;
+  match goal with
+  | _ => apply SubList_refl
+  | _ => apply SubList_app_1; subList_app_tac
+  | _ => apply SubList_app_2; subList_app_tac
+  end.
+Ltac equivList_app_tac := split; subList_app_tac.
 
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
                      SubList l1 l2 -> SubList (map f l1) (map f l2).

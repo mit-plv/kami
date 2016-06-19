@@ -47,7 +47,7 @@ Section MemCache.
     simpleFifoM "rsFromChild" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes LgNumChildren) eq_refl.
   Definition fifoToC := simpleFifoM "toChild" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes LgNumChildren Id) eq_refl.
 
-  Definition childParentC := (childParent +++ fifoRqFromC +++ fifoRsFromC +++ fifoToC)%kami.
+  Definition childParentC := (childParent +++ (fifoRqFromC +++ fifoRsFromC +++ fifoToC))%kami.
 
   Definition memDir := memDir MIdxBits LgNumDatas LgDataBytes LgNumChildren Id.
   Definition mline := @regFileM "mline"%string MIdxBits (MemDir.Line LgNumDatas LgDataBytes)
@@ -119,7 +119,7 @@ Section MemCacheNativeFifo.
 
   Definition nchildParentC :=
     ((childParent IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren)
-       +++ nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)%kami.
+       +++ (nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC))%kami.
 
   Definition nmemCache :=
     (nl1C +++ nchildParentC +++ (memDirC IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren))%kami.
