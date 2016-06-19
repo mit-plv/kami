@@ -36,11 +36,13 @@ Section Refinement.
   Variable n: nat. (* number of l1 caches (cores) *)
     
   Lemma getDefs_fifos_nfifos:
-    getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas
-                               LgDataBytes Id n) =
-    getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes
-                             Id FifoSize n).
+    SubList (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
+            (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)).
   Proof.
+    replace (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)) 
+    with (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n));
+      [apply SubList_refl|].
+    
     unfold nfifosInNMemCache, fifosInMemCache.
     repeat rewrite getDefs_modFromMeta_app.
     f_equal.
@@ -51,14 +53,34 @@ Section Refinement.
     apply getDefs_fifo_nativeFifo.
   Qed.
 
+  Ltac getCalls_fifos_nfifos_tac :=
+    eapply SubList_trans; [apply getCalls_modFromMeta_app|];
+    eapply SubList_trans; [|apply getCalls_modFromMeta_app];
+    apply SubList_app_6.
+
   Lemma getCalls_fifos_nfifos:
     SubList (getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
             (getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)).
   Proof.
-    admit.
+    unfold nfifosInNMemCache, fifosInMemCache.
+
+    getCalls_fifos_nfifos_tac.
+    - getCalls_fifos_nfifos_tac;
+        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
+      getCalls_fifos_nfifos_tac;
+        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
+      getCalls_fifos_nfifos_tac;
+        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
+      getCalls_fifos_nfifos_tac;
+        [|apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity].
+      apply SubList_refl'; apply getCalls_sinModule_eq; reflexivity.
+
+    - getCalls_fifos_nfifos_tac; [|vm_compute; tauto].
+      getCalls_fifos_nfifos_tac; [|vm_compute; tauto].
+      vm_compute; tauto.
   Qed.
 
-  Ltac cluster_fifos_in_memCache :=
+  Ltac abstract_fifos_in_memCache :=
     unfold fifosInMemCache, othersInMemCache, memCache, l1C, childParentC;
     let m := fresh in
     set (_ +++ (fifoFromP _ _ _ _ _ _ _)) as m; clearbody m;
@@ -72,7 +94,7 @@ Section Refinement.
     set (memDirC _ _ _ _ _ _) as m; clearbody m;
     simpl; repeat rewrite map_app, concat_app.
 
-  Ltac cluster_fifos_in_nmemCache :=
+  Ltac abstract_fifos_in_nmemCache :=
     unfold nfifosInNMemCache, othersInMemCache, nmemCache, nl1C, nchildParentC;
     let m := fresh in
     set (_ +++ (nfifoFromP _ _ _ _ _ _)) as m; clearbody m;
@@ -108,7 +130,9 @@ Section Refinement.
              (regs' := getRegInits others)
              (rules' := getRules others)
              (dms' := getDefsBodies others);
-        unfold fifos, nfifos, others; clear fifos nfifos others.
+        unfold fifos, nfifos, others; clear fifos nfifos others;
+          repeat rewrite getDefs_flattened;
+          repeat rewrite getCalls_flattened.
       + kequiv.
       + kequiv.
       + kequiv.
@@ -119,29 +143,26 @@ Section Refinement.
       + kdisj_regs.
       + kdisj_dms.
       + kdisj_dms.
-      + repeat rewrite getCalls_flattened; kdisj_cms.
-      + repeat rewrite getCalls_flattened; kdisj_cms.
+      + kdisj_cms.
+      + kdisj_cms.
       + split.
-        * repeat rewrite getDefs_flattened.
-          rewrite getDefs_fifos_nfifos.
-          apply SubList_refl.
-        * repeat rewrite getCalls_flattened.
-          apply getCalls_fifos_nfifos.
+        * repeat rewrite getDefs_flattened; apply getDefs_fifos_nfifos.
+        * repeat rewrite getCalls_flattened; apply getCalls_fifos_nfifos.
       + kvr.
       + kvr.
       + kvr.
-      + cluster_fifos_in_memCache; equivList_app_tac.
-      + cluster_fifos_in_memCache; equivList_app_tac.
-      + cluster_fifos_in_memCache; equivList_app_tac.
+      + abstract_fifos_in_memCache; equivList_app_tac.
+      + abstract_fifos_in_memCache; equivList_app_tac.
+      + abstract_fifos_in_memCache; equivList_app_tac.
 
       + admit. (* Real substitution proof -- from fifos to nativeFifos *)
 
     - apply traceRefines_same_module_structure.
       + knodup_regs.
       + knodup_regs.
-      + cluster_fifos_in_nmemCache; equivList_app_tac.
-      + cluster_fifos_in_nmemCache; equivList_app_tac.
-      + cluster_fifos_in_nmemCache; equivList_app_tac.
+      + abstract_fifos_in_nmemCache; equivList_app_tac.
+      + abstract_fifos_in_nmemCache; equivList_app_tac.
+      + abstract_fifos_in_nmemCache; equivList_app_tac.
 
   Qed.
 

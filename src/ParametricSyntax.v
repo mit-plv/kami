@@ -656,7 +656,7 @@ Section Sin.
     Section SpecificIdx.
       Variable i: A.
 
-      Lemma genSinSame GenK (getConstK: A -> ConstT GenK) k (a: SinActionT k):
+      Lemma genSinSameF GenK (getConstK: A -> ConstT GenK) k (a: SinActionT k):
         getGenAction strA getConstK i (convSinToGen false GenK a) = getSinAction a.
       Proof.
         induction a; simpl in *; f_equal; try extensionality v; auto.
@@ -671,8 +671,8 @@ Section Sin.
         induction a1; simpl in *; intros; f_equal;
         repeat let x := fresh in extensionality x; auto.
         apply IHa1.
-        apply genSinSame.
-        apply genSinSame.
+        apply genSinSameF.
+        apply genSinSameF.
         apply IHa1.
       Qed.
     End SpecificIdx.
@@ -1573,6 +1573,115 @@ Lemma getDefs_sinModule_eq:
     getDefs (modFromMeta (getMetaFromSinNat n sm2)).
 Proof.
   intros; apply getDefs_sinModule_eq'; auto.
+Qed.
+
+Lemma getCallsSinA_getCallsA_rep:
+  forall {A} (strA: A -> string) {genK} (getConst: A -> ConstT genK) i
+         {retK} (sa: SinActionT typeUT retK),
+    getCallsA (getGenAction strA getConst i (convSinToGen true genK sa)) =
+    map (fun nr => addIndexToStr strA i (nameVal nr)) (getCallsSinA sa).
+Proof.
+  induction sa; simpl; intros; auto.
+  - f_equal; auto.
+  - do 2 rewrite map_app; repeat f_equal; auto.
+Qed.
+
+Lemma getCallsSinA_getCallsR:
+  forall (sa1 sa2: SinAction Void) sn1 sn2
+         {A} (strA: A -> string) {genK} (getConst: A -> ConstT genK) ls,
+    getCallsSinA (sa1 typeUT) = getCallsSinA (sa2 typeUT) ->
+    getCallsR (repRule strA getConst (fun ty => convSinToGen true genK (sa1 ty)) sn1 ls) =
+    getCallsR (repRule strA getConst (fun ty => convSinToGen true genK (sa2 ty)) sn2 ls).
+Proof.
+  induction ls; simpl; intros; [reflexivity|].
+  f_equal; auto.
+  unfold getActionFromGen.
+  do 2 rewrite getCallsSinA_getCallsA_rep.
+  rewrite H; auto.
+Qed.
+
+Lemma getCallsR_rulesToRep_eq:
+  forall sr1 sr2,
+    map (fun r : SinRule => getCallsSinA (ruleGen r typeUT)) sr1 =
+    map (fun r : SinRule => getCallsSinA (ruleGen r typeUT)) sr2 ->
+    forall {A} (strA: A -> string) Hgood1 {genK} (getConst: A -> ConstT genK) Hgood2
+           {ls} (HnoDup: NoDup ls),
+      getCallsR
+        (concat
+           (map getListFromMetaRule
+                (rulesToRep strA Hgood1 getConst Hgood2 HnoDup sr1))) =
+      getCallsR
+        (concat
+           (map getListFromMetaRule
+                (rulesToRep strA Hgood1 getConst Hgood2 HnoDup sr2))).
+Proof.
+  induction sr1; simpl; intros;
+    [apply eq_sym, map_eq_nil in H; subst; reflexivity|].
+  destruct sr2; [inv H|]; simpl in H; inv H.
+  destruct a as [ra na], s as [rs ns]; simpl in *.
+  do 2 rewrite getCallsR_app; f_equal; auto.
+  apply getCallsSinA_getCallsR; auto.
+Qed.
+
+Lemma getCallsSinA_getCallsM:
+  forall (sa1 sa2: sigT SinMethodT) sn1 sn2
+         {A} (strA: A -> string) {genK} (getConst: A -> ConstT genK) ls,
+    getCallsSinA (projT2 sa1 typeUT tt) = getCallsSinA (projT2 sa2 typeUT tt) ->
+    getCallsM
+      (repMeth strA getConst
+               (existT (fun sig => GenMethodT genK sig)
+                       (projT1 sa1)
+                       (fun ty argv => convSinToGen true genK (projT2 sa1 ty argv)))
+               sn1 ls) =
+    getCallsM
+      (repMeth strA getConst
+               (existT (fun sig => GenMethodT genK sig)
+                       (projT1 sa2)
+                       (fun ty argv => convSinToGen true genK (projT2 sa2 ty argv)))
+               sn2 ls).
+Proof.
+  induction ls; simpl; intros; [reflexivity|].
+  f_equal; auto.
+  do 2 rewrite getCallsSinA_getCallsA_rep.
+  rewrite H; auto.
+Qed.
+
+Lemma getCallsM_methsToRep_eq:
+  forall sm1 sm2,
+    map (fun d : SinMeth => getCallsSinA (projT2 (methGen d) typeUT tt)) sm1 =
+    map (fun d : SinMeth => getCallsSinA (projT2 (methGen d) typeUT tt)) sm2 ->
+    forall {A} (strA: A -> string) Hgood1 {genK} (getConst: A -> ConstT genK) Hgood2
+           {ls} (HnoDup: NoDup ls),
+      getCallsM
+        (concat
+           (map getListFromMetaMeth
+                (methsToRep strA Hgood1 getConst Hgood2 HnoDup sm1))) =
+      getCallsM
+        (concat
+           (map getListFromMetaMeth
+                (methsToRep strA Hgood1 getConst Hgood2 HnoDup sm2))).
+Proof.
+  induction sm1; simpl; intros;
+    [apply eq_sym, map_eq_nil in H; subst; reflexivity|].
+  destruct sm2; [inv H|]; simpl in H; inv H.
+  destruct a as [ma na], s as [ms ns]; simpl in *.
+  do 2 rewrite getCallsM_app; f_equal; auto.
+  apply getCallsSinA_getCallsM; auto.
+Qed.
+
+Lemma getCalls_sinModule_eq:
+  forall sm1 sm2 n,
+    map (fun r => getCallsSinA (ruleGen r typeUT)) (sinRules sm1) =
+    map (fun r => getCallsSinA (ruleGen r typeUT)) (sinRules sm2) ->
+    map (fun d => getCallsSinA (projT2 (methGen d) typeUT tt)) (sinMeths sm1) =
+    map (fun d => getCallsSinA (projT2 (methGen d) typeUT tt)) (sinMeths sm2) ->
+    getCalls (modFromMeta (getMetaFromSinNat n sm1)) =
+    getCalls (modFromMeta (getMetaFromSinNat n sm2)).
+Proof.
+  intros.
+  unfold getCalls, modFromMeta; simpl; f_equal.
+  - apply getCallsR_rulesToRep_eq; auto.
+  - apply getCallsM_methsToRep_eq; auto.
 Qed.
 
 Lemma getDefs_modFromMeta_app:
