@@ -1,11 +1,10 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement Lts.Notations.
-Require Import Lts.Equiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
+Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
 Require Import Lts.Duplicate Lts.Substitute Lts.ModuleBound.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
-Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Lts.ParametricEquiv Lts.ParametricInline.
-Require Import Ex.MemCache.
+Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Ex.SimpleFifoCorrect Ex.MemCache.
 
 Set Implicit Arguments.
 
@@ -34,6 +33,70 @@ Section Refinement.
   Variable FifoSize: nat.
 
   Variable n: nat. (* number of l1 caches (cores) *)
+
+  Lemma fifos_refines_nfifos_memCache:
+    traceRefines id (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)
+                 (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
+  Proof.
+    unfold fifosInMemCache, nfifosInNMemCache.
+    ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+              apply modFromMeta_comm_1|].
+    ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+               apply modFromMeta_comm_2].
+
+    simple kmodularn;
+      [kequiv|kequiv|kequiv|kequiv
+       |kdisj_regs|kdisj_regs|kvr|kvr
+       |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+       |knoninteracting|knoninteracting| |].
+    - ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                apply modFromMeta_comm_1|].
+      ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                 apply modFromMeta_comm_2].
+      simple kmodularn;
+        [kequiv|kequiv|kequiv|kequiv
+         |kdisj_regs|kdisj_regs|kvr|kvr
+         |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+         |knoninteracting|knoninteracting| |].
+      + ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                  apply modFromMeta_comm_1|].
+        ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                   apply modFromMeta_comm_2].
+        simple kmodularn;
+          [kequiv|kequiv|kequiv|kequiv
+           |kdisj_regs|kdisj_regs|kvr|kvr
+           |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+           |knoninteracting|knoninteracting| |].
+        * admit.
+        * admit.
+      + admit.
+
+    - ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                apply modFromMeta_comm_1|].
+      ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                 apply modFromMeta_comm_2].
+      simple kmodularn;
+        [kequiv|kequiv|kequiv|kequiv
+         |kdisj_regs|kdisj_regs|kvr|kvr
+         |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+         |knoninteracting|knoninteracting| |].
+      + ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                  apply modFromMeta_comm_1|].
+        ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                   apply modFromMeta_comm_2].
+        simple kmodularn;
+          [kequiv|kequiv|kequiv|kequiv
+           |kdisj_regs|kdisj_regs|kvr|kvr
+           |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+           |knoninteracting|knoninteracting| |].
+        * unfold fifoRqFromC; rewrite <-simpleFifo_simpleFifoM.
+          unfold nfifoRqFromC; rewrite <-nativeSimpleFifo_nativeSimpleFifoM.
+          apply sfifo_refines_nsfifo.
+        * unfold fifoRsFromC; rewrite <-simpleFifo_simpleFifoM.
+          unfold nfifoRsFromC; rewrite <-nativeSimpleFifo_nativeSimpleFifoM.
+          apply sfifo_refines_nsfifo.
+      + apply sfifo_refines_nsfifo.
+  Qed.
     
   Lemma getDefs_fifos_nfifos:
     SubList (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
@@ -149,7 +212,11 @@ Section Refinement.
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.
 
-      + admit. (* Real substitution proof -- from fifos to nativeFifos *)
+      + ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                  apply flatten_traceRefines_inv|].
+        ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                   apply flatten_traceRefines].
+        apply fifos_refines_nfifos_memCache.
 
     - apply traceRefines_same_module_structure.
       + knodup_regs.

@@ -137,10 +137,23 @@ Hint Unfold listEltT listEltK listElt
 Hint Unfold nativeFifoS nativeSimpleFifoS nativeFifoM nativeSimpleFifoM : ModuleDefs.
 Hint Unfold nativeEnqS nativeDeqS nativeFirstEltS: MethDefs.
 
+Require Import Lib.StringEq.
+
 Section Facts.
   Variable fifoName: string.
   Variable dType: Kind.
   Variable default: ConstT dType.
+
+  Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
+
+  Lemma nativeFifo_nativeFifoM:
+    nativeFifo fifoName default = modFromMeta (nativeFifoM fifoName default Hgood).
+  Proof. reflexivity. Qed.
+
+  Lemma nativeSimpleFifo_nativeSimpleFifoM:
+    nativeSimpleFifo fifoName default =
+    modFromMeta (nativeSimpleFifoM fifoName default Hgood).
+  Proof. reflexivity. Qed.
 
   Lemma nativeFifo_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (nativeFifo fifoName default).
@@ -167,7 +180,6 @@ Section Facts.
   Qed.
 
   Variable n: nat.
-  Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
 
   Lemma nativeFifoS_ModEquiv:
     forall ty1 ty2,

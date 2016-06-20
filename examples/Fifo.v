@@ -175,6 +175,14 @@ Section Facts.
 
   Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
 
+  Lemma fifo_fifoM:
+    fifo fifoName sz dType = modFromMeta (fifoM fifoName sz dType HfifoName).
+  Proof. reflexivity. Qed.
+
+  Lemma simpleFifo_simpleFifoM:
+    simpleFifo fifoName sz dType = modFromMeta (simpleFifoM fifoName sz dType HfifoName).
+  Proof. reflexivity. Qed.
+
   Lemma fifo_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (fifo fifoName sz dType).
   Proof.
@@ -200,53 +208,53 @@ Section Facts.
   Qed.
 
   Variable n: nat.
-  Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
 
   Lemma fifoS_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (fifoS fifoName sz dType Hgood)).
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
   Proof.
     kequiv.
   Qed.
 
   Lemma fifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (fifoM fifoName sz dType Hgood).
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (fifoM fifoName sz dType HfifoName).
   Proof.
     kequiv.
   Qed.
 
   Lemma simpleFifoS_ModEquiv:
     forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (simpleFifoS fifoName sz dType Hgood)).
+      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
   Proof.
     kequiv.
   Qed.
 
   Lemma simpleFifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (simpleFifoM fifoName sz dType Hgood).
+    forall ty1 ty2, MetaModEquiv ty1 ty2 (simpleFifoM fifoName sz dType HfifoName).
   Proof.
     kequiv.
   Qed.
 
   Lemma fifoS_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (fifoS fifoName sz dType Hgood)).
+    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
   Proof.
     kvr.
   Qed.
 
   Lemma fifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (fifoM fifoName sz dType Hgood).
+    forall ty, ValidRegsMetaModule ty (fifoM fifoName sz dType HfifoName).
   Proof.
     kvr.
   Qed.
 
   Lemma simpleFifoS_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (simpleFifoS fifoName sz dType Hgood)).
+    forall ty,
+      ValidRegsMetaModule ty (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
   Proof.
     kvr.
   Qed.
 
   Lemma simpleFifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (simpleFifoM fifoName sz dType Hgood).
+    forall ty, ValidRegsMetaModule ty (simpleFifoM fifoName sz dType HfifoName).
   Proof.
     kvr.
   Qed.
