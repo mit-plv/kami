@@ -2,7 +2,7 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement Lts.Notations.
 Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
-Require Import Lts.Duplicate Lts.Substitute Lts.ModuleBound.
+Require Import Lts.Duplicate Lts.ParamDup Lts.Substitute Lts.ModuleBound.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Ex.SimpleFifoCorrect Ex.MemCache.
 
@@ -11,7 +11,7 @@ Set Implicit Arguments.
 (* fifo/nativeFifo facts *)
 
 Lemma getDefs_fifo_nativeFifo:
-  forall fifoName sz d1 {d2} (default: ConstT d2)  Hgood n,
+  forall fifoName sz d1 {d2} (default: ConstT d2) Hgood n,
     getDefs (modFromMeta (getMetaFromSinNat n (nativeFifoS fifoName default Hgood))) =
     getDefs (modFromMeta (getMetaFromSinNat n (fifoS fifoName sz d1 Hgood))).
 Proof.
@@ -19,12 +19,24 @@ Proof.
 Qed.
 
 Lemma getDefs_simpleFifo_nativeSimpleFifo:
-  forall fifoName sz d1 {d2} (default: ConstT d2)  Hgood n,
+  forall fifoName sz d1 {d2} (default: ConstT d2) Hgood n,
     getDefs (modFromMeta (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood))) =
     getDefs (modFromMeta (getMetaFromSinNat n (simpleFifoS fifoName sz d1 Hgood))).
 Proof.
   intros; apply getDefs_sinModule_eq; reflexivity.
 Qed.
+
+Lemma simpleFifoS_const_regs:
+  forall sr fifoName sz dType Hgood,
+    In sr (sinRegs (simpleFifoS fifoName sz dType Hgood)) ->
+    forall i j, regGen sr i = regGen sr j.
+Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
+
+Lemma nativeSimpleFifoS_const_regs:
+  forall sr fifoName {dType} (default: ConstT dType) Hgood,
+    In sr (sinRegs (nativeSimpleFifoS fifoName default Hgood)) ->
+    forall i j, regGen sr i = regGen sr j.
+Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
 
 Section Refinement.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
@@ -67,9 +79,39 @@ Section Refinement.
            |kdisj_regs|kdisj_regs|kvr|kvr
            |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
            |knoninteracting|knoninteracting| |].
-        * admit.
-        * admit.
-      + admit.
+        * ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                    apply sinModule_duplicate_1; auto;
+                    intros; eapply simpleFifoS_const_regs; eauto|].
+          ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                     apply sinModule_duplicate_2; auto;
+                     intros; eapply nativeSimpleFifoS_const_regs; eauto].
+          unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+          kduplicated; [kequiv|kequiv|kvr|kvr|].
+          rewrite <-simpleFifo_simpleFifoS.
+          rewrite <-nativeSimpleFifo_nativeSimpleFifoS.
+          apply sfifo_refines_nsfifo.
+        * ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                    apply sinModule_duplicate_1; auto;
+                    intros; eapply simpleFifoS_const_regs; eauto|].
+          ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                     apply sinModule_duplicate_2; auto;
+                     intros; eapply nativeSimpleFifoS_const_regs; eauto].
+          unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+          kduplicated; [kequiv|kequiv|kvr|kvr|].
+          rewrite <-simpleFifo_simpleFifoS.
+          rewrite <-nativeSimpleFifo_nativeSimpleFifoS.
+          apply sfifo_refines_nsfifo.
+      + ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                  apply sinModule_duplicate_1; auto;
+                  intros; eapply simpleFifoS_const_regs; eauto|].
+        ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
+                   apply sinModule_duplicate_2; auto;
+                   intros; eapply nativeSimpleFifoS_const_regs; eauto].
+        unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+        kduplicated; [kequiv|kequiv|kvr|kvr|].
+        rewrite <-simpleFifo_simpleFifoS.
+        rewrite <-nativeSimpleFifo_nativeSimpleFifoS.
+        apply sfifo_refines_nsfifo.
 
     - ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                 apply modFromMeta_comm_1|].

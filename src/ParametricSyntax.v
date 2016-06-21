@@ -1531,6 +1531,15 @@ Section SinModuleToMeta.
        metaMeths := methsToRep (sinMeths m) |}.
 End SinModuleToMeta.
 
+(* NOTE: it's assuming register types are independent to indices *)
+Definition getModFromSin (sm: SinModule nat) :=
+  Syntax.Mod (map (fun sr => ((nameVal (regName sr))
+                                :: ((regGen sr O)))%struct) (sinRegs sm))
+             (map (fun sr => ((nameVal (ruleName sr))
+                                :: (getActionFromSin (ruleGen sr)))%struct) (sinRules sm))
+             (map (fun sd => ((nameVal (methName sd))
+                                :: (getMethFromSin (methGen sd)))%struct) (sinMeths sm)).
+
 Definition getMetaFromSinNat lgn s :=
   getMetaFromSin string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
                  (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.

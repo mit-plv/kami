@@ -179,8 +179,16 @@ Section Facts.
     fifo fifoName sz dType = modFromMeta (fifoM fifoName sz dType HfifoName).
   Proof. reflexivity. Qed.
 
+  Lemma fifo_fifoS:
+    fifo fifoName sz dType = getModFromSin (fifoS fifoName sz dType HfifoName).
+  Proof. reflexivity. Qed.
+
   Lemma simpleFifo_simpleFifoM:
     simpleFifo fifoName sz dType = modFromMeta (simpleFifoM fifoName sz dType HfifoName).
+  Proof. reflexivity. Qed.
+
+  Lemma simpleFifo_simpleFifoS:
+    simpleFifo fifoName sz dType = getModFromSin (simpleFifoS fifoName sz dType HfifoName).
   Proof. reflexivity. Qed.
 
   Lemma fifo_ModEquiv:

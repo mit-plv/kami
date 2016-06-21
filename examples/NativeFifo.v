@@ -150,9 +150,18 @@ Section Facts.
     nativeFifo fifoName default = modFromMeta (nativeFifoM fifoName default Hgood).
   Proof. reflexivity. Qed.
 
+  Lemma nativeFifo_nativeFifoS:
+    nativeFifo fifoName default = getModFromSin (nativeFifoS fifoName default Hgood).
+  Proof. reflexivity. Qed.
+
   Lemma nativeSimpleFifo_nativeSimpleFifoM:
     nativeSimpleFifo fifoName default =
     modFromMeta (nativeSimpleFifoM fifoName default Hgood).
+  Proof. reflexivity. Qed.
+
+  Lemma nativeSimpleFifo_nativeSimpleFifoS:
+    nativeSimpleFifo fifoName default =
+    getModFromSin (nativeSimpleFifoS fifoName default Hgood).
   Proof. reflexivity. Qed.
 
   Lemma nativeFifo_ModEquiv:
