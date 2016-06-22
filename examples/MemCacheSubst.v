@@ -81,10 +81,10 @@ Section Refinement.
            |knoninteracting|knoninteracting| |].
         * ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                     apply sinModule_duplicate_1; auto;
-                    intros; eapply simpleFifoS_const_regs; eauto|].
+                    [kequiv|kvr|intros; eapply simpleFifoS_const_regs; eauto]|].
           ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                      apply sinModule_duplicate_2; auto;
-                     intros; eapply nativeSimpleFifoS_const_regs; eauto].
+                     [kequiv|kvr|intros; eapply nativeSimpleFifoS_const_regs; eauto]].
           unfold MethsT; rewrite <-SemFacts.idElementwiseId.
           kduplicated; [kequiv|kequiv|kvr|kvr|].
           rewrite <-simpleFifo_simpleFifoS.
@@ -92,10 +92,10 @@ Section Refinement.
           apply sfifo_refines_nsfifo.
         * ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                     apply sinModule_duplicate_1; auto;
-                    intros; eapply simpleFifoS_const_regs; eauto|].
+                    [kequiv|kvr|intros; eapply simpleFifoS_const_regs; eauto]|].
           ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                      apply sinModule_duplicate_2; auto;
-                     intros; eapply nativeSimpleFifoS_const_regs; eauto].
+                     [kequiv|kvr|intros; eapply nativeSimpleFifoS_const_regs; eauto]].
           unfold MethsT; rewrite <-SemFacts.idElementwiseId.
           kduplicated; [kequiv|kequiv|kvr|kvr|].
           rewrite <-simpleFifo_simpleFifoS.
@@ -103,10 +103,10 @@ Section Refinement.
           apply sfifo_refines_nsfifo.
       + ketrans; [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                   apply sinModule_duplicate_1; auto;
-                  intros; eapply simpleFifoS_const_regs; eauto|].
+                  [kequiv|kvr|intros; eapply simpleFifoS_const_regs; eauto]|].
         ketrans; [|unfold MethsT; rewrite <-SemFacts.idElementwiseId;
                    apply sinModule_duplicate_2; auto;
-                   intros; eapply nativeSimpleFifoS_const_regs; eauto].
+                   [kequiv|kvr|intros; eapply nativeSimpleFifoS_const_regs; eauto]].
         unfold MethsT; rewrite <-SemFacts.idElementwiseId.
         kduplicated; [kequiv|kequiv|kvr|kvr|].
         rewrite <-simpleFifo_simpleFifoS.
