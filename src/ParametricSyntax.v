@@ -1544,6 +1544,15 @@ Definition getMetaFromSinNat lgn s :=
   getMetaFromSin string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
                  (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.
 
+Lemma getMetaRegName_sinRegs:
+  forall {A} (strA: A -> string) Hgood1 Hgood2 {ls} (HnoDup: NoDup ls) sregs,
+    map getMetaRegName (regsToRep strA Hgood1 Hgood2 HnoDup sregs) =
+    map (fun sr => nameVal (regName sr)) sregs.
+Proof.
+  induction sregs; simpl; intros; auto.
+  destruct a; simpl; f_equal; auto.
+Qed.
+
 Lemma getDefs_sinModule_eq':
   forall n sm1 sm2,
     map (fun dm => nameVal (methName dm)) sm1 =

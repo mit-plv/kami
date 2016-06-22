@@ -3,32 +3,6 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.FMap Lib.Concat Lib.Ind
 Require Import Syntax Semantics SemFacts Equiv Wf.
 Require Import Specialize Duplicate Refinement Renaming ParametricSyntax.
 
-Lemma getMetaRegName_sinRegs:
-  forall {A} (strA: A -> string) Hgood1 Hgood2 {ls} (HnoDup: NoDup ls) sregs,
-    map getMetaRegName (regsToRep strA Hgood1 Hgood2 HnoDup sregs) =
-    map (fun sr => nameVal (regName sr)) sregs.
-Proof.
-  induction sregs; simpl; intros; auto.
-  destruct a; simpl; f_equal; auto.
-Qed.
-
-Lemma EquivList_cons:
-  forall {A} (a1 a2: A) l1 l2,
-    EquivList l1 l2 -> a1 = a2 -> EquivList (a1 :: l1) (a2 :: l2).
-Proof.
-  intros; inv H; subst; split;
-    try (apply SubList_cons; [left; auto|apply SubList_cons_right; auto]).
-Qed.
-
-Lemma hasNoIndex_app_inv:
-  forall l1 l2,
-    hasNoIndex (l1 ++ l2) = true ->
-    hasNoIndex l1 = true /\ hasNoIndex l2 = true.
-Proof.
-  induction l1; simpl; intros; auto.
-  destruct (index _ _ _); auto; inv H.
-Qed.
-
 Lemma getGenAction_convSinToGen_renameAction:
   forall genK getConst i {ty retK} (a: SinActionT ty retK),
     getGenAction string_of_nat getConst i (convSinToGen true genK a) =
@@ -42,52 +16,36 @@ Proof.
   - f_equal; auto.
 Qed.
 
-Lemma renameAction_specializer_rules:
-  forall regs rules dms i {ty} rn (a: Action Void),
-    In (rn :: a)%struct rules ->
-    Specializable (Mod regs rules dms) ->
-    Wf.ValidRegsAction (namesOf regs) (a ty) ->
-    ActionEquiv (a ty) (a typeUT) ->
-    renameAction (specializer (Mod regs rules dms) i) (a ty) =
-    renameAction (spf i) (a ty).
+Lemma getSinAction_getCallsA_hasNoIndex:
+  forall {retK} (a: SinActionT typeUT retK),
+    hasNoIndex (getCallsA (getSinAction a)) = true.
 Proof.
-  intros; apply renameAction_spDom_weakening with (regs:= namesOf regs) (au:= a typeUT); auto.
-  intros; apply specializer_dom; auto.
-  apply in_app_or in H3; destruct H3.
-  - unfold spDom; apply makeNoDup_SubList_2.
-    apply in_or_app; left; auto.
-  - unfold spDom; apply makeNoDup_SubList_2.
-    do 3 (apply in_or_app; right).
-    apply in_or_app; left; simpl.
-
-    clear -H H3; induction rules; [inv H|].
-    inv H.
-    + simpl; apply in_or_app; left; auto.
-    + simpl; apply in_or_app; right; auto.
+  induction a; simpl; intros; auto.
+  - destruct meth as [mn Hmn]; simpl; rewrite Hmn; auto.
+  - repeat (apply hasNoIndex_app; auto).
 Qed.
 
-Lemma renameAction_specializer_dms:
-  forall regs rules dms i dmn (dm: sigT MethodT) ty v,
-    In (dmn :: dm)%struct dms ->
-    Specializable (Mod regs rules dms) ->
-    Wf.ValidRegsAction (namesOf regs) (projT2 dm ty v) ->
-    ActionEquiv (projT2 dm ty v) (projT2 dm typeUT tt) ->
-    renameAction (specializer (Mod regs rules dms) i) (projT2 dm ty v) =
-    renameAction (spf i) (projT2 dm ty v).
+Lemma getModFromSin_Specializable:
+  forall (sm: SinModule nat), Specializable (getModFromSin sm).
 Proof.
-  intros; apply renameAction_spDom_weakening with
-          (regs:= namesOf regs) (au:= projT2 dm typeUT tt); auto.
-  intros; apply specializer_dom; auto.
-  apply in_app_or in H3; destruct H3.
-  - unfold spDom; apply makeNoDup_SubList_2.
-    apply in_or_app; left; auto.
-  - unfold spDom; apply makeNoDup_SubList_2.
-    do 4 (apply in_or_app; right); simpl.
-
-    clear -H H3; induction dms; [inv H|].
-    inv H.
-    + simpl; apply in_or_app; left; auto.
-    + simpl; apply in_or_app; right; auto.
+  intros; unfold Specializable, spDom.
+  rewrite <-hasNoIndex_makeNoDup.
+  repeat apply hasNoIndex_app; simpl.
+  - generalize (sinRegs sm) as regs; clear; induction regs; auto.
+    destruct a as [rg [rn Hrn]]; simpl in *; rewrite Hrn; auto.
+  - generalize (sinRules sm) as rules; clear; induction rules; auto.
+    destruct a as [rg [rn Hrn]]; simpl in *; rewrite Hrn; auto.
+  - generalize (sinMeths sm) as meths; clear; induction meths; auto.
+    destruct a as [mg [mn Hmn]]; simpl in *; rewrite Hmn; auto.
+  - generalize (sinRules sm) as rules; clear; induction rules; auto.
+    destruct a as [rg rn]; simpl.
+    apply hasNoIndex_app; auto.
+    unfold getActionFromSin.
+    apply getSinAction_getCallsA_hasNoIndex.
+  - generalize (sinMeths sm) as meths; clear; induction meths; auto.
+    destruct a as [mg mn]; simpl.
+    apply hasNoIndex_app; auto.
+    apply getSinAction_getCallsA_hasNoIndex.
 Qed.
 
 Section SinModuleDup.
@@ -613,13 +571,11 @@ Section SinModuleDup.
   Qed.
   
   Variable sm: SinModule nat.
-  Hypotheses
-    (* Hsp is provable generally, but fine to prove for each instantiation *)
-    (Hsp: Specializable (getModFromSin sm))
-    (Hequiv: forall ty, ModEquiv ty typeUT (getModFromSin sm))
-    (Hvr: forall ty, ValidRegsModules ty (getModFromSin sm))
-    (HnoDupRegs: NoDup (map (fun sr => nameVal (regName sr)) (sinRegs sm)))
-    (HregInits: forall sr, In sr (sinRegs sm) -> forall i j, regGen sr i = regGen sr j).
+  
+  Hypotheses (Hequiv: forall ty, ModEquiv ty typeUT (getModFromSin sm))
+             (Hvr: forall ty, ValidRegsModules ty (getModFromSin sm))
+             (HnoDupRegs: NoDup (map (fun sr => nameVal (regName sr)) (sinRegs sm)))
+             (HregInits: forall sr, In sr (sinRegs sm) -> forall i j, regGen sr i = regGen sr j).
 
   Lemma sinModule_duplicate_1:
     forall n, (modFromMeta (getMetaFromSinNat n sm) <<==
@@ -630,16 +586,20 @@ Section SinModuleDup.
     - apply noDup_metaRegs.
       simpl; rewrite getMetaRegName_sinRegs; auto.
     - apply duplicate_regs_NoDup; auto.
-      p_equal HnoDupRegs; unfold getModFromSin; simpl.
-      clear; induction (sinRegs sm); simpl; auto.
-      f_equal; auto.
+      + apply getModFromSin_Specializable.
+      + p_equal HnoDupRegs; unfold getModFromSin; simpl.
+        clear; induction (sinRegs sm); simpl; auto.
+        f_equal; auto.
     - apply regsToRep_duplicate_regs_equiv; auto.
+      apply getModFromSin_Specializable.
     - apply rulesToRep_duplicate_rules_equiv; auto.
       + intros; specialize (Hequiv ty); inv Hequiv; auto.
       + intros; specialize (Hvr ty); inv Hvr; auto.
+      + apply getModFromSin_Specializable.
     - apply methsToRep_duplicate_meths_equiv; auto.
       + intros; specialize (Hequiv ty); inv Hequiv; auto.
       + intros; specialize (Hvr ty); inv Hvr; auto.
+      + apply getModFromSin_Specializable.
   Qed.
 
   Lemma sinModule_duplicate_2:
@@ -649,18 +609,22 @@ Section SinModuleDup.
     intros; unfold MethsT; rewrite SemFacts.idElementwiseId.
     apply traceRefines_same_module_structure.
     - apply duplicate_regs_NoDup; auto.
-      p_equal HnoDupRegs; unfold getModFromSin; simpl.
-      clear; induction (sinRegs sm); simpl; auto.
-      f_equal; auto.
+      + apply getModFromSin_Specializable.
+      + p_equal HnoDupRegs; unfold getModFromSin; simpl.
+        clear; induction (sinRegs sm); simpl; auto.
+        f_equal; auto.
     - apply noDup_metaRegs.
       simpl; rewrite getMetaRegName_sinRegs; auto.
     - apply EquivList_comm, regsToRep_duplicate_regs_equiv; auto.
+      apply getModFromSin_Specializable.
     - apply EquivList_comm, rulesToRep_duplicate_rules_equiv; auto.
       + intros; specialize (Hequiv ty); inv Hequiv; auto.
       + intros; specialize (Hvr ty); inv Hvr; auto.
+      + apply getModFromSin_Specializable.
     - apply EquivList_comm, methsToRep_duplicate_meths_equiv; auto.
       + intros; specialize (Hequiv ty); inv Hequiv; auto.
       + intros; specialize (Hvr ty); inv Hvr; auto.
+      + apply getModFromSin_Specializable.
   Qed.
 
 End SinModuleDup.

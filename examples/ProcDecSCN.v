@@ -42,8 +42,8 @@ Section ProcDecSCN.
 
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
-    ketrans; [|unfold MethsT; rewrite <-idElementwiseId; apply pdecN_refines_scN].
-    ketrans; [apply traceRefines_assoc_2|].
+    ketrans; [|apply pdecN_refines_scN].
+    ketrans; [rewrite idElementwiseId; apply traceRefines_assoc_2|].
 
     kmodular_sim_l.
     - simpl; unfold namesOf; rewrite map_app; apply NoDup_DisjList.

@@ -103,6 +103,14 @@ Section Lists. (* For dealing with domains *)
   Lemma EquivList_nil_inv_2: forall l, EquivList nil l -> l = nil.
   Proof. intros; inv H; apply SubList_nil_inv; auto. Qed.
 
+  Lemma EquivList_cons:
+    forall a1 a2 l1 l2,
+      EquivList l1 l2 -> a1 = a2 -> EquivList (a1 :: l1) (a2 :: l2).
+  Proof.
+    intros; inv H; subst; split;
+      try (apply SubList_cons; [left; auto|apply SubList_cons_right; auto]).
+  Qed.
+
   Lemma EquivList_refl: forall l, EquivList l l.
   Proof. intros; split; apply SubList_refl. Qed.
   

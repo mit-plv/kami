@@ -193,85 +193,85 @@ Section Facts.
 
   Lemma fifo_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (fifo fifoName sz dType).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
+  Hint Resolve fifo_ModEquiv.
 
   Lemma simpleFifo_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (simpleFifo fifoName sz dType).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
+  Hint Resolve simpleFifo_ModEquiv.
 
   Lemma fifo_ValidRegs:
     forall ty, ValidRegsModules ty (fifo fifoName sz dType).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
+  Hint Resolve fifo_ValidRegs.
 
   Lemma simpleFifo_ValidRegs:
     forall ty, ValidRegsModules ty (simpleFifo fifoName sz dType).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
+  Hint Resolve simpleFifo_ValidRegs.
 
   Variable n: nat.
 
+  Lemma fifoSS_ModEquiv:
+    forall ty1 ty2, ModEquiv ty1 ty2 (getModFromSin (fifoS fifoName sz dType HfifoName)).
+  Proof. rewrite <-fifo_fifoS; kequiv. Qed.
+
   Lemma fifoS_ModEquiv:
     forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
 
   Lemma fifoM_ModEquiv:
     forall ty1 ty2, MetaModEquiv ty1 ty2 (fifoM fifoName sz dType HfifoName).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
+
+  Lemma simpleFifoSS_ModEquiv:
+    forall ty1 ty2,
+      ModEquiv ty1 ty2 (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
+  Proof. rewrite <-simpleFifo_simpleFifoS; kequiv. Qed.
 
   Lemma simpleFifoS_ModEquiv:
     forall ty1 ty2,
       MetaModEquiv ty1 ty2 (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
 
   Lemma simpleFifoM_ModEquiv:
     forall ty1 ty2, MetaModEquiv ty1 ty2 (simpleFifoM fifoName sz dType HfifoName).
-  Proof.
-    kequiv.
-  Qed.
+  Proof. kequiv. Qed.
 
+  Lemma fifoSS_ValidRegs:
+    forall ty, ValidRegsModules ty (getModFromSin (fifoS fifoName sz dType HfifoName)).
+  Proof. rewrite <-fifo_fifoS; kvr. Qed.
+  
   Lemma fifoS_ValidRegs:
     forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
 
   Lemma fifoM_ValidRegs:
     forall ty, ValidRegsMetaModule ty (fifoM fifoName sz dType HfifoName).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
+
+  Lemma simpleFifoSS_ValidRegs:
+    forall ty,
+      ValidRegsModules ty (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
+  Proof. rewrite <-simpleFifo_simpleFifoS; kvr. Qed.
 
   Lemma simpleFifoS_ValidRegs:
     forall ty,
       ValidRegsMetaModule ty (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
 
   Lemma simpleFifoM_ValidRegs:
     forall ty, ValidRegsMetaModule ty (simpleFifoM fifoName sz dType HfifoName).
-  Proof.
-    kvr.
-  Qed.
+  Proof. kvr. Qed.
 
 End Facts.
 
 Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv
-     fifoS_ModEquiv fifoM_ModEquiv simpleFifoS_ModEquiv simpleFifoM_ModEquiv.
+     fifoS_ModEquiv fifoSS_ModEquiv fifoM_ModEquiv
+     simpleFifoS_ModEquiv simpleFifoSS_ModEquiv simpleFifoM_ModEquiv.
      
 Hint Resolve fifo_ValidRegs simpleFifo_ValidRegs
-     fifoS_ValidRegs fifoM_ValidRegs simpleFifoS_ValidRegs simpleFifoM_ValidRegs.
+     fifoS_ValidRegs fifoSS_ValidRegs fifoM_ValidRegs
+     simpleFifoS_ValidRegs simpleFifoSS_ValidRegs simpleFifoM_ValidRegs.
 

@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBou
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.ParametricWf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
-Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate.
+Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate Lts.Substitute.
 Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
 
 Set Implicit Arguments.
@@ -16,7 +16,8 @@ Set Implicit Arguments.
   + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
   + kmodular_sim_l : convert (a + c) <<== (b + c) to (a <<== b)
   + kmodular_sim_r : convert (c + a) <<== (c + b) to (a <<== b)
-  + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
+  + ksimilar : prove (a <<== b) when a and b have the same set of regs, rules, and methods
+  + ksubst : prove (context[a] <<== context[b])
   + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
   + kvr : prove well-formedness conditions for valid register uses
   + kdisj_regs : prove DisjList conditions of regs
@@ -57,29 +58,9 @@ Ltac ktrans m :=
   try rewrite idElementwiseId; apply traceRefines_trans with (p:= id) (q:= id) (mb:= m).
 
 Ltac ketrans :=
-  let m := fresh "m" in evar (m: Modules); ktrans m; unfold m; clear m.
-
-Ltac kmodular :=
-  try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)); auto.
-
-Tactic Notation "simple" "kmodular" :=
-  try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
-
-Ltac kmodularn :=
-  try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_noninteracting; auto.
-
-Tactic Notation "simple" "kmodularn" :=
-  try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_noninteracting.
-
-Ltac kmodular_sim_l :=
-  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1.
-
-Ltac kmodular_sim_r :=
-  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
+  let m := fresh "m" in
+  evar (m: Modules); ktrans m; unfold m; clear m;
+  try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
 
 Ltac unfold_head m :=
   match m with
@@ -403,6 +384,51 @@ Ltac kdef_call_sub :=
     | [ |- DefCallSub _ _ ] => vm_compute; split; intros; intuition idtac
     end.
 
+Tactic Notation "simple" "kmodular" :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
+Ltac kmodular := simple kmodular; auto.
+
+Tactic Notation "simple" "kmodularn" :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_noninteracting.
+
+Ltac kmodularn :=
+  simple kmodularn;
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |knoninteracting|knoninteracting| |].
+
+Ltac kmodular_sim_l :=
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1.
+
+Ltac kmodular_sim_r :=
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
+
+Ltac ksimilar :=
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure;
+  [knodup_regs|knodup_regs| | |].
+
+Ltac ksubst fm tm om :=
+  apply substitute_flattened_refines_interacting
+  with (regs := getRegInits fm)
+         (rules := getRules fm)
+         (dms := getDefsBodies fm)
+         (sregs := getRegInits tm)
+         (srules := getRules tm)
+         (sdms := getDefsBodies tm)
+         (regs' := getRegInits om)
+         (rules' := getRules om)
+         (dms' := getDefsBodies om);
+  repeat rewrite getDefs_flattened;
+  repeat rewrite getCalls_flattened;
+  [kequiv|kequiv|kequiv|
+   knodup_regs|knodup_regs|knodup_regs|
+   kdisj_regs|kdisj_regs|
+   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| |
+   kvr|kvr|kvr| | | |].
+      
 Ltac kinline_compute :=
   repeat autounfold with ModuleDefs;
   repeat autounfold with MethDefs;

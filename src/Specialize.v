@@ -573,6 +573,15 @@ Section Specializable.
     destruct (index _ _ _); auto.
   Qed.
 
+  Lemma hasNoIndex_app_inv:
+    forall l1 l2,
+      hasNoIndex (l1 ++ l2) = true ->
+      hasNoIndex l1 = true /\ hasNoIndex l2 = true.
+  Proof.
+    induction l1; simpl; intros; auto.
+    destruct (index _ _ _); auto; inv H.
+  Qed.
+
   Lemma hasNoIndex_makeNoDup:
     forall l, hasNoIndex l = hasNoIndex (makeNoDup l).
   Proof.
@@ -901,6 +910,54 @@ Hint Immediate specializable_disj_dom_img
      specializable_disj_regs
      specializable_disj_defs
      specializable_disj_calls.
+
+Lemma renameAction_specializer_rules:
+  forall regs rules dms i {ty} rn (a: Action Void),
+    In (rn :: a)%struct rules ->
+    Specializable (Mod regs rules dms) ->
+    Wf.ValidRegsAction (namesOf regs) (a ty) ->
+    ActionEquiv (a ty) (a typeUT) ->
+    renameAction (specializer (Mod regs rules dms) i) (a ty) =
+    renameAction (spf i) (a ty).
+Proof.
+  intros; apply renameAction_spDom_weakening with (regs:= namesOf regs) (au:= a typeUT); auto.
+  intros; apply specializer_dom; auto.
+  apply in_app_or in H3; destruct H3.
+  - unfold spDom; apply makeNoDup_SubList_2.
+    apply in_or_app; left; auto.
+  - unfold spDom; apply makeNoDup_SubList_2.
+    do 3 (apply in_or_app; right).
+    apply in_or_app; left; simpl.
+
+    clear -H H3; induction rules; [inv H|].
+    inv H.
+    + simpl; apply in_or_app; left; auto.
+    + simpl; apply in_or_app; right; auto.
+Qed.
+
+Lemma renameAction_specializer_dms:
+  forall regs rules dms i dmn (dm: sigT MethodT) ty v,
+    In (dmn :: dm)%struct dms ->
+    Specializable (Mod regs rules dms) ->
+    Wf.ValidRegsAction (namesOf regs) (projT2 dm ty v) ->
+    ActionEquiv (projT2 dm ty v) (projT2 dm typeUT tt) ->
+    renameAction (specializer (Mod regs rules dms) i) (projT2 dm ty v) =
+    renameAction (spf i) (projT2 dm ty v).
+Proof.
+  intros; apply renameAction_spDom_weakening with
+          (regs:= namesOf regs) (au:= projT2 dm typeUT tt); auto.
+  intros; apply specializer_dom; auto.
+  apply in_app_or in H3; destruct H3.
+  - unfold spDom; apply makeNoDup_SubList_2.
+    apply in_or_app; left; auto.
+  - unfold spDom; apply makeNoDup_SubList_2.
+    do 4 (apply in_or_app; right); simpl.
+
+    clear -H H3; induction dms; [inv H|].
+    inv H.
+    + simpl; apply in_or_app; left; auto.
+    + simpl; apply in_or_app; right; auto.
+Qed.
 
 Section SpRefinement.
   Variables ma mb: Modules.
