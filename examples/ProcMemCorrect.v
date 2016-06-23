@@ -23,16 +23,16 @@ Section ProcMem.
   Variable execNextPc: ExecNextPcT 2 AddrSize LgDataBytes RfIdx.
 
   Variable LgNumChildren: nat.
-  Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
+  Definition numChildren := (wordToNat (wones LgNumChildren)).
 
-  Definition pdecN := pdecs dec execState execNextPc n.
+  Definition pdecN := pdecs dec execState execNextPc numChildren.
   Definition pmFifos :=
     modFromMeta
       ((nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes LgNumChildren)
          +++ (nfifoRsToProc LgDataBytes LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
-  Definition scN := sc dec execState execNextPc opLd opSt opHt n.
+  Definition scN := sc dec execState execNextPc opLd opSt opHt numChildren.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
   Proof.
@@ -40,7 +40,7 @@ Section ProcMem.
 
     kmodular_light.
     - kdef_call_sub.
-    - admit.
+    - admit. (* TODO: kdef_call_sub automation *)
     - kinteracting.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
@@ -49,10 +49,10 @@ Section ProcMem.
          |kdisj_regs|kdisj_regs|kvr|kvr
          |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
          | | | | |].
-      + admit.
-      + admit.
-      + admit. (* dropP Interacting *)
-      + admit.
+      + admit. (* kdef_call_sub automation *)
+      + admit. (* kdef_call_sub automation *)
+      + admit. (* dropP satisfies Interacting *)
+      + admit. (* fifos <= simpleFifos *)
       + apply memCache_refines_memAtomic.
   Qed.
 
