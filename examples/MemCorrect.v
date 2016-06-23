@@ -10,17 +10,22 @@ Section MemCorrect.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
   Variable FifoSize: nat.
+  Variable LgNumChildren: nat.
 
-  Variable n: nat. (* number of caches (cores) *)
+  Definition memCache :=
+    MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
+  Definition nmemCache :=
+    MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren.
+  Definition memAtomicWoQ :=
+    memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
+                 LgDataBytes (Word.wordToNat (Word.wones LgNumChildren)).
 
-  Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
-  Definition nmemCache := MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n.
-  Definition memAtomic := memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
-                                       LgDataBytes n.
+  (* TODO: give the right p *)
+  Axiom dropP: string -> sigT SignT -> option (sigT SignT).
 
-  Lemma memCache_refines_memAtomic: modFromMeta memCache <<== memAtomic.
+  Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropP] memAtomicWoQ.
   Proof.
-    ktrans (modFromMeta nmemCache);
+    apply Refinement.traceRefines_trans with (p:= id) (mb:= modFromMeta nmemCache);
       [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
        apply memCache_refines_nmemCache|].
     

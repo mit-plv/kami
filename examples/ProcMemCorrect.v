@@ -4,7 +4,7 @@ Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
 Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
 
-Require Import Ex.SC Ex.ProcDec Ex.MemCache Ex.L1Cache.
+Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.L1Cache.
 Require Import Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
 
 Set Implicit Arguments.
@@ -26,13 +26,34 @@ Section ProcMem.
   Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
 
   Definition pdecN := pdecs dec execState execNextPc n.
-  Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren. 
+  Definition pmFifos :=
+    modFromMeta
+      ((nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes LgNumChildren)
+         +++ (nfifoRsToProc LgDataBytes LgNumChildren)).
+    
+  Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
-  Theorem pdecN_mcache_refines_scN: (pdecN ++ modFromMeta mcache)%kami <<== scN.
+  Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
   Proof.
     ketrans; [|apply pdecN_memAtomic_refines_scN].
-    admit.
+
+    kmodular_light.
+    - kdef_call_sub.
+    - admit.
+    - kinteracting.
+    - krefl.
+    - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
+      apply traceRefines_modular_interacting with (vp:= dropP);
+        [kequiv|kequiv|kequiv|kequiv
+         |kdisj_regs|kdisj_regs|kvr|kvr
+         |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+         | | | | |].
+      + admit.
+      + admit.
+      + admit. (* dropP Interacting *)
+      + admit.
+      + apply memCache_refines_memAtomic.
   Qed.
 
 End ProcMem.

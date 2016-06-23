@@ -129,10 +129,21 @@ Section MemCacheNativeFifo.
     modFromMeta
       ((nfifoRqToP +++ nfifoRsToP +++ nfifoFromP)
          +++ (nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)).
+
+  (* Fifos connecting processors and nmemCache; it's NOT the part of "nmemCache" *)
+  Definition nfifoRqFromProc :=
+    getMetaFromSinNat LgNumChildren (@nativeFifoS "rqFromProc"
+                                                  (RqFromProc IdxBits TagBits
+                                                              LgNumDatas LgDataBytes)
+                                                  Default eq_refl).
+  Definition nfifoRsToProc :=
+    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "rsToProc"
+                                                        (RsToProc LgDataBytes) Default eq_refl).
   
 End MemCacheNativeFifo.
 
-Hint Unfold nfifoRqToP nfifoRsToP nfifoFromP
+Hint Unfold nfifoRqFromProc nfifoRsToProc
+     nfifoRqToP nfifoRsToP nfifoFromP
      nl1C nfifoRqFromC nfifoRsFromC nfifoToC nchildParentC nmemCache: ModuleDefs.
 
 
