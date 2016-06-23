@@ -44,14 +44,14 @@ Section ProcMem.
     - kinteracting.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
-      apply traceRefines_modular_interacting with (vp:= dropP);
+      apply traceRefines_modular_interacting with (vp:= dropFirstElts LgNumChildren);
         [kequiv|kequiv|kequiv|kequiv
          |kdisj_regs|kdisj_regs|kvr|kvr
          |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
          | | | | |].
       + admit. (* kdef_call_sub automation *)
       + admit. (* kdef_call_sub automation *)
-      + admit. (* dropP satisfies Interacting *)
+      + admit. (* dropFirstElts satisfies Interacting *)
       + admit. (* fifos <= simpleFifos *)
       + apply memCache_refines_memAtomic.
   Qed.

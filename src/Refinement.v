@@ -1,9 +1,33 @@
 Require Import List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
-Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
+Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Split Wf.
 
 Set Implicit Arguments.
+
+Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=
+  fun s v =>
+    match q s v with
+    | Some qv => p s qv
+    | None => None
+    end.
+
+Section LabelDrop.
+  Variable ds: string.
+
+  Definition dropP (s: M.key) (v: sigT SignT): option (sigT SignT) :=
+    if string_eq s ds then None else Some v.
+
+  Definition dropI (i: nat) (s: M.key) (v: sigT SignT): option (sigT SignT) :=
+    if string_eq s (ds __ i) then None else Some v.
+
+  Fixpoint dropN (n: nat) :=
+    match n with
+    | O => dropI O
+    | S n' => compLabelMaps (dropI n) (dropN n')
+    end.
+
+End LabelDrop.
 
 Section StepToRefinement.
   Variable imp spec: Modules.

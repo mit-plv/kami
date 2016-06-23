@@ -1,9 +1,9 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
-Require Import Syntax Semantics Notations SemFacts Equiv Refinement Tactics.
-Require Import DecompositionOne DecompositionInv.
-Require Import Ex.Fifo Ex.NativeFifo.
+Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement.
+Require Import Lts.Notations Lts.Tactics Lts.DecompositionOne Lts.DecompositionInv.
+Require Import Fifo NativeFifo.
 
 Set Implicit Arguments.
 
@@ -611,8 +611,7 @@ Section ToSimple.
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
 
-  Definition dropFirstElt {A} (s: string) (a: A): option A :=
-    if string_eq s ^"firstElt" then None else Some a.
+  Definition dropFirstElt := dropP ^"firstElt".
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
@@ -664,7 +663,7 @@ Section ToSimple.
           }
           { simpl; meq. }
       + kinv_action_dest; clear.
-        unfold dropFirstElt.
+        unfold dropFirstElt, dropP.
         remember (string_eq _ _) as beq; destruct beq;
           [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
         kinv_magic_light.
@@ -705,7 +704,7 @@ Section ToSimple.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
         * exfalso; inv H4; inv H5; clear HAction1 HAction2 Hsig Hsig0.
           invertActionRep; inv H2; findeq.
-        * unfold dropFirstElt in *.
+        * unfold dropFirstElt, dropP in *.
           remember (string_eq _ _) as beq; destruct beq;
             [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
           inv H4; inv H5; clear HAction HAction0 Hsig.
@@ -713,17 +712,17 @@ Section ToSimple.
         * exfalso; inv H4; inv H5; clear HAction1 HAction2 Hsig Hsig0.
           invertActionRep; inv H2; findeq.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-        * unfold dropFirstElt in *.
+        * unfold dropFirstElt, dropP in *.
           remember (string_eq _ _) as beq; destruct beq;
             [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
           inv H4; inv H5; clear HAction HAction0 Hsig.
           invertActionRep; repeat split; simpl; auto.
-        * unfold dropFirstElt in *.
+        * unfold dropFirstElt, dropP in *.
           remember (string_eq _ _) as beq; destruct beq;
             [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
           inv H4; inv H5; clear HAction HAction0 Hsig.
           invertActionRep; repeat split; simpl; auto.
-        * unfold dropFirstElt in *.
+        * unfold dropFirstElt, dropP in *.
           remember (string_eq _ _) as beq; destruct beq;
             [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
           inv H4; inv H5; clear HAction HAction0 Hsig.

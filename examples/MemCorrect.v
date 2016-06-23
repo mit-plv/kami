@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Equiv Lts.Tactics Lts.Specialize.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement.
+Require Import Lts.Equiv Lts.Tactics Lts.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
 
@@ -18,12 +19,13 @@ Section MemCorrect.
     MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren.
   Definition memAtomicWoQ :=
     memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
-                 LgDataBytes (Word.wordToNat (Word.wones LgNumChildren)).
+                 LgDataBytes (wordToNat (Word.wones LgNumChildren)).
 
-  (* TODO: give the right p *)
-  Axiom dropP: string -> sigT SignT -> option (sigT SignT).
+  Definition dropFirstElts :=
+    compLabelMaps (dropN ("rqFromProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren)))
+                  (dropN ("rsToProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren))).
 
-  Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropP] memAtomicWoQ.
+  Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.
     apply Refinement.traceRefines_trans with (p:= id) (mb:= modFromMeta nmemCache);
       [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
