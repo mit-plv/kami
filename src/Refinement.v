@@ -122,6 +122,16 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
+  Theorem traceRefines_trans_elem: forall m1 m2 m3: Modules,
+                                     (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
+  Proof.
+    intros.
+    unfold MethsT in *; rewrite idElementwiseId in *.
+    eapply traceRefines_trans; eauto.
+  Qed.
+
+
+
   Corollary traceRefines_trans_conj:
     forall ma mb mc p q,
       traceRefines p ma mb /\

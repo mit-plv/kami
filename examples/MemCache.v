@@ -42,7 +42,7 @@ Section MemCache.
   Definition childParent := childParent MIdxBits LgNumDatas LgDataBytes LgNumChildren Id.
 
   Definition fifoRqFromC :=
-    simpleFifoM "rqFromChild" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes LgNumChildren Id) eq_refl.
+    fifoM "rqFromChild" (rsz FifoSize) (RqFromC MIdxBits LgNumDatas LgDataBytes LgNumChildren Id) eq_refl.
   Definition fifoRsFromC :=
     simpleFifoM "rsFromChild" (rsz FifoSize) (RsFromC MIdxBits LgNumDatas LgDataBytes LgNumChildren) eq_refl.
   Definition fifoToC := simpleFifoM "toChild" (rsz FifoSize) (ToC MIdxBits LgNumDatas LgDataBytes LgNumChildren Id) eq_refl.
@@ -103,9 +103,9 @@ Section MemCacheNativeFifo.
       +++ (nfifoRqToP +++ nfifoRsToP +++ nfifoFromP).
 
   Definition nfifoRqFromC :=
-    @nativeSimpleFifoM "rqFromChild" (RqFromC (MIdxBits IdxBits TagBits)
-                                              LgNumDatas LgDataBytes LgNumChildren Id)
-                       Default eq_refl.
+    @nativeFifoM "rqFromChild" (RqFromC (MIdxBits IdxBits TagBits)
+                                        LgNumDatas LgDataBytes LgNumChildren Id)
+                 Default eq_refl.
   
   Definition nfifoRsFromC :=
     @nativeSimpleFifoM "rsFromChild" (RsFromC (MIdxBits IdxBits TagBits)

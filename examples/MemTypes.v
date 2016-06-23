@@ -56,7 +56,8 @@ Section MsgTypes.
   Definition RsToP := STRUCT {
                           "addr" :: Addr;
                           "to" :: Msi;
-                          "line" :: Line
+                          "line" :: Line;
+                          "isVol" :: Bool
                         }.
 
   Definition RqFromC := STRUCT {

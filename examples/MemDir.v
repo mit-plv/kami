@@ -41,6 +41,7 @@ Section Mem.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
   Definition rqFromCPop := MethodSig "rqFromChild"--"deq" (Void): RqFromC.
+  Definition rqFromCFirst := MethodSig "rqFromChild"--"firstElt" (Void): RqFromC.
   Definition rsFromCPop := MethodSig "rsFromChild"--"deq" (Void): RsFromC.
 
   Definition toCEnq := MethodSig "toChild"--"enq" (ToC): Void.
@@ -88,37 +89,18 @@ Section Mem.
   Definition memDir :=
     META {
         Register "cRqValid": Bool <- @ConstBool false
-        with Register "cRq": RqFromC <- Default
         with Register "cRqDirw": Dirw <- dirwInit
-
-        with Rule "hit" :=
-          Read valid <- "cRqValid";
-          Assert !#valid;
-          Call rqChild <- rqFromCPop();
-          LET c <- #rqChild@."child";
-          LET rq: RqToP <- #rqChild@."rq";
-          LET idx <- getIdx (#rq@."addr");
-          Call dir <- readDir(#idx);
-          Assert #dir@[#c] <= #rq@."from";
-          Assert (othersCompat #c #rq@."to" #dir);
-          Call line <- readLine(#idx);
-          LET rs: FromP <- STRUCT{"isRq" ::= $$ false; "addr" ::= #rq@."addr"; "to" ::= #rq@."to"; "line" ::= #line; "id" ::= #rq@."id"};
-          Call toCEnq(STRUCT{"child" ::= #c; "msg" ::= #rs});
-          LET dir' <- #dir@[#c <- #rq@."to"];
-          Call writeDir(STRUCT{"addr" ::= #idx; "data" ::= #dir'});
-          Retv
 
         with Rule "missByState" :=
           Read valid <- "cRqValid";
           Assert !#valid;
-          Call rqChild <- rqFromCPop();
+          Call rqChild <- rqFromCFirst();
           LET c <- #rqChild@."child";
           LET rq: RqToP <- #rqChild@."rq";
           LET idx <- getIdx (#rq@."addr");
           Call dir <- readDir(#idx);
-          Assert !((#dir@[#c] <= #rq@."from") && (othersCompat #c #rq@."to" #dir));
+          Assert (#dir@[#c] <= #rq@."from");
           Write "cRqValid" <- $$ true;
-          Write "cRq" <- #rqChild;
           LET dirw: Dirw <- VEC (replicate ($$ false) _);
           Write "cRqDirw" <- #dirw;
           Retv
@@ -126,7 +108,7 @@ Section Mem.
         with Rule "dwnRq" :=
           Read valid <- "cRqValid";
           Assert #valid;
-          Read rqChild: RqFromC <- "cRq";
+          Call rqChild <- rqFromCFirst();
           LET c <- #rqChild@."child";
           LET rq: RqToP <- #rqChild@."rq";
           Call dir <- readDir(getIdx #rq@."addr");

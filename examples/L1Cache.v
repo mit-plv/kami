@@ -158,7 +158,7 @@ Section L1Cache.
           Call cs <- readCs(#idx);
           Call line <- readLine(#idx);
           If !(#cs == $ Inv)
-          then (Call rsToPEnq(STRUCT{"addr" ::= getAddr #tag #idx; "to" ::= $ Inv; "line" ::= #line}); Retv)
+          then (Call rsToPEnq(STRUCT{"addr" ::= getAddr #tag #idx; "to" ::= $ Inv; "line" ::= #line; "isVol" ::= $$ true}); Retv)
           else Retv as _;
           Call writeCs(STRUCT{ "addr" ::= #idx; "data" ::= $ Inv});
           Write "procRqReplace" <- $$ false;
@@ -251,7 +251,7 @@ Section L1Cache.
           Call procRq <- rqFromProcFirst();
           Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == getTagIdx #fromP@."addr" &&
                   (#procRq@."op" && #cs == $ Mod || (!#procRq@."op" && #cs == $ Sh)));
-          Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line});
+          Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line; "isVol" ::= $$ false});
           Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
           Retv
       }.
