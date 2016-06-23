@@ -11,7 +11,7 @@ Section NativeFifo.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
-  Notation "^ s" := (fifoName -- s) (at level 0).
+  Local Notation "^ s" := (fifoName -- s) (at level 0).
 
   Definition listEltT ty := list (ty dType).
   Definition listEltK ty := @NativeKind (listEltT ty) nil.

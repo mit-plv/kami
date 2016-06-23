@@ -11,7 +11,7 @@ Section Fifo.
   Variable sz: nat.
   Variable dType: Kind.
 
-  Notation "^ s" := (fifoName -- s) (at level 0).
+  Local Notation "^ s" := (fifoName -- s) (at level 0).
 
   Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
     (Read isFull <- ^"full";

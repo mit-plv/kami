@@ -1,5 +1,5 @@
 Require Import Arith.Peano_dec Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
 Require Import Syntax Semantics Notations SemFacts Equiv Refinement Tactics.
 Require Import DecompositionOne DecompositionInv.
@@ -7,7 +7,7 @@ Require Import Ex.Fifo Ex.NativeFifo.
 
 Set Implicit Arguments.
 
-Section Facts.
+Section ToNative.
   Variable fifoName: string.
   Variable sz: nat.
   Variable dType: Kind.
@@ -602,5 +602,135 @@ Section Facts.
           END_SKIP_PROOF_ON *) admit.
   Qed.
 
-End Facts.
+End ToNative.
 
+Section ToSimple.
+  Variable fifoName: string.
+  Variable dType: Kind.
+  Variable default: ConstT dType.
+
+  Local Notation "^ s" := (fifoName -- s) (at level 0).
+
+  Definition dropFirstElt {A} (s: string) (a: A): option A :=
+    if string_eq s ^"firstElt" then None else Some a.
+
+  Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
+  Proof.
+    kexistnv ^"elt" v s (listEltK dType type).
+    exact (sv = Some (existT _ _ v)).
+  Defined.
+
+  Lemma nfifo_refines_nsfifo:
+    (nativeFifo fifoName default) <<=[dropFirstElt] (nativeSimpleFifo fifoName default).
+  Proof. (* SKIP_PROOF_ON
+    apply decompositionOneR with
+    (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^"elt"); auto.
+
+    - unfold thetaR; eexists; split.
+      + unfold nfifo_nsfifo_etaR; eexists; split.
+        * simpl; findeq.
+        * reflexivity.
+      + reflexivity.
+    - intros; CommonTactics.dest_in; simpl; tauto.
+    - intros; inv H0; inv HInRules.
+
+    - intros.
+      destruct H1 as [sv ?]; dest; subst.
+      destruct H1 as [eltv ?]; dest; subst.
+      inv H0; CommonTactics.dest_in; simpl in *.
+      + repeat kinv_magic_light.
+        repeat split; intros; auto.
+        destruct H0 as [sv [[eltv ?] ?]]; dest; subst; simpl in *.
+        eexists; split.
+        { eexists; split.
+          { findeq. }
+          { reflexivity. }
+        }
+        { simpl; meq. }
+      + eexists; split.
+        * kinv_action_dest.
+          econstructor; [right; left; reflexivity| |].
+          { repeat kinv_magic_light.
+            destruct x; [inv H3|]; reflexivity.
+          }
+          { kinv_magic_light. }
+        * kinv_magic_light.
+          repeat split; intros; auto.
+          destruct H0 as [sv [[eltv ?] ?]]; dest; subst; simpl in *.
+          eexists; split.
+          { eexists; split.
+            { findeq. }
+            { reflexivity. }
+          }
+          { simpl; meq. }
+      + kinv_action_dest; clear.
+        unfold dropFirstElt.
+        remember (string_eq _ _) as beq; destruct beq;
+          [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
+        kinv_magic_light.
+        repeat split; auto.
+
+    - intros; inv H0; inv H1. 
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
+          repeat split; unfold getLabel; simpl; auto.
+      + CommonTactics.dest_in; simpl in *.
+        * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
+        * exfalso; inv H4; inv H5; clear HAction1 HAction2 Hsig Hsig0.
+          invertActionRep; inv H2; findeq.
+        * unfold dropFirstElt in *.
+          remember (string_eq _ _) as beq; destruct beq;
+            [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
+          inv H4; inv H5; clear HAction HAction0 Hsig.
+          invertActionRep; repeat split; simpl; auto.
+        * exfalso; inv H4; inv H5; clear HAction1 HAction2 Hsig Hsig0.
+          invertActionRep; inv H2; findeq.
+        * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
+        * unfold dropFirstElt in *.
+          remember (string_eq _ _) as beq; destruct beq;
+            [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
+          inv H4; inv H5; clear HAction HAction0 Hsig.
+          invertActionRep; repeat split; simpl; auto.
+        * unfold dropFirstElt in *.
+          remember (string_eq _ _) as beq; destruct beq;
+            [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
+          inv H4; inv H5; clear HAction HAction0 Hsig.
+          invertActionRep; repeat split; simpl; auto.
+        * unfold dropFirstElt in *.
+          remember (string_eq _ _) as beq; destruct beq;
+            [clear Heqbeq|apply string_eq_dec_neq in Heqbeq; elim Heqbeq; auto].
+          inv H4; inv H5; clear HAction HAction0 Hsig.
+          invertActionRep; repeat split; simpl; auto.
+        * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
+          END_SKIP_PROOF_ON *) admit.
+  Qed.
+
+End ToSimple.
+    

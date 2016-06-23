@@ -22,7 +22,7 @@ Section StepToRefinement.
                   end;
          defs := p dfs;
          calls := p clls |}
-    end.    
+    end.
 
   Variable stepMap:
     forall o u l,
@@ -65,6 +65,68 @@ Section StepToRefinement.
     intuition.
   Qed.
 End StepToRefinement.
+
+Lemma liftPLabel_mergeLabel:
+  forall ruleMap o p l1 l2,
+    CanCombineLabel l1 l2 ->
+    liftPLabel (liftToMap1 p) ruleMap o (mergeLabel l1 l2) =
+    mergeLabel (liftPLabel (liftToMap1 p) ruleMap o l1)
+               (liftPLabel (liftToMap1 p) ruleMap o l2).
+Proof.
+  intros; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl in *; f_equal.
+
+  - destruct a1 as [[|]|], a2 as [[|]|]; reflexivity.
+  - inv H; dest; simpl in *.
+    apply liftToMap1_union; auto.
+  - inv H; dest; simpl in *.
+    apply liftToMap1_union; auto.
+Qed.
+
+Lemma liftPLabel_hide:
+  forall imp ruleMap o p l,
+    M.KeysSubset (defs l) (getDefs imp) ->
+    M.KeysSubset (calls l) (getCalls imp) ->
+    wellHidden imp (hide l) ->
+    liftPLabel (liftToMap1 p) ruleMap o (hide l) =
+    hide (liftPLabel (liftToMap1 p) ruleMap o l).
+Proof.
+  intros; destruct l as [a d c].
+  unfold hide in *; simpl in *.
+  f_equal; auto.
+  - apply eq_sym, liftToMap1_subtractKV_2.
+    intros; unfold wellHidden in H1; dest; simpl in *.
+    apply M.subtractKV_not_In_find with (deceqA:= signIsEq) (m2:= c) in H2.
+    + rewrite H2 in H3; inv H3; reflexivity.
+    + apply H1, H0.
+      apply M.F.P.F.in_find_iff; rewrite H3; discriminate.
+  - apply eq_sym, liftToMap1_subtractKV_2.
+    intros; unfold wellHidden in H1; dest; simpl in *.
+    apply M.subtractKV_not_In_find with (deceqA:= signIsEq) (m2:= c) in H3.
+    + rewrite H2 in H3; inv H3; reflexivity.
+    + apply H1, H0.
+      apply M.F.P.F.in_find_iff; rewrite H2; discriminate.
+Qed.
+
+Lemma liftPLabel_wellHidden:
+  forall imp spec ruleMap o p l
+         (HdefSubset: forall f, In f (getDefs spec) -> In f (getDefs imp))
+         (HcallSubset: forall f, In f (getCalls spec) -> In f (getCalls imp)),
+    wellHidden imp l ->
+    wellHidden spec (liftPLabel (liftToMap1 p) ruleMap o l).
+Proof.
+  intros; unfold wellHidden in *.
+  destruct l; simpl in *; dest; split.
+  - clear -H HcallSubset.
+    unfold M.KeysDisj in *; intros.
+    specialize (H k (HcallSubset _ H0)).
+    clear -H; findeq.
+    rewrite liftToMap1_find, H; auto.
+  - clear -H0 HdefSubset.
+    unfold M.KeysDisj in *; intros.
+    specialize (H0 k (HdefSubset _ H)).
+    clear -H0; findeq.
+    rewrite liftToMap1_find, H0; auto.
+Qed.
 
 Lemma vp_equivalentLabel_CanCombineLabel_proper:
   forall vp,
