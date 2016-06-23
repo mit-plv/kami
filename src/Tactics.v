@@ -387,7 +387,21 @@ Ltac kdef_call_sub :=
 Tactic Notation "simple" "kmodular" :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
-Ltac kmodular := simple kmodular; auto.
+
+Ltac kmodular_light :=
+  simple kmodular;
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   | | | | |].
+
+Ltac kmodular :=
+  simple kmodular;
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |kdef_call_sub|kdef_call_sub
+   |kinteracting| |].
 
 Tactic Notation "simple" "kmodularn" :=
   try (unfold MethsT; rewrite <-idElementwiseId);

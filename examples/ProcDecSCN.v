@@ -23,13 +23,7 @@ Section ProcDecSCN.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
-    simple kmodular;
-      [kequiv|kequiv|kequiv|kequiv
-       |kdisj_regs|kdisj_regs|kvr|kvr
-       |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-       |kdef_call_sub|kdef_call_sub
-       |kinteracting
-       | |].
+    kmodular.
     - kduplicated; [kvr|kvr|].
       apply pdec_refines_pinst.
     - krefl.

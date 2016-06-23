@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate.
+Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Refinement.
 Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.NativeFifo.
 
@@ -51,6 +51,8 @@ Section MemAtomic.
   Definition inQ := @nativeSimpleFifo "Ins" (RqFromProc addrSize lgDataBytes) Default.
   Definition outQ := @nativeSimpleFifo "Outs" (RsToProc lgDataBytes) Default.
   Definition ioQ := ConcatMod inQ outQ.
+
+  Definition ios (i: nat) := duplicate ioQ i.
 
   Definition midQ := mid "Ins" "Outs" addrSize lgDataBytes.
   Definition mids (i: nat) := duplicate midQ i.
@@ -114,4 +116,26 @@ End Facts.
 
 Hint Immediate midQ_ModEquiv iom_ModEquiv
      mids_ModEquiv ioms_ModEquiv memAtomicWoQ_ModEquiv memAtomic_ModEquiv.
+
+Section MemAtomicWoQ.
+  Variables (addrSize lgDataBytes: nat).
+  Variable n: nat.
+
+  Lemma ios_memAtomicWoQ_memAtomic:
+    ((ios addrSize lgDataBytes n ++ memAtomicWoQ addrSize lgDataBytes n)%kami)
+      <<== (memAtomic addrSize lgDataBytes n).
+  Proof.
+    unfold memAtomic, memAtomicWoQ.
+    ketrans; [rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_2|].
+
+    kmodular_light.
+    - admit. (* kdef_call_sub automation *)
+    - kdef_call_sub.
+    - kinteracting.
+    - apply duplicate_concatMod_comm_2; auto;
+        [kvr|kvr|kequiv].
+    - krefl.
+  Qed.
+
+End MemAtomicWoQ.
 

@@ -1,6 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Equiv Lts.Tactics Lts.Specialize.
+Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement.
+Require Import Lts.Equiv Lts.Tactics Lts.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
 
@@ -10,17 +11,23 @@ Section MemCorrect.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
   Variable FifoSize: nat.
+  Variable LgNumChildren: nat.
 
-  Variable n: nat. (* number of caches (cores) *)
+  Definition memCache :=
+    MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
+  Definition nmemCache :=
+    MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren.
+  Definition memAtomicWoQ :=
+    memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
+                 LgDataBytes (wordToNat (Word.wones LgNumChildren)).
 
-  Definition memCache := MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n.
-  Definition nmemCache := MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n.
-  Definition memAtomic := memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
-                                       LgDataBytes n.
+  Definition dropFirstElts :=
+    compLabelMaps (dropN ("rqFromProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren)))
+                  (dropN ("rsToProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren))).
 
-  Lemma memCache_refines_memAtomic: modFromMeta memCache <<== memAtomic.
+  Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.
-    ktrans (modFromMeta nmemCache);
+    apply Refinement.traceRefines_trans with (p:= id) (mb:= modFromMeta nmemCache);
       [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
        apply memCache_refines_nmemCache|].
     

@@ -4,7 +4,7 @@ Require Import Syntax Semantics SemFacts Refinement Equiv.
 
 Set Implicit Arguments.
 
-Section Decomposition.
+Section EtaFunc.
   Variable imp spec: Modules.
   Hypothesis HimpEquiv: ModEquiv type typeUT imp.
 
@@ -196,22 +196,6 @@ Section Decomposition.
       eapply substepRels_canCombine; eauto.
   Qed.
 
-  Lemma liftPLabel_mergeLabel:
-    forall o l1 l2,
-      CanCombineLabel l1 l2 ->
-      liftPLabel (liftToMap1 p) ruleMap o (mergeLabel l1 l2) =
-      mergeLabel (liftPLabel (liftToMap1 p) ruleMap o l1)
-                 (liftPLabel (liftToMap1 p) ruleMap o l2).
-  Proof.
-    intros; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl in *; f_equal.
-
-    - destruct a1 as [[|]|], a2 as [[|]|]; reflexivity.
-    - inv H; dest; simpl in *.
-      apply liftToMap1_union; auto.
-    - inv H; dest; simpl in *.
-      apply liftToMap1_union; auto.
-  Qed.
-
   Lemma liftPLabel_substepRels:
     forall {oi} (srs: list (SubstepRel oi)),
       SubstepRels srs ->
@@ -319,50 +303,6 @@ Section Decomposition.
           specialize (H specRegName); destruct H; findeq.
   Qed.
 
-  Lemma liftPLabel_hide:
-    forall o l,
-      M.KeysSubset (defs l) (getDefs imp) ->
-      M.KeysSubset (calls l) (getCalls imp) ->
-      wellHidden imp (hide l) ->
-      liftPLabel (liftToMap1 p) ruleMap o (hide l) =
-      hide (liftPLabel (liftToMap1 p) ruleMap o l).
-  Proof.
-    intros; destruct l as [a d c].
-    unfold hide in *; simpl in *.
-    f_equal; auto.
-    - apply eq_sym, liftToMap1_subtractKV_2.
-      intros; unfold wellHidden in H1; dest; simpl in *.
-      apply M.subtractKV_not_In_find with (deceqA:= signIsEq) (m2:= c) in H2.
-      + rewrite H2 in H3; inv H3; reflexivity.
-      + apply H1, H0.
-        apply M.F.P.F.in_find_iff; rewrite H3; discriminate.
-    - apply eq_sym, liftToMap1_subtractKV_2.
-      intros; unfold wellHidden in H1; dest; simpl in *.
-      apply M.subtractKV_not_In_find with (deceqA:= signIsEq) (m2:= c) in H3.
-      + rewrite H2 in H3; inv H3; reflexivity.
-      + apply H1, H0.
-        apply M.F.P.F.in_find_iff; rewrite H2; discriminate.
-  Qed.
-
-  Lemma liftPLabel_wellHidden:
-    forall o l,
-      wellHidden imp l ->
-      wellHidden spec (liftPLabel (liftToMap1 p) ruleMap o l).
-  Proof.
-    intros; unfold wellHidden in *.
-    destruct l; simpl in *; dest; split.
-    - clear -H HcallSubset.
-      unfold M.KeysDisj in *; intros.
-      specialize (H k (HcallSubset _ H0)).
-      clear -H; findeq.
-      rewrite liftToMap1_find, H; auto.
-    - clear -H0 HdefSubset.
-      unfold M.KeysDisj in *; intros.
-      specialize (H0 k (HdefSubset _ H)).
-      clear -H0; findeq.
-      rewrite liftToMap1_find, H0; auto.
-  Qed.
-
   Lemma substepRels_wellHidden:
     forall o,
       reachable o imp ->
@@ -372,8 +312,8 @@ Section Decomposition.
         wellHidden spec (hide (foldSSLabel (map toSubstepRecSpec srs))).
   Proof.
     intros.
-    pose proof (liftPLabel_wellHidden o H1).
-    rewrite liftPLabel_hide in H2; auto.
+    pose proof (liftPLabel_wellHidden spec ruleMap o p HdefSubset HcallSubset H1).
+    rewrite liftPLabel_hide with (imp:= imp) in H2; auto.
     - rewrite liftPLabel_substepRels in H2; auto.
     - unfold M.KeysSubset; apply staticDynDefsSubsteps.
     - unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
@@ -393,7 +333,7 @@ Section Decomposition.
     destruct H3 as [sss ?]; dest.
     exists (foldSSUpds sss); split.
 
-    - rewrite liftPLabel_hide; auto.
+    - rewrite liftPLabel_hide with (imp:= imp); auto.
       + subst; rewrite liftPLabel_substepRels; auto.
         constructor; auto.
         apply substepRels_wellHidden; auto.
@@ -403,7 +343,407 @@ Section Decomposition.
     - subst; unfold ConsistentUpdate in H2; dest; auto.
   Qed.
       
-End Decomposition.
+End EtaFunc.
 
 Hint Unfold theta: MethDefs.
+
+Section EtaRel.
+  Variable imp spec: Modules.
+  Hypothesis HimpEquiv: ModEquiv type typeUT imp.
+
+  Variable specRegName: string.
+  Variable etaR: RegsT -> option (sigT (fullType type)) -> Prop.
+
+  Definition etaRState (v: option (sigT (fullType type))) :=
+    match v with
+    | Some ev => M.add specRegName ev (M.empty _)
+    | _ => M.empty _
+    end.
+  Definition thetaR (ir sr: RegsT): Prop := exists sv, etaR ir sv /\ etaRState sv = sr.
+  
+  Variable ruleMap: RegsT -> string -> option string.
+  Variable p: string -> (sigT SignT) -> option (sigT SignT).
+  Hypothesis HthetaRRInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
+  
+  Hypothesis HdefSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
+  Hypothesis HcallSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
+
+  Definition ConsistentUpdateR (oImp oSpec: RegsT) (uImp uSpec: UpdatesT) :=
+    (uImp = M.empty _ -> uSpec = M.empty _) /\
+    (uSpec = M.empty _ -> uImp = M.empty _) /\
+    (thetaR oImp oSpec -> thetaR (M.union uImp oImp) (M.union uSpec oSpec)).
+
+  Hypothesis HsubstepRuleRel:
+    forall oImp uImp rule csImp,
+      reachable oImp imp ->
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
+      forall oSpec,
+        thetaR oImp oSpec ->
+        exists uSpec,
+          Substep spec oSpec uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
+          ConsistentUpdateR oImp oSpec uImp uSpec.
+  
+  Definition liftPR meth :=
+    match meth with
+    | (n :: t)%struct => match p n t with
+                         | None => None
+                         | Some v => Some (n :: v)%struct
+                         end
+    end.
+
+  Hypothesis HsubstepMethRel:
+    forall oImp uImp meth csImp,
+      reachable oImp imp ->
+      Substep imp oImp uImp (Meth (Some meth)) csImp ->
+      forall oSpec,
+        thetaR oImp oSpec ->
+        exists uSpec,
+          Substep spec oSpec uSpec (Meth (liftPR meth)) (liftToMap1 p csImp) /\
+          ConsistentUpdateR oImp oSpec uImp uSpec.
+
+  Definition mapUnitLabelR o ul :=
+    match ul with
+    | Rle (Some r) => Rle (ruleMap o r)
+    | Rle None => Rle None
+    | Meth (Some dm) => Meth (liftPR dm)
+    | Meth None => Meth None
+    end.
+
+  Lemma substepRel:
+    forall oi ui uli csi,
+      reachable oi imp ->
+      Substep imp oi ui uli csi ->
+      forall os,
+        thetaR oi os ->
+        exists us,
+          Substep spec os us (mapUnitLabelR oi uli) (liftToMap1 p csi) /\
+          ConsistentUpdateR oi os ui us.
+  Proof.
+    intros; destruct uli as [[r|]|[dm|]].
+
+    - apply HsubstepRuleRel; auto.
+    - inv H0; exists (M.empty _); split.
+      + apply EmptyRule.
+      + unfold ConsistentUpdate; repeat split; auto.
+    - apply HsubstepMethRel; auto.
+    - inv H0; exists (M.empty _); split.
+      + apply EmptyMeth.
+      + unfold ConsistentUpdate; repeat split; auto.
+  Qed.
+
+  Record SubstepRelR oImp oSpec :=
+    { uImpR: UpdatesT;
+      ulImpR: UnitLabel;
+      csImpR: MethsT;
+      HssImpR: Substep imp oImp uImpR ulImpR csImpR;
+      uSpecR: UpdatesT;
+      HssSpecR: Substep spec oSpec uSpecR
+                       (mapUnitLabelR oImp ulImpR) (liftToMap1 p csImpR);
+      HthetaR: thetaR oImp oSpec;
+      HcuR: ConsistentUpdateR oImp oSpec uImpR uSpecR
+    }.
+
+  Definition toSubstepRecImpR {oImp oSpec} (sr: SubstepRelR oImp oSpec) :=
+    {| upd := uImpR sr;
+       unitAnnot := ulImpR sr;
+       cms := csImpR sr;
+       substep := HssImpR sr
+    |}.
+
+  Definition toSubstepRecSpecR {oImp oSpec} (sr: SubstepRelR oImp oSpec) :=
+    {| upd := uSpecR sr;
+       unitAnnot := mapUnitLabelR oImp (ulImpR sr);
+       cms := liftToMap1 p (csImpR sr);
+       substep := HssSpecR sr
+    |}.
+
+  Inductive SubstepRelsR {oImp oSpec}: list (SubstepRelR oImp oSpec) -> Prop :=
+  | SubstepMapNilR: SubstepRelsR nil
+  | SubstepMapConsR:
+      forall srs sr,
+        SubstepRelsR srs ->
+        (forall sr', In sr' srs -> canCombine (toSubstepRecImpR sr)
+                                              (toSubstepRecImpR sr')) ->
+        SubstepRelsR (sr :: srs).
+
+  Hypothesis HcanCombine:
+    forall oi ui1 ui2 uli1 uli2 csi1 csi2,
+      reachable oi imp ->
+      Substep imp oi ui1 uli1 csi1 ->
+      Substep imp oi ui2 uli2 csi2 ->
+      CanCombineUL ui1 ui2 (getLabel uli1 csi1) (getLabel uli2 csi2) ->
+      forall us1 us2 css1 css2 os,
+        thetaR oi os ->
+        Substep spec os us1 (mapUnitLabelR oi uli1) css1 ->
+        Substep spec os us2 (mapUnitLabelR oi uli2) css2 ->
+        CanCombineUL us1 us2
+                     (getLabel (mapUnitLabelR oi uli1) css1)
+                     (getLabel (mapUnitLabelR oi uli2) css2).
+
+  Lemma substeps_substepRels_impR:
+    forall {oImp oSpec} (HthetaR: thetaR oImp oSpec)
+           (Hreach: reachable oImp imp)
+           (ss: Substeps imp oImp) (Hcomb: substepsComb ss),
+    exists (srs: list (SubstepRelR oImp oSpec)),
+      map toSubstepRecImpR srs = ss /\ SubstepRelsR srs.
+  Proof.
+    induction ss; simpl; intros; [exists nil; split; auto; constructor|].
+    inv Hcomb; specialize (IHss H1).
+    destruct IHss as [psrs ?]; dest.
+    destruct a as [su sul scs Hss].
+    pose proof (substepRel Hreach Hss HthetaR0) as [sus ?]; dest.
+    exists ({| HthetaR:= HthetaR0; HssImpR := Hss; HssSpecR := H3; HcuR:= H4 |} :: psrs); split.
+    - simpl; f_equal; auto.
+    - constructor; auto.
+      unfold toSubstepRecImp; simpl.
+      clear -H2 H.
+      intros; apply in_map with (f:= toSubstepRecImpR) in H0.
+      rewrite H in H0; auto.
+  Qed.
+
+  Lemma substepRels_canCombineR:
+    forall {oi os} (Hreach: reachable oi imp)
+           (srs: list (SubstepRelR oi os))
+           sui suli scsi sus Hssi Hsss
+           (Hcombi : forall sr' : SubstepRelR oi os,
+               In sr' srs ->
+               canCombine {| upd := sui; unitAnnot := suli; cms := scsi; substep := Hssi |}
+                          {| upd := uImpR sr'; unitAnnot := ulImpR sr'; cms := csImpR sr';
+                             substep := HssImpR sr' |}),
+    forall s': SubstepRec spec os,
+      In s' (map toSubstepRecSpecR srs) ->
+      canCombine
+        {| upd := sus;
+           unitAnnot := mapUnitLabelR oi suli;
+           cms := liftToMap1 p scsi;
+           substep := Hsss |} s'.
+  Proof.
+    intros.
+    apply in_map_iff in H.
+    destruct H as [nsr ?]; dest; subst.
+    specialize (Hcombi _ H0); clear H0.
+    destruct nsr as [nui nuli ncsi Hnssi nus ncss Hnsss]; simpl in *.
+    unfold toSubstepRecSpec; simpl.
+
+    apply canCombine_CanCombineUL.
+    apply canCombine_CanCombineUL in Hcombi.
+    eapply HcanCombine; eauto.
+  Qed.
+
+  Lemma substepRels_substeps_specR:
+    forall {oi os} (Hreach: reachable oi imp)
+           (srs: list (SubstepRelR oi os)),
+      SubstepRelsR srs ->
+      exists (ss: Substeps spec os),
+        map toSubstepRecSpecR srs = ss /\ substepsComb ss.
+  Proof.
+    induction srs; simpl; intros; [exists nil; split; auto; constructor|].
+    inv H; specialize (IHsrs H2).
+    destruct IHsrs as [pss ?]; dest.
+    destruct a as [sui suli scsi Hssi sus Hsss].
+    exists ({| substep := Hsss |} :: pss); split.
+    - simpl; f_equal; auto.
+    - constructor; auto.
+      subst; unfold toSubstepRecImp in H3; simpl in H3.
+
+      clear -H3 HthetaR0 Hreach HcanCombine.
+      eapply substepRels_canCombineR; eauto.
+  Qed.
+
+  Lemma liftPLabel_substepRelsR:
+    forall {oi os} (srs: list (SubstepRelR oi os)),
+      SubstepRelsR srs ->
+      liftPLabel (liftToMap1 p) ruleMap oi (foldSSLabel (map toSubstepRecImpR srs)) =
+      foldSSLabel (map toSubstepRecSpecR srs).
+  Proof.
+    induction srs; simpl; intros; [reflexivity|].
+    inv H. specialize (IHsrs H2).
+    rewrite <-IHsrs; clear IHsrs H2.
+    unfold addLabelLeft; rewrite liftPLabel_mergeLabel.
+    f_equal.
+    - destruct a as [ui uli csi Hssi us Hsss Hcuis].
+      unfold toSubstepRecImp, toSubstepRecSpec in *; simpl in *.
+      unfold getSLabel, getLabel; f_equal; simpl; auto.
+      + destruct uli as [[|]|[|]]; auto.
+      + unfold mapUnitLabel, liftP.
+        destruct uli as [[|]|[|]]; auto.
+        destruct a as [an ab]; simpl.
+        rewrite liftToMap1AddOne.
+        destruct (p an ab); auto.
+      
+    - assert (forall ss: SubstepRec imp oi,
+                 In ss (map toSubstepRecImpR srs) -> canCombine (toSubstepRecImpR a) ss).
+      { intros; apply in_map_iff in H; dest; subst; auto. }
+      clear H3.
+      apply canCombine_consistent_1 in H; clear -H.
+      generalize dependent (foldSSLabel (map toSubstepRecImpR srs)); intros.
+      inv H; dest; clear H0.
+      repeat split; auto.
+      + destruct a; simpl in *.
+        destruct ulImpR0 as [|[|]]; auto.
+        destruct a as [an ab]; simpl in *.
+        destruct (annot l); auto.
+      + destruct a; simpl in *.
+        destruct ulImpR0 as [|[|]]; auto.
+  Qed.
+
+  Lemma consistentUpdate_update_specR:
+    forall (oi os: RegsT) (HthetaR: thetaR oi os)
+           (ui us: UpdatesT),
+      ConsistentUpdateR oi os ui us ->
+      us = M.empty _ \/ exists v, us = M.add specRegName v (M.empty _).
+  Proof.
+    intros; inv H; dest.
+    remember (M.find specRegName us) as uv; destruct uv.
+
+    - right; exists s; meq; exfalso.
+      unfold thetaR in H2; destruct H2 as [sv ?]; dest.
+      destruct sv.
+      + simpl in H2; apply M.Equal_val with (k:= y) in H2; mred.
+      + simpl in H2; apply M.Equal_val with (k:= y) in H2; mred.
+
+    - left; meq.
+      exfalso; M.cmp y specRegName.
+      + findeq.
+      + unfold thetaR in H2; destruct H2 as [sv ?]; dest.
+        destruct sv.
+        * simpl in H2; apply M.Equal_val with (k:= y) in H2; mred.
+        * simpl in H2; apply M.Equal_val with (k:= y) in H2; mred.
+  Qed.
+
+  Lemma substepRels_consistentUpdateR:
+    forall oi os,
+      reachable oi imp ->
+      forall (srs: list (SubstepRelR oi os)),
+        SubstepRelsR srs ->
+        ConsistentUpdateR oi os (foldSSUpds (map toSubstepRecImpR srs))
+                         (foldSSUpds (map toSubstepRecSpecR srs)).
+  Proof.
+    induction 2; simpl; intros;
+      [unfold ConsistentUpdateR; repeat split; auto|].
+
+    destruct sr as [ui uli csi Hssi us Hsss HthetaR Hcu]; simpl in *.
+    pose proof (consistentUpdate_update_specR HthetaR IHSubstepRelsR).
+    repeat split.
+    - intros; unfold ConsistentUpdateR in *; dest; simpl in *.
+      apply M.union_empty in H3; dest.
+      unfold toSubstepRecImpR in H1; simpl in H1; subst.
+      specialize (e eq_refl); subst.
+      mred.
+    - intros; unfold ConsistentUpdateR in *; dest; simpl in *.
+      apply M.union_empty in H3; dest.
+      unfold toSubstepRecImpR in H1; simpl in H1; subst.
+      specialize (e0 eq_refl); subst.
+      mred.
+    - destruct H2.
+      + rewrite H2 in *.
+        unfold ConsistentUpdateR in *; dest; simpl in *.
+        specialize (H4 eq_refl); rewrite H4 in *.
+        intros; mred; auto.
+      + pose proof (consistentUpdate_update_specR HthetaR Hcu).
+        unfold toSubstepRecImpR in H1; simpl in H1.
+        inv Hcu; dest.
+        destruct H3.
+
+        * subst.
+          specialize (H5 eq_refl); subst.
+          inv IHSubstepRelsR; dest.
+          mred.
+        * exfalso.
+          pose proof (substepRels_canCombineR (sui:= ui) (Hssi:= Hssi) H srs Hsss H1).
+          apply canCombine_consistent_1 in H7.
+          dest; subst.
+          rewrite H2 in H7; clear -H7.
+          inv H7; dest; clear -H.
+          specialize (H specRegName); destruct H; findeq.
+  Qed.
+
+  Lemma substepRels_wellHiddenR:
+    forall o s,
+      reachable o imp ->
+      forall (srs: list (SubstepRelR o s)),
+        SubstepRelsR srs ->
+        wellHidden imp (hide (foldSSLabel (map toSubstepRecImpR srs))) ->
+        wellHidden spec (hide (foldSSLabel (map toSubstepRecSpecR srs))).
+  Proof.
+    intros.
+    pose proof (liftPLabel_wellHidden spec ruleMap o p HdefSubset HcallSubset H1).
+    rewrite liftPLabel_hide with (imp:= imp) in H2; auto.
+    - rewrite liftPLabel_substepRelsR in H2; auto.
+    - unfold M.KeysSubset; apply staticDynDefsSubsteps.
+    - unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+  Qed.
+
+  Lemma stepMapOne:
+    forall o (reachO: reachable o imp)
+           u l (s: Step imp o u l) oSpec,
+      thetaR o oSpec ->
+      exists uSpec ul,
+        Step spec oSpec uSpec ul /\
+        thetaR (M.union u o) (M.union uSpec oSpec) /\
+        equivalentLabel (liftToMap1 p) l ul.
+  Proof.
+    intros; inv s.
+    pose proof (substeps_substepRels_impR H reachO HSubsteps) as Hsrs.
+    destruct Hsrs as [srs ?]; dest; subst.
+    exists (foldSSUpds (map toSubstepRecSpecR srs)).
+    exists (hide (foldSSLabel (map toSubstepRecSpecR srs))); split; [|split].
+    - constructor; auto.
+      + pose proof (substepRels_substeps_specR reachO H1) as Hsss.
+        dest; subst; auto.
+      + apply substepRels_wellHiddenR; auto.
+    - apply substepRels_consistentUpdateR; auto.
+    - pose proof (liftPLabel_substepRelsR H1).
+      rewrite <-H0.
+      rewrite <-liftPLabel_hide with (imp:= imp); auto.
+      + generalize (hide (foldSSLabel (map toSubstepRecImpR srs))) as l; intros.
+        destruct l as [a d c].
+        repeat split; simpl; destruct a as [[|]|]; auto.
+      + unfold M.KeysSubset; apply staticDynDefsSubsteps.
+      + unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+  Qed.
+
+  Lemma multistepMapOne:
+    forall o u l,
+      o = initRegs (getRegInits imp) ->
+      Multistep imp o u l ->
+      exists uSpec ll,
+        thetaR u uSpec /\
+        equivalentLabelSeq (liftToMap1 p) l ll /\
+        Multistep spec (initRegs (getRegInits spec)) uSpec ll.
+  Proof.
+    induction 2; simpl; intros; repeat subst.
+
+    - do 2 eexists; repeat split.
+      + instantiate (1:= initRegs (getRegInits spec)); auto.
+      + instantiate (1:= nil); constructor.
+      + constructor; auto.
+
+    - specialize (IHMultistep eq_refl).
+      destruct IHMultistep as [puSpec [pll ?]]; dest.
+      apply stepMapOne with (oSpec:= puSpec) in HStep; auto;
+        [|eexists; constructor; eauto].
+      destruct HStep as [uSpec [ul ?]]; dest.
+
+      eexists (M.union uSpec puSpec), (ul :: pll).
+      repeat split; auto.
+      + constructor; auto.
+      + constructor; auto.
+  Qed.
+
+  Theorem decompositionOneR:
+    traceRefines (liftToMap1 p) imp spec.
+  Proof.
+    unfold traceRefines; intros.
+    inv H.
+    apply multistepMapOne in HMultistepBeh; auto.
+    destruct HMultistepBeh as [uSpec [ll ?]]; dest.
+    exists uSpec, ll.
+    split; auto.
+    constructor; auto.
+  Qed.
+      
+End EtaRel.
+
+Hint Unfold etaRState thetaR: MethDefs.
 
