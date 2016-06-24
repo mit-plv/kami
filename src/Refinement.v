@@ -208,16 +208,15 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
-  Theorem traceRefines_trans_elem: forall m1 m2 m3: Modules,
-                                     (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
+  Corollary traceRefines_trans_elem:
+    forall m1 m2 m3: Modules,
+      (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
   Proof.
     intros.
     unfold MethsT in *; rewrite idElementwiseId in *.
     eapply traceRefines_trans; eauto.
   Qed.
-
-
-
+  
   Corollary traceRefines_trans_conj:
     forall ma mb mc p q,
       traceRefines p ma mb /\
@@ -225,6 +224,41 @@ Section Facts.
       traceRefines (fun f => q (p f)) ma mc.
   Proof.
     intros; dest; eapply traceRefines_trans; eauto.
+  Qed.
+
+  Lemma traceRefines_labelMap_weakening:
+    forall ma (Hequiv: ModEquiv type typeUT ma) mb vp,
+      (ma <<=[vp] mb) ->
+      forall vq,
+        (forall s, In s (getDefs ma) \/ In s (getCalls ma) ->
+                   forall v, vp s v = vq s v) ->
+        (ma <<=[vq] mb).
+  Proof.
+    unfold traceRefines; intros.
+    specialize (H _ _ H1).
+    destruct H as [s2 [sig2 ?]]; dest.
+    exists s2, sig2; split; auto.
+    pose proof (behavior_defs_in H1).
+    pose proof (behavior_calls_in Hequiv H1).
+    clear -H0 H2 H3 H4.
+
+    generalize dependent sig2; induction sig1; simpl; intros;
+      [inv H2; constructor|].
+    destruct sig2; [inv H2|].
+    inv H2; inv H3; inv H4; constructor; auto.
+    clear -H0 H2 H3 H6.
+
+    unfold equivalentLabel in *; dest; repeat split; auto; clear H4.
+    - rewrite <-H; clear -H0 H2.
+      M.ext y; do 2 rewrite liftToMap1_find.
+      remember (M.find y (defs a)) as yv; destruct yv; auto.
+      apply eq_sym, H0.
+      left; apply H2; findeq.
+    - rewrite <-H1; clear -H0 H3.
+      M.ext y; do 2 rewrite liftToMap1_find.
+      remember (M.find y (calls a)) as yv; destruct yv; auto.
+      apply eq_sym, H0.
+      right; apply H3; findeq.
   Qed.
 
   Lemma traceRefines_same_module_structure:
@@ -553,9 +587,9 @@ Section Facts.
       + econstructor; eauto.
     - inv H0; inv HMultistepBeh; inv H1; inv HMultistepBeh.
       clear -Hequiv1 Hequiv2 HStep HStep0 H.
-      pose proof (step_defs_in Hequiv1 HStep).
+      pose proof (step_defs_in HStep).
       pose proof (step_calls_in Hequiv1 HStep).
-      pose proof (step_defs_in Hequiv2 HStep0).
+      pose proof (step_defs_in HStep0).
       pose proof (step_calls_in Hequiv2 HStep0).
       inv H; repeat split.
       + eapply step_hide; eauto.
@@ -854,7 +888,7 @@ Section Facts.
       Forall (fun l => ValidLabel m l) ll.
   Proof.
     intros.
-    pose proof (behavior_defs_in Hequiv H).
+    pose proof (behavior_defs_in H).
     pose proof (behavior_calls_in Hequiv H).
     clear H u.
     induction ll; simpl; intros; auto.
@@ -881,7 +915,7 @@ Section Facts.
                (Haccalls: DisjList (getCalls ma) (getCalls mc))
                (Hbddefs: DisjList (getDefs mb) (getDefs md))
                (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
-
+        
     Section NonInteracting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
@@ -924,6 +958,29 @@ Section Facts.
       Qed.
 
     End NonInteracting.
+
+    Section NonInteractingP.
+      Variable (vp vq: M.key -> sigT SignT -> option (sigT SignT)).
+
+      Hypotheses (Hvpq1: forall s, In s (getDefs ma) \/ In s (getCalls ma) ->
+                                   forall v, vp s v = compLabelMaps vp vq s v)
+                 (Hvpq2: forall s, In s (getDefs mc) \/ In s (getCalls mc) ->
+                                   forall v, vq s v = compLabelMaps vp vq s v).
+      
+      Corollary traceRefines_modular_noninteracting_p:
+        NonInteracting ma mc ->
+        NonInteracting mb md ->
+        (ma <<=[vp] mb) ->
+        (mc <<=[vq] md) ->
+        ((ma ++ mc)%kami <<=[compLabelMaps vp vq] (mb ++ md)%kami).
+      Proof.
+        intros.
+        eapply traceRefines_labelMap_weakening in H1; eauto.
+        eapply traceRefines_labelMap_weakening in H2; eauto.
+        apply traceRefines_modular_noninteracting; auto.
+      Qed.
+
+    End NonInteractingP.
 
     Section Interacting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).

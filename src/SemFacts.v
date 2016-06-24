@@ -886,7 +886,7 @@ Proof.
 Qed.
 
 Lemma step_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) or u l,
+  forall m or u l,
     Step m or u l -> M.KeysSubset (defs l) (getDefs m).
 Proof.
   intros; apply step_consistent in H; inv H.
@@ -908,7 +908,7 @@ Proof.
 Qed.
 
 Lemma multistep_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+  forall m or ll u,
     Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   induction ll; intros; auto.
@@ -926,7 +926,7 @@ Proof.
 Qed.
 
 Lemma behavior_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+  forall m ll u,
     Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   intros; inv H.
@@ -1011,7 +1011,7 @@ Lemma step_defs_extDefs_in:
     M.KeysSubset (defs l) (getExtDefs m).
 Proof.
   intros.
-  pose proof (step_defs_in Hequiv H).
+  pose proof (step_defs_in H).
   pose proof (step_defs_disj H).
 
   unfold M.KeysSubset, M.KeysDisj in *; intros.
