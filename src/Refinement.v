@@ -2,6 +2,7 @@ Require Import List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Split Wf.
+Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
 
@@ -11,6 +12,18 @@ Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=
     | Some qv => p s qv
     | None => None
     end.
+
+Lemma compLabelMaps_id_left:
+  forall p, p = compLabelMaps (@idElementwise _) p.
+Proof.
+  intros; extensionality k; extensionality v.
+  unfold compLabelMaps.
+  destruct (p k v); auto.
+Qed.
+
+Lemma compLabelMaps_id_right:
+  forall p, p = compLabelMaps p (@idElementwise _).
+Proof. auto. Qed.
 
 Section LabelDrop.
   Variable ds: string.
@@ -212,8 +225,23 @@ Section Facts.
     forall m1 m2 m3: Modules,
       (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
   Proof.
-    intros.
-    unfold MethsT in *; rewrite idElementwiseId in *.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
+    eapply traceRefines_trans; eauto.
+  Qed.
+
+  Corollary traceRefines_trans_elem_left_p:
+    forall (m1 m2 m3: Modules) p,
+      (m1 <<=[p] m2) -> (m2 <<== m3) -> (m1 <<=[p] m3).
+  Proof.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
+    eapply traceRefines_trans with (q:= id); eauto.
+  Qed.
+
+  Corollary traceRefines_trans_elem_right_p:
+    forall (m1 m2 m3: Modules) p,
+      (m1 <<== m2) -> (m2 <<=[p] m3) -> (m1 <<=[p] m3).
+  Proof.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
     eapply traceRefines_trans; eauto.
   Qed.
   

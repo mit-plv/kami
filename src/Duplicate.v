@@ -294,6 +294,26 @@ Section DuplicateFacts.
                (Hsp1: Specializable m1)
                (Hsp2: Specializable m2).
 
+    Variable (ds: string). (* a single label to drop *)
+
+    Lemma duplicate_traceRefines_drop:
+      forall n,
+        (m1 <<=[dropP ds] m2) ->
+        (duplicate m1 n <<=[dropN ds n] duplicate m2 n).
+    Proof.
+      admit.
+    Qed.
+  End TwoModules2.
+
+  Section TwoModules3.
+    Variables (m1 m2: Modules).
+    Hypotheses (Hequiv1: forall ty, ModEquiv ty typeUT m1)
+               (Hequiv2: forall ty, ModEquiv ty typeUT m2)
+               (Hvr1: forall ty, ValidRegsModules ty m1)
+               (Hvr2: forall ty, ValidRegsModules ty m2)
+               (Hsp1: Specializable m1)
+               (Hsp2: Specializable m2).
+
     Lemma duplicate_regs_ConcatMod_1:
       forall n,
         SubList (getRegInits (duplicate (m1 ++ m2)%kami n))
@@ -474,9 +494,9 @@ Section DuplicateFacts.
             Transparent specializeMod.
     Qed.
 
-  End TwoModules2.
+  End TwoModules3.
 
-  Section TwoModules3.
+  Section TwoModules4.
     Variables (m1 m2: Modules).
     Hypotheses (Hsp1: Specializable m1)
                (Hsp2: Specializable m2)
@@ -526,7 +546,7 @@ Section DuplicateFacts.
         + apply duplicate_defs_ConcatMod_1; auto.
     Qed.
 
-  End TwoModules3.
+  End TwoModules4.
 
 End DuplicateFacts.
 

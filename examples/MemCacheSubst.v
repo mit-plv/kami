@@ -26,14 +26,26 @@ Proof.
   intros; apply getDefs_sinModule_eq; reflexivity.
 Qed.
 
+Lemma fifoS_const_regs:
+  forall fifoName sz dType Hgood sr,
+    In sr (sinRegs (fifoS fifoName sz dType Hgood)) ->
+    forall i j, regGen sr i = regGen sr j.
+Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
+
+Lemma nativeFifoS_const_regs:
+  forall fifoName {dType} (default: ConstT dType) Hgood sr,
+    In sr (sinRegs (nativeFifoS fifoName default Hgood)) ->
+    forall i j, regGen sr i = regGen sr j.
+Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
+
 Lemma simpleFifoS_const_regs:
-  forall sr fifoName sz dType Hgood,
+  forall fifoName sz dType Hgood sr,
     In sr (sinRegs (simpleFifoS fifoName sz dType Hgood)) ->
     forall i j, regGen sr i = regGen sr j.
 Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
 
 Lemma nativeSimpleFifoS_const_regs:
-  forall sr fifoName {dType} (default: ConstT dType) Hgood,
+  forall fifoName {dType} (default: ConstT dType) Hgood sr,
     In sr (sinRegs (nativeSimpleFifoS fifoName default Hgood)) ->
     forall i j, regGen sr i = regGen sr j.
 Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.

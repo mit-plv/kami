@@ -57,9 +57,25 @@ Ltac krefl :=
 Ltac ktrans m :=
   try rewrite idElementwiseId; apply traceRefines_trans with (p:= id) (q:= id) (mb:= m).
 
+Ltac ktrans_l m :=
+  try rewrite idElementwiseId; apply traceRefines_trans_elem_left_p with (m2:= m).
+
+Ltac ktrans_r m :=
+  try rewrite idElementwiseId; apply traceRefines_trans_elem_right_p with (m2:= m).
+
 Ltac ketrans :=
   let m := fresh "m" in
   evar (m: Modules); ktrans m; unfold m; clear m;
+  try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
+
+Ltac ketrans_l :=
+  let m := fresh "m" in
+  evar (m: Modules); ktrans_l m; unfold m; clear m;
+  try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
+
+Ltac ketrans_r :=
+  let m := fresh "m" in
+  evar (m: Modules); ktrans_r m; unfold m; clear m;
   try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
 
 Ltac unfold_head m :=

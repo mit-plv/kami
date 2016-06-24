@@ -1002,5 +1002,13 @@ Section SpRefinement.
       reflexivity.
   Qed.
 
+  Corollary specialized_drop:
+    forall ds,
+      (ma <<=[dropP ds] mb) ->
+      (specializeMod ma i <<=[dropI ds i] specializeMod mb i).
+  Proof.
+    admit.
+  Qed.
+
 End SpRefinement.
 

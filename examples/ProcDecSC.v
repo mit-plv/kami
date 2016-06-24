@@ -37,7 +37,7 @@ Section ProcDecSC.
     kgetv "pc"%string pcv ir (Bit addrSize) False.
     kgetv "rf"%string rfv ir (Vector (Data lgDataBytes) rfIdx) False.
     refine (exists oeltv: fullType type (listEltK RsToProc type),
-               M.find "Outs"--"elt" ir = Some (existT _ _ oeltv) /\ _).
+               M.find "rsToProc"--"elt" ir = Some (existT _ _ oeltv) /\ _).
 
     pose proof (evalExpr (dec _ rfv pcv)) as inst.
     refine (match oeltv with

@@ -2,10 +2,10 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
+Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ParamDup.
 
-Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.L1Cache.
-Require Import Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
+Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Ex.L1Cache.
+Require Import Ex.FifoCorrect Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
 
 Set Implicit Arguments.
 
@@ -40,7 +40,7 @@ Section ProcMem.
 
     kmodular_light.
     - kdef_call_sub.
-    - admit. (* TODO: kdef_call_sub automation *)
+    - admit. (* kdef_call_sub automation *)
     - kinteracting.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
@@ -52,7 +52,28 @@ Section ProcMem.
       + admit. (* kdef_call_sub automation *)
       + admit. (* kdef_call_sub automation *)
       + admit. (* dropFirstElts satisfies Interacting *)
-      + admit. (* fifos <= simpleFifos *)
+      + ketrans_r; [apply modFromMeta_comm_1|].
+        ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kvr|kvr|kequiv|kequiv]].
+        replace (dropFirstElts LgNumChildren) with
+        (compLabelMaps (dropFirstElts LgNumChildren) (@idElementwise _))
+          by apply compLabelMaps_id_right.
+
+        apply traceRefines_modular_noninteracting_p;
+          [kequiv|kequiv|kequiv|kequiv
+           |kdisj_regs|kdisj_regs|kvr|kvr
+           |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+           | | |knoninteracting|knoninteracting| |].
+        * admit. (* disjointness of label maps *)
+        * admit. (* disjointness of label maps *)
+        * ketrans_r;
+            [apply sinModule_duplicate_1;
+             [kequiv|kvr|knodup_regs|apply nativeFifoS_const_regs]|].
+          apply duplicate_traceRefines_drop; auto; [kequiv|kvr|].
+          rewrite <-NativeFifo.nativeFifo_nativeFifoS.
+          apply nfifo_refines_nsfifo.
+        * apply sinModule_duplicate_1; [kequiv|kvr|knodup_regs|].
+          apply nativeFifoS_const_regs with (default:= (getDefaultConst _)).
+          
       + apply memCache_refines_memAtomic.
   Qed.
 

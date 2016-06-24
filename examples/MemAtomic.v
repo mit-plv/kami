@@ -48,13 +48,13 @@ Section MemAtomic.
 
   Definition minst := memInst n addrSize lgDataBytes.
 
-  Definition inQ := @nativeSimpleFifo "Ins" (RqFromProc addrSize lgDataBytes) Default.
-  Definition outQ := @nativeSimpleFifo "Outs" (RsToProc lgDataBytes) Default.
+  Definition inQ := @nativeSimpleFifo "rqFromProc" (RqFromProc addrSize lgDataBytes) Default.
+  Definition outQ := @nativeSimpleFifo "rsToProc" (RsToProc lgDataBytes) Default.
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition ios (i: nat) := duplicate ioQ i.
 
-  Definition midQ := mid "Ins" "Outs" addrSize lgDataBytes.
+  Definition midQ := mid "rqFromProc" "rsToProc" addrSize lgDataBytes.
   Definition mids (i: nat) := duplicate midQ i.
   
   Definition iom := ConcatMod ioQ midQ.
