@@ -68,7 +68,7 @@ Section ProcMem.
         * ketrans_r;
             [apply sinModule_duplicate_1;
              [kequiv|kvr|knodup_regs|apply nativeFifoS_const_regs]|].
-          apply duplicate_traceRefines_drop; auto; [kequiv|kvr|].
+          apply duplicate_traceRefines_drop; auto.
           rewrite <-NativeFifo.nativeFifo_nativeFifoS.
           apply nfifo_refines_nsfifo.
         * apply sinModule_duplicate_1; [kequiv|kvr|knodup_regs|].
