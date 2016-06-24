@@ -287,22 +287,100 @@ Section DuplicateFacts.
 
   Section TwoModules2.
     Variables (m1 m2: Modules).
-    Hypotheses (Hequiv1: forall ty, ModEquiv ty typeUT m1)
-               (Hequiv2: forall ty, ModEquiv ty typeUT m2)
-               (Hvr1: forall ty, ValidRegsModules ty m1)
-               (Hvr2: forall ty, ValidRegsModules ty m2)
-               (Hsp1: Specializable m1)
-               (Hsp2: Specializable m2).
+    Hypotheses (Hsp1: Specializable m1)
+               (Hsp2: Specializable m2)
+               (Hequiv1: ModEquiv type typeUT m1)
+               (Hequiv2: ModEquiv type typeUT m2)
+               (Hvr1: ValidRegsModules type m1)
+               (Hvr2: ValidRegsModules type m2).
 
     Variable (ds: string). (* a single label to drop *)
+
+    Hypothesis (Hexts: SubList (filter (fun s => negb (string_eq s ds)) (getExtMeths m1))
+                               (getExtMeths m2)).
+
+    Lemma specializeMod_traceRefines_drop:
+      forall i,
+        (m1 <<=[dropP ds] m2) ->
+        (specializeMod m1 i <<=[dropI ds i] specializeMod m2 i).
+    Proof.
+      intros.
+      apply specialized_2; auto.
+      apply traceRefines_label_map with (p:= liftToMap1 (dropP ds)); auto.
+
+      clear -Hsp1 Hsp2 Hexts.
+      unfold EquivalentLabelMap; intros.
+
+      unfold liftPRename.
+
+      assert (renameMap (specializer m2 i) ((liftToMap1 (dropP ds)) m) =
+              liftToMap1 (dropI ds i) (renameMap (specializer m1 i) m)).
+      { rewrite specializer_map with (m:= m1); auto;
+        [|eapply M.KeysSubset_SubList; eauto; apply spDom_getExtMeths].
+        rewrite specializer_map with (m:= m2); auto;
+          [|apply M.KeysSubset_SubList with (d1:= getExtMeths m2); [|apply spDom_getExtMeths];
+            eapply M.KeysSubset_SubList; eauto;
+            apply dropP_KeysSubset; auto].
+
+        clear; M.ext y.
+        rewrite liftToMap1_find.
+        remember (M.find y (renameMap (spf i) m)) as yiv; destruct yiv.
+        - apply eq_sym, renameFind2' in Heqyiv; [|apply spf_onto].
+          dest; subst; rewrite <-renameMapFind; [|apply spf_onto].
+          rewrite liftToMap1_find, H0.
+          unfold dropP, dropI.
+          remember (string_eq x ds) as xds; destruct xds.
+          + apply string_eq_dec_eq in Heqxds; subst.
+            rewrite string_eq_true; reflexivity.
+          + apply string_eq_dec_neq in Heqxds.
+            remember (string_eq (spf i x) (ds __ i)) as xdsi; destruct xdsi; auto.
+            apply string_eq_dec_eq, spf_onto in Heqxdsi.
+            elim Heqxds; auto.
+        - remember (M.find y (renameMap (spf i) (liftToMap1 (dropP ds) m))) as ypv;
+            destruct ypv; auto.
+          exfalso; apply eq_sym, renameFind2' in Heqypv; [|apply spf_onto].
+          dest; subst.
+          rewrite <-renameMapFind in Heqyiv; [|apply spf_onto].
+          rewrite liftToMap1_find in H0.
+          rewrite <-Heqyiv in H0; inv H0.
+      }
+
+      rewrite <-H0.
+      rewrite <-specializer_two_comm with (m1:= m2) (m2:= m2) (i:= i); auto.
+      - apply SubList_refl.
+      - eapply M.KeysSubset_SubList; eauto.
+        apply dropP_KeysSubset; auto.
+    Qed.
 
     Lemma duplicate_traceRefines_drop:
       forall n,
         (m1 <<=[dropP ds] m2) ->
         (duplicate m1 n <<=[dropN ds n] duplicate m2 n).
     Proof.
-      admit.
+      induction n; simpl; intros.
+
+      - apply specializeMod_traceRefines_drop; auto.
+
+      - apply traceRefines_modular_noninteracting_p; auto.
+        + apply specializeMod_ModEquiv; auto.
+        + apply specializeMod_ModEquiv; auto.
+        + apply duplicate_ModEquiv; auto.
+        + apply duplicate_ModEquiv; auto.
+        + apply duplicate_specializeMod_disj_regs; auto.
+        + apply duplicate_specializeMod_disj_regs; auto.
+        + pose proof (duplicate_validRegsModules m1 (S n) Hvr1); auto.
+        + pose proof (duplicate_validRegsModules m2 (S n) Hvr2); auto.
+        + apply duplicate_specializeMod_disj_defs; auto.
+        + apply duplicate_specializeMod_disj_calls; auto.
+        + apply duplicate_specializeMod_disj_defs; auto.
+        + apply duplicate_specializeMod_disj_calls; auto.
+        + admit.
+        + admit.
+        + apply duplicate_noninteracting; auto.
+        + apply duplicate_noninteracting; auto.
+        + apply specializeMod_traceRefines_drop; auto.
     Qed.
+
   End TwoModules2.
 
   Section TwoModules3.

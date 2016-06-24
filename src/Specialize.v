@@ -86,6 +86,19 @@ Section SpecializeModule.
     apply SubList_refl.
   Qed.
 
+  Lemma spDom_getExtMeths:
+    SubList (getExtMeths m) spDom.
+  Proof.
+    intros; eapply SubList_trans; [apply getExtMeths_meths|].
+    apply SubList_app_3.
+    - eapply SubList_trans; [|apply makeNoDup_SubList_2].
+      do 2 apply SubList_app_2.
+      apply SubList_app_1, SubList_refl.
+    - eapply SubList_trans; [|apply makeNoDup_SubList_2].
+      do 3 apply SubList_app_2.
+      apply SubList_refl.
+  Qed.
+
   Definition spf := fun e => e __ i.
 
   Lemma spf_onto: forall a1 a2, spf a1 = spf a2 -> a1 = a2.
@@ -1001,14 +1014,6 @@ Section SpRefinement.
       rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
       reflexivity.
   Qed.
-
-  Corollary specialized_drop:
-    forall ds,
-      (ma <<=[dropP ds] mb) ->
-      (specializeMod ma i <<=[dropI ds i] specializeMod mb i).
-  Proof.
-    admit.
-  Qed.
-
+  
 End SpRefinement.
 

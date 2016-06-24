@@ -1,4 +1,4 @@
-Require Import List String.
+Require Import Bool List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Split Wf.
@@ -25,6 +25,10 @@ Lemma compLabelMaps_id_right:
   forall p, p = compLabelMaps p (@idElementwise _).
 Proof. auto. Qed.
 
+Definition EquivalentLabelMapElem (p q: M.key -> sigT SignT -> option (sigT SignT))
+           (d: list string) :=
+  forall s, In s d -> forall v, p s v = q s v.
+
 Section LabelDrop.
   Variable ds: string.
 
@@ -39,6 +43,25 @@ Section LabelDrop.
     | O => dropI O
     | S n' => compLabelMaps (dropI n) (dropN n')
     end.
+
+  Lemma dropP_KeysSubset:
+    forall m d,
+      M.KeysSubset m d -> M.KeysSubset (liftToMap1 dropP m)
+                                       (filter (fun s => negb (string_eq s ds)) d).
+  Proof.
+    unfold M.KeysSubset; intros.
+    apply filter_In; split.
+    - apply H; rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H0; clear H0.
+      rewrite liftToMap1_find; rewrite Hx; auto.
+    - apply negb_true_iff.
+      apply string_eq_dec_false.
+      apply M.F.P.F.in_find_iff in H0.
+      intro Hx; elim H0; clear H0; subst.
+      rewrite liftToMap1_find.
+      destruct (M.find ds m); auto.
+      unfold dropP; rewrite string_eq_true; auto.
+  Qed.
 
 End LabelDrop.
 
@@ -258,16 +281,15 @@ Section Facts.
     forall ma (Hequiv: ModEquiv type typeUT ma) mb vp,
       (ma <<=[vp] mb) ->
       forall vq,
-        (forall s, In s (getDefs ma) \/ In s (getCalls ma) ->
-                   forall v, vp s v = vq s v) ->
+        EquivalentLabelMapElem vp vq (getExtMeths ma) ->
         (ma <<=[vq] mb).
   Proof.
     unfold traceRefines; intros.
     specialize (H _ _ H1).
     destruct H as [s2 [sig2 ?]]; dest.
     exists s2, sig2; split; auto.
-    pose proof (behavior_defs_in H1).
-    pose proof (behavior_calls_in Hequiv H1).
+    pose proof (behavior_defs_ext_in Hequiv H1).
+    pose proof (behavior_calls_ext_in Hequiv H1).
     clear -H0 H2 H3 H4.
 
     generalize dependent sig2; induction sig1; simpl; intros;
@@ -281,12 +303,12 @@ Section Facts.
       M.ext y; do 2 rewrite liftToMap1_find.
       remember (M.find y (defs a)) as yv; destruct yv; auto.
       apply eq_sym, H0.
-      left; apply H2; findeq.
+      apply H2; findeq.
     - rewrite <-H1; clear -H0 H3.
       M.ext y; do 2 rewrite liftToMap1_find.
       remember (M.find y (calls a)) as yv; destruct yv; auto.
       apply eq_sym, H0.
-      right; apply H3; findeq.
+      apply H3; findeq.
   Qed.
 
   Lemma traceRefines_same_module_structure:
@@ -415,6 +437,17 @@ Section Facts.
 
   Definition EquivalentLabelMap (p q: MethsT -> MethsT) (dom: list M.key) :=
     forall m, M.KeysSubset m dom -> p m = q m.
+
+  Lemma equivalentLabelMap_elem:
+    forall vp vq d,
+      EquivalentLabelMapElem vp vq d ->
+      EquivalentLabelMap (liftToMap1 vp) (liftToMap1 vq) d.
+  Proof.
+    unfold EquivalentLabelMap, EquivalentLabelMapElem; intros.
+    M.ext y; rewrite !liftToMap1_find.
+    remember (M.find y m) as yv; destruct yv; auto.
+    apply H, H0; findeq.
+  Qed.
 
   Lemma step_label_map:
     forall m (Hequiv: ModEquiv type typeUT m) p q,
@@ -990,10 +1023,8 @@ Section Facts.
     Section NonInteractingP.
       Variable (vp vq: M.key -> sigT SignT -> option (sigT SignT)).
 
-      Hypotheses (Hvpq1: forall s, In s (getDefs ma) \/ In s (getCalls ma) ->
-                                   forall v, vp s v = compLabelMaps vp vq s v)
-                 (Hvpq2: forall s, In s (getDefs mc) \/ In s (getCalls mc) ->
-                                   forall v, vq s v = compLabelMaps vp vq s v).
+      Hypotheses (Hvpq1: EquivalentLabelMapElem vp (compLabelMaps vp vq) (getExtMeths ma))
+                 (Hvpq2: EquivalentLabelMapElem vq (compLabelMaps vp vq) (getExtMeths mc)).
       
       Corollary traceRefines_modular_noninteracting_p:
         NonInteracting ma mc ->
