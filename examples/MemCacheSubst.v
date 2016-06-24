@@ -91,9 +91,9 @@ Section Refinement.
       + ketrans; [apply modFromMeta_comm_1|].
         ketrans; [|apply modFromMeta_comm_2].
         kmodularn.
-        * unfold fifoRqFromC; rewrite <-simpleFifo_simpleFifoM.
-          unfold nfifoRqFromC; rewrite <-nativeSimpleFifo_nativeSimpleFifoM.
-          apply sfifo_refines_nsfifo.
+        * unfold fifoRqFromC; rewrite <-fifo_fifoM.
+          unfold nfifoRqFromC; rewrite <-nativeFifo_nativeFifoM.
+          apply fifo_refines_nativefifo.
         * unfold fifoRsFromC; rewrite <-simpleFifo_simpleFifoM.
           unfold nfifoRsFromC; rewrite <-nativeSimpleFifo_nativeSimpleFifoM.
           apply sfifo_refines_nsfifo.

@@ -4,6 +4,8 @@ Require Import Lts.ParametricSyntax Lib.CommonTactics Lib.Reflection Lts.Tactics
 
 Set Implicit Arguments.
 
+Open Scope string.
+
 Ltac simplMod :=
   match goal with
     | m :=
@@ -62,7 +64,7 @@ Ltac simplMod :=
 Ltac simplifyMod :=
   match goal with
     | mRef:
-        modFromMeta (nmemCache _ _ _ _ _ _)
+        modFromMeta _
                     <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       unfold m in mRef, mEquiv;
@@ -112,7 +114,7 @@ Ltac simplifyMod :=
 end;
   match goal with
     | mRef:
-        modFromMeta (nmemCache _ _ _ _ _ _)
+        modFromMeta _
                     <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       let newm := fresh in
@@ -125,7 +127,7 @@ end;
 Ltac noFilt ltac dm r :=
   match goal with
     | mRef:
-        modFromMeta (nmemCache _ _ _ _ _ _)
+        modFromMeta _
                     <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       ltac dm r;
@@ -313,7 +315,7 @@ Ltac start_pf2 m mpf :=
 Ltac finish_pf :=
   match goal with
     | mRef:
-        modFromMeta (nmemCache _ _ _ _ _ _)
+        modFromMeta _
                     <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       (abstract exact (conj mRef mEquiv))
@@ -321,7 +323,7 @@ Ltac finish_pf :=
 
 
 
-Open Scope string.
+
 
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
@@ -488,7 +490,7 @@ Section MemCacheInl.
     ssFilt "write.mcs" "deferred".
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+       END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Definition nmemCacheInl_2: MetaModule.
@@ -560,24 +562,22 @@ Section MemCacheInl.
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
-  Defined.
+  Qed.
   
 
   
   Definition nmemCacheInl_4: MetaModule.
   Proof.
-    (* SKIP_PROOF_ON
     start_def nmemCacheInl_3.
 
     ggNoF "read.cs" "l1MissByState".
     ggNoF "read.cs" "l1MissByLine".
-    ggNoF "read.cs" "l1Hit".    
+    ggNoF "read.cs" "l1Hit".
     ggNoF "read.cs" "writeback".
     ggNoF "read.cs" "upgRq".
     ggNoF "read.cs" "upgRs".
 
     finish_def.
-        END_SKIP_PROOF_ON *) admit.
   Defined.
 
   Definition nmemCacheInl_4_5: MetaModule.
@@ -626,8 +626,8 @@ Section MemCacheInl.
     ggFilt "read.cs" "pProcess".
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
-  Qed. 
+       END_SKIP_PROOF_ON *) admit.
+  Qed.
 End MemCacheInl.
 
 Section MemCacheInl2.
@@ -1005,3 +1005,5 @@ Section MemCacheInl5.
         END_SKIP_PROOF_ON *) admit.
   Qed.
 End MemCacheInl5.
+
+Close Scope string.
