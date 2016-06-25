@@ -43,6 +43,23 @@ Section DuplicateFacts.
       apply specializeMod_validRegsModules; auto.
   Qed.
 
+  Lemma duplicate_dom_indexed:
+    forall m,
+      Specializable m ->
+      forall s n,
+        In s (spDom (duplicate m n)) ->
+        exists t i, s = t __ i /\ i < S n.
+  Proof.
+    induction n; simpl; intros.
+    - pose proof (specializeMod_dom_indexed H _ _ H0); dest; subst.
+      do 2 eexists; eauto.
+    - apply spDom_in in H0; destruct H0.
+      + pose proof (specializeMod_dom_indexed H _ _ H0); dest; subst.
+        do 2 eexists; eauto.
+      + specialize (IHn H0); dest; subst.
+        do 2 eexists; eauto.
+  Qed.
+
   Lemma duplicate_specializeMod_disj_regs:
     forall m,
       Specializable m ->
@@ -352,6 +369,75 @@ Section DuplicateFacts.
         apply dropP_KeysSubset; auto.
     Qed.
 
+    Lemma equivalentLabelMapElem_dropI_dropN:
+      forall n t (Ht: t > n),
+        EquivalentLabelMapElem (dropI ds t) (compLabelMaps (dropI ds t) (dropN ds n))
+                               (getExtMeths (specializeMod m1 t)).
+    Proof.
+      unfold EquivalentLabelMapElem; intros.
+      induction n.
+      - simpl; unfold compLabelMaps, dropI.
+        destruct (string_eq _ (ds __ t)).
+        + destruct (string_eq _ (ds __ 0)); auto.
+        + remember (string_eq _ _) as sv; destruct sv; auto.
+          exfalso; apply string_eq_dec_eq in Heqsv; subst.
+          apply spDom_getExtMeths in H.
+          apply specializeMod_dom_indexed in H; auto; dest.
+          apply withIndex_index_eq in H; dest; omega.
+      - simpl; assert (t > n) by omega; specialize (IHn H0); clear H0.
+        rewrite IHn; clear IHn.
+        unfold dropI, compLabelMaps.
+        remember (dropN ds n s v) as nv; destruct nv; auto.
+        destruct (string_eq s (ds __ t)).
+        + destruct (string_eq _ _); auto.
+        + remember (string_eq _ _) as sn; destruct sn; auto.
+          exfalso; apply string_eq_dec_eq in Heqsn; subst.
+          apply spDom_getExtMeths in H.
+          apply specializeMod_dom_indexed in H; auto; dest.
+          apply withIndex_index_eq in H; dest; omega.
+    Qed.
+
+    Lemma equivalentLabelMapElem_dropN_dropI:
+      forall n t (Ht: t > n),
+        EquivalentLabelMapElem (dropN ds n) (compLabelMaps (dropI ds t) (dropN ds n))
+                               (getExtMeths (duplicate m1 n)).
+    Proof.
+      unfold EquivalentLabelMapElem; intros.
+      induction n.
+      - simpl; unfold compLabelMaps, dropI.
+        destruct (string_eq _ (ds __ 0)); auto.
+        remember (string_eq _ _) as st; destruct st; auto.
+        apply string_eq_dec_eq in Heqst; subst.
+        simpl in H.
+        apply spDom_getExtMeths in H.
+        apply specializeMod_dom_indexed in H; auto; dest.
+        apply withIndex_index_eq in H; dest; omega.
+      - simpl; assert (t > n) by omega; specialize (IHn H0); clear H0.
+        simpl in H.
+        apply getExtMeths_in in H; destruct H.
+        + clear IHn.
+          unfold dropI, compLabelMaps.
+          destruct (dropN ds n s v); auto.
+          destruct (string_eq _ (ds __ (S n))); auto.
+          remember (string_eq _ _) as st; destruct st; auto.
+          exfalso; apply string_eq_dec_eq in Heqst; subst.
+          apply spDom_getExtMeths in H.
+          apply specializeMod_dom_indexed in H; auto; dest.
+          apply withIndex_index_eq in H; dest; omega.
+        + specialize (IHn H).
+          unfold compLabelMaps.
+          rewrite IHn; clear IHn.
+          unfold compLabelMaps.
+          destruct (dropN ds n s v); auto.
+          destruct (dropI ds t s s0); auto.
+          destruct (dropI ds (S n) s s1); auto.
+          unfold dropI; remember (string_eq _ _) as st; destruct st; auto.
+          exfalso; apply string_eq_dec_eq in Heqst; subst.
+          apply spDom_getExtMeths in H.
+          apply duplicate_dom_indexed in H; auto; dest.
+          apply withIndex_index_eq in H; dest; omega.
+    Qed.
+
     Lemma duplicate_traceRefines_drop:
       forall n,
         (m1 <<=[dropP ds] m2) ->
@@ -374,8 +460,8 @@ Section DuplicateFacts.
         + apply duplicate_specializeMod_disj_calls; auto.
         + apply duplicate_specializeMod_disj_defs; auto.
         + apply duplicate_specializeMod_disj_calls; auto.
-        + admit.
-        + admit.
+        + apply equivalentLabelMapElem_dropI_dropN; omega.
+        + apply equivalentLabelMapElem_dropN_dropI; omega.
         + apply duplicate_noninteracting; auto.
         + apply duplicate_noninteracting; auto.
         + apply specializeMod_traceRefines_drop; auto.

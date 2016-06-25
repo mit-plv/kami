@@ -29,6 +29,19 @@ Definition EquivalentLabelMapElem (p q: M.key -> sigT SignT -> option (sigT Sign
            (d: list string) :=
   forall s, In s d -> forall v, p s v = q s v.
 
+Lemma equivalentLabelMapElem_id_left:
+  forall p d, EquivalentLabelMapElem p (compLabelMaps (@idElementwise _) p) d.
+Proof.
+  unfold EquivalentLabelMapElem; intros.
+  unfold compLabelMaps; destruct (p s v); auto.
+Qed.
+
+Lemma equivalentLabelMapElem_id_right:
+  forall p d, EquivalentLabelMapElem p (compLabelMaps p (@idElementwise _)) d.
+Proof.
+  unfold EquivalentLabelMapElem; intros; reflexivity.
+Qed.
+
 Section LabelDrop.
   Variable ds: string.
 

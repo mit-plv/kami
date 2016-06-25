@@ -63,7 +63,7 @@ Section ProcMem.
            |kdisj_regs|kdisj_regs|kvr|kvr
            |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
            | | |knoninteracting|knoninteracting| |].
-        * admit. (* disjointness of label maps *)
+        * apply equivalentLabelMapElem_id_right.
         * admit. (* disjointness of label maps *)
         * ketrans_r;
             [apply sinModule_duplicate_1;
