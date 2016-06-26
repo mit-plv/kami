@@ -62,9 +62,29 @@ Section ProcMem.
           [kequiv|kequiv|kequiv|kequiv
            |kdisj_regs|kdisj_regs|kvr|kvr
            |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-           | | |knoninteracting|knoninteracting| |].
-        * apply equivalentLabelMapElem_id_right.
-        * admit. (* disjointness of label maps *)
+           | |knoninteracting|knoninteracting| |].
+        * unfold dropFirstElts; rewrite dropN_dropPs.
+          rewrite <-dropPs_nil_idElementwise.
+          apply dropPs_disj.
+          { apply DisjList_nil_2. }
+          { (* TODO: need some automation *)
+            eapply DisjList_SubList; [apply getExtMeths_meths|].
+            apply DisjList_comm.
+            apply DisjList_SubList with
+            (l1:= getDefs (modFromMeta (nfifoRqFromProc IdxBits TagBits LgNumDatas
+                                                        LgDataBytes LgNumChildren))).
+            { unfold modFromMeta, getDefs; simpl.
+              repeat rewrite namesOf_app.
+              do 2 apply SubList_app_2; apply SubList_app_1.
+              apply SubList_refl'.
+              clear; induction (wordToNat (wones LgNumChildren)); [reflexivity|].
+              simpl; f_equal; auto.
+            }
+            { apply DisjList_comm, DisjList_app_4.
+              { kdisj_dms. }
+              { kdisj_cms_dms. }
+            }
+          }
         * ketrans_r;
             [apply sinModule_duplicate_1;
              [kequiv|kvr|knodup_regs|apply nativeFifoS_const_regs]|].

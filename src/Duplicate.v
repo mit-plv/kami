@@ -460,8 +460,9 @@ Section DuplicateFacts.
         + apply duplicate_specializeMod_disj_calls; auto.
         + apply duplicate_specializeMod_disj_defs; auto.
         + apply duplicate_specializeMod_disj_calls; auto.
-        + apply equivalentLabelMapElem_dropI_dropN; omega.
-        + apply equivalentLabelMapElem_dropN_dropI; omega.
+        + split.
+          * apply equivalentLabelMapElem_dropI_dropN; omega.
+          * apply equivalentLabelMapElem_dropN_dropI; omega.
         + apply duplicate_noninteracting; auto.
         + apply duplicate_noninteracting; auto.
         + apply specializeMod_traceRefines_drop; auto.
