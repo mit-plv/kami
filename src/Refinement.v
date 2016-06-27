@@ -1,31 +1,158 @@
-Require Import List String.
+Require Import Bool List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Syntax Semantics SemFacts Equiv Split Wf.
+Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
 
-Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=
-  fun s v =>
-    match q s v with
-    | Some qv => p s qv
-    | None => None
-    end.
+Section LabelMapComposition.
+  Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=
+    fun s v =>
+      match q s v with
+      | Some qv => p s qv
+      | None => None
+      end.
+
+  Lemma compLabelMaps_id_left:
+    forall p, p = compLabelMaps (@idElementwise _) p.
+  Proof.
+    intros; extensionality k; extensionality v.
+    unfold compLabelMaps.
+    destruct (p k v); auto.
+  Qed.
+
+  Lemma compLabelMaps_id_right:
+    forall p, p = compLabelMaps p (@idElementwise _).
+  Proof. auto. Qed.
+  
+End LabelMapComposition.
+
+Section EquivalentLabelMapElem.
+
+  Definition EquivalentLabelMapElem (p q: M.key -> sigT SignT -> option (sigT SignT))
+             (d: list string) :=
+    forall s, In s d -> forall v, p s v = q s v.
+
+  Lemma equivalentLabelMapElem_id_left:
+    forall p d, EquivalentLabelMapElem p (compLabelMaps (@idElementwise _) p) d.
+  Proof.
+    unfold EquivalentLabelMapElem; intros.
+    unfold compLabelMaps; destruct (p s v); auto.
+  Qed.
+
+  Lemma equivalentLabelMapElem_id_right:
+    forall p d, EquivalentLabelMapElem p (compLabelMaps p (@idElementwise _)) d.
+  Proof.
+    unfold EquivalentLabelMapElem; intros; reflexivity.
+  Qed.
+
+End EquivalentLabelMapElem.
+
+Section DisjLabelMap.
+  Variable (vp vq: M.key -> sigT SignT -> option (sigT SignT)).
+
+  Definition DisjLabelMap (dp dq: list string) :=
+    EquivalentLabelMapElem vp (compLabelMaps vp vq) dp /\
+    EquivalentLabelMapElem vq (compLabelMaps vp vq) dq.
+
+End DisjLabelMap.
 
 Section LabelDrop.
-  Variable ds: string.
 
-  Definition dropP (s: M.key) (v: sigT SignT): option (sigT SignT) :=
+  Definition dropP (ds: string) (s: M.key) (v: sigT SignT): option (sigT SignT) :=
     if string_eq s ds then None else Some v.
 
-  Definition dropI (i: nat) (s: M.key) (v: sigT SignT): option (sigT SignT) :=
+  Definition dropI (ds: string) (i: nat) (s: M.key) (v: sigT SignT): option (sigT SignT) :=
     if string_eq s (ds __ i) then None else Some v.
 
-  Fixpoint dropN (n: nat) :=
+  Fixpoint dropN (ds: string) (n: nat) :=
     match n with
-    | O => dropI O
-    | S n' => compLabelMaps (dropI n) (dropN n')
+    | O => dropI ds O
+    | S n' => compLabelMaps (dropI ds n) (dropN ds n')
     end.
+
+  Lemma dropP_KeysSubset:
+    forall ds m d,
+      M.KeysSubset m d -> M.KeysSubset (liftToMap1 (dropP ds) m)
+                                       (filter (fun s => negb (string_eq s ds)) d).
+  Proof.
+    unfold M.KeysSubset; intros.
+    apply filter_In; split.
+    - apply H; rewrite M.F.P.F.in_find_iff in *.
+      intro Hx; elim H0; clear H0.
+      rewrite liftToMap1_find; rewrite Hx; auto.
+    - apply negb_true_iff.
+      apply string_eq_dec_false.
+      apply M.F.P.F.in_find_iff in H0.
+      intro Hx; elim H0; clear H0; subst.
+      rewrite liftToMap1_find.
+      destruct (M.find ds m); auto.
+      unfold dropP; rewrite string_eq_true; auto.
+  Qed.
+
+  Fixpoint dropPs (ds: list string): M.key -> sigT SignT -> option (sigT SignT) :=
+    match ds with
+    | nil => fun _ v => Some v
+    | d :: ds' => fun s v => if string_eq s d then None else dropPs ds' s v
+    end.
+
+  Lemma dropPs_nil_idElementwise: dropPs nil = idElementwise (A:= sigT SignT).
+  Proof. reflexivity. Qed.
+
+  Lemma dropPs_None: forall s v ds, dropPs ds s v = None -> In s ds.
+  Proof.
+    induction ds; simpl; intros; [inv H|].
+    remember (string_eq s a) as sa; destruct sa; auto.
+    apply string_eq_dec_eq in Heqsa; auto.
+  Qed.
+
+  Lemma dropPs_Some: forall s v v' ds, dropPs ds s v = Some v' -> v = v' /\ ~ In s ds.
+  Proof.
+    induction ds; simpl; intros; [inv H; auto|].
+    remember (string_eq s a) as sa; destruct sa; [inv H|].
+    specialize (IHds H); dest; split; auto.
+    apply string_eq_dec_neq in Heqsa; intuition.
+  Qed.
+
+  Fixpoint duplicateElt (ds: string) (n: nat) :=
+    match n with
+    | O => [ds __ 0]
+    | S n' => (ds __ n) :: (duplicateElt ds n')
+    end.
+
+  Lemma dropN_dropPs: forall ds n, dropN ds n = dropPs (duplicateElt ds n).
+  Proof.
+    induction n; simpl; intros; auto.
+    rewrite IHn; unfold compLabelMaps.
+    extensionality s; extensionality v.
+    remember (string_eq s (ds __ (S n))) as sn; destruct sn.
+    - destruct (dropPs _ _ _); auto.
+      apply string_eq_dec_eq in Heqsn; subst.
+      unfold dropI; rewrite string_eq_true; auto.
+    - destruct (dropPs _ _ _); auto.
+      apply string_eq_dec_neq in Heqsn.
+      unfold dropI; rewrite string_eq_dec_false; auto.
+  Qed.
+
+  Lemma dropPs_disj:
+    forall ds1 ds2 dom1 dom2,
+      DisjList dom1 ds2 -> DisjList dom2 ds1 ->
+      DisjLabelMap (dropPs ds1) (dropPs ds2) dom1 dom2.
+  Proof.
+    unfold DisjLabelMap; intros; split;
+      unfold EquivalentLabelMapElem, compLabelMaps; intros.
+    - remember (dropPs ds2 s v) as dv; destruct dv.
+      + apply eq_sym, dropPs_Some in Heqdv; dest; subst; auto.
+      + exfalso; apply eq_sym, dropPs_None in Heqdv.
+        specialize (H s); destruct H; auto.
+    - remember (dropPs ds2 s v) as dv; destruct dv; auto.
+      apply eq_sym, dropPs_Some in Heqdv; dest; subst.
+      remember (dropPs ds1 s s0) as ds; destruct ds.
+      + apply eq_sym, dropPs_Some in Heqds; dest; subst; auto.
+      + exfalso; apply eq_sym, dropPs_None in Heqds.
+        specialize (H0 s); destruct H0; auto.
+  Qed.
 
 End LabelDrop.
 
@@ -208,16 +335,30 @@ Section Facts.
       + destruct (annot y), (annot y0), (annot a); auto.
   Qed.
 
-  Theorem traceRefines_trans_elem: forall m1 m2 m3: Modules,
-                                     (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
+  Corollary traceRefines_trans_elem:
+    forall m1 m2 m3: Modules,
+      (m1 <<== m2) -> (m2 <<== m3) -> (m1 <<== m3).
   Proof.
-    intros.
-    unfold MethsT in *; rewrite idElementwiseId in *.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
     eapply traceRefines_trans; eauto.
   Qed.
 
+  Corollary traceRefines_trans_elem_left_p:
+    forall (m1 m2 m3: Modules) p,
+      (m1 <<=[p] m2) -> (m2 <<== m3) -> (m1 <<=[p] m3).
+  Proof.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
+    eapply traceRefines_trans with (q:= id); eauto.
+  Qed.
 
-
+  Corollary traceRefines_trans_elem_right_p:
+    forall (m1 m2 m3: Modules) p,
+      (m1 <<== m2) -> (m2 <<=[p] m3) -> (m1 <<=[p] m3).
+  Proof.
+    intros; unfold MethsT in *; rewrite idElementwiseId in *.
+    eapply traceRefines_trans; eauto.
+  Qed.
+  
   Corollary traceRefines_trans_conj:
     forall ma mb mc p q,
       traceRefines p ma mb /\
@@ -225,6 +366,40 @@ Section Facts.
       traceRefines (fun f => q (p f)) ma mc.
   Proof.
     intros; dest; eapply traceRefines_trans; eauto.
+  Qed.
+
+  Lemma traceRefines_labelMap_weakening:
+    forall ma (Hequiv: ModEquiv type typeUT ma) mb vp,
+      (ma <<=[vp] mb) ->
+      forall vq,
+        EquivalentLabelMapElem vp vq (getExtMeths ma) ->
+        (ma <<=[vq] mb).
+  Proof.
+    unfold traceRefines; intros.
+    specialize (H _ _ H1).
+    destruct H as [s2 [sig2 ?]]; dest.
+    exists s2, sig2; split; auto.
+    pose proof (behavior_defs_ext_in Hequiv H1).
+    pose proof (behavior_calls_ext_in Hequiv H1).
+    clear -H0 H2 H3 H4.
+
+    generalize dependent sig2; induction sig1; simpl; intros;
+      [inv H2; constructor|].
+    destruct sig2; [inv H2|].
+    inv H2; inv H3; inv H4; constructor; auto.
+    clear -H0 H2 H3 H6.
+
+    unfold equivalentLabel in *; dest; repeat split; auto; clear H4.
+    - rewrite <-H; clear -H0 H2.
+      M.ext y; do 2 rewrite liftToMap1_find.
+      remember (M.find y (defs a)) as yv; destruct yv; auto.
+      apply eq_sym, H0.
+      apply H2; findeq.
+    - rewrite <-H1; clear -H0 H3.
+      M.ext y; do 2 rewrite liftToMap1_find.
+      remember (M.find y (calls a)) as yv; destruct yv; auto.
+      apply eq_sym, H0.
+      apply H3; findeq.
   Qed.
 
   Lemma traceRefines_same_module_structure:
@@ -353,6 +528,17 @@ Section Facts.
 
   Definition EquivalentLabelMap (p q: MethsT -> MethsT) (dom: list M.key) :=
     forall m, M.KeysSubset m dom -> p m = q m.
+
+  Lemma equivalentLabelMap_elem:
+    forall vp vq d,
+      EquivalentLabelMapElem vp vq d ->
+      EquivalentLabelMap (liftToMap1 vp) (liftToMap1 vq) d.
+  Proof.
+    unfold EquivalentLabelMap, EquivalentLabelMapElem; intros.
+    M.ext y; rewrite !liftToMap1_find.
+    remember (M.find y m) as yv; destruct yv; auto.
+    apply H, H0; findeq.
+  Qed.
 
   Lemma step_label_map:
     forall m (Hequiv: ModEquiv type typeUT m) p q,
@@ -553,9 +739,9 @@ Section Facts.
       + econstructor; eauto.
     - inv H0; inv HMultistepBeh; inv H1; inv HMultistepBeh.
       clear -Hequiv1 Hequiv2 HStep HStep0 H.
-      pose proof (step_defs_in Hequiv1 HStep).
+      pose proof (step_defs_in HStep).
       pose proof (step_calls_in Hequiv1 HStep).
-      pose proof (step_defs_in Hequiv2 HStep0).
+      pose proof (step_defs_in HStep0).
       pose proof (step_calls_in Hequiv2 HStep0).
       inv H; repeat split.
       + eapply step_hide; eauto.
@@ -854,7 +1040,7 @@ Section Facts.
       Forall (fun l => ValidLabel m l) ll.
   Proof.
     intros.
-    pose proof (behavior_defs_in Hequiv H).
+    pose proof (behavior_defs_in H).
     pose proof (behavior_calls_in Hequiv H).
     clear H u.
     induction ll; simpl; intros; auto.
@@ -881,7 +1067,7 @@ Section Facts.
                (Haccalls: DisjList (getCalls ma) (getCalls mc))
                (Hbddefs: DisjList (getDefs mb) (getDefs md))
                (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
-
+        
     Section NonInteracting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).
 
@@ -924,6 +1110,25 @@ Section Facts.
       Qed.
 
     End NonInteracting.
+
+    Section NonInteractingP.
+      Variable (vp vq: M.key -> sigT SignT -> option (sigT SignT)).
+      Hypothesis (Hdisjl: DisjLabelMap vp vq (getExtMeths ma) (getExtMeths mc)).
+      
+      Corollary traceRefines_modular_noninteracting_p:
+        NonInteracting ma mc ->
+        NonInteracting mb md ->
+        (ma <<=[vp] mb) ->
+        (mc <<=[vq] md) ->
+        ((ma ++ mc)%kami <<=[compLabelMaps vp vq] (mb ++ md)%kami).
+      Proof.
+        intros; destruct Hdisjl.
+        eapply traceRefines_labelMap_weakening in H1; eauto.
+        eapply traceRefines_labelMap_weakening in H2; eauto.
+        apply traceRefines_modular_noninteracting; auto.
+      Qed.
+
+    End NonInteractingP.
 
     Section Interacting.
       Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).

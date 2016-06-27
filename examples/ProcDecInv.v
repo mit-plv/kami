@@ -26,8 +26,8 @@ Section Invariants.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistnv "Ins"--"elt" ieltv o (listEltK RqFromProc type).
-    kexistnv "Outs"--"elt" oeltv o (listEltK RsToProc type).
+    kexistnv "rqFromProc"--"elt" ieltv o (listEltK RqFromProc type).
+    kexistnv "rsToProc"--"elt" oeltv o (listEltK RsToProc type).
     exact True.
   Defined.
   Hint Unfold procDec_inv_0: InvDefs.
@@ -65,8 +65,8 @@ Section Invariants.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistnv "Ins"--"elt" ieltv o (listEltK RqFromProc type).
-    kexistnv "Outs"--"elt" oeltv o (listEltK RsToProc type).
+    kexistnv "rqFromProc"--"elt" ieltv o (listEltK RqFromProc type).
+    kexistnv "rsToProc"--"elt" oeltv o (listEltK RsToProc type).
     refine (or3 _ _ _).
     - exact (v1 = false /\ fifo_empty_inv v2 /\ fifo_empty_inv v3).
     - refine (_ /\ _).

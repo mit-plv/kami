@@ -22,8 +22,7 @@ Section MemCorrect.
                  LgDataBytes (wordToNat (Word.wones LgNumChildren)).
 
   Definition dropFirstElts :=
-    compLabelMaps (dropN ("rqFromProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren)))
-                  (dropN ("rsToProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren))).
+    dropN ("rqFromProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren)).
 
   Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.

@@ -886,7 +886,7 @@ Proof.
 Qed.
 
 Lemma step_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) or u l,
+  forall m or u l,
     Step m or u l -> M.KeysSubset (defs l) (getDefs m).
 Proof.
   intros; apply step_consistent in H; inv H.
@@ -908,7 +908,7 @@ Proof.
 Qed.
 
 Lemma multistep_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+  forall m or ll u,
     Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   induction ll; intros; auto.
@@ -926,7 +926,7 @@ Proof.
 Qed.
 
 Lemma behavior_defs_in:
-  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+  forall m ll u,
     Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getDefs m)) ll.
 Proof.
   intros; inv H.
@@ -1011,7 +1011,7 @@ Lemma step_defs_extDefs_in:
     M.KeysSubset (defs l) (getExtDefs m).
 Proof.
   intros.
-  pose proof (step_defs_in Hequiv H).
+  pose proof (step_defs_in H).
   pose proof (step_defs_disj H).
 
   unfold M.KeysSubset, M.KeysDisj in *; intros.
@@ -1063,6 +1063,78 @@ Proof.
   pose proof (step_calls_extCalls_in Hequiv H).
   eapply M.KeysSubset_SubList; eauto.
   apply SubList_app_2, SubList_refl.
+Qed.
+
+Lemma multistep_defs_extDefs_in:
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getExtDefs m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  eapply step_defs_extDefs_in; eauto.
+Qed.
+
+Lemma multistep_calls_extCalls_in:
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (calls l) (getExtCalls m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  eapply step_calls_extCalls_in; eauto.
+Qed.
+
+Lemma multistep_defs_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (defs l) (getExtMeths m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  apply M.KeysSubset_SubList with (d1:= getExtDefs m).
+  - eapply step_defs_extDefs_in; eauto.
+  - apply SubList_app_1, SubList_refl.
+Qed.
+
+Lemma multistep_calls_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) or ll u,
+    Multistep m or u ll -> Forall (fun l => M.KeysSubset (calls l) (getExtMeths m)) ll.
+Proof.
+  induction ll; intros; auto.
+  inv H; constructor; eauto.
+  apply M.KeysSubset_SubList with (d1:= getExtCalls m).
+  - eapply step_calls_extCalls_in; eauto.
+  - apply SubList_app_2, SubList_refl.
+Qed.
+
+Lemma behavior_defs_extDefs_in:
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getExtDefs m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_defs_extDefs_in; eauto.
+Qed.
+
+Lemma behavior_calls_extCalls_in:
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (calls l) (getExtCalls m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_calls_extCalls_in; eauto.
+Qed.
+
+Lemma behavior_defs_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (defs l) (getExtMeths m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_defs_ext_in; eauto.
+Qed.
+
+Lemma behavior_calls_ext_in:
+  forall m (Hequiv: ModEquiv type typeUT m) ll u,
+    Behavior m u ll -> Forall (fun l => M.KeysSubset (calls l) (getExtMeths m)) ll.
+Proof.
+  intros; inv H.
+  eapply multistep_calls_ext_in; eauto.
 Qed.
 
 Lemma substepsInd_rule_split:

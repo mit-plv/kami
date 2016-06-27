@@ -86,6 +86,19 @@ Section SpecializeModule.
     apply SubList_refl.
   Qed.
 
+  Lemma spDom_getExtMeths:
+    SubList (getExtMeths m) spDom.
+  Proof.
+    intros; eapply SubList_trans; [apply getExtMeths_meths|].
+    apply SubList_app_3.
+    - eapply SubList_trans; [|apply makeNoDup_SubList_2].
+      do 2 apply SubList_app_2.
+      apply SubList_app_1, SubList_refl.
+    - eapply SubList_trans; [|apply makeNoDup_SubList_2].
+      do 3 apply SubList_app_2.
+      apply SubList_refl.
+  Qed.
+
   Definition spf := fun e => e __ i.
 
   Lemma spf_onto: forall a1 a2, spf a1 = spf a2 -> a1 = a2.
@@ -248,6 +261,45 @@ Section SpecializeFacts.
       apply in_or_app; right.
       apply getCalls_in_2; auto.
       Transparent getCalls.
+  Qed.
+
+  Lemma spDom_in:
+    forall m1 m2 s,
+      In s (spDom (m1 ++ m2)%kami) ->
+      In s (spDom m1) \/ In s (spDom m2).
+  Proof.
+    unfold spDom; intros.
+    apply makeNoDup_SubList_1 in H.
+    Opaque getCalls.
+    repeat (apply in_app_or in H; destruct H).
+    - simpl in H; unfold RegInitT in H; rewrite namesOf_app in H.
+      apply in_app_or in H; destruct H.
+      + left; apply makeNoDup_SubList_2.
+        apply in_or_app; left; auto.
+      + right; apply makeNoDup_SubList_2.
+        apply in_or_app; left; auto.
+    - simpl in H; rewrite namesOf_app in H.
+      apply in_app_or in H; destruct H.
+      + left; apply makeNoDup_SubList_2.
+        apply in_or_app; right.
+        apply in_or_app; left; auto.
+      + right; apply makeNoDup_SubList_2.
+        apply in_or_app; right.
+        apply in_or_app; left; auto.
+    - simpl in H; unfold DefMethT in H; rewrite namesOf_app in H.
+      apply in_app_or in H; destruct H.
+      + left; apply makeNoDup_SubList_2.
+        do 2 (apply in_or_app; right).
+        apply in_or_app; left; auto.
+      + right; apply makeNoDup_SubList_2.
+        do 2 (apply in_or_app; right).
+        apply in_or_app; left; auto.
+    - simpl in H; apply getCalls_in in H; destruct H.
+      + left; apply makeNoDup_SubList_2.
+        do 3 (apply in_or_app; right); auto.
+      + right; apply makeNoDup_SubList_2.
+        do 3 (apply in_or_app; right); auto.
+        Transparent getCalls.
   Qed.
   
   Lemma spf_neq: forall a b i j, i <> j -> spf i a <> spf j b.
@@ -721,6 +773,24 @@ Section Specializable.
     apply spDom_regs.
   Qed.
 
+  Lemma specializeMod_rules:
+    forall i,
+      namesOf (getRules (specializeMod m i)) = map (spf i) (namesOf (getRules m)).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetRules.
+    match goal with
+    | [ |- ?lhs = _ ] =>
+      assert (lhs = map (specializer m i) (namesOf (getRules m)))
+    end.
+    { generalize (getRules m); clear; induction l; simpl; auto.
+      f_equal; auto; destruct a; auto.
+    }
+    rewrite H.
+    apply specializer_dom_list; auto.
+    apply spDom_rules.
+  Qed.
+
   Lemma specializeMod_defs:
     forall i,
       getDefs (specializeMod m i) = map (spf i) (getDefs m).
@@ -739,6 +809,26 @@ Section Specializable.
     rewrite renameGetCalls.
     apply specializer_dom_list; auto.
     apply spDom_calls.
+  Qed.
+
+  Lemma specializeMod_dom_indexed:
+    forall i s, In s (spDom (specializeMod m i)) ->
+                exists t, s = t __ i.
+  Proof.
+    unfold spDom; intros.
+    apply makeNoDup_SubList_1 in H.
+    apply in_app_or in H; destruct H.
+    - rewrite specializeMod_regs in H; auto.
+      apply in_map_iff in H; dest; subst; eexists; reflexivity.
+    - apply in_app_or in H; destruct H.
+      + rewrite specializeMod_rules in H.
+        apply in_map_iff in H; dest; subst; eexists; reflexivity.
+      + apply in_app_or in H; destruct H.
+        * fold (getDefs (specializeMod m i)) in H.
+          rewrite specializeMod_defs in H.
+          apply in_map_iff in H; dest; subst; eexists; reflexivity.
+        * rewrite specializeMod_calls in H.
+          apply in_map_iff in H; dest; subst; eexists; reflexivity.
   Qed.
 
   Lemma specializeMod_regs_NoDup:
@@ -1001,6 +1091,6 @@ Section SpRefinement.
       rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
       reflexivity.
   Qed.
-
+  
 End SpRefinement.
 

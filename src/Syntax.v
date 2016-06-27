@@ -622,6 +622,65 @@ Lemma getDefs_flattened:
     getDefs m.
 Proof. reflexivity. Qed.
 
+Lemma getExtDefs_in:
+  forall m1 m2 s,
+    In s (getExtDefs (ConcatMod m1 m2)) ->
+    In s (getExtDefs m1) \/ In s (getExtDefs m2).
+Proof.
+  unfold getExtDefs; intros.
+  apply filter_In in H; dest.
+  apply negb_true_iff, eq_sym in H0.
+  apply string_in_dec_not_in in H0.
+  rewrite getDefs_app in H; apply in_app_or in H; destruct H.
+  - left; apply filter_In; split; auto.
+    apply negb_true_iff.
+    remember (string_in _ _) as sin; destruct sin; auto.
+    apply string_in_dec_in in Heqsin.
+    elim H0; apply getCalls_in_1; auto.
+  - right; apply filter_In; split; auto.
+    apply negb_true_iff.
+    remember (string_in _ _) as sin; destruct sin; auto.
+    apply string_in_dec_in in Heqsin.
+    elim H0; apply getCalls_in_2; auto.
+Qed.
+
+Lemma getExtCalls_in:
+  forall m1 m2 s,
+    In s (getExtCalls (ConcatMod m1 m2)) ->
+    In s (getExtCalls m1) \/ In s (getExtCalls m2).
+Proof.
+  unfold getExtCalls; intros.
+  apply filter_In in H; dest.
+  apply negb_true_iff, eq_sym in H0.
+  apply string_in_dec_not_in in H0.
+  apply getCalls_in in H; destruct H.
+  - left; apply filter_In; split; auto.
+    apply negb_true_iff.
+    remember (string_in _ _) as sin; destruct sin; auto.
+    apply string_in_dec_in in Heqsin.
+    elim H0; rewrite getDefs_app; apply in_or_app; auto.
+  - right; apply filter_In; split; auto.
+    apply negb_true_iff.
+    remember (string_in _ _) as sin; destruct sin; auto.
+    apply string_in_dec_in in Heqsin.
+    elim H0; rewrite getDefs_app; apply in_or_app; auto.
+Qed.
+
+Lemma getExtMeths_in:
+  forall m1 m2 s,
+    In s (getExtMeths (ConcatMod m1 m2)) ->
+    In s (getExtMeths m1) \/ In s (getExtMeths m2).
+Proof.
+  unfold getExtMeths; intros.
+  apply in_app_or in H; destruct H.
+  - apply getExtDefs_in in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+  - apply getExtCalls_in in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+Qed.
+
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
