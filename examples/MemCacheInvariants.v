@@ -557,9 +557,9 @@ Section MemCacheInl.
   Ltac findVR mr cond :=
     match goal with
       | |- M.find (?k __ ?c) _ = _ =>
-        erewrite <- (findMVR_find_var mr _ _ cond)
+        rewrite <- (findMVR_find_var mr k eq_refl cond)
       | |- M.find ?k _ = _ =>
-        erewrite <- (findMVR_find_string mr)
+        erewrite <- (findMVR_find_string mr k eq_refl)
     end.
 
   Ltac doSplit := split; [| try doSplit].
@@ -637,22 +637,19 @@ Section MemCacheInl.
       rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
       rewrite ?makeMap_fold_eq.
 
-
-      admit.
-    - admit.
-  Qed.
-End MemCacheInl.
-
-(*
       match goal with
         | |- ?inv ?s =>
           unfold inv;
             intros;
             let mr := mapVR s in
-            match goal with
-              | cond: (_ <= _)%nat |- _ =>
-                repeat (eexists; split; [findVR mr cond; eauto |])
-            end
+            let mrv := fresh in
+            pose mr as mrv;
+              simpl in mrv;
+              match goal with
+                | cond: (_ <= _)%nat |- _ =>
+                  repeat (eexists; split; [findVR mrv cond; eauto |])
+              end;
+              clear mrv
       end.
       simpl in *.
 
@@ -682,10 +679,6 @@ End MemCacheInl.
       apply In_metaRules in HInRules; dest; unfold nmemCacheInl in *; simpl in *; dest.
 
       admit.
-      doDestruct; try admit; try reflexivity.
-      Grab Existential Variables.
-      reflexivity.
-      reflexivity.
   Qed.
 End MemCacheInl.
-*)
+
