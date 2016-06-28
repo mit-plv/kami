@@ -132,17 +132,29 @@ Definition whd' sz (w: word sz) :=
   end w.
 
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
-refine match op with
-         | Inv n => @wneg n
-         | ConstExtract n1 n2 n3 => fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)
-         | ZeroExtendTrunc n1 n2 => fun w => split2 n1 n2 (_ (combine (wzero n2) w))
-         | SignExtendTrunc n1 n2 => fun w => split2 n1 n2 (_ (combine (if whd' w
-                                                                       then wones n2
-                                                                       else wzero n2) w))
-         | TruncLsb n1 n2 => fun w => split1 n1 n2 w
-       end;
-  assert (H: n3 + n0 = n0 + n3) by omega;
-  rewrite H in *; intuition.
+  destruct op.
+  - exact (@wneg n).
+  - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
+  - exact (fun w => split2 n1 n2 w).
+  - refine (fun w =>
+              match Compare_dec.lt_dec n1 n2 with
+                | left isLt => _
+                | right isGe => _
+              end).
+    assert (sth: n2 - n1 + n1 = n2) by abstract omega.
+    exact (eq_rect _ _ (Word.combine (wzero (n2 - n1)) w) _ sth).
+    assert (sth: n1 = n1 - n2 + n2) by abstract omega.
+    exact (split2 (n1 - n2) n2 (eq_rect _ _ w _ sth)).
+  - refine (fun w =>
+              match Compare_dec.lt_dec n1 n2 with
+                | left isLt => _
+                | right isGe => _
+              end).
+    assert (sth: n2 - n1 + n1 = n2) by abstract omega.
+    exact (eq_rect _ _ (Word.combine ((if whd' w then wones else wzero) (n2 - n1)) w) _ sth).
+    assert (sth: n1 = n1 - n2 + n2) by abstract omega.
+    exact (split2 (n1 - n2) n2 (eq_rect _ _ w _ sth)).
+  - exact (fun w => split1 n1 n2 w).
 Defined.
 
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
