@@ -252,10 +252,6 @@ Section MemCacheInl.
          tag is ("dataArray.tag" __ c) of s
     /\ exists line: <| Vector (Line LgDataBytes LgNumDatas) IdxBits |> ,
          line is ("dataArray.line" __ c) of s
-    /\ exists procRqValid: <| Bool |> ,
-         procRqValid is ("procRqValid" __ c) of s
-    /\ exists wb: <| Bool |> ,
-         wb is ("procRqReplace" __ c) of s
     /\ exists csw: <| Bool |> ,
          csw is ("procRqWait" __ c) of s
     /\ exists rqToPList: << list (type (RqToP (Bit AddrBits) Id)) >> ,
@@ -544,7 +540,7 @@ Section MemCacheInl.
       | _ => constr:(MVParam m)
     end.
 
-  Ltac mapVR m := mapVReify 0 0 0 m.
+  Ltac mapVR m := mapVReify 0 0 (wordToNat (wones LgNumChildren)) m.
 
   Ltac findVR mr cond :=
     match goal with
@@ -637,6 +633,7 @@ Section MemCacheInl.
                                         LgNumDatas LgDataBytes Id LgNumChildren)) s ll ->
     nmemCache_invariants s.
   Proof.
+    (*
     intros beh.
     destruct beh.
     match goal with
@@ -644,7 +641,7 @@ Section MemCacheInl.
         remember P as init
     end.
     induction HMultistepBeh; repeat subst; intros.
-    - (* SKIP_PROOF_ON
+    - (* SKIP_PROOF_ON *)
       unfold nmemCacheInl, modFromMeta, metaRegs, getRegInits, initRegs;
       repeat (
           rewrite singleUnfoldConcat;
@@ -654,6 +651,17 @@ Section MemCacheInl.
       rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
       rewrite ?makeMap_fold_eq.
 
+      match goal with
+        | |- ?inv ?s =>
+          unfold inv;
+            intros;
+            let mr := mapVReify 0 0 (wordToNat (wones LgNumChildren)) s in
+            match goal with
+              | cond: (_ <= _)%nat |- _ =>
+                repeat (eexists; split; [findVR mr cond; eauto |])
+            end
+      end.
+      simpl in *.
       solveFinds.
 
       cbv [getTagIdxS getTagS getIdxS getOffsetS getAddrS AddrBits
@@ -670,7 +678,7 @@ Section MemCacheInl.
         * destruct H1; dest; exfalso; auto.
       + exfalso; apply app_cons_not_nil in H1; auto.
       + discriminate.
-       END_SKIP_PROOF_ON *) admit.
+       (* END_SKIP_PROOF_ON *)
     - specialize (IHHMultistepBeh eq_refl).
       apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
       dest; subst.
@@ -682,8 +690,20 @@ Section MemCacheInl.
 
       apply In_metaRules in HInRules; dest; unfold nmemCacheInl in *; simpl in *; dest.
 
+      doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *.
+      + kinv_magic_with customCache.
+
+        match goal with
+          | |- nmemCache_invariants ?s => let x := mapVR s in pose s
+                                            (* pose (mapVR s) *)
+        end.
+        rewrite ?makeMap_fold_eq.
+        solveFinds.
+        
       (*
       doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *;
       kinv_magic_with customCache; *) admit.
+     *)
+    admit.
   Qed.
 End MemCacheInl.
