@@ -78,6 +78,14 @@ Section Lists. (* For dealing with domains *)
     - apply SubList_app_2; auto.
   Qed.
 
+  Lemma SubList_app_7:
+    forall l1 l2 l3, SubList (l1 ++ l2) l3 -> SubList l1 l3 /\ SubList l2 l3.
+  Proof.
+    intros; split.
+    - eapply SubList_app_4; eauto.
+    - eapply SubList_app_5; eauto.
+  Qed.
+
   Lemma SubList_app_comm:
     forall l1 l2 l3, SubList l1 (l2 ++ l3) -> SubList l1 (l3 ++ l2).
   Proof.
@@ -1972,6 +1980,23 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H0 y); destruct H0.
     - elim H0; apply H; discriminate.
     - elim H0; auto.
+  Qed.
+
+  Lemma KeysSubset_subtractKV:
+    forall {A} (m1 m2: t A) deceqA d,
+      KeysSubset m1 d -> KeysSubset (subtractKV deceqA m1 m2) d.
+  Proof.
+    unfold KeysSubset; intros.
+    apply H; rewrite F.P.F.in_find_iff in *.
+    intro Hx; elim H0; clear H0.
+    rewrite subtractKV_find; rewrite Hx; auto.
+  Qed.
+
+  Lemma DomainSubset_KeysSubset:
+    forall {A} (m1 m2: t A) d,
+      KeysSubset m1 d -> DomainSubset m2 m1 -> KeysSubset m2 d.
+  Proof.
+    unfold KeysSubset, DomainSubset; auto.
   Qed.
 
 End LeibnizFacts.

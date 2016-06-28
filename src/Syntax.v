@@ -487,6 +487,22 @@ Section GetCalls.
       apply in_or_app; auto.
   Qed.
 
+  Lemma getCalls_subList_1:
+    forall m1 m2, SubList (getCalls m1 ++ getCalls m2) (getCalls (ConcatMod m1 m2)).
+  Proof.
+    unfold SubList; intros.
+    apply in_app_or in H; destruct H.
+    - apply getCalls_in_1; auto.
+    - apply getCalls_in_2; auto.
+  Qed.
+
+  Lemma getCalls_subList_2:
+    forall m1 m2, SubList (getCalls (ConcatMod m1 m2)) (getCalls m1 ++ getCalls m2).
+  Proof.
+    unfold SubList; intros.
+    apply getCalls_in in H; destruct H; apply in_or_app; auto.
+  Qed.
+
   Lemma getCallsR_SubList:
     forall ra rb,
       SubList ra rb ->
