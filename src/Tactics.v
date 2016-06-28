@@ -375,11 +375,12 @@ Ltac kdisj_cms_dms :=
 Ltac knodup_regs :=
   repeat (* Separating NoDup proofs by small modules *)
     match goal with
-    | [ |- NoDup (namesOf (getRegInits _)) ] =>
-      progress (unfold getRegInits; fold getRegInits)
     | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
     | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
+    | [ |- NoDup (namesOf (getRegInits (duplicate _ _))) ] => apply duplicate_regs_NoDup; auto
     | [ |- NoDup (namesOf (getRegInits ?m)) ] => unfold_head m
+    | [ |- NoDup (namesOf (getRegInits _)) ] =>
+      progress (unfold getRegInits; fold getRegInits)
     end;
   repeat
     match goal with
