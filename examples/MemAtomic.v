@@ -129,8 +129,8 @@ Section MemAtomicWoQ.
     ketrans; [rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_2|].
 
     kmodular_light.
-    - admit. (* kdef_call_sub automation *)
-    - kdef_call_sub.
+    - admit. (* Disj extDefs calls *)
+    - admit. (* Disj extCalls defs *)
     - kinteracting.
     - apply duplicate_concatMod_comm_2; auto;
         [kvr|kvr|kequiv].

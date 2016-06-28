@@ -121,8 +121,8 @@ Section ProcMem.
     ketrans; [|apply pdecN_memAtomic_refines_scN].
 
     kmodular_light.
-    - kdef_call_sub.
-    - admit. (* kdef_call_sub automation *)
+    - admit. (* Disj extDefs calls *)
+    - admit. (* Disj extCalls defs *)
     - kinteracting.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
@@ -131,8 +131,8 @@ Section ProcMem.
          |kdisj_regs|kdisj_regs|kvr|kvr
          |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
          | | | | |].
-      + admit. (* kdef_call_sub automation *)
-      + admit. (* kdef_call_sub automation *)
+      + admit. (* Disj extDefs calls *)
+      + admit. (* Disj extCalls defs *)
       + apply dropFirstElts_Interacting.
       + ketrans_r; [apply modFromMeta_comm_1|].
         ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kvr|kvr|kequiv|kequiv]].

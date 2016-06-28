@@ -186,9 +186,8 @@ Section Refinement.
         (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)
         (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)
         (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
-      + split.
-        * repeat rewrite getDefs_flattened; apply getDefs_fifos_nfifos.
-        * repeat rewrite getCalls_flattened; apply getCalls_fifos_nfifos.
+      + admit. (* Disj extDefs calls *)
+      + admit. (* Disj extCalls defs *)
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.

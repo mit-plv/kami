@@ -416,8 +416,7 @@ Ltac kmodular :=
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs|kdisj_regs|kvr|kvr
    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-   |kdef_call_sub|kdef_call_sub
-   |kinteracting| |].
+   | | |kinteracting| |].
 
 Tactic Notation "simple" "kmodularn" :=
   try (unfold MethsT; rewrite <-idElementwiseId);
@@ -456,7 +455,7 @@ Ltac ksubst fm tm om :=
   [kequiv|kequiv|kequiv|
    knodup_regs|knodup_regs|knodup_regs|
    kdisj_regs|kdisj_regs|
-   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| |
+   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| | |
    kvr|kvr|kvr| | | |].
       
 Ltac kinline_compute :=

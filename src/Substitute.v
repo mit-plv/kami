@@ -25,7 +25,10 @@ Section Interacting.
                                (getCalls (Mod regs' rules' dms')))
              (Hdisjsc: DisjList (getCalls (Mod sregs srules sdms))
                                 (getCalls (Mod regs' rules' dms')))
-             (Hdcs: DefCallSub (Mod regs rules dms) (Mod sregs srules sdms)).
+             (Hed: DisjList (getExtDefs (Mod regs rules dms ++ Mod regs' rules' dms')%kami)
+                            (getCalls (Mod sregs srules sdms ++ Mod regs' rules' dms')%kami))
+             (Hec: DisjList (getExtCalls (Mod regs rules dms ++ Mod regs' rules' dms')%kami)
+                            (getDefs (Mod sregs srules sdms ++ Mod regs' rules' dms')%kami)).
 
   Hypotheses (Hvr: ValidRegsModules type (Mod regs rules dms))
              (Hvrs: ValidRegsModules type (Mod sregs srules sdms))
@@ -59,8 +62,7 @@ Section Interacting.
       unfold MethsT; rewrite <-idElementwiseId.
       apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
         auto; try (constructor; auto; fail).
-      + apply DefCallSub_refl.
-      + rewrite idElementwiseId; apply traceRefines_refl.
+      rewrite idElementwiseId; apply traceRefines_refl.
   Qed.
 
 End Interacting.
