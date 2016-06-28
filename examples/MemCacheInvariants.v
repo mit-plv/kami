@@ -641,7 +641,7 @@ Section MemCacheInl.
         remember P as init
     end.
     induction HMultistepBeh; repeat subst; intros.
-    - (* SKIP_PROOF_ON *)
+    - (* SKIP_PROOF_ON
       unfold nmemCacheInl, modFromMeta, metaRegs, getRegInits, initRegs;
       repeat (
           rewrite singleUnfoldConcat;
@@ -678,7 +678,7 @@ Section MemCacheInl.
         * destruct H1; dest; exfalso; auto.
       + exfalso; apply app_cons_not_nil in H1; auto.
       + discriminate.
-       (* END_SKIP_PROOF_ON *)
+       END_SKIP_PROOF_ON *) admit.
     - specialize (IHHMultistepBeh eq_refl).
       apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
       dest; subst.
