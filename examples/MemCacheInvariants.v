@@ -1,7 +1,7 @@
 Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
         ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
-        FunctionalExtensionality Program.Equality.
+        FunctionalExtensionality Program.Equality Lts.Tactics Arith.
 
 Set Implicit Arguments.
 
@@ -81,10 +81,11 @@ Section MemCacheInl.
     word LgNumDatas :=
     split1 LgNumDatas LgDataBytes (split2 (TagBits + IdxBits) (LgNumDatas + LgDataBytes) x).
 
-  Definition getAddrS (tag: word TagBits) (idx: word IdxBits) :=
+  Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
+  
+  Definition getAddrS (tag: word TagBits) (idx: word IdxBits): word AddrBits :=
     @Word.combine _ (Word.combine tag idx) (LgNumDatas + LgDataBytes) (wzero _).
 
-  Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
 
   Definition isCompat (dir: type (Vector Msi LgNumChildren)) :=
     forall i, dir i = $ Msi.Mod -> forall j, j <> i -> dir j = $ Msi.Inv.
@@ -251,10 +252,6 @@ Section MemCacheInl.
          tag is ("dataArray.tag" __ c) of s
     /\ exists line: <| Vector (Line LgDataBytes LgNumDatas) IdxBits |> ,
          line is ("dataArray.line" __ c) of s
-    /\ exists procRqValid: <| Bool |> ,
-         procRqValid is ("procRqValid" __ c) of s
-    /\ exists wb: <| Bool |> ,
-         wb is ("procRqReplace" __ c) of s
     /\ exists csw: <| Bool |> ,
          csw is ("procRqWait" __ c) of s
     /\ exists rqToPList: << list (type (RqToP (Bit AddrBits) Id)) >> ,
@@ -390,78 +387,101 @@ Section MemCacheInl.
     | MVParam m: MapVR m
     | MVREmpty: MapVR (M.empty _)
     | MVRAdd:
-        forall k v {m},
-          MapVR m -> MapVR (M.add (nameVal k) v m)
+        forall k (pf: index 0 indexSymbol k = None) v {m},
+          MapVR m -> MapVR (M.add k v m)
+    | MVRAddV:
+        forall k (pf: index 0 indexSymbol k = None) i v {m},
+          MapVR m -> MapVR (M.add (k __ i) v m)
     | MVRUnion:
         forall {m1 m2},
           MapVR m1 -> MapVR m2 ->
           MapVR (M.union m1 m2)
-    | MVRVar (s: NameRec) (v: sigT f1) m (mr: MapVR m):
+    | MVRVar s (pf: index 0 indexSymbol s = None) (v: sigT f1) m (mr: MapVR m):
         MapVR
           (M.union (repMap f2 f (fun i => (addIndexToStr string_of_nat
-                                                         i (nameVal s) :: v)%struct) n) m).
+                                                         i s :: v)%struct) n) m).
 
-    Fixpoint findMVR_string (k : NameRec) {m} (mr : MapVR m): option (sigT f2) :=
+    Fixpoint findMVR_string k (pf: index 0 indexSymbol k = None)
+             {m} (mr : MapVR m): option (sigT f2) :=
       match mr with
-        | MVParam m => M.find (nameVal k) m
+        | MVParam m => M.find k m
         | MVREmpty => None
-        | MVRAdd k' v _ mr' => if string_eq (nameVal k) (nameVal k')
-                               then Some v else findMVR_string k mr'
+        | MVRAdd k' pf' v _ mr' => if string_eq k k'
+                                   then Some v else findMVR_string k pf mr'
+        | MVRAddV k' pf' i v _ mr' => findMVR_string k pf mr'
         | MVRUnion _ _ mr1 mr2 =>
-          match findMVR_string k mr1 with
+          match findMVR_string k pf mr1 with
             | Some v => Some v
-            | _ => findMVR_string k mr2
+            | _ => findMVR_string k pf mr2
           end
-        | MVRVar s v m mr => findMVR_string k mr
+        | MVRVar s pf' v m mr => findMVR_string k pf mr
       end.
 
-    Fixpoint findMVR_var (k : NameRec) i {m} (mr : MapVR m): option (sigT f2) :=
+    Fixpoint findMVR_var k (pf: index 0 indexSymbol k = None)
+             i {m} (mr : MapVR m): option (sigT f2) :=
       match mr with
-        | MVParam m => M.find (addIndexToStr string_of_nat i (nameVal k)) m
+        | MVParam m => M.find (addIndexToStr string_of_nat i k) m
         | MVREmpty => None
-        | MVRAdd k' v _ mr' => findMVR_var k i mr'
+        | MVRAdd k' pf' v _ mr' => findMVR_var k pf i mr'
+        | MVRAddV k' pf' i' v _ mr' => if string_eq k k'
+                                       then if eq_nat_dec i i'
+                                            then Some v
+                                            else findMVR_var k pf i mr'
+                                       else findMVR_var k pf i mr'
         | MVRUnion _ _ mr1 mr2 =>
-          match findMVR_var k i mr1 with
+          match findMVR_var k pf i mr1 with
             | Some v => Some v
-            | _ => findMVR_var k i mr2
+            | _ => findMVR_var k pf i mr2
           end
-        | MVRVar s v m mr => if string_eq (nameVal k) (nameVal s)
-                             then Some (existT _ (projT1 v) (f (projT2 v)))
-                             else findMVR_var k i mr
+        | MVRVar s pf' v m mr => if string_eq k s
+                                 then Some (existT _ (projT1 v) (f (projT2 v)))
+                                 else findMVR_var k pf i mr
       end.
 
     Lemma not_find_string_rep:
-      forall s k v,
-        M.Map.find (elt:=sigT f2) (nameVal k)
+      forall s (pfs: index 0 indexSymbol s = None) k (pf: index 0 indexSymbol k = None) v,
+        M.Map.find (elt:=sigT f2) k
                    (repMap f2 f
                            (fun i : nat =>
-                              (addIndexToStr string_of_nat i (nameVal s) :: v)%struct) n) = None.
+                              (addIndexToStr string_of_nat i s :: v)%struct) n) = None.
     Proof.
       induction n; simpl in *; auto; intros.
-      - rewrite <- (@M.find_empty _ (nameVal k)).
+      - rewrite <- (@M.find_empty _ k).
         apply M.find_add_2.
-        destruct k; simpl; intro H; subst; apply badIndex in goodName; auto.
+        intro H; subst;
+        apply badIndex in pf; auto.
       - rewrite M.find_add_2; auto.
-        destruct k; simpl; intro H; subst; apply badIndex in goodName; auto.
+        intro H; subst; apply badIndex in pf; auto.
     Qed.
+
+    Lemma not_find_string_var:
+      forall k k0 (pf0: index 0 indexSymbol k0 = None) i v m,
+        M.find (elt:=sigT f2) k0 (M.add (k) __ (i) v m) = M.find k0 m.
+    Proof.
+      induction n; simpl in *; auto; intros.
+      rewrite M.find_add_2; auto.
+      intro H; subst.
+      apply badIndex in pf0.
+      auto.
+    Qed.
+      
+
     
     Lemma findMVR_find_string:
       forall m (mr: MapVR m) k (pf: index 0 indexSymbol k = None),
-        findMVR_string {| nameVal := k; goodName := pf |} mr = M.find k m.
+        findMVR_string k pf mr = M.find k m.
     Proof.
       induction mr; simpl; auto; intros.
-      - destruct k; simpl in *.
-        dest_str; simpl in *.
-        specialize (IHmr nameVal goodName); simpl in *.
+      - dest_str; simpl in *.
+        specialize (IHmr k pf); simpl in *.
         findeq.
-        specialize (IHmr k0 pf); simpl in *.
+        specialize (IHmr k0 pf0); simpl in *.
         findeq.
+      - rewrite not_find_string_var; auto.
       - specialize (IHmr1 k pf); specialize (IHmr2 k pf); findeq.
       - rewrite IHmr.
         rewrite M.find_union.
-        replace k with (nameVal {| nameVal := k; goodName := pf |}) by reflexivity.
-        rewrite not_find_string_rep.
-        reflexivity.
+        rewrite not_find_string_rep; auto.
     Qed.
 
     Lemma find_var_rep:
@@ -486,73 +506,90 @@ Section MemCacheInl.
 
     Lemma not_find_var_rep:
       forall i s s' v,
-        nameVal s <> nameVal s' ->
-        M.Map.find (elt:=sigT f2) (addIndexToStr string_of_nat i (nameVal s))
+        s <> s' ->
+        M.Map.find (elt:=sigT f2) (addIndexToStr string_of_nat i s)
                    (repMap f2 f
                            (fun i0 : nat =>
-                              (addIndexToStr string_of_nat i0 (nameVal s') :: v)%struct) n)
+                              (addIndexToStr string_of_nat i0 s' :: v)%struct) n)
         = None.
     Proof.
       induction n; simpl; auto; intros.
       - rewrite M.find_add_2; auto.
         intro sth;
-          pose proof (withIndex_index_eq (nameVal s) (nameVal s') i 0 sth).
+          pose proof (withIndex_index_eq s s' i 0 sth).
         dest; auto.
       - rewrite M.find_add_2; auto.
         intro sth;
-          pose proof (withIndex_index_eq (nameVal s) (nameVal s') i (S n0) sth).
+          pose proof (withIndex_index_eq s s' i (S n0) sth).
         dest; auto.
     Qed.
 
-    
-    
+    Lemma addStrGood si sj i j:
+      si __ i = sj __ j -> si = sj /\ i = j.
+    Proof.
+      intros.
+      unfold addIndexToStr in H.
+      assert (withIndex si i = withIndex sj j) by
+          (rewrite withIndex_eq; assumption).
+      apply withIndex_index_eq; auto.
+    Qed.
+      
     Lemma findMVR_find_var:
       forall m (mr: MapVR m) k pf i,
         (i <= n)%nat ->
-        findMVR_var {| nameVal := k; goodName := pf |} i mr =
+        findMVR_var k pf i mr =
         M.find (addIndexToStr string_of_nat i k) m.
     Proof.
       induction mr; simpl; auto; intros.
       - rewrite M.find_add_2; auto.
-        destruct k; simpl; let H := fresh in intro H; subst; apply badIndex in goodName; auto.
+        let H := fresh in intro H; subst; apply badIndex in pf; auto.
+      - dest_str; simpl in *.
+        + destruct (eq_nat_dec i0 i); simpl in *; subst.
+          * findeq.
+          * rewrite M.find_add_2; auto.
+            intro sth.
+            apply addStrGood in sth; dest; auto.
+        + rewrite M.find_add_2; auto.
+          intro sth.
+          apply addStrGood in sth; dest; auto.
       - rewrite M.find_union.
         rewrite (@IHmr1 _ _ i), (@IHmr2 _ _ i); auto.
-      - destruct s; simpl in *.
-        dest_str; simpl in *.
+      - dest_str; simpl in *.
         + rewrite M.find_union.
           rewrite find_var_rep; auto.
         + rewrite M.find_union.
-          rewrite <- (IHmr k pf i); auto.
-          replace nameVal with (ParametricSyntax.nameVal {| nameVal := nameVal;
-                                                            goodName := goodName |}) by auto.
-          replace k with (ParametricSyntax.nameVal {| nameVal := k;
-                                                      goodName := pf |}) by auto.
-          rewrite (not_find_var_rep i
-                                    {| nameVal := k; goodName := pf |}
-                                    {|nameVal := nameVal; goodName := goodName |}); auto.
+          rewrite <- (IHmr k pf0 i); auto.
+          rewrite (not_find_var_rep i); auto.
     Qed.
   End MapVar.
 
   Ltac mapVReify f2 f n m :=
     match m with
+      | M.union
+          (repMap _ _ (fun i => (addIndexToStr string_of_nat
+                                                  i ?s :: ?v)%struct) _) ?m
+        =>
+        let mr := mapVReify f2 f n m in
+        constr:(MVRVar s eq_refl v mr)
       | M.empty _ => constr:(MVREmpty n _ f2 f)
+      | M.add (?k __ ?i) ?v ?m' =>
+        let mr' := mapVReify f2 f n m' in
+        constr:(MVRAddV k eq_refl i v mr')
       | M.add ?k ?v ?m' =>
         let mr' := mapVReify f2 f n m' in
-        constr:(MVRAdd {| nameVal := k; goodName := eq_refl |} v mr')
+        constr:(MVRAdd k eq_refl v mr')
       | M.union ?m1 ?m2 =>
         let mr1 := mapVReify f2 f n m1 in
         let mr2 := mapVReify f2 f n m2 in
         constr:(MVRUnion mr1 mr2)
-      | M.union
-          (repMap ?f2 ?f (fun i => (addIndexToStr string_of_nat
-                                                  i ?s :: ?v)%struct) ?n) ?m
-        =>
-        let mr := mapVReify f2 f n m in
-        constr:(MVRVar {| nameVal := s; goodName := eq_refl |} v mr)
-      | _ => constr:(MVParam m)
+      | _ => constr:(MVParam n _ f m)
     end.
 
-  Ltac mapVR m := mapVReify 0 0 0 m.
+  Ltac mapVR m := mapVReify (fullType type) evalConstFullT
+                            (wordToNat (wones LgNumChildren)) m.
+
+  Ltac mapVR2 m := mapVReify (fullType type) (fun k (v: fullType type k) => v)
+                             (wordToNat (wones LgNumChildren)) m.
 
   Ltac findVR mr cond :=
     match goal with
@@ -615,12 +652,37 @@ Section MemCacheInl.
                              end
                      ).
 
-  
+
+  Ltac solveFinds :=
+    match goal with
+        | |- ?inv ?s =>
+          unfold inv;
+            intros;
+            let mr := mapVR s in
+            match goal with
+              | cond: (_ <= _)%nat |- _ =>
+                repeat (eexists; split; [findVR mr cond; eauto |])
+            end
+      end;
+      simpl in *.
+
+  Ltac customCache := repeat match goal with
+                               | H: andb ?a ?b = true |- _ =>
+                                 apply Bool.andb_true_iff in H; dest
+                               | H: (if weq ?a ?b then _ else _) = _ |- _ =>
+                                 destruct (weq a b)
+                               | H: true = true |- _ => clear H
+                               | H: false = false |- _ => clear H
+                               | H: true = false |- _  => discriminate
+                               | H: false = true |- _ => discriminate
+                             end.
+        
   Theorem nmemCache_invariants_true s ll:
     Behavior (modFromMeta (nmemCacheInl IdxBits TagBits
                                         LgNumDatas LgDataBytes Id LgNumChildren)) s ll ->
     nmemCache_invariants s.
   Proof.
+    (*
     intros beh.
     destruct beh.
     match goal with
@@ -628,7 +690,8 @@ Section MemCacheInl.
         remember P as init
     end.
     induction HMultistepBeh; repeat subst; intros.
-    - unfold nmemCacheInl, modFromMeta, metaRegs, getRegInits, initRegs;
+    - (* SKIP_PROOF_ON
+      unfold nmemCacheInl, modFromMeta, metaRegs, getRegInits, initRegs;
       repeat (
           rewrite singleUnfoldConcat;
           rewrite makeMap_union;
@@ -637,21 +700,7 @@ Section MemCacheInl.
       rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
       rewrite ?makeMap_fold_eq.
 
-      match goal with
-        | |- ?inv ?s =>
-          unfold inv;
-            intros;
-            let mr := mapVR s in
-            let mrv := fresh in
-            pose mr as mrv;
-              simpl in mrv;
-              match goal with
-                | cond: (_ <= _)%nat |- _ =>
-                  repeat (eexists; split; [findVR mrv cond; eauto |])
-              end;
-              clear mrv
-      end.
-      simpl in *.
+      solveFinds.
 
       cbv [getTagIdxS getTagS getIdxS getOffsetS getAddrS AddrBits
                       isCompat filtRqFromC filtRsFromC filtToC filtRqToP filtRsToP
@@ -667,6 +716,7 @@ Section MemCacheInl.
         * destruct H1; dest; exfalso; auto.
       + exfalso; apply app_cons_not_nil in H1; auto.
       + discriminate.
+       END_SKIP_PROOF_ON *) admit.
     - specialize (IHHMultistepBeh eq_refl).
       apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
       dest; subst.
@@ -678,7 +728,30 @@ Section MemCacheInl.
 
       apply In_metaRules in HInRules; dest; unfold nmemCacheInl in *; simpl in *; dest.
 
-      admit.
+      doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *.
+      + kinv_magic_with customCache.
+        
+        Ltac solveFinds2 :=
+          match goal with
+            | |- ?inv ?s =>
+              unfold inv;
+                intros;
+                let mr := mapVR2 s in
+                match goal with
+                  | cond: (_ <= _)%nat |- _ =>
+                    repeat (eexists; split; [findVR mr cond; eauto |])
+                end
+          end;
+          simpl in *.
+
+        unfold nmemCache_invariants in IHHMultistepBeh.
+        
+        solveFinds2.
+        
+      (*
+      doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *;
+      kinv_magic_with customCache; *) admit.
+     *)
+    admit.
   Qed.
 End MemCacheInl.
-
