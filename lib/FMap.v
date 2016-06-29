@@ -243,6 +243,11 @@ Section Lists. (* For dealing with domains *)
 End Lists.
 
 Ltac subList_app_tac :=
+  auto;
+  repeat
+    match goal with
+    | [H: SubList _ _ |- _] => apply SubList_app_7 in H; destruct H
+    end;
   repeat apply SubList_app_3;
   match goal with
   | _ => apply SubList_refl
