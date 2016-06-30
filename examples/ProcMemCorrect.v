@@ -2,8 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ParamDup.
-
+Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ParamDup Lts.ModuleBoundEx.
 Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Ex.L1Cache.
 Require Import Ex.FifoCorrect Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
 
@@ -117,12 +116,12 @@ Section ProcMem.
   End DropFirstElts.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_memAtomic_refines_scN].
 
     kmodular_light.
-    - admit. (* Disj extDefs calls *)
-    - admit. (* Disj extCalls defs *)
+    - kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
+    - kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)).
     - kinteracting.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
@@ -131,8 +130,8 @@ Section ProcMem.
          |kdisj_regs|kdisj_regs|kvr|kvr
          |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
          | | | | |].
-      + admit. (* Disj extDefs calls *)
-      + admit. (* Disj extCalls defs *)
+      + kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
+      + kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)).
       + apply dropFirstElts_Interacting.
       + ketrans_r; [apply modFromMeta_comm_1|].
         ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kvr|kvr|kequiv|kequiv]].
@@ -149,8 +148,7 @@ Section ProcMem.
           rewrite <-dropPs_nil_idElementwise.
           apply dropPs_disj.
           { apply DisjList_nil_2. }
-          { (* TODO: need some automation *)
-            eapply DisjList_SubList; [apply getExtMeths_meths|].
+          { eapply DisjList_SubList; [apply getExtMeths_meths|].
             apply DisjList_comm.
             apply DisjList_SubList with
             (l1:= getDefs (modFromMeta (nfifoRqFromProc IdxBits TagBits LgNumDatas
@@ -172,6 +170,7 @@ Section ProcMem.
           apply nativeFifoS_const_regs with (default:= (getDefaultConst _)).
           
       + apply memCache_refines_memAtomic.
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcMem.

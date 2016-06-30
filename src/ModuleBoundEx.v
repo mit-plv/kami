@@ -989,11 +989,11 @@ End Correctness.
 
 (** Tactics *)
 
-Ltac get_regs_bound m :=
+Ltac get_regs_bound_ex m :=
   lazymatch m with
   | ConcatMod ?m1 ?m2 =>
-    let nb1 := get_regs_bound m1 in
-    let nb2 := get_regs_bound m2 in
+    let nb1 := get_regs_bound_ex m1 in
+    let nb2 := get_regs_bound_ex m2 in
     constr:(appendNameBound nb1 nb2)
   | duplicate ?sm _ => constr:(getDupRegsBound sm)
   | modFromMeta {| metaRegs := nil |} => constr:emptyNameBound
@@ -1001,7 +1001,7 @@ Ltac get_regs_bound m :=
                    metaRules := ?mrules;
                    metaMeths := ?mdms
                 |} =>
-    let pnb := get_regs_bound
+    let pnb := get_regs_bound_ex
                  (modFromMeta {| metaRegs := mregs;
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
@@ -1010,26 +1010,26 @@ Ltac get_regs_bound m :=
                    metaRules := ?mrules;
                    metaMeths := ?mdms
                 |} =>
-    let pnb := get_regs_bound
+    let pnb := get_regs_bound_ex
                  (modFromMeta {| metaRegs := mregs;
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
     constr:(appendNameBound (getRepNameBound nr) pnb)
   | modFromMeta (?mm1 +++ ?mm2) =>
-    let nb1 := get_regs_bound (modFromMeta mm1) in
-    let nb2 := get_regs_bound (modFromMeta mm2) in
+    let nb1 := get_regs_bound_ex (modFromMeta mm1) in
+    let nb2 := get_regs_bound_ex (modFromMeta mm2) in
     constr:(appendNameBound nb1 nb2)
   | modFromMeta ?mm =>
-    let mm' := eval red in mm in get_regs_bound (modFromMeta mm')
-  | _ => let m' := eval red in m in get_regs_bound m'
+    let mm' := eval red in mm in get_regs_bound_ex (modFromMeta mm')
+  | _ => let m' := eval red in m in get_regs_bound_ex m'
   | _ => constr:(getRegsBound m)
   end.
 
-Ltac get_dms_bound m :=
+Ltac get_dms_bound_ex m :=
      lazymatch m with
      | ConcatMod ?m1 ?m2 =>
-       let nb1 := get_dms_bound m1 in
-       let nb2 := get_dms_bound m2 in
+       let nb1 := get_dms_bound_ex m1 in
+       let nb2 := get_dms_bound_ex m2 in
        constr:(appendNameBound nb1 nb2)
      | duplicate ?sm _ => constr:(getDupDmsBound sm)
      | modFromMeta {| metaMeths := nil |} => constr:(emptyNameBound)
@@ -1037,7 +1037,7 @@ Ltac get_dms_bound m :=
                       metaRules := ?mrules;
                       metaMeths := (OneMeth _ ?nr :: ?mdms)
                    |} =>
-       let pnb := get_dms_bound
+       let pnb := get_dms_bound_ex
                     (modFromMeta {| metaRegs := mregs;
                                     metaRules := mrules;
                                     metaMeths := mdms |}) in
@@ -1046,7 +1046,7 @@ Ltac get_dms_bound m :=
                       metaRules := ?mrules;
                       metaMeths := (RepMeth _ _ _ _ _ ?nr _ :: ?mdms)
                    |} =>
-       let pnb := get_dms_bound
+       let pnb := get_dms_bound_ex
                     (modFromMeta {| metaRegs := mregs;
                                     metaRules := mrules;
                                     metaMeths := mdms |}) in
@@ -1055,25 +1055,25 @@ Ltac get_dms_bound m :=
                       metaRules := ?mrules;
                       metaMeths := methsToRep ?dd1 ?dd2 ?dd3 ?dd4 ?dd5 ?dd6 |} =>
        let sdd := (eval simpl in (methsToRep dd1 dd2 dd3 dd4 dd5 dd6)) in
-       get_dms_bound
+       get_dms_bound_ex
          (modFromMeta {| metaRegs := mregs;
                          metaRules := mrules;
                          metaMeths := sdd |})
      | modFromMeta (?mm1 +++ ?mm2) =>
-       let nb1 := get_dms_bound (modFromMeta mm1) in
-       let nb2 := get_dms_bound (modFromMeta mm2) in
+       let nb1 := get_dms_bound_ex (modFromMeta mm1) in
+       let nb2 := get_dms_bound_ex (modFromMeta mm2) in
        constr:(appendNameBound nb1 nb2)
      | modFromMeta ?mm =>
-       let mm' := eval red in mm in get_dms_bound (modFromMeta mm')
-     | _ => let m' := eval red in m in get_dms_bound m'
+       let mm' := eval red in mm in get_dms_bound_ex (modFromMeta mm')
+     | _ => let m' := eval red in m in get_dms_bound_ex m'
      | _ => constr:(getDmsBound m)
      end.
 
-Ltac get_cms_bound m :=
+Ltac get_cms_bound_ex m :=
      lazymatch m with
      | ConcatMod ?m1 ?m2 =>
-       let nb1 := get_cms_bound m1 in
-       let nb2 := get_cms_bound m2 in
+       let nb1 := get_cms_bound_ex m1 in
+       let nb2 := get_cms_bound_ex m2 in
        constr:(appendNameBound nb1 nb2)
      | duplicate ?sm _ => constr:(getDupCmsBound sm)
      | modFromMeta {| metaRules := nil; metaMeths := nil |} => constr:(emptyNameBound)
@@ -1081,7 +1081,7 @@ Ltac get_cms_bound m :=
                       metaRules := rulesToRep ?rr1 ?rr2 ?rr3 ?rr4 ?rr5 ?rr6;
                       metaMeths := ?mdms |} =>
        let srr := (eval simpl in (rulesToRep rr1 rr2 rr3 rr4 rr5 rr6)) in
-       get_cms_bound
+       get_cms_bound_ex
          (modFromMeta {| metaRegs := mregs;
                          metaRules := srr;
                          metaMeths := mdms |})
@@ -1089,7 +1089,7 @@ Ltac get_cms_bound m :=
                       metaRules := ?mrules;
                       metaMeths := methsToRep ?dd1 ?dd2 ?dd3 ?dd4 ?dd5 ?dd6 |} =>
        let sdd := (eval simpl in (methsToRep dd1 dd2 dd3 dd4 dd5 dd6)) in
-       get_cms_bound
+       get_cms_bound_ex
          (modFromMeta {| metaRegs := mregs;
                          metaRules := mrules;
                          metaMeths := sdd |})
@@ -1097,7 +1097,7 @@ Ltac get_cms_bound m :=
                       metaRules := nil;
                       metaMeths := (OneMeth ?sm ?nr :: ?mdms)
                    |} =>
-       let pnb := get_cms_bound
+       let pnb := get_cms_bound_ex
                     (modFromMeta {| metaRegs := mregs;
                                     metaRules := nil;
                                     metaMeths := mdms |}) in
@@ -1110,7 +1110,7 @@ Ltac get_cms_bound m :=
                    |} =>
        match rm with
        | RepMeth _ _ _ _ (existT _ _ ?gm) ?nr _ =>
-         let pnb := get_cms_bound
+         let pnb := get_cms_bound_ex
                       (modFromMeta {| metaRegs := mregs;
                                       metaRules := nil;
                                       metaMeths := mdms |}) in
@@ -1121,7 +1121,7 @@ Ltac get_cms_bound m :=
                       metaRules := (OneRule ?sr ?nr :: ?mrules);
                       metaMeths := ?mdms
                    |} =>
-       let pnb := get_cms_bound
+       let pnb := get_cms_bound_ex
                     (modFromMeta {| metaRegs := mregs;
                                     metaRules := mrules;
                                     metaMeths := mdms |}) in
@@ -1134,7 +1134,7 @@ Ltac get_cms_bound m :=
                    |} =>
        match rr with
        | RepRule _ _ _ _ ?gr ?nr _ =>
-         let pnb := get_cms_bound
+         let pnb := get_cms_bound_ex
                       (modFromMeta {| metaRegs := mregs;
                                       metaRules := mrules;
                                       metaMeths := mdms |}) in
@@ -1142,120 +1142,84 @@ Ltac get_cms_bound m :=
                    (getNameRecIdxNameBound (getCallsMetaRule rr)) pnb)
        end
      | modFromMeta (?mm1 +++ ?mm2) =>
-       let nb1 := get_cms_bound (modFromMeta mm1) in
-       let nb2 := get_cms_bound (modFromMeta mm2) in
+       let nb1 := get_cms_bound_ex (modFromMeta mm1) in
+       let nb2 := get_cms_bound_ex (modFromMeta mm2) in
        constr:(appendNameBound nb1 nb2)
      | modFromMeta ?mm =>
-       let mm' := eval red in mm in get_cms_bound (modFromMeta mm')
-     | _ => let m' := eval red in m in get_cms_bound m'
+       let mm' := eval red in mm in get_cms_bound_ex (modFromMeta mm')
+     | _ => let m' := eval red in m in get_cms_bound_ex m'
      | _ => constr:(getCmsBound m)
      end.
 
-Ltac red_to_regs_bound rn :=
+Ltac red_to_regs_bound_ex rn :=
   match goal with
   | [ |- DisjList (namesOf (getRegInits ?m1))
                   (namesOf (getRegInits ?m2)) ] =>
-    let mb1' := get_regs_bound m1 in
-    let mb2' := get_regs_bound m2 in
+    let mb1' := get_regs_bound_ex m1 in
+    let mb2' := get_regs_bound_ex m2 in
     apply regsBound_disj_regs with (n:= rn) (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (map _ (getRegInits ?m1))
                   (map _ (getRegInits ?m2)) ] =>
-    let mb1' := get_regs_bound m1 in
-    let mb2' := get_regs_bound m2 in
+    let mb1' := get_regs_bound_ex m1 in
+    let mb2' := get_regs_bound_ex m2 in
     apply regsBound_disj_regs with (n:= rn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_dms_bound dn :=
+Ltac red_to_dms_bound_ex dn :=
   match goal with
   | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
-    let mb1' := get_dms_bound m1 in
-    let mb2' := get_dms_bound m2 in
+    let mb1' := get_dms_bound_ex m1 in
+    let mb2' := get_dms_bound_ex m2 in
     apply dmsBound_disj_dms with (n:= dn) (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (namesOf (getDefsBodies ?m1)) (namesOf (getDefsBodies ?m2)) ] =>
-    let mb1' := get_dms_bound m1 in
-    let mb2' := get_dms_bound m2 in
+    let mb1' := get_dms_bound_ex m1 in
+    let mb2' := get_dms_bound_ex m2 in
     apply dmsBound_disj_dms with (n:= dn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_cms_bound cn :=
+Ltac red_to_cms_bound_ex cn :=
   match goal with
   | [ |- DisjList (getCalls ?m1) (getCalls ?m2) ] =>
-    let mb1' := get_cms_bound m1 in
-    let mb2' := get_cms_bound m2 in
+    let mb1' := get_cms_bound_ex m1 in
+    let mb2' := get_cms_bound_ex m2 in
     apply cmsBound_disj_calls with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_dc_bound cn :=
+Ltac red_to_dc_bound_ex cn :=
   match goal with
   | [ |- DisjList (getDefs ?m1) (getCalls ?m2) ] =>
-    let mb1' := get_dms_bound m1 in
-    let mb2' := get_cms_bound m2 in
+    let mb1' := get_dms_bound_ex m1 in
+    let mb2' := get_cms_bound_ex m2 in
     apply bound_disj_dms_calls with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_cd_bound cn :=
+Ltac red_to_cd_bound_ex cn :=
   match goal with
   | [ |- DisjList (getCalls ?m1) (getDefs ?m2) ] =>
-    let mb1' := get_cms_bound m1 in
-    let mb2' := get_dms_bound m2 in
+    let mb1' := get_cms_bound_ex m1 in
+    let mb2' := get_dms_bound_ex m2 in
     apply bound_disj_calls_dms with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_edc_bound cn :=
+Ltac red_to_edc_bound_ex cn :=
   match goal with
   | [ |- DisjList (getExtDefs ?m1) (getCalls ?m2) ] =>
-    let dnb1' := get_dms_bound m1 in
-    let cnb1' := get_cms_bound m1 in
-    let cnb2' := get_cms_bound m2 in
+    let dnb1' := get_dms_bound_ex m1 in
+    let cnb1' := get_cms_bound_ex m1 in
+    let cnb2' := get_cms_bound_ex m2 in
     apply bound_disj_extDefs_calls with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (cnb2:= cnb2')
   end.
 
-Ltac red_to_ecd_bound cn :=
+Ltac red_to_ecd_bound_ex cn :=
   match goal with
   | [ |- DisjList (getExtCalls ?m1) (getDefs ?m2) ] =>
-    let dnb1' := get_dms_bound m1 in
-    let cnb1' := get_cms_bound m1 in
-    let dnb2' := get_dms_bound m2 in
+    let dnb1' := get_dms_bound_ex m1 in
+    let cnb1' := get_cms_bound_ex m1 in
+    let dnb2' := get_dms_bound_ex m2 in
     apply bound_disj_extCalls_defs with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (dnb2:= dnb2')
   end.
 
-Ltac unfold_head m :=
-  match m with
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ =>
-    unfold hdef
-  | ?hdef _ =>
-    unfold hdef
-  | ?hdef =>
-    unfold hdef
-  end.
-
-Ltac regs_bound_tac_unit :=
+Ltac regs_bound_tac_unit_ex :=
   match goal with
   | [ |- RegsBound (modFromMeta {| metaRegs := (OneReg _ _) :: _ |}) _ _ ] =>
     apply getOneNameBound_regs_bounded
@@ -1273,9 +1237,9 @@ Ltac regs_bound_tac_unit :=
   | [ |- RegsBound ?m _ _ ] => unfold_head m
   | _ => apply getRegsBound_bounded
   end.
-Ltac regs_bound_tac := repeat regs_bound_tac_unit.
+Ltac regs_bound_tac_ex := repeat regs_bound_tac_unit_ex.
 
-Ltac dms_bound_tac_unit :=
+Ltac dms_bound_tac_unit_ex :=
      match goal with
      | [ |- DmsBound (modFromMeta
                         {| metaMeths := methsToRep ?dd1 ?dd2 ?dd3 ?dd4 ?dd5 ?dd6 |})
@@ -1298,9 +1262,9 @@ Ltac dms_bound_tac_unit :=
      | [ |- DmsBound ?m _ _ ] => unfold_head m
      | _ => apply getDmsBound_bounded
      end.
-Ltac dms_bound_tac := repeat dms_bound_tac_unit.
+Ltac dms_bound_tac_ex := repeat dms_bound_tac_unit_ex.
 
-Ltac cms_bound_tac_unit :=
+Ltac cms_bound_tac_unit_ex :=
      match goal with
      | [ |- CmsBound (modFromMeta
                         {| metaRules := rulesToRep ?rr1 ?rr2 ?rr3 ?rr4 ?rr5 ?rr6 |})
@@ -1334,51 +1298,51 @@ Ltac cms_bound_tac_unit :=
      | [ |- CmsBound ?m _ _ ] => unfold_head m
      | _ => apply getCmsBound_bounded
      end.
-Ltac cms_bound_tac := repeat cms_bound_tac_unit.
+Ltac cms_bound_tac_ex := repeat cms_bound_tac_unit_ex.
 
-Ltac kdisj_regs n :=
-  red_to_regs_bound n;
+Ltac kdisj_regs_ex n :=
+  red_to_regs_bound_ex n;
   [apply disjNameBound_DisjNameBound; reflexivity
-  |regs_bound_tac
-  |regs_bound_tac].
+  |regs_bound_tac_ex
+  |regs_bound_tac_ex].
 
-Ltac kdisj_dms n :=
-  red_to_dms_bound n;
+Ltac kdisj_dms_ex n :=
+  red_to_dms_bound_ex n;
   [apply disjNameBound_DisjNameBound; reflexivity
-  |dms_bound_tac
-  |dms_bound_tac].
+  |dms_bound_tac_ex
+  |dms_bound_tac_ex].
 
-Ltac kdisj_cms n :=
-  red_to_cms_bound n;
+Ltac kdisj_cms_ex n :=
+  red_to_cms_bound_ex n;
   [apply disjNameBound_DisjNameBound; reflexivity
-  |cms_bound_tac
-  |cms_bound_tac].
+  |cms_bound_tac_ex
+  |cms_bound_tac_ex].
 
-Ltac kdisj_dms_cms n :=
-  red_to_dc_bound n;
+Ltac kdisj_dms_cms_ex n :=
+  red_to_dc_bound_ex n;
   [apply disjNameBound_DisjNameBound; reflexivity
-  |dms_bound_tac
-  |cms_bound_tac].
+  |dms_bound_tac_ex
+  |cms_bound_tac_ex].
 
-Ltac kdisj_cms_dms n :=
-  red_to_cd_bound n;
+Ltac kdisj_cms_dms_ex n :=
+  red_to_cd_bound_ex n;
   [apply disjNameBound_DisjNameBound; reflexivity
-  |cms_bound_tac
-  |dms_bound_tac].
+  |cms_bound_tac_ex
+  |dms_bound_tac_ex].
 
-Ltac kdisj_edms_cms n :=
-  red_to_edc_bound n;
+Ltac kdisj_edms_cms_ex n :=
+  red_to_edc_bound_ex n;
   [reflexivity|reflexivity
    |apply disjNameBound_DisjNameBound; reflexivity
-   |dms_bound_tac
-   |cms_bound_tac
-   |cms_bound_tac].
+   |dms_bound_tac_ex
+   |cms_bound_tac_ex
+   |cms_bound_tac_ex].
 
-Ltac kdisj_ecms_dms n :=
-  red_to_ecd_bound n;
+Ltac kdisj_ecms_dms_ex n :=
+  red_to_ecd_bound_ex n;
   [reflexivity|reflexivity
    |apply disjNameBound_DisjNameBound; reflexivity
-   |dms_bound_tac
-   |cms_bound_tac
-   |dms_bound_tac].
+   |dms_bound_tac_ex
+   |cms_bound_tac_ex
+   |dms_bound_tac_ex].
 
