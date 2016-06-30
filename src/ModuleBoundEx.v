@@ -676,12 +676,51 @@ Section Bounds.
       addPrefix (nameVal nr) (getNameRecIdxNameBound t)
     end.
 
+  Lemma getNameRecIdxNameBound_EquivList_singleton:
+    forall i calls,
+      EquivList
+        ((originals (getNameRecIdxNameBound calls))
+           ++ (concat (map (fun p => [p __ i]) (prefixes (getNameRecIdxNameBound calls)))))
+        (map (strFromName string_of_nat i) calls).
+  Proof.
+    induction calls; simpl; intros; [apply EquivList_nil|].
+    destruct a as [[|] nr]; simpl.
+    - eapply EquivList_trans; [apply EquivList_app_comm|].
+      simpl; apply EquivList_cons; auto.
+      eapply EquivList_trans; [apply EquivList_app_comm|]; auto.
+    - apply EquivList_cons; auto.
+  Qed.
+
+  Lemma concat_spf_singleton:
+    forall i calls,
+      concat (map (fun p => [p __ i]) calls) = map (spf i) calls.
+  Proof.
+    induction calls; simpl; auto.
+    f_equal; auto.
+  Qed.
+
   Lemma genRule_abstracted:
     forall nr (gr: GenAction Void Void) n,
       Abstracted n (getNameRecIdxNameBound (getCallsGenA (gr typeUT)))
                  (getCallsR (repRule string_of_nat natToVoid gr (nameVal nr) (getNatListToN n))).
   Proof.
-    admit.
+    unfold Abstracted, unfoldNameBound, repRule; intros.
+    induction n; simpl.
+    - rewrite app_nil_r.
+      unfold getActionFromGen; rewrite getCallsGenA_matches.
+      generalize (getCallsGenA (gr typeUT)) as calls; clear; intros.
+      apply getNameRecIdxNameBound_EquivList_singleton.
+    - eapply EquivList_trans; [|apply EquivList_app; [apply EquivList_refl|eassumption]].
+      clear IHn; unfold getActionFromGen; rewrite getCallsGenA_matches.
+      generalize (getCallsGenA (gr typeUT)) as calls; clear; intros.
+
+      eapply EquivList_trans;
+        [apply EquivList_app; [apply EquivList_refl|apply getDupNameBound_concat_vertical]|].
+      eapply EquivList_trans;
+        [|apply EquivList_app;
+          [apply getNameRecIdxNameBound_EquivList_singleton|apply EquivList_refl]].
+      rewrite concat_spf_singleton.
+      equivList_app_tac.
   Qed.
   
   Lemma getRepNameBound_rule_cms_bounded:
@@ -744,7 +783,23 @@ Section Bounds.
                     (repMeth string_of_nat natToVoid (existT (GenMethodT Void) sigT gm) 
                              (nameVal nr) (getNatListToN n))).
   Proof.
-    admit.
+    unfold Abstracted, unfoldNameBound, repMeth; intros.
+    induction n; simpl.
+    - rewrite app_nil_r.
+      rewrite getCallsGenA_matches.
+      generalize (getCallsGenA (gm typeUT tt)) as calls; clear; intros.
+      apply getNameRecIdxNameBound_EquivList_singleton.
+    - eapply EquivList_trans; [|apply EquivList_app; [apply EquivList_refl|eassumption]].
+      clear IHn; rewrite getCallsGenA_matches.
+      generalize (getCallsGenA (gm typeUT tt)) as calls; clear; intros.
+
+      eapply EquivList_trans;
+        [apply EquivList_app; [apply EquivList_refl|apply getDupNameBound_concat_vertical]|].
+      eapply EquivList_trans;
+        [|apply EquivList_app;
+          [apply getNameRecIdxNameBound_EquivList_singleton|apply EquivList_refl]].
+      rewrite concat_spf_singleton.
+      equivList_app_tac.
   Qed.
 
   Lemma getRepNameBound_meth_cms_bounded:
