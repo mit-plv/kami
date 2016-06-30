@@ -83,7 +83,19 @@ Section ModuleBound.
       EquivList (filter (fun d => negb (string_in d l3)) l1)
                 (filter (fun d => negb (string_in d l4)) l2).
   Proof.
-    admit.
+    unfold EquivList, SubList; intros; dest; split; intros.
+    - specializeAll e.
+      apply filter_In; apply filter_In in H3; dest; split; auto.
+      rewrite negb_true_iff in *.
+      apply eq_sym, string_in_dec_not_in in H4.
+      remember (string_in e l4) as ein; destruct ein; auto.
+      exfalso; apply string_in_dec_in in Heqein; auto.
+    - specializeAll e.
+      apply filter_In; apply filter_In in H3; dest; split; auto.
+      rewrite negb_true_iff in *.
+      apply eq_sym, string_in_dec_not_in in H4.
+      remember (string_in e l3) as ein; destruct ein; auto.
+      exfalso; apply string_in_dec_in in Heqein; auto.
   Qed.
 
   Lemma filter_app:
@@ -95,6 +107,149 @@ Section ModuleBound.
     simpl; f_equal; auto.
   Qed.
 
+  Lemma filter_DisjList_app_1:
+    forall l1 l2 l3,
+      DisjList l1 l3 ->
+      filter (fun d => negb (string_in d (l2 ++ l3))) l1 =
+      filter (fun d => negb (string_in d l2)) l1.
+  Proof.
+    induction l1; simpl; intros; auto.
+    remember (string_in a l2) as ain; destruct ain; simpl.
+    - apply string_in_dec_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + apply IHl1; eapply DisjList_cons; eauto.
+      + exfalso; apply string_in_dec_not_in in Heqaain; elim Heqaain.
+        apply in_or_app; auto.
+    - apply string_in_dec_not_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + apply string_in_dec_in in Heqaain.
+        exfalso; apply in_app_or in Heqaain; destruct Heqaain; auto.
+        specialize (H a); destruct H; auto.
+        elim H; left; auto.
+      + f_equal; apply IHl1; eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma filter_DisjList_app_2:
+    forall l1 l2 l3,
+      DisjList l1 l2 ->
+      filter (fun d => negb (string_in d (l2 ++ l3))) l1 =
+      filter (fun d => negb (string_in d l3)) l1.
+  Proof.
+    induction l1; simpl; intros; auto.
+    remember (string_in a l3) as ain; destruct ain; simpl.
+    - apply string_in_dec_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + apply IHl1; eapply DisjList_cons; eauto.
+      + exfalso; apply string_in_dec_not_in in Heqaain; elim Heqaain.
+        apply in_or_app; auto.
+    - apply string_in_dec_not_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + apply string_in_dec_in in Heqaain.
+        exfalso; apply in_app_or in Heqaain; destruct Heqaain; auto.
+        specialize (H a); destruct H; auto.
+        elim H; left; auto.
+      + f_equal; apply IHl1; eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma duplicateElt_in_DisjList:
+    forall p n l,
+      ~ In p l ->
+      DisjList (duplicateElt p n) (concat (map (fun t => duplicateElt t n) l)).
+  Proof.
+    induction l; simpl; intros; [apply DisjList_nil_2|].
+    apply DisjList_comm, DisjList_app_4.
+    - apply duplicateElt_DisjList; intuition.
+    - apply DisjList_comm; auto.
+  Qed.
+
+  Lemma duplicateElt_concat_DisjList:
+    forall n l1 l2,
+      DisjList l1 l2 ->
+      DisjList (concat (map (fun t => duplicateElt t n) l1))
+               (concat (map (fun t => duplicateElt t n) l2)).
+  Proof.
+    induction l1; simpl; intros; [apply DisjList_nil_1|].
+    apply DisjList_app_4.
+    - apply duplicateElt_in_DisjList.
+      specialize (H a); destruct H; auto.
+      elim H; left; auto.
+    - apply IHl1; eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma concat_filter_comm:
+    forall p1 p2 n,
+      concat
+        (map (fun p => duplicateElt p n)
+             (filter (fun p => negb (string_in p p2)) p1)) =
+      filter
+        (fun d => negb (string_in d (concat (map (fun p => duplicateElt p n) p2))))
+        (concat (map (fun p => duplicateElt p n) p1)).
+  Proof.
+    induction p1; simpl; intros; auto.
+    remember (string_in a p2) as ain; destruct ain; simpl.
+    - rewrite filter_app.
+      replace (filter
+                (fun d => negb (string_in d (concat (map (fun p => duplicateElt p n0) p2))))
+                (duplicateElt a n0)) with (nil (A:= string)).
+      + rewrite app_nil_l; auto.
+      + apply string_in_dec_in in Heqain; clear -Heqain.
+        induction n0; simpl.
+        * remember (string_in _ _) as iin; destruct iin; auto.
+          exfalso; apply string_in_dec_not_in in Heqiin; elim Heqiin; clear Heqiin.
+          induction p2; [inv Heqain|].
+          inv Heqain; simpl; auto.
+        * remember (string_in _ _) as iin; destruct iin; simpl.
+          { clear -IHn0; induction (duplicateElt a n0); simpl in *; auto.
+            remember (string_in a0 (concat (map (fun p => duplicateElt p n0) p2)))
+              as allin; destruct allin; simpl in IHn0; [|inv IHn0].
+            remember (string_in a0 (concat (map (fun p => (p) __ (S n0) :: duplicateElt p n0) p2)))
+              as cllin; destruct cllin; simpl; auto.
+            exfalso; apply string_in_dec_not_in in Heqcllin; elim Heqcllin.
+            apply string_in_dec_in in Heqallin; clear -Heqallin.
+            apply in_concat_iff in Heqallin; dest.
+            apply in_map_iff in H; dest; subst.
+            apply in_concat_iff; eexists; split.
+            { apply in_map_iff; eexists; split; eauto. }
+            { right; auto. }
+          }
+          { exfalso; apply string_in_dec_not_in in Heqiin; elim Heqiin; clear Heqiin.
+            apply in_concat_iff; eexists; split.
+            { apply in_map_iff; eexists; split; eauto. }
+            { left; auto. }
+          }
+    - rewrite IHp1; clear -Heqain.
+      generalize (concat (map (fun p : string => duplicateElt p n0) p1)); intros.
+      rewrite filter_app; f_equal.
+      apply string_in_dec_not_in in Heqain.
+      rewrite <-app_nil_l with (l:= (concat (map (fun p : string => duplicateElt p n0) p2))).
+      rewrite filter_DisjList_app_1.
+      + induction (duplicateElt a n0); auto.
+        simpl; f_equal; auto.
+      + apply duplicateElt_in_DisjList; auto.
+  Qed.
+
+  Lemma hasNoIndex_duplicateElt_DisjList:
+    forall l p n,
+      hasNoIndex l = true ->
+      DisjList l (duplicateElt p n).
+  Proof.
+    induction n0; simpl; intros.
+    - unfold DisjList; intros.
+      destruct (in_dec string_dec e [p __ 0]); auto.
+      destruct (in_dec string_dec e l); auto.
+      exfalso; inv i; [|inv H0].
+      pose proof (hasNoIndex_in _ H _ i0).
+      clear -H0.
+      Transparent withIndex.
+      unfold withIndex in H0; generalize H0; apply badIndex.
+      Opaque withIndex.
+    - apply DisjList_comm, DisjList_string_cons; [|apply DisjList_comm; auto].
+      intro Hx; pose proof (hasNoIndex_in _ H _ Hx).
+      Transparent withIndex.
+      unfold withIndex in H0; generalize H0; apply badIndex.
+      Opaque withIndex.
+  Qed.
+
   Lemma subtractNameBound_filter_abstracted:
     forall nb1 nb2 l1 l2,
       hasNoIndex (originals nb1) = true ->
@@ -103,10 +258,23 @@ Section ModuleBound.
       Abstracted (subtractNameBound nb1 nb2) 
                  (filter (fun d => negb (string_in d l2)) l1).
   Proof.
-    unfold Abstracted, unfoldNameBound; simpl; intros.
+    unfold Abstracted, unfoldNameBound; intros.
+    destruct nb1 as [o1 p1], nb2 as [o2 p2]; simpl in *.
     eapply EquivList_trans; [|eapply EquivList_filter; eauto].
-    rewrite filter_app.
-    apply EquivList_app; admit.
+    rewrite filter_app; apply EquivList_app.
+    - rewrite filter_DisjList_app_1; [apply EquivList_refl|].
+      clear -H; induction p2; [apply DisjList_nil_2|].
+      simpl; apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm.
+        apply hasNoIndex_duplicateElt_DisjList; auto.
+      + apply DisjList_comm; auto.
+    - rewrite filter_DisjList_app_2.
+      + rewrite concat_filter_comm; apply EquivList_refl.
+      + clear -H0; apply DisjList_comm.
+        induction p1; [apply DisjList_nil_2|].
+        simpl; apply DisjList_comm, DisjList_app_4.
+        * apply DisjList_comm, hasNoIndex_duplicateElt_DisjList; auto.
+        * apply DisjList_comm; auto.
   Qed.
 
   Definition RegsBound (regnb: NameBound) := Abstracted regnb (namesOf (getRegInits m)).
@@ -638,11 +806,17 @@ Section Correctness.
     apply in_app_or in H6; apply in_app_or in H7.
     destruct H6, H7.
     - destruct (H3 e); auto.
-    - clear -H H0 H1; apply in_concat_iff in H1; destruct H1 as [l ?]; dest.
+    - clear -H H0 H1 H2; apply in_concat_iff in H1; destruct H1 as [l ?]; dest.
       apply in_map_iff in H1; destruct H1 as [s ?]; dest; subst; simpl in *.
-      admit.
-    - admit.
-    - admit.
+      pose proof (hasNoIndex_duplicateElt_DisjList _ s n H e) as Hd.
+      destruct Hd; auto.
+    - clear -H0 H1 H2.
+      induction (prefixes ss1); [inv H0|].
+      simpl in H0; apply in_app_or in H0; destruct H0; auto.
+      pose proof (hasNoIndex_duplicateElt_DisjList _ a n H2 e) as Hd.
+      destruct Hd; auto.
+    - clear -H0 H1 H4.
+      pose proof (duplicateElt_concat_DisjList n H4 e); destruct H; auto.
   Qed.
 
   Lemma regsBound_disj_regs:

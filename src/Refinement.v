@@ -121,6 +121,25 @@ Section LabelDrop.
     | S n' => (ds __ n) :: (duplicateElt ds n')
     end.
 
+  Lemma duplicateElt_In:
+    forall e p n,
+      In e (duplicateElt p n) -> exists t, e = p __ t.
+  Proof.
+    induction n; simpl; intros.
+    - destruct H; [|inv H]; subst; eexists; eauto.
+    - destruct H; [subst; eexists; eauto|auto].
+  Qed.
+
+  Lemma duplicateElt_DisjList:
+    forall p1 p2 n, p1 <> p2 -> DisjList (duplicateElt p1 n) (duplicateElt p2 n).
+  Proof.
+    unfold DisjList; intros.
+    destruct (in_dec string_dec e (duplicateElt p1 n)); auto.
+    destruct (in_dec string_dec e (duplicateElt p2 n)); auto.
+    exfalso; apply duplicateElt_In in i; apply duplicateElt_In in i0; dest.
+    subst; apply withIndex_index_eq in H0; intuition.
+  Qed.
+
   Lemma dropN_dropPs: forall ds n, dropN ds n = dropPs (duplicateElt ds n).
   Proof.
     induction n; simpl; intros; auto.
