@@ -6,16 +6,13 @@ Require Import Specialize Duplicate Notations.
 Set Implicit Arguments.
 
 Section ModuleBound.
+  Variable m: Modules.
+  Variable n: nat. (* Assume that all indexed names in "m" is parametrized by "n" *)
+
   Record NameBound :=
     { originals : list string;
-      prefixes : list (string * nat)
+      prefixes : list string
     }.
-
-  Definition string_nat_dec: forall (sn1 sn2: string * nat), {sn1 = sn2} + {sn1 <> sn2}.
-    decide equality; [exact (eq_nat_dec b n)|exact (string_dec a s)].
-  Defined.
-  Definition string_nat_in sn snl :=
-    if in_dec string_nat_dec sn snl then true else false.
 
   Definition emptyNameBound := Build_NameBound nil nil.
   Definition addOriginal s nb := Build_NameBound (s :: originals nb) (prefixes nb).
@@ -29,10 +26,10 @@ Section ModuleBound.
 
   Definition subtractNameBound (nb1 nb2: NameBound) :=
     Build_NameBound (filter (fun o => negb (string_in o (originals nb2))) (originals nb1))
-                    (filter (fun p => negb (string_nat_in p (prefixes nb2))) (prefixes nb1)).
+                    (filter (fun p => negb (string_in p (prefixes nb2))) (prefixes nb1)).
 
   Definition unfoldNameBound (nb: NameBound) :=
-    (originals nb) ++ (concat (map (fun p => duplicateElt (fst p) (snd p)) (prefixes nb))).
+    (originals nb) ++ (concat (map (fun p => duplicateElt p n) (prefixes nb))).
 
   Definition Abstracted (nb: NameBound) (ls: list string) :=
     EquivList (unfoldNameBound nb) ls.
@@ -112,7 +109,6 @@ Section ModuleBound.
     apply EquivList_app; admit.
   Qed.
 
-  Variable m: Modules.
   Definition RegsBound (regnb: NameBound) := Abstracted regnb (namesOf (getRegInits m)).
   Definition DmsBound (dmnb: NameBound) := Abstracted dmnb (getDefs m).
   Definition CmsBound (cmnb: NameBound) := Abstracted cmnb (getCalls m).
@@ -128,7 +124,7 @@ Section ModuleBound.
     hasNoIndex (originals nb1) = true /\
     hasNoIndex (originals nb2) = true /\
     DisjList (originals nb1) (originals nb2) /\
-    DisjPrefixes (map (fun p => fst p) (prefixes nb1)) (map (fun p => fst p) (prefixes nb2)).
+    DisjList (prefixes nb1) (prefixes nb2).
 
   (* TODO: move to Reflection.v *)
   Fixpoint disjListStr (l1 l2: list string) :=
@@ -146,49 +142,11 @@ Section ModuleBound.
     apply string_in_dec_not_in in Heqain; auto.
   Qed.
 
-  Fixpoint disjPrefix (s: string) (l: list string) :=
-    match l with
-    | nil => true
-    | h :: t =>
-      negb (prefix s h) && negb (prefix h s) && disjPrefix s t
-    end.
-
-  Fixpoint disjPrefixes (l1 l2: list string) :=
-    match l1 with
-    | nil => true
-    | h1 :: t1 => disjPrefix h1 l2 && disjPrefixes t1 l2
-    end.
-
-  Lemma disjPrefix_prefix:
-    forall s l,
-      disjPrefix s l = true ->
-      (forall t, In t l -> prefix s t = false /\ prefix t s = false).
-  Proof.
-    induction l; simpl; intros; [inv H0|].
-    destruct H0; subst.
-    - apply andb_true_iff in H; dest.
-      apply andb_true_iff in H; dest; auto.
-      rewrite negb_true_iff in H, H1; auto.
-    - apply andb_true_iff in H; dest; auto.
-  Qed.
-
-  Lemma disjPrefixes_DisjPrefixes:
-    forall l1 l2,
-      disjPrefixes l1 l2 = true -> DisjPrefixes l1 l2.
-  Proof.
-    induction l1; simpl; unfold DisjPrefixes; intros; [inv H0|].
-    apply andb_true_iff in H; dest.
-    destruct H0; subst.
-    - eapply disjPrefix_prefix; eauto.
-    - specialize (IHl1 _ H2); auto.
-  Qed.
-
   Definition disjNameBound (nb1 nb2: NameBound) :=
     (hasNoIndex (originals nb1))
       && (hasNoIndex (originals nb2))
       && (disjListStr (originals nb1) (originals nb2))
-      && (disjPrefixes (map (fun p => fst p) (prefixes nb1))
-                       (map (fun p => fst p) (prefixes nb2))).
+      && (disjListStr (prefixes nb1) (prefixes nb2)).
 
   Lemma disjNameBound_DisjNameBound:
     forall nb1 nb2, disjNameBound nb1 nb2 = true -> DisjNameBound nb1 nb2.
@@ -197,7 +155,7 @@ Section ModuleBound.
     repeat (apply andb_true_iff in H; dest).
     Opaque DisjPrefixes. repeat split; auto. Transparent DisjPrefixes.
     - apply disjListStr_DisjList; auto.
-    - apply disjPrefixes_DisjPrefixes; auto.
+    - apply disjListStr_DisjList; auto.
   Qed.
 
 End ModuleBound.
@@ -207,10 +165,10 @@ Section Bounds.
   Delimit Scope namebound_scope with nb.
 
   Lemma concatMod_regsBound_1:
-    forall m1 m2 rb1 rb2,
-      RegsBound m1 rb1 ->
-      RegsBound m2 rb2 ->
-      RegsBound (m1 ++ m2)%kami (rb1 ++ rb2)%nb.
+    forall m1 m2 n rb1 rb2,
+      RegsBound m1 n rb1 ->
+      RegsBound m2 n rb2 ->
+      RegsBound (m1 ++ m2)%kami n (rb1 ++ rb2)%nb.
   Proof.
     unfold RegsBound; simpl; intros.
     unfold RegInitT; rewrite namesOf_app.
@@ -218,10 +176,10 @@ Section Bounds.
   Qed.
 
   Lemma concatMod_regsBound_2:
-    forall m1 m2 rb,
-      RegsBound m1 rb ->
-      RegsBound m2 rb ->
-      RegsBound (m1 ++ m2)%kami rb.
+    forall m1 m2 n rb,
+      RegsBound m1 n rb ->
+      RegsBound m2 n rb ->
+      RegsBound (m1 ++ m2)%kami n rb.
   Proof.
     unfold RegsBound; simpl; intros.
     unfold RegInitT; rewrite namesOf_app.
@@ -229,10 +187,10 @@ Section Bounds.
   Qed.
 
   Lemma concatMod_dmsBound_1:
-    forall m1 m2 db1 db2,
-      DmsBound m1 db1 ->
-      DmsBound m2 db2 ->
-      DmsBound (m1 ++ m2)%kami (db1 ++ db2)%nb.
+    forall m1 m2 n db1 db2,
+      DmsBound m1 n db1 ->
+      DmsBound m2 n db2 ->
+      DmsBound (m1 ++ m2)%kami n (db1 ++ db2)%nb.
   Proof.
     unfold DmsBound; simpl; intros.
     rewrite getDefs_app.
@@ -240,10 +198,10 @@ Section Bounds.
   Qed.
 
   Lemma concatMod_dmsBound_2:
-    forall m1 m2 db,
-      DmsBound m1 db ->
-      DmsBound m2 db ->
-      DmsBound (m1 ++ m2)%kami db.
+    forall m1 m2 n db,
+      DmsBound m1 n db ->
+      DmsBound m2 n db ->
+      DmsBound (m1 ++ m2)%kami n db.
   Proof.
     unfold DmsBound; simpl; intros.
     rewrite getDefs_app.
@@ -251,10 +209,10 @@ Section Bounds.
   Qed.
 
   Lemma concatMod_cmsBound_1:
-    forall m1 m2 cb1 cb2,
-      CmsBound m1 cb1 ->
-      CmsBound m2 cb2 ->
-      CmsBound (m1 ++ m2)%kami (cb1 ++ cb2)%nb.
+    forall m1 m2 n cb1 cb2,
+      CmsBound m1 n cb1 ->
+      CmsBound m2 n cb2 ->
+      CmsBound (m1 ++ m2)%kami n (cb1 ++ cb2)%nb.
   Proof.
     unfold CmsBound in *; simpl; intros.
     apply EquivList_trans with (l2:= getCalls m1 ++ getCalls m2).
@@ -263,10 +221,10 @@ Section Bounds.
   Qed.
 
   Lemma concatMod_cmsBound_2:
-    forall m1 m2 cb,
-      CmsBound m1 cb ->
-      CmsBound m2 cb ->
-      CmsBound (m1 ++ m2)%kami cb.
+    forall m1 m2 n cb,
+      CmsBound m1 n cb ->
+      CmsBound m2 n cb ->
+      CmsBound (m1 ++ m2)%kami n cb.
   Proof.
     unfold CmsBound in *; simpl; intros.
     apply EquivList_trans with (l2:= getCalls m1 ++ getCalls m2).
@@ -281,22 +239,22 @@ Section Bounds.
   Definition getCmsBound (m: Modules) := Build_NameBound (getCalls m) nil.
 
   Lemma getRegsBound_bounded:
-    forall m, RegsBound m (getRegsBound m).
+    forall m n, RegsBound m n (getRegsBound m).
   Proof. intros; apply abstracted_originals_refl. Qed.
 
   Lemma getDmsBound_bounded:
-    forall m, DmsBound m (getDmsBound m).
+    forall m n, DmsBound m n (getDmsBound m).
   Proof. intros; apply abstracted_originals_refl. Qed.
   
   Lemma getCmsBound_bounded:
-    forall m, CmsBound m (getCmsBound m).
+    forall m n, CmsBound m n (getCmsBound m).
   Proof. intros; apply abstracted_originals_refl. Qed.
 
   Lemma getRegsBound_modular:
-    forall m1 m2,
-      RegsBound m1 (getRegsBound m1) ->
-      RegsBound m2 (getRegsBound m2) ->
-      RegsBound (m1 ++ m2)%kami (getRegsBound (m1 ++ m2)%kami).
+    forall m1 m2 n,
+      RegsBound m1 n (getRegsBound m1) ->
+      RegsBound m2 n (getRegsBound m2) ->
+      RegsBound (m1 ++ m2)%kami n (getRegsBound (m1 ++ m2)%kami).
   Proof.
     intros.
     replace (getRegsBound (m1 ++ m2)%kami) with (getRegsBound m1 ++ getRegsBound m2)%nb.
@@ -306,10 +264,10 @@ Section Bounds.
   Qed.
   
   Lemma getDmsBound_modular:
-    forall m1 m2,
-      DmsBound m1 (getDmsBound m1) ->
-      DmsBound m2 (getDmsBound m2) ->
-      DmsBound (m1 ++ m2)%kami (getDmsBound (m1 ++ m2)%kami).
+    forall m1 m2 n,
+      DmsBound m1 n (getDmsBound m1) ->
+      DmsBound m2 n (getDmsBound m2) ->
+      DmsBound (m1 ++ m2)%kami n (getDmsBound (m1 ++ m2)%kami).
   Proof.
     intros.
     replace (getDmsBound (m1 ++ m2)%kami) with (getDmsBound m1 ++ getDmsBound m2)%nb.
@@ -318,10 +276,10 @@ Section Bounds.
   Qed.
 
   Lemma getCmsBound_modular:
-    forall m1 m2,
-      CmsBound m1 (getCmsBound m1) ->
-      CmsBound m2 (getCmsBound m2) ->
-      CmsBound (m1 ++ m2)%kami (getCmsBound (m1 ++ m2)%kami).
+    forall m1 m2 n,
+      CmsBound m1 n (getCmsBound m1) ->
+      CmsBound m2 n (getCmsBound m2) ->
+      CmsBound (m1 ++ m2)%kami n (getCmsBound (m1 ++ m2)%kami).
   Proof.
     intros; pose proof (concatMod_cmsBound_1 H H0); clear H H0.
     eapply EquivList_trans; eauto.
@@ -332,28 +290,19 @@ Section Bounds.
 
   (** duplicate boundaries *)
 
-  Fixpoint getDupNameBound (names: list string) (n: nat) :=
-    match names with
-    | nil => nil
-    | name :: names' => (name, n) :: (getDupNameBound names' n)
-    end.
-      
-  Definition getDupRegsBound m n :=
-    Build_NameBound nil (getDupNameBound (namesOf (getRegInits m)) n).
-  Definition getDupDmsBound m n :=
-    Build_NameBound nil (getDupNameBound (getDefs m) n).
-  Definition getDupCmsBound m n :=
-    Build_NameBound nil (getDupNameBound (getCalls m) n).
+  Definition getDupRegsBound m :=
+    Build_NameBound nil (namesOf (getRegInits m)).
+  Definition getDupDmsBound m :=
+    Build_NameBound nil (getDefs m).
+  Definition getDupCmsBound m :=
+    Build_NameBound nil (getCalls m).
 
   Lemma getDupNameBound_concat_vertical:
     forall names n,
       EquivList
-        (concat
-           (map (fun p => duplicateElt (fst p) (snd p))
-                (getDupNameBound names (S n))))
+        (concat (map (fun p => (p) __ (S n) :: duplicateElt p n) names))
         ((map (spf (S n)) names)
-           ++ (concat (map (fun p => duplicateElt (fst p) (snd p))
-                           (getDupNameBound names n)))).
+           ++ (concat (map (fun p : string => duplicateElt p n) names))).
   Proof.
     induction names; simpl; intros; [apply EquivList_nil|].
     apply EquivList_cons; auto.
@@ -367,7 +316,7 @@ Section Bounds.
   Lemma getDupRegsBound_bounded:
     forall m n,
       Specializable m ->
-      RegsBound (duplicate m n) (getDupRegsBound m n).
+      RegsBound (duplicate m n) n (getDupRegsBound m).
   Proof.
     unfold RegsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
@@ -388,7 +337,7 @@ Section Bounds.
   Lemma getDupDmsBound_bounded:
     forall m n,
       Specializable m ->
-      DmsBound (duplicate m n) (getDupDmsBound m n).
+      DmsBound (duplicate m n) n (getDupDmsBound m).
   Proof.
     unfold DmsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
@@ -409,7 +358,7 @@ Section Bounds.
   Lemma getDupCmsBound_bounded:
     forall m n,
       Specializable m ->
-      CmsBound (duplicate m n) (getDupCmsBound m n).
+      CmsBound (duplicate m n) n (getDupCmsBound m).
   Proof.
     unfold CmsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
@@ -433,19 +382,19 @@ Section Bounds.
 
   Definition getOneNameBound (nr: NameRec) :=
     Build_NameBound [nameVal nr] nil.
-  Definition getRepNameBound (nr: NameRec) (n: nat) :=
-    Build_NameBound nil [(nameVal nr, n)].
+  Definition getRepNameBound (nr: NameRec) :=
+    Build_NameBound nil [nameVal nr].
 
   Lemma getOneNameBound_regs_bounded:
-    forall mregs mrules mdms rb,
-      RegsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
+    forall n mregs mrules mdms rb,
+      RegsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
       forall c nr,
-        RegsBound (modFromMeta (Build_MetaModule (OneReg c nr :: mregs) mrules mdms))
+        RegsBound (modFromMeta (Build_MetaModule (OneReg c nr :: mregs) mrules mdms)) n
                   (getOneNameBound nr ++ rb)%nb.
   Proof.
     unfold RegsBound, modFromMeta; simpl; intros.
     match goal with
-    | [ |- Abstracted _ (?h :: ?t) ] => change (h :: t) with ([h] ++ t)
+    | [ |- Abstracted _ _ (?h :: ?t) ] => change (h :: t) with ([h] ++ t)
     end.
     apply abstracted_app_1; auto.
     apply EquivList_refl.
@@ -453,7 +402,7 @@ Section Bounds.
 
   Lemma getRepNameBound_getListFromRep_abstracted:
     forall {B} (genF: nat -> B) nr n,
-      Abstracted (getRepNameBound nr n)
+      Abstracted n (getRepNameBound nr)
                  (namesOf (getListFromRep string_of_nat genF (nameVal nr) (getNatListToN n))).
   Proof.
     unfold Abstracted, getRepNameBound, unfoldNameBound; simpl; intros.
@@ -463,15 +412,15 @@ Section Bounds.
   Qed.
 
   Lemma getRepNameBound_regs_bounded:
-    forall mregs mrules mdms rb,
-      RegsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
-      forall initF nr n,
+    forall n mregs mrules mdms rb,
+      RegsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
+      forall initF nr,
         RegsBound (modFromMeta (Build_MetaModule
                                   (RepReg string_of_nat
                                           string_of_nat_into
                                           withIndex_index_eq
                                           initF nr (getNatListToN_NoDup n) :: mregs) mrules mdms))
-                  (getRepNameBound nr n ++ rb)%nb.
+                  n (getRepNameBound nr ++ rb)%nb.
   Proof.
     unfold RegsBound, modFromMeta; simpl; intros.
     rewrite namesOf_app.
@@ -480,24 +429,24 @@ Section Bounds.
   Qed.
 
   Lemma getOneNameBound_dms_bounded:
-    forall mregs mrules mdms rb,
-      DmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
+    forall n mregs mrules mdms rb,
+      DmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
       forall s nr,
         DmsBound (modFromMeta (Build_MetaModule mregs mrules (OneMeth s nr :: mdms)))
-                 (getOneNameBound nr ++ rb)%nb.
+                 n (getOneNameBound nr ++ rb)%nb.
   Proof.
     unfold DmsBound, modFromMeta, getDefs; simpl; intros.
     match goal with
-    | [ |- Abstracted _ (?h :: ?t) ] => change (h :: t) with ([h] ++ t)
+    | [ |- Abstracted _ _ (?h :: ?t) ] => change (h :: t) with ([h] ++ t)
     end.
     apply abstracted_app_1; auto.
     apply EquivList_refl.
   Qed.
 
   Lemma getRepNameBound_dms_bounded:
-    forall mregs mrules mdms rb,
-      DmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
-      forall dm nr n,
+    forall n mregs mrules mdms rb,
+      DmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
+      forall dm nr,
         DmsBound (modFromMeta (Build_MetaModule
                                  mregs mrules
                                  (RepMeth string_of_nat
@@ -505,7 +454,7 @@ Section Bounds.
                                           natToVoid
                                           withIndex_index_eq
                                           dm nr (getNatListToN_NoDup n) :: mdms)))
-                  (getRepNameBound nr n ++ rb)%nb.
+                 n (getRepNameBound nr ++ rb)%nb.
   Proof.
     unfold DmsBound, modFromMeta, getDefs; simpl; intros.
     rewrite namesOf_app.
@@ -514,12 +463,12 @@ Section Bounds.
   Qed.
 
   Lemma sinAction_abstracted:
-    forall {retK} (sa: SinActionT typeUT retK),
+    forall n {retK} (sa: SinActionT typeUT retK),
       Abstracted
-        {| originals := map (fun n => nameVal (nameRec n))
-                            (map (fun a => {| isRep := false; nameRec := a |})
-                                 (getCallsSinA sa));
-           prefixes := nil |} (getCallsA (getSinAction sa)).
+        n {| originals := map (fun nm => nameVal (nameRec nm))
+                              (map (fun a => {| isRep := false; nameRec := a |})
+                                   (getCallsSinA sa));
+             prefixes := nil |} (getCallsA (getSinAction sa)).
   Proof.
     unfold Abstracted, unfoldNameBound; simpl.
     intros; rewrite app_nil_r.
@@ -531,11 +480,11 @@ Section Bounds.
   Qed.
 
   Lemma getOneNameBound_rule_cms_bounded:
-    forall mregs mrules mdms rb,
-      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
+    forall n mregs mrules mdms rb,
+      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
       forall sa nr,
-        CmsBound (modFromMeta (Build_MetaModule mregs (OneRule sa nr :: mrules) mdms))
-                 ((Build_NameBound (map (fun n => nameVal (nameRec n))
+        CmsBound (modFromMeta (Build_MetaModule mregs (OneRule sa nr :: mrules) mdms)) n
+                 ((Build_NameBound (map (fun nm => nameVal (nameRec nm))
                                         (getCallsMetaRule (OneRule sa nr))) nil) ++ rb)%nb.
   Proof.
     unfold CmsBound, modFromMeta; simpl; intros.
@@ -550,37 +499,44 @@ Section Bounds.
     - unfold getCalls; simpl; clear; equivList_app_tac.
   Qed.
 
-  Fixpoint getNameRecIdxNameBound (l: list NameRecIdx) (n: nat) :=
+  Fixpoint getNameRecIdxNameBound (l: list NameRecIdx) :=
     match l with
     | nil => emptyNameBound
     | {| isRep:= false; nameRec:= nr |} :: t =>
-      addOriginal (nameVal nr) (getNameRecIdxNameBound t n)
+      addOriginal (nameVal nr) (getNameRecIdxNameBound t)
     | {| isRep:= true; nameRec:= nr |} :: t =>
-      addPrefix (nameVal nr, n) (getNameRecIdxNameBound t n)
+      addPrefix (nameVal nr) (getNameRecIdxNameBound t)
     end.
 
   Lemma genRule_abstracted:
     forall nr (gr: GenAction Void Void) n,
-      Abstracted (getNameRecIdxNameBound (getCallsGenA (gr typeUT)) n)
+      Abstracted n (getNameRecIdxNameBound (getCallsGenA (gr typeUT)))
                  (getCallsR (repRule string_of_nat natToVoid gr (nameVal nr) (getNatListToN n))).
   Proof.
     admit.
   Qed.
   
   Lemma getRepNameBound_rule_cms_bounded:
-    forall mregs mrules mdms rb,
-      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
-      forall gr nr n rr,
-        rr = RepRule
-               string_of_nat
-               string_of_nat_into
-               natToVoid
-               withIndex_index_eq
-               gr nr (getNatListToN_NoDup n) ->
-        CmsBound (modFromMeta (Build_MetaModule mregs (rr :: mrules) mdms))
-                 ((getNameRecIdxNameBound (getCallsMetaRule rr) n) ++ rb)%nb.
+    forall n mregs mrules mdms rb,
+      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
+      forall gr nr,
+        CmsBound (modFromMeta (Build_MetaModule
+                                 mregs (RepRule
+                                          string_of_nat
+                                          string_of_nat_into
+                                          natToVoid
+                                          withIndex_index_eq
+                                          gr nr (getNatListToN_NoDup n) :: mrules) mdms)) n
+                 ((getNameRecIdxNameBound
+                     (getCallsMetaRule
+                        (RepRule
+                           string_of_nat
+                           string_of_nat_into
+                           natToVoid
+                           withIndex_index_eq
+                           gr nr (getNatListToN_NoDup n)))) ++ rb)%nb.
   Proof.
-    unfold CmsBound, modFromMeta; intros; subst; simpl in *.
+    unfold CmsBound, modFromMeta; intros; simpl in *.
     apply abstracted_EquivList with
     (l1 := (getCallsR (repRule string_of_nat natToVoid gr (nameVal nr) (getNatListToN n)))
              ++ (getCalls
@@ -594,11 +550,11 @@ Section Bounds.
   Qed.
 
   Lemma getOneNameBound_meth_cms_bounded:
-    forall mregs mrules mdms rb,
-      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
+    forall n mregs mrules mdms rb,
+      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
       forall sm nr,
-        CmsBound (modFromMeta (Build_MetaModule mregs mrules (OneMeth sm nr :: mdms)))
-                 ((Build_NameBound (map (fun n => nameVal (nameRec n))
+        CmsBound (modFromMeta (Build_MetaModule mregs mrules (OneMeth sm nr :: mdms))) n
+                 ((Build_NameBound (map (fun nm => nameVal (nameRec nm))
                                         (getCallsMetaMeth (OneMeth sm nr))) nil) ++ rb)%nb.
   Proof.
     unfold CmsBound, modFromMeta; simpl; intros.
@@ -615,7 +571,7 @@ Section Bounds.
 
   Lemma genMeth_abstracted:
     forall nr {sigT} (gm: GenMethodT Void sigT) n,
-      Abstracted (getNameRecIdxNameBound (getCallsGenA (gm typeUT tt)) n)
+      Abstracted n (getNameRecIdxNameBound (getCallsGenA (gm typeUT tt)))
                  (getCallsM
                     (repMeth string_of_nat natToVoid (existT (GenMethodT Void) sigT gm) 
                              (nameVal nr) (getNatListToN n))).
@@ -624,20 +580,29 @@ Section Bounds.
   Qed.
 
   Lemma getRepNameBound_meth_cms_bounded:
-    forall mregs mrules mdms rb,
-      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) rb ->
-      forall sigT gm nr n rm,
-        rm = RepMeth
-               string_of_nat
-               string_of_nat_into
-               natToVoid
-               withIndex_index_eq
-               (existT (GenMethodT Void) sigT gm)
-               nr (getNatListToN_NoDup n) ->
-        CmsBound (modFromMeta (Build_MetaModule mregs mrules (rm :: mdms)))
-                 ((getNameRecIdxNameBound (getCallsMetaMeth rm) n) ++ rb)%nb.
+    forall n mregs mrules mdms rb,
+      CmsBound (modFromMeta (Build_MetaModule mregs mrules mdms)) n rb ->
+      forall sigT gm nr,
+        CmsBound (modFromMeta (Build_MetaModule
+                                 mregs mrules
+                                 (RepMeth
+                                    string_of_nat
+                                    string_of_nat_into
+                                    natToVoid
+                                    withIndex_index_eq
+                                    (existT (GenMethodT Void) sigT gm)
+                                    nr (getNatListToN_NoDup n) :: mdms))) n
+                 ((getNameRecIdxNameBound
+                     (getCallsMetaMeth
+                        (RepMeth
+                           string_of_nat
+                           string_of_nat_into
+                           natToVoid
+                           withIndex_index_eq
+                           (existT (GenMethodT Void) sigT gm)
+                           nr (getNatListToN_NoDup n)))) ++ rb)%nb.
   Proof.
-    unfold CmsBound, modFromMeta; intros; subst; simpl in *.
+    unfold CmsBound, modFromMeta; intros; simpl in *.
     apply abstracted_EquivList with
     (l1 := (getCallsM (repMeth string_of_nat natToVoid (existT _ sigT gm)
                                (nameVal nr) (getNatListToN n)))
@@ -658,8 +623,8 @@ Section Correctness.
   Lemma disjNameBound_DisjList:
     forall ss1 ss2,
       DisjNameBound ss1 ss2 ->
-      forall l1 l2,
-        Abstracted ss1 l1 -> Abstracted ss2 l2 ->
+      forall n l1 l2,
+        Abstracted n ss1 l1 -> Abstracted n ss2 l2 ->
         DisjList l1 l2.
   Proof.
     unfold DisjNameBound, Abstracted, DisjList; intros.
@@ -674,7 +639,7 @@ Section Correctness.
     destruct H6, H7.
     - destruct (H3 e); auto.
     - clear -H H0 H1; apply in_concat_iff in H1; destruct H1 as [l ?]; dest.
-      apply in_map_iff in H1; destruct H1 as [[s n] ?]; dest; subst; simpl in *.
+      apply in_map_iff in H1; destruct H1 as [s ?]; dest; subst; simpl in *.
       admit.
     - admit.
     - admit.
@@ -683,51 +648,51 @@ Section Correctness.
   Lemma regsBound_disj_regs:
     forall mb1 mb2,
       DisjNameBound mb1 mb2 ->
-      forall m1 m2,
-        RegsBound m1 mb1 -> RegsBound m2 mb2 ->
+      forall n m1 m2,
+        RegsBound m1 n mb1 -> RegsBound m2 n mb2 ->
         DisjList (namesOf (getRegInits m1)) (namesOf (getRegInits m2)).
   Proof.
-    intros; apply disjNameBound_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+    intros; eapply disjNameBound_DisjList; eauto.
   Qed.
 
   Lemma dmsBound_disj_dms:
     forall mb1 mb2,
       DisjNameBound mb1 mb2 ->
-      forall m1 m2,
-        DmsBound m1 mb1 -> DmsBound m2 mb2 ->
+      forall n m1 m2,
+        DmsBound m1 n mb1 -> DmsBound m2 n mb2 ->
         DisjList (getDefs m1) (getDefs m2).
   Proof.
-    intros; apply disjNameBound_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+    intros; eapply disjNameBound_DisjList; eauto.
   Qed.
 
   Lemma cmsBound_disj_calls:
     forall mb1 mb2,
       DisjNameBound mb1 mb2 ->
-      forall m1 m2,
-        CmsBound m1 mb1 -> CmsBound m2 mb2 ->
+      forall n m1 m2,
+        CmsBound m1 n mb1 -> CmsBound m2 n mb2 ->
         DisjList (getCalls m1) (getCalls m2).
   Proof.
-    intros; apply disjNameBound_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+    intros; eapply disjNameBound_DisjList; eauto.
   Qed.
 
   Lemma bound_disj_dms_calls:
     forall mb1 mb2,
       DisjNameBound mb1 mb2 ->
-      forall m1 m2,
-        DmsBound m1 mb1 -> CmsBound m2 mb2 ->
+      forall n m1 m2,
+        DmsBound m1 n mb1 -> CmsBound m2 n mb2 ->
         DisjList (getDefs m1) (getCalls m2).
   Proof.
-    intros; apply disjNameBound_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+    intros; eapply disjNameBound_DisjList; eauto.
   Qed.
 
   Lemma bound_disj_calls_dms:
     forall mb1 mb2,
       DisjNameBound mb1 mb2 ->
-      forall m1 m2,
-        CmsBound m1 mb1 -> DmsBound m2 mb2 ->
+      forall n m1 m2,
+        CmsBound m1 n mb1 -> DmsBound m2 n mb2 ->
         DisjList (getCalls m1) (getDefs m2).
   Proof.
-    intros; apply disjNameBound_DisjList with (ss1:= mb1) (ss2:= mb2); auto.
+    intros; eapply disjNameBound_DisjList; eauto.
   Qed.
 
   Lemma bound_disj_extDefs_calls:
@@ -735,13 +700,12 @@ Section Correctness.
       hasNoIndex (originals dnb1) = true ->
       hasNoIndex (originals cnb1) = true ->
       DisjNameBound (subtractNameBound dnb1 cnb1) cnb2 ->
-      forall m1 m2,
-        DmsBound m1 dnb1 -> CmsBound m1 cnb1 -> CmsBound m2 cnb2 ->
+      forall n m1 m2,
+        DmsBound m1 n dnb1 -> CmsBound m1 n cnb1 -> CmsBound m2 n cnb2 ->
         DisjList (getExtDefs m1) (getCalls m2).
   Proof.
     intros.
-    apply disjNameBound_DisjList with
-    (ss1:= subtractNameBound dnb1 cnb1) (ss2:= cnb2); auto.
+    eapply disjNameBound_DisjList; eauto.
     apply subtractNameBound_filter_abstracted; auto.
   Qed.
 
@@ -750,13 +714,12 @@ Section Correctness.
       hasNoIndex (originals dnb1) = true ->
       hasNoIndex (originals cnb1) = true ->
       DisjNameBound (subtractNameBound cnb1 dnb1) dnb2 ->
-      forall m1 m2,
-        DmsBound m1 dnb1 -> CmsBound m1 cnb1 -> DmsBound m2 dnb2 ->
+      forall n m1 m2,
+        DmsBound m1 n dnb1 -> CmsBound m1 n cnb1 -> DmsBound m2 n dnb2 ->
         DisjList (getExtCalls m1) (getDefs m2).
   Proof.
     intros.
-    apply disjNameBound_DisjList with
-    (ss1:= subtractNameBound cnb1 dnb1) (ss2:= dnb2); auto.
+    eapply disjNameBound_DisjList; eauto.
     apply subtractNameBound_filter_abstracted; auto.
   Qed.
 
@@ -770,8 +733,8 @@ Ltac get_regs_bound m :=
     let nb1 := get_regs_bound m1 in
     let nb2 := get_regs_bound m2 in
     constr:(appendNameBound nb1 nb2)
-  | duplicate ?sm ?n => constr:(getDupRegsBound sm n)
-  | modFromMeta {| metaRegs := nil |} => constr:(emptyNameBound)
+  | duplicate ?sm _ => constr:(getDupRegsBound sm)
+  | modFromMeta {| metaRegs := nil |} => constr:emptyNameBound
   | modFromMeta {| metaRegs := (OneReg _ ?nr :: ?mregs);
                    metaRules := ?mrules;
                    metaMeths := ?mdms
@@ -781,7 +744,7 @@ Ltac get_regs_bound m :=
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
     constr:(appendNameBound (getOneNameBound nr) pnb)
-  | modFromMeta {| metaRegs := (RepReg _ _ _ _ ?nr (getNatListToN_NoDup ?n) :: ?mregs);
+  | modFromMeta {| metaRegs := (RepReg _ _ _ _ ?nr _ :: ?mregs);
                    metaRules := ?mrules;
                    metaMeths := ?mdms
                 |} =>
@@ -789,7 +752,7 @@ Ltac get_regs_bound m :=
                  (modFromMeta {| metaRegs := mregs;
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
-    constr:(appendNameBound (getRepNameBound nr n) pnb)
+    constr:(appendNameBound (getRepNameBound nr) pnb)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_regs_bound (modFromMeta mm')
   | _ => let m' := eval red in m in get_regs_bound m'
@@ -802,7 +765,7 @@ Ltac get_dms_bound m :=
     let nb1 := get_dms_bound m1 in
     let nb2 := get_dms_bound m2 in
     constr:(appendNameBound nb1 nb2)
-  | duplicate ?sm ?n => constr:(getDupDmsBound sm n)
+  | duplicate ?sm _ => constr:(getDupDmsBound sm)
   | modFromMeta {| metaMeths := nil |} => constr:(emptyNameBound)
   | modFromMeta {| metaRegs := ?mregs;
                    metaRules := ?mrules;
@@ -815,13 +778,13 @@ Ltac get_dms_bound m :=
     constr:(appendNameBound (getOneNameBound nr) pnb)
   | modFromMeta {| metaRegs := ?mregs;
                    metaRules := ?mrules;
-                   metaMeths := (RepMeth _ _ _ _ _ ?nr (getNatListToN_NoDup ?n) :: ?mdms)
+                   metaMeths := (RepMeth _ _ _ _ _ ?nr _ :: ?mdms)
                 |} =>
     let pnb := get_dms_bound
                  (modFromMeta {| metaRegs := mregs;
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
-    constr:(appendNameBound (getRepNameBound nr n) pnb)
+    constr:(appendNameBound (getRepNameBound nr) pnb)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_dms_bound (modFromMeta mm')
   | _ => let m' := eval red in m in get_dms_bound m'
@@ -834,7 +797,7 @@ Ltac get_cms_bound m :=
     let nb1 := get_cms_bound m1 in
     let nb2 := get_cms_bound m2 in
     constr:(appendNameBound nb1 nb2)
-  | duplicate ?sm ?n => constr:(getDupCmsBound sm n)
+  | duplicate ?sm _ => constr:(getDupCmsBound sm)
   | modFromMeta {| metaRules := nil; metaMeths := nil |} => constr:(emptyNameBound)
   | modFromMeta {| metaRegs := ?mregs;
                    metaRules := nil;
@@ -852,13 +815,13 @@ Ltac get_cms_bound m :=
                    metaMeths := (?rm :: ?mdms)
                 |} =>
     match rm with
-    | RepMeth _ _ _ _ (existT _ _ ?gm) ?nr (getNatListToN_NoDup ?n) =>
+    | RepMeth _ _ _ _ (existT _ _ ?gm) ?nr _ =>
       let pnb := get_cms_bound
                    (modFromMeta {| metaRegs := mregs;
                                    metaRules := nil;
                                    metaMeths := mdms |}) in
       constr:(appendNameBound
-                (getNameRecIdxNameBound (getCallsMetaMeth rm) n) pnb)
+                (getNameRecIdxNameBound (getCallsMetaMeth rm)) pnb)
     end
   | modFromMeta {| metaRegs := ?mregs;
                    metaRules := (OneRule ?sr ?nr :: ?mrules);
@@ -876,13 +839,13 @@ Ltac get_cms_bound m :=
                    metaMeths := ?mdms
                 |} =>
     match rr with
-    | RepRule _ _ _ _ ?gr ?nr (getNatListToN_NoDup ?n) =>
+    | RepRule _ _ _ _ ?gr ?nr _ =>
       let pnb := get_cms_bound
                    (modFromMeta {| metaRegs := mregs;
                                    metaRules := nil;
                                    metaMeths := mdms |}) in
       constr:(appendNameBound
-                (getNameRecIdxNameBound (getCallsMetaRule rr) n) pnb)
+                (getNameRecIdxNameBound (getCallsMetaRule rr)) pnb)
     end
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_cms_bound (modFromMeta mm')
@@ -890,143 +853,210 @@ Ltac get_cms_bound m :=
   | _ => constr:(getCmsBound m)
   end.
 
-Ltac red_to_regs_bound :=
+Ltac red_to_regs_bound rn :=
   match goal with
   | [ |- DisjList (namesOf (getRegInits ?m1))
                   (namesOf (getRegInits ?m2)) ] =>
     let mb1' := get_regs_bound m1 in
     let mb2' := get_regs_bound m2 in
-    apply regsBound_disj_regs with (mb1 := mb1') (mb2 := mb2')
+    apply regsBound_disj_regs with (n:= rn) (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (map _ (getRegInits ?m1))
                   (map _ (getRegInits ?m2)) ] =>
     let mb1' := get_regs_bound m1 in
     let mb2' := get_regs_bound m2 in
-    apply regsBound_disj_regs with (mb1 := mb1') (mb2 := mb2')
+    apply regsBound_disj_regs with (n:= rn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_dms_bound :=
+Ltac red_to_dms_bound dn :=
   match goal with
   | [ |- DisjList (getDefs ?m1) (getDefs ?m2) ] =>
     let mb1' := get_dms_bound m1 in
     let mb2' := get_dms_bound m2 in
-    apply dmsBound_disj_dms with (mb1 := mb1') (mb2 := mb2')
+    apply dmsBound_disj_dms with (n:= dn) (mb1 := mb1') (mb2 := mb2')
   | [ |- DisjList (namesOf (getDefsBodies ?m1)) (namesOf (getDefsBodies ?m2)) ] =>
     let mb1' := get_dms_bound m1 in
     let mb2' := get_dms_bound m2 in
-    apply dmsBound_disj_dms with (mb1 := mb1') (mb2 := mb2')
+    apply dmsBound_disj_dms with (n:= dn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_cms_bound :=
+Ltac red_to_cms_bound cn :=
   match goal with
   | [ |- DisjList (getCalls ?m1) (getCalls ?m2) ] =>
     let mb1' := get_cms_bound m1 in
     let mb2' := get_cms_bound m2 in
-    apply cmsBound_disj_calls with (mb1 := mb1') (mb2 := mb2')
+    apply cmsBound_disj_calls with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_dc_bound :=
+Ltac red_to_dc_bound cn :=
   match goal with
   | [ |- DisjList (getDefs ?m1) (getCalls ?m2) ] =>
     let mb1' := get_dms_bound m1 in
     let mb2' := get_cms_bound m2 in
-    apply bound_disj_dms_calls with (mb1 := mb1') (mb2 := mb2')
+    apply bound_disj_dms_calls with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_cd_bound :=
+Ltac red_to_cd_bound cn :=
   match goal with
   | [ |- DisjList (getCalls ?m1) (getDefs ?m2) ] =>
     let mb1' := get_cms_bound m1 in
     let mb2' := get_dms_bound m2 in
-    apply bound_disj_calls_dms with (mb1 := mb1') (mb2 := mb2')
+    apply bound_disj_calls_dms with (n:= cn) (mb1 := mb1') (mb2 := mb2')
   end.
 
-Ltac red_to_edc_bound :=
+Ltac red_to_edc_bound cn :=
   match goal with
   | [ |- DisjList (getExtDefs ?m1) (getCalls ?m2) ] =>
     let dnb1' := get_dms_bound m1 in
     let cnb1' := get_cms_bound m1 in
     let cnb2' := get_cms_bound m2 in
-    apply bound_disj_extDefs_calls with (dnb1:= dnb1') (cnb1:= cnb1') (cnb2:= cnb2')
+    apply bound_disj_extDefs_calls with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (cnb2:= cnb2')
   end.
 
-Ltac red_to_ecd_bound :=
+Ltac red_to_ecd_bound cn :=
   match goal with
   | [ |- DisjList (getExtCalls ?m1) (getDefs ?m2) ] =>
     let dnb1' := get_dms_bound m1 in
     let cnb1' := get_cms_bound m1 in
     let dnb2' := get_dms_bound m2 in
-    apply bound_disj_extCalls_defs with (dnb1:= dnb1') (cnb1:= cnb1') (dnb2:= dnb2')
+    apply bound_disj_extCalls_defs with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (dnb2:= dnb2')
   end.
 
-Ltac regs_bound_tac :=
-  repeat (
-      apply getOneNameBound_regs_bounded
-      || apply getRepNameBound_regs_bounded
-      || apply concatMod_regsBound_1
-      || apply getRegsBound_modular
-      || (apply getDupRegsBound_bounded; auto)
-      || apply getRegsBound_bounded).
+Ltac unfold_head m :=
+  match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ =>
+    unfold hdef
+  | ?hdef _ =>
+    unfold hdef
+  | ?hdef =>
+    unfold hdef
+  end.
 
-Ltac dms_bound_tac :=
-  repeat (
-      apply getOneNameBound_dms_bounded
-      || apply getRepNameBound_dms_bounded
-      || apply concatMod_dmsBound_1
-      || apply getDmsBound_modular
-      || (apply getDupDmsBound_bounded; auto)
-      || apply getDmsBound_bounded).
+Ltac regs_bound_tac_unit :=
+  match goal with
+  | [ |- RegsBound (modFromMeta {| metaRegs := (OneReg _ _) :: _ |}) _ _ ] =>
+    apply getOneNameBound_regs_bounded
+  | [ |- RegsBound (modFromMeta {| metaMeths := (RepReg _ _ _ _ _ _) :: _ |}) _ _ ] =>
+    apply getRepNameBound_regs_bounded
+  | [ |- RegsBound (ConcatMod _ _) _ (appendNameBound _ _) ] =>
+    apply concatMod_regsBound_1
+  | [ |- RegsBound (ConcatMod _ _) _ _ ] =>
+    apply getRegsBound_modular
+  | [ |- RegsBound (duplicate _ _) _ _ ] =>
+    apply getDupRegsBound_bounded; auto
+  | [ |- RegsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
+  | [ |- RegsBound ?m _ _ ] => unfold_head m
+  | _ => apply getRegsBound_bounded
+  end.
+Ltac regs_bound_tac := repeat regs_bound_tac_unit.
 
-Ltac cms_bound_tac :=
-  repeat (
-      apply getOneNameBound_rule_cms_bounded
-      || apply getRepNameBound_rule_cms_bounded
-      || apply getOneNameBound_meth_cms_bounded
-      || apply getRepNameBound_meth_cms_bounded
-      || apply concatMod_cmsBound_1
-      || apply getCmsBound_modular
-      || (apply getDupCmsBound_bounded; auto)
-      || apply getCmsBound_bounded).
+Ltac dms_bound_tac_unit :=
+  match goal with
+  | [ |- DmsBound (modFromMeta {| metaMeths := (OneMeth _ _) :: _ |}) _ _ ] =>
+    apply getOneNameBound_dms_bounded
+  | [ |- DmsBound (modFromMeta {| metaMeths := (RepMeth _ _ _ _ _ _ _) :: _ |}) _ _ ] =>
+    apply getRepNameBound_dms_bounded
+  | [ |- DmsBound (ConcatMod _ _) _ (appendNameBound _ _) ] =>
+    apply concatMod_dmsBound_1
+  | [ |- DmsBound (ConcatMod _ _) _ _ ] =>
+    apply getDmsBound_modular
+  | [ |- DmsBound (duplicate _ _) _ _ ] =>
+    apply getDupDmsBound_bounded; auto
+  | [ |- DmsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
+  | [ |- DmsBound ?m _ _ ] => unfold_head m
+  | _ => apply getDmsBound_bounded
+  end.
+Ltac dms_bound_tac := repeat dms_bound_tac_unit.
 
-Ltac kdisj_regs :=
-  red_to_regs_bound;
+Ltac cms_bound_tac_unit :=
+  match goal with
+  | [ |- CmsBound (modFromMeta {| metaRules := (OneRule _ _) :: _ |}) _ _ ] =>
+    apply getOneNameBound_rule_cms_bounded
+  | [ |- CmsBound (modFromMeta {| metaRules := (RepRule _ _ _ _ _ _ _) :: _ |}) _ _ ] =>
+    apply getRepNameBound_rule_cms_bounded
+  | [ |- CmsBound (modFromMeta {| metaRules := nil;
+                                  metaMeths := (OneMeth _ _) :: _ |}) _ _ ] =>
+    apply getOneNameBound_meth_cms_bounded
+  | [ |- CmsBound (modFromMeta {| metaRules := nil;
+                                  metaMeths := (RepMeth _ _ _ _ _ _ _) :: _ |}) _ _ ] =>
+    apply getRepNameBound_meth_cms_bounded
+  | [ |- CmsBound (ConcatMod _ _) _ (appendNameBound _ _) ] =>
+    apply concatMod_cmsBound_1
+  | [ |- CmsBound (ConcatMod _ _) _ _ ] =>
+    apply getCmsBound_modular
+  | [ |- CmsBound (duplicate _ _) _ _ ] =>
+    apply getDupCmsBound_bounded; auto
+  | [ |- CmsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
+  | [ |- CmsBound ?m _ _ ] => unfold_head m
+  | _ => apply getCmsBound_bounded
+  end.
+Ltac cms_bound_tac := repeat cms_bound_tac_unit.
+
+Ltac kdisj_regs n :=
+  red_to_regs_bound n;
   [apply disjNameBound_DisjNameBound; reflexivity
   |regs_bound_tac
   |regs_bound_tac].
 
-Ltac kdisj_dms :=
-  red_to_dms_bound;
+Ltac kdisj_dms n :=
+  red_to_dms_bound n;
   [apply disjNameBound_DisjNameBound; reflexivity
   |dms_bound_tac
   |dms_bound_tac].
 
-Ltac kdisj_cms :=
-  red_to_cms_bound;
+Ltac kdisj_cms n :=
+  red_to_cms_bound n;
   [apply disjNameBound_DisjNameBound; reflexivity
   |cms_bound_tac
   |cms_bound_tac].
 
-Ltac kdisj_dms_cms :=
-  red_to_dc_bound;
+Ltac kdisj_dms_cms n :=
+  red_to_dc_bound n;
   [apply disjNameBound_DisjNameBound; reflexivity
   |dms_bound_tac
   |cms_bound_tac].
 
-Ltac kdisj_cms_dms :=
-  red_to_cd_bound;
+Ltac kdisj_cms_dms n :=
+  red_to_cd_bound n;
   [apply disjNameBound_DisjNameBound; reflexivity
   |cms_bound_tac
   |dms_bound_tac].
 
-Ltac kdisj_edms_cms :=
-  red_to_edc_bound;
+Ltac kdisj_edms_cms n :=
+  red_to_edc_bound n;
   [reflexivity|reflexivity
    |apply disjNameBound_DisjNameBound; reflexivity
    |dms_bound_tac
    |cms_bound_tac
    |cms_bound_tac].
 
-Ltac kdisj_ecms_dms :=
-  red_to_ecd_bound; auto;
+Ltac kdisj_ecms_dms n :=
+  red_to_ecd_bound n;
   [reflexivity|reflexivity
    |apply disjNameBound_DisjNameBound; reflexivity
    |dms_bound_tac
