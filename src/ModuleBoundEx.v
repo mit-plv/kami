@@ -548,6 +548,39 @@ Section Bounds.
 
   (** meta-module boundaries *)
 
+  Lemma concatMetaMod_regsBound_1:
+    forall mm1 mm2 n rb1 rb2,
+      RegsBound (modFromMeta mm1) n rb1 ->
+      RegsBound (modFromMeta mm2) n rb2 ->
+      RegsBound (modFromMeta (mm1 +++ mm2))%kami n (rb1 ++ rb2)%nb.
+  Proof.
+    unfold RegsBound; simpl; intros.
+    rewrite map_app, concat_app, namesOf_app.
+    apply abstracted_app_1; auto.
+  Qed.
+
+  Lemma concatMetaMod_dmsBound_1:
+    forall mm1 mm2 n rb1 rb2,
+      DmsBound (modFromMeta mm1) n rb1 ->
+      DmsBound (modFromMeta mm2) n rb2 ->
+      DmsBound (modFromMeta (mm1 +++ mm2))%kami n (rb1 ++ rb2)%nb.
+  Proof.
+    unfold DmsBound; simpl; intros.
+    rewrite getDefs_modFromMeta_app.
+    apply abstracted_app_1; auto.
+  Qed.
+
+  Lemma concatMetaMod_cmsBound_1:
+    forall mm1 mm2 n rb1 rb2,
+      CmsBound (modFromMeta mm1) n rb1 ->
+      CmsBound (modFromMeta mm2) n rb2 ->
+      CmsBound (modFromMeta (mm1 +++ mm2))%kami n (rb1 ++ rb2)%nb.
+  Proof.
+    unfold CmsBound; simpl; intros.
+    eapply abstracted_EquivList; [|apply EquivList_comm, getCalls_modFromMeta_app].
+    apply abstracted_app_1; auto.
+  Qed.
+
   Definition getOneNameBound (nr: NameRec) :=
     Build_NameBound [nameVal nr] nil.
   Definition getRepNameBound (nr: NameRec) :=
@@ -982,6 +1015,10 @@ Ltac get_regs_bound m :=
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
     constr:(appendNameBound (getRepNameBound nr) pnb)
+  | modFromMeta (?mm1 +++ ?mm2) =>
+    let nb1 := get_regs_bound (modFromMeta mm1) in
+    let nb2 := get_regs_bound (modFromMeta mm2) in
+    constr:(appendNameBound nb1 nb2)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_regs_bound (modFromMeta mm')
   | _ => let m' := eval red in m in get_regs_bound m'
@@ -1014,6 +1051,10 @@ Ltac get_dms_bound m :=
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
     constr:(appendNameBound (getRepNameBound nr) pnb)
+  | modFromMeta (?mm1 +++ ?mm2) =>
+    let nb1 := get_dms_bound (modFromMeta mm1) in
+    let nb2 := get_dms_bound (modFromMeta mm2) in
+    constr:(appendNameBound nb1 nb2)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_dms_bound (modFromMeta mm')
   | _ => let m' := eval red in m in get_dms_bound m'
@@ -1076,6 +1117,10 @@ Ltac get_cms_bound m :=
       constr:(appendNameBound
                 (getNameRecIdxNameBound (getCallsMetaRule rr)) pnb)
     end
+  | modFromMeta (?mm1 +++ ?mm2) =>
+    let nb1 := get_cms_bound (modFromMeta mm1) in
+    let nb2 := get_cms_bound (modFromMeta mm2) in
+    constr:(appendNameBound nb1 nb2)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_cms_bound (modFromMeta mm')
   | _ => let m' := eval red in m in get_cms_bound m'
@@ -1198,6 +1243,8 @@ Ltac regs_bound_tac_unit :=
     apply getRegsBound_modular
   | [ |- RegsBound (duplicate _ _) _ _ ] =>
     apply getDupRegsBound_bounded; auto
+  | [ |- RegsBound (modFromMeta (_ +++ _)) _ (appendNameBound _ _) ] =>
+    apply concatMetaMod_regsBound_1
   | [ |- RegsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
   | [ |- RegsBound ?m _ _ ] => unfold_head m
   | _ => apply getRegsBound_bounded
@@ -1216,6 +1263,8 @@ Ltac dms_bound_tac_unit :=
     apply getDmsBound_modular
   | [ |- DmsBound (duplicate _ _) _ _ ] =>
     apply getDupDmsBound_bounded; auto
+  | [ |- DmsBound (modFromMeta (_ +++ _)) _ (appendNameBound _ _) ] =>
+    apply concatMetaMod_dmsBound_1
   | [ |- DmsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
   | [ |- DmsBound ?m _ _ ] => unfold_head m
   | _ => apply getDmsBound_bounded
@@ -1240,6 +1289,8 @@ Ltac cms_bound_tac_unit :=
     apply getCmsBound_modular
   | [ |- CmsBound (duplicate _ _) _ _ ] =>
     apply getDupCmsBound_bounded; auto
+  | [ |- CmsBound (modFromMeta (_ +++ _)) _ (appendNameBound _ _) ] =>
+    apply concatMetaMod_cmsBound_1
   | [ |- CmsBound (modFromMeta ?mm) _ _ ] => unfold_head mm
   | [ |- CmsBound ?m _ _ ] => unfold_head m
   | _ => apply getCmsBound_bounded
