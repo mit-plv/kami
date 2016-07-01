@@ -128,13 +128,21 @@ Section MemAtomicWoQ.
     unfold memAtomic, memAtomicWoQ.
     ketrans; [rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_2|].
 
-    kmodular_light.
-    - admit. (* kdef_call_sub automation *)
-    - kdef_call_sub.
-    - kinteracting.
-    - apply duplicate_concatMod_comm_2; auto;
-        [kvr|kvr|kequiv].
-    - krefl.
+    kmodular_sim_l.
+    - knodup_regs.
+    - knodup_regs.
+    - knodup_regs.
+    - kdisj_regs.
+    - kdisj_regs.
+    - split.
+      + apply duplicate_regs_ConcatMod_2; [kequiv|kequiv|kvr|kvr| |]; auto.
+      + apply duplicate_regs_ConcatMod_1; [kequiv|kequiv|kvr|kvr| |]; auto.
+    - split.
+      + apply duplicate_rules_ConcatMod_2; [kequiv|kequiv|kvr|kvr| |]; auto.
+      + apply duplicate_rules_ConcatMod_1; [kequiv|kequiv|kvr|kvr| |]; auto.
+    - split.
+      + apply duplicate_defs_ConcatMod_2; [kequiv|kequiv|kvr|kvr| |]; auto.
+      + apply duplicate_defs_ConcatMod_1; [kequiv|kequiv|kvr|kvr| |]; auto.
   Qed.
 
 End MemAtomicWoQ.

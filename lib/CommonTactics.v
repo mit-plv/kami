@@ -112,6 +112,78 @@ Ltac destruct_existT :=
              (apply Eqdep.EqdepTheory.inj_pair2 in H; subst)
          end.
 
+Ltac unfold_head m :=
+  match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ =>
+    unfold hdef
+  | ?hdef _ =>
+    unfold hdef
+  | ?hdef =>
+    unfold hdef
+  end.
+
+Ltac unfold_head_ret m :=
+  match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef =>
+    let m' := eval cbv [hdef] in m in m'
+  end.
+
 Notation "'nosimpl' t" := (match tt with tt => t end) (at level 10).
 
 Notation Yes := (left _).

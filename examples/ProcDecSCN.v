@@ -3,7 +3,8 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.SemFacts.
 Require Import Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ModuleBound.
+Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
+Require Import Lts.ModuleBound Lts.ModuleBoundEx.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
@@ -24,6 +25,8 @@ Section ProcDecSCN.
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
     kmodular.
+    - kdisj_edms_cms_ex n.
+    - kdisj_ecms_dms_ex n.
     - kduplicated; [kvr|kvr|].
       apply pdec_refines_pinst.
     - krefl.

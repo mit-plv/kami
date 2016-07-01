@@ -78,78 +78,6 @@ Ltac ketrans_r :=
   evar (m: Modules); ktrans_r m; unfold m; clear m;
   try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
 
-Ltac unfold_head m :=
-  match m with
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ _ =>
-    unfold hdef
-  | ?hdef _ _ =>
-    unfold hdef
-  | ?hdef _ =>
-    unfold hdef
-  | ?hdef =>
-    unfold hdef
-  end.
-
-Ltac unfold_head_ret m :=
-  match m with
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef _ =>
-    let m' := eval cbv [hdef] in m in m'
-  | ?hdef =>
-    let m' := eval cbv [hdef] in m in m'
-  end.
-
 Ltac kequiv_red :=
   eauto;
   match goal with
@@ -375,11 +303,12 @@ Ltac kdisj_cms_dms :=
 Ltac knodup_regs :=
   repeat (* Separating NoDup proofs by small modules *)
     match goal with
-    | [ |- NoDup (namesOf (getRegInits _)) ] =>
-      progress (unfold getRegInits; fold getRegInits)
     | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
     | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
+    | [ |- NoDup (namesOf (getRegInits (duplicate _ _))) ] => apply duplicate_regs_NoDup; auto
     | [ |- NoDup (namesOf (getRegInits ?m)) ] => unfold_head m
+    | [ |- NoDup (namesOf (getRegInits _)) ] =>
+      progress (unfold getRegInits; fold getRegInits)
     end;
   repeat
     match goal with
@@ -416,8 +345,7 @@ Ltac kmodular :=
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs|kdisj_regs|kvr|kvr
    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-   |kdef_call_sub|kdef_call_sub
-   |kinteracting| |].
+   | | |kinteracting| |].
 
 Tactic Notation "simple" "kmodularn" :=
   try (unfold MethsT; rewrite <-idElementwiseId);
@@ -456,7 +384,7 @@ Ltac ksubst fm tm om :=
   [kequiv|kequiv|kequiv|
    knodup_regs|knodup_regs|knodup_regs|
    kdisj_regs|kdisj_regs|
-   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| |
+   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| | |
    kvr|kvr|kvr| | | |].
       
 Ltac kinline_compute :=

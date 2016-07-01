@@ -2,7 +2,8 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.SemFacts Lts.Refinement.
 Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
-Require Import Lts.Duplicate Lts.ParamDup Lts.Notations Lts.Substitute Lts.ModuleBound.
+Require Import Lts.Duplicate Lts.ParamDup Lts.Notations Lts.Substitute.
+Require Import Lts.ModuleBound Lts.ModuleBoundEx.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Ex.SimpleFifoCorrect Ex.MemCache.
 
@@ -179,16 +180,25 @@ Section Refinement.
   Lemma memCache_refines_nmemCache:
     (modFromMeta (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
       <<== (modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     ketrans.
 
     - ksubst
         (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)
         (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)
         (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
-      + split.
-        * repeat rewrite getDefs_flattened; apply getDefs_fifos_nfifos.
-        * repeat rewrite getCalls_flattened; apply getCalls_fifos_nfifos.
+      + repeat
+          match goal with
+          | [ |- context[Syntax.Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)] ] =>
+            change (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) with m
+          end.
+        kdisj_edms_cms_ex (wordToNat (wones n)).
+      + repeat
+          match goal with
+          | [ |- context[Syntax.Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)] ] =>
+            change (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) with m
+          end.
+        kdisj_ecms_dms_ex (wordToNat (wones n)).
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.
@@ -200,6 +210,7 @@ Section Refinement.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End Refinement.

@@ -488,6 +488,22 @@ Section GetCalls.
       apply in_or_app; auto.
   Qed.
 
+  Lemma getCalls_subList_1:
+    forall m1 m2, SubList (getCalls m1 ++ getCalls m2) (getCalls (ConcatMod m1 m2)).
+  Proof.
+    unfold SubList; intros.
+    apply in_app_or in H; destruct H.
+    - apply getCalls_in_1; auto.
+    - apply getCalls_in_2; auto.
+  Qed.
+
+  Lemma getCalls_subList_2:
+    forall m1 m2, SubList (getCalls (ConcatMod m1 m2)) (getCalls m1 ++ getCalls m2).
+  Proof.
+    unfold SubList; intros.
+    apply getCalls_in in H; destruct H; apply in_or_app; auto.
+  Qed.
+
   Lemma getCallsR_SubList:
     forall ra rb,
       SubList ra rb ->
@@ -531,6 +547,34 @@ Section GetCalls.
       apply getCallsR_SubList; auto.
     - apply SubList_app_2.
       apply getCallsM_SubList; auto.
+  Qed.
+
+  Definition DefCallSub (impl spec: Modules) :=
+    SubList (getDefs spec) (getDefs impl) /\
+    SubList (getCalls spec) (getCalls impl).
+
+  Lemma DefCallSub_refl:
+    forall m, DefCallSub m m.
+  Proof.
+    intros; split; apply SubList_refl.
+  Qed.
+  Hint Immediate DefCallSub_refl.
+
+  Lemma DefCallSub_modular:
+    forall m1 m2 m3 m4,
+      DefCallSub m1 m3 ->
+      DefCallSub m2 m4 ->
+      DefCallSub (ConcatMod m1 m2) (ConcatMod m3 m4).
+  Proof.
+    unfold DefCallSub, SubList; intros; dest; split; intros.
+    - specialize (H e); specialize (H0 e); specialize (H1 e); specialize (H2 e).
+      apply getDefs_in in H3; destruct H3.
+      + apply getDefs_in_1; auto.
+      + apply getDefs_in_2; auto.
+    - specialize (H e); specialize (H0 e); specialize (H1 e); specialize (H2 e).
+      apply getCalls_in in H3; destruct H3.
+      + apply getCalls_in_1; auto.
+      + apply getCalls_in_2; auto.
   Qed.
 
 End GetCalls.

@@ -363,6 +363,21 @@ Section TwoModules.
         WellHiddenModular ma mb la lb ->
         WellHiddenModularSeq ma mb (la :: lsa) (lb :: lsb).
 
+  Lemma wellHidden_concat_modular:
+    forall ma mb la lb, WellHiddenConcat ma mb la lb ->
+                        WellHiddenModular ma mb la lb.
+  Proof. unfold WellHiddenModular, WellHiddenConcat; intros; auto. Qed.
+
+  Lemma wellHidden_concat_modular_seq:
+    forall ma mb la lb, WellHiddenConcatSeq ma mb la lb ->
+                        WellHiddenModularSeq ma mb la lb.
+  Proof.
+    induction la; intros.
+    - inv H; constructor.
+    - inv H; constructor; auto.
+      apply wellHidden_concat_modular; auto.
+  Qed.
+
   Lemma stepInd_modular:
     forall oa ua la,
       StepInd ma oa ua la ->
