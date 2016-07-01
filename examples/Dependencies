@@ -1,5 +1,4 @@
 5 Dependencies: 7, 8, 26
-6 Dependencies: 7, 25 (no one depends on 6)
 7 Dependencies: 5, 12, 13, 25
 8 Dependencies: 5, 10, 12, 25
 9 Dependencies: 7, 13, 16a, 17, 22, 23, 26
@@ -17,6 +16,9 @@
 21 Dependencies: 13, 17, 22
 22 Dependencies: 7, 18
 23 Dependencies: 7, 13, 16, 22
-24 Dependencies: 13
+
 25 Dependencies: None
 26 Dependencies: None
+
+6 Dependencies: 7, 25 (no one depends on 6)
+24 Dependencies: 13 (no one depends on 24)
