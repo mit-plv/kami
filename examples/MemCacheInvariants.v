@@ -751,14 +751,14 @@ Section MemCacheInl.
   Ltac instantiateExists :=
   match goal with
     | xcond: (?x <= wordToNat (wones LgNumChildren))%nat,
-             prevState: nmemCache_invariants ?n |- nmemCache_invariants ?s =>
+             prevState: ?inv ?n |- ?inv ?s =>
       let a := fresh in
       let cword := fresh in
       let c := fresh in
       let cond := fresh in
       let trans := fresh in
       let curr_a_c := fresh in
-      unfold nmemCache_invariants;
+      unfold inv;
         intros a cword c cond trans;
         pose proof (prevState a cword c cond trans) as curr_a_c;
         dest;
