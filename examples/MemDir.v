@@ -26,7 +26,7 @@ Section Mem.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  Definition AddrBits := IdxBits + (LgNumDatas + LgDataBytes).
+  Definition AddrBits := IdxBits.
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
   Definition Data := Bit (LgDataBytes * 8).
@@ -60,13 +60,13 @@ Section Mem.
   Section UtilFunctions.
     Variable var: Kind -> Type.
     Definition getIdx (x: (Addr @ var)%kami): (Idx @ var)%kami :=
-      UniBit (TruncLsb IdxBits (LgNumDatas + LgDataBytes)) x.
+      x.
     
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
-      UniBit (TruncLsb LgNumDatas LgDataBytes) (UniBit (ZeroExtendTrunc AddrBits (LgNumDatas + LgDataBytes)) x).
+      UniBit (ZeroExtendTrunc AddrBits LgNumDatas) x.
     
     Definition getAddr (idx: (Idx@var)%kami) :=
-      BinBit (Concat IdxBits (LgNumDatas + LgDataBytes)) idx ($ 0)%kami_expr.
+      BinBit (Concat IdxBits LgNumDatas) idx ($ 0)%kami_expr.
 
     Definition othersCompat (c: (Child@var)%kami) (x: (Msi@var)%kami) (dir: (Dir@var)%kami) :=
       foldInc (fun idx old =>

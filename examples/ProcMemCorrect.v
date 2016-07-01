@@ -24,7 +24,7 @@ Section ProcMem.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
-  Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes.
+  Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
   
   Variable dec: DecT 2 AddrSize LgDataBytes RfIdx.

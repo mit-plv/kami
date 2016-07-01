@@ -10,13 +10,13 @@ Section ChildParent.
   Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
-  Definition AddrBits := IdxBits + (LgNumDatas + LgDataBytes).
+  Definition AddrBits := IdxBits.
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
   Definition Data := Bit (LgDataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
- 
+
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RqFromC := Ex.MemTypes.RqFromC LgNumChildren Addr Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.

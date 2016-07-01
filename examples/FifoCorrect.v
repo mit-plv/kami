@@ -273,7 +273,7 @@ Section ToNative.
           { left; reflexivity. }
           { instantiate (3:= argV).
             simpl; repeat econstructor.
-            kregmap_red; reflexivity.
+            kregmap_red; kregmap_clear; reflexivity.
             findeq.
           }
           { reflexivity. }
@@ -282,7 +282,7 @@ Section ToNative.
           repeat split.
           { intros; inv H1. }
           { intros; inv H1. }
-          { kregmap_red; meq.
+          { kregmap_red; kregmap_clear; meq.
             { repeat f_equal.
               destruct (weq (x2 ^+ _) x2); [exfalso; eapply wplus_one_neq; eauto|].
               simpl; replace (wordToNat _) with 1.
@@ -409,7 +409,7 @@ Section ToNative.
             { right; left; reflexivity. }
             { instantiate (3:= argV).
               repeat econstructor.
-              { kregmap_red; reflexivity. }
+              { kregmap_red; kregmap_clear; reflexivity. }
               { destruct (weq x2 x2); [|elim n; reflexivity].
                 reflexivity.
               }
@@ -422,7 +422,7 @@ Section ToNative.
           { repeat split.
             { intros; inv H2. }
             { intros; inv H2. }
-            { kregmap_red; meq.
+            { kregmap_red; kregmap_clear; meq.
               destruct (weq x2 (x2 ^+ _)); [exfalso; eapply wplus_one_neq; eauto|].
               replace (x2 ^- (x2 ^+ $0~1)) with (wones (S sz)); auto.
               apply wplus_cancel with (c:= x2 ^+ $0~1).
@@ -444,7 +444,7 @@ Section ToNative.
             { right; left; reflexivity. }
             { instantiate (3:= argV).
               repeat econstructor.
-              { kregmap_red; reflexivity. }
+              { kregmap_red; kregmap_clear; reflexivity. }
               { destruct (weq x1 x2); [elim n; auto|].
                 pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x1 (wordToNat (x1 ^- x2))).
                 assert (wordToNat (x1 ^- x2) <> 0).
@@ -486,7 +486,7 @@ Section ToNative.
           { repeat split.
             { intros; inv H2. }
             { intros; inv H2. }
-            { kregmap_red; meq.
+            { kregmap_red; kregmap_clear; meq.
               { simpl; repeat f_equal.
                 replace (wordToNat _) with 1.
                 { rewrite fifo_nfifo_elt_not_full_prop_1; reflexivity. }
@@ -511,7 +511,7 @@ Section ToNative.
         * kinv_red; eapply SingleMeth.
           { right; right; left; reflexivity. }
           { simpl; repeat econstructor.
-            { kregmap_red; reflexivity. }
+            { kregmap_red; kregmap_clear; reflexivity. }
             { destruct H9 as [|[|]]; dest; subst; [inv H1| |].
               { unfold rsz in *.
                 destruct (weq x4 x1); [|inv H3].

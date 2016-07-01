@@ -65,30 +65,27 @@ Section MemCacheInl.
   Variable LgNumChildren: nat.
 
 
-  Definition getTagIdxS (x: word (TagBits + IdxBits + (LgNumDatas + LgDataBytes))):
+  Definition getTagIdxS (x: word (TagBits + IdxBits)):
     word (TagBits + IdxBits) :=
-    split1 (TagBits + IdxBits) (LgNumDatas + LgDataBytes) x.
+    x.
 
-  Definition getTagS (x: word (TagBits + IdxBits + (LgNumDatas + LgDataBytes))):
+  Definition getTagS (x: word (TagBits + IdxBits)):
     word TagBits :=
-    split1 TagBits IdxBits (getTagIdxS x).
+    split1 TagBits IdxBits x.
 
-  Definition getIdxS (x: word (TagBits + IdxBits + (LgNumDatas + LgDataBytes))):
+  Definition getIdxS (x: word (TagBits + IdxBits)):
     word IdxBits :=
-    split2 TagBits IdxBits (getTagIdxS x).
+    split2 TagBits IdxBits x.
 
-  Definition getOffsetS (x: word (TagBits + IdxBits + (LgNumDatas + LgDataBytes))):
-    word LgNumDatas :=
-    split1 LgNumDatas LgDataBytes (split2 (TagBits + IdxBits) (LgNumDatas + LgDataBytes) x).
-
-  Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
+  Definition AddrBits := TagBits + IdxBits.
   
   Definition getAddrS (tag: word TagBits) (idx: word IdxBits): word AddrBits :=
-    @Word.combine _ (Word.combine tag idx) (LgNumDatas + LgDataBytes) (wzero _).
+    Word.combine tag idx.
 
 
-  Definition isCompat (dir: type (Vector Msi LgNumChildren)) :=
-    forall i, dir i = $ Msi.Mod -> forall j, j <> i -> dir j = $ Msi.Inv.
+  Definition isCompat c (dir: type (Vector Msi LgNumChildren)) :=
+    (dir c = $ Msi.Mod -> forall i, i <> c -> dir c = $ Msi.Inv) /\
+    (forall i, i <> c -> dir i = $ Msi.Mod -> dir c = $ Msi.Inv).
 
   Local Notation "x 'is' y 'of' s" := (M.find y%string s = Some (existT _ _ x)) (at level 12).
 
@@ -192,20 +189,6 @@ Section MemCacheInl.
     list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) :=
     filtFromP a l1 ++ filtToC c a l2.
 
-  Definition rqFromPToC
-             (c: word LgNumChildren) (a: word AddrBits)
-             (l1: list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)))
-             (l2: list (type (ToC LgDataBytes LgNumDatas LgNumChildren (Bit AddrBits) Id))):
-    list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) :=
-    filter (fun x: type (FromP _ _ _ _) => x ``"isRq") (filtFromP a l1 ++ filtToC c a l2).
-
-  Definition rsFromPToC
-             (c: word LgNumChildren) (a: word AddrBits)
-             (l1: list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)))
-             (l2: list (type (ToC LgDataBytes LgNumDatas LgNumChildren (Bit AddrBits) Id))):
-    list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) :=
-    filter (fun x: type (FromP _ _ _ _) => negb (x ``"isRq")) (filtFromP a l1 ++ filtToC c a l2).
-  
   Definition getCs (cs: word IdxBits -> type Msi) (tag: word IdxBits -> word TagBits)
              (a: word AddrBits) :=
     if weq (cs (getIdxS a)) ($ Msi.Inv)
@@ -223,9 +206,23 @@ Section MemCacheInl.
       | x :: y :: xs => x ``"to" > y ``"to" /\ rsLessTo xs
       | _ => True
     end.
-  
+
+  Definition isCWait a procv
+             (procRq: type (RqFromProc LgDataBytes (Bit (TagBits + IdxBits + LgNumDatas))))
+             csw :=
+    procv = true /\ split1 (TagBits + IdxBits) LgNumDatas (procRq ``"addr") = a /\
+    csw = true.
+
+  Definition isPWait a cRqValid
+             (rqFromCToP: list (type (RqFromC LgNumChildren (Bit (TagBits + IdxBits)) Id)))
+             dirw (cword: word LgNumChildren) :=
+    exists cRq rest,
+      rqFromCToP = cRq :: rest /\
+      cRqValid = true /\
+      cRq ``"rq" ``"addr" = a /\ dirw cword = true.
+
   Definition nmemCache_invariants (s: RegsT) :=
-    forall (a: word (TagBits + IdxBits + (LgNumDatas + LgDataBytes))) cword c,
+    forall (a: word (TagBits + IdxBits)) cword c,
       (c <= wordToNat (wones LgNumChildren))%nat ->
       cword = natToWord _ c ->
     exists dir: <| Vector (Vector Msi LgNumChildren) (TagBits + IdxBits) |> ,
@@ -252,6 +249,10 @@ Section MemCacheInl.
          tag is ("dataArray.tag" __ c) of s
     /\ exists line: <| Vector (Line LgDataBytes LgNumDatas) IdxBits |> ,
          line is ("dataArray.line" __ c) of s
+    /\ exists procv: <| Bool |> ,
+         procv is ("procRqValid" __ c) of s
+    /\ exists procRq: <| RqFromProc LgDataBytes (Bit (TagBits + IdxBits + LgNumDatas)) |> ,
+         procRq is ("procRq" __ c) of s
     /\ exists csw: <| Bool |> ,
          csw is ("procRqWait" __ c) of s
     /\ exists rqToPList: << list (type (RqToP (Bit AddrBits) Id)) >> ,
@@ -262,78 +263,119 @@ Section MemCacheInl.
                                               (Bit AddrBits) Id)) >> ,
          fromPList is ("elt.fromParent" __ c) of s
 
+    (* 5 *)
     /\ (dir (getTagIdxS a) cword >= getCs cs tag a)
               
-    /\ isCompat (dir (getTagIdxS a))
+    (* 6 *)
+    /\ isCompat cword (dir (getTagIdxS a))
                 
+    (* 7 *)
     /\ (forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
                    getCs cs tag a <= rs ``"to" /\ dir (getTagIdxS a) cword > rs ``"to")
 
+    (* 8 *)
     /\ (forall msg, In msg (fromPToC cword a fromPList toCList) ->
                     msg ``"isRq" = false ->
                     getCs cs tag a < msg ``"to" /\ dir (getTagIdxS a) cword = msg ``"to")
 
+    (* 9 *)
     /\ (forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                    dir (getTagIdxS a) cword <= rq ``"from" ->
                    forall rs,
                      In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                     dirw cword = true)
+                     isPWait a cRqValid rqFromCList dirw cword)
 
-    /\ (rsFromPToC cword a fromPList toCList = nil \/
-        exists pToCRs,
-          rsFromPToC cword a fromPList toCList = pToCRs :: nil)
+    (* 10 *)
+    /\ (forall msg1 msg2 beg mid last,
+          fromPToC cword a fromPList toCList = beg ++ msg1 :: mid ++ msg2 :: last ->
+          msg1 ``"isRq" = false ->
+          msg2 ``"isRq" = false ->
+          False)
                    
-    /\ (dir (getTagIdxS a) cword > getCs cs tag a -> rsFromCToP cword a rsFromCList rsToPList <> nil)
+    (* 11 *)
+    /\ (dir (getTagIdxS a) cword > getCs cs tag a ->
+        rsFromCToP cword a rsFromCList rsToPList <> nil)
          
+    (* 12 *)
     /\ (rsFromCToP cword a rsFromCList rsToPList = nil \/
-        rsFromPToC cword a fromPList toCList = nil)
+        forall msg, In msg (fromPToC cword a fromPList toCList) -> msg ``"isRq" = true)
 
+    (* 13 *)
     /\ (rsLessTo (rsFromCToP cword a rsFromCList rsToPList))
 
+    (* 14 *)
     /\ (forall cToPRsLast beg,
           rsFromCToP cword a rsFromCList rsToPList = beg ++ [cToPRsLast] ->
           cToPRsLast ``"to" = getCs cs tag a)
 
+    (* 15 *)
     /\ (forall pToCRq pToCRs beg mid last,
           fromPToC cword a fromPList toCList = beg ++ pToCRq :: mid ++ pToCRs :: last ->
           pToCRq ``"isRq" = true ->
           pToCRs ``"isRq" = false ->
           getCs cs tag a = $ Msi.Inv)
 
-    /\ (csw = true <->
+    (* 16 *)
+    /\ (isCWait a procv procRq csw ->
         xor (exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList)
-             /\ rq ``"from" >= getCs cs tag a)
-            (exists rs, In rs (rsFromPToC cword a fromPList toCList)))
+                        /\ rq ``"to" = (if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh)
+                        /\ rq ``"from" >= getCs cs tag a)
+            (exists rs, In rs (fromPToC cword a fromPList toCList)
+                        /\ rs ``"isRq" = false
+                        /\ rs ``"to" = if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh))
 
+    (* 16a *)
+    /\ (forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+                   isCWait a procv procRq csw
+                   /\ rq ``"to" = (if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh)
+                   /\ rq ``"from" >= getCs cs tag a)
+
+    (* 16b *)
+    /\ (forall rs, In rs (fromPToC cword a fromPList toCList) ->
+                   isCWait a procv procRq csw
+                   /\ rs ``"isRq" = false
+                   /\ rs ``"to" = (if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh))
+
+    (* 17 *)
     /\ (forall pToCRq,
-          In pToCRq (rqFromPToC cword a fromPList toCList) ->
-          dirw cword = false ->
+          In pToCRq (fromPToC cword a fromPList toCList) ->
+          pToCRq ``"isRq" = true ->
+          isPWait a cRqValid rqFromCList dirw cword ->
           getCs cs tag a = $ Msi.Inv)
 
+    (* 18 *)
     /\ (forall pToCRq cToPRs,
-          In pToCRq (rqFromPToC cword a fromPList toCList) ->
+          In pToCRq (fromPToC cword a fromPList toCList) ->
+          pToCRq ``"isRq" = true ->
           In cToPRs (rsFromCToP cword a rsFromCList rsToPList) ->
           cToPRs ``"to" = $ Msi.Inv)
 
+    (* 19 *)
     /\ (forall pToCRs pToCRq beg mid last,
           fromPToC cword a fromPList toCList = beg ++ pToCRs :: mid ++ pToCRq :: last ->
           pToCRs ``"isRq" = false ->
           pToCRq ``"isRq" = true ->
-          dirw cword = true)
+          isPWait a cRqValid rqFromCList dirw cword)
 
-    /\ (forall pToCRq1 pToCRq2 rest,
-          rqFromPToC cword a fromPList toCList = pToCRq1 :: pToCRq2 :: rest ->
+    (* 20 *)
+    /\ (forall pToCRq1 pToCRq2 beg mid last,
+          fromPToC cword a fromPList toCList = beg ++ pToCRq1 :: mid ++ pToCRq2 :: last ->
+          pToCRq1 ``"isRq" = true ->
+          pToCRq2 ``"isRq" = true ->
           getCs cs tag a = $ Msi.Inv)
 
+    (* 21 *)
     /\ (forall rs,
           In rs (rsFromCToP cword a rsFromCList rsToPList) ->
           rs ``"isVol" = false ->
-          dirw cword = true)
+          isPWait a cRqValid rqFromCList dirw cword)
 
-    /\ (forall cToPRs1 cToPRs2 rest,
-          rsFromCToP cword a rsFromCList rsToPList = cToPRs1 :: cToPRs2 :: rest ->
+    (* 22 *)
+    /\ (forall cToPRs1 cToPRs2 beg mid last,
+          rsFromCToP cword a rsFromCList rsToPList = beg ++ cToPRs1 :: mid ++ cToPRs2 :: last ->
           cToPRs1 ``"isVol" = true \/ cToPRs2 ``"isVol" = true)
 
+    (* 23 *)
     /\ (forall cToPRq,
           In cToPRq (rqFromCToP cword a rqFromCList rqToPList) ->
           dir (getTagIdxS a) cword <= cToPRq ``"from" ->
@@ -341,9 +383,11 @@ Section MemCacheInl.
             In cToPRs (rsFromCToP cword a rsFromCList rsToPList) ->
             cToPRs ``"isVol" = false)
 
+    (* 24 *)
     /\ (length (rsFromCToP cword a rsFromCList rsToPList) <= 2)%nat.
 
-  Hint Unfold modFromMeta nmemCacheInl metaRegs metaRules metaMeths Concat.concat getListFromMetaReg getListFromMetaRule getListFromMetaMeth: MethDefs.
+  Hint Unfold modFromMeta nmemCacheInl metaRegs metaRules metaMeths Concat.concat
+       getListFromMetaReg getListFromMetaRule getListFromMetaMeth: MethDefs.
 
 
   Lemma singleUnfoldConcat A B a (f: A -> list B) (ls: list A):
@@ -588,11 +632,15 @@ Section MemCacheInl.
   Ltac mapVR m := mapVReify (fullType type) evalConstFullT
                             (wordToNat (wones LgNumChildren)) m.
 
-  Ltac mapVR2 m := mapVReify (fullType type) (fun k (v: fullType type k) => v)
+  Ltac mapVR2 t m := mapVReify t (fun k (v: t k) => v)
+                               (wordToNat (wones LgNumChildren)) m.
+
+  Ltac mapVR3 m := mapVReify SignT (fun k (v: fullType type k) => v)
                              (wordToNat (wones LgNumChildren)) m.
 
+
   Ltac findVR mr cond :=
-    match goal with
+    repeat match goal with
       | |- M.find (?k __ ?c) _ = _ =>
         rewrite <- (findMVR_find_var mr k eq_refl cond)
       | |- M.find ?k _ = _ =>
@@ -677,12 +725,86 @@ Section MemCacheInl.
                                | H: false = true |- _ => discriminate
                              end.
         
+  Lemma invSome: forall t (a b: t), Some a = Some b -> a = b.
+  Proof.
+    intros t a b cond; subst; inv cond; reflexivity.
+  Qed.
+
+  Ltac initRed :=
+    kinv_action_dest;
+    kinv_custom customCache;
+    kinv_red; kregmap_red.
+
+  Ltac rewriteFind :=
+    repeat match goal with
+             | cond: (?c <= wordToNat ?n)%nat, H: M.find (elt := sigT ?t)
+                                                         (?k __ ?c) ?m = _ |- _ =>
+               let mr := mapVR2 t m in
+               rewrite <- (findMVR_find_var mr k eq_refl cond) in H
+             | H: M.find (elt := sigT ?t) ?k ?m = _ |- _ =>
+               let mr := mapVR2 t m in
+               rewrite <- (findMVR_find_string mr k eq_refl) in H
+           end; simpl in *; repeat match goal with
+                                     | H: ?a = ?a |- _ => clear H
+                                   end.
+
+  Ltac instantiateExists :=
+  match goal with
+    | xcond: (?x <= wordToNat (wones LgNumChildren))%nat,
+             prevState: nmemCache_invariants ?n |- nmemCache_invariants ?s =>
+      let a := fresh in
+      let cword := fresh in
+      let c := fresh in
+      let cond := fresh in
+      let trans := fresh in
+      let curr_a_c := fresh in
+      unfold nmemCache_invariants;
+        intros a cword c cond trans;
+        pose proof (prevState a cword c cond trans) as curr_a_c;
+        dest;
+        let mr := mapVR2 (fullType type) s in
+        repeat (eexists; split;
+                [findVR mr cond;
+                  try ( (progress eauto)
+                          ||
+                          (progress simpl;
+                           instantiate (1:= if eq_nat_dec c x then _ else _);
+                           destruct (eq_nat_dec c x); eauto))
+                | ])
+  end.
+
+  Ltac splitInv :=
+  repeat (match goal with
+            | |- _ /\ _ => split; [auto | ]
+                                | _ => auto
+          end);
+  
+  match goal with
+    | |- context [eq_nat_dec ?c ?x] =>
+      destruct (eq_nat_dec c x); subst; [|auto]; intros
+  end.
+  
+  Ltac allRules :=
+    initRed;
+    rewriteFind;
+    instantiateExists;
+    splitInv.
+  
+  Ltac rule1 :=
+    repeat match goal with
+             | H: isCWait _ _ _ _ |- _ => unfold isCWait in H; dest; discriminate
+             | H: In ?rq ?l, H': forall rq, In rq ?l -> _ |- _ =>
+               apply H' in H; [unfold isCWait in H; dest; subst]
+             | H: M.find ?x ?m = Some ?p1, H': M.find ?x ?m = Some ?p2 |- _ =>
+               rewrite H in H'
+             | H: Some ?p = Some ?q |- _ => apply invSome in H; destruct_existT; discriminate
+           end.
+  
   Theorem nmemCache_invariants_true s ll:
     Behavior (modFromMeta (nmemCacheInl IdxBits TagBits
                                         LgNumDatas LgDataBytes Id LgNumChildren)) s ll ->
     nmemCache_invariants s.
   Proof.
-    (*
     intros beh.
     destruct beh.
     match goal with
@@ -702,20 +824,21 @@ Section MemCacheInl.
 
       solveFinds.
 
-      cbv [getTagIdxS getTagS getIdxS getOffsetS getAddrS AddrBits
+      cbv [getTagIdxS getTagS getIdxS getAddrS AddrBits
                       isCompat filtRqFromC filtRsFromC filtToC filtRqToP filtRsToP
-                      filtFromP rqFromCToP rsFromCToP rsFromPToC fromPToC rqFromPToC getCs].
+                      filtFromP rqFromCToP rsFromCToP fromPToC getCs].
 
       doSplit; intros; try (exfalso; assumption);
       repeat (rewrite ?mapVec_replicate_commute, ?evalVec_replicate in *; simpl in *; idtac); auto.
       + apply wzero_le.
+      + exfalso; apply app_cons_not_nil in H1; auto.
       + nomega.
       + exfalso; apply app_cons_not_nil in H1; auto.
       + constructor; intros; unfold xor in *; simpl in *.
         * discriminate.
         * destruct H1; dest; exfalso; auto.
       + exfalso; apply app_cons_not_nil in H1; auto.
-      + discriminate.
+      + exfalso; apply app_cons_not_nil in H1; auto.
        END_SKIP_PROOF_ON *) admit.
     - specialize (IHHMultistepBeh eq_refl).
       apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
@@ -729,29 +852,109 @@ Section MemCacheInl.
       apply In_metaRules in HInRules; dest; unfold nmemCacheInl in *; simpl in *; dest.
 
       doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *.
-      + kinv_magic_with customCache.
-        
-        Ltac solveFinds2 :=
-          match goal with
-            | |- ?inv ?s =>
-              unfold inv;
-                intros;
-                let mr := mapVR2 s in
-                match goal with
-                  | cond: (_ <= _)%nat |- _ =>
-                    repeat (eexists; split; [findVR mr cond; eauto |])
-                end
-          end;
-          simpl in *.
 
-        unfold nmemCache_invariants in IHHMultistepBeh.
+      + admit.
+      + admit.
+      + admit.
+      + initRed.
+        rewriteFind.
+        Print Ltac dest.
+
+  match goal with
+    | xcond: (?x <= wordToNat (wones LgNumChildren))%nat,
+             prevState: nmemCache_invariants ?n |- nmemCache_invariants ?s =>
+      let a := fresh in
+      let cword := fresh in
+      let c := fresh in
+      let cond := fresh in
+      let trans := fresh in
+      let curr_a_c := fresh in
+      unfold nmemCache_invariants;
+        intros a cword c cond trans;
+        pose proof (prevState a cword c cond trans) as curr_a_c;
+        (* dest; *)
+        idtac end.
+
+  Ltac unitt :=
+    match goal with
+   | H:_ /\ _ |- _ => destruct H
+   | H:exists _, _ |- _ => destruct H
+    end.
+
+  do 25 unitt.
+  unitt.
+  unitt.
+
+        let mr := mapVR2 (fullType type) s in
+        (eexists; split;
+                [findVR mr cond;
+                  try ( (progress eauto)
+                          ||
+                          (progress simpl;
+                           instantiate (1:= if eq_nat_dec c x then _ else _);
+                           destruct (eq_nat_dec c x); eauto))
+                | ])
+  end.
+
+
+        Reset Profile.
+        Start Profiling.
         
-        solveFinds2.
+        instantiateExists.
+
+        Stop Profiling.
+        Show Profile.
+        repeat match goal with
+          | H: M.Disj _ _ |- _ => clear H
+               end.
+        unfold nmemCache_invariants; intros.
+        instantiateExists.
         
-      (*
-      doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction; simpl in *;
-      kinv_magic_with customCache; *) admit.
-     *)
-    admit.
+      + initRed.
+        instantiateExists.
+      + initRed.
+      + allRules.
+        * rule1.
+        * rule1.
+        * rule1.
+      + allRules.
+        * rule1.
+        * rule1.
+        * rule1.
+      + allRules.
+        * rule1.
+        * rule1.
+        * rule1.
+      + allRules.
+
+
+
+
+
+
+      + 
+        thisSubgoal.
+        thisSubgoal.
+        thisSubgoal.
+
+                repeat match goal with
+          | H: isCWait _ _ _ _ |- _ => unfold isCWait in H; dest; discriminate
+          | H: In ?rq ?l, H': forall rq, In rq ?l -> _ |- _ =>
+            apply H' in H; [unfold isCWait in H; dest; subst]
+        end.
+
+        thisSubgoal.
+        apply H37 in H2; dest.
+        unfold isCWait in *; dest.
+        subst.
+        rewrite H19 in H0.
+        apply invSome in H0.
+        destruct_existT; discriminate.
+        apply H38 in H2; dest.
+        unfold isCWait in *; dest.
+        subst.
+        rewrite H19 in H0.
+        apply invSome in H0.
+        destruct_existT; discriminate.
   Qed.
 End MemCacheInl.

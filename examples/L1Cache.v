@@ -10,7 +10,7 @@ Section L1Cache.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
-  Definition AddrBits := TagBits + IdxBits + (LgNumDatas + LgDataBytes).
+  Definition AddrBits := TagBits + IdxBits + LgNumDatas.
   Definition Addr := Bit AddrBits.
   Definition Tag := Bit TagBits.
   Definition Idx := Bit IdxBits.
@@ -21,11 +21,11 @@ Section L1Cache.
  
   Definition RqFromProc := Ex.MemTypes.RqFromProc LgDataBytes Addr.
   Definition RsToProc := Ex.MemTypes.RsToProc LgDataBytes.
-  Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
-  Definition RqFromP := Ex.MemTypes.RqFromP Addr.
-  Definition RsFromP := Ex.MemTypes.RsFromP LgDataBytes LgNumDatas Addr Id.
-  Definition RqToP := Ex.MemTypes.RqToP Addr Id.
-  Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
+  Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas TagIdx Id.
+  Definition RqFromP := Ex.MemTypes.RqFromP TagIdx.
+  Definition RsFromP := Ex.MemTypes.RsFromP LgDataBytes LgNumDatas TagIdx Id.
+  Definition RqToP := Ex.MemTypes.RqToP TagIdx Id.
+  Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas TagIdx.
 
   Definition rqFromProcPop := MethodSig "rqFromProc"--"deq" (Void): RqFromProc.
   Definition rqFromProcFirst := MethodSig "rqFromProc"--"firstElt" (Void): RqFromProc.
@@ -45,7 +45,7 @@ Section L1Cache.
   Section UtilFunctions.
     Variable var: Kind -> Type.
     Definition getTagIdx (x: (Addr @ var)%kami): (TagIdx @ var)%kami :=
-      UniBit (TruncLsb (TagBits + IdxBits) (LgNumDatas + LgDataBytes)) x.
+      UniBit (TruncLsb (TagBits + IdxBits) LgNumDatas) x.
     
     Definition getTag (x: (Addr @ var)%kami): (Tag @ var)%kami :=
       UniBit (TruncLsb TagBits IdxBits) (getTagIdx x).
@@ -54,13 +54,18 @@ Section L1Cache.
       UniBit (Trunc TagBits IdxBits) (getTagIdx x).
 
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
-      UniBit (TruncLsb LgNumDatas LgDataBytes) (UniBit (Trunc (TagBits + IdxBits) (LgNumDatas + LgDataBytes)) x).
+      UniBit (Trunc (TagBits + IdxBits) LgNumDatas) x.
     
-    Definition getAddr (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
-      BinBit (Concat (TagBits + IdxBits) (LgNumDatas + LgDataBytes))
-             (BinBit (Concat TagBits IdxBits) tag idx)
-             ($ 0)%kami_expr.
-    
+    Definition makeTagIdx (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
+      BinBit (Concat TagBits IdxBits) tag idx.
+
+    Definition getIdxFromTagIdx (x: (TagIdx @var)%kami): (Idx @ var)%kami :=
+      UniBit (Trunc TagBits IdxBits) x.
+      
+    Definition getTagFromTagIdx (x: (TagIdx @var)%kami): (Tag @ var)%kami :=
+      UniBit (TruncLsb TagBits IdxBits) x.
+      
+
   End UtilFunctions.
 
   Definition l1Cache :=
@@ -162,7 +167,7 @@ Section L1Cache.
           Call cs <- readCs(#idx);
           Call line <- readLine(#idx);
           If !(#cs == $ Inv)
-          then (Call rsToPEnq(STRUCT{"addr" ::= getAddr #tag #idx; "to" ::= $ Inv; "line" ::= #line; "isVol" ::= $$ true}); Retv)
+          then (Call rsToPEnq(STRUCT{"addr" ::= makeTagIdx #tag #idx; "to" ::= $ Inv; "line" ::= #line; "isVol" ::= $$ true}); Retv)
           else Retv as _;
           Call writeCs(STRUCT{ "addr" ::= #idx; "data" ::= $ Inv});
           Write "procRqReplace" <- $$ false;
@@ -179,17 +184,17 @@ Section L1Cache.
           LET toS: Msi <- IF #rq@."op" then $ Mod else $ Sh;
           Read wait <- "procRqWait";
           Assert (!#wait && (#cs < #toS));
-          Call rqToPEnq(STRUCT{"addr" ::= #rq@."addr"; "from" ::= #cs; "to" ::= #toS; "id" ::= $$ Default});
+          Call rqToPEnq(STRUCT{"addr" ::= getTagIdx #rq@."addr"; "from" ::= #cs; "to" ::= #toS; "id" ::= $$ Default});
           Write "procRqWait" <- $$ true;
           Retv
 
         with Rule "upgRs" :=
           Call fromP <- fromPPop();
           Assert !#fromP@."isRq";
-          LET idx <- getIdx #fromP@."addr";
+          LET idx <- getIdxFromTagIdx #fromP@."addr";
           Call cs <- readCs(#idx);
           Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
-          Call writeTag(STRUCT{"addr" ::= #idx; "data" ::= getTag #fromP@."addr"});
+          Call writeTag(STRUCT{"addr" ::= #idx; "data" ::= getTagFromTagIdx #fromP@."addr"});
           Write "procRqWait" <- $$ false;
           If #cs == $ Inv then Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."line"}); Retv
                           else Retv as _;
@@ -240,24 +245,24 @@ Section L1Cache.
         with Rule "drop" :=
           Call fromP <- fromPPop();
           Assert #fromP@."isRq";
-          LET idx <- getIdx #fromP@."addr";
+          LET idx <- getIdxFromTagIdx #fromP@."addr";
           Call cs <- readCs(#idx);
           Call tag <- readTag(#idx);
-          Assert (#cs <= #fromP@."to") || !(#tag == getTag #fromP@."addr");
+          Assert (#cs <= #fromP@."to") || !(#tag == getTagFromTagIdx #fromP@."addr");
           Retv
 
         with Rule "pProcess" :=
           Call fromP <- fromPPop();
           Assert #fromP@."isRq";
-          LET idx <- getIdx #fromP@."addr";
+          LET idx <- getIdxFromTagIdx #fromP@."addr";
           Call cs <- readCs(#idx);
           Call tag <- readTag(#idx);
           Call line <- readLine(#idx);
-          Assert (#cs > #fromP@."to") && (#tag == getTag #fromP@."addr");
+          Assert (#cs > #fromP@."to") && (#tag == getTagFromTagIdx #fromP@."addr");
           Read valid <- "procRqValid";
           Read wait <- "procRqWait";
           Read procRq: RqFromProc <- "procRq";
-          Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == getTagIdx #fromP@."addr" &&
+          Assert !(#valid && !#wait && getTagIdx #procRq@."addr" == #fromP@."addr" &&
                   (#procRq@."op" && #cs == $ Mod || (!#procRq@."op" && #cs == $ Sh)));
           Call rsToPEnq(STRUCT{"addr" ::= #fromP@."addr"; "to" ::= #fromP@."to"; "line" ::= #line; "isVol" ::= $$ false});
           Call writeCs(STRUCT{"addr" ::= #idx; "data" ::= #fromP@."to"});
@@ -269,7 +274,7 @@ Hint Unfold AddrBits Addr Tag Idx TagIdx Data Offset Line : MethDefs.
 Hint Unfold RqFromProc RsToProc FromP RqFromP RsFromP RqToP RsToP : MethDefs.
 Hint Unfold rqFromProcPop fromPPop rsToProcEnq rqToPEnq rsToPEnq : MethDefs.
 Hint Unfold readLine writeLine readTag writeTag readCs writeCs : MethDefs.
-Hint Unfold getTagIdx getTag getIdx getOffset getAddr : MethDefs.
+Hint Unfold getTagIdx getTag getIdx getOffset makeTagIdx : MethDefs.
 
 Hint Unfold l1Cache : ModuleDefs.
 

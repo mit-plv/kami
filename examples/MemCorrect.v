@@ -18,7 +18,7 @@ Section MemCorrect.
   Definition nmemCache :=
     MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren.
   Definition memAtomicWoQ :=
-    memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas LgDataBytes)
+    memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas)
                  LgDataBytes (wordToNat (Word.wones LgNumChildren)).
 
   Definition dropFirstElts :=

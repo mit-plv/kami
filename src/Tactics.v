@@ -538,7 +538,9 @@ Ltac kregmap_red :=
            rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
          end;
      dest; try subst;
-     try findReify);
+     try findReify).
+
+Ltac kregmap_clear :=
   repeat
     match goal with
     | [H: M.find _ _ = _ |- _] => clear H
@@ -546,11 +548,11 @@ Ltac kregmap_red :=
 
 Ltac kdecompose_regmap_init :=
   unfold initRegs, getRegInits; simpl;
-  kregmap_red; try reflexivity.
+  kregmap_red; kregmap_clear; try reflexivity.
 
 Ltac kdecompose_regrel_init :=
   unfold initRegs, getRegInits; simpl;
-  kregmap_red; eexists; split; reflexivity.
+  kregmap_red; kregmap_clear; eexists; split; reflexivity.
 
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
@@ -637,7 +639,7 @@ Ltac kinv_finish :=
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red; kinv_contra.
-Ltac kinv_regmap_red := kinv_red; kregmap_red.
+Ltac kinv_regmap_red := kinv_red; kregmap_red; kregmap_clear.
 Ltac kinv_constr :=
   repeat
     (kinv_red;
