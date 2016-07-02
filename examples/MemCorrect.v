@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.Refinement.
 Require Import Lts.Equiv Lts.Tactics Lts.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
@@ -22,14 +22,42 @@ Section MemCorrect.
                  LgDataBytes (wordToNat (Word.wones LgNumChildren)).
 
   Definition dropFirstElts :=
-    dropN ("rqFromProc" -- "firstElt") (wordToNat (Word.wones LgNumChildren)).
+    dropN ("rqFromProc" -- "firstElt") (wordToNat (wones LgNumChildren)).
+
+  (* "dropFirstElts" properties *)
+  Section DropFirstElts.
+    Lemma firstElts_SubList:
+      forall n,
+        SubList
+          (duplicateElt (Indexer.withPrefix "rqFromProc" "firstElt") (wordToNat (wones n)))
+          (getDefs (modFromMeta (nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes n))).
+    Proof.
+      unfold modFromMeta, getDefs; simpl; intros.
+      repeat rewrite namesOf_app.
+      do 2 apply SubList_app_2; apply SubList_app_1.
+      apply SubList_refl'.
+      clear; induction (wordToNat (wones n)); [reflexivity|].
+      simpl; f_equal; auto.
+    Qed.
+
+    Lemma dropFirstElts_Some:
+      forall k v,
+        ~ In k (duplicateElt (Indexer.withPrefix "rqFromProc" "firstElt")
+                             (wordToNat (wones LgNumChildren))) ->
+        dropFirstElts k v = Some v.
+    Proof.
+      unfold dropFirstElts; intros.
+      rewrite dropN_dropPs.
+      remember (dropPs _ _ _) as kv; destruct kv.
+      - apply eq_sym, dropPs_Some in Heqkv; dest; subst; auto.
+      - apply eq_sym, dropPs_None in Heqkv; elim H; auto.
+    Qed.
+
+  End DropFirstElts.
 
   Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.
-    apply Refinement.traceRefines_trans with (p:= id) (mb:= modFromMeta nmemCache);
-      [unfold MethsT; rewrite <-SemFacts.idElementwiseId;
-       apply memCache_refines_nmemCache|].
-    
+    ketrans_r; [apply memCache_refines_nmemCache|].
     admit. (* vmurali TODO *)
   Qed.
 

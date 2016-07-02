@@ -524,6 +524,16 @@ Section DuplicateFacts.
             Transparent specializeMod.
     Qed.
 
+    Corollary duplicate_regs_ConcatMod:
+      forall n,
+        EquivList (getRegInits (duplicate m1 n ++ duplicate m2 n)%kami)
+                  (getRegInits (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      intros; split.
+      - apply duplicate_regs_ConcatMod_2.
+      - apply duplicate_regs_ConcatMod_1.
+    Qed.
+
     Lemma duplicate_regs_NoDup_2:
       NoDup (namesOf (getRegInits (m1 ++ m2)%kami)) ->
       forall n,
@@ -614,6 +624,16 @@ Section DuplicateFacts.
             Transparent specializeMod.
     Qed.
 
+    Corollary duplicate_rules_ConcatMod:
+      forall n,
+        EquivList (getRules (duplicate m1 n ++ duplicate m2 n)%kami)
+                  (getRules (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      intros; split.
+      - apply duplicate_rules_ConcatMod_2.
+      - apply duplicate_rules_ConcatMod_1.
+    Qed.
+
     Lemma duplicate_defs_ConcatMod_1:
       forall n,
         SubList (getDefsBodies (duplicate (m1 ++ m2)%kami n))
@@ -657,6 +677,16 @@ Section DuplicateFacts.
           * apply SubList_app_1, SubList_app_2, SubList_refl.
           * apply SubList_app_2; apply SubList_app_5 in IHn; auto.
             Transparent specializeMod.
+    Qed.
+
+    Lemma duplicate_defs_ConcatMod:
+      forall n,
+        EquivList (getDefsBodies (duplicate m1 n ++ duplicate m2 n)%kami)
+                  (getDefsBodies (duplicate (m1 ++ m2)%kami n)).
+    Proof.
+      intros; split.
+      - apply duplicate_defs_ConcatMod_2.
+      - apply duplicate_defs_ConcatMod_1.
     Qed.
 
   End TwoModules3.

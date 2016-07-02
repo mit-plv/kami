@@ -275,6 +275,15 @@ Proof.
   destruct (in_dec string_dec e l1); intuition.
 Qed.
 
+Lemma DisjList_logic_inv:
+  forall (l1 l2: list string),
+    DisjList l1 l2 ->
+    (forall e, In e l1 -> In e l2 -> False).
+Proof.
+  unfold DisjList; intros.
+  specialize (H e); destruct H; auto.
+Qed.
+
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 

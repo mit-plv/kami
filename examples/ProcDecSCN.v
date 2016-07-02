@@ -27,7 +27,7 @@ Section ProcDecSCN.
     kmodular.
     - kdisj_edms_cms_ex n.
     - kdisj_ecms_dms_ex n.
-    - kduplicated; [kvr|kvr|].
+    - kduplicated.
       apply pdec_refines_pinst.
     - krefl.
       END_SKIP_PROOF_ON *) admit.
@@ -40,26 +40,11 @@ Section ProcDecSCN.
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_refines_scN].
-    ketrans; [rewrite idElementwiseId; apply traceRefines_assoc_2|].
-
+    krewrite assoc left.
     kmodular_sim_l.
-    - simpl; unfold namesOf; rewrite map_app; apply NoDup_DisjList.
-      + apply duplicate_regs_NoDup; auto.
-      + apply duplicate_regs_NoDup; auto.
-      + kdisj_regs.
-    - apply duplicate_regs_NoDup; auto.
-    - auto.
-    - kdisj_regs.
-    - kdisj_regs.
-    - split.
-      + apply duplicate_regs_ConcatMod_2; auto; kvr.
-      + apply duplicate_regs_ConcatMod_1; auto; kvr.
-    - split.
-      + apply duplicate_rules_ConcatMod_2; auto; kvr.
-      + apply duplicate_rules_ConcatMod_1; auto; kvr.
-    - split.
-      + apply duplicate_defs_ConcatMod_2; auto; kvr.
-      + apply duplicate_defs_ConcatMod_1; auto; kvr.
+    - apply duplicate_regs_ConcatMod; auto; kvr.
+    - apply duplicate_rules_ConcatMod; auto; kvr.
+    - apply duplicate_defs_ConcatMod; auto; kvr.
       END_SKIP_PROOF_ON *) admit.
   Qed.
   
