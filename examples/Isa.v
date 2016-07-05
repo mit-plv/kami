@@ -36,25 +36,25 @@ Section RV32ISubset.
     refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst)
                 == ($$ rv32iLd)) then _ else _)%kami_expr.
     - (* load case *)
-      exact (STRUCT { "inst" ::= #inst;
-                      "opcode" ::= UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst;
+      exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst;
                       "reg" ::= UniBit (ConstExtract 20 5 _) #inst;
                       "addr" ::= (getRs1ValueE s inst + getLdBaseE inst);
-                      "value" ::= $$Default })%kami_expr.
+                      "value" ::= $$Default;
+                      "inst" ::= #inst})%kami_expr.
     - refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst)
                   == ($$ rv32iSt)) then _ else _)%kami_expr.
       + (* store case *)
-        exact (STRUCT { "inst" ::= #inst;
-                        "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
+        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
                         "reg" ::= $$Default;
                         "addr" ::= (getRs1ValueE s inst + getStBaseE inst);
-                        "value" ::= getRs2ValueE s inst })%kami_expr.
+                        "value" ::= getRs2ValueE s inst;
+                        "inst" ::= #inst})%kami_expr.
       + (* halt OR non-memory operations *)
-        exact (STRUCT { "inst" ::= #inst;
-                        "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
+        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
                         "reg" ::= $$Default;
                         "addr" ::= $$Default;
-                        "value" ::= $$Default })%kami_expr.
+                        "value" ::= $$Default;
+                        "inst" ::= #inst})%kami_expr.
   Defined.
 
   Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.

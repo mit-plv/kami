@@ -22,11 +22,11 @@ Section DecExec.
 
   Definition DecInstK :=
     STRUCT {
-        "inst" :: Data lgDataBytes;
         "opcode" :: Bit opIdx;
         "reg" :: Bit rfIdx;
         "addr" :: Bit addrSize;
-        "value" :: Data lgDataBytes
+        "value" :: Data lgDataBytes;
+        "inst" :: Data lgDataBytes
       }.
   Definition DecInstT (ty : Kind -> Type) := fullType ty (SyntaxKind DecInstK).
   Definition DecInstE (ty : Kind -> Type) := Expr ty (SyntaxKind DecInstK).
