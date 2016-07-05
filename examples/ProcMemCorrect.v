@@ -10,21 +10,23 @@ Set Implicit Arguments.
 
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
-  Variables RfIdx: nat. (* processor *)
+  Variables OpIdx RfIdx: nat. (* processor *)
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
   Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
   
-  Variable dec: DecT 2 AddrSize LgDataBytes RfIdx.
-  Variable execState: ExecStateT 2 AddrSize LgDataBytes RfIdx.
-  Variable execNextPc: ExecNextPcT 2 AddrSize LgDataBytes RfIdx.
+  Variable dec: DecT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execState: ExecStateT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execNextPc: ExecNextPcT OpIdx AddrSize LgDataBytes RfIdx.
+
+  Variables opLd opSt opHt: ConstT (Bit OpIdx).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
-  Definition pdecN := pdecs dec execState execNextPc numChildren.
+  Definition pdecN := pdecs dec execState execNextPc opLd opSt opHt numChildren.
   Definition pmFifos :=
     modFromMeta
       ((nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes LgNumChildren)

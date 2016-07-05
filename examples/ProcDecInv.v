@@ -10,16 +10,18 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdecInl := pdecInl dec execState execNextPc.
+  Definition pdecInl := pdecInl dec execState execNextPc opLd opSt opHt.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.

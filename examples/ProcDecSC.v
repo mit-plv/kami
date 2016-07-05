@@ -11,16 +11,18 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdec := pdecf dec execState execNextPc.
+  Definition pdec := pdecf dec execState execNextPc opLd opSt opHt.
   Definition pinst := pinst dec execState execNextPc opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)

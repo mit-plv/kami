@@ -13,15 +13,13 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
-  Definition opLd : ConstT (Bit 2) := WO~0~0.
-  Definition opSt : ConstT (Bit 2) := WO~0~1.
-  Definition opHt : ConstT (Bit 2) := WO~1~0.
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -118,18 +116,20 @@ Section ProcDec.
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc opLd opSt opHt
-     memReq memRep halt nextPc
+Hint Unfold RqFromProc RsToProc memReq memRep halt nextPc
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
-  Definition pdec := procDec "rqFromProc"%string "rsToProc"%string dec execState execNextPc.
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
+
+  Definition pdec := procDec "rqFromProc"%string "rsToProc"%string dec execState execNextPc
+                             opLd opSt opHt.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize lgDataBytes).
@@ -141,21 +141,23 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT 2 addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT 2 addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT 2 addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+
+  Variables opLd opSt opHt: ConstT (Bit opIdx).
 
   Lemma pdec_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc opLd opSt opHt).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf dec execState execNextPc).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf dec execState execNextPc opLd opSt opHt).
   Proof.
     kequiv.
   Qed.
@@ -164,14 +166,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs dec execState execNextPc n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM dec execState execNextPc n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.
