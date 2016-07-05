@@ -13,6 +13,7 @@ Section RV32ISubset.
 
   Definition rv32iLd := WO~0~0~0~0~0~1~1.
   Definition rv32iSt := WO~0~1~0~0~0~1~1.
+  Definition rv32iHt := WO~0~0~0~0~0~0~0. 
   Definition rv32iOp := WO~0~1~1~0~0~1~1. (* Register-Register operations *)
 
   Definition getRs1ValueE {ty}
@@ -33,21 +34,24 @@ Section RV32ISubset.
   Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
     unfold DecT; intros ty s inst.
     refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst)
-                == (Const _ rv32iLd)) then _ else _)%kami_expr.
+                == ($$ rv32iLd)) then _ else _)%kami_expr.
     - (* load case *)
-      exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst;
+      exact (STRUCT { "inst" ::= #inst;
+                      "opcode" ::= UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst;
                       "reg" ::= UniBit (ConstExtract 20 5 _) #inst;
                       "addr" ::= (getRs1ValueE s inst + getLdBaseE inst);
                       "value" ::= $$Default })%kami_expr.
     - refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst)
-                  == (Const _ rv32iSt)) then _ else _)%kami_expr.
+                  == ($$ rv32iSt)) then _ else _)%kami_expr.
       + (* store case *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
+        exact (STRUCT { "inst" ::= #inst;
+                        "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
                         "reg" ::= $$Default;
                         "addr" ::= (getRs1ValueE s inst + getStBaseE inst);
                         "value" ::= getRs2ValueE s inst })%kami_expr.
-      + (* non-memory operations *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
+      + (* halt OR non-memory operations *)
+        exact (STRUCT { "inst" ::= #inst;
+                        "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) #inst);
                         "reg" ::= $$Default;
                         "addr" ::= $$Default;
                         "value" ::= $$Default })%kami_expr.
@@ -55,7 +59,21 @@ Section RV32ISubset.
 
   Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
     unfold ExecStateT; intros ty s pc inst.
-    exact (#s)%kami_expr. (* TODO: implement *)
+    refine (IF (ReadField
+                  {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |}
+                  (#inst) == $$ rv32iLd) then #s else _)%kami_expr. (* load *)
+    refine (IF (ReadField
+                  {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |}
+                  (#inst) == $$ rv32iSt) then #s else _)%kami_expr. (* store *)
+    refine (IF (ReadField
+                  {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |}
+                  (#inst) == $$ rv32iHt) then #s else _)%kami_expr. (* halt *)
+
+    refine (IF (ReadField
+                  {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |}
+                  (#inst) == $$ rv32iHt) then _ else #s)%kami_expr. (* op *)
+
+    exact (#s)%kami_expr. (* TODO: more *)
   Defined.
 
   Definition rv32iExecNextPc: ExecNextPcT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.

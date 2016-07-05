@@ -22,6 +22,7 @@ Section DecExec.
 
   Definition DecInstK :=
     STRUCT {
+        "inst" :: Data lgDataBytes;
         "opcode" :: Bit opIdx;
         "reg" :: Bit rfIdx;
         "addr" :: Bit addrSize;
