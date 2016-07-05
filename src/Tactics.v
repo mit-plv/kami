@@ -522,7 +522,7 @@ Ltac kinv_add inv :=
   match goal with
   | [H: reachable _ _ |- _] =>
     let Hr := fresh "Hr" in
-    pose proof H as Hr; apply inv in Hr
+    pose proof H as Hr; apply inv in Hr; auto
   end.
 
 Ltac kinv_add_end :=
@@ -562,6 +562,7 @@ Ltac kinv_simpl :=
   repeat
     (try match goal with
          | [H: ?t = ?t |- _] => clear H
+         | [H: ?t <> ?t |- _] => elim H; reflexivity
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
          | [ |- context [weq ?w ?w] ] =>
@@ -588,6 +589,7 @@ Ltac kinv_finish :=
     (try match goal with
          | [H: _ = _ |- _] => rewrite H in *; clear H
          | [H: _ = _ |- _] => rewrite <-H in *; clear H
+         | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
          end;
      simpl in *; kinv_simpl; auto).
 

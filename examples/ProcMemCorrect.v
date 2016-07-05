@@ -22,6 +22,7 @@ Section ProcMem.
   Variable execNextPc: ExecNextPcT OpIdx AddrSize LgDataBytes RfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit OpIdx).
+  Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
@@ -81,7 +82,7 @@ Section ProcMem.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
   Proof. (* SKIP_PROOF_ON
-    ketrans; [|apply pdecN_memAtomic_refines_scN].
+    ketrans; [|apply pdecN_memAtomic_refines_scN; auto].
 
     kmodular.
     - kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
