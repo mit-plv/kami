@@ -37,7 +37,7 @@ Unset Extraction AutoInline.
 Section BluespecSubset.
 
   Inductive BExpr: Type :=
-  | BVar: string -> BExpr
+  | BVar: nat -> BExpr
   | BConst k: ConstT k -> BExpr
   | BUniBool: UniBoolOp -> BExpr -> BExpr
   | BBinBool: BinBoolOp -> BExpr -> BExpr -> BExpr
@@ -54,8 +54,8 @@ Section BluespecSubset.
   | BReadReg: string -> BExpr.
 
   Inductive BAction: Type :=
-  | BMCall: string (* binder *) -> string (* meth *) -> BExpr -> BAction
-  | BLet: string (* binder *) -> BExpr -> BAction
+  | BMCall: nat (* binder *) -> string (* meth *) -> BExpr -> BAction
+  | BLet: nat (* binder *) -> BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction
   | BIfElse: BExpr -> list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
@@ -65,7 +65,6 @@ Section BluespecSubset.
   Definition BMethod := Attribute (SignatureT * list BAction).
 
   Record BModule := { bregs : list RegInitT;
-                      bmods : list string; (* just names to instantiate *)
                       brules : list BRule;
                       bdms : list BMethod }.
 
@@ -91,7 +90,7 @@ Section BluespecSubset.
     match e with
     | Var vk i =>
       (match vk return (fullType tyS vk -> option BExpr) with
-       | SyntaxKind sk => fun f => Some (BVar (string_of_nat f))
+       | SyntaxKind sk => fun f => Some (BVar f)
        | NativeKind _ _ => fun _ => None
        end) i
     | Const k c => Some (BConst k c)
@@ -139,15 +138,15 @@ Section BluespecSubset.
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr arge)
-                 >>= (fun be => Some (BMCall (string_of_nat idx) name be :: bc)))
+                 >>= (fun be => Some (BMCall idx name be :: bc)))
     | LetS_ _ e idx cont =>
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr e)
-                 >>= (fun be => Some (BLet (string_of_nat idx) be :: bc)))
+                 >>= (fun be => Some (BLet idx be :: bc)))
     | ReadRegS reg idx cont =>
       (actionSToBAction cont)
-        >>= (fun bc => Some (BLet (string_of_nat idx) (BReadReg reg) :: bc))
+        >>= (fun bc => Some (BLet idx (BReadReg reg) :: bc))
     | WriteRegS reg _ e cont =>
       (actionSToBAction cont)
         >>= (fun bc =>
@@ -194,7 +193,7 @@ Section BluespecSubset.
       (rulesToBRules rules)
         >>= (fun brules =>
                (methsToBMethods dms)
-                 >>= (fun bdms => Some ((Build_BModule regs nil (* TODO *) brules bdms) :: nil)))
+                 >>= (fun bdms => Some ((Build_BModule regs brules bdms) :: nil)))
     | ConcatModsS m1 m2 =>
       (ModulesSToBModules m1)
         >>= (fun bm1 =>
@@ -204,5 +203,17 @@ Section BluespecSubset.
 
 End BluespecSubset.
 
-(* Extraction "Extracted.ml" BModules. *)
+Extraction "BModules.ml" BModules.
+
+Require Import Fifo.
+
+Definition testFifo := fifo "fifo" 4 (Bit 2).
+Definition testFifoS := getModuleS testFifo.
+Definition testFifoB := ModulesSToBModules testFifoS.
+
+Eval compute in testFifo.
+Eval compute in testFifoS.
+Eval compute in testFifoB.
+
+Extraction "ExtractionTest.ml" testFifoB.
 

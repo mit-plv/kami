@@ -1,5 +1,3 @@
-#use "Extracted.ml"
-
 (* Borrowed from Compcert *)
 let camlstring_of_coqstring (s: char list) =
   let r = Bytes.create (List.length s) in
@@ -8,9 +6,13 @@ let camlstring_of_coqstring (s: char list) =
     | c :: s -> Bytes.set r pos c; fill (pos + 1) s
   in Bytes.to_string (fill 0 s)
 
+let string_of_de_brujin_index (i: int) =
+  "x_" ^ string_of_int i
+
+exception Should_not_happen
+                     
 let ppDelim = " "
 let ppEndLine = "\n"
-let ppFail = "(FAIL)"
 let ppBinary = "'b"
 let ppNeg = "not"
 let ppInv = "~"
@@ -43,6 +45,9 @@ let ppIf = "if"
 let ppElse = "else"
 let ppBegin = "begin"
 let ppEnd = "end"
+let ppReturn = "return"
+let ppWhen = "when"
+let ppNoAction = "noAction"
 
 let ppRule = "rule"
 let ppEndRule = "endrule"
@@ -51,6 +56,9 @@ let ppEndMethod = "endmethod"
 let ppActionValue = "ActionValue#"
 let ppModule = "module"
 let ppEndModule = "endmodule"
+let ppReg = "Reg#"
+let ppAssign = "<-"
+let ppMkReg = "mkReg"
 
 let rec ppWord (w: word) =
   match w with
@@ -58,7 +66,7 @@ let rec ppWord (w: word) =
   | WS (false, _, w') -> ppWord w' ^ "0"
   | WS (true, _, w') -> ppWord w' ^ "1"
 
-let rec ppBConst (c: constT) =
+let rec ppConst (c: constT) =
   match c with
   | ConstBool true -> "True"
   | ConstBool false -> "False"
@@ -70,21 +78,21 @@ let rec ppBConst (c: constT) =
   | ConstStruct (_, st) -> ppCBracketL ^ ppConstStruct st ^ ppCBracketR
 and ppConstVec (v: constT vec) =
   match v with
-  | Vec0 c -> ppBConst c ^ ppComma ^ ppDelim
+  | Vec0 c -> ppConst c ^ ppComma ^ ppDelim
   | VecNext (_, v1, v2) -> ppConstVec v1 ^ ppConstVec v2
 and ppConstStruct (stl: (kind attribute, constT) ilist) =
   match stl with
   | Inil -> ""
   | Icons ({ attrName = kn; attrType = _ }, _, c, Inil) ->
-     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppBConst c
+     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppConst c
   | Icons ({ attrName = kn; attrType = _ }, _, c, stl') ->
-     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppBConst c
+     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
 
 let rec ppBExpr (e: bExpr) =
   match e with
-  | BVar v -> camlstring_of_coqstring v
-  | BConst (_, c) -> ppBConst c
+  | BVar v -> string_of_de_brujin_index v
+  | BConst (_, c) -> ppConst c
   | BUniBool (Neg, se) -> ppNeg ^ ppDelim ^ ppRBracketL ^ ppBExpr se ^ ppRBracketR
   | BBinBool (And, se1, se2) -> ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
                                 ^ ppDelim ^ ppAnd ^ ppDelim
@@ -148,10 +156,10 @@ and ppBExprStruct (st: bExpr attribute list) =
 let rec ppBAction (a: bAction) =
   (match a with
    | BMCall (bind, meth, e) ->
-      ppLet ^ ppDelim ^ (camlstring_of_coqstring bind) ^ ppDelim ^ ppBind ^ ppDelim
+      ppLet ^ ppDelim ^ (string_of_de_brujin_index bind) ^ ppDelim ^ ppBind ^ ppDelim
       ^ (camlstring_of_coqstring meth) ^ ppRBracketL ^ (ppBExpr e) ^ ppRBracketR
    | BLet (bind, e) ->
-      ppLet ^ ppDelim ^ (camlstring_of_coqstring bind) ^ ppDelim ^ ppBind ^ ppDelim
+      ppLet ^ ppDelim ^ (string_of_de_brujin_index bind) ^ ppDelim ^ ppBind ^ ppDelim
       ^ ppRBracketL ^ (ppBExpr e) ^ ppRBracketR
    | BWriteReg (reg, e) ->
       (camlstring_of_coqstring reg) ^ ppDelim ^ ppWriteReg ^ ppDelim ^ (ppBExpr e)
@@ -159,6 +167,8 @@ let rec ppBAction (a: bAction) =
       ppIf ^ ppDelim ^ (ppBExpr ce) ^ ppDelim ^ ppBegin ^ ppEndLine
       ^ ppBActions ta ^ ppEnd ^ ppDelim ^ ppElse ^ ppBegin ^ ppEndLine
       ^ ppBActions fa ^ ppEnd
+   | BAssert e -> ppNoAction ^ ppDelim ^ ppWhen ^ ppDelim ^ ppBExpr e
+   | BReturn e -> ppReturn ^ ppDelim ^ ppBExpr e
    | _ -> "") ^ ppSep
 and ppBActions (aa: bAction list) =
   match aa with
@@ -193,20 +203,37 @@ and ppAttrKinds (ks: kind attribute list) =
 let ppBMethod (d: bMethod) =
   match d with
   | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, db) } ->
-      ppMethod ^ ppDelim ^ ppActionValue ^ (camlstring_of_coqstring dn) ^ ppDelim
-      ^ ppRBracketL ^ (ppKind asig) ^ ppDelim ^ "" (* TODO: arg name *) ^ ppRBracketR ^ ppSep
-      ^ ppBActions db ^ ppEndMethod
+     ppMethod ^ ppDelim ^ ppActionValue
+     ^ ppRBracketL ^ ppKind rsig ^ ppRBracketR ^ ppDelim
+     ^ (camlstring_of_coqstring dn) ^ ppDelim
+     ^ ppRBracketL ^ (ppKind asig) ^ ppDelim
+     ^ string_of_de_brujin_index 0 (* method argument is always x_0 by convention *)
+     ^ ppRBracketR ^ ppSep ^ ppEndLine
+     ^ ppBActions db ^ ppEndMethod
 
 let rec ppBMethods (dl: bMethod list) =
   match dl with
   | [] -> ""
-  | d :: dl' -> ppBMethod d ^ ppBMethods dl'
+  | d :: dl' -> ppBMethod d ^ ppEndLine ^ ppBMethods dl'
+
+let ppRegInit (r: regInitT) =
+  match r with
+  | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
+     ppReg ^ ppRBracketL ^ ppKind k ^ ppRBracketR ^ ppDelim
+     ^ camlstring_of_coqstring rn ^ ppDelim ^ ppAssign ^ ppDelim
+     ^ ppMkReg ^ ppRBracketL ^ ppConst c ^ ppRBracketR ^ ppSep
+  | _ -> raise Should_not_happen
+
+let rec ppRegInits (rl: regInitT list) =
+  match rl with
+  | [] -> ""
+  | r :: rl' -> ppRegInit r ^ ppEndLine ^ ppRegInits rl'
                                          
 let ppBModule (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ppModule ^ ppDelim ^ n ^ ppSep ^ ppEndLine
-     ^ "" (* TODO: registers *) ^ ppEndLine
+     ^ ppRegInits br
      ^ ppBRules brl
      ^ ppBMethods bd
      ^ ppEndModule
