@@ -203,17 +203,17 @@ Section BluespecSubset.
 
 End BluespecSubset.
 
-Extraction "BModules.ml" BModules.
+(* Extraction "BModules.ml" BModules. *)
 
-Require Import Fifo.
+(* Require Import Fifo. *)
 
-Definition testFifo := fifo "fifo" 4 (Bit 2).
-Definition testFifoS := getModuleS testFifo.
-Definition testFifoB := ModulesSToBModules testFifoS.
+(* Definition testFifo := fifo "fifo" 4 (Bit 2). *)
+(* Definition testFifoS := getModuleS testFifo. *)
+(* Definition testFifoB := ModulesSToBModules testFifoS. *)
 
-Eval compute in testFifo.
-Eval compute in testFifoS.
-Eval compute in testFifoB.
+(* Eval compute in testFifo. *)
+(* Eval compute in testFifoS. *)
+(* Eval compute in testFifoB. *)
 
-Extraction "ExtractionTest.ml" testFifoB.
+(* Extraction "ExtractionTest.ml" testFifoB. *)
 

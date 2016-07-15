@@ -129,7 +129,7 @@ Proof.
 Qed.
 
 Definition indexSymbol: string := "$"%string.
-Definition prefixSymbol: string := "."%string.
+Definition prefixSymbol: string := "_"%string.
 
 Definition withIndex str idx := 
   append str (append indexSymbol (string_of_nat idx)).

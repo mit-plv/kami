@@ -1,3 +1,5 @@
+open Format
+
 (* Borrowed from Compcert *)
 let camlstring_of_coqstring (s: char list) =
   let r = Bytes.create (List.length s) in
@@ -10,11 +12,13 @@ let string_of_de_brujin_index (i: int) =
   "x_" ^ string_of_int i
 
 exception Should_not_happen
-                     
+
+let ps = print_string
+let pi = print_int
+
 let ppDelim = " "
-let ppEndLine = "\n"
 let ppBinary = "'b"
-let ppNeg = "not"
+let ppNeg = "!"
 let ppInv = "~"
 let ppAnd = "&&"
 let ppOr = "||"
@@ -62,7 +66,7 @@ let ppMkReg = "mkReg"
 
 let rec ppWord (w: word) =
   match w with
-  | WO -> "0"
+  | WO -> ""
   | WS (false, _, w') -> ppWord w' ^ "0"
   | WS (true, _, w') -> ppWord w' ^ "1"
 
@@ -156,41 +160,60 @@ and ppBExprStruct (st: bExpr attribute list) =
 let rec ppBAction (a: bAction) =
   (match a with
    | BMCall (bind, meth, e) ->
-      ppLet ^ ppDelim ^ (string_of_de_brujin_index bind) ^ ppDelim ^ ppBind ^ ppDelim
-      ^ (camlstring_of_coqstring meth) ^ ppRBracketL ^ (ppBExpr e) ^ ppRBracketR
+      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+      ps ppBind; print_space ();
+      ps (camlstring_of_coqstring meth);
+      ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
    | BLet (bind, e) ->
-      ppLet ^ ppDelim ^ (string_of_de_brujin_index bind) ^ ppDelim ^ ppBind ^ ppDelim
-      ^ ppRBracketL ^ (ppBExpr e) ^ ppRBracketR
+      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+      ps ppBind; print_space ();
+      ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
    | BWriteReg (reg, e) ->
-      (camlstring_of_coqstring reg) ^ ppDelim ^ ppWriteReg ^ ppDelim ^ (ppBExpr e)
+      ps (camlstring_of_coqstring reg); print_space ();
+      ps ppWriteReg; print_space (); ps (ppBExpr e)
    | BIfElse (ce, ta, fa) ->
-      ppIf ^ ppDelim ^ (ppBExpr ce) ^ ppDelim ^ ppBegin ^ ppEndLine
-      ^ ppBActions ta ^ ppEnd ^ ppDelim ^ ppElse ^ ppBegin ^ ppEndLine
-      ^ ppBActions fa ^ ppEnd
-   | BAssert e -> ppNoAction ^ ppDelim ^ ppWhen ^ ppDelim ^ ppBExpr e
-   | BReturn e -> ppReturn ^ ppDelim ^ ppBExpr e
-   | _ -> "") ^ ppSep
+      ps ppIf; print_space (); ps (ppBExpr ce); print_space (); ps ppBegin;
+      print_break 0 4; open_hovbox 0;
+      ppBActions ta;
+      close_box (); print_break 0 (-4);
+      ps ppEnd; print_space (); ps ppElse; ps ppBegin;
+      print_break 0 4; open_hovbox 0;
+      ppBActions fa;
+      close_box (); print_break 0 (-4);
+      ps ppEnd
+   | BAssert e -> ps ppNoAction; print_space (); ps ppWhen; print_space ();
+                  ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
+   | BReturn e -> ps ppReturn; print_space (); ps (ppBExpr e)); ps ppSep
 and ppBActions (aa: bAction list) =
   match aa with
-  | [] -> ""
-  | a' :: aa' -> (ppBAction a') ^ ppEndLine ^ (ppBActions aa')
+  | [] -> ()
+  | a' :: [] -> ppBAction a'
+  | a' :: aa' -> ppBAction a'; print_cut (); force_newline (); ppBActions aa'
 
 let ppBRule (r: bRule) =
   match r with
   | { attrName = rn; attrType = rb } ->
-      ppRule ^ ppDelim ^ (camlstring_of_coqstring rn) ^ ppSep ^ ppEndLine
-      ^ ppBActions rb ^ ppEndRule
+     open_hovbox 0;
+     ps ppRule; print_space (); ps (camlstring_of_coqstring rn); ps ppSep;
+     print_break 0 4; open_hovbox 0;
+     ppBActions rb;
+     close_box (); print_break 0 (-4); force_newline ();
+     ps ppEndRule;
+     close_box ()
 
 let rec ppBRules (rl: bRule list) =
   match rl with
-  | [] -> ""
-  | r :: rl' -> ppBRule r ^ ppBRules rl'
+  | [] -> ()
+  | r :: rl' -> ppBRule r; print_cut (); ppBRules rl'
      
 let rec ppKind (k: kind) =
   match k with
   | Bool -> "Bool"
-  | Bit w -> "Bit#" ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
-  | Vector (k', w) -> "Vector#" ^ ppRBracketL ^ string_of_int w
+  | Bit w ->
+     if w = 0 then "Void"
+     else "Bit#" ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
+  | Vector (k', w) -> "Vector#" ^ ppRBracketL
+                      ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
   | Struct sl -> "Struct" ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl
                  ^ ppDelim ^ ppCBracketR
@@ -203,37 +226,54 @@ and ppAttrKinds (ks: kind attribute list) =
 let ppBMethod (d: bMethod) =
   match d with
   | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, db) } ->
-     ppMethod ^ ppDelim ^ ppActionValue
-     ^ ppRBracketL ^ ppKind rsig ^ ppRBracketR ^ ppDelim
-     ^ (camlstring_of_coqstring dn) ^ ppDelim
-     ^ ppRBracketL ^ (ppKind asig) ^ ppDelim
-     ^ string_of_de_brujin_index 0 (* method argument is always x_0 by convention *)
-     ^ ppRBracketR ^ ppSep ^ ppEndLine
-     ^ ppBActions db ^ ppEndMethod
+     open_hovbox 0;
+     ps ppMethod; print_space (); ps ppActionValue;
+     ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR; print_space ();
+     ps (camlstring_of_coqstring dn); print_space ();
+     ps ppRBracketL; ps (ppKind asig); print_space ();
+     ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
+     ps ppRBracketR; ps ppSep;
+     print_break 0 4; open_hovbox 0;
+     ppBActions db;
+     close_box (); print_break 0 (-4); force_newline ();
+     ps ppEndMethod;
+     close_box ()
 
 let rec ppBMethods (dl: bMethod list) =
   match dl with
-  | [] -> ""
-  | d :: dl' -> ppBMethod d ^ ppEndLine ^ ppBMethods dl'
+  | [] -> ()
+  | d :: dl' -> ppBMethod d; print_cut (); force_newline (); ppBMethods dl'
 
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
-     ppReg ^ ppRBracketL ^ ppKind k ^ ppRBracketR ^ ppDelim
-     ^ camlstring_of_coqstring rn ^ ppDelim ^ ppAssign ^ ppDelim
-     ^ ppMkReg ^ ppRBracketL ^ ppConst c ^ ppRBracketR ^ ppSep
+     open_hovbox 0;
+     ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
+     ps (camlstring_of_coqstring rn); print_space ();
+     ps ppAssign; print_space ();
+     ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
+     close_box ()
   | _ -> raise Should_not_happen
 
 let rec ppRegInits (rl: regInitT list) =
   match rl with
-  | [] -> ""
-  | r :: rl' -> ppRegInit r ^ ppEndLine ^ ppRegInits rl'
+  | [] -> ()
+  | r :: rl' ->
+     open_hovbox 0;
+     ppRegInit r; print_cut (); ppRegInits rl';
+     close_box ()
                                          
 let ppBModule (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
-     ppModule ^ ppDelim ^ n ^ ppSep ^ ppEndLine
-     ^ ppRegInits br
-     ^ ppBRules brl
-     ^ ppBMethods bd
-     ^ ppEndModule
+     ps ppModule; print_space (); ps n; ps "(Empty)"; (* temporarily *) ps ppSep;
+     print_break 0 4; open_hovbox 0;
+     ppRegInits br;
+     print_cut (); force_newline ();
+     ppBRules brl;
+     print_cut (); force_newline ();
+     ppBMethods bd;
+     close_box(); print_break 0 (-4);
+     ps ppEndModule;
+     print_newline ();
+
