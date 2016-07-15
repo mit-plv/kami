@@ -61,6 +61,8 @@ let ppActionValue = "ActionValue#"
 let ppAction = "Action"
 let ppModule = "module"
 let ppEndModule = "endmodule"
+let ppInterface = "interface"
+let ppEndInterface = "endinterface"
 let ppReg = "Reg#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
@@ -257,6 +259,27 @@ let rec ppBMethods (dl: bMethod list) =
   | [] -> ()
   | d :: dl' -> ppBMethod d; print_cut (); force_newline (); ppBMethods dl'
 
+let ppBInterface (d: bMethod) =
+  match d with
+  | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, _) } ->
+     open_hovbox 0;
+     ps ppMethod; print_space ();
+     (if rsig = Bit 0 then
+        ps ppAction
+      else
+        (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
+     print_space ();
+     ps (camlstring_of_coqstring dn); print_space ();
+     ps ppRBracketL; ps (ppKind asig); print_space ();
+     ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
+     ps ppRBracketR; ps ppSep;
+     close_box ()
+
+let rec ppBInterfaces (dl: bMethod list) =
+  match dl with
+  | [] -> ()
+  | d :: dl' -> ppBInterface d; print_cut(); ppBInterfaces dl'
+
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
@@ -280,12 +303,23 @@ let ppImports (_: unit) =
   ps "import Vector::*;"; print_cut(); force_newline ();
   ps "import BuildVector::*;"; print_cut(); force_newline ();
   force_newline ()
-                                         
-let ppBModule (n: string) (m: bModule) =
+
+let ppBModuleInterface (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
-     ppImports ();
-     ps ppModule; print_space (); ps n; ps "(Empty)"; (* temporarily *) ps ppSep;
+     ps ppInterface; print_space (); ps n; ps ppSep;
+     print_break 0 4; open_hovbox 0;
+     ppBInterfaces bd;
+     close_box(); print_break 0 (-4); force_newline ();
+     ps ppEndInterface;
+     print_cut(); force_newline ();
+     force_newline ()
+                                         
+let ppBModule (ifcn: string) (m: bModule) =
+  match m with
+  | { bregs = br; brules = brl; bdms = bd } ->
+     ps ppModule; print_space ();
+     ps ("mk" ^ ifcn); ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
      print_cut (); force_newline ();
@@ -294,5 +328,10 @@ let ppBModule (n: string) (m: bModule) =
      ppBMethods bd;
      close_box(); print_break 0 (-4);
      ps ppEndModule;
-     print_newline ();
+     print_newline ()
 
+let ppBModuleFull (ifcn: string) (m: bModule) =
+  ppImports ();
+  ppBModuleInterface ifcn m;
+  ppBModule ifcn m
+             
