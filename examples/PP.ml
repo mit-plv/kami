@@ -58,11 +58,18 @@ let ppEndRule = "endrule"
 let ppMethod = "method"
 let ppEndMethod = "endmethod"
 let ppActionValue = "ActionValue#"
+let ppAction = "Action"
 let ppModule = "module"
 let ppEndModule = "endmodule"
 let ppReg = "Reg#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
+let ppBool = "Bool"
+let ppVoid = "void"
+let ppBit = "Bit#"
+let ppVector = "Vector#"
+let ppStruct = "Struct"
+let ppVec = "vec"
 
 let rec ppWord (w: word) =
   match w with
@@ -78,7 +85,7 @@ let rec ppConst (c: constT) =
   | ConstVector (_, _, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
-     ppCBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppCBracketR
+     ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
   | ConstStruct (_, st) -> ppCBracketL ^ ppConstStruct st ^ ppCBracketR
 and ppConstVec (v: constT vec) =
   match v with
@@ -138,7 +145,7 @@ let rec ppBExpr (e: bExpr) =
   | BBuildVector (_, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppBExprVec v in
-     ppCBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppCBracketR
+     ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
   | BBuildStruct st -> ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
   | BUpdateVector (ve, ie, vale) -> 
      ppVUpdate ^ ppDelim ^ ppRBracketL ^ ppBExpr ve ^ ppComma ^ ppDelim
@@ -174,21 +181,23 @@ let rec ppBAction (a: bAction) =
    | BIfElse (ce, ta, fa) ->
       ps ppIf; print_space (); ps (ppBExpr ce); print_space (); ps ppBegin;
       print_break 0 4; open_hovbox 0;
-      ppBActions ta;
+      ppBActions true ta;
       close_box (); print_break 0 (-4);
       ps ppEnd; print_space (); ps ppElse; ps ppBegin;
       print_break 0 4; open_hovbox 0;
-      ppBActions fa;
+      ppBActions true fa;
       close_box (); print_break 0 (-4);
       ps ppEnd
-   | BAssert e -> ps ppNoAction; print_space (); ps ppWhen; print_space ();
-                  ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
+   | BAssert e ->
+      ps ppWhen; print_space (); ps ppRBracketL;
+      ps (ppBExpr e); ps ppComma; print_space ();
+      ps ppNoAction; ps ppRBracketR
    | BReturn e -> ps ppReturn; print_space (); ps (ppBExpr e)); ps ppSep
-and ppBActions (aa: bAction list) =
+and ppBActions (noret: bool) (aa: bAction list) =
   match aa with
   | [] -> ()
-  | a' :: [] -> ppBAction a'
-  | a' :: aa' -> ppBAction a'; print_cut (); force_newline (); ppBActions aa'
+  | a' :: [] -> if noret then () else ppBAction a'
+  | a' :: aa' -> ppBAction a'; print_cut (); force_newline (); ppBActions noret aa'
 
 let ppBRule (r: bRule) =
   match r with
@@ -196,7 +205,7 @@ let ppBRule (r: bRule) =
      open_hovbox 0;
      ps ppRule; print_space (); ps (camlstring_of_coqstring rn); ps ppSep;
      print_break 0 4; open_hovbox 0;
-     ppBActions rb;
+     ppBActions true rb;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndRule;
      close_box ()
@@ -208,14 +217,14 @@ let rec ppBRules (rl: bRule list) =
      
 let rec ppKind (k: kind) =
   match k with
-  | Bool -> "Bool"
+  | Bool -> ppBool
   | Bit w ->
-     if w = 0 then "Void"
-     else "Bit#" ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
-  | Vector (k', w) -> "Vector#" ^ ppRBracketL
+     if w = 0 then ppVoid
+     else ppBit ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
+  | Vector (k', w) -> ppVector ^ ppRBracketL
                       ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
-  | Struct sl -> "Struct" ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl
+  | Struct sl -> ppStruct ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl
                  ^ ppDelim ^ ppCBracketR
 and ppAttrKinds (ks: kind attribute list) =
   match ks with
@@ -227,14 +236,18 @@ let ppBMethod (d: bMethod) =
   match d with
   | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, db) } ->
      open_hovbox 0;
-     ps ppMethod; print_space (); ps ppActionValue;
-     ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR; print_space ();
+     ps ppMethod; print_space ();
+     (if rsig = Bit 0 then
+        ps ppAction
+      else
+        (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
+     print_space ();
      ps (camlstring_of_coqstring dn); print_space ();
      ps ppRBracketL; ps (ppKind asig); print_space ();
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
-     ppBActions db;
+     ppBActions (rsig = Bit 0) db;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndMethod;
      close_box ()
@@ -262,10 +275,16 @@ let rec ppRegInits (rl: regInitT list) =
      open_hovbox 0;
      ppRegInit r; print_cut (); ppRegInits rl';
      close_box ()
+
+let ppImports (_: unit) =
+  ps "import Vector::*;"; print_cut(); force_newline ();
+  ps "import BuildVector::*;"; print_cut(); force_newline ();
+  force_newline ()
                                          
 let ppBModule (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
+     ppImports ();
      ps ppModule; print_space (); ps n; ps "(Empty)"; (* temporarily *) ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
