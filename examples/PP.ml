@@ -73,6 +73,23 @@ let ppVector = "Vector#"
 let ppStruct = "Struct"
 let ppVec = "vec"
 
+let rec ppKind (k: kind) =
+  match k with
+  | Bool -> ppBool
+  | Bit w ->
+     if w = 0 then ppVoid
+     else ppBit ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
+  | Vector (k', w) -> ppVector ^ ppRBracketL
+                      ^ string_of_int (int_of_float (float 2 ** float w))
+                      ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
+  | Struct sl -> ppStruct ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl ^ ppCBracketR
+and ppAttrKinds (ks: kind attribute list) =
+  match ks with
+  | [] -> ""
+  | { attrName = kn; attrType = k } :: ks' ->
+     ppKind k ^ ppDelim ^ (camlstring_of_coqstring kn) ^ ppSep ^ ppDelim
+     ^ ppAttrKinds ks'
+
 let rec ppWord (w: word) =
   match w with
   | WO -> ""
@@ -163,7 +180,7 @@ and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
   | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
      camlstring_of_coqstring kn ^ ppComma ^ ppDelim ^ ppBExpr e
   | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
-     camlstring_of_coqstring kn ^ ppComma ^ ppDelim ^ ppBExpr e
+     camlstring_of_coqstring kn ^ ppDelim ^ ppColon ^ ppDelim ^ ppBExpr e
      ^ ppComma ^ ppDelim ^ ppBExprStruct stl'
 
 let rec ppBAction (a: bAction) =
@@ -173,8 +190,11 @@ let rec ppBAction (a: bAction) =
       ps ppBind; print_space ();
       ps (camlstring_of_coqstring meth);
       ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
-   | BLet (bind, e) ->
-      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+   | BLet (bind, ok, e) ->
+      (match ok with
+       | Some k -> ps (ppKind k)
+       | None -> ps ppLet);
+      print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
       ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
    | BWriteReg (reg, e) ->
@@ -215,25 +235,8 @@ let ppBRule (r: bRule) =
 let rec ppBRules (rl: bRule list) =
   match rl with
   | [] -> ()
-  | r :: rl' -> ppBRule r; print_cut (); ppBRules rl'
+  | r :: rl' -> ppBRule r; print_cut (); force_newline (); ppBRules rl'
      
-let rec ppKind (k: kind) =
-  match k with
-  | Bool -> ppBool
-  | Bit w ->
-     if w = 0 then ppVoid
-     else ppBit ^ ppRBracketL ^ string_of_int w ^ ppRBracketR
-  | Vector (k', w) -> ppVector ^ ppRBracketL
-                      ^ string_of_int (int_of_float (float 2 ** float w))
-                      ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
-  | Struct sl -> ppStruct ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl
-                 ^ ppDelim ^ ppCBracketR
-and ppAttrKinds (ks: kind attribute list) =
-  match ks with
-  | [] -> ""
-  | { attrName = kn; attrType = k } :: ks' ->
-     ppKind k ^ ppDelim ^ (camlstring_of_coqstring kn) ^ ppSep ^ ppDelim
-
 let ppBMethod (d: bMethod) =
   match d with
   | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, db) } ->

@@ -61,7 +61,8 @@ Section BluespecSubset.
 
   Inductive BAction: Type :=
   | BMCall: nat (* binder *) -> string (* meth *) -> BExpr -> BAction
-  | BLet: nat (* binder *) -> BExpr -> BAction
+  | BLet: nat (* binder *) -> option Kind (* type annotation, if possible *) ->
+          BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction
   | BIfElse: BExpr -> list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
@@ -169,14 +170,15 @@ Section BluespecSubset.
         >>= (fun bc =>
                (exprSToBExpr arge)
                  >>= (fun be => Some (BMCall idx name be :: bc)))
-    | LetS_ _ e idx cont =>
+    | LetS_ (SyntaxKind k) e idx cont =>
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr e)
-                 >>= (fun be => Some (BLet idx be :: bc)))
+                 >>= (fun be => Some (BLet idx (Some k) be :: bc)))
+    | LetS_ (NativeKind _ _) _ _ _ => None
     | ReadRegS reg idx cont =>
       (actionSToBAction cont)
-        >>= (fun bc => Some (BLet idx (BReadReg reg) :: bc))
+        >>= (fun bc => Some (BLet idx None (BReadReg reg) :: bc))
     | WriteRegS reg _ e cont =>
       (actionSToBAction cont)
         >>= (fun bc =>
@@ -247,15 +249,15 @@ End BluespecSubset.
 
 (* Extraction "ExtractionTest.ml" testFifoB. *)
 
-(* Require Import Isa ProcDec. *)
+Require Import Isa ProcDec.
 
-(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
-(*   getDefaultConst _. *)
+Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) :=
+  getDefaultConst _.
 
-(* Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
-(*                                 rv32iLd rv32iSt rv32iHt. *)
-(* Definition testProcDecMS := getModuleS testProcDecM. *)
-(* Definition testProcDecMB := ModulesSToBModules testProcDecMS. *)
+Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc
+                                rv32iLd rv32iSt rv32iHt.
+Definition testProcDecMS := getModuleS testProcDecM.
+Definition testProcDecMB := ModulesSToBModules testProcDecMS.
 
-(* Extraction "ExtractionTest2.ml" testProcDecMB. *)
+Extraction "ExtractionTest2.ml" testProcDecMB.
 
