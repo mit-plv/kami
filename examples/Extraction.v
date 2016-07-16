@@ -1,5 +1,5 @@
 Require Import String List.
-Require Import Lib.Struct Lib.Indexer Lib.StringBound.
+Require Import Lib.ilist Lib.Struct Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Synthesize Lts.ParametricSyntax.
 Require Import Ex.Fifo Ex.Isa.
 (* Require Import Ex.ProcMemCorrect. *)
@@ -49,7 +49,13 @@ Section BluespecSubset.
   | BReadIndex: BExpr -> BExpr -> BExpr
   | BReadField: string -> BExpr -> BExpr
   | BBuildVector lgn: Vec BExpr lgn -> BExpr
-  | BBuildStruct: list (Attribute BExpr) -> BExpr
+  | BBuildStruct:
+      forall attrs,
+        ilist.ilist (fun _:Attribute Kind => BExpr) attrs -> BExpr
+  (* if we use list instead of "ilist" in BExpr,
+   * then Coq cannot find the decreasing factor while converting ExprS to BExpr
+   *)
+  (* | BBuildStruct: list (Attribute BExpr) -> BExpr *)
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
   | BReadReg: string -> BExpr.
 
@@ -86,6 +92,23 @@ Section BluespecSubset.
       (bindVec v1) >>= (fun bv1 => (bindVec v2) >>= (fun bv2 => Some (VecNext bv1 bv2)))
     end.
 
+  (* Fixpoint bindList {A} (l: list (Attribute (option A))): option (list (Attribute A)) := *)
+  (*   match l with *)
+  (*   | nil => Some nil *)
+  (*   | {| attrName:= an; attrType:= Some ab |} :: t => *)
+  (*     (bindList t) >>= (fun bl => Some ({| attrName:= an; attrType:= ab |} :: bl)) *)
+  (*   | _ => None *)
+  (*   end. *)
+
+  Fixpoint bindList attrs (il: ilist (fun _ : Attribute Kind => option BExpr) attrs):
+    option (ilist (fun _ : Attribute Kind => BExpr) attrs) :=
+    match il with
+    | inil => Some (inil _)
+    | icons a ats (Some e) t =>
+      (bindList ats t) >>= (fun bl => Some (icons a e bl))
+    | _ => None
+    end.
+  
   Fixpoint exprSToBExpr {k} (e: ExprS k): option BExpr :=
     match e with
     | Var vk i =>
@@ -94,7 +117,7 @@ Section BluespecSubset.
        | NativeKind _ _ => fun _ => None
        end) i
     | Const k c => Some (BConst k c)
-    | UniBool op e => (exprSToBExpr e) >>= (fun be => Some (BUniBool op be))
+    | UniBool op se => (exprSToBExpr se) >>= (fun be => Some (BUniBool op be))
     | BinBool op e1 e2 =>
       (exprSToBExpr e1)
         >>= (fun be1 => (exprSToBExpr e2) >>= (fun be2 => Some (BBinBool op be1 be2)))
@@ -119,7 +142,7 @@ Section BluespecSubset.
                                           >>= (fun bve => Some (BReadIndex bie bve)))
     | ReadField _ s e => (exprSToBExpr e) >>= (fun be => Some (BReadField (bindex s) be))
     | BuildVector _ lgn v =>
-      (bindVec (mapVec exprSToBExpr v)) >>= (fun bv => Some (BBuildVector lgn bv))
+      (bindVec (mapVec (exprSToBExpr) v)) >>= (fun bv => Some (BBuildVector lgn bv))
     | UpdateVector _ _ ve ie ke =>
       (exprSToBExpr ve)
         >>= (fun bve =>
@@ -127,8 +150,15 @@ Section BluespecSubset.
                  >>= (fun bie => 
                         (exprSToBExpr ke)
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
-    (* | BuildStruct _ st => Some (BBuildStruct st) *) (* TODO *)
-    | _ => None
+    | BuildStruct attrs st =>
+      (bindList attrs (ilist.imap _ (fun a (e: Expr tyS (SyntaxKind (attrType a)))
+                                     => exprSToBExpr e) st))
+        >>= (fun bl => Some (BBuildStruct attrs bl))
+        (* cannot find the decreasing factor because of "ilist.map_ilist" *)
+        (* (bindList (ilist.map_ilist (fun a (e: Expr tyS (SyntaxKind (attrType a))) *)
+        (*                             => {| attrName:= attrName a; *)
+        (*                                   attrType:= exprSToBExpr e |}) st)) *)
+        (*   >>= (fun bl => Some (BBuildStruct bl)) *)
     end.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
@@ -216,4 +246,16 @@ End BluespecSubset.
 (* Eval compute in testFifoB. *)
 
 (* Extraction "ExtractionTest.ml" testFifoB. *)
+
+(* Require Import Isa ProcDec. *)
+
+(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
+(*   getDefaultConst _. *)
+
+(* Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
+(*                                 rv32iLd rv32iSt rv32iHt. *)
+(* Definition testProcDecMS := getModuleS testProcDecM. *)
+(* Definition testProcDecMB := ModulesSToBModules testProcDecMS. *)
+
+(* Extraction "ExtractionTest2.ml" testProcDecMB. *)
 

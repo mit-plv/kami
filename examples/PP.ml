@@ -148,7 +148,7 @@ let rec ppBExpr (e: bExpr) =
      (* To remove the last comma + delim (", ") *)
      let ppv = ppBExprVec v in
      ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
-  | BBuildStruct st -> ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
+  | BBuildStruct (_, st) -> ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
   | BUpdateVector (ve, ie, vale) -> 
      ppVUpdate ^ ppDelim ^ ppRBracketL ^ ppBExpr ve ^ ppComma ^ ppDelim
      ^ ppBExpr ie ^ ppComma ^ ppDelim ^ ppBExpr vale ^ ppRBracketR
@@ -157,14 +157,14 @@ and ppBExprVec (v: bExpr vec) =
   match v with
   | Vec0 e -> ppBExpr e ^ ppComma ^ ppDelim
   | VecNext (_, v1, v2) -> ppBExprVec v1 ^ ppBExprVec v2
-and ppBExprStruct (st: bExpr attribute list) =
-  match st with
-  | [] -> ""
-  | { attrName = n; attrType = e } :: [] ->
-     camlstring_of_coqstring n ^ ppComma ^ ppDelim ^ ppBExpr e
-  | { attrName = n; attrType = e } :: st' ->
-     camlstring_of_coqstring n ^ ppComma ^ ppDelim ^ ppBExpr e
-     ^ ppComma ^ ppDelim ^ ppBExprStruct st'
+and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
+  match stl with
+  | Inil -> ""
+  | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
+     camlstring_of_coqstring kn ^ ppComma ^ ppDelim ^ ppBExpr e
+  | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
+     camlstring_of_coqstring kn ^ ppComma ^ ppDelim ^ ppBExpr e
+     ^ ppComma ^ ppDelim ^ ppBExprStruct stl'
 
 let rec ppBAction (a: bAction) =
   (match a with
