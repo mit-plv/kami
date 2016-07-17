@@ -70,8 +70,30 @@ let ppBool = "Bool"
 let ppVoid = "void"
 let ppBit = "Bit#"
 let ppVector = "Vector#"
-let ppStruct = "Struct"
+let ppTypeDef = "typedef"
+let ppStruct = "struct"
+let ppStructNamePrefix = "Struct"
 let ppVec = "vec"
+
+(* Global references for generating structs *)
+let structIdx : int ref = ref 0
+let getStructName (_: unit) = (structIdx := !structIdx + 1);
+                              ppStructNamePrefix ^ string_of_int !structIdx
+
+module StringMap = Map.Make (String)
+let glbStructs : ((kind attribute list) StringMap.t) ref = ref StringMap.empty
+
+let resetGlbStructs (_: unit) = glbStructs := StringMap.empty
+let findGlbStructName (k: kind attribute list) =
+  StringMap.fold (fun s k' cs -> if (k = k') then s else cs) !glbStructs ""
+let addGlbStruct (k: kind attribute list) =
+  let name = findGlbStructName k in
+  if name = "" then
+    let newName = getStructName () in
+    (glbStructs := StringMap.add newName k !glbStructs; newName)
+  else ((); name)
+
+(* Global references end *)
 
 let rec ppKind (k: kind) =
   match k with
@@ -82,8 +104,9 @@ let rec ppKind (k: kind) =
   | Vector (k', w) -> ppVector ^ ppRBracketL
                       ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
-  | Struct sl -> ppStruct ^ ppDelim ^ ppCBracketL ^ ppDelim ^ ppAttrKinds sl ^ ppCBracketR
-and ppAttrKinds (ks: kind attribute list) =
+  | Struct sl -> addGlbStruct sl
+
+let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
   | [] -> ""
   | { attrName = kn; attrType = k } :: ks' ->
@@ -105,7 +128,8 @@ let rec ppConst (c: constT) =
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
      ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
-  | ConstStruct (_, st) -> ppCBracketL ^ ppConstStruct st ^ ppCBracketR
+  | ConstStruct (kl, st) ->
+     addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppConstStruct st ^ ppCBracketR
 and ppConstVec (v: constT vec) =
   match v with
   | Vec0 c -> ppConst c ^ ppComma ^ ppDelim
@@ -165,7 +189,8 @@ let rec ppBExpr (e: bExpr) =
      (* To remove the last comma + delim (", ") *)
      let ppv = ppBExprVec v in
      ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
-  | BBuildStruct (_, st) -> ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
+  | BBuildStruct (kl, st) ->
+     addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
   | BUpdateVector (ve, ie, vale) -> 
      ppVUpdate ^ ppDelim ^ ppRBracketL ^ ppBExpr ve ^ ppComma ^ ppDelim
      ^ ppBExpr ie ^ ppComma ^ ppDelim ^ ppBExpr vale ^ ppRBracketR
@@ -307,15 +332,23 @@ let ppImports (_: unit) =
   ps "import BuildVector::*;"; print_cut(); force_newline ();
   force_newline ()
 
+let ppGlbStructs (_: unit) =
+  (StringMap.iter (fun nm kl ->
+       ps ppTypeDef; print_space (); ps ppStruct; print_space ();
+       ps ppCBracketL; print_space (); ps (ppAttrKinds kl); print_space (); ps ppCBracketR;
+       print_space (); ps nm; ps ppSep) !glbStructs);
+  resetGlbStructs ();
+  print_cut (); force_newline (); force_newline ()
+
 let ppBModuleInterface (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppInterface; print_space (); ps n; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppBInterfaces bd;
-     close_box(); print_break 0 (-4); force_newline ();
+     close_box (); print_break 0 (-4); force_newline ();
      ps ppEndInterface;
-     print_cut(); force_newline ();
+     print_cut (); force_newline ();
      force_newline ()
                                          
 let ppBModule (ifcn: string) (m: bModule) =
@@ -331,10 +364,13 @@ let ppBModule (ifcn: string) (m: bModule) =
      ppBMethods bd;
      close_box(); print_break 0 (-4);
      ps ppEndModule;
-     print_newline ()
+     print_cut (); force_newline ();
+     force_newline ()
 
 let ppBModuleFull (ifcn: string) (m: bModule) =
   ppImports ();
   ppBModuleInterface ifcn m;
-  ppBModule ifcn m
+  ppBModule ifcn m;
+  ppGlbStructs ();
+  print_newline ()
              
