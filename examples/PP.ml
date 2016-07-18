@@ -146,11 +146,18 @@ let rec ppWord (w: word) =
   | WS (false, _, w') -> ppWord w' ^ "0"
   | WS (true, _, w') -> ppWord w' ^ "1"
 
+let rec wordToInt (w: word) =
+  match w with
+  | WO -> 0
+  | WS (false, _, w') -> 2 * (wordToInt w')
+  | WS (true, _, w') -> 2 * (wordToInt w') + 1
+
 let rec ppConst (c: constT) =
   match c with
   | ConstBool true -> "True"
   | ConstBool false -> "False"
-  | ConstBit (sz, w) -> string_of_int sz ^ ppBinary ^ ppWord w
+  | ConstBit (sz, w) -> (* string_of_int sz ^ ppBinary ^ ppWord w *)
+     string_of_int (wordToInt w)
   | ConstVector (_, _, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
@@ -172,68 +179,71 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
 
 let rec ppBExpr (e: bExpr) =
   match e with
-  | BVar v -> string_of_de_brujin_index v
-  | BConst (_, c) -> ppConst c
-  | BUniBool (Neg, se) -> ppNeg ^ ppDelim ^ ppRBracketL ^ ppBExpr se ^ ppRBracketR
-  | BBinBool (And, se1, se2) -> ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-                                ^ ppDelim ^ ppAnd ^ ppDelim
-                                ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR
-  | BBinBool (Or, se1, se2) -> ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-                               ^ ppDelim ^ ppOr ^ ppDelim
-                               ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR
-  | BUniBit (_, _, Inv _, se) -> ppInv ^ ppRBracketL ^ ppBExpr se ^ ppRBracketR
+  | BVar v -> ps (string_of_de_brujin_index v)
+  | BConst (_, c) -> ps (ppConst c)
+  | BUniBool (Neg, se) -> ps ppNeg; print_space (); ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BBinBool (And, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+                                ps ppAnd; print_space ();
+                                ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBool (Or, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+                               ps ppOr; print_space ();
+                               ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BUniBit (_, _, Inv _, se) -> ps ppInv; ps ppRBracketL; ppBExpr se; ps ppRBracketR
   | BUniBit (_, _, ConstExtract (_, n2, n3), se) ->
-     ppRBracketL ^ ppBExpr se ^ ppRBracketR
-     ^ ppBracketL ^ string_of_int (n2 + n3) ^ ppColon ^ string_of_int (n3 + 1) ^ ppBracketR
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR;
+     ps ppBracketL; ps (string_of_int (n2 + n3)); ps ppColon;
+     ps (string_of_int (n3 + 1)); ps ppBracketR
   | BUniBit (_, _, Trunc (_, n2), se) ->
-     ppRBracketL ^ ppBExpr se ^ ppRBracketR
-     ^ ppBracketL ^ string_of_int (n2 - 1) ^ ppColon ^ "0" ^ ppBracketR
-  | BUniBit (_, _, ZeroExtendTrunc _, se) -> ppZeroExtend ^ ppRBracketL ^ ppBExpr se ^ ppRBracketR
-  | BUniBit (_, _, SignExtendTrunc _, se) -> ppSignExtend ^ ppRBracketL ^ ppBExpr se ^ ppRBracketR
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR;
+     ps ppBracketL; ps (string_of_int (n2 - 1)); ps ppColon; ps "0"; ps ppBracketR
+  | BUniBit (_, _, ZeroExtendTrunc _, se) ->
+     ps ppZeroExtend; ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BUniBit (_, _, SignExtendTrunc _, se) ->
+     ps ppSignExtend; ps ppRBracketL; ppBExpr se; ps ppRBracketR
   | BUniBit (_, _, TruncLsb (n1, n2), se) -> 
-     ppRBracketL ^ ppBExpr se ^ ppRBracketR
-     ^ ppBracketL ^ string_of_int (n1 + n2 - 1) ^ ppColon ^ string_of_int n2 ^ ppBracketR
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR;
+     ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
+     ps (string_of_int n2); ps ppBracketR
   | BBinBit (_, _, _, Add _, se1, se2) ->
-     ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-     ^ ppDelim ^ ppAdd ^ ppDelim ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppAdd; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Sub _, se1, se2) ->
-     ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-     ^ ppDelim ^ ppSub ^ ppDelim ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppSub; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Concat (_, _), se1, se2) ->
-     ppCBracketL ^ ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-     ^ ppComma ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR ^ ppCBracketR
+     ps ppCBracketL; ps ppRBracketL; ppBExpr se1; ps ppRBracketR;
+     ps ppComma; ps ppRBracketL; ppBExpr se2; ps ppRBracketR; ps ppCBracketR
   | BBinBitBool (_, _, Lt _, se1, se2) ->
-     ppRBracketL ^ ppBExpr se1 ^ ppRBracketR
-     ^ ppDelim ^ ppLt ^ ppDelim ^ ppRBracketL ^ ppBExpr se2 ^ ppRBracketR
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
-     ppBExpr ce ^ ppDelim ^ ppQ ^ ppDelim ^ ppBExpr te ^ ppDelim ^ ppColon ^ ppDelim ^ ppBExpr fe
-  | BEq (se1, se2) -> ppBExpr se1 ^ ppDelim ^ ppEq ^ ppDelim ^ ppBExpr se2
+     ppBExpr ce; print_space (); ps ppQ; print_space (); ppBExpr te; print_space ();
+     ps ppColon; print_space (); ppBExpr fe
+  | BEq (se1, se2) -> ppBExpr se1; print_space (); ps ppEq; print_space (); ppBExpr se2
   | BReadIndex (ie, ve) ->
-     ppRBracketL ^ ppBExpr ve ^ ppRBracketR ^ ppBracketL ^ ppBExpr ie ^ ppBracketR
+     ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
   | BReadField (fd, se) ->
-     ppRBracketL ^ ppBExpr se ^ ppRBracketR ^ ppDot ^ camlstring_of_coqstring fd
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (camlstring_of_coqstring fd)
   | BBuildVector (_, v) ->
-     (* To remove the last comma + delim (", ") *)
-     let ppv = ppBExprVec v in
-     ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
+     ps ppVec; ps ppRBracketL; ppBExprVec v true; ps ppRBracketR
   | BBuildStruct (kl, st) ->
-     addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppBExprStruct st ^ ppCBracketR
+     ps (addGlbStruct kl); print_space (); ps ppCBracketL; ppBExprStruct st; ps ppCBracketR
   | BUpdateVector (ve, ie, vale) -> 
-     ppVUpdate ^ ppDelim ^ ppRBracketL ^ ppBExpr ve ^ ppComma ^ ppDelim
-     ^ ppBExpr ie ^ ppComma ^ ppDelim ^ ppBExpr vale ^ ppRBracketR
-  | BReadReg r -> camlstring_of_coqstring r
-and ppBExprVec (v: bExpr vec) =
+     ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
+     ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
+  | BReadReg r -> ps (camlstring_of_coqstring r)
+and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
-  | Vec0 e -> ppBExpr e ^ ppComma ^ ppDelim
-  | VecNext (_, v1, v2) -> ppBExprVec v1 ^ ppBExprVec v2
+  | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
+  | VecNext (_, v1, v2) -> ppBExprVec v1 false; ppBExprVec v2 (tail && true)
 and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
   match stl with
-  | Inil -> ""
+  | Inil -> ()
   | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
-     camlstring_of_coqstring kn ^ ppComma ^ ppDelim ^ ppBExpr e
+     ps (camlstring_of_coqstring kn); ps ppComma; print_space (); ppBExpr e
   | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
-     camlstring_of_coqstring kn ^ ppDelim ^ ppColon ^ ppDelim ^ ppBExpr e
-     ^ ppComma ^ ppDelim ^ ppBExprStruct stl'
+     ps (camlstring_of_coqstring kn); print_space (); ps ppColon; print_space (); ppBExpr e;
+     ps ppComma; print_space (); ppBExprStruct stl'
 
 let rec ppBAction (a: bAction) =
   (match a with
@@ -241,19 +251,19 @@ let rec ppBAction (a: bAction) =
       ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
       ps (camlstring_of_coqstring meth);
-      ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
+      ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BLet (bind, ok, e) ->
       (match ok with
        | Some k -> ps (ppKind k)
        | None -> ps ppLet);
       print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
-      ps ppRBracketL; ps (ppBExpr e); ps ppRBracketR
+      ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BWriteReg (reg, e) ->
       ps (camlstring_of_coqstring reg); print_space ();
-      ps ppWriteReg; print_space (); ps (ppBExpr e)
+      ps ppWriteReg; print_space (); ppBExpr e
    | BIfElse (ce, ta, fa) ->
-      ps ppIf; print_space (); ps (ppBExpr ce); print_space (); ps ppBegin;
+      ps ppIf; print_space (); ppBExpr ce; print_space (); ps ppBegin;
       print_break 0 4; open_hovbox 0;
       ppBActions true ta;
       close_box (); print_break 0 (-4);
@@ -264,9 +274,9 @@ let rec ppBAction (a: bAction) =
       ps ppEnd
    | BAssert e ->
       ps ppWhen; print_space (); ps ppRBracketL;
-      ps (ppBExpr e); ps ppComma; print_space ();
+      ppBExpr e; ps ppComma; print_space ();
       ps ppNoAction; ps ppRBracketR
-   | BReturn e -> ps ppReturn; print_space (); ps (ppBExpr e)); ps ppSep
+   | BReturn e -> ps ppReturn; print_space (); ppBExpr e); ps ppSep
 and ppBActions (noret: bool) (aa: bAction list) =
   match aa with
   | [] -> ()
