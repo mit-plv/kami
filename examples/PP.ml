@@ -1,12 +1,12 @@
 open Format
 
 (* Borrowed from Compcert *)
-let camlstring_of_coqstring (s: char list) =
+let camlstring_of_bstring (s: char list) =
   let r = Bytes.create (List.length s) in
   let rec fill pos = function
     | [] -> r
     | c :: s -> Bytes.set r pos c; fill (pos + 1) s
-  in Bytes.to_string (fill 0 s)
+  in String.lowercase (Bytes.to_string (fill 0 s))
 
 let string_of_de_brujin_index (i: int) =
   "x_" ^ string_of_int i
@@ -100,7 +100,8 @@ let addGlbStruct (k: kind attribute list) =
 let rec getCallsBA (al: bAction list) =
   match al with
   | [] -> []
-  | BMCall (bind, meth, msig, e) :: tl -> (camlstring_of_coqstring meth, msig) :: (getCallsBA tl)
+  | BMCall (bind, meth, msig, e) :: tl ->
+     (camlstring_of_bstring meth, msig) :: (getCallsBA tl)
   | _ :: tl -> getCallsBA tl
 
 let rec getCallsBR (rl: bRule list) =
@@ -118,7 +119,8 @@ let rec getCallsBM (ml: bMethod list) =
 let getCallsB (bm: bModule) =
   match bm with
   | { bregs = _; brules = rl; bdms = ml } ->
-     append (getCallsBR rl) (getCallsBM ml)
+     let calls = append (getCallsBR rl) (getCallsBM ml) in
+     List.fold_left (fun acc e -> if List.mem e acc then acc else e :: acc) [] calls
 
 let rec collectStrK (k: kind) =
   match k with
@@ -168,9 +170,12 @@ let rec collectStrAL (al: bAction list) =
   | a :: al' -> collectStrA a; collectStrAL al'
 and collectStrA (a: bAction) =
   match a with
-  | BMCall (_, _, _, e) -> collectStrE e
-  | BLet (_, _, e) -> collectStrE e
-  | BWriteReg (reg, e) -> collectStrE e
+  | BMCall (_, _, msig, _) -> collectStrK (arg msig); collectStrK (ret msig)
+  | BLet (_, ok, e) ->
+     (match ok with
+      | Some k -> collectStrK k
+      | _ -> ()); collectStrE e
+  | BWriteReg (_, e) -> collectStrE e
   | BIfElse (ce, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
   | BAssert e -> collectStrE e
   | BReturn e -> collectStrE e
@@ -209,7 +214,7 @@ let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
   | [] -> ""
   | { attrName = kn; attrType = k } :: ks' ->
-     ppKind k ^ ppDelim ^ (camlstring_of_coqstring kn) ^ ppSep ^ ppDelim
+     ppKind k ^ ppDelim ^ (camlstring_of_bstring kn) ^ ppSep ^ ppDelim
      ^ ppAttrKinds ks'
 
 let rec ppWord (w: word) =
@@ -244,9 +249,9 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
   match stl with
   | Inil -> ""
   | Icons ({ attrName = kn; attrType = _ }, _, c, Inil) ->
-     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppConst c
+     camlstring_of_bstring kn ^ ppColon ^ ppDelim ^ ppConst c
   | Icons ({ attrName = kn; attrType = _ }, _, c, stl') ->
-     camlstring_of_coqstring kn ^ ppColon ^ ppDelim ^ ppConst c
+     camlstring_of_bstring kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
 
 let rec ppBExpr (e: bExpr) =
@@ -295,7 +300,7 @@ let rec ppBExpr (e: bExpr) =
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
   | BReadField (fd, se) ->
-     ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (camlstring_of_coqstring fd)
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (camlstring_of_bstring fd)
   | BBuildVector (_, v) ->
      ps ppVec; ps ppRBracketL; ppBExprVec v true; ps ppRBracketR
   | BBuildStruct (kl, st) ->
@@ -303,7 +308,7 @@ let rec ppBExpr (e: bExpr) =
   | BUpdateVector (ve, ie, vale) -> 
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
-  | BReadReg r -> ps (camlstring_of_coqstring r)
+  | BReadReg r -> ps (camlstring_of_bstring r)
 and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
@@ -312,9 +317,9 @@ and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
   match stl with
   | Inil -> ()
   | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
-     ps (camlstring_of_coqstring kn); ps ppComma; print_space (); ppBExpr e
+     ps (camlstring_of_bstring kn); print_space (); ps ppColon; print_space (); ppBExpr e
   | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
-     ps (camlstring_of_coqstring kn); print_space (); ps ppColon; print_space (); ppBExpr e;
+     ps (camlstring_of_bstring kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
 
 let rec ppBAction (a: bAction) =
@@ -322,7 +327,7 @@ let rec ppBAction (a: bAction) =
    | BMCall (bind, meth, msig, e) ->
       ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
-      ps (camlstring_of_coqstring meth);
+      ps (camlstring_of_bstring meth);
       ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BLet (bind, ok, e) ->
       (match ok with
@@ -332,7 +337,7 @@ let rec ppBAction (a: bAction) =
       ps ppBind; print_space ();
       ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BWriteReg (reg, e) ->
-      ps (camlstring_of_coqstring reg); print_space ();
+      ps (camlstring_of_bstring reg); print_space ();
       ps ppWriteReg; print_space (); ppBExpr e
    | BIfElse (ce, ta, fa) ->
       ps ppIf; print_space (); ppBExpr ce; print_space (); ps ppBegin;
@@ -359,7 +364,7 @@ let ppBRule (r: bRule) =
   match r with
   | { attrName = rn; attrType = rb } ->
      open_hovbox 0;
-     ps ppRule; print_space (); ps (camlstring_of_coqstring rn); ps ppSep;
+     ps ppRule; print_space (); ps (camlstring_of_bstring rn); ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppBActions true rb;
      close_box (); print_break 0 (-4); force_newline ();
@@ -381,7 +386,7 @@ let ppBMethod (d: bMethod) =
       else
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
-     ps (camlstring_of_coqstring dn); print_space ();
+     ps (camlstring_of_bstring dn); print_space ();
      ps ppRBracketL; ps (ppKind asig); print_space ();
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
@@ -406,7 +411,7 @@ let ppBInterface (d: bMethod) =
       else
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
-     ps (camlstring_of_coqstring dn); print_space ();
+     ps (camlstring_of_bstring dn); print_space ();
      ps ppRBracketL; ps (ppKind asig); print_space ();
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
@@ -422,7 +427,7 @@ let ppRegInit (r: regInitT) =
   | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
      open_hovbox 0;
      ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
-     ps (camlstring_of_coqstring rn); print_space ();
+     ps (camlstring_of_bstring rn); print_space ();
      ps ppAssign; print_space ();
      ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
      close_box ()
@@ -446,7 +451,6 @@ let ppGlbStructs (_: unit) =
        ps ppTypeDef; print_space (); ps ppStruct; print_space ();
        ps ppCBracketL; print_space (); ps (ppAttrKinds kl); print_space (); ps ppCBracketR;
        print_space (); ps nm; ps ppSep; print_cut (); force_newline ()) !glbStructs);
-  resetGlbStructs ();
   print_cut (); force_newline ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
@@ -462,16 +466,16 @@ let ppBModuleInterface (n: string) (m: bModule) =
 
 let ppCallArg (cn: string) (csig: signatureT) =
   ps ppFunction; print_space ();
-  (if arg csig = Bit 0 then
+  (if ret csig = Bit 0 then
      ps ppAction
    else
-     (ps ppActionValue; ps ppRBracketL; ps (ppKind (arg csig)); ps ppRBracketR));
+     (ps ppActionValue; ps ppRBracketL; ps (ppKind (ret csig)); ps ppRBracketR));
   print_space ();
   ps cn; ps ppRBracketL;
-  (if ret csig = Bit 0 then
+  (if arg csig = Bit 0 then
      ()
    else
-     ps (ppKind (ret csig)));
+     ps (ppKind (arg csig)));
   ps ppRBracketR
 
 let rec ppCallArgs (cs: (string * signatureT) list) =
@@ -482,14 +486,15 @@ let rec ppCallArgs (cs: (string * signatureT) list) =
 
 let ppBModuleCallArgs (m: bModule) =
   let cargs = getCallsB m in
-  ppCallArgs cargs
+  match cargs with
+  | [] -> ()
+  | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
                                          
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppModule; print_space ();
-     ps ("mk" ^ ifcn);
-     ps "#"; ps ppRBracketL; ppBModuleCallArgs m; ps ppRBracketR; print_space ();
+     ps ("mk" ^ ifcn); ppBModuleCallArgs m; print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
@@ -509,5 +514,6 @@ let ppBModuleFull (ifcn: string) (m: bModule) =
   ppGlbStructs ();
   ppBModuleInterface ifcn m;
   ppBModule ifcn m;
+  resetGlbStructs ();
   print_newline ()
              
