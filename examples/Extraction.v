@@ -60,7 +60,7 @@ Section BluespecSubset.
   | BReadReg: string -> BExpr.
 
   Inductive BAction: Type :=
-  | BMCall: nat (* binder *) -> string (* meth *) -> BExpr -> BAction
+  | BMCall: nat (* binder *) -> string (* meth *) -> SignatureT -> BExpr -> BAction
   | BLet: nat (* binder *) -> option Kind (* type annotation, if possible *) ->
           BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction
@@ -164,12 +164,12 @@ Section BluespecSubset.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
     match e with
-    | MCallS name _ arge idx cont =>
+    | MCallS name msig arge idx cont =>
       (* TODO: need to correct name like Bluespec-style *)
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr arge)
-                 >>= (fun be => Some (BMCall idx name be :: bc)))
+                 >>= (fun be => Some (BMCall idx name msig be :: bc)))
     | LetS_ (SyntaxKind k) e idx cont =>
       (actionSToBAction cont)
         >>= (fun bc =>

@@ -74,6 +74,7 @@ let ppTypeDef = "typedef"
 let ppStruct = "struct"
 let ppStructNamePrefix = "Struct"
 let ppVec = "vec"
+let ppFunction = "function"
 
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
@@ -94,6 +95,32 @@ let addGlbStruct (k: kind attribute list) =
   else ((); name)
 
 (* Global references end *)
+
+(* Simple analyses: better to generate a new file Analysis.ml *)
+let rec getCallsBA (al: bAction list) =
+  match al with
+  | [] -> []
+  | BMCall (bind, meth, msig, e) :: tl -> (camlstring_of_coqstring meth, msig) :: (getCallsBA tl)
+  | _ :: tl -> getCallsBA tl
+
+let rec getCallsBR (rl: bRule list) =
+  match rl with
+  | [] -> []
+  | { attrName = _; attrType = rb } :: tl ->
+     append (getCallsBA rb) (getCallsBR tl)
+
+let rec getCallsBM (ml: bMethod list) =
+  match ml with
+  | [] -> []
+  | { attrName = _; attrType = (_, mb) } :: tl ->
+     append (getCallsBA mb) (getCallsBM tl)
+
+let getCallsB (bm: bModule) =
+  match bm with
+  | { bregs = _; brules = rl; bdms = ml } ->
+     append (getCallsBR rl) (getCallsBM ml)
+
+(* Simple analyses end *)
 
 let rec ppKind (k: kind) =
   match k with
@@ -210,7 +237,7 @@ and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
 
 let rec ppBAction (a: bAction) =
   (match a with
-   | BMCall (bind, meth, e) ->
+   | BMCall (bind, meth, msig, e) ->
       ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
       ps (camlstring_of_coqstring meth);
@@ -350,12 +377,38 @@ let ppBModuleInterface (n: string) (m: bModule) =
      ps ppEndInterface;
      print_cut (); force_newline ();
      force_newline ()
+
+let ppCallArg (cn: string) (csig: signatureT) =
+  ps ppFunction; print_space ();
+  (if arg csig = Bit 0 then
+     ps ppAction
+   else
+     (ps ppActionValue; ps ppRBracketL; ps (ppKind (arg csig)); ps ppRBracketR));
+  print_space ();
+  ps cn; ps ppRBracketL;
+  (if ret csig = Bit 0 then
+     ()
+   else
+     ps (ppKind (ret csig)));
+  ps ppRBracketR
+
+let rec ppCallArgs (cs: (string * signatureT) list) =
+  match cs with
+  | [] -> ()
+  | (cn, csig) :: [] -> ppCallArg cn csig
+  | (cn, csig) :: tl -> ppCallArg cn csig; ps ppComma; print_space (); ppCallArgs tl
+
+let ppBModuleCallArgs (m: bModule) =
+  let cargs = getCallsB m in
+  ppCallArgs cargs
                                          
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppModule; print_space ();
-     ps ("mk" ^ ifcn); ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
+     ps ("mk" ^ ifcn);
+     ps "#"; ps ppRBracketL; ppBModuleCallArgs m; ps ppRBracketR; print_space ();
+     ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
      print_cut (); force_newline ();
