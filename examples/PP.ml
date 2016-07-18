@@ -120,6 +120,78 @@ let getCallsB (bm: bModule) =
   | { bregs = _; brules = rl; bdms = ml } ->
      append (getCallsBR rl) (getCallsBM ml)
 
+let rec collectStrK (k: kind) =
+  match k with
+  | Vector (k', _) -> collectStrK k'
+  | Struct sl -> let _ = addGlbStruct sl in collectStrKL sl
+  | _ -> ()
+and collectStrKL (kl: kind attribute list) =
+  match kl with
+  | [] -> ()
+  | { attrName = _; attrType = k } :: kl' ->
+     collectStrK k; collectStrKL kl'
+
+let rec collectStrC (c: constT) =
+  match c with
+  | ConstVector (_, _, v) -> collectStrVec v
+  | ConstStruct (kl, st) -> let _ = addGlbStruct kl in collectStrKL kl
+  | _ -> ()
+and collectStrVec (v: constT vec) =
+  match v with
+  | Vec0 c -> collectStrC c
+  | VecNext (_, v1, v2) -> collectStrVec v1; collectStrVec v2
+
+let rec collectStrE (e: bExpr) =
+  match e with
+  | BConst (k, _) -> collectStrK k
+  | BUniBool (_, se) -> collectStrE se
+  | BBinBool (_, se1, se2) -> collectStrE se1; collectStrE se2
+  | BUniBit (_, _, _, se) -> collectStrE se
+  | BBinBit (_, _, _, _, se1, se2) -> collectStrE se1; collectStrE se2
+  | BBinBitBool (_, _, _, se1, se2) -> collectStrE se1; collectStrE se2
+  | BITE (ce, te, fe) -> collectStrE ce; collectStrE te; collectStrE fe
+  | BEq (se1, se2) -> collectStrE se1; collectStrE se2
+  | BReadIndex (ie, ve) -> collectStrE ie; collectStrE ve
+  | BReadField (fd, se) -> collectStrE se
+  | BBuildVector (_, v) -> collectStrV v
+  | BBuildStruct (kl, _) -> let _ = addGlbStruct kl in collectStrKL kl
+  | BUpdateVector (ve, ie, vale) -> collectStrE ve; collectStrE ie; collectStrE vale
+  | _ -> ()
+and collectStrV (v: bExpr vec) =
+  match v with
+  | Vec0 e -> collectStrE e
+  | VecNext (_, v1, v2) -> collectStrV v1; collectStrV v2
+
+let rec collectStrAL (al: bAction list) =
+  match al with
+  | [] -> ()
+  | a :: al' -> collectStrA a; collectStrAL al'
+and collectStrA (a: bAction) =
+  match a with
+  | BMCall (_, _, _, e) -> collectStrE e
+  | BLet (_, _, e) -> collectStrE e
+  | BWriteReg (reg, e) -> collectStrE e
+  | BIfElse (ce, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
+  | BAssert e -> collectStrE e
+  | BReturn e -> collectStrE e
+
+let rec collectStrBR (rl: bRule list) =
+  match rl with
+  | [] -> ()
+  | { attrName = _; attrType = rb } :: tl ->
+     collectStrAL rb; collectStrBR tl
+
+let rec collectStrBM (ml: bMethod list) =
+  match ml with
+  | [] -> ()
+  | { attrName = _; attrType = (_, mb) } :: tl ->
+     collectStrAL mb; collectStrBM tl
+
+let collectStrB (bm: bModule) =
+  match bm with
+  | { bregs = _; brules = rl; bdms = ml } ->
+     collectStrBR rl; collectStrBM ml
+
 (* Simple analyses end *)
 
 let rec ppKind (k: kind) =
@@ -373,9 +445,9 @@ let ppGlbStructs (_: unit) =
   (StringMap.iter (fun nm kl ->
        ps ppTypeDef; print_space (); ps ppStruct; print_space ();
        ps ppCBracketL; print_space (); ps (ppAttrKinds kl); print_space (); ps ppCBracketR;
-       print_space (); ps nm; ps ppSep) !glbStructs);
+       print_space (); ps nm; ps ppSep; print_cut (); force_newline ()) !glbStructs);
   resetGlbStructs ();
-  print_cut (); force_newline (); force_newline ()
+  print_cut (); force_newline ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
   match m with
@@ -425,15 +497,17 @@ let ppBModule (ifcn: string) (m: bModule) =
      ppBRules brl;
      print_cut (); force_newline ();
      ppBMethods bd;
-     close_box(); print_break 0 (-4);
+     close_box(); print_break 0 (-4); force_newline ();
      ps ppEndModule;
-     print_cut (); force_newline ();
-     force_newline ()
+     print_cut (); force_newline ()
 
 let ppBModuleFull (ifcn: string) (m: bModule) =
+  (* pre-analyses *)
+  collectStrB m;
+  (* pre-analyses end *)
   ppImports ();
+  ppGlbStructs ();
   ppBModuleInterface ifcn m;
   ppBModule ifcn m;
-  ppGlbStructs ();
   print_newline ()
              
