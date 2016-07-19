@@ -4,6 +4,7 @@ Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         FunctionalExtensionality Program.Equality Lts.Tactics Arith Ex.MapVReify Lts.SymEval
         Lts.SymEvalTac.
 
+(*
 Set Implicit Arguments.
 
 (* Local Notation "x 'is' y 'of' s" := (M.find y%string s = Some (existT _ _ x)) (at level 12). *)
@@ -647,7 +648,7 @@ Theorem forall qs: list Prop, qs => Forall qs.
           admit.
           simpl in H6.
         try (unfold rsFromCToP in *; rewrite filtRsToP_commute_app in *;
-             rewrite app_assoc in *; fold (rsFromCToP $(x) a rsFromCList rsToPList) in *).
+             rewrite app_assoc in *; fold (rsFromCToP $(x) a rsFromCList rsToPList) in.
 
         * repeat rewrite mkStruct_eq; unfold StringBound.ith_Bounded; simpl.
           unfold getCs in *.
@@ -808,3 +809,4 @@ Theorem forall qs: list Prop, qs => Forall qs.
         rule1.
         intros; subst; rule1.
 End MemCacheInl.
+*)
