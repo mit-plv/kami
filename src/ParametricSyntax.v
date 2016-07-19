@@ -72,19 +72,6 @@ Section AboutFoldRight1.
   Qed.
 End AboutFoldRight1.
 
-Lemma badIndex:
-  forall a c, index 0 indexSymbol (a ++ indexSymbol ++ c) <> None.
-Proof.
-  unfold not; intros.
-  apply index_correct3 with (m := String.length a) in H; try omega; auto.
-  rewrite substring_append_1 in H.
-  assert (sth: prefix indexSymbol (indexSymbol ++ c) = true) by
-      (clear; 
-       induction c; intros; simpl in *; auto).
-  apply prefix_correct in sth.
-  intuition.
-Qed.
-
 Section AboutFold2.
   Variable A B: Type.
   Variable ls: list A.
@@ -248,9 +235,8 @@ Section Rep.
     
     Section SpecificIdx.
       Variable i: A.
-      Definition addIndexToStr s := append s (append indexSymbol (strA i)).
       Definition strFromName n := if isRep n
-                                  then addIndexToStr (nameVal (nameRec n))
+                                  then addIndexToStr strA i (nameVal (nameRec n))
                                   else nameVal (nameRec n).
       
       Notation "^ n" := (strFromName n) (at level 0).
@@ -345,12 +331,12 @@ Section Rep.
       + rewrite H1 in *;
         destruct (isRep meth), (isRep dmn); simpl in *; auto;
         try (match goal with
-               | H: addIndexToStr ?i ?l1 = ?l2 |- _ =>
-                 assert (sth: String.length (addIndexToStr i l1) =
+               | H: addIndexToStr ?strA ?i ?l1 = ?l2 |- _ =>
+                 assert (sth: String.length (addIndexToStr strA i l1) =
                               String.length l2) by (f_equal; auto)
-               | H: ?l2 = addIndexToStr ?i ?l1 |- _ =>
+               | H: ?l2 = addIndexToStr ?strA ?i ?l1 |- _ =>
                  assert (sth: String.length l2 =
-                              String.length (addIndexToStr i l1)) by (f_equal; auto)
+                              String.length (addIndexToStr strA i l1)) by (f_equal; auto)
              end;
              unfold addIndexToStr in *;
                rewrite S_app_length in sth; simpl in *; omega).
@@ -423,7 +409,7 @@ Section Rep.
   Lemma inlineGenGenDm_matches ty k (a: GenActionT ty k) dn (dm: sigT GenMethodT):
     forall i,
       getGenAction i (inlineGenGenDm a dn dm) =
-      inlineDm (getGenAction i a) (addIndexToStr i dn :: getMethFromGen dm i)%struct.
+      inlineDm (getGenAction i a) (addIndexToStr strA i dn :: getMethFromGen dm i)%struct.
   Proof.
     induction a; simpl in *; intros; auto; f_equal; try extensionality v; auto.
     unfold getGenGenBody, getBody, strFromName; simpl in *.
@@ -440,7 +426,7 @@ Section Rep.
           f_equal; extensionality v'; auto.
         * f_equal; extensionality v; simpl in *; subst.
           auto.
-      + case_eq (string_eq (addIndexToStr i nameVal0) (addIndexToStr i dn)); intros;
+      + case_eq (string_eq (addIndexToStr strA i nameVal0) (addIndexToStr strA i dn)); intros;
         [|f_equal; extensionality v; auto].
         apply eq_sym in H1; apply string_eq_dec_eq in H1; subst;
         unfold addIndexToStr in *; simpl in *.
@@ -448,7 +434,7 @@ Section Rep.
         rewrite string_eq_true in H0; discriminate.
     - case_eq (string_eq nameVal0 dn); intros.
       + apply eq_sym in H0; apply string_eq_dec_eq in H0; subst; simpl in *.
-        case_eq (string_eq dn (addIndexToStr i dn)); intros.
+        case_eq (string_eq dn (addIndexToStr strA i dn)); intros.
         * apply eq_sym in H0; apply string_eq_dec_eq in H0; simpl in *;
           unfold addIndexToStr in H0.
           rewrite <- append_empty with (s := dn) in H0 at 1.
@@ -456,10 +442,10 @@ Section Rep.
           discriminate.
         * f_equal; auto;
           extensionality v'; auto.
-      + case_eq (string_eq nameVal0 (addIndexToStr i dn)); intros.
+      + case_eq (string_eq nameVal0 (addIndexToStr strA i dn)); intros.
         * apply eq_sym in H1; apply string_eq_dec_eq in H1.
-          unfold addIndexToStr in H1; subst.
-          pose proof (badIndex _ _ goodName0); intuition.
+          subst.
+          pose proof (badIndex goodName0); intuition.
         * simpl in *.
           f_equal; extensionality v; auto.
   Qed.

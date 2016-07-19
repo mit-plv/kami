@@ -101,10 +101,10 @@ Notation "'ReadN' name : kind <- reg ; cont " :=
 Notation "'Write' reg <- expr ; cont " :=
   (WriteReg reg expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_action_scope.
-Notation "'Write' reg <- expr : kind ; cont " :=
+Notation "'Write' reg : kind <- expr ; cont " :=
   (@WriteReg _ _ reg (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_action_scope.
-Notation "'WriteN' reg <- expr : kind ; cont " :=
+Notation "'WriteN' reg : kind <- expr ; cont " :=
   (@WriteReg _ _ reg kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_action_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
@@ -243,19 +243,19 @@ Notation "'ReadN' name : kind <- { reg | pf } ; cont " :=
 Notation "'Write' reg <- expr ; cont " :=
   (SWriteReg (Build_NameRec reg eq_refl) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
-Notation "'Write' reg <- expr : kind ; cont " :=
+Notation "'Write' reg : kind <- expr ; cont " :=
   (@SWriteReg _ _ (Build_NameRec reg eq_refl) (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
-Notation "'WriteN' reg <- expr : kind ; cont " :=
+Notation "'WriteN' reg : kind <- expr ; cont " :=
   (@SWriteReg _ _ (Build_NameRec reg eq_refl) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
 Notation "'Write' { reg | pf } <- expr ; cont " :=
   (SWriteReg (Build_NameRec reg pf) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
-Notation "'Write' { reg | pf } <- expr : kind ; cont " :=
+Notation "'Write' { reg | pf } : kind <- expr ; cont " :=
   (@SWriteReg _ _ (Build_NameRec reg pf) (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
-Notation "'WriteN' { reg | pf } <- expr : kind ; cont " :=
+Notation "'WriteN' { reg | pf } : kind <- expr ; cont " :=
   (@SWriteReg _ _ (Build_NameRec reg pf) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_sin_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
@@ -343,28 +343,28 @@ Notation "'ReadNi' name : kind <- reg ; cont " :=
 Notation "'Write' reg <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx false (Build_NameRec reg eq_refl)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
-Notation "'Write' reg <- expr : kind ; cont " :=
+Notation "'Write' reg : kind <- expr ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' { reg | pf } <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx false (Build_NameRec reg pf)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
-Notation "'Write' { reg | pf } <- expr : kind ; cont " :=
+Notation "'Write' { reg | pf } : kind <- expr ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg pf))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
-Notation "'WriteN' reg <- expr : kind ; cont " :=
+Notation "'WriteN' reg : kind <- expr ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Writei' reg <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx true (Build_NameRec reg eq_refl)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
-Notation "'Writei' reg <- expr : kind ; cont " :=
+Notation "'Writei' reg : kind <- expr ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
-Notation "'WriteNi' reg <- expr : kind ; cont " :=
+Notation "'WriteNi' reg : kind <- expr ; cont " :=
   (@GWriteReg _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=

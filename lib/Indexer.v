@@ -1,5 +1,5 @@
 Require Import Bool Ascii String Eqdep Omega.
-Require Import CommonTactics StringExtension.
+Require Import CommonTactics StringExtension StringEq.
 
 (** Some string manipulation lemmas *)
 
@@ -129,10 +129,12 @@ Proof.
 Qed.
 
 Definition indexSymbol: string := "$"%string.
-Definition prefixSymbol: string := "_"%string.
+Definition prefixSymbol: string := "."%string.
 
-Definition withIndex str idx := 
-  append str (append indexSymbol (string_of_nat idx)).
+Definition addIndexToStr {A} strA (i: A) s := append s (append indexSymbol (strA i)).
+
+Definition withIndex str idx :=
+  addIndexToStr string_of_nat idx str.
 Definition withPrefix pre str :=
   append str (append prefixSymbol pre).
 
@@ -171,7 +173,7 @@ Lemma withIndex_neq:
     i <> j ->
     withIndex a i <> withIndex b j.
 Proof.
-  unfold withIndex; intros; intro Hx; elim H; clear H.
+  unfold withIndex, addIndexToStr; intros; intro Hx; elim H; clear H.
   assert (string_rev (a ++ indexSymbol ++ string_of_nat i) =
           string_rev (b ++ indexSymbol ++ string_of_nat j))
     by (rewrite Hx; reflexivity); clear Hx.
@@ -200,7 +202,7 @@ Lemma withIndex_index_eq:
   forall s t i j,
     withIndex s i = withIndex t j -> s = t /\ i = j.
 Proof.
-  unfold withIndex; intros.
+  unfold withIndex, addIndexToStr; intros.
   destruct (eq_nat_dec i j).
   - subst; split; auto.
     assert (string_rev (s ++ indexSymbol ++ string_of_nat j) =
@@ -250,7 +252,20 @@ Proof.
   apply prefix_append.
 Qed.
 
-Global Opaque withIndex.
+Lemma badIndex:
+  forall {A} {a} {strA} {c:A}, index 0 indexSymbol (addIndexToStr strA c a) <> None.
+Proof.
+  unfold not; intros.
+  unfold addIndexToStr in H.
+  apply index_correct3 with (m := String.length a) in H; try omega; try discriminate; auto.
+  rewrite substring_append_1 in H.
+  assert (sth: prefix indexSymbol (indexSymbol ++ strA c) = true) by
+      apply prefix_append.
+  apply prefix_correct in sth.
+  intuition.
+Qed.
+
+(* Global Opaque withIndex. *)
 
 Notation "str '__' idx" := (withIndex str idx) (at level 0).
 Notation "pre '--' str" := (withPrefix pre str) (at level 0).
