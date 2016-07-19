@@ -45,7 +45,6 @@ Set Implicit Arguments.
 - Kami Hints
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-  + Hint Extern 1 (_ = _: Modules) => apply eq_refl.
  *)
 
 Ltac kstring_simpl :=
@@ -77,6 +76,18 @@ Ltac ketrans_r :=
   let m := fresh "m" in
   evar (m: Modules); ktrans_r m; unfold m; clear m;
   try (unfold RegInitT, MethsT; rewrite <-idElementwiseId).
+
+Tactic Notation "krewrite" "assoc" "left" :=
+  ketrans; [rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_2|].
+
+Tactic Notation "krewrite" "<-" "assoc" "left" :=
+  ketrans; [rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_1|].
+
+Tactic Notation "krewrite" "assoc" "right" :=
+  ketrans; [|rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_1].
+
+Tactic Notation "krewrite" "<-" "assoc" "right" :=
+  ketrans; [|rewrite SemFacts.idElementwiseId; apply traceRefines_assoc_2|].
 
 Ltac kequiv_red :=
   eauto;
@@ -329,40 +340,55 @@ Ltac kdef_call_sub :=
     | [ |- DefCallSub _ _ ] => vm_compute; split; intros; intuition idtac
     end.
 
-Tactic Notation "simple" "kmodular" :=
-  try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_interacting with (vp:= (@idElementwise _)).
-
-Ltac kmodular_light :=
-  simple kmodular;
-  [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-   | | | | |].
-
 Ltac kmodular :=
-  simple kmodular;
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs|kdisj_regs|kvr|kvr
    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
    | | |kinteracting| |].
 
-Tactic Notation "simple" "kmodularn" :=
+Tactic Notation "kmodular" "with" constr(p) :=
   try (unfold MethsT; rewrite <-idElementwiseId);
-  apply traceRefines_modular_noninteracting.
+  apply traceRefines_modular_interacting with (vp:= p);
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   | | | | |].
 
 Ltac kmodularn :=
-  simple kmodularn;
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_noninteracting;
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs|kdisj_regs|kvr|kvr
    |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
    |knoninteracting|knoninteracting| |].
 
+Tactic Notation "kmodularn" "with" constr(p) :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_noninteracting with (vp:= p);
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |knoninteracting|knoninteracting| |].
+
+Ltac kmodularnp :=
+  try (unfold MethsT; rewrite <-idElementwiseId);
+  apply traceRefines_modular_noninteracting_p;
+  [kequiv|kequiv|kequiv|kequiv
+   |kdisj_regs|kdisj_regs|kvr|kvr
+   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   | |knoninteracting|knoninteracting| |].
+
 Ltac kmodular_sim_l :=
-  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1.
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1;
+  [knodup_regs|knodup_regs|knodup_regs
+   |kdisj_regs|kdisj_regs| | |].
 
 Ltac kmodular_sim_r :=
-  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2.
+  try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2;
+  [knodup_regs|knodup_regs|knodup_regs
+   |kdisj_regs|kdisj_regs| | |].
 
 Ltac ksimilar :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure;
@@ -496,7 +522,7 @@ Ltac kinv_add inv :=
   match goal with
   | [H: reachable _ _ |- _] =>
     let Hr := fresh "Hr" in
-    pose proof H as Hr; apply inv in Hr
+    pose proof H as Hr; apply inv in Hr; auto
   end.
 
 Ltac kinv_add_end :=
@@ -536,6 +562,7 @@ Ltac kinv_simpl :=
   repeat
     (try match goal with
          | [H: ?t = ?t |- _] => clear H
+         | [H: ?t <> ?t |- _] => elim H; reflexivity
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
          | [ |- context [weq ?w ?w] ] =>
@@ -562,6 +589,7 @@ Ltac kinv_finish :=
     (try match goal with
          | [H: _ = _ |- _] => rewrite H in *; clear H
          | [H: _ = _ |- _] => rewrite <-H in *; clear H
+         | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
          end;
      simpl in *; kinv_simpl; auto).
 
@@ -605,7 +633,13 @@ Ltac kinv_magic_light_with tac :=
 
 Ltac kinv_magic_light := kinv_magic_light_with idtac.
 
-Ltac kduplicated := apply duplicate_traceRefines; auto.
+Ltac kduplicated :=
+  apply duplicate_traceRefines;
+  [auto|auto (* Specializable *)
+   |kequiv|kequiv
+   |kvr|kvr
+   |auto (* SubList (getExtMeth _) (getExtMeth _) *)
+   |].
 
 Ltac kgetv k v m t f :=
   destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];
@@ -621,14 +655,6 @@ Ltac kexistnv k v m t :=
 
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
-Hint Extern 1 (_ = _: Modules) => apply eq_refl.
-
-(* Hint Extern 1 (ModEquiv _ _ _) => kequiv. *)
-(* Hint Extern 1 (NoDup (getRegInits _) (getRegInits _)) => knodup_regs. *)
-(* Hint Extern 1 (DisjList (getRegInits _) (getRegInits _)) => kdisj_regs. *)
-(* Hint Extern 1 (DisjList (getDefs _) (getDefs _)) => kdisj_dms. *)
-(* Hint Extern 1 (DisjList (getCalls _) (getCalls _)) => kdisj_cms. *)
-(* Hint Extern 1 (ValidRegsModules _ _) => kvr. *)
 
 (** Final Kami proof configuration *)
 

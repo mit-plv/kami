@@ -209,7 +209,7 @@ Section Facts.
     - simpl; kinv_magic; or3_fst; auto.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
-      + simpl in *; kinv_magic_with kinv_or3.
+      + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
@@ -225,7 +225,7 @@ Section Facts.
             destruct (weq _ _); auto.
             elim n0; auto.
           }
-      + simpl in *; kinv_magic_with kinv_or3.
+      + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.

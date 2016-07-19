@@ -129,7 +129,7 @@ Proof.
 Qed.
 
 Definition indexSymbol: string := "$"%string.
-Definition prefixSymbol: string := "."%string.
+Definition prefixSymbol: string := "_"%string.
 
 Definition addIndexToStr {A} strA (i: A) s := append s (append indexSymbol (strA i)).
 

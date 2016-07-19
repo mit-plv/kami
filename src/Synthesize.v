@@ -48,10 +48,14 @@ Proof.
             | Return e => (n, ReturnS e)
           end).
   - destruct lret'.
-    + exact (getActionS (S n) _ (cn n)).
+    + set (getActionS (S n) _ (cn n)) as ma'.
+      destruct ma' as [m a'].
+      exact (m, LetS_ e n a').
     + exact (n, ReturnS (Const tyS Default)).
   - destruct k.
-    + exact (getActionS (S n) _ (cn n)).
+    + set (getActionS (S n) _ (cn n)) as ma'.
+      destruct ma' as [m a'].
+      exact (m, ReadRegS r n a').
     + exact (n, ReturnS (Const tyS Default)).
 Defined.
   
