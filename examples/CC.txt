@@ -9,7 +9,8 @@ Theta:
 if c is the lowest in S or M, then data(c)
 else if c is the lowest first cToP response msg and dir(c) = M, then data(msg)
 else if c is the lowest pToC response msg and cs(c) = I, then data(msg)
-else mem
+else if forall i. dir(i) <= S, then mem
+else garbage // impossible
 
 Invariants:
 
@@ -51,7 +52,7 @@ wait-state.
 cannot be a voluntary cToP response.
 24. There can be at most 2 responses in cToP for c.
 25. In any cToP request, from < to.
-26. For voluntary response, from = I
+26. For voluntary response, to = I
 
 Proofs:
 1.

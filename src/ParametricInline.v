@@ -70,7 +70,7 @@ Section NoDup2.
       destruct s0, s; simpl in *.
       rewrite <- H5 in *.
       unfold addIndexToStr in goodName0.
-      apply (badIndex _ _ goodName0).
+      apply (badIndex goodName0).
 
       
       unfold repMeth, getListFromRep in H1.
@@ -92,7 +92,7 @@ Section NoDup2.
       inv H1; destruct_existT; subst.
       destruct s0; simpl in *; subst.
       unfold addIndexToStr in goodName.
-      apply (badIndex _ _ goodName).
+      apply (badIndex goodName).
       unfold repMeth, getListFromRep in H5.
       apply in_map_iff in H5; dest; subst.
       inv H1; destruct_existT; subst.
@@ -161,7 +161,7 @@ Section NoDup3.
       destruct s0, s; simpl in *.
       rewrite <- H5 in *.
       unfold addIndexToStr in goodName0.
-      apply (badIndex _ _ goodName0).
+      apply (badIndex goodName0).
 
       
       unfold repRule, getListFromRep in H1.
@@ -182,7 +182,7 @@ Section NoDup3.
       inv H1; destruct_existT; subst.
       destruct s0; simpl in *; subst.
       unfold addIndexToStr in goodName.
-      apply (badIndex _ _ goodName).
+      apply (badIndex goodName).
       unfold repRule, getListFromRep in H5.
       apply in_map_iff in H5; dest; subst.
       inv H1; destruct_existT; subst.
