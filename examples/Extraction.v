@@ -249,15 +249,17 @@ End BluespecSubset.
 
 (* Extraction "ExtractionTest.ml" testFifoB. *)
 
-Require Import Isa ProcDec.
 
-Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) :=
-  getDefaultConst _.
 
-Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc
-                                rv32iLd rv32iSt rv32iHt.
-Definition testProcDecMS := getModuleS testProcDecM.
-Definition testProcDecMB := ModulesSToBModules testProcDecMS.
+(* Require Import Isa ProcDec. *)
 
-Extraction "ExtractionTest2.ml" testProcDecMB.
+(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
+(*   getDefaultConst _. *)
+
+(* Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
+(*                                 rv32iLd rv32iSt rv32iHt. *)
+(* Definition testProcDecMS := getModuleS testProcDecM. *)
+(* Definition testProcDecMB := ModulesSToBModules testProcDecMS. *)
+
+(* Extraction "ExtractionTest2.ml" testProcDecMB. *)
 

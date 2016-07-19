@@ -40,11 +40,11 @@ let bsv_keywords =
    "wand"; "weak0"; "weak1"; "while"; "wildcard"; "wire"; "with"; "within"; "wor"; "xnor"; "xor"]
 
 (* Partial definition borrowed from Compcert *)
-let camlstring_of_bstring (s: char list) =
+let bstring_of_charlist (s: char list) =
   let r = Bytes.create (List.length s) in
   let rec fill pos = function
     | [] -> r
-    | c :: s -> Bytes.set r pos c; fill (pos + 1) s
+    | c :: s -> Bytes.set r pos (if c = '.' then '_' else c); fill (pos + 1) s
   in
   let bstr = String.uncapitalize (Bytes.to_string (fill 0 s)) in
   if List.mem bstr bsv_keywords then bstr ^ "_" else bstr
@@ -142,7 +142,7 @@ let rec getCallsBA (al: bAction list) =
   match al with
   | [] -> []
   | BMCall (bind, meth, msig, e) :: tl ->
-     (camlstring_of_bstring meth, msig) :: (getCallsBA tl)
+     (bstring_of_charlist meth, msig) :: (getCallsBA tl)
   | _ :: tl -> getCallsBA tl
 
 let rec getCallsBR (rl: bRule list) =
@@ -255,7 +255,7 @@ let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
   | [] -> ""
   | { attrName = kn; attrType = k } :: ks' ->
-     ppKind k ^ ppDelim ^ (camlstring_of_bstring kn) ^ ppSep ^ ppDelim
+     ppKind k ^ ppDelim ^ (bstring_of_charlist kn) ^ ppSep ^ ppDelim
      ^ ppAttrKinds ks'
 
 let rec ppWord (w: word) =
@@ -290,9 +290,9 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
   match stl with
   | Inil -> ""
   | Icons ({ attrName = kn; attrType = _ }, _, c, Inil) ->
-     camlstring_of_bstring kn ^ ppColon ^ ppDelim ^ ppConst c
+     bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
   | Icons ({ attrName = kn; attrType = _ }, _, c, stl') ->
-     camlstring_of_bstring kn ^ ppColon ^ ppDelim ^ ppConst c
+     bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
 
 let rec ppBExpr (e: bExpr) =
@@ -341,7 +341,7 @@ let rec ppBExpr (e: bExpr) =
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
   | BReadField (fd, se) ->
-     ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (camlstring_of_bstring fd)
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (bstring_of_charlist fd)
   | BBuildVector (_, v) ->
      ps ppVec; ps ppRBracketL; ppBExprVec v true; ps ppRBracketR
   | BBuildStruct (kl, st) ->
@@ -349,7 +349,7 @@ let rec ppBExpr (e: bExpr) =
   | BUpdateVector (ve, ie, vale) -> 
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
-  | BReadReg r -> ps (camlstring_of_bstring r)
+  | BReadReg r -> ps (bstring_of_charlist r)
 and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
@@ -358,9 +358,9 @@ and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
   match stl with
   | Inil -> ()
   | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
-     ps (camlstring_of_bstring kn); print_space (); ps ppColon; print_space (); ppBExpr e
+     ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e
   | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
-     ps (camlstring_of_bstring kn); print_space (); ps ppColon; print_space (); ppBExpr e;
+     ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
 
 let rec ppBAction (a: bAction) =
@@ -368,7 +368,7 @@ let rec ppBAction (a: bAction) =
    | BMCall (bind, meth, msig, e) ->
       ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
       ps ppBind; print_space ();
-      ps (camlstring_of_bstring meth);
+      ps (bstring_of_charlist meth);
       ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BLet (bind, ok, e) ->
       (match ok with
@@ -378,7 +378,7 @@ let rec ppBAction (a: bAction) =
       ps ppBind; print_space ();
       ps ppRBracketL; ppBExpr e; ps ppRBracketR
    | BWriteReg (reg, e) ->
-      ps (camlstring_of_bstring reg); print_space ();
+      ps (bstring_of_charlist reg); print_space ();
       ps ppWriteReg; print_space (); ppBExpr e
    | BIfElse (ce, ta, fa) ->
       ps ppIf; print_space (); ppBExpr ce; print_space (); ps ppBegin;
@@ -405,7 +405,7 @@ let ppBRule (r: bRule) =
   match r with
   | { attrName = rn; attrType = rb } ->
      open_hovbox 0;
-     ps ppRule; print_space (); ps (camlstring_of_bstring rn); ps ppSep;
+     ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppBActions true rb;
      close_box (); print_break 0 (-4); force_newline ();
@@ -427,7 +427,7 @@ let ppBMethod (d: bMethod) =
       else
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
-     ps (camlstring_of_bstring dn); print_space ();
+     ps (bstring_of_charlist dn); print_space ();
      ps ppRBracketL; ps (ppKind asig); print_space ();
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
@@ -452,7 +452,7 @@ let ppBInterface (d: bMethod) =
       else
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
-     ps (camlstring_of_bstring dn); print_space ();
+     ps (bstring_of_charlist dn); print_space ();
      ps ppRBracketL; ps (ppKind asig); print_space ();
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
@@ -468,7 +468,7 @@ let ppRegInit (r: regInitT) =
   | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
      open_hovbox 0;
      ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
-     ps (camlstring_of_bstring rn); print_space ();
+     ps (bstring_of_charlist rn); print_space ();
      ps ppAssign; print_space ();
      ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
      close_box ()
