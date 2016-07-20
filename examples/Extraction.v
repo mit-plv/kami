@@ -64,7 +64,7 @@ Section BluespecSubset.
   | BLet: nat (* binder *) -> option Kind (* type annotation, if possible *) ->
           BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction
-  | BIfElse: BExpr -> list BAction -> list BAction -> BAction
+  | BIfElse: BExpr -> nat (* branch return binder *) -> list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
   | BReturn: BExpr -> BAction.
 
@@ -192,7 +192,7 @@ Section BluespecSubset.
                         (actionSToBAction ta)
                           >>= (fun bta =>
                                  (actionSToBAction fa)
-                                   >>= (fun bfa => Some (BIfElse bce bta bfa :: bc)))))
+                                   >>= (fun bfa => Some (BIfElse bce idx bta bfa :: bc)))))
     | AssertS_ e cont =>
       (actionSToBAction cont)
         >>= (fun bc => (exprSToBExpr e) >>= (fun be => Some (BAssert be :: bc)))
@@ -251,15 +251,19 @@ End BluespecSubset.
 
 
 
-(* Require Import Isa ProcDec. *)
+Require Import Isa ProcDec.
 
-(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
-(*   getDefaultConst _. *)
+Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) :=
+  getDefaultConst _.
 
-(* Definition testProcDecM := pdec (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
-(*                                 rv32iLd rv32iSt rv32iHt. *)
+(* Definition testProcDecM := procDecM (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
+(*                                     rv32iLd rv32iSt rv32iHt 0. *)
 (* Definition testProcDecMS := getModuleS testProcDecM. *)
 (* Definition testProcDecMB := ModulesSToBModules testProcDecMS. *)
 
-(* Extraction "ExtractionTest2.ml" testProcDecMB. *)
+Definition testProcDecM := SC.minst rv32iAddrSize rv32iLgDataBytes 0.
+Definition testProcDecMS := getModuleS testProcDecM.
+Definition testProcDecMB := ModulesSToBModules testProcDecMS.
+
+Extraction "ExtractionTest2.ml" testProcDecMB.
 

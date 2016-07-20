@@ -47,7 +47,7 @@ let bstring_of_charlist (s: char list) =
   let r = Bytes.create (List.length s) in
   let rec fill pos = function
     | [] -> r
-    | c :: s -> Bytes.set r pos (if c = '.' then '_' else c); fill (pos + 1) s
+    | c :: s -> Bytes.set r pos (if c = '.' || c = '$' then '_' else c); fill (pos + 1) s
   in
   let bstr = String.uncapitalize (Bytes.to_string (fill 0 s)) in
   if List.mem bstr bsv_keywords then bstr ^ "_" else bstr
@@ -119,6 +119,7 @@ let ppVector = "Vector#"
 let ppTypeDef = "typedef"
 let ppStruct = "struct"
 let ppStructNamePrefix = "Struct"
+let ppModuleNamePrefix = "Module"
 let ppVec = "vec"
 let ppFunction = "function"
 
@@ -167,6 +168,13 @@ let getCallsB (bm: bModule) =
   | { bregs = _; brules = rl; bdms = ml } ->
      let calls = append (getCallsBR rl) (getCallsBM ml) in
      List.fold_left (fun acc e -> if List.mem e acc then acc else e :: acc) [] calls
+
+let getDefsB (bm: bModule) =
+  match bm with
+  | { bregs = _; brules = _; bdms = ml } ->
+     List.map (fun bm -> match bm with
+                         | { attrName = mn; attrType = (msig, _) } ->
+                            (bstring_of_charlist mn, msig)) ml
 
 let rec collectStrK (k: kind) =
   match k with
@@ -222,7 +230,7 @@ and collectStrA (a: bAction) =
       | Some k -> collectStrK k
       | _ -> ()); collectStrE e
   | BWriteReg (_, e) -> collectStrE e
-  | BIfElse (ce, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
+  | BIfElse (ce, _, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
   | BAssert e -> collectStrE e
   | BReturn e -> collectStrE e
 
@@ -235,7 +243,8 @@ let rec collectStrBR (rl: bRule list) =
 let rec collectStrBM (ml: bMethod list) =
   match ml with
   | [] -> ()
-  | { attrName = _; attrType = (_, mb) } :: tl ->
+  | { attrName = _; attrType = (msig, mb) } :: tl ->
+     collectStrK (arg msig); collectStrK (ret msig);
      collectStrAL mb; collectStrBM tl
 
 let collectStrB (bm: bModule) =
@@ -370,46 +379,56 @@ and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
 
-let rec ppBAction (a: bAction) =
-  (match a with
-   | BMCall (bind, meth, msig, e) ->
-      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-      (if ret msig = Bit 0 then ps ppBind else ps ppAssign);
-      print_space ();
-      ps (bstring_of_charlist meth);
-      ps ppRBracketL;
-      (if arg msig = Bit 0 then () else ppBExpr e);
-      ps ppRBracketR
-   | BLet (bind, ok, e) ->
-      (match ok with
-       | Some k -> ps (ppKind k)
-       | None -> ps ppLet);
-      print_space (); ps (string_of_de_brujin_index bind); print_space ();
-      ps ppBind; print_space ();
-      ps ppRBracketL; ppBExpr e; ps ppRBracketR
-   | BWriteReg (reg, e) ->
-      ps (bstring_of_charlist reg); print_space ();
-      ps ppWriteReg; print_space (); ppBExpr e
-   | BIfElse (ce, ta, fa) ->
-      ps ppIf; print_space (); ppBExpr ce; print_space (); ps ppBegin;
-      print_break 0 4; open_hovbox 0;
-      ppBActions true ta;
-      close_box (); print_break 0 (-4);
-      ps ppEnd; print_space (); ps ppElse; ps ppBegin;
-      print_break 0 4; open_hovbox 0;
-      ppBActions true fa;
-      close_box (); print_break 0 (-4);
-      ps ppEnd
-   | BAssert e ->
-      ps ppWhen; print_space (); ps ppRBracketL;
-      ppBExpr e; ps ppComma; print_space ();
-      ps ppNoAction; ps ppRBracketR
-   | BReturn e -> ps ppReturn; print_space (); ppBExpr e); ps ppSep
-and ppBActions (noret: bool) (aa: bAction list) =
+let rec ppBAction (ife: int option) (a: bAction) =
+  match a with
+  | BMCall (bind, meth, msig, e) ->
+     ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+     (if ret msig = Bit 0 then ps ppBind else ps ppAssign);
+     print_space ();
+     ps (bstring_of_charlist meth);
+     ps ppRBracketL;
+     (if arg msig = Bit 0 then () else ppBExpr e);
+     ps ppRBracketR; ps ppSep
+  | BLet (bind, ok, e) ->
+     (match ok with
+      | Some k -> ps (ppKind k)
+      | None -> ps ppLet);
+     print_space (); ps (string_of_de_brujin_index bind); print_space ();
+     ps ppBind; print_space ();
+     ps ppRBracketL; ppBExpr e; ps ppRBracketR; ps ppSep
+  | BWriteReg (reg, e) ->
+     ps (bstring_of_charlist reg); print_space ();
+     ps ppWriteReg; print_space (); ppBExpr e; ps ppSep
+  | BIfElse (ce, bind, ta, fa) ->
+     (* let-bind for the branch return *)
+     ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+     ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ();
+     (* let-bind ends *)
+     ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
+     print_space (); ps ppBegin;
+     print_break 0 4; open_hovbox 0;
+     ppBActions false (Some bind) ta;
+     close_box (); print_break 0 (-4);
+     ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin;
+     print_break 0 4; open_hovbox 0;
+     ppBActions false (Some bind) fa;
+     close_box (); print_break 0 (-4);
+     ps ppEnd
+  | BAssert e ->
+     ps ppWhen; print_space (); ps ppRBracketL;
+     ppBExpr e; ps ppComma; print_space ();
+     ps ppNoAction; ps ppRBracketR; ps ppSep
+  | BReturn e ->
+     (match ife with
+      | Some bind ->
+         (ps (string_of_de_brujin_index bind); print_space ();
+          ps ppBind; print_space (); ppBExpr e; ps ppSep)
+      | _ -> (ps ppReturn; print_space (); ppBExpr e; ps ppSep))
+and ppBActions (noret: bool) (ife: int option) (aa: bAction list) =
   match aa with
   | [] -> ()
-  | a' :: [] -> if noret then () else ppBAction a'
-  | a' :: aa' -> ppBAction a'; print_cut (); force_newline (); ppBActions noret aa'
+  | a' :: [] -> if noret then () else (ppBAction ife a'; print_cut (); force_newline ())
+  | a' :: aa' -> ppBAction ife a'; print_cut (); force_newline (); ppBActions noret ife aa'
 
 let ppBRule (r: bRule) =
   match r with
@@ -417,7 +436,7 @@ let ppBRule (r: bRule) =
      open_hovbox 0;
      ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep;
      print_break 0 4; open_hovbox 0;
-     ppBActions true rb;
+     ppBActions true None rb;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndRule;
      close_box ()
@@ -442,7 +461,7 @@ let ppBMethod (d: bMethod) =
      ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
      ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
-     ppBActions (rsig = Bit 0) db;
+     ppBActions (rsig = Bit 0) None db;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndMethod;
      close_box ()
@@ -508,7 +527,7 @@ let ppBModuleInterface (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppInterface; print_space (); ps n; ps ppSep;
-     print_break 0 4; open_hovbox 0;
+     print_break 1 4; force_newline (); open_hovbox 0;
      ppBInterfaces bd;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndInterface;
@@ -558,13 +577,24 @@ let ppBModule (ifcn: string) (m: bModule) =
      print_cut (); force_newline ()
 
 let ppBModuleFull (ifcn: string) (m: bModule) =
-  (* pre-analyses *)
-  collectStrB m;
-  (* pre-analyses end *)
-  ppImports ();
-  ppGlbStructs ();
   ppBModuleInterface ifcn m;
-  ppBModule ifcn m;
+  ppBModule ifcn m
+
+let rec ppBModules (bml: bModule list) (idx: int) =
+  match bml with
+  | [] -> ()
+  | bm :: bml' -> ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
+                  ppBModules bml' (succ idx)
+
+let rec preAnalyses (bml: bModule list) =
+  match bml with
+  | [] -> ()
+  | bm :: bml' -> collectStrB bm; preAnalyses bml'
+
+let ppBModulesFull (bml: bModule list) =
+  ppImports ();
+  preAnalyses bml;
+  ppGlbStructs ();
+  ppBModules bml 1;
   resetGlbStructs ();
   print_newline ()
-             
