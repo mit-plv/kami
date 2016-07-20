@@ -68,6 +68,7 @@ let ppAnd = "&&"
 let ppOr = "||"
 let ppZeroExtend = "zeroExtend"
 let ppSignExtend = "signExtend"
+let ppTruncate = "truncate"
 let ppAdd = "+"
 let ppSub = "-"
 let ppLt = "<"
@@ -318,10 +319,12 @@ let rec ppBExpr (e: bExpr) =
   | BUniBit (_, _, Trunc (_, n2), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n2 - 1)); ps ppColon; ps "0"; ps ppBracketR
-  | BUniBit (_, _, ZeroExtendTrunc _, se) ->
-     ps ppZeroExtend; ps ppRBracketL; ppBExpr se; ps ppRBracketR
-  | BUniBit (_, _, SignExtendTrunc _, se) ->
-     ps ppSignExtend; ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BUniBit (fn, tn, ZeroExtendTrunc _, se) ->
+     (if (fn >= tn) then ps ppTruncate else ps ppZeroExtend);
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BUniBit (fn, tn, SignExtendTrunc _, se) ->
+     (if (fn >= tn) then ps ppTruncate else ps ppSignExtend);
+     ps ppRBracketL; ppBExpr se; ps ppRBracketR
   | BUniBit (_, _, TruncLsb (n1, n2), se) -> 
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
@@ -371,9 +374,12 @@ let rec ppBAction (a: bAction) =
   (match a with
    | BMCall (bind, meth, msig, e) ->
       ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-      ps ppBind; print_space ();
+      (if ret msig = Bit 0 then ps ppBind else ps ppAssign);
+      print_space ();
       ps (bstring_of_charlist meth);
-      ps ppRBracketL; ppBExpr e; ps ppRBracketR
+      ps ppRBracketL;
+      (if arg msig = Bit 0 then () else ppBExpr e);
+      ps ppRBracketR
    | BLet (bind, ok, e) ->
       (match ok with
        | Some k -> ps (ppKind k)
