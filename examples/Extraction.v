@@ -64,7 +64,8 @@ Section BluespecSubset.
   | BLet: nat (* binder *) -> option Kind (* type annotation, if possible *) ->
           BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction
-  | BIfElse: BExpr -> nat (* branch return binder *) -> list BAction -> list BAction -> BAction
+  | BIfElse: BExpr -> nat (* branch return binder *) -> Kind (* return type *) ->
+             list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
   | BReturn: BExpr -> BAction.
 
@@ -184,7 +185,7 @@ Section BluespecSubset.
         >>= (fun bc =>
                (exprSToBExpr e)
                  >>= (fun be => Some (BWriteReg reg be :: bc)))
-    | IfElseS ce _ ta fa idx cont =>
+    | IfElseS ce iretK ta fa idx cont =>
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr ce)
@@ -192,7 +193,7 @@ Section BluespecSubset.
                         (actionSToBAction ta)
                           >>= (fun bta =>
                                  (actionSToBAction fa)
-                                   >>= (fun bfa => Some (BIfElse bce idx bta bfa :: bc)))))
+                                   >>= (fun bfa => Some (BIfElse bce idx iretK bta bfa :: bc)))))
     | AssertS_ e cont =>
       (actionSToBAction cont)
         >>= (fun bc => (exprSToBExpr e) >>= (fun be => Some (BAssert be :: bc)))
@@ -251,19 +252,14 @@ End BluespecSubset.
 
 
 
-Require Import Isa ProcDec.
+Require Import Isa MemDir.
 
 Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) :=
   getDefaultConst _.
 
-(* Definition testProcDecM := procDecM (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
-(*                                     rv32iLd rv32iSt rv32iHt 0. *)
-(* Definition testProcDecMS := getModuleS testProcDecM. *)
-(* Definition testProcDecMB := ModulesSToBModules testProcDecMS. *)
+Definition testM := modFromMeta (memDir 2 2 2 2 (Bit 1)).
+Definition testS := getModuleS testM.
+Definition testB := ModulesSToBModules testS.
 
-Definition testProcDecM := SC.minst rv32iAddrSize rv32iLgDataBytes 0.
-Definition testProcDecMS := getModuleS testProcDecM.
-Definition testProcDecMB := ModulesSToBModules testProcDecMS.
-
-Extraction "ExtractionTest2.ml" testProcDecMB.
+Extraction "ExtractionTest.ml" testB.
 

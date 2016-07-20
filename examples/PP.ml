@@ -55,7 +55,7 @@ let bstring_of_charlist (s: char list) =
 let string_of_de_brujin_index (i: int) =
   "x_" ^ string_of_int i
 
-exception Should_not_happen
+exception Should_not_happen of string
 
 let ps = print_string
 let pi = print_int
@@ -149,6 +149,8 @@ let rec getCallsBA (al: bAction list) =
   | [] -> []
   | BMCall (bind, meth, msig, e) :: tl ->
      (bstring_of_charlist meth, msig) :: (getCallsBA tl)
+  | BIfElse (_, _, _, ta, fa) :: tl ->
+     append (append (getCallsBA ta) (getCallsBA fa)) (getCallsBA tl)
   | _ :: tl -> getCallsBA tl
 
 let rec getCallsBR (rl: bRule list) =
@@ -230,7 +232,7 @@ and collectStrA (a: bAction) =
       | Some k -> collectStrK k
       | _ -> ()); collectStrE e
   | BWriteReg (_, e) -> collectStrE e
-  | BIfElse (ce, _, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
+  | BIfElse (ce, _, _, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
   | BAssert e -> collectStrE e
   | BReturn e -> collectStrE e
 
@@ -399,20 +401,21 @@ let rec ppBAction (ife: int option) (a: bAction) =
   | BWriteReg (reg, e) ->
      ps (bstring_of_charlist reg); print_space ();
      ps ppWriteReg; print_space (); ppBExpr e; ps ppSep
-  | BIfElse (ce, bind, ta, fa) ->
+  | BIfElse (ce, bind, bk, ta, fa) ->
      (* let-bind for the branch return *)
-     ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-     ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ();
-     (* let-bind ends *)
+     (if (bk = Bit 0) then ()
+      else
+        (ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
      print_space (); ps ppBegin;
-     print_break 0 4; open_hovbox 0;
-     ppBActions false (Some bind) ta;
-     close_box (); print_break 0 (-4);
+     print_break 0 4; force_newline (); open_hovbox 0;
+     ppBActions (bk = Bit 0) (Some bind) ta;
+     close_box (); print_break 0 (-4); force_newline ();
      ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin;
-     print_break 0 4; open_hovbox 0;
-     ppBActions false (Some bind) fa;
-     close_box (); print_break 0 (-4);
+     print_break 0 4; force_newline (); open_hovbox 0;
+     ppBActions (bk = Bit 0) (Some bind) fa;
+     close_box (); print_break 0 (-4); force_newline ();
      ps ppEnd
   | BAssert e ->
      ps ppWhen; print_space (); ps ppRBracketL;
@@ -427,7 +430,7 @@ let rec ppBAction (ife: int option) (a: bAction) =
 and ppBActions (noret: bool) (ife: int option) (aa: bAction list) =
   match aa with
   | [] -> ()
-  | a' :: [] -> if noret then () else (ppBAction ife a'; print_cut (); force_newline ())
+  | a' :: [] -> if noret then () else ppBAction ife a'
   | a' :: aa' -> ppBAction ife a'; print_cut (); force_newline (); ppBActions noret ife aa'
 
 let ppBRule (r: bRule) =
@@ -501,7 +504,8 @@ let ppRegInit (r: regInitT) =
      ps ppAssign; print_space ();
      ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
      close_box ()
-  | _ -> raise Should_not_happen
+  | { attrName = rn; attrType = _ } ->
+     raise (Should_not_happen ("RegName: " ^ (bstring_of_charlist rn)))
 
 let rec ppRegInits (rl: regInitT list) =
   match rl with
