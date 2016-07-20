@@ -2,42 +2,45 @@ open Format
 
 (* string manipulations *)
 let bsv_keywords =
-  ["action"; "actionvalue"; "ancestor";
-   "begin"; "bit"; "case"; "clocked_by"; "default"; "default_clock"; "default_reset";
-   "dependencies"; "deriving"; "determines"; "e"; "else"; "enable"; "end"; "enum"; "export"; "for";
-   "function"; "if"; "ifc_inout"; "import"; "inout"; "input_clock"; "input_reset"; "instance";
-   "interface"; "let"; "match"; "matches"; "method"; "module"; "numeric"; "output_clock";
-   "output_reset"; "package"; "parameter"; "path"; "port"; "endaction"; "endactionvalue";
-   "endcase"; "endfunction"; "endinstance"; "endinterface"; "endmethod"; "endmodule"; "endpackage";
-   "provisos"; "reset_by"; "return"; "rule"; "rules"; "same_family"; "schedule"; "struct";
-   "tagged"; "type"; "typeclass"; "typedef"; "union"; "valueOf"; "valueof"; "void"; "while";
-   "endrule"; "endrules"; "endtypeclass"; "alias"; "always"; "always_comb"; "always_ff";
-   "always_latch"; "and"; "assert"; "assert_strobe"; "assign"; "assume"; "automatic"; "before";
-   "begin"; "end"; "bind"; "bins"; "binsof"; "bit"; "break"; "buf"; "bufif0"; "bufif1";
-   "byte"; "case"; "endcase"; "casex"; "expect"; "export"; "extends"; "extern"; "final";
-   "first_match"; "for"; "force"; "foreach"; "forever"; "fork"; "forkjoin"; "function";
-   "endfunction"; "generate"; "endgenerate"; "genvar"; "highz0"; "highz1"; "if"; "iff";
-   "ifnone"; "ignore_bins"; "illegal_bins"; "import"; "incdir"; "include"; "initial"; "inout";
-   "input"; "inside"; "instance"; "int"; "integer"; "interface"; "endinterface";
-   "intersect"; "join"; "join_any"; "join_none"; "large"; "liblist"; "library"; "local";
-   "localparam"; "logic"; "longint"; "macromodule"; "matches"; "medium"; "modport"; "module";
-   "endmodule"; "negedge"; "new"; "nmos"; "nor"; "noshowcancelled"; "not"; "casez"; "cell";
-   "chandle"; "class"; "clocking"; "endclocking"; "cmos"; "config"; "const";
-   "constraint"; "context"; "continue"; "cover"; "covergroup"; "endgroup"; "coverpoint";
-   "cross"; "deassign"; "default"; "defparam"; "design"; "disable"; "dist"; "real"; "realtime";
-   "ref"; "reg"; "release"; "repeat"; "return"; "rnmos"; "rpmos"; "rtran"; "rtranif0"; "rtranif1";
-   "scalared"; "sequence"; "shortint"; "shortreal"; "showcancelled"; "endclass"; "endconfig"; "do";
-   "edge"; "else"; "enum"; "event"; "nand"; "endsequence"; "151"; "notif0"; "notif1"; "null"; "or";
-   "output"; "package"; "packed"; "parameter"; "pmos"; "posedge"; "primitive"; "priority";
-   "program"; "property"; "protected"; "pull0"; "pull1"; "pulldown"; "pullup";
-   "pulsestyle_onevent"; "pulsestyle_ondetect"; "pure"; "rand"; "randc"; "randcase";
-   "randsequence"; "rcmos"; "endpackage"; "endprimitive"; "endprogram"; "endproperty";
-   "signed"; "time"; "var"; "small"; "timeprecision"; "vectored"; "solve"; "timeunit";
-   "specify"; "endspecify"; "tran"; "specparam"; "tranif0"; "static"; "tranif1"; "string"; "tri";
-   "strong0"; "tri0"; "strong1"; "tri1"; "struct"; "triand"; "super"; "trior"; "supply0"; "trireg";
-   "supply1"; "type"; "table"; "endtable"; "typedef"; "tagged"; "union"; "task"; "endtask";
-   "unique"; "this"; "unsigned"; "throughout"; "use"; "virtual"; "void"; "wait"; "wait_order";
-   "wand"; "weak0"; "weak1"; "while"; "wildcard"; "wire"; "with"; "within"; "wor"; "xnor"; "xor"]
+  [ (* Bluespec keywords *)
+    "action"; "actionvalue"; "ancestor";
+    "begin"; "bit"; "case"; "clocked_by"; "default"; "default_clock"; "default_reset";
+    "dependencies"; "deriving"; "determines"; "e"; "else"; "enable"; "end"; "enum"; "export"; "for";
+    "function"; "if"; "ifc_inout"; "import"; "inout"; "input_clock"; "input_reset"; "instance";
+    "interface"; "let"; "match"; "matches"; "method"; "module"; "numeric"; "output_clock";
+    "output_reset"; "package"; "parameter"; "path"; "port"; "endaction"; "endactionvalue";
+    "endcase"; "endfunction"; "endinstance"; "endinterface"; "endmethod"; "endmodule"; "endpackage";
+    "provisos"; "reset_by"; "return"; "rule"; "rules"; "same_family"; "schedule"; "struct";
+    "tagged"; "type"; "typeclass"; "typedef"; "union"; "valueOf"; "valueof"; "void"; "while";
+    "endrule"; "endrules"; "endtypeclass";
+    (* Verilog keywords *)
+    "alias"; "always"; "always_comb"; "always_ff"; "always_latch"; "and"; "assert";
+    "assert_strobe"; "assign"; "assume"; "automatic"; "before"; "begin"; "end"; "bind"; "bins";
+    "binsof"; "bit"; "break"; "buf"; "bufif0"; "bufif1"; "byte"; "case"; "endcase"; "casex";
+    "expect"; "export"; "extends"; "extern"; "final"; "first_match"; "for"; "force"; "foreach";
+    "forever"; "fork"; "forkjoin"; "function"; "endfunction"; "generate"; "endgenerate"; "genvar";
+    "highz0"; "highz1"; "if"; "iff"; "ifnone"; "ignore_bins"; "illegal_bins"; "import"; "incdir";
+    "include"; "initial"; "inout"; "input"; "inside"; "instance"; "int"; "integer"; "interface";
+    "endinterface"; "intersect"; "join"; "join_any"; "join_none"; "large"; "liblist"; "library";
+    "local"; "localparam"; "logic"; "longint"; "macromodule"; "matches"; "medium"; "modport";
+    "module"; "endmodule"; "negedge"; "new"; "nmos"; "nor"; "noshowcancelled"; "not"; "casez";
+    "cell"; "chandle"; "class"; "clocking"; "endclocking"; "cmos"; "config"; "const";
+    "constraint"; "context"; "continue"; "cover"; "covergroup"; "endgroup"; "coverpoint";
+    "cross"; "deassign"; "default"; "defparam"; "design"; "disable"; "dist"; "real"; "realtime";
+    "ref"; "reg"; "release"; "repeat"; "return"; "rnmos"; "rpmos"; "rtran"; "rtranif0"; "rtranif1";
+    "scalared"; "sequence"; "shortint"; "shortreal"; "showcancelled"; "endclass"; "endconfig";
+    "do"; "edge"; "else"; "enum"; "event"; "nand"; "endsequence"; "151"; "notif0"; "notif1";
+    "null"; "or"; "output"; "package"; "packed"; "parameter"; "pmos"; "posedge"; "primitive";
+    "priority"; "program"; "property"; "protected"; "pull0"; "pull1"; "pulldown"; "pullup";
+    "pulsestyle_onevent"; "pulsestyle_ondetect"; "pure"; "rand"; "randc"; "randcase";
+    "randsequence"; "rcmos"; "endpackage"; "endprimitive"; "endprogram"; "endproperty";
+    "signed"; "time"; "var"; "small"; "timeprecision"; "vectored"; "solve"; "timeunit";
+    "specify"; "endspecify"; "tran"; "specparam"; "tranif0"; "static"; "tranif1"; "string"; "tri";
+    "strong0"; "tri0"; "strong1"; "tri1"; "struct"; "triand"; "super"; "trior"; "supply0";
+    "trireg"; "supply1"; "type"; "table"; "endtable"; "typedef"; "tagged"; "union"; "task";
+    "endtask"; "unique"; "this"; "unsigned"; "throughout"; "use"; "virtual"; "void"; "wait";
+    "wait_order"; "wand"; "weak0"; "weak1"; "while"; "wildcard"; "wire"; "with"; "within"; "wor";
+    "xnor"; "xor"]
 
 (* Partial definition borrowed from Compcert *)
 let bstring_of_charlist (s: char list) =
@@ -58,7 +61,7 @@ let ps = print_string
 let pi = print_int
 
 let ppDelim = " "
-let ppBinary = "'b"
+let ppHexa = "'h"
 let ppNeg = "!"
 let ppInv = "~"
 let ppAnd = "&&"
@@ -74,6 +77,7 @@ let ppDot = "."
 let ppComma = ","
 let ppSep = ";"
 let ppColon = ":"
+let ppTypeCast = "'"
 let ppQ = "?"
 let ppEq = "=="
 let ppRBracketL = "("
@@ -274,8 +278,7 @@ let rec ppConst (c: constT) =
   match c with
   | ConstBool true -> "True"
   | ConstBool false -> "False"
-  | ConstBit (sz, w) -> (* string_of_int sz ^ ppBinary ^ ppWord w *)
-     string_of_int (wordToInt w)
+  | ConstBit (sz, w) -> string_of_int sz ^ ppHexa ^ Printf.sprintf "%x" (wordToInt w)
   | ConstVector (_, _, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
@@ -298,7 +301,8 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
 let rec ppBExpr (e: bExpr) =
   match e with
   | BVar v -> ps (string_of_de_brujin_index v)
-  | BConst (_, c) -> ps (ppConst c)
+  | BConst (k, c) -> ps ppRBracketL; ps (ppKind k); ps ppRBracketR; ps ppTypeCast;
+                     ps ppRBracketL; ps (ppConst c); ps ppRBracketR
   | BUniBool (Neg, se) -> ps ppNeg; print_space (); ps ppRBracketL; ppBExpr se; ps ppRBracketR
   | BBinBool (And, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
                                 ps ppAnd; print_space ();
