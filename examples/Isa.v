@@ -5,7 +5,7 @@ Require Import Ex.MemTypes Ex.SC.
 
 (* Subset of RV32I instructions = {ld, st, add, sub, beq, blt} (+ halt) *)
 Section RV32ISubset.
-  Definition rv32iAddrSize := 32.
+  Definition rv32iAddrSize := 2.
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
@@ -26,29 +26,29 @@ Section RV32ISubset.
 
   Definition getRs1ValueE {ty}
              (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (#s @[UniBit (ConstExtract 12 5 _) inst])%kami_expr.
   Definition getRs2ValueE {ty}
              (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (#s @[UniBit (ConstExtract 7 5 _) inst])%kami_expr.
   Definition getRdE {ty}
-             (inst: Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     UniBit (ConstExtract 20 5 _) inst.
   Definition getLdBaseE {ty}
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (UniBit (ZeroExtendTrunc _ rv32iAddrSize) (UniBit (TruncLsb 12 _) inst))%kami_expr.
   Definition getStBaseE {ty}
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (UniBit (ZeroExtendTrunc _ rv32iAddrSize) (UniBit (TruncLsb 7 _) inst))%kami_expr.
   Definition getFunct7E {ty}
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (UniBit (TruncLsb 7 _) inst)%kami_expr.
   Definition getFunct3E {ty}
-             (inst : Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (UniBit (ConstExtract 17 3 _) inst)%kami_expr.
   Definition getBrOffsetE {ty}
-             (inst: Expr ty (SyntaxKind (Bit rv32iAddrSize))) :=
+             (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
     (UniBit (SignExtendTrunc _ rv32iAddrSize)
             (BinBit (Concat _ 1)
                     (BinBit (Concat _ _)
@@ -61,24 +61,26 @@ Section RV32ISubset.
   Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
     unfold DecT; intros ty st pc.
     set ($$insts @[ #pc ])%kami_expr as inst.
-    refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) inst)
+    refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
                 == ($$ rv32iLd)) then _ else _)%kami_expr.
     - (* load case *)
-      exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) inst;
+      exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst;
                       "reg" ::= UniBit (ConstExtract 20 5 _) inst;
-                      "addr" ::= (getRs1ValueE st inst + getLdBaseE inst);
+                      "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
+                                  + getLdBaseE inst);
                       "value" ::= $$Default;
                       "inst" ::= inst})%kami_expr.
-    - refine (IF ((UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) inst)
+    - refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
                   == ($$ rv32iSt)) then _ else _)%kami_expr.
       + (* store case *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) inst);
+        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
                         "reg" ::= $$Default;
-                        "addr" ::= (getRs1ValueE st inst + getStBaseE inst);
+                        "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
+                                    + getStBaseE inst);
                         "value" ::= getRs2ValueE st inst;
                         "inst" ::= inst})%kami_expr.
       + (* halt, non-memory, or branch operations *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iAddrSize - rv32iOpIdx) _) inst);
+        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
                         "reg" ::= $$Default;
                         "addr" ::= $$Default;
                         "value" ::= $$Default;

@@ -1,38 +1,8 @@
 Require Import String List.
 Require Import Lib.ilist Lib.Struct Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Synthesize Lts.ParametricSyntax.
-Require Import Ex.Fifo Ex.Isa.
-(* Require Import Ex.ProcMemCorrect. *)
 
-Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
-Extraction Language Ocaml.
-
-Set Extraction Optimize.
-Set Extraction KeepSingleton.
-Unset Extraction AutoInline.
-
-(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
-(*   getDefaultConst _. *)
-
-(* Definition exIdxBits := 20. *)
-(* Definition exTagBits := 10. *)
-(* Definition exLgNumDatas := 2. *)
-(* Definition exLgNumChildren := 2. *)
-(* Definition exFifoSize := 4. *)
-
-(* Definition exProcMem := ((pdecN exIdxBits exTagBits exLgNumDatas *)
-(*                                 (rv32iDecode exInsts) rv32iExecState rv32iExecNextPc *)
-(*                                 rv32iLd rv32iSt rv32iHt exLgNumChildren) *)
-(*                            ++ (pmFifos exIdxBits exTagBits exLgNumDatas *)
-(*                                        rv32iLgDataBytes exLgNumChildren) *)
-(*                            ++ (modFromMeta (mcache exFifoSize exIdxBits exTagBits *)
-(*                                                    exLgNumDatas rv32iLgDataBytes *)
-(*                                                    Void exLgNumChildren)) *)
-(*                         )%kami. *)
-
-(* Definition exProcMemS := (getModuleS exProcMem). *)
-
-(* Extraction "ExtractionResult.ml" exProcMemS. *)
+Set Implicit Arguments.
 
 Section BluespecSubset.
 
@@ -94,20 +64,12 @@ Section BluespecSubset.
       (bindVec v1) >>= (fun bv1 => (bindVec v2) >>= (fun bv2 => Some (VecNext bv1 bv2)))
     end.
 
-  (* Fixpoint bindList {A} (l: list (Attribute (option A))): option (list (Attribute A)) := *)
-  (*   match l with *)
-  (*   | nil => Some nil *)
-  (*   | {| attrName:= an; attrType:= Some ab |} :: t => *)
-  (*     (bindList t) >>= (fun bl => Some ({| attrName:= an; attrType:= ab |} :: bl)) *)
-  (*   | _ => None *)
-  (*   end. *)
-
   Fixpoint bindList attrs (il: ilist (fun _ : Attribute Kind => option BExpr) attrs):
     option (ilist (fun _ : Attribute Kind => BExpr) attrs) :=
     match il with
     | inil => Some (inil _)
     | icons a ats (Some e) t =>
-      (bindList ats t) >>= (fun bl => Some (icons a e bl))
+      (bindList t) >>= (fun bl => Some (icons a e bl))
     | _ => None
     end.
   
@@ -118,18 +80,18 @@ Section BluespecSubset.
        | SyntaxKind sk => fun f => Some (BVar f)
        | NativeKind _ _ => fun _ => None
        end) i
-    | Const k c => Some (BConst k c)
+    | Const k c => Some (BConst c)
     | UniBool op se => (exprSToBExpr se) >>= (fun be => Some (BUniBool op be))
     | BinBool op e1 e2 =>
       (exprSToBExpr e1)
         >>= (fun be1 => (exprSToBExpr e2) >>= (fun be2 => Some (BBinBool op be1 be2)))
-    | UniBit n1 n2 op e => (exprSToBExpr e) >>= (fun be => Some (BUniBit n1 n2 op be))
+    | UniBit n1 n2 op e => (exprSToBExpr e) >>= (fun be => Some (BUniBit op be))
     | BinBit n1 n2 n3 op e1 e2 =>
       (exprSToBExpr e1) >>= (fun be1 => (exprSToBExpr e2)
-                                          >>= (fun be2 => Some (BBinBit n1 n2 n3 op be1 be2)))
+                                          >>= (fun be2 => Some (BBinBit op be1 be2)))
     | BinBitBool n1 n2 op e1 e2 =>
       (exprSToBExpr e1) >>= (fun be1 => (exprSToBExpr e2)
-                                          >>= (fun be2 => Some (BBinBitBool n1 n2 op be1 be2)))
+                                          >>= (fun be2 => Some (BBinBitBool op be1 be2)))
     | ITE _ ce te fe =>
       (exprSToBExpr ce)
         >>= (fun bce =>
@@ -144,7 +106,7 @@ Section BluespecSubset.
                                           >>= (fun bve => Some (BReadIndex bie bve)))
     | ReadField _ s e => (exprSToBExpr e) >>= (fun be => Some (BReadField (bindex s) be))
     | BuildVector _ lgn v =>
-      (bindVec (mapVec (exprSToBExpr) v)) >>= (fun bv => Some (BBuildVector lgn bv))
+      (bindVec (mapVec (exprSToBExpr) v)) >>= (fun bv => Some (BBuildVector bv))
     | UpdateVector _ _ ve ie ke =>
       (exprSToBExpr ve)
         >>= (fun bve =>
@@ -153,9 +115,9 @@ Section BluespecSubset.
                         (exprSToBExpr ke)
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
     | BuildStruct attrs st =>
-      (bindList attrs (ilist.imap _ (fun a (e: Expr tyS (SyntaxKind (attrType a)))
-                                     => exprSToBExpr e) st))
-        >>= (fun bl => Some (BBuildStruct attrs bl))
+      (bindList (ilist.imap _ (fun a (e: Expr tyS (SyntaxKind (attrType a)))
+                               => exprSToBExpr e) st))
+        >>= (fun bl => Some (BBuildStruct bl))
         (* cannot find the decreasing factor because of "ilist.map_ilist" *)
         (* (bindList (ilist.map_ilist (fun a (e: Expr tyS (SyntaxKind (attrType a))) *)
         (*                             => {| attrName:= attrName a; *)
@@ -235,31 +197,4 @@ Section BluespecSubset.
     end.
 
 End BluespecSubset.
-
-(* Extraction "BModules.ml" BModules. *)
-
-(* Require Import Fifo. *)
-
-(* Definition testFifo := fifo "fifo" 4 (Bit 2). *)
-(* Definition testFifoS := getModuleS testFifo. *)
-(* Definition testFifoB := ModulesSToBModules testFifoS. *)
-
-(* Eval compute in testFifo. *)
-(* Eval compute in testFifoS. *)
-(* Eval compute in testFifoB. *)
-
-(* Extraction "ExtractionTest.ml" testFifoB. *)
-
-
-
-Require Import Isa MemDir.
-
-Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) :=
-  getDefaultConst _.
-
-Definition testM := modFromMeta (memDir 2 2 2 2 (Bit 1)).
-Definition testS := getModuleS testM.
-Definition testB := ModulesSToBModules testS.
-
-Extraction "ExtractionTest.ml" testB.
 
