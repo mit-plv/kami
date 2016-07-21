@@ -178,6 +178,11 @@ let getDefsB (bm: bModule) =
                          | { attrName = mn; attrType = (msig, _) } ->
                             (bstring_of_charlist mn, msig)) ml
 
+type bModuleDC = bModule * (string * signatureT) list * (string * signatureT) list
+
+let toBModuleDC (bm: bModule) = (bm, getDefsB bm, getCallsB bm)
+let toBModuleDCL (bml: bModule list) = List.map (fun bm -> toBModuleDC bm) bml
+
 let rec collectStrK (k: kind) =
   match k with
   | Vector (k', _) -> collectStrK k'
@@ -558,8 +563,7 @@ let rec ppCallArgs (cs: (string * signatureT) list) =
   | (cn, csig) :: [] -> ppCallArg cn csig
   | (cn, csig) :: tl -> ppCallArg cn csig; ps ppComma; print_space (); ppCallArgs tl
 
-let ppBModuleCallArgs (m: bModule) =
-  let cargs = getCallsB m in
+let ppBModuleCallArgs (cargs: (string * signatureT) list) =
   match cargs with
   | [] -> ()
   | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
@@ -568,7 +572,7 @@ let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppModule; print_space ();
-     ps ("mk" ^ ifcn); ppBModuleCallArgs m; print_space ();
+     ps ("mk" ^ ifcn); ppBModuleCallArgs (getCallsB m); print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
@@ -588,6 +592,7 @@ let rec ppBModules (bml: bModule list) (idx: int) =
   match bml with
   | [] -> ()
   | bm :: bml' -> ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
+                  force_newline ();
                   ppBModules bml' (succ idx)
 
 let rec preAnalyses (bml: bModule list) =
@@ -595,10 +600,109 @@ let rec preAnalyses (bml: bModule list) =
   | [] -> ()
   | bm :: bml' -> collectStrB bm; preAnalyses bml'
 
+let rec callsToInsts (dmap: int StringMap.t) (calls: (string * signatureT) list) =
+  match calls with
+  | [] -> []
+  | (meth, _) :: calls' ->
+     let cipair = try (StringMap.find meth dmap, meth)
+                  with Not_found -> (-1, meth) in
+     cipair :: (callsToInsts dmap calls')
+
+let rec ppCallInsts (cis: (int * string) list) =
+  match cis with
+  | [] -> ()
+  | (idx, meth) :: [] ->
+     (if (idx >= 0) then
+        (ps ("m" ^ string_of_int idx); ps ppDot)
+      else ()); ps meth
+  | (idx, meth) :: cis' ->
+     (if (idx >= 0) then
+        (ps ("m" ^ string_of_int idx); ps ppDot)
+      else ()); ps meth; ps ppComma; print_space (); ppCallInsts cis'
+
+let ppModuleInst (dmap: int StringMap.t) (bmdc: bModuleDC) (idx: int) =
+  ps (ppModuleNamePrefix ^ string_of_int idx); print_space ();
+  ps ("m" ^ string_of_int idx); print_space (); ps ppAssign; print_space ();
+  ps ("mk" ^ ppModuleNamePrefix ^ string_of_int idx); print_space ();
+  ps ppRBracketL;
+  ppCallInsts (callsToInsts dmap ((fun (_, _, c) -> c) bmdc));
+  ps ppRBracketR; ps ppSep
+
+let rec ppModulesInst (dmap: int StringMap.t) (bmdcl: bModuleDC list) (idx: int) =
+  match bmdcl with
+  | [] -> ()
+  | bmdc :: bmdcl' -> ppModuleInst dmap bmdc idx; print_cut (); force_newline ();
+                      ppModulesInst dmap bmdcl' (succ idx)
+
+let rec makeDefMap (bmdcl: bModuleDC list) (idx: int) =
+  match bmdcl with
+  | [] -> StringMap.empty
+  | (_, d, _) :: bmdcl' ->
+     List.fold_left (fun dmap df -> StringMap.add (fst df) idx dmap)
+                    (makeDefMap bmdcl' (succ idx)) d
+
+let rec makeCallMap (bmdcl: bModuleDC list) (idx: int) =
+  match bmdcl with
+  | [] -> StringMap.empty
+  | (_, _, c) :: bmdcl' ->
+     List.fold_left (fun dmap df ->
+         if StringMap.mem (fst df) dmap
+         then StringMap.add (fst df) (idx :: StringMap.find (fst df) dmap) dmap
+         else StringMap.add (fst df) [idx] dmap)
+                    (makeCallMap bmdcl' (succ idx)) c
+
+let makeModuleOrderPairs (defs: int StringMap.t) (calls: (int list) StringMap.t) =
+  StringMap.fold (fun k di ps ->
+      if StringMap.mem k calls then
+        let cis = StringMap.find k calls in
+        List.append (List.map (fun ci -> (di, ci)) cis) ps
+      else ps) defs []
+
+let rec makeModuleOrder (mids: int list) (pairs: (int * int) list) =
+  match mids with
+  | [] -> []
+  | _ ->
+     let no_incomings = List.filter (fun i -> not (List.mem i (List.map snd pairs))) mids in
+     let incomings = List.filter (fun i -> List.mem i (List.map snd pairs)) mids in
+     List.append no_incomings
+                 (makeModuleOrder incomings
+                                  (List.filter (fun ii -> not (List.mem (fst ii) no_incomings))
+                                               pairs))
+
+let ppTopModule (bmdcl: bModuleDC list) (idx: int)
+                (extCallsAll: (string * signatureT) list)  =
+  ps ppModule; print_space ();
+  ps "mkTop"; ppBModuleCallArgs extCallsAll; print_space ();
+  ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
+  print_break 0 4; open_hovbox 0;
+  ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
+  close_box(); print_break 0 (-4);
+  ps ppEndModule
+
+let rec makeMids (idxInit: int) (numMods: int) =
+  if numMods = 0 then []
+  else idxInit :: (makeMids (succ idxInit) (numMods - 1))
+
+let rec permute (ls: 'a list) (ps: int list) =
+  match ps with
+  | [] -> []
+  | p :: ps' -> (List.nth ls p) :: (permute ls ps')
+
+(* NOTE: idxInit should be larger than 0 *)
 let ppBModulesFull (bml: bModule list) =
+  let idxInit = 1 in
+  let bmdcl = toBModuleDCL bml in
+  let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
+  let callsAll = List.concat (List.map (fun (_, _, c) -> c) bmdcl) in
+  let extCallsAll = List.filter (fun meth -> not (List.mem meth defsAll)) callsAll in
+  let moduleOrder =
+    makeModuleOrder (makeMids 0 (List.length bmdcl))
+                    (makeModuleOrderPairs (makeDefMap bmdcl 0)
+                                          (makeCallMap bmdcl 0)) in
   ppImports ();
   preAnalyses bml;
   ppGlbStructs ();
-  ppBModules bml 1;
+  ppBModules (permute bml moduleOrder) idxInit;
+  ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
   resetGlbStructs ();
-  print_newline ()
+  print_newline ();

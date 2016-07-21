@@ -10,12 +10,13 @@ Unset Extraction AutoInline.
 
 Extraction "BModules.ml" BModules.
 
-(* Require Import Isa MemDir. *)
+(* Require Import Lts.Syntax Lts.ParametricSyntax Lts.Synthesize Ex.Isa Ex.MemCache. *)
 
-(* Definition exInsts: ConstT (Vector (MemTypes.Data rv32iLgDataBytes) rv32iAddrSize) := *)
-(*   getDefaultConst _. *)
+(* Definition memDirCC := ((modFromMeta (memDir 2 2 2 2 (Bit 1) 1)) *)
+(*                           ++ (modFromMeta (mline 2 2 2 2)) *)
+(*                           ++ (modFromMeta (mdir 2 2 1)))%kami. *)
 
-(* Definition testM := modFromMeta (memDir 2 2 2 2 (Bit 1)). *)
+(* Definition testM := memDirCC. *)
 (* Definition testS := getModuleS testM. *)
 (* Definition testB := ModulesSToBModules testS. *)
 
