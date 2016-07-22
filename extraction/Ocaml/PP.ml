@@ -1,4 +1,5 @@
 open Format
+open Target
 
 (* string manipulations *)
 let bsv_keywords =
@@ -151,25 +152,25 @@ let rec getCallsBA (al: bAction list) =
   | BMCall (bind, meth, msig, e) :: tl ->
      (bstring_of_charlist meth, msig) :: (getCallsBA tl)
   | BIfElse (_, _, _, ta, fa) :: tl ->
-     append (append (getCallsBA ta) (getCallsBA fa)) (getCallsBA tl)
+     List.append (List.append (getCallsBA ta) (getCallsBA fa)) (getCallsBA tl)
   | _ :: tl -> getCallsBA tl
 
 let rec getCallsBR (rl: bRule list) =
   match rl with
   | [] -> []
   | { attrName = _; attrType = rb } :: tl ->
-     append (getCallsBA rb) (getCallsBR tl)
+     List.append (getCallsBA rb) (getCallsBR tl)
 
 let rec getCallsBM (ml: bMethod list) =
   match ml with
   | [] -> []
   | { attrName = _; attrType = (_, mb) } :: tl ->
-     append (getCallsBA mb) (getCallsBM tl)
+     List.append (getCallsBA mb) (getCallsBM tl)
 
 let getCallsB (bm: bModule) =
   match bm with
   | { bregs = _; brules = rl; bdms = ml } ->
-     let calls = append (getCallsBR rl) (getCallsBM ml) in
+     let calls = List.append (getCallsBR rl) (getCallsBM ml) in
      List.fold_left (fun acc e -> if List.mem e acc then acc else e :: acc) [] calls
 
 let getDefsB (bm: bModule) =
