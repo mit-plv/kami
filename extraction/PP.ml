@@ -117,6 +117,7 @@ let ppVoid = "void"
 let ppBit = "Bit#"
 let ppVector = "Vector#"
 let ppTypeDef = "typedef"
+let ppDerivations = "deriving(Eq, Bits)"
 let ppStruct = "struct"
 let ppStructNamePrefix = "Struct"
 let ppModuleNamePrefix = "Module"
@@ -465,8 +466,11 @@ let ppBMethod (d: bMethod) =
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
      ps (bstring_of_charlist dn); print_space ();
-     ps ppRBracketL; ps (ppKind asig); print_space ();
-     ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
+     ps ppRBracketL;
+     (if asig = Bit 0 then ()
+      else (ps (ppKind asig); print_space ();
+            ps (string_of_de_brujin_index 0) (* method argument is always x_0 by convention *)
+     ));
      ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
      ppBActions (rsig = Bit 0) None db;
@@ -481,7 +485,7 @@ let rec ppBMethods (dl: bMethod list) =
 
 let ppBInterface (d: bMethod) =
   match d with
-  | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, _) } ->
+  | { attrName = dn; attrType = ({ arg = asig; ret = rsig }, _) } ->
      open_hovbox 0;
      ps ppMethod; print_space ();
      (if rsig = Bit 0 then
@@ -490,8 +494,11 @@ let ppBInterface (d: bMethod) =
         (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
      print_space ();
      ps (bstring_of_charlist dn); print_space ();
-     ps ppRBracketL; ps (ppKind asig); print_space ();
-     ps (string_of_de_brujin_index 0); (* method argument is always x_0 by convention *)
+     ps ppRBracketL;
+     (if asig = Bit 0 then ()
+      else (ps (ppKind asig); print_space ();
+            ps (string_of_de_brujin_index 0) (* method argument is always x_0 by convention *)
+     ));
      ps ppRBracketR; ps ppSep;
      close_box ()
 
@@ -529,7 +536,8 @@ let ppGlbStructs (_: unit) =
   (StringMap.iter (fun nm kl ->
        ps ppTypeDef; print_space (); ps ppStruct; print_space ();
        ps ppCBracketL; print_space (); ps (ppAttrKinds kl); print_space (); ps ppCBracketR;
-       print_space (); ps nm; ps ppSep; print_cut (); force_newline ()) !glbStructs);
+       print_space (); ps nm; print_space (); ps ppDerivations; ps ppSep;
+       print_cut (); force_newline ()) !glbStructs);
   print_cut (); force_newline ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
