@@ -33,7 +33,9 @@ type ('a, 'b) ilist =
 | Icons of 'a * 'a list * 'b * ('a, 'b) ilist
 | Inil
 
-val imap : ('a1 -> 'a2 -> 'a3) -> 'a1 list -> ('a1, 'a2) ilist -> ('a1, 'a3) ilist
+val imap :
+  ('a1 -> 'a2 -> 'a3) -> 'a1 list -> ('a1, 'a2) ilist -> ('a1,
+  'a3) ilist
 
 type word =
 | WO
@@ -53,7 +55,8 @@ val ibound : 'a1 -> 'a1 list -> 'a1 indexBound -> int
 
 val indexBound_head : 'a1 -> 'a1 list -> 'a1 indexBound
 
-val indexBound_tail : 'a1 -> 'a1 -> 'a1 list -> 'a1 indexBound -> 'a1 indexBound
+val indexBound_tail :
+  'a1 -> 'a1 -> 'a1 list -> 'a1 indexBound -> 'a1 indexBound
 
 type 'a boundedIndex = { bindex : 'a; indexb : 'a indexBound }
 
@@ -65,7 +68,8 @@ val none_neq_Some : 'a1 -> 'a2
 
 val nth_Bounded' : ('a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a1
 
-val nth_Bounded : ('a1 -> 'a2) -> 'a1 list -> 'a2 boundedIndex -> 'a1
+val nth_Bounded :
+  ('a1 -> 'a2) -> 'a1 list -> 'a2 boundedIndex -> 'a1
 
 type 'kind attribute = { attrName : char list; attrType : 'kind }
 
@@ -75,9 +79,11 @@ val attrType : 'a1 attribute -> 'a1
 
 type 'kind boundedIndexFull = char list boundedIndex
 
-val getAttr : 'a1 attribute list -> 'a1 boundedIndexFull -> 'a1 attribute
+val getAttr :
+  'a1 attribute list -> 'a1 boundedIndexFull -> 'a1 attribute
 
-val getAttrType : 'a1 attribute list -> 'a1 boundedIndexFull -> 'a1
+val getAttrType :
+  'a1 attribute list -> 'a1 boundedIndexFull -> 'a1
 
 val string_of_nat : int -> char list
 
@@ -85,7 +91,8 @@ val indexSymbol : char list
 
 val prefixSymbol : char list
 
-val addIndexToStr : ('a1 -> char list) -> 'a1 -> char list -> char list
+val addIndexToStr :
+  ('a1 -> char list) -> 'a1 -> char list -> char list
 
 val withPrefix : char list -> char list -> char list
 
@@ -113,7 +120,8 @@ type constT =
 | ConstBool of bool
 | ConstBit of int * word
 | ConstVector of kind * int * constT vec
-| ConstStruct of kind attribute list * (kind attribute, constT) ilist
+| ConstStruct of kind attribute list
+   * (kind attribute, constT) ilist
 
 type constFullT =
 | SyntaxConst of kind * constT
@@ -163,17 +171,21 @@ type 'ty expr =
 | ITE of fullKind * 'ty expr * 'ty expr * 'ty expr
 | Eq of kind * 'ty expr * 'ty expr
 | ReadIndex of int * kind * 'ty expr * 'ty expr
-| ReadField of kind attribute list * kind boundedIndexFull * 'ty expr
+| ReadField of kind attribute list * kind boundedIndexFull
+   * 'ty expr
 | BuildVector of kind * int * 'ty expr vec
-| BuildStruct of kind attribute list * (kind attribute, 'ty expr) ilist
+| BuildStruct of kind attribute list
+   * (kind attribute, 'ty expr) ilist
 | UpdateVector of int * kind * 'ty expr * 'ty expr * 'ty expr
 
 type 'ty actionT =
-| MCall of char list * signatureT * 'ty expr * ('ty -> 'ty actionT)
+| MCall of char list * signatureT * 'ty expr
+   * ('ty -> 'ty actionT)
 | Let_ of fullKind * 'ty expr * ('ty fullType -> 'ty actionT)
 | ReadReg of char list * fullKind * ('ty fullType -> 'ty actionT)
 | WriteReg of char list * fullKind * 'ty expr * 'ty actionT
-| IfElse of 'ty expr * kind * 'ty actionT * 'ty actionT * ('ty -> 'ty actionT)
+| IfElse of 'ty expr * kind * 'ty actionT * 'ty actionT
+   * ('ty -> 'ty actionT)
 | Assert_ of 'ty expr * 'ty actionT
 | Return of 'ty expr
 
@@ -206,41 +218,52 @@ val nameRec0 : nameRecIdx -> nameRec
 val convNameRec : bool -> nameRec -> nameRecIdx
 
 type 'ty genActionT =
-| GMCall of nameRecIdx * signatureT * 'ty expr * ('ty -> 'ty genActionT)
+| GMCall of nameRecIdx * signatureT * 'ty expr
+   * ('ty -> 'ty genActionT)
 | GIndex of ('ty -> 'ty genActionT)
 | GLet_ of fullKind * 'ty expr * ('ty fullType -> 'ty genActionT)
-| GReadReg of nameRecIdx * fullKind * ('ty fullType -> 'ty genActionT)
+| GReadReg of nameRecIdx * fullKind
+   * ('ty fullType -> 'ty genActionT)
 | GWriteReg of nameRecIdx * fullKind * 'ty expr * 'ty genActionT
-| GIfElse of 'ty expr * kind * 'ty genActionT * 'ty genActionT * ('ty -> 'ty genActionT)
+| GIfElse of 'ty expr * kind * 'ty genActionT * 'ty genActionT
+   * ('ty -> 'ty genActionT)
 | GAssert_ of 'ty expr * 'ty genActionT
 | GReturn of 'ty expr
 
-val strFromName : ('a1 -> char list) -> 'a1 -> nameRecIdx -> char list
+val strFromName :
+  ('a1 -> char list) -> 'a1 -> nameRecIdx -> char list
 
 val getGenAction :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 -> kind -> 'a2 genActionT -> 'a2 actionT
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 -> kind ->
+  'a2 genActionT -> 'a2 actionT
 
 type genAction = __ -> __ genActionT
 
 type genMethodT = __ -> __ -> __ genActionT
 
 val getActionFromGen :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> genAction -> 'a1 -> 'a2 actionT
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> genAction ->
+  'a1 -> 'a2 actionT
 
 val getMethFromGen :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> (signatureT, genMethodT) sigT -> 'a1 ->
-  (signatureT, __ -> __ -> __ actionT) sigT
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> (signatureT,
+  genMethodT) sigT -> 'a1 -> (signatureT, __ -> __ -> __ actionT)
+  sigT
 
 type 'ty sinActionT =
-| SMCall of nameRec * signatureT * 'ty expr * ('ty -> 'ty sinActionT)
+| SMCall of nameRec * signatureT * 'ty expr
+   * ('ty -> 'ty sinActionT)
 | SLet_ of fullKind * 'ty expr * ('ty fullType -> 'ty sinActionT)
-| SReadReg of nameRec * fullKind * ('ty fullType -> 'ty sinActionT)
+| SReadReg of nameRec * fullKind
+   * ('ty fullType -> 'ty sinActionT)
 | SWriteReg of nameRec * fullKind * 'ty expr * 'ty sinActionT
-| SIfElse of 'ty expr * kind * 'ty sinActionT * 'ty sinActionT * ('ty -> 'ty sinActionT)
+| SIfElse of 'ty expr * kind * 'ty sinActionT * 'ty sinActionT
+   * ('ty -> 'ty sinActionT)
 | SAssert_ of 'ty expr * 'ty sinActionT
 | SReturn of 'ty expr
 
-val convSinToGen : bool -> kind -> kind -> 'a1 sinActionT -> 'a1 genActionT
+val convSinToGen :
+  bool -> kind -> kind -> 'a1 sinActionT -> 'a1 genActionT
 
 val getSinAction : kind -> 'a1 sinActionT -> 'a1 actionT
 
@@ -250,39 +273,51 @@ type sinMethodT = __ -> __ -> __ sinActionT
 
 val getActionFromSin : sinAction -> 'a1 actionT
 
-val getMethFromSin : (signatureT, sinMethodT) sigT -> (signatureT, __ -> __ -> __ actionT) sigT
+val getMethFromSin :
+  (signatureT, sinMethodT) sigT -> (signatureT, __ -> __ -> __
+  actionT) sigT
 
 val getListFromRep :
-  ('a1 -> char list) -> ('a1 -> 'a2) -> char list -> 'a1 list -> 'a2 attribute list
+  ('a1 -> char list) -> ('a1 -> 'a2) -> char list -> 'a1 list ->
+  'a2 attribute list
 
 val repRule :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> genAction -> char list -> 'a1 list -> (__ -> __
-  actionT) attribute list
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> genAction ->
+  char list -> 'a1 list -> (__ -> __ actionT) attribute list
 
 val repMeth :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> (signatureT, genMethodT) sigT -> char list -> 'a1
-  list -> (signatureT, __ -> __ -> __ actionT) sigT attribute list
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> (signatureT,
+  genMethodT) sigT -> char list -> 'a1 list -> (signatureT, __ ->
+  __ -> __ actionT) sigT attribute list
 
 type metaReg =
 | OneReg of (fullKind, constFullT) sigT * nameRec
-| RepReg of (__ -> char list) * (__ -> (fullKind, constFullT) sigT) * nameRec * __ list
+| RepReg of (__ -> char list)
+   * (__ -> (fullKind, constFullT) sigT) * nameRec * __ list
 
-val getListFromMetaReg : metaReg -> (fullKind, constFullT) sigT attribute list
+val getListFromMetaReg :
+  metaReg -> (fullKind, constFullT) sigT attribute list
 
 type metaRule =
 | OneRule of sinAction * nameRec
-| RepRule of (__ -> char list) * kind * (__ -> constT) * genAction * nameRec * __ list
+| RepRule of (__ -> char list) * kind * (__ -> constT)
+   * genAction * nameRec * __ list
 
-val getListFromMetaRule : metaRule -> (__ -> __ actionT) attribute list
+val getListFromMetaRule :
+  metaRule -> (__ -> __ actionT) attribute list
 
 type metaMeth =
 | OneMeth of (signatureT, sinMethodT) sigT * nameRec
-| RepMeth of (__ -> char list) * kind * (__ -> constT) * (signatureT, genMethodT) sigT * nameRec
-   * __ list
+| RepMeth of (__ -> char list) * kind * (__ -> constT)
+   * (signatureT, genMethodT) sigT * nameRec * __ list
 
-val getListFromMetaMeth : metaMeth -> (signatureT, __ -> __ -> __ actionT) sigT attribute list
+val getListFromMetaMeth :
+  metaMeth -> (signatureT, __ -> __ -> __ actionT) sigT attribute
+  list
 
-type metaModule = { metaRegs : metaReg list; metaRules : metaRule list; metaMeths : metaMeth list }
+type metaModule = { metaRegs : metaReg list;
+                    metaRules : metaRule list;
+                    metaMeths : metaMeth list }
 
 val metaRegs : metaModule -> metaReg list
 
@@ -296,13 +331,17 @@ val getNatListToN : int -> int list
 
 val natToWordConst : int -> int -> constT
 
-type 'a sinReg = { regGen : ('a -> (fullKind, constFullT) sigT); regName : nameRec }
+type 'a sinReg = { regGen : ('a -> (fullKind, constFullT) sigT);
+                   regName : nameRec }
 
 type sinRule = { ruleGen : sinAction; ruleName : nameRec }
 
-type sinMeth = { methGen : (signatureT, sinMethodT) sigT; methName : nameRec }
+type sinMeth = { methGen : (signatureT, sinMethodT) sigT;
+                 methName : nameRec }
 
-type 'a sinModule = { sinRegs : 'a sinReg list; sinRules : sinRule list; sinMeths : sinMeth list }
+type 'a sinModule = { sinRegs : 'a sinReg list;
+                      sinRules : sinRule list;
+                      sinMeths : sinMeth list }
 
 val sinRegs : 'a1 sinModule -> 'a1 sinReg list
 
@@ -310,22 +349,27 @@ val sinRules : 'a1 sinModule -> sinRule list
 
 val sinMeths : 'a1 sinModule -> sinMeth list
 
-val regsToRep : ('a1 -> char list) -> 'a1 list -> 'a1 sinReg list -> metaReg list
+val regsToRep :
+  ('a1 -> char list) -> 'a1 list -> 'a1 sinReg list -> metaReg
+  list
 
 val rulesToRep :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list -> sinRule list -> metaRule list
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list ->
+  sinRule list -> metaRule list
 
 val methsToRep :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list -> sinMeth list -> metaMeth list
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list ->
+  sinMeth list -> metaMeth list
 
 val getMetaFromSin :
-  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list -> 'a1 sinModule -> metaModule
+  ('a1 -> char list) -> kind -> ('a1 -> constT) -> 'a1 list ->
+  'a1 sinModule -> metaModule
 
 val getMetaFromSinNat : int -> int sinModule -> metaModule
 
 val icons' :
-  (kind attribute, 'a1 expr) sigT -> kind attribute list -> (kind attribute, 'a1 expr) ilist ->
-  (kind attribute, 'a1 expr) ilist
+  (kind attribute, 'a1 expr) sigT -> kind attribute list -> (kind
+  attribute, 'a1 expr) ilist -> (kind attribute, 'a1 expr) ilist
 
 val maybe : kind -> kind
 
@@ -376,7 +420,8 @@ type modulesS =
 | ModS of regInitT list * actionS attribute list * defMethTS list
 | ConcatModsS of modulesS * modulesS
 
-val getMethS : (signatureT, methodT) sigT -> (signatureT, methodTS) sigT
+val getMethS :
+  (signatureT, methodT) sigT -> (signatureT, methodTS) sigT
 
 val getModuleS : modules -> modulesS
 
@@ -393,7 +438,8 @@ type bExpr =
 | BReadIndex of bExpr * bExpr
 | BReadField of char list * bExpr
 | BBuildVector of int * bExpr vec
-| BBuildStruct of kind attribute list * (kind attribute, bExpr) ilist
+| BBuildStruct of kind attribute list
+   * (kind attribute, bExpr) ilist
 | BUpdateVector of bExpr * bExpr * bExpr
 | BReadReg of char list
 
@@ -409,21 +455,23 @@ type bRule = bAction list attribute
 
 type bMethod = (signatureT * bAction list) attribute
 
-type bModule = { bregs : regInitT list; brules : bRule list; bdms : bMethod list }
+type bModule = { bregs : regInitT list; brules : bRule list;
+                 bdms : bMethod list }
 
 val bind : 'a1 option -> ('a1 -> 'a2 option) -> 'a2 option
 
 val bindVec : int -> 'a1 option vec -> 'a1 vec option
 
 val bindList :
-  kind attribute list -> (kind attribute, bExpr option) ilist -> (kind attribute, bExpr) ilist
-  option
+  kind attribute list -> (kind attribute, bExpr option) ilist ->
+  (kind attribute, bExpr) ilist option
 
 val exprSToBExpr : fullKind -> exprS -> bExpr option
 
 val actionSToBAction : kind -> actionS -> bAction list option
 
-val rulesToBRules : actionS attribute list -> bAction list attribute list option
+val rulesToBRules :
+  actionS attribute list -> bAction list attribute list option
 
 val methsToBMethods : defMethTS list -> bMethod list option
 
@@ -471,7 +519,8 @@ val addr : int -> kind
 
 val writePort : int -> kind -> kind
 
-val regFileS : char list -> int -> kind -> constT -> int sinModule
+val regFileS :
+  char list -> int -> kind -> constT -> int sinModule
 
 val regFileM : char list -> int -> kind -> constT -> metaModule
 
@@ -501,11 +550,14 @@ val rqToP0 : int -> int -> kind -> kind
 
 val rsToP0 : int -> int -> int -> int -> kind
 
-val rqFromProcPop : int -> int -> int -> int -> signatureT attribute
+val rqFromProcPop :
+  int -> int -> int -> int -> signatureT attribute
 
-val rqFromProcFirst : int -> int -> int -> int -> signatureT attribute
+val rqFromProcFirst :
+  int -> int -> int -> int -> signatureT attribute
 
-val fromPPop : int -> int -> int -> int -> kind -> signatureT attribute
+val fromPPop :
+  int -> int -> int -> int -> kind -> signatureT attribute
 
 val rsToProcEnq : int -> signatureT attribute
 
@@ -565,15 +617,20 @@ val rsToPPop : int -> int -> int -> signatureT attribute
 
 val rsFromCEnq : int -> int -> int -> int -> signatureT attribute
 
-val toCPop : int -> int -> int -> int -> kind -> signatureT attribute
+val toCPop :
+  int -> int -> int -> int -> kind -> signatureT attribute
 
 val fromPEnq : int -> int -> int -> kind -> signatureT attribute
 
 val childParent : int -> int -> int -> int -> kind -> metaModule
 
-val foldInc' : kind -> int -> ('a1 expr -> 'a1 expr -> 'a1 expr) -> 'a1 expr -> int -> 'a1 expr
+val foldInc' :
+  kind -> int -> ('a1 expr -> 'a1 expr -> 'a1 expr) -> 'a1 expr
+  -> int -> 'a1 expr
 
-val foldInc : kind -> int -> ('a1 expr -> 'a1 expr -> 'a1 expr) -> 'a1 expr -> 'a1 expr
+val foldInc :
+  kind -> int -> ('a1 expr -> 'a1 expr -> 'a1 expr) -> 'a1 expr
+  -> 'a1 expr
 
 val addrBits1 : int -> int
 
@@ -603,7 +660,8 @@ val rqFromCFirst : int -> int -> kind -> signatureT attribute
 
 val rsFromCPop : int -> int -> int -> int -> signatureT attribute
 
-val toCEnq : int -> int -> int -> int -> kind -> signatureT attribute
+val toCEnq :
+  int -> int -> int -> int -> kind -> signatureT attribute
 
 val dir : int -> kind
 
@@ -621,9 +679,11 @@ val child0 : int -> kind
 
 val getIdx0 : int -> 'a1 expr -> 'a1 expr
 
-val othersCompat : int -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr
+val othersCompat :
+  int -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr
 
-val findIncompat : int -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr
+val findIncompat :
+  int -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr -> 'a1 expr
 
 val dirwInit : int -> constT
 
@@ -643,7 +703,8 @@ val simpleFifoM : char list -> int -> kind -> metaModule
 
 val rsz : int -> int
 
-val l1Cache0 : int -> int -> int -> int -> kind -> int -> metaModule
+val l1Cache0 :
+  int -> int -> int -> int -> kind -> int -> metaModule
 
 val l1cs : int -> int -> metaModule
 
@@ -655,19 +716,25 @@ val mIdxBits : int -> int -> int
 
 val fifoRqToP : int -> int -> kind -> int -> int -> metaModule
 
-val fifoRsToP : int -> int -> int -> int -> int -> int -> metaModule
+val fifoRsToP :
+  int -> int -> int -> int -> int -> int -> metaModule
 
-val fifoFromP : int -> int -> int -> int -> kind -> int -> int -> metaModule
+val fifoFromP :
+  int -> int -> int -> int -> kind -> int -> int -> metaModule
 
-val childParent0 : int -> int -> int -> int -> kind -> int -> metaModule
+val childParent0 :
+  int -> int -> int -> int -> kind -> int -> metaModule
 
 val fifoRqFromC : int -> int -> kind -> int -> int -> metaModule
 
-val fifoRsFromC : int -> int -> int -> int -> int -> int -> metaModule
+val fifoRsFromC :
+  int -> int -> int -> int -> int -> int -> metaModule
 
-val fifoToC : int -> int -> int -> int -> kind -> int -> int -> metaModule
+val fifoToC :
+  int -> int -> int -> int -> kind -> int -> int -> metaModule
 
-val memDir0 : int -> int -> int -> int -> kind -> int -> metaModule
+val memDir0 :
+  int -> int -> int -> int -> kind -> int -> metaModule
 
 val mline : int -> int -> int -> int -> metaModule
 
@@ -678,6 +745,8 @@ val l1Con : modules
 val memDirCCon : modules
 
 val childParentCCon : modules
+
+val memCache : modules
 
 val targetM : modules
 

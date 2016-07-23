@@ -125,6 +125,9 @@ let ppModuleNamePrefix = "Module"
 let ppVec = "vec"
 let ppFunction = "function"
 
+let ppNoRules = "// No rules in this module"
+let ppNoMeths = "// No methods in this module"
+
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
 let getStructName (_: unit) = (structIdx := !structIdx + 1);
@@ -416,11 +419,11 @@ let rec ppBAction (ife: int option) (a: bAction) =
          ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
      print_space (); ps ppBegin;
-     print_break 0 4; force_newline (); open_hovbox 0;
+     print_break 0 4; (* force_newline (); *) open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) ta;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin;
-     print_break 0 4; force_newline (); open_hovbox 0;
+     print_break 0 4; (* force_newline (); *) open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) fa;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEnd
@@ -511,7 +514,7 @@ let rec ppBInterfaces (dl: bMethod list) =
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
-     open_hovbox 0;
+     open_hbox ();
      ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
      ps (bstring_of_charlist rn); print_space ();
      ps ppAssign; print_space ();
@@ -524,28 +527,28 @@ let rec ppRegInits (rl: regInitT list) =
   match rl with
   | [] -> ()
   | r :: rl' ->
-     open_hovbox 0;
-     ppRegInit r; print_cut (); ppRegInits rl';
-     close_box ()
+     ppRegInit r; print_cut (); ppRegInits rl'
 
 let ppImports (_: unit) =
   ps "import Vector::*;"; print_cut(); force_newline ();
-  ps "import BuildVector::*;"; print_cut(); force_newline ();
-  force_newline ()
+  ps "import BuildVector::*;"; print_cut(); force_newline ()
 
+(* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
+  open_hbox ();
   (StringMap.iter (fun nm kl ->
        ps ppTypeDef; print_space (); ps ppStruct; print_space ();
        ps ppCBracketL; print_space (); ps (ppAttrKinds kl); print_space (); ps ppCBracketR;
        print_space (); ps nm; print_space (); ps ppDerivations; ps ppSep;
        print_cut (); force_newline ()) !glbStructs);
-  print_cut (); force_newline ()
+  print_cut (); force_newline ();
+  close_box ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
      ps ppInterface; print_space (); ps n; ps ppSep;
-     print_break 1 4; force_newline (); open_hovbox 0;
+     print_break 1 4; open_hovbox 0;
      ppBInterfaces bd;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndInterface;
@@ -553,6 +556,7 @@ let ppBModuleInterface (n: string) (m: bModule) =
      force_newline ()
 
 let ppCallArg (cn: string) (csig: signatureT) =
+  open_hbox ();
   ps ppFunction; print_space ();
   (if ret csig = Bit 0 then
      ps ppAction
@@ -564,7 +568,8 @@ let ppCallArg (cn: string) (csig: signatureT) =
      ()
    else
      (ps (ppKind (arg csig)); print_space (); ps "_"));
-  ps ppRBracketR
+  ps ppRBracketR;
+  close_box ()
 
 let rec ppCallArgs (cs: (string * signatureT) list) =
   match cs with
@@ -580,15 +585,17 @@ let ppBModuleCallArgs (cargs: (string * signatureT) list) =
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | { bregs = br; brules = brl; bdms = bd } ->
+     open_hovbox 2;
      ps ppModule; print_space ();
      ps ("mk" ^ ifcn); ppBModuleCallArgs (getCallsB m); print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
+     close_box ();
      print_break 0 4; open_hovbox 0;
      ppRegInits br;
      print_cut (); force_newline ();
-     ppBRules brl;
+     (if (brl = []) then ps ppNoRules else ppBRules brl);
      print_cut (); force_newline ();
-     ppBMethods bd;
+     (if (bd = []) then ps ppNoMeths else ppBMethods bd);
      close_box(); print_break 0 (-4); force_newline ();
      ps ppEndModule;
      print_cut (); force_newline ()
@@ -680,9 +687,11 @@ let rec makeModuleOrder (mids: int list) (pairs: (int * int) list) =
 
 let ppTopModule (bmdcl: bModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
+  open_hovbox 2;
   ps ppModule; print_space ();
   ps "mkTop"; ppBModuleCallArgs extCallsAll; print_space ();
   ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
+  close_box ();
   print_break 0 4; open_hovbox 0;
   ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
   close_box(); print_break 0 (-4);
