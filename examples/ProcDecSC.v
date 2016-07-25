@@ -11,7 +11,7 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -23,7 +23,7 @@ Section ProcDecSC.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdec := pdecf dec execState execNextPc opLd opSt opHt.
+  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opHt.
   Definition pinst := pinst dec execState execNextPc opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
@@ -35,37 +35,39 @@ Section ProcDecSC.
     "processLd" |-> "execLd";
     "processSt" |-> "execSt"; ||.
 
-  Definition pdec_pinst_regRel (ir sr: RegsT): Prop.
+  Definition pdec_pinst_regMap (r: RegsT): RegsT.
   Proof.
-    kgetv "pc"%string pcv ir (Bit addrSize) False.
-    kgetv "rf"%string rfv ir (Vector (Data lgDataBytes) rfIdx) False.
-    refine (exists oeltv: fullType type (listEltK RsToProc type),
-               M.find "rsToProc"--"elt" ir = Some (existT _ _ oeltv) /\ _).
+    kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
+    kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
+    kgetv "rsToProc"--"empty"%string oev r Bool (M.empty (sigT (fullType type))).
+    kgetv "rsToProc"--"elt"%string oelv r (Vector RsToProc fifoSize)
+          (M.empty (sigT (fullType type))).
+    kgetv "rsToProc"--"deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
 
     pose proof (evalExpr (dec _ rfv pcv)) as inst.
-    refine (match oeltv with
-            | nil => sr = M.add "pc"%string (existT _ _ pcv)
-                                (M.add "rf"%string (existT _ _ rfv)
-                                       (M.empty _))
-            | _ => sr = M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
-                              (M.add "rf"%string _ (M.empty _))
-            end).
+    refine (
+        if oev
+        then (M.add "pc"%string (existT _ _ pcv)
+                    (M.add "rf"%string (existT _ _ rfv)
+                           (M.empty _)))
+        else (M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
+                    (M.add "rf"%string _ (M.empty _)))
+      ).
 
     pose proof (inst ``"opcode") as opc.
     destruct (weq opc (evalConstT opLd)).
     - refine (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx)) _); simpl.
       exact (fun a => if weq a (inst ``"reg")
-                      then hd (evalConstT Default) oeltv ``"data"
+                      then (oelv odv) ``"data"
                       else rfv a).
     - refine (existT _ _ rfv).
   Defined.
-  Hint Unfold pdec_pinst_regRel: MethDefs. (* for kdecompose_regMap_init *)
-  Hint Unfold evalConstT: MethDefs.
+  Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
   Definition decInstConfig :=
     {| inlining := true;
        decomposition :=
-         DTRelational pdec_pinst_regRel pdec_pinst_ruleMap;
+         DTFunctional pdec_pinst_regMap pdec_pinst_ruleMap;
        invariants :=
          IVCons procDec_inv_0_ok (IVCons procDec_inv_1_ok IVNil)
     |}.

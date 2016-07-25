@@ -11,7 +11,7 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -22,7 +22,7 @@ Section ProcDecSCN.
 
   Variable n: nat.
   
-  Definition pdecN := procDecM dec execState execNextPc opLd opSt opHt n.
+  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opHt n.
   Definition scN := sc dec execState execNextPc opLd opSt opHt n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
@@ -37,7 +37,7 @@ Section ProcDecSCN.
   Qed.
 
   Definition procDecN := pdecs dec execState execNextPc opLd opSt opHt n.
-  Definition memAtomic := memAtomic addrSize lgDataBytes n.
+  Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.

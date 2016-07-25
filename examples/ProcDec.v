@@ -120,7 +120,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep halt nextPc
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -132,7 +132,7 @@ Section ProcDecM.
                              opLd opSt opHt.
   Definition pdecs (i: nat) := duplicate pdec i.
 
-  Definition pdecf := ConcatMod pdec (iom addrSize lgDataBytes).
+  Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
   Definition pdecfs (i: nat) := duplicate pdecf i.
   Definition procDecM (n: nat) := ConcatMod (pdecfs n) (minst addrSize lgDataBytes n).
 
@@ -141,7 +141,7 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -157,7 +157,7 @@ Section Facts.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf dec execState execNextPc opLd opSt opHt).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf fifoSize dec execState execNextPc opLd opSt opHt).
   Proof.
     kequiv.
   Qed.
@@ -166,14 +166,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs fifoSize dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM fifoSize dec execState execNextPc opLd opSt opHt n).
   Proof.
     kequiv.
   Qed.

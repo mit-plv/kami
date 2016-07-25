@@ -30,8 +30,8 @@ Section ProcMem.
   Definition pdecN := pdecs dec execState execNextPc opLd opSt opHt numChildren.
   Definition pmFifos :=
     modFromMeta
-      ((nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes LgNumChildren)
-         +++ (nfifoRsToProc LgDataBytes LgNumChildren)).
+      ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes FifoSize LgNumChildren)
+         +++ (fifoRsToProc LgDataBytes FifoSize LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
   Definition scN := sc dec execState execNextPc opLd opSt opHt numChildren.
@@ -76,7 +76,7 @@ Section ProcMem.
         try (intro Hx;
              apply firstElts_SubList with
              (IdxBits:= IdxBits) (TagBits:= TagBits) (LgNumDatas:= LgNumDatas)
-                                 (LgDataBytes:= LgDataBytes) in Hx;
+                                 (LgDataBytes:= LgDataBytes) (FifoSize:= FifoSize) in Hx;
              generalize dependent k; eapply DisjList_logic_inv; kdisj_dms).
   Qed.
 

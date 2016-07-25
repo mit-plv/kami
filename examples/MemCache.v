@@ -68,6 +68,16 @@ Section MemCache.
   Definition othersInMemCache :=
     modFromMeta (l1 +++ childParent +++ memDirC).
 
+  (* Fifos connecting processors and memCache; it's NOT the part of "memCache" *)
+  Definition fifoRqFromProc :=
+    getMetaFromSinNat LgNumChildren (@fifoS "rqFromProc" FifoSize
+                                            (RqFromProc IdxBits TagBits
+                                                        LgNumDatas LgDataBytes)
+                                            eq_refl).
+  Definition fifoRsToProc :=
+    getMetaFromSinNat LgNumChildren (@simpleFifoS "rsToProc" FifoSize
+                                                  (RsToProc LgDataBytes) eq_refl).
+
 End MemCache.
 
 Hint Unfold MIdxBits: MethDefs.
@@ -130,20 +140,10 @@ Section MemCacheNativeFifo.
     modFromMeta
       ((nfifoRqToP +++ nfifoRsToP +++ nfifoFromP)
          +++ (nfifoRqFromC +++ nfifoRsFromC +++ nfifoToC)).
-
-  (* Fifos connecting processors and nmemCache; it's NOT the part of "nmemCache" *)
-  Definition nfifoRqFromProc :=
-    getMetaFromSinNat LgNumChildren (@nativeFifoS "rqFromProc"
-                                                  (RqFromProc IdxBits TagBits
-                                                              LgNumDatas LgDataBytes)
-                                                  Default eq_refl).
-  Definition nfifoRsToProc :=
-    getMetaFromSinNat LgNumChildren (@nativeSimpleFifoS "rsToProc"
-                                                        (RsToProc LgDataBytes) Default eq_refl).
   
 End MemCacheNativeFifo.
 
-Hint Unfold nfifoRqFromProc nfifoRsToProc
+Hint Unfold fifoRqFromProc fifoRsToProc
      nfifoRqToP nfifoRsToP nfifoFromP
      nl1C nfifoRqFromC nfifoRsFromC nfifoToC nchildParentC nmemCache: ModuleDefs.
 

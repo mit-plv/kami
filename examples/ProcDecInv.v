@@ -10,7 +10,7 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -22,60 +22,71 @@ Section Invariants.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdecInl := pdecInl dec execState execNextPc opLd opSt opHt.
+  Definition pdecInl := pdecInl fifoSize dec execState execNextPc opLd opSt opHt.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistnv "rqFromProc"--"elt" ieltv o (listEltK RqFromProc type).
-    kexistnv "rsToProc"--"elt" oeltv o (listEltK RsToProc type).
+    kexistv "rqFromProc"--"empty"%string iev o Bool.
+    kexistv "rqFromProc"--"full"%string ifv o Bool.
+    kexistv "rqFromProc"--"enqP"%string ienqpv o (Bit fifoSize).
+    kexistv "rqFromProc"--"deqP"%string ideqpv o (Bit fifoSize).
+    kexistv "rqFromProc"--"elt"%string ieltv o (Vector RqFromProc fifoSize).
+    kexistv "rsToProc"--"empty"%string oev o Bool.
+    kexistv "rsToProc"--"full"%string ofv o Bool.
+    kexistv "rsToProc"--"enqP"%string oenqpv o (Bit fifoSize).
+    kexistv "rsToProc"--"deqP"%string odeqpv o (Bit fifoSize).
+    kexistv "rsToProc"--"elt"%string oeltv o (Vector RsToProc fifoSize).
     exact True.
   Defined.
   Hint Unfold procDec_inv_0: InvDefs.
 
-  Definition fifo_empty_inv {A} (elt: list A) :=
-    elt = nil.
+  Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
+    fifoEmpty = true /\ fifoEnqP = fifoDeqP.
   
-  Definition fifo_not_empty_inv {A} (elt: list A) :=
-    exists e, elt = e :: nil.
-    (* length elt = 1. *)
+  Definition fifo_not_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
+    fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
              (pc: fullType type (SyntaxKind (Bit addrSize)))
              (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
-             (insElt: list (type RqFromProc)): Prop.
+             (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
+             (insDeqP: type (Bit fifoSize)): Prop.
   Proof.
-    refine (match insElt with nil => True | _ => _ end).
+    refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
     - refine (_ /\ _).
       + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opLd)
-                then false else true) = hd (evalConstT Default) insElt ``"op").
+                then false else true) = insElt insDeqP ``"op").
       + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opSt)
-                then true else false) = hd (evalConstT Default) insElt ``"op").
-    - exact (hd (evalConstT Default) insElt ``"addr" = evalExpr (dec _ rf pc) ``"addr").
-    - refine (if (hd (evalConstT Default) insElt ``"op") : bool then _ else _).
-      + exact (hd (evalConstT Default) insElt ``"data" = evalExpr (dec _ rf pc) ``"value").
-      + exact (hd (evalConstT Default) insElt ``"data" =
-               evalConstT (getDefaultConst (Data lgDataBytes))).
+                then true else false) = insElt insDeqP ``"op").
+    - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf pc) ``"addr").
+    - refine (if (insElt insDeqP ``"op") : bool then _ else _).
+      + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf pc) ``"value").
+      + exact (insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))).
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
-  Hint Unfold evalConstT: MethDefs.
 
   Definition procDec_inv_1 (o: RegsT): Prop.
   Proof.
     kexistv "pc"%string pcv o (Bit addrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
-    kexistnv "rqFromProc"--"elt" ieltv o (listEltK RqFromProc type).
-    kexistnv "rsToProc"--"elt" oeltv o (listEltK RsToProc type).
+    kexistv "rqFromProc"--"empty"%string iev o Bool.
+    kexistv "rqFromProc"--"enqP"%string ienqP o (Bit fifoSize).
+    kexistv "rqFromProc"--"deqP"%string ideqP o (Bit fifoSize).
+    kexistv "rqFromProc"--"elt"%string ieltv o (Vector RqFromProc fifoSize).
+    kexistv "rsToProc"--"empty"%string oev o Bool.
+    kexistv "rsToProc"--"enqP"%string oenqP o (Bit fifoSize).
+    kexistv "rsToProc"--"deqP"%string odeqP o (Bit fifoSize).
     refine (or3 _ _ _).
-    - exact (v1 = false /\ fifo_empty_inv v2 /\ fifo_empty_inv v3).
+    - exact (v1 = false /\ fifo_empty_inv v2 v3 v4 /\ fifo_empty_inv v6 v7 v8).
     - refine (_ /\ _).
-      + exact (v1 = true /\ fifo_not_empty_inv v2 /\ fifo_empty_inv v3).
-      + exact (mem_request_inv v v0 v2).
-    - exact (v1 = true /\ fifo_empty_inv v2 /\ fifo_not_empty_inv v3).
+      + exact (v1 = true /\ fifo_not_empty_inv v2 v3 v4 /\ fifo_empty_inv v6 v7 v8).
+      + exact (mem_request_inv v v0 v2 v5 v4).
+    - exact (v1 = true /\ fifo_empty_inv v2 v3 v4 /\ fifo_not_empty_inv v6 v7 v8).
   Defined.
   Hint Unfold procDec_inv_1: InvDefs.
 

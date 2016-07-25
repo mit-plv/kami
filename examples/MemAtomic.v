@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Refinement.
 Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.NativeFifo.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
 
@@ -42,14 +42,14 @@ Hint Unfold mid : ModuleDefs.
 Hint Unfold RqFromProc RsToProc getReq setRep exec processLd processSt : MethDefs.
 
 Section MemAtomic.
-  Variables (addrSize lgDataBytes: nat).
+  Variables (addrSize fifoSize lgDataBytes: nat).
 
   Variable n: nat.
 
   Definition minst := memInst n addrSize lgDataBytes.
 
-  Definition inQ := @nativeSimpleFifo "rqFromProc" (RqFromProc addrSize lgDataBytes) Default.
-  Definition outQ := @nativeSimpleFifo "rsToProc" (RsToProc lgDataBytes) Default.
+  Definition inQ := @simpleFifo "rqFromProc" fifoSize (RqFromProc addrSize lgDataBytes).
+  Definition outQ := @simpleFifo "rsToProc" fifoSize (RsToProc lgDataBytes).
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition ios (i: nat) := duplicate ioQ i.
@@ -68,7 +68,7 @@ End MemAtomic.
 Hint Unfold minst inQ outQ ioQ midQ mids iom ioms memAtomicWoQ memAtomic : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize lgDataBytes: nat).
+  Variables (addrSize fifoSize lgDataBytes: nat).
 
   Lemma midQ_ModEquiv:
     forall ty1 ty2, ModEquiv ty1 ty2 (midQ addrSize lgDataBytes).
@@ -78,7 +78,7 @@ Section Facts.
   Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize lgDataBytes).
+    forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize fifoSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
@@ -94,7 +94,7 @@ Section Facts.
   Hint Resolve mids_ModEquiv.
 
   Lemma ioms_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize lgDataBytes n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
@@ -107,7 +107,7 @@ Section Facts.
   Qed.
 
   Lemma memAtomic_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize lgDataBytes n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
@@ -118,12 +118,12 @@ Hint Immediate midQ_ModEquiv iom_ModEquiv
      mids_ModEquiv ioms_ModEquiv memAtomicWoQ_ModEquiv memAtomic_ModEquiv.
 
 Section MemAtomicWoQ.
-  Variables (addrSize lgDataBytes: nat).
+  Variables (addrSize fifoSize lgDataBytes: nat).
   Variable n: nat.
 
   Lemma ios_memAtomicWoQ_memAtomic:
-    ((ios addrSize lgDataBytes n ++ memAtomicWoQ addrSize lgDataBytes n)%kami)
-      <<== (memAtomic addrSize lgDataBytes n).
+    ((ios addrSize fifoSize lgDataBytes n ++ memAtomicWoQ addrSize lgDataBytes n)%kami)
+      <<== (memAtomic addrSize fifoSize lgDataBytes n).
   Proof.
     unfold memAtomic, memAtomicWoQ.
     krewrite assoc left.

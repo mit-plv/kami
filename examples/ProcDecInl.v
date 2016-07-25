@@ -5,7 +5,7 @@ Require Import Ex.SC Ex.ProcDec.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
@@ -13,7 +13,7 @@ Section Inlined.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
-  Definition pdec := pdecf dec execState execNextPc opLd opSt opHt.
+  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opHt.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: Modules * bool.

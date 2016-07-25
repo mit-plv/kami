@@ -30,7 +30,7 @@ Section MemCorrect.
       forall n,
         SubList
           (duplicateElt (Indexer.withPrefix "rqFromProc" "firstElt") (wordToNat (wones n)))
-          (getDefs (modFromMeta (nfifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes n))).
+          (getDefs (modFromMeta (fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes FifoSize n))).
     Proof.
       unfold modFromMeta, getDefs; simpl; intros.
       repeat rewrite namesOf_app.
