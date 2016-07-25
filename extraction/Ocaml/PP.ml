@@ -521,7 +521,7 @@ let ppRegInit (r: regInitT) =
      ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
      close_box ()
   | { attrName = rn; attrType = _ } ->
-     raise (Should_not_happen ("RegName: " ^ (bstring_of_charlist rn)))
+     raise (Should_not_happen ("NativeKind register detected; name: " ^ (bstring_of_charlist rn)))
 
 let rec ppRegInits (rl: regInitT list) =
   match rl with
@@ -671,7 +671,10 @@ let makeModuleOrderPairs (defs: int StringMap.t) (calls: (int list) StringMap.t)
   StringMap.fold (fun k di ps ->
       if StringMap.mem k calls then
         let cis = StringMap.find k calls in
-        List.append (List.map (fun ci -> (di, ci)) cis) ps
+        List.append (List.map
+                       (fun ci -> if di = ci
+                                  then raise (Should_not_happen "Call-cycle in a module")
+                                  else (di, ci)) cis) ps
       else ps) defs []
 
 let rec makeModuleOrder (mids: int list) (pairs: (int * int) list) =

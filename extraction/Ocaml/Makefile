@@ -11,4 +11,7 @@ native:
 byte:
 	$(OCB) Main.byte
 
-.PHONY: all clean native byte
+debug:
+	$(OCB) -tag debug Main.native
+
+.PHONY: all clean native byte debug
