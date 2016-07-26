@@ -606,6 +606,19 @@ End ToNative.
 
 Definition dropFirstElt fifoName := dropP (fifoName -- "firstElt").
 
+Lemma substepsInd_getRules_nil_annot:
+  forall m o u l,
+    getRules m = nil ->
+    SubstepsInd m o u l ->
+    (annot l = None \/ annot l = Some None).
+Proof.
+  induction 2; simpl; intros; auto.
+  subst; destruct l as [a d c]; simpl in *.
+  inv H1; auto.
+  - destruct a; auto.
+  - rewrite H in HInRules; inv HInRules.
+Qed.
+
 Section ToSimple.
   Variable fifoName: string.
   Variable fifoSize: nat.
@@ -613,11 +626,123 @@ Section ToSimple.
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
 
+  Definition fifo_sfifo_ruleMap (_: RegsT) (r: string) := Some r.
+
   Lemma fifo_refines_sfifo:
     (Fifo.fifo fifoName fifoSize dType)
       <<=[dropFirstElt fifoName] (Fifo.simpleFifo fifoName fifoSize dType).
-  Proof.
-    admit.
+  Proof. (* SKIP_PROOF_ON
+    apply stepRefinement with (ruleMap:= fifo_sfifo_ruleMap) (theta:= id); auto.
+    intros o u l _ Hstep; exists u; split; auto; unfold id.
+
+    apply step_consistent; apply step_consistent in Hstep.
+    inv Hstep.
+
+    pose proof (@substepsInd_getRules_nil_annot (Fifo.fifo fifoName fifoSize dType) _ _ _
+                                                eq_refl HSubSteps).
+    pose proof (substepsInd_calls_in (fifo_ModEquiv _ _ _ _ _) HSubSteps) as Hcs.
+    unfold getCalls in Hcs; simpl in Hcs.
+    apply M.KeysSubset_nil in Hcs; subst.
+    destruct l0 as [ann ds cs]; simpl in *; subst.
+    rewrite M.subtractKV_empty_1; rewrite M.subtractKV_empty_2.
+
+    match goal with
+    | [ |- StepInd _ _ _ ?l ] =>
+      replace l with (hide {| annot:= ann;
+                              defs:= liftToMap1 (dropFirstElt fifoName) ds;
+                              calls:= M.empty _ |});
+        [|unfold hide; simpl; f_equal;
+          [destruct ann as [[|]|]; auto
+          |repeat rewrite M.subtractKV_empty_1; rewrite liftToMap1Empty; auto]]
+    end.
+
+    constructor;
+      [|unfold hide; simpl; rewrite M.subtractKV_empty_1; rewrite M.subtractKV_empty_2;
+        unfold wellHidden; simpl; split; [apply M.KeysDisj_nil|apply M.KeysDisj_empty]].
+
+    clear HWellHidden.
+
+    remember {| annot:= ann; defs:= ds; calls:= M.empty _ |} as l.
+    replace ds with (defs l) by (subst; auto).
+    assert (annot l = None \/ annot l = Some None) by (subst; auto).
+    assert (calls l = M.empty _) by (subst; auto).
+    clear Heql; induction HSubSteps; subst.
+
+    - simpl in *; subst.
+      destruct H; subst; [constructor|].
+      eapply SubstepsCons.
+      + constructor.
+      + apply EmptyRule.
+      + repeat split; auto.
+      + auto.
+      + reflexivity.
+
+    - inv H2; [|destruct l as [a d c]; simpl in *; subst; mred (* EmptyMeth *)
+               |inv HInRules (* SingleRule *)
+               |].
+
+      + (* EmptyRule *)
+        destruct l as [a d c]; simpl in *; mred.
+        apply IHHSubSteps; auto.
+        pose proof (@substepsInd_getRules_nil_annot (Fifo.fifo fifoName fifoSize dType) _ _ _
+                                                    eq_refl HSubSteps); auto.
+
+      + (* SingleMeth *)
+        CommonTactics.dest_in; destruct l as [a d c]; simpl in *; subst.
+        * (* enq *)
+          eapply SubstepsCons.
+          { apply IHHSubSteps; auto.
+            apply M.union_empty in H1; dest; auto.
+          }
+          { eapply SingleMeth.
+            { left; auto. }
+            { eassumption. }
+            { reflexivity. }
+          }
+          { simpl; inv H3; dest; simpl in *.
+            repeat split; simpl; auto.
+            destruct a, ann; findeq; rewrite liftToMap1_find; rewrite H4; auto.
+          }
+          { reflexivity. }
+          { simpl; f_equal.
+            { meq; findeq_custom liftToMap1_find_tac. }
+            { apply M.union_empty in H1; dest; subst; meq. }
+          }
+          
+        * (* deq *)
+          eapply SubstepsCons.
+          { apply IHHSubSteps; auto.
+            apply M.union_empty in H1; dest; auto.
+          }
+          { eapply SingleMeth.
+            { right; left; auto. }
+            { eassumption. }
+            { reflexivity. }
+          }
+          { simpl; inv H3; dest; simpl in *.
+            repeat split; simpl; auto.
+            destruct a, ann; findeq; rewrite liftToMap1_find; rewrite H4; auto.
+          }
+          { reflexivity. }
+          { simpl; f_equal.
+            { meq; findeq_custom liftToMap1_find_tac. }
+            { apply M.union_empty in H1; dest; subst; meq. }
+          }
+
+        * (* firstElt *)
+          match goal with
+          | [ |- SubstepsInd _ _ _ {| defs := ?ds |} ] =>
+            replace ds with (liftToMap1 (dropFirstElt fifoName) d)
+          end.
+          { assert (su = M.empty _) by (kinv_action_dest; auto); subst.
+            mred; apply IHHSubSteps; auto.
+            apply M.union_empty in H1; dest; subst; auto.
+          }
+          { clear; meq.
+            findeq_custom liftToMap1_find_tac;
+              try (unfold dropFirstElt, dropP; rewrite string_eq_true; auto).
+          }
+          END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ToSimple.
