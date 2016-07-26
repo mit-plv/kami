@@ -604,14 +604,30 @@ Section ToNative.
 
 End ToNative.
 
+Definition dropFirstElt fifoName := dropP (fifoName -- "firstElt").
+
 Section ToSimple.
+  Variable fifoName: string.
+  Variable fifoSize: nat.
+  Variable dType: Kind.
+
+  Local Notation "^ s" := (fifoName -- s) (at level 0).
+
+  Lemma fifo_refines_sfifo:
+    (Fifo.fifo fifoName fifoSize dType)
+      <<=[dropFirstElt fifoName] (Fifo.simpleFifo fifoName fifoSize dType).
+  Proof.
+    admit.
+  Qed.
+
+End ToSimple.
+
+Section ToSimpleN.
   Variable fifoName: string.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
-
-  Definition dropFirstElt := dropP ^"firstElt".
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
@@ -620,7 +636,8 @@ Section ToSimple.
   Defined.
 
   Lemma nfifo_refines_nsfifo:
-    (nativeFifo fifoName default) <<=[dropFirstElt] (nativeSimpleFifo fifoName default).
+    (nativeFifo fifoName default)
+      <<=[dropFirstElt fifoName] (nativeSimpleFifo fifoName default).
   Proof. (* SKIP_PROOF_ON
     apply decompositionOneR with
     (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^"elt"); auto.
@@ -731,5 +748,5 @@ Section ToSimple.
           END_SKIP_PROOF_ON *) admit.
   Qed.
 
-End ToSimple.
+End ToSimpleN.
     

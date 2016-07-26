@@ -30,8 +30,8 @@ Section ProcMem.
   Definition pdecN := pdecs dec execState execNextPc opLd opSt opHt numChildren.
   Definition pmFifos :=
     modFromMeta
-      ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes FifoSize LgNumChildren)
-         +++ (fifoRsToProc LgDataBytes FifoSize LgNumChildren)).
+      ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
+         +++ (fifoRsToProc LgDataBytes (rsz FifoSize) LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
   Definition scN := sc dec execState execNextPc opLd opSt opHt numChildren.
@@ -82,7 +82,7 @@ Section ProcMem.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
   Proof. (* SKIP_PROOF_ON
-    ketrans; [|apply pdecN_memAtomic_refines_scN; auto].
+    ketrans; [|apply pdecN_memAtomic_refines_scN with (fifoSize:= rsz FifoSize); auto].
 
     kmodular.
     - kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
@@ -107,24 +107,26 @@ Section ProcMem.
           { eapply DisjList_SubList; [apply getExtMeths_meths|].
             apply DisjList_comm.
             apply DisjList_SubList with
-            (l1:= getDefs (modFromMeta (nfifoRqFromProc IdxBits TagBits LgNumDatas
-                                                        LgDataBytes LgNumChildren)));
+            (l1:= getDefs (modFromMeta (fifoRqFromProc
+                                          IdxBits TagBits LgNumDatas
+                                          LgDataBytes (rsz FifoSize) LgNumChildren)));
               [apply firstElts_SubList|].
             apply DisjList_comm, DisjList_app_4.
             { kdisj_dms. }
             { kdisj_cms_dms. }
           }
         * ketrans_r; [apply sinModule_duplicate_1;
-                      [kequiv|kvr|knodup_regs|apply nativeFifoS_const_regs]|].
+                      [kequiv|kvr|knodup_regs|apply fifoS_const_regs]|].
           apply duplicate_traceRefines_drop; auto; [kequiv|kvr| |].
           { vm_compute; tauto. }
-          { rewrite <-NativeFifo.nativeFifo_nativeFifoS.
-            apply nfifo_refines_nsfifo.
+          { rewrite <-Fifo.fifo_fifoS.
+            apply fifo_refines_sfifo.
           }
         * apply sinModule_duplicate_1; [kequiv|kvr|knodup_regs|].
-          apply nativeFifoS_const_regs with (default:= (getDefaultConst _)).
+          apply fifoS_const_regs.
           
       + apply memCache_refines_memAtomic.
+        
         END_SKIP_PROOF_ON *) admit.
   Qed.
 
