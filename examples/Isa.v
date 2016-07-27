@@ -5,7 +5,7 @@ Require Import Ex.MemTypes Ex.SC.
 
 (* Subset of RV32I instructions = {ld, st, add, sub, beq, blt} (+ halt) *)
 Section RV32ISubset.
-  Definition rv32iAddrSize := 2.
+  Definition rv32iAddrSize := 4.
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)

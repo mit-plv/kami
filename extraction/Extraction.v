@@ -15,44 +15,59 @@ Unset Extraction AutoInline.
  *)
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Synthesize Ex.Isa.
 
-(** memCache test *)
-Require Import Ex.MemCache.
+(** procDec + memCache test *)
+Require Import Ex.MemCache Ex.ProcMemCorrect.
 
-Definition l1Con := ((modFromMeta (l1Cache 2 2 2 2 (Bit 1) 1))
-                       ++ ((modFromMeta (l1cs 2 1))
-                             ++ (modFromMeta (l1tag 2 2 1))
-                             ++ (modFromMeta (l1line 2 2 2 1)))
-                       ++ ((modFromMeta (fifoRqToP 2 2 (Bit 1) 2 1))
-                             ++ (modFromMeta (fifoRsToP 2 2 2 2 2 1))
-                             ++ (modFromMeta (fifoFromP 2 2 2 2 (Bit 1) 2 1))))%kami.
+Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
+                                  rv32iAddrSize) := getDefaultConst _.
 
-Definition memDirCCon := ((modFromMeta (memDir 2 2 2 2 (Bit 1) 1))
-                            ++ (modFromMeta (mline 2 2 2 2))
-                            ++ (modFromMeta (mdir 2 2 1)))%kami.
+(* AddrSize = IdxBits + TagBits + LgNumDatas *)
+Definition idxBits := 1.
+Definition tagBits := 1.
+Definition lgNumDatas := 2.
+Definition lgNumChildren := 1. (* 2 cores *)
+Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
+Definition fifoSize := 2.
+Definition idK := Bit 1.
 
-Definition childParentCCon := ((modFromMeta (childParent 2 2 2 2 (Bit 1) 1))
-                                 ++ (modFromMeta (fifoRqFromC 2 2 (Bit 1) 2 1))
-                                 ++ (modFromMeta (fifoRsFromC 2 2 2 2 2 1))
-                                 ++ (modFromMeta (fifoToC 2 2 2 2 (Bit 1) 2 1)))%kami.
+Definition pdecN := pdecN idxBits tagBits lgNumDatas
+                          (rv32iDecode insts) rv32iExecState rv32iExecNextPc
+                          rv32iLd rv32iSt rv32iHt lgNumChildren.
+Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren.
+
+Definition l1Con := ((modFromMeta (l1Cache idxBits tagBits lgNumDatas lgDataBytes
+                                           idK lgNumChildren))
+                       ++ ((modFromMeta (l1cs idxBits lgNumChildren))
+                             ++ (modFromMeta (l1tag idxBits tagBits lgNumChildren))
+                             ++ (modFromMeta (l1line idxBits lgNumDatas lgDataBytes lgNumChildren)))
+                       ++ ((modFromMeta (fifoRqToP idxBits tagBits idK fifoSize lgNumChildren))
+                             ++ (modFromMeta (fifoRsToP idxBits tagBits lgNumDatas lgDataBytes
+                                                        fifoSize lgNumChildren))
+                             ++ (modFromMeta (fifoFromP idxBits tagBits lgNumDatas lgDataBytes
+                                                        idK fifoSize lgNumChildren))))%kami.
+
+Definition memDirCCon := ((modFromMeta (memDir idxBits tagBits lgNumDatas lgDataBytes
+                                               idK lgNumChildren))
+                            ++ (modFromMeta (mline idxBits tagBits lgNumDatas lgDataBytes))
+                            ++ (modFromMeta (mdir idxBits tagBits lgNumChildren)))%kami.
+
+Definition childParentCCon := ((modFromMeta (childParent idxBits tagBits lgNumDatas lgDataBytes
+                                                         idK lgNumChildren))
+                                 ++ (modFromMeta (fifoRqFromC idxBits tagBits
+                                                              idK fifoSize lgNumChildren))
+                                 ++ (modFromMeta (fifoRsFromC idxBits tagBits lgNumDatas lgDataBytes
+                                                              fifoSize lgNumChildren))
+                                 ++ (modFromMeta (fifoToC idxBits tagBits lgNumDatas lgDataBytes
+                                                          idK fifoSize lgNumChildren)))%kami.
 
 Definition memCache := (l1Con ++ childParentCCon ++ memDirCCon)%kami.
 
-(* Require Import ProcMemCorrect. *)
+Definition procMemCache := (pdecN ++ pmFifos ++ memCache)%kami.
 
-(* Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes) *)
-(*                                   rv32iAddrSize) := getDefaultConst _. *)
+(** MODIFY targetM to your target module *)
+Definition targetM := procMemCache.
 
-(* (** procDec + memCache test *) *)
-(* Definition pdecN := pdecN 1 1 0 *)
-(*                           (rv32iDecode insts) rv32iExecState rv32iExecNextPc *)
-(*                           rv32iLd rv32iSt rv32iHt 1. *)
-(* Definition pmFifos := pmFifos 1 1 0 2 1. *)
-(* Definition mcache := mcache 2 1 1 0 2 (Bit 1) 1. *)
-
-(* Definition procMemCache := (pdecN ++ pmFifos ++ modFromMeta mcache)%kami. *)
-
-(** DON'T REMOVE BELOW LINES *)
-Definition targetM := memCache.
+(** DON'T REMOVE OR MODIFY BELOW LINES *)
 Definition targetS := getModuleS targetM.
 Definition targetB := ModulesSToBModules targetS.
 
