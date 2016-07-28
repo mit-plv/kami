@@ -500,8 +500,7 @@ Section MemCacheInl.
     ssNoF "enq.toChild" "dwnRq".
     ssF "enq.toChild" "deferred".
 
-    ssNoF "firstElt.rqFromChild" "missByState".
-    ssF "firstElt.rqFromChild" "dwnRq".
+    ssF "firstElt.rqFromChild" "missByState".
     
     ssF "deq.rqFromChild" "deferred".
 
@@ -522,8 +521,7 @@ Section MemCacheInl.
     ssNoFilt "enq.toChild" "dwnRq".
     ssFilt "enq.toChild" "deferred".
 
-    ssNoFilt "firstElt.rqFromChild" "missByState".
-    ssFilt "firstElt.rqFromChild" "dwnRq".
+    ssFilt "firstElt.rqFromChild" "missByState".
     
     ssFilt "deq.rqFromChild" "deferred".
 

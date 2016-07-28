@@ -90,6 +90,7 @@ Section Mem.
     META {
         Register "cRqValid": Bool <- @ConstBool false
         with Register "cRqDirw": Dirw <- dirwInit
+        with Register "cRq": RqFromC <- Default
 
         with Rule "missByState" :=
           Read valid <- "cRqValid";
@@ -103,12 +104,13 @@ Section Mem.
           Write "cRqValid" <- $$ true;
           LET dirw: Dirw <- VEC (replicate ($$ false) _);
           Write "cRqDirw" <- #dirw;
+          Write "cRq" <- #rqChild;
           Retv
 
         with Rule "dwnRq" :=
           Read valid <- "cRqValid";
           Assert #valid;
-          Call rqChild <- rqFromCFirst();
+          Read rqChild: RqFromC <- "cRq";
           LET c <- #rqChild@."child";
           LET rq: RqToP <- #rqChild@."rq";
           Call dir <- readDir(getIdx #rq@."addr");
@@ -140,7 +142,9 @@ Section Mem.
         with Rule "deferred" :=
           Read valid <- "cRqValid";
           Assert #valid;
-          Call rqChild <- rqFromCPop();
+          Read rqChild: RqFromC <- "cRq";
+          Call rqChild' <- rqFromCPop();
+          Assert (#rqChild == #rqChild');
           LET c <- #rqChild@."child";
           LET rq: RqToP <- #rqChild@."rq";
           LET idx <- getIdx (#rq@."addr");
