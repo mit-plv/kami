@@ -75,21 +75,29 @@ Defined.
 Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf : RegsT -> MethsT -> type k -> Prop) {struct a} : Prop :=
   match a with
   | MCall meth s marg cont =>
-    forall mret,
-      M.find meth cs = None
-      /\ SymSemAction (cont mret) rs rs' cs[meth |-> (evalExpr marg, mret)] kf
+    match M.find meth cs with
+      | None => forall mret, SymSemAction (cont mret) rs rs'
+                                          cs[meth |-> (evalExpr marg, mret)] kf
+      | Some _ => False
+    end
   | Let_ _ e cont =>
     SymSemAction (cont (evalExpr e)) rs rs' cs kf
   | ReadReg r k cont =>
-    exists regV,
-      regV === rs.[r]
-      /\ SymSemAction (cont regV) rs rs' cs kf
+    forall regV,
+      regV === rs.[r] ->
+      SymSemAction (cont regV) rs rs' cs kf
   | WriteReg r _ e cont =>
     match M.find r rs' with
       | None => SymSemAction cont rs rs'[r |-> evalExpr e] cs kf
       | Some _ => False
     end
   | IfElse p _ a a' cont =>
+    (*
+    IF_then_else
+      (semExpr p eq_refl)
+      (SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
+      (SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
+     *)
     (semExpr p eq_refl ->
      SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf)) /\
     ((semExpr p eq_refl -> False) ->
@@ -202,14 +210,14 @@ Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rs' cs' rv,
 Proof.
   induction 1; simpl; intuition auto.
 
-  - specialize (H0 mret); intuition.
-    eapply IHSemAction in H2; auto.
-    subst; rewrite union_add by assumption; auto.
-
-  - destruct H0; intuition.
-    unfold RegsT in *.
-    specialize (double_find rs r HRegVal H1); intro; subst.
+  - subst.
+    rewrite union_add by (destruct (M.find meth cs); intuition auto).
+    case_eq (M.find meth cs); intros.
+    rewrite H1 in H0; exfalso; assumption.
+    rewrite H1 in H0.
     apply IHSemAction; auto.
+
+  - apply IHSemAction; auto.
 
   - subst.
     case_eq (M.find r rs''); intros; subst; rewrite H1 in H0;

@@ -208,6 +208,8 @@ Section L1Cache.
           Read rq: RqFromProc <- "procRq";
           Assert !#rq@."op";
           LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Assert #tag == getTag (#rq@."addr");
           Call cs <- readCs(#idx);
           Assert #cs >= $ Sh;
           Call line <- readLine(#idx);
@@ -228,6 +230,8 @@ Section L1Cache.
           Read rq: RqFromProc <- "procRq";
           Assert #rq@."op";
           LET idx <- getIdx #rq@."addr";
+          Call tag <- readTag(#idx);
+          Assert #tag == getTag (#rq@."addr");
           Call cs <- readCs(#idx);
           Assert #cs == $ Mod;
           Call line <- readLine(#idx);

@@ -500,7 +500,8 @@ Section MemCacheInl.
     ssNoF "enq.toChild" "dwnRq".
     ssF "enq.toChild" "deferred".
 
-    ssF "firstElt.rqFromChild" "missByState".
+    ssNoF "firstElt.rqFromChild" "missByState".
+    ssF "firstElt.rqFromChild" "dwnRq".
     
     ssF "deq.rqFromChild" "deferred".
 
@@ -521,7 +522,8 @@ Section MemCacheInl.
     ssNoFilt "enq.toChild" "dwnRq".
     ssFilt "enq.toChild" "deferred".
 
-    ssFilt "firstElt.rqFromChild" "missByState".
+    ssNoFilt "firstElt.rqFromChild" "missByState".
+    ssFilt "firstElt.rqFromChild" "dwnRq".
     
     ssFilt "deq.rqFromChild" "deferred".
 
@@ -664,6 +666,8 @@ Section MemCacheInl2.
     ggNoF "read.tag" "l1MissByLine".
     ggNoF "read.tag" "l1Hit".    
     ggNoF "read.tag" "writeback".
+    ggNoF "read.tag" "ld".
+    ggNoF "read.tag" "st".
     ggNoF "read.tag" "drop".
     ggF "read.tag" "pProcess".
 
@@ -682,6 +686,8 @@ Section MemCacheInl2.
     ggNoFilt "read.tag" "l1MissByLine".
     ggNoFilt "read.tag" "l1Hit".    
     ggNoFilt "read.tag" "writeback".
+    ggNoFilt "read.tag" "ld".
+    ggNoFilt "read.tag" "st".
     ggNoFilt "read.tag" "drop".
     ggFilt "read.tag" "pProcess".
 
