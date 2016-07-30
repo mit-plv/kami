@@ -10,11 +10,11 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
   Hypothesis (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
@@ -26,7 +26,7 @@ Section Invariants.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.
-    kexistv "pc"%string pcv o (Bit addrSize).
+    kexistv "pc"%string pcv o (Bit iaddrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
     kexistv "rqFromProc"--"empty"%string iev o Bool.
@@ -50,7 +50,7 @@ Section Invariants.
     fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
-             (pc: fullType type (SyntaxKind (Bit addrSize)))
+             (pc: fullType type (SyntaxKind (Bit iaddrSize)))
              (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
              (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
@@ -71,7 +71,7 @@ Section Invariants.
 
   Definition procDec_inv_1 (o: RegsT): Prop.
   Proof.
-    kexistv "pc"%string pcv o (Bit addrSize).
+    kexistv "pc"%string pcv o (Bit iaddrSize).
     kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
     kexistv "stall"%string stallv o Bool.
     kexistv "rqFromProc"--"empty"%string iev o Bool.

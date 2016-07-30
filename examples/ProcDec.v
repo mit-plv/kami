@@ -13,11 +13,11 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
@@ -101,7 +101,7 @@ Section ProcDec.
      nextPc ppc st inst)%kami_action.
 
   Definition procDec := MODULE {
-    Register "pc" : Bit addrSize <- Default
+    Register "pc" : Bit iaddrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
     with Register "stall" : Bool <- false
 
@@ -120,11 +120,11 @@ Hint Unfold RqFromProc RsToProc memReq memRep halt nextPc
      reqLd reqSt repLd repSt execHt execNm : MethDefs.
 
 Section ProcDecM.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 
@@ -141,11 +141,11 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
 

@@ -5,12 +5,13 @@ Require Import Ex.MemTypes Ex.SC.
 
 (* Subset of RV32I instructions = {ld, st, add, sub, beq, blt} (+ halt) *)
 Section RV32ISubset.
-  Definition rv32iAddrSize := 4.
+  Definition rv32iAddrSize := 32.
+  Definition rv32iIAddrSize := 6. (* # of instructions = 64 *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
 
-  Variable (insts: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize)).
+  Variable (insts: ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize)).
 
   Definition rv32iLd := WO~0~0~0~0~0~1~1.
   Definition rv32iSt := WO~0~1~0~0~0~1~1.
@@ -49,7 +50,7 @@ Section RV32ISubset.
     (UniBit (ConstExtract 17 3 _) inst)%kami_expr.
   Definition getBrOffsetE {ty}
              (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-    (UniBit (SignExtendTrunc _ rv32iAddrSize)
+    (UniBit (SignExtendTrunc _ rv32iIAddrSize)
             (BinBit (Concat _ 1)
                     (BinBit (Concat _ _)
                             (BinBit (Concat _ _) (UniBit (TruncLsb 1 _) inst)
@@ -58,7 +59,8 @@ Section RV32ISubset.
                                     (UniBit (ConstExtract 20 4 _) inst)))
                     ($0)))%kami_expr.
 
-  Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
+  Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iIAddrSize
+                               rv32iLgDataBytes rv32iRfIdx.
     unfold DecT; intros ty st pc.
     set ($$insts @[ #pc ])%kami_expr as inst.
     refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
@@ -87,7 +89,8 @@ Section RV32ISubset.
                         "inst" ::= inst})%kami_expr.
   Defined.
 
-  Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
+  Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iIAddrSize
+                                        rv32iLgDataBytes rv32iRfIdx.
     unfold ExecStateT; intros ty st pc dec.
     set (ReadField {| StringBound.bindex := "inst"%string; StringBound.indexb := _ |}
                    #dec)%kami_expr as inst.
@@ -105,7 +108,8 @@ Section RV32ISubset.
       refine (#st @[ getRdE inst <- getRs1ValueE st inst - getRs2ValueE st inst ])%kami_expr.
   Defined.
 
-  Definition rv32iExecNextPc: ExecNextPcT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
+  Definition rv32iExecNextPc: ExecNextPcT rv32iOpIdx rv32iAddrSize rv32iIAddrSize
+                                          rv32iLgDataBytes rv32iRfIdx.
     unfold ExecNextPcT; intros ty st pc dec.
     set (ReadField {| StringBound.bindex := "inst"%string; StringBound.indexb := _ |}
                    #dec)%kami_expr as inst.
@@ -123,7 +127,7 @@ Section RV32ISubset.
     - (* Blt *)
       refine (IF (getRs1ValueE st inst < getRs2ValueE st inst)
               then #pc + getBrOffsetE inst
-              else #pc + $4)%kami_expr.
+              else #pc + $1)%kami_expr.
   Defined.
     
 End RV32ISubset.

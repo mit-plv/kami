@@ -19,11 +19,11 @@ Require Import Lts.Syntax Lts.ParametricSyntax Lts.Synthesize Ex.Isa.
 Require Import Ex.MemCache Ex.ProcMemCorrect.
 
 Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
-                                  rv32iAddrSize) := getDefaultConst _.
+                                  rv32iIAddrSize) := getDefaultConst _.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
-Definition idxBits := 1.
-Definition tagBits := 1.
+Definition idxBits := 16.
+Definition tagBits := 14.
 Definition lgNumDatas := 2.
 Definition lgNumChildren := 1. (* 2 cores *)
 Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
