@@ -1088,7 +1088,10 @@ Section MemCacheInl.
         * dest; discriminate.
         * apply i16a in H0; dest; discriminate.
         * apply i16b in H0; dest; discriminate.
-      + admit.
+      + allRules; (reflexivity || eassumption || intros); unfold isCWait in *.
+        * dest; discriminate.
+        * apply i16a in H0; dest; discriminate.
+        * apply i16b in H0; dest; discriminate.
       + admit.
       + admit.
       + admit.
@@ -1288,3 +1291,5 @@ Section MemCacheInl.
       + admit.
       + admit.
   Qed.
+
+  
