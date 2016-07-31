@@ -517,6 +517,18 @@ Section MemCacheInl.
       i16: (
              isCWait a procv procRq csw ->
              (getCs cs tag a < if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh) /\
+             (((exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList)
+                              /\ rq ``"to" = (if (procRq ``"op"):bool then $ Msi.Mod
+                                              else $ Msi.Sh)
+                              /\ rq ``"from" >= getCs cs tag a) /\
+               forall msg, In msg (fromPToC cword a fromPList toCList) -> msg ``"isRq" = true)
+              \/
+              ((exists rs, In rs (fromPToC cword a fromPList toCList)
+                              /\ rs ``"isRq" = false
+                              /\ rs ``"to" = if (procRq ``"op"):bool then $ Msi.Mod
+                                             else $ Msi.Sh)) /\
+              forall rq, ~ In rq (rqFromCToP cword a rqFromCList rqToPList)));
+             (*
               xor (exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList)
                               /\ rq ``"to" = (if (procRq ``"op"):bool then $ Msi.Mod
                                               else $ Msi.Sh)
@@ -525,6 +537,7 @@ Section MemCacheInl.
                               /\ rs ``"isRq" = false
                               /\ rs ``"to" = if (procRq ``"op"):bool then $ Msi.Mod
                                              else $ Msi.Sh));
+              *)
 
       i16a: (forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                         isCWait a procv procRq csw
@@ -1026,7 +1039,8 @@ Section MemCacheInl.
         | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
           destruct (IHHMultistepBeh a _ _ H eq_refl)          
       end;
-      unfold withIndex in *;
+      unfold withIndex, withPrefix in *;
+      simpl in *;
       repeat
         match goal with
           | H: ?y === ?n .[ ?s] , H': ?v === ?n .[ ?s] |- _ =>
@@ -1058,8 +1072,6 @@ Section MemCacheInl.
         | _ => idtac
       end.
 
-      Focus 9.
-      
       + allRules; (reflexivity || eassumption || intros); unfold isCWait in *.
         * dest; discriminate.
         * apply i16a in H0; dest; discriminate.
@@ -1072,6 +1084,11 @@ Section MemCacheInl.
         * dest; discriminate.
         * apply i16a in H0; dest; discriminate.
         * apply i16b in H0; dest; discriminate.
+      + allRules; (reflexivity || eassumption || intros); unfold isCWait in *.
+        * dest; discriminate.
+        * apply i16a in H0; dest; discriminate.
+        * apply i16b in H0; dest; discriminate.
+      + admit.
       + admit.
       + admit.
       + admit.
@@ -1079,19 +1096,90 @@ Section MemCacheInl.
       + admit.
       + allRules; (reflexivity || eassumption || intros); unfold isCWait in *.
         * dest; discriminate.
-        * apply i16a in H0.
-          destruct H0 as [? ?].
-          pose proof (i16 H0) as sth.
+        * pose proof (i16a _ H0) as sth1.
+          destruct sth1 as [sth2 sth3].
+          pose proof (i16 sth2) as sth4.
           dest.
-          unfold getCs in H2.
-          unfold getTagS, getIdxS in H2.
-          discriminate.
-        * apply i16b in H0; dest; discriminate.
+          destruct H3; dest; [| specialize (H13 _ H0); exfalso; assumption].
+          simpl in *.
+          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
+          StringBound.IndexBound_head in *; simpl in *.
+          rewrite H6 in H2.
+          simpl in H2.
+          unfold getCs, getIdxS, getTagS in H2.
+          rewrite H11 in H8, H10.
+          rewrite H8 in H2.
+          match goal with
+            | H: context[weq ?p ?p] |- _ =>
+              destruct (weq p p); intuition auto
+          end.
+        * pose proof (i16b _ H0) as sth1.
+          destruct sth1 as [sth2 sth3].
+          pose proof (i16 sth2) as sth4.
+          dest.
+          destruct H3; dest; [specialize (H13 _ H0); congruence|].
+          simpl in *.
+          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
+          StringBound.IndexBound_head in *; simpl in *.
+          rewrite H6 in H2.
+          simpl in H2.
+          unfold getCs, getIdxS, getTagS in H2.
+          rewrite H11 in H8, H10.
+          rewrite H8 in H2.
+          match goal with
+            | H: context[weq ?p ?p] |- _ =>
+              destruct (weq p p); intuition auto
+          end.
+      + allRules; (reflexivity || eassumption || intros); exfalso; unfold isCWait in *.
+        * dest; discriminate.
+        * pose proof (i16a _ H0) as sth1.
+          destruct sth1 as [sth2 sth3].
+          pose proof (i16 sth2) as sth4.
+          dest.
+          destruct H3; dest; [| specialize (H13 _ H0); assumption].
+          simpl in *.
+          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
+          StringBound.IndexBound_head in *; simpl in *.
+          rewrite H6 in H2.
+          simpl in H2.
+          unfold getCs, getIdxS, getTagS in H2.
+          rewrite H11 in H8, H10.
+          rewrite H8 in H2.
+          match goal with
+            | H: context[weq ?p ?p] |- _ =>
+              destruct (weq p p); [|intuition auto]
+          end.
+          rewrite H10 in H2.
+          Nomega.pre_nomega; Nomega.nomega.
+        * pose proof (i16b _ H0) as sth1.
+          destruct sth1 as [sth2 sth3].
+          pose proof (i16 sth2) as sth4.
+          dest.
+          destruct H3; dest; [specialize (H13 _ H0); congruence|].
+          simpl in *.
+          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
+          StringBound.IndexBound_head in *; simpl in *.
+          rewrite H6 in H2.
+          simpl in H2.
+          unfold getCs, getIdxS, getTagS in H2.
+          rewrite H11 in H8, H10.
+          rewrite H8 in H2.
+          match goal with
+            | H: context[weq ?p ?p] |- _ =>
+              destruct (weq p p); [|intuition auto]
+          end.
+          rewrite H10 in H2.
+          Nomega.pre_nomega; Nomega.nomega.
       + admit.
       + admit.
       + admit.
       + match goal with
-          | H: (?x <= wordToNat _)%nat, H': (c <= wordToNat _)%nat |-
+          | H: (?x <= wordToNat _)%nat,
+               H': (c <= wordToNat _)%nat,
+                   rqToPList: listEltT
+                                STRUCT  {"addr" :: Bit (TagBits + IdxBits);
+                                          "from" :: Bit 2; "to" :: Bit 2; "id" :: Id} type
+            |-
             nmemCache_invariants_rec (M.union ?m ?n) ?a
                                      ?cword c =>
             unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
@@ -1119,7 +1207,14 @@ Section MemCacheInl.
           eassumption.
         * auto.
       + match goal with
-          | H: (?x <= wordToNat _)%nat, H': (c <= wordToNat _)%nat |-
+          | H: (?x <= wordToNat _)%nat,
+               H': (c <= wordToNat _)%nat,
+                   rsToPList: listEltT
+                                STRUCT  {"addr" :: Bit (TagBits + IdxBits); 
+                                         "to" :: Bit 2;
+                                         "line" :: Vector (Bit (LgDataBytes * 8)) LgNumDatas;
+                                         "isVol" :: Bool} type
+            |-
             nmemCache_invariants_rec (M.union ?m ?n) ?a
                                      ?cword c =>
             unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
@@ -1148,7 +1243,18 @@ Section MemCacheInl.
         * auto.
         * auto.
       + match goal with
-          | H: (?x <= wordToNat _)%nat, H': (c <= wordToNat _)%nat |-
+          | H: (?x <= wordToNat _)%nat,
+               H': (c <= wordToNat _)%nat,
+                   toCList : listEltT
+                               STRUCT  {"child" :: Bit LgNumChildren;
+                                        "msg"
+                                          :: STRUCT  {"isRq" :: Bool;
+                                                      "addr" :: Bit (TagBits + IdxBits);
+                                                      "to" :: Bit 2;
+                                                      "line" :: Vector
+                                                             (Bit (LgDataBytes * 8)) LgNumDatas;
+                                                      "id" :: Id}} type
+            |-
             nmemCache_invariants_rec (M.union ?m ?n) ?a
                                      ?cword c =>
             unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
@@ -1158,7 +1264,7 @@ Section MemCacheInl.
                  [subst; allRules; (reflexivity || eassumption ||
                                                 rewrite <- fromPToC_unchanged; auto) | ]]
         end.
-        clear - IHHMultistepBeh n0 H H1 H2 toCListFind fromPListFind.
+        clear - IHHMultistepBeh n0 H H1 H3 toCListFind fromPListFind.
         destruct IHHMultistepBeh; allRules;
         match goal with
           | |- ?p === ?n.[?s] => eassumption
@@ -1177,7 +1283,6 @@ Section MemCacheInl.
               [specialize (neq isEq); exfalso; assumption | eassumption]
           | _ => idtac
         end; auto.
-      + admit.
       + admit.
       + admit.
       + admit.
