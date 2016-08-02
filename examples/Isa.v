@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Lts.Syntax Lts.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-(* Subset of RV32I instructions (18):
+(* Subset of RV32I instructions (17/47):
  * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
  * - Memory : LW, SW
  * - Arithmetic : ADD, SUB, SLL, SLT, XOR, SRL, SRA, OR, AND
@@ -38,33 +38,30 @@ Section RV32ISubset.
       (UniBit (ConstExtract 17 3 _) inst)%kami_expr.
     Definition getOffsetIE {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (ZeroExtendTrunc _ rv32iAddrSize) (UniBit (TruncLsb 12 _) inst))%kami_expr.
+      (UniBit (TruncLsb 12 _) inst)%kami_expr.
     Definition getOffsetSE {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (ZeroExtendTrunc _ rv32iAddrSize)
-              (BinBit (Concat _ _)
-                      (UniBit (TruncLsb 7 _) inst)
-                      (UniBit (ConstExtract 20 5 _) inst)))%kami_expr.
+      (BinBit (Concat _ _)
+              (UniBit (TruncLsb 7 _) inst)
+              (UniBit (ConstExtract 20 5 _) inst))%kami_expr.
     Definition getOffsetSBE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (SignExtendTrunc _ rv32iIAddrSize)
-              (BinBit (Concat _ 1)
-                      (BinBit (Concat _ _)
-                              (BinBit (Concat _ _) (UniBit (TruncLsb 1 _) inst)
-                                      (UniBit (ConstExtract 24 1 _) inst))
-                              (BinBit (Concat _ _) (UniBit (ConstExtract 1 6 _) inst)
-                                      (UniBit (ConstExtract 20 4 _) inst)))
-                      ($0)))%kami_expr.
+      (BinBit (Concat _ 1)
+              (BinBit (Concat _ _)
+                      (BinBit (Concat _ _) (UniBit (TruncLsb 1 _) inst)
+                              (UniBit (ConstExtract 24 1 _) inst))
+                      (BinBit (Concat _ _) (UniBit (ConstExtract 1 6 _) inst)
+                              (UniBit (ConstExtract 20 4 _) inst)))
+              ($0))%kami_expr.
     Definition getOffsetUJE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (SignExtendTrunc _ rv32iIAddrSize)
+      (BinBit (Concat _ _)
               (BinBit (Concat _ _)
-                      (BinBit (Concat _ _)
-                              (UniBit (TruncLsb 1 _) inst)
-                              (UniBit (ConstExtract 12 8 _) inst))
-                      (BinBit (Concat _ _)
-                              (UniBit (ConstExtract 11 1 _) inst)
-                              (UniBit (ConstExtract 1 10 _) inst)))).
+                      (UniBit (TruncLsb 1 _) inst)
+                      (UniBit (ConstExtract 12 8 _) inst))
+              (BinBit (Concat _ _)
+                      (UniBit (ConstExtract 11 1 _) inst)
+                      (UniBit (ConstExtract 1 10 _) inst))).
   End Common.
 
   Section Opcodes.
@@ -99,7 +96,7 @@ Section RV32ISubset.
       exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst;
                       "reg" ::= UniBit (ConstExtract 20 5 _) inst;
                       "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
-                                  + getOffsetIE inst);
+                                  + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE inst)));
                       "value" ::= $$Default;
                       "inst" ::= inst})%kami_expr.
     - refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
@@ -108,7 +105,7 @@ Section RV32ISubset.
         exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
                         "reg" ::= $$Default;
                         "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
-                                    + getOffsetSE inst);
+                                    + (UniBit (ZeroExtendTrunc _ _) (getOffsetSE inst)));
                         "value" ::= getRs2ValueE st inst;
                         "inst" ::= inst})%kami_expr.
       + (* others *)
@@ -184,7 +181,8 @@ Section RV32ISubset.
     set (ReadField ``"inst" #dec)%kami_expr as inst.
 
     refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL)
-            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) (#pc + getOffsetUJE inst))]
+            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) #pc) +
+                       (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE inst))]
             else _)%kami_expr.
     refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR)
             then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _)
@@ -238,7 +236,7 @@ Section RV32ISubset.
 
     (* NOTE: "rd" is updated by rv32iExecState *)
     refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL)
-            then #pc + getOffsetUJE inst else _)%kami_expr.
+            then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetUJE inst)) else _)%kami_expr.
     refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR)
             then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st inst))
                  + (UniBit (SignExtendTrunc _ _) (getOffsetIE inst)) else _)%kami_expr.
@@ -249,19 +247,19 @@ Section RV32ISubset.
     (* branch instructions *)
     register_op_funct3 inst rv32iF3BEQ
                        (IF (getRs1ValueE st inst == getRs2ValueE st inst)
-                        then #pc + getOffsetSBE inst
+                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
                         else #pc + $1)%kami_expr.
     register_op_funct3 inst rv32iF3BNE
                        (IF (getRs1ValueE st inst != getRs2ValueE st inst)
-                        then #pc + getOffsetSBE inst
+                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
                         else #pc + $1)%kami_expr.
     register_op_funct3 inst rv32iF3BLT
                        (IF (getRs1ValueE st inst < getRs2ValueE st inst)
-                        then #pc + getOffsetSBE inst
+                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
                         else #pc + $1)%kami_expr.
     register_op_funct3 inst rv32iF3BGE
                        (IF (getRs1ValueE st inst >= getRs2ValueE st inst)
-                        then #pc + getOffsetSBE inst
+                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
                         else #pc + $1)%kami_expr.
     exact (#pc + $1)%kami_expr.
   Defined.

@@ -387,8 +387,10 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
-     ppBExpr ce; print_space (); ps ppQ; print_space (); ppBExpr te; print_space ();
-     ps ppColon; print_space (); ppBExpr fe
+     ppBExpr ce; print_space (); ps ppQ; print_space ();
+     ps ppRBracketL; ppBExpr te; ps ppRBracketR; print_space ();
+     ps ppColon; print_space ();
+     ps ppRBracketL; ppBExpr fe; ps ppRBracketR
   | BEq (se1, se2) -> ppBExpr se1; print_space (); ps ppEq; print_space (); ppBExpr se2
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
