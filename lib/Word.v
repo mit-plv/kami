@@ -473,6 +473,47 @@ Definition sext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
 Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
   combine w (wzero sz').
 
+(** * Shift operators *)
+
+Fixpoint rtrunc (sz : nat) (w : word sz) (sz' : nat) : word (sz - sz').
+  destruct sz' as [|psz'].
+  - destruct sz as [|sz']; exact w.
+  - destruct sz as [|sz'].
+    + exact WO.
+    + inversion w as [|lsb n rem Heq]; subst n.
+      exact (rtrunc sz' rem psz').
+Defined.
+
+Fixpoint rev (sz : nat) (w : word sz) : word sz :=
+  match w in (word n) return (word n) with
+  | WO => WO
+  | WS b sz' w' =>
+    eq_rec (sz' + 1) (fun n => word n) (combine (rev w') (WS b WO)) 
+           (S sz') (NPeano.Nat.add_1_r sz')
+  end.
+
+Definition ltrunc (sz : nat) (w : word sz) (sz' : nat) : word (sz - sz') :=
+  rev (rtrunc (rev w) sz').
+
+Fixpoint sll' (sz : nat) (w : word sz) (ln : nat) : word (ln + sz) :=
+  match ln as n return (word (n + sz)) with
+  | 0 => w
+  | S ln' => WS false (sll' w ln')
+  end.
+
+Definition sll (sz : nat) (w : word sz) (ln : nat) : word sz :=
+  eq_rec (ln + sz - ln) (fun n => word n) (ltrunc (sll' w ln) ln) sz (minus_plus ln sz).
+
+Definition srl (sz : nat) (w : word sz) (ln : nat) : word sz :=
+  eq_rec (sz + ln - ln) (fun n => word n) (rtrunc (zext w ln) ln) sz (NPeano.Nat.add_sub sz ln).
+
+Definition sra (sz : nat) (w : word sz) (ln : nat) : word sz :=
+  match sz as n return (word n -> word n) with
+  | 0 => fun _ => WO
+  | S sz' =>
+    fun w0 => eq_rec (sz' + 1) (fun n => word n) (combine (srl (wtl w0) ln) (WS (whd w0) WO)) 
+                     (S sz') (NPeano.Nat.add_1_r sz')
+  end w.
 
 (** * Arithmetic *)
 
@@ -507,10 +548,10 @@ Definition wminusN sz (x y : word sz) : word sz := wplusN x (wnegN y).
 Delimit Scope word_scope with word.
 Bind Scope word_scope with word.
 
-Notation "w ~ 1" := (WS true w)
- (at level 7, left associativity, format "w '~' '1'") : word_scope.
-Notation "w ~ 0" := (WS false w)
- (at level 7, left associativity, format "w '~' '0'") : word_scope.
+Notation "w ~ 1" :=
+  (WS true w) (at level 7, left associativity, format "w '~' '1'") : word_scope.
+Notation "w ~ 0" :=
+  (WS false w) (at level 7, left associativity, format "w '~' '0'") : word_scope.
 
 Notation "^~" := wneg.
 Notation "l ^+ r" := (@wplus _ l%word r%word) (at level 50, left associativity).

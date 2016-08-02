@@ -27,11 +27,19 @@ Infix "&&" := (BinBool And) : kami_expr_scope.
 Infix "||" := (BinBool Or) : kami_expr_scope.
 Infix "+" := (BinBit (Add _)) : kami_expr_scope.
 Infix "-" := (BinBit (Sub _)) : kami_expr_scope.
+Infix "~&" := (BinBit (Band _)) (at level 0) : kami_expr_scope.
+Infix "~|" := (BinBit (Bor _)) (at level 0) : kami_expr_scope.
+Infix "~+" := (BinBit (Bxor _)) (at level 0) : kami_expr_scope.
+Infix "<<" := (BinBit (Sll _ _)) (at level 0) : kami_expr_scope.
+Infix ">>" := (BinBit (Srl _ _)) (at level 0) : kami_expr_scope.
+Infix "~>>" := (BinBit (Sra _ _)) (at level 0) : kami_expr_scope.
 Infix "<" := (BinBitBool (Lt _)) : kami_expr_scope.
 Notation "x > y" := (BinBitBool (Lt _) y x) : kami_expr_scope.
 Notation "x >= y" := (UniBool Neg (BinBitBool (Lt _) x y)) : kami_expr_scope.
 Notation "x <= y" := (UniBool Neg (BinBitBool (Lt _) y x)) : kami_expr_scope.
 Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
+Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
+                (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_expr_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.

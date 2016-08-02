@@ -399,6 +399,12 @@ type uniBitOp =
 type binBitOp =
 | Add of int
 | Sub of int
+| Band of int
+| Bor of int
+| Bxor of int
+| Sll of int * int
+| Srl of int * int
+| Sra of int * int
 | Concat of int * int
 
 type binBitBoolOp =
@@ -1361,6 +1367,11 @@ type execNextPcT = __ -> __ stateT -> __ fullType -> __ decInstT -> __ expr
 let rv32iAddrSize =
   Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
 
+(** val rv32iIAddrSize : int **)
+
+let rv32iIAddrSize =
+  Pervasives.succ (Pervasives.succ 0)
+
 (** val rv32iLgDataBytes : int **)
 
 let rv32iLgDataBytes =
@@ -1376,82 +1387,6 @@ let rv32iOpIdx =
 
 let rv32iRfIdx =
   Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))
-
-(** val rv32iLd : word **)
-
-let rv32iLd =
-  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iSt : word **)
-
-let rv32iSt =
-  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iHt : word **)
-
-let rv32iHt =
-  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iOp : word **)
-
-let rv32iOp =
-  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (true, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iBr : word **)
-
-let rv32iBr =
-  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
-    (Pervasives.succ 0), (WS (true, 0, WO)))))))))))))
-
-(** val rv32iAdd : word **)
-
-let rv32iAdd =
-  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iSub : word **)
-
-let rv32iSub =
-  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
-    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
-
-(** val rv32iBeq : word **)
-
-let rv32iBeq =
-  WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false, (Pervasives.succ 0), (WS (false, 0,
-    WO)))))
 
 (** val getRs1ValueE : 'a1 stateT -> 'a1 expr -> 'a1 expr **)
 
@@ -1615,111 +1550,6 @@ let getRdE inst =
                 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))))))),
     inst)
 
-(** val getLdBaseE : 'a1 expr -> 'a1 expr **)
-
-let getLdBaseE inst =
-  UniBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))))))))))), rv32iAddrSize, (ZeroExtendTrunc
-    ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0)))))))))))), rv32iAddrSize)), (UniBit
-    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-       (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-       (Pervasives.succ (Pervasives.succ 0)))))))))))) (Pervasives.succ
-       (let rec plus0 n m =
-          (fun fO fS n -> if n=0 then fO () else fS (n-1))
-            (fun _ ->
-            m)
-            (fun p -> Pervasives.succ
-            (plus0 p m))
-            n
-        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
-             (let rec mult0 n m =
-                (fun fO fS n -> if n=0 then fO () else fS (n-1))
-                  (fun _ ->
-                  0)
-                  (fun p ->
-                  plus m (mult0 p m))
-                  n
-              in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
-                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-                   (Pervasives.succ (Pervasives.succ 0)))))))))))), (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0)))))))))))), (TruncLsb ((Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
-    (Pervasives.succ
-    (let rec plus0 n m =
-       (fun fO fS n -> if n=0 then fO () else fS (n-1))
-         (fun _ ->
-         m)
-         (fun p -> Pervasives.succ
-         (plus0 p m))
-         n
-     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
-          (let rec mult0 n m =
-             (fun fO fS n -> if n=0 then fO () else fS (n-1))
-               (fun _ ->
-               0)
-               (fun p ->
-               plus m (mult0 p m))
-               n
-           in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
-                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-                (Pervasives.succ 0))))))))))))), inst)))
-
-(** val getStBaseE : 'a1 expr -> 'a1 expr **)
-
-let getStBaseE inst =
-  UniBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))))), rv32iAddrSize, (ZeroExtendTrunc ((Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))))))), rv32iAddrSize)), (UniBit
-    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-       (Pervasives.succ (Pervasives.succ 0))))))) (Pervasives.succ
-       (let rec plus0 n m =
-          (fun fO fS n -> if n=0 then fO () else fS (n-1))
-            (fun _ ->
-            m)
-            (fun p -> Pervasives.succ
-            (plus0 p m))
-            n
-        in plus0 0
-             (let rec mult0 n m =
-                (fun fO fS n -> if n=0 then fO () else fS (n-1))
-                  (fun _ ->
-                  0)
-                  (fun p ->
-                  plus m (mult0 p m))
-                  n
-              in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
-                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-                   (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))))), (TruncLsb ((Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
-    (Pervasives.succ
-    (let rec plus0 n m =
-       (fun fO fS n -> if n=0 then fO () else fS (n-1))
-         (fun _ ->
-         m)
-         (fun p -> Pervasives.succ
-         (plus0 p m))
-         n
-     in plus0 0
-          (let rec mult0 n m =
-             (fun fO fS n -> if n=0 then fO () else fS (n-1))
-               (fun _ ->
-               0)
-               (fun p ->
-               plus m (mult0 p m))
-               n
-           in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
-                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-                (Pervasives.succ (Pervasives.succ 0))))))))))))), inst)))
-
 (** val getFunct7E : 'a1 expr -> 'a1 expr **)
 
 let getFunct7E inst =
@@ -1819,20 +1649,188 @@ let getFunct3E inst =
                 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
                 0))))))))))))), inst)
 
-(** val getBrOffsetE : 'a1 expr -> 'a1 expr **)
+(** val getOffsetIE : 'a1 expr -> 'a1 expr **)
 
-let getBrOffsetE inst =
+let getOffsetIE inst =
+  UniBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))))))))))), rv32iAddrSize, (ZeroExtendTrunc
+    ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))))))))))), rv32iAddrSize)), (UniBit
+    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0)))))))))))) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ 0)))))))))))), (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))))))))), (TruncLsb ((Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
+    (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ 0))))))))))))), inst)))
+
+(** val getOffsetSE : 'a1 expr -> 'a1 expr **)
+
+let getOffsetSE inst =
+  UniBit
+    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0))))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0)))))), rv32iAddrSize, (ZeroExtendTrunc
+    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0))))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0)))))), rv32iAddrSize)), (BinBit ((Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))))))), (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))))),
+    (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ 0))))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ 0)))))), (Concat ((Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+    (UniBit
+    ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ 0))))))) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 0
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))))), (TruncLsb ((Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+    (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 0
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ 0))))))))))))), inst)), (UniBit
+    ((plus
+       (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         0)))))))))))))))))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0)))))) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+             (Pervasives.succ (Pervasives.succ 0))))))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))),
+    (ConstExtract ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))))))))))))))))), (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+          (Pervasives.succ 0))))))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))))))),
+    inst)))))
+
+(** val getOffsetSBE : 'a1 expr -> 'a1 expr **)
+
+let getOffsetSBE inst =
   UniBit
     ((plus
        (plus (plus (Pervasives.succ 0) (Pervasives.succ 0))
          (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
            (Pervasives.succ 0)))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
-           (Pervasives.succ 0)))))) (Pervasives.succ 0)), rv32iAddrSize, (SignExtendTrunc
+           (Pervasives.succ 0)))))) (Pervasives.succ 0)), rv32iIAddrSize, (SignExtendTrunc
     ((plus
        (plus (plus (Pervasives.succ 0) (Pervasives.succ 0))
          (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
            (Pervasives.succ 0)))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
-           (Pervasives.succ 0)))))) (Pervasives.succ 0)), rv32iAddrSize)), (BinBit
+           (Pervasives.succ 0)))))) (Pervasives.succ 0)), rv32iIAddrSize)), (BinBit
     ((plus (plus (Pervasives.succ 0) (Pervasives.succ 0))
        (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
          (Pervasives.succ 0)))))) (Pervasives.succ (Pervasives.succ (Pervasives.succ
@@ -2037,11 +2035,303 @@ let getBrOffsetE inst =
     inst)))))), (Const ((Bit (Pervasives.succ 0)), (ConstBit ((Pervasives.succ 0),
     (natToWord (Pervasives.succ 0) 0))))))))
 
+(** val getOffsetUJE : 'a1 expr -> 'a1 expr **)
+
+let getOffsetUJE inst =
+  UniBit
+    ((plus
+       (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))
+       (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0)))))))))))), rv32iIAddrSize, (SignExtendTrunc
+    ((plus
+       (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))
+       (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0)))))))))))), rv32iIAddrSize)), (BinBit
+    ((plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+    (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ 0))))))))))),
+    (plus
+      (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+        (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))
+      (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+        (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+        (Pervasives.succ 0)))))))))))), (Concat
+    ((plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+       (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+    (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ 0))))))))))))), (BinBit ((Pervasives.succ 0), (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))))))),
+    (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Concat
+    ((Pervasives.succ 0), (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))), (UniBit
+    ((plus (Pervasives.succ 0) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+             (Pervasives.succ (Pervasives.succ 0))))))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
+    (Pervasives.succ 0), (TruncLsb ((Pervasives.succ 0), (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+          (Pervasives.succ 0))))))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))) (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ 0))))))))))))), inst)), (UniBit
+    ((plus
+       (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ 0)))))))))))) (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0))))))))) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ 0)))))))))))), (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))))), (ConstExtract ((Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))),
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                0))))))))))))), inst)))), (BinBit ((Pervasives.succ 0), (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
+    (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+      (Pervasives.succ 0))))))))))), (Concat ((Pervasives.succ 0), (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))))), (UniBit
+    ((plus
+       (plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0))))))))))) (Pervasives.succ 0)) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ 0)))))))))))), (Pervasives.succ 0),
+    (ConstExtract ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))))))))), (Pervasives.succ 0), (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ 0))))))))))))), inst)), (UniBit
+    ((plus
+       (plus (Pervasives.succ 0) (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+         (Pervasives.succ 0))))))))))) (Pervasives.succ
+       (let rec plus0 n m =
+          (fun fO fS n -> if n=0 then fO () else fS (n-1))
+            (fun _ ->
+            m)
+            (fun p -> Pervasives.succ
+            (plus0 p m))
+            n
+        in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))
+             (let rec mult0 n m =
+                (fun fO fS n -> if n=0 then fO () else fS (n-1))
+                  (fun _ ->
+                  0)
+                  (fun p ->
+                  plus m (mult0 p m))
+                  n
+              in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                   (Pervasives.succ (Pervasives.succ 0)))))))))))), (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))), (ConstExtract
+    ((Pervasives.succ 0), (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))))))), (Pervasives.succ
+    (let rec plus0 n m =
+       (fun fO fS n -> if n=0 then fO () else fS (n-1))
+         (fun _ ->
+         m)
+         (fun p -> Pervasives.succ
+         (plus0 p m))
+         n
+     in plus0 (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))
+          (let rec mult0 n m =
+             (fun fO fS n -> if n=0 then fO () else fS (n-1))
+               (fun _ ->
+               0)
+               (fun p ->
+               plus m (mult0 p m))
+               n
+           in mult0 (Pervasives.succ (Pervasives.succ 0)) (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+                (Pervasives.succ 0))))))))))))), inst)))))))
+
+(** val rv32iOpJAL : word **)
+
+let rv32iOpJAL =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (true, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (true, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (true, 0, WO)))))))))))))
+
+(** val rv32iOpJALR : word **)
+
+let rv32iOpJALR =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (true, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (true, 0, WO)))))))))))))
+
+(** val rv32iOpBRANCH : word **)
+
+let rv32iOpBRANCH =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (true, 0, WO)))))))))))))
+
+(** val rv32iOpLOAD : word **)
+
+let rv32iOpLOAD =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iOpSTORE : word **)
+
+let rv32iOpSTORE =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iOpOP : word **)
+
+let rv32iOpOP =
+  WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (true, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (true, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iOpHALT : word **)
+
+let rv32iOpHALT =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (true, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
 (** val rv32iDecode : constT -> 'a1 stateT -> 'a1 -> 'a1 decInstE **)
 
 let rv32iDecode insts0 st pc =
-  let inst = ReadIndex (rv32iAddrSize, (data rv32iLgDataBytes), (Var ((SyntaxKind (Bit
-    rv32iAddrSize)), (Obj.magic pc))), (Const ((Vector ((data rv32iLgDataBytes), rv32iAddrSize)),
+  let inst = ReadIndex (rv32iIAddrSize, (data rv32iLgDataBytes), (Var ((SyntaxKind (Bit
+    rv32iIAddrSize)), (Obj.magic pc))), (Const ((Vector ((data rv32iLgDataBytes), rv32iIAddrSize)),
     insts0)))
   in
   ITE ((SyntaxKind (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Eq ((Bit
@@ -2133,7 +2423,7 @@ let rv32iDecode insts0 st pc =
   inst)), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ 0))))))), rv32iLd)))))), (BuildStruct
+  (Pervasives.succ 0))))))), rv32iOpLOAD)))))), (BuildStruct
   (((projT1 (ExistT ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
       (Pervasives.succ
       (let rec plus0 n m =
@@ -2285,21 +2575,21 @@ let rv32iDecode insts0 st pc =
     rv32iAddrSize, (ZeroExtendTrunc
     ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
        (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
-    rv32iAddrSize)), (getRs1ValueE st inst))), (getLdBaseE inst)))))) :: ((projT1 (ExistT
-                                                                            ({ attrName =
-                                                                            ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                            attrType =
-                                                                            (data rv32iLgDataBytes) },
-                                                                            (Const ({ attrName =
-                                                                            ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                            attrType =
-                                                                            (data rv32iLgDataBytes) }.attrType,
-                                                                            (getDefaultConst
-                                                                              { attrName =
-                                                                              ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                              attrType =
-                                                                              (data
-                                                                                rv32iLgDataBytes) }.attrType)))))) :: (
+    rv32iAddrSize)), (getRs1ValueE st inst))), (getOffsetIE inst)))))) :: ((projT1 (ExistT
+                                                                             ({ attrName =
+                                                                             ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                             attrType =
+                                                                             (data rv32iLgDataBytes) },
+                                                                             (Const ({ attrName =
+                                                                             ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                             attrType =
+                                                                             (data rv32iLgDataBytes) }.attrType,
+                                                                             (getDefaultConst
+                                                                               { attrName =
+                                                                               ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                               attrType =
+                                                                               (data
+                                                                                 rv32iLgDataBytes) }.attrType)))))) :: (
   (projT1 (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
     (data rv32iLgDataBytes) }, inst))) :: []))))),
   (icons' (ExistT ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -2450,15 +2740,16 @@ let rv32iDecode insts0 st pc =
                        ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ
                           (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
                           (Pervasives.succ 0))))))))), rv32iAddrSize)), (getRs1ValueE st inst))),
-                       (getLdBaseE inst)))))) :: ((projT1 (ExistT ({ attrName =
-                                                    ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                    attrType = (data rv32iLgDataBytes) }, (Const
-                                                    ({ attrName =
-                                                    ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                    attrType = (data rv32iLgDataBytes) }.attrType,
-                                                    (getDefaultConst { attrName =
-                                                      ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                      attrType = (data rv32iLgDataBytes) }.attrType)))))) :: (
+                       (getOffsetIE inst)))))) :: ((projT1 (ExistT ({ attrName =
+                                                     ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                     attrType = (data rv32iLgDataBytes) }, (Const
+                                                     ({ attrName =
+                                                     ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                     attrType = (data rv32iLgDataBytes) }.attrType,
+                                                     (getDefaultConst { attrName =
+                                                       ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                       attrType =
+                                                       (data rv32iLgDataBytes) }.attrType)))))) :: (
     (projT1 (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
       (data rv32iLgDataBytes) }, inst))) :: []))))
     (icons' (ExistT ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit (Pervasives.succ
@@ -2522,24 +2813,24 @@ let rv32iDecode insts0 st pc =
          rv32iAddrSize, (ZeroExtendTrunc
          ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
             (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
-         rv32iAddrSize)), (getRs1ValueE st inst))), (getLdBaseE inst)))))) :: ((projT1 (ExistT
-                                                                                 ({ attrName =
-                                                                                 ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                                 attrType =
-                                                                                 (data
-                                                                                   rv32iLgDataBytes) },
-                                                                                 (Const
-                                                                                 ({ attrName =
-                                                                                 ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                                 attrType =
-                                                                                 (data
-                                                                                   rv32iLgDataBytes) }.attrType,
-                                                                                 (getDefaultConst
-                                                                                   { attrName =
-                                                                                   ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                                   attrType =
-                                                                                   (data
-                                                                                     rv32iLgDataBytes) }.attrType)))))) :: (
+         rv32iAddrSize)), (getRs1ValueE st inst))), (getOffsetIE inst)))))) :: ((projT1 (ExistT
+                                                                                  ({ attrName =
+                                                                                  ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                                  attrType =
+                                                                                  (data
+                                                                                    rv32iLgDataBytes) },
+                                                                                  (Const
+                                                                                  ({ attrName =
+                                                                                  ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                                  attrType =
+                                                                                  (data
+                                                                                    rv32iLgDataBytes) }.attrType,
+                                                                                  (getDefaultConst
+                                                                                    { attrName =
+                                                                                    ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                                    attrType =
+                                                                                    (data
+                                                                                      rv32iLgDataBytes) }.attrType)))))) :: (
       (projT1 (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
         (data rv32iLgDataBytes) }, inst))) :: [])))
       (icons' (ExistT ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
@@ -2550,7 +2841,7 @@ let rv32iDecode insts0 st pc =
         rv32iAddrSize, (ZeroExtendTrunc
         ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
            (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
-        rv32iAddrSize)), (getRs1ValueE st inst))), (getLdBaseE inst)))))
+        rv32iAddrSize)), (getRs1ValueE st inst))), (getOffsetIE inst)))))
         ((projT1 (ExistT ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
            (data rv32iLgDataBytes) }, (Const ({ attrName = ('v'::('a'::('l'::('u'::('e'::[])))));
            attrType = (data rv32iLgDataBytes) }.attrType,
@@ -2656,7 +2947,7 @@ let rv32iDecode insts0 st pc =
   inst)), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ 0))))))), rv32iSt)))))), (BuildStruct
+  (Pervasives.succ 0))))))), rv32iOpSTORE)))))), (BuildStruct
   (((projT1 (ExistT ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
       (Pervasives.succ
       (let rec plus0 n m =
@@ -2766,15 +3057,15 @@ let rv32iDecode insts0 st pc =
                                                               (Pervasives.succ 0))))))))),
                                                            rv32iAddrSize)),
                                                            (getRs1ValueE st inst))),
-                                                           (getStBaseE inst)))))) :: ((projT1
-                                                                                        (ExistT
-                                                                                        ({ attrName =
-                                                                                        ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                                        attrType =
-                                                                                        (data
-                                                                                          rv32iLgDataBytes) },
-                                                                                        (getRs2ValueE
-                                                                                          st inst)))) :: (
+                                                           (getOffsetSE inst)))))) :: ((projT1
+                                                                                         (ExistT
+                                                                                         ({ attrName =
+                                                                                         ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                                         attrType =
+                                                                                         (data
+                                                                                           rv32iLgDataBytes) },
+                                                                                         (getRs2ValueE
+                                                                                           st inst)))) :: (
   (projT1 (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
     (data rv32iLgDataBytes) }, inst))) :: []))))),
   (icons' (ExistT ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -2880,7 +3171,7 @@ let rv32iDecode insts0 st pc =
                                                (Pervasives.succ (Pervasives.succ (Pervasives.succ
                                                (Pervasives.succ (Pervasives.succ (Pervasives.succ
                                                (Pervasives.succ 0))))))))), rv32iAddrSize)),
-                                            (getRs1ValueE st inst))), (getStBaseE inst)))))) :: (
+                                            (getRs1ValueE st inst))), (getOffsetSE inst)))))) :: (
     (projT1 (ExistT ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
       (data rv32iLgDataBytes) }, (getRs2ValueE st inst)))) :: ((projT1 (ExistT ({ attrName =
                                                                  ('i'::('n'::('s'::('t'::[]))));
@@ -2897,14 +3188,14 @@ let rv32iDecode insts0 st pc =
          rv32iAddrSize, (ZeroExtendTrunc
          ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
             (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
-         rv32iAddrSize)), (getRs1ValueE st inst))), (getStBaseE inst)))))) :: ((projT1 (ExistT
-                                                                                 ({ attrName =
-                                                                                 ('v'::('a'::('l'::('u'::('e'::[])))));
-                                                                                 attrType =
-                                                                                 (data
-                                                                                   rv32iLgDataBytes) },
-                                                                                 (getRs2ValueE st
-                                                                                   inst)))) :: (
+         rv32iAddrSize)), (getRs1ValueE st inst))), (getOffsetSE inst)))))) :: ((projT1 (ExistT
+                                                                                  ({ attrName =
+                                                                                  ('v'::('a'::('l'::('u'::('e'::[])))));
+                                                                                  attrType =
+                                                                                  (data
+                                                                                    rv32iLgDataBytes) },
+                                                                                  (getRs2ValueE st
+                                                                                    inst)))) :: (
       (projT1 (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
         (data rv32iLgDataBytes) }, inst))) :: [])))
       (icons' (ExistT ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
@@ -2915,7 +3206,7 @@ let rv32iDecode insts0 st pc =
         rv32iAddrSize, (ZeroExtendTrunc
         ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
            (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
-        rv32iAddrSize)), (getRs1ValueE st inst))), (getStBaseE inst)))))
+        rv32iAddrSize)), (getRs1ValueE st inst))), (getOffsetSE inst)))))
         ((projT1 (ExistT ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
            (data rv32iLgDataBytes) }, (getRs2ValueE st inst)))) :: ((projT1 (ExistT ({ attrName =
                                                                       ('i'::('n'::('s'::('t'::[]))));
@@ -3193,6 +3484,110 @@ let rv32iDecode insts0 st pc =
           (icons' (ExistT ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
             (data rv32iLgDataBytes) }, inst)) [] Inil))))))))))
 
+(** val rv32iF7ADD : word **)
+
+let rv32iF7ADD =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7SUB : word **)
+
+let rv32iF7SUB =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7SLL : word **)
+
+let rv32iF7SLL =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7XOR : word **)
+
+let rv32iF7XOR =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7SRL : word **)
+
+let rv32iF7SRL =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7SRA : word **)
+
+let rv32iF7SRA =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (true,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7OR : word **)
+
+let rv32iF7OR =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF7AND : word **)
+
+let rv32iF7AND =
+  WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0)))))), (WS (false, (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0)))), (WS (false, (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))), (WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false,
+    (Pervasives.succ 0), (WS (false, 0, WO)))))))))))))
+
+(** val rv32iF3BEQ : word **)
+
+let rv32iF3BEQ =
+  WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false, (Pervasives.succ 0), (WS (false, 0,
+    WO)))))
+
+(** val rv32iF3BNE : word **)
+
+let rv32iF3BNE =
+  WS (true, (Pervasives.succ (Pervasives.succ 0)), (WS (false, (Pervasives.succ 0), (WS (false, 0,
+    WO)))))
+
+(** val rv32iF3BLT : word **)
+
+let rv32iF3BLT =
+  WS (false, (Pervasives.succ (Pervasives.succ 0)), (WS (false, (Pervasives.succ 0), (WS (true, 0,
+    WO)))))
+
+(** val rv32iF3BGE : word **)
+
+let rv32iF3BGE =
+  WS (true, (Pervasives.succ (Pervasives.succ 0)), (WS (false, (Pervasives.succ 0), (WS (true, 0,
+    WO)))))
+
 (** val rv32iExecState : 'a1 stateT -> 'a1 -> 'a1 decInstT -> 'a1 stateE **)
 
 let rv32iExecState st pc dec =
@@ -3258,12 +3653,98 @@ let rv32iExecState st pc dec =
   ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
-  rv32iOp)))))), (ITE ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit
+  rv32iOpJAL)))))), (UpdateVector (rv32iRfIdx, (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), st)), (getRdE inst), (UniBit (rv32iIAddrSize,
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (ZeroExtendTrunc
+  (rv32iIAddrSize,
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))))), (BinBit
+  (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit
+  rv32iIAddrSize)), (Obj.magic pc))), (getOffsetUJE inst))))))), (ITE ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq
+  ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+     rv32iOpIdx) } :: ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+     rv32iRfIdx) } :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+     rv32iAddrSize) } :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+     (data rv32iLgDataBytes) } :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+     (data rv32iLgDataBytes) } :: []))))) { bindex = ('o'::('p'::('c'::('o'::('d'::('e'::[]))))));
+     indexb =
+     (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+       rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+       rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+       rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+       (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[]))));
+       attrType = (data rv32iLgDataBytes) }.attrName :: []))))) }), (ReadField (({ attrName =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit rv32iOpIdx) } :: ({ attrName =
+  ('r'::('e'::('g'::[]))); attrType = (Bit rv32iRfIdx) } :: ({ attrName =
+  ('a'::('d'::('d'::('r'::[])))); attrType = (Bit rv32iAddrSize) } :: ({ attrName =
+  ('v'::('a'::('l'::('u'::('e'::[]))))); attrType = (data rv32iLgDataBytes) } :: ({ attrName =
+  ('i'::('n'::('s'::('t'::[])))); attrType = (data rv32iLgDataBytes) } :: []))))), { bindex =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); indexb =
+  (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+    rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+    rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+    rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: []))))) }, (Var ((SyntaxKind
+  (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Obj.magic dec))))), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  rv32iOpJALR)))))), (UpdateVector (rv32iRfIdx, (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), st)), (getRdE inst), (UniBit (rv32iIAddrSize,
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (ZeroExtendTrunc
+  (rv32iIAddrSize,
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))))), (BinBit
+  (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (BinBit (rv32iIAddrSize,
+  rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Obj.magic pc))), (UniBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), rv32iIAddrSize,
+  (SignExtendTrunc
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  rv32iIAddrSize)), (getRs1ValueE st inst))))), (UniBit (rv32iAddrSize, rv32iIAddrSize,
+  (SignExtendTrunc (rv32iAddrSize, rv32iIAddrSize)), (getOffsetIE inst))))))))), (ITE ((SyntaxKind
+  (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq
+  ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+     rv32iOpIdx) } :: ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+     rv32iRfIdx) } :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+     rv32iAddrSize) } :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+     (data rv32iLgDataBytes) } :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+     (data rv32iLgDataBytes) } :: []))))) { bindex = ('o'::('p'::('c'::('o'::('d'::('e'::[]))))));
+     indexb =
+     (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+       rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+       rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+       rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+       (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[]))));
+       attrType = (data rv32iLgDataBytes) }.attrName :: []))))) }), (ReadField (({ attrName =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit rv32iOpIdx) } :: ({ attrName =
+  ('r'::('e'::('g'::[]))); attrType = (Bit rv32iRfIdx) } :: ({ attrName =
+  ('a'::('d'::('d'::('r'::[])))); attrType = (Bit rv32iAddrSize) } :: ({ attrName =
+  ('v'::('a'::('l'::('u'::('e'::[]))))); attrType = (data rv32iLgDataBytes) } :: ({ attrName =
+  ('i'::('n'::('s'::('t'::[])))); attrType = (data rv32iLgDataBytes) } :: []))))), { bindex =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); indexb =
+  (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+    rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+    rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+    rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: []))))) }, (Var ((SyntaxKind
+  (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Obj.magic dec))))), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  rv32iOpOP)))))), (ITE ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ 0)))))))), (getFunct7E inst), (Const ((Bit (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))), rv32iAdd)))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7ADD)))))),
   (UpdateVector (rv32iRfIdx, (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector
   ((data rv32iLgDataBytes), rv32iRfIdx))), st)), (getRdE inst), (BinBit
   ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
@@ -3280,7 +3761,7 @@ let rv32iExecState st pc dec =
   (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit
   ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ (Pervasives.succ 0))))))), rv32iSub)))))), (UpdateVector (rv32iRfIdx,
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7SUB)))))), (UpdateVector (rv32iRfIdx,
   (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
   (getRdE inst), (BinBit
   ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
@@ -3291,9 +3772,156 @@ let rv32iExecState st pc dec =
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Sub
   (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
+  (getRs1ValueE st inst), (getRs2ValueE st inst))))), (ITE ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7SLL)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Sll
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  (getRs1ValueE st inst), (UniBit
+  ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))) (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))), (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))), (Trunc
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))), (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))), (getRs2ValueE st inst))))))), (ITE
+  ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ 0)))))))), (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (ConstBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7SRL)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Srl
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  (getRs1ValueE st inst), (UniBit
+  ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))) (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))), (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))), (Trunc
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))), (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))), (getRs2ValueE st inst))))))), (ITE
+  ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ 0)))))))), (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (ConstBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7SRA)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Sra
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  (getRs1ValueE st inst), (UniBit
+  ((plus (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))) (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))), (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))), (Trunc
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))))))))))))))))))))))), (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))), (getRs2ValueE st inst))))))), (ITE
+  ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ 0)))))))), (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (ConstBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7OR)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Bor
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
+  (getRs1ValueE st inst), (getRs2ValueE st inst))))), (ITE ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7AND)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Band
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
+  (getRs1ValueE st inst), (getRs2ValueE st inst))))), (ITE ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), (Eq ((Bit (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))),
+  (getFunct7E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit
+  ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))))))), rv32iF7XOR)))))), (UpdateVector (rv32iRfIdx,
+  (data rv32iLgDataBytes), (Var ((SyntaxKind (Vector ((data rv32iLgDataBytes), rv32iRfIdx))), st)),
+  (getRdE inst), (BinBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Bxor
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
   (getRs1ValueE st inst), (getRs2ValueE st inst))))), (Var ((SyntaxKind (Vector
-  ((data rv32iLgDataBytes), rv32iRfIdx))), st)))))), (Var ((SyntaxKind (Vector
-  ((data rv32iLgDataBytes), rv32iRfIdx))), st)))
+  ((data rv32iLgDataBytes), rv32iRfIdx))), st)))))))))))))))))), (Var ((SyntaxKind (Vector
+  ((data rv32iLgDataBytes), rv32iRfIdx))), st)))))))
 
 (** val rv32iExecNextPc : 'a1 stateT -> 'a1 -> 'a1 decInstT -> 'a1 expr **)
 
@@ -3330,7 +3958,7 @@ let rv32iExecNextPc st pc dec =
               (data rv32iLgDataBytes) }.attrName []))))) }, (Var ((SyntaxKind
     (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Obj.magic dec))))
   in
-  ITE ((SyntaxKind (Bit rv32iAddrSize)), (Eq
+  ITE ((SyntaxKind (Bit rv32iIAddrSize)), (Eq
   ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
      rv32iOpIdx) } :: ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
      rv32iRfIdx) } :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
@@ -3360,34 +3988,136 @@ let rv32iExecNextPc st pc dec =
   ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
   (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
-  rv32iBr)))))), (ITE ((SyntaxKind (Bit rv32iAddrSize)), (Eq ((Bit (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ 0)))), (getFunct3E inst), (Const ((Bit (Pervasives.succ (Pervasives.succ
-  (Pervasives.succ 0)))), (ConstBit ((Pervasives.succ (Pervasives.succ (Pervasives.succ 0))),
-  rv32iBeq)))))), (ITE ((SyntaxKind (Bit rv32iAddrSize)), (Eq ((data rv32iLgDataBytes),
-  (getRs1ValueE st inst), (getRs2ValueE st inst))), (BinBit (rv32iAddrSize, rv32iAddrSize,
-  rv32iAddrSize, (Add rv32iAddrSize), (Var ((SyntaxKind (Bit rv32iAddrSize)), (Obj.magic pc))),
-  (getBrOffsetE inst))), (BinBit (rv32iAddrSize, rv32iAddrSize, rv32iAddrSize, (Add rv32iAddrSize),
-  (Var ((SyntaxKind (Bit rv32iAddrSize)), (Obj.magic pc))), (Const ((Bit rv32iAddrSize), (ConstBit
-  (rv32iAddrSize,
-  (natToWord rv32iAddrSize (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    0))))))))))))), (ITE ((SyntaxKind (Bit rv32iAddrSize)), (BinBitBool
+  rv32iOpJAL)))))), (BinBit (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize),
+  (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))), (getOffsetUJE inst))), (ITE
+  ((SyntaxKind (Bit rv32iIAddrSize)), (Eq
+  ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+     rv32iOpIdx) } :: ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+     rv32iRfIdx) } :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+     rv32iAddrSize) } :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+     (data rv32iLgDataBytes) } :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+     (data rv32iLgDataBytes) } :: []))))) { bindex = ('o'::('p'::('c'::('o'::('d'::('e'::[]))))));
+     indexb =
+     (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+       rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+       rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+       rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+       (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[]))));
+       attrType = (data rv32iLgDataBytes) }.attrName :: []))))) }), (ReadField (({ attrName =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit rv32iOpIdx) } :: ({ attrName =
+  ('r'::('e'::('g'::[]))); attrType = (Bit rv32iRfIdx) } :: ({ attrName =
+  ('a'::('d'::('d'::('r'::[])))); attrType = (Bit rv32iAddrSize) } :: ({ attrName =
+  ('v'::('a'::('l'::('u'::('e'::[]))))); attrType = (data rv32iLgDataBytes) } :: ({ attrName =
+  ('i'::('n'::('s'::('t'::[])))); attrType = (data rv32iLgDataBytes) } :: []))))), { bindex =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); indexb =
+  (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+    rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+    rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+    rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: []))))) }, (Var ((SyntaxKind
+  (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Obj.magic dec))))), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  rv32iOpJALR)))))), (BinBit (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize),
+  (BinBit (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind
+  (Bit rv32iIAddrSize)), (Obj.magic pc))), (UniBit
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), rv32iIAddrSize,
+  (SignExtendTrunc
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  rv32iIAddrSize)), (getRs1ValueE st inst))))), (UniBit (rv32iAddrSize, rv32iIAddrSize,
+  (SignExtendTrunc (rv32iAddrSize, rv32iIAddrSize)), (getOffsetIE inst))))), (ITE ((SyntaxKind (Bit
+  rv32iIAddrSize)), (Eq
+  ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+     rv32iOpIdx) } :: ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+     rv32iRfIdx) } :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+     rv32iAddrSize) } :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+     (data rv32iLgDataBytes) } :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+     (data rv32iLgDataBytes) } :: []))))) { bindex = ('o'::('p'::('c'::('o'::('d'::('e'::[]))))));
+     indexb =
+     (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+       rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+       rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+       rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+       (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[]))));
+       attrType = (data rv32iLgDataBytes) }.attrName :: []))))) }), (ReadField (({ attrName =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit rv32iOpIdx) } :: ({ attrName =
+  ('r'::('e'::('g'::[]))); attrType = (Bit rv32iRfIdx) } :: ({ attrName =
+  ('a'::('d'::('d'::('r'::[])))); attrType = (Bit rv32iAddrSize) } :: ({ attrName =
+  ('v'::('a'::('l'::('u'::('e'::[]))))); attrType = (data rv32iLgDataBytes) } :: ({ attrName =
+  ('i'::('n'::('s'::('t'::[])))); attrType = (data rv32iLgDataBytes) } :: []))))), { bindex =
+  ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); indexb =
+  (indexBound_head { attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
+    rv32iOpIdx) }.attrName ({ attrName = ('r'::('e'::('g'::[]))); attrType = (Bit
+    rv32iRfIdx) }.attrName :: ({ attrName = ('a'::('d'::('d'::('r'::[])))); attrType = (Bit
+    rv32iAddrSize) }.attrName :: ({ attrName = ('v'::('a'::('l'::('u'::('e'::[]))))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: ({ attrName = ('i'::('n'::('s'::('t'::[])))); attrType =
+    (data rv32iLgDataBytes) }.attrName :: []))))) }, (Var ((SyntaxKind
+  (decInstK rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx)), (Obj.magic dec))))), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))))))), (ConstBit ((Pervasives.succ (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
+  rv32iOpBRANCH)))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)), (Eq ((Bit (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))), (getFunct3E inst), (Const ((Bit (Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0)))), (ConstBit ((Pervasives.succ (Pervasives.succ
+  (Pervasives.succ 0))), rv32iF3BEQ)))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)), (Eq
+  ((data rv32iLgDataBytes), (getRs1ValueE st inst), (getRs2ValueE st inst))), (BinBit
+  (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit
+  rv32iIAddrSize)), (Obj.magic pc))), (getOffsetSBE inst))), (BinBit (rv32iIAddrSize,
+  rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Obj.magic pc))), (Const ((Bit rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Eq ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (getFunct3E inst), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (ConstBit ((Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))), rv32iF3BNE)))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (let e1 = getRs1ValueE st inst in
+   let e2 = getRs2ValueE st inst in UniBool (Neg, (Eq ((data rv32iLgDataBytes), e1, e2)))), (BinBit
+  (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit
+  rv32iIAddrSize)), (Obj.magic pc))), (getOffsetSBE inst))), (BinBit (rv32iIAddrSize,
+  rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Obj.magic pc))), (Const ((Bit rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Eq ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (getFunct3E inst), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (ConstBit ((Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))), rv32iF3BLT)))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (BinBitBool
   ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
      (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
   (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Lt
   (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
-  (getRs1ValueE st inst), (getRs2ValueE st inst))), (BinBit (rv32iAddrSize, rv32iAddrSize,
-  rv32iAddrSize, (Add rv32iAddrSize), (Var ((SyntaxKind (Bit rv32iAddrSize)), (Obj.magic pc))),
-  (getBrOffsetE inst))), (BinBit (rv32iAddrSize, rv32iAddrSize, rv32iAddrSize, (Add rv32iAddrSize),
-  (Var ((SyntaxKind (Bit rv32iAddrSize)), (Obj.magic pc))), (Const ((Bit rv32iAddrSize), (ConstBit
-  (rv32iAddrSize,
-  (natToWord rv32iAddrSize (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    0))))))))))))))), (BinBit (rv32iAddrSize, rv32iAddrSize, rv32iAddrSize, (Add rv32iAddrSize),
-  (Var ((SyntaxKind (Bit rv32iAddrSize)), (Obj.magic pc))), (Const ((Bit rv32iAddrSize), (ConstBit
-  (rv32iAddrSize,
-  (natToWord rv32iAddrSize (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    0))))))))))))
+  (getRs1ValueE st inst), (getRs2ValueE st inst))), (BinBit (rv32iIAddrSize, rv32iIAddrSize,
+  rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))),
+  (getOffsetSBE inst))), (BinBit (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add
+  rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))), (Const ((Bit
+  rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Eq ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (getFunct3E inst), (Const
+  ((Bit (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))), (ConstBit ((Pervasives.succ
+  (Pervasives.succ (Pervasives.succ 0))), rv32iF3BGE)))))), (ITE ((SyntaxKind (Bit rv32iIAddrSize)),
+  (UniBool (Neg, (BinBitBool
+  ((mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))),
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))))), (Lt
+  (mult rv32iLgDataBytes (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
+    (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0)))))))))),
+  (getRs1ValueE st inst), (getRs2ValueE st inst))))), (BinBit (rv32iIAddrSize, rv32iIAddrSize,
+  rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))),
+  (getOffsetSBE inst))), (BinBit (rv32iIAddrSize, rv32iIAddrSize, rv32iIAddrSize, (Add
+  rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))), (Const ((Bit
+  rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))), (BinBit (rv32iIAddrSize, rv32iIAddrSize,
+  rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)), (Obj.magic pc))),
+  (Const ((Bit rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))))))))), (BinBit (rv32iIAddrSize,
+  rv32iIAddrSize, rv32iIAddrSize, (Add rv32iIAddrSize), (Var ((SyntaxKind (Bit rv32iIAddrSize)),
+  (Obj.magic pc))), (Const ((Bit rv32iIAddrSize), (ConstBit (rv32iIAddrSize,
+  (natToWord rv32iIAddrSize (Pervasives.succ 0)))))))))))))
 
 (** val dataArray : int -> kind -> kind **)
 
@@ -4704,11 +5434,24 @@ let l1Cache idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id =
         memOp }.attrName :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
         (data lgDataBytes0) }.attrName :: []))) }, (Var ((SyntaxKind
       (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq))))), (fun idx1 -> SMCall
-    ({ nameVal = (readCs idxBits0).attrName }, (readCs idxBits0).attrType, (Var ((SyntaxKind
-    (idx idxBits0)), idx1)), (fun cs -> SAssert_ ((UniBool (Neg, (BinBitBool ((Pervasives.succ
-    (Pervasives.succ 0)), (Pervasives.succ (Pervasives.succ 0)), (Lt (Pervasives.succ
-    (Pervasives.succ 0))), (Var ((SyntaxKind (readCs idxBits0).attrType.ret), cs)), (Const ((Bit
-    (Pervasives.succ (Pervasives.succ 0))), (ConstBit ((Pervasives.succ (Pervasives.succ 0)),
+    ({ nameVal = (readTag idxBits0 tagBits0).attrName }, (readTag idxBits0 tagBits0).attrType, (Var
+    ((SyntaxKind (idx idxBits0)), idx1)), (fun tag0 -> SAssert_ ((Eq
+    ((readTag idxBits0 tagBits0).attrType.ret, (Var ((SyntaxKind
+    (readTag idxBits0 tagBits0).attrType.ret), tag0)),
+    (getTag idxBits0 tagBits0 lgNumDatas0 (ReadField (({ attrName = ('a'::('d'::('d'::('r'::[]))));
+      attrType = (addr0 idxBits0 tagBits0 lgNumDatas0) } :: ({ attrName = ('o'::('p'::[]));
+      attrType = memOp } :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
+      (data lgDataBytes0) } :: []))), { bindex = ('a'::('d'::('d'::('r'::[])))); indexb =
+      (indexBound_head { attrName = ('a'::('d'::('d'::('r'::[])))); attrType =
+        (addr0 idxBits0 tagBits0 lgNumDatas0) }.attrName ({ attrName = ('o'::('p'::[])); attrType =
+        memOp }.attrName :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
+        (data lgDataBytes0) }.attrName :: []))) }, (Var ((SyntaxKind
+      (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq))))))), (SMCall ({ nameVal =
+    (readCs idxBits0).attrName }, (readCs idxBits0).attrType, (Var ((SyntaxKind (idx idxBits0)),
+    idx1)), (fun cs -> SAssert_ ((UniBool (Neg, (BinBitBool ((Pervasives.succ (Pervasives.succ 0)),
+    (Pervasives.succ (Pervasives.succ 0)), (Lt (Pervasives.succ (Pervasives.succ 0))), (Var
+    ((SyntaxKind (readCs idxBits0).attrType.ret), cs)), (Const ((Bit (Pervasives.succ
+    (Pervasives.succ 0))), (ConstBit ((Pervasives.succ (Pervasives.succ 0)),
     (natToWord (Pervasives.succ (Pervasives.succ 0)) sh))))))))), (SMCall ({ nameVal =
     (readLine idxBits0 lgNumDatas0 lgDataBytes0).attrName },
     (readLine idxBits0 lgNumDatas0 lgDataBytes0).attrType, (Var ((SyntaxKind (idx idxBits0)),
@@ -4749,7 +5492,7 @@ let l1Cache idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id =
     (fun rq' -> SAssert_ ((Eq ((rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0), (Var
     ((SyntaxKind (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq)), (Var ((SyntaxKind
     (rqFromProcPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0).attrType.ret), rq')))), (SReturn
-    (Const (void, (getDefaultConst void)))))))))))))))))))))))))))))))); ruleName = { nameVal =
+    (Const (void, (getDefaultConst void)))))))))))))))))))))))))))))))))))); ruleName = { nameVal =
     ('l'::('d'::[])) } }), (ConsInSinModule ((SMERule { ruleGen = (fun _ -> SReadReg ({ nameVal =
     ('p'::('r'::('o'::('c'::('R'::('q'::('V'::('a'::('l'::('i'::('d'::[]))))))))))) }, (SyntaxKind
     Bool), (fun valid -> SAssert_ ((Var ((SyntaxKind Bool), valid)), (SReadReg ({ nameVal =
@@ -4778,10 +5521,23 @@ let l1Cache idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id =
         memOp }.attrName :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
         (data lgDataBytes0) }.attrName :: []))) }, (Var ((SyntaxKind
       (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq))))), (fun idx1 -> SMCall
-    ({ nameVal = (readCs idxBits0).attrName }, (readCs idxBits0).attrType, (Var ((SyntaxKind
-    (idx idxBits0)), idx1)), (fun cs -> SAssert_ ((Eq ((readCs idxBits0).attrType.ret, (Var
-    ((SyntaxKind (readCs idxBits0).attrType.ret), cs)), (Const ((Bit (Pervasives.succ
-    (Pervasives.succ 0))), (ConstBit ((Pervasives.succ (Pervasives.succ 0)),
+    ({ nameVal = (readTag idxBits0 tagBits0).attrName }, (readTag idxBits0 tagBits0).attrType, (Var
+    ((SyntaxKind (idx idxBits0)), idx1)), (fun tag0 -> SAssert_ ((Eq
+    ((readTag idxBits0 tagBits0).attrType.ret, (Var ((SyntaxKind
+    (readTag idxBits0 tagBits0).attrType.ret), tag0)),
+    (getTag idxBits0 tagBits0 lgNumDatas0 (ReadField (({ attrName = ('a'::('d'::('d'::('r'::[]))));
+      attrType = (addr0 idxBits0 tagBits0 lgNumDatas0) } :: ({ attrName = ('o'::('p'::[]));
+      attrType = memOp } :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
+      (data lgDataBytes0) } :: []))), { bindex = ('a'::('d'::('d'::('r'::[])))); indexb =
+      (indexBound_head { attrName = ('a'::('d'::('d'::('r'::[])))); attrType =
+        (addr0 idxBits0 tagBits0 lgNumDatas0) }.attrName ({ attrName = ('o'::('p'::[])); attrType =
+        memOp }.attrName :: ({ attrName = ('d'::('a'::('t'::('a'::[])))); attrType =
+        (data lgDataBytes0) }.attrName :: []))) }, (Var ((SyntaxKind
+      (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq))))))), (SMCall ({ nameVal =
+    (readCs idxBits0).attrName }, (readCs idxBits0).attrType, (Var ((SyntaxKind (idx idxBits0)),
+    idx1)), (fun cs -> SAssert_ ((Eq ((readCs idxBits0).attrType.ret, (Var ((SyntaxKind
+    (readCs idxBits0).attrType.ret), cs)), (Const ((Bit (Pervasives.succ (Pervasives.succ 0))),
+    (ConstBit ((Pervasives.succ (Pervasives.succ 0)),
     (natToWord (Pervasives.succ (Pervasives.succ 0)) mod0))))))), (SMCall ({ nameVal =
     (readLine idxBits0 lgNumDatas0 lgDataBytes0).attrName },
     (readLine idxBits0 lgNumDatas0 lgDataBytes0).attrType, (Var ((SyntaxKind (idx idxBits0)),
@@ -4907,9 +5663,9 @@ let l1Cache idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id =
     (fun rq' -> SAssert_ ((Eq ((rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0), (Var
     ((SyntaxKind (rqFromProc0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0)), rq)), (Var ((SyntaxKind
     (rqFromProcPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0).attrType.ret), rq')))), (SReturn
-    (Const (void, (getDefaultConst void)))))))))))))))))))))))))))))))))))); ruleName = { nameVal =
-    ('s'::('t'::[])) } }), (ConsInSinModule ((SMERule { ruleGen = (fun _ -> SMCall ({ nameVal =
-    (fromPPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id).attrName },
+    (Const (void, (getDefaultConst void)))))))))))))))))))))))))))))))))))))))); ruleName =
+    { nameVal = ('s'::('t'::[])) } }), (ConsInSinModule ((SMERule { ruleGen = (fun _ -> SMCall
+    ({ nameVal = (fromPPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id).attrName },
     (fromPPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id).attrType, (Const
     ((fromPPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id).attrType.arg,
     (getDefaultConst (fromPPop idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 id).attrType.arg))),
@@ -8091,18 +8847,19 @@ let halt =
   { attrName = ('H'::('A'::('L'::('T'::[])))); attrType = { arg = void; ret = void } }
 
 (** val nextPc :
-    int -> int -> int -> int -> execNextPcT -> 'a1 -> 'a1 stateT -> 'a1 decInstT -> 'a1 actionT **)
+    int -> int -> int -> int -> int -> execNextPcT -> 'a1 -> 'a1 stateT -> 'a1 decInstT -> 'a1
+    actionT **)
 
-let nextPc opIdx addrSize0 lgDataBytes0 rfIdx execNextPc ppc st inst =
-  WriteReg (('p'::('c'::[])), (SyntaxKind (Bit addrSize0)), (Obj.magic execNextPc __ st ppc inst),
+let nextPc opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx execNextPc ppc st inst =
+  WriteReg (('p'::('c'::[])), (SyntaxKind (Bit iaddrSize)), (Obj.magic execNextPc __ st ppc inst),
     (Return (Const (void, (getDefaultConst void)))))
 
-(** val reqLd : char list -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
+(** val reqLd : char list -> int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
 
-let reqLd inName opIdx addrSize0 lgDataBytes0 rfIdx dec opLd =
+let reqLd inName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opLd =
   ReadReg (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (fun stall -> Assert_ ((UniBool
     (Neg, (Var ((SyntaxKind Bool), stall)))), (ReadReg (('p'::('c'::[])), (SyntaxKind (Bit
-    addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
+    iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
     ((SyntaxKind (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc),
     (fun inst -> Assert_ ((Eq
     ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -8272,12 +9029,12 @@ let reqLd inName opIdx addrSize0 lgDataBytes0 rfIdx dec opLd =
     (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (Const (Bool, (ConstBool true))),
     (Return (Const (void, (getDefaultConst void)))))))))))))))))))
 
-(** val reqSt : char list -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
+(** val reqSt : char list -> int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
 
-let reqSt inName opIdx addrSize0 lgDataBytes0 rfIdx dec opSt =
+let reqSt inName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opSt =
   ReadReg (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (fun stall -> Assert_ ((UniBool
     (Neg, (Var ((SyntaxKind Bool), stall)))), (ReadReg (('p'::('c'::[])), (SyntaxKind (Bit
-    addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
+    iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
     ((SyntaxKind (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc),
     (fun inst -> Assert_ ((Eq
     ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -8811,13 +9568,13 @@ let reqSt inName opIdx addrSize0 lgDataBytes0 rfIdx dec opSt =
     true))), (Return (Const (void, (getDefaultConst void)))))))))))))))))))
 
 (** val repLd :
-    char list -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT **)
+    char list -> int -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT **)
 
-let repLd outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opLd =
+let repLd outName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execNextPc opLd =
   MCall ((memRep outName lgDataBytes0).attrName, (memRep outName lgDataBytes0).attrType, (Const
     ((memRep outName lgDataBytes0).attrType.arg,
     (getDefaultConst (memRep outName lgDataBytes0).attrType.arg))), (fun val0 -> ReadReg
-    (('p'::('c'::[])), (SyntaxKind (Bit addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])),
+    (('p'::('c'::[])), (SyntaxKind (Bit iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])),
     (stateK lgDataBytes0 rfIdx), (fun st -> Let_ ((SyntaxKind
     (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc), (fun inst -> Assert_
     ((Eq
@@ -8873,16 +9630,17 @@ let repLd outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opLd =
       (data lgDataBytes0) }.attrName []) }, (Var ((SyntaxKind
     (memRep outName lgDataBytes0).attrType.ret), (Obj.magic val0))))))), (WriteReg
     (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (Const (Bool, (ConstBool false))),
-    (nextPc opIdx addrSize0 lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st (Obj.magic inst)))))))))))))))
+    (nextPc opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st
+      (Obj.magic inst)))))))))))))))
 
 (** val repSt :
-    char list -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT **)
+    char list -> int -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT **)
 
-let repSt outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opSt =
+let repSt outName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execNextPc opSt =
   MCall ((memRep outName lgDataBytes0).attrName, (memRep outName lgDataBytes0).attrType, (Const
     ((memRep outName lgDataBytes0).attrType.arg,
     (getDefaultConst (memRep outName lgDataBytes0).attrType.arg))), (fun val0 -> ReadReg
-    (('p'::('c'::[])), (SyntaxKind (Bit addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])),
+    (('p'::('c'::[])), (SyntaxKind (Bit iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])),
     (stateK lgDataBytes0 rfIdx), (fun st -> Let_ ((SyntaxKind
     (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc), (fun inst -> Assert_
     ((Eq
@@ -8913,14 +9671,15 @@ let repSt outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opSt =
     (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), inst)))), (Const ((Bit opIdx), opSt)))),
     (WriteReg (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (Const (Bool, (ConstBool
     false))),
-    (nextPc opIdx addrSize0 lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st (Obj.magic inst)))))))))))))
+    (nextPc opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st
+      (Obj.magic inst)))))))))))))
 
-(** val execHt : int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
+(** val execHt : int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT **)
 
-let execHt opIdx addrSize0 lgDataBytes0 rfIdx dec opHt =
+let execHt opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opHt =
   ReadReg (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (fun stall -> Assert_ ((UniBool
     (Neg, (Var ((SyntaxKind Bool), stall)))), (ReadReg (('p'::('c'::[])), (SyntaxKind (Bit
-    addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
+    iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
     ((SyntaxKind (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc),
     (fun inst -> Assert_ ((Eq
     ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -8952,13 +9711,13 @@ let execHt opIdx addrSize0 lgDataBytes0 rfIdx dec opHt =
     (fun x -> Return (Const (void, (getDefaultConst void)))))))))))))))))
 
 (** val execNm :
-    int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT ->
-    'a1 actionT **)
+    int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT ->
+    constT -> 'a1 actionT **)
 
-let execNm opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
+let execNm opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
   ReadReg (('s'::('t'::('a'::('l'::('l'::[]))))), (SyntaxKind Bool), (fun stall -> Assert_ ((UniBool
     (Neg, (Var ((SyntaxKind Bool), stall)))), (ReadReg (('p'::('c'::[])), (SyntaxKind (Bit
-    addrSize0)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
+    iaddrSize)), (fun ppc -> ReadReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (fun st -> Let_
     ((SyntaxKind (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), (Obj.magic dec __ st ppc),
     (fun inst -> Assert_ ((UniBool (Neg, (BinBool (Or, (BinBool (Or, (Eq
     ((getAttrType ({ attrName = ('o'::('p'::('c'::('o'::('d'::('e'::[])))))); attrType = (Bit
@@ -9037,16 +9796,17 @@ let execNm opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt
       (data lgDataBytes0) }.attrName :: []))))) }, (Var ((SyntaxKind
     (decInstK opIdx addrSize0 lgDataBytes0 rfIdx)), inst)))), (Const ((Bit opIdx), opHt)))))))),
     (WriteReg (('r'::('f'::[])), (stateK lgDataBytes0 rfIdx), (Obj.magic execState __ st ppc inst),
-    (nextPc opIdx addrSize0 lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st (Obj.magic inst)))))))))))))))
+    (nextPc opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx execNextPc (Obj.magic ppc) st
+      (Obj.magic inst)))))))))))))))
 
 (** val procDec :
-    char list -> char list -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT ->
-    constT -> constT -> constT -> modules **)
+    char list -> char list -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT
+    -> constT -> constT -> constT -> modules **)
 
-let procDec inName outName opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
+let procDec inName outName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
   makeModule (ConsInModule ((MERegister { attrName = ('p'::('c'::[])); attrType = (ExistT
-    ((SyntaxKind (Bit addrSize0)),
-    (makeConst (Bit addrSize0) (getDefaultConst (Bit addrSize0))))) }), (ConsInModule ((MERegister
+    ((SyntaxKind (Bit iaddrSize)),
+    (makeConst (Bit iaddrSize) (getDefaultConst (Bit iaddrSize))))) }), (ConsInModule ((MERegister
     { attrName = ('r'::('f'::[])); attrType = (ExistT ((SyntaxKind (Vector ((data lgDataBytes0),
     rfIdx))),
     (makeConst (Vector ((data lgDataBytes0), rfIdx))
@@ -9054,34 +9814,35 @@ let procDec inName outName opIdx addrSize0 lgDataBytes0 rfIdx dec execState exec
     { attrName = ('s'::('t'::('a'::('l'::('l'::[]))))); attrType = (ExistT ((SyntaxKind Bool),
     (makeConst Bool (ConstBool false)))) }), (ConsInModule ((MERule { attrName =
     ('r'::('e'::('q'::('L'::('d'::[]))))); attrType = (fun _ ->
-    reqLd inName opIdx addrSize0 lgDataBytes0 rfIdx dec opLd) }), (ConsInModule ((MERule
+    reqLd inName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opLd) }), (ConsInModule ((MERule
     { attrName = ('r'::('e'::('q'::('S'::('t'::[]))))); attrType = (fun _ ->
-    reqSt inName opIdx addrSize0 lgDataBytes0 rfIdx dec opSt) }), (ConsInModule ((MERule
+    reqSt inName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opSt) }), (ConsInModule ((MERule
     { attrName = ('r'::('e'::('p'::('L'::('d'::[]))))); attrType = (fun _ ->
-    repLd outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opLd) }), (ConsInModule ((MERule
-    { attrName = ('r'::('e'::('p'::('S'::('t'::[]))))); attrType = (fun _ ->
-    repSt outName opIdx addrSize0 lgDataBytes0 rfIdx dec execNextPc opSt) }), (ConsInModule ((MERule
-    { attrName = ('e'::('x'::('e'::('c'::('H'::('t'::[])))))); attrType = (fun _ ->
-    execHt opIdx addrSize0 lgDataBytes0 rfIdx dec opHt) }), (ConsInModule ((MERule { attrName =
-    ('e'::('x'::('e'::('c'::('N'::('m'::[])))))); attrType = (fun _ ->
-    execNm opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt) }),
+    repLd outName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execNextPc opLd) }),
+    (ConsInModule ((MERule { attrName = ('r'::('e'::('p'::('S'::('t'::[]))))); attrType = (fun _ ->
+    repSt outName opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execNextPc opSt) }),
+    (ConsInModule ((MERule { attrName = ('e'::('x'::('e'::('c'::('H'::('t'::[])))))); attrType =
+    (fun _ -> execHt opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec opHt) }), (ConsInModule
+    ((MERule { attrName = ('e'::('x'::('e'::('c'::('N'::('m'::[])))))); attrType = (fun _ ->
+    execNm opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt) }),
     NilInModule))))))))))))))))))
 
 (** val pdec :
-    int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT ->
-    modules **)
+    int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT ->
+    constT -> modules **)
 
-let pdec opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
+let pdec opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt =
   procDec ('r'::('q'::('F'::('r'::('o'::('m'::('P'::('r'::('o'::('c'::[]))))))))))
-    ('r'::('s'::('T'::('o'::('P'::('r'::('o'::('c'::[])))))))) opIdx addrSize0 lgDataBytes0 rfIdx
-    dec execState execNextPc opLd opSt opHt
+    ('r'::('s'::('T'::('o'::('P'::('r'::('o'::('c'::[])))))))) opIdx addrSize0 iaddrSize
+    lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt
 
 (** val pdecs :
-    int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT ->
-    int -> modules **)
+    int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT ->
+    constT -> int -> modules **)
 
-let pdecs opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt i =
-  duplicate (pdec opIdx addrSize0 lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt) i
+let pdecs opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt i =
+  duplicate
+    (pdec opIdx addrSize0 iaddrSize lgDataBytes0 rfIdx dec execState execNextPc opLd opSt opHt) i
 
 (** val addrSize : int -> int -> int -> int **)
 
@@ -9094,12 +9855,12 @@ let numChildren lgNumChildren0 =
   wordToNat lgNumChildren0 (wones lgNumChildren0)
 
 (** val pdecN :
-    int -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT
-    -> constT -> int -> modules **)
+    int -> int -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT ->
+    constT -> constT -> int -> modules **)
 
-let pdecN opIdx rfIdx idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 dec execState execNextPc opLd opSt opHt lgNumChildren0 =
-  pdecs opIdx (addrSize idxBits0 tagBits0 lgNumDatas0) lgDataBytes0 rfIdx dec execState execNextPc
-    opLd opSt opHt (numChildren lgNumChildren0)
+let pdecN opIdx rfIdx iAddrSize idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 dec execState execNextPc opLd opSt opHt lgNumChildren0 =
+  pdecs opIdx (addrSize idxBits0 tagBits0 lgNumDatas0) iAddrSize lgDataBytes0 rfIdx dec execState
+    execNextPc opLd opSt opHt (numChildren lgNumChildren0)
 
 (** val pmFifos : int -> int -> int -> int -> int -> int -> modules **)
 
@@ -9112,12 +9873,12 @@ let pmFifos fifoSize0 idxBits0 tagBits0 lgNumDatas0 lgDataBytes0 lgNumChildren0 
 (** val insts : constT **)
 
 let insts =
-  getDefaultConst (Vector ((data rv32iLgDataBytes), rv32iAddrSize))
+  getDefaultConst (Vector ((data rv32iLgDataBytes), rv32iIAddrSize))
 
 (** val idxBits : int **)
 
 let idxBits =
-  Pervasives.succ 0
+  Pervasives.succ (Pervasives.succ 0)
 
 (** val tagBits : int **)
 
@@ -9127,7 +9888,7 @@ let tagBits =
 (** val lgNumDatas : int **)
 
 let lgNumDatas =
-  Pervasives.succ (Pervasives.succ 0)
+  Pervasives.succ 0
 
 (** val lgNumChildren : int **)
 
@@ -9152,14 +9913,14 @@ let idK =
 (** val pdecN0 : modules **)
 
 let pdecN0 =
-  pdecN rv32iOpIdx rv32iRfIdx idxBits tagBits lgNumDatas rv32iLgDataBytes (fun _ ->
+  pdecN rv32iOpIdx rv32iRfIdx rv32iIAddrSize idxBits tagBits lgNumDatas rv32iLgDataBytes (fun _ ->
     rv32iDecode insts) (fun _ -> rv32iExecState) (fun _ -> rv32iExecNextPc) (ConstBit
     ((Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ (Pervasives.succ 0))))))), rv32iLd)) (ConstBit ((Pervasives.succ
+    (Pervasives.succ (Pervasives.succ 0))))))), rv32iOpLOAD)) (ConstBit ((Pervasives.succ
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ
-    (Pervasives.succ 0))))))), rv32iSt)) (ConstBit ((Pervasives.succ (Pervasives.succ
+    (Pervasives.succ 0))))))), rv32iOpSTORE)) (ConstBit ((Pervasives.succ (Pervasives.succ
     (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ (Pervasives.succ 0))))))),
-    rv32iHt)) lgNumChildren
+    rv32iOpHALT)) lgNumChildren
 
 (** val pmFifos0 : modules **)
 

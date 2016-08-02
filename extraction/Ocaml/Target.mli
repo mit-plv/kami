@@ -163,6 +163,12 @@ type uniBitOp =
 type binBitOp =
 | Add of int
 | Sub of int
+| Band of int
+| Bor of int
+| Bxor of int
+| Sll of int * int
+| Srl of int * int
+| Sra of int * int
 | Concat of int * int
 
 type binBitBoolOp =
@@ -565,27 +571,13 @@ type execNextPcT = __ -> __ stateT -> __ fullType -> __ decInstT -> __ expr
 
 val rv32iAddrSize : int
 
+val rv32iIAddrSize : int
+
 val rv32iLgDataBytes : int
 
 val rv32iOpIdx : int
 
 val rv32iRfIdx : int
-
-val rv32iLd : word
-
-val rv32iSt : word
-
-val rv32iHt : word
-
-val rv32iOp : word
-
-val rv32iBr : word
-
-val rv32iAdd : word
-
-val rv32iSub : word
-
-val rv32iBeq : word
 
 val getRs1ValueE : 'a1 stateT -> 'a1 expr -> 'a1 expr
 
@@ -593,17 +585,57 @@ val getRs2ValueE : 'a1 stateT -> 'a1 expr -> 'a1 expr
 
 val getRdE : 'a1 expr -> 'a1 expr
 
-val getLdBaseE : 'a1 expr -> 'a1 expr
-
-val getStBaseE : 'a1 expr -> 'a1 expr
-
 val getFunct7E : 'a1 expr -> 'a1 expr
 
 val getFunct3E : 'a1 expr -> 'a1 expr
 
-val getBrOffsetE : 'a1 expr -> 'a1 expr
+val getOffsetIE : 'a1 expr -> 'a1 expr
+
+val getOffsetSE : 'a1 expr -> 'a1 expr
+
+val getOffsetSBE : 'a1 expr -> 'a1 expr
+
+val getOffsetUJE : 'a1 expr -> 'a1 expr
+
+val rv32iOpJAL : word
+
+val rv32iOpJALR : word
+
+val rv32iOpBRANCH : word
+
+val rv32iOpLOAD : word
+
+val rv32iOpSTORE : word
+
+val rv32iOpOP : word
+
+val rv32iOpHALT : word
 
 val rv32iDecode : constT -> 'a1 stateT -> 'a1 -> 'a1 decInstE
+
+val rv32iF7ADD : word
+
+val rv32iF7SUB : word
+
+val rv32iF7SLL : word
+
+val rv32iF7XOR : word
+
+val rv32iF7SRL : word
+
+val rv32iF7SRA : word
+
+val rv32iF7OR : word
+
+val rv32iF7AND : word
+
+val rv32iF3BEQ : word
+
+val rv32iF3BNE : word
+
+val rv32iF3BLT : word
+
+val rv32iF3BGE : word
 
 val rv32iExecState : 'a1 stateT -> 'a1 -> 'a1 decInstT -> 'a1 stateE
 
@@ -834,41 +866,43 @@ val memRep : char list -> int -> signatureT attribute
 val halt : signatureT attribute
 
 val nextPc :
-  int -> int -> int -> int -> execNextPcT -> 'a1 -> 'a1 stateT -> 'a1 decInstT -> 'a1 actionT
+  int -> int -> int -> int -> int -> execNextPcT -> 'a1 -> 'a1 stateT -> 'a1 decInstT -> 'a1 actionT
 
-val reqLd : char list -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT
+val reqLd : char list -> int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT
 
-val reqSt : char list -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT
+val reqSt : char list -> int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT
 
-val repLd : char list -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT
+val repLd :
+  char list -> int -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT
 
-val repSt : char list -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT
+val repSt :
+  char list -> int -> int -> int -> int -> int -> decT -> execNextPcT -> constT -> 'a1 actionT
 
-val execHt : int -> int -> int -> int -> decT -> constT -> 'a1 actionT
+val execHt : int -> int -> int -> int -> int -> decT -> constT -> 'a1 actionT
 
 val execNm :
-  int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT -> 'a1
-  actionT
+  int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT
+  -> 'a1 actionT
 
 val procDec :
-  char list -> char list -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT
-  -> constT -> constT -> modules
+  char list -> char list -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT ->
+  constT -> constT -> constT -> modules
 
 val pdec :
-  int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT ->
-  modules
+  int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT
+  -> modules
 
 val pdecs :
-  int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT -> int
-  -> modules
+  int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT -> constT
+  -> int -> modules
 
 val addrSize : int -> int -> int -> int
 
 val numChildren : int -> int
 
 val pdecN :
-  int -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT -> constT ->
-  constT -> int -> modules
+  int -> int -> int -> int -> int -> int -> int -> decT -> execStateT -> execNextPcT -> constT ->
+  constT -> constT -> int -> modules
 
 val pmFifos : int -> int -> int -> int -> int -> int -> modules
 
