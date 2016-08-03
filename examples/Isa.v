@@ -3,12 +3,12 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Lts.Syntax Lts.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-(* Subset of RV32I instructions (17/47):
+(* Subset of RV32I instructions (16/47):
  * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
  * - Memory : LW, SW
- * - Arithmetic : ADD, SUB, SLL, SLT, XOR, SRL, SRA, OR, AND
+ * - Arithmetic : ADD, SUB, SLL, SRL, SRA, OR, AND, XOR
  * - (HALT) *)
-Section RV32ISubset.
+Section RV32I.
   Definition rv32iAddrSize := 4.
   Definition rv32iIAddrSize := 2. (* # of maximal instructions = 2^2 = 4 *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
@@ -264,5 +264,105 @@ Section RV32ISubset.
     exact (#pc + $1)%kami_expr.
   Defined.
     
-End RV32ISubset.
+End RV32I.
+
+(* For easy RV32I programming *)
+Section RV32IStruct.
+
+  Inductive Gpr :=
+  | x0 | x1 | x2 | x3 | x4 | x5 | x6 | x7
+  | x8 | x9 | x10 | x11 | x12 | x13 | x14 | x15
+  | x16 | x17 | x18 | x19 | x20 | x21 | x22 | x23
+  | x24 | x25 | x26 | x27 | x28 | x29 | x30 | x31.
+
+  Definition gprToRaw (r: Gpr): word 5 :=
+    match r with
+    | x0 => natToWord _ 0 | x1 => natToWord _ 1 | x2 => natToWord _ 2 | x3 => natToWord _ 3
+    | x4 => natToWord _ 4 | x5 => natToWord _ 5 | x6 => natToWord _ 6 | x7 => natToWord _ 7
+    | x8 => natToWord _ 8 | x9 => natToWord _ 9 | x10 => natToWord _ 10 | x11 => natToWord _ 11
+    | x12 => natToWord _ 12 | x13 => natToWord _ 13 | x14 => natToWord _ 14 | x15 => natToWord _ 15
+    | x16 => natToWord _ 16 | x17 => natToWord _ 17 | x18 => natToWord _ 18 | x19 => natToWord _ 19
+    | x20 => natToWord _ 20 | x21 => natToWord _ 21 | x22 => natToWord _ 22 | x23 => natToWord _ 23
+    | x24 => natToWord _ 24 | x25 => natToWord _ 25 | x26 => natToWord _ 26 | x27 => natToWord _ 27
+    | x28 => natToWord _ 28 | x29 => natToWord _ 29 | x30 => natToWord _ 30 | x31 => natToWord _ 31
+    end.
+
+  Inductive Rv32i :=
+  | JAL (ofs: word 20) (rd: Gpr): Rv32i
+  | JALR (ofs: word 12) (rs1 rd: Gpr): Rv32i
+  | BEQ (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | BNE (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | BLT (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | BGE (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | LW (ofs: word 12) (rs1 rd: Gpr): Rv32i
+  | SW (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | ADD (rs1 rs2 rd: Gpr): Rv32i
+  | SUB (rs1 rs2 rd: Gpr): Rv32i
+  | SLL (rs1 rs2 rd: Gpr): Rv32i
+  | SRL (rs1 rs2 rd: Gpr): Rv32i
+  | SRA (rs1 rs2 rd: Gpr): Rv32i
+  | OR (rs1 rs2 rd: Gpr): Rv32i
+  | AND (rs1 rs2 rd: Gpr): Rv32i
+  | XOR (rs1 rs2 rd: Gpr): Rv32i
+  | HALT: Rv32i.
+
+  Local Infix "~~" := combine (at level 0).
+
+  Definition offsetUJToRaw (ofs: word 20) :=
+    let ofs20_12 := split2 11 9 ofs in
+    let ofs11_1 := split1 11 9 ofs in
+    combine (combine (split1 8 1 ofs20_12) (split2 10 1 ofs11_1))
+            (combine (split1 10 1 ofs11_1) (split2 8 1 ofs20_12)).
+  Definition offsetUJToRawTest:
+    (offsetUJToRaw (WO~1~1~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0~0~0) =
+     WO~1~1~0~0~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0) := eq_refl.
+
+  Definition offsetSBToRaw12 (ofs: word 12) := split2 11 1 ofs.
+  Definition offsetSBToRaw11 (ofs: word 12) := split2 10 1 (split1 11 1 ofs).
+  Definition offsetSBToRaw10_5 (ofs: word 12) := split2 4 6 (split1 10 2 ofs).
+  Definition offsetSBToRaw4_1 (ofs: word 12) := split1 4 8 ofs.
+  Definition offsetSBToRawTest:
+    let ofs := WO~1~1~1~0~0~0~0~0~1~0~0~0 in
+    combine (combine (offsetSBToRaw4_1 ofs) (offsetSBToRaw10_5 ofs))
+            (combine (offsetSBToRaw11 ofs) (offsetSBToRaw12 ofs)) =
+    ofs := eq_refl.
+
+  Definition offsetSToRaw11_5 (ofs: word 12) := split2 5 7 ofs.
+  Definition offsetSToRaw4_0 (ofs: word 12) := split1 5 7 ofs.
+
+  Definition RtypeToRaw (op: word 7) (rs1 rs2 rd: Gpr) (f7: word 7) (f3: word 3) :=
+    op~~(gprToRaw rd)~~f3~~(gprToRaw rs1)~~(gprToRaw rs2)~~f7.
+  Definition ItypeToRaw (op: word 7) (rs1 rd: Gpr) (f3: word 3) (ofs: word 12) :=
+    op~~(gprToRaw rd)~~f3~~(gprToRaw rs1)~~ofs.
+  Definition StypeToRaw (op: word 7) (rs1 rs2: Gpr) (f3: word 3) (ofs: word 12) :=
+    op~~(offsetSToRaw4_0 ofs)~~f3~~(gprToRaw rs1)~~(gprToRaw rs2)~~(offsetSToRaw11_5 ofs).
+  Definition SBtypeToRaw (op: word 7) (rs1 rs2: Gpr) (f3: word 3) (ofs: word 12) :=
+    op~~(offsetSBToRaw11 ofs)~~(offsetSBToRaw4_1 ofs)
+      ~~f3~~(gprToRaw rs1)~~(gprToRaw rs2)
+      ~~(offsetSBToRaw10_5 ofs)~~(offsetSBToRaw12 ofs).
+  Definition UJtypeToRaw (op: word 7) (rd: Gpr) (ofs: word 20) :=
+    op~~(gprToRaw rd)~~(offsetUJToRaw ofs).
+               
+  Definition rv32iToRaw (inst: Rv32i): word 32 :=
+    match inst with
+    | JAL ofs rd => UJtypeToRaw rv32iOpJAL rd ofs
+    | JALR ofs rs1 rd => ItypeToRaw rv32iOpJALR rs1 rd WO~0~0~0 ofs
+    | BEQ ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BEQ ofs
+    | BNE ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BNE ofs
+    | BLT ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BLT ofs
+    | BGE ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGE ofs
+    | LW ofs rs1 rd => ItypeToRaw rv32iOpLOAD rs1 rd rv32iF3LW ofs
+    | SW ofs rs1 rs2 => StypeToRaw rv32iOpSTORE rs1 rs2 rv32iF3SW ofs
+    | ADD rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7ADD rv32iF3ADD
+    | SUB rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SUB rv32iF3SUB
+    | SLL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLL rv32iF3SLL
+    | SRL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SRL rv32iF3SRL
+    | SRA rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SRA rv32iF3SRA
+    | OR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7OR rv32iF3OR
+    | AND rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7AND rv32iF3AND
+    | XOR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7XOR rv32iF3XOR
+    | HALT => rv32iOpHALT~~(wzero _)
+    end.
+
+End RV32IStruct.
 
