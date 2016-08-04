@@ -174,6 +174,8 @@ Section RV32I.
 
   Ltac register_op_funct7 inst op expr :=
     refine (IF (getFunct7E inst == $$op) then expr else _)%kami_expr.
+  Ltac register_op_funct3 inst op expr :=
+    refine (IF (getFunct3E inst == $$op) then expr else _)%kami_expr.
 
   Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iIAddrSize
                                         rv32iLgDataBytes rv32iRfIdx.
@@ -190,40 +192,45 @@ Section RV32I.
                                                              (getRs1ValueE st inst))
                                                + (UniBit (SignExtendTrunc _ _)
                                                          (getOffsetIE inst))))] else _)%kami_expr.
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOP) then _ else #st)%kami_expr.
+    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOP) then _ else _)%kami_expr.
 
-    register_op_funct7
-      inst rv32iF7ADD
-      (#st @[ getRdE inst <- getRs1ValueE st inst + getRs2ValueE st inst ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7SUB
-      (#st @[ getRdE inst <- getRs1ValueE st inst - getRs2ValueE st inst ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7SLL
-      (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                     << (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7SRL
-      (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                     >> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7SRA
-      (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                     ~>> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7OR
-      (#st @[ getRdE inst <- (getRs1ValueE st inst) ~| (getRs2ValueE st inst) ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7AND
-      (#st @[ getRdE inst <- (getRs1ValueE st inst) ~& (getRs2ValueE st inst) ])%kami_expr.
-    register_op_funct7
-      inst rv32iF7XOR
-      (#st @[ getRdE inst <- (getRs1ValueE st inst) ~+ (getRs2ValueE st inst) ])%kami_expr.
-    exact (#st)%kami_expr.
+    - register_op_funct7
+        inst rv32iF7ADD
+        (#st @[ getRdE inst <- getRs1ValueE st inst + getRs2ValueE st inst ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7SUB
+        (#st @[ getRdE inst <- getRs1ValueE st inst - getRs2ValueE st inst ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7SLL
+        (#st @[ getRdE inst <- (getRs1ValueE st inst)
+                       << (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7SRL
+        (#st @[ getRdE inst <- (getRs1ValueE st inst)
+                       >> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7SRA
+        (#st @[ getRdE inst <- (getRs1ValueE st inst)
+                       ~>> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7OR
+        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~| (getRs2ValueE st inst) ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7AND
+        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~& (getRs2ValueE st inst) ])%kami_expr.
+      register_op_funct7
+        inst rv32iF7XOR
+        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~+ (getRs2ValueE st inst) ])%kami_expr.
+      exact (#st)%kami_expr.
+
+    - refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOPIMM) then _ else #st)%kami_expr.
+
+      register_op_funct3
+        inst rv32iF3ADDI
+        (#st @[ getRdE inst <- getRs1ValueE st inst
+                + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE inst)) ])%kami_expr.
+      exact (#st)%kami_expr.
   Defined.
-
-  Ltac register_op_funct3 inst op expr :=
-    refine (IF (getFunct3E inst == $$op) then expr else _)%kami_expr.
 
   (* NOTE: Because instructions are not on the memory, we give (pc + 1) for the next pc.
    * Branch offsets are not aligned, so the complete offset bits are used.
@@ -296,6 +303,7 @@ Section RV32IStruct.
   | BGE (ofs: word 12) (rs1 rs2: Gpr): Rv32i
   | LW (ofs: word 12) (rs1 rd: Gpr): Rv32i
   | SW (ofs: word 12) (rs1 rs2: Gpr): Rv32i
+  | ADDI (ofs: word 12) (rs1 rd: Gpr): Rv32i
   | ADD (rs1 rs2 rd: Gpr): Rv32i
   | SUB (rs1 rs2 rd: Gpr): Rv32i
   | SLL (rs1 rs2 rd: Gpr): Rv32i
@@ -353,6 +361,7 @@ Section RV32IStruct.
     | BGE ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGE ofs
     | LW ofs rs1 rd => ItypeToRaw rv32iOpLOAD rs1 rd rv32iF3LW ofs
     | SW ofs rs1 rs2 => StypeToRaw rv32iOpSTORE rs1 rs2 rv32iF3SW ofs
+    | ADDI ofs rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
     | ADD rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7ADD rv32iF3ADD
     | SUB rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SUB rv32iF3SUB
     | SLL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLL rv32iF3SLL
