@@ -1049,7 +1049,6 @@ Section Laster.
   Qed.
 End Laster.
 
-Notation "`` A" := ({| bindex := A%string |}) (at level 0, format "`` A").
 
 Notation "[]" := (fun _ => None) (at level 0, format "[]").
 Notation "M '(+)' [ K <- V ]" :=

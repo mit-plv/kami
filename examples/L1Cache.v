@@ -183,7 +183,9 @@ Section L1Cache.
           Call cs <- readCs(#idx);
           LET toS: Msi <- IF #rq@."op" then $ Mod else $ Sh;
           Read wait <- "procRqWait";
-          Assert (!#wait && (#cs < #toS));
+          Call tag <- readTag(#idx);
+          Assert (!#wait && (#cs == $ Msi.Inv ||
+                                      ((#tag == getTag #rq@."addr") && (#cs < #toS))));
           Call rqToPEnq(STRUCT{"addr" ::= getTagIdx #rq@."addr"; "from" ::= #cs; "to" ::= #toS; "id" ::= $$ Default});
           Write "procRqWait" <- $$ true;
           Retv

@@ -666,6 +666,7 @@ Section MemCacheInl2.
     ggNoF "read.tag" "l1MissByLine".
     ggNoF "read.tag" "l1Hit".    
     ggNoF "read.tag" "writeback".
+    ggNoF "read.tag" "upgRq".
     ggNoF "read.tag" "ld".
     ggNoF "read.tag" "st".
     ggNoF "read.tag" "drop".
@@ -686,6 +687,7 @@ Section MemCacheInl2.
     ggNoFilt "read.tag" "l1MissByLine".
     ggNoFilt "read.tag" "l1Hit".    
     ggNoFilt "read.tag" "writeback".
+    ggNoFilt "read.tag" "upgRq".
     ggNoFilt "read.tag" "ld".
     ggNoFilt "read.tag" "st".
     ggNoFilt "read.tag" "drop".

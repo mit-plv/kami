@@ -308,6 +308,105 @@ Proof.
   reflexivity.
 Qed.
 
+Ltac mapVReify f2 f n m :=
+  match m with
+    | M.union
+        (repMap _ _ (fun i => (addIndexToStr _
+                                             i ?s :: ?v)%struct) _) ?m
+      =>
+      let mr := mapVReify f2 f n m in
+      constr:(MVRVar s eq_refl v mr)
+    | M.empty _ => constr:(MVREmpty n _ f2 f)
+    | M.add (addIndexToStr _ ?i ?k) ?v ?m' =>
+      let mr' := mapVReify f2 f n m' in
+      constr:(MVRAddV k eq_refl i v mr')
+    | M.add ?k ?v ?m' =>
+      let mr' := mapVReify f2 f n m' in
+      constr:(MVRAdd k eq_refl v mr')
+    | M.union ?m1 ?m2 =>
+      let mr1 := mapVReify f2 f n m1 in
+      let mr2 := mapVReify f2 f n m2 in
+      constr:(MVRUnion mr1 mr2)
+    | _ => constr:(MVParam n _ f m)
+  end.
+
+Ltac mapVR_Regs n m := mapVReify (fullType type) evalConstFullT
+                                 n m.
+
+Ltac mapVR_Others t n m := mapVReify t (fun k (v: t k) => v)
+                                     n m.
+
+Ltac mapVR_Meths n m := mapVReify SignT (fun k (v: SignT k) => v)
+                                  n m.
+
+Ltac mkStruct :=
+  repeat match goal with
+           | H: context[mkStruct ?p ?q] |- _ => rewrite (mkStruct_eq p q) in H;
+               simpl in H; unfold StringBound.ith_Bounded in H; simpl in H
+           | |- context[mkStruct ?p ?q] => rewrite (mkStruct_eq p q);
+               simpl; unfold StringBound.ith_Bounded; simpl
+         end.
+
+Ltac existRegs n :=
+  match goal with
+    | |- ?inv ?s =>
+      unfold inv;
+        intros;
+        let mr := mapVR_Regs (wordToNat (wones n)) s in
+        esplit;
+          unfold withIndex;
+          match goal with
+            | cond: (_ <= _)%nat |- _ =>
+              match goal with
+                | |- M.find (addIndexToStr _ ?c ?k) _ = _ =>
+                  rewrite <- (findMVR_find_var mr k eq_refl cond); simpl; eauto
+                | |- M.find ?k _ = _ =>
+                  rewrite <- (findMVR_find_string mr k eq_refl); simpl; eauto
+                | _ => simpl; auto
+              end
+          end
+  end.
+
+Ltac simplifyInvs :=
+  repeat autounfold with MethDefs in *;
+  intros; try (exfalso; assumption);
+  repeat (rewrite ?mapVec_replicate_commute, ?evalVec_replicate in *; simpl in *);
+  dest; auto; try discriminate;
+  repeat match goal with
+           | H: nil = (?a ++ ?b :: ?c)%list |- _ => apply app_cons_not_nil in H
+           | H: False |- _ => exfalso; auto
+           | |- context[weq ?p ?q] => destruct (weq p q)
+           | H: context[weq ?p ?q] |- _ => destruct (weq p q)
+           | H: andb ?a ?b = true |- _ =>
+             apply Bool.andb_true_iff in H; dest
+           | _ => (Nomega.pre_nomega; omega) || discriminate
+         end.
+
+Ltac prelimSimplRegs n :=
+  existRegs n; simplifyInvs.
+
+Ltac allRules :=
+  esplit;
+  unfold withIndex;
+  match goal with
+    | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t)
+                                        (addIndexToStr _ ?c ?k) ?m = Some _ =>
+      let mr := mapVR_Others t total m in
+      rewrite <- (findMVR_find_var mr k eq_refl cond)
+    | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t) ?k ?m = Some _ =>
+      let mr := mapVR_Others t total m in
+      rewrite <- (findMVR_find_string mr k eq_refl)
+    | _ => idtac
+  end; simpl;
+  match goal with
+    | |- context [eq_nat_dec ?x ?x] =>
+      let isEq := fresh in
+      destruct (eq_nat_dec x x) as [isEq | isEq];
+        [ | clear - isEq; intuition auto]
+    | _ => idtac
+  end.
+
+
 (*
 Ltac initRed :=
   kinv_action_dest;
@@ -400,4 +499,5 @@ Ltac destructWeq :=
            | H: context[weq ?p ?q] |- _ => destruct (weq p q)
          end; ((pre_nomega; nomega) || auto).
 
-*)
+ *)
+

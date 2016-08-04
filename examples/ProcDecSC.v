@@ -54,11 +54,11 @@ Section ProcDecSC.
                     (M.add "rf"%string _ (M.empty _)))
       ).
 
-    pose proof (inst ``"opcode") as opc.
+    pose proof (inst {| bindex := "opcode"%string |}) as opc.
     destruct (weq opc (evalConstT opLd)).
     - refine (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx)) _); simpl.
-      exact (fun a => if weq a (inst ``"reg")
-                      then (oelv odv) ``"data"
+      exact (fun a => if weq a (inst {| bindex := "reg"%string |})
+                      then (oelv odv) {| bindex := "data"%string |}
                       else rfv a).
     - refine (existT _ _ rfv).
   Defined.
