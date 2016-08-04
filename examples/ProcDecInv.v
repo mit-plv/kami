@@ -58,14 +58,18 @@ Section Invariants.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
     - refine (_ /\ _).
-      + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opLd)
-                then false else true) = insElt insDeqP ``"op").
-      + exact ((if weq (evalExpr (dec _ rf pc) ``"opcode") (evalConstT opSt)
-                then true else false) = insElt insDeqP ``"op").
-    - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf pc) ``"addr").
-    - refine (if (insElt insDeqP ``"op") : bool then _ else _).
-      + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf pc) ``"value").
-      + exact (insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))).
+      + exact ((if weq (evalExpr (dec _ rf pc) {| bindex := "opcode"%string |}) (evalConstT opLd)
+                then false else true) = insElt insDeqP {| bindex := "op"%string |}).
+      + exact ((if weq (evalExpr (dec _ rf pc) {| bindex := "opcode"%string |}) (evalConstT opSt)
+                then true else false) = insElt insDeqP {| bindex := "op"%string |}).
+    - exact (insElt insDeqP {| bindex := "addr"%string |} =
+             evalExpr (dec _ rf pc) {| bindex := "addr"%string |}).
+    - refine (if (insElt insDeqP {| bindex := "op"%string |}) : bool then _ else _).
+      + exact (insElt insDeqP {| bindex := "data"%string |} =
+               evalExpr (dec _ rf pc)
+                        {| bindex := "value"%string |}).
+      + exact (insElt insDeqP {| bindex := "data"%string |} =
+               evalConstT (getDefaultConst (Data lgDataBytes))).
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 

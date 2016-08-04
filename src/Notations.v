@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.Word Lib.ilist Lib.Indexer.
+Require Import Lib.Struct Lib.StringBound Lib.Word Lib.ilist Lib.Indexer.
 Require Import Lts.Syntax Lts.ParametricSyntax.
 
 Set Implicit Arguments.
@@ -19,6 +19,10 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 (** Notations for expressions *)
 
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope.
+
+(*
+Notation "`` A" := ({| Lib.Struct.bindex := A%string |}) (at level 0, format "`` A").
+*)
 
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_expr_scope.
 (* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_expr_scope. *)
@@ -41,7 +45,7 @@ Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
 Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
-Notation "s @. fd" := (ReadField ``(fd) s) (at level 0) : kami_expr_scope.
+Notation "s @. fd" := (ReadField ({| bindex := fd%string |}) s) (at level 0) : kami_expr_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.
 Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_expr_scope.
