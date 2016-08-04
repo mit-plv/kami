@@ -297,15 +297,15 @@ Section RV32IStruct.
     end.
 
   Inductive Rv32i :=
-  | JAL (ofs: word 20) (rd: Gpr): Rv32i
-  | JALR (ofs: word 12) (rs1 rd: Gpr): Rv32i
-  | BEQ (ofs: word 12) (rs1 rs2: Gpr): Rv32i
-  | BNE (ofs: word 12) (rs1 rs2: Gpr): Rv32i
-  | BLT (ofs: word 12) (rs1 rs2: Gpr): Rv32i
-  | BGE (ofs: word 12) (rs1 rs2: Gpr): Rv32i
-  | LW (ofs: word 12) (rs1 rd: Gpr): Rv32i
-  | SW (ofs: word 12) (rs1 rs2: Gpr): Rv32i
-  | ADDI (ofs: word 12) (rs1 rd: Gpr): Rv32i
+  | JAL (rd: Gpr) (ofs: word 20): Rv32i
+  | JALR (rs1 rd: Gpr) (ofs: word 12): Rv32i
+  | BEQ (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | BNE (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | BLT (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | BGE (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | LW (rs1 rd: Gpr) (ofs: word 12): Rv32i
+  | SW (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | ADDI (rs1 rd: Gpr) (ofs: word 12): Rv32i
   | ADD (rs1 rs2 rd: Gpr): Rv32i
   | SUB (rs1 rs2 rd: Gpr): Rv32i
   | SLL (rs1 rs2 rd: Gpr): Rv32i
@@ -315,14 +315,14 @@ Section RV32IStruct.
   | AND (rs1 rs2 rd: Gpr): Rv32i
   | XOR (rs1 rs2 rd: Gpr): Rv32i
   (* pseudo-instructions *)
-  | LI (ofs: word 20) (rd: Gpr): Rv32i
+  | LI (rd: Gpr) (ofs: word 20): Rv32i
   | MV (rs1 rd: Gpr): Rv32i
-  | BEQZ (ofs: word 12) (rs1: Gpr): Rv32i
-  | BNEZ (ofs: word 12) (rs1: Gpr): Rv32i
-  | BLEZ (ofs: word 12) (rs1: Gpr): Rv32i
-  | BGEZ (ofs: word 12) (rs1: Gpr): Rv32i
-  | BLTZ (ofs: word 12) (rs1: Gpr): Rv32i
-  | BGTZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BEQZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | BNEZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | BLEZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | BGEZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | BLTZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | HALT: Rv32i.
 
   Local Infix "~~" := combine (at level 0).
@@ -364,15 +364,15 @@ Section RV32IStruct.
                
   Fixpoint rv32iToRaw (inst: Rv32i): word 32 :=
     match inst with
-    | JAL ofs rd => UJtypeToRaw rv32iOpJAL rd ofs
-    | JALR ofs rs1 rd => ItypeToRaw rv32iOpJALR rs1 rd WO~0~0~0 ofs
-    | BEQ ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BEQ ofs
-    | BNE ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BNE ofs
-    | BLT ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BLT ofs
-    | BGE ofs rs1 rs2 => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGE ofs
-    | LW ofs rs1 rd => ItypeToRaw rv32iOpLOAD rs1 rd rv32iF3LW ofs
-    | SW ofs rs1 rs2 => StypeToRaw rv32iOpSTORE rs1 rs2 rv32iF3SW ofs
-    | ADDI ofs rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
+    | JAL rd ofs => UJtypeToRaw rv32iOpJAL rd ofs
+    | JALR rs1 rd ofs => ItypeToRaw rv32iOpJALR rs1 rd WO~0~0~0 ofs
+    | BEQ rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BEQ ofs
+    | BNE rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BNE ofs
+    | BLT rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BLT ofs
+    | BGE rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGE ofs
+    | LW rs1 rd ofs => ItypeToRaw rv32iOpLOAD rs1 rd rv32iF3LW ofs
+    | SW rs1 rs2 ofs => StypeToRaw rv32iOpSTORE rs1 rs2 rv32iF3SW ofs
+    | ADDI rs1 rd ofs => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
     | ADD rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7ADD rv32iF3ADD
     | SUB rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SUB rv32iF3SUB
     | SLL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLL rv32iF3SLL
@@ -382,16 +382,46 @@ Section RV32IStruct.
     | AND rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7AND rv32iF3AND
     | XOR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7XOR rv32iF3XOR
     (* pseudo-instructions *)
-    | LI ofs rd => ItypeToRaw rv32iOpOPIMM x0 rd rv32iF3ADDI (split1 12 8 ofs)
+    | LI rd ofs => ItypeToRaw rv32iOpOPIMM x0 rd rv32iF3ADDI (split1 12 8 ofs)
     | MV rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI (natToWord _ 0)
-    | BEQZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BEQ ofs
-    | BNEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BNE ofs 
-    | BLEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BGE ofs
-    | BGEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BGE ofs
-    | BLTZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
-    | BGTZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
+    | BEQZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BEQ ofs
+    | BNEZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BNE ofs 
+    | BLEZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BGE ofs
+    | BGEZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BGE ofs
+    | BLTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
+    | BGTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
     | HALT => rv32iOpHALT~~(wzero _)
     end.
 
 End RV32IStruct.
+
+Section Examples.
+
+  Section Fibonacci.
+
+    (*
+        00: li		x21,?
+	01: blez	x21,.L4
+	02: li		x9,1
+	03: mv		x6,x9
+	04: mv		x8,x9
+	05: mv		x7,x9
+	06: addw	x5,x7,x8
+	07: addw	x9,x9,1
+	08: mv		x7,x8
+	09: mv		x8,x5
+	10: bne		x9,x6,.06
+	11: add		x4,x20,%lo(.LC0)
+	12: call	printf
+        ...
+.L4:
+	13: li		x5,1
+	14: j		.11
+     *)
+
+    (* Definition pgmFibonacci : list Rv32i := *)
+          
+  End Fibonacci.
+
+End Examples.
 
