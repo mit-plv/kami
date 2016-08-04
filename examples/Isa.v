@@ -3,10 +3,12 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Lts.Syntax Lts.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-(* Subset of RV32I instructions (16/47):
+(* Subset of RV32I instructions (17/47):
  * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
  * - Memory : LW, SW
- * - Arithmetic : ADD, SUB, SLL, SRL, SRA, OR, AND, XOR
+ * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
+ * Some pseudo instructions:
+ * - LI, MV
  * - (HALT) *)
 Section RV32I.
   Definition rv32iAddrSize := 4.
@@ -312,6 +314,9 @@ Section RV32IStruct.
   | OR (rs1 rs2 rd: Gpr): Rv32i
   | AND (rs1 rs2 rd: Gpr): Rv32i
   | XOR (rs1 rs2 rd: Gpr): Rv32i
+  (* pseudo-instructions *)
+  | LI (ofs: word 20) (rd: Gpr): Rv32i
+  | MV (rs1 rd: Gpr): Rv32i
   | HALT: Rv32i.
 
   Local Infix "~~" := combine (at level 0).
@@ -370,6 +375,9 @@ Section RV32IStruct.
     | OR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7OR rv32iF3OR
     | AND rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7AND rv32iF3AND
     | XOR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7XOR rv32iF3XOR
+    (* pseudo-instructions *)
+    | LI ofs rd => ItypeToRaw rv32iOpOPIMM x0 rd rv32iF3ADDI (split1 12 8 ofs)
+    | MV rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI (natToWord _ 0)
     | HALT => rv32iOpHALT~~(wzero _)
     end.
 
