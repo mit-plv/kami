@@ -11,11 +11,11 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opHt: ConstT (Bit opIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
@@ -37,7 +37,7 @@ Section ProcDecSC.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT.
   Proof.
-    kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
+    kgetv "pc"%string pcv r (Bit iaddrSize) (M.empty (sigT (fullType type))).
     kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
     kgetv "rsToProc"--"empty"%string oev r Bool (M.empty (sigT (fullType type))).
     kgetv "rsToProc"--"elt"%string oelv r (Vector RsToProc fifoSize)

@@ -162,6 +162,12 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   match op with
     | Add n => @wplus n
     | Sub n => @wminus n
+    | Band n => @wand n
+    | Bor n => @wor n
+    | Bxor n => @wxor n
+    | Sll n m => (fun x y => sll x (wordToNat y))
+    | Srl n m => (fun x y => srl x (wordToNat y))
+    | Sra n m => (fun x y => sra x (wordToNat y))
     | Concat n1 n2 => fun x y => (combine x y)
   end.
 

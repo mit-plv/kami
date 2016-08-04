@@ -72,6 +72,12 @@ let ppSignExtend = "signExtend"
 let ppTruncate = "truncate"
 let ppAdd = "+"
 let ppSub = "-"
+let ppBand = "&"
+let ppBor = "|"
+let ppBxor = "^"
+let ppSll = "<<"
+let ppSrl = ">>"
+let ppSra = ">>" (* TODO: distinguish *)
 let ppLt = "<"
 let ppVUpdate = "update"
 
@@ -356,6 +362,24 @@ let rec ppBExpr (e: bExpr) =
   | BBinBit (_, _, _, Sub _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppSub; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Band _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppBand; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Bor _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppBor; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Bxor _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppBxor; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Sll _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppSll; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Srl _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppSrl; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Sra _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppSra; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Concat (_, _), se1, se2) ->
      ps ppCBracketL; ps ppRBracketL; ppBExpr se1; ps ppRBracketR;
      ps ppComma; ps ppRBracketL; ppBExpr se2; ps ppRBracketR; ps ppCBracketR
@@ -363,8 +387,10 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
-     ppBExpr ce; print_space (); ps ppQ; print_space (); ppBExpr te; print_space ();
-     ps ppColon; print_space (); ppBExpr fe
+     ppBExpr ce; print_space (); ps ppQ; print_space ();
+     ps ppRBracketL; ppBExpr te; ps ppRBracketR; print_space ();
+     ps ppColon; print_space ();
+     ps ppRBracketL; ppBExpr fe; ps ppRBracketR
   | BEq (se1, se2) -> ppBExpr se1; print_space (); ps ppEq; print_space (); ppBExpr se2
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
