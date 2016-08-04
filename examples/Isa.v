@@ -8,7 +8,7 @@ Require Import Ex.MemTypes Ex.SC.
  * - Memory : LW, SW
  * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
  * Some pseudo instructions:
- * - LI, MV
+ * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ
  * - (HALT) *)
 Section RV32I.
   Definition rv32iAddrSize := 4.
@@ -317,6 +317,12 @@ Section RV32IStruct.
   (* pseudo-instructions *)
   | LI (ofs: word 20) (rd: Gpr): Rv32i
   | MV (rs1 rd: Gpr): Rv32i
+  | BEQZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BNEZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BLEZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BGEZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BLTZ (ofs: word 12) (rs1: Gpr): Rv32i
+  | BGTZ (ofs: word 12) (rs1: Gpr): Rv32i
   | HALT: Rv32i.
 
   Local Infix "~~" := combine (at level 0).
@@ -356,7 +362,7 @@ Section RV32IStruct.
   Definition UJtypeToRaw (op: word 7) (rd: Gpr) (ofs: word 20) :=
     op~~(gprToRaw rd)~~(offsetUJToRaw ofs).
                
-  Definition rv32iToRaw (inst: Rv32i): word 32 :=
+  Fixpoint rv32iToRaw (inst: Rv32i): word 32 :=
     match inst with
     | JAL ofs rd => UJtypeToRaw rv32iOpJAL rd ofs
     | JALR ofs rs1 rd => ItypeToRaw rv32iOpJALR rs1 rd WO~0~0~0 ofs
@@ -378,6 +384,12 @@ Section RV32IStruct.
     (* pseudo-instructions *)
     | LI ofs rd => ItypeToRaw rv32iOpOPIMM x0 rd rv32iF3ADDI (split1 12 8 ofs)
     | MV rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI (natToWord _ 0)
+    | BEQZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BEQ ofs
+    | BNEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BNE ofs 
+    | BLEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BGE ofs
+    | BGEZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BGE ofs
+    | BLTZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
+    | BGTZ ofs rs1 => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
     | HALT => rv32iOpHALT~~(wzero _)
     end.
 
