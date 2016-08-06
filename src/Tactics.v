@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBou
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
 Require Import Lts.Wf Lts.ParametricWf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
-Require Import Lts.Inline Lts.InlineFacts_2 Lts.Specialize Lts.Duplicate Lts.Substitute.
+Require Import Lts.Inline Lts.InlineFacts Lts.Specialize Lts.Duplicate Lts.Substitute.
 Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
 
 Set Implicit Arguments.
