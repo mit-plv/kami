@@ -7,9 +7,11 @@ Require Import Ex.MemTypes Ex.SC.
  * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
  * - Memory : LW, SW
  * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
- * Some pseudo instructions:
- * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ
- * - (HALT) *)
+ * Some pseudo instructions (9):
+ * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J
+ * Custom instructions (1):
+ * - HALT
+ *)
 Section RV32I.
   Definition rv32iAddrSize := 4.
   Definition rv32iIAddrSize := 2. (* # of maximal instructions = 2^2 = 4 *)
@@ -323,6 +325,7 @@ Section RV32IStruct.
   | BGEZ (rs1: Gpr) (ofs: word 12): Rv32i
   | BLTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
+  | J (ofs: word 20): Rv32i
   | HALT: Rv32i.
 
   Local Infix "~~" := combine (at level 0).
@@ -390,6 +393,7 @@ Section RV32IStruct.
     | BGEZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BGE ofs
     | BLTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
     | BGTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
+    | J ofs => UJtypeToRaw rv32iOpJAL x0 ofs
     | HALT => rv32iOpHALT~~(wzero _)
     end.
 
@@ -399,28 +403,23 @@ Section Examples.
 
   Section Fibonacci.
 
-    (*
-        00: li		x21,?
-	01: blez	x21,.L4
-	02: li		x9,1
-	03: mv		x6,x9
-	04: mv		x8,x9
-	05: mv		x7,x9
-	06: addw	x5,x7,x8
-	07: addw	x9,x9,1
-	08: mv		x7,x8
-	09: mv		x8,x5
-	10: bne		x9,x6,.06
-	11: add		x4,x20,%lo(.LC0)
-	12: call	printf
-        ...
-.L4:
-	13: li		x5,1
-	14: j		.11
-     *)
+    Definition pgmFibonacci (n: nat) : list Rv32i :=
+      [ (*00*) LI x21 (natToWord _ n);
+        (*01*) BLEZ x21 (natToWord _ 12);
+        (*02*) LI x9 (natToWord _ 1);  
+        (*03*) MV x21 x6;
+        (*04*) MV x9 x8;
+        (*05*) MV x9 x7;
+        (*06*) ADD x7 x8 x5;
+        (*07*) ADDI x9 x9 (natToWord _ 1);
+        (*08*) MV x8 x7;
+        (*09*) MV x5 x8;
+        (*10*) BNE x6 x9 (natToWord _ 6);
+        (*11*) HALT;
+        (*12*) LI x5 (natToWord _ 1);
+        (*13*) J (natToWord _ 11)
+      ].
 
-    (* Definition pgmFibonacci : list Rv32i := *)
-          
   End Fibonacci.
 
 End Examples.

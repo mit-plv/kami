@@ -44,6 +44,7 @@ let bsv_keywords =
     "xnor"; "xor"]
 
 (* Partial definition borrowed from Compcert *)
+(* TODO: '.' -> "__" / '$' -> "___" *)
 let bstring_of_charlist (s: char list) =
   let r = Bytes.create (List.length s) in
   let rec fill pos = function
