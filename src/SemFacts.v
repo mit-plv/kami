@@ -1,7 +1,7 @@
 Require Import Bool String List Program.Equality Program.Basics.
 Require Import FunctionalExtensionality Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
-Require Import Syntax Semantics Equiv StaticDynamic.
+Require Import Syntax Semantics Equiv.
 
 Set Implicit Arguments.
 
@@ -694,6 +694,84 @@ Qed.
 Section ModEquiv.
   Variable m: Modules.
   Variable mEquiv: ModEquiv type typeUT m.
+
+  Lemma callsSubsetA k (a1: ActionT type k) (a2: ActionT typeUT k):
+    ActionEquiv a1 a2 ->
+    forall o u cs r,
+      SemAction o a1 u cs r ->
+      forall x, M.In x cs -> In x (getCallsA a2).
+  Proof.
+    intro ae.
+    induction ae; fold type in *; fold typeUT in *; subst; intros.
+    - dependent destruction H1.
+      apply M.F.P.F.add_in_iff in H2.
+      specialize (@H0 _ tt _ _ _ _ H1 x).
+      simpl in *.
+      destruct H2; subst; intuition.
+    - dependent destruction H1.
+      specialize (H0 (evalExpr e1)).
+      apply (H0 _ _ _ _ _ H1 x H2).
+    - dependent destruction H1.
+      apply (H0 _ _ _ _ _ _ H1 x H2).
+    - dependent destruction H.
+      apply (@IHae _ _ _ _ H x H0).
+    - dependent destruction H1.
+      apply M.union_In in H2.
+      simpl in *.
+      specialize (IHae1 _ _ _ _ H1_ x).
+      specialize (H0 _ tt _ _ _ _ H1_0 x).
+      destruct H2.
+      + apply in_or_app.
+        intuition.
+      + apply in_or_app; right; apply in_or_app.
+        intuition.
+      + specialize (IHae2 _ _ _ _ H1_ x).
+        specialize (H0 _ tt _ _ _ _ H1_0 x).
+        simpl in *.
+        apply M.union_In in H2.
+        destruct H2;
+          apply in_or_app; right; apply in_or_app;
+            intuition.
+    - dependent destruction H.
+      apply (IHae _ _ _ _ H x H0).
+    - dependent destruction H.
+      apply M.F.P.F.empty_in_iff in H0; intuition.
+  Qed.
+
+  Lemma callsSubsetR:
+    forall o u rName cs,
+      Substep m o u (Rle (Some rName)) cs ->
+      forall x, M.In x cs -> exists a, In (rName :: a)%struct (getRules m) /\
+                                       In x (getCallsA (a typeUT)).
+  Proof.
+    destruct mEquiv.
+    clear mEquiv H0.
+    intros.
+    dependent destruction H0.
+    exists a.
+    constructor.
+    intuition.
+    pose proof (proj1 (RulesEquiv_in type typeUT (getRules m)) H _ HInRules).
+    apply (callsSubsetA H0 HAction); intuition.
+  Qed.
+
+  Lemma callsSubsetM:
+    forall o u mName argRet cs,
+      Substep m o u (Meth (Some (mName :: argRet)%struct)) cs ->
+      forall x, M.In x cs -> exists a, In (mName :: a)%struct (getDefsBodies m) /\
+                                      In x (getCallsA (projT2 a typeUT tt)).
+  Proof.
+    destruct mEquiv.
+    clear mEquiv H.
+    intros.
+    dependent destruction H.
+    destruct f.
+    exists attrType.
+    constructor.
+    intuition.
+    pose proof (proj1 (MethsEquiv_in type typeUT (getDefsBodies m)) H0  _ HIn argV tt).
+    apply (callsSubsetA H HAction); intuition.
+  Qed.
 
   Lemma getCallsARulesSubset (a: Action Void) rName:
     forall x,
