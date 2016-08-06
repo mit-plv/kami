@@ -1,5 +1,5 @@
 (*Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith ParametricSyntax String
-        Lib.Indexer Lts.Syntax Lts.SemanticsExprAction Program.Equality Lib.CommonTactics
+        Lib.Indexer Lts.Syntax Lts.Semantics Program.Equality Lib.CommonTactics
         Lts.Tactics Lts.SymEvalTac Lts.SymEval.
 *)
 Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi

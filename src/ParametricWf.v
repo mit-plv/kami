@@ -1,7 +1,7 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics.
 Require Import Lib.StringBound Lib.ilist Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.SemanticsExprAction Lts.Semantics Lts.Equiv Lts.Wf.
+Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
 Require Import Lts.ParametricSyntax Lib.Indexer.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
