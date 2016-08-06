@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 
 Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.Wf.
-Require Import Lts.Inline Lts.InlineFacts_1 Lts.InlineFacts_2.
+Require Import Lts.Inline Lts.InlineFacts.
 Require Import Lts.Refinement Lts.Decomposition.
 Require Import Lts.Tactics.
 
