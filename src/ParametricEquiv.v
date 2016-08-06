@@ -1,4 +1,4 @@
-Require Import String ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringExtension.
+Require Import String ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringAsList.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.

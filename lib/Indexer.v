@@ -1,5 +1,5 @@
 Require Import Bool Ascii String Eqdep Omega.
-Require Import CommonTactics StringExtension StringEq.
+Require Import CommonTactics StringAsList StringEq.
 
 (** Some string manipulation lemmas *)
 

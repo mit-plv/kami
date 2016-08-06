@@ -2,7 +2,7 @@ Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
         ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
         FunctionalExtensionality Program.Equality Lts.Tactics Arith Ex.MapVReify Lts.SymEval
-        Lts.SymEvalTac Lib.StringExtension Lib.StringBound.
+        Lts.SymEvalTac Lib.StringAsList Lib.StringBound.
 
 Set Implicit Arguments.
 

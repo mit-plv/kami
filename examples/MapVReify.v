@@ -6,7 +6,7 @@ Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
         ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
         FunctionalExtensionality Program.Equality Lts.Tactics Arith Lts.SymEval
-        Lts.SymEvalTac Lib.StringExtension.
+        Lts.SymEvalTac Lib.StringAsList.
 
 
 

@@ -1,6 +1,6 @@
 Require Import PartialInline Equiv
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
-        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension Lib.Concat.
+        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.Concat.
 
 Set Implicit Arguments.
 
