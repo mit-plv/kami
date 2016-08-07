@@ -1,6 +1,6 @@
 Require Import String List FunctionalExtensionality.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.FMap Lib.Concat Lib.Indexer.
-Require Import Syntax Semantics SemFacts Equiv Wf.
+Require Import Syntax Semantics SemFacts Wf.
 Require Import Specialize Duplicate Refinement Renaming ParametricSyntax.
 
 Lemma getGenAction_convSinToGen_renameAction:

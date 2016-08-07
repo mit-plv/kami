@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.SemFacts Lts.Refinement.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
+Require Import Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics Lts.Specialize.
 Require Import Lts.Duplicate Lts.ParamDup Lts.Notations Lts.Substitute.
 Require Import Lts.ModuleBound Lts.ModuleBoundEx.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.

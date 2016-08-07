@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.Struct.
-Require Import Lts.Equiv Lts.Syntax Lts.Inline Lts.InlineFacts.
+Require Import Syntax Wf Inline InlineFacts.
 Require Import Program.Equality FunctionalExtensionality.
 
 Set Implicit Arguments.

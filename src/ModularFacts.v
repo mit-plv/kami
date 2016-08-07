@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf Equiv.
+Require Import Syntax Semantics SemFacts Wf.
 
 Set Implicit Arguments.
 

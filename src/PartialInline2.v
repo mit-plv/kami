@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts Equiv Inline InlineFacts.
+Require Import Syntax Semantics SemFacts Wf Inline InlineFacts.
 Require Import Refinement PartialInline Program.Equality FunctionalExtensionality SimpleInline.
 
 Section AboutFilter.

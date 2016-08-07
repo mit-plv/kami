@@ -1,10 +1,10 @@
 Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics Lts.SemFacts.
-Require Import Lts.Wf Lts.ParametricWf Lts.Equiv Lts.ParametricEquiv Lts.Refinement.
-Require Import Lts.Inline Lts.InlineFacts Lts.Specialize Lts.Duplicate Lts.Substitute.
-Require Import Lts.Decomposition Lts.DecompositionZero Lts.ModuleBound Lts.ParametricEquiv.
+Require Import Syntax Semantics SemFacts Wf Refinement Notations.
+Require Import Inline InlineFacts Specialize Duplicate Substitute.
+Require Import Decomposition DecompositionZero ModuleBound.
+Require Import ParametricSyntax ParametricEquiv ParametricWf.
 
 Set Implicit Arguments.
 

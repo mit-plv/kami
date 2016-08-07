@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList Lib.StringBound.
 Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.Wf Lts.ParametricEquiv Lts.ParametricWf Lts.Tactics.
+Require Import Lts.Wf Lts.ParametricEquiv Lts.ParametricWf Lts.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.

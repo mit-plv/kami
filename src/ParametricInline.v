@@ -1,4 +1,4 @@
-Require Import PartialInline Equiv
+Require Import PartialInline Wf
         PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
         Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.Concat.
 

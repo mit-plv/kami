@@ -1,7 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement.
+Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Wf Lts.Refinement.
 Require Import Lts.Notations Lts.Tactics Lts.DecompositionOne Lts.DecompositionInv.
 Require Import Fifo NativeFifo.
 

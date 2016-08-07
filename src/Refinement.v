@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
-Require Import Syntax Semantics SemFacts Equiv ModularFacts Wf.
+Require Import Syntax Semantics SemFacts ModularFacts Wf.
 Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.

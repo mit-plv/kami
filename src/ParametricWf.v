@@ -1,9 +1,8 @@
-Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics.
+Require Import Bool List String.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.Indexer.
 Require Import Lib.StringBound Lib.ilist Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Wf.
-Require Import Lts.ParametricSyntax Lib.Indexer.
-Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
+Require Import Syntax Semantics Wf ParametricSyntax.
+Require Import FunctionalExtensionality Program.Equality Structures.Equalities Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 

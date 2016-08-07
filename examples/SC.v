@@ -2,7 +2,7 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
 Require Import Lts.Syntax Lts.Notations.
 Require Import Lts.Semantics Lts.Specialize Lts.Duplicate.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Lts.Wf Lts.ParametricEquiv Lts.Tactics.
 Require Import Ex.MemTypes Lts.ParametricSyntax.
 
 Set Implicit Arguments.

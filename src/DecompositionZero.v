@@ -1,6 +1,6 @@
 Require Import Bool List String Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemFacts Equiv.
+Require Import Syntax Semantics SemFacts Wf.
 
 Set Implicit Arguments.
 
