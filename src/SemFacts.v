@@ -942,6 +942,37 @@ Proof.
     unfold mergeLabel; try reflexivity; try (f_equal; auto).
 Qed.
 
+Lemma substepsInd_defs_sig:
+  forall m dm,
+    NoDup (getDefs m) ->
+    In dm (getDefsBodies m) ->
+    forall o u l,
+      SubstepsInd m o u l ->
+      forall s,
+        Some s = M.find (elt:=sigT SignT) (attrName dm) (defs l) ->
+        projT1 s = projT1 (attrType dm).
+Proof.
+  induction 3; simpl; intros; [mred|].
+  subst; destruct sul as [|odm].
+
+  - apply IHSubstepsInd.
+    destruct l as [ann ds cs]; simpl in *; findeq.
+
+  - destruct odm as [dm'|].
+    + destruct dm as [dmn dmb], dm' as [dmn' dmb'], l as [ann ds cs]; simpl in *.
+      destruct (string_dec dmn dmn').
+      * subst; mred.
+        inv H2; inv Hsig; simpl in *.
+        destruct f as [fn fb]; simpl in *.
+        f_equal.
+        assert ((fn :: fb)%struct = (fn :: dmb)%struct).
+        { eapply in_NoDup_attr; eauto. }
+        inv H2; auto.
+      * apply IHSubstepsInd; findeq.
+    + apply IHSubstepsInd.
+      destruct l as [ann ds cs]; simpl in *; findeq.
+Qed.
+
 Lemma substepsInd_defs_in:
   forall m or u l,
     SubstepsInd m or u l -> M.KeysSubset (defs l) (getDefs m).
@@ -1414,6 +1445,76 @@ Lemma flatten_preserves_step:
 Proof.
   intros; apply module_structure_indep_step with (m1:= m);
     auto; apply EquivList_refl.
+Qed.
+
+Lemma substep_dm_weakening:
+  forall regs rules dms dmn o u ul cs,
+    Substep (Mod regs rules dms) o u ul cs ->
+    None = M.find (elt:=sigT SignT) dmn (defs (getLabel ul cs)) ->
+    None = M.find (elt:=sigT SignT) dmn (calls (getLabel ul cs)) ->
+    Substep (Mod regs rules (filterDm dms dmn)) o u ul cs.
+Proof.
+  induction 1; simpl; intros; try (econstructor; eauto; fail).
+
+  econstructor; eauto.
+  simpl; apply filter_In; split; auto.
+  destruct (string_dec _ _); subst; auto.
+  mred.
+Qed.
+
+Lemma substepsInd_dm_weakening:
+  forall regs rules dms dmn o u l,
+    SubstepsInd (Mod regs rules dms) o u l ->
+    None = M.find (elt:=sigT SignT) dmn (defs l) ->
+    None = M.find (elt:=sigT SignT) dmn (calls l) ->
+    SubstepsInd (Mod regs rules (filterDm dms dmn)) o u l.
+Proof.
+  induction 1; simpl; intros; [constructor|subst].
+
+  destruct l as [a d c]; simpl in *.
+  econstructor.
+  - apply IHSubstepsInd.
+    + rewrite M.find_union in H4.
+      match goal with
+      | [H: None = match M.find dmn ?lm with Some _ => _ | None => _ end |- _] =>
+        destruct (M.find dmn lm); [inv H|]
+      end.
+      auto.
+    + rewrite M.find_union in H5.
+      destruct (M.find dmn scs); [inv H5|]; auto.
+  - apply substep_dm_weakening; eauto.
+    + rewrite M.find_union in H4; simpl.
+      match goal with
+      | [H: None = match M.find dmn ?lm with Some _ => _ | None => _ end |- _] =>
+        destruct (M.find dmn lm); [inv H|]
+      end.
+      auto.
+    + simpl; findeq.
+  - inv H1; dest; simpl in *.
+    repeat split; auto.
+  - reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma filterDm_wellHidden:
+  forall regs rules dms dmn l,
+    wellHidden (Mod regs rules dms) l ->
+    wellHidden (Mod regs rules (filterDm dms dmn)) l.
+Proof.
+  intros; eapply wellHidden_weakening; eauto.
+  - apply SubList_app_3.
+    + apply SubList_app_1, SubList_refl.
+    + apply SubList_app_2; simpl.
+      clear; induction dms; simpl; [apply SubList_nil|].
+      destruct (string_dec _ _).
+      * apply SubList_app_2; auto.
+      * simpl; apply SubList_app_3.
+        { apply SubList_app_1, SubList_refl. }
+        { apply SubList_app_2; auto. }
+  - unfold getDefs; simpl.
+    apply SubList_map.
+    unfold SubList; intros.
+    unfold filterDm in H0; apply filter_In in H0; dest; auto.
 Qed.
 
 Lemma substep_dms_weakening:
