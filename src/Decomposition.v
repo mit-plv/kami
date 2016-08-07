@@ -44,7 +44,7 @@ Section Decomposition.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite liftToMap1Empty;
+        inversion s; subst; rewrite liftToMap1_empty;
         constructor;
         [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
@@ -57,7 +57,7 @@ Section Decomposition.
   Proof.
     refine (exist _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite liftToMap1Empty;
+        inversion s; subst; rewrite liftToMap1_empty;
         constructor;
         [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
@@ -130,7 +130,7 @@ Section Decomposition.
       destruct a, a0; simpl in *.
     dependent induction substep;
     dependent induction substep0;
-    try rewrite liftToMap1Empty in *;
+    try rewrite liftToMap1_empty in *;
     destruct H; try discriminate;
     simpl in s, s0;
     repeat match goal with
@@ -208,11 +208,11 @@ Section Decomposition.
           destruct H2; unfold not.
           - left; intros.
             apply M.MapsToIn2 in H0; dest.
-            apply liftToMap1MapsTo in H0; dest; subst.
+            apply liftToMap1_MapsTo in H0; dest; subst.
             apply M.MapsToIn1 in H1; intuition.
           - right; intros.
             apply M.MapsToIn2 in H0; dest.
-            apply liftToMap1MapsTo in H0; dest; subst.
+            apply liftToMap1_MapsTo in H0; dest; subst.
             apply M.MapsToIn1 in H1; intuition.
         }
   Qed.
@@ -249,8 +249,8 @@ Section Decomposition.
     unfold wellHidden in *.
     unfold xformLabel; destruct l; simpl in *.
     clear - defSubset callSubset dHid cHid.
-    pose proof (liftToMap1Subset p defs) as dH.
-    pose proof (liftToMap1Subset p calls) as cH.
+    pose proof (liftToMap1_DomainSubset p defs) as dH.
+    pose proof (liftToMap1_DomainSubset p calls) as cH.
     unfold M.DomainSubset, M.KeysDisj in *.
     constructor; unfold not; intros.
     - specialize (dH _ H0).
@@ -305,27 +305,27 @@ Section Decomposition.
     apply M.leibniz.
     apply M.F.P.F.Equal_mapsto_iff; intros.
     constructor; intros.
-    - apply liftToMap1MapsTo in H; dest.
+    - apply liftToMap1_MapsTo in H; dest.
       apply M.mapsto_union in H0.
       apply M.mapsto_union.
       destruct H0; dest; subst.
       + left.
-        apply liftToMap1MapsTo.
+        apply liftToMap1_MapsTo.
         eexists; eauto.
       + right.
         constructor; unfold not; intros.
         apply M.MapsToIn2 in H2; dest.
-        apply liftToMap1MapsTo in H2; dest; subst.
+        apply liftToMap1_MapsTo in H2; dest; subst.
         apply M.MapsToIn1 in H3; intuition.
-        apply liftToMap1MapsTo.
+        apply liftToMap1_MapsTo.
         exists x; intuition.
     - apply M.mapsto_union in H.
-      apply liftToMap1MapsTo.
+      apply liftToMap1_MapsTo.
       destruct H; dest; subst.
-      + apply liftToMap1MapsTo in H; dest; subst.
+      + apply liftToMap1_MapsTo in H; dest; subst.
         exists x; intuition.
         apply M.mapsto_union; intuition.
-      + apply liftToMap1MapsTo in H0; dest; subst.
+      + apply liftToMap1_MapsTo in H0; dest; subst.
         unfold M.Disj in disj.
         pose proof H1 as sth.
         apply M.MapsToIn1 in H1.
@@ -359,7 +359,7 @@ Section Decomposition.
     destruct unitAnnot; destruct o0; try rewrite liftToMap1Empty; intuition.
     destruct a.
     unfold liftP.
-    rewrite liftToMap1AddOne.
+    rewrite liftToMap1_add_one.
     unfold getSLabel; simpl.
     destruct (p attrName attrType); intuition.
   Qed.
@@ -518,8 +518,8 @@ Section Decomposition.
     f_equal.
     apply eq_sym; apply xformLabelFoldCommute; intuition.
     apply (wellHiddenEq1 (m := imp)).
-    - unfold M.KeysSubset; apply (staticDynDefsSubsteps ss).
-    - unfold M.KeysSubset; apply (staticDynCallsSubsteps impEquiv ss).
+    - unfold M.KeysSubset; apply (getDefs_substeps ss).
+    - unfold M.KeysSubset; apply (getCalls_substeps impEquiv ss).
     - intuition.
   Qed.
 

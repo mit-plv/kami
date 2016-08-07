@@ -308,13 +308,13 @@ Proof.
   destruct x0 as [annx0 dsx0 csx0], y0 as [anny0 dsy0 csy0]; simpl in *.
   inv H; inv H0; inv H1; dest; simpl in *; subst.
   repeat split; simpl; auto.
-  - apply M.DomainSubset_Disj with (m2:= dsx); [|apply liftToMap1Subset].
+  - apply M.DomainSubset_Disj with (m2:= dsx); [|apply liftToMap1_DomainSubset].
     apply M.Disj_comm.
-    apply M.DomainSubset_Disj with (m2:= dsx0); [|apply liftToMap1Subset].
+    apply M.DomainSubset_Disj with (m2:= dsx0); [|apply liftToMap1_DomainSubset].
     auto.
-  - apply M.DomainSubset_Disj with (m2:= csx); [|apply liftToMap1Subset].
+  - apply M.DomainSubset_Disj with (m2:= csx); [|apply liftToMap1_DomainSubset].
     apply M.Disj_comm.
-    apply M.DomainSubset_Disj with (m2:= csx0); [|apply liftToMap1Subset].
+    apply M.DomainSubset_Disj with (m2:= csx0); [|apply liftToMap1_DomainSubset].
     auto.
   - destruct annx, annx0, anny, anny0; auto.
 Qed.

@@ -214,7 +214,7 @@ Section EtaFunc.
       + unfold mapUnitLabel, liftP.
         destruct uli as [[|]|[|]]; auto.
         destruct a as [an ab]; simpl.
-        rewrite liftToMap1AddOne.
+        rewrite liftToMap1_add_one.
         destruct (p an ab); auto.
       
     - assert (forall ss: SubstepRec imp oi,
@@ -315,8 +315,8 @@ Section EtaFunc.
     pose proof (liftPLabel_wellHidden spec ruleMap o p HdefSubset HcallSubset H1).
     rewrite liftPLabel_hide with (imp:= imp) in H2; auto.
     - rewrite liftPLabel_substepRels in H2; auto.
-    - unfold M.KeysSubset; apply staticDynDefsSubsteps.
-    - unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+    - unfold M.KeysSubset; apply getDefs_substeps.
+    - unfold M.KeysSubset; apply getCalls_substeps; auto.
   Qed.
 
   Theorem decompositionOne:
@@ -337,8 +337,8 @@ Section EtaFunc.
       + subst; rewrite liftPLabel_substepRels; auto.
         constructor; auto.
         apply substepRels_wellHidden; auto.
-      + unfold M.KeysSubset; apply staticDynDefsSubsteps.
-      + unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+      + unfold M.KeysSubset; apply getDefs_substeps.
+      + unfold M.KeysSubset; apply getCalls_substeps; auto.
 
     - subst; unfold ConsistentUpdate in H2; dest; auto.
   Qed.
@@ -568,7 +568,7 @@ Section EtaRel.
       + unfold mapUnitLabel, liftP.
         destruct uli as [[|]|[|]]; auto.
         destruct a as [an ab]; simpl.
-        rewrite liftToMap1AddOne.
+        rewrite liftToMap1_add_one.
         destruct (p an ab); auto.
       
     - assert (forall ss: SubstepRec imp oi,
@@ -670,8 +670,8 @@ Section EtaRel.
     pose proof (liftPLabel_wellHidden spec ruleMap o p HdefSubset HcallSubset H1).
     rewrite liftPLabel_hide with (imp:= imp) in H2; auto.
     - rewrite liftPLabel_substepRelsR in H2; auto.
-    - unfold M.KeysSubset; apply staticDynDefsSubsteps.
-    - unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+    - unfold M.KeysSubset; apply getDefs_substeps.
+    - unfold M.KeysSubset; apply getCalls_substeps; auto.
   Qed.
 
   Lemma stepMapOne:
@@ -699,8 +699,8 @@ Section EtaRel.
       + generalize (hide (foldSSLabel (map toSubstepRecImpR srs))) as l; intros.
         destruct l as [a d c].
         repeat split; simpl; destruct a as [[|]|]; auto.
-      + unfold M.KeysSubset; apply staticDynDefsSubsteps.
-      + unfold M.KeysSubset; apply staticDynCallsSubsteps; auto.
+      + unfold M.KeysSubset; apply getDefs_substeps.
+      + unfold M.KeysSubset; apply getCalls_substeps; auto.
   Qed.
 
   Lemma multistepMapOne:

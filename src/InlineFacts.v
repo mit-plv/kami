@@ -588,11 +588,11 @@ Proof.
   - apply M.KeysSubset_union; auto.
     apply M.KeysSubset_add.
     + apply M.KeysSubset_empty.
-    + pose proof (staticDynDefsSubstep H0); auto.
+    + pose proof (getDefs_substep H0); auto.
   - apply M.KeysSubset_union; auto.
     apply M.KeysSubset_add.
     + apply M.KeysSubset_empty.
-    + pose proof (staticDynDefsSubstep H0); auto.
+    + pose proof (getDefs_substep H0); auto.
 Qed.
 
 Lemma inlineDm_ActionEquiv:

@@ -11,7 +11,7 @@ Ltac specializeAll k :=
     | [H: forall _, _ |- _] => specialize (H k)
     end.
 
-Section MapSet.
+Section LiftToMap.
   Variable A: Type.
   Variable p: M.key -> A -> option A.
 
@@ -23,12 +23,12 @@ Section MapSet.
     destruct (p k e), (p k' e'); intuition.
   Qed.
 
-  Theorem liftToMap1Empty: liftToMap1 p (M.empty _) = M.empty _.
+  Theorem liftToMap1_empty: liftToMap1 p (M.empty _) = M.empty _.
   Proof.
     unfold liftToMap1, M.fold; reflexivity.
   Qed.
 
-  Theorem liftToMap1MapsTo:
+  Theorem liftToMap1_MapsTo:
     forall m k v, M.MapsTo k v (liftToMap1 p m) <->
                   exists v', p k v' = Some v /\ M.MapsTo k v' m.
   Proof.
@@ -81,11 +81,11 @@ Section MapSet.
           apply M.F.P.F.add_mapsto_iff; intuition.
   Qed.
 
-  Lemma liftToMap1Subset s: M.DomainSubset (liftToMap1 p s) s.
+  Lemma liftToMap1_DomainSubset s: M.DomainSubset (liftToMap1 p s) s.
   Proof.
     apply (M.map_induction (P := fun s => M.DomainSubset (liftToMap1 p s) s));
       unfold M.DomainSubset; intros.
-    - rewrite liftToMap1Empty in *.
+    - rewrite liftToMap1_empty in *.
       intuition.
     - unfold liftToMap1 in H1.
       rewrite M.F.P.fold_add in H1; fold (liftToMap1 p m) in *; unfold rmModify.
@@ -106,7 +106,7 @@ Section MapSet.
       + intuition.
   Qed.
         
-  Theorem liftToMap1AddOne k v:
+  Theorem liftToMap1_add_one k v:
     liftToMap1 p (M.add k v (M.empty _)) =
     match p k v with
       | Some argRet => M.add k argRet (M.empty _)
@@ -120,84 +120,84 @@ Section MapSet.
     rewrite H; reflexivity.
   Qed.
 
-End MapSet.
+  Lemma liftToMap1_find:
+    forall (m: M.t A) k,
+      M.find k (liftToMap1 p m) = match M.find k m with
+                                   | Some v => p k v
+                                   | None => None
+                                   end.
+  Proof.
+    intros.
+    case_eq (M.find k (liftToMap1 p m)); intros.
+    - apply M.Facts.P.F.find_mapsto_iff in H.
+      apply liftToMap1_MapsTo in H; dest; subst.
+      apply M.F.P.F.find_mapsto_iff in H0.
+      rewrite H0; auto.
+    - apply M.F.P.F.not_find_in_iff in H.
+      case_eq (M.find k m); intros; auto.
+      apply M.Facts.P.F.find_mapsto_iff in H0.
+      case_eq (p k a); intros; auto.
+      assert (exists v', p k v' = Some a0 /\ M.MapsTo k v' m).
+      { eexists; eauto. }
+      apply liftToMap1_MapsTo in H2.
+      elim H. 
+      eapply M.MapsToIn1; eauto.
+  Qed.
 
-Lemma liftToMap1_find:
-  forall {A} vp (m: M.t A) k,
-    M.find k (liftToMap1 vp m) = match M.find k m with
-                                 | Some v => vp k v
-                                 | None => None
-                                 end.
-Proof.
-  intros.
-  case_eq (M.find k (liftToMap1 vp m)); intros.
-  - apply M.Facts.P.F.find_mapsto_iff in H.
-    apply liftToMap1MapsTo in H; dest; subst.
-    apply M.F.P.F.find_mapsto_iff in H0.
-    rewrite H0; auto.
-  - apply M.F.P.F.not_find_in_iff in H.
-    case_eq (M.find k m); intros; auto.
-    apply M.Facts.P.F.find_mapsto_iff in H0.
-    case_eq (vp k a); intros; auto.
-    assert (exists v', vp k v' = Some a0 /\ M.MapsTo k v' m).
-    { eexists; eauto. }
-    apply liftToMap1MapsTo in H2.
-    elim H. 
-    eapply M.MapsToIn1; eauto.
-Qed.
+  Ltac liftToMap1_find_tac :=
+    repeat
+      match goal with
+      | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
+        rewrite liftToMap1_find in H
+      | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
+        rewrite liftToMap1_find
+      end.
 
-Ltac liftToMap1_find_tac :=
-  repeat
-    match goal with
-    | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
-      rewrite liftToMap1_find in H
-    | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
-      rewrite liftToMap1_find
-    end.
+  Lemma liftToMap1_union:
+    forall (m1 m2: M.t A),
+      M.Disj m1 m2 ->
+      liftToMap1 p (M.union m1 m2) = M.union (liftToMap1 p m1) (liftToMap1 p m2).
+  Proof.
+    intros; M.ext y.
+    findeq.
+    findeq_custom liftToMap1_find_tac.
+    - exfalso; eapply M.Disj_find_union_3; eauto.
+    - destruct (p y a); auto.
+  Qed.
 
-Lemma liftToMap1_union:
-  forall {A} vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    liftToMap1 vp (M.union m1 m2) = M.union (liftToMap1 vp m1) (liftToMap1 vp m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  findeq_custom liftToMap1_find_tac.
-  - exfalso; eapply M.Disj_find_union_3; eauto.
-  - destruct (vp y a); auto.
-Qed.
+  Lemma liftToMap1_subtractKV_1:
+    forall (deceqA: forall x y : A, sumbool (x = y) (x <> y)) (m1 m2: M.t A),
+      M.Disj m1 m2 ->
+      M.subtractKV deceqA (liftToMap1 p m1) (liftToMap1 p m2) =
+      liftToMap1 p (M.subtractKV deceqA m1 m2).
+  Proof.
+    intros; M.ext y.
+    findeq.
+    findeq_custom liftToMap1_find_tac.
+    - exfalso; eapply M.Disj_find_union_3; eauto.
+    - destruct (p y a); auto.
+  Qed.
 
-Lemma liftToMap1_subtractKV_1:
-  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
-    M.Disj m1 m2 ->
-    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
-    liftToMap1 vp (M.subtractKV deceqA m1 m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  findeq_custom liftToMap1_find_tac.
-  - exfalso; eapply M.Disj_find_union_3; eauto.
-  - destruct (vp y a); auto.
-Qed.
+  Lemma liftToMap1_subtractKV_2:
+    forall (deceqA: forall x y : A, sumbool (x = y) (x <> y)) (m1 m2: M.t A),
+      (forall k v1 v2, M.find k m1 = Some v1 -> M.find k m2 = Some v2 -> v1 = v2) ->
+      M.subtractKV deceqA (liftToMap1 p m1) (liftToMap1 p m2) =
+      liftToMap1 p (M.subtractKV deceqA m1 m2).
+  Proof.
+    intros; M.ext y.
+    findeq.
+    findeq_custom liftToMap1_find_tac.
+    - specialize (H _ _ _ (eq_sym Heqv) (eq_sym Heqv0)); subst.
+      destruct (p y a0).
+      + destruct (deceqA a a); [|elim f; reflexivity].
+        destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
+      + destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
+    - destruct (p y a); auto.
+  Qed.
 
-Lemma liftToMap1_subtractKV_2:
-  forall {A} (deceqA: forall x y : A, sumbool (x = y) (x <> y)) vp (m1 m2: M.t A),
-    (forall k v1 v2, M.find k m1 = Some v1 -> M.find k m2 = Some v2 -> v1 = v2) ->
-    M.subtractKV deceqA (liftToMap1 vp m1) (liftToMap1 vp m2) =
-    liftToMap1 vp (M.subtractKV deceqA m1 m2).
-Proof.
-  intros; M.ext y.
-  findeq.
-  findeq_custom liftToMap1_find_tac.
-  - specialize (H _ _ _ (eq_sym Heqv) (eq_sym Heqv0)); subst.
-    destruct (vp y a0).
-    + destruct (deceqA a a); [|elim f; reflexivity].
-      destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
-    + destruct (deceqA a0 a0); [|elim f; reflexivity]; auto.
-  - destruct (vp y a); auto.
-Qed.
+End LiftToMap.
 
-Lemma liftToMap1IdElementwiseAdd A m:
+Lemma liftToMap1_idElementwise_add A m:
   forall k (v: A),
     liftToMap1 (@idElementwise _) (M.add k v m) =
     rmModify (@idElementwise _) k v (liftToMap1 (@idElementwise _) m).
@@ -218,12 +218,12 @@ Proof.
     apply M.F.P.F.not_find_in_iff; auto.
 Qed.
 
-Lemma liftToMap1IdElementwiseId A m:
+Lemma liftToMap1_idElementwise_id A m:
   liftToMap1 (@idElementwise A) m = m.
 Proof.
   M.mind m; simpl in *.
-  - rewrite liftToMap1Empty; reflexivity.
-  - rewrite liftToMap1IdElementwiseAdd.
+  - rewrite liftToMap1_empty; reflexivity.
+  - rewrite liftToMap1_idElementwise_add.
     unfold rmModify; simpl in *.
     rewrite H.
     reflexivity.
@@ -232,7 +232,7 @@ Qed.
 Lemma idElementwiseId A: liftToMap1 (@idElementwise A) = id.
 Proof.
   apply functional_extensionality; intros.
-  apply liftToMap1IdElementwiseId.
+  apply liftToMap1_idElementwise_id.
 Qed.
 
 Lemma wellHidden_find_1:
@@ -508,7 +508,7 @@ Section EmptyDefs.
   Variable o: RegsT.
   Variable defsZero: getDefsBodies m = nil.
   
-  Theorem substepsIndZero u l:
+  Theorem substepsInd_zero u l:
     SubstepsInd m o u l ->
     defs l = M.empty _ /\
     Substep m o u match annot l with
@@ -537,19 +537,19 @@ Section EmptyDefs.
         intuition.
   Qed.
 
-  Theorem substepsIndZeroHide u l:
+  Theorem substepsInd_zero_hide u l:
     SubstepsInd m o u l ->
     hide l = l.
   Proof.
     intros si.
-    apply substepsIndZero in si; dest.
+    apply substepsInd_zero in si; dest.
     unfold hide; destruct l; simpl in *; subst.
     rewrite M.subtractKV_empty_1.
     rewrite M.subtractKV_empty_2.
     reflexivity.
   Qed.
 
-  Theorem stepZero u l:
+  Theorem step_zero u l:
     Step m o u l ->
     defs l = M.empty _ /\
     Substep m o u match annot l with
@@ -560,8 +560,8 @@ Section EmptyDefs.
     intros si.
     apply step_consistent in si.
     inv si.
-    apply substepsIndZero.
-    rewrite substepsIndZeroHide with (u := u); auto.
+    apply substepsInd_zero.
+    rewrite substepsInd_zero_hide with (u := u); auto.
   Qed.
 
   Theorem substepZero_imp_step u a cs:
@@ -691,11 +691,11 @@ Proof.
   - apply noCallsDms_implies_disj; auto.
 Qed.
 
-Section ModEquiv.
+Section Calls.
   Variable m: Modules.
   Variable mEquiv: ModEquiv type typeUT m.
 
-  Lemma callsSubsetA k (a1: ActionT type k) (a2: ActionT typeUT k):
+  Lemma callsA_subset k (a1: ActionT type k) (a2: ActionT typeUT k):
     ActionEquiv a1 a2 ->
     forall o u cs r,
       SemAction o a1 u cs r ->
@@ -738,7 +738,7 @@ Section ModEquiv.
       apply M.F.P.F.empty_in_iff in H0; intuition.
   Qed.
 
-  Lemma callsSubsetR:
+  Lemma callsR_subset:
     forall o u rName cs,
       Substep m o u (Rle (Some rName)) cs ->
       forall x, M.In x cs -> exists a, In (rName :: a)%struct (getRules m) /\
@@ -752,10 +752,10 @@ Section ModEquiv.
     constructor.
     intuition.
     pose proof (proj1 (RulesEquiv_in type typeUT (getRules m)) H _ HInRules).
-    apply (callsSubsetA H0 HAction); intuition.
+    apply (callsA_subset H0 HAction); intuition.
   Qed.
 
-  Lemma callsSubsetM:
+  Lemma callsM_subset:
     forall o u mName argRet cs,
       Substep m o u (Meth (Some (mName :: argRet)%struct)) cs ->
       forall x, M.In x cs -> exists a, In (mName :: a)%struct (getDefsBodies m) /\
@@ -770,10 +770,10 @@ Section ModEquiv.
     constructor.
     intuition.
     pose proof (proj1 (MethsEquiv_in type typeUT (getDefsBodies m)) H0  _ HIn argV tt).
-    apply (callsSubsetA H HAction); intuition.
+    apply (callsA_subset H HAction); intuition.
   Qed.
 
-  Lemma getCallsARulesSubset (a: Action Void) rName:
+  Lemma getCalls_rules_subset (a: Action Void) rName:
     forall x,
       In x (getCallsA (a typeUT)) ->
       In (rName :: a)%struct (getRules m) ->
@@ -789,7 +789,7 @@ Section ModEquiv.
       destruct H0; subst; apply in_or_app; intuition.
   Qed.
 
-  Lemma getCallsAMethsSubset (a: sigT MethodT) mName:
+  Lemma getCalls_meths_subset (a: sigT MethodT) mName:
     forall x,
       In x (getCallsA (projT2 a typeUT tt)) ->
       In (mName :: a)%struct (getDefsBodies m) ->
@@ -805,23 +805,23 @@ Section ModEquiv.
       destruct H0; subst; apply in_or_app; intuition.
   Qed.
 
-  Theorem staticDynCallsSubstep o u rm cs:
+  Theorem getCalls_substep o u rm cs:
     Substep m o u rm cs ->
     forall f, M.In f cs -> In f (getCalls m).
   Proof.
     dependent induction rm; dependent induction o0; intros.
-    - eapply callsSubsetR in H; dest; subst;
-        try eapply getCallsARulesSubset in H1; eauto.
+    - eapply callsR_subset in H; dest; subst;
+        try eapply getCalls_rules_subset in H1; eauto.
     - dependent destruction H.
       apply M.F.P.F.empty_in_iff in H0; intuition.
     - destruct a.
-      eapply callsSubsetM  in H; dest; subst;
-        try eapply getCallsAMethsSubset in H1; eauto.
+      eapply callsM_subset  in H; dest; subst;
+        try eapply getCalls_meths_subset in H1; eauto.
     - dependent destruction H.
       apply M.F.P.F.empty_in_iff in H0; intuition.
   Qed.
 
-  Theorem staticDynCallsSubsteps o ss:
+  Theorem getCalls_substeps o ss:
     forall f, M.In f (calls (foldSSLabel (m := m) (o := o) ss)) -> In f (getCalls m).
   Proof.
     intros.
@@ -835,25 +835,26 @@ Section ModEquiv.
       + destruct (foldSSLabel ss); simpl in *.
         pose proof (M.union_In H) as sth.
         destruct sth.
-        * apply (staticDynCallsSubstep substep); intuition.
+        * apply (getCalls_substep substep); intuition.
         * intuition.
       + destruct (foldSSLabel ss); simpl in *.
         dependent destruction o0; simpl in *.
         * dependent destruction a; simpl in *.
           pose proof (M.union_In H) as sth.
           { destruct sth.
-            - apply (staticDynCallsSubstep substep); intuition.
+            - apply (getCalls_substep substep); intuition.
             - intuition.
           }
         * pose proof (M.union_In H) as sth.
           { destruct sth.
-            - apply (staticDynCallsSubstep substep); intuition.
+            - apply (getCalls_substep substep); intuition.
             - intuition.
           }
   Qed.
-End ModEquiv.
 
-Theorem staticDynDefsSubstep m o u far cs:
+End Calls.
+
+Theorem getDefs_substep m o u far cs:
   Substep m o u (Meth (Some far)) cs ->
   List.In (attrName far) (getDefs m).
 Proof.
@@ -870,7 +871,7 @@ Proof.
     + right; intuition.
 Qed.
 
-Theorem staticDynDefsSubstepsInd m o u l:
+Theorem getDefs_substepsInd m o u l:
   SubstepsInd m o u l ->
   forall x, M.In x (defs l) -> List.In x (getDefs m).
 Proof.
@@ -891,7 +892,7 @@ Proof.
       destruct H4.
       * apply M.F.P.F.add_in_iff in H2.
         { destruct H2; subst.
-          - apply staticDynDefsSubstep in H0.
+          - apply getDefs_substep in H0.
             assumption.
           - apply M.F.P.F.empty_in_iff in H2; intuition.
         }
@@ -903,7 +904,7 @@ Proof.
       apply IHSubstepsInd; intuition.
 Qed.
 
-Theorem staticDynDefsSubsteps m o ss:
+Theorem getDefs_substeps m o ss:
   forall f, M.In f (defs (foldSSLabel (m := m) (o := o) ss)) -> In f (getDefs m).
 Proof.
   intros.
@@ -925,7 +926,7 @@ Proof.
           - apply M.F.P.F.add_in_iff in H0.
             destruct H0.
             + subst.
-              apply (staticDynDefsSubstep substep).
+              apply (getDefs_substep substep).
             + exfalso; apply ((proj1 (M.F.P.F.empty_in_iff _ _)) H0).
           - intuition.
         }
@@ -950,7 +951,7 @@ Proof.
   apply M.KeysSubset_union; auto.
   destruct sul as [|[[dmn dmv]|]]; try (apply M.KeysSubset_empty).
   apply M.KeysSubset_add; [apply M.KeysSubset_empty|].
-  pose proof (staticDynDefsSubstep H0); auto.
+  pose proof (getDefs_substep H0); auto.
 Qed.
 
 Lemma substepsInd_calls_in:
@@ -960,7 +961,7 @@ Proof.
   induction 2; simpl; [apply M.KeysSubset_empty|].
   subst; destruct l as [ann ds cs]; simpl in *.
   apply M.KeysSubset_union; auto.
-  pose proof (staticDynCallsSubstep Hequiv H0); auto.
+  pose proof (getCalls_substep Hequiv H0); auto.
 Qed.
 
 Lemma step_defs_in:

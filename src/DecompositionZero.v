@@ -36,7 +36,7 @@ Section Decomposition.
   Proof.
     refine (ex_intro _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite liftToMap1Empty;
+        inversion s; subst; rewrite liftToMap1_empty;
         constructor;
         [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
@@ -49,7 +49,7 @@ Section Decomposition.
   Proof.
     refine (ex_intro _ (M.empty _) _);
     abstract (
-        inversion s; subst; rewrite liftToMap1Empty;
+        inversion s; subst; rewrite liftToMap1_empty;
         constructor;
         [ constructor |
           repeat rewrite M.union_empty_L; intuition]).
@@ -108,14 +108,14 @@ Section Decomposition.
       Step spec (theta o) uSpec (xformLabel o l) /\
       M.union uSpec (theta o) = theta (M.union u o).
   Proof.
-    apply stepZero in s; auto; dest.
+    apply step_zero in s; auto; dest.
     destruct l; simpl in *.
     pose proof (substepMap reachO H0); dest.
     exists x.
     apply substepZero_imp_step in H1; auto.
     repeat (try constructor; auto).
     rewrite H.
-    rewrite liftToMap1Empty.
+    rewrite liftToMap1_empty.
     unfold xformUnitAnnot, getLabel; simpl in *.
     destruct annot; auto.
     destruct o0; auto.
@@ -220,7 +220,7 @@ Section ThetaRel.
         Step spec oSpec uSpec (xformLabelR o l) /\
         thetaR (M.union u o) (M.union uSpec oSpec).
   Proof.
-    intros; apply stepZero in s; auto; dest.
+    intros; apply step_zero in s; auto; dest.
     destruct l as [ann ds cs]; simpl in *; subst.
 
     destruct ann as [[r|]|].
