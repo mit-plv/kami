@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
 Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
 Require Import Lts.Wf Lts.Notations Lts.Tactics.
-Require Import Lts.DecompositionOne Lts.DecompositionInv.
+Require Import Lts.Decomposition.
 Require Import Ex.Fifo Ex.NativeFifo.
 
 Set Implicit Arguments.

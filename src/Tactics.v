@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBou
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Syntax Semantics SemFacts Wf Refinement Notations.
 Require Import Inline InlineFacts Specialize Duplicate Substitute.
-Require Import Decomposition DecompositionZero ModuleBound.
+Require Import Decomposition ModuleBound.
 Require Import ParametricSyntax ParametricEquiv ParametricWf.
 
 Set Implicit Arguments.
@@ -472,12 +472,6 @@ Ltac kinline_left im :=
     kinline_compute_in Heq;
     split; [|subst; reflexivity]
   end.
-
-Ltac kdecompose t r Hrm Hmm :=
-  eapply decomposition with (theta:= t)
-                              (ruleMap:= r)
-                              (substepRuleMap:= Hrm)
-                              (substepMethMap:= Hmm); auto; intros.
 
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;

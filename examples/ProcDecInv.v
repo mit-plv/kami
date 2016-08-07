@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts Lts.DecompositionZero.
+Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts Lts.Decomposition.
 Require Import Lts.Tactics Lts.Notations.
 Require Import Ex.MemTypes Ex.SC Ex.NativeFifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
 Require Import Eqdep ProofIrrelevance.
