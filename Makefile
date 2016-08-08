@@ -1,4 +1,4 @@
-IGNORE:=MemCacheInvariants
+IGNORE:=examples/MapVReify examples/MemCacheInl examples/MemCacheInvariants
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))
@@ -12,7 +12,7 @@ EXVS:=$(filter-out $(IGNORE:%=%.v),$(EXVS))
 EXTVS:=$(wildcard extraction/*.v)
 EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
-.PHONY: coq clean
+.PHONY: coq src clean
 
 LIBARGS := -R lib Lib
 
@@ -22,13 +22,19 @@ EXARGS := -R examples Ex
 
 EXTARGS := -R extraction Ext
 
-coq: Makefile.coq
-	$(MAKE) -f Makefile.coq
+coq: Makefile.coq.all
+	$(MAKE) -f Makefile.coq.all
 
-Makefile.coq: Makefile $(VS)
-	echo Cchefef [$(LIBVS)]
-	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXTVS) -o Makefile.coq
+Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXTVS)
+	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXTVS) -o Makefile.coq.all
 
-clean:: Makefile.coq
-	$(MAKE) -f Makefile.coq clean
-	rm -f Makefile.coq
+src: Makefile.coq.src
+	$(MAKE) -f Makefile.coq.src
+
+Makefile.coq.src: Makefile $(LIBVS) $(VS)
+	coq_makefile $(LIBARGS) $(ARGS) $(LIBVS) $(VS) -o Makefile.coq.src
+
+clean:: Makefile.coq.all Makefile.coq.src
+	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean
+	rm -f Makefile.coq.all
+	rm -f Makefile.coq.src
