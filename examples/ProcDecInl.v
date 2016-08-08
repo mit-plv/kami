@@ -1,4 +1,4 @@
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.Renaming Lts.Wf.
+Require Import Lts.Syntax Lts.Semantics Lts.RefinementFacts Lts.Renaming Lts.Wf.
 Require Import Lts.Inline Lts.InlineFacts Lts.Tactics.
 Require Import Ex.SC Ex.ProcDec.
 

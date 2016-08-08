@@ -1,6 +1,6 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.StringEq.
-Require Import Syntax Semantics SemFacts Refinement Renaming Wf.
+Require Import Syntax Semantics SemFacts RefinementFacts Renaming Wf.
 
 Require Import FunctionalExtensionality.
 Require Import Compare_dec.

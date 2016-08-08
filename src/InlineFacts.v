@@ -1,7 +1,7 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts Refinement Wf Inline.
+Require Import Syntax Semantics SemFacts RefinementFacts Wf Inline.
 
 Require Import FunctionalExtensionality.
 

@@ -1,4 +1,4 @@
-Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
+Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.RefinementFacts.
 Require Import Lts.ParametricEquiv Lts.ParametricInline String Lts.ParametricInlineLtac.
 Require Import Lts.ParametricSyntax Lib.CommonTactics Lib.Reflection Lts.Tactics List.
 

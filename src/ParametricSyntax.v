@@ -1,6 +1,6 @@
 Require Import Syntax String Lib.Word Lib.Struct Lib.FMap List Inline InlineFacts
         CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics SemFacts Refinement Lib.StringAsList Ascii
+        Bool Lib.Indexer Semantics SemFacts RefinementFacts Lib.StringAsList Ascii
         Lib.Concat.
 
 Set Implicit Arguments.

@@ -1,27 +1,10 @@
 Require Import FunctionalExtensionality List String.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.Refinement Lts.SymEval.
+Require Import Lts.Syntax Lts.Semantics Lts.RefinementFacts Lts.SymEval.
 
 Hint Rewrite @M.find_empty @M.find_add_1: SymEval.
 Hint Rewrite @M.find_union: SymEval.
 Hint Rewrite @M.union_empty_L @M.union_empty_R: SymEval.
-
-(*
-Hint Rewrite @find_empty @complement_empty @complement_nil @find_add_1 : SymEval.
-Hint Rewrite @disjUnion_In_1 using (clear; simpl; tauto) : SymEval.
-Hint Rewrite @disjUnion_In_2 using (clear; try rewrite withIndex_eq; simpl;
-intuition discriminate) : SymEval.
-
-Lemma disjUnion_empty : forall A ls, @disjUnion A empty empty ls = empty.
-Proof.
-  unfold disjUnion; intros.
-  extensionality k.
-  destruct (in_dec string_dec k ls); auto.
-Qed.
-
-Hint Rewrite @disjUnion_empty : SymEval.
-*)
-
 
 Ltac SymEval'' H :=
   match type of H with

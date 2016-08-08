@@ -1,8 +1,8 @@
 Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts Wf Inline InlineFacts.
-Require Import Refinement Program.Equality FunctionalExtensionality.
+Require Import Syntax Semantics SemFacts RefinementFacts Wf Inline InlineFacts.
+Require Import Program.Equality FunctionalExtensionality.
 
 Set Implicit Arguments.
 

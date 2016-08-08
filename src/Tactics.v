@@ -1,7 +1,7 @@
 Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf Refinement Notations.
+Require Import Syntax Semantics SemFacts Wf RefinementFacts Notations.
 Require Import Inline InlineFacts Specialize Duplicate Substitute.
 Require Import Decomposition ModuleBound.
 Require Import ParametricSyntax ParametricEquiv ParametricWf.

@@ -1,4 +1,4 @@
-Require Import Lib.FMap Lib.Struct Semantics Syntax String List Refinement.
+Require Import Lib.FMap Lib.Struct Semantics Syntax String List RefinementFacts.
 Require Import Program.Equality.
 
 Require Import Lib.CommonTactics.
