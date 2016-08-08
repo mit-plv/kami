@@ -9,9 +9,9 @@ Require Import Lts.Tactics.
 
 Set Implicit Arguments.
 
-(** Welcome to the Kami tutorial! This tutorial gives a demo for implementing and verifying a very simple producer-consumer components. *)
+(** Welcome to the Kami tutorial! This tutorial gives a demo of implementing and verifying a very simple producer-consumer components. *)
 
-(** Kami has its own syntax, similar to that of Bluespec. Syntax is built with "Notation" in Coq, so module definitions are automatically type-checked internally by the Gallina type-checker. *)
+(** Kami has its own syntax, which is very similar to Bluespec. Syntax is built with "Notation" in Coq, so module definitions are automatically type-checked internally by the Gallina type-checker. *)
 
 (** Let's design a producer module first. A module consists of registers, rules, and methods. A rule or a method is defined as a sequence of actions. Semantically, rules are executed by a global rule scheduler. Methods are executed by method calls, which can be called by other modules once they are composed. *)
 
@@ -66,7 +66,7 @@ Definition producer_consumer_regMap (r: RegsT): RegsT.
 Defined.
 Hint Unfold producer_consumer_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
-(** The Kami syntax is built by PHOAS, so sometimes we need to have a PHOAS equivalence for any two variable mappings. Adding the equivalence lemma to the Coq hint database will allow related features to use it automatically. *)
+(** The Kami syntax is built by PHOAS, so sometimes we need to prove a PHOAS equivalence for any two variable mappings. Adding the equivalence lemma to the Coq hint database will allow related features to use it automatically. *)
 Lemma impl_ModEquiv:
   forall ty1 ty2, ModEquiv ty1 ty2 producerConsumerImpl.
 Proof. kequiv. Qed.

@@ -14,3 +14,9 @@ To build
 - Libraries and core source: `make src`
 - All: `make`
 
+Tutorial
+--------
+
+1. `make src` (You don't need to compile examples)
+2. Execute src/Tutorial.v
+
