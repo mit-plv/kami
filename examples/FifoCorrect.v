@@ -653,7 +653,7 @@ Section ToSimple.
                               calls:= M.empty _ |});
         [|unfold hide; simpl; f_equal;
           [destruct ann as [[|]|]; auto
-          |repeat rewrite M.subtractKV_empty_1; rewrite liftToMap1Empty; auto]]
+          |repeat rewrite M.subtractKV_empty_1; rewrite liftToMap1_empty; auto]]
     end.
 
     constructor;
@@ -705,7 +705,9 @@ Section ToSimple.
           }
           { reflexivity. }
           { simpl; f_equal.
-            { meq; findeq_custom liftToMap1_find_tac. }
+            { 
+
+              meq; findeq_custom liftToMap1_find_tac. }
             { apply M.union_empty in H1; dest; subst; meq. }
           }
           

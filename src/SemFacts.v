@@ -197,6 +197,16 @@ Section LiftToMap.
 
 End LiftToMap.
 
+(* For global use *)
+Ltac liftToMap1_find_tac :=
+  repeat
+    match goal with
+    | [H: context [M.find _ (liftToMap1 _ _)] |- _] =>
+      rewrite liftToMap1_find in H
+    | [ |- context [M.find _ (liftToMap1 _ _)] ] =>
+      rewrite liftToMap1_find
+    end.
+
 Lemma liftToMap1_idElementwise_add A m:
   forall k (v: A),
     liftToMap1 (@idElementwise _) (M.add k v m) =
