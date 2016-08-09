@@ -19,7 +19,8 @@ Require Import Lts.Syntax Lts.ParametricSyntax Lts.Synthesize Ex.Isa.
 Require Import Ex.MemCache Ex.ProcMemCorrect.
 
 Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
-                                  rv32iIAddrSize) := getDefaultConst _.
+                                  rv32iIAddrSize) :=
+  pgmFibonacci 5.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.
@@ -32,7 +33,7 @@ Definition idK := Bit 1.
 
 Definition pdecN := pdecN idxBits tagBits lgNumDatas
                           (rv32iDecode insts) rv32iExecState rv32iExecNextPc
-                          rv32iOpLOAD rv32iOpSTORE rv32iOpHALT lgNumChildren.
+                          rv32iOpLOAD rv32iOpSTORE rv32iOpTOHOST lgNumChildren.
 Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren.
 
 Definition l1Con := ((modFromMeta (l1Cache idxBits tagBits lgNumDatas lgDataBytes

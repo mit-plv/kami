@@ -11,9 +11,9 @@ Section Inlined.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
-  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opHt.
+  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opTh.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: Modules * bool.

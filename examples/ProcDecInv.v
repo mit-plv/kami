@@ -16,13 +16,13 @@ Section Invariants.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
   Hypothesis (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdecInl := pdecInl fifoSize dec execState execNextPc opLd opSt opHt.
+  Definition pdecInl := pdecInl fifoSize dec execState execNextPc opLd opSt opTh.
 
   Definition procDec_inv_0 (o: RegsT): Prop.
   Proof.

@@ -17,13 +17,13 @@ Section ProcDecSCN.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Variable n: nat.
   
-  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opHt n.
-  Definition scN := sc dec execState execNextPc opLd opSt opHt n.
+  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opTh n.
+  Definition scN := sc dec execState execNextPc opLd opSt opTh n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -36,7 +36,7 @@ Section ProcDecSCN.
       END_SKIP_PROOF_ON *) admit.
   Qed.
 
-  Definition procDecN := pdecs dec execState execNextPc opLd opSt opHt n.
+  Definition procDecN := pdecs dec execState execNextPc opLd opSt opTh n.
   Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

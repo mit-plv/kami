@@ -17,23 +17,23 @@ Section ProcDecSC.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opHt.
-  Definition pinst := pinst dec execState execNextPc opLd opSt opHt.
+  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opTh.
+  Definition pinst := pinst dec execState execNextPc opLd opSt opTh.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
   Definition pdec_pinst_ruleMap (_: RegsT): string -> option string :=
-    "execHt"    |-> "execHt";
-    "execNm"    |-> "execNm";
-    "processLd" |-> "execLd";
-    "processSt" |-> "execSt"; ||.
+    "execToHost" |-> "execToHost";
+    "execNm"     |-> "execNm";
+    "processLd"  |-> "execLd";
+    "processSt"  |-> "execSt"; ||.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT.
   Proof.

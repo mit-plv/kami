@@ -21,20 +21,20 @@ Section ProcMem.
   Variable execState: ExecStateT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
   Variable execNextPc: ExecNextPcT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit OpIdx).
+  Variables opLd opSt opTh: ConstT (Bit OpIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
-  Definition pdecN := pdecs dec execState execNextPc opLd opSt opHt numChildren.
+  Definition pdecN := pdecs dec execState execNextPc opLd opSt opTh numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
          +++ (fifoRsToProc LgDataBytes (rsz FifoSize) LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
-  Definition scN := sc dec execState execNextPc opLd opSt opHt numChildren.
+  Definition scN := sc dec execState execNextPc opLd opSt opTh numChildren.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).

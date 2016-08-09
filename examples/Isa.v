@@ -10,11 +10,11 @@ Require Import Ex.MemTypes Ex.SC.
  * Some pseudo instructions (9):
  * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J
  * Custom instructions (1):
- * - HALT
+ * - TOHOST
  *)
 Section RV32I.
   Definition rv32iAddrSize := 4.
-  Definition rv32iIAddrSize := 2. (* # of maximal instructions = 2^2 = 4 *)
+  Definition rv32iIAddrSize := 4. (* # of maximal instructions = 2^4 = 16 *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
@@ -82,7 +82,7 @@ Section RV32I.
     Definition rv32iOpMISCMEM := WO~0~0~0~1~1~1~1.
     Definition rv32iOpSYSTEM  := WO~1~1~1~0~0~1~1.
 
-    Definition rv32iOpHALT    := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
+    Definition rv32iOpTOHOST    := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
 
   End Opcodes.
 
@@ -112,12 +112,20 @@ Section RV32I.
                                     + (UniBit (ZeroExtendTrunc _ _) (getOffsetSE inst)));
                         "value" ::= getRs2ValueE st inst;
                         "inst" ::= inst})%kami_expr.
-      + (* others *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
-                        "reg" ::= $$Default;
-                        "addr" ::= $$Default;
-                        "value" ::= $$Default;
-                        "inst" ::= inst})%kami_expr.
+      + refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
+                    == ($$ rv32iOpTOHOST)) then _ else _)%kami_expr.
+        * (* tohost case *)
+          exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
+                          "reg" ::= $$Default;
+                          "addr" ::= $$Default;
+                          "value" ::= getRs1ValueE st inst;
+                          "inst" ::= inst})%kami_expr.
+        * (* others *)
+          exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
+                          "reg" ::= $$Default;
+                          "addr" ::= $$Default;
+                          "value" ::= $$Default;
+                          "inst" ::= inst})%kami_expr.
   Defined.
 
   Section Funct7.
@@ -326,7 +334,7 @@ Section RV32IStruct.
   | BLTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | J (ofs: word 20): Rv32i
-  | HALT: Rv32i.
+  | TOHOST (rs1: Gpr): Rv32i.
 
   Local Infix "~~" := combine (at level 0).
 
@@ -394,7 +402,7 @@ Section RV32IStruct.
     | BLTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
     | BGTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
     | J ofs => UJtypeToRaw rv32iOpJAL x0 ofs
-    | HALT => rv32iOpHALT~~(wzero _)
+    | TOHOST rs1 => RtypeToRaw rv32iOpTOHOST rs1 x0 x0 rv32iF7ADD rv32iF3ADD
     end.
 
 End RV32IStruct.
@@ -403,23 +411,33 @@ Section Examples.
 
   Section Fibonacci.
 
-    Definition pgmFibonacci (n: nat) : list Rv32i :=
-      [ (*00*) LI x21 (natToWord _ n);
-        (*01*) BLEZ x21 (natToWord _ 12);
-        (*02*) LI x9 (natToWord _ 1);  
-        (*03*) MV x21 x6;
-        (*04*) MV x9 x8;
-        (*05*) MV x9 x7;
-        (*06*) ADD x7 x8 x5;
-        (*07*) ADDI x9 x9 (natToWord _ 1);
-        (*08*) MV x8 x7;
-        (*09*) MV x5 x8;
-        (*10*) BNE x6 x9 (natToWord _ 6);
-        (*11*) HALT;
-        (*12*) LI x5 (natToWord _ 1);
-        (*13*) J (natToWord _ 11)
-      ].
-
+    Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize).
+      refine (ConstVector _).
+      refine (VecNext
+                (VecNext
+                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+                (VecNext
+                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
+      - exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
+      - exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 12)))).
+      - exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
+      - exact (ConstBit (rv32iToRaw (MV x21 x6))).
+      - exact (ConstBit (rv32iToRaw (MV x9 x8))).
+      - exact (ConstBit (rv32iToRaw (MV x9 x7))).
+      - exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
+      - exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
+      - exact (ConstBit (rv32iToRaw (MV x8 x7))).
+      - exact (ConstBit (rv32iToRaw (MV x5 x8))).
+      - exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 6)))).
+      - exact (ConstBit (rv32iToRaw (TOHOST x5))).
+      - exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
+      - exact (ConstBit (rv32iToRaw (J (natToWord _ 11)))).
+      - exact (ConstBit (wzero _)).
+      - exact (ConstBit (wzero _)).
+    Defined.
+    
   End Fibonacci.
 
 End Examples.

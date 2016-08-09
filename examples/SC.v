@@ -88,10 +88,10 @@ Section ProcInst.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Definition execCm := MethodSig "exec"(RqFromProc addrSize lgDataBytes) : RsToProc lgDataBytes.
-  Definition haltCm := MethodSig "HALT"(Bit 0) : Bit 0.
+  Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
@@ -122,12 +122,12 @@ Section ProcInst.
                            "data" ::= #inst@."value" });
       nextPc ppc st inst
 
-    with Rule "execHt" :=
+    with Rule "execToHost" :=
       Read ppc <- "pc";
       Read st <- "rf";
       LET inst <- dec _ st ppc;
-      Assert #inst@."opcode" == $$opHt;
-      Call haltCm();
+      Assert #inst@."opcode" == $$opTh;
+      Call toHostCm(#inst@."value");
       Retv
 
     with Rule "execNm" :=
@@ -136,14 +136,14 @@ Section ProcInst.
       LET inst <- dec _ st ppc;
       Assert !(#inst@."opcode" == $$opLd
              || #inst@."opcode" == $$opSt
-             || #inst@."opcode" == $$opHt);
+             || #inst@."opcode" == $$opTh);
       Write "rf" <- execState _ st ppc inst;
       nextPc ppc st inst
   }.
 
 End ProcInst.
 
-Hint Unfold execCm haltCm nextPc : MethDefs.
+Hint Unfold execCm toHostCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -153,11 +153,11 @@ Section SC.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Variable n: nat.
 
-  Definition pinst := procInst dec execState execNextPc opLd opSt opHt.
+  Definition pinst := procInst dec execState execNextPc opLd opSt opTh.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize lgDataBytes.
 
@@ -174,10 +174,10 @@ Section Facts.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Lemma pinst_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pinst dec execState execNextPc opLd opSt opHt).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pinst dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
@@ -186,7 +186,7 @@ Section Facts.
   Variable n: nat.
   
   Lemma pinsts_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pinsts dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pinsts dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.
@@ -200,7 +200,7 @@ Section Facts.
   Hint Resolve memInstM_ModEquiv.
 
   Lemma sc_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (sc dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (sc dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.

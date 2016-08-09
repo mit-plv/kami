@@ -19,7 +19,7 @@ Section ProcDec.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -27,7 +27,7 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
-  Definition halt := MethodSig "HALT"() : Void.
+  Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
@@ -78,14 +78,14 @@ Section ProcDec.
      Write "stall" <- $$false;
      nextPc ppc st inst)%kami_action.
 
-  Definition execHt {ty} : ActionT ty Void :=
+  Definition execToHost {ty} : ActionT ty Void :=
     (Read stall <- "stall";
      Assert !#stall;
      Read ppc <- "pc";
      Read st <- "rf";
      LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opHt;
-     Call halt();
+     Assert #inst@."opcode" == $$opTh;
+     Call toHost(#inst@."value");
      Retv)%kami_action.
 
   Definition execNm {ty} : ActionT ty Void :=
@@ -96,7 +96,7 @@ Section ProcDec.
      LET inst <- dec _ st ppc;
      Assert !(#inst@."opcode" == $$opLd
            || #inst@."opcode" == $$opSt
-           || #inst@."opcode" == $$opHt);
+           || #inst@."opcode" == $$opTh);
      Write "rf" <- execState _ st ppc inst;
      nextPc ppc st inst)%kami_action.
 
@@ -109,15 +109,15 @@ Section ProcDec.
     with Rule "reqSt" := reqSt
     with Rule "repLd" := repLd
     with Rule "repSt" := repSt
-    with Rule "execHt" := execHt
+    with Rule "execToHost" := execToHost
     with Rule "execNm" := execNm
   }.
 
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep halt nextPc
-     reqLd reqSt repLd repSt execHt execNm : MethDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc
+     reqLd reqSt repLd repSt execToHost execNm : MethDefs.
 
 Section ProcDecM.
   Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
@@ -126,10 +126,10 @@ Section ProcDecM.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Definition pdec := procDec "rqFromProc"%string "rsToProc"%string dec execState execNextPc
-                             opLd opSt opHt.
+                             opLd opSt opTh.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
@@ -147,17 +147,17 @@ Section Facts.
   Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Lemma pdec_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc opLd opSt opHt).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf fifoSize dec execState execNextPc opLd opSt opHt).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf fifoSize dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
@@ -166,14 +166,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs fifoSize dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs fifoSize dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM fifoSize dec execState execNextPc opLd opSt opHt n).
+    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM fifoSize dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.
