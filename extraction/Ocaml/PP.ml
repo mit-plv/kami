@@ -422,7 +422,7 @@ let rec ppBAction (ife: int option) (a: bAction) =
   match a with
   | BMCall (bind, meth, msig, e) ->
      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-     (if ret msig = Bit 0 then ps ppBind else ps ppAssign);
+     (* (if ret msig = Bit 0 then ps ppBind else ps ppAssign); *) ps ppAssign;
      print_space ();
      ps (bstring_of_charlist meth);
      ps ppRBracketL;
