@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.StructNotation.
-Require Import Lts.Syntax Lts.Notations.
+Require Import Lts.Syntax Lts.Semantics Lts.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
 (* Subset of RV32I instructions (17/47):
@@ -8,7 +8,7 @@ Require Import Ex.MemTypes Ex.SC.
  * - Memory : LW, SW
  * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
  * Some pseudo instructions (9):
- * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J
+ * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
  * Custom instructions (1):
  * - TOHOST
  *)
@@ -23,49 +23,61 @@ Section RV32I.
 
   Section Common.
 
+    Definition getOpcodeE {ty}
+               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+      (UniBit (Trunc 7 _) inst)%kami_expr.
+
     Definition getRs1ValueE {ty}
                (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (#s @[UniBit (ConstExtract 12 5 _) inst])%kami_expr.
+      (#s @[UniBit (ConstExtract 15 5 _) inst])%kami_expr.
+
     Definition getRs2ValueE {ty}
                (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (#s @[UniBit (ConstExtract 7 5 _) inst])%kami_expr.
+      (#s @[UniBit (ConstExtract 20 5 _) inst])%kami_expr.
+
     Definition getRdE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      UniBit (ConstExtract 20 5 _) inst.
+      UniBit (ConstExtract 7 5 _) inst.
+
     Definition getFunct7E {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (TruncLsb 7 _) inst)%kami_expr.
+      (UniBit (TruncLsb 25 7) inst)%kami_expr.
+
     Definition getFunct3E {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (ConstExtract 17 3 _) inst)%kami_expr.
+      (UniBit (ConstExtract 12 3 _) inst)%kami_expr.
+
     Definition getOffsetIE {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (UniBit (TruncLsb 12 _) inst)%kami_expr.
+      (UniBit (TruncLsb 20 12) inst)%kami_expr.
+
     Definition getOffsetSE {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
       (BinBit (Concat _ _)
-              (UniBit (TruncLsb 7 _) inst)
-              (UniBit (ConstExtract 20 5 _) inst))%kami_expr.
+              (UniBit (TruncLsb 25 7) inst)
+              (UniBit (ConstExtract 7 5 _) inst))%kami_expr.
+
     Definition getOffsetSBE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (BinBit (Concat _ 1)
+      (BinBit (Concat _ _)
               (BinBit (Concat _ _)
-                      (BinBit (Concat _ _) (UniBit (TruncLsb 1 _) inst)
-                              (UniBit (ConstExtract 24 1 _) inst))
-                      (BinBit (Concat _ _) (UniBit (ConstExtract 1 6 _) inst)
-                              (UniBit (ConstExtract 20 4 _) inst)))
-              ($0))%kami_expr.
+                      (UniBit (TruncLsb 31 1) inst)
+                      (UniBit (ConstExtract 7 1 _) inst))
+              (BinBit (Concat _ _)
+                      (UniBit (ConstExtract 25 6 _) inst)
+                      (UniBit (ConstExtract 8 4 _) inst)))%kami_expr.
+
     Definition getOffsetUJE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
       (BinBit (Concat _ _)
               (BinBit (Concat _ _)
-                      (UniBit (TruncLsb 1 _) inst)
+                      (UniBit (TruncLsb 31 1) inst)
                       (UniBit (ConstExtract 12 8 _) inst))
               (BinBit (Concat _ _)
-                      (UniBit (ConstExtract 11 1 _) inst)
-                      (UniBit (ConstExtract 1 10 _) inst))).
+                      (UniBit (ConstExtract 20 1 _) inst)
+                      (UniBit (ConstExtract 21 10 _) inst))).
   End Common.
 
   Section Opcodes.
@@ -94,34 +106,31 @@ Section RV32I.
                                rv32iLgDataBytes rv32iRfIdx.
     unfold DecT; intros ty st pc.
     set ($$insts @[ #pc ])%kami_expr as inst.
-    refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
-                == ($$ rv32iOpLOAD)) then _ else _)%kami_expr.
+    refine (IF ((getOpcodeE inst) == ($$ rv32iOpLOAD)) then _ else _)%kami_expr.
     - (* load case *)
-      exact (STRUCT { "opcode" ::= UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst;
-                      "reg" ::= UniBit (ConstExtract 20 5 _) inst;
+      exact (STRUCT { "opcode" ::= getOpcodeE inst;
+                      "reg" ::= getRdE inst;
                       "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
                                   + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE inst)));
                       "value" ::= $$Default;
                       "inst" ::= inst})%kami_expr.
-    - refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
-                  == ($$ rv32iOpSTORE)) then _ else _)%kami_expr.
+    - refine (IF (getOpcodeE inst == $$ rv32iOpSTORE) then _ else _)%kami_expr.
       + (* store case *)
-        exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
+        exact (STRUCT { "opcode" ::= getOpcodeE inst;
                         "reg" ::= $$Default;
                         "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st inst)
                                     + (UniBit (ZeroExtendTrunc _ _) (getOffsetSE inst)));
                         "value" ::= getRs2ValueE st inst;
                         "inst" ::= inst})%kami_expr.
-      + refine (IF ((UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst)
-                    == ($$ rv32iOpTOHOST)) then _ else _)%kami_expr.
+      + refine (IF (getOpcodeE inst == $$ rv32iOpTOHOST) then _ else _)%kami_expr.
         * (* tohost case *)
-          exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
+          exact (STRUCT { "opcode" ::= getOpcodeE inst;
                           "reg" ::= $$Default;
                           "addr" ::= $$Default;
                           "value" ::= getRs1ValueE st inst;
                           "inst" ::= inst})%kami_expr.
         * (* others *)
-          exact (STRUCT { "opcode" ::= (UniBit (Trunc (rv32iLgDataBytes * 8 - rv32iOpIdx) _) inst);
+          exact (STRUCT { "opcode" ::= getOpcodeE inst;
                           "reg" ::= $$Default;
                           "addr" ::= $$Default;
                           "value" ::= $$Default;
@@ -215,15 +224,15 @@ Section RV32I.
       register_op_funct7
         inst rv32iF7SLL
         (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       << (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+                       << (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
       register_op_funct7
         inst rv32iF7SRL
         (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       >> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+                       >> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
       register_op_funct7
         inst rv32iF7SRA
         (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       ~>> (UniBit (Trunc 27 5) (getRs2ValueE st inst)) ])%kami_expr.
+                       ~>> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
       register_op_funct7
         inst rv32iF7OR
         (#st @[ getRdE inst <- (getRs1ValueE st inst) ~| (getRs2ValueE st inst) ])%kami_expr.
@@ -334,31 +343,32 @@ Section RV32IStruct.
   | BLTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | J (ofs: word 20): Rv32i
+  | NOP: Rv32i
   | TOHOST (rs1: Gpr): Rv32i.
 
   Local Infix "~~" := combine (at level 0).
 
   Definition offsetUJToRaw (ofs: word 20) :=
-    let ofs20_12 := split2 11 9 ofs in
-    let ofs11_1 := split1 11 9 ofs in
-    combine (combine (split1 8 1 ofs20_12) (split2 10 1 ofs11_1))
-            (combine (split1 10 1 ofs11_1) (split2 8 1 ofs20_12)).
+    let ofs20_12 := spl1 11 9 ofs in
+    let ofs11_1 := spl2 11 9 ofs in
+    cmb (cmb (spl1 8 1 ofs20_12) (spl2 10 1 ofs11_1))
+        (cmb (spl1 10 1 ofs11_1) (spl2 8 1 ofs20_12)).
   Definition offsetUJToRawTest:
     (offsetUJToRaw (WO~1~1~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0~0~0) =
      WO~1~1~0~0~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0) := eq_refl.
 
-  Definition offsetSBToRaw12 (ofs: word 12) := split2 11 1 ofs.
-  Definition offsetSBToRaw11 (ofs: word 12) := split2 10 1 (split1 11 1 ofs).
-  Definition offsetSBToRaw10_5 (ofs: word 12) := split2 4 6 (split1 10 2 ofs).
-  Definition offsetSBToRaw4_1 (ofs: word 12) := split1 4 8 ofs.
+  Definition offsetSBToRaw12 (ofs: word 12) := spl1 11 1 ofs.
+  Definition offsetSBToRaw11 (ofs: word 12) := spl2 1 1 (spl1 10 2 ofs).
+  Definition offsetSBToRaw10_5 (ofs: word 12) := spl2 6 2 (spl1 4 8 ofs).
+  Definition offsetSBToRaw4_1 (ofs: word 12) := spl2 4 8 ofs.
   Definition offsetSBToRawTest:
     let ofs := WO~1~1~1~0~0~0~0~0~1~0~0~0 in
-    combine (combine (offsetSBToRaw4_1 ofs) (offsetSBToRaw10_5 ofs))
-            (combine (offsetSBToRaw11 ofs) (offsetSBToRaw12 ofs)) =
-    ofs := eq_refl.
+    cmb (cmb (offsetSBToRaw12 ofs) (offsetSBToRaw11 ofs))
+        (cmb (offsetSBToRaw10_5 ofs) (offsetSBToRaw4_1 ofs))
+    = ofs := eq_refl.
 
-  Definition offsetSToRaw11_5 (ofs: word 12) := split2 5 7 ofs.
-  Definition offsetSToRaw4_0 (ofs: word 12) := split1 5 7 ofs.
+  Definition offsetSToRaw11_5 (ofs: word 12) := spl1 5 7 ofs.
+  Definition offsetSToRaw4_0 (ofs: word 12) := spl2 5 7 ofs.
 
   Definition RtypeToRaw (op: word 7) (rs1 rs2 rd: Gpr) (f7: word 7) (f3: word 3) :=
     op~~(gprToRaw rd)~~f3~~(gprToRaw rs1)~~(gprToRaw rs2)~~f7.
@@ -402,43 +412,125 @@ Section RV32IStruct.
     | BLTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH rs1 x0 rv32iF3BLT ofs
     | BGTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
     | J ofs => UJtypeToRaw rv32iOpJAL x0 ofs
+    | NOP => ItypeToRaw rv32iOpOPIMM x0 x0 rv32iF3ADDI (wzero _)
     | TOHOST rs1 => RtypeToRaw rv32iOpTOHOST rs1 x0 x0 rv32iF7ADD rv32iF3ADD
     end.
 
 End RV32IStruct.
 
+Section UnitTests.
+
+  Require Import Lts.Semantics.
+
+  (* Eval compute in (evalExpr (UniBit (Trunc 2 7) (Const _ (ConstBit WO~0~0~1~1~1~1~1~1~1)))). *)
+  (* Eval compute in (wordToNat WO~0~0~1~1). *)
+
+  (* Definition getRs1ValueE {ty} *)
+  (* Definition getRs2ValueE {ty} *)
+  (* Definition getRdE {ty} *)
+  (* Definition getFunct7E {ty} *)
+  (* Definition getFunct3E {ty} *)
+  (* Definition getOffsetIE {ty} *)
+  (* Definition getOffsetSE {ty} *)
+  (* Definition getOffsetSBE {ty} *)
+  (* Definition getOffsetUJE {ty} *)
+
+  Definition JAL_getRdE_correct:
+    evalExpr (getRdE (Const _ (ConstBit (rv32iToRaw (JAL x3 (natToWord _ 5)))))) =
+    gprToRaw x3 := eq_refl.
+
+  Definition JAL_getOffsetUJE_correct:
+    evalExpr (getOffsetUJE (Const _ (ConstBit (rv32iToRaw (JAL x3 (natToWord _ 5)))))) =
+    natToWord _ 5 := eq_refl.
+
+  Definition LI_getRdE_correct:
+    evalExpr (getRdE (Const _ (ConstBit (rv32iToRaw (LI x3 (natToWord _ 5)))))) =
+    gprToRaw x3 := eq_refl.
+  
+End UnitTests.
+
 Section Examples.
 
-  Section Fibonacci.
+  Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize).
+    refine (ConstVector _).
+    refine (VecNext
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
+    - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ n)))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+  Defined.
 
-    Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize).
-      refine (ConstVector _).
-      refine (VecNext
-                (VecNext
-                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-                (VecNext
-                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                   (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
-      - exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
-      - exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 12)))).
-      - exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
-      - exact (ConstBit (rv32iToRaw (MV x21 x6))).
-      - exact (ConstBit (rv32iToRaw (MV x9 x8))).
-      - exact (ConstBit (rv32iToRaw (MV x9 x7))).
-      - exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
-      - exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
-      - exact (ConstBit (rv32iToRaw (MV x8 x7))).
-      - exact (ConstBit (rv32iToRaw (MV x5 x8))).
-      - exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 6)))).
-      - exact (ConstBit (rv32iToRaw (TOHOST x5))).
-      - exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
-      - exact (ConstBit (rv32iToRaw (J (natToWord _ 11)))).
-      - exact (ConstBit (wzero _)).
-      - exact (ConstBit (wzero _)).
-    Defined.
-    
-  End Fibonacci.
+  Definition pgmBranchTest: ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize).
+    refine (ConstVector _).
+    refine (VecNext
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
+    - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ 3)))).
+    - exact (ConstBit (rv32iToRaw (LI x4 (natToWord _ 5)))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x4))).
+    - exact (ConstBit (rv32iToRaw (BLT x3 x4 (natToWord _ 6)))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x0))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+  Defined.
+  
+  Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize).
+    refine (ConstVector _).
+    refine (VecNext
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+              (VecNext
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
+    - exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
+    - exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 12)))).
+    - exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
+    - exact (ConstBit (rv32iToRaw (MV x21 x6))).
+    - exact (ConstBit (rv32iToRaw (MV x9 x8))).
+    - exact (ConstBit (rv32iToRaw (MV x9 x7))).
+    - exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
+    - exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
+    - exact (ConstBit (rv32iToRaw (MV x8 x7))).
+    - exact (ConstBit (rv32iToRaw (MV x5 x8))).
+    - exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 6)))).
+    - exact (ConstBit (rv32iToRaw (TOHOST x5))).
+    - exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
+    - exact (ConstBit (rv32iToRaw (J (natToWord _ 11)))).
+    - exact (ConstBit (rv32iToRaw NOP)).
+    - exact (ConstBit (rv32iToRaw NOP)).
+  Defined.
 
 End Examples.
 

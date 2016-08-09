@@ -176,11 +176,11 @@ Inductive BinBoolOp: Set :=
 
 Inductive UniBitOp: nat -> nat -> Set :=
 | Inv n: UniBitOp n n
-| ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2
-| Trunc n1 n2: UniBitOp (n1 + n2) n2
+| ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2 (* LSB : n1, MSB : n3 *)
+| Trunc n1 n2: UniBitOp (n1 + n2) n1 (* LSB : n1 *)
 | ZeroExtendTrunc n1 n2: UniBitOp n1 n2
 | SignExtendTrunc n1 n2: UniBitOp n1 n2
-| TruncLsb n1 n2: UniBitOp (n1 + n2) n1.
+| TruncLsb n1 n2: UniBitOp (n1 + n2) n2. (* MSB : n2 *)
 
 Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
@@ -191,7 +191,7 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Sll n m: BinBitOp n m n
 | Srl n m: BinBitOp n m n
 | Sra n m: BinBitOp n m n
-| Concat n1 n2: BinBitOp n1 n2 (n1 + n2).
+| Concat n1 n2: BinBitOp n1 n2 (n2 + n1). (* MSB : n1, LSB : n2 *)
 
 Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n.

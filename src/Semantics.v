@@ -8,6 +8,11 @@ Set Implicit Arguments.
 
 Section WordFunc.
 
+  (* Some definitions in Word.v are just opposite, we rename them to use correctly. *)
+  Definition spl1 := split2. (* to return _most_ significant bits *)
+  Definition spl2 := split1. (* to return _least_ significant bits *)
+  Definition cmb := fun sz1 (w1: word sz1) sz2 (w2: word sz2) => combine w2 w1.
+  
   Definition wordZero (w: word 0): w = WO :=
     shatter_word w.
 
@@ -129,27 +134,27 @@ Definition whd' sz (w: word sz) :=
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wneg n).
-  - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
-  - exact (fun w => split2 n1 n2 w).
+  - exact (fun w => spl1 n1 n2 (spl2 (n1 + n2) n3 w)).
+  - exact (fun w => spl2 n1 n2 w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
                 | right isGe => _
               end).
-    assert (sth: n2 - n1 + n1 = n2) by abstract omega.
-    exact (eq_rect _ _ (Word.combine (wzero (n2 - n1)) w) _ sth).
-    assert (sth: n1 = n1 - n2 + n2) by abstract omega.
-    exact (split2 (n1 - n2) n2 (eq_rect _ _ w _ sth)).
+    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
+      exact (zext w _).
+    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+      exact (spl2 _ _ w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
                 | right isGe => _
               end).
-    assert (sth: n2 - n1 + n1 = n2) by abstract omega.
-    exact (eq_rect _ _ (Word.combine ((if whd' w then wones else wzero) (n2 - n1)) w) _ sth).
-    assert (sth: n1 = n1 - n2 + n2) by abstract omega.
-    exact (split2 (n1 - n2) n2 (eq_rect _ _ w _ sth)).
-  - exact (fun w => split1 n1 n2 w).
+    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
+      exact (sext w _).
+    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+      exact (spl2 _ _ w).
+  - exact (fun w => spl1 n1 n2 w).
 Defined.
 
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
@@ -163,7 +168,7 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Sll n m => (fun x y => sll x (wordToNat y))
     | Srl n m => (fun x y => srl x (wordToNat y))
     | Sra n m => (fun x y => sra x (wordToNat y))
-    | Concat n1 n2 => fun x y => (combine x y)
+    | Concat n1 n2 => fun x y => (cmb x y)
   end.
 
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
