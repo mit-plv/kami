@@ -381,3 +381,6 @@ Section Equiv.
   Qed.
 
 End Equiv.
+
+(* NOTE: Defining "MetaModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
+Notation "'MetaModPhoasWf' m" := (forall ty1 ty2, MetaModEquiv ty1 ty2 m) (at level 0).

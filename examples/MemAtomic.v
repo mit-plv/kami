@@ -71,14 +71,14 @@ Section Facts.
   Variables (addrSize fifoSize lgDataBytes: nat).
 
   Lemma midQ_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (midQ addrSize lgDataBytes).
+    ModPhoasWf (midQ addrSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
   Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize fifoSize lgDataBytes).
+    ModPhoasWf (iom addrSize fifoSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
@@ -87,27 +87,27 @@ Section Facts.
   Variable n: nat.
 
   Lemma mids_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (mids addrSize lgDataBytes n).
+    ModPhoasWf (mids addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mids_ModEquiv.
 
   Lemma ioms_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (ioms addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomicWoQ_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomicWoQ addrSize lgDataBytes n).
+    ModPhoasWf (memAtomicWoQ addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAtomic_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (memAtomic addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.

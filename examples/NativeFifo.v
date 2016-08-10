@@ -165,28 +165,28 @@ Section Facts.
   Proof. reflexivity. Qed.
 
   Lemma nativeFifo_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (nativeFifo fifoName default).
+    ModPhoasWf (nativeFifo fifoName default).
   Proof.
     kequiv.
   Qed.
   Hint Resolve nativeFifo_ModEquiv.
 
   Lemma nativeSimpleFifo_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (nativeSimpleFifo fifoName default).
+    ModPhoasWf (nativeSimpleFifo fifoName default).
   Proof.
     kequiv.
   Qed.
   Hint Resolve nativeSimpleFifo_ModEquiv.
 
   Lemma nativeFifo_ValidRegs:
-    forall ty, ValidRegsModules ty (nativeFifo fifoName default).
+    ModRegsWf (nativeFifo fifoName default).
   Proof.
     kvr.
   Qed.
   Hint Resolve nativeFifo_ValidRegs.
 
   Lemma nativeSimpleFifo_ValidRegs:
-    forall ty, ValidRegsModules ty (nativeSimpleFifo fifoName default).
+    ModRegsWf (nativeSimpleFifo fifoName default).
   Proof.
     kvr.
   Qed.
@@ -195,81 +195,73 @@ Section Facts.
   Variable n: nat.
 
   Lemma nativeFifoS_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
+    MetaModPhoasWf (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
   Proof.
     kequiv.
   Qed.
 
   Lemma nativeFifoSS_ModEquiv:
-    forall ty1 ty2,
-      ModEquiv ty1 ty2 (getModFromSin (nativeFifoS fifoName default Hgood)).
+    ModPhoasWf (getModFromSin (nativeFifoS fifoName default Hgood)).
   Proof.
     rewrite <-nativeFifo_nativeFifoS; kequiv.
   Qed.
 
   Lemma nativeFifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (nativeFifoM fifoName default Hgood).
+    MetaModPhoasWf (nativeFifoM fifoName default Hgood).
   Proof.
     kequiv.
   Qed.
 
   Lemma nativeSimpleFifoS_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
+    MetaModPhoasWf (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
   Proof.
     kequiv.
   Qed.
 
   Lemma nativeSimpleFifoSS_ModEquiv:
-    forall ty1 ty2,
-      ModEquiv ty1 ty2 (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
+    ModPhoasWf (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
   Proof.
     rewrite <-nativeSimpleFifo_nativeSimpleFifoS; kequiv.
   Qed.
 
   Lemma nativeSimpleFifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (nativeSimpleFifoM fifoName default Hgood).
+    MetaModPhoasWf (nativeSimpleFifoM fifoName default Hgood).
   Proof.
     kequiv.
   Qed.
 
   Lemma nativeFifoS_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
+    MetaModRegsWf (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
   Proof.
     kvr.
   Qed.
 
   Lemma nativeFifoSS_ValidRegs:
-    forall ty,
-      ValidRegsModules ty (getModFromSin (nativeFifoS fifoName default Hgood)).
+    ModRegsWf (getModFromSin (nativeFifoS fifoName default Hgood)).
   Proof.
     rewrite <-nativeFifo_nativeFifoS; kvr.
   Qed.
 
   Lemma nativeFifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (nativeFifoM fifoName default Hgood).
+    MetaModRegsWf (nativeFifoM fifoName default Hgood).
   Proof.
     kvr.
   Qed.
 
   Lemma nativeSimpleFifoS_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
+    MetaModRegsWf (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
   Proof.
     kvr.
   Qed.
 
   Lemma nativeSimpleFifoSS_ValidRegs:
-    forall ty,
-      ValidRegsModules ty (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
+    ModRegsWf (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
   Proof.
     rewrite <-nativeSimpleFifo_nativeSimpleFifoS; kvr.
   Qed.
 
   Lemma nativeSimpleFifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (nativeSimpleFifoM fifoName default Hgood).
+    MetaModRegsWf (nativeSimpleFifoM fifoName default Hgood).
   Proof.
     kvr.
   Qed.

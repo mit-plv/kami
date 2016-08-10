@@ -57,9 +57,8 @@ Definition producer_consumer_ruleMap (_: RegsT): string -> option string :=
   "produce" |-> "produce_consume"; ||.
 Definition producer_consumer_regMap (r: RegsT): RegsT.
   (* We are using tactics to build a map from register valuations in [impl] to register valuations in [spec]. *)
-  kgetv "data"%string datav r (Bit 32) (M.empty (sigT (fullType type))).
+  kgetv "data"%string datav r (Bit 32) (M.empty _: RegsT).
   (* First, extract the value of [impl] register ["data"]. *)
-    (* FIXME: [sigT (fullType type)] is too scary here.  Explain or find a way to avoid needing it? *)
   exact (M.add "data"%string (existT _ _ datav) (M.empty _)).
   (* Then, give the corresponding values of all registers for [spec]. *)
 Defined.
@@ -67,8 +66,7 @@ Hint Unfold producer_consumer_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
 (** The Kami syntax is built by PHOAS, so sometimes we need to prove a PHOAS equivalence for any two variable mappings.  Adding the equivalence lemma to the Coq hint database will allow related features to use it automatically. *)
 Lemma impl_ModEquiv:
-  forall ty1 ty2, ModEquiv ty1 ty2 producerConsumerImpl.
-  (* FIXME: I would rather see [ModWf producerConsumerImpl], with no explicit quantifiers.  Any reason not to switch everywhere? *)
+  ModPhoasWf producerConsumerImpl.
 Proof. kequiv. Qed.
 Hint Resolve impl_ModEquiv.
 

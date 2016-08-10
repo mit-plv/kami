@@ -177,7 +177,7 @@ Section Facts.
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Lemma pinst_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pinst dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (pinst dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
@@ -186,21 +186,21 @@ Section Facts.
   Variable n: nat.
   
   Lemma pinsts_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pinsts dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (pinsts dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pinsts_ModEquiv.
 
   Lemma memInstM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (memInstM n addrSize lgDataBytes).
+    MetaModPhoasWf (memInstM n addrSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
   Hint Resolve memInstM_ModEquiv.
 
   Lemma sc_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (sc dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (sc dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.

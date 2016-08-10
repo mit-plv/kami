@@ -164,6 +164,9 @@ Section ValidRegs.
 
 End ValidRegs.
 
+(* NOTE: Defining "MetaModRegsWf" by Gallina definition affects proof automation by "kvr". *)
+Notation "'MetaModRegsWf' m" := (forall ty, ValidRegsMetaModule ty m) (at level 0).
+
 Section Facts.
 
   Lemma oneReg_getListFromMetaReg_In:

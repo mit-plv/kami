@@ -150,14 +150,14 @@ Section Facts.
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Lemma pdec_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdec dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (pdec dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecf fifoSize dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (pdecf fifoSize dec execState execNextPc opLd opSt opTh).
   Proof.
     kequiv.
   Qed.
@@ -166,14 +166,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (pdecfs fifoSize dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (pdecfs fifoSize dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (procDecM fifoSize dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (procDecM fifoSize dec execState execNextPc opLd opSt opTh n).
   Proof.
     kequiv.
   Qed.

@@ -290,18 +290,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma l1Cache_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (l1Cache IdxBits TagBits
-                                                         LgNumDatas LgDataBytes Id)).
+    MetaModPhoasWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma l1Cache_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (getMetaFromSinNat n (l1Cache IdxBits TagBits
-                                                           LgNumDatas LgDataBytes Id)).
+    MetaModRegsWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kvr.
     END_SKIP_PROOF_ON *) admit.

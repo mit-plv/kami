@@ -1,2 +1,4 @@
 -R lib Lib
 -R src Lts
+-R examples Ex
+-R extraction Ext

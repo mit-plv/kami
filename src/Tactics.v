@@ -12,35 +12,46 @@ Set Implicit Arguments.
 - Kami Tactics
   + krefl : prove (a <<== a)
   + ktrans : for given "b", convert (a <<== c) into two subgoals (a <<== b) and (b <<== c)
+    * ktrans_l : convert (a <<=[p] c) into two subgoals (a <<=[p] b) and (b <<== c)
+    * ktrans_r : convert (a <<=[p] c) into two subgoals (a <<== b) and (b <<=[p] c)
+  + ketrans : generate an evar for "b" convert into two subgoals (a <<== ?) and (? <<== c)
+    * ketrans_l : convert (a <<=[p] c) into two subgoals (a <<=[p] ?) and (? <<== c)
+    * ketrans_r : convert (a <<=[p] c) into two subgoals (a <<== ?) and (? <<=[p] c)
+  + krewrite assoc left : convert (a + (b + c) <<== m) to ((a + b) + c <<== m)
+  + krewrite <- assoc left : convert ((a + b) + c <<== m) to (a + (b + c) <<== m)
+  + krewrite assoc right : convert (m <<== a + (b + c)) to (m <<== (a + b) + c)
+  + krewrite <- assoc right : convert (m <<== (a + b) + c) to (m <<== a + (b + c))
+  + kequiv : prove any PHOAS equivalences
+  + kvr : prove any ValidRegsModules well-formedness conditions
+  + kdisj_regs : prove DisjList conditions of regs
+  + kdisj_dms : prove DisjList conditions of dms
+  + kdisj_cms : prove DisjList conditions of cms
+  + kdisj_dms_cms : prove DisjList conditions of dms and cms
+  + kdisj_cms_dms : prove DisjList conditions of cms and dms
+  + knodup_regs : prove (NoDup regs), where _regs_ are names of registers
+  + kinteracting : prove the Interacting predicate
+  + knoninteracting : prove the NonInteracting predicate
+  + kdef_call_sub : prove the DefCallSub predicate
   + kmodular : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
+    * kmodular with constr(p) : when the refinement is by "<=[p]"
   + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
+    * kmodularn with constr(p) : when the refinement is by "<=[p]"
+  + kmodularnp : convert (a + b <<=[compLabelMaps p q] c + d) to (a <<=[p] c) /\ (b <<=[q] d)
   + kmodular_sim_l : convert (a + c) <<== (b + c) to (a <<== b)
   + kmodular_sim_r : convert (c + a) <<== (c + b) to (a <<== b)
   + ksimilar : prove (a <<== b) when a and b have the same set of regs, rules, and methods
   + ksubst : prove (context[a] <<== context[b])
-  + kequiv : prove any PHOAS equivalences defined in src/Equiv.v
-  + kvr : prove well-formedness conditions for valid register uses
-  + kdisj_regs : prove DisjList conditions of regs
-  + kdisj_dms : prove DisjList conditions of dms
-  + kdisj_cms : prove DisjList conditions of cms
-  + knodup_regs : prove (NoDup regs), where _regs_ are names of registers
-  + kdef_call_sub : prove DefCallSub conditions
   + kinline_compute : compute terms with _inlineF_
   + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
   + kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
-  + kdecompose : apply the decomposition theorem
-  + kdecompose_nodefs : apply the decompositionZero theorem,
-    for modules with no defined methods.
+  + kdecompose_nodefs : apply the decompositionZero theorem, for modules with no defined methods.
+  + kdecomposeR_nodefs : apply the decompositionZeroR theorem, for modules with no defined methods.
+  + kinv_magic : try to solve invariant proofs (slow)
+    * kinv_magic_with _tactic_ : also try to apply _tactic_ alternately
+  + kinv_magic_light : a lightweight version of "kinv_magic"
+    * kinv_magic_light_with _tactic_ : also try to apply _tactic_ alternately
   + kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
-  + kgetv/kexistv : used to construct register or label mappings
-
-  + kinvert : invert Kami semantic definitions (Substep, Step, etc.)
-  + kinv_magic : try to solve invariant proofs
-    * kinv_simpl : simplify invariants
-    * kinv_red : reduce invariants
-    * kinv_contra : try to prove exfalso with invariants
-    * kinv_finish : try to prove invariants.
-  + kinv_magic_with _tactic_ : also try to apply _tactic_ alternately
+  + kgetv/kexistv/kexistnv : used to construct register or label mappings
 
 - Kami Hints
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.

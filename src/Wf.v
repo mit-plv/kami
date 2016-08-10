@@ -156,6 +156,9 @@ Section Equiv.
   
 End Equiv.
 
+(* NOTE: Defining "ModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
+Notation "'ModPhoasWf' m" := (forall ty1 ty2, ModEquiv ty1 ty2 m) (at level 0).
+
 Section EquivFacts.
   
   Lemma actionEquiv_appendAction:
@@ -306,6 +309,9 @@ Section ValidRegs.
     end.
 
 End ValidRegs.
+
+(* NOTE: Defining "ModRegsWf" by Gallina definition affects proof automation by "kvr". *)
+Notation "'ModRegsWf' m" := (forall ty, ValidRegsModules ty m) (at level 0).
 
 Section ValidRegsFacts.
 

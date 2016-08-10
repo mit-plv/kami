@@ -88,13 +88,13 @@ Section Facts.
   Variable init: ConstT (DataArray IdxBits Data).
 
   Lemma regFile_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (regFile name init).
+    ModPhoasWf (regFile name init).
   Proof.
     kequiv.
   Qed.
 
   Lemma regFile_ValidRegs:
-    forall ty, ValidRegsModules ty (regFile name init).
+    ModRegsWf (regFile name init).
   Proof.
     kvr.
   Qed.
@@ -103,25 +103,25 @@ Section Facts.
   Hypothesis (Hgood: index 0 indexSymbol name = None).
   
   Lemma regFileS_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (regFileS name init Hgood)).
+    MetaModPhoasWf (getMetaFromSinNat n (regFileS name init Hgood)).
   Proof.
     kequiv.
   Qed.
 
   Lemma regFileM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (regFileM name init Hgood).
+    MetaModPhoasWf (regFileM name init Hgood).
   Proof.
     kequiv.
   Qed.
 
   Lemma regFileS_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (regFileS name init Hgood)).
+    MetaModRegsWf (getMetaFromSinNat n (regFileS name init Hgood)).
   Proof.
     kvr.
   Qed.
 
   Lemma regFileM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (regFileM name init Hgood).
+    MetaModRegsWf (regFileM name init Hgood).
   Proof.
     kvr.
   Qed.
