@@ -10,11 +10,11 @@ Section L1Cache.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
-  Definition AddrBits := TagBits + IdxBits + LgNumDatas.
+  Definition AddrBits := LgNumDatas + (IdxBits + TagBits).
   Definition Addr := Bit AddrBits.
   Definition Tag := Bit TagBits.
   Definition Idx := Bit IdxBits.
-  Definition TagIdx := Bit (TagBits + IdxBits).
+  Definition TagIdx := Bit (IdxBits + TagBits).
   Definition Data := Bit (LgDataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
@@ -45,26 +45,25 @@ Section L1Cache.
   Section UtilFunctions.
     Variable var: Kind -> Type.
     Definition getTagIdx (x: (Addr @ var)%kami): (TagIdx @ var)%kami :=
-      UniBit (TruncLsb (TagBits + IdxBits) LgNumDatas) x.
+      UniBit (TruncLsb LgNumDatas (IdxBits + TagBits)) x.
     
     Definition getTag (x: (Addr @ var)%kami): (Tag @ var)%kami :=
-      UniBit (TruncLsb TagBits IdxBits) (getTagIdx x).
+      UniBit (TruncLsb IdxBits TagBits) (getTagIdx x).
 
     Definition getIdx (x: (Addr @ var)%kami): (Idx @ var)%kami :=
-      UniBit (Trunc TagBits IdxBits) (getTagIdx x).
+      UniBit (Trunc IdxBits TagBits) (getTagIdx x).
 
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
-      UniBit (Trunc (TagBits + IdxBits) LgNumDatas) x.
+      UniBit (Trunc LgNumDatas (IdxBits + TagBits)) x.
     
     Definition makeTagIdx (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
       BinBit (Concat TagBits IdxBits) tag idx.
 
     Definition getIdxFromTagIdx (x: (TagIdx @var)%kami): (Idx @ var)%kami :=
-      UniBit (Trunc TagBits IdxBits) x.
+      UniBit (Trunc IdxBits TagBits) x.
       
     Definition getTagFromTagIdx (x: (TagIdx @var)%kami): (Tag @ var)%kami :=
-      UniBit (TruncLsb TagBits IdxBits) x.
-      
+      UniBit (TruncLsb IdxBits TagBits) x.
 
   End UtilFunctions.
 
