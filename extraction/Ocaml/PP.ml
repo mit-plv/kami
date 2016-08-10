@@ -344,9 +344,9 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n2 + n3)); ps ppColon;
      ps (string_of_int (n3 + 1)); ps ppBracketR
-  | BUniBit (_, _, Trunc (_, n2), se) ->
+  | BUniBit (_, _, Trunc (n1, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
-     ps ppBracketL; ps (string_of_int (n2 - 1)); ps ppColon; ps "0"; ps ppBracketR
+     ps ppBracketL; ps (string_of_int (n1 - 1)); ps ppColon; ps "0"; ps ppBracketR
   | BUniBit (fn, tn, ZeroExtendTrunc _, se) ->
      (if (fn >= tn) then ps ppTruncate else ps ppZeroExtend);
      ps ppRBracketL; ppBExpr se; ps ppRBracketR
@@ -356,7 +356,7 @@ let rec ppBExpr (e: bExpr) =
   | BUniBit (_, _, TruncLsb (n1, n2), se) -> 
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
-     ps (string_of_int n2); ps ppBracketR
+     ps (string_of_int n1); ps ppBracketR
   | BBinBit (_, _, _, Add _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppAdd; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR

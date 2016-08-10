@@ -27,15 +27,23 @@ Section RV32I.
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
       (UniBit (Trunc 7 _) inst)%kami_expr.
 
+    Definition getRs1E {ty}
+               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+      (UniBit (ConstExtract 15 5 _) inst)%kami_expr.
+    
     Definition getRs1ValueE {ty}
                (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (#s @[UniBit (ConstExtract 15 5 _) inst])%kami_expr.
+      (#s @[getRs1E inst])%kami_expr.
+
+    Definition getRs2E {ty}
+               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+      (UniBit (ConstExtract 20 5 _) inst)%kami_expr.
 
     Definition getRs2ValueE {ty}
                (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
                (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
-      (#s @[UniBit (ConstExtract 20 5 _) inst])%kami_expr.
+      (#s @[getRs2E inst])%kami_expr.
 
     Definition getRdE {ty}
                (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
@@ -353,19 +361,11 @@ Section RV32IStruct.
     let ofs11_1 := spl2 11 9 ofs in
     cmb (cmb (spl1 8 1 ofs20_12) (spl2 10 1 ofs11_1))
         (cmb (spl1 10 1 ofs11_1) (spl2 8 1 ofs20_12)).
-  Definition offsetUJToRawTest:
-    (offsetUJToRaw (WO~1~1~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0~0~0) =
-     WO~1~1~0~0~0~0~0~0~0~0~0~1~1~0~0~0~0~0~0~0) := eq_refl.
 
   Definition offsetSBToRaw12 (ofs: word 12) := spl1 11 1 ofs.
   Definition offsetSBToRaw11 (ofs: word 12) := spl2 1 1 (spl1 10 2 ofs).
   Definition offsetSBToRaw10_5 (ofs: word 12) := spl2 6 2 (spl1 4 8 ofs).
   Definition offsetSBToRaw4_1 (ofs: word 12) := spl2 4 8 ofs.
-  Definition offsetSBToRawTest:
-    let ofs := WO~1~1~1~0~0~0~0~0~1~0~0~0 in
-    cmb (cmb (offsetSBToRaw12 ofs) (offsetSBToRaw11 ofs))
-        (cmb (offsetSBToRaw10_5 ofs) (offsetSBToRaw4_1 ofs))
-    = ofs := eq_refl.
 
   Definition offsetSToRaw11_5 (ofs: word 12) := spl1 5 7 ofs.
   Definition offsetSToRaw4_0 (ofs: word 12) := spl2 5 7 ofs.
@@ -420,32 +420,106 @@ End RV32IStruct.
 
 Section UnitTests.
 
-  Require Import Lts.Semantics.
-
-  (* Eval compute in (evalExpr (UniBit (Trunc 2 7) (Const _ (ConstBit WO~0~0~1~1~1~1~1~1~1)))). *)
-  (* Eval compute in (wordToNat WO~0~0~1~1). *)
-
-  (* Definition getRs1ValueE {ty} *)
-  (* Definition getRs2ValueE {ty} *)
-  (* Definition getRdE {ty} *)
-  (* Definition getFunct7E {ty} *)
-  (* Definition getFunct3E {ty} *)
-  (* Definition getOffsetIE {ty} *)
-  (* Definition getOffsetSE {ty} *)
-  (* Definition getOffsetSBE {ty} *)
-  (* Definition getOffsetUJE {ty} *)
-
-  Definition JAL_getRdE_correct:
-    evalExpr (getRdE (Const _ (ConstBit (rv32iToRaw (JAL x3 (natToWord _ 5)))))) =
+  Definition RtypeToRaw_getOpcodeE_correct:
+    evalExpr (getOpcodeE
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+    rv32iOpOP := eq_refl.
+  Definition RtypeToRaw_getRs1E_correct:
+    evalExpr (getRs1E
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+    gprToRaw x1 := eq_refl.
+  Definition RtypeToRaw_getRs2E_correct:
+    evalExpr (getRs2E
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+    gprToRaw x2 := eq_refl.
+  Definition RtypeToRaw_getRdE_correct:
+    evalExpr (getRdE
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
     gprToRaw x3 := eq_refl.
+  Definition RtypeToRaw_getFunct7E_correct:
+    evalExpr (getFunct7E
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+    rv32iF7SRAI := eq_refl.
+  Definition RtypeToRaw_getFunct3E_correct:
+    evalExpr (getFunct3E
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+    rv32iF3SRAI := eq_refl.
 
-  Definition JAL_getOffsetUJE_correct:
-    evalExpr (getOffsetUJE (Const _ (ConstBit (rv32iToRaw (JAL x3 (natToWord _ 5)))))) =
+  Definition ItypeToRaw_getOpcodeE_correct:
+    evalExpr (getOpcodeE
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+    rv32iOpOPIMM := eq_refl.
+  Definition ItypeToRaw_getRs1E_correct:
+    evalExpr (getRs1E
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+    gprToRaw x1 := eq_refl.
+  Definition ItypeToRaw_getRdE_correct:
+    evalExpr (getRdE
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+    gprToRaw x2 := eq_refl.
+  Definition ItypeToRaw_getFunct3E_correct:
+    evalExpr (getFunct3E
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+    rv32iF3SRAI := eq_refl.
+  Definition ItypeToRaw_getOffsetIE_correct:
+    evalExpr (getOffsetIE
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
     natToWord _ 5 := eq_refl.
 
-  Definition LI_getRdE_correct:
-    evalExpr (getRdE (Const _ (ConstBit (rv32iToRaw (LI x3 (natToWord _ 5)))))) =
-    gprToRaw x3 := eq_refl.
+  Definition StypeToRaw_getOpcodeE_correct:
+    evalExpr (getOpcodeE
+                (Const _ (ConstBit (StypeToRaw rv32iOpSTORE x1 x2 rv32iF3SW (natToWord _ 5))))) =
+    rv32iOpSTORE := eq_refl.
+  Definition StypeToRaw_getRs1E_correct:
+    evalExpr (getRs1E
+                (Const _ (ConstBit (StypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SW (natToWord _ 5))))) =
+    gprToRaw x1 := eq_refl.
+  Definition StypeToRaw_getRs2E_correct:
+    evalExpr (getRs2E
+                (Const _ (ConstBit (StypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SW (natToWord _ 5))))) =
+    gprToRaw x2 := eq_refl.
+  Definition StypeToRaw_getFunct3E_correct:
+    evalExpr (getFunct3E
+                (Const _ (ConstBit (StypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SW (natToWord _ 5))))) =
+    rv32iF3SW := eq_refl.
+  Definition StypeToRaw_getOffsetSE_correct:
+    evalExpr (getOffsetSE
+                (Const _ (ConstBit (StypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SW (natToWord _ 5))))) =
+    natToWord _ 5 := eq_refl.
+
+  Definition SBtypeToRaw_getOpcodeE_correct:
+    evalExpr (getOpcodeE
+                (Const _ (ConstBit (SBtypeToRaw rv32iOpBRANCH x1 x2 rv32iF3BGE (natToWord _ 5))))) =
+    rv32iOpBRANCH := eq_refl.
+  Definition SBtypeToRaw_getRs1E_correct:
+    evalExpr (getRs1E
+                (Const _ (ConstBit (SBtypeToRaw rv32iOpOPIMM x1 x2 rv32iF3BGE (natToWord _ 5))))) =
+    gprToRaw x1 := eq_refl.
+  Definition SBtypeToRaw_getRs2E_correct:
+    evalExpr (getRs2E
+                (Const _ (ConstBit (SBtypeToRaw rv32iOpOPIMM x1 x2 rv32iF3BGE (natToWord _ 5))))) =
+    gprToRaw x2 := eq_refl.
+  Definition SBtypeToRaw_getFunct3E_correct:
+    evalExpr (getFunct3E
+                (Const _ (ConstBit (SBtypeToRaw rv32iOpOPIMM x1 x2 rv32iF3BGE (natToWord _ 5))))) =
+    rv32iF3BGE := eq_refl.
+  Definition SBtypeToRaw_getOffsetSE_correct:
+    evalExpr (getOffsetSBE
+                (Const _ (ConstBit (SBtypeToRaw rv32iOpOPIMM x1 x2 rv32iF3BGE (natToWord _ 5))))) =
+    natToWord _ 5 := eq_refl.
+
+  Definition UJtypeToRaw_getOpcodeE_correct:
+    evalExpr (getOpcodeE
+                (Const _ (ConstBit (UJtypeToRaw rv32iOpJAL x1 (natToWord _ 5))))) =
+    rv32iOpJAL := eq_refl.
+  Definition UJtypeToRaw_getRdE_correct:
+    evalExpr (getRdE
+                (Const _ (ConstBit (UJtypeToRaw rv32iOpJAL x1 (natToWord _ 5))))) =
+    gprToRaw x1 := eq_refl.
+  Definition UJtypeToRaw_getOffsetUJE_correct:
+    evalExpr (getOffsetUJE
+                (Const _ (ConstBit (UJtypeToRaw rv32iOpJAL x1 (natToWord _ 5))))) =
+    natToWord _ 5 := eq_refl.
   
 End UnitTests.
 
