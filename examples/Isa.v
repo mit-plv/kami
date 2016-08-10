@@ -413,6 +413,7 @@ Section RV32IStruct.
     | BGTZ rs1 ofs => SBtypeToRaw rv32iOpBRANCH x0 rs1 rv32iF3BLT ofs
     | J ofs => UJtypeToRaw rv32iOpJAL x0 ofs
     | NOP => ItypeToRaw rv32iOpOPIMM x0 x0 rv32iF3ADDI (wzero _)
+    (* custom instructions *)
     | TOHOST rs1 => RtypeToRaw rv32iOpTOHOST rs1 x0 x0 rv32iF7ADD rv32iF3ADD
     end.
 
@@ -588,22 +589,22 @@ Section Examples.
               (VecNext
                  (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
                  (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
-    - exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
-    - exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 12)))).
-    - exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
-    - exact (ConstBit (rv32iToRaw (MV x21 x6))).
-    - exact (ConstBit (rv32iToRaw (MV x9 x8))).
-    - exact (ConstBit (rv32iToRaw (MV x9 x7))).
-    - exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
-    - exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
-    - exact (ConstBit (rv32iToRaw (MV x8 x7))).
-    - exact (ConstBit (rv32iToRaw (MV x5 x8))).
-    - exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 6)))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x5))).
-    - exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
-    - exact (ConstBit (rv32iToRaw (J (natToWord _ 11)))).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
+    - (* 00 *) exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
+    - (* 01 *) exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 11)))).
+    - (* 02 *) exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
+    - (* 03 *) exact (ConstBit (rv32iToRaw (MV x21 x6))).
+    - (* 04 *) exact (ConstBit (rv32iToRaw (MV x9 x8))).
+    - (* 05 *) exact (ConstBit (rv32iToRaw (MV x9 x7))).
+    - (* 06 *) exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
+    - (* 07 *) exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
+    - (* 08 *) exact (ConstBit (rv32iToRaw (MV x8 x7))).
+    - (* 09 *) exact (ConstBit (rv32iToRaw (MV x5 x8))).
+    - (* 10 *) exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 12)))). (* 10 + 12 == 6 *)
+    - (* 11 *) exact (ConstBit (rv32iToRaw (TOHOST x5))).
+    - (* 12 *) exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
+    - (* 13 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 14)))). (* 13 + 14 == 11 *)
+    - (* 14 *) exact (ConstBit (rv32iToRaw NOP)).
+    - (* 15 *) exact (ConstBit (rv32iToRaw NOP)).
   Defined.
 
 End Examples.

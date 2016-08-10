@@ -20,7 +20,7 @@ Require Import Ex.MemCache Ex.ProcMemCorrect.
 
 Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
                                   rv32iIAddrSize) :=
-  pgmFibonacci 5.
+  pgmFibonacci 10.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.

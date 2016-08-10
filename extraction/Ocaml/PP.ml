@@ -340,10 +340,10 @@ let rec ppBExpr (e: bExpr) =
                                ps ppOr; print_space ();
                                ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BUniBit (_, _, Inv _, se) -> ps ppInv; ps ppRBracketL; ppBExpr se; ps ppRBracketR
-  | BUniBit (_, _, ConstExtract (_, n2, n3), se) ->
+  | BUniBit (_, _, ConstExtract (n1, n2, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
-     ps ppBracketL; ps (string_of_int (n2 + n3)); ps ppColon;
-     ps (string_of_int (n3 + 1)); ps ppBracketR
+     ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
+     ps (string_of_int n1); ps ppBracketR
   | BUniBit (_, _, Trunc (n1, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 - 1)); ps ppColon; ps "0"; ps ppBracketR
