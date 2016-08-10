@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.RefinementFacts.
-Require Import Lts.Wf Lts.ParametricEquiv Lts.Tactics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
+Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.

@@ -1,9 +1,9 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
-Require Import Lts.Syntax Lts.Semantics Lts.RefinementFacts Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Inline Lts.InlineFacts Lts.Decomposition.
-Require Import Lts.Tactics Lts.Notations.
+Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Renaming Kami.Specialize Kami.Inline Kami.InlineFacts Kami.Decomposition.
+Require Import Kami.Tactics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC Ex.NativeFifo Ex.MemAtomic Ex.ProcDec Ex.ProcDecInl.
 Require Import Eqdep ProofIrrelevance.
 

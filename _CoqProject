@@ -1,4 +1,4 @@
 -R lib Lib
--R src Lts
+-R src Kami
 -R examples Ex
 -R extraction Ext

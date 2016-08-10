@@ -1,7 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
-Require Import Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
+Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
 
 Set Implicit Arguments.
 

@@ -13,7 +13,7 @@ Unset Extraction AutoInline.
  * 2) Change the definition "targetM" to your module.
  * 3) Compile.
  *)
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Synthesize Ex.Isa.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
 
 (** procDec + memCache test *)
 Require Import Ex.MemCache Ex.ProcMemCorrect.

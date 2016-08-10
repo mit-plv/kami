@@ -1,8 +1,8 @@
 Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
-        Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
-        ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
-        FunctionalExtensionality Program.Equality Lts.Tactics Arith Ex.MapVReify Lts.SymEval
-        Lts.SymEvalTac Lib.StringAsList Lib.StringBound.
+        Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
+        ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat
+        FunctionalExtensionality Program.Equality Kami.Tactics Arith Ex.MapVReify Kami.SymEval
+        Kami.SymEvalTac Lib.StringAsList Lib.StringBound.
 
 Set Implicit Arguments.
 
@@ -1383,7 +1383,7 @@ Section MemCacheInl.
       prelimSimplRegs LgNumChildren.
       SKIP_PROOF_ON *) admit.
     - specialize (IHHMultistepBeh eq_refl).
-      apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
+      apply Kami.SemFacts.stepZero in HStep; [| apply eq_refl].
       dest; subst.
       destruct l.
       simpl in H, H0.

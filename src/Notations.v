@@ -1,6 +1,6 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.StringBound Lib.Word Lib.ilist Lib.Indexer.
-Require Import Lts.Syntax Lts.ParametricSyntax.
+Require Import Kami.Syntax Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 

@@ -2,10 +2,10 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
 
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Wf.
-Require Import Lts.Inline Lts.InlineFacts.
-Require Import Lts.RefinementFacts Lts.Decomposition.
-Require Import Lts.Tactics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Wf.
+Require Import Kami.Inline Kami.InlineFacts.
+Require Import Kami.RefinementFacts Kami.Decomposition.
+Require Import Kami.Tactics.
 
 Require Import FunctionalExtensionality.
 

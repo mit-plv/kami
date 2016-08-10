@@ -1,5 +1,5 @@
-Require Import Lts.Syntax Lts.Semantics Lts.RefinementFacts Lts.Renaming Lts.Wf.
-Require Import Lts.Inline Lts.InlineFacts Lts.Tactics.
+Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Ex.SC Ex.ProcDec.
 
 Set Implicit Arguments.

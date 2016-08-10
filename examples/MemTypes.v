@@ -1,4 +1,4 @@
-Require Import Lts.Syntax Lts.Notations.
+Require Import Kami.Syntax Kami.Notations.
 Require Import Ex.Msi.
 
 Definition MemOp := Bool.

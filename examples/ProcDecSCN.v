@@ -1,10 +1,10 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.SemFacts.
-Require Import Lts.RefinementFacts Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
-Require Import Lts.ModuleBound Lts.ModuleBoundEx.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate.
+Require Import Kami.ModuleBound Kami.ModuleBoundEx.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 

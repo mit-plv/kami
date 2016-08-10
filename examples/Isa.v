@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.StructNotation.
-Require Import Lts.Syntax Lts.Semantics Lts.Notations.
+Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
 (* Subset of RV32I instructions (17/47):

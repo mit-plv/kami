@@ -1,6 +1,6 @@
 Require Import String List.
 Require Import Lib.ilist Lib.Struct Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Synthesize Lts.ParametricSyntax.
+Require Import Kami.Syntax Kami.Synthesize Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 

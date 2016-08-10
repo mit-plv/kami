@@ -1,12 +1,12 @@
 (*Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith ParametricSyntax String
-        Lib.Indexer Lts.Syntax Lts.Semantics Program.Equality Lib.CommonTactics
-        Lts.Tactics Lts.SymEvalTac Lts.SymEval.
+        Lib.Indexer Kami.Syntax Kami.Semantics Program.Equality Lib.CommonTactics
+        Kami.Tactics Kami.SymEvalTac Kami.SymEval.
 *)
 Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
-        Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
-        ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
-        FunctionalExtensionality Program.Equality Lts.Tactics Arith Lts.SymEval
-        Lts.SymEvalTac Lib.StringAsList.
+        Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
+        ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat
+        FunctionalExtensionality Program.Equality Kami.Tactics Arith Kami.SymEval
+        Kami.SymEvalTac Lib.StringAsList.
 
 
 

@@ -1,8 +1,8 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics.
-Require Import Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
-Require Import Ex.Msi Ex.MemTypes Ex.RegFile Lts.ParametricSyntax.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics.
+Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
+Require Import Ex.Msi Ex.MemTypes Ex.RegFile Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 

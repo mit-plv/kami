@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.RefinementFacts.
-Require Import Lts.Wf Lts.Tactics Lts.Specialize.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.RefinementFacts.
+Require Import Kami.Wf Kami.Tactics Kami.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
 

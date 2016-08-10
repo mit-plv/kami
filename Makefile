@@ -16,7 +16,7 @@ EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
 LIBARGS := -R lib Lib
 
-ARGS := -R src Lts
+ARGS := -R src Kami
 
 EXARGS := -R examples Ex
 

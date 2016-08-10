@@ -1,7 +1,7 @@
 Require Import FunctionalExtensionality List String.
 Require Import Lib.Word Lib.Struct Lib.FMap.
-Require Import Lts.Syntax Lts.Semantics Lts.RefinementFacts Lts.SymEval Lts.SymEvalTac
-        Lts.Notations.
+Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.SymEval Kami.SymEvalTac
+        Kami.Notations.
 
 Set Implicit Arguments.
 

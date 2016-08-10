@@ -1,4 +1,4 @@
-Require Import Lts.
+Require Import KamiBasis.
 
 Set Implicit Arguments.
 
