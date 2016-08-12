@@ -6,8 +6,12 @@
 class HostIndication : public HostIndicationWrapper
 {
 public:
-	virtual void msg_to_host(uint32_t v, uint32_t pid) {
-		printf("Got the message: (%d, %d)\n", v, pid);
+	virtual void msg_to_host1(uint32_t v) {
+		printf("Got the message: (%d, 1)\n", v);
+	}
+
+	virtual void msg_to_host2(uint32_t v) {
+		printf("Got the message: (%d, 2)\n", v);
 	}
 
 	HostIndication(unsigned int id) : HostIndicationWrapper(id) {}
