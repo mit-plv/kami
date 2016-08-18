@@ -13,11 +13,11 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
@@ -31,100 +31,134 @@ Section ProcDec.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
+     Write "fetch" <- $$true;
      Retv)%kami_action.
-
-  Definition reqLd {ty} : ActionT ty Void :=
-    (Read stall <- "stall";
-     Assert !#stall;
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opLd;
-     Call memReq(STRUCT { "addr" ::= #inst@."addr";
-                          "op" ::= $$false;
-                          "data" ::= $$Default });
-     Write "stall" <- $$true;
-     Retv)%kami_action.
-
-  Definition reqSt {ty} : ActionT ty Void :=
-    (Read stall <- "stall";
-     Assert !#stall;
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opSt;
-     Call memReq(STRUCT {  "addr" ::= #inst@."addr";
-                           "op" ::= $$true;
-                           "data" ::= #inst@."value" });
-     Write "stall" <- $$true;
-     Retv)%kami_action.
-
-  Definition repLd {ty} : ActionT ty Void :=
-    (Call val <- memRep();
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opLd;
-     Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
-     Write "stall" <- $$false;
-     nextPc ppc st inst)%kami_action.
-
-  Definition repSt {ty} : ActionT ty Void :=
-    (Call val <- memRep();
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opSt;
-     Write "stall" <- $$false;
-     nextPc ppc st inst)%kami_action.
-
-  Definition execToHost {ty} : ActionT ty Void :=
-    (Read stall <- "stall";
-     Assert !#stall;
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert #inst@."opcode" == $$opTh;
-     Call toHost(#inst@."value");
-     Retv)%kami_action.
-
-  Definition execNm {ty} : ActionT ty Void :=
-    (Read stall <- "stall";
-     Assert !#stall;
-     Read ppc <- "pc";
-     Read st <- "rf";
-     LET inst <- dec _ st ppc;
-     Assert !(#inst@."opcode" == $$opLd
-           || #inst@."opcode" == $$opSt
-           || #inst@."opcode" == $$opTh);
-     Write "rf" <- execState _ st ppc inst;
-     nextPc ppc st inst)%kami_action.
 
   Definition procDec := MODULE {
-    Register "pc" : Bit iaddrSize <- Default
+    Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-    with Register "stall" : Bool <- false
+    with Register "fetch" : Bool <- true
+    with Register "fetched" : Data lgDataBytes <- Default                                   
+    with Register "fetchStall" : Bool <- false
+    with Register "memStall" : Bool <- false
+                                 
+    with Rule "reqInstFetch" :=
+      Read fetch <- "fetch";
+      Assert #fetch;
+      Read fetchStall <- "fetchStall";
+      Assert !#fetchStall;
+      Read ppc <- "pc";
+      Call memReq(STRUCT { "addr" ::= #ppc;
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Write "fetchStall" <- $$true;
+      Retv
 
-    with Rule "reqLd" := reqLd
-    with Rule "reqSt" := reqSt
-    with Rule "repLd" := repLd
-    with Rule "repSt" := repSt
-    with Rule "execToHost" := execToHost
-    with Rule "execNm" := execNm
+    with Rule "repInstFetch" :=
+      Read fetch <- "fetch";
+      Assert #fetch;
+      Call val <- memRep();
+      LET rawInst <- #val@."data";
+      Write "fetched" <- #rawInst;
+      Write "fetch" <- $$false;
+      Write "fetchStall" <- $$false;
+      Retv
+      
+    with Rule "reqLd" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read memStall <- "memStall";
+      Assert !#memStall;
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opLd;
+      Call memReq(STRUCT { "addr" ::= #inst@."addr";
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Write "memStall" <- $$true;
+      Retv
+        
+    with Rule "reqSt" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read memStall <- "memStall";
+      Assert !#memStall;
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opSt;
+      Call memReq(STRUCT {  "addr" ::= #inst@."addr";
+                            "op" ::= $$true;
+                            "data" ::= #inst@."value" });
+      Write "memStall" <- $$true;
+      Retv
+                      
+    with Rule "repLd" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Call val <- memRep();
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opLd;
+      Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
+      Write "memStall" <- $$false;
+      nextPc ppc st inst
+                      
+    with Rule "repSt" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Call val <- memRep();
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opSt;
+      Write "memStall" <- $$false;
+      nextPc ppc st inst
+                      
+    with Rule "execToHost" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read memStall <- "memStall";
+      Assert !#memStall;
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opTh;
+      Call toHost(#inst@."value");
+      nextPc ppc st inst
+
+    with Rule "execNm" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read memStall <- "memStall";
+      Assert !#memStall;
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert !(#inst@."opcode" == $$opLd
+            || #inst@."opcode" == $$opSt
+            || #inst@."opcode" == $$opTh);
+      Write "rf" <- execState _ st ppc inst;
+      nextPc ppc st inst                          
   }.
 
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc
-     reqLd reqSt repLd repSt execToHost execNm : MethDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
@@ -141,11 +175,11 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 

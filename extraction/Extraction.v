@@ -19,20 +19,20 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
 Require Import Ex.MemCache Ex.ProcMemCorrect.
 
 Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
-                                  rv32iIAddrSize) :=
+                                  rv32iAddrSize) :=
   pgmFibonacci 10.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
-Definition idxBits := 2.
-Definition tagBits := 1.
-Definition lgNumDatas := 1.
+Definition idxBits := 16.
+Definition tagBits := 14.
+Definition lgNumDatas := 2.
 Definition lgNumChildren := 1. (* 2 cores *)
 Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
 Definition pdecN := pdecN idxBits tagBits lgNumDatas
-                          (rv32iDecode insts) rv32iExecState rv32iExecNextPc
+                          rv32iDecode rv32iExecState rv32iExecNextPc
                           rv32iOpLOAD rv32iOpSTORE rv32iOpTOHOST lgNumChildren.
 Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren.
 

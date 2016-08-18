@@ -200,9 +200,9 @@ Section ToNative.
     kexistv ^"enqP"%string enqPv o (Bit rsz).
     kexistv ^"deqP"%string deqPv o (Bit rsz).
     refine (or3 _ _ _).
-    - exact (v = true /\ v0 = false /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = true /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = false /\ (if weq v1 v2 then true else false) = false).
+    - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
   Hint Unfold fifo_inv_1: InvDefs.
 
@@ -758,8 +758,8 @@ Section ToSimpleN.
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
-    kexistnv ^"elt" v s (listEltK dType type).
-    exact (sv = Some (existT _ _ v)).
+    kexistnv ^"elt" eltv s (listEltK dType type).
+    exact (sv = Some (existT _ _ eltv)).
   Defined.
 
   Lemma nfifo_refines_nsfifo:

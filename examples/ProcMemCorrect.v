@@ -10,16 +10,16 @@ Set Implicit Arguments.
 
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
-  Variables OpIdx RfIdx IAddrSize: nat. (* processor *)
+  Variables OpIdx RfIdx: nat. (* processor *)
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
   Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
   
-  Variable dec: DecT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
-  Variable execState: ExecStateT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
-  Variable execNextPc: ExecNextPcT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
+  Variable dec: DecT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execState: ExecStateT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execNextPc: ExecNextPcT OpIdx AddrSize LgDataBytes RfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit OpIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).

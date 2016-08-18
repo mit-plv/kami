@@ -491,9 +491,9 @@ Ltac kregmap_red :=
      try match goal with
          | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
          | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] => rewrite H1 in H2
-         | [ |- context[decKind ?k ?k] ] =>
+         | [ |- context[decKind _ _] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
-         | [H: context[decKind ?k ?k] |- _] =>
+         | [H: context[decKind _ _] |- _] =>
            rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
          end;
      dest; try subst;
@@ -650,13 +650,16 @@ Ltac kgetv k v m t f :=
   destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];
   destruct (decKind kind t); [subst|exact f].
 
-(* TODO: "v" is not working *)
-Ltac kexistv k v m t :=
+Ltac kexistv k vn m t :=
+  let v := fresh "v" in
   refine (exists v: fullType type (SyntaxKind t),
-             M.find k m = Some (existT _ _ v) /\ _).
-Ltac kexistnv k v m t :=
+             M.find k m = Some (existT _ _ v) /\ _);
+  rename v into vn.
+Ltac kexistnv k vn m t :=
+  let v := fresh "v" in
   refine (exists v: fullType type t,
-             M.find k m = Some (existT _ _ v) /\ _).
+             M.find k m = Some (existT _ _ v) /\ _);
+  rename v into vn.
 
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
@@ -717,13 +720,11 @@ Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
 Tactic Notation "or3_fst" := left.
 Tactic Notation "or3_snd" := right; left.
 Tactic Notation "or3_thd" := right; right.
-Ltac dest_or3 :=
-  match goal with
-  | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
-  end.
+
 Ltac kinv_or3 :=
   repeat
-    match goal with
-    | [H: or3 _ _ _ |- _] => dest_or3; kinv_contra
-    end.
+    (match goal with
+     | [H: _ \/ _ |- _] => destruct H
+     | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
+     end; dest).
 

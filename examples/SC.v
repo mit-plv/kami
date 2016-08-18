@@ -14,7 +14,7 @@ Set Implicit Arguments.
 
 (* Abstract ISA *)
 Section DecExec.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize lgDataBytes rfIdx: nat.
 
   Definition StateK := SyntaxKind (Vector (Data lgDataBytes) rfIdx).
   Definition StateT (ty : Kind -> Type) := fullType ty StateK.
@@ -32,16 +32,16 @@ Section DecExec.
   Definition DecInstE (ty : Kind -> Type) := Expr ty (SyntaxKind DecInstK).
 
   Definition DecT := forall ty, StateT ty -> (* rf *)
-                                fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
+                                fullType ty (SyntaxKind (Data lgDataBytes)) -> (* raw inst *)
                                 DecInstE ty.
   Definition ExecStateT := forall ty, StateT ty -> (* rf *)
-                                      fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
-                                      DecInstT ty ->
-                                      StateE ty.
+                                      fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                      DecInstT ty -> (* decoded inst *)
+                                      StateE ty. (* next state *)
   Definition ExecNextPcT := forall ty, StateT ty -> (* rf *)
-                                       fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
-                                       DecInstT ty ->
-                                       Expr ty (SyntaxKind (Bit iaddrSize)).
+                                       fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       DecInstT ty -> (* decoded inst *)
+                                       Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
 
 End DecExec.
 
@@ -50,7 +50,7 @@ Hint Unfold StateK StateT StateE DecInstK DecInstT DecInstE : MethDefs.
 (* The module definition for Minst with n ports *)
 Section MemInst.
   Variable n : nat.
-  Variable addrSize iaddrSize : nat.
+  Variable addrSize : nat.
   Variable lgDataBytes : nat.
 
   Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
@@ -81,12 +81,12 @@ Hint Unfold memInstM memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
   (* External abstract ISA: dec and exec *)
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
@@ -95,16 +95,33 @@ Section ProcInst.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
+     Write "fetch" <- $$true;
      Retv)%kami_action.
 
   Definition procInst := MODULE {
-    Register "pc" : Bit iaddrSize <- Default
+    Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-
+    with Register "fetch" : Bool <- true
+    with Register "fetched" : Data lgDataBytes <- Default
+                                 
+    with Rule "instFetch" :=
+      Read fetch <- "fetch";
+      Assert #fetch;
+      Read ppc <- "pc";
+      Call rawInst <- execCm(STRUCT { "addr" ::= #ppc;
+                                      "op" ::= $$false;
+                                      "data" ::= $$Default });
+      Write "fetched" <- #rawInst@."data";
+      Write "fetch" <- $$false;
+      Retv
+      
     with Rule "execLd" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
       Read ppc <- "pc";
       Read st <- "rf";
-      LET inst <- dec _ st ppc;
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT { "addr" ::= #inst@."addr";
                                     "op" ::= $$false;
@@ -113,9 +130,12 @@ Section ProcInst.
       nextPc ppc st inst
 
     with Rule "execSt" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
       Read ppc <- "pc";
       Read st <- "rf";
-      LET inst <- dec _ st ppc;
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opSt;
       Call execCm(STRUCT { "addr" ::= #inst@."addr";
                            "op" ::= $$true;
@@ -123,17 +143,23 @@ Section ProcInst.
       nextPc ppc st inst
 
     with Rule "execToHost" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
       Read ppc <- "pc";
       Read st <- "rf";
-      LET inst <- dec _ st ppc;
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opTh;
       Call toHostCm(#inst@."value");
-      Retv
+      nextPc ppc st inst
 
     with Rule "execNm" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
       Read ppc <- "pc";
       Read st <- "rf";
-      LET inst <- dec _ st ppc;
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
       Assert !(#inst@."opcode" == $$opLd
              || #inst@."opcode" == $$opSt
              || #inst@."opcode" == $$opTh);
@@ -147,11 +173,11 @@ Hint Unfold execCm toHostCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
@@ -168,11 +194,11 @@ End SC.
 Hint Unfold pinst pinsts minst sc : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables opIdx addrSize lgDataBytes rfIdx : nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
   
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 

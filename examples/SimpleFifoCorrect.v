@@ -195,9 +195,9 @@ Section Facts.
     kexistv ^"enqP"%string enqPv o (Bit rsz).
     kexistv ^"deqP"%string deqPv o (Bit rsz).
     refine (or3 _ _ _).
-    - exact (v = true /\ v0 = false /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = true /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = false /\ (if weq v1 v2 then true else false) = false).
+    - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
   Hint Unfold sfifo_inv_1: InvDefs.
 

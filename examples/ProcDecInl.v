@@ -5,11 +5,11 @@ Require Import Ex.SC Ex.ProcDec.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
   Variables opLd opSt opTh: ConstT (Bit opIdx).
 
