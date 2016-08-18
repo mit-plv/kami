@@ -115,7 +115,7 @@ Section ProcDecSC.
       + (* TODO: automation *)
         unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *.
         simpl in *.
-        rewrite H17 in H25.
+        rewrite H18 in H25.
         kinv_contra.
       + kinv_constr;
           kinv_eq;
