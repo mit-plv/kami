@@ -567,6 +567,7 @@ Ltac kinv_simpl :=
   repeat
     (try match goal with
          | [H: ?t = ?t |- _] => clear H
+         | [H: ?t = ?t -> False |- _] => elim H; reflexivity
          | [H: ?t <> ?t |- _] => elim H; reflexivity
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
@@ -599,7 +600,8 @@ Ltac kinv_finish :=
      simpl in *; kinv_simpl; auto).
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
-Ltac kinv_custom tac := kinv_red; try tac; kinv_red; kinv_contra.
+Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
+Ltac kinv_dest_custom tac := kinv_action_dest; kinv_custom tac.
 Ltac kinv_regmap_red := kinv_red; kregmap_red; kregmap_clear.
 Ltac kinv_constr :=
   repeat

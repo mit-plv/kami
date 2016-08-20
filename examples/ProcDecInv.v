@@ -63,67 +63,91 @@ Section Invariants.
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv fetch_request_inv: InvDefs.
 
-  Definition procDec_inv (o: RegsT): Prop.
-  Proof.
-    kexistv "pc"%string pcv o (Bit addrSize).
-    kexistv "rf"%string rfv o (Vector (Data lgDataBytes) rfIdx).
-    kexistv "memStall"%string stallv o Bool.
-    kexistv "fetch"%string fetchv o Bool.
-    kexistv "fetched"%string fetchedv o (Data lgDataBytes).
-    kexistv "fetchStall"%string fstallv o Bool.
-    kexistv "rqFromProc"--"empty"%string iev o Bool.
-    kexistv "rqFromProc"--"full"%string ifv o Bool.
-    kexistv "rqFromProc"--"enqP"%string ienqpv o (Bit fifoSize).
-    kexistv "rqFromProc"--"deqP"%string ideqpv o (Bit fifoSize).
-    kexistv "rqFromProc"--"elt"%string ieltv o (Vector RqFromProc fifoSize).
-    kexistv "rsToProc"--"empty"%string oev o Bool.
-    kexistv "rsToProc"--"full"%string ofv o Bool.
-    kexistv "rsToProc"--"enqP"%string oenqpv o (Bit fifoSize).
-    kexistv "rsToProc"--"deqP"%string odeqpv o (Bit fifoSize).
-    kexistv "rsToProc"--"elt"%string oeltv o (Vector RsToProc fifoSize).
-    refine (_ \/ _).
-    - (* fetch stage *)
-      refine (fetchv = true /\ stallv = false /\ (or3 _ _ _)).
-      + (* reqInstFetch *)
-        exact (fstallv = false /\
-               fifo_empty_inv iev ienqpv ideqpv /\
-               fifo_empty_inv oev oenqpv odeqpv).
-      + (* processLd *)
-        refine (_ /\ _).
-        * exact (fstallv = true /\
-                 fifo_not_empty_inv iev ienqpv ideqpv /\
-                 fifo_empty_inv oev oenqpv odeqpv).
-        * exact (fetch_request_inv pcv rfv iev ieltv ideqpv).
-      + (* repInstFetch *)
-        exact (fstallv = true /\
-               fifo_empty_inv iev ienqpv ideqpv /\
-               fifo_not_empty_inv oev oenqpv odeqpv).
-    - (* execute stage *)
-      refine (fetchv = false /\ fstallv = false /\ (or3 _ _ _)).
-      + (* reqLd/St *)
-        exact (stallv = false /\
-               fifo_empty_inv iev ienqpv ideqpv /\
-               fifo_empty_inv oev oenqpv odeqpv).
-      + (* processLd/St *)
-        refine (_ /\ _).
-        * exact (stallv = true /\
-                 fifo_not_empty_inv iev ienqpv ideqpv /\
-                 fifo_empty_inv oev oenqpv odeqpv).
-        * exact (mem_request_inv fetchedv rfv iev ieltv ideqpv).
-      + (* repLd/St *)
-        exact (stallv = true /\
-               fifo_empty_inv iev ienqpv ideqpv /\
-               fifo_not_empty_inv oev oenqpv odeqpv).
-  Defined.
-  Hint Unfold procDec_inv: InvDefs.
+  Record procDec_inv (o: RegsT) : Prop :=
+    { pcv : fullType type (SyntaxKind (Bit addrSize));
+      Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
+      rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
+      Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
+      stallv : fullType type (SyntaxKind Bool);
+      Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
+      fetchv : fullType type (SyntaxKind Bool);
+      Hfetchv : M.find "fetch"%string o = Some (existT _ _ fetchv);
+      fetchedv : fullType type (SyntaxKind (Data lgDataBytes));
+      Hfetchedv : M.find "fetched"%string o = Some (existT _ _ fetchedv);
+      fstallv : fullType type (SyntaxKind Bool);
+      HfetchStallv : M.find "fetchStall"%string o = Some (existT _ _ fstallv);
+      iev : fullType type (SyntaxKind Bool);
+      Hiev : M.find "rqFromProc"--"empty"%string o = Some (existT _ _ iev);
+      ifv : fullType type (SyntaxKind Bool);
+      Hifv : M.find "rqFromProc"--"full"%string o = Some (existT _ _ ifv);
+      ienqpv : fullType type (SyntaxKind (Bit fifoSize));
+      Hienqpv : M.find "rqFromProc"--"enqP"%string o = Some (existT _ _ ienqpv);
+      ideqpv : fullType type (SyntaxKind (Bit fifoSize));
+      Hideqpv : M.find "rqFromProc"--"deqP"%string o = Some (existT _ _ ideqpv);
+      ieltv : fullType type (SyntaxKind (Vector RqFromProc fifoSize));
+      Hieltv : M.find "rqFromProc"--"elt"%string o = Some (existT _ _ ieltv);
+      oev : fullType type (SyntaxKind Bool);
+      Hoev : M.find "rsToProc"--"empty"%string o = Some (existT _ _ oev);
+      ofv : fullType type (SyntaxKind Bool);
+      Hofv : M.find "rsToProc"--"full"%string o = Some (existT _ _ ofv);
+      oenqpv : fullType type (SyntaxKind (Bit fifoSize));
+      Hoenqpv : M.find "rsToProc"--"enqP"%string o = Some (existT _ _ oenqpv);
+      odeqpv : fullType type (SyntaxKind (Bit fifoSize));
+      Hodeqpv : M.find "rsToProc"--"deqP"%string o = Some (existT _ _ odeqpv);
+      oeltv : fullType type (SyntaxKind (Vector RsToProc fifoSize));
+      Hoeltv : M.find "rsToProc"--"elt"%string o = Some (existT _ _ oeltv);
 
-  Ltac procDec_inv_tac :=
-    kinv_or3;
-    repeat
-      match goal with
-      | [ |- _ /\ _ ] => split
-      | [ |- exists _, _ ] => eexists
-      end.
+      Hinv :
+        (fetchv = true /\ stallv = false /\
+         or3
+           (fstallv = false /\
+            fifo_empty_inv iev ienqpv ideqpv /\
+            fifo_empty_inv oev oenqpv odeqpv)
+           ((fstallv = true /\
+             fifo_not_empty_inv iev ienqpv ideqpv /\
+             fifo_empty_inv oev oenqpv odeqpv) /\
+            (fetch_request_inv pcv rfv iev ieltv ideqpv))
+           (fstallv = true /\
+            fifo_empty_inv iev ienqpv ideqpv /\
+            fifo_not_empty_inv oev oenqpv odeqpv)) \/
+        (fetchv = false /\ fstallv = false /\
+         or3
+           (stallv = false /\
+            fifo_empty_inv iev ienqpv ideqpv /\
+            fifo_empty_inv oev oenqpv odeqpv)
+           ((stallv = true /\
+             fifo_not_empty_inv iev ienqpv ideqpv /\
+             fifo_empty_inv oev oenqpv odeqpv) /\
+            (mem_request_inv fetchedv rfv iev ieltv ideqpv))
+           (stallv = true /\
+            fifo_empty_inv iev ienqpv ideqpv /\
+            fifo_not_empty_inv oev oenqpv odeqpv)) }.
+
+  Ltac procDec_inv_old :=
+    try match goal with
+        | [H: procDec_inv _ |- _] => destruct H
+        end;
+    kinv_red; kinv_or3;
+    (* decide the current state by giving contradictions for all other states *)
+    kinv_red; kinv_contra.
+    
+  Ltac procDec_inv_new :=
+    econstructor; (* let's prove that the invariant holds for the next state *)
+    try (findReify; (reflexivity || eassumption); fail);
+    kregmap_clear. (* for improving performance *)
+
+  Ltac procDec_inv_tac := procDec_inv_old; procDec_inv_new.
+
+  Ltac procDec_inv_next st ph :=
+    match st with
+    | 0 => left (* fetch state *)
+    | 1 => right (* execute state *)
+    end; repeat split; auto;
+    match ph with
+    | 0 => or3_fst (* intact *)
+    | 1 => or3_snd (* requested *)
+    | 2 => or3_thd (* responded *)
+    end; intuition idtac.
 
   Lemma procDec_inv_ok':
     forall init n ll,
@@ -133,51 +157,40 @@ Section Invariants.
   Proof. (* SKIP_PROOF_ON
     induction 2.
 
-    - kinv_magic_light_with procDec_inv_tac.
-      left; repeat split; auto; or3_fst.
-      kinv_magic_light_with procDec_inv_tac.
+    - kinv_dest_custom procDec_inv_tac.
+      procDec_inv_next 0 0.
 
     - kinvert.
       + mred.
       + mred.
-      + kinv_magic_light_with kinv_or3.
-        left; repeat split; auto; or3_snd.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        right; repeat split; auto; or3_fst.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        right; repeat split; auto; or3_snd.
-        kinv_magic_light_with procDec_inv_tac.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 1.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 1 0.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 1 1.
         * kinv_finish.
         * kinv_finish.
-      + kinv_magic_light_with kinv_or3.
-        right; repeat split; auto; or3_snd.
-        kinv_magic_light_with procDec_inv_tac.
+        * reflexivity.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 1 1.
         * kinv_finish.
         * kinv_finish.
-      + kinv_magic_light_with kinv_or3.
-        left; repeat split; auto; or3_fst.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        left; repeat split; auto; or3_fst.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        left; repeat split; auto; or3_fst.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        left; repeat split; auto; or3_fst.
-        kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        * left; repeat split; auto; or3_thd.
-          kinv_magic_light_with procDec_inv_tac.
-        * right; repeat split; auto; or3_thd.
-          kinv_magic_light_with procDec_inv_tac.
-      + kinv_magic_light_with kinv_or3.
-        * left; repeat split; auto; or3_thd.
-          kinv_magic_light_with procDec_inv_tac.
-        * right; repeat split; auto; or3_thd.
-          kinv_magic_light_with procDec_inv_tac.
+        * reflexivity.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 0.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 0.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 0.
+      + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 0.
+      + kinv_dest_custom procDec_inv_tac.
+        * procDec_inv_next 0 2.
+        * procDec_inv_next 1 2.
+      + kinv_dest_custom procDec_inv_tac.
+        * procDec_inv_next 0 2.
+        * procDec_inv_next 1 2.
 
           END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -194,6 +207,13 @@ Section Invariants.
 End Invariants.
 
 Hint Unfold RqFromProc RsToProc: MethDefs.
-Hint Unfold procDec_inv fifo_empty_inv fifo_not_empty_inv
-     mem_request_inv fetch_request_inv: InvDefs.
+Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv fetch_request_inv: InvDefs.
 
+Ltac procDec_inv_old :=
+  try match goal with
+      | [H: procDec_inv _ _ _ _ _ |- _] => destruct H
+      end;
+  kinv_red; kinv_or3;
+  (* decide the current state by giving contradictions for all other states *)
+  kinv_red; kinv_contra.
+    

@@ -100,22 +100,22 @@ Section ProcDecSC.
     kinv_add_end.
 
     kinvert.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
-    - kinv_magic_with kinv_or3.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
     - kinv_action_dest;
-        kinv_custom kinv_or3;
+        kinv_custom procDec_inv_old;
         kinv_regmap_red.
       + (* TODO: automation *)
         unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *.
         simpl in *.
-        rewrite H18 in H25.
+        rewrite H2 in H8.
         kinv_contra.
       + kinv_constr;
           kinv_eq;

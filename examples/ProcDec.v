@@ -40,7 +40,7 @@ Section ProcDec.
     with Register "fetch" : Bool <- true
     with Register "fetched" : Data lgDataBytes <- Default                                   
     with Register "fetchStall" : Bool <- false
-    with Register "memStall" : Bool <- false
+    with Register "stall" : Bool <- false
                                  
     with Rule "reqInstFetch" :=
       Read fetch <- "fetch";
@@ -67,8 +67,8 @@ Section ProcDec.
     with Rule "reqLd" :=
       Read fetch <- "fetch";
       Assert !#fetch;
-      Read memStall <- "memStall";
-      Assert !#memStall;
+      Read stall <- "stall";
+      Assert !#stall;
       Read st <- "rf";
       Read rawInst <- "fetched";
       LET inst <- dec _ st rawInst;
@@ -76,14 +76,14 @@ Section ProcDec.
       Call memReq(STRUCT { "addr" ::= #inst@."addr";
                            "op" ::= $$false;
                            "data" ::= $$Default });
-      Write "memStall" <- $$true;
+      Write "stall" <- $$true;
       Retv
         
     with Rule "reqSt" :=
       Read fetch <- "fetch";
       Assert !#fetch;
-      Read memStall <- "memStall";
-      Assert !#memStall;
+      Read stall <- "stall";
+      Assert !#stall;
       Read st <- "rf";
       Read rawInst <- "fetched";
       LET inst <- dec _ st rawInst;
@@ -91,7 +91,7 @@ Section ProcDec.
       Call memReq(STRUCT {  "addr" ::= #inst@."addr";
                             "op" ::= $$true;
                             "data" ::= #inst@."value" });
-      Write "memStall" <- $$true;
+      Write "stall" <- $$true;
       Retv
                       
     with Rule "repLd" :=
@@ -104,7 +104,7 @@ Section ProcDec.
       LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
       Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
-      Write "memStall" <- $$false;
+      Write "stall" <- $$false;
       nextPc ppc st inst
                       
     with Rule "repSt" :=
@@ -116,14 +116,14 @@ Section ProcDec.
       Read rawInst <- "fetched";
       LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opSt;
-      Write "memStall" <- $$false;
+      Write "stall" <- $$false;
       nextPc ppc st inst
                       
     with Rule "execToHost" :=
       Read fetch <- "fetch";
       Assert !#fetch;
-      Read memStall <- "memStall";
-      Assert !#memStall;
+      Read stall <- "stall";
+      Assert !#stall;
       Read ppc <- "pc";
       Read st <- "rf";
       Read rawInst <- "fetched";
@@ -135,8 +135,8 @@ Section ProcDec.
     with Rule "execNm" :=
       Read fetch <- "fetch";
       Assert !#fetch;
-      Read memStall <- "memStall";
-      Assert !#memStall;
+      Read stall <- "stall";
+      Assert !#stall;
       Read ppc <- "pc";
       Read st <- "rf";
       Read rawInst <- "fetched";
