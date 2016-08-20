@@ -48,7 +48,7 @@ Proof.
 Qed.
 
 Ltac SymEval_simpl :=
-  simpl; intuition idtac; autorewrite with SymEval in *;
+  simpl; intuition idtac; autorewrite with SymEval in *; unfold or_wrap, and_wrap in *;
   repeat match goal with
            | [ H : existT _ _ _ = existT _ _ _ |- _ ] => apply sigT_eq in H
            | [ H : (_, _) = (_, _) |- _ ] => inv H

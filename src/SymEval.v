@@ -22,6 +22,10 @@ Notation "_=== m .[ k ]" := (M.find k m = None) (at level 70).
 Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _))
                                (at level 0).
 
+Definition or_wrap := or.
+
+Definition and_wrap := and.
+
 Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
   refine match p in Expr _ k' return k' = SyntaxKind Bool -> Prop with            
            | Var k' x => fun ise => (eq_rect k' (fullType type) x (SyntaxKind Bool) ise) = true
@@ -30,7 +34,7 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
                                       (SyntaxKind Bool) ise) = true
            | UniBool Neg x => fun ise => semExpr _ x ise -> False
            | BinBool And x y => fun ise => semExpr _ x ise /\ semExpr _ y ise
-           | BinBool Or x y => fun ise => semExpr _ x ise \/ semExpr _ y ise
+           | BinBool Or x y => fun ise => or_wrap (semExpr _ x ise) (semExpr _ y ise)
            | UniBit _ _ _ _ => fun ise => _
            | BinBit _ _ _ _ _ _ => fun ise => _
            | BinBitBool n1 n2 op e1 e2 =>
@@ -98,8 +102,9 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
       (SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
       (SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
      *)
-    (semExpr p eq_refl ->
-     SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf)) /\
+    and_wrap
+      (semExpr p eq_refl ->
+       SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
     ((semExpr p eq_refl -> False) ->
      SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
     (*
@@ -174,7 +179,8 @@ Lemma semExpr_sound: forall k (tEq: k = SyntaxKind Bool) (e: Expr type k),
                                      end <-> semExpr e tEq).
 Proof.
   intros k tEq e.
-  apply boolInduction with (k := k) (tEq := tEq) (e := e); intros; simpl in *; intuition auto;
+  apply boolInduction with (k := k) (tEq := tEq) (e := e); intros; simpl in *;
+  unfold or_wrap, and_wrap in *; intuition auto;
   repeat match goal with
            | H: negb _ = true |- _ => apply negb_true_iff in H
            | H: negb _ = false |- _ => apply negb_false_iff in H
@@ -208,7 +214,7 @@ Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rs' cs' rv,
   -> forall rs'' cs kf, SymSemAction a rs rs'' cs kf
     -> kf (M.union rs'' rs') (M.union cs cs') rv.
 Proof.
-  induction 1; simpl; intuition auto.
+  induction 1; simpl; unfold and_wrap; intuition auto.
 
   - subst.
     rewrite union_add by (destruct (M.find meth cs); intuition auto).
