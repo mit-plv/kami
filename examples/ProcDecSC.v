@@ -91,7 +91,7 @@ Section ProcDecSC.
   (*   |}. *)
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_ON *)
 
     kinline_left im.
     kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
@@ -100,6 +100,13 @@ Section ProcDecSC.
     kinv_add_end.
 
     kinvert.
+    Focus 10.
+
+    
+    
+
+    
+    
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
@@ -109,7 +116,9 @@ Section ProcDecSC.
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
-    - kinv_action_dest;
+    - kinv_action_dest.
+
+      
         kinv_custom procDec_inv_old;
         kinv_regmap_red.
       + (* TODO: automation *)

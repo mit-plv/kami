@@ -218,6 +218,9 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * destruct (weq x6 (x5 ^+ $0~1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
@@ -227,6 +230,9 @@ Section Facts.
             elim n0; auto.
           }
       + simpl in *; kinv_magic_light_with kinv_or3.
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
