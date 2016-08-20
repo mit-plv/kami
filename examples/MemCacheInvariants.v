@@ -1737,7 +1737,7 @@ Ltac simplMapUpds1 tac :=
       nmemCache_invariants (M.union u s).
   Proof.
     metaInit.
-    simplMapUpds; (reflexivity || eassumption || intros); exfalso; unfold isCWait in *.
+    simplMapUpds ltac:(intros; exfalso; unfold isCWait in *).
     - dest; discriminate.
     - pose proof (i16a _ H1) as sth1.
       destruct sth1 as [sth2 sth3].
@@ -1966,13 +1966,12 @@ Ltac simplMapUpds1 tac :=
   Proof.
     normalInit.
 
-    simplMapUpds; (reflexivity || eassumption ||
-                           unfold listEnq, listDeq, listIsEmpty,
-               listFirstElt, listEltT, fromPToC, AddrBits in *; subst;
-              destruct rqFromCList;
-              simpl in *; try discriminate; mkStruct;
-              unfold IndexBound_head, IndexBound_tail, AddrBits, isCWait,
-              addFirstBoundedIndex in *; simpl in *; intros).
+    simplMapUpds ltac:(unfold listEnq, listDeq, listIsEmpty,
+                       listFirstElt, listEltT, fromPToC, AddrBits in *; subst;
+                       destruct rqFromCList;
+                       simpl in *; try discriminate; mkStruct;
+                       unfold IndexBound_head, IndexBound_tail, AddrBits, isCWait,
+                       addFirstBoundedIndex in *; simpl in *; intros).
     - match goal with
         | H: In _ (rqFromCToP _ _ _ _),
              H2: dir _ _ <= _,
