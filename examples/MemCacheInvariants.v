@@ -2082,7 +2082,8 @@ Ltac simplMapUpds1 tac :=
                  match goal with
                    | |- context [@weq ?t a0 ?a] =>
                      destruct (@weq t a0 a) as [e | ?];
-                   [ rewrite <- e in *
+                   [ rewrite <- e in *reflexivity || eassumption ||
+                           
                    | match goal with
                        | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
                          rewrite rsFromCToP_diffAddr_first with (g := g);
