@@ -549,12 +549,16 @@ Ltac kinvert :=
 
 Ltac kinv_contra :=
   try (exfalso;
+       unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *;
+       simpl in *;
        repeat autounfold with MethDefs in *;
        repeat autounfold with InvDefs in *; dest; subst;
        repeat
          (match goal with
           | [H: false = true |- _] => inversion H
           | [H: true = false |- _] => inversion H
+          | [H1: ?t = true, H2: ?t = false |- _] => rewrite H1 in H2
+          | [H1: true = ?t, H2: false = ?t |- _] => rewrite <-H1 in H2
           | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
           | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
           end; dest; try subst);

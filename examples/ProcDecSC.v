@@ -84,45 +84,16 @@ Section ProcDecSC.
   Defined.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 
-  (* Definition decInstConfig := *)
-  (*   {| inlining := true; *)
-  (*      decomposition := DTFunctional pdec_pinst_regMap pdec_pinst_ruleMap; *)
-  (*      invariants := IVCons procDec_inv_ok IVNil *)
-  (*   |}. *)
+  Definition decInstConfig :=
+    {| inlining := true;
+       decomposition := DTFunctional pdec_pinst_regMap pdec_pinst_ruleMap;
+       invariants := IVCons procDec_inv_ok IVNil
+    |}.
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
-
-    kinline_left im.
-    kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
-
-    kinv_add procDec_inv_ok.
-    kinv_add_end.
-
-    kinvert.
-
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_magic_with procDec_inv_old.
-    - kinv_action_dest;
-        kinv_custom procDec_inv_old;
-        kinv_regmap_red.
-      + (* TODO: automation *)
-        unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *.
-        simpl in *.
-        rewrite H2 in H8.
-        kinv_contra.
-      + kinv_constr;
-          kinv_eq;
-          kinv_finish.
-
-        END_SKIP_PROOF_ON *) admit.
+    kami_ok decInstConfig procDec_inv_old.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcDecSC.
