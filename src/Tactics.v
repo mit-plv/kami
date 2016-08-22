@@ -486,6 +486,7 @@ Ltac kinline_left im :=
 
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
+  repeat autounfold with MapDefs in *;
   repeat
     (kstring_simpl;
      try match goal with
@@ -515,13 +516,15 @@ Ltac kdecompose_regrel_init :=
 
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
-  try reflexivity; (* "getDefsBodies _ = nil" conditions *)
-  try kdecompose_regmap_init.
-
+  [try reflexivity; try kdecompose_regmap_init
+  |reflexivity (* "getDefsBodies _ = nil" conditions *)
+  |reflexivity (* "getDefsBodies _ = nil" conditions *)
+  |].
+ 
 Ltac kdecomposeR_nodefs t r :=
   apply decompositionZeroR with (thetaR:= t) (ruleMap:= r); intros; subst;
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
-  try kdecompose_regrel_init.
+  [try kdecompose_regrel_init|]. (* should have only two subgoals at this time *)
 
 Ltac kinv_add inv :=
   match goal with

@@ -82,7 +82,7 @@ Section ProcDecSC.
                         else rfv a).
       + refine (existT _ _ rfv).
   Defined.
-  Hint Unfold pdec_pinst_regMap: MethDefs. (* for kdecompose_regMap_init *)
+  Hint Unfold pdec_pinst_regMap: MapDefs.
 
   (* Definition decInstConfig := *)
   (*   {| inlining := true; *)
@@ -100,6 +100,7 @@ Section ProcDecSC.
     kinv_add_end.
 
     kinvert.
+
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
     - kinv_magic_with procDec_inv_old.
