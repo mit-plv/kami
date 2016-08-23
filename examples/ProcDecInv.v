@@ -189,10 +189,9 @@ Section Invariants.
         * procDec_inv_next 0 2.
         * procDec_inv_next 1 2.
       + kinv_dest_custom procDec_inv_tac.
-        * procDec_inv_next 0 2.
-        * procDec_inv_next 1 2.
+        procDec_inv_next 1 2.
 
-          END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma procDec_inv_ok:
