@@ -128,7 +128,6 @@ Section BluespecSubset.
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
     match e with
     | MCallS name msig arge idx cont =>
-      (* TODO: need to correct name like Bluespec-style *)
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr arge)

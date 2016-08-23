@@ -18,14 +18,14 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
 (** procDec + memCache test *)
 Require Import Ex.MemCache Ex.ProcMemCorrect.
 
-Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes)
-                                  rv32iAddrSize) :=
-  pgmFibonacci 10.
+(* Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes) *)
+(*                                   rv32iAddrSize) := *)
+(*   pgmFibonacci 10. *)
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
-Definition idxBits := 16.
-Definition tagBits := 14.
-Definition lgNumDatas := 2.
+Definition idxBits := 2.
+Definition tagBits := 2.
+Definition lgNumDatas := 1.
 Definition lgNumChildren := 1. (* 2 cores *)
 Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.

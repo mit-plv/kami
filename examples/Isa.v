@@ -13,12 +13,10 @@ Require Import Ex.MemTypes Ex.SC.
  * - TOHOST
  *)
 Section RV32I.
-  Definition rv32iAddrSize := 32.
+  Definition rv32iAddrSize := 5. (* 2^5 = 32 memory cells *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
-
-  Variable (insts: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize)).
 
   Section Common.
 
@@ -110,8 +108,6 @@ Section RV32I.
    *          All loads (stores) are regarded as LW (SW).
    *)
   Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
-    (* unfold DecT; intros ty st pc. *)
-    (* set ($$insts @[ #pc ])%kami_expr as inst. *)
     unfold DecT; intros ty st inst.
     refine (IF ((getOpcodeE #inst) == ($$ rv32iOpLOAD)) then _ else _)%kami_expr.
     - (* load case *)
@@ -522,7 +518,7 @@ End UnitTests.
 
 Section Examples.
 
-  Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+  (* Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize). *)
     (* - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ n)))). *)
     (* - exact (ConstBit (rv32iToRaw (TOHOST x3))). *)
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
@@ -539,10 +535,8 @@ Section Examples.
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
-    admit.
-  Defined.
 
-  Definition pgmBranchTest: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+  (* Definition pgmBranchTest: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize). *)
     (* - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ 3)))). *)
     (* - exact (ConstBit (rv32iToRaw (LI x4 (natToWord _ 5)))). *)
     (* - exact (ConstBit (rv32iToRaw (TOHOST x3))). *)
@@ -559,10 +553,8 @@ Section Examples.
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
     (* - exact (ConstBit (rv32iToRaw NOP)). *)
-    admit.
-  Defined.
   
-  Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+  (* Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize). *)
     (* - (* 00 *) exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))). *)
     (* - (* 01 *) exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 11)))). *)
     (* - (* 02 *) exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))). *)
@@ -579,8 +571,6 @@ Section Examples.
     (* - (* 13 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 14)))). (* 13 + 14 == 11 *) *)
     (* - (* 14 *) exact (ConstBit (rv32iToRaw NOP)). *)
     (* - (* 15 *) exact (ConstBit (rv32iToRaw NOP)). *)
-    admit.
-  Defined.
 
 End Examples.
 
