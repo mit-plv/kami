@@ -458,12 +458,15 @@ Section MemCacheInl.
   
     ssNoF "read.mcs" "missByState".
     ssNoF "read.mcs" "dwnRq".
-    ssNoF "read.mcs" "dwnRs".
+    ssNoF "read.mcs" "dwnRs_wait".
+    ssNoF "read.mcs" "dwnRs_noWait".
     ssF "read.mcs" "deferred".
 
-    ssF "write.mline" "dwnRs".
+    ssNoF "write.mline" "dwnRs_wait".
+    ssF "write.mline" "dwnRs_noWait".
 
-    ssNoF "write.mcs" "dwnRs".
+    ssNoF "write.mcs" "dwnRs_wait".
+    ssNoF "write.mcs" "dwnRs_noWait".
     ssF "write.mcs" "deferred".
 
     finish_def.
@@ -481,12 +484,15 @@ Section MemCacheInl.
   
     ssNoFilt "read.mcs" "missByState".
     ssNoFilt "read.mcs" "dwnRq".
-    ssNoFilt "read.mcs" "dwnRs".
+    ssNoFilt "read.mcs" "dwnRs_wait".
+    ssNoFilt "read.mcs" "dwnRs_noWait".
     ssFilt "read.mcs" "deferred".
 
-    ssFilt "write.mline" "dwnRs".
+    ssNoFilt "write.mline" "dwnRs_wait".
+    ssFilt "write.mline" "dwnRs_noWait".
 
-    ssNoFilt "write.mcs" "dwnRs".
+    ssNoFilt "write.mcs" "dwnRs_wait".
+    ssNoFilt "write.mcs" "dwnRs_noWait".
     ssFilt "write.mcs" "deferred".
 
     finish_pf.
@@ -505,7 +511,8 @@ Section MemCacheInl.
     
     ssF "deq.rqFromChild" "deferred".
 
-    ssF "deq.rsFromChild" "dwnRs".
+    ssNoF "deq.rsFromChild" "dwnRs_wait".
+    ssF "deq.rsFromChild" "dwnRs_noWait".
 
     finish_def.
   Defined.
@@ -527,7 +534,8 @@ Section MemCacheInl.
     
     ssFilt "deq.rqFromChild" "deferred".
 
-    ssFilt "deq.rsFromChild" "dwnRs".
+    ssNoFilt "deq.rsFromChild" "dwnRs_wait".
+    ssFilt "deq.rsFromChild" "dwnRs_noWait".
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
