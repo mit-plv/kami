@@ -1177,6 +1177,7 @@ Section MemCacheInl.
     rewrite <- HInRule in HS; clear HInRule;
     intros ? ? c ? ?; destructRules c HInd.
 
+
   Lemma nmemCache_invariants_hold_1 s a u cs:
     nmemCache_invariants s ->
     "l1MissByState" metaIs a ->
@@ -1187,7 +1188,7 @@ Section MemCacheInl.
       nmemCache_invariants (M.union u s).
   Proof.
     metaInit.
-    simplMapUpds
+    simplMapUpds 
       ltac:(intros; unfold isCWait in *;
               match goal with
                 | H: In _ _ |- _ =>
@@ -1195,7 +1196,7 @@ Section MemCacheInl.
                 | _ => idtac
               end; dest; try discriminate).
   Qed.
-
+  
   Lemma nmemCache_invariants_hold_2 s a u cs:
     nmemCache_invariants s ->
     "l1MissByLine" metaIs a ->
@@ -2048,7 +2049,85 @@ Section MemCacheInl.
       unfold isPWait in *; dest; discriminate.
   Qed.
 
+
 (*
+
+
+  Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
+    nmemCache_invariants s ->
+    "rqFromCToP" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?.
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; simpl.
+    match goal with
+      | a: word (TagBits + IdxBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl)          
+    end.
+           destructRules c HInd.
+    metaInit.
+    simplMapUpds idtac.
+    eassumption.
+      
+      ltac:(intros; unfold isCWait in *;
+              match goal with
+                | H: In _ _ |- _ =>
+                  (apply i16a in H || apply i16b in H)
+                | _ => intuition auto
+              end; dest; try discriminate).
+  Qed.
+
+  
+  Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
+    nmemCache_invariants s ->
+    "rqFromCToP" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaInit.
+    
+    simplMapUpds idtac.
+      ltac:(intros; exfalso; unfold isCWait in * ).
+
+    
+        * dest; discriminate.
+        * pose proof (i16a _ H2) as sth1.
+          destruct sth1 as [sth2 sth3].
+          pose proof (i16 sth2) as sth4.
+          dest.
+          destruct H12; dest; [| specialize (H19 _ H2); assumption].
+          simpl in *.
+          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
+          StringBound.IndexBound_head in *; simpl in *.
+          rewrite H6 in H4.
+          simpl in H4.
+          unfold getCs, getIdxS, getTagS in H4.
+          rewrite H17 in H8, H10.
+          rewrite H8 in H4.
+          match goal with
+            | H: context[weq ?p ?p] |- _ =>
+              destruct (weq p p); intuition auto
+          end.
+            
+
+  
+
+
   
   Lemma nmemCache_invariants_hold_13 s a u cs:
     nmemCache_invariants s ->
@@ -2094,7 +2173,7 @@ Section MemCacheInl.
              ).
 
 
-  (* Beyond this, some hypotheses names are hard coded *)
+  ( * Beyond this, some hypotheses names are hard coded * )
   
   
   Lemma rsFromCToP_sameAddr_sameChild a c P:
@@ -2165,7 +2244,7 @@ Section MemCacheInl.
   Qed.
 
 
-  (*
+  ( *
   
   Lemma nmemCache_invariants_hold_12 s a u cs:
     nmemCache_invariants s ->
@@ -2386,7 +2465,7 @@ Section MemCacheInl.
       simpl.
       Nomega.nomega.
     - 
-          (*rewrite H in H'; exfalso; Nomega.nomega *) idtac
+          ( *rewrite H in H'; exfalso; Nomega.nomega * ) idtac
       end.
       simpl.
     - 
@@ -2401,7 +2480,7 @@ Section MemCacheInl.
       destruct (isPWait_dec 
           simpl in H;
           apply i20 in H; auto;
-          try (rewrite H in *; Nomega.nomega) *)
+          try (rewrite H in *; Nomega.nomega)
       end.
       apply i20 with (beg := g :: beg) (mid := mid) (last := last) (pToCRq1 := pToCRq1)
                                        (pToCRq2 := pToCRq2); auto; simpl; try f_equal; auto.
@@ -2548,17 +2627,17 @@ Section MemCacheInl.
       destruct i8 with (msg := msg).
        match goal with
         | H: In _ _ |- _ =>
-          apply i8 in H (*;
-          split; Nomega.pre_nomega; Nomega.nomega *)
+          apply i8 in H ( *;
+          split; Nomega.pre_nomega; Nomega.nomega * )
       end.
-          | (*simpl in sth2; destruct sth2 as [sth3 | sth4];
+          | ( *simpl in sth2; destruct sth2 as [sth3 | sth4];
             [ rewrite <- sth3;
               clear sth3;
               repeat match goal with
                        | |- context [mkStruct] =>
                          rewrite mkStruct_eq; simpl; unfold ith_Bounded; simpl
                      end; split; Nomega.pre_nomega; Nomega.nomega
-            | exfalso; exact sth4]*)]
+            | exfalso; exact sth4]* )]
       end.
       
       Focus 2.
@@ -2606,8 +2685,8 @@ Section MemCacheInl.
       firstorder.
       match goal with
         | H: forall msg: ?T, ?A \/ ?B -> ?P |- ?P =>
-          idtac (*
-                  apply H; intuition auto *)
+          idtac ( *
+                  apply H; intuition auto * )
       end.
           [left; split; [eexists; eauto| intros; match goal with
                                                    | H: _ -> ?P |- ?P =>
@@ -2711,10 +2790,10 @@ Section MemCacheInl.
           | H': ?y === ?n .[ ?s] , H: ?v === ?n .[ ?s] |- _ =>
             rewrite H' in H;
               apply invSome in H;
-              apply Eqdep.EqdepTheory.inj_pair2 in H; subst; intros (*
+              apply Eqdep.EqdepTheory.inj_pair2 in H; subst; intros ( *
             intros; constructor 1 with (x := y);
-            (* exists y; *)
-            split; [assumption|]; intros *)
+            ( * exists y; * )
+            split; [assumption|]; intros * )
           | |- _ /\ _ => split; intros
           | |- _ => auto
         end; dest;
@@ -2960,5 +3039,3 @@ Section MemCacheInl.
       + admit.
   Qed.
    *)
-
-  *)
