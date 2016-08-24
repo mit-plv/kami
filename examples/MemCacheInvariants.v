@@ -1249,6 +1249,50 @@ Section MemCacheInl.
       )
     ]; (destruct (eq_nat_dec c x); [intuition auto |]); auto.
   Qed.
+
+    Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
+    nmemCache_invariants s ->
+    "fromPToC" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
+      listFirstElt, listEnq, listDeq in *; subst;
+    SymEval; subst; simpl;
+    destruct (eq_nat_dec c x);
+    [subst;
+      match goal with
+        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct toCList; [discriminate|
+                          simplMapUpds ltac:(rewrite <- ?fromPToC_xfer; auto)]
+      )
+    | match goal with
+        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct toCList; [discriminate|
+                          simplMapUpds ltac:(try erewrite fromPToC_xfer_diffAddr; eauto);
+                            match goal with
+                              | neq: ?c <> ?x |- context [eq_nat_dec ?c ?x] =>
+                                destruct (eq_nat_dec c x) as [isEq | notEq];
+                                  [specialize (neq isEq); exfalso; assumption | eassumption]
+                              | _ => idtac
+                            end; auto
+                         ])].
+  Qed.
   
   Lemma isPWait_addRq a cRqValid
         (rqFromCList: list (type (RqFromC LgNumChildren (Bit (TagBits + IdxBits)) Id)))
