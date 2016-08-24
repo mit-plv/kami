@@ -16,20 +16,20 @@ Unset Extraction AutoInline.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
 
 (** procDec + memCache test *)
-Require Import Ex.MemCache Ex.ProcMemCorrect.
-
-(* Definition insts : ConstT (Vector (MemTypes.Data rv32iLgDataBytes) *)
-(*                                   rv32iAddrSize) := *)
-(*   pgmFibonacci 10. *)
+Require Import Ex.ProcDecSCN Ex.MemCache Ex.ProcMemCorrect.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.
-Definition tagBits := 2.
+Definition tagBits := 1.
 Definition lgNumDatas := 1.
 Definition lgNumChildren := 1. (* 2 cores *)
 Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.
 Definition idK := Bit 1.
+
+(* Temporary; just for experiment *)
+Definition pdecAN := pdecAN fifoSize rv32iDecode rv32iExecState rv32iExecNextPc
+                            rv32iOpLOAD rv32iOpSTORE rv32iOpTOHOST lgNumChildren.
 
 Definition pdecN := pdecN idxBits tagBits lgNumDatas
                           rv32iDecode rv32iExecState rv32iExecNextPc
@@ -65,12 +65,17 @@ Definition memCache := (l1Con ++ childParentCCon ++ memDirCCon)%kami.
 
 Definition procMemCache := (pdecN ++ pmFifos ++ memCache)%kami.
 
+(** MODIFY targetPgm to your target program *)
+Definition targetPgm := pgmFibonacci 10.
+
 (** MODIFY targetM to your target module *)
-Definition targetM := procMemCache.
+Definition targetProcM := pdecAN.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)
-Definition targetS := getModuleS targetM.
-Definition targetB := ModulesSToBModules targetS.
+Definition targetProcS := getModuleS targetProcM.
+Definition targetProcB := ModulesSToBModules targetProcS.
 
-(* Extraction "./Ocaml/Target.ml" targetB. *)
+Definition target := (targetPgm, targetProcB).
+
+(* Extraction "./Ocaml/Target.ml" target. *)
 

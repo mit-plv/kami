@@ -10,7 +10,9 @@ let () =
     (let output_file = Sys.argv.(1) in
      let oc = open_out output_file in
      set_formatter_out_channel oc;
-     (match targetB with
+     print_string (ppConst (fst target));
+     force_newline (); force_newline (); force_newline ();
+     (match snd target with
       | Some bml -> ppBModulesFull bml
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
