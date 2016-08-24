@@ -3171,3 +3171,4 @@ Section MemCacheInl.
       + admit.
   Qed.
    *)
+End MemCacheInl.
