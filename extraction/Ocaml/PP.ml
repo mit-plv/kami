@@ -143,6 +143,15 @@ let getStructName (_: unit) = (structIdx := !structIdx + 1);
 module StringMap = Map.Make (String)
 let glbStructs : ((kind attribute list) StringMap.t) ref = ref StringMap.empty
 
+let initMem : constT option ref = ref None
+let getInitMem (_: unit) =
+  match !initMem with
+  | Some im -> im
+  | None -> raise (Should_not_happen "Initial memory not provided")
+
+let setInitMem (c: constT) = initMem := Some c
+let resetInitMem (_: unit) = initMem := None
+
 let resetGlbStructs (_: unit) = glbStructs := StringMap.empty
 let findGlbStructName (k: kind attribute list) =
   StringMap.fold (fun s k' cs -> if (k = k') then s else cs) !glbStructs ""
@@ -545,7 +554,12 @@ let ppRegInit (r: regInitT) =
      ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
      ps (bstring_of_charlist rn); print_space ();
      ps ppAssign; print_space ();
-     ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
+     ps ppMkReg; ps ppRBracketL;
+     (if bstring_of_charlist rn = "mem" then
+        ps (ppConst (getInitMem ()))
+      else
+        ps (ppConst c));        
+     ps ppRBracketR; ps ppSep;
      close_box ()
   | { attrName = rn; attrType = _ } ->
      raise (Should_not_happen ("NativeKind register detected; name: " ^ (bstring_of_charlist rn)))
@@ -753,4 +767,10 @@ let ppBModulesFull (bml: bModule list) =
   ppBModules (permute bml moduleOrder) idxInit;
   ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
   resetGlbStructs ();
-  print_newline ();
+  print_newline ()
+
+let ppBModulesFullInitMem (bml: bModule list) (initMem: constT) =
+  setInitMem initMem;
+  ppBModulesFull bml;
+  resetInitMem ()
+
