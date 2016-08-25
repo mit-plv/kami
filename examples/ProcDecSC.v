@@ -10,6 +10,25 @@ Require Import Eqdep.
 
 Set Implicit Arguments.
 
+Notation "'mlet' vn : t <- r 'of' kn ; cont" :=
+  (match M.find kn%string r with
+   | Some (existT k v) =>
+     match k with
+     | SyntaxKind kind =>
+       fun vname =>
+         match decKind kind t with
+         | left Heq => 
+           eq_rect_r (fun kind => fullType type (SyntaxKind kind) -> RegsT)
+                     (fun vn : fullType type (SyntaxKind t) => cont) Heq vname
+         | right _ => M.empty _
+         end
+     | _ => fun _ => M.empty _
+     end v
+   | _ => M.empty _
+   end) (at level 0, vn at level 0) : mapping_scope.
+
+Delimit Scope mapping_scope with mapping.
+
 Section ProcDecSC.
   Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
@@ -40,48 +59,47 @@ Section ProcDecSC.
   Defined.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 
-  Definition pdec_pinst_regMap (r: RegsT): RegsT.
-  Proof.
-    kgetv "pc"%string pcv r (Bit addrSize) (M.empty (sigT (fullType type))).
-    kgetv "rf"%string rfv r (Vector (Data lgDataBytes) rfIdx) (M.empty (sigT (fullType type))).
-    kgetv "fetch"%string fetchv r Bool (M.empty (sigT (fullType type))).
-    kgetv "fetched"%string fetchedv r (Data lgDataBytes) (M.empty (sigT (fullType type))).
-    kgetv "rsToProc"--"empty"%string oev r Bool (M.empty (sigT (fullType type))).
-    kgetv "rsToProc"--"elt"%string oelv r (Vector RsToProc fifoSize)
-          (M.empty (sigT (fullType type))).
-    kgetv "rsToProc"--"deqP"%string odv r (Bit fifoSize) (M.empty (sigT (fullType type))).
-
-    refine (if oev
-            then (M.add "pc"%string (existT _ _ pcv)
-                        (M.add "rf"%string (existT _ _ rfv)
-                               (M.add "fetch"%string (existT _ _ fetchv)
-                                      (M.add "fetched"%string (existT _ _ fetchedv)
-                                             (M.empty _)))))
-            else _).
-    refine (if fetchv then _ else _).
-
-    - refine (M.add "pc"%string (existT _ _ pcv)
-                    (M.add "rf"%string (existT _ _ rfv)
-                           (M.add "fetch"%string (existT _ (SyntaxKind Bool) false)
-                                  (M.add "fetched"%string
-                                         (existT _ (SyntaxKind (Data lgDataBytes))
-                                                 (oelv odv ``"data"))
-                                         (M.empty _))))).
-
-    - pose proof (evalExpr (dec _ rfv fetchedv)) as inst.
-      refine (M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
-                    (M.add "rf"%string _
-                           (M.add "fetch"%string (existT _ (SyntaxKind Bool) true)
-                                  (M.add "fetched"%string (existT _ _ fetchedv)
-                                         (M.empty _))))).
-      pose proof (inst ``"opcode") as opc.
-      destruct (weq opc (evalConstT opLd)).
-      + refine (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx)) _); simpl.
-        exact (fun a => if weq a (inst ``"reg")
-                        then oelv odv ``"data"
-                        else rfv a).
-      + refine (existT _ _ rfv).
-  Defined.
+  Definition pdec_pinst_regMap (r: RegsT): RegsT :=
+    (mlet pcv : (Bit addrSize) <- r of "pc";
+       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
+       mlet fetchv : Bool <- r of "fetch";
+       mlet fetchedv : (Data lgDataBytes) <- r of "fetched";
+       mlet oev : Bool <- r of "rsToProc"--"empty";
+       mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
+       mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
+       if oev
+       then (M.add "pc"%string (existT _ _ pcv)
+                   (M.add "rf"%string (existT _ _ rfv)
+                          (M.add "fetch"%string (existT _ _ fetchv)
+                                 (M.add "fetched"%string (existT _ _ fetchedv)
+                                        (M.empty _)))))
+       else
+         if fetchv
+         then (M.add "pc"%string (existT _ _ pcv)
+                     (M.add "rf"%string (existT _ _ rfv)
+                            (M.add "fetch"%string (existT _ (SyntaxKind Bool) false)
+                                   (M.add "fetched"%string
+                                          (existT _ (SyntaxKind (Data lgDataBytes))
+                                                  (oelv odv ``"data"))
+                                          (M.empty _)))))
+         else
+           let inst := evalExpr (dec _ rfv fetchedv) in
+           (M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
+                  (M.add "rf"%string
+                         (let opc := inst ``"opcode" in
+                          if weq opc (evalConstT opLd)
+                          then
+                            (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
+                                    ((fun a : word rfIdx => if weq a (inst ``"reg")
+                                                            then oelv odv ``"data"
+                                                            else rfv a)
+                                     : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
+                                                                          rfIdx)))))
+                          else
+                            (existT _ _ rfv))
+                         (M.add "fetch"%string (existT _ (SyntaxKind Bool) true)
+                                (M.add "fetched"%string (existT _ _ fetchedv)
+                                       (M.empty _))))))%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 
   Definition decInstConfig :=
