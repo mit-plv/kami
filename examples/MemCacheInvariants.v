@@ -1253,196 +1253,6 @@ Section MemCacheInl.
     unfold not at 2; intros.
     eapply isPWait_addRq in H0; eauto.
   Qed.
-  
-  Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
-    nmemCache_invariants s ->
-    "rqFromCToP" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
-    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
-      listFirstElt, listEnq, listDeq in *; subst;
-    SymEval; subst; simpl;
-    destruct (eq_nat_dec c x);
-    [subst;
-      match goal with
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct rqToPList; [discriminate|
-                                 simplMapUpds ltac:(rewrite <- ?rqFromCToP_xfer; auto)]
-      )
-    | match goal with
-        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct regV; [discriminate|
-                       simplMapUpds ltac:(rewrite <- ?rqFromCToP_xfer_diffAddr; auto)]
-      )];
-    try applyLemma isPWait_addRq; auto.
-    - intros.
-      match goal with
-        | H: ~ isPWait _ _ _ _ _ |- _ => apply isPWait_addRq_contra in H
-      end; eapply i17; eauto.
-    - intros cv; apply i28 in cv; erewrite hd_error_revcons_same; eauto.
-    - destruct (eq_nat_dec c x); [intuition auto | auto].
-    - intros.
-      match goal with
-        | H: ~ isPWait _ _ _ _ _ |- _ => apply isPWait_addRq_contra in H
-      end; eapply i17; eauto.
-    - intros cv; apply i28 in cv; erewrite hd_error_revcons_same; eauto.
-  Qed.
-
-  Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
-    nmemCache_invariants s ->
-    "rsFromCToP" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
-    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
-      listFirstElt, listEnq, listDeq in *; subst;
-    SymEval; subst; simpl;
-    destruct (eq_nat_dec c x);
-    [subst;
-      match goal with
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct rsToPList; [discriminate|
-                                 simplMapUpds ltac:(rewrite <- ?rsFromCToP_xfer; auto)]
-      )
-    | match goal with
-        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct regV; [discriminate|
-                       simplMapUpds ltac:(rewrite <- ?rsFromCToP_xfer_diffAddr; auto)]
-      )
-    ]; (destruct (eq_nat_dec c x); [intuition auto |]); auto.
-  Qed.
-
-  Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
-    nmemCache_invariants s ->
-    "fromPToC" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
-    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
-      listFirstElt, listEnq, listDeq in *; subst;
-    SymEval; subst; simpl;
-    destruct (eq_nat_dec c x);
-    [subst;
-      match goal with
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct toCList; [discriminate|
-                          simplMapUpds ltac:(rewrite <- ?fromPToC_xfer; auto)]
-      )
-    | match goal with
-        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (destruct toCList; [discriminate|
-                          simplMapUpds ltac:(try erewrite fromPToC_xfer_diffAddr; eauto);
-                            match goal with
-                              | neq: ?c <> ?x |- context [eq_nat_dec ?c ?x] =>
-                                destruct (eq_nat_dec c x) as [isEq | notEq];
-                                  [specialize (neq isEq); exfalso; assumption | eassumption]
-                              | _ => idtac
-                            end; auto
-                         ])].
-  Qed.
-  
-  Lemma nmemCache_invariants_hold_1 s a u cs:
-    nmemCache_invariants s ->
-    "l1MissByState" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    metaInit.
-    simplMapUpds 
-      ltac:(intros; unfold isCWait in *;
-              match goal with
-                | H: In _ _ |- _ =>
-                  (apply i16a in H || apply i16b in H)
-                | _ => idtac
-              end; dest; try discriminate).
-  Qed.
-  
-  Lemma nmemCache_invariants_hold_2 s a u cs:
-    nmemCache_invariants s ->
-    "l1MissByLine" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    metaInit.
-    simplMapUpds
-      ltac:(intros; unfold isCWait in *;
-              match goal with
-                | H: In _ _ |- _ =>
-                  (apply i16a in H || apply i16b in H)
-                | _ => intuition auto
-              end; dest; try discriminate).
-  Qed.
-
-  Lemma nmemCache_invariants_hold_3 s a u cs:
-    nmemCache_invariants s ->
-    "l1Hit" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    metaInit.
-    simplMapUpds
-      ltac:(intros; unfold isCWait in *;
-              match goal with
-                | H: In _ _ |- _ =>
-                  (apply i16a in H || apply i16b in H)
-                | _ => intuition auto
-              end; dest; try discriminate).
-  Qed.
 
   Lemma rsLessTo_in_I_last ls:
     forall rs,
@@ -1717,7 +1527,418 @@ Section MemCacheInl.
                              destruct p; word_omega
                          end | auto]
     end.
+
+  Lemma rsFromCToP_sameAddr_sameChild_cons_prop a c P:
+    forall rsFromCList g rsToPList,
+      (forall rs, In rs (rsFromCToP ($ c) a (g :: rsFromCList) rsToPList) ->
+                  P rs) ->
+      a = g {| bindex := "rs" |} {| bindex := "addr" |} ->
+      $ c = g {| bindex := "child" |} ->
+      P (g {| bindex := "rs" |}).
+  Proof.
+    simpl.
+    unfold IndexBound_head, IndexBound_tail; simpl.
+    unfold rsFromCToP.
+    simpl.
+    intros.
+    repeat match type of X with
+             | context [weq ?p ?q] => destruct (weq p q); [| intuition auto]
+           end.
+    match goal with
+      | |- P ?a => specialize (X a)
+    end.
+    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
+    apply X; auto.
+  Qed.
+
+  Lemma rsFromCToP_sameAddr_sameChild_cons a c:
+    forall rsFromCList (g: type (RsFromC LgDataBytes LgNumDatas LgNumChildren
+                                         (Bit (TagBits + IdxBits))))  rsToPList,
+      a = g {| bindex := "rs" |} {| bindex := "addr" |} ->
+      $ c = g {| bindex := "child" |} ->
+      rsFromCToP ($ c) a (g :: rsFromCList) rsToPList =
+      g {| bindex := "rs" |} :: rsFromCToP ($ c) a rsFromCList rsToPList.
+  Proof.
+    simpl.
+    unfold IndexBound_head, IndexBound_tail; simpl.
+    unfold rsFromCToP.
+    simpl.
+    intros.
+    repeat match goal with
+             | |- context[if ?p then _ else _] => destruct p; [| intuition auto]
+           end.
+    unfold IndexBound_tail; auto.
+  Qed.
+
+  Lemma rsFromCToP_diffAddr_cons
+        c a rsFromCList rsToPList (g: type (RsFromC LgDataBytes LgNumDatas
+                                                    LgNumChildren (Bit (TagBits + IdxBits)))):
+    a <> g {| bindex := "rs" |} {| bindex := "addr" |} ->
+    rsFromCToP c a rsFromCList rsToPList = rsFromCToP c a (g :: rsFromCList) rsToPList.
+  Proof.
+    simpl in *; intros.
+    unfold rsFromCToP; simpl.
+    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
+    repeat match goal with
+             | |- context[if ?p then _ else _] =>
+               destruct p; intuition auto
+           end.
+  Qed.
   
+  Lemma rsFromCToP_diffChild_cons
+        c a rsFromCList rsToPList (g: type (RsFromC LgDataBytes LgNumDatas
+                                                    LgNumChildren (Bit (TagBits + IdxBits)))):
+    c <> g {| bindex := "child" |} ->
+    rsFromCToP c a rsFromCList rsToPList = rsFromCToP c a (g :: rsFromCList) rsToPList.
+  Proof.
+    simpl in *; intros.
+    unfold rsFromCToP; simpl.
+    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
+    repeat match goal with
+             | |- context[if ?p then _ else _] =>
+               destruct p; intuition auto
+           end.
+  Qed.
+
+  Lemma rsLessTo_cons ls:
+    forall g rs,
+      In rs ls ->
+      rsLessTo (g :: ls) ->
+      rs {| bindex := "to" |} < g {| bindex := "to" |}.
+  Proof.
+    unfold IndexBound_head, IndexBound_tail; simpl.
+    induction ls; intros; simpl in *; subst; intuition auto.
+    rewrite H0 in *; auto.
+    apply IHls with (rs := rs) in H2; auto.
+    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
+    word_omega.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_13 s a u cs:
+    nmemCache_invariants s ->
+    "dwnRs_noWait" is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    normalInit.
+
+    - simplMapUpds
+        ltac:(unfold listEnq, listDeq, listIsEmpty,
+              listFirstElt, listEltT, fromPToC, AddrBits, isPWait in *; subst;
+              destruct rsFromCList;
+              simpl in *; try discriminate; mkStruct;
+              unfold IndexBound_head, IndexBound_tail, AddrBits,
+              addFirstBoundedIndex in *; simpl in *;
+              match goal with
+                | H: context[_ {| bindex := "rs"; indexb := ?i1 |}
+                              {| bindex := "addr"; indexb := ?i2 |}] |- _ =>
+                  destruct (weq a0 (g {| bindex := "rs"; indexb := i1 |}
+                                      {| bindex := "addr"; indexb := i2 |})) as [e | ?];
+                [ rewrite <- e in *;
+                  match goal with
+                    | H: context[{| bindex := "child"; indexb := ?i |}] |- _ =>
+                      destruct (weq ($ c) (g {| bindex := "child"; indexb := i |}));
+                        [
+                          rewrite rsFromCToP_sameAddr_sameChild_cons in * by
+                            (unfold IndexBound_head, IndexBound_tail in *; simpl in *; auto);
+                          unfold IndexBound_head, IndexBound_tail in *; cbv [ibound boundi] in *
+                        | match goal with
+                            | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
+                              rewrite rsFromCToP_diffChild_cons with (g := g);
+                                unfold IndexBound_head, IndexBound_tail; simpl; auto
+                            | _ => auto
+                          end
+                        ]
+                  end
+                | match goal with
+                    | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
+                      rewrite rsFromCToP_diffAddr_cons with (g := g);
+                        unfold IndexBound_head, IndexBound_tail; cbv [ibound boundi] in *; auto
+                    | _ => auto
+                  end
+                ]
+              end).
+      + specialize (i7 _ (or_introl eq_refl)).
+        dest; assumption.
+      + intros.
+        destruct i7 with (rs := rs); simpl; auto.
+        constructor; [auto |].
+        apply rsLessTo_cons with (rs := rs) in i13;
+          unfold IndexBound_head, IndexBound_tail; simpl; auto.
+      + intros.
+        destruct i12 as [ez | diff]; [discriminate|].
+        match goal with
+          | H: In _ _ |- _ => apply diff in H; rewrite H in *; discriminate
+        end.
+      + intros.
+        unfold rsFromCToP in *.
+        apply rsLessTo_cons with (rs := rs) in i13;
+          unfold IndexBound_head, IndexBound_tail in *; simpl in *; auto.
+        match goal with
+          | H: In _ _ |- _ =>
+            specialize (i26 _ (@or_introl _ _ eq_refl))
+        end.  
+        match type of i26 with
+          | ?P = true -> _ =>
+            case_eq (P); intros whichBool
+        end.
+        * specialize (i26 whichBool).
+          rewrite i26 in i13.
+          word_omega.
+        * match goal with
+            | H: In rs _ |- _ =>
+              destruct (in_pre_suf _ _ H) as [mid [last sth3]]
+          end.
+          rewrite sth3 in i22.
+          
+          match goal with
+            | H: a0 = g ?idx _ |- _ =>
+              specialize (i22 (g idx) rs nil mid last); simpl in i22;
+              specialize (i22 eq_refl);
+              specialize (i7 (g idx) (@or_introl _ _ eq_refl)); destruct i7 as [sth1 sth2]
+          end.
+          match type of i22 with
+            | _ \/ ?p =>
+              assert (sth4: p) by (destruct i22; [rewrite whichBool in *; discriminate| auto])
+          end.
+          match goal with
+            | H: In rq _, H': In rs _, H2: rs _ = true |- _ =>
+              specialize (i29 _ _ H (@or_intror _ _ H') H2)
+          end.
+          rewrite i29 in *.
+          word_omega.
+      + rewrite rsFromCToP_sameAddr_sameChild_cons in i14;
+        unfold IndexBound_head, IndexBound_tail in *; simpl in *; auto.
+        unfold not; intros csLt isNil.
+        rewrite isNil in i14.
+        erewrite <- i14 with (beg := nil) in csLt;
+          unfold IndexBound_head, IndexBound_tail; simpl; eauto.
+        word_omega.
+      + rewrite rsFromCToP_sameAddr_sameChild_cons in i12;
+        unfold IndexBound_head, IndexBound_tail in *; simpl in *; auto.
+        destruct i12 as [ez | diff]; [discriminate | right; auto].
+      + 
+        right; auto.
+      + 
+        * discriminate
+        specialize (i14 (g {| bindex := "rs" |}) nil);
+          unfold IndexBound_head, IndexBound_tail in i14; simpl in i14.
+        rewrite rsFromCToP_sameAddr_sameChild_cons in *.
+        intros; unfold isPWait.
+        match goal with
+          | |- context [@weq ?t ($ c) ?a] =>
+            destruct (@weq t ($ c) a);
+              [intuition auto
+              | match goal with
+                  | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
+                    rewrite rsFromCToP_diffChild_first with (g := g);
+                      unfold IndexBound_head, IndexBound_tail; simpl; auto
+                  | _ => auto
+                end
+              ]
+        end.
+        apply i9; auto.
+      + 
+
+        destruct i7 with (rs := rs); auto.
+        intro rs;
+          destruct i7 with (rs := rs); eauto.
+      
+  simpl.
+
+
+  
+  Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
+    nmemCache_invariants s ->
+    "rqFromCToP" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
+      listFirstElt, listEnq, listDeq in *; subst;
+    SymEval; subst; simpl;
+    destruct (eq_nat_dec c x);
+    [subst;
+      match goal with
+        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct rqToPList; [discriminate|
+                                 simplMapUpds ltac:(rewrite <- ?rqFromCToP_xfer; auto)]
+      )
+    | match goal with
+        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct regV; [discriminate|
+                       simplMapUpds ltac:(rewrite <- ?rqFromCToP_xfer_diffAddr; auto)]
+      )];
+    try applyLemma isPWait_addRq; auto.
+    - intros.
+      match goal with
+        | H: ~ isPWait _ _ _ _ _ |- _ => apply isPWait_addRq_contra in H
+      end; eapply i17; eauto.
+    - intros cv; apply i28 in cv; erewrite hd_error_revcons_same; eauto.
+    - destruct (eq_nat_dec c x); [intuition auto | auto].
+    - intros.
+      match goal with
+        | H: ~ isPWait _ _ _ _ _ |- _ => apply isPWait_addRq_contra in H
+      end; eapply i17; eauto.
+    - intros cv; apply i28 in cv; erewrite hd_error_revcons_same; eauto.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
+    nmemCache_invariants s ->
+    "rsFromCToP" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
+      listFirstElt, listEnq, listDeq in *; subst;
+    SymEval; subst; simpl;
+    destruct (eq_nat_dec c x);
+    [subst;
+      match goal with
+        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct rsToPList; [discriminate|
+                                 simplMapUpds ltac:(rewrite <- ?rsFromCToP_xfer; auto)]
+      )
+    | match goal with
+        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct regV; [discriminate|
+                       simplMapUpds ltac:(rewrite <- ?rsFromCToP_xfer_diffAddr; auto)]
+      )
+    ]; (destruct (eq_nat_dec c x); [intuition auto |]); auto.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
+    nmemCache_invariants s ->
+    "fromPToC" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
+      listFirstElt, listEnq, listDeq in *; subst;
+    SymEval; subst; simpl;
+    destruct (eq_nat_dec c x);
+    [subst;
+      match goal with
+        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct toCList; [discriminate|
+                          simplMapUpds ltac:(rewrite <- ?fromPToC_xfer; auto)]
+      )
+    | match goal with
+        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
+          destruct (HInd a _ _ H eq_refl)
+      end; unfold withIndex, withPrefix, listIsEmpty,
+           listFirstElt, listEnq, listDeq, listEltK in *; simpl in *;
+      repeat substFind; dest; repeat simplBool; mkStruct;
+      (destruct toCList; [discriminate|
+                          simplMapUpds ltac:(try erewrite fromPToC_xfer_diffAddr; eauto);
+                            match goal with
+                              | neq: ?c <> ?x |- context [eq_nat_dec ?c ?x] =>
+                                destruct (eq_nat_dec c x) as [isEq | notEq];
+                                  [specialize (neq isEq); exfalso; assumption | eassumption]
+                              | _ => idtac
+                            end; auto
+                         ])].
+  Qed.
+  
+  Lemma nmemCache_invariants_hold_1 s a u cs:
+    nmemCache_invariants s ->
+    "l1MissByState" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaInit.
+    simplMapUpds 
+      ltac:(intros; unfold isCWait in *;
+              match goal with
+                | H: In _ _ |- _ =>
+                  (apply i16a in H || apply i16b in H)
+                | _ => idtac
+              end; dest; try discriminate).
+  Qed.
+  
+  Lemma nmemCache_invariants_hold_2 s a u cs:
+    nmemCache_invariants s ->
+    "l1MissByLine" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaInit.
+    simplMapUpds
+      ltac:(intros; unfold isCWait in *;
+              match goal with
+                | H: In _ _ |- _ =>
+                  (apply i16a in H || apply i16b in H)
+                | _ => intuition auto
+              end; dest; try discriminate).
+  Qed.
+
+  Lemma nmemCache_invariants_hold_3 s a u cs:
+    nmemCache_invariants s ->
+    "l1Hit" metaIs a ->
+    forall x,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaInit.
+    simplMapUpds
+      ltac:(intros; unfold isCWait in *;
+              match goal with
+                | H: In _ _ |- _ =>
+                  (apply i16a in H || apply i16b in H)
+                | _ => intuition auto
+              end; dest; try discriminate).
+  Qed.
+
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
     "upgRq" metaIs a ->
@@ -2258,124 +2479,8 @@ Section MemCacheInl.
       unfold isPWait in *; dest; discriminate.
   Qed.
 
-
 (*  
   
-  Lemma nmemCache_invariants_hold_13 s a u cs:
-    nmemCache_invariants s ->
-    "dwnRs_noWait" is a ->
-    SemAction s a
-              u cs WO ->
-    nmemCache_invariants (M.union u s).
-  Proof.
-    normalInit.
-
-    - simplMapUpds
-        ltac:(unfold listEnq, listDeq, listIsEmpty,
-              listFirstElt, listEltT, fromPToC, AddrBits, isPWait in *; subst;
-              destruct rsFromCList;
-              simpl in *; try discriminate; mkStruct;
-              unfold IndexBound_head, IndexBound_tail, AddrBits,
-              addFirstBoundedIndex in *; simpl in *;
-              match goal with
-                | |- context [@weq ?t a0 ?a] =>
-                  destruct (@weq t a0 a) as [e | ?];
-                [ rewrite <- e in *            
-                | match goal with
-                    | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
-                      rewrite rsFromCToP_diffAddr_first with (g := g);
-                        unfold IndexBound_head, IndexBound_tail; simpl; auto
-                    | _ => auto
-                  end
-                ]
-                | _ => auto
-              end;
-              match goal with
-                | |- context [@weq ?t ($ c) ?a] =>
-                  destruct (@weq t ($ c) a);
-                [| match goal with
-                     | |- context [rsFromCToP _ _ rsFromCList rsToPList] =>
-                       rewrite rsFromCToP_diffChild_first with (g := g);
-                         unfold IndexBound_head, IndexBound_tail; simpl; auto
-                     | _ => auto
-                   end
-                ]
-                | _ => auto
-              end
-             ).
-
-
-  ( * Beyond this, some hypotheses names are hard coded * )
-  
-  
-  Lemma rsFromCToP_sameAddr_sameChild a c P:
-    forall rsFromCList g rsToPList,
-      (forall rs, In rs (rsFromCToP ($ c) a (g :: rsFromCList) rsToPList) ->
-                  P rs) ->
-      a = g {| bindex := "rs" |} {| bindex := "addr" |} ->
-      $ c = g {| bindex := "child" |} ->
-      P (g {| bindex := "rs" |}).
-  Proof.
-    simpl.
-    unfold IndexBound_head, IndexBound_tail; simpl.
-    unfold rsFromCToP.
-    simpl.
-    intros.
-    repeat match type of X with
-             | context [weq ?p ?q] => destruct (weq p q); [| intuition auto]
-           end.
-    match goal with
-      | |- P ?a => specialize (X a)
-    end.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    apply X; auto.
-  Qed.
-
-  Lemma rsFromCToP_diffAddr_first
-        c a rsFromCList rsToPList (g: type (RsFromC LgDataBytes LgNumDatas
-                                                    LgNumChildren (Bit (TagBits + IdxBits)))):
-    a <> g {| bindex := "rs" |} {| bindex := "addr" |} ->
-    rsFromCToP c a rsFromCList rsToPList = rsFromCToP c a (g :: rsFromCList) rsToPList.
-  Proof.
-    simpl in *; intros.
-    unfold rsFromCToP; simpl.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    repeat match goal with
-             | |- context[if ?p then _ else _] =>
-               destruct p; intuition auto
-           end.
-  Qed.
-  
-  Lemma rsFromCToP_diffChild_first
-        c a rsFromCList rsToPList (g: type (RsFromC LgDataBytes LgNumDatas
-                                                    LgNumChildren (Bit (TagBits + IdxBits)))):
-    c <> g {| bindex := "child" |} ->
-    rsFromCToP c a rsFromCList rsToPList = rsFromCToP c a (g :: rsFromCList) rsToPList.
-  Proof.
-    simpl in *; intros.
-    unfold rsFromCToP; simpl.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    repeat match goal with
-             | |- context[if ?p then _ else _] =>
-               destruct p; intuition auto
-           end.
-  Qed.
-
-  Lemma rsLessTo_cons ls:
-    forall g rs,
-      In rs ls ->
-      rsLessTo (g :: ls) ->
-      rs {| bindex := "to" |} < g {| bindex := "to" |}.
-  Proof.
-    unfold IndexBound_head, IndexBound_tail; simpl.
-    induction ls; intros; simpl in *; subst; intuition auto.
-    rewrite H0 in *; auto.
-    apply IHls with (rs := rs) in H2; auto.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    Nomega.nomega.
-  Qed.
-
-
   ( *
   
   Lemma nmemCache_invariants_hold_12 s a u cs:
@@ -2868,307 +2973,4 @@ Section MemCacheInl.
     simpl in *; discriminate.
 
 *)
-    
-  (*
-  
-  Theorem nmemCache_invariants_true s ll:
-    Behavior (modFromMeta (nmemCacheInl IdxBits TagBits
-                                        LgNumDatas LgDataBytes Id LgNumChildren)) s ll ->
-    nmemCache_invariants s.
-  Proof.
-    intros beh.
-    destruct beh.
-    match goal with
-      | H: Multistep _ ?P _ _ |- _ =>
-        remember P as init
-    end.
-    induction HMultistepBeh; repeat subst; intros.
-    - unfold nmemCacheInl, modFromMeta, metaRegs, getRegInits, initRegs;
-      repeat (
-          rewrite single_unfold_concat;
-          rewrite makeMap_union;
-          [| apply disjList_metaRegs; simpl; intro H;
-             (repeat (destruct H; [discriminate | ]); assumption)]); simpl;
-      cbv [getListFromRep];
-      rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
-      rewrite ?makeMap_fold_eq.
-
-      prelimSimplRegs LgNumChildren.
-    - specialize (IHHMultistepBeh eq_refl).
-      apply Lts.SemFacts.stepZero in HStep; [| apply eq_refl].
-      dest; subst.
-      destruct l.
-      simpl in H, H0.
-      destruct annot; subst; [| inv H0; rewrite M.union_empty_L; auto].
-      clear - H0 IHHMultistepBeh.
-      inv H0; [rewrite M.union_empty_L; auto|].
-      apply In_metaRules in HInRules; dest; unfold nmemCacheInl in *; simpl in *; dest.
-      intros ? ? c ? ?.
-             
-      doDestruct; unfold getActionFromGen, getGenAction, strFromName in HAction;
-      simpl in *; subst; unfold getActionFromSin, getSinAction in *; subst;
-      SymEval; subst; simpl;
-      match goal with
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
-          destruct (IHHMultistepBeh a _ _ H eq_refl);
-            specialize (IHHMultistepBeh a _ _ H' eq_refl)
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
-          destruct (IHHMultistepBeh a _ _ H eq_refl)          
-      end;
-      unfold withIndex, withPrefix in *;
-      simpl in *;
-      repeat
-        match goal with
-          | H': ?y === ?n .[ ?s] , H: ?v === ?n .[ ?s] |- _ =>
-            rewrite H' in H;
-              apply invSome in H;
-              apply Eqdep.EqdepTheory.inj_pair2 in H; subst; intros ( *
-            intros; constructor 1 with (x := y);
-            ( * exists y; * )
-            split; [assumption|]; intros * )
-          | |- _ /\ _ => split; intros
-          | |- _ => auto
-        end; dest;
-      repeat match goal with
-               | H: ?v = true -> False |- _ =>
-                 apply true_False_false in H
-               | H: ?v = false -> False |- _ =>
-                 apply false_False_true in H
-             end;
-      match goal with
-        | H: (?x <= wordToNat _)%nat, H': (c <= wordToNat _)%nat |-
-          nmemCache_invariants_rec (M.union ?m ?n) ?a
-                                   ?cword c =>
-          destruct (eq_nat_dec c x);
-            [subst|
-             let ls := mkList_add_key_instance m in
-             replace m with (do_upd_map_key_instance x ls) by
-                 reflexivity;
-               apply nmemCache_invariants_same; auto]
-        | _ => idtac
-      end.
-
-      + simplMapUpds; (reflexivity || eassumption || intros); unfold isCWait in *.
-        * dest; discriminate.
-        * apply i16a in H2; dest; discriminate.
-        * apply i16b in H2; dest; discriminate.
-        * discriminate.
-      + simplMapUpds; (reflexivity || eassumption || intros); unfold isCWait in *.
-        * dest; discriminate.
-        * apply i16a in H2; dest; discriminate.
-        * apply i16b in H2; dest; discriminate.
-        * left; intuition auto.
-      + simplMapUpds; (reflexivity || eassumption || intros); unfold isCWait in *.
-        * dest; discriminate.
-        * apply i16a in H2; dest; discriminate.
-        * apply i16b in H2; dest; discriminate.
-        * right; intuition auto.
-      + simplMapUpds; (reflexivity || eassumption || intros); unfold isCWait in *.
-        * dest; discriminate.
-        * apply i16a in H2; dest; discriminate.
-        * apply i16b in H2; dest; discriminate.
-        * discriminate.
-      + simplMapUpds; (reflexivity || eassumption || intros); unfold isCWait in *.
-        * dest; discriminate.
-        * apply i16a in H2; dest; discriminate.
-        * apply i16b in H2; dest; discriminate.
-        * discriminate.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-      + simplMapUpds; (reflexivity || eassumption || intros); exfalso; unfold isCWait in *.
-        * dest; discriminate.
-        * pose proof (i16a _ H2) as sth1.
-          destruct sth1 as [sth2 sth3].
-          pose proof (i16 sth2) as sth4.
-          dest.
-          destruct H12; dest; [| specialize (H19 _ H2); assumption].
-          simpl in *.
-          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
-          StringBound.IndexBound_head in *; simpl in *.
-          rewrite H6 in H4.
-          simpl in H4.
-          unfold getCs, getIdxS, getTagS in H4.
-          rewrite H17 in H8, H10.
-          rewrite H8 in H4.
-          match goal with
-            | H: context[weq ?p ?p] |- _ =>
-              destruct (weq p p); intuition auto
-          end.
-        * pose proof (i16b _ H2) as sth1.
-          destruct sth1 as [sth2 sth3].
-          pose proof (i16 sth2) as sth4.
-          dest.
-          destruct H12; dest; [specialize (H19 _ H2); congruence|].
-          simpl in *.
-          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
-          StringBound.IndexBound_head in *; simpl in *.
-          rewrite H6 in H4.
-          simpl in H4.
-          unfold getCs, getIdxS, getTagS in H4.
-          rewrite H17 in H8, H10.
-          rewrite H8 in H4.
-          match goal with
-            | H: context[weq ?p ?p] |- _ =>
-              destruct (weq p p); intuition auto
-          end.
-        * discriminate.
-      + simplMapUpds; (reflexivity || eassumption || intros); exfalso; unfold isCWait in *.
-        * dest; discriminate.
-        * pose proof (i16a _ H2) as sth1.
-          destruct sth1 as [sth2 sth3].
-          pose proof (i16 sth2) as sth4.
-          dest.
-          destruct H12; dest; [| specialize (H19 _ H2); assumption].
-          simpl in *.
-          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
-          StringBound.IndexBound_head in *; simpl in *.
-          rewrite H6 in H4.
-          simpl in H4.
-          unfold getCs, getIdxS, getTagS in H4.
-          rewrite H17 in H8, H10.
-          rewrite H8 in H4.
-          match goal with
-            | H: context[weq ?p ?p] |- _ =>
-              destruct (weq p p); [|intuition auto]
-          end.
-          rewrite H10 in H4.
-          Nomega.pre_nomega; Nomega.nomega.
-        * pose proof (i16b _ H2) as sth1.
-          destruct sth1 as [sth2 sth3].
-          pose proof (i16 sth2) as sth4.
-          dest.
-          destruct H12; dest; [specialize (H19 _ H2); congruence|].
-          simpl in *.
-          unfold addFirstBoundedIndex, StringBound.IndexBound_tail,
-          StringBound.IndexBound_head in *; simpl in *.
-          rewrite H6 in H4.
-          simpl in H4.
-          unfold getCs, getIdxS, getTagS in H4.
-          rewrite H17 in H8, H10.
-          rewrite H8 in H4.
-          match goal with
-            | H: context[weq ?p ?p] |- _ =>
-              destruct (weq p p); [|intuition auto]
-          end.
-          rewrite H10 in H4.
-          Nomega.pre_nomega; Nomega.nomega.
-        * discriminate.
-      + admit.
-      + admit.
-      + admit.
-      + match goal with
-          | H: (?x <= wordToNat _)%nat,
-               H': (c <= wordToNat _)%nat
-            |-
-            nmemCache_invariants_rec (M.union ?m ?n) ?a
-                                     ?cword c =>
-            unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
-              destruct rqToPList; simpl in *;
-              [discriminate |
-              destruct (eq_nat_dec c x); [subst; simplMapUpds; (reflexivity || eassumption ||
-                                           (try rewrite <- rqFromCToP_xfer); auto) | ]]
-        end.
-
-        rewrite <- rqFromCToP_xfer with (t := g) (rqFromCList := rqFromCList)
-                                                      (rqToPList := rqToPList)
-                                                      (x := x).
-                                                               .
-        Focus 7.
-        simpl.
-              destruct rqToPList; simpl in *;
-              [discriminate |
-              destruct (eq_nat_dec c x); [subst; simplMapUpds; (reflexivity || eassumption ||
-                                           rewrite <- rqFromCToP_xfer; auto) | ]]
-        end.
-        clear - IHHMultistepBeh n0 H H1 H0 H3.
-        destruct IHHMultistepBeh; simplMapUpds;
-        match goal with
-          | |- ?p === ?n.[?s] => eassumption
-          | _ => auto
-        end;
-        unfold withIndex, withPrefix in *;
-        match goal with
-          | H: ?p1 === ?n.[?s], H': ?p2 === ?n.[?s] |- _ =>
-            rewrite H' in H;
-              apply invSome in H;
-              simpl in H;
-              destruct_existT
-        end;
-        try rewrite <- rqFromCToP_xfer_diffAddr; auto.
-        * destruct (eq_nat_dec c x).
-          specialize (n0 e); exfalso; assumption.
-          eassumption.
-        * auto.
-      + match goal with
-          | H: (?x <= wordToNat _)%nat,
-               H': (c <= wordToNat _)%nat
-            |-
-            nmemCache_invariants_rec (M.union ?m ?n) ?a
-                                     ?cword c =>
-            unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
-              destruct rsToPList; simpl in *;
-              [discriminate |
-              destruct (eq_nat_dec c x); [subst; simplMapUpds; (reflexivity || eassumption ||
-                                           rewrite <- rsFromCToP_xfer; auto) | ]]
-        end.
-        clear - IHHMultistepBeh n0 H H1 H0 H3.
-        destruct IHHMultistepBeh; simplMapUpds;
-        match goal with
-          | |- ?p === ?n.[?s] => eassumption
-          | _ => auto
-        end;
-        match goal with
-          | H: ?p1 === ?n.[?s], H': ?p2 === ?n.[?s] |- _ =>
-            rewrite H' in H;
-              apply invSome in H;
-              simpl in H;
-              destruct_existT
-        end;
-        try rewrite <- rsFromCToP_xfer_diffAddr; auto.
-        * destruct (eq_nat_dec c x).
-          specialize (n0 e); exfalso; assumption.
-          eassumption.
-        * auto.
-        * auto.
-      + match goal with
-          | H: (?x <= wordToNat _)%nat,
-               H': (c <= wordToNat _)%nat
-            |-
-            nmemCache_invariants_rec (M.union ?m ?n) ?a
-                                     ?cword c =>
-            unfold listIsEmpty, listFirstElt, listEnq, listDeq in *;
-              destruct toCList; simpl in *;
-              [discriminate |
-               destruct (eq_nat_dec c x);
-                 [subst; simplMapUpds; (reflexivity || eassumption ||
-                                                rewrite <- fromPToC_xfer; auto) | ]]
-        end.
-        clear - IHHMultistepBeh n0 H H1 H4 H0 H3.
-        destruct IHHMultistepBeh; simplMapUpds;
-        match goal with
-          | |- ?p === ?n.[?s] => eassumption
-          | _ => auto
-        end;
-        match goal with
-          | H: ?p1 === ?n.[?s], H': ?p2 === ?n.[?s] |- _ =>
-            rewrite H' in H;
-              apply invSome in H;
-              simpl in H;
-              destruct_existT
-        end; try erewrite fromPToC_xfer_diffAddr; eauto;
-        match goal with
-          | neq: ?c <> ?x |- context [eq_nat_dec ?c ?x] =>
-            destruct (eq_nat_dec c x) as [isEq | notEq];
-              [specialize (neq isEq); exfalso; assumption | eassumption]
-          | _ => idtac
-        end; auto.
-      + admit.
-      + admit.
-      + admit.
-      + admit.
-  Qed.
-   *)
 End MemCacheInl.
