@@ -597,7 +597,8 @@ Section Examples.
     - (* 12 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 3)))). (* to 15 *)
     - (* 13 *) exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
     - (* 14 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 13)))). (* 14 + 13 == 11 *)
-    - (* 15 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 0)))). (* loop *)
+    - (* 15 *) exact (ConstBit (rv32iToRaw NOP)). (* loop *)
+    (* - (* 15 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 0)))). (* loop *) *)
   Defined.
 
 End Examples.

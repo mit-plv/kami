@@ -10,6 +10,15 @@ Require Import Eqdep.
 
 Set Implicit Arguments.
 
+(* TODO: move to lib/FMap.v *)
+
+Notation "'[]'" := (M.empty _) : fmap_scope.
+Notation " [ k <- v ] " := (M.add k%string v (M.empty _)) : fmap_scope.
+Notation " m [ k <- v ] " := (M.add k%string v m) (at level 0) : fmap_scope.
+Notation " m [ k ] " := (M.find k%string m) (at level 0) : fmap_scope.
+
+Delimit Scope fmap_scope with fmap.
+
 Notation "'mlet' vn : t <- r 'of' kn ; cont" :=
   (match M.find kn%string r with
    | Some (existT k v) =>
@@ -68,38 +77,33 @@ Section ProcDecSC.
        mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
        if oev
-       then (M.add "pc"%string (existT _ _ pcv)
-                   (M.add "rf"%string (existT _ _ rfv)
-                          (M.add "fetch"%string (existT _ _ fetchv)
-                                 (M.add "fetched"%string (existT _ _ fetchedv)
-                                        (M.empty _)))))
+       then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
+              ["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
+              ["rf" <- (existT _ _ rfv)]
+              ["pc" <- (existT _ _ pcv)]%fmap
        else
          if fetchv
-         then (M.add "pc"%string (existT _ _ pcv)
-                     (M.add "rf"%string (existT _ _ rfv)
-                            (M.add "fetch"%string (existT _ (SyntaxKind Bool) false)
-                                   (M.add "fetched"%string
-                                          (existT _ (SyntaxKind (Data lgDataBytes))
-                                                  (oelv odv ``"data"))
-                                          (M.empty _)))))
+         then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
+                ["fetch" <- (existT _ (SyntaxKind Bool) false)]
+                ["rf" <- (existT _ _ rfv)]
+                ["pc" <- (existT _ _ pcv)]%fmap
          else
            let inst := evalExpr (dec _ rfv fetchedv) in
-           (M.add "pc"%string (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))
-                  (M.add "rf"%string
-                         (let opc := inst ``"opcode" in
-                          if weq opc (evalConstT opLd)
-                          then
-                            (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
-                                    ((fun a : word rfIdx => if weq a (inst ``"reg")
-                                                            then oelv odv ``"data"
-                                                            else rfv a)
-                                     : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
-                                                                          rfIdx)))))
-                          else
-                            (existT _ _ rfv))
-                         (M.add "fetch"%string (existT _ (SyntaxKind Bool) true)
-                                (M.add "fetched"%string (existT _ _ fetchedv)
-                                       (M.empty _))))))%mapping.
+           ["fetched" <- (existT _ _ fetchedv)]
+             ["fetch" <- (existT _ (SyntaxKind Bool) true)]
+             ["rf" <- (let opc := inst ``"opcode" in
+                       if weq opc (evalConstT opLd)
+                       then
+                         (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
+                                 ((fun a : word rfIdx => if weq a (inst ``"reg")
+                                                         then oelv odv ``"data"
+                                                         else rfv a)
+                                  : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
+                                                                       rfIdx)))))
+                       else
+                         (existT _ _ rfv))]
+             ["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))]%fmap
+    )%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 
   Definition decInstConfig :=
