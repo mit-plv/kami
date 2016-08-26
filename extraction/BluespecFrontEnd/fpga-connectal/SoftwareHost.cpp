@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "HostIndication.h"
+#include "HostRequest.h"
 #include "GeneratedTypes.h"
 
 class HostIndication : public HostIndicationWrapper
@@ -18,16 +20,18 @@ public:
 };
 
 int main(int argc, const char **argv) {
-	HostIndication toHostIndication(IfcNames_HostIndicationH2S);
-
-	// TODO: instantiate HostIndication with threading
 	
-	int v = 0;
-	int ret = scanf("%d", &v);
+	HostIndication toHostIndication(IfcNames_HostIndicationH2S);
+	HostRequestProxy* hostRequestProxy = new HostRequestProxy(IfcNames_HostRequestS2H);
 
-	if (ret) {
-		printf("succeed");
+	// Wait for some seconds from connectal to be ready
+	usleep(3 * 1000);
+
+	hostRequestProxy->start();	
+
+	// busy-waiting
+	while (1) {
 	}
 
-	return v;
+	return 0;
 }

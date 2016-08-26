@@ -1,4 +1,5 @@
 CONNECTALDIR?=../connectal
+S2H_INTERFACES = HostRequest:Host.request
 H2S_INTERFACES = Host:HostIndication
 
 BSVFILES= Host.bsv
