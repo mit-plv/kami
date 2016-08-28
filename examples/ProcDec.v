@@ -63,7 +63,7 @@ Section ProcDec.
       Write "fetch" <- $$false;
       Write "fetchStall" <- $$false;
       Retv
-      
+
     with Rule "reqLd" :=
       Read fetch <- "fetch";
       Assert !#fetch;
@@ -73,12 +73,26 @@ Section ProcDec.
       Read rawInst <- "fetched";
       LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
+      Assert #inst@."reg" != $0;
       Call memReq(STRUCT { "addr" ::= #inst@."addr";
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
       Retv
-        
+
+    with Rule "reqLdZ" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read stall <- "stall";
+      Assert !#stall;
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      Assert #inst@."opcode" == $$opLd;
+      Assert #inst@."reg" == $0;
+      nextPc ppc st inst
+
     with Rule "reqSt" :=
       Read fetch <- "fetch";
       Assert !#fetch;

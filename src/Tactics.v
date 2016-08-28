@@ -575,6 +575,7 @@ Ltac kinv_simpl :=
     (try match goal with
          | [H: ?t = ?t |- _] => clear H
          | [H: ?t = ?t -> False |- _] => elim H; reflexivity
+         | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
          | [H: ?t <> ?t |- _] => elim H; reflexivity
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
@@ -591,7 +592,7 @@ Ltac kinv_simpl :=
          end; dest; try subst).
 
 Ltac kinv_red :=
-  repeat autounfold with InvDefs in *;
+  intros; repeat autounfold with InvDefs in *;
   dest; try subst; kinv_simpl.
 
 Ltac kinv_finish :=
@@ -602,6 +603,7 @@ Ltac kinv_finish :=
     (try match goal with
          | [H: _ = _ |- _] => rewrite H in *; clear H
          | [H: _ = _ |- _] => rewrite <-H in *; clear H
+         | [H: _ <> _ |- _] => elim H; reflexivity
          | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
          end;
      simpl in *; kinv_simpl; auto).

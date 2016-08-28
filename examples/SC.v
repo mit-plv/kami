@@ -114,7 +114,7 @@ Section ProcInst.
       Write "fetched" <- #rawInst@."data";
       Write "fetch" <- $$false;
       Retv
-      
+
     with Rule "execLd" :=
       Read fetch <- "fetch";
       Assert !#fetch;
@@ -122,11 +122,24 @@ Section ProcInst.
       Read st <- "rf";
       Read rawInst <- "fetched";
       LET inst <- dec _ st rawInst;
+      LET regIdx <- #inst@."reg";
+      Assert (#regIdx != $0);
       Assert #inst@."opcode" == $$opLd;
       Call ldRep <- execCm(STRUCT { "addr" ::= #inst@."addr";
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
-      Write "rf" <- #st@[#inst@."reg" <- #ldRep@."data"];
+      Write "rf" <- #st@[#regIdx <- #ldRep@."data"];
+      nextPc ppc st inst
+
+    with Rule "execLdZ" :=
+      Read fetch <- "fetch";
+      Assert !#fetch;
+      Read ppc <- "pc";
+      Read st <- "rf";
+      Read rawInst <- "fetched";
+      LET inst <- dec _ st rawInst;
+      LET regIdx <- #inst@."reg";
+      Assert (#regIdx == $0);
       nextPc ppc st inst
 
     with Rule "execSt" :=

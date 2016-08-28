@@ -38,11 +38,13 @@ Section Invariants.
   Proof.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
-    - refine (_ /\ _).
+    - refine (_ /\ _ /\ _).
       + exact ((if weq (evalExpr (dec _ rf instRaw) ``"opcode") (evalConstT opLd)
                 then false else true) = insElt insDeqP ``"op").
       + exact ((if weq (evalExpr (dec _ rf instRaw) ``"opcode") (evalConstT opSt)
                 then true else false) = insElt insDeqP ``"op").
+      + exact (evalExpr (dec _ rf instRaw) ``"opcode" = evalConstT opLd ->
+               evalExpr (dec _ rf instRaw) ``"reg" <> (natToWord _ 0)).
     - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf instRaw) ``"addr").
     - refine (if (insElt insDeqP ``"op") : bool then _ else _).
       + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf instRaw) ``"value").
@@ -111,17 +113,18 @@ Section Invariants.
             fifo_empty_inv iev ienqpv ideqpv /\
             fifo_not_empty_inv oev oenqpv odeqpv)) \/
         (fetchv = false /\ fstallv = false /\
-         or3
-           (stallv = false /\
-            fifo_empty_inv iev ienqpv ideqpv /\
-            fifo_empty_inv oev oenqpv odeqpv)
-           ((stallv = true /\
-             fifo_not_empty_inv iev ienqpv ideqpv /\
-             fifo_empty_inv oev oenqpv odeqpv) /\
-            (mem_request_inv fetchedv rfv iev ieltv ideqpv))
-           (stallv = true /\
-            fifo_empty_inv iev ienqpv ideqpv /\
-            fifo_not_empty_inv oev oenqpv odeqpv)) }.
+         (or3
+            (stallv = false /\
+             fifo_empty_inv iev ienqpv ideqpv /\
+             fifo_empty_inv oev oenqpv odeqpv)
+            ((stallv = true /\
+              fifo_not_empty_inv iev ienqpv ideqpv /\
+              fifo_empty_inv oev oenqpv odeqpv) /\
+             (mem_request_inv fetchedv rfv iev ieltv ideqpv))
+            (stallv = true /\
+             fifo_empty_inv iev ienqpv ideqpv /\
+             fifo_not_empty_inv oev oenqpv odeqpv)))
+    }.
 
   Ltac procDec_inv_old :=
     try match goal with
@@ -173,7 +176,10 @@ Section Invariants.
         * kinv_finish.
         * reflexivity.
       + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0 0.
+      + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 1 1.
+        * kinv_finish.
         * kinv_finish.
         * kinv_finish.
         * reflexivity.

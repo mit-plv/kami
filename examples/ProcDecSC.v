@@ -60,7 +60,8 @@ Section ProcDecSC.
   Definition pdec_pinst_ruleMap (o: RegsT): string -> option string.
     refine ("execToHost" |-> "execToHost";
             "execNm"     |-> "execNm";
-            "processSt"  |-> "execSt"; _).
+            "processSt"  |-> "execSt";
+            "reqLdZ"     |-> "execLdZ"; _).
     kgetv "fetch"%string fetchv o Bool (fun _ : string => @None string).
     exact (if fetchv
            then "processLd" |-> "instFetch"; ||
@@ -77,7 +78,7 @@ Section ProcDecSC.
        mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
        if oev
-       then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
+       then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) fetchedv)]
               ["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
               ["rf" <- (existT _ _ rfv)]
               ["pc" <- (existT _ _ pcv)]%fmap
