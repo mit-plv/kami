@@ -205,17 +205,20 @@ Section RV32I.
     unfold ExecStateT; intros ty st pc dec.
     set (ReadField ``"inst" #dec)%kami_expr as inst.
 
-    (* refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL) *)
-    (*         then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) #pc) + *)
-    (*                    (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE inst))] *)
-    (*         else _)%kami_expr. *)
-    (* refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR) *)
-    (*         then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) *)
-    (*                                           (#pc + (UniBit (SignExtendTrunc _ _) *)
-    (*                                                          (getRs1ValueE st inst)) *)
-    (*                                            + (UniBit (SignExtendTrunc _ _) *)
-    (*                                                      (getOffsetIE inst))))] else _)%kami_expr. *)
-    
+    (* x0 is always hardcoded to zero. *)
+    refine (IF (getRdE inst == $0) then #st else _)%kami_expr.
+
+    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL)
+            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) #pc) +
+                       (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE inst))]
+            else _)%kami_expr.
+    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR)
+            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _)
+                                              (#pc + (UniBit (SignExtendTrunc _ _)
+                                                             (getRs1ValueE st inst))
+                                               + (UniBit (SignExtendTrunc _ _)
+                                                         (getOffsetIE inst))))] else _)%kami_expr.
+
     refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOP) then _ else _)%kami_expr.
 
     - register_op_funct7
@@ -597,7 +600,7 @@ Section Examples.
     - (* 12 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 3)))). (* to 15 *)
     - (* 13 *) exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
     - (* 14 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 13)))). (* 14 + 13 == 11 *)
-    - (* 15 *) exact (ConstBit (rv32iToRaw NOP)). (* loop *)
+    - (* 15 *) exact (ConstBit (rv32iToRaw NOP)).
     (* - (* 15 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 0)))). (* loop *) *)
   Defined.
 
