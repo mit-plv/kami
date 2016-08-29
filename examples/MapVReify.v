@@ -401,10 +401,11 @@ Ltac simplMapUpds tac :=
     | _ => idtac
   end; simpl;
   match goal with
-    | |- context [eq_nat_dec ?x ?x] =>
+    | |- context [eq_nat_dec ?x1 ?x2] =>
+      destruct (eq_nat_dec x1 x2); (exfalso; tauto)
+    | |- context [eq_nat_dec ?x1 ?x2] =>
       let isEq := fresh in
-      destruct (eq_nat_dec x x) as [isEq | isEq];
-        [ | clear - isEq; intuition auto]
+      destruct (eq_nat_dec x1 x2) as [isEq | isEq]; try (exfalso; congruence); [ clear isEq ]
     | _ => idtac
   end; (reflexivity || eassumption || tac).
 
