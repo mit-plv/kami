@@ -783,7 +783,7 @@ Section ToSimpleN.
 
     - unfold thetaR; eexists; split.
       + unfold nfifo_nsfifo_etaR; eexists; split.
-        * simpl; findeq.
+        * unfold initRegs, rawInitRegs, getRegInits; simpl; findeq.
         * reflexivity.
       + reflexivity.
     - intros; CommonTactics.dest_in; simpl; tauto.
