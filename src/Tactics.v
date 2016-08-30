@@ -487,7 +487,6 @@ Ltac kinline_left im :=
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
   repeat autounfold with MapDefs in *;
-  unfold initRegs, rawInitRegs, getRegInits; simpl;
   repeat
     (kstring_simpl;
      try match goal with

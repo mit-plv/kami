@@ -183,7 +183,9 @@ Section ToNative.
     forall o, reachable o fifo -> fifo_inv_0 o.
   Proof. (* SKIP_PROOF_ON
     apply decompositionInv.
-    - simpl; kinv_magic.
+    - simpl; kinv_action_dest.
+      unfold initRegs, rawInitRegs, getRegInits; simpl.
+      kinv_regmap_red; kinv_constr; kinv_eq.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
       + kinv_magic_light.
@@ -212,7 +214,10 @@ Section ToNative.
       fifo_inv_1 o.
   Proof. (* SKIP_PROOF_ON
     apply decompositionInv.
-    - simpl; kinv_magic; or3_fst; auto.
+    - simpl; kinv_action_dest.
+      unfold initRegs, rawInitRegs, getRegInits; simpl.
+      kinv_regmap_red; kinv_constr; kinv_eq.
+      or3_fst; auto.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
       + simpl in *; kinv_magic_light_with kinv_or3.
