@@ -1816,6 +1816,7 @@ Section MemCacheInl.
     mkStruct;
     do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
            simpl in *);
+    try (rewrite getCs_cs_matches in * by tauto);
     try tauto; try discriminate; try word_omega.
   
   Ltac invariant_solve :=
@@ -1997,6 +1998,8 @@ Section MemCacheInl.
       nmemCache_invariants (M.union u s).
   Proof.
     metaInvariant.
+    rewrite getCs_cs_matches in * by (tauto || congruence).
+    word_omega.
     specialize_msgs.
   
       match goal with
