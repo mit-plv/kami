@@ -1640,6 +1640,7 @@ Section MemCacheInl.
              destruct E; try discriminate; [ clear H ]
            end; autorewrite with invariant in *.
 
+(*
   Ltac specialize_msgs :=
     repeat
       match goal with
@@ -1652,6 +1653,48 @@ Section MemCacheInl.
                                pose proof (H b)
                            end; clear H
               end
+      end.
+
+  Definition Sth := BoundedIndexFull.
+  Ltac specialize_msgs :=
+    repeat match goal with
+             | [H: forall x: (forall i: BoundedIndexFull _, GetAttrType i), _ |- _ ] =>
+               match goal with
+                 | [a: forall i: BoundedIndexFull _, GetAttrType i |- _] =>
+                   pose proof (H a);
+                     fold Sth in a;
+                     (repeat match goal with
+                              | [b: forall i: BoundedIndexFull _, GetAttrType i |- _] =>
+                                pose proof (H b); fold Sth in b
+                            end);
+                     clear H;
+                     unfold Sth in *
+               end
+           end.
+*)
+  Ltac specialize_msgs :=
+    repeat
+      match goal with
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); pose proof (H c); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); clear H
+          end
+        | [H: (forall x:?T, _), a:?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); clear H
+          end
       end.
 
   Ltac apply_in_app_or H :=
@@ -1769,8 +1812,10 @@ Section MemCacheInl.
     destruct_in_app;
     dest;
     specialize_msgs; specialize_in;
-    dest; mkStruct;
-    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error in *; simpl in *);
+    dest; subst;
+    mkStruct;
+    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
+           simpl in *);
     try tauto; try discriminate; try word_omega.
   
   Ltac invariant_solve :=
@@ -1952,6 +1997,69 @@ Section MemCacheInl.
       nmemCache_invariants (M.union u s).
   Proof.
     metaInvariant.
+    specialize_msgs.
+  
+      match goal with
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); pose proof (H c); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); pose proof (H b); clear H
+          end
+        | [H: (forall x:?T, _), a:?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, GetAttrType i =>
+              pose proof (H a); clear H
+          end
+      end.
+
+  Ltac apply_in_app_or H :=
+    intros; eapply H; eauto; apply in_or_app; eauto.
+
+  Ltac apply_in_inv H :=
+    intros; eapply H; eauto; simpl; eauto.
+
+  Ltac specialize_in :=
+    repeat
+      match goal with
+        | [H: In ?x _ -> _, H': In ?x _ |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?x = ?y |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?y = ?x |- _] =>
+          specialize (H (eq_sym H'))
+        | [H: In ?x (?l1 ++ ?l2)%list -> ?P |- _] =>
+          assert (In x l1 -> P) by (apply_in_app_or H);
+            assert (In x l2 -> P) by (apply_in_app_or H);
+            clear H
+        | [H: In ?x (?v :: ?l)%list -> ?P |- _] =>
+          assert (x = v -> P) by (apply_in_inv H);
+            assert (In x l -> P) by (apply_in_inv H);
+            clear H
+      end.
+
+
+    specialize (i7 rs).
+    specialize_msgs.
+    clear i7.
+    simpl.
+                                         
+        pose 
+        pose proof (H a); clear H
+           end.
+        specialize (H a)
+    end.
+                    
+    simpl
     metaInit;
     try match goal with
           | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
