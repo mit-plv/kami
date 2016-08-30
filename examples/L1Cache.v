@@ -69,9 +69,9 @@ Section L1Cache.
 
   Definition l1Cache :=
     SIN {
-        Register "procRqValid": Bool <- @ConstBool false
-        with Register "procRqReplace": Bool <- @ConstBool false
-        with Register "procRqWait": Bool <- @ConstBool false
+        Register "procRqValid": Bool <- false
+        with Register "procRqReplace": Bool <- false
+        with Register "procRqWait": Bool <- false
         with Register "procRq": RqFromProc <- Default
 
         (*                                 

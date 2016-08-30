@@ -243,10 +243,13 @@ Section Phoas.
 End Phoas.
 
 Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
-Definition MethodT (sig : SignatureT) := forall ty,
-                                           ty (arg sig) -> ActionT ty (ret sig).
+Definition MethodT (sig : SignatureT) := forall ty, ty (arg sig) -> ActionT ty (ret sig).
 
-Definition RegInitT := Attribute (sigT ConstFullT).
+Inductive RegInitValue :=
+| RegInitCustom: sigT ConstFullT -> RegInitValue
+| RegInitDefault: FullKind -> RegInitValue.
+                    
+Definition RegInitT := Attribute RegInitValue.
 Definition DefMethT := Attribute (sigT MethodT).
 
 Definition filterDm (dms: list DefMethT) (filt: string) :=

@@ -882,12 +882,11 @@ Section Rename.
       remember (getRegInits m) as sth; clear m Heqsth.
       induction sth.
       + reflexivity.
-      + destruct a.
-        destruct attrType.
-        simpl.
-        rewrite <- IHsth.
-        rewrite renameMapAdd.
-        reflexivity.
+      + destruct a as [rn [[? ?]|]];
+          unfold initRegs in *; simpl in *;
+            rewrite <- IHsth;
+            rewrite renameMapAdd;
+            reflexivity.
     - intros.
       exists (renameMap u).
       constructor.
@@ -1123,12 +1122,11 @@ Section Rename.
     remember (getRegInits m) as sth; clear m Heqsth.
     induction sth.
     + reflexivity.
-    + destruct a.
-      destruct attrType.
-      simpl.
-      rewrite IHsth.
-      rewrite renameMapAdd.
-      reflexivity.
+    + destruct a as [rn [[? ?]|]];
+        unfold initRegs in *; simpl in *;
+          rewrite IHsth;
+          rewrite renameMapAdd;
+          reflexivity.
   Qed.
 
   Lemma renameMultistep m' n l:

@@ -834,18 +834,42 @@ Section GivenModule.
           u l (HStep: Step n u l):
       Multistep o (M.union u n) (l :: a).
 
-  Definition initRegs (init: list RegInitT): RegsT :=
-    makeMap (fullType type) evalConstFullT init.
-  Hint Unfold initRegs.
+  Definition rawInitRegs (init: list RegInitT) :=
+    map (fun r =>
+           match r with
+           | {| attrName := rn; attrType := ri |} =>
+             {| attrName := rn;
+                attrType := match ri with
+                            | RegInitCustom ric => ric
+                            | RegInitDefault rk => existT _ _ (getDefaultConstFull rk)
+                            end
+             |}
+           end) init.
 
-  Lemma initRegs_eq:
+  Definition initRegs (init: list RegInitT): RegsT :=
+    makeMap (fullType type) evalConstFullT (rawInitRegs init).
+  Hint Unfold rawInitRegs initRegs.
+
+  Lemma rawInitRegs_namesOf:
+    forall r, namesOf r = namesOf (rawInitRegs r).
+  Proof.
+    induction r; simpl; intros; auto.
+    destruct a; simpl; f_equal; auto.
+  Qed.
+
+  Lemma rawInitRegs_EquivList:
+    forall r1 r2, EquivList r1 r2 -> EquivList (rawInitRegs r1) (rawInitRegs r2).
+  Proof. intros; destruct H; split; apply SubList_map; auto. Qed.
+
+  Lemma initRegs_eq':
     forall r1 r2,
       NoDup (namesOf r1) ->
       NoDup (namesOf r2) ->
       EquivList r1 r2 ->
-      initRegs r1 = initRegs r2.
+      makeMap (fullType type) evalConstFullT r1 = 
+      makeMap (fullType type) evalConstFullT r2.
   Proof.
-    unfold initRegs; intros; M.ext y.
+    intros; M.ext y.
     do 2 (rewrite makeMap_find; auto).
     remember (getAttribute y r1) as yr1.
     remember (getAttribute y r2) as yr2.
@@ -869,6 +893,19 @@ Section GivenModule.
       elim Heqyr1.
       inv H1; apply SubList_map with (f:= @attrName _) in H3; auto.
     - auto.
+  Qed.
+  
+  Lemma initRegs_eq:
+    forall r1 r2,
+      NoDup (namesOf r1) ->
+      NoDup (namesOf r2) ->
+      EquivList r1 r2 ->
+      initRegs r1 = initRegs r2.
+  Proof.
+    intros; apply initRegs_eq'.
+    - rewrite <-rawInitRegs_namesOf; auto.
+    - rewrite <-rawInitRegs_namesOf; auto.
+    - apply rawInitRegs_EquivList; auto.
   Qed.
 
   Definition LabelSeqT := list LabelT.

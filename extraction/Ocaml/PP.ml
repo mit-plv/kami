@@ -120,6 +120,7 @@ let ppEndInterface = "endinterface"
 let ppReg = "Reg#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
+let ppDefaultValue = "unpack(0)"
 let ppBool = "Bool"
 let ppVoid = "void"
 let ppBit = "Bit#"
@@ -549,18 +550,32 @@ let rec ppBInterfaces (dl: bMethod list) =
 
 let ppRegInit (r: regInitT) =
   match r with
-  | { attrName = rn; attrType = ExistT (_, SyntaxConst (k, c)) } ->
-     open_hbox ();
-     ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
-     ps (bstring_of_charlist rn); print_space ();
-     ps ppAssign; print_space ();
-     ps ppMkReg; ps ppRBracketL;
-     (if bstring_of_charlist rn = "mem" then
-        ps (ppConst (getInitMem ()))
-      else
-        ps (ppConst c));        
-     ps ppRBracketR; ps ppSep;
-     close_box ()
+  | { attrName = rn; attrType = riv } ->
+     (match riv with
+      | RegInitCustom (ExistT (_, SyntaxConst (k, c))) ->
+         open_hbox ();
+         ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
+         ps (bstring_of_charlist rn); print_space ();
+         ps ppAssign; print_space ();
+         ps ppMkReg; ps ppRBracketL;
+         (if bstring_of_charlist rn = "mem" then
+            ps (ppConst (getInitMem ()))
+          else
+            ps (ppConst c));        
+         ps ppRBracketR; ps ppSep;
+         close_box ()
+      | RegInitDefault (SyntaxKind k) ->
+         open_hbox ();
+         ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
+         ps (bstring_of_charlist rn); print_space ();
+         ps ppAssign; print_space ();
+         ps ppMkReg; ps ppRBracketL;
+         (if bstring_of_charlist rn = "mem" then
+            ps (ppConst (getInitMem ()))
+          else
+            ps ppDefaultValue);
+         ps ppRBracketR; ps ppSep;
+         close_box ())
   | { attrName = rn; attrType = _ } ->
      raise (Should_not_happen ("NativeKind register detected; name: " ^ (bstring_of_charlist rn)))
 

@@ -240,8 +240,12 @@ Section TwoModules.
     induction 1; simpl; intros; subst.
     - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
       + eapply M.DisjList_KeysSubset_Disj with (d1:= namesOf (getRegInits ma)); eauto;
-          unfold initRegs; apply makeMap_KeysSubset; auto.
-      + subst; unfold initRegs; apply makeMap_union; auto.
+          unfold initRegs; rewrite rawInitRegs_namesOf;
+            apply makeMap_KeysSubset; auto.
+      + subst; unfold initRegs.
+        rewrite <-makeMap_union.
+        * unfold rawInitRegs; rewrite map_app; auto.
+        * rewrite <- !rawInitRegs_namesOf; auto.
 
     - intros; subst.
       specialize (IHMultistep eq_refl).
@@ -456,7 +460,9 @@ Section TwoModules.
     - destruct lsb; [|intuition idtac].
       inv H; inv H1; constructor.
       unfold initRegs.
-      apply makeMap_union; auto.
+      rewrite <-makeMap_union; auto.
+      + unfold rawInitRegs; rewrite map_app; auto.
+      + rewrite <- !rawInitRegs_namesOf; auto.
 
     - destruct lsb as [|]; [intuition idtac|].
       destruct H3; inv H4.

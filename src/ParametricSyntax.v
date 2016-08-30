@@ -1118,11 +1118,11 @@ Section MoreThm.
 End MoreThm.
 
 Inductive MetaReg :=
-| OneReg (b: sigT ConstFullT) (s: NameRec)
+| OneReg (b: RegInitValue) (s: NameRec)
 | RepReg A (strA: A -> string) (goodStrFn: forall i j, strA i = strA j -> i = j)
          (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
                                         si = sj /\ i = j)
-         (bgen: A -> sigT ConstFullT) (s: NameRec) (ls: list A) (noDup: NoDup ls).
+         (bgen: A -> RegInitValue) (s: NameRec) (ls: list A) (noDup: NoDup ls).
 
 Definition getMetaRegName m :=
   match m with
@@ -1456,7 +1456,7 @@ Definition natToVoid (_: nat): ConstT Void := ConstBit WO.
 Definition natToWordConst (sz: nat) (i: nat) := ConstBit (natToWord sz i).
 
 Record SinReg A :=
-  { regGen: A -> sigT ConstFullT;
+  { regGen: A -> RegInitValue;
     regName: NameRec }.
 
 Record SinRule :=

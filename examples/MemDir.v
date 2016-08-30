@@ -88,7 +88,7 @@ Section Mem.
 
   Definition memDir :=
     META {
-        Register "cRqValid": Bool <- @ConstBool false
+        Register "cRqValid": Bool <- false
         with Register "cRqDirw": Dirw <- dirwInit
 
         with Rule "missByState" :=

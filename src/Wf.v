@@ -553,7 +553,7 @@ Section ValidRegsFacts.
         M.KeysSubset u (namesOf (getRegInits m)).
   Proof.
     induction 2; simpl; intros.
-    - do 2 subst; apply makeMap_KeysSubset.
+    - do 2 subst; rewrite rawInitRegs_namesOf; apply makeMap_KeysSubset.
     - apply M.KeysSubset_union; auto.
       apply step_consistent in HStep.
       eapply validRegsModules_stepInd_newregs_subset; eauto.

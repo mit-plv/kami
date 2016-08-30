@@ -551,15 +551,12 @@ Section DuplicateFacts.
         specialize (IHn H1); clear H1.
         unfold namesOf; repeat rewrite map_app.
         rewrite app_assoc.
-        rewrite <-app_assoc with (l:= map (attrName (Kind:=sigT ConstFullT))
-                                          (getRegInits (specializeMod m1 (S n)))).
-        rewrite <-app_assoc with (l:= map (attrName (Kind:=sigT ConstFullT))
-                                          (getRegInits (specializeMod m1 (S n)))).
+        rewrite <-app_assoc with (l:= map (@attrName _) (getRegInits (specializeMod m1 (S n)))).
+        rewrite <-app_assoc with (l:= map (@attrName _) (getRegInits (specializeMod m1 (S n)))).
         apply NoDup_app_comm_ext.
         rewrite app_assoc.
         rewrite app_assoc.
-        rewrite <-app_assoc with (n:= map (attrName (Kind:=sigT ConstFullT))
-                                          (getRegInits (duplicate m2 n))).
+        rewrite <-app_assoc with (n:= map (@attrName _) (getRegInits (duplicate m2 n))).
         apply NoDup_DisjList.
         + apply specializeMod_regs_NoDup with (i:= S n) in H;
             [|apply specializable_concatMod; auto].
