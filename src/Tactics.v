@@ -487,6 +487,7 @@ Ltac kinline_left im :=
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
   repeat autounfold with MapDefs in *;
+  unfold initRegs, rawInitRegs, getRegInits; simpl;
   repeat
     (kstring_simpl;
      try match goal with
@@ -507,11 +508,11 @@ Ltac kregmap_clear :=
     end.
 
 Ltac kdecompose_regmap_init :=
-  unfold initRegs, getRegInits; simpl;
+  unfold initRegs, rawInitRegs, getRegInits; simpl;
   kregmap_red; kregmap_clear; try reflexivity.
 
 Ltac kdecompose_regrel_init :=
-  unfold initRegs, getRegInits; simpl;
+  unfold initRegs, rawInitRegs, getRegInits; simpl;
   kregmap_red; kregmap_clear; eexists; split; reflexivity.
 
 Ltac kdecompose_nodefs t r :=
