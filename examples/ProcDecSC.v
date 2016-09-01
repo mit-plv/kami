@@ -10,34 +10,6 @@ Require Import Eqdep.
 
 Set Implicit Arguments.
 
-(* TODO: move to lib/FMap.v *)
-
-Notation "'[]'" := (M.empty _) : fmap_scope.
-Notation " [ k <- v ] " := (M.add k%string v (M.empty _)) : fmap_scope.
-Notation " m [ k <- v ] " := (M.add k%string v m) (at level 0) : fmap_scope.
-Notation " m [ k ] " := (M.find k%string m) (at level 0) : fmap_scope.
-
-Delimit Scope fmap_scope with fmap.
-
-Notation "'mlet' vn : t <- r 'of' kn ; cont" :=
-  (match M.find kn%string r with
-   | Some (existT k v) =>
-     match k with
-     | SyntaxKind kind =>
-       fun vname =>
-         match decKind kind t with
-         | left Heq => 
-           eq_rect_r (fun kind => fullType type (SyntaxKind kind) -> RegsT)
-                     (fun vn : fullType type (SyntaxKind t) => cont) Heq vname
-         | right _ => M.empty _
-         end
-     | _ => fun _ => M.empty _
-     end v
-   | _ => M.empty _
-   end) (at level 0, vn at level 0) : mapping_scope.
-
-Delimit Scope mapping_scope with mapping.
-
 Section ProcDecSC.
   Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
@@ -78,21 +50,21 @@ Section ProcDecSC.
        mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
        if oev
-       then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) fetchedv)]
-              ["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
-              ["rf" <- (existT _ _ rfv)]
-              ["pc" <- (existT _ _ pcv)]%fmap
+       then (["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) fetchedv)]
+             +["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
+             +["rf" <- (existT _ _ rfv)]
+             +["pc" <- (existT _ _ pcv)])%fmap
        else
          if fetchv
-         then ["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
-                ["fetch" <- (existT _ (SyntaxKind Bool) false)]
-                ["rf" <- (existT _ _ rfv)]
-                ["pc" <- (existT _ _ pcv)]%fmap
+         then (["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
+               +["fetch" <- (existT _ (SyntaxKind Bool) false)]
+               +["rf" <- (existT _ _ rfv)]
+               +["pc" <- (existT _ _ pcv)])%fmap
          else
            let inst := evalExpr (dec _ rfv fetchedv) in
-           ["fetched" <- (existT _ _ fetchedv)]
-             ["fetch" <- (existT _ (SyntaxKind Bool) true)]
-             ["rf" <- (let opc := inst ``"opcode" in
+           (["fetched" <- (existT _ _ fetchedv)]
+            +["fetch" <- (existT _ (SyntaxKind Bool) true)]
+            +["rf" <- (let opc := inst ``"opcode" in
                        if weq opc (evalConstT opLd)
                        then
                          (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
@@ -103,7 +75,7 @@ Section ProcDecSC.
                                                                        rfIdx)))))
                        else
                          (existT _ _ rfv))]
-             ["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))]%fmap
+            +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))])%fmap
     )%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 

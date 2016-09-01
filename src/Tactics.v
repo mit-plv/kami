@@ -726,6 +726,25 @@ Notation "from '|->' to ; cont" :=
             else (cont s)) (at level 12, right associativity).
 Notation "||" := (fun _ => None) (at level 12).
 
+(** Notations for register maps *)
+Notation "'mlet' vn : t <- r 'of' kn ; cont" :=
+  (match M.find kn%string r with
+   | Some (existT k v) =>
+     match k with
+     | SyntaxKind kind =>
+       fun vname =>
+         match decKind kind t with
+         | left Heq => 
+           eq_rect_r (fun kind => fullType type (SyntaxKind kind) -> RegsT)
+                     (fun vn : fullType type (SyntaxKind t) => cont) Heq vname
+         | right _ => M.empty _
+         end
+     | _ => fun _ => M.empty _
+     end v
+   | _ => M.empty _
+   end) (at level 0, vn at level 0) : mapping_scope.
+Delimit Scope mapping_scope with mapping.
+
 (** Invariant-related definitions *)
 Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
 Tactic Notation "or3_fst" := left.

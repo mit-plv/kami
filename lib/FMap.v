@@ -2032,15 +2032,12 @@ Module M.
 End M.
 
 (** FMap Notations *)
-(* Notation "'[]'" := (M.empty _) : fmap_scope. *)
-(* Notation "m '[' k '<-' v ']'" := (M.add k v m) (at level 40) : fmap_scope. *)
-(* Notation "m1 'U' m2" := (M.union m1 m2) (at level 42) : fmap_scope. *)
-(* Notation "m1 '<U' m2" := (M.update m1 m2) (at level 42) : fmap_scope. *)
-(* Notation "m1 '-k' m2" := (M.subtract m1 m2) (at level 41) : fmap_scope. *)
-(* Notation "m1 '-kv' m2" := (M.subtractKV m1 m2) (at level 41) : fmap_scope. *)
-(* Notation "m '<|' d" := (M.restrict m d) (at level 41) : fmap_scope. *)
-(* Notation "m '[' k ']'" := (M.find k m) (at level 40) : fmap_scope. *)
-(* Delimit Scope fmap_scope with fmap. *)
+
+Notation "'[]'" := (M.empty _) : fmap_scope.
+Notation " [ k <- v ] " := (M.add k%string v (M.empty _)) : fmap_scope.
+Notation " m +[ k <- v ] " := (M.add k%string v m) (at level 0) : fmap_scope.
+Notation " m @[ k ] " := (M.find k%string m) (at level 0) : fmap_scope.
+Delimit Scope fmap_scope with fmap.
 
 Ltac dest_disj :=
   repeat

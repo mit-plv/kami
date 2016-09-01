@@ -13,13 +13,13 @@ Set Implicit Arguments.
  *)
 Section ProcTwoStage.
   Variables opIdx addrSize lgDataBytes rfIdx: nat.
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  Variable inName outName: string.
 
   Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
   Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
   Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
-  Variable inName outName: string.
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -255,10 +255,50 @@ Section ProcTwoStage.
   End Execute.
 
   Definition procTwoStage := (decoder
+                                ++ regFile
                                 ++ branchPredictor
                                 ++ fifo d2eFifoName 1 d2eElt
                                 ++ fifo e2dFifoName 1 (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
+
+Hint Unfold regFile branchPredictor decoder executer procTwoStage : ModuleDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep
+     d2eElt d2eFifoName d2eEnq d2eDeq
+     e2dElt e2dFifoName e2dEnq e2dDeq
+     getRf setRf predictNextPc toHost checkNextPc : MethDefs.
+
+Section ProcTwoStageM.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
+
+  Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
+                                  dec execState execNextPc opLd opSt opTh.
+
+End ProcTwoStageM.
+
+Section Facts.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
+
+  Lemma procTwoStage_ModEquiv:
+    ModPhoasWf (p2st dec execState execNextPc opLd opSt opTh).
+  Proof.
+    kequiv.
+  Qed.
+
+End Facts.
+
+Hint Resolve procTwoStage_ModEquiv.
 
