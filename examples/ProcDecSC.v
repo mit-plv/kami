@@ -45,37 +45,39 @@ Section ProcDecSC.
     (mlet pcv : (Bit addrSize) <- r of "pc";
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
        mlet fetchv : Bool <- r of "fetch";
-       mlet fetchedv : (Data lgDataBytes) <- r of "fetched";
+       mlet fetchedv : (DecInstK opIdx addrSize lgDataBytes rfIdx) <- r of "fetched";
        mlet oev : Bool <- r of "rsToProc"--"empty";
        mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
        if oev
-       then (["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) fetchedv)]
+       then (["fetched" <- (existT _ (SyntaxKind
+                                        (DecInstK opIdx addrSize lgDataBytes rfIdx)) fetchedv)]
              +["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
          if fetchv
-         then (["fetched" <- (existT _ (SyntaxKind (Data lgDataBytes)) (oelv odv ``"data"))]
+         then (["fetched" <- (existT _ (SyntaxKind
+                                          (DecInstK opIdx addrSize lgDataBytes rfIdx))
+                                     (evalExpr (dec _ rfv (oelv odv ``"data"))))]
                +["fetch" <- (existT _ (SyntaxKind Bool) false)]
                +["rf" <- (existT _ _ rfv)]
                +["pc" <- (existT _ _ pcv)])%fmap
-         else
-           let inst := evalExpr (dec _ rfv fetchedv) in
-           (["fetched" <- (existT _ _ fetchedv)]
-            +["fetch" <- (existT _ (SyntaxKind Bool) true)]
-            +["rf" <- (let opc := inst ``"opcode" in
-                       if weq opc (evalConstT opLd)
-                       then
-                         (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
-                                 ((fun a : word rfIdx => if weq a (inst ``"reg")
-                                                         then oelv odv ``"data"
-                                                         else rfv a)
-                                  : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
-                                                                       rfIdx)))))
-                       else
-                         (existT _ _ rfv))]
-            +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))])%fmap
+         else (["fetched" <- (existT _ (SyntaxKind
+                                          (DecInstK opIdx addrSize lgDataBytes rfIdx)) fetchedv)]
+               +["fetch" <- (existT _ (SyntaxKind Bool) true)]
+               +["rf" <- (let opc := fetchedv ``"opcode" in
+                          if weq opc (evalConstT opLd)
+                          then
+                            (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
+                                    ((fun a : word rfIdx => if weq a (fetchedv ``"reg")
+                                                            then oelv odv ``"data"
+                                                            else rfv a)
+                                     : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
+                                                                          rfIdx)))))
+                          else
+                            (existT _ _ rfv))]
+               +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv fetchedv)))])%fmap
     )%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 

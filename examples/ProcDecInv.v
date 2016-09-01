@@ -31,7 +31,7 @@ Section Invariants.
     fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
-             (instRaw: fullType type (SyntaxKind (Data lgDataBytes)))
+             (inst: fullType type (SyntaxKind (DecInstK opIdx addrSize lgDataBytes rfIdx)))
              (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
              (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
@@ -39,15 +39,14 @@ Section Invariants.
     refine (if insEmpty then True else _).
     refine (_ /\ _ /\ _).
     - refine (_ /\ _ /\ _).
-      + exact ((if weq (evalExpr (dec _ rf instRaw) ``"opcode") (evalConstT opLd)
+      + exact ((if weq (inst ``"opcode") (evalConstT opLd)
                 then false else true) = insElt insDeqP ``"op").
-      + exact ((if weq (evalExpr (dec _ rf instRaw) ``"opcode") (evalConstT opSt)
+      + exact ((if weq (inst ``"opcode") (evalConstT opSt)
                 then true else false) = insElt insDeqP ``"op").
-      + exact (evalExpr (dec _ rf instRaw) ``"opcode" = evalConstT opLd ->
-               evalExpr (dec _ rf instRaw) ``"reg" <> (natToWord _ 0)).
-    - exact (insElt insDeqP ``"addr" = evalExpr (dec _ rf instRaw) ``"addr").
+      + exact (inst ``"opcode" = evalConstT opLd -> inst ``"reg" <> (natToWord _ 0)).
+    - exact (insElt insDeqP ``"addr" = inst ``"addr").
     - refine (if (insElt insDeqP ``"op") : bool then _ else _).
-      + exact (insElt insDeqP ``"data" = evalExpr (dec _ rf instRaw) ``"value").
+      + exact (insElt insDeqP ``"data" = inst ``"value").
       + exact (insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))).
   Defined.
 
@@ -74,7 +73,7 @@ Section Invariants.
       Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
       fetchv : fullType type (SyntaxKind Bool);
       Hfetchv : M.find "fetch"%string o = Some (existT _ _ fetchv);
-      fetchedv : fullType type (SyntaxKind (Data lgDataBytes));
+      fetchedv : fullType type (SyntaxKind (DecInstK opIdx addrSize lgDataBytes rfIdx));
       Hfetchedv : M.find "fetched"%string o = Some (existT _ _ fetchedv);
       fstallv : fullType type (SyntaxKind Bool);
       HfetchStallv : M.find "fetchStall"%string o = Some (existT _ _ fstallv);
@@ -216,7 +215,7 @@ Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv fetch_request_inv:
 
 Ltac procDec_inv_old :=
   try match goal with
-      | [H: procDec_inv _ _ _ _ _ |- _] => destruct H
+      | [H: procDec_inv _ _ _ _ _ _ _ |- _] => destruct H
       end;
   kinv_red; kinv_or3;
   (* decide the current state by giving contradictions for all other states *)
