@@ -95,30 +95,42 @@ Qed.
 Ltac pre_word_omega :=
   unfold wzero, wone in *;
   repeat match goal with
-           | H: ?a = ?b |- _ =>
-             match type of a with
-               | word _ =>
-                 apply wordToNat_eq1 in H
+           | H: @eq ?T ?a ?b |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_eq1 sz a b) in H;
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+                   simpl in H
              end
-           | |- ?a = ?b =>
-             match type of a with
-               | word _ =>
-                 apply wordToNat_eq2
+           | |- @eq ?T ?a ?b =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_eq2 sz a b);
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+                   simpl
              end
            | H: ?a < ?b |- _ =>
-             apply wordToNat_lt1 in H
+             apply wordToNat_lt1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
            | |- ?a < ?b =>
              apply wordToNat_lt2
            | H: ?a > ?b |- _ =>
-             apply wordToNat_gt1 in H
+             apply wordToNat_gt1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
            | |- ?a > ?b =>
              apply wordToNat_gt2
            | H: ?a <= ?b |- _ =>
-             apply wordToNat_le1 in H
+             apply wordToNat_le1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
            | |- ?a <= ?b =>
              apply wordToNat_le2
            | H: ?a >= ?b |- _ =>
-             apply wordToNat_ge1 in H
+             apply wordToNat_ge1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
            | |- ?a >= ?b =>
              apply wordToNat_ge2
          end; rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in *; simpl.
@@ -572,24 +584,24 @@ Section MemCacheInl.
               pToCRs {| bindex := "isRq" |} = false ->
               getCs cs tag a = $ Msi.Inv)%list;
 
-      i16: (
-             isCWait a procV procRq csw ->
-             (getCs cs tag a < if (procRq {| bindex := "op" |}):bool
-                               then $ Msi.Mod else $ Msi.Sh) /\
-             (((exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList)
-                           /\ rq {| bindex := "to" |} =
-                              (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
-                               else $ Msi.Sh)
-                           /\ rq {| bindex := "from" |} >= getCs cs tag a) /\
-               forall msg, In msg (fromPToC cword a fromPList toCList) ->
-                           msg {| bindex := "isRq"|} = true)
-              \/
-              ((exists rs, In rs (fromPToC cword a fromPList toCList)
-                           /\ rs {| bindex := "isRq" |} = false
-                           /\ rs {| bindex := "to" |} =
-                              if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
-                              else $ Msi.Sh)) /\
-              forall rq, ~ In rq (rqFromCToP cword a rqFromCList rqToPList)));
+      i16: isCWait a procV procRq csw ->
+           (getCs cs tag a < if (procRq {| bindex := "op" |}):bool
+                             then $ Msi.Mod else $ Msi.Sh)
+           /\
+           match find (fun _ => true) (rqFromCToP cword a rqFromCList rqToPList),
+                 find
+                   (fun (msg: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) =>
+                      if (msg {| bindex := "isRq" |}):bool then false else true)
+                   (fromPToC cword a fromPList toCList) with
+             | Some rq, None => rq {| bindex := "to" |} =
+                                (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
+                                 else $ Msi.Sh)
+                                /\ rq {| bindex := "from" |} >= getCs cs tag a
+             | None, Some rs => rs {| bindex := "to" |} = 
+                                if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
+                                else $ Msi.Sh
+             | _, _ => False
+           end ;
 
       i16a: (forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                         isCWait a procV procRq csw
@@ -672,11 +684,6 @@ Section MemCacheInl.
                          rs {| bindex := "isVol" |} = true ->
                          rq {| bindex := "from" |} = $ Msi.Inv
     }.
-
-  Hint Unfold modFromMeta nmemCacheInl metaRegs metaRules metaMeths Concat.concat
-       getListFromMetaReg getListFromMetaRule getListFromMetaMeth getCs getTagS
-       getIdxS getAddrS isCompat fromPToC rqFromCToP rsFromCToP isCWait isPWait
-       withIndex: MethDefs.
 
   Definition nmemCache_invariants (s: RegsT) :=
     forall a cword (c: cache),
@@ -1054,16 +1061,6 @@ Section MemCacheInl.
     intuition auto.
   Qed.
 
-  Lemma invertSubstep m s u r cs:
-    Substep m s u (Rle (Some r)) cs ->
-    exists a, In (r :: a)%struct (getRules m) /\
-              SemAction s (a type) u cs WO.
-  Proof.
-    intros Hs.
-    inv Hs.
-    eexists; eauto.
-  Qed.
-
   Fixpoint getMetaRules r' ls :=
     match ls with
       | nil => None
@@ -1164,68 +1161,6 @@ Section MemCacheInl.
     repeat simplBool;
     elimDiffC c; mkStruct.
 
-  Ltac normalInit :=
-    intros HInd HInRule HS;
-    simpl in HInRule; apply invSome in HInRule;
-    unfold getActionFromSin, getSinAction at 1 in HInRule; simpl in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; destructRules c HInd.
-  
-  Ltac metaInit :=
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; destructRules c HInd.
-
-  Ltac xferInit T sameAddr diffAddr :=
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?; unfold getActionFromGen, getGenAction, strFromName in *;
-    simpl in *; subst; unfold getActionFromSin, getSinAction, listIsEmpty,
-      listFirstElt, listEnq, listDeq in *; subst;
-    SymEval; subst; simpl;
-    destruct (eq_nat_dec c x);
-    [subst;
-      match goal with
-        | a: word (TagBits + IdxBits), H: (_ <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-           listFirstElt, listEnq, listDeq in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (match goal with
-         | ls: T |- _ =>
-           destruct ls; [discriminate|
-                         simplMapUpds ltac:(rewrite <- ?sameAddr; auto)]
-       end)
-    | match goal with
-        | a: word (TagBits + IdxBits), H: (c <= _)%nat |- _ =>
-          destruct (HInd a _ _ H eq_refl)
-      end; unfold withIndex, withPrefix, listIsEmpty,
-              listFirstElt, listEnq, listDeq in *; simpl in *;
-      repeat substFind; dest; repeat simplBool; mkStruct;
-      (match goal with
-         | ls: T |- _ =>
-           destruct ls; [discriminate|
-                         simplMapUpds ltac:(rewrite <- ?diffAddr; auto)]
-       end)
-    ].
-  
-  Lemma isPWait_addRq a cRqValid
-        (rqFromCList: list (type (RqFromC LgNumChildren (Bit (TagBits + IdxBits)) Id)))
-        dirw (cword: word LgNumChildren) rq:
-    isPWait a cRqValid rqFromCList dirw cword ->
-    isPWait a cRqValid (rqFromCList ++ [rq]) dirw cword.
-  Proof.
-    unfold isPWait; intros.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    intuition auto.
-    case_eq (hd_error rqFromCList); intros sth; try rewrite sth in *; intuition auto.
-    rewrite hd_error_revcons_same with (ls := rqFromCList) (a := sth); auto.
-    rewrite H1 in H2.
-    assumption.
-  Qed.
-
   Ltac applyLemma lemma :=
     match goal with
       | |- forall x, _ =>
@@ -1243,6 +1178,34 @@ Section MemCacheInl.
       | |- _ =>
         apply lemma
     end.
+
+  Ltac normalInit :=
+    intros HInd HInRule HS;
+    simpl in HInRule; apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule; simpl in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; destructRules c HInd.
+  
+  Ltac metaInit :=
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?; destructRules c HInd.
+
+  Lemma isPWait_addRq a cRqValid
+        (rqFromCList: list (type (RqFromC LgNumChildren (Bit (TagBits + IdxBits)) Id)))
+        dirw (cword: word LgNumChildren) rq:
+    isPWait a cRqValid rqFromCList dirw cword ->
+    isPWait a cRqValid (rqFromCList ++ [rq]) dirw cword.
+  Proof.
+    unfold isPWait; intros.
+    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
+    intuition auto.
+    case_eq (hd_error rqFromCList); intros sth; try rewrite sth in *; intuition auto.
+    rewrite hd_error_revcons_same with (ls := rqFromCList) (a := sth); auto.
+    rewrite H1 in H2.
+    assumption.
+  Qed.
 
   Lemma isPWait_addRq_contra a cRqValid
         (rqFromCList: list (type (RqFromC LgNumChildren (Bit (TagBits + IdxBits)) Id)))
@@ -1641,20 +1604,6 @@ Section MemCacheInl.
            end; autorewrite with invariant in *.
 
 (*
-  Ltac specialize_msgs :=
-    repeat
-      match goal with
-        | [H: forall (x: forall i: BoundedIndexFull _, GetAttrType i), _ |- _] =>
-          try match goal with
-                | [a: (forall i: BoundedIndexFull _, GetAttrType i) |- _] =>
-                  pose proof (H a);
-                    repeat match goal with
-                             | [b: (forall i: BoundedIndexFull _, GetAttrType i) |- _] =>
-                               pose proof (H b)
-                           end; clear H
-              end
-      end.
-
   Definition Sth := BoundedIndexFull.
   Ltac specialize_msgs :=
     repeat match goal with
@@ -1802,6 +1751,21 @@ Section MemCacheInl.
                destruct (@weq t a b)
            end.
   
+  Ltac rmBadHyp :=
+    repeat match goal with
+             | [H: ?a === ?s .[ ?v ] |- _] =>
+               clear H
+             | [H: ?v = ?v |- _] => clear H
+           end.
+
+  Ltac invariant_hammer :=
+    specialize_msgs; specialize_in;
+    (word_omega ||
+                (repeat match goal with
+                          | |- context [if ?p then _ else _] =>
+                            destruct p
+                        end); word_omega || auto).
+
   Ltac invariant_solve0 :=
     autorewrite with invariant in *; eauto;
     intros; unfold isCWait, isPWait in *;
@@ -1813,11 +1777,34 @@ Section MemCacheInl.
     dest;
     specialize_msgs; specialize_in;
     dest; subst;
+    rmBadHyp;
     mkStruct;
     do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
            simpl in *);
+    repeat match goal with
+             | H: context[GetAttrType ?v] |- _ =>
+               unfold GetAttrType in H; simpl in H
+             | |- context[GetAttrType ?v] =>
+               unfold GetAttrType; simpl
+           end;
+    rmBadHyp;
+    try (discriminate || tauto || word_omega);
     try (rewrite getCs_cs_matches in * by tauto);
-    try tauto; try discriminate; try word_omega.
+    try (discriminate || tauto || word_omega);
+    repeat split;
+    try intuition invariant_hammer;
+    repeat match goal with
+             | H: context [match @find ?T ?a ?b with _ => _ end] |- _ =>
+               case_eq (@find T a b); intro H'; rewrite H' in H; simpl in H
+           end;
+    intuition word_omega.
+
+(*
+    repeat constructor; try (intuition (repeat match goal with
+                                                 | |- context[if?p then _ else _] =>
+                                                   destruct p
+                                               end; word_omega)).
+*)
   
   Ltac invariant_solve :=
     simplMapUpds invariant_solve0.
@@ -1833,7 +1820,6 @@ Section MemCacheInl.
   Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
 
 
-  (*
   Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
     nmemCache_invariants s ->
     "rqFromCToP" metaIs a ->
@@ -1845,11 +1831,9 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-   *)
 
   Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
 
-  (*
   Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
     nmemCache_invariants s ->
     "rsFromCToP" metaIs a ->
@@ -1861,7 +1845,6 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-*)
 
   Lemma fromPToC_xfer_diffAddr_packaged:
     forall c a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren (Bit AddrBits) Id))
@@ -1882,7 +1865,6 @@ Section MemCacheInl.
   Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
        (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
 
-  (*
   Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
     nmemCache_invariants s ->
     "fromPToC" metaIs a ->
@@ -1930,7 +1912,6 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-   *)
 
   Lemma rqFromCToP_revcons_sameAddr a c:
     forall l1 l2
@@ -1985,8 +1966,8 @@ Section MemCacheInl.
        using (tauto || congruence) : invariant.
    *)
   Hint Rewrite rqFromCToP_revcons : invariant.
-  Hint Rewrite getCs_cs_matches using (tauto || congruence) : invariant.
-  Hint Resolve in_app_or rsFromCToP_vol_cs_I in_single.
+(*  Hint Rewrite getCs_cs_matches using (tauto || congruence) : invariant. *)
+  Hint Resolve in_app_or in_or_app rsFromCToP_vol_cs_I in_single.
   
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
@@ -1997,7 +1978,125 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    Set Ltac Profiling.
     metaInvariant.
+    Show Ltac Profile.
+    Focus 2.
+    repeat split;
+      try intuition (repeat match goal with
+                              | |- context [if ?p then _ else _] =>
+                                destruct p
+                            end; word_omega).
+    intuition (word_omega || auto).
+    Focus 2.
+    repeat split;
+      try intuition (repeat match goal with
+                              | |- context [if ?p then _ else _] =>
+                                destruct p
+                            end; word_omega).
+    simpl.
+    Focus 2.
+    repeat split;
+      try intuition (repeat match goal with
+                              | |- context [if ?p then _ else _] =>
+                                destruct p
+                            end; word_omega).
+    pre_word_omega.
+    unfold GetAttrType; simpl.
+    match goal with
+      | |- @eq ?T ?a ?b =>
+        match T with
+          | word ?sz =>
+            apply (@wordToNat_eq2 sz a b);
+              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+              simpl
+        end
+    end.
+          
+    omega.
+    pre_word_omega.
+    match type of H1 with
+      | @eq ?T ?a ?b =>
+        match T with
+          | word ?sz =>
+            apply (@wordToNat_eq1 sz a b) in H1;
+              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H1;
+              simpl in H1
+        end
+    end. 
+
+    pre_word_omega.
+    simpl.
+    match type of H1 with
+      | @eq ?T ?a ?b =>
+        pose T
+    end.
+    
+
+
+    Set Printing All.
+    simpl.
+    
+    unfold GetAttrType in H1; simpl in H1.
+    match goal with
+      | H: @eq ?Y ?a ?b |- _ =>
+        pose Y
+    end.
+       match type of H1 with
+         | ?a = ?b =>
+           match type of a with
+             | ?P => pose P
+           end
+       end.
+       unfold GetAttrType in H1.
+       simpl in H1.
+       match type of H1 with
+         | ?a = ?b =>
+           match type of a with
+             | ?P => pose P
+           end
+       end.
+       
+    simpl in T.
+    unfold GetAttrType in T; simpl in T.
+    simpl.
+    unfold nth_Bounded in T.
+    simpl in T.
+    simpl.
+        match T with
+          | word _ =>
+            idtac
+        end
+    end.
+            (*apply (wordToNat_eq1) in H;
+              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+              simpl in H*) idtac
+        end
+    end.
+
+
+
+    apply wordToNat_eq1 in H0.
+    Focus 
+    Focus 3.
+    clear -H1 H5.
+    pre_word_omega.
+    apply wordToNat_eq1 with (sz := 2) in H1.
+    simpl in *.
+    omega.
+    repeat constructor; try (intuition (repeat match goal with
+                                                 | |- context[if?p then _ else _] =>
+                                                   destruct p
+                                               end; word_omega)).
+    assert (5 = 5).
+    intuition idtac.
+    
+    Focus 2.
+    Focus 2.
+    repeat (constructor; [try (reflexivity || word_omega || tauto)|]).
+    Focus 2.
+    word_omega.
+
     rewrite getCs_cs_matches in * by (tauto || congruence).
     word_omega.
     specialize_msgs.
