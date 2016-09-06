@@ -6,6 +6,42 @@ Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
 
+(* A fifo containing only one element.
+ * Implementation is much simpler than the general fifo, implemented in Fifo.v
+ *)
+Section OneEltFifo.
+  Variable fifoName: string.
+  Variable dType: Kind.
+
+  Local Notation "^ s" := (fifoName -- s) (at level 0).
+
+  Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
+    (Read isFull <- ^"full";
+     Assert !#isFull;
+     Write ^"elt" <- #d;
+     Write ^"full" <- $$true;
+     Retv)%kami_action.
+
+  Definition deq {ty} : ActionT ty dType :=
+    (Read isFull <- ^"full";
+     Assert #isFull;
+     Read elt <- ^"elt";
+     Write ^"full" <- $$false;
+     Ret #elt)%kami_action.
+  
+  Definition oneEltFifo := MODULE {
+    Register ^"elt" : dType <- Default
+    with Register ^"full" : Bool <- Default
+
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
+  }.
+
+End OneEltFifo.
+
+Hint Unfold oneEltFifo : ModuleDefs.
+Hint Unfold enq deq : MethDefs.
+
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
  * are modularly separated to form each stage. "epoch" registers are used to handle incorrect
  * branch prediction. Like a decoupled processor, memory operations are stalled until getting 
@@ -257,8 +293,8 @@ Section ProcTwoStage.
   Definition procTwoStage := (decoder
                                 ++ regFile
                                 ++ branchPredictor
-                                ++ fifo d2eFifoName 1 d2eElt
-                                ++ fifo e2dFifoName 1 (Bit addrSize)
+                                ++ oneEltFifo d2eFifoName d2eElt
+                                ++ oneEltFifo e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
@@ -282,6 +318,8 @@ Section ProcTwoStageM.
                                   dec execState execNextPc opLd opSt opTh.
 
 End ProcTwoStageM.
+
+Hint Unfold p2st : ModuleDefs.
 
 Section Facts.
   Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
