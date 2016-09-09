@@ -28,6 +28,10 @@ Section OneEltFifo.
      Read elt <- ^"elt";
      Write ^"full" <- $$false;
      Ret #elt)%kami_action.
+
+  Definition isFull {ty} : ActionT ty Bool :=
+    (Read isFull <- ^"full";
+     Ret #isFull)%kami_action.
   
   Definition oneEltFifo := MODULE {
     Register ^"elt" : dType <- Default
@@ -37,10 +41,19 @@ Section OneEltFifo.
     with Method ^"deq"() : dType := deq
   }.
 
+  Definition oneEltFifoEx := MODULE {
+    Register ^"elt" : dType <- Default
+    with Register ^"full" : Bool <- Default
+
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
+    with Method ^"isFull"() : Bool := isFull
+  }.
+  
 End OneEltFifo.
 
-Hint Unfold oneEltFifo : ModuleDefs.
-Hint Unfold enq deq : MethDefs.
+Hint Unfold oneEltFifo oneEltFifoEx : ModuleDefs.
+Hint Unfold enq deq isFull : MethDefs.
 
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
  * are modularly separated to form each stage. "epoch" registers are used to handle incorrect
@@ -78,6 +91,7 @@ Section ProcTwoStage.
   Definition e2dFifoName := "e2d"%string.
   Definition e2dEnq := MethodSig (e2dFifoName -- "enq")(e2dElt) : Void.
   Definition e2dDeq := MethodSig (e2dFifoName -- "deq")() : e2dElt.
+  Definition e2dFull := MethodSig (e2dFifoName -- "isFull")() : Bool.
 
   Section RegFile.
 
@@ -112,7 +126,7 @@ Section ProcTwoStage.
 
     Definition decoder := MODULE {
       Register "pc" : Bit addrSize <- Default
-      with Register "fetchStall" : Bool <- false
+      with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
       with Register "fEpoch" : Bool <- false
 
       with Rule "modifyPc" :=
@@ -121,23 +135,15 @@ Section ProcTwoStage.
         Read pEpoch <- "fEpoch";
         Write "fEpoch" <- !#pEpoch;
         Retv
-        
-      with Rule "reqInstFetch" :=
-        Read fetchStall <- "fetchStall";
-        Assert !#fetchStall;
-        Read ppc <- "pc";
-        Call memReq(STRUCT { "addr" ::= #ppc;
-                             "op" ::= $$false;
-                             "data" ::= $$Default });
-        Write "fetchStall" <- $$true;
-        Retv
 
-      with Rule "repInstFetch" :=
-        Call val <- memRep();
-        LET rawInst <- #val@."data";
+      with Rule "instFetch" :=
+        Call e2dFull <- e2dFull();
+        Assert !#e2dFull;
+        Read ppc : Bit addrSize <- "pc";
+        Read pgm <- "pgm";
+        LET rawInst <- #pgm @[ #ppc ];
         Call st <- getRf();
         LET inst <- dec _ st rawInst;
-        Read ppc <- "pc";
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
         Write "fetchStall" <- $$false;
@@ -294,7 +300,7 @@ Section ProcTwoStage.
                                 ++ regFile
                                 ++ branchPredictor
                                 ++ oneEltFifo d2eFifoName d2eElt
-                                ++ oneEltFifo e2dFifoName (Bit addrSize)
+                                ++ oneEltFifoEx e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
@@ -302,7 +308,7 @@ End ProcTwoStage.
 Hint Unfold regFile branchPredictor decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      d2eElt d2eFifoName d2eEnq d2eDeq
-     e2dElt e2dFifoName e2dEnq e2dDeq
+     e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
      getRf setRf predictNextPc toHost checkNextPc : MethDefs.
 
 Section ProcTwoStageM.

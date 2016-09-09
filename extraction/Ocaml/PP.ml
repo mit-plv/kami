@@ -558,7 +558,7 @@ let ppRegInit (r: regInitT) =
          ps (bstring_of_charlist rn); print_space ();
          ps ppAssign; print_space ();
          ps ppMkReg; ps ppRBracketL;
-         (if bstring_of_charlist rn = "mem" then
+         (if String.sub (bstring_of_charlist rn) 0 3 = "pgm" then
             ps (ppConst (getInitMem ()))
           else
             ps (ppConst c));        
@@ -570,7 +570,7 @@ let ppRegInit (r: regInitT) =
          ps (bstring_of_charlist rn); print_space ();
          ps ppAssign; print_space ();
          ps ppMkReg; ps ppRBracketL;
-         (if bstring_of_charlist rn = "mem" then
+         (if String.sub (bstring_of_charlist rn) 0 3 = "pgm" then
             ps (ppConst (getInitMem ()))
           else
             ps ppDefaultValue);

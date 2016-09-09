@@ -27,8 +27,8 @@ Section Invariants.
   Record p2st_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
-      fstallv : fullType type (SyntaxKind Bool);
-      Hfstallv : M.find "fetchStall"%string o = Some (existT _ _ fstallv);
+      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+      Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
       fepochv : fullType type (SyntaxKind Bool);
       Hfepochv : M.find "fEpoch"%string o = Some (existT _ _ fepochv);
       rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
@@ -49,7 +49,15 @@ Section Invariants.
       eepochv : fullType type (SyntaxKind Bool);
       Heepochv : M.find "eEpoch"%string o = Some (existT _ _ eepochv);
       curInfov : fullType type (SyntaxKind (d2eElt opIdx addrSize lgDataBytes rfIdx));
-      HcurInfov : M.find "curInfo"%string o = Some (existT _ _ curInfov)
+      HcurInfov : M.find "curInfo"%string o = Some (existT _ _ curInfov);
+
+      Hinv :
+        (fepochv = eepochv ->
+         (e2dfullv = false /\ (d2efullv = true -> d2eeltv ``"curPc" = pcv))) /\
+        (fepochv <> eepochv -> e2dfullv = true) /\
+        (d2efullv = true ->
+         (fepochv = d2eeltv ``"epoch" /\
+          evalExpr (dec _ rfv (pgmv (d2eeltv ``"curPc"))) = d2eeltv ``"instDec"))
     }.
 
   Ltac p2st_inv_old :=

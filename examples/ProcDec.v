@@ -31,47 +31,22 @@ Section ProcDec.
 
   Definition nextPc {ty} ppc st inst :=
     (Write "pc" <- execNextPc ty st ppc inst;
-     Write "fetch" <- $$true;
      Retv)%kami_action.
 
   Definition procDec := MODULE {
     Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-    with Register "fetch" : Bool <- true
-    with Register "fetched" : DecInstK opIdx addrSize lgDataBytes rfIdx <- Default
-    with Register "fetchStall" : Bool <- false
+    with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
     with Register "stall" : Bool <- false
                                  
-    with Rule "reqInstFetch" :=
-      Read fetch <- "fetch";
-      Assert #fetch;
-      Read fetchStall <- "fetchStall";
-      Assert !#fetchStall;
-      Read ppc <- "pc";
-      Call memReq(STRUCT { "addr" ::= #ppc;
-                           "op" ::= $$false;
-                           "data" ::= $$Default });
-      Write "fetchStall" <- $$true;
-      Retv
-
-    with Rule "repInstFetch" :=
-      Read fetch <- "fetch";
-      Assert #fetch;
-      Call val <- memRep();
-      LET rawInst <- #val@."data";
-      Read st <- "rf";
-      LET inst <- dec _ st rawInst;
-      Write "fetched" <- #inst;
-      Write "fetch" <- $$false;
-      Write "fetchStall" <- $$false;
-      Retv
-
     with Rule "reqLd" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Read stall <- "stall";
       Assert !#stall;
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read ppc : Bit addrSize <- "pc";
+      Read st <- "rf";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
       Assert #inst@."reg" != $0;
       Call memReq(STRUCT { "addr" ::= #inst@."addr";
@@ -81,23 +56,25 @@ Section ProcDec.
       Retv
 
     with Rule "reqLdZ" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
       Read st <- "rf";
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
       Assert #inst@."reg" == $0;
       nextPc ppc st inst
 
     with Rule "reqSt" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Read stall <- "stall";
       Assert !#stall;
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read ppc : Bit addrSize <- "pc";
+      Read st <- "rf";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opSt;
       Call memReq(STRUCT {  "addr" ::= #inst@."addr";
                             "op" ::= $$true;
@@ -106,48 +83,48 @@ Section ProcDec.
       Retv
                       
     with Rule "repLd" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Call val <- memRep();
       Read ppc <- "pc";
       Read st <- "rf";
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opLd;
       Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
       Write "stall" <- $$false;
       nextPc ppc st inst
                       
     with Rule "repSt" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Call val <- memRep();
       Read ppc <- "pc";
       Read st <- "rf";
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opSt;
       Write "stall" <- $$false;
       nextPc ppc st inst
                       
     with Rule "execToHost" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
       Read st <- "rf";
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert #inst@."opcode" == $$opTh;
       Call toHost(#inst@."value");
       nextPc ppc st inst
 
     with Rule "execNm" :=
-      Read fetch <- "fetch";
-      Assert !#fetch;
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
       Read st <- "rf";
-      Read inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- "fetched";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      LET inst <- dec _ st rawInst;
       Assert !(#inst@."opcode" == $$opLd
             || #inst@."opcode" == $$opSt
             || #inst@."opcode" == $$opTh);

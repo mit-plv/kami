@@ -29,55 +29,40 @@ Section ProcDecSC.
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
-  Definition pdec_pinst_ruleMap (o: RegsT): string -> option string.
-    refine ("execToHost" |-> "execToHost";
-            "execNm"     |-> "execNm";
-            "processSt"  |-> "execSt";
-            "reqLdZ"     |-> "execLdZ"; _).
-    kgetv "fetch"%string fetchv o Bool (fun _ : string => @None string).
-    exact (if fetchv
-           then "processLd" |-> "instFetch"; ||
-           else "processLd" |-> "execLd"; ||).
-  Defined.
+  Definition pdec_pinst_ruleMap (o: RegsT): string -> option string :=
+    "execToHost" |-> "execToHost";
+      "execNm"     |-> "execNm";
+      "processSt"  |-> "execSt";
+      "reqLdZ"     |-> "execLdZ";
+      "processLd"  |-> "execLd"; ||.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Bit addrSize) <- r of "pc";
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
-       mlet fetchv : Bool <- r of "fetch";
-       mlet fetchedv : (DecInstK opIdx addrSize lgDataBytes rfIdx) <- r of "fetched";
+       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r of "pgm";
        mlet oev : Bool <- r of "rsToProc"--"empty";
        mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
        if oev
-       then (["fetched" <- (existT _ (SyntaxKind
-                                        (DecInstK opIdx addrSize lgDataBytes rfIdx)) fetchedv)]
-             +["fetch" <- (existT _ (SyntaxKind Bool) fetchv)]
+       then (["pgm" <- (existT _ _ pgmv)]
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
-         if fetchv
-         then (["fetched" <- (existT _ (SyntaxKind
-                                          (DecInstK opIdx addrSize lgDataBytes rfIdx))
-                                     (evalExpr (dec _ rfv (oelv odv ``"data"))))]
-               +["fetch" <- (existT _ (SyntaxKind Bool) false)]
-               +["rf" <- (existT _ _ rfv)]
-               +["pc" <- (existT _ _ pcv)])%fmap
-         else (["fetched" <- (existT _ (SyntaxKind
-                                          (DecInstK opIdx addrSize lgDataBytes rfIdx)) fetchedv)]
-               +["fetch" <- (existT _ (SyntaxKind Bool) true)]
-               +["rf" <- (let opc := fetchedv ``"opcode" in
-                          if weq opc (evalConstT opLd)
-                          then
-                            (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
-                                    ((fun a : word rfIdx => if weq a (fetchedv ``"reg")
-                                                            then oelv odv ``"data"
-                                                            else rfv a)
-                                     : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
-                                                                          rfIdx)))))
-                          else
-                            (existT _ _ rfv))]
-               +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv fetchedv)))])%fmap
+         let inst := evalExpr (dec _ rfv (pgmv pcv)) in
+         (["pgm" <- (existT _ _ pgmv)]
+          +["rf" <- (let opc := inst ``"opcode" in
+                     if weq opc (evalConstT opLd)
+                     then
+                       (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
+                               ((fun a : word rfIdx => if weq a (inst ``"reg")
+                                                       then oelv odv ``"data"
+                                                       else rfv a)
+                                : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
+                                                                     rfIdx)))))
+                     else
+                       (existT _ _ rfv))]
+          +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))])%fmap
     )%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
 
