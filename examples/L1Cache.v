@@ -1,8 +1,8 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Wf Lts.ParametricWf Lts.Tactics.
-Require Import Ex.Msi Ex.MemTypes Ex.RegFile Lts.ParametricSyntax.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics.
+Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
+Require Import Ex.Msi Ex.MemTypes Ex.RegFile Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 
@@ -10,11 +10,11 @@ Section L1Cache.
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
   Variable Id: Kind.
 
-  Definition AddrBits := TagBits + IdxBits + LgNumDatas.
+  Definition AddrBits := LgNumDatas + (IdxBits + TagBits).
   Definition Addr := Bit AddrBits.
   Definition Tag := Bit TagBits.
   Definition Idx := Bit IdxBits.
-  Definition TagIdx := Bit (TagBits + IdxBits).
+  Definition TagIdx := Bit (IdxBits + TagBits).
   Definition Data := Bit (LgDataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
@@ -45,26 +45,25 @@ Section L1Cache.
   Section UtilFunctions.
     Variable var: Kind -> Type.
     Definition getTagIdx (x: (Addr @ var)%kami): (TagIdx @ var)%kami :=
-      UniBit (TruncLsb (TagBits + IdxBits) LgNumDatas) x.
+      UniBit (TruncLsb LgNumDatas (IdxBits + TagBits)) x.
     
     Definition getTag (x: (Addr @ var)%kami): (Tag @ var)%kami :=
-      UniBit (TruncLsb TagBits IdxBits) (getTagIdx x).
+      UniBit (TruncLsb IdxBits TagBits) (getTagIdx x).
 
     Definition getIdx (x: (Addr @ var)%kami): (Idx @ var)%kami :=
-      UniBit (Trunc TagBits IdxBits) (getTagIdx x).
+      UniBit (Trunc IdxBits TagBits) (getTagIdx x).
 
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
-      UniBit (Trunc (TagBits + IdxBits) LgNumDatas) x.
+      UniBit (Trunc LgNumDatas (IdxBits + TagBits)) x.
     
     Definition makeTagIdx (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
       BinBit (Concat TagBits IdxBits) tag idx.
 
     Definition getIdxFromTagIdx (x: (TagIdx @var)%kami): (Idx @ var)%kami :=
-      UniBit (Trunc TagBits IdxBits) x.
+      UniBit (Trunc IdxBits TagBits) x.
       
     Definition getTagFromTagIdx (x: (TagIdx @var)%kami): (Tag @ var)%kami :=
-      UniBit (TruncLsb TagBits IdxBits) x.
-      
+      UniBit (TruncLsb IdxBits TagBits) x.
 
   End UtilFunctions.
 
@@ -291,18 +290,14 @@ Section Facts.
   Variable n: nat.
 
   Lemma l1Cache_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (l1Cache IdxBits TagBits
-                                                         LgNumDatas LgDataBytes Id)).
+    MetaModPhoasWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma l1Cache_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (getMetaFromSinNat n (l1Cache IdxBits TagBits
-                                                           LgNumDatas LgDataBytes Id)).
+    MetaModRegsWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kvr.
     END_SKIP_PROOF_ON *) admit.

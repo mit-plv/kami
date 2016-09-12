@@ -1,40 +1,40 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate Lts.ParamDup Lts.ModuleBoundEx.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate Kami.ParamDup Kami.ModuleBoundEx.
 Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Ex.L1Cache.
-Require Import Ex.FifoCorrect Ex.MemCorrect Ex.ProcDecSCN Lts.ParametricSyntax.
+Require Import Ex.FifoCorrect Ex.MemCorrect Ex.ProcDecSCN Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
-  Variables OpIdx RfIdx IAddrSize: nat. (* processor *)
+  Variables OpIdx RfIdx: nat. (* processor *)
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
   Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
   
-  Variable dec: DecT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
-  Variable execState: ExecStateT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
-  Variable execNextPc: ExecNextPcT OpIdx AddrSize IAddrSize LgDataBytes RfIdx.
+  Variable dec: DecT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execState: ExecStateT OpIdx AddrSize LgDataBytes RfIdx.
+  Variable execNextPc: ExecNextPcT OpIdx AddrSize LgDataBytes RfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit OpIdx).
+  Variables opLd opSt opTh: ConstT (Bit OpIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
-  Definition pdecN := pdecs dec execState execNextPc opLd opSt opHt numChildren.
+  Definition pdecN := pdecs dec execState execNextPc opLd opSt opTh numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
          +++ (fifoRsToProc LgDataBytes (rsz FifoSize) LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
-  Definition scN := sc dec execState execNextPc opLd opSt opHt numChildren.
+  Definition scN := sc dec execState execNextPc opLd opSt opTh numChildren.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).

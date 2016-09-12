@@ -147,26 +147,10 @@ Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
     | NativeKind t c => NativeConst c c
   end.
 
-(*
-Definition RegKey := Attribute Kind.
-
-Definition RegKey_dec: forall (s1 s2: Attribute Kind), {s1 = s2} + {s1 <> s2}.
-Proof.
-  intros.
-  decide equality.
-  apply decKind.
-  apply string_dec.
-Qed.
-*)
-
 Record SignatureT :=
   { arg: Kind;
     ret: Kind
   }.
-
-(*
-Definition MethKey := Attribute SignatureT.
-*)
 
 Definition SignatureT_dec: forall (s1 s2: SignatureT), {s1 = s2} + {s1 <> s2}.
 Proof.
@@ -192,11 +176,11 @@ Inductive BinBoolOp: Set :=
 
 Inductive UniBitOp: nat -> nat -> Set :=
 | Inv n: UniBitOp n n
-| ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2
-| Trunc n1 n2: UniBitOp (n1 + n2) n2
+| ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2 (* LSB : n1, MSB : n3 *)
+| Trunc n1 n2: UniBitOp (n1 + n2) n1 (* LSB : n1 *)
 | ZeroExtendTrunc n1 n2: UniBitOp n1 n2
 | SignExtendTrunc n1 n2: UniBitOp n1 n2
-| TruncLsb n1 n2: UniBitOp (n1 + n2) n1.
+| TruncLsb n1 n2: UniBitOp (n1 + n2) n2. (* MSB : n2 *)
 
 Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
@@ -207,7 +191,7 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Sll n m: BinBitOp n m n
 | Srl n m: BinBitOp n m n
 | Sra n m: BinBitOp n m n
-| Concat n1 n2: BinBitOp n1 n2 (n1 + n2).
+| Concat n1 n2: BinBitOp n1 n2 (n2 + n1). (* MSB : n1, LSB : n2 *)
 
 Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n.
@@ -221,7 +205,6 @@ Section Phoas.
   
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
-(*  | Native k: Expr (SyntaxKind k) -> Expr (@NativeKind (type k) (getDefaultConstNative k)) *)
   | Const k: ConstT k -> Expr (SyntaxKind k)
   | UniBool: UniBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
   | BinBool: BinBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
@@ -735,20 +718,13 @@ Qed.
 Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
-(** * Notation corner! *)
+(** Notations *)
 
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
-
 Notation "name :: ty" := (Build_Attribute name ty) : kami_struct_scope.
-
 Delimit Scope kami_struct_scope with struct.
-
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Struct (cons s1%struct .. (cons sN%struct nil) ..)).
-
-(** Miscellaneous Notations *)
-
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
-
 Delimit Scope kami_scope with kami.
 

@@ -44,6 +44,7 @@ let bsv_keywords =
     "xnor"; "xor"]
 
 (* Partial definition borrowed from Compcert *)
+(* TODO: '.' -> "__" / '$' -> "___" *)
 let bstring_of_charlist (s: char list) =
   let r = Bytes.create (List.length s) in
   let rec fill pos = function
@@ -141,6 +142,15 @@ let getStructName (_: unit) = (structIdx := !structIdx + 1);
 
 module StringMap = Map.Make (String)
 let glbStructs : ((kind attribute list) StringMap.t) ref = ref StringMap.empty
+
+let initMem : constT option ref = ref None
+let getInitMem (_: unit) =
+  match !initMem with
+  | Some im -> im
+  | None -> raise (Should_not_happen "Initial memory not provided")
+
+let setInitMem (c: constT) = initMem := Some c
+let resetInitMem (_: unit) = initMem := None
 
 let resetGlbStructs (_: unit) = glbStructs := StringMap.empty
 let findGlbStructName (k: kind attribute list) =
@@ -339,13 +349,13 @@ let rec ppBExpr (e: bExpr) =
                                ps ppOr; print_space ();
                                ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BUniBit (_, _, Inv _, se) -> ps ppInv; ps ppRBracketL; ppBExpr se; ps ppRBracketR
-  | BUniBit (_, _, ConstExtract (_, n2, n3), se) ->
+  | BUniBit (_, _, ConstExtract (n1, n2, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
-     ps ppBracketL; ps (string_of_int (n2 + n3)); ps ppColon;
-     ps (string_of_int (n3 + 1)); ps ppBracketR
-  | BUniBit (_, _, Trunc (_, n2), se) ->
+     ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
+     ps (string_of_int n1); ps ppBracketR
+  | BUniBit (_, _, Trunc (n1, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
-     ps ppBracketL; ps (string_of_int (n2 - 1)); ps ppColon; ps "0"; ps ppBracketR
+     ps ppBracketL; ps (string_of_int (n1 - 1)); ps ppColon; ps "0"; ps ppBracketR
   | BUniBit (fn, tn, ZeroExtendTrunc _, se) ->
      (if (fn >= tn) then ps ppTruncate else ps ppZeroExtend);
      ps ppRBracketL; ppBExpr se; ps ppRBracketR
@@ -355,7 +365,7 @@ let rec ppBExpr (e: bExpr) =
   | BUniBit (_, _, TruncLsb (n1, n2), se) -> 
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
-     ps (string_of_int n2); ps ppBracketR
+     ps (string_of_int n1); ps ppBracketR
   | BBinBit (_, _, _, Add _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppAdd; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
@@ -421,7 +431,7 @@ let rec ppBAction (ife: int option) (a: bAction) =
   match a with
   | BMCall (bind, meth, msig, e) ->
      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-     (if ret msig = Bit 0 then ps ppBind else ps ppAssign);
+     (* (if ret msig = Bit 0 then ps ppBind else ps ppAssign); *) ps ppAssign;
      print_space ();
      ps (bstring_of_charlist meth);
      ps ppRBracketL;
@@ -544,7 +554,12 @@ let ppRegInit (r: regInitT) =
      ps ppReg; ps ppRBracketL; ps (ppKind k); ps ppRBracketR; print_space ();
      ps (bstring_of_charlist rn); print_space ();
      ps ppAssign; print_space ();
-     ps ppMkReg; ps ppRBracketL; ps (ppConst c); ps ppRBracketR; ps ppSep;
+     ps ppMkReg; ps ppRBracketL;
+     (if bstring_of_charlist rn = "mem" then
+        ps (ppConst (getInitMem ()))
+      else
+        ps (ppConst c));        
+     ps ppRBracketR; ps ppSep;
      close_box ()
   | { attrName = rn; attrType = _ } ->
      raise (Should_not_happen ("NativeKind register detected; name: " ^ (bstring_of_charlist rn)))
@@ -752,4 +767,10 @@ let ppBModulesFull (bml: bModule list) =
   ppBModules (permute bml moduleOrder) idxInit;
   ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
   resetGlbStructs ();
-  print_newline ();
+  print_newline ()
+
+let ppBModulesFullInitMem (bml: bModule list) (initMem: constT) =
+  setInitMem initMem;
+  ppBModulesFull bml;
+  resetInitMem ()
+

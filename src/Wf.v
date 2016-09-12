@@ -1,16 +1,229 @@
 Require Import Bool List String Structures.Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics.
 Require Import Lib.StringBound Lib.ilist Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.SemanticsExprAction Lts.Semantics Lts.Equiv.
+Require Import Kami.Syntax Kami.Semantics.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
-(* Well-formedness w.r.t. valid register uses (read/writes) *)
+(* PHOAS equivalence *)
+Section Equiv.
+  Variable t1 t2: Kind -> Type.
+
+  Definition ft1 := fullType t1.
+  Definition ft2 := fullType t2.
+  Hint Unfold ft1 ft2.
+
+  Inductive ActionEquiv: forall {k}, ActionT t1 k -> ActionT t2 k -> Prop :=
+  | AEMCall: forall {k} n s (e1: Expr t1 (SyntaxKind (arg s)))
+                    (e2: Expr t2 (SyntaxKind (arg s)))
+                    (cont1: t1 (ret s) -> ActionT t1 k)
+                    (cont2: t2 (ret s) -> ActionT t2 k),
+      (forall (v1: ft1 (SyntaxKind (ret s)))
+              (v2: ft2 (SyntaxKind (ret s))),
+          ActionEquiv (cont1 v1) (cont2 v2)) ->
+      ActionEquiv (MCall n s e1 cont1) (MCall n s e2 cont2)
+  | AELet: forall {k k1' k2'} (e1: Expr t1 k1') (e2: Expr t2 k2')
+                  (cont1: fullType t1 k1' -> ActionT t1 k)
+                  (cont2: fullType t2 k2' -> ActionT t2 k),
+      (forall (v1: ft1 k1') (v2: ft2 k2'),
+          ActionEquiv (cont1 v1) (cont2 v2)) ->
+      ActionEquiv (Let_ e1 cont1) (Let_ e2 cont2)
+  | AEReadReg: forall {k k1' k2'} rn
+                      (cont1: fullType t1 k1' -> ActionT t1 k)
+                      (cont2: fullType t2 k2' -> ActionT t2 k),
+      (forall (v1: ft1 k1') (v2: ft2 k2'),
+          ActionEquiv (cont1 v1) (cont2 v2)) ->
+      ActionEquiv (ReadReg rn _ cont1) (ReadReg rn _ cont2)
+  | AEWriteReg: forall {k k1' k2'} rn (e1: Expr t1 k1') (e2: Expr t2 k2')
+                       (cont1: ActionT t1 k) (cont2: ActionT t2 k),
+      ActionEquiv cont1 cont2 ->
+      ActionEquiv (WriteReg rn e1 cont1) (WriteReg rn e2 cont2)
+  | AEIfElse: forall {k k'} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
+                     (ta1 fa1: ActionT t1 k') (ta2 fa2: ActionT t2 k')
+                     (cont1: t1 k' -> ActionT t1 k) (cont2: t2 k' -> ActionT t2 k),
+      ActionEquiv ta1 ta2 -> ActionEquiv fa1 fa2 ->
+      (forall (v1: ft1 (SyntaxKind k')) (v2: ft2 (SyntaxKind k')),
+          ActionEquiv (cont1 v1) (cont2 v2)) ->
+      ActionEquiv (IfElse e1 ta1 fa1 cont1) (IfElse e2 ta2 fa2 cont2)
+  | AEAssert: forall {k} (e1: Expr t1 (SyntaxKind Bool)) (e2: Expr t2 (SyntaxKind Bool))
+                     (cont1: ActionT t1 k) (cont2: ActionT t2 k),
+      ActionEquiv cont1 cont2 ->
+      ActionEquiv (Assert_ e1 cont1) (Assert_ e2 cont2)
+  | AERet: forall {k} (e1: Expr t1 (SyntaxKind k))
+                  (e2: Expr t2 (SyntaxKind k)),
+      ActionEquiv (Return e1) (Return e2).
+
+  Definition RuleEquiv (r: Attribute (Action Void)) : Prop :=
+    ActionEquiv (attrType r t1) (attrType r t2).
+  
+  Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
+  | RulesEquivNil: RulesEquiv nil
+  | RulesEquivCons:
+      forall r,
+        RuleEquiv r ->
+        forall rules,
+          RulesEquiv rules -> RulesEquiv (r :: rules).
+
+  Lemma RulesEquiv_in:
+    forall rules,
+      RulesEquiv rules <-> (forall r, In r rules -> RuleEquiv r).
+  Proof.
+    intros; constructor.
+    - induction 1; simpl in *; intros.
+      + intuition.
+      + destruct H1; subst; auto.
+    - induction rules; intros; simpl in *.
+      + constructor.
+      + constructor; auto.
+  Qed.
+
+  Lemma RulesEquiv_sub:
+    forall rules1 rules2,
+      RulesEquiv rules1 ->
+      SubList rules2 rules1 ->
+      RulesEquiv rules2.
+  Proof.
+    induction rules2; simpl; intros; [constructor|].
+    destruct a; constructor.
+    - intros; eapply RulesEquiv_in.
+      + exact H.
+      + apply H0; left; auto.
+    - apply IHrules2; auto.
+      apply SubList_cons_inv in H0; dest; auto.
+  Qed.
+
+  Lemma RulesEquiv_app:
+    forall rules1 rules2
+           (Hequiv1: RulesEquiv rules1)
+           (Hequiv2: RulesEquiv rules2),
+      RulesEquiv (rules1 ++ rules2).
+  Proof.
+    induction rules1; intros; auto.
+    simpl; inv Hequiv1.
+    constructor; auto.
+  Qed.
+
+  Definition MethEquiv (dm: DefMethT) : Prop :=
+    forall arg1 arg2,
+      ActionEquiv (projT2 (attrType dm) t1 arg1) (projT2 (attrType dm) t2 arg2).
+
+  Inductive MethsEquiv: list DefMethT -> Prop :=
+  | MethsEquivNil: MethsEquiv nil
+  | MethsEquivCons:
+      forall dm, MethEquiv dm ->
+                 forall meths,
+                   MethsEquiv meths -> MethsEquiv (dm :: meths).
+
+  Lemma MethsEquiv_in:
+    forall meths,
+      MethsEquiv meths <-> (forall m, In m meths -> MethEquiv m).
+  Proof.
+    intros; constructor.
+    - induction 1; simpl in *; intros.
+      + intuition.
+      + destruct H1; subst; auto.
+    - induction meths; intros; simpl in *.
+      + constructor.
+      + constructor; auto.
+  Qed.
+
+  Lemma MethsEquiv_sub:
+    forall meths1 meths2,
+      MethsEquiv meths1 ->
+      SubList meths2 meths1 ->
+      MethsEquiv meths2.
+  Proof.
+    induction meths2; simpl; intros; [constructor|].
+    apply SubList_cons_inv in H0; dest.
+    destruct a as [? [? ?]]; constructor; auto.
+    intros; apply (MethsEquiv_in meths1); auto.
+  Qed.
+
+  Lemma MethsEquiv_app:
+    forall meths1 meths2
+           (Hequiv1: MethsEquiv meths1)
+           (Hequiv2: MethsEquiv meths2),
+      MethsEquiv (meths1 ++ meths2).
+  Proof.
+    induction meths1; intros; auto.
+    simpl; inv Hequiv1.
+    constructor; auto.
+  Qed.
+
+  Definition ModEquiv (m: Modules): Prop :=
+    RulesEquiv (getRules m) /\ MethsEquiv (getDefsBodies m).
+  
+End Equiv.
+
+(* NOTE: Defining "ModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
+Notation "'ModPhoasWf' m" := (forall ty1 ty2, ModEquiv ty1 ty2 m) (at level 0).
+
+Section EquivFacts.
+  
+  Lemma actionEquiv_appendAction:
+    forall type1 type2
+           {retT1} (a11: ActionT type1 retT1) (a21: ActionT type2 retT1)
+           (Hequiv1: ActionEquiv a11 a21)
+           {retT2} (a12: type1 retT1 -> ActionT type1 retT2)
+           (a22: type2 retT1 -> ActionT type2 retT2)
+           (Hequiv2: forall (argV1: ft1 type1 (SyntaxKind retT1))
+                            (argV2: ft2 type2 (SyntaxKind retT1)),
+               ActionEquiv (a12 argV1) (a22 argV2)),
+      ActionEquiv (appendAction a11 a12) (appendAction a21 a22).
+  Proof.
+    induction 1; intros; try (simpl; constructor; intros; eauto).
+  Qed.
+
+  Lemma ModEquiv_split:
+    forall t1 t2 m1 m2,
+      ModEquiv t1 t2 (ConcatMod m1 m2) ->
+      ModEquiv t1 t2 m1 /\ ModEquiv t1 t2 m2.
+  Proof.
+    intros; inv H; split.
+    - constructor.
+      + eapply RulesEquiv_sub; eauto.
+        apply SubList_app_1, SubList_refl.
+      + eapply MethsEquiv_sub; eauto.
+        apply SubList_app_1, SubList_refl.
+    - constructor.
+      + eapply RulesEquiv_sub; eauto.
+        apply SubList_app_2, SubList_refl.
+      + eapply MethsEquiv_sub; eauto.
+        apply SubList_app_2, SubList_refl.
+  Qed.
+  
+  Lemma ModEquiv_modular:
+    forall t1 t2 m1 m2,
+      ModEquiv t1 t2 m1 ->
+      ModEquiv t1 t2 m2 ->
+      ModEquiv t1 t2 (ConcatMod m1 m2).
+  Proof.
+    intros; inv H; inv H0.
+    constructor; simpl.
+    - apply RulesEquiv_app; auto.
+    - apply MethsEquiv_app; auto.
+  Qed.
+
+  Lemma ModEquiv_flatten:
+    forall t1 t2 m,
+      ModEquiv t1 t2 m ->
+      ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)).
+  Proof. auto. Qed.
+  
+  Lemma ModEquiv_deflatten:
+    forall t1 t2 m,
+      ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)) ->
+      ModEquiv t1 t2 m.
+  Proof. auto. Qed.
+
+End EquivFacts.
+
+(* Valid register uses (reads and writes) *)
 Section ValidRegs.
   Variable type: Kind -> Type.
 
-  Section Regs.
+  Section GivenRegs.
     Variable regs: list string.
 
     Inductive ValidRegsAction:
@@ -84,7 +297,7 @@ Section ValidRegs.
       inv H; constructor; auto.
     Qed.
 
-  End Regs.
+  End GivenRegs.
 
   Fixpoint ValidRegsModules (m: Modules): Prop :=
     match m with
@@ -97,7 +310,10 @@ Section ValidRegs.
 
 End ValidRegs.
 
-Section Facts.
+(* NOTE: Defining "ModRegsWf" by Gallina definition affects proof automation by "kvr". *)
+Notation "'ModRegsWf' m" := (forall ty, ValidRegsModules ty m) (at level 0).
+
+Section ValidRegsFacts.
 
   Lemma validRegsAction_regs_weakening:
     forall {retT type} (a: ActionT type retT) regs,
@@ -230,7 +446,7 @@ Section Facts.
     - intros; eapply validRegsDms_dm; eauto.
       intuition.
   Qed.
-    
+  
   Lemma validRegsAction_old_regs_restrict:
     forall regs {retT} (a: ActionT type retT),
       ValidRegsAction regs a ->
@@ -368,5 +584,5 @@ Section Facts.
         apply SubList_app_2, SubList_refl.
   Qed.
 
-End Facts.
+End ValidRegsFacts.
 

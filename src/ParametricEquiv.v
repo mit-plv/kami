@@ -1,4 +1,4 @@
-Require Import String ParametricSyntax Syntax List Lib.CommonTactics Equiv Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringExtension.
+Require Import String ParametricSyntax Syntax List Lib.CommonTactics Wf Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringAsList.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.
@@ -381,3 +381,6 @@ Section Equiv.
   Qed.
 
 End Equiv.
+
+(* NOTE: Defining "MetaModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
+Notation "'MetaModPhoasWf' m" := (forall ty1 ty2, MetaModEquiv ty1 ty2 m) (at level 0).

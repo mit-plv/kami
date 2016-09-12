@@ -1,7 +1,7 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringExtension Lib.StringBound.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Notations Lts.Semantics.
-Require Import Lts.Equiv Lts.Wf Lts.ParametricEquiv Lts.ParametricWf Lts.Tactics.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList Lib.StringBound.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
+Require Import Kami.Wf Kami.ParametricEquiv Kami.ParametricWf Kami.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
@@ -192,77 +192,73 @@ Section Facts.
   Proof. reflexivity. Qed.
 
   Lemma fifo_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (fifo fifoName sz dType).
+    ModPhoasWf (fifo fifoName sz dType).
   Proof. kequiv. Qed.
   Hint Resolve fifo_ModEquiv.
 
   Lemma simpleFifo_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (simpleFifo fifoName sz dType).
+    ModPhoasWf (simpleFifo fifoName sz dType).
   Proof. kequiv. Qed.
   Hint Resolve simpleFifo_ModEquiv.
 
   Lemma fifo_ValidRegs:
-    forall ty, ValidRegsModules ty (fifo fifoName sz dType).
+    ModRegsWf (fifo fifoName sz dType).
   Proof. kvr. Qed.
   Hint Resolve fifo_ValidRegs.
 
   Lemma simpleFifo_ValidRegs:
-    forall ty, ValidRegsModules ty (simpleFifo fifoName sz dType).
+    ModRegsWf (simpleFifo fifoName sz dType).
   Proof. kvr. Qed.
   Hint Resolve simpleFifo_ValidRegs.
 
   Variable n: nat.
 
   Lemma fifoSS_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (getModFromSin (fifoS fifoName sz dType HfifoName)).
+    ModPhoasWf (getModFromSin (fifoS fifoName sz dType HfifoName)).
   Proof. rewrite <-fifo_fifoS; kequiv. Qed.
 
   Lemma fifoS_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
+    MetaModPhoasWf (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
   Proof. kequiv. Qed.
 
   Lemma fifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (fifoM fifoName sz dType HfifoName).
+    MetaModPhoasWf (fifoM fifoName sz dType HfifoName).
   Proof. kequiv. Qed.
 
   Lemma simpleFifoSS_ModEquiv:
-    forall ty1 ty2,
-      ModEquiv ty1 ty2 (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
+    ModPhoasWf (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
   Proof. rewrite <-simpleFifo_simpleFifoS; kequiv. Qed.
 
   Lemma simpleFifoS_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2 (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
+    MetaModPhoasWf (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
   Proof. kequiv. Qed.
 
   Lemma simpleFifoM_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (simpleFifoM fifoName sz dType HfifoName).
+    MetaModPhoasWf (simpleFifoM fifoName sz dType HfifoName).
   Proof. kequiv. Qed.
 
   Lemma fifoSS_ValidRegs:
-    forall ty, ValidRegsModules ty (getModFromSin (fifoS fifoName sz dType HfifoName)).
+    ModRegsWf (getModFromSin (fifoS fifoName sz dType HfifoName)).
   Proof. rewrite <-fifo_fifoS; kvr. Qed.
   
   Lemma fifoS_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
+    MetaModRegsWf (getMetaFromSinNat n (fifoS fifoName sz dType HfifoName)).
   Proof. kvr. Qed.
 
   Lemma fifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (fifoM fifoName sz dType HfifoName).
+    MetaModRegsWf (fifoM fifoName sz dType HfifoName).
   Proof. kvr. Qed.
 
   Lemma simpleFifoSS_ValidRegs:
-    forall ty,
-      ValidRegsModules ty (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
+    ModRegsWf (getModFromSin (simpleFifoS fifoName sz dType HfifoName)).
   Proof. rewrite <-simpleFifo_simpleFifoS; kvr. Qed.
 
   Lemma simpleFifoS_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
+    MetaModRegsWf (getMetaFromSinNat n (simpleFifoS fifoName sz dType HfifoName)).
   Proof. kvr. Qed.
 
   Lemma simpleFifoM_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (simpleFifoM fifoName sz dType HfifoName).
+    MetaModRegsWf (simpleFifoM fifoName sz dType HfifoName).
   Proof. kvr. Qed.
 
 End Facts.

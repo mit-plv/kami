@@ -1,29 +1,29 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Semantics Lts.SemFacts.
-Require Import Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Renaming Lts.Specialize Lts.Tactics Lts.Duplicate.
-Require Import Lts.ModuleBound Lts.ModuleBoundEx.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate.
+Require Import Kami.ModuleBound Kami.ModuleBoundEx.
 Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
   Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
 
   Variable n: nat.
   
-  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opHt n.
-  Definition scN := sc dec execState execNextPc opLd opSt opHt n.
+  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opTh n.
+  Definition scN := sc dec execState execNextPc opLd opSt opTh n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -36,7 +36,7 @@ Section ProcDecSCN.
       END_SKIP_PROOF_ON *) admit.
   Qed.
 
-  Definition procDecN := pdecs dec execState execNextPc opLd opSt opHt n.
+  Definition procDecN := pdecs dec execState execNextPc opLd opSt opTh n.
   Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

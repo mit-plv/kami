@@ -1,6 +1,6 @@
 Require Import String Streams.
 Require Import Lib.Indexer List.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics.
 
 Set Implicit Arguments.
 

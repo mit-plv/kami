@@ -1,19 +1,19 @@
-Require Import Lts.Syntax Lts.Semantics Lts.Equiv Lts.Refinement Lts.Renaming Lts.Wf.
-Require Import Lts.Inline Lts.InlineFacts_2 Lts.Tactics.
+Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Ex.SC Ex.ProcDec.
 
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize iaddrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize iaddrSize lgDataBytes rfIdx.
+  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
+  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
+  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
 
-  Variables opLd opSt opHt: ConstT (Bit opIdx).
+  Variables opLd opSt opTh: ConstT (Bit opIdx).
 
-  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opHt.
+  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opTh.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: Modules * bool.

@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Equiv Lts.ParametricEquiv.
-Require Import Lts.Wf Lts.ParametricWf Lts.Tactics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.ParametricEquiv.
+Require Import Kami.Wf Kami.ParametricWf Kami.Tactics.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile.
 
 Set Implicit Arguments.
@@ -193,14 +193,14 @@ Section Facts.
   Variable Id: Kind.
 
   Lemma memDir_ModEquiv:
-    forall ty1 ty2, MetaModEquiv ty1 ty2 (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModPhoasWf (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma memDir_ValidRegs:
-    forall ty, ValidRegsMetaModule ty (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModRegsWf (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof. (* SKIP_PROOF_ON
     kvr.
     END_SKIP_PROOF_ON *) admit.

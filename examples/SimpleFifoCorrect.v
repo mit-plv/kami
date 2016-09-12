@@ -1,8 +1,9 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
-Require Import Syntax Semantics Notations SemFacts Equiv Refinement Tactics.
-Require Import DecompositionOne DecompositionInv.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
+Require Import Kami.Wf Kami.Notations Kami.Tactics.
+Require Import Kami.Decomposition.
 Require Import Ex.Fifo Ex.NativeFifo.
 
 Set Implicit Arguments.
@@ -194,9 +195,9 @@ Section Facts.
     kexistv ^"enqP"%string enqPv o (Bit rsz).
     kexistv ^"deqP"%string deqPv o (Bit rsz).
     refine (or3 _ _ _).
-    - exact (v = true /\ v0 = false /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = true /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = false /\ (if weq v1 v2 then true else false) = false).
+    - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
   Hint Unfold sfifo_inv_1: InvDefs.
 
@@ -217,6 +218,9 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * destruct (weq x6 (x5 ^+ $0~1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
@@ -226,6 +230,9 @@ Section Facts.
             elim n0; auto.
           }
       + simpl in *; kinv_magic_light_with kinv_or3.
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.

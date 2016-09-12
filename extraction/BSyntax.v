@@ -1,6 +1,6 @@
 Require Import String List.
 Require Import Lib.ilist Lib.Struct Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Synthesize Lts.ParametricSyntax.
+Require Import Kami.Syntax Kami.Synthesize Kami.ParametricSyntax.
 
 Set Implicit Arguments.
 
@@ -128,7 +128,6 @@ Section BluespecSubset.
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
     match e with
     | MCallS name msig arge idx cont =>
-      (* TODO: need to correct name like Bluespec-style *)
       (actionSToBAction cont)
         >>= (fun bc =>
                (exprSToBExpr arge)

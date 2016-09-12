@@ -1,7 +1,7 @@
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
-Require Import Lts.Syntax Lts.ParametricSyntax Lts.Wf Lts.ParametricWf Lts.Notations.
-Require Import Lts.Semantics Lts.ParametricEquiv Lts.Tactics.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Wf Kami.ParametricWf Kami.Notations.
+Require Import Kami.Semantics Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
@@ -68,16 +68,13 @@ Section Facts.
   Variable Id: Kind.
 
   Lemma childParent_ModEquiv:
-    forall ty1 ty2,
-      MetaModEquiv ty1 ty2
-                   (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModPhoasWf (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof.
     kequiv.
   Qed.
 
   Lemma childParent_ValidRegs:
-    forall ty,
-      ValidRegsMetaModule ty (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModRegsWf (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
   Proof.
     kvr.
   Qed.

@@ -1,6 +1,8 @@
-Require Import PartialInline Equiv
-        PartialInline2 ParametricSyntax ParametricEquiv Syntax String List Semantics
-        Lib.Struct Program.Equality Lib.CommonTactics Lib.Indexer Lib.StringExtension Lib.Concat.
+Require Import String List.
+Require Import Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.Concat.
+Require Import Syntax Semantics Wf InlineFacts PartialInlineFacts.
+Require Import ParametricSyntax ParametricEquiv.
+Require Import Program.Equality.
 
 Set Implicit Arguments.
 
@@ -996,13 +998,13 @@ Section SinSin.
 
   Lemma inlineSinSinDmToRule_traceRefines_NoFilt:
     modFromMeta m <<==
-               modFromMeta
-               {| metaRegs := metaRegs m;
-                  metaRules :=
-                    preR ++ OneRule
-                         (fun ty => inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
-                         sufR;
-                  metaMeths := metaMeths m |}.
+                modFromMeta
+                {| metaRegs := metaRegs m;
+                   metaRules :=
+                     preR ++ OneRule
+                          (fun ty => inlineSinSinDm (r ty) (nameVal dmName) dm) rName ::
+                          sufR;
+                   metaMeths := metaMeths m |}.
   Proof.
     unfold modFromMeta; simpl.
     repeat rewrite map_app; simpl.
@@ -1029,16 +1031,16 @@ Section SinSin.
       reflexivity.
     }
     match goal with
-      | |- ?m2 <<== ?m3 =>
-        apply (inlineDmToRule_traceRefines_NoFilt
-                      m2 (dName :: getMethFromSin dm)%struct
-                      (concat (map getListFromMetaMeth preDm)) 
-                      (concat (map getListFromMetaMeth sufDm))
-                      sth1 (noDup_preserveMeth _ HnoDupMeths)
-                      (concat (map getListFromMetaRule preR))
-                      (concat (map getListFromMetaRule sufR))
-                      _ sth2 (noDup_preserveRule _ HnoDupRules)
-                   )
+    | |- ?m2 <<== ?m3 =>
+      apply (@inlineDmToRule_traceRefines_NoFilt
+               m2 (dName :: getMethFromSin dm)%struct
+               (concat (map getListFromMetaMeth preDm)) 
+               (concat (map getListFromMetaMeth sufDm))
+               sth1 (noDup_preserveMeth _ HnoDupMeths)
+               (concat (map getListFromMetaRule preR))
+               (concat (map getListFromMetaRule sufR))
+               _ sth2 (noDup_preserveRule _ HnoDupRules)
+            )
     end.
   Qed.
 
@@ -1078,8 +1080,6 @@ Section SinSin.
       apply in_or_app; simpl.
       intuition auto.
   Qed.
-  
-
   
   Hypothesis HdmNoRule1:
     forall rbody rb, In (@OneRule rbody rb) (preR ++ sufR) ->
@@ -1142,7 +1142,7 @@ Section SinSin.
     }
     match goal with
       | |- ?m2 <<== ?m3 =>
-        apply (inlineDmToRule_traceRefines_Filt
+        apply (@inlineDmToRule_traceRefines_Filt
                       m2 (nameVal dmName :: getMethFromSin dm)%struct
                       (concat (map getListFromMetaMeth preDm)) 
                       (concat (map getListFromMetaMeth sufDm))

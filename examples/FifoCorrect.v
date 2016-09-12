@@ -1,8 +1,8 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Equiv Lts.Refinement.
-Require Import Lts.Notations Lts.Tactics Lts.DecompositionOne Lts.DecompositionInv.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
+Require Import Kami.Notations Kami.Tactics Kami.Decomposition.
 Require Import Fifo NativeFifo.
 
 Set Implicit Arguments.
@@ -200,9 +200,9 @@ Section ToNative.
     kexistv ^"enqP"%string enqPv o (Bit rsz).
     kexistv ^"deqP"%string deqPv o (Bit rsz).
     refine (or3 _ _ _).
-    - exact (v = true /\ v0 = false /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = true /\ (if weq v1 v2 then true else false) = true).
-    - exact (v = false /\ v0 = false /\ (if weq v1 v2 then true else false) = false).
+    - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
+    - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
   Hint Unfold fifo_inv_1: InvDefs.
 
@@ -223,6 +223,9 @@ Section ToNative.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * destruct (weq x6 (x5 ^+ $0~1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
@@ -232,6 +235,9 @@ Section ToNative.
             elim n0; auto.
           }
       + simpl in *; kinv_magic_light_with kinv_or3.
+        * or3_thd; repeat split.
+          { destruct (weq _ _); auto. }
+          { destruct (weq _ _); auto. }
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
@@ -243,6 +249,7 @@ Section ToNative.
           { or3_fst; auto. }
           { or3_thd; auto. }
       + simpl in *; kinv_magic_light_with kinv_or3.
+        * or3_snd; auto.
         * or3_snd; auto.
         * or3_thd; repeat split; auto.
           destruct (weq _ _); auto; elim n; auto.
@@ -653,7 +660,7 @@ Section ToSimple.
                               calls:= M.empty _ |});
         [|unfold hide; simpl; f_equal;
           [destruct ann as [[|]|]; auto
-          |repeat rewrite M.subtractKV_empty_1; rewrite liftToMap1Empty; auto]]
+          |repeat rewrite M.subtractKV_empty_1; rewrite liftToMap1_empty; auto]]
     end.
 
     constructor;
@@ -705,7 +712,9 @@ Section ToSimple.
           }
           { reflexivity. }
           { simpl; f_equal.
-            { meq; findeq_custom liftToMap1_find_tac. }
+            { 
+
+              meq; findeq_custom liftToMap1_find_tac. }
             { apply M.union_empty in H1; dest; subst; meq. }
           }
           
@@ -756,8 +765,8 @@ Section ToSimpleN.
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
-    kexistnv ^"elt" v s (listEltK dType type).
-    exact (sv = Some (existT _ _ v)).
+    kexistnv ^"elt" eltv s (listEltK dType type).
+    exact (sv = Some (existT _ _ eltv)).
   Defined.
 
   Lemma nfifo_refines_nsfifo:

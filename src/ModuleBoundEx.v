@@ -1,6 +1,6 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Concat Lib.Indexer Lib.StringEq.
-Require Import Syntax ParametricSyntax Semantics SemFacts Refinement.
+Require Import Syntax ParametricSyntax Semantics SemFacts RefinementFacts.
 Require Import Specialize Duplicate Notations.
 
 Set Implicit Arguments.

@@ -3,10 +3,10 @@ Require FSets.FMapList FSets.FMapFacts.
 Require Import Lists.SetoidList.
 Require Import Structures.OrderedType.
 Require Import Structures.OrderedTypeEx.
+Require Import Equalities Eqdep_dec FMapInterface.
 
-Require Import Eqdep_dec.
+Require Import CommonTactics StringAsOT StringEq Struct.
 
-Require Import Lib.CommonTactics.
 Set Implicit Arguments.
 
 Section Lists. (* For dealing with domains *)
@@ -371,8 +371,6 @@ Proof.
     symmetry. apply _H. apply HdRel_irrel; assumption.
 Qed.
 
-Require Import FMapInterface.
-
 Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := UOT.
 
   Module OT := UOT_to_OT UOT.
@@ -448,8 +446,6 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
   Qed.
 
 End FMapListEq.
-
-Require Import Equalities.
 
 Module Type LT_IRREL (Import T : OrderedType).
   Parameter Inline lt_irrel : forall (x y : t) (p q : lt x y), p = q.
@@ -2022,8 +2018,6 @@ Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Proof. apply lt_irrel_leibniz, UOT.lt_irrel. Qed.
 End FMapListLeib.
 
-Require Import Lib.String_as_OT.
-
 Module String_as_OT' <: UsualOrderedTypeLTI.
   Include String_as_OT.
   Lemma lt_irrel : forall (x y : t) (p q : lt x y), p = q.
@@ -2238,8 +2232,6 @@ Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
 Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
 
-Require Import Lib.Struct Lib.StringEq.
-
 Section MakeMap.
   Variable A: Type.
   Variable f1 f2: A -> Type.
@@ -2293,8 +2285,6 @@ Section MakeMap.
     eapply DisjList_cons; eauto.
   Qed.
 End MakeMap.
-
-Require Import Lib.StringEq.
 
 Inductive MapR {A} : M.t A -> Type :=
 | MRUnknown: forall (m: M.t A), MapR m

@@ -1,6 +1,6 @@
-Require Import Ex.MemCache Lts.Notations Lts.Syntax Lts.Semantics Lts.SemFacts Lts.Refinement.
-Require Import Lts.ParametricEquiv Lts.ParametricInline String Lts.ParametricInlineLtac.
-Require Import Lts.ParametricSyntax Lib.CommonTactics Lib.Reflection Lts.Tactics List.
+Require Import Ex.MemCache Kami.Notations Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
+Require Import Kami.ParametricEquiv Kami.ParametricInline String Kami.ParametricInlineLtac.
+Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tactics List.
 
 Set Implicit Arguments.
 

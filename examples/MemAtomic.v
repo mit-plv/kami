@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
-Require Import Lts.Syntax Lts.Notations Lts.Semantics Lts.Specialize Lts.Duplicate Lts.Refinement.
-Require Import Lts.Equiv Lts.ParametricEquiv Lts.Tactics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
+Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
@@ -71,14 +71,14 @@ Section Facts.
   Variables (addrSize fifoSize lgDataBytes: nat).
 
   Lemma midQ_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (midQ addrSize lgDataBytes).
+    ModPhoasWf (midQ addrSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
   Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (iom addrSize fifoSize lgDataBytes).
+    ModPhoasWf (iom addrSize fifoSize lgDataBytes).
   Proof.
     kequiv.
   Qed.
@@ -87,27 +87,27 @@ Section Facts.
   Variable n: nat.
 
   Lemma mids_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (mids addrSize lgDataBytes n).
+    ModPhoasWf (mids addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mids_ModEquiv.
 
   Lemma ioms_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (ioms addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (ioms addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomicWoQ_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomicWoQ addrSize lgDataBytes n).
+    ModPhoasWf (memAtomicWoQ addrSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAtomic_ModEquiv:
-    forall ty1 ty2, ModEquiv ty1 ty2 (memAtomic addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (memAtomic addrSize fifoSize lgDataBytes n).
   Proof.
     kequiv.
   Qed.

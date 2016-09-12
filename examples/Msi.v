@@ -1,4 +1,4 @@
-Require Import Lts.Syntax Lts.Notations.
+Require Import Kami.Syntax Kami.Notations.
 
 Set Implicit Arguments.
 
