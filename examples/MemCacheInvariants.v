@@ -1,152 +1,10 @@
-Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
+Require Import Lib.FMap Lib.Word Lib.WordSupport Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Lts.Notations String Ex.MemCacheInl Lts.Syntax List Lts.Semantics
-        ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat
-        FunctionalExtensionality Program.Equality Lts.Tactics Arith Ex.MapVReify Lts.SymEval
-        Lts.SymEvalTac Lib.StringExtension Lib.StringBound Lib.Nomega.
+        ParametricSyntax Lib.CommonTactics Lts.SemFacts Lib.FMap Lib.Concat Arith
+        FunctionalExtensionality Program.Equality Lts.Tactics Ex.MapVReify Lts.SymEval
+        Lts.SymEvalTac Lib.StringExtension Lib.StringBound Lib.ListSupport Lib.Misc Lib.StructNotation.
 
 Set Implicit Arguments.
-
-Lemma wordToNat_eq1: forall sz (a b: word sz), a = b -> wordToNat a = wordToNat b.
-Proof.
-  intros; subst; reflexivity.
-Qed.
-
-Lemma wordToNat_eq2: forall sz (a b: word sz), wordToNat a = wordToNat b -> a = b.
-Proof.
-  intros.
-  rewrite <- natToWord_wordToNat with (w := a).
-  rewrite <- natToWord_wordToNat with (w := b).
-  rewrite H.
-  reflexivity.
-Qed.
-
-Lemma wordToN_to_nat sz: forall (w: word sz), BinNat.N.to_nat (wordToN w) = wordToNat w.
-Proof.
-  intros.
-  rewrite wordToN_nat.
-  rewrite Nnat.Nat2N.id.
-  reflexivity.
-Qed.
-
-Lemma wordToNat_lt1: forall sz (a b: word sz), a < b -> (wordToNat a < wordToNat b)%nat.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat in H.
-  assumption.
-Qed.
-
-Lemma wordToNat_lt2: forall sz (a b: word sz), (wordToNat a < wordToNat b)%nat -> a < b.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat.
-  assumption.
-Qed.
-
-Lemma wordToNat_gt1: forall sz (a b: word sz), a > b -> (wordToNat a > wordToNat b)%nat.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat in H.
-  assumption.
-Qed.
-
-Lemma wordToNat_gt2: forall sz (a b: word sz), (wordToNat a > wordToNat b)%nat -> a > b.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat.
-  assumption.
-Qed.
-
-Lemma wordToNat_le1: forall sz (a b: word sz), a <= b -> (wordToNat a <= wordToNat b)%nat.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat in H.
-  assumption.
-Qed.
-
-Lemma wordToNat_le2: forall sz (a b: word sz), (wordToNat a <= wordToNat b)%nat -> a <= b.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat.
-  assumption.
-Qed.
-
-Lemma wordToNat_ge1: forall sz (a b: word sz), a >= b -> (wordToNat a >= wordToNat b)%nat.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat in H.
-  assumption.
-Qed.
-
-Lemma wordToNat_ge2: forall sz (a b: word sz), (wordToNat a >= wordToNat b)%nat -> a >= b.
-Proof.
-  intros.
-  pre_nomega.
-  repeat rewrite wordToN_to_nat.
-  assumption.
-Qed.
-
-Ltac pre_word_omega :=
-  unfold wzero, wone in *;
-  repeat match goal with
-           | H: @eq ?T ?a ?b |- _ =>
-             match T with
-               | word ?sz =>
-                 apply (@wordToNat_eq1 sz a b) in H;
-                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-                   simpl in H
-             end
-           | |- @eq ?T ?a ?b =>
-             match T with
-               | word ?sz =>
-                 apply (@wordToNat_eq2 sz a b);
-                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
-                   simpl
-             end
-           | H: ?a < ?b |- _ =>
-             apply wordToNat_lt1 in H;
-               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-               simpl in H
-           | |- ?a < ?b =>
-             apply wordToNat_lt2
-           | H: ?a > ?b |- _ =>
-             apply wordToNat_gt1 in H;
-               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-               simpl in H
-           | |- ?a > ?b =>
-             apply wordToNat_gt2
-           | H: ?a <= ?b |- _ =>
-             apply wordToNat_le1 in H;
-               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-               simpl in H
-           | |- ?a <= ?b =>
-             apply wordToNat_le2
-           | H: ?a >= ?b |- _ =>
-             apply wordToNat_ge1 in H;
-               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-               simpl in H
-           | |- ?a >= ?b =>
-             apply wordToNat_ge2
-         end; rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in *; simpl.
-
-Ltac word_omega := pre_word_omega; omega.
-
-Lemma word_le_ge_eq sz (w1 w2: word sz): w1 <= w2 -> w1 >= w2 -> w1 = w2.
-Proof.
-  intros; word_omega.
-Qed.
-
-Lemma word_le_zero sz (w: word sz): w <= wzero sz -> w = wzero sz.
-Proof.
-  intros;
-  word_omega.
-Qed.
 
 Local Notation "<| t |>" := (fullType type (SyntaxKind t)).
 
@@ -171,10 +29,6 @@ Section MemCacheInl.
   Definition getAddrS (tag: word TagBits) (idx: word IdxBits): word AddrBits :=
     Word.combine tag idx.
 
-  Definition isCompat c (dir: type (Vector Msi LgNumChildren)) :=
-    (dir c = $ Msi.Mod -> forall i, i <> c -> dir c = $ Msi.Inv) /\
-    (forall i, i <> c -> dir i = $ Msi.Mod -> dir c = $ Msi.Inv).
-
   Open Scope string.
 
   Fixpoint filtRqFromC
@@ -182,9 +36,9 @@ Section MemCacheInl.
              (ls: list (type (RqFromC LgNumChildren (Bit AddrBits) Id))):
     list (type (RqToP (Bit AddrBits) Id)) :=
     match ls with
-      | x :: xs => if weq c (x {| bindex := "child" |})
-                   then if weq a (x {| bindex := "rq" |} {| bindex := "addr" |})
-                        then x {| bindex := "rq" |} :: filtRqFromC c a xs
+      | x :: xs => if weq c (x ``"child")
+                   then if weq a (x ``"rq" ``"addr")
+                        then x ``"rq" :: filtRqFromC c a xs
                         else filtRqFromC c a xs
                    else filtRqFromC c a xs
       | nil => nil
@@ -204,9 +58,9 @@ Section MemCacheInl.
                                       (Bit AddrBits)))):
     list (type (RsToP LgDataBytes LgNumDatas (Bit AddrBits))) :=
     match ls with
-      | x :: xs => if weq c (x {| bindex := "child" |})
-                   then if weq a (x {| bindex := "rs" |} {| bindex := "addr" |})
-                        then x {| bindex := "rs" |} :: filtRsFromC c a xs
+      | x :: xs => if weq c (x ``"child")
+                   then if weq a (x ``"rs" ``"addr")
+                        then x ``"rs" :: filtRsFromC c a xs
                         else filtRsFromC c a xs
                    else filtRsFromC c a xs
       | nil => nil
@@ -226,9 +80,9 @@ Section MemCacheInl.
                                   (Bit AddrBits) Id))):
     list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) :=
     match ls with
-      | x :: xs => if weq c (x {| bindex := "child" |})
-                   then if weq a (x {| bindex := "msg" |} {| bindex := "addr" |})
-                        then x {| bindex := "msg" |} :: filtToC c a xs
+      | x :: xs => if weq c (x ``"child")
+                   then if weq a (x ``"msg" ``"addr")
+                        then x ``"msg" :: filtToC c a xs
                         else filtToC c a xs
                    else filtToC c a xs
       | nil => nil
@@ -247,7 +101,7 @@ Section MemCacheInl.
              (ls: list (type (RqToP (Bit AddrBits) Id))):
     list (type (RqToP (Bit AddrBits) Id)) :=
     match ls with
-      | x :: xs => if weq a (x {| bindex := "addr" |})
+      | x :: xs => if weq a (x ``"addr")
                    then x :: filtRqToP a xs
                    else filtRqToP a xs
       | nil => nil
@@ -266,7 +120,7 @@ Section MemCacheInl.
              (ls: list (type (RsToP LgDataBytes LgNumDatas (Bit AddrBits)))):
     list (type (RsToP LgDataBytes LgNumDatas (Bit AddrBits))) :=
     match ls with
-      | x :: xs => if weq a (x {| bindex := "addr" |})
+      | x :: xs => if weq a (x ``"addr")
                    then x :: filtRsToP a xs
                    else filtRsToP a xs
       | nil => nil
@@ -285,7 +139,7 @@ Section MemCacheInl.
              (ls: list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id))):
     list (type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) :=
     match ls with
-      | x :: xs => if weq a (x {| bindex := "addr" |})
+      | x :: xs => if weq a (x ``"addr")
                    then x :: filtFromP a xs
                    else filtFromP a xs
       | nil => nil
@@ -339,7 +193,7 @@ Section MemCacheInl.
   Lemma rsFromCToP_right_diffAddr_cons c a l1
         (t: type (RsToP LgDataBytes LgNumDatas (Bit AddrBits))):
     forall l3,
-      a <> t {| bindex := "addr" |} ->
+      a <> t ``"addr" ->
       rsFromCToP c a l1 l3 = rsFromCToP c a l1 (t :: l3).
   Proof.
     intros.
@@ -372,7 +226,7 @@ Section MemCacheInl.
       | x :: xs =>
         match xs with
           | y :: xs' =>
-            x {| bindex := "to" |} > y {| bindex := "to" |} /\ rsLessTo xs
+            x ``"to" > y ``"to" /\ rsLessTo xs
           | nil => True
         end
       | _ => True
@@ -381,7 +235,7 @@ Section MemCacheInl.
   Definition isCWait a procV
              (procRq: type (RqFromProc LgDataBytes (Bit (TagBits + IdxBits + LgNumDatas))))
              csw :=
-    procV = true /\ a = split1 (TagBits + IdxBits) LgNumDatas (procRq {| bindex := "addr" |}) /\
+    procV = true /\ a = split1 (TagBits + IdxBits) LgNumDatas (procRq ``"addr") /\
     csw = true.
 
   Lemma isCWait_dec: forall a procV procRq csw, isCWait a procV procRq csw \/
@@ -403,7 +257,7 @@ Section MemCacheInl.
     cRqValid = true /\
     dirw cword = true /\
     match hd_error rqFromCList with
-      | Some cRq => a = cRq {| bindex := "rq" |} {| bindex := "addr" |}
+      | Some cRq => a = cRq ``"rq" ``"addr"
       | _ => False
     end.
 
@@ -420,29 +274,6 @@ Section MemCacheInl.
     end.
   Qed.
   
-  Lemma hd_error_revcons_same A ls: forall (a: A), hd_error ls = Some a ->
-                                                   forall v, hd_error (ls ++ [v]) = Some a.
-  Proof.
-    induction ls; auto; simpl; intros; discriminate.
-  Qed.
-
-  Lemma hd_error_revcons_holds A (P: A -> Prop) (ls: list A):
-    forall a, hd_error ls = Some a ->
-              P a ->
-              forall b v, hd_error (ls ++ [v]) = Some b ->
-                          P b.
-  Proof.
-    intros.
-    rewrite hd_error_revcons_same with (a := a) in H1; auto.
-    inv H1; auto.
-  Qed.
-  
-  Lemma single_unfold_concat A B a (f: A -> list B) (ls: list A):
-    concat (map f (a :: ls)) = (f a ++ concat (map f ls))%list.
-  Proof.
-    reflexivity.
-  Qed.
-
   Hint Unfold nmemCacheInl: ModuleInl.
 
   Lemma In_metaRules:
@@ -477,25 +308,6 @@ Section MemCacheInl.
                  destruct x; dest; eexists; constructor; simpl in *; eauto; simpl in *; eauto.
   Qed.
   
-  Ltac inv_MetaModule :=
-    intros;
-    match goal with
-      | H: Substep (modFromMeta ?m) ?s ?u ?ul ?cs |- _ =>
-        autounfold with ModuleInl in H;
-        inv H; subst; [unfold modFromMeta in *; simpl in *;
-                       rewrite M.union_empty_L; eexists; eauto|
-                       unfold modFromMeta in *; simpl in *;
-                       rewrite M.union_empty_L; eexists; eauto|
-                       |
-                       unfold modFromMeta in *; simpl in *; exfalso; auto]
-    end;
-    match goal with
-      | H: In ?sth (getRules (modFromMeta ?m)) |- _ =>
-        apply In_metaRules in H; simpl in *; dest;
-        unfold getActionFromGen, getGenAction, getActionFromSin, getSinAction,
-        strFromName in *; doDestruct; simpl in *
-    end.
-
   Definition cache := nat.
   
   Record nmemCache_invariants_rec (s: RegsT)
@@ -544,145 +356,187 @@ Section MemCacheInl.
 
       i5: (dir a cword >= getCs cs tag a);
       
-      i7: (forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                      getCs cs tag a <= rs {| bindex := "to" |} /\
-                      dir a cword > rs {| bindex := "to" |});
+      i7: match find (fun _ => true) (rsFromCToP cword a rsFromCList rsToPList) with
+            | Some rs => getCs cs tag a <= rs ``"to" /\
+                         dir a cword > rs ``"to"
+            | None => True
+          end ;
 
-      i8: (forall msg, In msg (fromPToC cword a fromPList toCList) ->
-                       msg {| bindex := "isRq" |} = false ->
-                       getCs cs tag a < msg {| bindex := "to" |} /\
-                       dir a cword = msg {| bindex := "to" |});
+      i8: match find (fun msg: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id) => msg ``"isRq")
+                     (fromPToC cword a fromPList toCList) with
+            | Some msg => getCs cs tag a < msg ``"to" /\
+                          dir a cword = msg ``"to"
+            | None => True
+          end ;
 
-      i9: (forall rq rs,
-             In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             dir a cword <= rq {| bindex := "from" |} ->
-             isPWait a cRqValid rqFromCList dirw cword);
+      i9: match find (fun rq: type (RqToP (Bit AddrBits) Id) => if wlt_dec (rq ``"from") (dir a cword)
+                                                                then false
+                                                                else true)
+                     (rqFromCToP cword a rqFromCList rqToPList),
+                find (fun _ => true) (rsFromCToP cword a rsFromCList rsToPList) with
+            | Some rq, Some rs => isPWait a cRqValid rqFromCList dirw cword
+            | _, _ => True
+          end ;
 
       i10: (forall beg mid last msg1 msg2,
               fromPToC cword a fromPList toCList = beg ++ msg1 :: mid ++ msg2 :: last ->
-              msg1 {| bindex := "isRq" |} = false ->
-              msg2 {| bindex := "isRq" |} = false ->
-              False)%list;
+              msg1 ``"isRq" = false ->
+              msg2 ``"isRq" = false ->
+              False)%list ;
       
-      i11: (dir a cword > getCs cs tag a ->
-            rsFromCToP cword a rsFromCList rsToPList <> nil);
+      i11: rsFromCToP cword a rsFromCList rsToPList = nil ->
+           dir a cword <= getCs cs tag a ;
       
-      i12: rsFromCToP cword a rsFromCList rsToPList = nil \/
-           forall msg, In msg (fromPToC cword a fromPList toCList) ->
-                       msg {| bindex := "isRq" |} = true;
+      i12: match find (fun msg : type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id) =>
+                         negb (msg ``"isRq"))
+                      (fromPToC cword a fromPList toCList), find (fun _ => true) (rsFromCToP cword a rsFromCList rsToPList) with
+             | Some _, Some _ => False
+             | _, _ => True
+           end ;
     
-      i13: (rsLessTo (rsFromCToP cword a rsFromCList rsToPList));
+      i13: rsLessTo (rsFromCToP cword a rsFromCList rsToPList) ;
 
       i14: (forall beg cToPRsLast,
               rsFromCToP cword a rsFromCList rsToPList = beg ++ [cToPRsLast] ->
-              cToPRsLast {| bindex := "to" |} = getCs cs tag a)%list;
+              cToPRsLast ``"to" = getCs cs tag a)%list ;
 
       i15: (forall beg mid last pToCRq pToCRs,
               fromPToC cword a fromPList toCList = beg ++ pToCRq :: mid ++ pToCRs :: last ->
-              pToCRq {| bindex := "isRq" |} = true ->
-              pToCRs {| bindex := "isRq" |} = false ->
-              getCs cs tag a = $ Msi.Inv)%list;
+              pToCRq ``"isRq" = true ->
+              pToCRs ``"isRq" = false ->
+              getCs cs tag a = $ Msi.Inv)%list ;
 
       i16: isCWait a procV procRq csw ->
-           (getCs cs tag a < if (procRq {| bindex := "op" |}):bool
+           (getCs cs tag a < if (procRq ``"op"):bool
                              then $ Msi.Mod else $ Msi.Sh)
            /\
            match find (fun _ => true) (rqFromCToP cword a rqFromCList rqToPList),
                  find
                    (fun (msg: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id)) =>
-                      if (msg {| bindex := "isRq" |}):bool then false else true)
+                      if (msg ``"isRq"):bool then false else true)
                    (fromPToC cword a fromPList toCList) with
-             | Some rq, None => rq {| bindex := "to" |} =
-                                (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
+             | Some rq, None => rq ``"to" =
+                                (if (procRq ``"op"):bool then $ Msi.Mod
                                  else $ Msi.Sh)
-                                /\ rq {| bindex := "from" |} >= getCs cs tag a
-             | None, Some rs => rs {| bindex := "to" |} = 
-                                if (procRq {| bindex := "op" |}):bool then $ Msi.Mod
+                                /\ rq ``"from" >= getCs cs tag a
+             | None, Some rs => rs ``"to" = 
+                                if (procRq ``"op"):bool then $ Msi.Mod
                                 else $ Msi.Sh
              | _, _ => False
            end ;
 
-      i16a: (forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                        isCWait a procV procRq csw
-                        /\ (getCs cs tag a < if (procRq {| bindex := "op" |} ):bool
-                                             then $ Msi.Mod else $ Msi.Sh)
-                        /\ rq {| bindex := "to" |} =
-                           (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod else $ Msi.Sh)
-                        /\ rq {| bindex := "from" |} >= getCs cs tag a);
+      i16a: match find (fun _ => true) (rqFromCToP cword a rqFromCList rqToPList) with
+              | Some rq => isCWait a procV procRq csw
+                           /\ (getCs cs tag a < if (procRq ``"op" ):bool
+                                                then $ Msi.Mod else $ Msi.Sh)
+                           /\ rq ``"to" =
+                              (if (procRq ``"op"):bool then $ Msi.Mod else $ Msi.Sh)
+                           /\ rq ``"from" >= getCs cs tag a
+              | None => True
+            end ;
 
-      i16b: (forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                        isCWait a procV procRq csw
-                        /\ (getCs cs tag a < if (procRq {| bindex := "op" |}):bool
-                                             then $ Msi.Mod else $ Msi.Sh)
-                        /\ rs {| bindex := "isRq" |} = false
-                        /\ rs {| bindex := "to" |} =
-                           (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod else $ Msi.Sh));
+      i16b: match find (fun msg: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id) =>
+                          if (msg ``"isRq"):bool then false else true)
+                       (fromPToC cword a fromPList toCList) with
+              | Some rs => isCWait a procV procRq csw
+                           /\ (getCs cs tag a < if (procRq {| bindex := "op" |}):bool
+                                                then $ Msi.Mod else $ Msi.Sh)
+                           /\ rs {| bindex := "isRq" |} = false
+                           /\ rs {| bindex := "to" |} =
+                              (if (procRq {| bindex := "op" |}):bool then $ Msi.Mod else $ Msi.Sh)
+              | None => True
+            end ;
 
-      i17: (forall pToCRq,
-              In pToCRq (fromPToC cword a fromPList toCList) ->
-              pToCRq {| bindex := "isRq" |} = true ->
-              ~ isPWait a cRqValid rqFromCList dirw cword ->
-              getCs cs tag a = $ Msi.Inv);
+      i17: match find (fun rq: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id) =>
+                         rq ``"isRq") (fromPToC cword a fromPList toCList) with
+             | Some rq => isPWait a cRqValid rqFromCList dirw cword \/ getCs cs tag a = $ Msi.Inv
+             | None => True
+           end ;
 
-      i18: (forall pToCRq cToPRs,
-              In pToCRq (fromPToC cword a fromPList toCList) ->
-              In cToPRs (rsFromCToP cword a rsFromCList rsToPList) ->
-              pToCRq {| bindex := "isRq" |} = true ->
-              cToPRs {| bindex := "to" |} = $ Msi.Inv);
+      i18: match find (fun rq: type (FromP LgDataBytes LgNumDatas (Bit AddrBits) Id) =>
+                         rq ``"isRq") (fromPToC cword a fromPList toCList),
+                 find (fun _ => true) (rsFromCToP cword a rsFromCList rsToPList) with
+             | Some rq, Some rs  => rs ``"to" = $ Msi.Inv
+             | _, _ => True
+           end ;
 
       i19: (forall beg mid last pToCRq pToCRs,
               fromPToC cword a fromPList toCList = beg ++ pToCRs :: mid ++ pToCRq :: last ->
-              pToCRs {| bindex := "isRq" |} = false ->
-              pToCRq {| bindex := "isRq" |} = true ->
-              isPWait a cRqValid rqFromCList dirw cword)%list;
+              pToCRs ``"isRq" = false ->
+              pToCRq ``"isRq" = true ->
+              isPWait a cRqValid rqFromCList dirw cword)%list ;
 
       i20: (forall beg mid last pToCRq1 pToCRq2,
               fromPToC cword a fromPList toCList = beg ++ pToCRq1 :: mid ++ pToCRq2 :: last ->
-              pToCRq1 {| bindex := "isRq" |} = true ->
-              pToCRq2 {| bindex := "isRq" |} = true ->
-              getCs cs tag a = $ Msi.Inv)%list;
+              pToCRq1 ``"isRq" = true ->
+              pToCRq2 ``"isRq" = true ->
+              getCs cs tag a = $ Msi.Inv)%list ;
 
-      i21: (forall rs,
-              In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-              rs {| bindex := "isVol" |} = false ->
-              isPWait a cRqValid rqFromCList dirw cword);
+      i21: match find (fun rs: type (RsToP LgDataBytes LgNumDatas (Bit AddrBits)) =>
+                         if (rs ``"isVol"):bool then false else true)
+                      (rsFromCToP cword a rsFromCList rsToPList) with
+             | Some rs => isPWait a cRqValid rqFromCList dirw cword
+             | None => True
+           end ;
 
       i22: (forall beg mid last cToPRs1 cToPRs2,
               rsFromCToP cword a rsFromCList rsToPList =
               beg ++ cToPRs1 :: mid ++ cToPRs2 :: last ->
               cToPRs1 {| bindex := "isVol" |} = true \/
-              cToPRs2 {| bindex := "isVol" |} = true)%list;
+              cToPRs2 {| bindex := "isVol" |} = true)%list ;
 
-      i23: (forall cToPRq cToPRs,
-              In cToPRq (rqFromCToP cword a rqFromCList rqToPList) ->
-              In cToPRs (rsFromCToP cword a rsFromCList rsToPList) ->
-              dir a cword <= cToPRq {| bindex := "from" |} ->
-              cToPRs {| bindex := "isVol" |} = false);
+      i23: match find (fun rq: type (RqToP (Bit AddrBits) Id) =>
+                         if wlt_dec (rq ``"from") (dir a cword) then false else true)
+                      (rqFromCToP cword a rqFromCList rqToPList),
+                 find (fun _ => true) (rsFromCToP cword a rsFromCList rsToPList) with
+             | Some rq, Some rs => rs ``"isVol" = false
+             | _, _ => True
+           end ;
 
-      i25: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                      rq {| bindex := "from" |} < rq {| bindex := "to" |};
+      i25: match find (fun _ => true) (rqFromCToP cword a rqFromCList rqToPList) with
+             | Some rq => rq ``"from" < rq ``"to"
+             | None => True
+           end ;
 
-      i26: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                      rs {| bindex := "isVol" |} = true ->
-                      rs {| bindex := "to" |} = $ Msi.Inv ;
+      i26: match find (fun rs: type (RsToP LgDataBytes LgNumDatas (Bit (AddrBits))) => rs ``"isVol")
+                      (rsFromCToP cword a rsFromCList rsToPList) with
+             | Some rs => rs ``"to" = $ Msi.Inv
+             | None => True
+           end ;
 
       i27: procV = true -> procRqReplace = true ->
            tag (split2 TagBits IdxBits
-                       (split1 (TagBits + IdxBits) LgNumDatas
-                               (procRq {| bindex := "addr" |}))) <>
-           split1 TagBits IdxBits (split1 (TagBits + IdxBits) LgNumDatas
-                                          (procRq {| bindex := "addr" |})) \/
+                       (split1 AddrBits LgNumDatas
+                               (procRq ``"addr"))) <>
+           split1 TagBits IdxBits (split1 AddrBits LgNumDatas
+                                          (procRq ``"addr")) \/
            cs (split2 TagBits IdxBits
-                      (split1 (TagBits + IdxBits) LgNumDatas
+                      (split1 AddrBits LgNumDatas
                               (procRq {| bindex := "addr" |}))) = $ Msi.Inv ;
 
       i28: cRqValid = true -> hd_error rqFromCList = Some cRq ;
 
-      i29: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                         In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                         rs {| bindex := "isVol" |} = true ->
-                         rq {| bindex := "from" |} = $ Msi.Inv
+      i29: match find (fun rs: type (RsToP LgDataBytes LgNumDatas (Bit AddrBits)) => rs ``"isVol")
+                      (rsFromCToP cword a rsFromCList rsToPList),
+                 find (fun _ => true) (rqFromCToP cword a rqFromCList rqToPList) with
+             | Some rs, Some rq => rq ``"from" = $ Msi.Inv
+             | _, _ => True
+           end ;
+
+
+      i30: match find (fun rs: type (RsToP LgDataBytes LgNumDatas (Bit AddrBits)) =>
+                         if weq (rs ``"to") ($ Msi.Inv)
+                         then true
+                         else false) (rsFromCToP ($ c) a rsFromCList rsToPList) with
+             | Some rs => getCs cs tag a = $ Msi.Inv
+             | None => True
+           end ;
+
+      i31: match find (fun rs: type (RsToP LgDataBytes LgNumDatas (Bit AddrBits)) =>
+                         rs ``"isVol") (rsFromCToP ($ c) a rsFromCList rsToPList) with
+             | Some rs => getCs cs tag a = $ Msi.Inv
+             | None => True
+           end
     }.
 
   Definition nmemCache_invariants (s: RegsT) :=
@@ -691,57 +545,29 @@ Section MemCacheInl.
       cword = natToWord _ c ->
       nmemCache_invariants_rec s a cword c.
 
-  Theorem true_False_false: forall v, (v = true -> False) -> v = false.
-  Proof.
-    intros.
-    destruct v; intuition auto.
-  Qed.
-
-  Theorem false_False_true: forall v, (v = false -> False) -> v = true.
-  Proof.
-    intros.
-    destruct v; intuition auto.
-  Qed.
-
-  Ltac simplBool :=
-    match goal with
-      | H: ?v = true -> False |- _ =>
-        apply true_False_false in H
-      | H: ?v = false -> False |- _ =>
-        apply false_False_true in H
-    end.
-  
-  Definition do_upd_map_key_instance (x: nat) (ls: list (string * sigT (fullType type))): RegsT :=
-    fold_right (fun nk (m: RegsT) =>
-                  m[(fst nk) __ x |--> snd nk]) (M.empty _) ls.
-
-  Lemma not_in_string_uneq':
-    forall a x n s, ~ S_In a s -> s <> x ++ (String a n).
-  Proof.
-    induction x; simpl; auto; intros; intro; subst; simpl in *; [intuition auto|].
-    assert (sth: ~ S_In a (x ++ String a n)) by intuition auto.
-    clear - sth.
-    assert ((S_In a x \/ S_In a (String a n)) -> False) by
-        (intros H; apply S_in_or_app in H; intuition auto).
-    assert (sth2: S_In a (String a n) -> False) by intuition auto.
-    simpl in sth2.
-    intuition auto.
-  Qed.
-  
-  Lemma not_in_string_uneq:
-    forall a x n s, index 0 (String a EmptyString) s = None -> s <> x ++ (String a n).
-  Proof.
-    intros.
-    apply not_in_string_uneq'.
-    apply index_not_in; auto.
-  Qed.
-  
   Lemma rsLessTo_less_app:
     forall ls
            (v1: type (RsToP LgDataBytes LgNumDatas (Bit (TagBits + IdxBits)))),
       rsLessTo (ls ++ [v1]) ->
       forall (v2: type (RsToP _ _ _)),
-        v1 {| bindex := "to" |} > v2 {| bindex := "to" |} ->
+        v1 {| bindex := "to";
+              indexb :=
+                {| boundi := eq_refl:
+                               nth_error (map (@attrName _)
+                                              (mapAttr type ("addr" :: Bit (TagBits + IdxBits))%struct ::
+                                                       mapAttr type ("to" :: Msi)%struct ::
+                                                       mapAttr type ("line" :: Line LgDataBytes LgNumDatas)%struct ::
+                                                       mapAttr type ("isVol" :: Bool)%struct :: nil))
+                                         1 = Some "to" |} |} >
+        v2 {| bindex := "to";
+              indexb :=
+                {| boundi := eq_refl:
+                               nth_error (map (@attrName _)
+                                              (mapAttr type ("addr" :: Bit (TagBits + IdxBits))%struct ::
+                                                       mapAttr type ("to" :: Msi)%struct ::
+                                                       mapAttr type ("line" :: Line LgDataBytes LgNumDatas)%struct ::
+                                                       mapAttr type ("isVol" :: Bool)%struct :: nil))
+                                         1 = Some "to" |} |} ->
         rsLessTo ((ls ++ [v1]) ++ [v2]).
   Proof.
     simpl.
@@ -810,14 +636,6 @@ Section MemCacheInl.
     rewrite M.union_add.
     apply nmemCache_invariants_same' with (s := M.union (do_upd_map_key_instance x ls) s); auto.
   Qed.
-
-  Ltac mkList_add_key_instance madds :=
-    match madds with
-      | M.add (addIndexToStr _ ?x ?k) ?v ?m =>
-        let ls := mkList_add_key_instance m in
-        constr:( (k, v) :: ls)
-      | M.empty ?t => constr:(@nil (string * t))
-    end.
 
   Lemma rqFromCToP_xfer:
     forall x a t rqFromCList rqToPList,
@@ -1161,24 +979,6 @@ Section MemCacheInl.
     repeat simplBool;
     elimDiffC c; mkStruct.
 
-  Ltac applyLemma lemma :=
-    match goal with
-      | |- forall x, _ =>
-        let y := fresh in
-        intro y;
-          applyLemma lemma;
-          generalize y;
-          clear y
-      | |- _ -> _ =>
-        let y := fresh in
-        intro y;
-          applyLemma lemma;
-          generalize y;
-          clear y
-      | |- _ =>
-        apply lemma
-    end.
-
   Ltac normalInit :=
     intros HInd HInRule HS;
     simpl in HInRule; apply invSome in HInRule;
@@ -1221,7 +1021,16 @@ Section MemCacheInl.
     forall rs,
       In rs ls ->
       rsLessTo ls ->
-      rs {| bindex := "to" |}  = WO~0~0 ->
+      rs {| bindex := "to";
+            indexb :=
+              {| boundi := eq_refl:
+                             nth_error (map (@attrName _)
+                                            (mapAttr type ("addr" :: Bit (TagBits + IdxBits))%struct ::
+                                                     mapAttr type ("to" :: Msi)%struct ::
+                                                     mapAttr type ("line" :: Line LgDataBytes LgNumDatas)%struct ::
+                                                     mapAttr type ("isVol" :: Bool)%struct :: nil))
+                                       1 = Some "to" |} 
+         |}  = WO~0~0 ->
       exists sth, ls = (sth ++ [rs])%list.
   Proof.
     unfold IndexBound_head, IndexBound_tail; simpl.
@@ -1236,77 +1045,6 @@ Section MemCacheInl.
       exists (a :: x).
       simpl.
       f_equal; auto.
-  Qed.
-
-  Lemma rsFromCToP_toI_cs_I c a (s: RegsT):
-    forall (cs: <| Vector Msi IdxBits |>)
-           (tag: <| Vector (Bit TagBits) IdxBits |>)
-           (rsToPList: <[ list (type (RsToP LgDataBytes LgNumDatas (Bit AddrBits))) ]>)
-           (rsFromCList: <[ list (type (RsFromC LgDataBytes LgNumDatas
-                                                LgNumChildren (Bit AddrBits))) ]>),
-      cs === s.["dataArray.cs" __ c] ->
-      tag === s.["dataArray.tag" __ c] ->
-      rsToPList === s.["elt.rsToParent" __ c] ->
-      rsFromCList === s.["elt.rsFromChild"] ->
-      nmemCache_invariants_rec s a ($ c) c ->
-      forall rs,
-        In rs (rsFromCToP ($ c) a rsFromCList rsToPList) ->
-        rs {| bindex := "to" |} = $ Msi.Inv ->
-        getCs cs tag a = $ Msi.Inv.
-  Proof.
-    simpl; intros ? ? ? ? csFind tagFind rsToPListFind rsFromCListFind inv ? inRs rsTo.
-    destruct inv.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    repeat match goal with
-             | H': ?b === s .[ ?p ], H: ?a === s .[ ?p ] |- _ =>
-               rewrite H' in H; apply invSome in H;
-               apply Eqdep.EqdepTheory.inj_pair2 in H;
-               rewrite <- H in *; clear a H H'
-           end.
-    repeat match goal with
-             | H: ?a === s .[ _ ] |- _ => clear H
-           end.
-    clear - inRs rsTo i13 i14.
-    remember (rsFromCToP ($ c) a rsFromCList rsToPList) as sth;
-      clear Heqsth rsFromCList rsToPList c.
-    assert (sth2: exists beg, sth = (beg ++ [rs])%list).
-    { apply rsLessTo_in_I_last; auto.
-    }
-    dest.
-    subst.
-    erewrite <- i14 with (cToPRsLast := rs); eauto.
-  Qed.
-  
-  Lemma rsFromCToP_vol_cs_I c a (s: RegsT):
-    forall (cs: <| Vector Msi IdxBits |>)
-           (tag: <| Vector (Bit TagBits) IdxBits |>)
-           (rsToPList: <[ list (type (RsToP LgDataBytes LgNumDatas (Bit AddrBits))) ]>)
-           (rsFromCList: <[ list (type (RsFromC LgDataBytes LgNumDatas
-                                                LgNumChildren (Bit AddrBits))) ]>),
-      cs === s.["dataArray.cs" __ c] ->
-      tag === s.["dataArray.tag" __ c] ->
-      rsToPList === s.["elt.rsToParent" __ c] ->
-      rsFromCList === s.["elt.rsFromChild"] ->
-      nmemCache_invariants_rec s a ($ c) c ->
-      forall rs,
-        In rs (rsFromCToP ($ c) a rsFromCList rsToPList) ->
-        rs {| bindex := "isVol" |} = true ->
-        getCs cs tag a = $ Msi.Inv.
-  Proof.
-    simpl; intros ? ? ? ? csFind tagFind rsToPListFind rsFromCListFind inv ? inRs rsVol.
-    eapply rsFromCToP_toI_cs_I; eauto; simpl.
-    destruct inv.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
-    repeat match goal with
-             | H': ?b === s .[ ?p ], H: ?a === s .[ ?p ] |- _ =>
-               rewrite H' in H; apply invSome in H;
-               apply Eqdep.EqdepTheory.inj_pair2 in H;
-               rewrite <- H in *; clear a H H'
-           end.
-    repeat match goal with
-             | H: ?a === s .[ _ ] |- _ => clear H
-           end.
-    apply i26 in rsVol; auto.
   Qed.
 
   Lemma cs_sameAddr_upd: forall cs tag a0 a upd,
@@ -1404,73 +1142,6 @@ Section MemCacheInl.
     intuition auto.
   Qed.
 
-  Lemma in_single: forall A (a l: A), In a (l :: nil) -> a = l.
-  Proof.
-    intros.
-    simpl in *.
-    destruct H; intuition auto.
-  Qed.
-
-  Lemma in_pre_suf: forall A l (a: A), In a l -> exists l1 l2, (l = l1 ++ a :: l2)%list.
-  Proof.
-    induction l; simpl.
-    - intuition auto.
-    - intros.
-      destruct H; [| apply IHl in H; intuition auto].
-      + subst.
-        exists nil, l.
-        reflexivity.
-      + dest.
-        subst.
-        exists (a :: x), x0.
-        reflexivity.
-  Qed.
-
-  Lemma list_nil_revcons A: forall (l: list A), l = nil \/ exists l' v, l = (l' ++ [v])%list.
-  Proof.
-    induction l; subst.
-    - left; auto.
-    - destruct IHl; subst.
-      + right.
-        exists nil, a.
-        reflexivity.
-      + dest; subst.
-        right; simpl.
-        exists (a :: x), x0.
-        reflexivity.
-  Qed.
-
-
-  Lemma app_single_r: forall A (ls1 ls2: list A) v1 v2,
-                        (ls1 ++ [v1] = ls2 ++ [v2])%list ->
-                        ls1 = ls2 /\ v1 = v2.
-  Proof.
-    induction ls1; simpl; auto; intros.
-    - destruct ls2; simpl in *; inv H; auto.
-      apply app_cons_not_nil in H2.
-      intuition auto.
-    - destruct ls2; simpl in *; inv H; auto.
-      + apply eq_sym in H2; apply app_cons_not_nil in H2.
-        intuition auto.
-      + specialize (IHls1 _ _ _ H2).
-        intuition (try f_equal; auto).
-  Qed.
-
-  Lemma app_cons_in A ls:
-    forall (v: A) s1 s2 beg mid last,
-      (ls ++ [v] = beg ++ s1 :: mid ++ s2 :: last)%list ->
-      In s1 ls.
-  Proof.
-    induction ls; simpl; auto; intros;
-    destruct beg; simpl in *; inv H.
-    - apply app_cons_not_nil in H2.
-      auto.
-    - apply app_cons_not_nil in H2.
-      auto.
-    - intuition auto.
-    - apply IHls in H2; intuition auto.
-  Qed.
-
   Lemma getCs_cs_matches cs tag a:
     cs (split2 TagBits IdxBits a) = WO~0~0 \/
     tag (split2 TagBits IdxBits a) = split1 TagBits IdxBits a ->
@@ -1480,16 +1151,6 @@ Section MemCacheInl.
     destruct H, (weq (tag (split2 TagBits IdxBits a)) (split1 TagBits IdxBits a));
       intuition auto.
   Qed.
-
-  Ltac cs_inv_for_5 :=
-    match goal with
-      | H: _ _ = _ \/ _ _ = _ /\ _ |- _ =>
-        clear - H; destruct H as [isZero | [? ?]];
-        [rewrite isZero; match goal with
-                           | |- _ < (if ?p then _ else _) =>
-                             destruct p; word_omega
-                         end | auto]
-    end.
 
   Lemma rsFromCToP_sameAddr_sameChild_cons_prop a c P:
     forall rsFromCList g rsToPList,
@@ -1603,73 +1264,142 @@ Section MemCacheInl.
              destruct E; try discriminate; [ clear H ]
            end; autorewrite with invariant in *.
 
-(*
-  Definition Sth := BoundedIndexFull.
-  Ltac specialize_msgs :=
+  Ltac addr_eq := 
+    try rewrite cs_sameAddr_upd in *;
+    try rewrite rsFromCToP_sameAddr_revcons in *; auto;
+    subst; try rewrite cs_sameAddr_no_upd in * by auto.
+  
+  Ltac addr_neq :=
+    try rewrite cs_diffAddr_upd in *;
+    try rewrite rsFromCToP_diffAddr_revcons in *; auto.
+
+  Ltac destruct_addr :=
     repeat match goal with
-             | [H: forall x: (forall i: BoundedIndexFull _, GetAttrType i), _ |- _ ] =>
-               match goal with
-                 | [a: forall i: BoundedIndexFull _, GetAttrType i |- _] =>
-                   pose proof (H a);
-                     fold Sth in a;
-                     (repeat match goal with
-                              | [b: forall i: BoundedIndexFull _, GetAttrType i |- _] =>
-                                pose proof (H b); fold Sth in b
-                            end);
-                     clear H;
-                     unfold Sth in *
-               end
+             | H: context [@weq (TagBits + IdxBits) ?a ?b] |- _ =>
+               destruct (@weq (TagBits + IdxBits) a b); [addr_eq | addr_neq]
+             | |- context [@weq (TagBits + IdxBits) ?a ?b] =>
+               destruct (@weq (TagBits + IdxBits) a b); [addr_eq | addr_neq]
+             | H: context [@weq AddrBits ?a ?b] |- _ =>
+               destruct (@weq AddrBits a b); [addr_eq | addr_neq]
+             | |- context [@weq AddrBits ?a ?b] =>
+               destruct (@weq AddrBits a b); [addr_eq | addr_neq]
            end.
-*)
-  Ltac specialize_msgs :=
-    repeat
-      match goal with
-        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
-          end
-        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); pose proof (H c); clear H
-          end
-        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); clear H
-          end
-        | [H: (forall x:?T, _), a:?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); clear H
-          end
-      end.
+  
+  Lemma find_some A f: forall l (x: A), find f l = Some x -> In x l /\ f x = true.
+  Proof.
+    induction l; simpl; auto; try discriminate; intros.
+    case_eq (f a); intro H'; rewrite H' in *.
+    - inv H; tauto.
+    - apply IHl in H; tauto.
+  Qed.
+    
+  Lemma find_none A f: forall l, find f l = None -> forall x: A, In x l -> f x = false.
+  Proof.
+    induction l; simpl; auto; try discriminate; try tauto; intros.
+    case_eq (f a); intro H'; rewrite H' in *; try discriminate.
+    specialize (IHl H x); dest.
+    destruct H0; subst; tauto.
+  Qed.
 
-  Ltac apply_in_app_or H :=
-    intros; eapply H; eauto; apply in_or_app; eauto.
+  Lemma find_none_revcons A l: forall v: A, find (fun _ => true) (l ++ [v])%list = None -> False.
+  Proof.
+    induction l; simpl; auto; try discriminate; intros.
+  Qed.
 
-  Ltac apply_in_inv H :=
-    intros; eapply H; eauto; simpl; eauto.
+  Ltac find_simpl :=
+    repeat match goal with
+             | H: context [match @find ?T ?a ?b with _ => _ end] |- _ =>
+               let x := fresh in
+               let H' := fresh in
+               case_eq (@find T a b);
+                 [intros x H'; pose proof (find_some _ _ H') |
+                  intros H';
+                    ((pose proof (find_none_revcons _ _ H')) || pose proof (find_none _ _ H')) ];
+                 try rewrite H' in H; simpl in H
+             | |- context [match @find ?T ?a ?b with _ => _ end] =>
+               let x := fresh in
+               let H' := fresh in
+               case_eq (@find T a b);
+                 [intros x H'; pose proof (find_some _ _ H') |
+                  intros H';
+                    ((pose proof (find_none_revcons _ _ H')) || pose proof (find_none _ _ H')) ];
+                 try rewrite H'; simpl
+           end.
 
-  Ltac specialize_in :=
-    repeat
-      match goal with
-        | [H: In ?x _ -> _, H': In ?x _ |- _] =>
-          specialize (H H')
-        | [H: ?x = ?y -> _, H': ?x = ?y |- _] =>
-          specialize (H H')
-        | [H: ?x = ?y -> _, H': ?y = ?x |- _] =>
-          specialize (H (eq_sym H'))
-        | [H: In ?x (?l1 ++ ?l2)%list -> ?P |- _] =>
-          assert (In x l1 -> P) by (apply_in_app_or H);
-            assert (In x l2 -> P) by (apply_in_app_or H);
-            clear H
-        | [H: In ?x (?v :: ?l)%list -> ?P |- _] =>
-          assert (x = v -> P) by (apply_in_inv H);
-            assert (In x l -> P) by (apply_in_inv H);
-            clear H
-      end.
+
+  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
+  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
+  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
+
+  Lemma fromPToC_xfer_diffAddr_packaged:
+    forall c a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren (Bit AddrBits) Id))
+           fromPList toCList,
+      (exists x, c <> x
+                 /\ ($ x = t {| bindex := "child" |}
+                     /\ (x <= wordToNat (wones LgNumChildren))%nat)) ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      fromPToC $ c a fromPList toCList =
+      fromPToC $ c a
+               fromPList
+               (t :: toCList).
+  Proof.
+    destruct 1; intuition idtac.
+    eauto using fromPToC_xfer_diffAddr.
+  Qed.
+
+  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
+       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
+
+  Lemma rqFromCToP_revcons a c:
+    forall l1 l2
+           (v: type (RqToP (Bit (TagBits + IdxBits)) Id)),
+      rqFromCToP c a l1 (l2 ++ [v]) =
+      (rqFromCToP c a l1 l2 ++
+                  if weq a (v {| bindex := "addr" |}) then [v] else nil)%list.
+  Proof.
+    unfold rqFromCToP.
+    intros.
+    rewrite filtRqToP_commute_app.
+    rewrite app_assoc.
+    reflexivity.
+  Qed.
+
+  Hint Rewrite rqFromCToP_revcons : invariant.
+  Hint Resolve in_app_or in_or_app in_single.
+
+  Lemma fromPToC_rm a c g:
+    forall l1 l2,
+      fromPToC c a (g :: l1) l2 = if weq a (g {| bindex := "addr" |}) then
+                                    g :: fromPToC c a l1 l2
+                                  else fromPToC c a l1 l2.
+  Proof.
+    simpl.
+    intros.
+    unfold fromPToC.
+    simpl.
+    match goal with
+      | |- _ = if ?p then _ else _ => destruct p; simpl; reflexivity
+    end.
+  Qed.
+
+  Hint Rewrite fromPToC_rm : invariant.
+
+  Ltac unfold_index :=
+    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
+           simpl in *).
+
+  Hint Resolve f_equal app_single_r in_pre_suf in_single in_app_or app_cons_not_nil rsLessTo_less_app rsLessTo_in_I_last.
+
+  Ltac rmBadHyp :=
+    repeat match goal with
+             | [H: ?a === ?s .[ ?v ] |- _] =>
+               clear H
+             | [H: ?v = ?v |- _] => clear H
+           end.
+
+  Ltac solve_simpl := try (discriminate || tauto || word_omega).
+
+  Ltac rewrite_getCs := try (rewrite getCs_cs_matches in * by tauto).
 
   Lemma beg_mid_last_add_eq A ls:
     (forall (v: A) v1 v2 beg mid last,
@@ -1701,125 +1431,264 @@ Section MemCacheInl.
       reflexivity.
   Qed.
 
-  Ltac beg_mid_last_add :=
-    repeat match goal with
-             | [H: forall beg mid last v1 v2,
-                     (?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
-                  H': (?l ++ [?v] = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
-               apply beg_mid_last_add_eq in H';
-                 let lastNil := fresh in
-                 let valV := fresh in
-                 let valLs := fresh in
-                 let newLast := fresh "newLast" in
-                 let lastEq := fresh in
-                 let lsEq := fresh in
-                 destruct H' as [[lastNil [valV valLs]] | [newLast [lastEq lsEq]]]; subst;
-                 [|apply H with (beg := beg') (mid := mid') (last := newLast) in lsEq]
-           end.
-        
-  Ltac beg_mid_last_rm :=
-    repeat match goal with
-             | [H: forall beg mid last v1 v2,
-                     (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
-                  H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
-               specialize (H (g :: beg') mid' last' v1' v2');
-                 simpl in H;
-                 specialize (H eq_refl)
-           end.
 
-  Ltac destruct_in_app :=
-    repeat match goal with
-             | H: In _ (nil ++ ?l)%list |- _ =>
-               rewrite app_nil_l with (l := l) in H
-             | H: In _ (?l ++ nil)%list |- _ =>
-               rewrite app_nil_r with (l := l) in H
-             | H: In _ (_ ++ _)%list |- _ =>
-               let L := fresh in
-               let R := fresh in
-               apply in_app_or in H; destruct H as [L | R]; [| try apply in_single in R; subst]
-             | H: In _ (?v :: nil) |- _ =>
-               apply in_single in H; subst
-             | H: In _ (_ :: _) |- _ =>
-               apply in_inv in H; destruct H; [subst|]
-           end.
+  Ltac specialize_msgs :=
+    repeat
+      match goal with
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); pose proof (H c); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); clear H
+          end
+        | [H: (forall x:?T, _), a:?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); clear H
+          end
+      end.
 
-  Ltac destruct_addr :=
-    repeat match goal with
-             | H: context [@weq ?t ?a ?b] |- _ =>
-               destruct (@weq t a b)
-             | |- context [@weq ?t ?a ?b] =>
-               destruct (@weq t a b)
-           end.
+  Ltac apply_in_app_or_goal H :=
+    intros; eapply H; eauto; apply in_or_app; eauto.
+
+  Ltac apply_in_inv H :=
+    intros; eapply H; eauto; simpl; eauto.
+
+  Ltac specialize_in :=
+    repeat
+      match goal with
+        | [H: In ?x _ -> _, H': In ?x _ |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?x = ?y |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?y = ?x |- _] =>
+          specialize (H (eq_sym H'))
+        | [H: In ?x (?l1 ++ ?l2)%list -> ?P |- _] =>
+          assert (In x l1 -> P) by (apply_in_app_or_goal H);
+            assert (In x l2 -> P) by (apply_in_app_or_goal H);
+            clear H
+        | [H: In ?x (?v :: ?l)%list -> ?P |- _] =>
+          assert (x = v -> P) by (apply_in_inv H);
+            assert (In x l -> P) by (apply_in_inv H);
+            clear H
+        | [H: forall beg mid last v1 v2,
+                (?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+             H': (?l ++ [?v] = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
+          apply beg_mid_last_add_eq in H';
+            let lastNil := fresh in
+            let valV := fresh in
+            let valLs := fresh in
+            let newLast := fresh "newLast" in
+            let lastEq := fresh in
+            let lsEq := fresh in
+            destruct H' as [[lastNil [valV valLs]] | [newLast [lastEq lsEq]]]; subst;
+            [|apply H with (beg := beg') (mid := mid') (last := newLast) in lsEq]
+        | [H: forall beg mid last v1 v2,
+                (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+             H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
+          specialize (H (g :: beg') mid' last' v1' v2');
+            simpl in H;
+            specialize (H eq_refl)
+      end.
   
-  Ltac rmBadHyp :=
-    repeat match goal with
-             | [H: ?a === ?s .[ ?v ] |- _] =>
-               clear H
-             | [H: ?v = ?v |- _] => clear H
-           end.
+  Ltac solve_complex := 
+    dest; repeat split; specialize_msgs; specialize_in; dest; solve_simpl.
 
-  Ltac invariant_hammer :=
-    specialize_msgs; specialize_in;
-    (word_omega ||
-                (repeat match goal with
-                          | |- context [if ?p then _ else _] =>
-                            destruct p
-                        end); word_omega || auto).
-
-  Ltac invariant_solve0 :=
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm;
-    destruct_addr;
-    destruct_in_app;
-    dest;
-    specialize_msgs; specialize_in;
-    dest; subst;
-    rmBadHyp;
-    mkStruct;
-    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
-           simpl in *);
-    repeat match goal with
-             | H: context[GetAttrType ?v] |- _ =>
-               unfold GetAttrType in H; simpl in H
-             | |- context[GetAttrType ?v] =>
-               unfold GetAttrType; simpl
-           end;
-    rmBadHyp;
-    try (discriminate || tauto || word_omega);
-    try (rewrite getCs_cs_matches in * by tauto);
-    try (discriminate || tauto || word_omega);
-    repeat split;
-    try intuition invariant_hammer;
-    repeat match goal with
-             | H: context [match @find ?T ?a ?b with _ => _ end] |- _ =>
-               case_eq (@find T a b); intro H'; rewrite H' in H; simpl in H
-           end;
-    intuition word_omega.
-
-(*
-    repeat constructor; try (intuition (repeat match goal with
-                                                 | |- context[if?p then _ else _] =>
-                                                   destruct p
-                                               end; word_omega)).
-*)
-  
-  Ltac invariant_solve :=
-    simplMapUpds invariant_solve0.
-
-  Ltac invariant1 := invariant_simpl; invariant_solve.
-
-  Ltac metaInvariant := metaInit;
-      try match goal with
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    "pProcess" metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    Reset Ltac Profile.
+    Set Ltac Profiling.
+    metaInit;
+    try match goal with
             | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-          end; invariant1.
+          end; invariant_simpl;
+    simplMapUpds
+      ltac:(autorewrite with invariant in *; eauto;
+            intros; unfold isCWait, isPWait, GetAttrType in *;
+                    simpl in *;
+            destruct_addr;
+            unfold_index;
+            rmBadHyp;
+            find_simpl).
 
-  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
-  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
+    match goal with
+      | H: context [match @find ?T ?a ?b with _ => _ end] |- _ =>
+        let x := fresh in
+        let H' := fresh in
+        case_eq (@find T a b);
+          idtac end.
+    intros y H'; pose proof (find_some _ _ H').
+          [intros x H'; pose proof (find_some _ _ H') |
+           intros H';
+             ((pose proof (find_none_revcons _ _ H')) || pose proof (find_none _ _ H')) ];
+          try rewrite H' in H; simpl in H
+    end.
+                                          progress find_simpl.
+ ;
+            destruct_in;
+            mkStruct;
+            solve_complex;
+            rewrite_getCs
+           ).
+    Show Ltac Profile.
+    simpl.
+
+  Ltac specialize_msgs :=
+    repeat
+      match goal with
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); pose proof (H c); clear H
+          end
+        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); pose proof (H b); clear H
+          end
+        | [H: (forall x:?T, _), a:?T |- _] =>
+          match T with
+            | forall i: BoundedIndexFull _, attrType (GetAttr i) =>
+              pose proof (H a); clear H
+          end
+      end.
+
+  Ltac apply_in_app_or_goal H :=
+    intros; eapply H; eauto; apply in_or_app; eauto.
+
+  Ltac apply_in_inv H :=
+    intros; eapply H; eauto; simpl; eauto.
+
+  Ltac specialize_in :=
+    repeat
+      match goal with
+        | [H: In ?x _ -> _, H': In ?x _ |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?x = ?y |- _] =>
+          specialize (H H')
+        | [H: ?x = ?y -> _, H': ?y = ?x |- _] =>
+          specialize (H (eq_sym H'))
+        | [H: In ?x (?l1 ++ ?l2)%list -> ?P |- _] =>
+          assert (In x l1 -> P) by (apply_in_app_or_goal H);
+            assert (In x l2 -> P) by (apply_in_app_or_goal H);
+            clear H
+        | [H: In ?x (?v :: ?l)%list -> ?P |- _] =>
+          assert (x = v -> P) by (apply_in_inv H);
+            assert (In x l -> P) by (apply_in_inv H);
+            clear H
+        | [H: forall beg mid last v1 v2,
+                (?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+             H': (?l ++ [?v] = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
+          apply beg_mid_last_add_eq in H';
+            let lastNil := fresh in
+            let valV := fresh in
+            let valLs := fresh in
+            let newLast := fresh "newLast" in
+            let lastEq := fresh in
+            let lsEq := fresh in
+            destruct H' as [[lastNil [valV valLs]] | [newLast [lastEq lsEq]]]; subst;
+            [|apply H with (beg := beg') (mid := mid') (last := newLast) in lsEq]
+        | [H: forall beg mid last v1 v2,
+                (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+             H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
+          specialize (H (g :: beg') mid' last' v1' v2');
+            simpl in H;
+            specialize (H eq_refl)
+      end.
+  
+  Reset Ltac Profile.
+  Set Ltac Profile.
+  Show Ltac Profile.
+
+  specialize_msgs.
+  speceiali
+  specialize_in
+  
+  simpl.
+
+    simpl.
+
+    Focus 42.
+
+    Show Ltac Profile.
+    simpl.
+
+    destruct_in; mkStruct.
+
+    simpl.
+
+    apply in_app_or in H0.
+    Reset Ltac Profile.
+    firstorder (mkStruct; (discriminate || word_omega || auto)).
+    Show Ltac Profile.
+    firstorder
+
+    Focus 39.
+    
+    Show Ltac Profile.
+    simpl.
+            try (rewrite getCs_cs_matches in * by tauto);
+            repeat match goal with
+                     | |- context [if ?p then _ else _] => destruct p
+                     | H: context [if ?p then _ else _] |- _ => destruct p
+                   end;
+            repeat split;
+            intros).
+    Show Ltac Profile.
 
 
+
+            try (discriminate || tauto || word_omega)).
+).
+            firstorder (discriminate || word_omega || auto) with
+            specialize_all;
+            simpl in *;
+            intuition (discriminate || word_omega || auto)).
+
+
+
+      ltac:(autorewrite with invariant in *; eauto;
+            intros; unfold isCWait, isPWait, GetAttrType in *;
+                    simpl in *;
+                    beg_mid_last_add;
+            beg_mid_last_rm;
+            destruct_addr;
+            destruct_in_app;
+            mkStruct;
+            unfold_index;
+            rmBadHyp;
+            try (rewrite getCs_cs_matches in * by tauto);
+            repeat match goal with
+                     | |- context [if ?p then _ else _] => destruct p
+                     | H: context [if ?p then _ else _] |- _ => destruct p
+                   end;
+            repeat split;
+            intros;
+            specialize_all;
+            simpl in *;
+            intuition (discriminate || word_omega || auto)).
+(*
   Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
     nmemCache_invariants s ->
     "rqFromCToP" metaIs a ->
@@ -1831,9 +1700,8 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-
-  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
-
+*)
+(*
   Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
     nmemCache_invariants s ->
     "rsFromCToP" metaIs a ->
@@ -1845,26 +1713,8 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-
-  Lemma fromPToC_xfer_diffAddr_packaged:
-    forall c a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren (Bit AddrBits) Id))
-           fromPList toCList,
-      (exists x, c <> x
-                 /\ ($ x = t {| bindex := "child" |}
-                     /\ (x <= wordToNat (wones LgNumChildren))%nat)) ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      fromPToC $ c a fromPList toCList =
-      fromPToC $ c a
-               fromPList
-               (t :: toCList).
-  Proof.
-    destruct 1; intuition idtac.
-    eauto using fromPToC_xfer_diffAddr.
-  Qed.
-
-  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
-       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
-
+*)
+(*
   Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
     nmemCache_invariants s ->
     "fromPToC" metaIs a ->
@@ -1912,7 +1762,7 @@ Section MemCacheInl.
   Proof.
     metaInvariant.
   Qed.
-
+*)
   Lemma rqFromCToP_revcons_sameAddr a c:
     forall l1 l2
            (v: type (RqToP (Bit (TagBits + IdxBits)) Id)),
@@ -1947,28 +1797,13 @@ Section MemCacheInl.
     end.
   Qed.
   
-  Lemma rqFromCToP_revcons a c:
-    forall l1 l2
-           (v: type (RqToP (Bit (TagBits + IdxBits)) Id)),
-      rqFromCToP c a l1 (l2 ++ [v]) =
-      (rqFromCToP c a l1 l2 ++
-                  if weq a (v {| bindex := "addr" |}) then [v] else nil)%list.
-  Proof.
-    unfold rqFromCToP.
-    intros.
-    rewrite filtRqToP_commute_app.
-    rewrite app_assoc.
-    reflexivity.
-  Qed.
-
   (*
   Hint Rewrite rqFromCToP_revcons_sameAddr rqFromCToP_revcons_diffAddr
        using (tauto || congruence) : invariant.
    *)
-  Hint Rewrite rqFromCToP_revcons : invariant.
 (*  Hint Rewrite getCs_cs_matches using (tauto || congruence) : invariant. *)
-  Hint Resolve in_app_or in_or_app rsFromCToP_vol_cs_I in_single.
   
+(*
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
     "upgRq" metaIs a ->
@@ -1978,453 +1813,25 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    Set Ltac Profiling.
     metaInvariant.
-    Show Ltac Profile.
-    Focus 2.
-    repeat split;
-      try intuition (repeat match goal with
-                              | |- context [if ?p then _ else _] =>
-                                destruct p
-                            end; word_omega).
-    intuition (word_omega || auto).
-    Focus 2.
-    repeat split;
-      try intuition (repeat match goal with
-                              | |- context [if ?p then _ else _] =>
-                                destruct p
-                            end; word_omega).
-    simpl.
-    Focus 2.
-    repeat split;
-      try intuition (repeat match goal with
-                              | |- context [if ?p then _ else _] =>
-                                destruct p
-                            end; word_omega).
-    pre_word_omega.
-    unfold GetAttrType; simpl.
-    match goal with
-      | |- @eq ?T ?a ?b =>
-        match T with
-          | word ?sz =>
-            apply (@wordToNat_eq2 sz a b);
-              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
-              simpl
-        end
-    end.
-          
-    omega.
-    pre_word_omega.
-    match type of H1 with
-      | @eq ?T ?a ?b =>
-        match T with
-          | word ?sz =>
-            apply (@wordToNat_eq1 sz a b) in H1;
-              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H1;
-              simpl in H1
-        end
-    end. 
-
-    pre_word_omega.
-    simpl.
-    match type of H1 with
-      | @eq ?T ?a ?b =>
-        pose T
-    end.
-    
-
-
-    Set Printing All.
-    simpl.
-    
-    unfold GetAttrType in H1; simpl in H1.
-    match goal with
-      | H: @eq ?Y ?a ?b |- _ =>
-        pose Y
-    end.
-       match type of H1 with
-         | ?a = ?b =>
-           match type of a with
-             | ?P => pose P
-           end
-       end.
-       unfold GetAttrType in H1.
-       simpl in H1.
-       match type of H1 with
-         | ?a = ?b =>
-           match type of a with
-             | ?P => pose P
-           end
-       end.
-       
-    simpl in T.
-    unfold GetAttrType in T; simpl in T.
-    simpl.
-    unfold nth_Bounded in T.
-    simpl in T.
-    simpl.
-        match T with
-          | word _ =>
-            idtac
-        end
-    end.
-            (*apply (wordToNat_eq1) in H;
-              rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
-              simpl in H*) idtac
-        end
-    end.
-
-
-
-    apply wordToNat_eq1 in H0.
-    Focus 
-    Focus 3.
-    clear -H1 H5.
-    pre_word_omega.
-    apply wordToNat_eq1 with (sz := 2) in H1.
-    simpl in *.
-    omega.
-    repeat constructor; try (intuition (repeat match goal with
-                                                 | |- context[if?p then _ else _] =>
-                                                   destruct p
-                                               end; word_omega)).
-    assert (5 = 5).
-    intuition idtac.
-    
-    Focus 2.
-    Focus 2.
-    repeat (constructor; [try (reflexivity || word_omega || tauto)|]).
-    Focus 2.
-    word_omega.
-
-    rewrite getCs_cs_matches in * by (tauto || congruence).
-    word_omega.
-    specialize_msgs.
-  
-      match goal with
-        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T, d: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); pose proof (H c); pose proof (H d); clear H
-          end
-        | [H: (forall x:?T, _), a:?T, b: ?T, c: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); pose proof (H c); clear H
-          end
-        | [H: (forall x:?T, _), a:?T, b: ?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); pose proof (H b); clear H
-          end
-        | [H: (forall x:?T, _), a:?T |- _] =>
-          match T with
-            | forall i: BoundedIndexFull _, GetAttrType i =>
-              pose proof (H a); clear H
-          end
-      end.
-
-  Ltac apply_in_app_or H :=
-    intros; eapply H; eauto; apply in_or_app; eauto.
-
-  Ltac apply_in_inv H :=
-    intros; eapply H; eauto; simpl; eauto.
-
-  Ltac specialize_in :=
-    repeat
-      match goal with
-        | [H: In ?x _ -> _, H': In ?x _ |- _] =>
-          specialize (H H')
-        | [H: ?x = ?y -> _, H': ?x = ?y |- _] =>
-          specialize (H H')
-        | [H: ?x = ?y -> _, H': ?y = ?x |- _] =>
-          specialize (H (eq_sym H'))
-        | [H: In ?x (?l1 ++ ?l2)%list -> ?P |- _] =>
-          assert (In x l1 -> P) by (apply_in_app_or H);
-            assert (In x l2 -> P) by (apply_in_app_or H);
-            clear H
-        | [H: In ?x (?v :: ?l)%list -> ?P |- _] =>
-          assert (x = v -> P) by (apply_in_inv H);
-            assert (In x l -> P) by (apply_in_inv H);
-            clear H
-      end.
-
-
-    specialize (i7 rs).
-    specialize_msgs.
-    clear i7.
-    simpl.
-                                         
-        pose 
-        pose proof (H a); clear H
-           end.
-        specialize (H a)
-    end.
-                    
-    simpl
-    metaInit;
-    try match goal with
-          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-        end.
-    invariant_simpl.
-    simplMapUpds
-      ltac:(autorewrite with invariant in *; eauto;
-       intros; unfold isCWait, isPWait in *;
-         simpl in *;
-         beg_mid_last_add;
-       beg_mid_last_rm
-       destruct_in_app;
-      dest).
-       destruct_addr;
-         specialize_msgs; specialize_in;
-         dest; mkStruct.
-       do 2 (unfold IndexBound_head, IndexBound_tail, nth_error in *; simpl in *).
-       try tauto; try discriminate; try word_omega.
-  
-  Ltac invariant_solve :=
-    simplMapUpds invariant_solve0.
-
-  Ltac invariant1 := invariant_simpl; invariant_solve.
-
-
-    metaInvariant.
-    destruct_addr.
-    match goal with
-      | H: context[@weq ?t ?a ?b] |- _ =>
-        destruct (@weq t a b)
-    end.
-                                    
-    
-    Reset Profile.
-    Start Profiling.
-    metaInvariant.
-    Stop Profiling.
-    Show Profile.
-    simpl.
-    metaInit.
-    try match goal with
-          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-        end.
-    invariant_simpl.
-    simplMapUpds idtac.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm.
-    specialize_msgs.
-    specialize_in.
-    admit.
-    
-
-    invariant1.
-
-      Ltac invariant_solve0 :=
-    autorewrite with invariant in *; eauto;
-    intros; unfold isCWait, isPWait in *;
-    simpl in *;
-    beg_mid_last_add;
-    beg_mid_last_rm;
-    specialize_msgs; specialize_in;
-    destruct_in_app; dest; mkStruct;
-    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error in *; simpl in *);
-    try tauto; try discriminate; try assumption.
-  
-  Ltac invariant_solve :=
-    simplMapUpds invariant_solve0.
-
-  Ltac invariant1 := invariant_simpl; invariant_solve.
-
-  Ltac metaInvariant := metaInit;
-      try match goal with
-            | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-          end; invariant1.
-
-    metaInvariant.
-    admit.
-    admit.
-    match goal with
-      | H: context[@weq ?t ?a ?b] |- _ =>
-        destruct (@weq t a b); intuition idtac
-    end.
-
-    simpl.
-    simpl.
-      
-      
-    rewrite 
-    rewrite rqFr
-    intuition auto || word_omega.
-    
-    eapply i9; eauto.
-    cs_inv_for_5.
-    unfold IndexBound_head, IndexBound_tail, nth_error in *; simpl in *
-    
-    . try cs_inv_for_5; try word_omega.
-    metaInit.
-
-    pose proof (@rsFromCToP_vol_cs_I x a0 s cs0 tag rsToPList rsFromCList
-                                     csFind tagFind rsToPListFind
-                                     rsFromCListFind HInd) as volInv.
-  
-    simplMapUpds
-      ltac:(unfold listEnq, listDeq, listIsEmpty,
-            listFirstElt, listEltT, rqFromCToP, AddrBits in *;
-             rewrite ?filtRqFromC_commute_app, ?filtRqToP_commute_app in *;
-             simpl in *; mkStruct; rewrite ?app_assoc;
-            unfold IndexBound_head, IndexBound_tail, AddrBits, isCWait, getIdxS, getTagS,
-              addFirstBoundedIndex in *; simpl in *;
-            match goal with
-              | |- context[weq a0 ?a] =>
-                destruct (weq a0 a) as [e | n];
-              [rewrite <- e in *; intros; match goal with
-                                            | H: In ?p (?q ++ ?r) |- _ =>
-                                              apply in_app_or in H; destruct H;
-                                              [auto | simpl in *; destruct H;
-                                                      [rewrite <- H in *; mkStruct
-                                                      |exfalso; intuition]]
-                                            | _ => idtac
-                                          end
-              | rewrite ?app_nil_r; auto;
-                unfold IndexBound_head, IndexBound_tail, nth_error; intros; dest; subst;
-                match goal with
-                  | H: ?a <> ?a |- _ =>
-                    exfalso; apply (H eq_refl)
-                  | _ => idtac
-                end]
-              | _ => idtac
-            end;
-            rewrite ?getCs_cs_matches in * by
-                match goal with
-                  | H: cs0 _ = _ \/ tag _ = _ /\ _ |- _ =>
-                    clear - H; intuition auto
-                end
-           ).
-    - apply i9 with (rq := rq) (rs := rs); auto.
-    - match goal with
-        | H: In _ _ |- _ =>
-          apply i7 in H; auto; dest; word_omega
-      end.
-    - repeat (constructor; auto).
-      + cs_inv_for_5.
-      + match goal with
-          | |- context[mkStruct ?p] =>
-            intros; constructor 1 with (x := mkStruct p)
-        end.
-        { constructor.
-          - apply in_or_app; right; left;
-            reflexivity.
-          - mkStruct.
-            constructor; [auto| word_omega].
-        }
-      + destruct i12; [| assumption].
-        assert(~ (cs0 (split2 TagBits IdxBits a0) < dir a0 $ x)) by
-            match goal with
-              | |- ?a <= ?b =>
-                destruct (@wlt_dec _ a b); intuition auto
-            end.
-        assert (dir a0 $ x = cs0 (split2 TagBits IdxBits a0)) by word_omega.
-        intros msg inMsg.
-        match goal with
-          | |- ?a = ?b =>
-            assert (sth: {a = true} + {a = false})
-              by (clear; destruct a; intuition auto)
-        end.
-        destruct sth; [assumption | apply i8 in inMsg; auto].
-        dest.
-        match goal with
-          | H: cs0 (split2 TagBits IdxBits a0) < ?v, H': dir a0 $ x = ?v |- _ =>
-            rewrite <- H' in H
-        end.
-        word_omega.
-    - intros.
-      match goal with
-        | H: In _ _ |- _ =>
-          apply i16a in H; dest; discriminate
-      end.
-    - repeat (constructor; auto; try word_omega).
-      repeat (constructor; subst; auto; try word_omega).
-      cs_inv_for_5.
-    - intros.
-      match goal with
-        | H: In _ _ |- _ =>
-          apply i16a in H; dest; discriminate
-      end.
-    - intros.
-      match goal with
-        | H: In _ _ |- _ =>
-          apply i16b in H; dest; discriminate
-      end.
-    - apply i23 with (cToPRq := cToPRq); auto.
-    - match goal with
-        | H: In _ _ |- _ =>
-          apply i7 in H; auto; dest; word_omega
-      end.
-    - cs_inv_for_5.
-    - apply i29 with (rs := rs); auto.
-    - match goal with
-        | H: In rs _ |- _ =>
-          apply volInv in H; auto
-      end.
   Qed.
-  
+*)
+
+(*
   Lemma nmemCache_invariants_hold_6 s a u cs:
     nmemCache_invariants s ->
     "ld" metaIs a ->
-    forall x,
+    forall x: cache,
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    metaInvariant.
+  Qed.
+*)
+
+(*
     metaInit.
     simplMapUpds ltac:(intros; exfalso;
                        unfold isCWait, getCs, getIdxS, getTagS,
@@ -2458,16 +1865,23 @@ Section MemCacheInl.
             destruct (@weq t a b); subst; try discriminate; intuition auto
       end.
   Qed.
+*)
 
+(*
   Lemma nmemCache_invariants_hold_7 s a u cs:
     nmemCache_invariants s ->
     "st" metaIs a ->
-    forall x,
+    forall x: cache,
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    metaInvariant.
+  Qed.
+*)
+
+(*
     metaInit.
     simplMapUpds ltac:(intros; exfalso;
                        unfold isCWait, getCs, getIdxS, getTagS,
@@ -2501,81 +1915,30 @@ Section MemCacheInl.
               destruct (@weq t a b); subst; try discriminate; intuition auto
       end; try word_omega.
   Qed.
+*)
 
-  Lemma nmemCache_invariants_hold_8 s a u cs:
-    nmemCache_invariants s ->
-    "drop" metaIs a ->
-    forall x,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    metaInit.
-
-    simplMapUpds
-      ltac:(unfold listEnq, listDeq, listIsEmpty,
-            listFirstElt, listEltT, fromPToC, AddrBits in *;
-             destruct fromPList; simpl in *; try discriminate; mkStruct;
-            unfold IndexBound_head, IndexBound_tail, AddrBits, isCWait in *; simpl in *;
-            match type of i8 with
-              | context[weq a0 ?a] =>
-                destruct (weq a0 a); [simpl in *|auto]
-            end; intros
-           ).
-    - apply i8; intuition auto.
-    - apply i10 with (msg1 := msg1) (msg2 := msg2) (beg := g :: beg) (mid := mid)
-                                    (last := last); simpl; try f_equal; auto.
-    - destruct i12 as [sth1 | sth2]; [left; assumption |
-                                      right; intros; apply sth2; intuition auto].
-    - apply i15 with (pToCRq := pToCRq) (pToCRs := pToCRs) (beg := g :: beg)
-                                        (mid := mid) (last := last); simpl; try f_equal; auto.
-    - match type of i16 with
-        | ?P -> _ =>
-          match goal with
-            | H: ?P |- _ => apply i16 in H
-          end
-      end.
-      dest.
-      constructor; auto.
-      match goal with
-        | H: (_ /\ _) \/ (_ /\ _) |- _ =>
-          destruct H; dest;
-          [left; split;
-           [eexists; eauto|
-            intuition auto]
-          |match goal with
-             | H: _ \/ _ |- _ => destruct H; [subst; match goal with
-                                                       | H1: ?A = true,
-                                                             H2: ?A = false |- _ =>
-                                                         rewrite H1 in H2; discriminate
-                                                     end
-                                             |
-                                             right; split;
-                                             [eexists; eauto | intuition auto]
-                                             ]
-           end]
-      end.
-
-    - apply i16b; intuition auto.
-    - apply i17 with (pToCRq := pToCRq); intuition auto.
-    - eapply i18; intuition eauto.
-    - apply i19 with (pToCRs := pToCRs) (pToCRq := pToCRq) (beg := g :: beg) (mid := mid)
-                                        (last := last); simpl; try f_equal; auto.
-    - apply i20 with (pToCRq1 := pToCRq1) (pToCRq2 := pToCRq2)
-                                          (beg := g :: beg) (mid := mid)
-                                          (last := last); simpl; try f_equal; auto.
-  Qed.
-  
   Lemma nmemCache_invariants_hold_9 s a u cs:
     nmemCache_invariants s ->
     "pProcess" metaIs a ->
-    forall x,
+    forall x: cache,
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    metaInvariant.
+    specialize (H10 eq_refl).
+    specialize (H10 (conj eq_refl eq_refl)).
+    Notation "a `` b" := (a {| bindex := b; indexb := _ |}) (at level 0).
+    simpl.
+    rewrite getCs_cs_matches in i5.
+    Focus 2.
+    right. apply H8.
+
+tauto.
+    simpl.
+  Qed.
+(*
     metaInit.
 
     pose proof (@rsFromCToP_toI_cs_I x a0 s cs0 tag
@@ -2803,7 +2166,80 @@ Section MemCacheInl.
               subst; mkStruct; discriminate
         end.
   Qed.
+*)
 
+
+
+  Lemma nmemCache_invariants_hold_8 s a u cs:
+    nmemCache_invariants s ->
+    "drop" metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaInvariant.
+    simpl.
+  Qed.
+(*
+    metaInit.
+
+    simplMapUpds
+      ltac:(unfold listEnq, listDeq, listIsEmpty,
+            listFirstElt, listEltT, fromPToC, AddrBits in *;
+             destruct fromPList; simpl in *; try discriminate; mkStruct;
+            unfold IndexBound_head, IndexBound_tail, AddrBits, isCWait in *; simpl in *;
+            match type of i8 with
+              | context[weq a0 ?a] =>
+                destruct (weq a0 a); [simpl in *|auto]
+            end; intros
+           ).
+    - apply i8; intuition auto.
+    - apply i10 with (msg1 := msg1) (msg2 := msg2) (beg := g :: beg) (mid := mid)
+                                    (last := last); simpl; try f_equal; auto.
+    - destruct i12 as [sth1 | sth2]; [left; assumption |
+                                      right; intros; apply sth2; intuition auto].
+    - apply i15 with (pToCRq := pToCRq) (pToCRs := pToCRs) (beg := g :: beg)
+                                        (mid := mid) (last := last); simpl; try f_equal; auto.
+    - match type of i16 with
+        | ?P -> _ =>
+          match goal with
+            | H: ?P |- _ => apply i16 in H
+          end
+      end.
+      dest.
+      constructor; auto.
+      match goal with
+        | H: (_ /\ _) \/ (_ /\ _) |- _ =>
+          destruct H; dest;
+          [left; split;
+           [eexists; eauto|
+            intuition auto]
+          |match goal with
+             | H: _ \/ _ |- _ => destruct H; [subst; match goal with
+                                                       | H1: ?A = true,
+                                                             H2: ?A = false |- _ =>
+                                                         rewrite H1 in H2; discriminate
+                                                     end
+                                             |
+                                             right; split;
+                                             [eexists; eauto | intuition auto]
+                                             ]
+           end]
+      end.
+
+    - apply i16b; intuition auto.
+    - apply i17 with (pToCRq := pToCRq); intuition auto.
+    - eapply i18; intuition eauto.
+    - apply i19 with (pToCRs := pToCRs) (pToCRq := pToCRq) (beg := g :: beg) (mid := mid)
+                                        (last := last); simpl; try f_equal; auto.
+    - apply i20 with (pToCRq1 := pToCRq1) (pToCRq2 := pToCRq2)
+                                          (beg := g :: beg) (mid := mid)
+                                          (last := last); simpl; try f_equal; auto.
+  Qed.
+*)
+  
   Lemma nmemCache_invariants_hold_10 s a u cs:
     nmemCache_invariants s ->
     "missByState" is a ->

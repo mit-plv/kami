@@ -409,6 +409,19 @@ Ltac simplMapUpds tac :=
     | _ => idtac
   end; (reflexivity || eassumption || tac).
 
+Definition do_upd_map_key_instance (x: nat) (ls: list (string * sigT (fullType type))): RegsT :=
+  fold_right (fun nk (m: RegsT) =>
+                m[(fst nk) __ x |--> snd nk]) (M.empty _) ls.
+
+
+Ltac mkList_add_key_instance madds :=
+  match madds with
+    | M.add (addIndexToStr _ ?x ?k) ?v ?m =>
+      let ls := mkList_add_key_instance m in
+      constr:( (k, v) :: ls)
+    | M.empty ?t => constr:(@nil (string * t))
+  end.
+
 
   
 (*
