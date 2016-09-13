@@ -48,15 +48,18 @@ Section Invariants.
       Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
       eepochv : fullType type (SyntaxKind Bool);
       Heepochv : M.find "eEpoch"%string o = Some (existT _ _ eepochv);
-      curInfov : fullType type (SyntaxKind (d2eElt opIdx addrSize lgDataBytes rfIdx));
-      HcurInfov : M.find "curInfo"%string o = Some (existT _ _ curInfov);
 
       Hinv :
-        (fepochv = eepochv ->
-         (e2dfullv = false /\ (d2efullv = true -> d2eeltv ``"curPc" = pcv))) /\
-        (fepochv <> eepochv -> e2dfullv = true) /\
+        (fepochv = eepochv -> e2dfullv = false) /\ (e2dfullv = false -> fepochv = eepochv) /\
+        (fepochv <> eepochv -> e2dfullv = true) /\ (e2dfullv = true -> fepochv <> eepochv) /\
+
+        (e2dfullv = true -> d2efullv = false) /\ (d2efullv = true -> e2dfullv = false) /\
+
+        (stallv = true -> d2efullv = true) /\
+        
         (d2efullv = true ->
          (fepochv = d2eeltv ``"epoch" /\
+          pcv = d2eeltv ``"nextPc" /\
           evalExpr (dec _ rfv (pgmv (d2eeltv ``"curPc"))) = d2eeltv ``"instDec"))
     }.
 

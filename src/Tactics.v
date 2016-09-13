@@ -573,20 +573,41 @@ Ltac kinv_simpl :=
   kstring_simpl;
   repeat
     (try match goal with
+         (* about bool *)
          | [H: ?t = ?t |- _] => clear H
          | [H: ?t = ?t -> False |- _] => elim H; reflexivity
          | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
          | [H: ?t <> ?t |- _] => elim H; reflexivity
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
-         | [ |- context [weq ?w ?w] ] =>
-           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
-         | [H: context [weq ?w ?w] |- _] =>
-           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: false = true |- _] => inversion H
+         | [H: true = false |- _] => inversion H
+         | [H: false = negb false |- _] => inversion H
+         | [H: negb false = false |- _] => inversion H
+         | [H: true = negb true |- _] => inversion H
+         | [H: negb true = true |- _] => inversion H
+         | [H1: ?t = true, H2: ?t = false |- _] => rewrite H1 in H2
+         | [H1: true = ?t, H2: false = ?t |- _] => rewrite <-H1 in H2
          | [H: (if ?c then true else false) = true |- _] => destruct c; [|inv H]
          | [H: (if ?c then true else false) = false |- _] => destruct c; [inv H|]
          | [H: (if ?c then false else true) = true |- _] => destruct c; [inv H|]
          | [H: (if ?c then false else true) = false |- _] => destruct c; [|inv H]
+         | [H: context[_ || true] |- _] => rewrite orb_true_r in H
+         | [H: context[true || _] |- _] => rewrite orb_true_l in H
+         | [H: true <> false -> _ |- _ ] => specialize (H diff_true_false)
+         | [H: (true = false -> False) -> _ |- _ ] => specialize (H diff_true_false)
+         | [H: false <> true |- _ ] => specialize (H diff_false_true)
+         | [H: (false = true -> False) -> _ |- _ ] => specialize (H diff_false_true)
+         | [H: ?t <> true |- _] => apply not_true_is_false in H
+         | [H: ?t = true -> False |- _] => apply not_true_is_false in H
+         | [H: ?t <> false |- _] => apply not_false_is_true in H
+         | [H: ?t = false -> False |- _] => apply not_false_is_true in H
+
+         (* others *)
+         | [ |- context [weq ?w ?w] ] =>
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
+         | [H: context [weq ?w ?w] |- _] =>
+           let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
          | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] => rewrite H1 in H2
          | [H: Some _ = Some _ |- _] => apply Some_inv in H; destruct_existT
          end; dest; try subst).
@@ -596,7 +617,10 @@ Ltac kinv_red :=
   dest; try subst; kinv_simpl.
 
 Ltac kinv_finish :=
-  unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *;
+  cbv [BoundedIndexFull
+         IndexBound_head IndexBound_tail
+         mapAttr addFirstBoundedIndex bindex
+         M.Raw.key M.OT.t] in *;
   repeat autounfold with MethDefs;
   simpl in *;
   repeat

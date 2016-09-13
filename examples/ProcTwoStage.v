@@ -29,6 +29,12 @@ Section OneEltFifo.
      Write ^"full" <- $$false;
      Ret #elt)%kami_action.
 
+  Definition firstElt {ty} : ActionT ty dType :=
+    (Read isFull <- ^"full";
+     Assert #isFull;
+     Read elt <- ^"elt";
+     Ret #elt)%kami_action.
+
   Definition isFull {ty} : ActionT ty Bool :=
     (Read isFull <- ^"full";
      Ret #isFull)%kami_action.
@@ -41,7 +47,7 @@ Section OneEltFifo.
     with Method ^"deq"() : dType := deq
   }.
 
-  Definition oneEltFifoEx := MODULE {
+  Definition oneEltFifoEx1 := MODULE {
     Register ^"elt" : dType <- Default
     with Register ^"full" : Bool <- Default
 
@@ -49,11 +55,20 @@ Section OneEltFifo.
     with Method ^"deq"() : dType := deq
     with Method ^"isFull"() : Bool := isFull
   }.
-  
+
+  Definition oneEltFifoEx2 := MODULE {
+    Register ^"elt" : dType <- Default
+    with Register ^"full" : Bool <- Default
+
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
+    with Method ^"firstElt"() : dType := firstElt
+  }.
+
 End OneEltFifo.
 
-Hint Unfold oneEltFifo oneEltFifoEx : ModuleDefs.
-Hint Unfold enq deq isFull : MethDefs.
+Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
+Hint Unfold enq deq firstElt isFull : MethDefs.
 
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
  * are modularly separated to form each stage. "epoch" registers are used to handle incorrect
@@ -85,6 +100,7 @@ Section ProcTwoStage.
   Definition d2eFifoName := "d2e"%string.
   Definition d2eEnq := MethodSig (d2eFifoName -- "enq")(d2eElt) : Void.
   Definition d2eDeq := MethodSig (d2eFifoName -- "deq")() : d2eElt.
+  Definition d2eFirstElt := MethodSig (d2eFifoName -- "firstElt")() : d2eElt.
 
   (* For correct pc redirection *)
   Definition e2dElt := Bit addrSize. 
@@ -176,7 +192,6 @@ Section ProcTwoStage.
     Definition executer := MODULE {
       Register "stall" : Bool <- false
       with Register "eEpoch" : Bool <- false
-      with Register "curInfo" : d2eElt <- Default
 
       with Rule "wrongEpoch" :=
         Read stall <- "stall";
@@ -191,7 +206,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert !#stall;
         Call st <- getRf();
-        Call d2e <- d2eDeq();
+        Call d2e <- d2eFirstElt();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
@@ -201,7 +216,6 @@ Section ProcTwoStage.
         Call memReq(STRUCT { "addr" ::= #inst@."addr";
                              "op" ::= $$false;
                              "data" ::= $$Default });
-        Write "curInfo" <- #d2e;
         Write "stall" <- $$true;
         Retv 
 
@@ -224,7 +238,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert !#stall;
         Call st <- getRf();
-        Call d2e <- d2eDeq();
+        Call d2e <- d2eFirstElt();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
@@ -233,14 +247,15 @@ Section ProcTwoStage.
         Call memReq(STRUCT { "addr" ::= #inst@."addr";
                              "op" ::= $$true;
                              "data" ::= #inst@."value" });
-        Write "curInfo" <- #d2e;
         Write "stall" <- $$true;
         Retv
                                 
       with Rule "repLd" :=
+        Read stall <- "stall";
+        Assert #stall;
         Call val <- memRep();
         Call st <- getRf();
-        Read curInfo : d2eElt <- "curInfo";
+        Call curInfo <- d2eDeq();
         LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
         Assert #inst@."opcode" == $$opLd;
         Call setRf (#st@[#inst@."reg" <- #val@."data"]);
@@ -250,9 +265,11 @@ Section ProcTwoStage.
         checkNextPc ppc npcp st inst
 
       with Rule "repSt" :=
+        Read stall <- "stall";
+        Assert #stall;
         Call val <- memRep();
         Call st <- getRf();
-        Read curInfo : d2eElt <- "curInfo";
+        Call curInfo <- d2eDeq();
         LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
         Assert #inst@."opcode" == $$opSt;
         Write "stall" <- $$false;
@@ -299,15 +316,15 @@ Section ProcTwoStage.
   Definition procTwoStage := (decoder
                                 ++ regFile
                                 ++ branchPredictor
-                                ++ oneEltFifo d2eFifoName d2eElt
-                                ++ oneEltFifoEx e2dFifoName (Bit addrSize)
+                                ++ oneEltFifoEx2 d2eFifoName d2eElt
+                                ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
 
 Hint Unfold regFile branchPredictor decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
-     d2eElt d2eFifoName d2eEnq d2eDeq
+     d2eElt d2eFifoName d2eEnq d2eDeq d2eFirstElt
      e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
      getRf setRf predictNextPc toHost checkNextPc : MethDefs.
 
