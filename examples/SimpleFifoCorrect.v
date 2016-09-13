@@ -145,7 +145,7 @@ Section Facts.
       CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2) ->
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
-  Proof. (* SKIP_PROOF_ON 
+  Proof. (* SKIP_PROOF_ON
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
@@ -223,9 +223,6 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
-        * or3_thd; repeat split.
-          { destruct (weq _ _); auto. }
-          { destruct (weq _ _); auto. }
         * destruct (weq x6 (x5 ^+ $0~1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
@@ -235,9 +232,6 @@ Section Facts.
             elim n0; auto.
           }
       + simpl in *; kinv_magic_light_with kinv_or3.
-        * or3_thd; repeat split.
-          { destruct (weq _ _); auto. }
-          { destruct (weq _ _); auto. }
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
