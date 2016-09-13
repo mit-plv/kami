@@ -68,11 +68,12 @@ Section Invariants.
         | [H: p2st_inv _ |- _] => destruct H
         end;
     kinv_red.
-  
+
   Ltac p2st_inv_new :=
     econstructor; (* let's prove that the invariant holds for the next state *)
     try (findReify; (reflexivity || eassumption); fail);
-    kregmap_clear. (* for improving performance *)
+    kregmap_clear; (* for improving performance *)
+    intuition kinv_simpl. (* "intuition" should be enough to prove the invariant! *)
 
   Ltac p2st_inv_tac := p2st_inv_old; p2st_inv_new.
 
@@ -81,96 +82,28 @@ Section Invariants.
       init = initRegs (getRegInits (fst p2stInl)) ->
       Multistep (fst p2stInl) init n ll ->
       p2st_inv n.
-  Proof.
-    admit.
-    
-    (* induction 2. *)
+  Proof. (* SKIP_PROOF_ON
+    induction 2.
 
-    (* - kinv_dest_custom p2st_inv_tac. *)
-    (*   intuition idtac. *)
-    (*   + inv H. *)
-    (*   + inv H. *)
+    - p2st_inv_old.
+      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl.
+      p2st_inv_new; simpl in *; kinv_simpl.
 
-    (* - kinvert. *)
-    (*   + mred. *)
-    (*   + mred. *)
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     destruct x0, eepochv; intuition idtac. *)
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     intuition idtac. *)
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     intuition idtac. *)
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     intuition idtac. *)
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-    (*       { inv H3. } *)
-    (*       { inv H2. } *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-        
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*     mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*     match goal with *)
-    (*     | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*     end; intuition idtac. *)
+    - kinvert.
+      + mred.
+      + mred.
+      + kinv_dest_custom p2st_inv_tac; destruct x0, eepochv; intuition idtac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
 
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     * match goal with *)
-    (*       | [ |- context[x2 ?e] ] => destruct (x2 e) *)
-    (*       end; intuition idtac. *)
-    (*       { inv H2. } *)
-    (*       { inv H. } *)
-    (*     * match goal with *)
-    (*       | [ |- context[x2 ?e] ] => destruct (x2 e) *)
-    (*       end; intuition idtac. *)
-
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     * match goal with *)
-    (*       | [ |- context[x2 ?e] ] => destruct (x2 e) *)
-    (*       end; intuition idtac. *)
-    (*       { inv H2. } *)
-    (*       { inv H. } *)
-    (*     * match goal with *)
-    (*       | [ |- context[x2 ?e] ] => destruct (x2 e) *)
-    (*       end; intuition idtac. *)
-
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-    (*       { inv H3. } *)
-    (*       { inv H2. } *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-
-    (*   + kinv_dest_custom p2st_inv_tac. *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-    (*       { inv H3. } *)
-    (*       { inv H2. } *)
-    (*     * unfold BoundedIndexFull, IndexBound_head, IndexBound_tail, *)
-    (*       mapAttr, addFirstBoundedIndex, bindex in *; simpl in *. *)
-    (*       match goal with *)
-    (*       | [ |- context[x1 ?e] ] => destruct (x1 e) *)
-    (*       end; intuition idtac. *)
-
+        END_SKIP_PROOF_ON *) admit.
   Qed.
   
   Lemma p2st_inv_ok:

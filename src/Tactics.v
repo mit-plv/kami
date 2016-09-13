@@ -569,6 +569,9 @@ Proof.
   intros; inv H; reflexivity.
 Qed.
 
+Lemma negb_eq_false: forall b, b = negb b -> False.
+Proof. destruct b; intros; inv H. Qed.
+
 Ltac kinv_simpl :=
   kstring_simpl;
   repeat
@@ -582,6 +585,8 @@ Ltac kinv_simpl :=
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
          | [H: false = true |- _] => inversion H
          | [H: true = false |- _] => inversion H
+         | [H: ?t = negb ?t |- _] => exfalso; eapply negb_eq_false; eauto
+         | [H: negb ?t = ?t |- _] => exfalso; apply eq_sym in H; eapply negb_eq_false; eauto
          | [H: false = negb false |- _] => inversion H
          | [H: negb false = false |- _] => inversion H
          | [H: true = negb true |- _] => inversion H
