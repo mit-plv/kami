@@ -572,6 +572,11 @@ Qed.
 Lemma negb_eq_false: forall b, b = negb b -> False.
 Proof. destruct b; intros; inv H. Qed.
 
+Lemma eqb_unfolded_refl:
+  forall b: bool, (if b then if b then true else false
+                   else if b then false else true) = true.
+Proof. destruct b; reflexivity. Qed.
+
 Ltac kinv_simpl :=
   kstring_simpl;
   repeat
@@ -599,6 +604,10 @@ Ltac kinv_simpl :=
          | [H: (if ?c then false else true) = false |- _] => destruct c; [|inv H]
          | [H: context[_ || true] |- _] => rewrite orb_true_r in H
          | [H: context[true || _] |- _] => rewrite orb_true_l in H
+         | [H: _ || _ = false |- _] => apply orb_false_iff in H
+         | [H: false = _ || _ |- _] => apply orb_false_elim in H
+         | [H: _ && _ = true |- _] => apply andb_true_iff in H
+         | [H: true = _ && _ |- _] => apply andb_true_eq in H
          | [H: true <> false -> _ |- _ ] => specialize (H diff_true_false)
          | [H: (true = false -> False) -> _ |- _ ] => specialize (H diff_true_false)
          | [H: false <> true |- _ ] => specialize (H diff_false_true)
@@ -607,6 +616,12 @@ Ltac kinv_simpl :=
          | [H: ?t = true -> False |- _] => apply not_true_is_false in H
          | [H: ?t <> false |- _] => apply not_false_is_true in H
          | [H: ?t = false -> False |- _] => apply not_false_is_true in H
+         | [H: context[if ?b then if ?b then true else false
+                       else if ?b then false else true] |- _] =>
+           rewrite eqb_unfolded_refl in *
+         | [ |- context[if ?b then if ?b then true else false
+                        else if ?b then false else true] ] =>
+           rewrite eqb_unfolded_refl in *
 
          (* others *)
          | [ |- context [weq ?w ?w] ] =>
@@ -621,21 +636,42 @@ Ltac kinv_red :=
   intros; repeat autounfold with InvDefs in *;
   dest; try subst; kinv_simpl.
 
+Ltac is_not_const_bool t :=
+  match t with
+  | true => fail 1
+  | false => fail 1
+  | _ => idtac
+  end.
+
+Ltac kinv_finish_with tac :=
+  cbv [BoundedIndexFull
+         IndexBound_head IndexBound_tail
+         mapAttr addFirstBoundedIndex bindex] in *;
+  repeat autounfold with MethDefs ; simpl in *;
+  repeat
+    (kinv_simpl;
+     try match goal with
+         | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
+         | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
+         | H:_ <> _ |- _ => elim H; reflexivity
+         | |- context [if weq ?w1 ?w2 then _ else _] => destruct (weq w1 w2)
+         end; simpl in *; auto);
+  try tac.
+
 Ltac kinv_finish :=
   cbv [BoundedIndexFull
          IndexBound_head IndexBound_tail
-         mapAttr addFirstBoundedIndex bindex
-         M.Raw.key M.OT.t] in *;
-  repeat autounfold with MethDefs;
-  simpl in *;
+         mapAttr addFirstBoundedIndex bindex] in *;
+  repeat autounfold with MethDefs; simpl in *;
   repeat
-    (try match goal with
-         | [H: _ = _ |- _] => rewrite H in *; clear H
-         | [H: _ = _ |- _] => rewrite <-H in *; clear H
+    (kinv_simpl;
+     try match goal with
+         | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
+         | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
          | [H: _ <> _ |- _] => elim H; reflexivity
          | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
          end;
-     simpl in *; kinv_simpl; auto).
+     simpl in *; auto).
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.

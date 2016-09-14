@@ -86,29 +86,65 @@ Section ProcTwoStDec.
            | [H: false = ?t |- _] => rewrite <-H in *
            end; dest_if; kinv_simpl; intuition idtac).
 
-  Ltac is_not_const_bool t :=
-    match t with
-    | true => fail 1
-    | false => fail 1
-    | _ => idtac
-    end.
-
-  Ltac kinv_finish ::=
-       unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *;
-  repeat autounfold  with MethDefs ; simpl in *;
-  repeat
-    (try
-       match goal with
-       | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
-       | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
-       | H:_ <> _ |- _ => elim H; reflexivity
-       | |- context [if weq ?w1 ?w2 then _ else _] => destruct (weq w1 w2)
-       end; simpl in *; kinv_simpl; auto).
+  Ltac p2st_inv_tac :=
+    try match goal with
+        | [H: p2st_inv _ _ |- _] => destruct H
+        end;
+    kinv_red.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
-  Proof.
-    admit.
+  Proof. (* SKIP_PROOF_ON
+
+    kinline_left im.
+    kdecompose_nodefs p2st_pdec_regMap p2st_pdec_ruleMap.
+
+    kinv_add p2st_inv_ok.
+    kinv_add_end.
+
+    kinvert.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcTwoStDec.

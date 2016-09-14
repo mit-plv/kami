@@ -2353,5 +2353,5 @@ Ltac meqReify :=
   simpl; try reflexivity;
   apply M.elements_eq_leibniz;
   try reflexivity;
-  simpl; repeat f_equal.
+  simpl; repeat (unfold M.Raw.key, M.OT.t; f_equal).
 
