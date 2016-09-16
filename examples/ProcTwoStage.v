@@ -47,7 +47,7 @@ Section OneEltFifo.
     with Method ^"deq"() : dType := deq
   }.
 
-  Definition oneEltFifoEx1 := MODULE {
+  Definition oneEltFifoEx := MODULE {
     Register ^"elt" : dType <- Default
     with Register ^"full" : Bool <- Default
 
@@ -56,18 +56,9 @@ Section OneEltFifo.
     with Method ^"isFull"() : Bool := isFull
   }.
 
-  Definition oneEltFifoEx2 := MODULE {
-    Register ^"elt" : dType <- Default
-    with Register ^"full" : Bool <- Default
-
-    with Method ^"enq"(d : dType) : Void := (enq d)
-    with Method ^"deq"() : dType := deq
-    with Method ^"firstElt"() : dType := firstElt
-  }.
-
 End OneEltFifo.
 
-Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
+Hint Unfold oneEltFifo oneEltFifoEx : ModuleDefs.
 Hint Unfold enq deq firstElt isFull : MethDefs.
 
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
@@ -100,7 +91,6 @@ Section ProcTwoStage.
   Definition d2eFifoName := "d2e"%string.
   Definition d2eEnq := MethodSig (d2eFifoName -- "enq")(d2eElt) : Void.
   Definition d2eDeq := MethodSig (d2eFifoName -- "deq")() : d2eElt.
-  Definition d2eFirstElt := MethodSig (d2eFifoName -- "firstElt")() : d2eElt.
 
   (* For correct pc redirection *)
   Definition e2dElt := Bit addrSize. 
@@ -128,6 +118,39 @@ Section ProcTwoStage.
 
   End RegFile.
 
+  Section ScoreBoard.
+
+    Definition scoreBoard := MODULE {
+      Register "idx" : Bit rfIdx <- Default
+      with Register "valid" : Bool <- false
+
+      with Method "search1" (idx1: Bit rfIdx) : Bool :=
+        Read idx <- "idx";
+        Read valid <- "valid";
+        Ret (#valid && (#idx1 == #idx))
+
+      with Method "search2" (idx2: Bit rfIdx) : Bool :=
+        Read idx <- "idx";
+        Read valid <- "valid";
+        Ret (#valid && (#idx2 == #idx))
+
+      with Method "insert" (nidx: Bit rfIdx) : Void :=
+        Write "idx" <- #nidx;
+        Write "valid" <- $$true;
+        Retv
+        
+      with Method "remove" () : Void :=
+        Write "valid" <- $$false;
+        Retv
+    }.
+
+    Definition sbSearch1 := MethodSig "search1"(Bit rfIdx) : Bool.
+    Definition sbSearch2 := MethodSig "search2"(Bit rfIdx) : Bool.
+    Definition sbInsert := MethodSig "insert"(Bit rfIdx) : Void.
+    Definition sbRemove := MethodSig "remove"() : Void.
+    
+  End ScoreBoard.
+    
   Section BranchPredictor.
 
     Definition branchPredictor := MODULE {
@@ -144,7 +167,7 @@ Section ProcTwoStage.
       Register "pc" : Bit addrSize <- Default
       with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
       with Register "fEpoch" : Bool <- false
-
+                                    
       with Rule "modifyPc" :=
         Call correctPc <- e2dDeq();
         Write "pc" <- #correctPc;
@@ -160,6 +183,9 @@ Section ProcTwoStage.
         LET rawInst <- #pgm @[ #ppc ];
         Call st <- getRf();
         LET inst <- dec _ st rawInst;
+
+        Call src1 <- sbSearch1(
+        
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
         Write "fetchStall" <- $$false;
@@ -192,6 +218,7 @@ Section ProcTwoStage.
     Definition executer := MODULE {
       Register "stall" : Bool <- false
       with Register "eEpoch" : Bool <- false
+      with Register "stalled" : d2eElt <- Default
 
       with Rule "wrongEpoch" :=
         Read stall <- "stall";
@@ -201,12 +228,12 @@ Section ProcTwoStage.
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch != #eEpoch);
         Retv
-                              
+
       with Rule "reqLd" :=
         Read stall <- "stall";
         Assert !#stall;
         Call st <- getRf();
-        Call d2e <- d2eFirstElt();
+        Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
@@ -217,6 +244,7 @@ Section ProcTwoStage.
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
+        Write "stalled" <- #d2e;
         Retv 
 
       with Rule "reqLdZ" :=
@@ -238,7 +266,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert !#stall;
         Call st <- getRf();
-        Call d2e <- d2eFirstElt();
+        Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
@@ -248,6 +276,7 @@ Section ProcTwoStage.
                              "op" ::= $$true;
                              "data" ::= #inst@."value" });
         Write "stall" <- $$true;
+        Write "stalled" <- #d2e;
         Retv
                                 
       with Rule "repLd" :=
@@ -255,7 +284,7 @@ Section ProcTwoStage.
         Assert #stall;
         Call val <- memRep();
         Call st <- getRf();
-        Call curInfo <- d2eDeq();
+        Read curInfo : d2eElt <- "stalled";
         LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
         Assert #inst@."opcode" == $$opLd;
         Call setRf (#st@[#inst@."reg" <- #val@."data"]);
@@ -269,7 +298,7 @@ Section ProcTwoStage.
         Assert #stall;
         Call val <- memRep();
         Call st <- getRf();
-        Call curInfo <- d2eDeq();
+        Read curInfo : d2eElt <- "stalled";
         LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
         Assert #inst@."opcode" == $$opSt;
         Write "stall" <- $$false;
@@ -316,15 +345,15 @@ Section ProcTwoStage.
   Definition procTwoStage := (decoder
                                 ++ regFile
                                 ++ branchPredictor
-                                ++ oneEltFifoEx2 d2eFifoName d2eElt
-                                ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
+                                ++ oneEltFifo d2eFifoName d2eElt
+                                ++ oneEltFifoEx e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
 
 Hint Unfold regFile branchPredictor decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
-     d2eElt d2eFifoName d2eEnq d2eDeq d2eFirstElt
+     d2eElt d2eFifoName d2eEnq d2eDeq
      e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
      getRf setRf predictNextPc toHost checkNextPc : MethDefs.
 

@@ -50,17 +50,19 @@ Section ProcTwoStDec.
        mlet e2dfv : Bool <- r of "e2d"--"full";
        mlet eev : Bool <- r of "eEpoch";
        mlet stallv : Bool <- r of "stall";
+       mlet stalledv : d2eElt opIdx addrSize lgDataBytes rfIdx <- r of "stalled";
+       
        (["stall" <- existT _ _ stallv]
         +["pgm" <- existT _ _ pgmv]
         +["rf" <- existT _ _ rfv]
         +["pc" <- existT _ (SyntaxKind (Bit addrSize))
-               (if e2dfv then e2deltv
-                else if d2efv
-                     then
-                       if eqb eev (d2eeltv ``"epoch")
-                       then d2eeltv ``"curPc"
-                       else e2deltv
-                     else pcv)])%fmap)%mapping.
+               (if stallv then stalledv ``"curPc"
+                else if e2dfv then e2deltv
+                     else if d2efv then
+                            if eqb eev (d2eeltv ``"epoch")
+                            then d2eeltv ``"curPc"
+                            else pcv
+                          else pcv)])%fmap)%mapping.
   Hint Unfold p2st_pdec_regMap: MapDefs.
 
   Ltac is_not_ife t :=
@@ -88,7 +90,7 @@ Section ProcTwoStDec.
 
   Ltac p2st_inv_tac :=
     try match goal with
-        | [H: p2st_inv _ _ |- _] => destruct H
+        | [H: p2st_inv _ _ _ _ _ |- _] => destruct H
         end;
     kinv_red.
 
@@ -103,6 +105,7 @@ Section ProcTwoStDec.
     kinv_add_end.
 
     kinvert.
+    
     - kinv_action_dest;
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;

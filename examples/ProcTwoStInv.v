@@ -46,6 +46,9 @@ Section Invariants.
 
       stallv : fullType type (SyntaxKind Bool);
       Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
+      stalledv : fullType type (SyntaxKind (d2eElt opIdx addrSize lgDataBytes rfIdx));
+      Hstalledv : M.find "stalled"%string o = Some (existT _ _ stalledv);
+
       eepochv : fullType type (SyntaxKind Bool);
       Heepochv : M.find "eEpoch"%string o = Some (existT _ _ eepochv);
 
@@ -53,16 +56,19 @@ Section Invariants.
         (fepochv = eepochv -> e2dfullv = false) /\ (e2dfullv = false -> fepochv = eepochv) /\
         (fepochv <> eepochv -> e2dfullv = true) /\ (e2dfullv = true -> fepochv <> eepochv) /\
 
-        (e2dfullv = true -> d2efullv = false) /\ (d2efullv = true -> e2dfullv = false) /\
+        (e2dfullv = true -> d2efullv = true -> d2eeltv ``"epoch" = fepochv) /\
+        (d2efullv = true -> d2eeltv ``"epoch" = fepochv -> d2eeltv ``"nextPc" = pcv) /\
+        (d2efullv = true -> d2eeltv ``"epoch" = eepochv -> e2dfullv = false) /\
 
-        (stallv = true -> d2efullv = true) /\
+        (stallv = true -> e2dfullv = false) /\
+
+        (stallv = true -> d2efullv = true ->
+         (stalledv ``"nextPc" = d2eeltv ``"curPc" /\ d2eeltv ``"epoch" = fepochv)) /\
+        (stallv = true -> d2efullv = false -> e2dfullv = false ->
+         stalledv ``"nextPc" = pcv)
         
-        (d2efullv = true ->
-         (fepochv = d2eeltv ``"epoch" /\
-          pcv = d2eeltv ``"nextPc" /\
-          evalExpr (dec _ rfv (pgmv (d2eeltv ``"curPc"))) = d2eeltv ``"instDec"))
     }.
-
+  
   Ltac p2st_inv_old :=
     try match goal with
         | [H: p2st_inv _ |- _] => destruct H
@@ -92,12 +98,16 @@ Section Invariants.
     - kinvert.
       + mred.
       + mred.
-      + kinv_dest_custom p2st_inv_tac; destruct x0, eepochv; intuition idtac.
+      + kinv_dest_custom p2st_inv_tac.
+        * destruct x0, eepochv; intuition idtac.
+        * destruct x0, eepochv; intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
+        intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
+        intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
