@@ -5,15 +5,26 @@ Require Import Ex.SC Ex.ProcTwoStage.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-
-  Definition p2st := p2st dec execState execNextPc opLd opSt opTh.
+  Definition p2st := p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                          getStAddr getStSrc calcStAddr getStVSrc
+                          getSrc1 getSrc2 execState execNextPc.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
   Definition p2stInl: Modules * bool.

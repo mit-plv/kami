@@ -643,6 +643,22 @@ Ltac is_not_const_bool t :=
   | _ => idtac
   end.
 
+Ltac kinv_finish :=
+  cbv [BoundedIndexFull
+         IndexBound_head IndexBound_tail
+         mapAttr addFirstBoundedIndex bindex] in *;
+  repeat autounfold with MethDefs; simpl in *;
+  repeat
+    (kinv_simpl;
+     try assumption; try discriminate;
+     try match goal with
+         | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
+         | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
+         | [H: _ <> _ |- _] => elim H; reflexivity
+         | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
+         end;
+     simpl in *; auto).
+
 Ltac kinv_finish_with tac :=
   cbv [BoundedIndexFull
          IndexBound_head IndexBound_tail
@@ -651,6 +667,7 @@ Ltac kinv_finish_with tac :=
   repeat (
       repeat
         (kinv_simpl;
+         try assumption; try discriminate;
          try match goal with
              | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
              | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
@@ -658,21 +675,6 @@ Ltac kinv_finish_with tac :=
              | |- context [if weq ?w1 ?w2 then _ else _] => destruct (weq w1 w2)
              end; simpl in *; auto);
       try tac).
-
-Ltac kinv_finish :=
-  cbv [BoundedIndexFull
-         IndexBound_head IndexBound_tail
-         mapAttr addFirstBoundedIndex bindex] in *;
-  repeat autounfold with MethDefs; simpl in *;
-  repeat
-    (kinv_simpl;
-     try match goal with
-         | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
-         | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
-         | [H: _ <> _ |- _] => elim H; reflexivity
-         | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
-         end;
-     simpl in *; auto).
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.

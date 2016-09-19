@@ -10,19 +10,29 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-  Hypothesis (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition p2stInl := p2stInl dec execState execNextPc opLd opSt opTh.
+  Definition p2stInl := p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                getStAddr getStSrc calcStAddr getStVSrc
+                                getSrc1 getSrc2 execState execNextPc.
 
   Record p2st_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
@@ -34,7 +44,7 @@ Section Invariants.
       rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
 
-      d2eeltv : fullType type (SyntaxKind (d2eElt opIdx addrSize lgDataBytes rfIdx));
+      d2eeltv : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
       Hd2eeltv : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv);
       d2efullv : fullType type (SyntaxKind Bool);
       Hd2efullv : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv);
@@ -46,7 +56,7 @@ Section Invariants.
 
       stallv : fullType type (SyntaxKind Bool);
       Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
-      stalledv : fullType type (SyntaxKind (d2eElt opIdx addrSize lgDataBytes rfIdx));
+      stalledv : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
       Hstalledv : M.find "stalled"%string o = Some (existT _ _ stalledv);
 
       eepochv : fullType type (SyntaxKind Bool);
@@ -66,7 +76,6 @@ Section Invariants.
          (stalledv ``"nextPc" = d2eeltv ``"curPc" /\ d2eeltv ``"epoch" = fepochv)) /\
         (stallv = true -> d2efullv = false -> e2dfullv = false ->
          stalledv ``"nextPc" = pcv)
-        
     }.
   
   Ltac p2st_inv_old :=

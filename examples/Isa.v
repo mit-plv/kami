@@ -99,7 +99,7 @@ Section RV32I.
     Definition rv32iOpMISCMEM := WO~0~0~0~1~1~1~1.
     Definition rv32iOpSYSTEM  := WO~1~1~1~0~0~1~1.
 
-    Definition rv32iOpTOHOST    := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
+    Definition rv32iOpTOHOST  := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
 
   End Opcodes.
 
@@ -107,39 +107,57 @@ Section RV32I.
   (* CAUTION: currently there are no distinctions among LW/LH/LB or SW/SH/SB.
    *          All loads (stores) are regarded as LW (SW).
    *)
-  Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
-    unfold DecT; intros ty st inst.
-    refine (IF ((getOpcodeE #inst) == ($$ rv32iOpLOAD)) then _ else _)%kami_expr.
-    - (* load case *)
-      exact (STRUCT { "opcode" ::= getOpcodeE #inst;
-                      "reg" ::= getRdE #inst;
-                      "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st #inst)
-                                  + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE #inst)));
-                      "value" ::= $$Default;
-                      "inst" ::= #inst})%kami_expr.
-    - refine (IF (getOpcodeE #inst == $$ rv32iOpSTORE) then _ else _)%kami_expr.
-      + (* store case *)
-        exact (STRUCT { "opcode" ::= getOpcodeE #inst;
-                        "reg" ::= $$Default;
-                        "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st #inst)
-                                    + (UniBit (ZeroExtendTrunc _ _) (getOffsetSE #inst)));
-                        "value" ::= getRs2ValueE st #inst;
-                        "inst" ::= #inst})%kami_expr.
-      + refine (IF (getOpcodeE #inst == $$ rv32iOpTOHOST) then _ else _)%kami_expr.
-        * (* tohost case *)
-          exact (STRUCT { "opcode" ::= getOpcodeE #inst;
-                          "reg" ::= $$Default;
-                          "addr" ::= $$Default;
-                          "value" ::= getRs1ValueE st #inst;
-                          "inst" ::= #inst})%kami_expr.
-        * (* others *)
-          exact (STRUCT { "opcode" ::= getOpcodeE #inst;
-                          "reg" ::= $$Default;
-                          "addr" ::= $$Default;
-                          "value" ::= $$Default;
-                          "inst" ::= #inst})%kami_expr.
-  Defined.
 
+  (* TODO: recover *)
+  (* Definition rv32iDecode: DecT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx. *)
+  (*   unfold DecT; intros ty st inst. *)
+  (*   refine (IF ((getOpcodeE #inst) == ($$ rv32iOpLOAD)) then _ else _)%kami_expr. *)
+  (*   - (* load case *) *)
+  (*     exact (STRUCT { "opcode" ::= getOpcodeE #inst; *)
+  (*                     "dst" ::= getRdE #inst; *)
+  (*                     "src1" ::= getRs1E #inst; *)
+  (*                     "src2" ::= $$Default; *)
+  (*                     "src1valid" ::= $$true; *)
+  (*                     "src2valid" ::= $$false; *)
+  (*                     "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st #inst) *)
+  (*                                 + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE #inst))); *)
+  (*                     "value" ::= $$Default; *)
+  (*                     "inst" ::= #inst})%kami_expr. *)
+  (*   - refine (IF (getOpcodeE #inst == $$ rv32iOpSTORE) then _ else _)%kami_expr. *)
+  (*     + (* store case *) *)
+  (*       exact (STRUCT { "opcode" ::= getOpcodeE #inst; *)
+  (*                       "dst" ::= $$Default; *)
+  (*                       "src1" ::= getRs1E #inst; *)
+  (*                       "src2" ::= getRs2E #inst; *)
+  (*                       "src1valid" ::= $$true; *)
+  (*                       "src2valid" ::= $$true; *)
+  (*                       "addr" ::= (UniBit (ZeroExtendTrunc _ _) (getRs1ValueE st #inst) *)
+  (*                                   + (UniBit (ZeroExtendTrunc _ _) (getOffsetSE #inst))); *)
+  (*                       "value" ::= getRs2ValueE st #inst; *)
+  (*                       "inst" ::= #inst})%kami_expr. *)
+  (*     + refine (IF (getOpcodeE #inst == $$ rv32iOpTOHOST) then _ else _)%kami_expr. *)
+  (*       * (* tohost case *) *)
+  (*         exact (STRUCT { "opcode" ::= getOpcodeE #inst; *)
+  (*                         "dst" ::= $$Default; *)
+  (*                         "src1" ::= getRs1E #inst; *)
+  (*                         "src2" ::= $$Default; *)
+  (*                         "src1valid" ::= $$true; *)
+  (*                         "src2valid" ::= $$false; *)
+  (*                         "addr" ::= $$Default; *)
+  (*                         "value" ::= getRs1ValueE st #inst; *)
+  (*                         "inst" ::= #inst})%kami_expr. *)
+  (*       * (* others *) *)
+  (*         exact (STRUCT { "opcode" ::= getOpcodeE #inst; *)
+  (*                         "dst" ::= $$Default; (* over-approximation of src1 and src2 *) *)
+  (*                         "src1" ::= $$Default; *)
+  (*                         "src2" ::= $$Default; *)
+  (*                         "src1valid" ::= $$false; *)
+  (*                         "src2valid" ::= $$false; *)
+  (*                         "addr" ::= $$Default; *)
+  (*                         "value" ::= $$Default; *)
+  (*                         "inst" ::= #inst})%kami_expr. *)
+  (* Defined. *)
+        
   Section Funct7.
 
     Definition rv32iF7SLLI := WO~0~0~0~0~0~0~0.
@@ -201,100 +219,104 @@ Section RV32I.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E inst == $$op) then expr else _)%kami_expr.
 
-  Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
-    unfold ExecStateT; intros ty st pc dec.
-    set (ReadField ``"inst" #dec)%kami_expr as inst.
+  (* TODO: recover *)
+  
+  (* Definition rv32iExecState: ExecStateT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx. *)
+  (*   unfold ExecStateT; intros ty st pc dec. *)
+  (*   set (ReadField ``"inst" #dec)%kami_expr as inst. *)
 
-    (* x0 is always hardcoded to zero. *)
-    refine (IF (getRdE inst == $0) then #st else _)%kami_expr.
+  (*   (* x0 is always hardcoded to zero. *) *)
+  (*   refine (IF (getRdE inst == $0) then #st else _)%kami_expr. *)
 
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL)
-            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) #pc) +
-                       (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE inst))]
-            else _)%kami_expr.
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR)
-            then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _)
-                                              (#pc + (UniBit (SignExtendTrunc _ _)
-                                                             (getRs1ValueE st inst))
-                                               + (UniBit (SignExtendTrunc _ _)
-                                                         (getOffsetIE inst))))] else _)%kami_expr.
+  (*   refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL) *)
+  (*           then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) #pc) + *)
+  (*                      (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE inst))] *)
+  (*           else _)%kami_expr. *)
+  (*   refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR) *)
+  (*           then #st @[getRdE inst <- (UniBit (ZeroExtendTrunc _ _) *)
+  (*                                             (#pc + (UniBit (SignExtendTrunc _ _) *)
+  (*                                                            (getRs1ValueE st inst)) *)
+  (*                                              + (UniBit (SignExtendTrunc _ _) *)
+  (*                                                        (getOffsetIE inst))))] else _)%kami_expr. *)
 
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOP) then _ else _)%kami_expr.
+  (*   refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOP) then _ else _)%kami_expr. *)
 
-    - register_op_funct7
-        inst rv32iF7ADD
-        (#st @[ getRdE inst <- getRs1ValueE st inst + getRs2ValueE st inst ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7SUB
-        (#st @[ getRdE inst <- getRs1ValueE st inst - getRs2ValueE st inst ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7SLL
-        (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       << (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7SRL
-        (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       >> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7SRA
-        (#st @[ getRdE inst <- (getRs1ValueE st inst)
-                       ~>> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7OR
-        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~| (getRs2ValueE st inst) ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7AND
-        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~& (getRs2ValueE st inst) ])%kami_expr.
-      register_op_funct7
-        inst rv32iF7XOR
-        (#st @[ getRdE inst <- (getRs1ValueE st inst) ~+ (getRs2ValueE st inst) ])%kami_expr.
-      exact (#st)%kami_expr.
+  (*   - register_op_funct7 *)
+  (*       inst rv32iF7ADD *)
+  (*       (#st @[ getRdE inst <- getRs1ValueE st inst + getRs2ValueE st inst ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7SUB *)
+  (*       (#st @[ getRdE inst <- getRs1ValueE st inst - getRs2ValueE st inst ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7SLL *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) *)
+  (*                      << (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7SRL *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) *)
+  (*                      >> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7SRA *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) *)
+  (*                      ~>> (UniBit (Trunc 5 _) (getRs2ValueE st inst)) ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7OR *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) ~| (getRs2ValueE st inst) ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7AND *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) ~& (getRs2ValueE st inst) ])%kami_expr. *)
+  (*     register_op_funct7 *)
+  (*       inst rv32iF7XOR *)
+  (*       (#st @[ getRdE inst <- (getRs1ValueE st inst) ~+ (getRs2ValueE st inst) ])%kami_expr. *)
+  (*     exact (#st)%kami_expr. *)
 
-    - refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOPIMM) then _ else #st)%kami_expr.
+  (*   - refine (IF (ReadField ``"opcode" #dec == $$rv32iOpOPIMM) then _ else #st)%kami_expr. *)
 
-      register_op_funct3
-        inst rv32iF3ADDI
-        (#st @[ getRdE inst <- getRs1ValueE st inst
-                + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE inst)) ])%kami_expr.
-      exact (#st)%kami_expr.
-  Defined.
+  (*     register_op_funct3 *)
+  (*       inst rv32iF3ADDI *)
+  (*       (#st @[ getRdE inst <- getRs1ValueE st inst *)
+  (*               + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE inst)) ])%kami_expr. *)
+  (*     exact (#st)%kami_expr. *)
+  (* Defined. *)
 
   (* NOTE: Because instructions are not on the memory, we give (pc + 1) for the next pc.
    * Branch offsets are not aligned, so the complete offset bits are used.
    *)
-  Definition rv32iExecNextPc: ExecNextPcT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
-    unfold ExecNextPcT; intros ty st pc dec.
-    set (ReadField ``"inst" #dec)%kami_expr as inst.
 
-    (* NOTE: "rd" is updated by rv32iExecState *)
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL)
-            then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetUJE inst)) else _)%kami_expr.
-    refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR)
-            then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st inst))
-                 + (UniBit (SignExtendTrunc _ _) (getOffsetIE inst)) else _)%kami_expr.
+  (* TODO: recover *)
+  (* Definition rv32iExecNextPc: ExecNextPcT rv32iOpIdx rv32iAddrSize rv32iLgDataBytes rv32iRfIdx. *)
+  (*   unfold ExecNextPcT; intros ty st pc dec. *)
+  (*   set (ReadField ``"inst" #dec)%kami_expr as inst. *)
 
-    refine (IF (ReadField
-                  {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |}
-                  #dec == $$rv32iOpBRANCH) then _ else #pc + $1)%kami_expr.
-    (* branch instructions *)
-    register_op_funct3 inst rv32iF3BEQ
-                       (IF (getRs1ValueE st inst == getRs2ValueE st inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
-                        else #pc + $1)%kami_expr.
-    register_op_funct3 inst rv32iF3BNE
-                       (IF (getRs1ValueE st inst != getRs2ValueE st inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
-                        else #pc + $1)%kami_expr.
-    register_op_funct3 inst rv32iF3BLT
-                       (IF (getRs1ValueE st inst < getRs2ValueE st inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
-                        else #pc + $1)%kami_expr.
-    register_op_funct3 inst rv32iF3BGE
-                       (IF (getRs1ValueE st inst >= getRs2ValueE st inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst))
-                        else #pc + $1)%kami_expr.
-    exact (#pc + $1)%kami_expr.
-  Defined.
+  (*   (* NOTE: "rd" is updated by rv32iExecState *) *)
+  (*   refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJAL) *)
+  (*           then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetUJE inst)) else _)%kami_expr. *)
+  (*   refine (IF (ReadField ``"opcode" #dec == $$rv32iOpJALR) *)
+  (*           then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st inst)) *)
+  (*                + (UniBit (SignExtendTrunc _ _) (getOffsetIE inst)) else _)%kami_expr. *)
+
+  (*   refine (IF (ReadField *)
+  (*                 {| StringBound.bindex := "opcode"%string; StringBound.indexb := _ |} *)
+  (*                 #dec == $$rv32iOpBRANCH) then _ else #pc + $1)%kami_expr. *)
+  (*   (* branch instructions *) *)
+  (*   register_op_funct3 inst rv32iF3BEQ *)
+  (*                      (IF (getRs1ValueE st inst == getRs2ValueE st inst) *)
+  (*                       then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst)) *)
+  (*                       else #pc + $1)%kami_expr. *)
+  (*   register_op_funct3 inst rv32iF3BNE *)
+  (*                      (IF (getRs1ValueE st inst != getRs2ValueE st inst) *)
+  (*                       then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst)) *)
+  (*                       else #pc + $1)%kami_expr. *)
+  (*   register_op_funct3 inst rv32iF3BLT *)
+  (*                      (IF (getRs1ValueE st inst < getRs2ValueE st inst) *)
+  (*                       then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst)) *)
+  (*                       else #pc + $1)%kami_expr. *)
+  (*   register_op_funct3 inst rv32iF3BGE *)
+  (*                      (IF (getRs1ValueE st inst >= getRs2ValueE st inst) *)
+  (*                       then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE inst)) *)
+  (*                       else #pc + $1)%kami_expr. *)
+  (*   exact (#pc + $1)%kami_expr. *)
+  (* Defined. *)
     
 End RV32I.
 

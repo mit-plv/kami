@@ -16,25 +16,37 @@ Section ProcMem.
 
   Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
-  
-  Variable dec: DecT OpIdx AddrSize LgDataBytes RfIdx.
-  Variable execState: ExecStateT OpIdx AddrSize LgDataBytes RfIdx.
-  Variable execNextPc: ExecNextPcT OpIdx AddrSize LgDataBytes RfIdx.
 
-  Variables opLd opSt opTh: ConstT (Bit OpIdx).
-  Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT LgDataBytes)
+            (getLdDst: LdDstT LgDataBytes RfIdx)
+            (getLdAddr: LdAddrT AddrSize LgDataBytes)
+            (getLdSrc: LdSrcT LgDataBytes RfIdx)
+            (calcLdAddr: LdAddrCalcT AddrSize LgDataBytes)
+            (getStAddr: StAddrT AddrSize LgDataBytes)
+            (getStSrc: StSrcT LgDataBytes RfIdx)
+            (calcStAddr: StAddrCalcT AddrSize LgDataBytes)
+            (getStVSrc: StVSrcT LgDataBytes RfIdx)
+            (getSrc1: Src1T LgDataBytes RfIdx)
+            (getSrc2: Src2T LgDataBytes RfIdx)
+            (execState: ExecStateT AddrSize LgDataBytes RfIdx)
+            (execNextPc: ExecNextPcT AddrSize LgDataBytes RfIdx).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
-  Definition pdecN := pdecs dec execState execNextPc opLd opSt opTh numChildren.
+  Definition pdecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                            getStAddr getStSrc calcStAddr getStVSrc
+                            getSrc1 execState execNextPc numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
          +++ (fifoRsToProc LgDataBytes (rsz FifoSize) LgNumChildren)).
     
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
-  Definition scN := sc dec execState execNextPc opLd opSt opTh numChildren.
+  Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 execState execNextPc numChildren.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).

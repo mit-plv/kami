@@ -11,19 +11,31 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-  Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Variable n: nat.
   
-  Definition pdecN := procDecM fifoSize dec execState execNextPc opLd opSt opTh n.
-  Definition scN := sc dec execState execNextPc opLd opSt opTh n.
+  Definition pdecN := procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                               getStAddr getStSrc calcStAddr getStVSrc
+                               getSrc1 execState execNextPc n.
+  Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 execState execNextPc n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -36,7 +48,9 @@ Section ProcDecSCN.
       END_SKIP_PROOF_ON *) admit.
   Qed.
 
-  Definition procDecN := pdecs dec execState execNextPc opLd opSt opTh n.
+  Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                               getStAddr getStSrc calcStAddr getStVSrc
+                               getSrc1 execState execNextPc n.
   Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

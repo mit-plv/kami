@@ -11,20 +11,32 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-  Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdec := pdecf fifoSize dec execState execNextPc opLd opSt opTh.
-  Definition pinst := pinst dec execState execNextPc opLd opSt opTh.
+  Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                           getStAddr getStSrc calcStAddr getStVSrc
+                           getSrc1 execState execNextPc.
+  Definition pinst := pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                            getStAddr getStSrc calcStAddr getStVSrc
+                            getSrc1 execState execNextPc.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
@@ -49,22 +61,30 @@ Section ProcDecSC.
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
-         let inst := evalExpr (dec _ rfv (pgmv pcv)) in
+         let rawInst := pgmv pcv in
          (["pgm" <- (existT _ _ pgmv)]
-          +["rf" <- (let opc := inst ``"opcode" in
-                     if weq opc (evalConstT opLd)
+          +["rf" <- (let opc := evalExpr (getOptype _ rawInst) in
+                     if weq opc opLd
                      then
                        (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
-                               ((fun a : word rfIdx => if weq a (inst ``"reg")
+                               ((fun a : word rfIdx => if weq a (evalExpr (getLdDst _ rawInst))
                                                        then oelv odv ``"data"
                                                        else rfv a)
                                 : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
                                                                      rfIdx)))))
                      else
                        (existT _ _ rfv))]
-          +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv inst)))])%fmap
+          +["pc" <- (existT _ _ (evalExpr (execNextPc _ rfv pcv rawInst)))])%fmap
     )%mapping.
   Hint Unfold pdec_pinst_regMap: MapDefs.
+
+  Ltac procDec_inv_old :=
+    try match goal with
+        | [H: procDec_inv _ _ _ _ _ _ _ _ _ _ _ |- _] => destruct H
+        end;
+    kinv_red; kinv_or3;
+    (* decide the current state by giving contradictions for all other states *)
+    kinv_red; kinv_contra.
 
   Definition decInstConfig :=
     {| inlining := true;

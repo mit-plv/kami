@@ -13,13 +13,22 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -29,8 +38,8 @@ Section ProcDec.
   Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
   Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
-  Definition nextPc {ty} ppc st inst :=
-    (Write "pc" <- execNextPc ty st ppc inst;
+  Definition nextPc {ty} ppc st rawInst :=
+    (Write "pc" <- execNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
   Definition procDec := MODULE {
@@ -43,13 +52,17 @@ Section ProcDec.
       Read stall <- "stall";
       Assert !#stall;
       Read ppc : Bit addrSize <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opLd;
-      Assert #inst@."reg" != $0;
-      Call memReq(STRUCT { "addr" ::= #inst@."addr";
+      LET rawInst <- #pgm@[#ppc];
+      Assert (getOptype _ rawInst == $$opLd);
+      LET dstIdx <- getLdDst _ rawInst;
+      Assert (#dstIdx != $0);
+      LET addr <- getLdAddr _ rawInst;
+      LET srcIdx <- getLdSrc _ rawInst;
+      LET srcVal <- #rf@[#srcIdx];
+      LET laddr <- calcLdAddr _ addr srcVal;
+      Call memReq(STRUCT { "addr" ::= #laddr;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
@@ -59,77 +72,79 @@ Section ProcDec.
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opLd;
-      Assert #inst@."reg" == $0;
-      nextPc ppc st inst
+      LET rawInst <- #pgm@[#ppc];
+      Assert (getOptype _ rawInst == $$opLd);
+      LET regIdx <- getLdDst _ rawInst;
+      Assert (#regIdx == $0);
+      nextPc ppc rf rawInst
 
     with Rule "reqSt" :=
       Read stall <- "stall";
       Assert !#stall;
       Read ppc : Bit addrSize <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opSt;
-      Call memReq(STRUCT {  "addr" ::= #inst@."addr";
-                            "op" ::= $$true;
-                            "data" ::= #inst@."value" });
+      Assert (getOptype _ rawInst == $$opSt);
+      LET addr <- getStAddr _ rawInst;
+      LET srcIdx <- getStSrc _ rawInst;
+      LET srcVal <- #rf@[#srcIdx];
+      LET vsrcIdx <- getStVSrc _ rawInst;
+      LET stVal <- #rf@[#vsrcIdx];
+      LET saddr <- calcStAddr _ addr srcVal;
+      Call memReq(STRUCT { "addr" ::= #saddr;
+                           "op" ::= $$true;
+                           "data" ::= #stVal });
       Write "stall" <- $$true;
       Retv
                       
     with Rule "repLd" :=
       Call val <- memRep();
       Read ppc <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opLd;
-      Write "rf" <- #st@[#inst@."reg" <- #val@."data"];
+      Assert (getOptype _ rawInst == $$opLd);
+      LET dstIdx <- getLdDst _ rawInst;
+      Write "rf" <- #rf@[#dstIdx <- #val@."data"];
       Write "stall" <- $$false;
-      nextPc ppc st inst
+      nextPc ppc rf rawInst
                       
     with Rule "repSt" :=
       Call val <- memRep();
       Read ppc <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opSt;
+      Assert (getOptype _ rawInst == $$opSt);
       Write "stall" <- $$false;
-      nextPc ppc st inst
+      nextPc ppc rf rawInst
                       
     with Rule "execToHost" :=
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert #inst@."opcode" == $$opTh;
-      Call toHost(#inst@."value");
-      nextPc ppc st inst
+      Assert (getOptype _ rawInst == $$opTh);
+      LET valIdx <- getSrc1 _ rawInst;
+      LET val <- #rf@[#valIdx];
+      Call toHost(#val);
+      nextPc ppc rf rawInst
 
     with Rule "execNm" :=
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
-      Read st <- "rf";
+      Read rf <- "rf";
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
-      LET inst <- dec _ st rawInst;
-      Assert !(#inst@."opcode" == $$opLd
-            || #inst@."opcode" == $$opSt
-            || #inst@."opcode" == $$opTh);
-      Write "rf" <- execState _ st ppc inst;
-      nextPc ppc st inst                          
+      Assert (getOptype _ rawInst == $$opNm);
+      Write "rf" <- execState _ rf ppc rawInst;
+      nextPc ppc rf rawInst
   }.
 
 End ProcDec.
@@ -138,16 +153,27 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-
-  Definition pdec := procDec "rqFromProc"%string "rsToProc"%string dec execState execNextPc
-                             opLd opSt opTh.
+  Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
+                             getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                             getStAddr getStSrc calcStAddr getStVSrc
+                             getSrc1 execState execNextPc.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
@@ -161,21 +187,34 @@ Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 Section Facts.
   Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Lemma pdec_ModEquiv:
-    ModPhoasWf (pdec dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                     getStAddr getStSrc calcStAddr getStVSrc
+                     getSrc1 execState execNextPc).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    ModPhoasWf (pdecf fifoSize dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                      getStAddr getStSrc calcStAddr getStVSrc
+                      getSrc1 execState execNextPc).
   Proof.
     kequiv.
   Qed.
@@ -184,14 +223,18 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    ModPhoasWf (pdecfs fifoSize dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 execState execNextPc n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    ModPhoasWf (procDecM fifoSize dec execState execNextPc opLd opSt opTh n).
+    ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                         getStAddr getStSrc calcStAddr getStVSrc
+                         getSrc1 execState execNextPc n).
   Proof.
     kequiv.
   Qed.

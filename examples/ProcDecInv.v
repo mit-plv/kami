@@ -10,19 +10,29 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-  Hypothesis (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition pdecInl := pdecInl fifoSize dec execState execNextPc opLd opSt opTh.
+  Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                getStAddr getStSrc calcStAddr getStVSrc
+                                getSrc1 execState execNextPc.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -31,23 +41,28 @@ Section Invariants.
     fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
-             (inst: fullType type (SyntaxKind (DecInstK opIdx addrSize lgDataBytes rfIdx)))
+             (rawInst: fullType type (SyntaxKind (Data lgDataBytes)))
              (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
              (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
   Proof.
     refine (if insEmpty then True else _).
-    refine (_ /\ _ /\ _).
-    - refine (_ /\ _ /\ _).
-      + exact ((if weq (inst ``"opcode") (evalConstT opLd)
-                then false else true) = insElt insDeqP ``"op").
-      + exact ((if weq (inst ``"opcode") (evalConstT opSt)
-                then true else false) = insElt insDeqP ``"op").
-      + exact (inst ``"opcode" = evalConstT opLd -> inst ``"reg" <> (natToWord _ 0)).
-    - exact (insElt insDeqP ``"addr" = inst ``"addr").
-    - refine (if (insElt insDeqP ``"op") : bool then _ else _).
-      + exact (insElt insDeqP ``"data" = inst ``"value").
-      + exact (insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))).
+    refine (_ /\ _).
+    - exact ((insElt insDeqP ``"op" = false -> evalExpr (getOptype _ rawInst) = opLd) /\
+             (evalExpr (getOptype _ rawInst) = opLd ->
+              (insElt insDeqP ``"op" = false /\
+               evalExpr (getLdDst _ rawInst) <> (natToWord _ 0) /\
+               insElt insDeqP ``"addr" =
+               evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
+                                    (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
+               insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))))).
+    - exact ((insElt insDeqP ``"op" = true -> evalExpr (getOptype _ rawInst) = opSt) /\
+             (evalExpr (getOptype _ rawInst) = opSt ->
+              (insElt insDeqP ``"op" = true /\
+               insElt insDeqP ``"addr" =
+               evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
+                                    (evalExpr (#rf@[getStSrc _ rawInst])%kami_expr)) /\
+               insElt insDeqP ``"data" = evalExpr (#rf@[getStVSrc _ rawInst ])%kami_expr))).
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
@@ -89,8 +104,7 @@ Section Invariants.
                ((stallv = true /\
                  fifo_not_empty_inv iev ienqpv ideqpv /\
                  fifo_empty_inv oev oenqpv odeqpv) /\
-                (mem_request_inv (evalExpr (dec _ rfv (pgmv pcv)))
-                                 rfv iev ieltv ideqpv))
+                (mem_request_inv (pgmv pcv) rfv iev ieltv ideqpv))
                (stallv = true /\
                 fifo_empty_inv iev ienqpv ideqpv /\
                 fifo_not_empty_inv oev oenqpv odeqpv)
@@ -133,18 +147,15 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom procDec_inv_tac.
-        procDec_inv_next 1.
-        * kinv_finish.
-        * kinv_finish.
-        * reflexivity.
+        procDec_inv_next 1;
+          try (exfalso; unfold OptypeK in e, H; rewrite e in H; inv H; fail).
+        inv H.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 0.
       + kinv_dest_custom procDec_inv_tac.
-        procDec_inv_next 1.
-        * kinv_finish.
-        * kinv_finish.
-        * kinv_finish.
-        * reflexivity.
+        procDec_inv_next 1;
+          try (exfalso; unfold OptypeK in e, H; rewrite e in H; inv H; fail).
+        inv H.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 0.
       + kinv_dest_custom procDec_inv_tac.
@@ -174,12 +185,4 @@ End Invariants.
 
 Hint Unfold RqFromProc RsToProc: MethDefs.
 Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
-
-Ltac procDec_inv_old :=
-  try match goal with
-      | [H: procDec_inv _ _ _ _ _ |- _] => destruct H
-      end;
-  kinv_red; kinv_or3;
-  (* decide the current state by giving contradictions for all other states *)
-  kinv_red; kinv_contra.
     

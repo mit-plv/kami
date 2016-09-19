@@ -11,20 +11,34 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcTwoStDec.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
-  Hypotheses (HldSt: (if weq (evalConstT opLd) (evalConstT opSt) then true else false) = false).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition p2st := ProcTwoStage.p2st dec execState execNextPc opLd opSt opTh.
-  Definition pdec := ProcDec.pdec dec execState execNextPc opLd opSt opTh.
+  Definition p2st := ProcTwoStage.p2st
+                       getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 getSrc2 execState execNextPc.
+  Definition pdec := ProcDec.pdec
+                       getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 execState execNextPc.
 
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p2st) => unfold p2st. (* for kequiv *)
@@ -44,14 +58,14 @@ Section ProcTwoStDec.
     (mlet pcv : (Bit addrSize) <- r of "pc";
        mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r of "pgm";
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
-       mlet d2eeltv : d2eElt opIdx addrSize lgDataBytes rfIdx <- r of "d2e"--"elt";
+       mlet d2eeltv : d2eElt addrSize lgDataBytes rfIdx <- r of "d2e"--"elt";
        mlet d2efv : Bool <- r of "d2e"--"full";
        mlet e2deltv : Bit addrSize <- r of "e2d"--"elt";
        mlet e2dfv : Bool <- r of "e2d"--"full";
        mlet eev : Bool <- r of "eEpoch";
        mlet stallv : Bool <- r of "stall";
-       mlet stalledv : d2eElt opIdx addrSize lgDataBytes rfIdx <- r of "stalled";
-       
+       mlet stalledv : d2eElt addrSize lgDataBytes rfIdx <- r of "stalled";
+
        (["stall" <- existT _ _ stallv]
         +["pgm" <- existT _ _ pgmv]
         +["rf" <- existT _ _ rfv]
@@ -96,58 +110,20 @@ Section ProcTwoStDec.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
-  Proof. (* SKIP_PROOF_ON
-
-    kinline_left im.
-    kdecompose_nodefs p2st_pdec_regMap p2st_pdec_ruleMap.
-
-    kinv_add p2st_inv_ok.
-    kinv_add_end.
-
-    kinvert.
+  Proof.
+    admit.
     
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p2st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    (* kinline_left im. *)
+    (* kdecompose_nodefs p2st_pdec_regMap p2st_pdec_ruleMap. *)
 
-        END_SKIP_PROOF_ON *) admit.
+    (* kinv_add p2st_inv_ok. *)
+    (* kinv_add_end. *)
+
+    (* kinvert; *)
+    (*   kinv_action_dest; *)
+    (*   kinv_custom p2st_inv_tac; *)
+    (*   kinv_regmap_red; *)
+    (*   kinv_constr; kinv_eq; kinv_finish_with kinv_bool. *)
   Qed.
 
 End ProcTwoStDec.

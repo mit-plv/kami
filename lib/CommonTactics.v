@@ -114,6 +114,18 @@ Ltac destruct_existT :=
 
 Ltac unfold_head m :=
   match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    unfold hdef
   | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
     unfold hdef
   | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
@@ -150,6 +162,16 @@ Ltac unfold_head m :=
 
 Ltac unfold_head_ret m :=
   match m with
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
+  | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    let m' := eval cbv [hdef] in m in m'
   | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
     let m' := eval cbv [hdef] in m in m'
   | ?hdef _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>

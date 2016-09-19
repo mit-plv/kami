@@ -67,14 +67,23 @@ Hint Unfold enq deq firstElt isFull : MethDefs.
  * the response.
  *)
 Section ProcTwoStage.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
   Variable inName outName: string.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -82,8 +91,15 @@ Section ProcTwoStage.
   Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
 
+  Definition decInst :=
+    STRUCT { "opType" :: Bit 2;
+             "dst" :: Bit rfIdx;
+             "addr" :: Bit addrSize;
+             "val" :: Data lgDataBytes;
+             "rawInst" :: Data lgDataBytes }.
+
   Definition d2eElt :=
-    STRUCT { "instDec" :: DecInstK opIdx addrSize lgDataBytes rfIdx;
+    STRUCT { "decInst" :: decInst;
              "curPc" :: Bit addrSize;
              "nextPc" :: Bit addrSize;
              "epoch" :: Bool }.
@@ -123,16 +139,16 @@ Section ProcTwoStage.
     Definition scoreBoard := MODULE {
       Register "idx" : Bit rfIdx <- Default
       with Register "valid" : Bool <- false
-
+                                   
       with Method "search1" (idx1: Bit rfIdx) : Bool :=
         Read idx <- "idx";
         Read valid <- "valid";
-        Ret (#valid && (#idx1 == #idx))
+        Ret (#valid && #idx == #idx1)
 
       with Method "search2" (idx2: Bit rfIdx) : Bool :=
         Read idx <- "idx";
         Read valid <- "valid";
-        Ret (#valid && (#idx2 == #idx))
+        Ret (#valid && #idx == #idx2)
 
       with Method "insert" (nidx: Bit rfIdx) : Void :=
         Write "idx" <- #nidx;
@@ -180,20 +196,59 @@ Section ProcTwoStage.
         Assert !#e2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
-        LET rawInst <- #pgm @[ #ppc ];
-        Call st <- getRf();
-        LET inst <- dec _ st rawInst;
+        LET rawInst <- #pgm@[#ppc];
+        Call rf <- getRf();
 
-        Call src1 <- sbSearch1(
-        
+        (* Scoreboard-related *)
+        Call stall1 <- sbSearch1(getSrc1 _ rawInst);
+        Call stall2 <- sbSearch2(getSrc2 _ rawInst);
+        Assert !(#stall1 || #stall2);
+        If (getOptype _ rawInst == $$opLd)
+        then
+          Call sbInsert(getLdDst _ rawInst);
+          Retv
+        else
+          Retv
+        as _;
+
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
         Write "fetchStall" <- $$false;
         Write "pc" <- #npc;
-        Call d2eEnq(STRUCT { "instDec" ::= #inst;
-                             "curPc" ::= #ppc;
-                             "nextPc" ::= #npc;
-                             "epoch" ::= #epoch });
+
+        LET opType <- getOptype _ rawInst;
+        If (#opType == $$opLd)
+        then
+          LET addr <- getLdAddr _ rawInst;
+          LET srcIdx <- getLdSrc _ rawInst;
+          LET srcVal <- #rf@[#srcIdx];
+          LET laddr <- calcLdAddr _ addr srcVal;
+          Call d2eEnq(STRUCT { "decInst" ::= STRUCT { "opType" ::= #opType;
+                                                      "dst" ::= getLdDst _ rawInst;
+                                                      "addr" ::= #laddr;
+                                                      "val" ::= $$Default;
+                                                      "rawInst" ::= #rawInst };
+                               "curPc" ::= #ppc;
+                               "nextPc" ::= #npc;
+                               "epoch" ::= #epoch });
+          Retv
+        else
+          LET addr <- getStAddr _ rawInst;
+          LET srcIdx <- getStSrc _ rawInst;
+          LET srcVal <- #rf@[#srcIdx];
+          LET vsrcIdx <- getStVSrc _ rawInst;
+          LET stVal <- #rf@[#vsrcIdx];
+          LET saddr <- calcStAddr _ addr srcVal;
+          Call d2eEnq(STRUCT { "decInst" ::= STRUCT { "opType" ::= #opType;
+                                                      "dst" ::= $$Default;
+                                                      "addr" ::= #saddr;
+                                                      "val" ::= #stVal;
+                                                      "rawInst" ::= #rawInst };
+                               "curPc" ::= #ppc;
+                               "nextPc" ::= #npc;
+                               "epoch" ::= #epoch });
+          Retv
+        as _;
         Retv
     }.
 
@@ -202,8 +257,8 @@ Section ProcTwoStage.
   Section Execute.
     Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
-    Definition checkNextPc {ty} ppc npcp st inst :=
-      (LET npc <- execNextPc ty st ppc inst;
+    Definition checkNextPc {ty} ppc npcp st rawInst :=
+      (LET npc <- execNextPc ty st ppc rawInst;
        If (#npc != #npcp)
        then
          Read pEpoch <- "eEpoch";
@@ -237,44 +292,44 @@ Section ProcTwoStage.
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #d2e@."instDec";
-        Assert #inst@."opcode" == $$opLd;
-        Assert #inst@."reg" != $0;
+        LET inst : decInst <- #d2e@."decInst";
+        Assert #inst@."opType" == $$opLd;
+        Assert #inst@."dst" != $0;
         Call memReq(STRUCT { "addr" ::= #inst@."addr";
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
-        Retv 
-
+        Retv
+          
       with Rule "reqLdZ" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call st <- getRf();
+        Call rf <- getRf();
         Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #d2e@."instDec";
-        Assert #inst@."opcode" == $$opLd;
-        Assert #inst@."reg" == $0;
+        LET inst : decInst <- #d2e@."decInst";
+        Assert #inst@."opType" == $$opLd;
+        Assert #inst@."dst" == $0;
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
-        checkNextPc ppc npcp st inst
+        LET rawInst <- #inst@."rawInst";
+        checkNextPc ppc npcp rf rawInst
                         
       with Rule "reqSt" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call st <- getRf();
         Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #d2e@."instDec";
-        Assert #inst@."opcode" == $$opSt;
+        LET inst : decInst <- #d2e@."decInst";
+        Assert #inst@."opType" == $$opSt;
         Call memReq(STRUCT { "addr" ::= #inst@."addr";
                              "op" ::= $$true;
-                             "data" ::= #inst@."value" });
+                             "data" ::= #inst@."val" });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
         Retv
@@ -283,67 +338,71 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert #stall;
         Call val <- memRep();
-        Call st <- getRf();
+        Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
-        Assert #inst@."opcode" == $$opLd;
-        Call setRf (#st@[#inst@."reg" <- #val@."data"]);
+        LET inst : decInst <- #curInfo@."decInst";
+        Assert #inst@."opType" == $$opLd;
+        Call setRf (#rf@[#inst@."dst" <- #val@."data"]);
+        Call sbRemove ();
         Write "stall" <- $$false;
         LET ppc <- #curInfo@."curPc";
         LET npcp <- #curInfo@."nextPc";
-        checkNextPc ppc npcp st inst
+        LET rawInst <- #inst@."rawInst";
+        checkNextPc ppc npcp rf rawInst
 
       with Rule "repSt" :=
         Read stall <- "stall";
         Assert #stall;
         Call val <- memRep();
-        Call st <- getRf();
+        Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #curInfo@."instDec";
-        Assert #inst@."opcode" == $$opSt;
+        LET inst : decInst <- #curInfo@."decInst";
+        Assert #inst@."opType" == $$opSt;
         Write "stall" <- $$false;
         LET ppc <- #curInfo@."curPc";
         LET npcp <- #curInfo@."nextPc";
-        checkNextPc ppc npcp st inst
+        LET rawInst <- #inst@."rawInst";
+        checkNextPc ppc npcp rf rawInst
                                 
       with Rule "execToHost" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call st <- getRf();
+        Call rf <- getRf();
         Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #d2e@."instDec";
-        Assert #inst@."opcode" == $$opTh;
-        Call toHost(#inst@."value");
+        LET inst : decInst <- #d2e@."decInst";
+        Assert #inst@."opType" == $$opTh;
+        Call toHost(#inst@."val");
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
-        checkNextPc ppc npcp st inst
+        LET rawInst <- #inst@."rawInst";
+        checkNextPc ppc npcp rf rawInst
 
       with Rule "execNm" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call st <- getRf();
+        Call rf <- getRf();
         Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
         LET ppc <- #d2e@."curPc";
-        LET inst : DecInstK opIdx addrSize lgDataBytes rfIdx <- #d2e@."instDec";
-        Assert !(#inst@."opcode" == $$opLd
-                  || #inst@."opcode" == $$opSt
-                  || #inst@."opcode" == $$opTh);
-        Call setRf (execState _ st ppc inst);
+        LET inst : decInst <- #d2e@."decInst";
+        Assert #inst@."opType" == $$opNm;
+        LET rawInst <- #inst@."rawInst";
+        Call setRf (execState _ rf ppc rawInst);
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
-        checkNextPc ppc npcp st inst
+        checkNextPc ppc npcp rf rawInst
     }.
     
   End Execute.
 
   Definition procTwoStage := (decoder
                                 ++ regFile
+                                ++ scoreBoard
                                 ++ branchPredictor
                                 ++ oneEltFifo d2eFifoName d2eElt
                                 ++ oneEltFifoEx e2dFifoName (Bit addrSize)
@@ -351,44 +410,119 @@ Section ProcTwoStage.
 
 End ProcTwoStage.
 
-Hint Unfold regFile branchPredictor decoder executer procTwoStage : ModuleDefs.
+Hint Unfold regFile scoreBoard branchPredictor decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      d2eElt d2eFifoName d2eEnq d2eDeq
      e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
-     getRf setRf predictNextPc toHost checkNextPc : MethDefs.
+     getRf setRf
+     sbSearch1 sbSearch2 sbInsert sbRemove
+     predictNextPc toHost checkNextPc : MethDefs.
 
 Section ProcTwoStageM.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
-
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
   Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
-                                  dec execState execNextPc opLd opSt opTh.
+                                  getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                  getStAddr getStSrc calcStAddr getStVSrc
+                                  getSrc1 getSrc2 execState execNextPc.
 
 End ProcTwoStageM.
 
 Hint Unfold p2st : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize lgDataBytes rfIdx: nat.
 
-  Variable dec: DecT opIdx addrSize lgDataBytes rfIdx.
-  Variable execState: ExecStateT opIdx addrSize lgDataBytes rfIdx.
-  Variable execNextPc: ExecNextPcT opIdx addrSize lgDataBytes rfIdx.
+  (* External abstract ISA: decoding and execution *)
+  Variables (getOptype: OptypeT lgDataBytes)
+            (getLdDst: LdDstT lgDataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize lgDataBytes)
+            (getLdSrc: LdSrcT lgDataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
+            (getStAddr: StAddrT addrSize lgDataBytes)
+            (getStSrc: StSrcT lgDataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
+            (getStVSrc: StVSrcT lgDataBytes rfIdx)
+            (getSrc1: Src1T lgDataBytes rfIdx)
+            (getSrc2: Src2T lgDataBytes rfIdx)
+            (execState: ExecStateT addrSize lgDataBytes rfIdx)
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
 
-  Variables opLd opSt opTh: ConstT (Bit opIdx).
+  Lemma regFile_ModEquiv:
+    ModPhoasWf (regFile lgDataBytes rfIdx).
+  Proof. kequiv. Qed.
+  Hint Resolve regFile_ModEquiv.
 
+  Lemma scoreBoard_ModEquiv:
+    ModPhoasWf (scoreBoard rfIdx).
+  Proof. kequiv. Qed.
+  Hint Resolve scoreBoard_ModEquiv.
+
+  Lemma branchPredictor_ModEquiv:
+    ModPhoasWf (branchPredictor addrSize).
+  Proof. kequiv. Qed.
+  Hint Resolve branchPredictor_ModEquiv.
+
+  Lemma oneEltFifo_ModEquiv:
+    forall fifoName dType, ModPhoasWf (oneEltFifo fifoName dType).
+  Proof. kequiv. Qed.
+  Hint Resolve oneEltFifo_ModEquiv.
+  
+  Lemma oneEltFifoEx_ModEquiv:
+    forall fifoName dType, ModPhoasWf (oneEltFifoEx fifoName dType).
+  Proof. kequiv. Qed.
+  Hint Resolve oneEltFifoEx_ModEquiv.
+
+  Lemma decoder_ModEquiv:
+    ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                        getStAddr getStSrc calcStAddr getStVSrc
+                        getSrc1 getSrc2).
+  Proof. (* SKIP_PROOF_ON
+    kequiv.
+    END_SKIP_PROOF_ON *) admit.
+  Qed.
+  Hint Resolve decoder_ModEquiv.
+
+  Lemma executer_ModEquiv:
+    forall inName outName,
+      ModPhoasWf (executer inName outName execState execNextPc).
+  Proof. (* SKIP_PROOF_ON
+    kequiv.
+    END_SKIP_PROOF_ON *) admit.
+  Qed.
+  Hint Resolve executer_ModEquiv.
+  
   Lemma procTwoStage_ModEquiv:
-    ModPhoasWf (p2st dec execState execNextPc opLd opSt opTh).
+    ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                     getStAddr getStSrc calcStAddr getStVSrc
+                     getSrc1 getSrc2 execState execNextPc).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve procTwoStage_ModEquiv.
+Hint Resolve regFile_ModEquiv
+     scoreBoard_ModEquiv
+     branchPredictor_ModEquiv
+     oneEltFifo_ModEquiv
+     oneEltFifoEx_ModEquiv
+     decoder_ModEquiv
+     executer_ModEquiv
+     procTwoStage_ModEquiv.
 
