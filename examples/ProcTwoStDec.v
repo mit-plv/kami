@@ -104,26 +104,43 @@ Section ProcTwoStDec.
 
   Ltac p2st_inv_tac :=
     try match goal with
-        | [H: p2st_inv _ _ _ _ _ |- _] => destruct H
+        | [H: p2st_inv _ _ _ _ |- _] => destruct H
         end;
     kinv_red.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
   Proof.
+
     admit.
-    
     (* kinline_left im. *)
     (* kdecompose_nodefs p2st_pdec_regMap p2st_pdec_ruleMap. *)
 
     (* kinv_add p2st_inv_ok. *)
     (* kinv_add_end. *)
 
-    (* kinvert; *)
-    (*   kinv_action_dest; *)
+    (* kinvert. *)
+
+    (* Focus 4. *)
+    
+    (* kinv_action_dest; *)
     (*   kinv_custom p2st_inv_tac; *)
     (*   kinv_regmap_red; *)
-    (*   kinv_constr; kinv_eq; kinv_finish_with kinv_bool. *)
+    (*   kinv_constr; kinv_eq. *)
+
+    
+    (* kinv_finish_with kinv_bool. *)
+
+    
+    
+    (* kinv_finish_with kinv_bool. *)
+    (* kinv_finish_with kinv_bool. *)
+    (* kinv_finish_with kinv_bool. *)
+    
+    (* kinv_constr; kinv_eq; kinv_finish_with kinv_bool. *)
+
+
+    
   Qed.
 
 End ProcTwoStDec.

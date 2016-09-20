@@ -586,10 +586,13 @@ Ltac kinv_simpl :=
          | [H: ?t = ?t -> False |- _] => elim H; reflexivity
          | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
          | [H: ?t <> ?t |- _] => elim H; reflexivity
+         | [H: ?t <> ?t -> _ |- _] => clear H
          | [H: negb _ = true |- _] => apply negb_true_iff in H; subst
          | [H: negb _ = false |- _] => apply negb_false_iff in H; subst
          | [H: false = true |- _] => inversion H
          | [H: true = false |- _] => inversion H
+         | [H: false = true -> _ |- _] => clear H
+         | [H: true = false -> _ |- _] => clear H
          | [H: ?t = negb ?t |- _] => exfalso; eapply negb_eq_false; eauto
          | [H: negb ?t = ?t |- _] => exfalso; apply eq_sym in H; eapply negb_eq_false; eauto
          | [H: false = negb false |- _] => inversion H

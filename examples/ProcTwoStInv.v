@@ -32,8 +32,67 @@ Section Invariants.
 
   Definition p2stInl := p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 execState execNextPc.
+                                getSrc1 execState execNextPc.
 
+  Definition p2st_pc_epochs_inv
+             (fepochv eepochv d2efullv e2dfullv stallv: fullType type (SyntaxKind Bool))
+             (pcv: fullType type (SyntaxKind (Bit addrSize)))
+             (d2eeltv stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    (fepochv = eepochv -> e2dfullv = false) /\ (e2dfullv = false -> fepochv = eepochv) /\
+    (fepochv <> eepochv -> e2dfullv = true) /\ (e2dfullv = true -> fepochv <> eepochv) /\
+
+    (e2dfullv = true -> d2efullv = true -> d2eeltv ``"epoch" = fepochv) /\
+    (d2efullv = true -> d2eeltv ``"epoch" = fepochv -> d2eeltv ``"nextPc" = pcv) /\
+    (d2efullv = true -> d2eeltv ``"epoch" = eepochv -> e2dfullv = false) /\
+
+    (stallv = true -> e2dfullv = false) /\
+
+    (stallv = true -> d2efullv = true ->
+     (stalledv ``"nextPc" = d2eeltv ``"curPc" /\ d2eeltv ``"epoch" = fepochv)) /\
+    (stallv = true -> d2efullv = false -> e2dfullv = false ->
+     stalledv ``"nextPc" = pcv).
+
+  Definition p2st_decode_inv
+             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
+             (rfv: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
+             (d2efullv: fullType type (SyntaxKind Bool))
+             (d2eeltv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    d2efullv = true ->
+    let rawInst := d2eeltv ``"rawInst" in
+    (rawInst = pgmv (d2eeltv ``"curPc") /\
+     d2eeltv ``"opType" = evalExpr (getOptype _ rawInst) /\
+     (d2eeltv ``"opType" = opLd ->
+      (d2eeltv ``"dst" = evalExpr (getLdDst _ rawInst) /\
+       d2eeltv ``"addr" =
+       evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
+                            (rfv (evalExpr (getLdSrc _ rawInst)))))) /\
+     (d2eeltv ``"opType" = opSt ->
+      d2eeltv ``"addr" =
+      evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
+                           (rfv (evalExpr (getStSrc _ rawInst)))) /\
+      d2eeltv ``"val" = rfv (evalExpr (getStVSrc _ rawInst)))) /\
+    (d2eeltv ``"opType" = opTh ->
+     d2eeltv ``"val" = rfv (evalExpr (getSrc1 _ rawInst))).
+
+  Definition p2st_raw_inv
+             (d2efullv stallv: fullType type (SyntaxKind Bool))
+             (d2eeltv stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    d2efullv = true -> stallv = true -> stalledv ``"opType" = opLd ->
+    (d2eeltv ``"opType" = opSt ->
+     (stalledv ``"dst" <> evalExpr (getStSrc _ (d2eeltv ``"rawInst")) /\
+      stalledv ``"dst" <> evalExpr (getStVSrc _ (d2eeltv ``"rawInst")))) /\
+    (d2eeltv ``"opType" = opLd ->
+     stalledv ``"dst" <> evalExpr (getLdSrc _ (d2eeltv ``"rawInst"))) /\
+    (d2eeltv ``"opType" = opTh ->
+     stalledv ``"dst" <> evalExpr (getSrc1 _ (d2eeltv ``"rawInst"))).
+
+  Definition p2st_scoreboard_inv
+             (d2efullv stallv sbvv: fullType type (SyntaxKind Bool))
+             (sbv: fullType type (SyntaxKind (Bit rfIdx)))
+             (d2eeltv stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    (d2efullv = false -> stallv = true -> sbvv = true /\ stalledv ``"dst" = sbv) /\
+    (d2efullv = true -> d2eeltv ``"opType" = opLd -> sbvv = true /\ d2eeltv ``"dst" = sbv).
+  
   Record p2st_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
@@ -41,8 +100,14 @@ Section Invariants.
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
       fepochv : fullType type (SyntaxKind Bool);
       Hfepochv : M.find "fEpoch"%string o = Some (existT _ _ fepochv);
+
       rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
+
+      sbv : fullType type (SyntaxKind (Bit rfIdx));
+      Hsbv : M.find "idx"%string o = Some (existT _ _ sbv);
+      sbvv : fullType type (SyntaxKind Bool);
+      Hsbvv : M.find "valid"%string o = Some (existT _ _ sbvv);
 
       d2eeltv : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
       Hd2eeltv : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv);
@@ -63,20 +128,12 @@ Section Invariants.
       Heepochv : M.find "eEpoch"%string o = Some (existT _ _ eepochv);
 
       Hinv :
-        (fepochv = eepochv -> e2dfullv = false) /\ (e2dfullv = false -> fepochv = eepochv) /\
-        (fepochv <> eepochv -> e2dfullv = true) /\ (e2dfullv = true -> fepochv <> eepochv) /\
-
-        (e2dfullv = true -> d2efullv = true -> d2eeltv ``"epoch" = fepochv) /\
-        (d2efullv = true -> d2eeltv ``"epoch" = fepochv -> d2eeltv ``"nextPc" = pcv) /\
-        (d2efullv = true -> d2eeltv ``"epoch" = eepochv -> e2dfullv = false) /\
-
-        (stallv = true -> e2dfullv = false) /\
-
-        (stallv = true -> d2efullv = true ->
-         (stalledv ``"nextPc" = d2eeltv ``"curPc" /\ d2eeltv ``"epoch" = fepochv)) /\
-        (stallv = true -> d2efullv = false -> e2dfullv = false ->
-         stalledv ``"nextPc" = pcv)
+        p2st_pc_epochs_inv fepochv eepochv d2efullv e2dfullv stallv pcv d2eeltv stalledv
+        (* p2st_decode_inv pgmv rfv d2efullv d2eeltv /\ *)
+        (* p2st_raw_inv d2efullv stallv d2eeltv stalledv /\ *)
+        (* p2st_scoreboard_inv d2efullv stallv sbvv sbv d2eeltv stalledv *)
     }.
+  Hint Unfold p2st_pc_epochs_inv p2st_decode_inv p2st_raw_inv p2st_scoreboard_inv: InvDefs.
   
   Ltac p2st_inv_old :=
     try match goal with
@@ -88,7 +145,13 @@ Section Invariants.
     econstructor; (* let's prove that the invariant holds for the next state *)
     try (findReify; (reflexivity || eassumption); fail);
     kregmap_clear; (* for improving performance *)
-    intuition kinv_simpl. (* "intuition" should be enough to prove the invariant! *)
+    kinv_red; (* unfolding invariant definitions *)
+    repeat (* cheaper than "intuition" *)
+      (match goal with
+       | [ |- _ /\ _ ] => split
+       end);
+    try eassumption; intros; try reflexivity;
+    intuition kinv_simpl; intuition idtac.
 
   Ltac p2st_inv_tac := p2st_inv_old; p2st_inv_new.
 
@@ -113,10 +176,11 @@ Section Invariants.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
-        intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
-        intuition idtac.
+      + kinv_dest_custom p2st_inv_tac; intuition idtac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac; intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.

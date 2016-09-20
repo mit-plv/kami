@@ -91,15 +91,12 @@ Section ProcTwoStage.
   Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
 
-  Definition decInst :=
+  Definition d2eElt :=
     STRUCT { "opType" :: Bit 2;
              "dst" :: Bit rfIdx;
              "addr" :: Bit addrSize;
              "val" :: Data lgDataBytes;
-             "rawInst" :: Data lgDataBytes }.
-
-  Definition d2eElt :=
-    STRUCT { "decInst" :: decInst;
+             "rawInst" :: Data lgDataBytes;
              "curPc" :: Bit addrSize;
              "nextPc" :: Bit addrSize;
              "epoch" :: Bool }.
@@ -190,8 +187,8 @@ Section ProcTwoStage.
         Read pEpoch <- "fEpoch";
         Write "fEpoch" <- !#pEpoch;
         Retv
-
-      with Rule "instFetch" :=
+          
+      with Rule "instFetchLd" :=
         Call e2dFull <- e2dFull();
         Assert !#e2dFull;
         Read ppc : Bit addrSize <- "pc";
@@ -199,17 +196,38 @@ Section ProcTwoStage.
         LET rawInst <- #pgm@[#ppc];
         Call rf <- getRf();
 
-        (* Scoreboard-related *)
-        Call stall1 <- sbSearch1(getSrc1 _ rawInst);
-        Call stall2 <- sbSearch2(getSrc2 _ rawInst);
-        Assert !(#stall1 || #stall2);
-        If (getOptype _ rawInst == $$opLd)
-        then
-          Call sbInsert(getLdDst _ rawInst);
-          Retv
-        else
-          Retv
-        as _;
+        Call npc <- predictNextPc(#ppc);
+        Read epoch <- "fEpoch";
+        Write "fetchStall" <- $$false;
+        Write "pc" <- #npc;
+
+        LET opType <- getOptype _ rawInst;
+        Assert (#opType == $$opLd);
+
+        LET srcIdx <- getLdSrc _ rawInst;
+        Call stall1 <- sbSearch1(#srcIdx);
+        Assert !#stall1;
+        Call sbInsert(getLdDst _ rawInst);
+        LET addr <- getLdAddr _ rawInst;
+        LET srcVal <- #rf@[#srcIdx];
+        LET laddr <- calcLdAddr _ addr srcVal;
+        Call d2eEnq(STRUCT { "opType" ::= #opType;
+                             "dst" ::= getLdDst _ rawInst;
+                             "addr" ::= #laddr;
+                             "val" ::= $$Default;
+                             "rawInst" ::= #rawInst;
+                             "curPc" ::= #ppc;
+                             "nextPc" ::= #npc;
+                             "epoch" ::= #epoch });
+        Retv
+
+      with Rule "instFetchSt" :=
+        Call e2dFull <- e2dFull();
+        Assert !#e2dFull;
+        Read ppc : Bit addrSize <- "pc";
+        Read pgm <- "pgm";
+        LET rawInst <- #pgm@[#ppc];
+        Call rf <- getRf();
 
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
@@ -217,38 +235,79 @@ Section ProcTwoStage.
         Write "pc" <- #npc;
 
         LET opType <- getOptype _ rawInst;
-        If (#opType == $$opLd)
-        then
-          LET addr <- getLdAddr _ rawInst;
-          LET srcIdx <- getLdSrc _ rawInst;
-          LET srcVal <- #rf@[#srcIdx];
-          LET laddr <- calcLdAddr _ addr srcVal;
-          Call d2eEnq(STRUCT { "decInst" ::= STRUCT { "opType" ::= #opType;
-                                                      "dst" ::= getLdDst _ rawInst;
-                                                      "addr" ::= #laddr;
-                                                      "val" ::= $$Default;
-                                                      "rawInst" ::= #rawInst };
-                               "curPc" ::= #ppc;
-                               "nextPc" ::= #npc;
-                               "epoch" ::= #epoch });
-          Retv
-        else
-          LET addr <- getStAddr _ rawInst;
-          LET srcIdx <- getStSrc _ rawInst;
-          LET srcVal <- #rf@[#srcIdx];
-          LET vsrcIdx <- getStVSrc _ rawInst;
-          LET stVal <- #rf@[#vsrcIdx];
-          LET saddr <- calcStAddr _ addr srcVal;
-          Call d2eEnq(STRUCT { "decInst" ::= STRUCT { "opType" ::= #opType;
-                                                      "dst" ::= $$Default;
-                                                      "addr" ::= #saddr;
-                                                      "val" ::= #stVal;
-                                                      "rawInst" ::= #rawInst };
-                               "curPc" ::= #ppc;
-                               "nextPc" ::= #npc;
-                               "epoch" ::= #epoch });
-          Retv
-        as _;
+        Assert (#opType == $$opSt);
+
+        LET srcIdx <- getStSrc _ rawInst;
+        LET vsrcIdx <- getStVSrc _ rawInst;
+        Call stall1 <- sbSearch1(#srcIdx);
+        Call stall2 <- sbSearch2(#vsrcIdx);
+        Assert !(#stall1 || #stall2);
+
+        LET addr <- getStAddr _ rawInst;
+        LET srcVal <- #rf@[#srcIdx];
+        LET stVal <- #rf@[#vsrcIdx];
+        LET saddr <- calcStAddr _ addr srcVal;
+        Call d2eEnq(STRUCT { "opType" ::= #opType;
+                             "dst" ::= $$Default;
+                             "addr" ::= #saddr;
+                             "val" ::= #stVal;
+                             "rawInst" ::= #rawInst;
+                             "curPc" ::= #ppc;
+                             "nextPc" ::= #npc;
+                             "epoch" ::= #epoch });
+        Retv
+
+      with Rule "instFetchTh" :=
+        Call e2dFull <- e2dFull();
+        Assert !#e2dFull;
+        Read ppc : Bit addrSize <- "pc";
+        Read pgm <- "pgm";
+        LET rawInst <- #pgm@[#ppc];
+        Call rf <- getRf();
+
+        Call npc <- predictNextPc(#ppc);
+        Read epoch <- "fEpoch";
+        Write "fetchStall" <- $$false;
+        Write "pc" <- #npc;
+
+        LET opType <- getOptype _ rawInst;
+        Assert (#opType == $$opTh);
+
+        LET srcIdx <- getSrc1 _ rawInst;
+        LET srcVal <- #rf@[#srcIdx];
+        Call d2eEnq(STRUCT { "opType" ::= #opType;
+                             "dst" ::= $$Default;
+                             "addr" ::= $$Default;
+                             "val" ::= #srcVal;
+                             "rawInst" ::= #rawInst;
+                             "curPc" ::= #ppc;
+                             "nextPc" ::= #npc;
+                             "epoch" ::= #epoch });
+        Retv
+
+      with Rule "instFetchNm" :=
+        Call e2dFull <- e2dFull();
+        Assert !#e2dFull;
+        Read ppc : Bit addrSize <- "pc";
+        Read pgm <- "pgm";
+        LET rawInst <- #pgm@[#ppc];
+        Call rf <- getRf();
+
+        Call npc <- predictNextPc(#ppc);
+        Read epoch <- "fEpoch";
+        Write "fetchStall" <- $$false;
+        Write "pc" <- #npc;
+
+        LET opType <- getOptype _ rawInst;
+        Assert (#opType == $$opNm);
+        Call d2eEnq(STRUCT { "opType" ::= #opType;
+                             "dst" ::= $$Default;
+                             "addr" ::= $$Default;
+                             "val" ::= $$Default;
+                             "rawInst" ::= #rawInst;
+                             "curPc" ::= #ppc;
+                             "nextPc" ::= #npc;
+                             "epoch" ::= #epoch });
         Retv
     }.
 
@@ -292,10 +351,9 @@ Section ProcTwoStage.
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : decInst <- #d2e@."decInst";
-        Assert #inst@."opType" == $$opLd;
-        Assert #inst@."dst" != $0;
-        Call memReq(STRUCT { "addr" ::= #inst@."addr";
+        Assert #d2e@."opType" == $$opLd;
+        Assert #d2e@."dst" != $0;
+        Call memReq(STRUCT { "addr" ::= #d2e@."addr";
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
@@ -310,12 +368,11 @@ Section ProcTwoStage.
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : decInst <- #d2e@."decInst";
-        Assert #inst@."opType" == $$opLd;
-        Assert #inst@."dst" == $0;
+        Assert #d2e@."opType" == $$opLd;
+        Assert #d2e@."dst" == $0;
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
-        LET rawInst <- #inst@."rawInst";
+        LET rawInst <- #d2e@."rawInst";
         checkNextPc ppc npcp rf rawInst
                         
       with Rule "reqSt" :=
@@ -325,11 +382,10 @@ Section ProcTwoStage.
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : decInst <- #d2e@."decInst";
-        Assert #inst@."opType" == $$opSt;
-        Call memReq(STRUCT { "addr" ::= #inst@."addr";
+        Assert #d2e@."opType" == $$opSt;
+        Call memReq(STRUCT { "addr" ::= #d2e@."addr";
                              "op" ::= $$true;
-                             "data" ::= #inst@."val" });
+                             "data" ::= #d2e@."val" });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
         Retv
@@ -340,7 +396,7 @@ Section ProcTwoStage.
         Call val <- memRep();
         Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
-        LET inst : decInst <- #curInfo@."decInst";
+        LET inst <- #curInfo;
         Assert #inst@."opType" == $$opLd;
         Call setRf (#rf@[#inst@."dst" <- #val@."data"]);
         Call sbRemove ();
@@ -356,7 +412,7 @@ Section ProcTwoStage.
         Call val <- memRep();
         Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
-        LET inst : decInst <- #curInfo@."decInst";
+        LET inst <- #curInfo;
         Assert #inst@."opType" == $$opSt;
         Write "stall" <- $$false;
         LET ppc <- #curInfo@."curPc";
@@ -372,12 +428,11 @@ Section ProcTwoStage.
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET inst : decInst <- #d2e@."decInst";
-        Assert #inst@."opType" == $$opTh;
-        Call toHost(#inst@."val");
+        Assert #d2e@."opType" == $$opTh;
+        Call toHost(#d2e@."val");
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
-        LET rawInst <- #inst@."rawInst";
+        LET rawInst <- #d2e@."rawInst";
         checkNextPc ppc npcp rf rawInst
 
       with Rule "execNm" :=
@@ -389,9 +444,8 @@ Section ProcTwoStage.
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
         LET ppc <- #d2e@."curPc";
-        LET inst : decInst <- #d2e@."decInst";
-        Assert #inst@."opType" == $$opNm;
-        LET rawInst <- #inst@."rawInst";
+        Assert #d2e@."opType" == $$opNm;
+        LET rawInst <- #d2e@."rawInst";
         Call setRf (execState _ rf ppc rawInst);
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
@@ -439,7 +493,7 @@ Section ProcTwoStageM.
   Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
                                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                   getStAddr getStSrc calcStAddr getStVSrc
-                                  getSrc1 getSrc2 execState execNextPc.
+                                  getSrc1 execState execNextPc.
 
 End ProcTwoStageM.
 
@@ -491,7 +545,7 @@ Section Facts.
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                         getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1 getSrc2).
+                        getSrc1).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
@@ -510,7 +564,7 @@ Section Facts.
   Lemma procTwoStage_ModEquiv:
     ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 execState execNextPc).
+                     getSrc1 execState execNextPc).
   Proof.
     kequiv.
   Qed.

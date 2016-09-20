@@ -24,7 +24,7 @@ Section Inlined.
 
   Definition p2st := p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 execState execNextPc.
+                          getSrc1 execState execNextPc.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
   Definition p2stInl: Modules * bool.
