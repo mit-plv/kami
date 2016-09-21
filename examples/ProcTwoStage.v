@@ -38,6 +38,10 @@ Section OneEltFifo.
   Definition isFull {ty} : ActionT ty Bool :=
     (Read isFull <- ^"full";
      Ret #isFull)%kami_action.
+
+  Definition flush {ty} : ActionT ty Void :=
+    (Write "full" <- $$false;
+     Retv)%kami_action.
   
   Definition oneEltFifo := MODULE {
     Register ^"elt" : dType <- Default
@@ -47,7 +51,7 @@ Section OneEltFifo.
     with Method ^"deq"() : dType := deq
   }.
 
-  Definition oneEltFifoEx := MODULE {
+  Definition oneEltFifoEx1 := MODULE {
     Register ^"elt" : dType <- Default
     with Register ^"full" : Bool <- Default
 
@@ -56,9 +60,18 @@ Section OneEltFifo.
     with Method ^"isFull"() : Bool := isFull
   }.
 
+  Definition oneEltFifoEx2 := MODULE {
+    Register ^"elt" : dType <- Default
+    with Register ^"full" : Bool <- Default
+
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
+    with Method ^"flush"() : Void := flush
+  }.
+
 End OneEltFifo.
 
-Hint Unfold oneEltFifo oneEltFifoEx : ModuleDefs.
+Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
 Hint Unfold enq deq firstElt isFull : MethDefs.
 
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
@@ -198,7 +211,6 @@ Section ProcTwoStage.
 
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
-        Write "fetchStall" <- $$false;
         Write "pc" <- #npc;
 
         LET opType <- getOptype _ rawInst;
@@ -207,7 +219,6 @@ Section ProcTwoStage.
         LET srcIdx <- getLdSrc _ rawInst;
         Call stall1 <- sbSearch1(#srcIdx);
         Assert !#stall1;
-        Call sbInsert(getLdDst _ rawInst);
         LET addr <- getLdAddr _ rawInst;
         LET srcVal <- #rf@[#srcIdx];
         LET laddr <- calcLdAddr _ addr srcVal;
@@ -231,7 +242,6 @@ Section ProcTwoStage.
 
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
-        Write "fetchStall" <- $$false;
         Write "pc" <- #npc;
 
         LET opType <- getOptype _ rawInst;
@@ -267,13 +277,15 @@ Section ProcTwoStage.
 
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
-        Write "fetchStall" <- $$false;
         Write "pc" <- #npc;
 
         LET opType <- getOptype _ rawInst;
         Assert (#opType == $$opTh);
 
         LET srcIdx <- getSrc1 _ rawInst;
+        Call stall1 <- sbSearch1(#srcIdx);
+        Assert !#stall1;
+
         LET srcVal <- #rf@[#srcIdx];
         Call d2eEnq(STRUCT { "opType" ::= #opType;
                              "dst" ::= $$Default;
@@ -295,7 +307,6 @@ Section ProcTwoStage.
 
         Call npc <- predictNextPc(#ppc);
         Read epoch <- "fEpoch";
-        Write "fetchStall" <- $$false;
         Write "pc" <- #npc;
 
         LET opType <- getOptype _ rawInst;
@@ -346,16 +357,17 @@ Section ProcTwoStage.
       with Rule "reqLd" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call st <- getRf();
         Call d2e <- d2eDeq();
         LET fEpoch <- #d2e@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
         Assert #d2e@."opType" == $$opLd;
-        Assert #d2e@."dst" != $0;
+        LET dst <- #d2e@."dst";
+        Assert #dst != $0;
         Call memReq(STRUCT { "addr" ::= #d2e@."addr";
                              "op" ::= $$false;
                              "data" ::= $$Default });
+        Call sbInsert(#dst);
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
         Retv
@@ -459,7 +471,7 @@ Section ProcTwoStage.
                                 ++ scoreBoard
                                 ++ branchPredictor
                                 ++ oneEltFifo d2eFifoName d2eElt
-                                ++ oneEltFifoEx e2dFifoName (Bit addrSize)
+                                ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
@@ -537,10 +549,15 @@ Section Facts.
   Proof. kequiv. Qed.
   Hint Resolve oneEltFifo_ModEquiv.
   
-  Lemma oneEltFifoEx_ModEquiv:
-    forall fifoName dType, ModPhoasWf (oneEltFifoEx fifoName dType).
+  Lemma oneEltFifoEx1_ModEquiv:
+    forall fifoName dType, ModPhoasWf (oneEltFifoEx1 fifoName dType).
   Proof. kequiv. Qed.
-  Hint Resolve oneEltFifoEx_ModEquiv.
+  Hint Resolve oneEltFifoEx1_ModEquiv.
+
+  Lemma oneEltFifoEx2_ModEquiv:
+    forall fifoName dType, ModPhoasWf (oneEltFifoEx1 fifoName dType).
+  Proof. kequiv. Qed.
+  Hint Resolve oneEltFifoEx2_ModEquiv.
 
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
@@ -575,7 +592,8 @@ Hint Resolve regFile_ModEquiv
      scoreBoard_ModEquiv
      branchPredictor_ModEquiv
      oneEltFifo_ModEquiv
-     oneEltFifoEx_ModEquiv
+     oneEltFifoEx1_ModEquiv
+     oneEltFifoEx2_ModEquiv
      decoder_ModEquiv
      executer_ModEquiv
      procTwoStage_ModEquiv.
