@@ -242,12 +242,12 @@ Section Invariants.
       + mred.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac; try (rewrite e in H5; inv H5; fail).
-        rewrite andb_true_l in H15; kinv_simpl; intuition idtac.
+        rewrite andb_true_l in H14; kinv_simpl; intuition idtac.
       + kinv_dest_custom p2st_inv_tac; try (rewrite e in H7; inv H7; fail).
         * rewrite andb_true_l in H4; kinv_simpl; intuition idtac.
-        * rewrite andb_true_l in H12; kinv_simpl; intuition idtac.
+        * rewrite andb_true_l in H11; kinv_simpl; intuition idtac.
       + kinv_dest_custom p2st_inv_tac; try (rewrite e in H5; inv H5; fail).
-        rewrite andb_true_l in H15; kinv_simpl; intuition idtac.
+        rewrite andb_true_l in H14; kinv_simpl; intuition idtac.
       + kinv_dest_custom p2st_inv_tac; try (rewrite e in H7; inv H7; fail).
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
