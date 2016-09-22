@@ -50,12 +50,12 @@ Section ProcDecSC.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit addrSize) <- r of "pc";
-       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
-       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r of "pgm";
-       mlet oev : Bool <- r of "rsToProc"--"empty";
-       mlet oelv : (Vector RsToProc fifoSize) <- r of "rsToProc"--"elt";
-       mlet odv : (Bit fifoSize) <- r of "rsToProc"--"deqP";
+    (mlet pcv : (Bit addrSize) <- r |> "pc";
+       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
+       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r |> "pgm";
+       mlet oev : Bool <- r |> "rsToProc"--"empty";
+       mlet oelv : (Vector RsToProc fifoSize) <- r |> "rsToProc"--"elt";
+       mlet odv : (Bit fifoSize) <- r |> "rsToProc"--"deqP";
        if oev
        then (["pgm" <- (existT _ _ pgmv)]
              +["rf" <- (existT _ _ rfv)]

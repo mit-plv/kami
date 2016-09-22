@@ -1392,14 +1392,14 @@ Lemma disjList_metaReg:
 Proof.
   destruct mr1 as [mr1|mr1], mr2 as [mr2|mr2]; simpl; intros.
   - unfold DisjList; intros.
-    destruct (in_dec string_dec e [nameVal s]); auto.
-    destruct (in_dec string_dec e [nameVal s0]); auto.
+    destruct (in_dec string_dec e (nameVal s :: nil)); auto.
+    destruct (in_dec string_dec e (nameVal s0 :: nil)); auto.
     inv i; auto.
     inv i0; auto.
   - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
     unfold DisjList; intros.
     specialize (IHls e); destruct IHls; auto.
-    destruct (in_dec string_dec e [nameVal s]); auto.
+    destruct (in_dec string_dec e (nameVal s :: nil)); auto.
     inv i; auto; right.
     intro Hx; inv Hx; auto.
     destruct s as [s]; simpl in *; subst.
@@ -1407,7 +1407,7 @@ Proof.
   - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
     unfold DisjList; intros.
     specialize (IHls e); destruct IHls; auto.
-    destruct (in_dec string_dec e [nameVal s0]); auto.
+    destruct (in_dec string_dec e (nameVal s0 :: nil)); auto.
     inv i; auto; left.
     intro Hx; inv Hx; auto.
     destruct s0 as [s0]; simpl in *; subst.

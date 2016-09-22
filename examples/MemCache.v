@@ -24,7 +24,7 @@ Section MemCache.
 
   Definition l1 := l1Cache +++ (l1cs +++ l1tag +++ l1line).
 
-  Definition MIdxBits := TagBits + IdxBits.
+  Definition MIdxBits := IdxBits + TagBits.
 
   Definition fifoRqToP :=
     getMetaFromSinNat

@@ -2037,6 +2037,12 @@ Notation "'[]'" := (M.empty _) : fmap_scope.
 Notation " [ k <- v ] " := (M.add k%string v (M.empty _)) : fmap_scope.
 Notation " m +[ k <- v ] " := (M.add k%string v m) (at level 0) : fmap_scope.
 Notation " m @[ k ] " := (M.find k%string m) (at level 0) : fmap_scope.
+
+Notation "m #[ k |--> v ]" := (M.add k%string v m) (at level 0) : fmap_scope.
+Notation "m #[ k |-> v ]" := (M.add k%string (existT _ _ v) m) (at level 0) : fmap_scope.
+Notation "v === m .[ k ]" := (M.find k%string m = Some (existT _ _ v)) (at level 70) : fmap_scope.
+Notation "_=== m .[ k ]" := (M.find k%string m = None) (at level 70) : fmap_scope.
+
 Delimit Scope fmap_scope with fmap.
 
 Ltac dest_disj :=

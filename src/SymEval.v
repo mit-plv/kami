@@ -5,6 +5,13 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
+(*
+Notation "m ~{ k |-> v }" := ((fun a => if weq a k%string then v else m a) : type (Vector (Bit _) _))
+                               (at level 0).
+*)
+
+Open Scope fmap.
+
 Definition getDefault k :=
   match k as k0 return match k0 with
                          | SyntaxKind k' => type k'
@@ -14,13 +21,9 @@ Definition getDefault k :=
     | NativeKind t c => c
   end.
 
-Notation "m [ k |--> v ]" := (M.add k v m) (at level 0).
-Notation "m [ k |-> v ]" := (m [k |--> existT _ _ v]) (at level 0).
-Notation "v === m .[ k ]" := (M.find k m = Some (existT _ _ v)) (at level 70).
-Notation "_=== m .[ k ]" := (M.find k m = None) (at level 70).
+Definition or_wrap := or.
 
-Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _))
-                               (at level 0).
+Definition and_wrap := and.
 
 Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
   refine match p in Expr _ k' return k' = SyntaxKind Bool -> Prop with            
@@ -30,7 +33,7 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
                                       (SyntaxKind Bool) ise) = true
            | UniBool Neg x => fun ise => semExpr _ x ise -> False
            | BinBool And x y => fun ise => semExpr _ x ise /\ semExpr _ y ise
-           | BinBool Or x y => fun ise => semExpr _ x ise \/ semExpr _ y ise
+           | BinBool Or x y => fun ise => or_wrap (semExpr _ x ise) (semExpr _ y ise)
            | UniBit _ _ _ _ => fun ise => _
            | BinBit _ _ _ _ _ _ => fun ise => _
            | BinBitBool n1 n2 op e1 e2 =>
@@ -68,7 +71,7 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
   | MCall meth s marg cont =>
     match M.find meth cs with
       | None => forall mret, SymSemAction (cont mret) rs rs'
-                                          cs[meth |-> (evalExpr marg, mret)] kf
+                                          cs#[meth |-> (evalExpr marg, mret)] kf
       | Some _ => False
     end
   | Let_ _ e cont =>
@@ -79,12 +82,19 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
       SymSemAction (cont regV) rs rs' cs kf
   | WriteReg r _ e cont =>
     match M.find r rs' with
-      | None => SymSemAction cont rs rs'[r |-> evalExpr e] cs kf
+      | None => SymSemAction cont rs rs'#[r |-> evalExpr e] cs kf
       | Some _ => False
     end
   | IfElse p _ a a' cont =>
-    (semExpr p eq_refl ->
-     SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf)) /\
+    (*
+    IF_then_else
+      (semExpr p eq_refl)
+      (SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
+      (SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
+     *)
+    and_wrap
+      (semExpr p eq_refl ->
+       SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
     ((semExpr p eq_refl -> False) ->
      SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
   | Assert_ p cont =>
@@ -96,7 +106,7 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
 
 Lemma union_add : forall A k (v : A) m1 m2,
   M.find k m1 = None
-  -> M.union m1 m2[k |--> v] = M.union m1[k |--> v] m2.
+  -> M.union m1 m2#[k |--> v] = M.union m1#[k |--> v] m2.
 Proof.
   intros A k v m1.
   M.mind m1; meq.
@@ -148,7 +158,8 @@ Lemma semExpr_sound: forall k (tEq: k = SyntaxKind Bool) (e: Expr type k),
                                      end <-> semExpr e tEq).
 Proof.
   intros k tEq e.
-  apply boolInduction with (k := k) (tEq := tEq) (e := e); intros; simpl in *; intuition auto;
+  apply boolInduction with (k := k) (tEq := tEq) (e := e); intros; simpl in *;
+  unfold or_wrap, and_wrap in *; intuition auto;
   repeat match goal with
            | H: negb _ = true |- _ => apply negb_true_iff in H
            | H: negb _ = false |- _ => apply negb_false_iff in H
@@ -182,7 +193,7 @@ Lemma SymSemAction_sound' : forall k (a : ActionT type k) rs rs' cs' rv,
   -> forall rs'' cs kf, SymSemAction a rs rs'' cs kf
     -> kf (M.union rs'' rs') (M.union cs cs') rv.
 Proof.
-  induction 1; simpl; intuition auto.
+  induction 1; simpl; unfold and_wrap; intuition auto.
 
   - subst.
     rewrite union_add by (destruct (M.find meth cs); intuition auto).
@@ -232,3 +243,4 @@ Proof.
   apply (SymSemAction_sound' H) in H0; auto.
 Qed.
 
+Close Scope fmap.

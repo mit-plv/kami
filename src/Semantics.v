@@ -134,8 +134,8 @@ Definition whd' sz (w: word sz) :=
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wneg n).
-  - exact (fun w => spl1 n1 n2 (spl2 (n1 + n2) n3 w)).
-  - exact (fun w => spl2 n1 n2 w).
+  - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
+  - exact (fun w => split1 n1 n2 w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
@@ -144,7 +144,7 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
     + replace n2 with (n1 + (n2 - n1)) by abstract omega.
       exact (zext w _).
     + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
-      exact (spl2 _ _ w).
+      exact (split1 _ _ w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
@@ -153,8 +153,8 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
     + replace n2 with (n1 + (n2 - n1)) by abstract omega.
       exact (sext w _).
     + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
-      exact (spl2 _ _ w).
-  - exact (fun w => spl1 n1 n2 w).
+      exact (split1 _ _ w).
+  - exact (fun w => split2 n1 n2 w).
 Defined.
 
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
@@ -168,7 +168,7 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Sll n m => (fun x y => sll x (wordToNat y))
     | Srl n m => (fun x y => srl x (wordToNat y))
     | Sra n m => (fun x y => sra x (wordToNat y))
-    | Concat n1 n2 => fun x y => (cmb x y)
+    | Concat n1 n2 => fun x y => (combine y x)
   end.
 
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
