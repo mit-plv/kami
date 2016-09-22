@@ -55,16 +55,16 @@ Section ProcTwoStDec.
   Hint Unfold p2st_pdec_ruleMap: MethDefs.
 
   Definition p2st_pdec_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit addrSize) <- r of "pc";
-       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r of "pgm";
-       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r of "rf";
-       mlet d2eeltv : d2eElt addrSize lgDataBytes rfIdx <- r of "d2e"--"elt";
-       mlet d2efv : Bool <- r of "d2e"--"full";
-       mlet e2deltv : Bit addrSize <- r of "e2d"--"elt";
-       mlet e2dfv : Bool <- r of "e2d"--"full";
-       mlet eev : Bool <- r of "eEpoch";
-       mlet stallv : Bool <- r of "stall";
-       mlet stalledv : d2eElt addrSize lgDataBytes rfIdx <- r of "stalled";
+    (mlet pcv : (Bit addrSize) <- r |> "pc";
+       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r |> "pgm";
+       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
+       mlet d2eeltv : d2eElt addrSize lgDataBytes rfIdx <- r |> "d2e"--"elt";
+       mlet d2efv : Bool <- r |> "d2e"--"full";
+       mlet e2deltv : Bit addrSize <- r |> "e2d"--"elt";
+       mlet e2dfv : Bool <- r |> "e2d"--"full";
+       mlet eev : Bool <- r |> "eEpoch";
+       mlet stallv : Bool <- r |> "stall";
+       mlet stalledv : d2eElt addrSize lgDataBytes rfIdx <- r |> "stalled";
 
        (["stall" <- existT _ _ stallv]
         +["pgm" <- existT _ _ pgmv]

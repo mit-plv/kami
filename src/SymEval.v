@@ -5,6 +5,13 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 
+(*
+Notation "m ~{ k |-> v }" := ((fun a => if weq a k%string then v else m a) : type (Vector (Bit _) _))
+                               (at level 0).
+*)
+
+Open Scope fmap.
+
 Definition getDefault k :=
   match k as k0 return match k0 with
                          | SyntaxKind k' => type k'
@@ -13,14 +20,6 @@ Definition getDefault k :=
     | SyntaxKind k' => getDefaultConstNative k'
     | NativeKind t c => c
   end.
-
-Notation "m [ k |--> v ]" := (M.add k v m) (at level 0).
-Notation "m [ k |-> v ]" := (m [k |--> existT _ _ v]) (at level 0).
-Notation "v === m .[ k ]" := (M.find k m = Some (existT _ _ v)) (at level 70).
-Notation "_=== m .[ k ]" := (M.find k m = None) (at level 70).
-
-Notation "m ~{ k |-> v }" := ((fun a => if weq a k then v else m a) : type (Vector (Bit _) _))
-                               (at level 0).
 
 Definition or_wrap := or.
 
@@ -72,7 +71,7 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
   | MCall meth s marg cont =>
     match M.find meth cs with
       | None => forall mret, SymSemAction (cont mret) rs rs'
-                                          cs[meth |-> (evalExpr marg, mret)] kf
+                                          cs#[meth |-> (evalExpr marg, mret)] kf
       | Some _ => False
     end
   | Let_ _ e cont =>
@@ -83,7 +82,7 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
       SymSemAction (cont regV) rs rs' cs kf
   | WriteReg r _ e cont =>
     match M.find r rs' with
-      | None => SymSemAction cont rs rs'[r |-> evalExpr e] cs kf
+      | None => SymSemAction cont rs rs'#[r |-> evalExpr e] cs kf
       | Some _ => False
     end
   | IfElse p _ a a' cont =>
@@ -107,7 +106,7 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
 
 Lemma union_add : forall A k (v : A) m1 m2,
   M.find k m1 = None
-  -> M.union m1 m2[k |--> v] = M.union m1[k |--> v] m2.
+  -> M.union m1 m2#[k |--> v] = M.union m1#[k |--> v] m2.
 Proof.
   intros A k v m1.
   M.mind m1; meq.
@@ -244,3 +243,4 @@ Proof.
   apply (SymSemAction_sound' H) in H0; auto.
 Qed.
 
+Close Scope fmap.

@@ -1,13 +1,13 @@
-(*Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith ParametricSyntax String
+Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith Kami.ParametricSyntax String
         Lib.Indexer Kami.Syntax Kami.Semantics Program.Equality Lib.CommonTactics
         Kami.Tactics Kami.SymEvalTac Kami.SymEval.
-*)
+(*
 Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
         ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat
         FunctionalExtensionality Program.Equality Kami.Tactics Arith Kami.SymEval
         Kami.SymEvalTac Lib.StringAsList.
-
+*)
 
 
 Set Implicit Arguments.
@@ -409,9 +409,11 @@ Ltac simplMapUpds tac :=
     | _ => idtac
   end; (reflexivity || eassumption || tac).
 
+Open Scope fmap.
+
 Definition do_upd_map_key_instance (x: nat) (ls: list (string * sigT (fullType type))): RegsT :=
   fold_right (fun nk (m: RegsT) =>
-                m[(fst nk) __ x |--> snd nk]) (M.empty _) ls.
+                m#[(fst nk) __ x |--> snd nk]) (M.empty _) ls.
 
 
 Ltac mkList_add_key_instance madds :=
@@ -422,6 +424,7 @@ Ltac mkList_add_key_instance madds :=
     | M.empty ?t => constr:(@nil (string * t))
   end.
 
+Close Scope fmap.
 
   
 (*

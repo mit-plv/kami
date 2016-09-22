@@ -798,7 +798,7 @@ Notation "from '|->' to ; cont" :=
 Notation "||" := (fun _ => None) (at level 12).
 
 (** Notations for register maps *)
-Notation "'mlet' vn : t <- r 'of' kn ; cont" :=
+Notation "'mlet' vn : t <- r '|>' kn ; cont" :=
   (match M.find kn%string r with
    | Some (existT k v) =>
      match k with
