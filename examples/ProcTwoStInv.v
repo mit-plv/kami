@@ -318,8 +318,8 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom p2st_inv_tac.
-        * destruct x0, eepochv; intuition idtac.
-        * destruct x0, eepochv; intuition idtac.
+        * destruct x0, eepochv0; intuition idtac.
+        * destruct x0, eepochv0; intuition idtac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
       + kinv_dest_custom p2st_inv_tac.
@@ -335,7 +335,7 @@ Section Invariants.
 
         END_SKIP_PROOF_ON *) admit.
   Qed.
-  
+
   Lemma p2st_inv_ok:
     forall o,
       reachable o (fst p2stInl) ->
