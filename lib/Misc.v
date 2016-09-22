@@ -1,7 +1,5 @@
 Require Import String StringExtension.
 
-Open Scope string.
-
 Set Implicit Arguments.
 
 Theorem true_False_false: forall v, (v = true -> False) -> v = false.
@@ -23,6 +21,8 @@ Ltac simplBool :=
     | H: ?v = false -> False |- _ =>
       apply false_False_true in H
   end.
+
+Open Scope string.
 
 Lemma not_in_string_uneq':
   forall a x n s, ~ S_In a s -> s <> x ++ (String a n).
@@ -46,3 +46,4 @@ Proof.
 Qed.
 
 Close Scope string.
+

@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List Lib.Concat.
+Require Import Coq.Lists.List Lib.Concat Coq.Program.Basics.
 
 Import ListNotations.
 
@@ -64,6 +64,11 @@ Proof.
       reflexivity.
 Qed.
 
+Lemma list_revcons A (P: Prop): forall l (g: A), (forall l' v, g :: l = l' ++ (v :: nil) -> P) -> P.
+Proof.
+  intros.
+  destruct (list_nil_revcons (g ::l)); firstorder (discriminate || idtac).
+Qed.
 
 Lemma app_single_r: forall A (ls1 ls2: list A) v1 v2,
                       (ls1 ++ [v1] = ls2 ++ [v2])%list ->
@@ -162,19 +167,41 @@ Proof.
   intuition.
 Qed.
 
-Ltac destruct_in :=
-  repeat match goal with
-           | H: In ?v (?ls ++ ?a :: nil) |- _ =>
-             apply (in_revcons ls a v) in H;
-               let isEq := fresh in
-               (destruct H as [ ? | isEq]; [| rewrite isEq in *])
-           | H: In ?v (?a :: ?ls) |- _ =>
-             apply (in_cons) in H;
-               let isEq := fresh in
-               (destruct H as [ ? | isEq]; [| rewrite isEq in *])
-           | |- In ?v (?ls ++ ?a :: nil) =>
-             apply (in_revcons_converse ls)
-           | |- In ?v (?a :: ?ls) =>
-             apply (in_cons_converse ls)
-         end.
-      
+Lemma in_revcons_hyp A ls (a v: A) (P: A -> Prop):
+  (In v (ls ++ (a :: nil)) -> P v) ->
+  (In v ls -> P v) /\ (v = a -> P v).
+Proof.
+  intros.
+  assert ((In v ls \/ v = a) -> P v).
+  { intros K.
+    apply in_revcons_converse in K.
+    tauto.
+  } 
+  tauto.
+Qed.
+
+Lemma in_cons_hyp A ls (a v: A) (P: A -> Prop):
+  (In v (a :: ls) -> P v) ->
+  (In v ls -> P v) /\ (v = a -> P v).
+  intros.
+  assert ((In v ls \/ v = a) -> P v).
+  { intros K.
+    apply in_cons_converse in K.
+    tauto.
+  } 
+  tauto.
+Qed.
+
+Lemma app_or A: forall l1 l2 (v: A), iff (In v (l1 ++ l2)) (In v l1 \/ In v l2).
+Proof.
+  unfold iff.
+  split; intros.
+  - apply in_app_or; assumption.
+  - apply in_or_app; assumption.
+Qed.
+
+Lemma cons_or A: forall l (a v: A), iff (In a (v :: l)) (a = v \/ In a l).
+Proof.
+  unfold iff; simpl.
+  intuition auto.
+Qed.
