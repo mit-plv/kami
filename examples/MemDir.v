@@ -90,6 +90,7 @@ Section Mem.
     META {
         Register "cRqValid": Bool <- false
         with Register "cRqDirw": Dirw <- dirwInit
+        with Register "cRq": RqFromC <- Default
 
         with Rule "missByState" :=
           Read valid <- "cRqValid";
@@ -103,6 +104,7 @@ Section Mem.
           Write "cRqValid" <- $$ true;
           LET dirw: Dirw <- VEC (replicate ($$ false) _);
           Write "cRqDirw" <- #dirw;
+          Write "cRq" <- #rqChild;
           Retv
 
         with Rule "dwnRq" :=
@@ -121,7 +123,7 @@ Section Mem.
           Write "cRqDirw" <- #dirw';
           Retv
 
-        with Rule "dwnRs" :=
+        with Rule "dwnRs_wait" :=
           Call rsChild <- rsFromCPop();
           LET c <- #rsChild@."child";
           LET rs: RsToP <- #rsChild@."rs";
@@ -129,14 +131,35 @@ Section Mem.
           Call dir <- readDir(#idx);
           LET dir' <- #dir@[#c <- #rs@."to"];
           Call writeDir(STRUCT{"addr" ::= #idx; "data" ::= #dir'});
-          Read dirw <- "cRqDirw";
-          LET dirw' <- #dirw@[#c <- $$ false];
-          Write "cRqDirw" <- #dirw';
           If #dir@[#c] == $ Mod
           then Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #rs@."line"}); Retv
           else Retv as _;
+          Read rqChild: RqFromC <- "cRq";
+          LET rq: RqToP <- #rqChild@."rq";
+          Read valid <- "cRqValid";
+          Assert #valid && #rq@."addr" == #rs@."addr";
+          Read dirw <- "cRqDirw";
+          LET dirw' <- #dirw@[#c <- $$ false];
+          Write "cRqDirw" <- #dirw';
           Retv
 
+        with Rule "dwnRs_noWait" :=
+          Call rsChild <- rsFromCPop();
+          LET c <- #rsChild@."child";
+          LET rs: RsToP <- #rsChild@."rs";
+          LET idx <- getIdx #rs@."addr";
+          Call dir <- readDir(#idx);
+          LET dir' <- #dir@[#c <- #rs@."to"];
+          Call writeDir(STRUCT{"addr" ::= #idx; "data" ::= #dir'});
+          If #dir@[#c] == $ Mod
+          then Call writeLine(STRUCT{"addr" ::= #idx; "data" ::= #rs@."line"}); Retv
+          else Retv as _;
+          Read rqChild: RqFromC <- "cRq";
+          LET rq: RqToP <- #rqChild@."rq";
+          Read valid <- "cRqValid";
+          Assert !(#valid && #rq@."addr" == #rs@."addr");
+          Retv
+            
         with Rule "deferred" :=
           Read valid <- "cRqValid";
           Assert #valid;

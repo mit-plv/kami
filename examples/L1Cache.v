@@ -56,7 +56,7 @@ Section L1Cache.
     Definition getOffset (x: (Addr @ var)%kami): (Offset @ var)%kami :=
       UniBit (Trunc LgNumDatas (IdxBits + TagBits)) x.
     
-    Definition makeTagIdx (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) :=
+    Definition makeTagIdx (tag: (Tag@var)%kami) (idx: (Idx@var)%kami) : (TagIdx @ var)%kami :=
       BinBit (Concat TagBits IdxBits) tag idx.
 
     Definition getIdxFromTagIdx (x: (TagIdx @var)%kami): (Idx @ var)%kami :=

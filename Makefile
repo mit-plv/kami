@@ -1,4 +1,4 @@
-IGNORE:=examples/MapVReify examples/MemCacheInl examples/MemCacheInvariants
+IGNORE:=examples/MemCacheInvariants
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))

@@ -341,12 +341,13 @@ Ltac mapVR_Meths n m := mapVReify SignT (fun k (v: SignT k) => v)
 
 Ltac mkStruct :=
   repeat match goal with
-           | H: context[mkStruct ?p ?q] |- _ => rewrite (mkStruct_eq p q) in H;
+           | H: context[@mkStruct ?a ?b ?c] |- _ => rewrite (@mkStruct_eq a b c) in H;
                simpl in H; unfold StringBound.ith_Bounded in H; simpl in H
-           | |- context[mkStruct ?p ?q] => rewrite (mkStruct_eq p q);
+           | |- context[@mkStruct ?a ?b ?c] => rewrite (@mkStruct_eq a b c);
                simpl; unfold StringBound.ith_Bounded; simpl
          end.
 
+(*
 Ltac existRegs n :=
   match goal with
     | |- ?inv ?s =>
@@ -370,7 +371,7 @@ Ltac existRegs n :=
 Ltac simplifyInvs :=
   repeat autounfold with MethDefs in *;
   intros; try (exfalso; assumption);
-  repeat (rewrite ?mapVec_replicate_commute, ?evalVec_replicate in *; simpl in *);
+  repeat (rewrite ?mapVec_replicate_commute, ?evalVec_replicate in *; simpl in * );
   dest; auto; try discriminate;
   repeat match goal with
            | H: nil = (?a ++ ?b :: ?c)%list |- _ => apply app_cons_not_nil in H
@@ -384,8 +385,9 @@ Ltac simplifyInvs :=
 
 Ltac prelimSimplRegs n :=
   existRegs n; simplifyInvs.
+*)
 
-Ltac allRules :=
+Ltac simplMapUpds tac :=
   esplit;
   unfold withIndex;
   match goal with
@@ -399,14 +401,29 @@ Ltac allRules :=
     | _ => idtac
   end; simpl;
   match goal with
-    | |- context [eq_nat_dec ?x ?x] =>
+    | |- context [eq_nat_dec ?x1 ?x2] =>
+      destruct (eq_nat_dec x1 x2); (exfalso; tauto)
+    | |- context [eq_nat_dec ?x1 ?x2] =>
       let isEq := fresh in
-      destruct (eq_nat_dec x x) as [isEq | isEq];
-        [ | clear - isEq; intuition auto]
+      destruct (eq_nat_dec x1 x2) as [isEq | isEq]; try (exfalso; congruence); [ clear isEq ]
     | _ => idtac
+  end; (reflexivity || eassumption || tac).
+
+Definition do_upd_map_key_instance (x: nat) (ls: list (string * sigT (fullType type))): RegsT :=
+  fold_right (fun nk (m: RegsT) =>
+                m[(fst nk) __ x |--> snd nk]) (M.empty _) ls.
+
+
+Ltac mkList_add_key_instance madds :=
+  match madds with
+    | M.add (addIndexToStr _ ?x ?k) ?v ?m =>
+      let ls := mkList_add_key_instance m in
+      constr:( (k, v) :: ls)
+    | M.empty ?t => constr:(@nil (string * t))
   end.
 
 
+  
 (*
 Ltac initRed :=
   kinv_action_dest;
