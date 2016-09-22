@@ -30,9 +30,9 @@ Section Invariants.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition p2stInl := p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 execState execNextPc.
+  Definition p2stInl := projT1 (p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                        getStAddr getStSrc calcStAddr getStVSrc
+                                        getSrc1 execState execNextPc).
 
   Definition p2st_pc_epochs_inv_body
              (fepochv eepochv d2efullv e2dfullv stallv: fullType type (SyntaxKind Bool))
@@ -191,14 +191,14 @@ Section Invariants.
 
   Lemma p2st_scoreboard_inv_ok':
     forall init n ll,
-      init = initRegs (getRegInits (fst p2stInl)) ->
-      Multistep (fst p2stInl) init n ll ->
+      init = initRegs (getRegInits p2stInl) ->
+      Multistep p2stInl init n ll ->
       p2st_scoreboard_inv n.
   Proof. (* SKIP_PROOF_ON
     induction 2.
 
     - p2st_inv_old.
-      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl.
+      unfold getRegInits, p2stInl, ProcTwoStInl.p2stInl, projT1.
       p2st_inv_new; simpl in *; kinv_simpl.
 
     - kinvert.
@@ -226,14 +226,14 @@ Section Invariants.
 
   Lemma p2st_raw_inv_ok':
     forall init n ll,
-      init = initRegs (getRegInits (fst p2stInl)) ->
-      Multistep (fst p2stInl) init n ll ->
+      init = initRegs (getRegInits p2stInl) ->
+      Multistep p2stInl init n ll ->
       p2st_raw_inv n.
   Proof. (* SKIP_PROOF_ON
     induction 2; intros.
 
     - p2st_inv_old.
-      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl.
+      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl, projT1.
       p2st_inv_new; simpl in *; kinv_simpl.
 
     - pose proof (p2st_scoreboard_inv_ok' H H0).
@@ -263,14 +263,14 @@ Section Invariants.
 
   Lemma p2st_decode_inv_ok':
     forall init n ll,
-      init = initRegs (getRegInits (fst p2stInl)) ->
-      Multistep (fst p2stInl) init n ll ->
+      init = initRegs (getRegInits p2stInl) ->
+      Multistep p2stInl init n ll ->
       p2st_decode_inv n.
   Proof. (* SKIP_PROOF_ON
     induction 2; intros.
 
     - p2st_inv_old.
-      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl.
+      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl, projT1.
       p2st_inv_new; simpl in *; kinv_simpl.
 
     - pose proof (p2st_raw_inv_ok' H H0).
@@ -304,14 +304,14 @@ Section Invariants.
 
   Lemma p2st_pc_epochs_inv_ok':
     forall init n ll,
-      init = initRegs (getRegInits (fst p2stInl)) ->
-      Multistep (fst p2stInl) init n ll ->
+      init = initRegs (getRegInits p2stInl) ->
+      Multistep p2stInl init n ll ->
       p2st_pc_epochs_inv n.
   Proof. (* SKIP_PROOF_ON
     induction 2; intros.
 
     - p2st_inv_old.
-      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl.
+      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl, projT1.
       p2st_inv_new; simpl in *; kinv_simpl.
 
     - kinvert.
@@ -338,7 +338,7 @@ Section Invariants.
 
   Lemma p2st_inv_ok:
     forall o,
-      reachable o (fst p2stInl) ->
+      reachable o p2stInl ->
       p2st_pc_epochs_inv o /\ p2st_decode_inv o /\
       p2st_raw_inv o /\ p2st_scoreboard_inv o.
   Proof.

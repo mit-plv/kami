@@ -27,15 +27,33 @@ Section Inlined.
                           getSrc1 execState execNextPc.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
-  Definition p2stInl: Modules * bool.
+  Definition p2stInl: sigT (fun m: Modules => p2st <<== m).
   Proof.
-    remember (inlineF p2st) as inlined.
-    kinline_compute_in Heqinlined.
+    pose proof (inlineF_refines
+                  (procTwoStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                         getStAddr getStSrc calcStAddr getStVSrc
+                                         getSrc1 execState execNextPc type typeUT)
+                  (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p2st)) eq_refl))
+      as Him.
+    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
     match goal with
-    | [H: inlined = ?m |- _] =>
-      exact m
+    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
     end.
+    kinline_compute_in Him.
+    unfold origm in *.
+    specialize (Him eq_refl).
+    exact (existT _ _ Him).
   Defined.
+
+  (* Definition p2stInl: Modules * bool. *)
+  (* Proof. *)
+  (*   remember (inlineF p2st) as inlined. *)
+  (*   kinline_compute_in Heqinlined. *)
+  (*   match goal with *)
+  (*   | [H: inlined = ?m |- _] => *)
+  (*     exact m *)
+  (*   end. *)
+  (* Defined. *)
 
 End Inlined.
 

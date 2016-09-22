@@ -34,7 +34,7 @@ Section ProcTwoStDec.
   Definition p2st := ProcTwoStage.p2st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 execState execNextPc.
+                       getSrc1 execState execNextPc.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
@@ -103,17 +103,25 @@ Section ProcTwoStDec.
            end; dest_if; kinv_simpl; intuition idtac).
 
   Ltac p2st_inv_tac :=
-    try match goal with
-        | [H: p2st_inv _ _ _ _ |- _] => destruct H
-        end;
+    repeat match goal with
+           | [H: p2st_pc_epochs_inv _ _ _ _ |- _] => destruct H
+           | [H: p2st_decode_inv _ _ _ _ _ _ _ _ _ _ _ |- _] => destruct H
+           | [H: p2st_raw_inv _ _ _ _ _ _ |- _] => destruct H
+           | [H: p2st_scoreboard_inv _ _ _ _ |- _] => destruct H
+           end;
     kinv_red.
+
+  Definition p2stInl := ProcTwoStInl.p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                             getStAddr getStSrc calcStAddr getStVSrc
+                                             getSrc1 execState execNextPc.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
   Proof.
-
-    admit.
-    (* kinline_left im. *)
+    admit. (* working on it now *)
+    
+    (* (* instead of: kinline_left im. *) *)
+    (* ketrans; [exact (projT2 p2stInl)|]. *)
     (* kdecompose_nodefs p2st_pdec_regMap p2st_pdec_ruleMap. *)
 
     (* kinv_add p2st_inv_ok. *)
@@ -121,25 +129,11 @@ Section ProcTwoStDec.
 
     (* kinvert. *)
 
-    (* Focus 4. *)
-    
-    (* kinv_action_dest; *)
-    (*   kinv_custom p2st_inv_tac; *)
-    (*   kinv_regmap_red; *)
-    (*   kinv_constr; kinv_eq. *)
-
-    
+    (* kinv_action_dest. *)
+    (* kinv_custom p2st_inv_tac. *)
+    (* kinv_regmap_red. *)
+    (* kinv_constr; kinv_eq. *)
     (* kinv_finish_with kinv_bool. *)
-
-    
-    
-    (* kinv_finish_with kinv_bool. *)
-    (* kinv_finish_with kinv_bool. *)
-    (* kinv_finish_with kinv_bool. *)
-    
-    (* kinv_constr; kinv_eq; kinv_finish_with kinv_bool. *)
-
-
     
   Qed.
 
