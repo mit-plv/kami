@@ -62,6 +62,10 @@ Section Invariants.
       Hd2eeltv0 : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv0);
       d2efullv0 : fullType type (SyntaxKind Bool);
       Hd2efullv0 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv0);
+
+      (* NOTE: Don't remove e2dElt even if it's not used in the invariant body. *)
+      e2deltv0 : fullType type (SyntaxKind (e2dElt addrSize));
+      He2deltv0 : M.find "e2d"--"elt"%string o = Some (existT _ _ e2deltv0);
       e2dfullv0 : fullType type (SyntaxKind Bool);
       He2dfullv0 : M.find "e2d"--"full"%string o = Some (existT _ _ e2dfullv0);
 
