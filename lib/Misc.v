@@ -1,4 +1,4 @@
-Require Import String StringExtension.
+Require Import String StringAsList.
 
 Set Implicit Arguments.
 

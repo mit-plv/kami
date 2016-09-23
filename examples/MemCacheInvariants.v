@@ -2,7 +2,7 @@ Require Import Lib.FMap Lib.Word Lib.WordSupport Ex.MemTypes Lib.Indexer Lib.Str
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
         ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Ex.MapVReify Kami.SymEval
-        Kami.SymEvalTac Lib.StringExtension Lib.StringBound Lib.ListSupport Lib.Misc Lib.StructNotation
+        Kami.SymEvalTac Lib.StringAsList Lib.StringBound Lib.ListSupport Lib.Misc Lib.StructNotation
         Coq.Program.Basics.
 
 Set Implicit Arguments.

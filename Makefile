@@ -1,4 +1,4 @@
-IGNORE:=examples/MemCacheInvariants examples/ProcTwoStInl
+IGNORE:=examples/MemCacheInvariants
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))
