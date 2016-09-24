@@ -20,29 +20,31 @@ Section Inlined.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1.
+                                        getSrc1 predictNextPc.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
-  Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
-  Proof.
-    pose proof (inlineF_refines
-                  (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                        getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 type typeUT)
-                  (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))
-      as Him.
-    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
-    match goal with
-    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
-    end.
-    kinline_compute_in Him.
-    unfold origm in *.
-    specialize (Him eq_refl).
-    exact (existT _ _ Him).
-  Defined.
+  (* Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m). *)
+  (* Proof. *)
+  (*   pose proof (inlineF_refines *)
+  (*                 (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr *)
+  (*                                       getStAddr getStSrc calcStAddr getStVSrc *)
+  (*                                       getSrc1 predictNextPc type typeUT) *)
+  (*                 (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl)) *)
+  (*     as Him. *)
+  (*   unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him. *)
+  (*   match goal with *)
+  (*   | [H: context[inlineF ?m] |- _] => set m as origm in H at 2 *)
+  (*   end. *)
+  (*   kinline_compute_in Him. *)
+  (*   unfold origm in *. *)
+  (*   specialize (Him eq_refl). *)
+  (*   exact (existT _ _ Him). *)
+  (* Defined. *)
 
 End Inlined.

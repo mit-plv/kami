@@ -176,19 +176,12 @@ Section ProcTwoStage.
     Definition sbRemove := MethodSig "remove"() : Void.
     
   End ScoreBoard.
-    
-  Section BranchPredictor.
 
-    Definition branchPredictor := MODULE {
-      Method "predictNextPc" (ppc: Bit addrSize) : Bit addrSize :=
-        Ret (#ppc + $1)
-    }.
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Bit addrSize)).
 
-  End BranchPredictor.
-    
   Section Decode.
-    Definition predictNextPc := MethodSig "predictNextPc"(Bit addrSize) : Bit addrSize.
-
+    
     Definition decoder := MODULE {
       Register "pc" : Bit addrSize <- Default
       with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
@@ -209,7 +202,7 @@ Section ProcTwoStage.
         LET rawInst <- #pgm@[#ppc];
         Call rf <- getRf();
 
-        Call npc <- predictNextPc(#ppc);
+        LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -240,7 +233,7 @@ Section ProcTwoStage.
         LET rawInst <- #pgm@[#ppc];
         Call rf <- getRf();
 
-        Call npc <- predictNextPc(#ppc);
+        LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -275,7 +268,7 @@ Section ProcTwoStage.
         LET rawInst <- #pgm@[#ppc];
         Call rf <- getRf();
 
-        Call npc <- predictNextPc(#ppc);
+        LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -305,7 +298,7 @@ Section ProcTwoStage.
         LET rawInst <- #pgm@[#ppc];
         Call rf <- getRf();
 
-        Call npc <- predictNextPc(#ppc);
+        LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -469,20 +462,19 @@ Section ProcTwoStage.
   Definition procTwoStage := (decoder
                                 ++ regFile
                                 ++ scoreBoard
-                                ++ branchPredictor
                                 ++ oneEltFifo d2eFifoName d2eElt
                                 ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
                                 ++ executer)%kami.
 
 End ProcTwoStage.
 
-Hint Unfold regFile scoreBoard branchPredictor decoder executer procTwoStage : ModuleDefs.
+Hint Unfold regFile scoreBoard decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      d2eElt d2eFifoName d2eEnq d2eDeq
      e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
      getRf setRf
      sbSearch1 sbSearch2 sbInsert sbRemove
-     predictNextPc toHost checkNextPc : MethDefs.
+     toHost checkNextPc : MethDefs.
 
 Section ProcTwoStageM.
   Variables addrSize lgDataBytes rfIdx: nat.
@@ -500,12 +492,14 @@ Section ProcTwoStageM.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
                                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                   getStAddr getStSrc calcStAddr getStVSrc
-                                  getSrc1 execState execNextPc.
+                                  getSrc1 execState execNextPc predictNextPc.
 
 End ProcTwoStageM.
 
@@ -527,7 +521,9 @@ Section Facts.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Lemma regFile_ModEquiv:
     ModPhoasWf (regFile lgDataBytes rfIdx).
@@ -538,11 +534,6 @@ Section Facts.
     ModPhoasWf (scoreBoard rfIdx).
   Proof. kequiv. Qed.
   Hint Resolve scoreBoard_ModEquiv.
-
-  Lemma branchPredictor_ModEquiv:
-    ModPhoasWf (branchPredictor addrSize).
-  Proof. kequiv. Qed.
-  Hint Resolve branchPredictor_ModEquiv.
 
   Lemma oneEltFifo_ModEquiv:
     forall fifoName dType, ModPhoasWf (oneEltFifo fifoName dType).
@@ -562,7 +553,7 @@ Section Facts.
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                         getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1).
+                        getSrc1 predictNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
@@ -581,7 +572,7 @@ Section Facts.
   Lemma procTwoStage_ModEquiv:
     ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 execState execNextPc).
+                     getSrc1 execState execNextPc predictNextPc).
   Proof.
     kequiv.
   Qed.
@@ -590,7 +581,6 @@ End Facts.
 
 Hint Resolve regFile_ModEquiv
      scoreBoard_ModEquiv
-     branchPredictor_ModEquiv
      oneEltFifo_ModEquiv
      oneEltFifoEx1_ModEquiv
      oneEltFifoEx2_ModEquiv

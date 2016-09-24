@@ -679,6 +679,31 @@ Ltac kinv_finish_with tac :=
              end; simpl in *; auto);
       try tac).
 
+Ltac invertActionRep ::=
+     repeat
+     match goal with
+     | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
+     | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+     | [H: if ?c
+           then
+             SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+           else
+             SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+       cbv [BoundedIndexFull
+              IndexBound_head IndexBound_tail
+              mapAttr addFirstBoundedIndex bindex] in *;
+       repeat autounfold with MethDefs; simpl in *;
+       match goal with
+       | [H: if ?c
+             then
+               SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+             else
+               SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+         let ic := fresh "ic" in
+         (remember c as ic; destruct ic; dest; subst)
+       end
+     end.
+
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
 Ltac kinv_dest_custom tac := kinv_action_dest; kinv_custom tac.

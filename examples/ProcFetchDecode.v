@@ -25,7 +25,9 @@ Section FetchDecode.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition f2dElt :=
     STRUCT { "rawInst" :: Data lgDataBytes;
@@ -38,7 +40,6 @@ Section FetchDecode.
   Definition f2dFlush := MethodSig (f2dFifoName -- "flush")() : Void.
 
   Definition getRf := getRf lgDataBytes rfIdx.
-  Definition predictNextPc := predictNextPc addrSize.
   Definition d2eEnq := d2eEnq addrSize lgDataBytes rfIdx.
   Definition e2dDeq := e2dDeq addrSize.
   Definition sbSearch1 := sbSearch1 rfIdx.
@@ -61,7 +62,7 @@ Section FetchDecode.
       Read pc <- "pc";
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
-      Call npc <- predictNextPc(#pc);
+      LET npc <- predictNextPc _ pc;
       Call f2dEnq(STRUCT { "rawInst" ::= #pgm@[#pc];
                            "curPc" ::= #pc;
                            "nextPc" ::= #npc;
@@ -178,7 +179,6 @@ Section FetchDecode.
   }.
 
   Definition fetchDecode := (fetcher
-                               ++ branchPredictor addrSize
                                ++ oneEltFifoEx2 f2dFifoName f2dElt
                                ++ decoder)%kami.
   
@@ -186,7 +186,7 @@ End FetchDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dElt f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf predictNextPc d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
+     getRf d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
 
 (* TODO: Hint Unfold flush should be moved to ProcTwoStage.v *)
 Hint Unfold f2dFlush flush : MethDefs.
@@ -207,10 +207,12 @@ Section Facts.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Lemma fetcher_ModEquiv:
-    ModPhoasWf (fetcher addrSize lgDataBytes).
+    ModPhoasWf (fetcher lgDataBytes predictNextPc).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -227,7 +229,7 @@ Section Facts.
   Lemma fetchDecode_ModEquiv:
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1).
+                            getSrc1 predictNextPc).
   Proof.
     kequiv.
   Qed.

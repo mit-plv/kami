@@ -25,14 +25,13 @@ Section Invariants.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
-
-  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition p2stInl := projT1 (p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 execState execNextPc).
+                                        getSrc1 execState execNextPc predictNextPc).
 
   Definition p2st_pc_epochs_inv_body
              (fepochv eepochv d2efullv e2dfullv stallv: fullType type (SyntaxKind Bool))
@@ -117,6 +116,32 @@ Section Invariants.
 
       Hinv1 : p2st_decode_inv_body pgmv1 rfv1 d2efullv1 d2eeltv1 }.
 
+  (* NOTE: this invariant requires p2st_decode_inv *)
+  Definition p2st_stalled_inv_body
+             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
+             (rfv: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
+             (stallv: fullType type (SyntaxKind Bool))
+             (stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    stallv = true ->
+    let rawInst := stalledv ``"rawInst" in
+    stalledv ``"opType" = evalExpr (getOptype _ rawInst) /\
+    rawInst = pgmv (stalledv ``"curPc") /\
+    (stalledv ``"opType" = opLd -> stalledv ``"dst" = evalExpr (getLdDst _ rawInst)).
+
+  Record p2st_stalled_inv (o: RegsT) : Prop :=
+    { pgmv2 : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+      Hpgmv2 : M.find "pgm"%string o = Some (existT _ _ pgmv2);
+
+      rfv2 : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
+      Hrfv2 : M.find "rf"%string o = Some (existT _ _ rfv2);
+
+      stallv2 : fullType type (SyntaxKind Bool);
+      Hstallv2 : M.find "stall"%string o = Some (existT _ _ stallv2);
+      stalledv2 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
+      Hstalledv2 : M.find "stalled"%string o = Some (existT _ _ stalledv2);
+
+      Hinv2 : p2st_decode_inv_body pgmv2 rfv2 stallv2 stalledv2 }.
+  
   (* NOTE: this invariant requires p2st_scoreboard_inv *)
   Definition p2st_raw_inv_body
              (d2efullv stallv: fullType type (SyntaxKind Bool))
@@ -131,31 +156,7 @@ Section Invariants.
       stalledv ``"dst" <> evalExpr (getSrc1 _ (d2eeltv ``"rawInst")))).
 
   Record p2st_raw_inv (o: RegsT) : Prop :=
-    { d2eeltv2 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
-      Hd2eeltv2 : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv2);
-      d2efullv2 : fullType type (SyntaxKind Bool);
-      Hd2efullv2 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv2);
-
-      stallv2 : fullType type (SyntaxKind Bool);
-      Hstallv2 : M.find "stall"%string o = Some (existT _ _ stallv2);
-      stalledv2 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
-      Hstalledv2 : M.find "stalled"%string o = Some (existT _ _ stalledv2);
-
-      Hinv : p2st_raw_inv_body d2efullv2 stallv2 d2eeltv2 stalledv2 }.
-
-  Definition p2st_scoreboard_inv_body
-             (d2efullv stallv sbvv: fullType type (SyntaxKind Bool))
-             (sbv: fullType type (SyntaxKind (Bit rfIdx)))
-             (d2eeltv stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
-    stallv = true -> stalledv ``"opType" = opLd -> (sbvv = true /\ stalledv ``"dst" = sbv).
-
-  Record p2st_scoreboard_inv (o: RegsT) : Prop :=
-    { sbv3 : fullType type (SyntaxKind (Bit rfIdx));
-      Hsbv3 : M.find "idx"%string o = Some (existT _ _ sbv3);
-      sbvv3 : fullType type (SyntaxKind Bool);
-      Hsbvv3 : M.find "valid"%string o = Some (existT _ _ sbvv3);
-
-      d2eeltv3 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
+    { d2eeltv3 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
       Hd2eeltv3 : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv3);
       d2efullv3 : fullType type (SyntaxKind Bool);
       Hd2efullv3 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv3);
@@ -165,15 +166,40 @@ Section Invariants.
       stalledv3 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
       Hstalledv3 : M.find "stalled"%string o = Some (existT _ _ stalledv3);
 
-      Hinv : p2st_scoreboard_inv_body d2efullv3 stallv3 sbvv3 sbv3 d2eeltv3 stalledv3 }.
+      Hinv : p2st_raw_inv_body d2efullv3 stallv3 d2eeltv3 stalledv3 }.
 
-  Hint Unfold p2st_pc_epochs_inv_body p2st_decode_inv_body
+  Definition p2st_scoreboard_inv_body
+             (d2efullv stallv sbvv: fullType type (SyntaxKind Bool))
+             (sbv: fullType type (SyntaxKind (Bit rfIdx)))
+             (d2eeltv stalledv: fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx))) :=
+    stallv = true -> stalledv ``"opType" = opLd -> (sbvv = true /\ stalledv ``"dst" = sbv).
+
+  Record p2st_scoreboard_inv (o: RegsT) : Prop :=
+    { sbv4 : fullType type (SyntaxKind (Bit rfIdx));
+      Hsbv4 : M.find "idx"%string o = Some (existT _ _ sbv4);
+      sbvv4 : fullType type (SyntaxKind Bool);
+      Hsbvv4 : M.find "valid"%string o = Some (existT _ _ sbvv4);
+
+      d2eeltv4 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
+      Hd2eeltv4 : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv4);
+      d2efullv4 : fullType type (SyntaxKind Bool);
+      Hd2efullv4 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv4);
+
+      stallv4 : fullType type (SyntaxKind Bool);
+      Hstallv4 : M.find "stall"%string o = Some (existT _ _ stallv4);
+      stalledv4 : fullType type (SyntaxKind (d2eElt addrSize lgDataBytes rfIdx));
+      Hstalledv4 : M.find "stalled"%string o = Some (existT _ _ stalledv4);
+
+      Hinv : p2st_scoreboard_inv_body d2efullv4 stallv4 sbvv4 sbv4 d2eeltv4 stalledv4 }.
+
+  Hint Unfold p2st_pc_epochs_inv_body p2st_decode_inv_body p2st_stalled_inv_body
        p2st_raw_inv_body p2st_scoreboard_inv_body : InvDefs.
 
   Ltac p2st_inv_old :=
     repeat match goal with
            | [H: p2st_pc_epochs_inv _ |- _] => destruct H
            | [H: p2st_decode_inv _ |- _] => destruct H
+           | [H: p2st_stalled_inv _ |- _] => destruct H
            | [H: p2st_raw_inv _ |- _] => destruct H
            | [H: p2st_scoreboard_inv _ |- _] => destruct H
            end;
@@ -306,6 +332,39 @@ Section Invariants.
         END_SKIP_PROOF_ON *) admit.
   Qed.
 
+  Lemma p2st_stalled_inv_ok':
+    forall init n ll,
+      init = initRegs (getRegInits p2stInl) ->
+      Multistep p2stInl init n ll ->
+      p2st_stalled_inv n.
+  Proof. (* SKIP_PROOF_ON
+    induction 2; intros.
+
+    - p2st_inv_old.
+      unfold getRegInits, fst, p2stInl, ProcTwoStInl.p2stInl, projT1.
+      p2st_inv_new; simpl in *; kinv_simpl.
+
+    - pose proof (p2st_decode_inv_ok' H H0).
+      kinvert.
+      + mred.
+      + mred.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+      + kinv_dest_custom p2st_inv_tac.
+
+        END_SKIP_PROOF_ON *) admit.
+  Qed.
+
   Lemma p2st_pc_epochs_inv_ok':
     forall init n ll,
       init = initRegs (getRegInits p2stInl) ->
@@ -343,20 +402,20 @@ Section Invariants.
   Lemma p2st_inv_ok:
     forall o,
       reachable o p2stInl ->
-      p2st_pc_epochs_inv o /\ p2st_decode_inv o /\
+      p2st_pc_epochs_inv o /\ p2st_decode_inv o /\ p2st_stalled_inv o /\
       p2st_raw_inv o /\ p2st_scoreboard_inv o.
   Proof.
     intros; inv H; inv H0.
     repeat split.
     - eapply p2st_pc_epochs_inv_ok'; eauto.
     - eapply p2st_decode_inv_ok'; eauto.
+    - eapply p2st_stalled_inv_ok'; eauto.
     - eapply p2st_raw_inv_ok'; eauto.
     - eapply p2st_scoreboard_inv_ok'; eauto.
   Qed.
 
 End Invariants.
 
-Hint Unfold RqFromProc RsToProc: MethDefs.
-Hint Unfold p2st_pc_epochs_inv_body p2st_decode_inv_body
+Hint Unfold p2st_pc_epochs_inv_body p2st_decode_inv_body p2st_stalled_inv_body
      p2st_raw_inv_body p2st_scoreboard_inv_body : InvDefs.
 

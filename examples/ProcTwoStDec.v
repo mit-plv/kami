@@ -26,7 +26,9 @@ Section ProcTwoStDec.
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
             (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -34,7 +36,7 @@ Section ProcTwoStDec.
   Definition p2st := ProcTwoStage.p2st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc.
+                       getSrc1 execState execNextPc predictNextPc.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
@@ -106,6 +108,7 @@ Section ProcTwoStDec.
     repeat match goal with
            | [H: p2st_pc_epochs_inv _ _ _ _ |- _] => destruct H
            | [H: p2st_decode_inv _ _ _ _ _ _ _ _ _ _ _ |- _] => destruct H
+           | [H: p2st_stalled_inv _ _ _ _ _ _ _ _ _ _ _ |- _] => destruct H
            | [H: p2st_raw_inv _ _ _ _ _ _ |- _] => destruct H
            | [H: p2st_scoreboard_inv _ _ _ _ |- _] => destruct H
            end;
@@ -113,7 +116,7 @@ Section ProcTwoStDec.
 
   Definition p2stInl := ProcTwoStInl.p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                              getStAddr getStSrc calcStAddr getStVSrc
-                                             getSrc1 execState execNextPc.
+                                             getSrc1 execState execNextPc predictNextPc.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
@@ -126,7 +129,6 @@ Section ProcTwoStDec.
     kinv_add_end.
 
     kinvert.
-
     - kinv_action_dest;
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;
