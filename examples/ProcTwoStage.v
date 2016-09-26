@@ -451,7 +451,11 @@ Section ProcTwoStage.
         LET ppc <- #d2e@."curPc";
         Assert #d2e@."opType" == $$opNm;
         LET rawInst <- #d2e@."rawInst";
-        Call setRf (execState _ rf ppc rawInst);
+        LET src1 <- getSrc1 _ rawInst;
+        LET val1 <- #rf@[#src1];
+        LET src2 <- getSrc2 _ rawInst;
+        LET val2 <- #rf@[#src2];
+        Call setRf (execState _ val1 val2 ppc rawInst);
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
         checkNextPc ppc npcp rf rawInst
@@ -499,7 +503,7 @@ Section ProcTwoStageM.
   Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
                                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                   getStAddr getStSrc calcStAddr getStVSrc
-                                  getSrc1 execState execNextPc predictNextPc.
+                                  getSrc1 getSrc2 execState execNextPc predictNextPc.
 
 End ProcTwoStageM.
 
@@ -562,7 +566,8 @@ Section Facts.
 
   Lemma executer_ModEquiv:
     forall inName outName,
-      ModPhoasWf (executer inName outName execState execNextPc).
+      ModPhoasWf (
+          executer inName outName getSrc1 getSrc2 execState execNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
@@ -572,7 +577,7 @@ Section Facts.
   Lemma procTwoStage_ModEquiv:
     ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 execState execNextPc predictNextPc).
+                     getSrc1 getSrc2 execState execNextPc predictNextPc).
   Proof.
     kequiv.
   Qed.

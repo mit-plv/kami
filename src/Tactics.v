@@ -487,18 +487,19 @@ Ltac kinline_left im :=
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
   repeat autounfold with MapDefs in *;
+  kstring_simpl; dest;
+  repeat match goal with
+         | [H: M.find _ _ = None |- _] => clear H
+         end;
   repeat
-    (kstring_simpl;
-     try match goal with
+    (try match goal with
          | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
          | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] => rewrite H1 in H2
          | [ |- context[decKind _ _] ] =>
            rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
          | [H: context[decKind _ _] |- _] =>
            rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
-         end;
-     dest; try subst;
-     try findReify).
+         end; try subst; try findReify).
 
 Ltac kregmap_clear :=
   repeat

@@ -26,11 +26,11 @@ Section Inlined.
 
   Definition p2st := p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 execState execNextPc predictNextPc.
+                          getSrc1 getSrc2 execState execNextPc predictNextPc.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
   Definition p2stInl: sigT (fun m: Modules => p2st <<== m).
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     pose proof (inlineF_refines
                   (procTwoStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
@@ -46,6 +46,7 @@ Section Inlined.
     unfold origm in *.
     specialize (Him eq_refl).
     exact (existT _ _ Him).
+    END_SKIP_PROOF_ON *) admit.
   Defined.
 
 End Inlined.

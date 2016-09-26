@@ -82,7 +82,8 @@ Section DecExec.
   Definition StateT (ty : Kind -> Type) := fullType ty StateK.
   Definition StateE (ty : Kind -> Type) := Expr ty StateK.
 
-  Definition ExecStateT := forall ty, StateT ty -> (* rf *)
+  Definition ExecStateT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                                      fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                                       fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                       fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                                       StateE ty. (* next state *)
@@ -224,7 +225,11 @@ Section ProcInst.
       Read pgm <- "pgm";
       LET rawInst <- #pgm@[#ppc];
       Assert (getOptype _ rawInst == $$opNm);
-      Write "rf" <- execState _ rf ppc rawInst;
+      LET src1 <- getSrc1 _ rawInst;
+      LET val1 <- #rf@[#src1];
+      LET src2 <- getSrc2 _ rawInst;
+      LET val2 <- #rf@[#src2];
+      Write "rf" <- execState _ val1 val2 ppc rawInst;
       nextPc ppc rf rawInst
   }.
 
@@ -255,7 +260,7 @@ Section SC.
 
   Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 execState execNextPc.
+                               getSrc1 getSrc2 execState execNextPc.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize lgDataBytes.
 
@@ -286,7 +291,7 @@ Section Facts.
   Lemma pinst_ModEquiv:
     ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 execState execNextPc).
+                      getSrc1 getSrc2 execState execNextPc).
   Proof.
     kequiv.
   Qed.
@@ -297,7 +302,7 @@ Section Facts.
   Lemma pinsts_ModEquiv:
     ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc n).
+                       getSrc1 getSrc2 execState execNextPc n).
   Proof.
     kequiv.
   Qed.
@@ -313,7 +318,7 @@ Section Facts.
   Lemma sc_ModEquiv:
     ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                    getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 execState execNextPc n).
+                   getSrc1 getSrc2 execState execNextPc n).
   Proof.
     kequiv.
   Qed.

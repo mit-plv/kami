@@ -143,7 +143,11 @@ Section ProcDec.
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
       Assert (getOptype _ rawInst == $$opNm);
-      Write "rf" <- execState _ rf ppc rawInst;
+      LET src1 <- getSrc1 _ rawInst;
+      LET val1 <- #rf@[#src1];
+      LET src2 <- getSrc2 _ rawInst;
+      LET val2 <- #rf@[#src2];
+      Write "rf" <- execState _ val1 val2 ppc rawInst;
       nextPc ppc rf rawInst
   }.
 
@@ -173,7 +177,7 @@ Section ProcDecM.
   Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                              getStAddr getStSrc calcStAddr getStVSrc
-                             getSrc1 execState execNextPc.
+                             getSrc1 getSrc2 execState execNextPc.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
@@ -205,7 +209,7 @@ Section Facts.
   Lemma pdec_ModEquiv:
     ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 execState execNextPc).
+                     getSrc1 getSrc2 execState execNextPc).
   Proof.
     kequiv.
   Qed.
@@ -214,7 +218,7 @@ Section Facts.
   Lemma pdecf_ModEquiv:
     ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 execState execNextPc).
+                      getSrc1 getSrc2 execState execNextPc).
   Proof.
     kequiv.
   Qed.
@@ -225,7 +229,7 @@ Section Facts.
   Lemma pdecfs_ModEquiv:
     ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc n).
+                       getSrc1 getSrc2 execState execNextPc n).
   Proof.
     kequiv.
   Qed.
@@ -234,7 +238,7 @@ Section Facts.
   Lemma procDecM_ModEquiv:
     ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                          getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 execState execNextPc n).
+                         getSrc1 getSrc2 execState execNextPc n).
   Proof.
     kequiv.
   Qed.

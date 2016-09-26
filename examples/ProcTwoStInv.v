@@ -31,7 +31,7 @@ Section Invariants.
 
   Definition p2stInl := projT1 (p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 execState execNextPc predictNextPc).
+                                        getSrc1 getSrc2 execState execNextPc predictNextPc).
 
   Definition p2st_pc_epochs_inv_body
              (fepochv eepochv d2efullv e2dfullv stallv: fullType type (SyntaxKind Bool))

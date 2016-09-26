@@ -30,17 +30,14 @@ Section ProcTwoStDec.
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
-  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
-
   Definition p2st := ProcTwoStage.p2st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc predictNextPc.
+                       getSrc1 getSrc2 execState execNextPc predictNextPc.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc.
+                       getSrc1 getSrc2 execState execNextPc.
 
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p2st) => unfold p2st. (* for kequiv *)
@@ -116,24 +113,7 @@ Section ProcTwoStDec.
 
   Definition p2stInl := ProcTwoStInl.p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                              getStAddr getStSrc calcStAddr getStVSrc
-                                             getSrc1 execState execNextPc predictNextPc.
-
-  Ltac kregmap_red ::=
-       repeat autounfold with MethDefs in *;
-  repeat autounfold with MapDefs in *;
-  kstring_simpl; dest;
-  repeat match goal with
-         | [H: M.find _ _ = None |- _] => clear H
-         end;
-  repeat
-    (try match goal with
-         | [H: M.find ?k ?m = _ |- context[M.find ?k ?m] ] => rewrite H
-         | [H1: M.find ?k ?m = _, H2: context[M.find ?k ?m] |- _] => rewrite H1 in H2
-         | [ |- context[decKind _ _] ] =>
-           rewrite kind_eq; unfold eq_rect_r, eq_rect, eq_sym
-         | [H: context[decKind _ _] |- _] =>
-           rewrite kind_eq in H; unfold eq_rect_r, eq_rect, eq_sym in H
-         end; try subst; try findReify).
+                                             getSrc1 getSrc2 execState execNextPc predictNextPc.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.

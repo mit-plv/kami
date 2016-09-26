@@ -30,7 +30,7 @@ Section Inlined.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
   Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     pose proof (inlineF_refines
                   (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
@@ -45,6 +45,7 @@ Section Inlined.
     unfold origm in *.
     specialize (Him eq_refl).
     exact (existT _ _ Him).
+    END_SKIP_PROOF_ON *) admit.
   Defined.
 
 End Inlined.
