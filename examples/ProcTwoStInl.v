@@ -34,7 +34,7 @@ Section Inlined.
     pose proof (inlineF_refines
                   (procTwoStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 execState execNextPc predictNextPc
+                                         getSrc1 getSrc2 execState execNextPc predictNextPc
                                          type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p2st)) eq_refl))
       as Him.
