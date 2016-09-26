@@ -70,9 +70,12 @@ Notation "'STRUCT' { s1 ; .. ; sN }" :=
 
 Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
 
+Definition isValid := "isValid"%string.
+Definition value := "value"%string.
+
 Definition Maybe (t: Kind) := STRUCT {
-                                  "valid" :: Bool;
-                                  "value" :: t
+                                  isValid :: Bool;
+                                  value :: t
                                 }.
 
 Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0).

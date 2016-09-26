@@ -36,5 +36,8 @@ Makefile.coq.src: Makefile $(LIBVS) $(VS)
 
 clean:: Makefile.coq.all Makefile.coq.src
 	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean
+	rm -f */*.v.d
+	rm -f */*.glob
+	rm -f */*.vo
 	rm -f Makefile.coq.all
 	rm -f Makefile.coq.src

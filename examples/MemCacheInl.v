@@ -1,6 +1,8 @@
 Require Import Ex.MemCache Kami.Notations Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.ParametricEquiv Kami.ParametricInline String Kami.ParametricInlineLtac.
-Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tactics List.
+Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tactics List Ex.FifoNames Ex.Names Lib.Indexer Ex.RegFile.
+Require Import Ex.L1Cache Ex.MemDir Ex.ChildParent.
+Require Import Ex.L1CacheNames Ex.MemDirNames Ex.ChildParentNames.
 
 Set Implicit Arguments.
 
@@ -33,9 +35,9 @@ Ltac simplMod :=
            L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
            L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
            L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-           L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.readLine
-           L1Cache.writeLine L1Cache.readTag L1Cache.writeTag
-           L1Cache.readCs L1Cache.writeCs
+           L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
+           L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite
+           L1Cache.csRead L1Cache.csWrite
 
            MemCache.MIdxBits
 
@@ -44,8 +46,8 @@ Ltac simplMod :=
            MemDir.RqToP MemDir.RqFromC MemDir.RsToP
            MemDir.RsFromC MemDir.FromP MemDir.ToC
            MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-           MemDir.readLine MemDir.writeLine MemDir.readDir
-           MemDir.writeDir MemDir.Child
+           MemDir.lineRead MemDir.lineWrite MemDir.dirRead
+           MemDir.dirWrite MemDir.Child
 
            MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
            MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
@@ -87,9 +89,9 @@ Ltac simplifyMod :=
          L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
          L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
          L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-         L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.readLine
-         L1Cache.writeLine L1Cache.readTag L1Cache.writeTag
-         L1Cache.readCs L1Cache.writeCs
+         L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
+         L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite
+         L1Cache.csRead L1Cache.csWrite
 
          MemCache.MIdxBits
 
@@ -98,8 +100,8 @@ Ltac simplifyMod :=
          MemDir.RqToP MemDir.RqFromC MemDir.RsToP
          MemDir.RsFromC MemDir.FromP MemDir.ToC
          MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-         MemDir.readLine MemDir.writeLine MemDir.readDir
-         MemDir.writeDir MemDir.Child
+         MemDir.lineRead MemDir.lineWrite MemDir.dirRead
+         MemDir.dirWrite MemDir.Child
 
          MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
          MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
@@ -298,7 +300,6 @@ Ltac finish_def :=
     | m := ?mod: MetaModule |- _ =>
            cbv [NativeFifo.listEltK NativeFifo.listEnq NativeFifo.listEltT] in m;
              simpl in m; clear -m;
-             cbv [Indexer.withPrefix Indexer.prefixSymbol] in m;
              exact mod
   end.
 
@@ -335,8 +336,6 @@ Section MemCacheInl.
   Proof.
     pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as m;
 
-    (*    repeat autounfold with ModuleDefs in m; *)
-    
     cbv [
         ChildParent.childParent
 
@@ -363,8 +362,6 @@ Section MemCacheInl.
           convSinToGen concatMetaMod app metaRegs
           metaRules metaMeths
 
-          Indexer.withPrefix Indexer.prefixSymbol
-
           ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
           ChildParent.Offset ChildParent.Line
           ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
@@ -376,8 +373,8 @@ Section MemCacheInl.
           L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
           L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
           L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-          L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.readLine
-          L1Cache.writeLine L1Cache.readTag L1Cache.writeTag L1Cache.readCs L1Cache.writeCs
+          L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
+          L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite L1Cache.csRead L1Cache.csWrite
 
           L1Cache.RqFromProc L1Cache.rqFromProcFirst
 
@@ -386,7 +383,7 @@ Section MemCacheInl.
           MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset MemDir.Line
           MemDir.RqToP MemDir.RqFromC MemDir.RsToP MemDir.RsFromC MemDir.FromP MemDir.ToC
           MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-          MemDir.readLine MemDir.writeLine MemDir.readDir MemDir.writeDir MemDir.Child
+          MemDir.lineRead MemDir.lineWrite MemDir.dirRead MemDir.dirWrite MemDir.Child
 
           MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line
           MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC
@@ -402,28 +399,6 @@ Section MemCacheInl.
           ret arg
 
           projT1 projT2
-
-          (*
-          Struct.attrName Struct.attrType
-
-          
-          getDefaultConst
-          makeConst
-
-          RegFile.DataArray Msi.Msi
-
-          getDefaultConstBit
-
-          MemTypes.RqToP MemTypes.RsToProc MemTypes.FromP
-          Void
-
-          NativeFifo.nativeEnqS
-          MemTypes.RqFromProc
-
-          NativeFifo.listEltK
-          NativeFifo.nativeDeqS
-          NativeFifo.nativeFirstEltS
-           *)
       ] in m;
     simpl in m.
 
@@ -454,20 +429,20 @@ Section MemCacheInl.
   Proof.
     start_def nmemCacheInl_flat.
 
-    ssF "read.mline" "deferred".
+    ssF (mline -- read) deferred.
   
-    ssNoF "read.mcs" "missByState".
-    ssNoF "read.mcs" "dwnRq".
-    ssNoF "read.mcs" "dwnRs_wait".
-    ssNoF "read.mcs" "dwnRs_noWait".
-    ssF "read.mcs" "deferred".
+    ssNoF (mcs -- read) missByState.
+    ssNoF (mcs -- read) dwnRq.
+    ssNoF (mcs -- read) dwnRs_wait.
+    ssNoF (mcs -- read) dwnRs_noWait.
+    ssF (mcs -- read) deferred.
 
-    ssNoF "write.mline" "dwnRs_wait".
-    ssF "write.mline" "dwnRs_noWait".
+    ssNoF (mline -- write) dwnRs_wait.
+    ssF (mline -- write) dwnRs_noWait.
 
-    ssNoF "write.mcs" "dwnRs_wait".
-    ssNoF "write.mcs" "dwnRs_noWait".
-    ssF "write.mcs" "deferred".
+    ssNoF (mcs -- write) dwnRs_wait.
+    ssNoF (mcs -- write) dwnRs_noWait.
+    ssF (mcs -- write) deferred.
 
     finish_def.
   Defined.
@@ -480,20 +455,20 @@ Section MemCacheInl.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
     
-    ssFilt "read.mline" "deferred".
+    ssFilt (mline -- read) deferred.
   
-    ssNoFilt "read.mcs" "missByState".
-    ssNoFilt "read.mcs" "dwnRq".
-    ssNoFilt "read.mcs" "dwnRs_wait".
-    ssNoFilt "read.mcs" "dwnRs_noWait".
-    ssFilt "read.mcs" "deferred".
+    ssNoFilt (mcs -- read) missByState.
+    ssNoFilt (mcs -- read) dwnRq.
+    ssNoFilt (mcs -- read) dwnRs_wait.
+    ssNoFilt (mcs -- read) dwnRs_noWait.
+    ssFilt (mcs -- read) deferred.
 
-    ssNoFilt "write.mline" "dwnRs_wait".
-    ssFilt "write.mline" "dwnRs_noWait".
+    ssNoFilt (mline -- write) dwnRs_wait.
+    ssFilt (mline -- write) dwnRs_noWait.
 
-    ssNoFilt "write.mcs" "dwnRs_wait".
-    ssNoFilt "write.mcs" "dwnRs_noWait".
-    ssFilt "write.mcs" "deferred".
+    ssNoFilt (mcs -- write) dwnRs_wait.
+    ssNoFilt (mcs -- write) dwnRs_noWait.
+    ssFilt (mcs -- write) deferred.
 
     finish_pf.
        END_SKIP_PROOF_ON *) admit.
@@ -503,16 +478,16 @@ Section MemCacheInl.
   Proof.
 
     start_def nmemCacheInl_1.
-    ssNoF "enq.toChild" "dwnRq".
-    ssF "enq.toChild" "deferred".
+    ssNoF (toChild -- enqName) dwnRq.
+    ssF (toChild -- enqName) deferred.
 
-    ssNoF "firstElt.rqFromChild" "missByState".
-    ssF "firstElt.rqFromChild" "dwnRq".
+    ssNoF (rqFromChild -- firstEltName) missByState.
+    ssF (rqFromChild -- firstEltName) dwnRq.
     
-    ssF "deq.rqFromChild" "deferred".
+    ssF (rqFromChild -- deqName) deferred.
 
-    ssNoF "deq.rsFromChild" "dwnRs_wait".
-    ssF "deq.rsFromChild" "dwnRs_noWait".
+    ssNoF (rsFromChild -- deqName) dwnRs_wait.
+    ssF (rsFromChild -- deqName) dwnRs_noWait.
 
     finish_def.
   Defined.
@@ -525,18 +500,17 @@ Section MemCacheInl.
     (* SKIP_PROOF_ON
 
     start_pf2 nmemCacheInl_1 nmemCacheInl_1_pf.
+
+    ssNoFilt (toChild -- enqName) dwnRq.
+    ssFilt (toChild -- enqName) deferred.
+
+    ssNoFilt (rqFromChild -- firstEltName) missByState.
+    ssFilt (rqFromChild -- firstEltName) dwnRq.
     
-    ssNoFilt "enq.toChild" "dwnRq".
-    ssFilt "enq.toChild" "deferred".
+    ssFilt (rqFromChild -- deqName) deferred.
 
-    ssNoFilt "firstElt.rqFromChild" "missByState".
-    ssFilt "firstElt.rqFromChild" "dwnRq".
-    
-    ssFilt "deq.rqFromChild" "deferred".
-
-    ssNoFilt "deq.rsFromChild" "dwnRs_wait".
-    ssFilt "deq.rsFromChild" "dwnRs_noWait".
-
+    ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
+    ssFilt (rsFromChild -- deqName) dwnRs_noWait.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -545,11 +519,12 @@ Section MemCacheInl.
   Proof.
 
     start_def nmemCacheInl_2.
-    gsF "enq.rsFromChild" "rsFromCToP".
-
-    gsF "enq.rqFromChild" "rqFromCToP".
     
-    gsF "deq.toChild" "fromPToC".
+    gsF (rsFromChild -- enqName) rsFromCToPRule.
+
+    gsF (rqFromChild -- enqName) rqFromCToPRule.
+    
+    gsF (toChild -- deqName) fromPToCRule.
 
     finish_def.
   Defined.
@@ -562,11 +537,12 @@ Section MemCacheInl.
     (* SKIP_PROOF_ON
 
     start_pf2 nmemCacheInl_2 nmemCacheInl_2_pf.
-    gsFilt "enq.rsFromChild" "rsFromCToP".
 
-    gsFilt "enq.rqFromChild" "rqFromCToP".
+    gsFilt (rsFromChild -- enqName) rsFromCToPRule.
+
+    gsFilt (rqFromChild -- enqName) rqFromCToPRule.
     
-    gsFilt "deq.toChild" "fromPToC".
+    gsFilt (toChild -- deqName) fromPToCRule.
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
@@ -578,12 +554,12 @@ Section MemCacheInl.
   Proof.
     start_def nmemCacheInl_3.
 
-    ggNoF "read.cs" "l1MissByState".
-    ggNoF "read.cs" "l1MissByLine".
-    ggNoF "read.cs" "l1Hit".
-    ggNoF "read.cs" "writeback".
-    ggNoF "read.cs" "upgRq".
-    ggNoF "read.cs" "upgRs".
+    ggNoF (cs -- read) l1MissByState.
+    ggNoF (cs -- read) l1MissByLine.
+    ggNoF (cs -- read) l1Hit.
+    ggNoF (cs -- read) writeback.
+    ggNoF (cs -- read) upgRq.
+    ggNoF (cs -- read) upgRs.
 
     finish_def.
   Defined.
@@ -592,10 +568,10 @@ Section MemCacheInl.
   Proof.
     start_def nmemCacheInl_4.
     
-    ggNoF "read.cs" "ld".
-    ggNoF "read.cs" "st".
-    ggNoF "read.cs" "drop".
-    ggF "read.cs" "pProcess".
+    ggNoF (cs -- read) ld.
+    ggNoF (cs -- read) st.
+    ggNoF (cs -- read) drop.
+    ggNoF (cs -- read) pProcess.
 
     finish_def.
   Defined.
@@ -609,12 +585,12 @@ Section MemCacheInl.
 
     start_pf2 nmemCacheInl_3 nmemCacheInl_3_pf.
 
-    ggNoFilt "read.cs" "l1MissByState".
-    ggNoFilt "read.cs" "l1MissByLine".
-    ggNoFilt "read.cs" "l1Hit".    
-    ggNoFilt "read.cs" "writeback".
-    ggNoFilt "read.cs" "upgRq".
-    ggNoFilt "read.cs" "upgRs".
+    ggNoFilt (cs -- read) l1MissByState.
+    ggNoFilt (cs -- read) l1MissByLine.
+    ggNoFilt (cs -- read) l1Hit.
+    ggNoFilt (cs -- read) writeback.
+    ggNoFilt (cs -- read) upgRq.
+    ggNoFilt (cs -- read) upgRs.
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
@@ -628,10 +604,10 @@ Section MemCacheInl.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_4 nmemCacheInl_4_pf.
 
-    ggNoFilt "read.cs" "ld".
-    ggNoFilt "read.cs" "st".
-    ggNoFilt "read.cs" "drop".
-    ggFilt "read.cs" "pProcess".
+    ggNoFilt (cs -- read) ld.
+    ggNoFilt (cs -- read) st.
+    ggNoFilt (cs -- read) drop.
+    ggNoFilt (cs -- read) pProcess.
 
     finish_pf.
        END_SKIP_PROOF_ON *) admit.
@@ -669,16 +645,16 @@ Section MemCacheInl2.
   Definition nmemCacheInl_5: MetaModule.
   Proof.
     start_def nmemCacheInl_4_5'.
-    
-    ggNoF "read.tag" "l1MissByState".
-    ggNoF "read.tag" "l1MissByLine".
-    ggNoF "read.tag" "l1Hit".    
-    ggNoF "read.tag" "writeback".
-    ggNoF "read.tag" "upgRq".
-    ggNoF "read.tag" "ld".
-    ggNoF "read.tag" "st".
-    ggNoF "read.tag" "drop".
-    ggF "read.tag" "pProcess".
+
+    ggNoF (tag -- read) l1MissByState.
+    ggNoF (tag -- read) l1MissByLine.
+    ggNoF (tag -- read) l1Hit.
+    ggNoF (tag -- read) writeback.
+    ggNoF (tag -- read) upgRq.
+    ggNoF (tag -- read) ld.
+    ggNoF (tag -- read) st.
+    ggNoF (tag -- read) drop.
+    ggF (tag -- read) pProcess.
 
     finish_def.
   Defined.
@@ -690,16 +666,16 @@ Section MemCacheInl2.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_4_5' nmemCacheInl_4_5'_pf.
-    
-    ggNoFilt "read.tag" "l1MissByState".
-    ggNoFilt "read.tag" "l1MissByLine".
-    ggNoFilt "read.tag" "l1Hit".    
-    ggNoFilt "read.tag" "writeback".
-    ggNoFilt "read.tag" "upgRq".
-    ggNoFilt "read.tag" "ld".
-    ggNoFilt "read.tag" "st".
-    ggNoFilt "read.tag" "drop".
-    ggFilt "read.tag" "pProcess".
+
+    ggNoFilt (tag -- read) l1MissByState.
+    ggNoFilt (tag -- read) l1MissByLine.
+    ggNoFilt (tag -- read) l1Hit.
+    ggNoFilt (tag -- read) writeback.
+    ggNoFilt (tag -- read) upgRq.
+    ggNoFilt (tag -- read) ld.
+    ggNoFilt (tag -- read) st.
+    ggNoFilt (tag -- read) drop.
+    ggFilt (tag -- read) pProcess.
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
@@ -736,25 +712,25 @@ Section MemCacheInl3.
   Definition nmemCacheInl_6: MetaModule.
   Proof.
     start_def nmemCacheInl_5'.
-    ggNoF "read.line" "writeback".
-    ggNoF "read.line" "ld".
-    ggNoF "read.line" "st".
-    ggF "read.line" "pProcess".
+    ggNoF (line -- read) writeback.
+    ggNoF (line -- read) ld.
+    ggNoF (line -- read) st.
+    ggF (line -- read) pProcess.
     finish_def.
   Defined.
 
   Definition nmemCacheInl_6_3: MetaModule.
   Proof.
     start_def nmemCacheInl_6.
-    ggNoF "write.cs" "writeback".
-    ggNoF "write.cs" "upgRs".
+    ggNoF (cs -- write) writeback.
+    ggNoF (cs -- write) upgRs.
     finish_def.
   Defined.
 
   Definition nmemCacheInl_6_6: MetaModule.
   Proof.
     start_def nmemCacheInl_6_3.
-    ggF "write.cs" "pProcess".
+    ggF (cs -- write) pProcess.
 
     finish_def.
   Defined.
@@ -767,10 +743,10 @@ Section MemCacheInl3.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_5' nmemCacheInl_5'_pf.
     
-    ggNoFilt "read.line" "writeback".
-    ggNoFilt "read.line" "ld".
-    ggNoFilt "read.line" "st".
-    ggFilt "read.line" "pProcess".
+    ggNoFilt (line -- read) writeback.
+    ggNoFilt (line -- read) ld.
+    ggNoFilt (line -- read) st.
+    ggFilt (line -- read) pProcess.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -783,8 +759,8 @@ Section MemCacheInl3.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6 nmemCacheInl_6_pf.
     
-    ggNoFilt "write.cs" "writeback".
-    ggNoFilt "write.cs" "upgRs".
+    ggNoFilt (cs -- write) writeback.
+    ggNoFilt (cs -- write) upgRs.
 
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
@@ -798,7 +774,7 @@ Section MemCacheInl3.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6_3 nmemCacheInl_6_3_pf.
     
-    ggFilt "write.cs" "pProcess".
+    ggFilt (cs -- write) pProcess.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -834,15 +810,15 @@ Section MemCacheInl4.
   Definition nmemCacheInl_7: MetaModule.
   Proof.
     start_def nmemCacheInl_6_6'.
-    ggF "write.tag" "upgRs".
+    ggF (tag -- write) upgRs.
     finish_def.
   Defined.
 
   Definition nmemCacheInl_7_3: MetaModule.
   Proof.
     start_def nmemCacheInl_7.
-    ggNoF "write.line" "upgRs".
-    ggF "write.line" "st".
+    ggNoF (line -- write) upgRs.
+    ggF (line -- write) st.
     finish_def.
   Defined.
   
@@ -850,9 +826,9 @@ Section MemCacheInl4.
   Proof.
     start_def nmemCacheInl_7_3.
 
-    ggNoF "deq.fromParent" "upgRs".
-    ggNoF "deq.fromParent" "drop".
-    ggF "deq.fromParent" "pProcess".
+    ggNoF (fromParent -- deqName) upgRs.
+    ggNoF (fromParent -- deqName) drop.
+    ggF (fromParent -- deqName) pProcess.
     finish_def.
   Defined.
 
@@ -863,7 +839,7 @@ Section MemCacheInl4.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6_6' nmemCacheInl_6_6'_pf.
-    ggFilt "write.tag" "upgRs".
+    ggFilt (tag -- write) upgRs.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -875,8 +851,8 @@ Section MemCacheInl4.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7 nmemCacheInl_7_pf.
-    ggNoFilt "write.line" "upgRs".
-    ggFilt "write.line" "st".
+    ggNoFilt (line -- write) upgRs.
+    ggFilt (line -- write) st.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -888,9 +864,9 @@ Section MemCacheInl4.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7_3 nmemCacheInl_7_3_pf.
-    ggNoFilt "deq.fromParent" "upgRs".
-    ggNoFilt "deq.fromParent" "drop".
-    ggFilt "deq.fromParent" "pProcess".
+    ggNoFilt (fromParent -- deqName) upgRs.
+    ggNoFilt (fromParent -- deqName) drop.
+    ggFilt (fromParent -- deqName) pProcess.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -925,29 +901,29 @@ Section MemCacheInl5.
   Definition nmemCacheInl_8: MetaModule.
   Proof.
     start_def nmemCacheInl_7_7'.
-    ggF "enq.rqToParent" "upgRq".
+    ggF (rqToParent -- enqName) upgRq.
     finish_def.
   Defined.
 
   Definition nmemCacheInl_9: MetaModule.
   Proof.
     start_def nmemCacheInl_8.
-    ggNoF "enq.rsToParent" "writeback".
-    ggF "enq.rsToParent" "pProcess".
+    ggNoF (rsToParent -- enqName) writeback.
+    ggF (rsToParent -- enqName) pProcess.
     finish_def.
   Defined.
 
   Definition nmemCacheInl_10: MetaModule.
   Proof.
     start_def nmemCacheInl_9.
-    ggF "deq.rqToParent" "rqFromCToP".
+    ggF (rqToParent -- deqName) rqFromCToPRule.
     finish_def.
   Defined.
     
   Definition nmemCacheInl_11: MetaModule.
   Proof.
     start_def nmemCacheInl_10.
-    ggF "deq.rsToParent" "rsFromCToP".
+    ggF (rsToParent -- deqName) rsFromCToPRule.
     finish_def.
   Defined.
 
@@ -955,7 +931,7 @@ Section MemCacheInl5.
   Definition nmemCacheInl: MetaModule.
   Proof.
     start_def nmemCacheInl_11.
-    ggF "enq.fromParent" "fromPToC".
+    ggF (fromParent -- enqName) fromPToCRule.
     finish_def.
   Defined.
 
@@ -966,7 +942,7 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7_7' nmemCacheInl_7_7'_pf.
-    ggFilt "enq.rqToParent" "upgRq".
+    ggFilt (rqToParent -- enqName) upgRq.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -978,8 +954,8 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_8 nmemCacheInl_8_pf.
-    ggNoFilt "enq.rsToParent" "writeback".
-    ggFilt "enq.rsToParent" "pProcess".
+    ggNoFilt (rsToParent -- enqName) writeback.
+    ggFilt (rsToParent -- enqName) pProcess.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -991,7 +967,7 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_9 nmemCacheInl_9_pf.
-    ggFilt "deq.rqToParent" "rqFromCToP".
+    ggFilt (rqToParent -- deqName) rqFromCToPRule.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -1003,7 +979,7 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_10 nmemCacheInl_10_pf.
-    ggFilt "deq.rsToParent" "rsFromCToP".
+    ggFilt (rsToParent -- deqName) rsFromCToPRule.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.
@@ -1015,7 +991,7 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_11 nmemCacheInl_11_pf.
-    ggFilt "enq.fromParent" "fromPToC".
+    ggFilt (fromParent -- enqName) fromPToCRule.
     finish_pf.
         END_SKIP_PROOF_ON *) admit.
   Qed.

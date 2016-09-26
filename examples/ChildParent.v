@@ -2,7 +2,7 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Indexer.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Wf Kami.ParametricWf Kami.Notations.
 Require Import Kami.Semantics Kami.ParametricEquiv Kami.Tactics.
-Require Import Ex.MemTypes.
+Require Import Ex.MemTypes Ex.Names Ex.FifoNames Ex.ChildParentNames.
 
 Set Implicit Arguments.
 
@@ -24,34 +24,34 @@ Section ChildParent.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
 
-  Definition rqToPPop := MethodSig "rqToParent"--"deq" (Void): RqToP.
-  Definition rqFromCEnq := MethodSig "rqFromChild"--"enq" (RqFromC): Void.
-  Definition rsToPPop := MethodSig "rsToParent"--"deq" (Void): RsToP.
-  Definition rsFromCEnq := MethodSig "rsFromChild"--"enq" (RsFromC): Void.
+  Definition rqToPPop := MethodSig (rqToParent -- deqName) (Void): RqToP.
+  Definition rqFromCEnq := MethodSig (rqFromChild -- enqName) (RqFromC): Void.
+  Definition rsToPPop := MethodSig (rsToParent -- deqName) (Void): RsToP.
+  Definition rsFromCEnq := MethodSig (rsFromChild -- enqName) (RsFromC): Void.
 
-  Definition toCPop := MethodSig "toChild"--"deq" (Void): ToC.
-  Definition fromPEnq := MethodSig "fromParent"--"enq" (FromP): Void.
+  Definition toCPop := MethodSig (toChild -- deqName) (Void): ToC.
+  Definition fromPEnq := MethodSig (fromParent -- enqName) (FromP): Void.
 
   Local Notation "'n'" := (wordToNat (wones LgNumChildren)).
   Definition childParent :=
     META {
-      Repeat Rule till n with LgNumChildren by "rqFromCToP" :=
+      Repeat Rule till n with LgNumChildren by rqFromCToPRule :=
         ILET i;  
-        Calli rq <- rqToPPop();
-        Call rqFromCEnq(STRUCT{"child" ::= #i; "rq" ::= #rq});
+        Calli rqT <- rqToPPop();
+        Call rqFromCEnq(STRUCT{child ::= #i; rq ::= #rqT});
         Retv
               
-      with Repeat Rule till n with LgNumChildren by "rsFromCToP" :=
+      with Repeat Rule till n with LgNumChildren by rsFromCToPRule :=
         ILET i;  
-        Calli rs <- rsToPPop();
-        Call rsFromCEnq(STRUCT{"child" ::= #i; "rs" ::= #rs});
+        Calli rsT <- rsToPPop();
+        Call rsFromCEnq(STRUCT{child ::= #i; rs ::= #rsT});
         Retv
 
-      with Repeat Rule till n with LgNumChildren by "fromPToC" :=
+      with Repeat Rule till n with LgNumChildren by fromPToCRule :=
         ILET i;
-        Call msg <- toCPop();
-        Assert # i == #msg@."child";
-        Calli fromPEnq(#msg@."msg");
+        Call msgT <- toCPop();
+        Assert # i == #msgT@.child;
+        Calli fromPEnq(#msgT@.msg);
         Retv
     }.
   

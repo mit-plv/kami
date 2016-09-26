@@ -1,10 +1,28 @@
-Require Import Kami.Syntax Kami.Notations.
-Require Import Ex.Msi.
+Require Import Kami.Syntax Kami.Notations String.
+Require Import Ex.Msi Ex.RegFile Ex.FifoNames.
 
 Definition MemOp := Bool.
 
 Definition toMsi var (x: (MemOp @ var)%kami): (Msi @ var)%kami :=
   (IF x then $ Mod else $ Sh)%kami_expr.
+
+Section FieldDefns.
+  Local Open Scope string.
+  Definition op := "op".
+  Definition byteEn := "byteEn".
+  Definition data := "data".
+  Definition id := "id".
+  Definition isRq := "isRq".
+  Definition line := "line".
+  Definition from := "from".
+  Definition to := "to".
+  Definition isVol := "isVol".
+  Definition child := "child".
+  Definition rq := "rq".
+  Definition rs := "rs".
+  Definition msg := "msg".
+  Close Scope string.
+End FieldDefns.
 
 Section MsgTypes.
   Variables LgDataBytes LgNumDatas LgNumChildren: nat.
@@ -14,65 +32,65 @@ Section MsgTypes.
   Definition Line := Vector Data LgNumDatas.
 
   Definition RqFromProc := STRUCT {
-                               "addr" :: Addr;
-                               "op" :: MemOp;
-                               (* "byteEn" :: Vector Bool LgDataBytes; *)
-                               "data" :: Data
-                               (* "id" :: Id *)
+                               addr :: Addr;
+                               op :: MemOp;
+                               (* byteEn :: Vector Bool LgDataBytes; *)
+                               data :: Data
+                               (* id :: Id *)
                              }.
 
   Definition RsToProc := STRUCT {
-                             "data" :: Data
-                             (* "id" :: Id *)
+                             data :: Data
+                             (* id :: Id *)
                            }.
 
   Definition FromP := STRUCT {
-                          "isRq" :: Bool;
-                          "addr" :: Addr;
-                          "to" :: Msi;
-                          "line" :: Line;
-                          "id" :: Id
+                          isRq :: Bool;
+                          addr :: Addr;
+                          to :: Msi;
+                          line :: Line;
+                          id :: Id
                         }.
 
   Definition RqFromP := STRUCT {
-                            "addr" :: Addr;
-                            "to" :: Msi
+                            addr :: Addr;
+                            to :: Msi
                           }.
 
   Definition RsFromP := STRUCT {
-                            "addr" :: Addr;
-                            "to" :: Msi;
-                            "line" :: Line;
-                            "id" :: Id
+                            addr :: Addr;
+                            to :: Msi;
+                            line :: Line;
+                            id :: Id
                           }.
 
   Definition RqToP := STRUCT {
-                          "addr" :: Addr;
-                          "from" :: Msi;
-                          "to" :: Msi;
-                          "id" :: Id
+                          addr :: Addr;
+                          from :: Msi;
+                          to :: Msi;
+                          id :: Id
                         }.
 
   Definition RsToP := STRUCT {
-                          "addr" :: Addr;
-                          "to" :: Msi;
-                          "line" :: Line;
-                          "isVol" :: Bool
+                          addr :: Addr;
+                          to :: Msi;
+                          line :: Line;
+                          isVol :: Bool
                         }.
 
   Definition RqFromC := STRUCT {
-                            "child" :: Child;
-                            "rq" :: RqToP
+                            child :: Child;
+                            rq :: RqToP
                           }.
 
   Definition RsFromC := STRUCT {
-                            "child" :: Child;
-                            "rs" :: RsToP
+                            child :: Child;
+                            rs :: RsToP
                           }.
 
   Definition ToC := STRUCT {
-                        "child" :: Child;
-                        "msg" :: FromP
+                        child :: Child;
+                        msg :: FromP
                       }.
 End MsgTypes.
 

@@ -12,9 +12,17 @@ Section RegFile.
   Definition DataArray := Vector Data IdxBits.
   Definition Addr := Bit IdxBits.
 
+  Local Open Scope string.
+  Definition addr := "addr".
+  Definition data := "data".
+  Definition dataArray := "dataArray".
+  Definition read := "read".
+  Definition write := "write".
+  Close Scope string.
+  
   Definition WritePort := STRUCT {
-                              "addr" :: Addr;
-                              "data" :: Data
+                              addr :: Addr;
+                              data :: Data
                             }.
   Notation "^ s" := (name -- s) (at level 0).
 
@@ -22,15 +30,15 @@ Section RegFile.
   
   Definition regFile :=
     MODULE {
-        Register ^"dataArray": DataArray <- init
+        Register ^dataArray: DataArray <- init
 
-        with Method ^"read" (a: Addr): Data :=
-          Read full: DataArray <- ^"dataArray";
+        with Method ^read (a: Addr): Data :=
+          Read full: DataArray <- ^dataArray;
           Ret (#full@[#a])
             
-        with Method ^"write" (w: WritePort): Void :=
-          Read full: DataArray <- ^"dataArray";
-          Write ^"dataArray" <- #full@[ #w@."addr" <- #w@."data" ];
+        with Method ^write (w: WritePort): Void :=
+          Read full: DataArray <- ^dataArray;
+          Write ^dataArray <- #full@[ #w@.addr <- #w@.data ];
           Retv
       }.
 
@@ -50,29 +58,29 @@ Section RegFile.
 
   Definition regFileS :=
     SIN {
-        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
+        Register { ^dataArray | rfgn dataArray eq_refl } : DataArray <- init
 
-        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+        with Method { ^read | rfgn read eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^"write" | rfgn "write" eq_refl } (w: WritePort): Void :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w@."addr" <- #w@."data" ];
+        with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
+          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
+          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w@.addr <- #w@.data ];
           Retv
       }.
 
   Definition regFileM :=
     META {
-        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
+        Register { ^dataArray | rfgn dataArray eq_refl } : DataArray <- init
 
-        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+        with Method { ^read | rfgn read eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^"write" | rfgn "write" eq_refl } (w: WritePort): Void :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w@."addr" <- #w@."data" ];
+        with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
+          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
+          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w@.addr <- #w@.data ];
           Retv
       }.
 
