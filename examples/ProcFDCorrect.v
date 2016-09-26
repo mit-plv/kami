@@ -5,7 +5,7 @@ Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kam
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
 Require Import Ex.MemTypes Ex.NativeFifo Ex.MemAtomic.
-Require Import Ex.SC Ex.ProcDec Ex.ProcTwoStage Ex.ProcFetchDecode Ex.ProcFDInl.
+Require Import Ex.SC Ex.ProcDec Ex.ProcTwoStage Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
@@ -63,26 +63,53 @@ Section FetchDecode.
                 else pcv)])%fmap)%mapping.
   Hint Unfold fetchDecode_regMap: MapDefs.
 
-  (* Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl *)
-  (*                                getOptype getLdDst getLdAddr getLdSrc calcLdAddr *)
-  (*                                getStAddr getStSrc calcStAddr getStVSrc *)
-  (*                                getSrc1 predictNextPc. *)
+  Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl
+                                 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                 getStAddr getStSrc calcStAddr getStVSrc
+                                 getSrc1 predictNextPc.
+
+  Ltac fetchDecode_inv_tac :=
+    repeat match goal with
+           | [H: fetchDecode_inv _ _ _ |- _] => destruct H
+           end;
+    kinv_red.
 
   Theorem p2st_refines_pdec:
     fetchDecode <<== fetchNDecode.
-  Proof.
-    admit.
-    (* (* instead of: kinline_left im. *) *)
-    (* ketrans; [exact (projT2 fetchDecodeInl)|]. *)
-    (* kdecompose_nodefs fetchDecode_regMap fetchDecode_ruleMap. *)
+  Proof. (* SKIP_PROOF_ON
+    ketrans; [exact (projT2 fetchDecodeInl)|].
+    kdecompose_nodefs fetchDecode_regMap fetchDecode_ruleMap.
 
-    (* kinv_add_end. *)
+    kinv_add fetchDecode_inv_ok.
+    kinv_add_end.
 
-    (* kinvert. *)
+    kinvert.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom fetchDecode_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; kinv_finish_with kinv_bool.
 
-    (* - kinv_action_dest. *)
-    (*   kinv_red. *)
-    (*   kinv_regmap_red. *)
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End FetchDecode.

@@ -40,7 +40,7 @@ Section OneEltFifo.
      Ret #isFull)%kami_action.
 
   Definition flush {ty} : ActionT ty Void :=
-    (Write "full" <- $$false;
+    (Write ^"full" <- $$false;
      Retv)%kami_action.
   
   Definition oneEltFifo := MODULE {
