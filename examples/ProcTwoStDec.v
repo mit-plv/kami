@@ -25,19 +25,20 @@ Section ProcTwoStDec.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition p2st := ProcTwoStage.p2st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 execState execNextPc predictNextPc.
+                       getSrc1 getSrc2 getDst exec getNextPc predictNextPc.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 execState execNextPc.
+                       getSrc1 getSrc2 getDst exec getNextPc.
 
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p2st) => unfold p2st. (* for kequiv *)
@@ -113,7 +114,7 @@ Section ProcTwoStDec.
 
   Definition p2stInl := ProcTwoStInl.p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                              getStAddr getStSrc calcStAddr getStVSrc
-                                             getSrc1 getSrc2 execState execNextPc predictNextPc.
+                                             getSrc1 getSrc2 getDst exec getNextPc predictNextPc.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.

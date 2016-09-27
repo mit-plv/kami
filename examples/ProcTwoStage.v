@@ -95,8 +95,9 @@ Section ProcTwoStage.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -321,7 +322,7 @@ Section ProcTwoStage.
     Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
     Definition checkNextPc {ty} ppc npcp st rawInst :=
-      (LET npc <- execNextPc ty st ppc rawInst;
+      (LET npc <- getNextPc ty st ppc rawInst;
        If (#npc != #npcp)
        then
          Read pEpoch <- "eEpoch";
@@ -455,7 +456,9 @@ Section ProcTwoStage.
         LET val1 <- #rf@[#src1];
         LET src2 <- getSrc2 _ rawInst;
         LET val2 <- #rf@[#src2];
-        Call setRf (execState _ val1 val2 ppc rawInst);
+        LET dst <- getDst _ rawInst;
+        LET execVal <- exec _ val1 val2 ppc rawInst;
+        Call setRf (#rf@[#dst <- #execVal]);
         LET ppc <- #d2e@."curPc";
         LET npcp <- #d2e@."nextPc";
         checkNextPc ppc npcp rf rawInst
@@ -495,15 +498,16 @@ Section ProcTwoStageM.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
   Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
                                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                   getStAddr getStSrc calcStAddr getStVSrc
-                                  getSrc1 getSrc2 execState execNextPc predictNextPc.
+                                  getSrc1 getSrc2 getDst exec getNextPc predictNextPc.
 
 End ProcTwoStageM.
 
@@ -524,8 +528,9 @@ Section Facts.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -567,7 +572,7 @@ Section Facts.
   Lemma executer_ModEquiv:
     forall inName outName,
       ModPhoasWf (
-          executer inName outName getSrc1 getSrc2 execState execNextPc).
+          executer inName outName getSrc1 getSrc2 getDst exec getNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
@@ -577,7 +582,7 @@ Section Facts.
   Lemma procTwoStage_ModEquiv:
     ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 execState execNextPc predictNextPc).
+                     getSrc1 getSrc2 getDst exec getNextPc predictNextPc).
   Proof.
     kequiv.
   Qed.
