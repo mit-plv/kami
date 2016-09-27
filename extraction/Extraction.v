@@ -27,56 +27,58 @@ Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
-(* TODO: recover *)
+Definition pdecAN := pdecAN fifoSize rv32iGetOptype
+                            rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+                            rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+                            rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+                            lgNumChildren.
+Definition pdecN := pdecN idxBits tagBits lgNumDatas rv32iGetOptype
+                          rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+                          rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+                          rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+                          lgNumChildren.
+Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren.
 
-(* Definition pdecAN := pdecAN fifoSize rv32iDecode rv32iExecState rv32iExecNextPc *)
-(*                             rv32iOpLOAD rv32iOpSTORE rv32iOpTOHOST lgNumChildren. *)
+Definition l1Con := ((modFromMeta (l1Cache idxBits tagBits lgNumDatas lgDataBytes
+                                           idK lgNumChildren))
+                       ++ ((modFromMeta (l1cs idxBits lgNumChildren))
+                             ++ (modFromMeta (l1tag idxBits tagBits lgNumChildren))
+                             ++ (modFromMeta (l1line idxBits lgNumDatas lgDataBytes lgNumChildren)))
+                       ++ ((modFromMeta (fifoRqToP idxBits tagBits idK fifoSize lgNumChildren))
+                             ++ (modFromMeta (fifoRsToP idxBits tagBits lgNumDatas lgDataBytes
+                                                        fifoSize lgNumChildren))
+                             ++ (modFromMeta (fifoFromP idxBits tagBits lgNumDatas lgDataBytes
+                                                        idK fifoSize lgNumChildren))))%kami.
 
-(* Definition pdecN := pdecN idxBits tagBits lgNumDatas *)
-(*                           rv32iDecode rv32iExecState rv32iExecNextPc *)
-(*                           rv32iOpLOAD rv32iOpSTORE rv32iOpTOHOST lgNumChildren. *)
-(* Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren. *)
+Definition memDirCCon := ((modFromMeta (memDir idxBits tagBits lgNumDatas lgDataBytes
+                                               idK lgNumChildren))
+                            ++ (modFromMeta (mline idxBits tagBits lgNumDatas lgDataBytes))
+                            ++ (modFromMeta (mdir idxBits tagBits lgNumChildren)))%kami.
 
-(* Definition l1Con := ((modFromMeta (l1Cache idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                            idK lgNumChildren)) *)
-(*                        ++ ((modFromMeta (l1cs idxBits lgNumChildren)) *)
-(*                              ++ (modFromMeta (l1tag idxBits tagBits lgNumChildren)) *)
-(*                              ++ (modFromMeta (l1line idxBits lgNumDatas lgDataBytes lgNumChildren))) *)
-(*                        ++ ((modFromMeta (fifoRqToP idxBits tagBits idK fifoSize lgNumChildren)) *)
-(*                              ++ (modFromMeta (fifoRsToP idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                         fifoSize lgNumChildren)) *)
-(*                              ++ (modFromMeta (fifoFromP idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                         idK fifoSize lgNumChildren))))%kami. *)
+Definition childParentCCon := ((modFromMeta (childParent idxBits tagBits lgNumDatas lgDataBytes
+                                                         idK lgNumChildren))
+                                 ++ (modFromMeta (fifoRqFromC idxBits tagBits
+                                                              idK fifoSize lgNumChildren))
+                                 ++ (modFromMeta (fifoRsFromC idxBits tagBits lgNumDatas lgDataBytes
+                                                              fifoSize lgNumChildren))
+                                 ++ (modFromMeta (fifoToC idxBits tagBits lgNumDatas lgDataBytes
+                                                          idK fifoSize lgNumChildren)))%kami.
 
-(* Definition memDirCCon := ((modFromMeta (memDir idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                idK lgNumChildren)) *)
-(*                             ++ (modFromMeta (mline idxBits tagBits lgNumDatas lgDataBytes)) *)
-(*                             ++ (modFromMeta (mdir idxBits tagBits lgNumChildren)))%kami. *)
+Definition memCache := (l1Con ++ childParentCCon ++ memDirCCon)%kami.
 
-(* Definition childParentCCon := ((modFromMeta (childParent idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                          idK lgNumChildren)) *)
-(*                                  ++ (modFromMeta (fifoRqFromC idxBits tagBits *)
-(*                                                               idK fifoSize lgNumChildren)) *)
-(*                                  ++ (modFromMeta (fifoRsFromC idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                               fifoSize lgNumChildren)) *)
-(*                                  ++ (modFromMeta (fifoToC idxBits tagBits lgNumDatas lgDataBytes *)
-(*                                                           idK fifoSize lgNumChildren)))%kami. *)
+Definition procMemCache := (pdecN ++ pmFifos ++ memCache)%kami.
 
-(* Definition memCache := (l1Con ++ childParentCCon ++ memDirCCon)%kami. *)
+(** MODIFY targetPgm to your target program *)
+Definition targetPgm := pgmFibonacci 10.
 
-(* Definition procMemCache := (pdecN ++ pmFifos ++ memCache)%kami. *)
+(** MODIFY targetM to your target module *)
+Definition targetProcM := pdecAN.
 
-(* (** MODIFY targetPgm to your target program *) *)
-(* Definition targetPgm := pgmFibonacci 10. *)
+(** DON'T REMOVE OR MODIFY BELOW LINES *)
+Definition targetProcS := getModuleS targetProcM.
+Definition targetProcB := ModulesSToBModules targetProcS.
 
-(* (** MODIFY targetM to your target module *) *)
-(* Definition targetProcM := pdecAN. *)
-
-(* (** DON'T REMOVE OR MODIFY BELOW LINES *) *)
-(* Definition targetProcS := getModuleS targetProcM. *)
-(* Definition targetProcB := ModulesSToBModules targetProcS. *)
-
-(* Definition target := (targetPgm, targetProcB). *)
+Definition target := (targetPgm, targetProcB).
 
 (* Extraction "./Ocaml/Target.ml" target. *)
 
