@@ -126,12 +126,6 @@ Section ProcTwoStage.
   Definition e2dDeq := MethodSig (e2dFifoName -- "deq")() : e2dElt.
   Definition e2dFull := MethodSig (e2dFifoName -- "isFull")() : Bool.
 
-  (* Definition e2wElt := *)
-  (*   STRUCT { "decInst" :: d2eElt; "val" :: Data lgDataBytes }. *)
-  (* Definition e2wFifoName := "e2w"%string. *)
-  (* Definition e2wEnq := MethodSig (e2wFifoName -- "enq")(e2wElt) : Void. *)
-  (* Definition e2wDeq := MethodSig (e2wFifoName -- "deq")() : e2wElt. *)
-
   Section RegFile.
 
     Definition regFile := MODULE {

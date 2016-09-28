@@ -2,7 +2,7 @@ Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Syntax Semantics SemFacts Wf RefinementFacts Notations.
-Require Import Inline InlineFacts Specialize Duplicate Substitute SymEvalTac.
+Require Import Inline InlineFacts Specialize Duplicate Substitute.
 Require Import Decomposition ModuleBound.
 Require Import ParametricSyntax ParametricEquiv ParametricWf.
 
@@ -581,8 +581,7 @@ Proof. destruct b; reflexivity. Qed.
 Ltac kinv_simpl :=
   kstring_simpl;
   repeat
-    (dest; try subst;
-     try match goal with
+    (try match goal with
          (* about bool *)
          | [H: ?t = ?t |- _] => clear H
          | [H: ?t = ?t -> False |- _] => elim H; reflexivity
@@ -635,7 +634,7 @@ Ltac kinv_simpl :=
            let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
          | [H1: M.find ?k ?m = _, H2: M.find ?k ?m = _ |- _] => rewrite H1 in H2
          | [H: Some _ = Some _ |- _] => apply Some_inv in H; destruct_existT
-         end).
+         end; dest; try subst).
 
 Ltac kinv_red :=
   intros; repeat autounfold with InvDefs in *;
@@ -681,14 +680,32 @@ Ltac kinv_finish_with tac :=
              end; simpl in *; auto);
       try tac).
 
-Ltac invertActionSymb :=
-  repeat
-    match goal with
-    | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
-    | [H: SemAction _ _ _ _ _ |- _] => SymEval
-    end.
+Ltac invertActionRep ::=
+     repeat
+     match goal with
+     | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
+     | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+     | [H: if ?c
+           then
+             SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+           else
+             SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+       cbv [BoundedIndexFull
+              IndexBound_head IndexBound_tail
+              mapAttr addFirstBoundedIndex bindex] in *;
+       repeat autounfold with MethDefs; simpl in *;
+       match goal with
+       | [H: if ?c
+             then
+               SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+             else
+               SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+         let ic := fresh "ic" in
+         (remember c as ic; destruct ic; dest; subst)
+       end
+     end.
 
-Ltac kinv_action_dest := kinv_red; invertActionSymb.
+Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
 Ltac kinv_dest_custom tac := kinv_action_dest; kinv_custom tac.
 Ltac kinv_regmap_red := kinv_red; kregmap_red; kregmap_clear.
