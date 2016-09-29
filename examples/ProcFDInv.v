@@ -30,23 +30,69 @@ Section Invariants.
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
+  Variable (d2eElt: Kind).
+  Variable (d2ePack:
+              forall ty,
+                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind d2eElt)).
+
+  Variable (f2dElt: Kind).
+  Variable (f2dPack:
+              forall ty,
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind f2dElt)).
+  Variables
+    (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                            Expr ty (SyntaxKind (Data lgDataBytes)))
+    (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                           Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind Bool)).
+
+  Hypotheses (Hf2dRawInst: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dRawInst _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr rawInst)
+             (Hf2dCurPc: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dCurPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr curPc)
+             (Hf2dNextPc: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dNextPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr nextPc)
+             (Hf2dEpoch: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr epoch).
+  
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
                                          getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 predictNextPc).
+                                         getSrc1 predictNextPc
+                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
 
   Definition fetchDecode_inv_body
              (pcv: fullType type (SyntaxKind (Bit addrSize)))
              (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
              (fepochv: fullType type (SyntaxKind Bool))
              (f2dfullv: fullType type (SyntaxKind Bool))
-             (f2deltv: fullType type (SyntaxKind (f2dElt addrSize lgDataBytes))) :=
+             (f2deltv: fullType type (SyntaxKind f2dElt)) :=
     f2dfullv = true ->
-    let rawInst := f2deltv ``"rawInst" in
-    (rawInst = pgmv (f2deltv ``"curPc") /\
-     f2deltv ``"nextPc" = evalExpr (predictNextPc type (f2deltv ``"curPc")) /\
-     f2deltv ``"nextPc" = pcv /\
-     f2deltv ``"epoch" = fepochv).
+    let rawInst := evalExpr (f2dRawInst _ f2deltv) in
+    (rawInst = pgmv (evalExpr (f2dCurPc _ f2deltv)) /\
+     evalExpr (f2dNextPc _ f2deltv) =
+     evalExpr (predictNextPc type (evalExpr (f2dCurPc _ f2deltv))) /\
+     evalExpr (f2dNextPc _ f2deltv) = pcv /\
+     evalExpr (f2dEpoch _ f2deltv) = fepochv).
                                                       
   Record fetchDecode_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
@@ -58,7 +104,7 @@ Section Invariants.
 
       f2dfullv : fullType type (SyntaxKind Bool);
       Hf2dfullv : M.find "full.f2d"%string o = Some (existT _ _ f2dfullv);
-      f2deltv : fullType type (SyntaxKind (f2dElt addrSize lgDataBytes));
+      f2deltv : fullType type (SyntaxKind f2dElt);
       Hf2deltv : M.find "elt.f2d"%string o = Some (existT _ _ f2deltv);
 
       Hinv : fetchDecode_inv_body pcv pgmv fepochv f2dfullv f2deltv
@@ -84,7 +130,13 @@ Section Invariants.
     try eassumption; intros; try reflexivity;
     intuition kinv_simpl; intuition idtac.
 
-  Ltac fetchDecode_inv_tac := fetchDecode_inv_old; fetchDecode_inv_new.
+  Ltac f2d_abs_tac :=
+    try rewrite Hf2dRawInst in *;
+    try rewrite Hf2dCurPc in *;
+    try rewrite Hf2dNextPc in *;
+    try rewrite Hf2dEpoch in *.
+
+  Ltac fetchDecode_inv_tac := fetchDecode_inv_old; fetchDecode_inv_new; f2d_abs_tac.
 
   Lemma fetchDecode_inv_ok':
     forall init n ll,
@@ -102,7 +154,7 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom fetchDecode_inv_tac.
-      + kinv_dest_custom fetchDecode_inv_tac.
+      + kinv_dest_custom fetchDecode_inv_tac; try reflexivity.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
