@@ -6,6 +6,60 @@ Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcTwoStage.
 
 Set Implicit Arguments.
 
+Section F2dInst.
+  Variables addrSize lgDataBytes rfIdx: nat.
+
+  Definition f2dEltI :=
+    STRUCT { "rawInst" :: Data lgDataBytes;
+             "curPc" :: Bit addrSize;
+             "nextPc" :: Bit addrSize;
+             "epoch" :: Bool }.
+
+  Definition f2dPackI ty 
+             (rawInst: Expr ty (SyntaxKind (Data lgDataBytes)))
+             (curPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind f2dEltI) :=
+    STRUCT { "rawInst" ::= rawInst;
+             "curPc" ::= curPc;
+             "nextPc" ::= nextPc;
+             "epoch" ::= epoch }%kami_expr.
+
+  Definition f2dRawInstI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#f2d@."rawInst")%kami_expr.
+  Definition f2dCurPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."curPc")%kami_expr.
+  Definition f2dNextPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."nextPc")%kami_expr.
+  Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind Bool) := (#f2d@."epoch")%kami_expr.
+
+  Lemma f2dElt_rawInst:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dRawInstI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr rawInst.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_curPc:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dCurPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr curPc.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_nextPc:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dNextPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr nextPc.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_epoch:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dEpochI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr epoch.
+  Proof. reflexivity. Qed.
+
+End F2dInst.
+
 (* A pipelined "fetch" and "decode" modules. This module substitutes the {fetch, decode} stage
  * in two-staged processor (P2st).
  *)

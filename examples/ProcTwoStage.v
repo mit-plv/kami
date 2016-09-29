@@ -74,6 +74,104 @@ End OneEltFifo.
 Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
 Hint Unfold enq deq firstElt isFull : MethDefs.
 
+Section D2eInst.
+  Variables addrSize lgDataBytes rfIdx: nat.
+
+  Definition d2eEltI :=
+    STRUCT { "opType" :: Bit 2;
+             "dst" :: Bit rfIdx;
+             "addr" :: Bit addrSize;
+             "val" :: Data lgDataBytes;
+             "rawInst" :: Data lgDataBytes;
+             "curPc" :: Bit addrSize;
+             "nextPc" :: Bit addrSize;
+             "epoch" :: Bool }.
+
+  Definition d2ePackI ty 
+             (opTy: Expr ty (SyntaxKind (Bit 2)))
+             (dst: Expr ty (SyntaxKind (Bit rfIdx)))
+             (addr: Expr ty (SyntaxKind (Bit addrSize)))
+             (val: Expr ty (SyntaxKind (Data lgDataBytes)))
+             (rawInst: Expr ty (SyntaxKind (Data lgDataBytes)))
+             (curPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind d2eEltI) :=
+    STRUCT { "opType" ::= opTy;
+             "dst" ::= dst;
+             "addr" ::= addr;
+             "val" ::= val;
+             "rawInst" ::= rawInst;
+             "curPc" ::= curPc;
+             "nextPc" ::= nextPc;
+             "epoch" ::= epoch }%kami_expr.
+
+  Definition d2eOpTypeI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Bit 2)) := (#d2e@."opType")%kami_expr.
+  Definition d2eDstI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Bit rfIdx)) := (#d2e@."dst")%kami_expr.
+  Definition d2eAddrI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."addr")%kami_expr.
+  Definition d2eValI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e@."val")%kami_expr.
+  Definition d2eRawInstI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e@."rawInst")%kami_expr.
+  Definition d2eCurPcI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."curPc")%kami_expr.
+  Definition d2eNextPcI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."nextPc")%kami_expr.
+  Definition d2eEpochI ty (d2e: fullType ty (SyntaxKind d2eEltI))
+    : Expr ty (SyntaxKind Bool) := (#d2e@."epoch")%kami_expr.
+
+  Lemma d2eElt_opType:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eOpTypeI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr opType.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_dst:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eDstI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr dst.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_addr:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eAddrI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr addr.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_val:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eValI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr val.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_rawInst:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eRawInstI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr rawInst.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_curPc:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eCurPcI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr curPc.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_nextPc:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eNextPcI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr nextPc.
+  Proof. reflexivity. Qed.
+
+  Lemma d2eElt_epoch:
+    forall opType dst addr val rawInst curPc nextPc epoch,
+      evalExpr (d2eEpochI _ (evalExpr (d2ePackI opType dst addr val rawInst curPc nextPc epoch)))
+      = evalExpr epoch.
+  Proof. reflexivity. Qed.
+
+End D2eInst.
+  
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
  * are modularly separated to form each stage. "epoch" registers are used to handle incorrect
  * branch prediction. Like a decoupled processor, memory operations are stalled until getting 
@@ -135,16 +233,6 @@ Section ProcTwoStage.
                            Expr ty (SyntaxKind (Bit addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
-  
-  (* Definition d2eElt := *)
-  (*   STRUCT { "opType" :: Bit 2; *)
-  (*            "dst" :: Bit rfIdx; *)
-  (*            "addr" :: Bit addrSize; *)
-  (*            "val" :: Data lgDataBytes; *)
-  (*            "rawInst" :: Data lgDataBytes; *)
-  (*            "curPc" :: Bit addrSize; *)
-  (*            "nextPc" :: Bit addrSize; *)
-  (*            "epoch" :: Bool }. *)
 
   Definition d2eFifoName := "d2e"%string.
   Definition d2eEnq := MethodSig (d2eFifoName -- "enq")(d2eElt) : Void.
