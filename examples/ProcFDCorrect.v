@@ -127,7 +127,7 @@ Section FetchDecode.
            end;
     kinv_red.
 
-  Theorem p2st_refines_pdec:
+  Theorem fetchDecode_refines_fetchNDecode:
     fetchDecode <<== fetchNDecode.
   Proof. (* SKIP_PROOF_ON
     ketrans; [exact (projT2 fetchDecodeInl)|].

@@ -120,7 +120,7 @@ Section FetchDecode.
   Definition f2dDeq := MethodSig (f2dFifoName -- "deq")() : f2dElt.
   Definition f2dFlush := MethodSig (f2dFifoName -- "flush")() : Void.
 
-  Definition getRf := getRf lgDataBytes rfIdx.
+  Definition getRf1 := getRf1 lgDataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
   Definition e2dDeq := e2dDeq addrSize.
   Definition sbSearch1 := sbSearch1 rfIdx.
@@ -154,7 +154,7 @@ Section FetchDecode.
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
       LET rawInst <- f2dRawInst _ f2d;
 
@@ -178,7 +178,7 @@ Section FetchDecode.
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
       LET rawInst <- f2dRawInst _ f2d;
 
@@ -206,7 +206,7 @@ Section FetchDecode.
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
       LET rawInst <- f2dRawInst _ f2d;
 
@@ -229,7 +229,7 @@ Section FetchDecode.
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
       LET rawInst <- f2dRawInst _ f2d;
 
@@ -252,7 +252,7 @@ End FetchDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
+     getRf1 d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
 
 (* TODO: Hint Unfold flush should be moved to ProcTwoStage.v *)
 Hint Unfold f2dFlush flush : MethDefs.

@@ -250,7 +250,11 @@ Section ProcTwoStage.
     Definition regFile := MODULE {
       Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
 
-      with Method "getRf" () : Vector (Data lgDataBytes) rfIdx :=
+      with Method "getRf1" () : Vector (Data lgDataBytes) rfIdx :=
+        Read rf <- "rf";
+        Ret #rf
+
+      with Method "getRf2" () : Vector (Data lgDataBytes) rfIdx :=
         Read rf <- "rf";
         Ret #rf
 
@@ -259,7 +263,8 @@ Section ProcTwoStage.
         Retv
     }.
       
-    Definition getRf := MethodSig "getRf"() : Vector (Data lgDataBytes) rfIdx.
+    Definition getRf1 := MethodSig "getRf1"() : Vector (Data lgDataBytes) rfIdx.
+    Definition getRf2 := MethodSig "getRf2"() : Vector (Data lgDataBytes) rfIdx.
     Definition setRf := MethodSig "setRf"(Vector (Data lgDataBytes) rfIdx) : Void.
 
   End RegFile.
@@ -320,7 +325,7 @@ Section ProcTwoStage.
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
-        Call rf <- getRf();
+        Call rf <- getRf1();
 
         LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
@@ -345,7 +350,7 @@ Section ProcTwoStage.
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
-        Call rf <- getRf();
+        Call rf <- getRf1();
 
         LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
@@ -374,7 +379,7 @@ Section ProcTwoStage.
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
-        Call rf <- getRf();
+        Call rf <- getRf1();
 
         LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
@@ -398,7 +403,7 @@ Section ProcTwoStage.
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
-        Call rf <- getRf();
+        Call rf <- getRf1();
 
         LET npc <- predictNextPc _ ppc;
         Read epoch <- "fEpoch";
@@ -464,7 +469,7 @@ Section ProcTwoStage.
       with Rule "reqLdZ" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call rf <- getRf();
+        Call rf <- getRf2();
         Call d2e <- d2eDeq();
         LET fEpoch <- d2eEpoch _ d2e;
         Read eEpoch <- "eEpoch";
@@ -495,7 +500,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert #stall;
         Call val <- memRep();
-        Call rf <- getRf();
+        Call rf <- getRf2();
         Read stalled : d2eElt <- "stalled";
         Assert d2eOpType _ stalled == $$opLd;
         Call setRf (#rf@[d2eDst _ stalled <- #val@."data"]);
@@ -510,7 +515,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert #stall;
         Call val <- memRep();
-        Call rf <- getRf();
+        Call rf <- getRf2();
         Read stalled : d2eElt <- "stalled";
         Assert d2eOpType _ stalled == $$opSt;
         Write "stall" <- $$false;
@@ -522,7 +527,7 @@ Section ProcTwoStage.
       with Rule "execToHost" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call rf <- getRf();
+        Call rf <- getRf2();
         Call d2e <- d2eDeq();
         LET fEpoch <- d2eEpoch _ d2e;
         Read eEpoch <- "eEpoch";
@@ -537,7 +542,7 @@ Section ProcTwoStage.
       with Rule "execNm" :=
         Read stall <- "stall";
         Assert !#stall;
-        Call rf <- getRf();
+        Call rf <- getRf2();
         Call d2e <- d2eDeq();
         LET fEpoch <- d2eEpoch _ d2e;
         Read eEpoch <- "eEpoch";
@@ -572,7 +577,7 @@ Hint Unfold regFile scoreBoard decoder executer procTwoStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      (* d2eElt *) d2eFifoName d2eEnq d2eDeq
      e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
-     getRf setRf
+     getRf1 getRf2 setRf
      sbSearch1 sbSearch2 sbInsert sbRemove
      toHost checkNextPc : MethDefs.
 
