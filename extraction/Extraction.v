@@ -13,10 +13,11 @@ Unset Extraction AutoInline.
  * 2) Change the definition "targetM" to your module.
  * 3) Compile.
  *)
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
+        Kami.Notations Kami.Synthesize Ex.Isa.
 
-(** procDec + memCache test *)
-Require Import Ex.ProcDecSCN Ex.MemCache Ex.ProcMemCorrect.
+(** p2st + memAtomic test *)
+Require Import Ex.ProcTwoStage Ex.ProcTwoStDec Ex.MemAtomic.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.
@@ -27,52 +28,28 @@ Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
-Definition pdecAN := pdecAN fifoSize rv32iGetOptype
-                            rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
-                            rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
-                            rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-                            lgNumChildren.
-Definition pdecN := pdecN idxBits tagBits lgNumDatas rv32iGetOptype
-                          rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
-                          rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
-                          rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-                          lgNumChildren.
-Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas lgDataBytes lgNumChildren.
+Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
+  (#ppc + $1)%kami_expr.
 
-Definition l1Con := ((modFromMeta (l1Cache idxBits tagBits lgNumDatas lgDataBytes
-                                           idK lgNumChildren))
-                       ++ ((modFromMeta (l1cs idxBits lgNumChildren))
-                             ++ (modFromMeta (l1tag idxBits tagBits lgNumChildren))
-                             ++ (modFromMeta (l1line idxBits lgNumDatas lgDataBytes lgNumChildren)))
-                       ++ ((modFromMeta (fifoRqToP idxBits tagBits idK fifoSize lgNumChildren))
-                             ++ (modFromMeta (fifoRsToP idxBits tagBits lgNumDatas lgDataBytes
-                                                        fifoSize lgNumChildren))
-                             ++ (modFromMeta (fifoFromP idxBits tagBits lgNumDatas lgDataBytes
-                                                        idK fifoSize lgNumChildren))))%kami.
+Definition p2st := p2st rv32iGetOptype
+                        rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+                        rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+                        rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+                        predictNextPc (@d2ePackI _ _ _)
+                        (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _) (@d2eValI _ _ _)
+                        (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _) (@d2eNextPcI _ _ _)
+                        (@d2eEpochI _ _ _).
 
-Definition memDirCCon := ((modFromMeta (memDir idxBits tagBits lgNumDatas lgDataBytes
-                                               idK lgNumChildren))
-                            ++ (modFromMeta (mline idxBits tagBits lgNumDatas lgDataBytes))
-                            ++ (modFromMeta (mdir idxBits tagBits lgNumChildren)))%kami.
+Definition p2stN := duplicate p2st lgNumChildren.
+Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes lgNumChildren.
 
-Definition childParentCCon := ((modFromMeta (childParent idxBits tagBits lgNumDatas lgDataBytes
-                                                         idK lgNumChildren))
-                                 ++ (modFromMeta (fifoRqFromC idxBits tagBits
-                                                              idK fifoSize lgNumChildren))
-                                 ++ (modFromMeta (fifoRsFromC idxBits tagBits lgNumDatas lgDataBytes
-                                                              fifoSize lgNumChildren))
-                                 ++ (modFromMeta (fifoToC idxBits tagBits lgNumDatas lgDataBytes
-                                                          idK fifoSize lgNumChildren)))%kami.
-
-Definition memCache := (l1Con ++ childParentCCon ++ memDirCCon)%kami.
-
-Definition procMemCache := (pdecN ++ pmFifos ++ memCache)%kami.
+Definition procMemAtomic := (p2stN ++ memAtomic)%kami.
 
 (** MODIFY targetPgm to your target program *)
 Definition targetPgm := pgmFibonacci 10.
 
 (** MODIFY targetM to your target module *)
-Definition targetProcM := pdecAN.
+Definition targetProcM := procMemAtomic.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)
 Definition targetProcS := getModuleS targetProcM.
