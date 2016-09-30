@@ -1,6 +1,7 @@
 Require Import List String.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Fixpoint concat A (ls: list (list A)): list A :=
   match ls with

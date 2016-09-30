@@ -1,5 +1,7 @@
 Require Import String Program.Equality Omega.
 
+Set Asymmetric Patterns.
+
 Open Scope string.
 
 Fixpoint S_In a s :=

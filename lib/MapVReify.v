@@ -1,16 +1,9 @@
 Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith Kami.ParametricSyntax String
         Lib.Indexer Kami.Syntax Kami.Semantics Program.Equality Lib.CommonTactics
         Kami.Tactics Kami.SymEvalTac Kami.SymEval.
-(*
-Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
-        Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
-        ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat
-        FunctionalExtensionality Program.Equality Kami.Tactics Arith Kami.SymEval
-        Kami.SymEvalTac Lib.StringAsList.
-*)
-
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section ConvMakeMap.
   Variable A: Type.

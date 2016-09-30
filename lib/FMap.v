@@ -5,9 +5,10 @@ Require Import Structures.OrderedType.
 Require Import Structures.OrderedTypeEx.
 Require Import Equalities Eqdep_dec FMapInterface.
 
-Require Import CommonTactics StringAsOT StringEq Struct.
+Require Import Lib.CommonTactics Lib.StringAsOT Lib.StringEq Lib.Struct.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section Lists. (* For dealing with domains *)
   Context {A: Type}.
@@ -322,7 +323,7 @@ Proof.
           | HdRel_cons _ _ _ => fun _ => _
         end
       ).
-    replace r' with l1 by apply le_irrel.
+    replace l2 with l1 by apply le_irrel.
     reflexivity.
 Qed.
 
@@ -367,8 +368,8 @@ Proof.
           | Sorted_cons _ _ _ _ => fun _ _ _ => _
         end
       ).
-    replace h0 with h. replace p with s. reflexivity. 
-    symmetry. apply _H. apply HdRel_irrel; assumption.
+    replace h0 with h by (apply HdRel_irrel; assumption).
+    specialize (e s); subst; reflexivity.
 Qed.
 
 Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := UOT.
@@ -397,7 +398,6 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
     destruct H0 as [?[??]].
     apply InA_alt.
     exists x0; split; auto.
-    apply H; auto.
   Qed.
 
   Add Parametric Morphism A: (@eqlistA A)
@@ -406,8 +406,6 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
   Proof.
     unfold impl; firstorder.
     induction H0; auto.
-    constructor; auto.
-    apply H; auto.
   Qed.
 
   Lemma Equal_this: forall elt L1 L2,

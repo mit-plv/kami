@@ -1,6 +1,7 @@
 Require Import String StringAsList.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Theorem true_False_false: forall v, (v = true -> False) -> v = false.
 Proof.

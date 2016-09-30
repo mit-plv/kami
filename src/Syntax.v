@@ -1,11 +1,14 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
-Require Import Lib.StringEq Lib.ilist Lib.Word Lib.FMap.
+Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
+Require Import Program.Equality.
+
+Require Vector.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Fixpoint getDefaultConstBit n: word n :=
   match n with
@@ -47,8 +50,8 @@ Section VecFunc.
            end;
     clear evalVec.
     abstract (intros; discriminate).
-    abstract (injection _H; intros; subst; intuition).
-    abstract (injection _H; intros; subst; intuition).
+    abstract (injection e; intros; subst; intuition).
+    abstract (injection e; intros; subst; intuition).
   Defined.
 
   Variable B: Type.
@@ -60,32 +63,89 @@ Section VecFunc.
     end.
 End VecFunc.
 
-Inductive Kind: Type :=
+Inductive Kind :=
 | Bool    : Kind
 | Bit     : nat -> Kind
 | Vector  : Kind -> nat -> Kind
-| Struct  : list (Attribute Kind) -> Kind.
+| Struct  : forall n, Vector.t (string * Kind)%type n -> Kind.
 
 Fixpoint type (t: Kind): Type :=
   match t with
     | Bool => bool
     | Bit n => word n
     | Vector nt n => word n -> type nt
-    | Struct attrs => forall i, @GetAttrType _ (map (mapAttr type) attrs) i
+    | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (snd p)) ks) i
   end.
 
 Inductive FullKind: Type :=
 | SyntaxKind: Kind -> FullKind
 | NativeKind (t: Type) (c: t) : FullKind.
 
+Section VectorT_dec.
+  Variable A: Type.
+  Variable n: nat.
+  Variable decA: forall (a1 a2: A), {a1 = a2} + {a1 <> a2}.
+
+  Lemma decA_true_iff_sumbool a1 a2:
+    (if decA a1 a2 then true else false) = true <-> a1 = a2.
+  Proof.
+    destruct (decA a1 a2); try intuition congruence.
+  Qed.
+
+  Definition
+    VectorT_dec (v1 v2: Vector.t A n): {v1 = v2} + {v1 <> v2} :=
+    Vector.eq_dec _ (fun a1 a2 => if decA a1 a2 then true else false) decA_true_iff_sumbool n v1 v2.
+End VectorT_dec.
+
+Section Pair_dec.
+  Variable A B: Type.
+  Variable decA: forall (a1 a2: A), {a1 = a2} + {a1 <> a2}.
+  Variable decB: forall (b1 b2: B), {b1 = b2} + {b1 <> b2}.
+  Lemma prod_dec: forall (ab1 ab2: (A*B)%type), {ab1 = ab2} + {ab1 <> ab2}.
+  Proof.
+    intros.
+    destruct ab1, ab2.
+    destruct (decA a a0), (decB b b0); clear decA decB.
+    - abstract (subst; left; reflexivity).
+    - abstract (subst; right; intro H; inversion H; tauto).
+    - abstract (subst; right; intro H; inversion H; tauto).
+    - abstract (subst; right; intro H; inversion H; tauto).
+  Defined.
+End Pair_dec.
+
 Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
-Proof.
-  decide equality.
-  clear decKind; decide equality.
-  clear decKind; decide equality.
-  decide equality.
-  decide equality.
-  apply (string_dec).
+  refine match k1, k2 return {k1 = k2} + {k1 <> k2} with
+           | Bool, Bool => left eq_refl
+           | Bit n, Bit m => match PeanoNat.Nat.eq_dec n m with
+                               | left l => left match l in _ = Y return Bit n = Bit Y with
+                                                  | eq_refl => eq_refl
+                                                end
+                               | right r => right _
+                             end
+           | Vector k1 n1, Vector k2 n2 => match PeanoNat.Nat.eq_dec n1 n2 with
+                                             | left l => match decKind k1 k2 with
+                                                           | left kl => left match l in _ = Y, kl in _ = kY
+                                                                                   return Vector k1 n1 = Vector kY Y with
+                                                                               | eq_refl, eq_refl => eq_refl
+                                                                             end
+                                                           | right kr => right _
+                                                         end
+                                             | right r => right _
+                                           end
+           | Struct n1 l1, Struct n2 l2 => _
+           | _, _ => right _
+         end; try (clear decKind; abstract (intro; try inversion H; congruence)).
+  - dependent induction l1; dependent destruction l2.
+    + clear decKind; left; abstract reflexivity.
+    + clear decKind; right; abstract (intro H; inversion H).
+    + clear decKind; right; abstract (intro H; inversion H).
+    + destruct h0, h.
+      destruct (string_dec s0 s); [| clear decKind; abstract (right; intro H; inversion H; subst; tauto)].
+      destruct (decKind k0 k); clear decKind;
+      [| right; abstract (intro H; inversion H; try apply inj_pair2 in H; subst; tauto)].
+      destruct (IHl1 _ l2); clear IHl1.
+      * left; abstract (subst; inversion e1; try apply inj_pair2 in H1; subst; tauto).
+      * right; abstract (subst; intros H; inversion H; subst; apply inj_pair2 in H3; subst; tauto).
 Defined.
 
 Lemma kind_eq: forall k, decKind k k = left eq_refl.
@@ -99,7 +159,7 @@ Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
-| ConstStruct attrs: ilist (fun a => ConstT (attrType a)) attrs -> ConstT (Struct attrs).
+| ConstStruct n (ls: Vector.t (string * Kind) n): ilist (fun a => ConstT (snd a)) ls -> ConstT (Struct ls).
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
@@ -113,32 +173,50 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
     | Bool => ConstBool false
     | Bit n => ConstBit (getDefaultConstBit n)
     | Vector k n => ConstVector (replicate (getDefaultConst k) n)
-    | Struct ls =>
-      ConstStruct ((fix help ls :=
-                      match ls return ilist (fun a => ConstT (attrType a)) ls with
-                        | nil => inil _
-                        | x :: xs => icons x (getDefaultConst (attrType x)) (help xs)
-                      end) ls)
+    | Struct n ls =>
+      ConstStruct ((fix help n (ls: Vector.t (string * Kind) n) :=
+                      match ls return ilist (fun a => ConstT (snd a)) ls with
+                        | Vector.nil => inil _
+                        | Vector.cons x m xs => icons x (getDefaultConst (snd x)) (help m xs)
+                      end) n ls)
   end.
 
-Definition evalConstStruct attrs (ils : ilist (fun a => type (attrType a)) attrs) : type (Struct attrs) :=
-  fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
-    mapAttrEq1 type attrs i
-               (ith_Bounded _ ils (getNewIdx1 type attrs i)).
+Fixpoint evalConstStruct n (vs: Vector.t (string * Kind) n) (ils: ilist (fun a => type (snd a)) vs) {struct ils}: type (Struct vs) :=
+  match vs in Vector.t _ k return ilist (fun a => type (snd a)) vs -> type (Struct vs) with
+    | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
+    | Vector.cons a1 n1 vs1 =>
+      fun ils1 i1 =>
+        match ils1 in ilist _ (Vector.cons a n2 vs2)
+              return forall i2: Fin.t (S n2),
+                       Vector.nth
+                         (Vector.map (fun p => type (snd p)) (Vector.cons _ a n2 vs2)) i2 with
+          | inil => idProp
+          | icons t3 n3 vs3 b ils3 =>
+            fun k =>
+              match k as k4 in Fin.t (S n4) return
+                    forall (vs4: Vector.t (string * Kind) n4), type (Struct vs4) ->
+                                                               (Vector.nth (Vector.map (fun p => type (snd p))
+                                                                                       (Vector.cons _ t3 n4 vs4)) k4)
+              with
+                | Fin.F1 s5 => fun _ _ => b
+                | Fin.FS s5 f5 => fun vs5 f => f f5
+              end vs3 (@evalConstStruct _ _ ils3)
+        end i1
+  end ils.
 
 Fixpoint getDefaultConstNative (k: Kind): type k :=
-  match k as k0 return type k0 with
+  match k return type k with
     | Bool => false
     | Bit n => getDefaultConstBit n
     | Vector k n => fun _ => getDefaultConstNative k
-    | Struct attrs =>
+    | Struct n attrs =>
       fun i =>
-        evalConstStruct ((fix help ls :=
-                            match ls return ilist (fun a => type (attrType a)) ls with
-                              | nil => inil _
-                              | x :: xs =>
-                                icons x (getDefaultConstNative (attrType x)) (help xs)
-                            end) attrs) i
+        ilist_to_fun _ ((fix help n (ls: Vector.t (string * Kind) n) :=
+                           match ls return ilist (fun a => type (snd a)) ls with
+                             | Vector.nil => inil _
+                             | Vector.cons x _ xs =>
+                               icons x (getDefaultConstNative (snd x)) (help _ xs)
+                           end) n attrs) i
   end.
 
 Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
@@ -216,10 +294,11 @@ Section Phoas.
   | ITE k: Expr (SyntaxKind Bool) -> Expr k -> Expr k -> Expr k
   | Eq k: Expr (SyntaxKind k) -> Expr (SyntaxKind k) -> Expr (SyntaxKind Bool)
   | ReadIndex i k: Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
-  | ReadField attrs (attr: BoundedIndexFull attrs):
-      Expr (SyntaxKind (Struct attrs)) -> Expr (SyntaxKind (GetAttrType attr))
+  | ReadField n (ls: Vector.t (string * Kind) n) (i: Fin.t n):
+      Expr (SyntaxKind (Struct ls)) -> Expr (SyntaxKind (Vector.nth (Vector.map (@snd _ _) ls) i))
   | BuildVector n k: Vec (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Vector n k))
-  | BuildStruct attrs: ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))
+  | BuildStruct n (attrs: Vector.t (string * Kind) n):
+      ilist (fun a => Expr (SyntaxKind (snd a))) attrs -> Expr (SyntaxKind (Struct attrs))
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k)
                       -> Expr (SyntaxKind (Vector k i)).
 
@@ -248,7 +327,10 @@ Definition MethodT (sig : SignatureT) := forall ty, ty (arg sig) -> ActionT ty (
 Inductive RegInitValue :=
 | RegInitCustom: sigT ConstFullT -> RegInitValue
 | RegInitDefault: FullKind -> RegInitValue.
-                    
+
+(* TODO MUST MAKE THEM PAIRS *)
+Require Import Lib.Struct.
+
 Definition RegInitT := Attribute RegInitValue.
 Definition DefMethT := Attribute (sigT MethodT).
 
@@ -723,8 +805,10 @@ Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
 
 (** Notations *)
 
+(* TODO MUST CHANGE *)
+
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
-Notation "name :: ty" := (Build_Attribute name ty) : kami_struct_scope.
+Notation "name :: ty" := (name, ty) : kami_struct_scope.
 Delimit Scope kami_struct_scope with struct.
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Struct (cons s1%struct .. (cons sN%struct nil) ..)).

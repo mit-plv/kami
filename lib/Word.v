@@ -1,10 +1,10 @@
 (** Fixed precision machine words *)
 
 Require Import Arith Div2 NArith Bool Omega.
-Require Import Nomega.
+Require Import Lib.Nomega.
 
 Set Implicit Arguments.
-
+Set Asymmetric Patterns.
 
 (** * Basic definitions and conversion to and from [nat] *)
 
@@ -313,10 +313,9 @@ Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
 
   abstract (subst; symmetry; apply (shatter_word y)).
 
-  abstract (rewrite (shatter_word y); simpl; intro; injection H; intros;
-    apply _H0; apply inj_pair2_eq_dec in H0; [ auto | apply eq_nat_dec ]).
+  abstract (rewrite (shatter_word y); intro; injection H; intros; apply inj_pair2_eq_dec in H0; [ auto | apply eq_nat_dec]).
 
-  abstract (rewrite (shatter_word y); simpl; intro; apply _H; injection H; auto).
+  abstract (rewrite (shatter_word y); simpl; intro; injection H; auto).
 Defined.
 
 Fixpoint weqb sz (x : word sz) : word sz -> bool :=
@@ -489,8 +488,8 @@ Fixpoint rev (sz : nat) (w : word sz) : word sz :=
   | WO => WO
   | WS b sz' w' =>
     eq_rec (sz' + 1) (fun n => word n) (combine (rev w') (WS b WO)) 
-           (S sz') (NPeano.Nat.add_1_r sz')
-  end.
+           (S sz') (Nat.add_1_r sz')
+         end.
 
 Definition ltrunc (sz : nat) (w : word sz) (sz' : nat) : word (sz - sz') :=
   rev (rtrunc (rev w) sz').
@@ -505,14 +504,14 @@ Definition sll (sz : nat) (w : word sz) (ln : nat) : word sz :=
   eq_rec (ln + sz - ln) (fun n => word n) (ltrunc (sll' w ln) ln) sz (minus_plus ln sz).
 
 Definition srl (sz : nat) (w : word sz) (ln : nat) : word sz :=
-  eq_rec (sz + ln - ln) (fun n => word n) (rtrunc (zext w ln) ln) sz (NPeano.Nat.add_sub sz ln).
+  eq_rec (sz + ln - ln) (fun n => word n) (rtrunc (zext w ln) ln) sz (Nat.add_sub sz ln).
 
 Definition sra (sz : nat) (w : word sz) (ln : nat) : word sz :=
   match sz as n return (word n -> word n) with
   | 0 => fun _ => WO
   | S sz' =>
     fun w0 => eq_rec (sz' + 1) (fun n => word n) (combine (srl (wtl w0) ln) (WS (whd w0) WO)) 
-                     (S sz') (NPeano.Nat.add_1_r sz')
+                     (S sz') (Nat.add_1_r sz')
   end w.
 
 (** * Arithmetic *)
@@ -1063,10 +1062,10 @@ Notation "w1 >= w2" := (~(@wlt _ w1%word w2%word)) : word_scope.
 Notation "w1 < w2" := (@wlt _ w1%word w2%word) : word_scope.
 Notation "w1 <= w2" := (~(@wlt _ w2%word w1%word)) : word_scope.
 
-Notation "w1 '>s' w2" := (@wslt _ w2%word w1%word) (at level 70, arguments at next level) : word_scope.
-Notation "w1 '>s=' w2" := (~(@wslt _ w1%word w2%word)) (at level 70, arguments at next level) : word_scope.
-Notation "w1 '<s' w2" := (@wslt _ w1%word w2%word) (at level 70, arguments at next level) : word_scope.
-Notation "w1 '<s=' w2" := (~(@wslt _ w2%word w1%word)) (at level 70, arguments at next level) : word_scope.
+Notation "w1 '>s' w2" := (@wslt _ w2%word w1%word) (at level 70, w2 at next level) : word_scope.
+Notation "w1 '>s=' w2" := (~(@wslt _ w1%word w2%word)) (at level 70, w2 at next level) : word_scope.
+Notation "w1 '<s' w2" := (@wslt _ w1%word w2%word) (at level 70, w2 at next level) : word_scope.
+Notation "w1 '<s=' w2" := (~(@wslt _ w2%word w1%word)) (at level 70, w2 at next level) : word_scope.
 
 Definition wlt_dec : forall sz (l r : word sz), {l < r} + {l >= r}.
   refine (fun sz l r => 
@@ -1357,5 +1356,208 @@ Proof.
       apply wordToNat_bound.
     + pose proof (wordToNat_bound w); omega.
     + apply wordToNat_bound.
+Qed.
+
+Lemma wordToNat_eq1: forall sz (a b: word sz), a = b -> wordToNat a = wordToNat b.
+Proof.
+  intros; subst; reflexivity.
+Qed.
+
+Lemma wordToNat_eq2: forall sz (a b: word sz), wordToNat a = wordToNat b -> a = b.
+Proof.
+  intros.
+  rewrite <- natToWord_wordToNat with (w := a).
+  rewrite <- natToWord_wordToNat with (w := b).
+  rewrite H.
+  reflexivity.
+Qed.
+
+Lemma wordToN_to_nat sz: forall (w: word sz), BinNat.N.to_nat (wordToN w) = wordToNat w.
+Proof.
+  intros.
+  rewrite wordToN_nat.
+  rewrite Nnat.Nat2N.id.
+  reflexivity.
+Qed.
+
+Lemma wordToNat_lt1: forall sz (a b: word sz), a < b -> (wordToNat a < wordToNat b)%nat.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat in H.
+  assumption.
+Qed.
+
+Lemma wordToNat_lt2: forall sz (a b: word sz), (wordToNat a < wordToNat b)%nat -> a < b.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat.
+  assumption.
+Qed.
+
+Lemma wordToNat_gt1: forall sz (a b: word sz), a > b -> (wordToNat a > wordToNat b)%nat.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat in H.
+  assumption.
+Qed.
+
+Lemma wordToNat_gt2: forall sz (a b: word sz), (wordToNat a > wordToNat b)%nat -> a > b.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat.
+  assumption.
+Qed.
+
+Lemma wordToNat_le1: forall sz (a b: word sz), a <= b -> (wordToNat a <= wordToNat b)%nat.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat in H.
+  assumption.
+Qed.
+
+Lemma wordToNat_le2: forall sz (a b: word sz), (wordToNat a <= wordToNat b)%nat -> a <= b.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat.
+  assumption.
+Qed.
+
+Lemma wordToNat_ge1: forall sz (a b: word sz), a >= b -> (wordToNat a >= wordToNat b)%nat.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat in H.
+  assumption.
+Qed.
+
+Lemma wordToNat_ge2: forall sz (a b: word sz), (wordToNat a >= wordToNat b)%nat -> a >= b.
+Proof.
+  intros.
+  pre_nomega.
+  repeat rewrite wordToN_to_nat.
+  assumption.
+Qed.
+
+Lemma wordToNat_neq1: forall sz (a b: word sz), a <> b -> wordToNat a <> wordToNat b.
+Proof.
+  unfold not.
+  intros.
+  apply wordToNat_eq2 in H0.
+  tauto.
+Qed.
+
+Lemma wordToNat_neq2: forall sz (a b: word sz), wordToNat a <> wordToNat b -> a <> b.
+Proof.
+  unfold not.
+  intros.
+  subst.
+  tauto.
+Qed.
+
+Ltac pre_word_omega :=
+  unfold wzero, wone in *;
+  repeat match goal with
+           | H: @eq ?T ?a ?b |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_eq1 sz a b) in H;
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+                   simpl in H
+             end
+           | |- @eq ?T ?a ?b =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_eq2 sz a b);
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+                   simpl
+             end
+           | H: ?a < ?b |- _ =>
+             apply wordToNat_lt1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
+           | |- ?a < ?b =>
+             apply wordToNat_lt2;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+               simpl
+           | H: ?a > ?b |- _ =>
+             apply wordToNat_gt1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
+           | |- ?a > ?b =>
+             apply wordToNat_gt2;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+               simpl
+           | H: ?a <= ?b |- _ =>
+             apply wordToNat_le1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
+           | |- ?a <= ?b =>
+             apply wordToNat_le2;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+               simpl
+           | H: ?a > ?b -> False |- _ =>
+             apply wordToNat_le1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
+           | |- ?a > ?b -> False =>
+             apply wordToNat_le2;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+               simpl
+           | H: ?a < ?b -> False |- _ =>
+             apply wordToNat_ge1 in H;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+               simpl in H
+           | |- ?a < ?b -> False =>
+             apply wordToNat_ge2;
+               rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+               simpl
+           | H: not (@eq ?T ?a ?b) |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_neq1 sz a b) in H;
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+                   simpl in H
+             end
+           | |- not (@eq ?T ?a ?b) =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_neq2 sz a b);
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+                   simpl
+             end
+           | H: @eq ?T ?a ?b -> False |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_neq1 sz a b) in H;
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
+                   simpl in H
+             end
+           | |- @eq ?T ?a ?b -> False =>
+             match T with
+               | word ?sz =>
+                 apply (@wordToNat_neq2 sz a b);
+                   rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
+                   simpl
+             end
+         end.
+
+
+Ltac word_omega := pre_word_omega; omega.
+
+Lemma word_le_ge_eq sz (w1 w2: word sz): w1 <= w2 -> w1 >= w2 -> w1 = w2.
+Proof.
+  intros; word_omega.
+Qed.
+
+Lemma word_le_zero sz (w: word sz): w <= wzero sz -> w = wzero sz.
+Proof.
+  intros;
+  word_omega.
 Qed.
 

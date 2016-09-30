@@ -2,6 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Fixpoint noDupStr (l: list string) :=
   match l with

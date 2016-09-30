@@ -1,6 +1,8 @@
 Require Import Coq.omega.Omega Coq.Strings.String Coq.Strings.Ascii.
 Require Import Coq.Structures.OrderedType.
 
+Set Asymmetric Patterns.
+
 Lemma nat_compare_eq_refl : forall x, nat_compare x x = Eq.
   intros; apply nat_compare_eq_iff; trivial.
 Qed.

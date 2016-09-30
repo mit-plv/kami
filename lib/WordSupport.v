@@ -1,5 +1,6 @@
 Require Import Arith Lib.Word Lib.Nomega.
 
+Set Asymmetric Patterns.
 Set Implicit Arguments.
 
 Lemma wordToNat_eq1: forall sz (a b: word sz), a = b -> wordToNat a = wordToNat b.

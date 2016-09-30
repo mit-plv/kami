@@ -3,6 +3,7 @@ Require Import Coq.Lists.List Lib.Concat Coq.Program.Basics.
 Import ListNotations.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Lemma hd_error_revcons_same A ls: forall (a: A), hd_error ls = Some a ->
                                                  forall v, hd_error (ls ++ [v]) = Some a.

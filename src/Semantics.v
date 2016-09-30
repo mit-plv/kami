@@ -1,18 +1,19 @@
-Require Import Bool List String.
+Require Import Bool List String Omega.
 Require Import Structures.Equalities Program.Equality Eqdep Eqdep_dec.
 Require Import FunctionalExtensionality.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax.
+Require Import Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap Lib.StringEq Lib.VectorFacts Lib.Struct.
+Require Import Kami.Syntax.
 
 Set Implicit Arguments.
 
-Section WordFunc.
+Set Asymmetric Patterns.
 
-  (* Some definitions in Word.v are just opposite, we rename them to use correctly. *)
-  Definition spl1 := split2. (* to return _most_ significant bits *)
-  Definition spl2 := split1. (* to return _least_ significant bits *)
-  Definition cmb := fun sz1 (w1: word sz1) sz2 (w2: word sz2) => combine w2 w1.
-  
+(* Some definitions in Word.v are just opposite, we rename them to use correctly. *)
+Definition spl1 := split2. (* to return _most_ significant bits *)
+Definition spl2 := split1. (* to return _least_ significant bits *)
+Definition cmb := fun sz1 (w1: word sz1) sz2 (w2: word sz2) => combine w2 w1.
+
+Section WordFunc.
   Definition wordZero (w: word 0): w = WO :=
     shatter_word w.
 
@@ -55,62 +56,39 @@ Section WordFunc.
   Qed.
 End WordFunc.
 
-(* for any kind, we have decidable equality on its representation *)
-Definition isEq : forall k (e1: type k) (e2: type k),
-                    {e1 = e2} + {e1 <> e2}.
+
+Fixpoint isEq k: forall (e1: type k) (e2: type k),
+                   {e1 = e2} + {e1 <> e2}.
 Proof.
-  refine (fix isEq k : forall (e1: type k) (e2: type k), {e1 = e2} + {e1 <> e2} :=
-            match k return forall (e1: type k) (e2: type k),
-                             {e1 = e2} + {e1 <> e2} with
-              | Bool => bool_dec
-              | Bit n => fun e1 e2 => weq e1 e2
-              | Vector n nt =>
-                  fun e1 e2 =>
-                    wordVecDec e1 e2 (fun x => isEq _ (e1 x) (e2 x))
-              | Struct h =>
-                (fix isEqs atts : forall (vs1 vs2 : forall i, @GetAttrType _ (map (mapAttr type) atts) i),
-                                    {vs1 = vs2} + {vs1 <> vs2} :=
-                   match atts return forall (vs1 vs2 : forall i, @GetAttrType _ (map (mapAttr type) atts) i),
-                                       {vs1 = vs2} + {vs1 <> vs2} with
-                     | nil => fun _ _ => Yes
-                     | att :: atts' => fun vs1 vs2 =>
-                       isEq _
-                            (vs1 {| bindex := attrName att; indexb := {| ibound := 0;
-                                      boundi := eq_refl :
-                                                  nth_error
-                                                    (map (attrName (Kind:=Type))
-                                                         (map (mapAttr type) (att :: atts'))) 0
-                                                    = Some (attrName att) |} |})
-                            (vs2 {| bindex := attrName att; indexb := {| ibound := 0;
-                                      boundi := eq_refl :
-                                                  nth_error
-                                                    (map (attrName (Kind:=Type))
-                                                         (map (mapAttr type) (att :: atts'))) 0
-                                                    = Some (attrName att) |} |});;
-                       isEqs atts'
-                       (fun i => vs1 {| indexb := {| ibound := S (ibound (indexb i)) |} |})
-                       (fun i => vs2 {| indexb := {| ibound := S (ibound (indexb i)) |} |});;
-                       Yes
-                   end) h
-            end); clear isEq; try clear isEqs;
-  abstract (unfold BoundedIndexFull in *; simpl in *; try (intro; subst; tauto);
-  repeat match goal with
-           | [ |- _ = _ ] => extensionality i
-           | [ x : BoundedIndex _ |- _ ] => destruct x
-           | [ x : IndexBound _ _ |- _ ] => destruct x
-           | [ H : nth_error nil ?n = Some _ |- _ ] => destruct n; discriminate
-           | [ |- _ {| indexb := {| ibound := ?b |} |} = _ ] =>
-             match goal with
-               | [ x : _ |- _ ] =>
-                 match x with
-                   | b => destruct b; simpl in *
-                 end
-             end
-           | [ H : Specif.value _ = Some _ |- _ ] => progress (injection H; intro; subst)
-           | [ H : _ = _ |- _ ] => progress rewrite (UIP_refl _ _ H)
-           | [ H : _ = _ |- _ {| bindex := ?bi; indexb := {| ibound := S ?ib; boundi := ?pf |} |} = _ ] =>
-             apply (f_equal (fun f => f {| bindex := bi; indexb := {| ibound := ib; boundi := pf |} |})) in H
-         end; auto).
+  refine (match k return forall (e1: type k) (e2: type k),
+                           {e1 = e2} + {e1 <> e2} with
+            | Bool => bool_dec
+            | Bit n => fun e1 e2 => weq e1 e2
+            | Vector n nt =>
+              fun e1 e2 =>
+                wordVecDec e1 e2 (fun x => isEq _ (e1 x) (e2 x))
+            | Struct n ls =>
+              (fix help n ls1: forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (snd p)) ls1) i),
+                                 {vs1 = vs2} + {vs1 <> vs2} :=
+                 match ls1 return forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (snd p)) ls1) i),
+                                    {vs1 = vs2} + {vs1 <> vs2} with
+                   | Vector.nil => fun _ _ => Yes
+                   | Vector.cons att n atts' =>
+                     fun vs1 vs2 =>
+                       isEq _ (vs1 Fin.F1) (vs2 Fin.F1);;
+                            @help _ atts' (fun i => vs1 (Fin.FS i)) (fun i => vs2 (Fin.FS i));;
+                            Yes
+                 end) n ls
+          end); clear isEq help.
+  - abstract (extensionality x;
+              apply Fin.case0; assumption).
+  - abstract (extensionality x;
+              generalize atts' vs1 vs2 e e0 ; clear;
+              pattern n, x;
+              apply Fin.caseS with (n := n); simpl; intros; auto;
+              apply (f_equal (fun i => i p) e0)).
+  - abstract (intro; subst; tauto).
+  - abstract (intro; subst; tauto).
 Defined.
 
 Definition evalUniBool (op: UniBoolOp) : bool -> bool :=
@@ -177,13 +155,35 @@ Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
     | Lt n => fun a b => if @wlt_dec n a b then true else false
   end.
 
-(* evaluate any constant operation *)
+
 Fixpoint evalConstT k (e: ConstT k): type k :=
   match e in ConstT k return type k with
     | ConstBool b => b
     | ConstBit n w => w
     | ConstVector k' n v => evalVec (mapVec (@evalConstT k') v)
-    | ConstStruct attrs ils => evalConstStruct (imap _ (fun _ ba => evalConstT ba) ils)
+    | ConstStruct n vs ils =>
+      (fix help n (vs: Vector.t (string * Kind) n) (ils: ilist (fun a => ConstT (snd a)) vs): type (Struct vs) :=
+         match vs in Vector.t _ k return ilist (fun a => ConstT (snd a)) vs -> type (Struct vs) with
+           | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
+           | Vector.cons a1 n1 vs1 =>
+             fun ils1 i1 =>
+               match ils1 in ilist _ (Vector.cons a n2 vs2)
+                     return forall i2: Fin.t (S n2),
+                              Vector.nth
+                                (Vector.map (fun p => type (snd p)) (Vector.cons _ a n2 vs2)) i2 with
+                 | inil => idProp
+                 | icons t3 n3 vs3 b ils3 =>
+                   fun k =>
+                     match k as k4 in Fin.t (S n4) return
+                           forall (vs4: Vector.t _ n4), type (Struct vs4) ->
+                                                        (Vector.nth (Vector.map (fun p => type (snd p))
+                                                                                (Vector.cons _ t3 n4 vs4)) k4)
+                     with
+                       | Fin.F1 s5 => fun _ _ => @evalConstT _ b
+                       | Fin.FS s5 f5 => fun vs5 f => f f5
+                     end vs3 (@help _ _ ils3)
+               end i1
+         end ils) n vs ils
   end.
 
 Definition evalConstFullT k (e: ConstFullT k) :=
@@ -202,73 +202,32 @@ Definition SignT k := (type (arg k) * type (ret k))%type.
 Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
-  Definition mkStruct attrs (ils : ilist (fun a => type (attrType a)) attrs)
-  : type (Struct attrs) :=
-    fun (i: BoundedIndex (namesOf (map (mapAttr type) attrs))) =>
-      mapAttrEq1 type attrs i (ith_Bounded _ ils (getNewIdx1 type attrs i)).
+  Definition mkStruct n (attrs: Vector.t _ n) (ils : ilist (fun a => type (snd a)) attrs)
+  : type (Struct attrs) := ilist_to_fun _ ils.
 
-  Lemma nativeTypeEq k: fullType type (SyntaxKind k) = fullType type (@NativeKind (type k) (getDefaultConstNative k)).
-  Proof.
-    reflexivity.
-  Qed.
-
-  Lemma nativeTypeEq' k: fullType type (@NativeKind (type k) (getDefaultConstNative k)) = type k.
-  Proof.
-    reflexivity.
-  Qed.
-
-  Fixpoint typeToConst k: type k -> ConstT k.
-  refine (fun v =>
-            match k return type k -> ConstT k with
-              | Bool => fun v => ConstBool v
-              | Bit n => fun v => ConstBit v
-              | Vector k' n => fun v => _
-              | Struct attrs => fun v => _
-            end v).
-  induction n.
-  exact (ConstVector (Vec0 (@typeToConst _ (v0 WO)))).
-  pose proof (IHn (fun w => v0 (WS false w))) as v1.
-  pose proof (IHn (fun w => v0 (WS false w))) as v2.
-  dependent destruction v1; dependent destruction v2.
-  exact (ConstVector (VecNext v1 v2)).
-  induction attrs.
-  exact (ConstStruct (inil _)).
-  specialize (IHattrs (fun i => v0 (addFirstBoundedIndex _ i))).
-  apply ConstStruct.
-  dependent destruction IHattrs.
-  constructor.
-  specialize (v0 {| indexb := IndexBound_head (attrName (mapAttr type a)) (map (@attrName _) (map (mapAttr type) attrs)) |}).
-  exact (@typeToConst _ v0).
-  exact i.
-  Defined.
-
-  Definition typeToExpr k
-    (v: fullType type (@NativeKind (type k) (getDefaultConstNative k))) ty: 
-    Expr ty (SyntaxKind k) := Const ty (@typeToConst _ v).
-  
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
     match e in Expr _ exprT return fullType type exprT with
       | Var _ v => v
       | Const _ v => evalConstT v
-      | UniBool op e1 => (evalUniBool op) (evalExpr e1)
-      | BinBool op e1 e2 => (evalBinBool op) (evalExpr e1) (evalExpr e2)
-      | UniBit n1 n2 op e1 => (evalUniBit op) (evalExpr e1)
-      | BinBit n1 n2 n3 op e1 e2 => (evalBinBit op) (evalExpr e1) (evalExpr e2)
-      | BinBitBool n1 n2 op e1 e2 => (evalBinBitBool op) (evalExpr e1) (evalExpr e2)
-      | ITE _ p e1 e2 => if evalExpr p
-                         then evalExpr e1
-                         else evalExpr e2
-      | Eq _ e1 e2 => if isEq _ (evalExpr e1) (evalExpr e2)
+      | UniBool op e1 => (evalUniBool op) (@evalExpr _ e1)
+      | BinBool op e1 e2 => (evalBinBool op) (@evalExpr _ e1) (@evalExpr _ e2)
+      | UniBit n1 n2 op e1 => (evalUniBit op) (@evalExpr _ e1)
+      | BinBit n1 n2 n3 op e1 e2 => (evalBinBit op) (@evalExpr _ e1) (@evalExpr _ e2)
+      | BinBitBool n1 n2 op e1 e2 => (evalBinBitBool op) (@evalExpr _ e1) (@evalExpr _ e2)
+      | ITE _ p e1 e2 => if @evalExpr _ p
+                         then @evalExpr _ e1
+                         else @evalExpr _ e2
+      | Eq _ e1 e2 => if isEq _ (@evalExpr _ e1) (@evalExpr _ e2)
                       then true
                       else false
-      | ReadIndex _ _ i f => (evalExpr f) (evalExpr i)
-      | ReadField heading fld val =>
-          mapAttrEq2 type fld
-            ((evalExpr val) (getNewIdx2 type fld))
+      | ReadIndex _ _ i f => (@evalExpr _ f) (@evalExpr _ i)
+      | ReadField n ls i e =>
+        Vector_nth_map (@snd _ _) type ls (@evalExpr _ e) i
       | BuildVector _ k vec => evalVec (mapVec (@evalExpr _) vec)
-      | BuildStruct attrs ils => mkStruct (imap _ (fun _ ba => evalExpr ba) ils)
+      | BuildStruct n attrs ils =>
+        ilist_to_fun_m _ _ (fun sk => SyntaxKind (snd sk)) evalExpr ils
       | UpdateVector _ _ fn i v =>
-          fun w => if weq w (evalExpr i) then evalExpr v else (evalExpr fn) w
+          fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
     end.
 
   (* register values just before the current cycle *)
