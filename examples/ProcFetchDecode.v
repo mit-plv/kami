@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcTwoStage.
@@ -78,7 +78,7 @@ Section FetchDecode.
       Call f2d <- f2dDeq();
       Call rf <- getRf();
 
-      LET rawInst <- #f2d@."rawInst";
+      LET rawInst <- #f2d!f2dElt@."rawInst";
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opLd);
@@ -94,9 +94,9 @@ Section FetchDecode.
                            "addr" ::= #laddr;
                            "val" ::= $$Default;
                            "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d@."curPc";
-                           "nextPc" ::= #f2d@."nextPc";
-                           "epoch" ::= #f2d@."epoch" });
+                           "curPc" ::= #f2d!f2dElt@."curPc";
+                           "nextPc" ::= #f2d!f2dElt@."nextPc";
+                           "epoch" ::= #f2d!f2dElt@."epoch" });
       Retv
 
     with Rule "decodeSt" :=
@@ -105,7 +105,7 @@ Section FetchDecode.
       Call f2d <- f2dDeq();
       Call rf <- getRf();
 
-      LET rawInst <- #f2d@."rawInst";
+      LET rawInst <- #f2d!f2dElt@."rawInst";
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opSt);
@@ -125,9 +125,9 @@ Section FetchDecode.
                            "addr" ::= #saddr;
                            "val" ::= #stVal;
                            "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d@."curPc";
-                           "nextPc" ::= #f2d@."nextPc";
-                           "epoch" ::= #f2d@."epoch" });
+                           "curPc" ::= #f2d!f2dElt@."curPc";
+                           "nextPc" ::= #f2d!f2dElt@."nextPc";
+                           "epoch" ::= #f2d!f2dElt@."epoch" });
       Retv
 
     with Rule "decodeTh" :=
@@ -136,7 +136,7 @@ Section FetchDecode.
       Call f2d <- f2dDeq();
       Call rf <- getRf();
 
-      LET rawInst <- #f2d@."rawInst";
+      LET rawInst <- #f2d!f2dElt@."rawInst";
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opTh);
@@ -151,9 +151,9 @@ Section FetchDecode.
                            "addr" ::= $$Default;
                            "val" ::= #srcVal;
                            "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d@."curPc";
-                           "nextPc" ::= #f2d@."nextPc";
-                           "epoch" ::= #f2d@."epoch" });
+                           "curPc" ::= #f2d!f2dElt@."curPc";
+                           "nextPc" ::= #f2d!f2dElt@."nextPc";
+                           "epoch" ::= #f2d!f2dElt@."epoch" });
       Retv
 
     with Rule "decodeNm" :=
@@ -162,7 +162,7 @@ Section FetchDecode.
       Call f2d <- f2dDeq();
       Call rf <- getRf();
 
-      LET rawInst <- #f2d@."rawInst";
+      LET rawInst <- #f2d!f2dElt@."rawInst";
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opNm);
@@ -172,9 +172,9 @@ Section FetchDecode.
                            "addr" ::= $$Default;
                            "val" ::= $$Default;
                            "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d@."curPc";
-                           "nextPc" ::= #f2d@."nextPc";
-                           "epoch" ::= #f2d@."epoch" });
+                           "curPc" ::= #f2d!f2dElt@."curPc";
+                           "nextPc" ::= #f2d!f2dElt@."nextPc";
+                           "epoch" ::= #f2d!f2dElt@."epoch" });
       Retv
   }.
 
@@ -222,7 +222,7 @@ Section Facts.
                         getSrc1).
   Proof. (* SKIP_PROOF_ON
     kequiv.
-    END_SKIP_PROOF_ON *) admit.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   Hint Resolve decoder_ModEquiv.
 

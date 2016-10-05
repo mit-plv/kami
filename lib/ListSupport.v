@@ -1,9 +1,59 @@
-Require Import Coq.Lists.List Lib.Concat Coq.Program.Basics.
+Require Import Coq.Lists.List (* Lib.Concat*) Coq.Program.Basics.
 
 Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+
+
+Lemma NoDup_app_comm:
+  forall {A} (l1 l2: list A), NoDup (l1 ++ l2) -> NoDup (l2 ++ l1).
+Proof.
+  induction l2; simpl; intros; [rewrite app_nil_r in H; auto|].
+  constructor.
+  - intro Hx. apply in_app_or, or_comm, in_or_app in Hx.
+    apply NoDup_remove_2 in H; elim H; auto.
+  - apply IHl2.
+    eapply NoDup_remove_1; eauto.
+Qed.
+
+Lemma NoDup_app_1:
+  forall {A} (l1 l2: list A), NoDup (l1 ++ l2) -> NoDup l1.
+Proof.
+  induction l1; simpl; intros; auto.
+  - constructor.
+  - inversion H; constructor; eauto; subst.
+    intro Hx; elim H2; apply in_or_app; auto.
+Qed.
+
+Lemma NoDup_app_2:
+  forall {A} (l1 l2: list A), NoDup (l1 ++ l2) -> NoDup l2.
+Proof.
+  induction l2; simpl; intros; auto; constructor.
+  - apply NoDup_remove_2 in H.
+    intro Hx; elim H; apply in_or_app; auto.
+  - apply IHl2; eapply NoDup_remove_1; eauto.
+Qed.
+
+
+Lemma NoDup_app_comm_ext:
+  forall {A} (l1 l2 l3 l4: list A),
+    NoDup (l1 ++ (l2 ++ l3) ++ l4) -> NoDup (l1 ++ (l3 ++ l2) ++ l4).
+Proof.
+  intros; apply NoDup_app_comm; apply NoDup_app_comm in H.
+  rewrite <-app_assoc with (n:= l1).
+  rewrite <-app_assoc with (n:= l1) in H.
+  apply NoDup_app_comm; apply NoDup_app_comm in H.
+  induction (l4 ++ l1).
+  - rewrite app_nil_l in *; apply NoDup_app_comm; auto.
+  - simpl in *; inversion H; constructor; auto.
+    intro Hx; elim H2; clear H2.
+    apply in_app_or in Hx; destruct Hx.
+    + apply in_or_app; auto.
+    + apply in_app_or in H2; destruct H2.
+      * apply in_or_app; right; apply in_or_app; auto.
+      * apply in_or_app; right; apply in_or_app; auto.
+Qed.
 
 Lemma hd_error_revcons_same A ls: forall (a: A), hd_error ls = Some a ->
                                                  forall v, hd_error (ls ++ [v]) = Some a.

@@ -1,9 +1,11 @@
-Require Import Syntax String Lib.Word Lib.Struct Lib.FMap List Inline InlineFacts
-        CommonTactics Program.Equality StringEq FunctionalExtensionality
-        Bool Lib.Indexer Semantics SemFacts RefinementFacts Lib.StringAsList Ascii
-        Lib.Concat.
+Require Import Kami.Syntax String Lib.Word Lib.Struct Lib.FMap List.
+Require Import Kami.Inline Kami.InlineFacts.
+Require Import Lib.CommonTactics Program.Equality Lib.StringEq FunctionalExtensionality.
+Require Import Bool Lib.Indexer Kami.Semantics Kami.SemFacts Kami.RefinementFacts Lib.StringAsList Ascii.
+Require Import Lib.Concat Omega.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Ltac dest_str :=
   match goal with

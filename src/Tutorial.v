@@ -1,6 +1,7 @@
-Require Import Kami.
+Require Import Kami.Kami.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (** Welcome to the Kami tutorial!  This tutorial gives a demo of implementing and verifying very simple producer-consumer components. *)
 

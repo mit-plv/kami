@@ -2,6 +2,8 @@ Require Import FunctionalExtensionality List String.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.SymEval.
 
+Set Asymmetric Patterns.
+
 Hint Rewrite @M.find_empty @M.find_add_1: SymEval.
 Hint Rewrite @M.find_union: SymEval.
 Hint Rewrite @M.union_empty_L @M.union_empty_R: SymEval.

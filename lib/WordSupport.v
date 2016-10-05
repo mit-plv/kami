@@ -1,4 +1,4 @@
-Require Import Arith Lib.Word Lib.Nomega.
+Require Import Arith Lib.Word Lib.Nomega Omega.
 
 Set Asymmetric Patterns.
 Set Implicit Arguments.

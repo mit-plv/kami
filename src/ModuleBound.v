@@ -1,9 +1,10 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Concat Lib.Indexer Lib.StringEq.
-Require Import Syntax ParametricSyntax Semantics SemFacts.
-Require Import Specialize Duplicate.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.Specialize Kami.Duplicate.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Lemma prefix_getListFromRep:
   forall s {A} (strA: A -> string) {B} (bgen: A -> B) nameVal ls,

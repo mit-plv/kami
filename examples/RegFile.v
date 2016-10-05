@@ -27,21 +27,21 @@ Section RegFile.
   Notation "^ s" := (name -- s) (at level 0).
 
   Variable init: ConstT DataArray.
-  
+
   Definition regFile :=
     MODULE {
         Register ^dataArray: DataArray <- init
-
+                                       
         with Method ^read (a: Addr): Data :=
           Read full: DataArray <- ^dataArray;
-          Ret (#full@[#a])
+        Ret (#full@[#a])
             
         with Method ^write (w: WritePort): Void :=
           Read full: DataArray <- ^dataArray;
-          Write ^dataArray <- #full@[ #w@.addr <- #w@.data ];
-          Retv
+        Write ^dataArray <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
+        Retv
       }.
-
+  
   (** SinAction version *)
   Hypothesis Hname: index 0 indexSymbol name = None.
   Lemma rfgn:
@@ -66,7 +66,7 @@ Section RegFile.
             
         with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
-          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w@.addr <- #w@.data ];
+          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
           Retv
       }.
 
@@ -80,7 +80,7 @@ Section RegFile.
             
         with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
-          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w@.addr <- #w@.data ];
+          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
           Retv
       }.
 

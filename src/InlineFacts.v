@@ -1,11 +1,14 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.Struct.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts RefinementFacts Wf Inline.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.Wf Kami.Inline.
+Require Import Kami.RefinementFacts.
 
 Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Lemma inlineDm_SemAction_intact:
   forall {retK} or a nr calls (retV: type retK),

@@ -1,8 +1,10 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.StringBound Lib.Word Lib.ilist Lib.Indexer.
-Require Import Kami.Syntax Kami.ParametricSyntax.
+Require Import Lib.Struct Lib.Word Lib.ilist Lib.Indexer.
+Require Import Kami.Syntax.
+Require Import Kami.ParametricSyntax.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (** * Common notations for normal modules and meta-modules *)
 
@@ -46,7 +48,27 @@ Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
 Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
-Notation "s @. fd" := (ReadField ({| bindex := fd%string |}) s) (at level 0) : kami_expr_scope.
+
+
+Delimit Scope kami_expr_scope with kami_expr.
+
+Definition doReadField (s: string) n (v: Vector.t _ (S n)) ty (e: Expr ty (SyntaxKind (Struct v))) :=
+  (ReadField (Lib.VectorFacts.Vector_find (fun x => Lib.StringEq.string_eq s (attrName x)) v) e).
+
+Definition getLs {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
+
+Notation "e ! s @. f" := (@doReadField (f%string) _ (@getLs _ _ s eq_refl) _ (e%kami_expr)) (at level 0): kami_expr_scope.
+
+(*     cbv [doReadField getLs VectorFacts.Vector_find] in m; simpl in m *)
+
+(*
+Notation "e @. f" := ltac:(let x := constr:(@doReadField f _ _ _ e) in
+                             let y := eval compute in x in exact y) (at level 0)
+                       : kami_expr_scope.
+*)
+
+
+
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.
 Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_expr_scope.
@@ -55,9 +77,9 @@ Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_expr_scope.
 Notation "$ n" := (natToWord _ n) (at level 0).
 
 Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
-           {attrs}
+           {n} {attrs: Vector.t _ n}
            (tl : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) attrs)
-  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (projT1 na :: attrs) :=
+  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (Vector.cons _ (projT1 na) _ attrs) :=
   icons (projT1 na) (projT2 na) tl.
 
 Notation "name ::= value" :=
@@ -65,8 +87,13 @@ Notation "name ::= value" :=
           (Build_Attribute name _) value) (at level 50) : init_scope.
 Delimit Scope init_scope with init.
 
+
+
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..)) : kami_expr_scope.
+
+
+
 
 Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
 
@@ -80,8 +107,6 @@ Definition Maybe (t: Kind) := STRUCT {
 
 Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0).
 
-Delimit Scope kami_expr_scope with kami_expr.
-
 (** Notations for action *)
 
 Notation "'Call' meth ( arg ) ; cont " :=
@@ -90,11 +115,17 @@ Notation "'Call' meth ( arg ) ; cont " :=
 Notation "'Call' name <- meth ( arg ) ; cont " :=
   (MCall (attrName meth) (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+Notation "'Call' name : t <- meth ( arg ) ; cont " :=
+  (MCall (lretT := t) (attrName meth) (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 Notation "'Call' meth () ; cont " :=
   (MCall (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_action_scope.
 Notation "'Call' name <- meth () ; cont " :=
   (MCall (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+Notation "'Call' name : t <- meth () ; cont " :=
+  (MCall (lretT := t) (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 Notation "'LETN' name : kind <- expr ; cont " :=
   (Let_ (lretT' := kind) expr%kami_expr (fun name => cont))
@@ -167,7 +198,7 @@ Definition makeConst k (c: ConstT k): ConstFullT (SyntaxKind k) := SyntaxConst c
 
 Notation "'RegisterN' name : type <- 'Default'" :=
   (MERegister (Build_Attribute name (RegInitDefault type)))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_scope.
+    (at level 0, name at level 0, type at level 0) : kami_scope.
 
 Notation "'RegisterN' name : type <- init" :=
   (MERegister (Build_Attribute name (RegInitCustom (existT ConstFullT type init))))
@@ -175,7 +206,7 @@ Notation "'RegisterN' name : type <- init" :=
 
 Notation "'Register' name : type <- 'Default'" :=
   (MERegister (Build_Attribute name (RegInitDefault (SyntaxKind type))))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_scope.
+    (at level 0, name at level 0, type at level 0) : kami_scope.
 
 Notation "'Register' name : type <- init" :=
   (MERegister (Build_Attribute name (RegInitCustom (existT ConstFullT (SyntaxKind type) (makeConst init)))))
@@ -214,6 +245,9 @@ Notation "'Call' meth ( arg ) ; cont " :=
 Notation "'Call' name <- meth ( arg ) ; cont " :=
   (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' name : t <- meth ( arg ) ; cont " :=
+  (SMCall (lretT := t) (Build_NameRec (attrName meth) eq_refl) (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'Call' meth () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth)
           (Const _ Default) (fun _ => cont))
@@ -222,11 +256,18 @@ Notation "'Call' name <- meth () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) eq_refl) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' name : t <- meth () ; cont " :=
+  (SMCall (lretT := t) (Build_NameRec (attrName meth) eq_refl) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'Call' { meth | pf } ( arg ) ; cont " :=
   (SMCall (Build_NameRec (attrName meth) pf) (attrType meth) arg%kami_expr (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_sin_scope.
 Notation "'Call' name <- { meth | pf } ( arg ) ; cont " :=
   (SMCall (Build_NameRec (attrName meth) pf) (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' name : t <- { meth | pf } ( arg ) ; cont " :=
+  (SMCall (lretT := t) (Build_NameRec (attrName meth) pf) (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'Call' { meth | pf } () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) pf) (attrType meth)
@@ -234,6 +275,10 @@ Notation "'Call' { meth | pf } () ; cont " :=
     (at level 12, right associativity, meth at level 0) : kami_sin_scope.
 Notation "'Call' name <- { meth | pf } () ; cont " :=
   (SMCall (Build_NameRec (attrName meth) pf) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+Notation "'Call' name : t <- { meth | pf } () ; cont " :=
+  (SMCall (lretT := t) (Build_NameRec (attrName meth) pf) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 Notation "'LETN' name : kind <- expr ; cont " :=
@@ -304,12 +349,20 @@ Notation "'Call' name <- meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl))
           (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Call' name : t <- meth ( arg ) ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl))
+          (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Call' meth () ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_gen_scope.
 Notation "'Call' name <- meth () ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Call' name : t <- meth () ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Calli' meth ( arg ) ; cont " :=
@@ -320,12 +373,20 @@ Notation "'Calli' name <- meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl))
           (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name : t <- meth ( arg ) ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl))
+          (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'Calli' meth () ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_gen_scope.
 Notation "'Calli' name <- meth () ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name : t <- meth () ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 Notation "'ILET' name ; cont " :=
@@ -432,12 +493,12 @@ Notation "'RegisterN' name : type <- 'Default'" :=
   (MMERegister (OneReg (RegInitDefault type)
                        {| nameVal := name;
                           goodName := eq_refl |} ))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+    (at level 0, name at level 0, type at level 0) : kami_meta_scope.
 Notation "'RegisterN' { name | pf } : type <- 'Default'" :=
   (MMERegister (OneReg (RegInitDefault type)
                        {| nameVal := name;
                           goodName := pf |} ))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+    (at level 0, name at level 0, type at level 0) : kami_meta_scope.
 
 Notation "'RegisterN' name : type <- init" :=
   (MMERegister (OneReg (RegInitCustom (existT ConstFullT (type) (init)))
@@ -454,12 +515,12 @@ Notation "'Register' name : type <- 'Default'" :=
   (MMERegister (OneReg (RegInitDefault (SyntaxKind type))
                        {| nameVal := name;
                           goodName := eq_refl |} ))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+    (at level 0, name at level 0, type at level 0) : kami_meta_scope.
 Notation "'Register' { name | pf } : type <- 'Default'" :=
   (MMERegister (OneReg (RegInitDefault (SyntaxKind type))
                        {| nameVal := name;
                           goodName := pf |} ))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+    (at level 0, name at level 0, type at level 0) : kami_meta_scope.
 
 Notation "'Register' name : type <- init" :=
   (MMERegister (OneReg (RegInitCustom (existT ConstFullT (SyntaxKind type) (makeConst init)))
@@ -479,7 +540,7 @@ Notation "'Repeat' 'Register' 'as' i 'till' n 'by' name : type <- 'Default'" :=
                        (fun i => RegInitDefault (SyntaxKind type))
                        {| nameVal := name; goodName := eq_refl |}
                        (getNatListToN_NoDup n)))
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_meta_scope.
+    (at level 0, name at level 0, type at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Register' 'as' i 'till' n 'by' name : type <- init" :=
   (MMERegister (RepReg string_of_nat
@@ -526,7 +587,7 @@ Notation "'Repeat' 'Method' 'till' n 'by' name () : retT := c" :=
                             (fun ty (_: ty Void) => c%kami_gen))
                     {| nameVal := name; goodName := eq_refl |}
                     (getNatListToN_NoDup n)))
-    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
+    (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Method' 'till' n 'by' name ( param : dom ) : retT := c" :=
   (MMEMeth (RepMeth string_of_nat
@@ -548,7 +609,7 @@ Notation "'Repeat' 'Method' 'till' n 'with' sz 'by' name () : retT := c" :=
                             (fun ty (_: ty Void) => c%kami_gen))
                     name
                     (getNatListToN n)))
-    (at level 0, name at level 0, param at level 0, dom at level 0) : kami_meta_scope.
+    (at level 0, name at level 0) : kami_meta_scope.
 
 Notation "'Repeat' 'Method' 'till' n 'with' sz 'by' name ( param : dom ) : retT := c" :=
   (MMEMeth (RepMeth string_of_nat
@@ -635,12 +696,12 @@ Notation "'RegisterN' name : type <- 'Default'" :=
   (SMERegister {| regGen := fun _ => RegInitDefault type;
                   regName := {| nameVal := name;
                                 goodName := eq_refl |} |})
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+    (at level 0, name at level 0, type at level 0) : kami_sin_scope.
 Notation "'RegisterN' { name | pf } : type <- 'Default'" :=
   (SMERegister {| regGen := fun _ => RegInitDefault type;
                   regName := {| nameVal := name;
                                 goodName := pf |} |})
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+    (at level 0, name at level 0, type at level 0) : kami_sin_scope.
 
 Notation "'RegisterN' name : type <- init" :=
   (SMERegister {| regGen := fun _ => RegInitCustom (existT ConstFullT (type) (init));
@@ -657,12 +718,12 @@ Notation "'Register' name : type <- 'Default'" :=
   (SMERegister {| regGen := fun _ => RegInitDefault (SyntaxKind type);
                   regName := {| nameVal := name;
                                 goodName := eq_refl |} |})
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+    (at level 0, name at level 0, type at level 0) : kami_sin_scope.
 Notation "'Register' { name | pf } : type <- 'Default'" :=
   (SMERegister {| regGen := fun _ => RegInitDefault (SyntaxKind type);
                   regName := {| nameVal := name;
                                 goodName := pf |} |})
-    (at level 0, name at level 0, type at level 0, init at level 0) : kami_sin_scope.
+    (at level 0, name at level 0, type at level 0) : kami_sin_scope.
 
 Notation "'Register' name : type <- init" :=
   (SMERegister {| regGen := fun _ => RegInitCustom (existT ConstFullT (SyntaxKind type)

@@ -1,10 +1,11 @@
 Require Import Bool List String.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
-Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq.
-Require Import Syntax Semantics SemFacts ModularFacts Wf.
+Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq Lib.ListSupport.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.ModularFacts Kami.Wf.
 Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section LabelMapComposition.
   Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=

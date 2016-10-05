@@ -1,8 +1,9 @@
 Require Import List String.
 Require Import Lib.CommonTactics Lib.Struct Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Fixpoint composeLabels (ls1 ls2: LabelSeqT) :=
   match ls1, ls2 with
@@ -467,7 +468,8 @@ Section TwoModules.
     - destruct lsb as [|]; [intuition idtac|].
       destruct H3; inv H4.
       inv H; inv H1.
-      inv Hvr.
+      pose proof Hvr as Hvr'.
+      inv Hvr'.
       
       pose proof (validRegsModules_multistep_newregs_subset H HMultistep eq_refl).
       pose proof (validRegsModules_multistep_newregs_subset H1 HMultistep0 eq_refl).
@@ -499,4 +501,3 @@ Section TwoModules.
   Qed.
 
 End TwoModules.
-

@@ -1,12 +1,13 @@
 Require Import Bool String List Eqdep.
-Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.StringBound Lib.Struct.
+Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf RefinementFacts Notations.
-Require Import Inline InlineFacts Specialize Duplicate Substitute.
-Require Import Decomposition ModuleBound.
-Require Import ParametricSyntax ParametricEquiv ParametricWf.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts Kami.Notations.
+Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.Substitute.
+Require Import Kami.Decomposition Kami.ModuleBound.
+Require Import Kami.ParametricSyntax Kami.ParametricEquiv Kami.ParametricWf.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (**
 - Kami Tactics
@@ -439,6 +440,7 @@ Ltac kinline_compute :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
+               doReadField getLs VectorFacts.Vector_find
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb];
@@ -464,6 +466,7 @@ Ltac kinline_compute_in H :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
+               doReadField getLs VectorFacts.Vector_find
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb] in H;
@@ -549,7 +552,6 @@ Ltac kinvert :=
 
 Ltac kinv_contra :=
   try (exfalso;
-       unfold IndexBound_head, IndexBound_tail, mapAttr, addFirstBoundedIndex, bindex in *;
        simpl in *;
        repeat autounfold with MethDefs in *;
        repeat autounfold with InvDefs in *; dest; subst;
@@ -647,9 +649,6 @@ Ltac is_not_const_bool t :=
   end.
 
 Ltac kinv_finish :=
-  cbv [BoundedIndexFull
-         IndexBound_head IndexBound_tail
-         mapAttr addFirstBoundedIndex bindex] in *;
   repeat autounfold with MethDefs; simpl in *;
   repeat
     (kinv_simpl;
@@ -663,9 +662,6 @@ Ltac kinv_finish :=
      simpl in *; auto).
 
 Ltac kinv_finish_with tac :=
-  cbv [BoundedIndexFull
-         IndexBound_head IndexBound_tail
-         mapAttr addFirstBoundedIndex bindex] in *;
   repeat autounfold with MethDefs ; simpl in *;
   repeat (
       repeat
@@ -689,9 +685,6 @@ Ltac invertActionRep ::=
              SemAction _ _ _ _ _ /\ _ /\ _ /\ _
            else
              SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-       cbv [BoundedIndexFull
-              IndexBound_head IndexBound_tail
-              mapAttr addFirstBoundedIndex bindex] in *;
        repeat autounfold with MethDefs; simpl in *;
        match goal with
        | [H: if ?c
@@ -703,6 +696,8 @@ Ltac invertActionRep ::=
          (remember c as ic; destruct ic; dest; subst)
        end
      end.
+
+Ltac boundedMapTac := idtac.
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.

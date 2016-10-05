@@ -1,10 +1,11 @@
 Require Import String List.
 Require Import Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.Concat.
-Require Import Syntax Semantics Wf InlineFacts PartialInlineFacts.
-Require Import ParametricSyntax ParametricEquiv.
+Require Import Kami.Syntax Kami.Semantics Kami.Wf Kami.InlineFacts Kami.PartialInlineFacts.
+Require Import Kami.ParametricSyntax Kami.ParametricEquiv.
 Require Import Program.Equality.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section IndexSymbol.
   Lemma namesMatch:

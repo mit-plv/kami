@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
@@ -342,7 +342,7 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert !#stall;
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch != #eEpoch);
         Retv
@@ -351,13 +351,13 @@ Section ProcTwoStage.
         Read stall <- "stall";
         Assert !#stall;
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        Assert #d2e@."opType" == $$opLd;
-        LET dst <- #d2e@."dst";
+        Assert #d2e!d2eElt@."opType" == $$opLd;
+        LET dst <- #d2e!d2eElt@."dst";
         Assert #dst != $0;
-        Call memReq(STRUCT { "addr" ::= #d2e@."addr";
+        Call memReq(STRUCT { "addr" ::= #d2e!d2eElt@."addr";
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Call sbInsert(#dst);
@@ -370,27 +370,27 @@ Section ProcTwoStage.
         Assert !#stall;
         Call rf <- getRf();
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        Assert #d2e@."opType" == $$opLd;
-        Assert #d2e@."dst" == $0;
-        LET ppc <- #d2e@."curPc";
-        LET npcp <- #d2e@."nextPc";
-        LET rawInst <- #d2e@."rawInst";
+        Assert #d2e!d2eElt@."opType" == $$opLd;
+        Assert #d2e!d2eElt@."dst" == $0;
+        LET ppc <- #d2e!d2eElt@."curPc";
+        LET npcp <- #d2e!d2eElt@."nextPc";
+        LET rawInst <- #d2e!d2eElt@."rawInst";
         checkNextPc ppc npcp rf rawInst
                         
       with Rule "reqSt" :=
         Read stall <- "stall";
         Assert !#stall;
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        Assert #d2e@."opType" == $$opSt;
-        Call memReq(STRUCT { "addr" ::= #d2e@."addr";
+        Assert #d2e!d2eElt@."opType" == $$opSt;
+        Call memReq(STRUCT { "addr" ::= #d2e!d2eElt@."addr";
                              "op" ::= $$true;
-                             "data" ::= #d2e@."val" });
+                             "data" ::= #d2e!d2eElt@."val" });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
         Retv
@@ -402,13 +402,13 @@ Section ProcTwoStage.
         Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
         LET inst <- #curInfo;
-        Assert #inst@."opType" == $$opLd;
-        Call setRf (#rf@[#inst@."dst" <- #val@."data"]);
+        Assert #inst!d2eElt@."opType" == $$opLd;
+        Call setRf (#rf@[#inst!d2eElt@."dst" <- #val!RsToProc@."data"]);
         Call sbRemove ();
         Write "stall" <- $$false;
-        LET ppc <- #curInfo@."curPc";
-        LET npcp <- #curInfo@."nextPc";
-        LET rawInst <- #inst@."rawInst";
+        LET ppc <- #curInfo!d2eElt@."curPc";
+        LET npcp <- #curInfo!d2eElt@."nextPc";
+        LET rawInst <- #inst!d2eElt@."rawInst";
         checkNextPc ppc npcp rf rawInst
 
       with Rule "repSt" :=
@@ -418,11 +418,11 @@ Section ProcTwoStage.
         Call rf <- getRf();
         Read curInfo : d2eElt <- "stalled";
         LET inst <- #curInfo;
-        Assert #inst@."opType" == $$opSt;
+        Assert #inst!d2eElt@."opType" == $$opSt;
         Write "stall" <- $$false;
-        LET ppc <- #curInfo@."curPc";
-        LET npcp <- #curInfo@."nextPc";
-        LET rawInst <- #inst@."rawInst";
+        LET ppc <- #curInfo!d2eElt@."curPc";
+        LET npcp <- #curInfo!d2eElt@."nextPc";
+        LET rawInst <- #inst!d2eElt@."rawInst";
         checkNextPc ppc npcp rf rawInst
                                 
       with Rule "execToHost" :=
@@ -430,14 +430,14 @@ Section ProcTwoStage.
         Assert !#stall;
         Call rf <- getRf();
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        Assert #d2e@."opType" == $$opTh;
-        Call toHost(#d2e@."val");
-        LET ppc <- #d2e@."curPc";
-        LET npcp <- #d2e@."nextPc";
-        LET rawInst <- #d2e@."rawInst";
+        Assert #d2e!d2eElt@."opType" == $$opTh;
+        Call toHost(#d2e!d2eElt@."val");
+        LET ppc <- #d2e!d2eElt@."curPc";
+        LET npcp <- #d2e!d2eElt@."nextPc";
+        LET rawInst <- #d2e!d2eElt@."rawInst";
         checkNextPc ppc npcp rf rawInst
 
       with Rule "execNm" :=
@@ -445,15 +445,15 @@ Section ProcTwoStage.
         Assert !#stall;
         Call rf <- getRf();
         Call d2e <- d2eDeq();
-        LET fEpoch <- #d2e@."epoch";
+        LET fEpoch <- #d2e!d2eElt@."epoch";
         Read eEpoch <- "eEpoch";
         Assert (#fEpoch == #eEpoch);
-        LET ppc <- #d2e@."curPc";
-        Assert #d2e@."opType" == $$opNm;
-        LET rawInst <- #d2e@."rawInst";
+        LET ppc <- #d2e!d2eElt@."curPc";
+        Assert #d2e!d2eElt@."opType" == $$opNm;
+        LET rawInst <- #d2e!d2eElt@."rawInst";
         Call setRf (execState _ rf ppc rawInst);
-        LET ppc <- #d2e@."curPc";
-        LET npcp <- #d2e@."nextPc";
+        LET ppc <- #d2e!d2eElt@."curPc";
+        LET npcp <- #d2e!d2eElt@."nextPc";
         checkNextPc ppc npcp rf rawInst
     }.
     
@@ -556,7 +556,7 @@ Section Facts.
                         getSrc1 predictNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
-    END_SKIP_PROOF_ON *) admit.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   Hint Resolve decoder_ModEquiv.
 
@@ -565,7 +565,7 @@ Section Facts.
       ModPhoasWf (executer inName outName execState execNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
-    END_SKIP_PROOF_ON *) admit.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   Hint Resolve executer_ModEquiv.
   

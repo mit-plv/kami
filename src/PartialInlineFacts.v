@@ -1,10 +1,11 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
-Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics SemFacts RefinementFacts Wf Inline InlineFacts.
+Require Import Lib.CommonTactics Lib.Struct.
+Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq Lib.ListSupport.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Wf Kami.Inline Kami.InlineFacts.
 Require Import Program.Equality FunctionalExtensionality.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Lemma notNamesNotIn: forall A l (x: Attribute A), ~ In (attrName x) (namesOf l) -> In x l -> False.
 Proof.
@@ -679,7 +680,7 @@ Section AboutList.
 
   Lemma filter_equiv: filter (filterA a) ls = prefix ++ suffix.
   Proof.
-    subst.
+    rewrite HIn.
     rewrite filter_app.
     f_equal.
     apply filterA_eq.
@@ -689,7 +690,7 @@ Section AboutList.
     destruct (string_dec (attrName a) (attrName a)); auto.
     apply filterA_eq.
     apply aNotInSuffix.
-    intuition.
+    tauto.
   Qed.
 End AboutList.
   

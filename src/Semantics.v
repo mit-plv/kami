@@ -68,9 +68,9 @@ Proof.
               fun e1 e2 =>
                 wordVecDec e1 e2 (fun x => isEq _ (e1 x) (e2 x))
             | Struct n ls =>
-              (fix help n ls1: forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (snd p)) ls1) i),
+              (fix help n ls1: forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (attrType p)) ls1) i),
                                  {vs1 = vs2} + {vs1 <> vs2} :=
-                 match ls1 return forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (snd p)) ls1) i),
+                 match ls1 return forall (vs1 vs2: forall i, Vector.nth (Vector.map (fun p => type (attrType p)) ls1) i),
                                     {vs1 = vs2} + {vs1 <> vs2} with
                    | Vector.nil => fun _ _ => Yes
                    | Vector.cons att n atts' =>
@@ -162,21 +162,21 @@ Fixpoint evalConstT k (e: ConstT k): type k :=
     | ConstBit n w => w
     | ConstVector k' n v => evalVec (mapVec (@evalConstT k') v)
     | ConstStruct n vs ils =>
-      (fix help n (vs: Vector.t (string * Kind) n) (ils: ilist (fun a => ConstT (snd a)) vs): type (Struct vs) :=
-         match vs in Vector.t _ k return ilist (fun a => ConstT (snd a)) vs -> type (Struct vs) with
+      (fix help n (vs: Vector.t _ n) (ils: ilist (fun a => ConstT (attrType a)) vs): type (Struct vs) :=
+         match vs in Vector.t _ k return ilist (fun a => ConstT (attrType a)) vs -> type (Struct vs) with
            | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
            | Vector.cons a1 n1 vs1 =>
              fun ils1 i1 =>
                match ils1 in ilist _ (Vector.cons a n2 vs2)
                      return forall i2: Fin.t (S n2),
                               Vector.nth
-                                (Vector.map (fun p => type (snd p)) (Vector.cons _ a n2 vs2)) i2 with
+                                (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
                  | inil => idProp
                  | icons t3 n3 vs3 b ils3 =>
                    fun k =>
                      match k as k4 in Fin.t (S n4) return
                            forall (vs4: Vector.t _ n4), type (Struct vs4) ->
-                                                        (Vector.nth (Vector.map (fun p => type (snd p))
+                                                        (Vector.nth (Vector.map (fun p => type (attrType p))
                                                                                 (Vector.cons _ t3 n4 vs4)) k4)
                      with
                        | Fin.F1 s5 => fun _ _ => @evalConstT _ b
@@ -202,7 +202,7 @@ Definition SignT k := (type (arg k) * type (ret k))%type.
 Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
-  Definition mkStruct n (attrs: Vector.t _ n) (ils : ilist (fun a => type (snd a)) attrs)
+  Definition mkStruct n (attrs: Vector.t _ n) (ils : ilist (fun a => type (attrType a)) attrs)
   : type (Struct attrs) := ilist_to_fun _ ils.
 
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
@@ -222,10 +222,10 @@ Section Semantics.
                       else false
       | ReadIndex _ _ i f => (@evalExpr _ f) (@evalExpr _ i)
       | ReadField n ls i e =>
-        Vector_nth_map (@snd _ _) type ls (@evalExpr _ e) i
+        Vector_nth_map (@attrType _) type ls (@evalExpr _ e) i
       | BuildVector _ k vec => evalVec (mapVec (@evalExpr _) vec)
       | BuildStruct n attrs ils =>
-        ilist_to_fun_m _ _ (fun sk => SyntaxKind (snd sk)) evalExpr ils
+        ilist_to_fun_m _ _ (fun sk => SyntaxKind (attrType sk)) evalExpr ils
       | UpdateVector _ _ fn i v =>
           fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
     end.

@@ -1,5 +1,7 @@
-Require Import ParametricInline List ParametricSyntax String Syntax
-        Lib.CommonTactics Lib.Reflection Tactics ParametricEquiv.
+Require Import Kami.ParametricInline List Kami.ParametricSyntax String Kami.Syntax
+        Lib.CommonTactics Lib.Reflection Kami.Tactics Kami.ParametricEquiv.
+
+Set Asymmetric Patterns.
 
 Open Scope string.
 

@@ -1,9 +1,10 @@
-Require Import Lib.FMap Lib.Struct Semantics Syntax String List RefinementFacts.
+Require Import Lib.FMap Lib.Struct Kami.Semantics Kami.Syntax String List Kami.RefinementFacts.
 Require Import Program.Equality.
 
 Require Import Lib.CommonTactics.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Lemma prepend1To1: forall c s1 s2: string, (c ++ s1)%string = (c ++ s2)%string -> s1 = s2.
 Proof.

@@ -1,10 +1,10 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
-Require Import Lib.FMap Lib.Indexer Lib.StringBound.
+Require Import Lib.FMap Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.Wf Kami.Notations Kami.Tactics.
 Require Import Kami.Decomposition.
-Require Import Ex.Fifo Ex.NativeFifo.
+Require Import Ex.Fifo Ex.NativeFifo Omega.
 
 Set Implicit Arguments.
 
@@ -161,7 +161,7 @@ Section Facts.
     - exfalso.
       inv H1; inv H17; simpl in *.
       clear -H1; findeq.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition sfifo_inv_0 (o: RegsT): Prop.
@@ -187,7 +187,7 @@ Section Facts.
       + kinv_magic.
       + kinv_magic.
     - apply sfifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition sfifo_inv_1 (o: RegsT): Prop.
@@ -243,7 +243,7 @@ Section Facts.
           { or3_fst; auto. }
           { or3_thd; auto. }
     - apply sfifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma sfifo_refines_nsfifo: sfifo <<== nsfifo.
@@ -528,7 +528,7 @@ Section Facts.
         * exfalso; clear HAction1 HAction2 Hsig Hsig0.
           invertActionRep; inv H2; findeq.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) admit.
+          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End Facts.

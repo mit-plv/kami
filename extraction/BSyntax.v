@@ -1,8 +1,9 @@
 Require Import String List.
-Require Import Lib.ilist Lib.Struct Lib.Indexer Lib.StringBound.
+Require Import Lib.ilist Lib.Struct Lib.Indexer.
 Require Import Kami.Syntax Kami.Synthesize Kami.ParametricSyntax.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section BluespecSubset.
 
@@ -20,8 +21,7 @@ Section BluespecSubset.
   | BReadField: string -> BExpr -> BExpr
   | BBuildVector lgn: Vec BExpr lgn -> BExpr
   | BBuildStruct:
-      forall attrs,
-        ilist.ilist (fun _:Attribute Kind => BExpr) attrs -> BExpr
+      list BExpr -> BExpr
   (* if we use list instead of "ilist" in BExpr,
    * then Coq cannot find the decreasing factor while converting ExprS to BExpr
    *)
@@ -64,16 +64,16 @@ Section BluespecSubset.
       (bindVec v1) >>= (fun bv1 => (bindVec v2) >>= (fun bv2 => Some (VecNext bv1 bv2)))
     end.
 
-  Fixpoint bindList attrs (il: ilist (fun _ : Attribute Kind => option BExpr) attrs):
+  Fixpoint bindList n attrs (il: @ilist _ (fun _ : Attribute Kind => option BExpr) n attrs):
     option (ilist (fun _ : Attribute Kind => BExpr) attrs) :=
     match il with
     | inil => Some (inil _)
-    | icons a ats (Some e) t =>
+    | icons a n ats (Some e) t =>
       (bindList t) >>= (fun bl => Some (icons a e bl))
     | _ => None
     end.
-  
-  Fixpoint exprSToBExpr {k} (e: ExprS k): option BExpr :=
+
+  Fixpoint exprSToBExpr {k} (e: ExprS k) {struct e}: option BExpr :=
     match e with
     | Var vk i =>
       (match vk return (fullType tyS vk -> option BExpr) with
@@ -81,43 +81,50 @@ Section BluespecSubset.
        | NativeKind _ _ => fun _ => None
        end) i
     | Const k c => Some (BConst c)
-    | UniBool op se => (exprSToBExpr se) >>= (fun be => Some (BUniBool op be))
+    | UniBool op se => (@exprSToBExpr _ se) >>= (fun be => Some (BUniBool op be))
     | BinBool op e1 e2 =>
-      (exprSToBExpr e1)
-        >>= (fun be1 => (exprSToBExpr e2) >>= (fun be2 => Some (BBinBool op be1 be2)))
-    | UniBit n1 n2 op e => (exprSToBExpr e) >>= (fun be => Some (BUniBit op be))
+      (@exprSToBExpr _ e1)
+        >>= (fun be1 => (@exprSToBExpr _ e2) >>= (fun be2 => Some (BBinBool op be1 be2)))
+    | UniBit n1 n2 op e => (@exprSToBExpr _ e) >>= (fun be => Some (BUniBit op be))
     | BinBit n1 n2 n3 op e1 e2 =>
-      (exprSToBExpr e1) >>= (fun be1 => (exprSToBExpr e2)
+      (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2)
                                           >>= (fun be2 => Some (BBinBit op be1 be2)))
     | BinBitBool n1 n2 op e1 e2 =>
-      (exprSToBExpr e1) >>= (fun be1 => (exprSToBExpr e2)
+      (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2)
                                           >>= (fun be2 => Some (BBinBitBool op be1 be2)))
     | ITE _ ce te fe =>
-      (exprSToBExpr ce)
+      (@exprSToBExpr _ ce)
         >>= (fun bce =>
-               (exprSToBExpr te)
+               (@exprSToBExpr _ te)
                  >>= (fun bte => 
-                        (exprSToBExpr fe)
+                        (@exprSToBExpr _ fe)
                           >>= (fun bfe => Some (BITE bce bte bfe))))
     | Eq _ e1 e2 =>
-      (exprSToBExpr e1) >>= (fun be1 => (exprSToBExpr e2) >>= (fun be2 => Some (BEq be1 be2)))
+      (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2) >>= (fun be2 => Some (BEq be1 be2)))
     | ReadIndex _ _ ie ve =>
-      (exprSToBExpr ie) >>= (fun bie => (exprSToBExpr ve)
+      (@exprSToBExpr _ ie) >>= (fun bie => (@exprSToBExpr _ ve)
                                           >>= (fun bve => Some (BReadIndex bie bve)))
-    | ReadField _ s e => (exprSToBExpr e) >>= (fun be => Some (BReadField (bindex s) be))
+    | ReadField _ ls i e => (@exprSToBExpr _ e) >>= (fun be => Some (BReadField (Vector.nth (Vector.map (@attrName _) ls) i) be))
     | BuildVector _ lgn v =>
-      (bindVec (mapVec (exprSToBExpr) v)) >>= (fun bv => Some (BBuildVector bv))
+      (bindVec (mapVec (@exprSToBExpr _) v)) >>= (fun bv => Some (BBuildVector bv))
     | UpdateVector _ _ ve ie ke =>
-      (exprSToBExpr ve)
+      (@exprSToBExpr _ ve)
         >>= (fun bve =>
-               (exprSToBExpr ie)
+               (@exprSToBExpr _ ie)
                  >>= (fun bie => 
-                        (exprSToBExpr ke)
+                        (@exprSToBExpr _ ke)
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
-    | BuildStruct attrs st =>
-      (bindList (ilist.imap _ (fun a (e: Expr tyS (SyntaxKind (attrType a)))
-                               => exprSToBExpr e) st))
-        >>= (fun bl => Some (BBuildStruct bl))
+    | BuildStruct n attrs st =>
+      ((fix help n attrs st: option (list BExpr) :=
+         match st in ilist _ attrs1 return option (list BExpr) with
+           | inil => Some nil
+           | icons k na vs h t => match @exprSToBExpr _ h with
+                                    | Some v => (@help _ vs t) >>= (fun bl => Some (cons v bl))
+                                    | None => None
+                                  end
+         end) n attrs st) >>= (fun bl => Some (BBuildStruct bl))
+                                    
+                                                   
         (* cannot find the decreasing factor because of "ilist.map_ilist" *)
         (* (bindList (ilist.map_ilist (fun a (e: Expr tyS (SyntaxKind (attrType a))) *)
         (*                             => {| attrName:= attrName a; *)

@@ -1,9 +1,10 @@
 Require Import Bool List String Structures.Equalities.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap
-        Syntax Semantics.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap
+        Kami.Syntax Kami.Semantics.
 Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (*
 Notation "m ~{ k |-> v }" := ((fun a => if weq a k%string then v else m a) : type (Vector (Bit _) _))
@@ -55,12 +56,12 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
                                                        (fullType type)
                                                        ((evalExpr f) (evalExpr i))
                                                        (SyntaxKind Bool) ise) = true
-           | ReadField heading fld val =>
+           | ReadField _ _ fld val =>
              fun ise => evalExpr (ReadField fld val) = match eq_sym ise in _ = y return _ y with
                                                          | eq_refl => true
                                                        end
            | BuildVector _ _ _ => fun ise => _
-           | BuildStruct _ _ => fun ise => _
+           | BuildStruct _ _ _ => fun ise => _
            | UpdateVector _ _ _ _ _ => fun ise => _
          end; clear semExpr;
   try abstract (inversion ise).
@@ -137,9 +138,9 @@ Section InductionBool.
                                  P eq_refl (@ITE type (SyntaxKind Bool) p e1 e2).
   Variable HEq: forall k e1 e2, P eq_refl (@Eq type k e1 e2).
   Variable HReadIndex: forall i idx vec, P eq_refl (@ReadIndex type i _ idx vec).
-  Variable HReadField: forall attrs attr e (tEq: SyntaxKind (GetAttrType attr) =
-                                                 SyntaxKind Bool),
-                         P tEq (@ReadField type attrs attr e).
+  Variable HReadField: forall n attrs fld e (tEq: SyntaxKind (Vector.nth (Vector.map (@attrType _) attrs) fld) =
+                                                  SyntaxKind Bool),
+                         P tEq (@ReadField type n attrs fld e).
 
   Lemma boolInduction: forall k (tEq: k = SyntaxKind Bool) (e: Expr type k),
                          P tEq e.

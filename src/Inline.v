@@ -1,9 +1,10 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.Struct.
 Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq.
-Require Import Syntax.
+Require Import Kami.Syntax.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section Base.
   Variable type: Kind -> Type.

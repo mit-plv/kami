@@ -1,12 +1,13 @@
-Require Import Bool String List Arith.Peano_dec.
-Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq.
-Require Import Syntax Semantics SemFacts RefinementFacts Renaming Wf.
-Require Import Specialize.
+Require Import Bool String List Arith.Peano_dec Omega.
+Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq Lib.ListSupport.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
+Require Import Kami.Specialize.
 
 Require Import FunctionalExtensionality.
 Require Import Compare_dec.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section Duplicate.
   Variable m: Modules.
@@ -272,7 +273,7 @@ Section DuplicateFacts.
       induction n; simpl; intros.
       - apply specialized_2 with (i:= O); auto.
         eapply traceRefines_label_map; eauto using H.
-        clear; unfold EquivalentLabelMap; intros.
+        clear - Hsp1 Hsp2 Hexts; unfold EquivalentLabelMap; intros.
         rewrite idElementwiseId; unfold id; simpl.
         unfold liftPRename; simpl.
         apply specializer_two_comm; auto.
@@ -294,7 +295,7 @@ Section DuplicateFacts.
         + apply duplicate_noninteracting; auto.
         + apply specialized_2 with (i:= S n); auto.
           eapply traceRefines_label_map; eauto using H.
-          clear; unfold EquivalentLabelMap; intros.
+          clear - Hsp1 Hsp2 Hexts; unfold EquivalentLabelMap; intros.
           rewrite idElementwiseId; unfold id; simpl.
           unfold liftPRename; simpl.
           apply specializer_two_comm; auto.

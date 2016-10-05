@@ -9,6 +9,7 @@ Require Import Coq.Lists.List
 Require Export Lib.VectorFacts.
 Require Coq.Vectors.Vector.
 
+Set Universe Polymorphism.
 Section ilist.
 
   (* Lists of elements whose types depend on an indexing set (CPDT's hlists).
@@ -349,3 +350,4 @@ Section ListToFunctionFun.
              end i1
        end ils).
 End ListToFunctionFun.
+Unset Universe Polymorphism.

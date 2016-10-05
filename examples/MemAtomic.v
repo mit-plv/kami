@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo.
@@ -19,14 +19,14 @@ Section Middleman.
 
   Definition processLd {ty} : ActionT ty Void :=
     (Call req <- getReq();
-     Assert !#req@."op";
+     Assert !#req!RqFromProc@."op";
      Call rep <- exec(#req);
      Call setRep(#rep);
      Retv)%kami_action.
 
   Definition processSt {ty} : ActionT ty Void :=
     (Call req <- getReq();
-     Assert #req@."op";
+     Assert #req!RqFromProc@."op";
      Call rep <- exec(#req);
      Call setRep(#rep);
      Retv)%kami_action.

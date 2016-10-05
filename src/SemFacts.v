@@ -1,9 +1,10 @@
 Require Import Bool String List Program.Equality Program.Basics.
 Require Import FunctionalExtensionality Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
-Require Import Syntax Semantics Wf.
+Require Import Kami.Syntax Kami.Semantics Kami.Wf.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Ltac specializeAll k :=
   repeat

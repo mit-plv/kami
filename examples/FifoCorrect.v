@@ -1,9 +1,9 @@
 Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
-Require Import Lib.FMap Lib.Indexer Lib.StringBound.
+Require Import Lib.FMap Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
 Require Import Kami.Notations Kami.Tactics Kami.Decomposition.
-Require Import Fifo NativeFifo.
+Require Import Ex.Fifo Ex.NativeFifo Omega.
 
 Set Implicit Arguments.
 
@@ -165,7 +165,7 @@ Section ToNative.
     - right; reflexivity.
     - right; reflexivity.
     - left; reflexivity.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
@@ -192,7 +192,7 @@ Section ToNative.
       + kinv_magic_light.
       + kinv_magic_light.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
@@ -252,7 +252,7 @@ Section ToNative.
         * or3_thd; repeat split; auto.
           destruct (weq _ _); auto; elim n; auto.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
@@ -604,7 +604,7 @@ Section ToNative.
         * clear HAction HAction0 Hsig Hsig0.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) admit.
+          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToNative.
@@ -749,7 +749,7 @@ Section ToSimple.
             findeq_custom liftToMap1_find_tac;
               try (unfold dropFirstElt, dropP; rewrite string_eq_true; auto).
           }
-          END_SKIP_PROOF_ON *) admit.
+          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToSimple.
@@ -877,7 +877,7 @@ Section ToSimpleN.
           inv H4; inv H5; clear HAction HAction0 Hsig.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) admit.
+          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToSimpleN.

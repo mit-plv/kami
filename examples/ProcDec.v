@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
@@ -108,7 +108,7 @@ Section ProcDec.
       LET rawInst <- #pgm @[ #ppc ];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
-      Write "rf" <- #rf@[#dstIdx <- #val@."data"];
+      Write "rf" <- #rf@[#dstIdx <- #val!RsToProc@."data"];
       Write "stall" <- $$false;
       nextPc ppc rf rawInst
                       

@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.StringBound.
+Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
@@ -112,13 +112,13 @@ Section MemInst.
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
     with Repeat Method till n by "exec" (a : RqFromProc) : RsToProc :=
-      If !#a@."op" then (* load *)
+      If !#a!RqFromProc@."op" then (* load *)
         Read memv <- "mem";
-        LET ldval <- #memv@[#a@."addr"];
+        LET ldval <- #memv@[#a!RqFromProc@."addr"];
         Ret (STRUCT { "data" ::= #ldval } :: RsToProc)
       else (* store *)
         Read memv <- "mem";
-        Write "mem" <- #memv@[ #a@."addr" <- #a@."data" ];
+        Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
         Ret (STRUCT { "data" ::= $$Default } :: RsToProc)
       as na;
       Ret #na
@@ -177,7 +177,7 @@ Section ProcInst.
       Call ldRep <- execCm(STRUCT { "addr" ::= #laddr;
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
-      Write "rf" <- #rf@[#dstIdx <- #ldRep@."data"];
+      Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc lgDataBytes)@."data"];
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=

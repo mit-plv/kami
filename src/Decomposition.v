@@ -1,9 +1,10 @@
 Require Import Bool List String.
 Require Import Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
-Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.StringBound Lib.ilist Lib.FMap.
-Require Import Syntax Semantics SemFacts Wf RefinementFacts.
+Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section GivenLabelMap.
   Variable p: string -> (sigT SignT) -> option (sigT SignT).

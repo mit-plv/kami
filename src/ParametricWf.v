@@ -1,10 +1,11 @@
 Require Import Bool List String.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.Indexer.
-Require Import Lib.StringBound Lib.ilist Lib.FMap Lib.StringEq.
-Require Import Syntax Semantics Wf ParametricSyntax.
+Require Import Lib.ilist Lib.FMap Lib.StringEq.
+Require Import Kami.Syntax Kami.Semantics Kami.Wf Kami.ParametricSyntax.
 Require Import FunctionalExtensionality Program.Equality Structures.Equalities Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (* Well-formedness w.r.t. valid register uses (read/writes) *)
 Section ValidRegs.

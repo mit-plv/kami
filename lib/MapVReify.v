@@ -1,6 +1,6 @@
 Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith Kami.ParametricSyntax String
         Lib.Indexer Kami.Syntax Kami.Semantics Program.Equality Lib.CommonTactics
-        Kami.Tactics Kami.SymEvalTac Kami.SymEval.
+        Kami.Tactics Kami.SymEvalTac Kami.SymEval Omega.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -233,7 +233,7 @@ Proof.
     rewrite IHn; reflexivity.
 Qed.
 
-Require Import Nomega NArith.
+Require Import Lib.Nomega NArith.
 
 Theorem roundTrip_0' : forall sz, wordToN (natToWord sz 0) = 0%N.
   induction sz; simpl; subst; intuition.
@@ -289,18 +289,6 @@ Ltac doDestruct := (repeat match goal with
                            end
                    ).
 
-Theorem  mkStruct_eq:
-  forall (attrs : list (Attribute Kind))
-         (ils : ilist.ilist (fun a : Attribute Kind => type (attrType a)) attrs)
-         (i : StringBound.BoundedIndex (namesOf (map (mapAttr type) attrs))),
-    mkStruct ils i = 
-    mapAttrEq1 type attrs i
-               (StringBound.ith_Bounded (attrName (Kind:=Kind)) ils
-                                        (getNewIdx1 type attrs i)).
-Proof.
-  reflexivity.
-Qed.
-
 Ltac mapVReify f2 f n m :=
   match m with
     | M.union
@@ -331,14 +319,6 @@ Ltac mapVR_Others t n m := mapVReify t (fun k (v: t k) => v)
 
 Ltac mapVR_Meths n m := mapVReify SignT (fun k (v: SignT k) => v)
                                   n m.
-
-Ltac mkStruct :=
-  repeat match goal with
-           | H: context[@mkStruct ?a ?b ?c] |- _ => rewrite (@mkStruct_eq a b c) in H;
-               simpl in H; unfold StringBound.ith_Bounded in H; simpl in H
-           | |- context[@mkStruct ?a ?b ?c] => rewrite (@mkStruct_eq a b c);
-               simpl; unfold StringBound.ith_Bounded; simpl
-         end.
 
 (*
 Ltac existRegs n :=

@@ -1,11 +1,12 @@
-Require Import Bool String List Arith.Peano_dec.
+Require Import Bool String List Arith.Peano_dec Omega.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.StringEq.
-Require Import Syntax Semantics SemFacts RefinementFacts Renaming Wf.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 
 Require Import FunctionalExtensionality.
 Require Import Compare_dec.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section SpecializeModule.
   Variable m: Modules.

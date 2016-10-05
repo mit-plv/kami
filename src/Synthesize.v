@@ -1,6 +1,7 @@
-Require Import Kami.Syntax Lib.Struct List String Notations.
+Require Import Kami.Syntax Lib.Struct List String Kami.Notations.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Definition tyS: Kind -> Type := fun _ => nat.
 
@@ -26,38 +27,40 @@ Inductive ActionS (lretT: Kind) : Type :=
   | AssertS_: ExprS (SyntaxKind Bool) -> ActionS lretT -> ActionS lretT
   | ReturnS: ExprS (SyntaxKind lretT) -> ActionS lretT.
 
-Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret): (nat * ActionS lret).
-Proof.
-  refine (match a with
-            | MCall meth s e c =>
-              let (m, a') := getActionS (S n) _ (c n) in
-              (m, MCallS meth s e n a')
-            | Let_ lret' e cn => _
-            | ReadReg r _ cn => _
-            | WriteReg r _ e c =>
-              let (m, a') := getActionS n _ c in
-              (m, WriteRegS r e a')
-            | IfElse e _ ta fa c =>
-              let (tm, ta') := getActionS n _ ta in
-              let (fm, fa') := getActionS tm _ fa in
-              let (m, a') := getActionS (S fm) _ (c fm) in
-              (m, IfElseS e ta' fa' fm a')
-            | Assert_ e c =>
-              let (m, a') := getActionS n _ c in
-              (m, AssertS_ e a')
-            | Return e => (n, ReturnS e)
-          end).
-  - destruct lret'.
-    + set (getActionS (S n) _ (cn n)) as ma'.
-      destruct ma' as [m a'].
-      exact (m, LetS_ e n a').
-    + exact (n, ReturnS (Const tyS Default)).
-  - destruct k.
-    + set (getActionS (S n) _ (cn n)) as ma'.
-      destruct ma' as [m a'].
-      exact (m, ReadRegS r n a').
-    + exact (n, ReturnS (Const tyS Default)).
-Defined.
+Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}: (nat * ActionS lret) :=
+  match a with
+    | MCall meth s e c =>
+      let (m, a') := @getActionS (S n) _ (c n) in
+      (m, MCallS meth s e n a')
+    | Let_ lret' e cn => match lret' return (nat * ActionS lret) -> nat * ActionS lret with
+                           | SyntaxKind k => fun v => (fst v,
+                                                       LetS_ e n (snd v))
+                           | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+                         end (@getActionS (S n) _ (cn match lret' with
+                                                        | SyntaxKind k => n
+                                                        | NativeKind t c => c
+                                                      end))
+    | ReadReg r k cn => match k return (nat * ActionS lret) -> nat * ActionS lret with
+                          | SyntaxKind k => fun v => (fst v,
+                                                      ReadRegS r n (snd v))
+                          | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+                        end (@getActionS (S n) _ (cn match k with
+                                                       | SyntaxKind _ => n
+                                                       | NativeKind t c => c
+                                                     end))
+    | WriteReg r _ e c =>
+      let (m, a') := @getActionS n _ c in
+      (m, WriteRegS r e a')
+    | IfElse e _ ta fa c =>
+      let (tm, ta') := @getActionS n _ ta in
+      let (fm, fa') := @getActionS tm _ fa in
+      let (m, a') := @getActionS (S fm) _ (c fm) in
+      (m, IfElseS e ta' fa' fm a')
+    | Assert_ e c =>
+      let (m, a') := @getActionS n _ c in
+      (m, AssertS_ e a')
+    | Return e => (n, ReturnS e)
+  end.
   
 Definition MethodTS sig := ActionS (ret sig).
 

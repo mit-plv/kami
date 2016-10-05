@@ -1,4 +1,6 @@
-Require Import String ParametricSyntax Syntax List Lib.CommonTactics Wf Program.Equality Struct Lib.Concat Lib.StringEq Lib.StringAsList.
+Require Import String Kami.ParametricSyntax Kami.Syntax List Lib.CommonTactics Kami.Wf Program.Equality Lib.Struct Lib.Concat Lib.StringEq Lib.StringAsList.
+
+Set Asymmetric Patterns.
 
 Section Equiv.
   Variable t1 t2: Kind -> Type.

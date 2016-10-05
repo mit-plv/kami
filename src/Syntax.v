@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist.
+Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist Lib.Struct.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
@@ -67,14 +67,14 @@ Inductive Kind :=
 | Bool    : Kind
 | Bit     : nat -> Kind
 | Vector  : Kind -> nat -> Kind
-| Struct  : forall n, Vector.t (string * Kind)%type n -> Kind.
+| Struct  : forall n, Vector.t (Attribute Kind) n -> Kind.
 
 Fixpoint type (t: Kind): Type :=
   match t with
     | Bool => bool
     | Bit n => word n
     | Vector nt n => word n -> type nt
-    | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (snd p)) ks) i
+    | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
   end.
 
 Inductive FullKind: Type :=
@@ -140,8 +140,8 @@ Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
     + clear decKind; right; abstract (intro H; inversion H).
     + clear decKind; right; abstract (intro H; inversion H).
     + destruct h0, h.
-      destruct (string_dec s0 s); [| clear decKind; abstract (right; intro H; inversion H; subst; tauto)].
-      destruct (decKind k0 k); clear decKind;
+      destruct (string_dec attrName0 attrName); [| clear decKind; abstract (right; intro H; inversion H; subst; tauto)].
+      destruct (decKind attrType0 attrType); clear decKind;
       [| right; abstract (intro H; inversion H; try apply inj_pair2 in H; subst; tauto)].
       destruct (IHl1 _ l2); clear IHl1.
       * left; abstract (subst; inversion e1; try apply inj_pair2 in H1; subst; tauto).
@@ -159,7 +159,7 @@ Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
-| ConstStruct n (ls: Vector.t (string * Kind) n): ilist (fun a => ConstT (snd a)) ls -> ConstT (Struct ls).
+| ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls).
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
@@ -174,29 +174,29 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
     | Bit n => ConstBit (getDefaultConstBit n)
     | Vector k n => ConstVector (replicate (getDefaultConst k) n)
     | Struct n ls =>
-      ConstStruct ((fix help n (ls: Vector.t (string * Kind) n) :=
-                      match ls return ilist (fun a => ConstT (snd a)) ls with
+      ConstStruct ((fix help n (ls: Vector.t _ n) :=
+                      match ls return ilist (fun a => ConstT (attrType a)) ls with
                         | Vector.nil => inil _
-                        | Vector.cons x m xs => icons x (getDefaultConst (snd x)) (help m xs)
+                        | Vector.cons x m xs => icons x (getDefaultConst (attrType x)) (help m xs)
                       end) n ls)
   end.
 
-Fixpoint evalConstStruct n (vs: Vector.t (string * Kind) n) (ils: ilist (fun a => type (snd a)) vs) {struct ils}: type (Struct vs) :=
-  match vs in Vector.t _ k return ilist (fun a => type (snd a)) vs -> type (Struct vs) with
+Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrType a)) vs) {struct ils}: type (Struct vs) :=
+  match vs in Vector.t _ k return ilist (fun a => type (attrType a)) vs -> type (Struct vs) with
     | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
     | Vector.cons a1 n1 vs1 =>
       fun ils1 i1 =>
         match ils1 in ilist _ (Vector.cons a n2 vs2)
               return forall i2: Fin.t (S n2),
                        Vector.nth
-                         (Vector.map (fun p => type (snd p)) (Vector.cons _ a n2 vs2)) i2 with
+                         (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
           | inil => idProp
           | icons t3 n3 vs3 b ils3 =>
             fun k =>
               match k as k4 in Fin.t (S n4) return
-                    forall (vs4: Vector.t (string * Kind) n4), type (Struct vs4) ->
-                                                               (Vector.nth (Vector.map (fun p => type (snd p))
-                                                                                       (Vector.cons _ t3 n4 vs4)) k4)
+                    forall (vs4: Vector.t _ n4), type (Struct vs4) ->
+                                                 (Vector.nth (Vector.map (fun p => type (attrType p))
+                                                                         (Vector.cons _ t3 n4 vs4)) k4)
               with
                 | Fin.F1 s5 => fun _ _ => b
                 | Fin.FS s5 f5 => fun vs5 f => f f5
@@ -211,11 +211,11 @@ Fixpoint getDefaultConstNative (k: Kind): type k :=
     | Vector k n => fun _ => getDefaultConstNative k
     | Struct n attrs =>
       fun i =>
-        ilist_to_fun _ ((fix help n (ls: Vector.t (string * Kind) n) :=
-                           match ls return ilist (fun a => type (snd a)) ls with
+        ilist_to_fun _ ((fix help n (ls: Vector.t _ n) :=
+                           match ls return ilist (fun a => type (attrType a)) ls with
                              | Vector.nil => inil _
                              | Vector.cons x _ xs =>
-                               icons x (getDefaultConstNative (snd x)) (help _ xs)
+                               icons x (getDefaultConstNative (attrType x)) (help _ xs)
                            end) n attrs) i
   end.
 
@@ -294,11 +294,11 @@ Section Phoas.
   | ITE k: Expr (SyntaxKind Bool) -> Expr k -> Expr k -> Expr k
   | Eq k: Expr (SyntaxKind k) -> Expr (SyntaxKind k) -> Expr (SyntaxKind Bool)
   | ReadIndex i k: Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
-  | ReadField n (ls: Vector.t (string * Kind) n) (i: Fin.t n):
-      Expr (SyntaxKind (Struct ls)) -> Expr (SyntaxKind (Vector.nth (Vector.map (@snd _ _) ls) i))
+  | ReadField n (ls: Vector.t _ n) (i: Fin.t n):
+      Expr (SyntaxKind (Struct ls)) -> Expr (SyntaxKind (Vector.nth (Vector.map (@attrType _) ls) i))
   | BuildVector n k: Vec (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Vector n k))
-  | BuildStruct n (attrs: Vector.t (string * Kind) n):
-      ilist (fun a => Expr (SyntaxKind (snd a))) attrs -> Expr (SyntaxKind (Struct attrs))
+  | BuildStruct n (attrs: Vector.t _ n):
+      ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k)
                       -> Expr (SyntaxKind (Vector k i)).
 
@@ -808,10 +808,10 @@ Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
 (* TODO MUST CHANGE *)
 
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
-Notation "name :: ty" := (name, ty) : kami_struct_scope.
+Notation "name :: ty" := {| attrName := name; attrType := ty |} : kami_struct_scope.
 Delimit Scope kami_struct_scope with struct.
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (Struct (cons s1%struct .. (cons sN%struct nil) ..)).
+  (Struct (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..)).
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
 Delimit Scope kami_scope with kami.
 

@@ -1,5 +1,5 @@
 Require Import Arith.Peano_dec Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
 Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
 Require Import Ex.FifoNames.
@@ -52,6 +52,8 @@ Section NativeFifo.
     (ReadN elt : listEltK ty <- ^elt;
      Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami_action.
+
+  Set Printing Universes.
 
   Definition nativeFifo := MODULE {
     RegisterN ^elt : listEltK type <- (NativeConst nil nil)

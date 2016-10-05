@@ -13,10 +13,14 @@ Unset Extraction AutoInline.
  * 2) Change the definition "targetM" to your module.
  * 3) Compile.
  *)
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize Ex.Isa.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Synthesize.
+
+(*
+Require Import Ex.Isa.
 
 (** procDec + memCache test *)
 Require Import Ex.ProcDecSCN Ex.MemCache Ex.ProcMemCorrect.
+*)
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.

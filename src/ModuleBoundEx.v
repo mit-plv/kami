@@ -1,9 +1,10 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Concat Lib.Indexer Lib.StringEq.
-Require Import Syntax ParametricSyntax Semantics SemFacts RefinementFacts.
-Require Import Specialize Duplicate Notations.
+Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
+Require Import Kami.Specialize Kami.Duplicate Kami.Notations.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section ModuleBound.
   Variable m: Modules.

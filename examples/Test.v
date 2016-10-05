@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
+Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Wf.
 Require Import Kami.Inline Kami.InlineFacts.
