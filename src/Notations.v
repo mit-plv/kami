@@ -52,22 +52,12 @@ Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 
 Delimit Scope kami_expr_scope with kami_expr.
 
-Definition doReadField (s: string) n (v: Vector.t _ (S n)) ty (e: Expr ty (SyntaxKind (Struct v))) :=
-  (ReadField (Lib.VectorFacts.Vector_find (fun x => Lib.StringEq.string_eq s (attrName x)) v) e).
+Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
 
-Definition getLs {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
+Notation "s !! f" := (Lib.VectorFacts.Vector_find (fun x => Lib.StringEq.string_eq f%string (attrName x)) (@getStructVector _ _ s eq_refl))
+                                                  (at level 0).
 
-Notation "e ! s @. f" := (@doReadField (f%string) _ (@getLs _ _ s eq_refl) _ (e%kami_expr)) (at level 0): kami_expr_scope.
-
-(*     cbv [doReadField getLs VectorFacts.Vector_find] in m; simpl in m *)
-
-(*
-Notation "e @. f" := ltac:(let x := constr:(@doReadField f _ _ _ e) in
-                             let y := eval compute in x in exact y) (at level 0)
-                       : kami_expr_scope.
-*)
-
-
+Notation "e ! s @. f" := (@ReadField _ _ (@getStructVector _ _ s eq_refl) (s !! f) e%kami_expr) (at level 0): kami_expr_scope.
 
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.

@@ -440,7 +440,6 @@ Ltac kinline_compute :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               doReadField getLs VectorFacts.Vector_find
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb];
@@ -466,7 +465,6 @@ Ltac kinline_compute_in H :=
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
-               doReadField getLs VectorFacts.Vector_find
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
                eqb existsb andb orb negb] in H;
