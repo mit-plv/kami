@@ -295,14 +295,12 @@ Section ProcTwoStDec.
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;
         kinv_constr;
-        try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
-      meq; do 2 f_equal; kinv_finish_with kinv_bool.
+        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;
         kinv_constr;
-        try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
-      meq; do 2 f_equal; kinv_finish_with kinv_bool.
+        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
 
       END_SKIP_PROOF_ON *) admit.
 
