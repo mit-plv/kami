@@ -72,7 +72,7 @@ Section OneEltFifo.
 End OneEltFifo.
 
 Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
-Hint Unfold enq deq firstElt isFull : MethDefs.
+Hint Unfold enq deq firstElt isFull flush : MethDefs.
 
 Section D2eInst.
   Variables addrSize lgDataBytes rfIdx: nat.
@@ -200,9 +200,9 @@ Section E2wInst.
 
   Definition e2wPackI ty
              (decInst: Expr ty (SyntaxKind (d2eEltI addrSize lgDataBytes rfIdx)))
-             (val: Expr ty (SyntaxKind (Data lgDataBytes))) :=
-    STRUCT { "decInst" ::= decInst;
-             "val" ::= val }%kami_expr.
+             (val: Expr ty (SyntaxKind (Data lgDataBytes))) : Expr ty (SyntaxKind e2wEltI)
+    := STRUCT { "decInst" ::= decInst;
+                "val" ::= val }%kami_expr.
 
   Definition e2wDecInstI ty (e2w: fullType ty (SyntaxKind e2wEltI))
     : Expr ty (SyntaxKind (d2eEltI addrSize lgDataBytes rfIdx)) := (#e2w@."decInst")%kami_expr.
@@ -221,12 +221,12 @@ Section E2wInst.
 
 End E2wInst.
   
-(* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
- * are modularly separated to form each stage. "epoch" registers are used to handle incorrect
- * branch prediction. Like a decoupled processor, memory operations are stalled until getting 
- * the response.
+(* A three-staged processor, where three sets -- {fetch, decode}, {execute}, and 
+ * {mem, write-back} -- are modularly separated to form each stage. "epoch" registers are
+ * used to handle incorrect branch prediction. Like a decoupled processor, memory operations are
+ * stalled until getting the response.
  *)
-Section ProcTwoStage.
+Section ProcThreeStage.
   Variable inName outName: string.
   Variables addrSize lgDataBytes rfIdx: nat.
 
@@ -302,11 +302,11 @@ Section ProcTwoStage.
   Definition d2eDeq := MethodSig (d2eFifoName -- "deq")() : d2eElt.
 
   (* For correct pc redirection *)
-  Definition e2dElt := Bit addrSize. 
-  Definition e2dFifoName := "e2d"%string.
-  Definition e2dEnq := MethodSig (e2dFifoName -- "enq")(e2dElt) : Void.
-  Definition e2dDeq := MethodSig (e2dFifoName -- "deq")() : e2dElt.
-  Definition e2dFull := MethodSig (e2dFifoName -- "isFull")() : Bool.
+  Definition w2dElt := Bit addrSize. 
+  Definition w2dFifoName := "w2d"%string.
+  Definition w2dEnq := MethodSig (w2dFifoName -- "enq")(w2dElt) : Void.
+  Definition w2dDeq := MethodSig (w2dFifoName -- "deq")() : w2dElt.
+  Definition w2dFull := MethodSig (w2dFifoName -- "isFull")() : Bool.
 
   Definition e2wFifoName := "e2w"%string.
   Definition e2wEnq := MethodSig (e2wFifoName -- "enq")(e2wElt) : Void.
@@ -395,23 +395,23 @@ Section ProcTwoStage.
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Bit addrSize)).
 
-  Section Decode.
+  Section FetchDecode.
     
-    Definition decoder := MODULE {
+    Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- Default
       with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
       with Register "fEpoch" : Bool <- false
                                     
       with Rule "modifyPc" :=
-        Call correctPc <- e2dDeq();
+        Call correctPc <- w2dDeq();
         Write "pc" <- #correctPc;
         Read pEpoch <- "fEpoch";
         Write "fEpoch" <- !#pEpoch;
         Retv
           
       with Rule "instFetchLd" :=
-        Call e2dFull <- e2dFull();
-        Assert !#e2dFull;
+        Call w2dFull <- w2dFull();
+        Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
@@ -438,8 +438,8 @@ Section ProcTwoStage.
         Retv
 
       with Rule "instFetchSt" :=
-        Call e2dFull <- e2dFull();
-        Assert !#e2dFull;
+        Call w2dFull <- w2dFull();
+        Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
@@ -467,8 +467,8 @@ Section ProcTwoStage.
         Retv
 
       with Rule "instFetchTh" :=
-        Call e2dFull <- e2dFull();
-        Assert !#e2dFull;
+        Call w2dFull <- w2dFull();
+        Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
@@ -491,8 +491,8 @@ Section ProcTwoStage.
         Retv
 
       with Rule "instFetchNm" :=
-        Call e2dFull <- e2dFull();
-        Assert !#e2dFull;
+        Call w2dFull <- w2dFull();
+        Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
         LET rawInst <- #pgm@[#ppc];
@@ -522,11 +522,10 @@ Section ProcTwoStage.
         Retv
     }.
 
-  End Decode.
+  End FetchDecode.
 
   Section Execute.
-    Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
-
+    
     Definition executer := MODULE {
       Rule "execNm" :=
         Call rf <- getRf2();
@@ -549,12 +548,17 @@ Section ProcTwoStage.
         Retv
     }.
 
+  End Execute.
+
+  Section WriteBack.
+    Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
+    
     Definition checkNextPc {ty} ppc npcp st rawInst :=
       (LET npc <- getNextPc ty st ppc rawInst;
          If (#npc != #npcp)
        then
          Call toggleEpoch();
-         Call e2dEnq(#npc);
+         Call w2dEnq(#npc);
          Retv
        else
          Retv
@@ -700,30 +704,30 @@ Section ProcTwoStage.
         checkNextPc ppc npcp rf rawInst
     }.
     
-  End Execute.
+  End WriteBack.
 
-  Definition procTwoStage := (decoder
-                                ++ regFile
-                                ++ scoreBoard
-                                ++ oneEltFifo d2eFifoName d2eElt
-                                ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
-                                ++ executer
-                                ++ epoch
-                                ++ oneEltFifo e2wFifoName e2wElt
-                                ++ wb)%kami.
+  Definition procThreeStage := (fetchDecode
+                                  ++ regFile
+                                  ++ scoreBoard
+                                  ++ oneEltFifo d2eFifoName d2eElt
+                                  ++ oneEltFifoEx1 w2dFifoName (Bit addrSize)
+                                  ++ executer
+                                  ++ epoch
+                                  ++ oneEltFifo e2wFifoName e2wElt
+                                  ++ wb)%kami.
 
-End ProcTwoStage.
+End ProcThreeStage.
 
-Hint Unfold regFile scoreBoard decoder executer epoch wb procTwoStage : ModuleDefs.
+Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      d2eFifoName d2eEnq d2eDeq
-     e2dElt e2dFifoName e2dEnq e2dDeq e2dFull
+     w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
      e2wFifoName e2wEnq e2wDeq
      sbSearch1 sbSearch2 sbSearch3 sbInsert sbRemove
      toHost checkNextPc : MethDefs.
 
-Section ProcTwoStageM.
+Section ProcThreeStageM.
   Variables addrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
@@ -787,18 +791,18 @@ Section ProcTwoStageM.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data lgDataBytes))).
 
-  Definition p2st := procTwoStage "rqFromProc"%string "rsToProc"%string
-                                  getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                  getStAddr getStSrc calcStAddr getStVSrc
-                                  getSrc1 getSrc2 getDst exec getNextPc
-                                  d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                  d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                  e2wPack e2wDecInst e2wVal
-                                  predictNextPc.
+  Definition p3st := procThreeStage "rqFromProc"%string "rsToProc"%string
+                                    getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                    getStAddr getStSrc calcStAddr getStVSrc
+                                    getSrc1 getSrc2 getDst exec getNextPc
+                                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                                    e2wPack e2wDecInst e2wVal
+                                    predictNextPc.
 
-End ProcTwoStageM.
+End ProcThreeStageM.
 
-Hint Unfold p2st : ModuleDefs.
+Hint Unfold p3st : ModuleDefs.
 
 Section Facts.
   Variables addrSize lgDataBytes rfIdx: nat.
@@ -892,9 +896,9 @@ Section Facts.
   Hint Resolve oneEltFifoEx2_ModEquiv.
 
   Lemma decoder_ModEquiv:
-    ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                        d2ePack predictNextPc).
+    ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                            getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
+                            d2ePack predictNextPc).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) admit.
@@ -925,8 +929,8 @@ Section Facts.
   Qed.
   Hint Resolve wb_ModEquiv.
   
-  Lemma procTwoStage_ModEquiv:
-    ModPhoasWf (p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+  Lemma procThreeStage_ModEquiv:
+    ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
                      getSrc1 getSrc2 getDst exec getNextPc predictNextPc
                      d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
@@ -947,5 +951,5 @@ Hint Resolve regFile_ModEquiv
      executer_ModEquiv
      epoch_ModEquiv
      wb_ModEquiv
-     procTwoStage_ModEquiv.
+     procThreeStage_ModEquiv.
 
