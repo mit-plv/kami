@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.ParametricWf Kami.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
-Require Import Ex.FifoNames.
+Require Import Ex.Names.
 
 Set Implicit Arguments.
   

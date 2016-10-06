@@ -1,5 +1,5 @@
 Require Import Kami.Syntax Kami.Notations String.
-Require Import Ex.Msi Ex.RegFile Ex.FifoNames.
+Require Import Ex.Msi Names.
 
 Definition MemOp := Bool.
 

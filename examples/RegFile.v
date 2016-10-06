@@ -1,6 +1,6 @@
 Require Import String Lib.CommonTactics Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
-Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
+Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics Ex.Names.
 
 Set Implicit Arguments.
 
@@ -12,14 +12,6 @@ Section RegFile.
   Definition DataArray := Vector Data IdxBits.
   Definition Addr := Bit IdxBits.
 
-  Local Open Scope string.
-  Definition addr := "addr".
-  Definition data := "data".
-  Definition dataArray := "dataArray".
-  Definition read := "read".
-  Definition write := "write".
-  Close Scope string.
-  
   Definition WritePort := STRUCT {
                               addr :: Addr;
                               data :: Data

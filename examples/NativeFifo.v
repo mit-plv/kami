@@ -2,7 +2,7 @@ Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
 Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
-Require Import Ex.FifoNames.
+Require Import Ex.Names.
 
 Set Implicit Arguments.
 
