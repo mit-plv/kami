@@ -126,6 +126,8 @@ Section FetchDecode.
   Definition e2dDeq := e2dDeq addrSize.
   Definition sbSearch1 := sbSearch1 rfIdx.
   Definition sbSearch2 := sbSearch2 rfIdx.
+  Definition sbSearch3 := sbSearch3 rfIdx.
+  Definition sbInsert := sbInsert rfIdx.
   
   Definition fetcher := MODULE {
     Register "pc" : Bit addrSize <- Default
@@ -163,16 +165,19 @@ Section FetchDecode.
       Assert (#opType == $$opLd);
 
       LET srcIdx <- getLdSrc _ rawInst;
+      LET dst <- getLdDst _ rawInst;
       Call stall1 <- sbSearch1(#srcIdx);
-      Assert !#stall1;
+      Call stall2 <- sbSearch2(#dst);
+      Assert !(#stall1 || #stall2);
       LET addr <- getLdAddr _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType (getLdDst _ rawInst) #laddr $$Default $$Default
+      Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default
                           #rawInst #curPc #nextPc #epoch);
+      Call sbInsert(#dst);
       Retv
 
     with Rule "decodeSt" :=
@@ -242,7 +247,8 @@ Section FetchDecode.
       LET idx2 <- getSrc2 _ rawInst;
       Call stall1 <- sbSearch1(#idx1);
       Call stall2 <- sbSearch2(#idx2);
-      Assert !(#stall1 || #stall2);
+      Call stall3 <- sbSearch3(#dst);
+      Assert !(#stall1 || #stall2 || #stall3);
 
       LET val1 <- #rf@[#idx1];
       LET val2 <- #rf@[#idx2];
@@ -252,6 +258,7 @@ Section FetchDecode.
       LET epoch <- f2dEpoch _ f2d;
       Call d2eEnq(d2ePack #opType #dst $$Default #val1 #val2
                           #rawInst #curPc #nextPc #epoch);
+      Call sbInsert(#dst);
       Retv
   }.
 
