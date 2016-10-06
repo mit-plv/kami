@@ -31,7 +31,8 @@ Section Inlined.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -44,8 +45,8 @@ Section Inlined.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
-    (d2eVal: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                        Expr ty (SyntaxKind (Data lgDataBytes)))
+    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                 Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -55,11 +56,24 @@ Section Inlined.
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Variable (e2wElt: Kind).
+  Variable (e2wPack:
+              forall ty,
+                Expr ty (SyntaxKind d2eElt) -> (* decInst *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind e2wElt)).
+  Variables
+    (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                            Expr ty (SyntaxKind d2eElt))
+    (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                        Expr ty (SyntaxKind (Data lgDataBytes))).
+
   Definition p2st := p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
                           getSrc1 getSrc2 getDst exec getNextPc predictNextPc
-                          d2ePack d2eOpType d2eDst d2eAddr d2eVal
-                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch.
+                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                          e2wPack e2wDecInst e2wVal.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
   Definition p2stInl: sigT (fun m: Modules => p2st <<== m).
@@ -68,8 +82,9 @@ Section Inlined.
                   (procTwoStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
                                          getSrc1 getSrc2 getDst exec getNextPc predictNextPc
-                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal
+                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                                         e2wPack e2wDecInst e2wVal
                                          type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p2st)) eq_refl))
       as Him.

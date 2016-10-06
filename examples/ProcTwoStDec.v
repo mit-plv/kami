@@ -37,7 +37,8 @@ Section ProcTwoStDec.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -50,8 +51,8 @@ Section ProcTwoStDec.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
-    (d2eVal: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                        Expr ty (SyntaxKind (Data lgDataBytes)))
+    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                 Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -61,29 +62,51 @@ Section ProcTwoStDec.
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
-  Hypotheses (Hd2eOpType: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eOpType _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr opType)
-             (Hd2eDst: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eDst _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr dst)
-             (Hd2eAddr: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eAddr _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr addr)
-             (Hd2eVal: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eVal _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr val)
-             (Hd2eRawInst: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eRawInst _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr rawInst)
-             (Hd2eCurPc: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eCurPc _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr curPc)
-             (Hd2eNextPc: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eNextPc _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr nextPc)
-             (Hd2eEpoch: forall opType dst addr val rawInst curPc nextPc epoch,
-                 evalExpr (d2eEpoch _ (evalExpr (d2ePack opType dst addr val rawInst curPc nextPc epoch))) = evalExpr epoch).
+  Hypotheses
+    (Hd2eOpType: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eOpType _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr opType)
+    (Hd2eDst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eDst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr dst)
+    (Hd2eAddr: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eAddr _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr addr)
+    (Hd2eVal1: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eVal1 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val1)
+    (Hd2eVal2: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eVal2 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val2)
+    (Hd2eRawInst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eRawInst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr rawInst)
+    (Hd2eCurPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eCurPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr curPc)
+    (Hd2eNextPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eNextPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr nextPc)
+    (Hd2eEpoch: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+        evalExpr (d2eEpoch _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr epoch).
+
+  Variable (e2wElt: Kind).
+  Variable (e2wPack:
+              forall ty,
+                Expr ty (SyntaxKind d2eElt) -> (* decInst *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind e2wElt)).
+  Variables
+    (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                            Expr ty (SyntaxKind d2eElt))
+    (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                        Expr ty (SyntaxKind (Data lgDataBytes))).
+
+  Hypotheses
+    (He2wDecInst: forall decInst val,
+        evalExpr (e2wDecInst _ (evalExpr (e2wPack decInst val))) = evalExpr decInst)
+    (He2wVal: forall decInst val,
+        evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
   Definition p2st := ProcTwoStage.p2st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
                        getSrc1 getSrc2 getDst exec getNextPc predictNextPc
-                       d2ePack d2eOpType d2eDst d2eAddr d2eVal
-                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch.
+                       d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                       e2wPack e2wDecInst e2wVal.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
@@ -100,7 +123,7 @@ Section ProcTwoStDec.
       "repLd" |-> "repLd";
       "repSt" |-> "repSt";
       "execToHost" |-> "execToHost";
-      "execNm" |-> "execNm"; ||.
+      "wbNm" |-> "execNm"; ||.
   Hint Unfold p2st_pdec_ruleMap: MethDefs.
 
   Definition p2st_pdec_regMap (r: RegsT): RegsT :=
@@ -109,6 +132,8 @@ Section ProcTwoStDec.
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
        mlet d2eeltv : d2eElt <- r |> "d2e"--"elt";
        mlet d2efv : Bool <- r |> "d2e"--"full";
+       mlet e2weltv : e2wElt <- r |> "e2w"--"elt";
+       mlet e2wfv : Bool <- r |> "e2w"--"full";
        mlet e2deltv : Bit addrSize <- r |> "e2d"--"elt";
        mlet e2dfv : Bool <- r |> "e2d"--"full";
        mlet eev : Bool <- r |> "eEpoch";
@@ -119,13 +144,22 @@ Section ProcTwoStDec.
         +["pgm" <- existT _ _ pgmv]
         +["rf" <- existT _ _ rfv]
         +["pc" <- existT _ (SyntaxKind (Bit addrSize))
-               (if stallv then evalExpr (d2eCurPc _ stalledv)
-                else if e2dfv then e2deltv
-                     else if d2efv then
-                            if eqb eev (evalExpr (d2eEpoch _ d2eeltv))
-                            then evalExpr (d2eCurPc _ d2eeltv)
-                            else pcv
-                          else pcv)])%fmap)%mapping.
+               (if e2dfv then e2deltv
+                else if stallv then evalExpr (d2eCurPc _ stalledv)
+                     else if e2wfv then
+                            (if eqb eev (evalExpr (d2eEpoch _ (evalExpr (e2wDecInst _ e2weltv))))
+                             then evalExpr (d2eCurPc _ (evalExpr (e2wDecInst _ e2weltv)))
+                             else
+                               (if d2efv then
+                                 (if eqb eev (evalExpr (d2eEpoch _ d2eeltv))
+                                  then evalExpr (d2eCurPc _ d2eeltv)
+                                  else pcv)
+                                else pcv))
+                          else if d2efv then
+                                 (if eqb eev (evalExpr (d2eEpoch _ d2eeltv))
+                                  then evalExpr (d2eCurPc _ d2eeltv)
+                                  else pcv)
+                               else pcv)])%fmap)%mapping.
   Hint Unfold p2st_pdec_regMap: MapDefs.
 
   Ltac is_not_ife t :=
@@ -146,11 +180,14 @@ Section ProcTwoStDec.
     try rewrite Hd2eOpType in *;
     try rewrite Hd2eDst in *;
     try rewrite Hd2eAddr in *;
-    try rewrite Hd2eVal in *;
+    try rewrite Hd2eVal1 in *;
+    try rewrite Hd2eVal2 in *;
     try rewrite Hd2eRawInst in *;
     try rewrite Hd2eCurPc in *;
     try rewrite Hd2eNextPc in *;
-    try rewrite Hd2eEpoch in *.
+    try rewrite Hd2eEpoch in *;
+    try rewrite He2wDecInst in *;
+    try rewrite He2wVal in *.
 
   Ltac kinv_bool :=
     repeat
@@ -163,19 +200,22 @@ Section ProcTwoStDec.
 
   Ltac p2st_inv_tac :=
     repeat match goal with
-           | [H: context[p2st_pc_epochs_inv] |- _] => destruct H
+           | [H: context[p2st_epochs_inv] |- _] => destruct H
+           | [H: context[p2st_pc_inv] |- _] => destruct H
            | [H: context[p2st_decode_inv] |- _] => destruct H
            | [H: context[p2st_stalled_inv] |- _] => destruct H
            | [H: context[p2st_raw_inv] |- _] => destruct H
-           | [H: context[p2st_scoreboard_inv] |- _] => destruct H
+           | [H: context[p2st_scoreboard_waw_inv] |- _] => destruct H
+           | [H: context[p2st_exec_inv] |- _] => destruct H
            end;
     kinv_red.
 
   Definition p2stInl := ProcTwoStInl.p2stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                              getStAddr getStSrc calcStAddr getStVSrc
                                              getSrc1 getSrc2 getDst exec getNextPc predictNextPc
-                                             d2ePack d2eOpType d2eDst d2eAddr d2eVal
-                                             d2eRawInst d2eCurPc d2eNextPc d2eEpoch.
+                                             d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                                             d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                                             e2wPack e2wDecInst e2wVal.
 
   Theorem p2st_refines_pdec:
     p2st <<== pdec.
@@ -215,6 +255,14 @@ Section ProcTwoStDec.
     - kinv_action_dest;
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+    - kinv_action_dest;
+        kinv_custom p2st_inv_tac;
+        kinv_regmap_red;
         kinv_constr;
         try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
       Opaque evalExpr.
@@ -224,8 +272,7 @@ Section ProcTwoStDec.
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;
         kinv_constr;
-        try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
-      meq; do 2 f_equal; kinv_finish_with kinv_bool.
+        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p2st_inv_tac;
         kinv_regmap_red;

@@ -31,7 +31,8 @@ Section Inlined.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -58,7 +59,7 @@ Section Inlined.
 
   Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 predictNextPc
+                                        getSrc1 getSrc2 getDst predictNextPc
                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
@@ -67,7 +68,7 @@ Section Inlined.
     pose proof (inlineF_refines
                   (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 predictNextPc d2ePack
+                                        getSrc1 getSrc2 getDst predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))

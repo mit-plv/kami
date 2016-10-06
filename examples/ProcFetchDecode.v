@@ -90,7 +90,8 @@ Section FetchDecode.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -170,7 +171,7 @@ Section FetchDecode.
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType (getLdDst _ rawInst) #laddr $$Default
+      Call d2eEnq(d2ePack #opType (getLdDst _ rawInst) #laddr $$Default $$Default
                           #rawInst #curPc #nextPc #epoch);
       Retv
 
@@ -198,7 +199,7 @@ Section FetchDecode.
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType $$Default #saddr #stVal
+      Call d2eEnq(d2ePack #opType $$Default #saddr #stVal $$Default
                           #rawInst #curPc #nextPc #epoch);
       Retv
 
@@ -221,7 +222,7 @@ Section FetchDecode.
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType $$Default $$Default #srcVal
+      Call d2eEnq(d2ePack #opType $$Default $$Default #srcVal $$Default
                           #rawInst #curPc #nextPc #epoch);
       Retv
 
@@ -236,10 +237,20 @@ Section FetchDecode.
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opNm);
 
+      LET dst <- getDst _ rawInst;
+      LET idx1 <- getSrc1 _ rawInst;
+      LET idx2 <- getSrc2 _ rawInst;
+      Call stall1 <- sbSearch1(#idx1);
+      Call stall2 <- sbSearch2(#idx2);
+      Assert !(#stall1 || #stall2);
+
+      LET val1 <- #rf@[#idx1];
+      LET val2 <- #rf@[#idx2];
+
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType $$Default $$Default $$Default
+      Call d2eEnq(d2ePack #opType #dst $$Default #val1 #val2
                           #rawInst #curPc #nextPc #epoch);
       Retv
   }.
@@ -284,7 +295,8 @@ Section Facts.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -316,7 +328,7 @@ Section Facts.
 
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc getSrc1
+                        getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
                         d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof. (* SKIP_PROOF_ON
     kequiv.
@@ -327,7 +339,7 @@ Section Facts.
   Lemma fetchDecode_ModEquiv:
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 predictNextPc d2ePack
+                            getSrc1 getSrc2 getDst predictNextPc d2ePack
                             f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof.
     kequiv.

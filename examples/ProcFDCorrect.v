@@ -37,7 +37,8 @@ Section FetchDecode.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -77,11 +78,11 @@ Section FetchDecode.
 
   Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 predictNextPc d2ePack
+                                        getSrc1 getSrc2 getDst predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
   Definition fetchNDecode := ProcTwoStage.decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                                   getStAddr getStSrc calcStAddr getStVSrc
-                                                  getSrc1 d2ePack predictNextPc.
+                                                  getSrc1 getSrc2 getDst d2ePack predictNextPc.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -112,7 +113,7 @@ Section FetchDecode.
   Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl
                                  getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                  getStAddr getStSrc calcStAddr getStVSrc
-                                 getSrc1 predictNextPc d2ePack
+                                 getSrc1 getSrc2 getDst predictNextPc d2ePack
                                  f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
 
   Ltac f2d_abs_tac :=
@@ -178,6 +179,8 @@ Section FetchDecode.
         kinv_constr;
         try (kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool; fail).
       + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
+      + reflexivity.
+      + reflexivity.
       + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
 
         END_SKIP_PROOF_ON *) admit.
