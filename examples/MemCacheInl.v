@@ -1,8 +1,7 @@
 Require Import Ex.MemCache Kami.Notations Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.ParametricEquiv Kami.ParametricInline String Kami.ParametricInlineLtac.
-Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tactics List Ex.FifoNames Ex.Names Lib.Indexer Ex.RegFile.
+Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tactics List Ex.Names Lib.Indexer Ex.RegFile.
 Require Import Ex.L1Cache Ex.MemDir Ex.ChildParent.
-Require Import Ex.L1CacheNames Ex.MemDirNames Ex.ChildParentNames.
 
 Set Implicit Arguments.
 
@@ -54,7 +53,7 @@ Ltac simplMod :=
 
            Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
 
-           eq_rect ret arg Struct.GetAttrType
+           eq_rect ret arg
 
         ] in HeqmEq;
     rewrite signature_eq in HeqmEq; unfold eq_rect in HeqmEq; simpl in HeqmEq;
@@ -108,7 +107,7 @@ Ltac simplifyMod :=
 
          Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
 
-         eq_rect ret arg Struct.GetAttrType
+         eq_rect ret arg
 
       ] in mRef, mEquiv;
   rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
@@ -421,7 +420,7 @@ Section MemCacheInl.
                     kequiv)).
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
 
   Qed.
 
@@ -471,7 +470,7 @@ Section MemCacheInl.
     ssFilt (mcs -- write) deferred.
 
     finish_pf.
-       END_SKIP_PROOF_ON *) admit.
+       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition nmemCacheInl_2: MetaModule.
@@ -512,7 +511,7 @@ Section MemCacheInl.
     ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
     ssFilt (rsFromChild -- deqName) dwnRs_noWait.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition nmemCacheInl_3: MetaModule.
@@ -545,7 +544,7 @@ Section MemCacheInl.
     gsFilt (toChild -- deqName) fromPToCRule.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -593,7 +592,7 @@ Section MemCacheInl.
     ggNoFilt (cs -- read) upgRs.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
     
   Theorem nmemCacheInl_4_5_pf:
@@ -610,7 +609,7 @@ Section MemCacheInl.
     ggNoFilt (cs -- read) pProcess.
 
     finish_pf.
-       END_SKIP_PROOF_ON *) admit.
+       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
 
@@ -637,7 +636,7 @@ Section MemCacheInl2.
   Proof.
     (* SKIP_PROOF_ON
     eapply nmemCacheInl_4_5_pf; eauto.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -678,7 +677,7 @@ Section MemCacheInl2.
     ggFilt (tag -- read) pProcess.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl2.
   
@@ -705,7 +704,7 @@ Section MemCacheInl3.
   Proof.
     (* SKIP_PROOF_ON
     eapply nmemCacheInl_5_pf; eauto.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -748,7 +747,7 @@ Section MemCacheInl3.
     ggNoFilt (line -- read) st.
     ggFilt (line -- read) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_6_3_pf:
@@ -763,7 +762,7 @@ Section MemCacheInl3.
     ggNoFilt (cs -- write) upgRs.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_6_6_pf:
@@ -776,7 +775,7 @@ Section MemCacheInl3.
     
     ggFilt (cs -- write) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl3.
   
@@ -803,7 +802,7 @@ Section MemCacheInl4.
   Proof.
     (* SKIP_PROOF_ON
     eapply nmemCacheInl_6_6_pf; eauto.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -841,7 +840,7 @@ Section MemCacheInl4.
     start_pf2 nmemCacheInl_6_6' nmemCacheInl_6_6'_pf.
     ggFilt (tag -- write) upgRs.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_7_3_pf:
@@ -854,7 +853,7 @@ Section MemCacheInl4.
     ggNoFilt (line -- write) upgRs.
     ggFilt (line -- write) st.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_7_7_pf:
@@ -868,7 +867,7 @@ Section MemCacheInl4.
     ggNoFilt (fromParent -- deqName) drop.
     ggFilt (fromParent -- deqName) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl4.
 
@@ -894,7 +893,7 @@ Section MemCacheInl5.
   Proof.
     (* SKIP_PROOF_ON
     eapply nmemCacheInl_7_7_pf; eauto.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -944,7 +943,7 @@ Section MemCacheInl5.
     start_pf2 nmemCacheInl_7_7' nmemCacheInl_7_7'_pf.
     ggFilt (rqToParent -- enqName) upgRq.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_9_pf:
@@ -957,7 +956,7 @@ Section MemCacheInl5.
     ggNoFilt (rsToParent -- enqName) writeback.
     ggFilt (rsToParent -- enqName) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_10_pf:
@@ -969,7 +968,7 @@ Section MemCacheInl5.
     start_pf2 nmemCacheInl_9 nmemCacheInl_9_pf.
     ggFilt (rqToParent -- deqName) rqFromCToPRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Theorem nmemCacheInl_11_pf:
@@ -981,7 +980,7 @@ Section MemCacheInl5.
     start_pf2 nmemCacheInl_10 nmemCacheInl_10_pf.
     ggFilt (rsToParent -- deqName) rsFromCToPRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_pf:
@@ -993,7 +992,7 @@ Section MemCacheInl5.
     start_pf2 nmemCacheInl_11 nmemCacheInl_11_pf.
     ggFilt (fromParent -- enqName) fromPToCRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl5.
 

@@ -810,8 +810,6 @@ Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
 Notation "name :: ty" := {| attrName := name; attrType := ty |} : kami_struct_scope.
 Delimit Scope kami_struct_scope with struct.
-Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (Struct (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..)).
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
 Delimit Scope kami_scope with kami.
 

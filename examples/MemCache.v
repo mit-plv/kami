@@ -3,8 +3,7 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.Notations Kami.SemFacts.
 Require Import Kami.Wf Kami.Tactics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
 Require Import Ex.Msi Ex.MemTypes Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
-Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Kami.ParametricEquiv Kami.ParametricInline Ex.Names Ex.FifoNames.
-Require Import Ex.L1CacheNames Ex.MemDirNames Ex.ChildParentNames.
+Require Import Ex.Fifo Ex.NativeFifo Ex.FifoCorrect Kami.ParametricEquiv Kami.ParametricInline Ex.Names.
 
 Set Implicit Arguments.
 

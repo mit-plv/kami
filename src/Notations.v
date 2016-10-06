@@ -19,6 +19,11 @@ Notation "'MethodSig' name ( argT ) : retT" :=
   (Build_Attribute name {| arg := argT; ret := retT |})
   (at level 0, name at level 0, argT at level 200, retT at level 200).
 
+(** Notations for Struct **) 
+Notation "'STRUCT' { s1 ; .. ; sN }" :=
+  (Struct (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..)).
+
+
 (** Notations for expressions *)
 
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope.

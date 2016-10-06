@@ -21,7 +21,7 @@ Section BluespecSubset.
   | BReadField: string -> BExpr -> BExpr
   | BBuildVector lgn: Vec BExpr lgn -> BExpr
   | BBuildStruct:
-      list BExpr -> BExpr
+      list (Attribute BExpr) -> BExpr
   (* if we use list instead of "ilist" in BExpr,
    * then Coq cannot find the decreasing factor while converting ExprS to BExpr
    *)
@@ -115,11 +115,11 @@ Section BluespecSubset.
                         (@exprSToBExpr _ ke)
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
     | BuildStruct n attrs st =>
-      ((fix help n attrs st: option (list BExpr) :=
-         match st in ilist _ attrs1 return option (list BExpr) with
+      ((fix help n attrs st: option (list (Attribute BExpr)) :=
+         match st in ilist _ attrs1 return option (list (Attribute BExpr)) with
            | inil => Some nil
            | icons k na vs h t => match @exprSToBExpr _ h with
-                                    | Some v => (@help _ vs t) >>= (fun bl => Some (cons v bl))
+                                    | Some v => (@help _ vs t) >>= (fun bl => Some (cons (attrName k :: v)%struct bl))
                                     | None => None
                                   end
          end) n attrs st) >>= (fun bl => Some (BBuildStruct bl))
