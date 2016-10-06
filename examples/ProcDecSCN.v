@@ -25,17 +25,18 @@ Section ProcDecSCN.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Variable n: nat.
   
   Definition pdecN := procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 execState execNextPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc n.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc n.
+                       getSrc1 getSrc2 getDst exec getNextPc n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -50,7 +51,7 @@ Section ProcDecSCN.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 execState execNextPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc n.
   Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

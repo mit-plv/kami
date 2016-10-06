@@ -6,6 +6,60 @@ Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcTwoStage.
 
 Set Implicit Arguments.
 
+Section F2dInst.
+  Variables addrSize lgDataBytes rfIdx: nat.
+
+  Definition f2dEltI :=
+    STRUCT { "rawInst" :: Data lgDataBytes;
+             "curPc" :: Bit addrSize;
+             "nextPc" :: Bit addrSize;
+             "epoch" :: Bool }.
+
+  Definition f2dPackI ty 
+             (rawInst: Expr ty (SyntaxKind (Data lgDataBytes)))
+             (curPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind f2dEltI) :=
+    STRUCT { "rawInst" ::= rawInst;
+             "curPc" ::= curPc;
+             "nextPc" ::= nextPc;
+             "epoch" ::= epoch }%kami_expr.
+
+  Definition f2dRawInstI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#f2d@."rawInst")%kami_expr.
+  Definition f2dCurPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."curPc")%kami_expr.
+  Definition f2dNextPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."nextPc")%kami_expr.
+  Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind f2dEltI))
+    : Expr ty (SyntaxKind Bool) := (#f2d@."epoch")%kami_expr.
+
+  Lemma f2dElt_rawInst:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dRawInstI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr rawInst.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_curPc:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dCurPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr curPc.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_nextPc:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dNextPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr nextPc.
+  Proof. reflexivity. Qed.
+
+  Lemma f2dElt_epoch:
+    forall rawInst curPc nextPc epoch,
+      evalExpr (f2dEpochI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
+      = evalExpr epoch.
+  Proof. reflexivity. Qed.
+
+End F2dInst.
+
 (* A pipelined "fetch" and "decode" modules. This module substitutes the {fetch, decode} stage
  * in two-staged processor (P2st).
  *)
@@ -24,26 +78,56 @@ Section FetchDecode.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
-  Definition f2dElt :=
-    STRUCT { "rawInst" :: Data lgDataBytes;
-             "curPc" :: Bit addrSize;
-             "nextPc" :: Bit addrSize;
-             "epoch" :: Bool }.
+  Variable (d2eElt: Kind).
+  Variable (d2ePack:
+              forall ty,
+                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind d2eElt)).
+
+  Variable (f2dElt: Kind).
+  Variable (f2dPack:
+              forall ty,
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind f2dElt)).
+  Variables
+    (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                            Expr ty (SyntaxKind (Data lgDataBytes)))
+    (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                           Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind Bool)).
+
   Definition f2dFifoName := "f2d"%string.
   Definition f2dEnq := MethodSig (f2dFifoName -- "enq")(f2dElt) : Void.
   Definition f2dDeq := MethodSig (f2dFifoName -- "deq")() : f2dElt.
   Definition f2dFlush := MethodSig (f2dFifoName -- "flush")() : Void.
 
-  Definition getRf := getRf lgDataBytes rfIdx.
-  Definition d2eEnq := d2eEnq addrSize lgDataBytes rfIdx.
+  Definition getRf1 := getRf1 lgDataBytes rfIdx.
+  Definition d2eEnq := d2eEnq d2eElt.
   Definition e2dDeq := e2dDeq addrSize.
   Definition sbSearch1 := sbSearch1 rfIdx.
   Definition sbSearch2 := sbSearch2 rfIdx.
+  Definition sbSearch3 := sbSearch3 rfIdx.
+  Definition sbInsert := sbInsert rfIdx.
   
   Definition fetcher := MODULE {
     Register "pc" : Bit addrSize <- Default
@@ -63,10 +147,7 @@ Section FetchDecode.
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
       LET npc <- predictNextPc _ pc;
-      Call f2dEnq(STRUCT { "rawInst" ::= #pgm@[#pc];
-                           "curPc" ::= #pc;
-                           "nextPc" ::= #npc;
-                           "epoch" ::= #epoch });
+      Call f2dEnq(f2dPack #pgm@[#pc] #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
   }.
@@ -76,36 +157,36 @@ Section FetchDecode.
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
-      LET rawInst <- #f2d!f2dElt@."rawInst";
+      LET rawInst <- f2dRawInst _ f2d;
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opLd);
 
       LET srcIdx <- getLdSrc _ rawInst;
+      LET dst <- getLdDst _ rawInst;
       Call stall1 <- sbSearch1(#srcIdx);
-      Assert !#stall1;
+      Call stall2 <- sbSearch2(#dst);
+      Assert !(#stall1 || #stall2);
       LET addr <- getLdAddr _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call d2eEnq(STRUCT { "opType" ::= #opType;
-                           "dst" ::= getLdDst _ rawInst;
-                           "addr" ::= #laddr;
-                           "val" ::= $$Default;
-                           "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d!f2dElt@."curPc";
-                           "nextPc" ::= #f2d!f2dElt@."nextPc";
-                           "epoch" ::= #f2d!f2dElt@."epoch" });
+      LET curPc <- f2dCurPc _ f2d;
+      LET nextPc <- f2dNextPc _ f2d;
+      LET epoch <- f2dEpoch _ f2d;
+      Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default
+                          #rawInst #curPc #nextPc #epoch);
+      Call sbInsert(#dst);
       Retv
 
     with Rule "decodeSt" :=
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
-      LET rawInst <- #f2d!f2dElt@."rawInst";
+      LET rawInst <- f2dRawInst _ f2d;
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opSt);
@@ -120,23 +201,20 @@ Section FetchDecode.
       LET srcVal <- #rf@[#srcIdx];
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call d2eEnq(STRUCT { "opType" ::= #opType;
-                           "dst" ::= $$Default;
-                           "addr" ::= #saddr;
-                           "val" ::= #stVal;
-                           "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d!f2dElt@."curPc";
-                           "nextPc" ::= #f2d!f2dElt@."nextPc";
-                           "epoch" ::= #f2d!f2dElt@."epoch" });
+      LET curPc <- f2dCurPc _ f2d;
+      LET nextPc <- f2dNextPc _ f2d;
+      LET epoch <- f2dEpoch _ f2d;
+      Call d2eEnq(d2ePack #opType $$Default #saddr #stVal $$Default
+                          #rawInst #curPc #nextPc #epoch);
       Retv
 
     with Rule "decodeTh" :=
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
-      LET rawInst <- #f2d!f2dElt@."rawInst";
+      LET rawInst <- f2dRawInst _ f2d;
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opTh);
@@ -146,35 +224,41 @@ Section FetchDecode.
       Assert !#stall1;
 
       LET srcVal <- #rf@[#srcIdx];
-      Call d2eEnq(STRUCT { "opType" ::= #opType;
-                           "dst" ::= $$Default;
-                           "addr" ::= $$Default;
-                           "val" ::= #srcVal;
-                           "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d!f2dElt@."curPc";
-                           "nextPc" ::= #f2d!f2dElt@."nextPc";
-                           "epoch" ::= #f2d!f2dElt@."epoch" });
+      LET curPc <- f2dCurPc _ f2d;
+      LET nextPc <- f2dNextPc _ f2d;
+      LET epoch <- f2dEpoch _ f2d;
+      Call d2eEnq(d2ePack #opType $$Default $$Default #srcVal $$Default
+                          #rawInst #curPc #nextPc #epoch);
       Retv
 
     with Rule "decodeNm" :=
       Call e2dFull <- e2dFull();
       Assert !#e2dFull;
       Call f2d <- f2dDeq();
-      Call rf <- getRf();
+      Call rf <- getRf1();
 
-      LET rawInst <- #f2d!f2dElt@."rawInst";
+      LET rawInst <- f2dRawInst _ f2d;
 
       LET opType <- getOptype _ rawInst;
       Assert (#opType == $$opNm);
 
-      Call d2eEnq(STRUCT { "opType" ::= #opType;
-                           "dst" ::= $$Default;
-                           "addr" ::= $$Default;
-                           "val" ::= $$Default;
-                           "rawInst" ::= #rawInst;
-                           "curPc" ::= #f2d!f2dElt@."curPc";
-                           "nextPc" ::= #f2d!f2dElt@."nextPc";
-                           "epoch" ::= #f2d!f2dElt@."epoch" });
+      LET dst <- getDst _ rawInst;
+      LET idx1 <- getSrc1 _ rawInst;
+      LET idx2 <- getSrc2 _ rawInst;
+      Call stall1 <- sbSearch1(#idx1);
+      Call stall2 <- sbSearch2(#idx2);
+      Call stall3 <- sbSearch3(#dst);
+      Assert !(#stall1 || #stall2 || #stall3);
+
+      LET val1 <- #rf@[#idx1];
+      LET val2 <- #rf@[#idx2];
+
+      LET curPc <- f2dCurPc _ f2d;
+      LET nextPc <- f2dNextPc _ f2d;
+      LET epoch <- f2dEpoch _ f2d;
+      Call d2eEnq(d2ePack #opType #dst $$Default #val1 #val2
+                          #rawInst #curPc #nextPc #epoch);
+      Call sbInsert(#dst);
       Retv
   }.
 
@@ -185,8 +269,8 @@ Section FetchDecode.
 End FetchDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
-Hint Unfold f2dElt f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
+Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
+     getRf1 d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
 
 (* TODO: Hint Unfold flush should be moved to ProcTwoStage.v *)
 Hint Unfold f2dFlush flush : MethDefs.
@@ -206,20 +290,53 @@ Section Facts.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
+  Variable (d2eElt: Kind).
+  Variable (d2ePack:
+              forall ty,
+                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind d2eElt)).
+
+  Variable (f2dElt: Kind).
+  Variable (f2dPack:
+              forall ty,
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind f2dElt)).
+  Variables
+    (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                            Expr ty (SyntaxKind (Data lgDataBytes)))
+    (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                           Expr ty (SyntaxKind (Bit addrSize)))
+    (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
+                          Expr ty (SyntaxKind Bool)).
+
   Lemma fetcher_ModEquiv:
-    ModPhoasWf (fetcher lgDataBytes predictNextPc).
+    ModPhoasWf (fetcher predictNextPc f2dPack).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1).
+                        getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
+                        d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) apply cheat.
@@ -229,7 +346,8 @@ Section Facts.
   Lemma fetchDecode_ModEquiv:
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 predictNextPc).
+                            getSrc1 getSrc2 getDst predictNextPc d2ePack
+                            f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof.
     kequiv.
   Qed.

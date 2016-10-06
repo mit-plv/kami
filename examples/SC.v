@@ -68,7 +68,7 @@ Section DecExec.
   Definition StVSrcE (ty: Kind -> Type) := Expr ty StVSrcK.
   Definition StVSrcT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> StVSrcE ty.
 
-  (* sources *)
+  (* general sources *)
   Definition Src1K := SyntaxKind (Bit rfIdx).
   Definition Src1E (ty: Kind -> Type) := Expr ty Src1K.
   Definition Src1T := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> Src1E ty.
@@ -77,19 +77,25 @@ Section DecExec.
   Definition Src2E (ty: Kind -> Type) := Expr ty Src2K.
   Definition Src2T := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> Src2E ty.
 
+  (* general destination *)
+  Definition DstK := SyntaxKind (Bit rfIdx).
+  Definition DstE (ty: Kind -> Type) := Expr ty DstK.
+  Definition DstT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> DstE ty.
+  
   (* execution *)
   Definition StateK := SyntaxKind (Vector (Data lgDataBytes) rfIdx).
   Definition StateT (ty : Kind -> Type) := fullType ty StateK.
   Definition StateE (ty : Kind -> Type) := Expr ty StateK.
 
-  Definition ExecStateT := forall ty, StateT ty -> (* rf *)
-                                      fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                      fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
-                                      StateE ty. (* next state *)
-  Definition ExecNextPcT := forall ty, StateT ty -> (* rf *)
-                                       fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                       fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
-                                       Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
+  Definition ExecT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                                 fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
+                                 fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                 fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                                 Expr ty (SyntaxKind (Data lgDataBytes)). (* executed value *)
+  Definition NextPcT := forall ty, StateT ty -> (* rf *)
+                                   fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                   fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                                   Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
   
 End DecExec.
 
@@ -97,7 +103,7 @@ Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opTh opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
-     StateK StateE StateT ExecStateT ExecNextPcT : MethDefs.
+     StateK StateE StateT ExecT NextPcT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
@@ -147,14 +153,15 @@ Section ProcInst.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Definition execCm := MethodSig "exec"(RqFromProc addrSize lgDataBytes) : RsToProc lgDataBytes.
   Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
 
   Definition nextPc {ty} ppc st rawInst :=
-    (Write "pc" <- execNextPc ty st ppc rawInst;
+    (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
   Definition procInst := MODULE {
@@ -224,7 +231,13 @@ Section ProcInst.
       Read pgm <- "pgm";
       LET rawInst <- #pgm@[#ppc];
       Assert (getOptype _ rawInst == $$opNm);
-      Write "rf" <- execState _ rf ppc rawInst;
+      LET src1 <- getSrc1 _ rawInst;
+      LET val1 <- #rf@[#src1];
+      LET src2 <- getSrc2 _ rawInst;
+      LET val2 <- #rf@[#src2];
+      LET dst <- getDst _ rawInst;
+      LET execVal <- exec _ val1 val2 ppc rawInst;
+      Write "rf" <- #rf@[#dst <- #execVal];
       nextPc ppc rf rawInst
   }.
 
@@ -248,14 +261,15 @@ Section SC.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Variable n: nat.
 
   Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 execState execNextPc.
+                               getSrc1 getSrc2 getDst exec getNextPc.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize lgDataBytes.
 
@@ -280,13 +294,14 @@ Section Facts.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Lemma pinst_ModEquiv:
     ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 execState execNextPc).
+                      getSrc1 getSrc2 getDst exec getNextPc).
   Proof.
     kequiv.
   Qed.
@@ -297,7 +312,7 @@ Section Facts.
   Lemma pinsts_ModEquiv:
     ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc n).
+                       getSrc1 getSrc2 getDst exec getNextPc n).
   Proof.
     kequiv.
   Qed.
@@ -313,7 +328,7 @@ Section Facts.
   Lemma sc_ModEquiv:
     ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                    getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 execState execNextPc n).
+                   getSrc1 getSrc2 getDst exec getNextPc n).
   Proof.
     kequiv.
   Qed.

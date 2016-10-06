@@ -29,15 +29,16 @@ Section ProcMem.
             (getStVSrc: StVSrcT LgDataBytes RfIdx)
             (getSrc1: Src1T LgDataBytes RfIdx)
             (getSrc2: Src2T LgDataBytes RfIdx)
-            (execState: ExecStateT AddrSize LgDataBytes RfIdx)
-            (execNextPc: ExecNextPcT AddrSize LgDataBytes RfIdx).
+            (getDst: DstT LgDataBytes RfIdx)
+            (exec: ExecT AddrSize LgDataBytes)
+            (getNextPc: NextPcT AddrSize LgDataBytes RfIdx).
 
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
   Definition pdecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 execState execNextPc numChildren.
+                            getSrc1 getSrc2 getDst exec getNextPc numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
@@ -46,7 +47,7 @@ Section ProcMem.
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc numChildren.
+                       getSrc1 getSrc2 getDst exec getNextPc numChildren.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).

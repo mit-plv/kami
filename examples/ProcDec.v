@@ -27,8 +27,9 @@ Section ProcDec.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -39,7 +40,7 @@ Section ProcDec.
   Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
   Definition nextPc {ty} ppc st rawInst :=
-    (Write "pc" <- execNextPc ty st ppc rawInst;
+    (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
   Definition procDec := MODULE {
@@ -143,7 +144,13 @@ Section ProcDec.
       Read pgm <- "pgm";
       LET rawInst <- #pgm @[ #ppc ];
       Assert (getOptype _ rawInst == $$opNm);
-      Write "rf" <- execState _ rf ppc rawInst;
+      LET src1 <- getSrc1 _ rawInst;
+      LET val1 <- #rf@[#src1];
+      LET src2 <- getSrc2 _ rawInst;
+      LET val2 <- #rf@[#src2];
+      LET dst <- getDst _ rawInst;
+      LET execVal <- exec _ val1 val2 ppc rawInst;
+      Write "rf" <- #rf@[#dst <- #execVal];
       nextPc ppc rf rawInst
   }.
 
@@ -167,13 +174,14 @@ Section ProcDecM.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                              getStAddr getStSrc calcStAddr getStVSrc
-                             getSrc1 execState execNextPc.
+                             getSrc1 getSrc2 getDst exec getNextPc.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize lgDataBytes).
@@ -199,13 +207,14 @@ Section Facts.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx).
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
   Lemma pdec_ModEquiv:
     ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 execState execNextPc).
+                     getSrc1 getSrc2 getDst exec getNextPc).
   Proof.
     kequiv.
   Qed.
@@ -214,7 +223,7 @@ Section Facts.
   Lemma pdecf_ModEquiv:
     ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 execState execNextPc).
+                      getSrc1 getSrc2 getDst exec getNextPc).
   Proof.
     kequiv.
   Qed.
@@ -225,7 +234,7 @@ Section Facts.
   Lemma pdecfs_ModEquiv:
     ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 execState execNextPc n).
+                       getSrc1 getSrc2 getDst exec getNextPc n).
   Proof.
     kequiv.
   Qed.
@@ -234,7 +243,7 @@ Section Facts.
   Lemma procDecM_ModEquiv:
     ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                          getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 execState execNextPc n).
+                         getSrc1 getSrc2 getDst exec getNextPc n).
   Proof.
     kequiv.
   Qed.

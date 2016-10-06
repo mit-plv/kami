@@ -1,6 +1,6 @@
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
-Require Import Ex.SC Ex.ProcTwoStage.
+Require Import Ex.SC Ex.MemTypes Ex.ProcTwoStage.
 
 Set Implicit Arguments.
 
@@ -19,14 +19,61 @@ Section Inlined.
             (getStVSrc: StVSrcT lgDataBytes rfIdx)
             (getSrc1: Src1T lgDataBytes rfIdx)
             (getSrc2: Src2T lgDataBytes rfIdx)
-            (execState: ExecStateT addrSize lgDataBytes rfIdx)
-            (execNextPc: ExecNextPcT addrSize lgDataBytes rfIdx)
+            (getDst: DstT lgDataBytes rfIdx)
+            (exec: ExecT addrSize lgDataBytes)
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
+  Variable (d2eElt: Kind).
+  Variable (d2ePack:
+              forall ty,
+                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind d2eElt)).
+  Variables
+    (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Bit 2)))
+    (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                        Expr ty (SyntaxKind (Bit rfIdx)))
+    (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                         Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                 Expr ty (SyntaxKind (Data lgDataBytes)))
+    (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                            Expr ty (SyntaxKind (Data lgDataBytes)))
+    (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                          Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                          Expr ty (SyntaxKind Bool)).
+
+  Variable (e2wElt: Kind).
+  Variable (e2wPack:
+              forall ty,
+                Expr ty (SyntaxKind d2eElt) -> (* decInst *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind e2wElt)).
+  Variables
+    (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                            Expr ty (SyntaxKind d2eElt))
+    (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                        Expr ty (SyntaxKind (Data lgDataBytes))).
+
   Definition p2st := p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 execState execNextPc predictNextPc.
+                          getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                          e2wPack e2wDecInst e2wVal.
   Hint Unfold p2st: ModuleDefs. (* for kinline_compute *)
 
   Definition p2stInl: sigT (fun m: Modules => p2st <<== m).
@@ -34,7 +81,10 @@ Section Inlined.
     pose proof (inlineF_refines
                   (procTwoStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 execState execNextPc predictNextPc
+                                         getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                                         e2wPack e2wDecInst e2wVal
                                          type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p2st)) eq_refl))
       as Him.
