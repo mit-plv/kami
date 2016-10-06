@@ -190,6 +190,36 @@ Section D2eInst.
   Proof. reflexivity. Qed.
 
 End D2eInst.
+
+Section E2wInst.
+  Variables addrSize lgDataBytes rfIdx: nat.
+
+  Definition e2wEltI :=
+    STRUCT { "decInst" :: d2eEltI addrSize lgDataBytes rfIdx;
+             "val" :: Data lgDataBytes }.
+
+  Definition e2wPackI ty
+             (decInst: Expr ty (SyntaxKind (d2eEltI addrSize lgDataBytes rfIdx)))
+             (val: Expr ty (SyntaxKind (Data lgDataBytes))) :=
+    STRUCT { "decInst" ::= decInst;
+             "val" ::= val }%kami_expr.
+
+  Definition e2wDecInstI ty (e2w: fullType ty (SyntaxKind e2wEltI))
+    : Expr ty (SyntaxKind (d2eEltI addrSize lgDataBytes rfIdx)) := (#e2w@."decInst")%kami_expr.
+  Definition e2wValI ty (e2w: fullType ty (SyntaxKind e2wEltI))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#e2w@."val")%kami_expr.
+
+  Lemma e2wElt_decInst:
+    forall decInst val,
+      evalExpr (e2wDecInstI _ (evalExpr (e2wPackI decInst val))) = evalExpr decInst.
+  Proof. reflexivity. Qed.
+
+  Lemma e2wElt_val:
+    forall decInst val,
+      evalExpr (e2wValI _ (evalExpr (e2wPackI decInst val))) = evalExpr val.
+  Proof. reflexivity. Qed.
+
+End E2wInst.
   
 (* A two-staged processor, where two sets, {fetch, decode} and {execute, commit, write-back},
  * are modularly separated to form each stage. "epoch" registers are used to handle incorrect

@@ -36,7 +36,8 @@ Section ProcFDE.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
@@ -49,8 +50,8 @@ Section ProcFDE.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
-    (d2eVal: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                        Expr ty (SyntaxKind (Data lgDataBytes)))
+    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                 Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data lgDataBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -78,27 +79,45 @@ Section ProcFDE.
                            Expr ty (SyntaxKind (Bit addrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
-  
+
+  (* Abstract e2wElt *)  
+  Variable (e2wElt: Kind).
+  Variable (e2wPack:
+              forall ty,
+                Expr ty (SyntaxKind d2eElt) -> (* decInst *)
+                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind e2wElt)).
+  Variables
+    (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                            Expr ty (SyntaxKind d2eElt))
+    (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
+                        Expr ty (SyntaxKind (Data lgDataBytes))).
+
   Definition fetchDecode := ProcFetchDecode.fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 predictNextPc d2ePack
+                              getSrc1 getSrc2 getDst predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
+
   Definition p3st := (fetchDecode
                         ++ regFile lgDataBytes rfIdx
                         ++ scoreBoard rfIdx
                         ++ oneEltFifo d2eFifoName d2eElt
                         ++ oneEltFifoEx1 e2dFifoName (Bit addrSize)
-                        ++ (executer "rqFromProc"%string "rsToProc"%string
-                                     getSrc1 getSrc2 getDst exec getNextPc
-                                     d2eOpType d2eDst d2eAddr d2eVal
-                                     d2eRawInst d2eCurPc d2eNextPc d2eEpoch))%kami.
+                        ++ (executer rfIdx exec d2eOpType d2eVal1 d2eVal2
+                                     d2eRawInst d2eCurPc e2wPack)
+                        ++ epoch
+                        ++ oneEltFifo e2wFifoName e2wElt
+                        ++ (wb "rqFromProc"%string "rsToProc"%string
+                               getNextPc d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
+                               d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
   Definition p2st := ProcTwoStage.p2st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                        getStAddr getStSrc calcStAddr getStVSrc
                                        getSrc1 getSrc2 getDst exec getNextPc predictNextPc
-                                       d2ePack d2eOpType d2eDst d2eAddr d2eVal
-                                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch.
+                                       d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                                       e2wPack e2wDecInst e2wVal.
 
   Lemma p3st_refines_p2st: p3st <<== p2st.
   Proof. (* SKIP_PROOF_ON
