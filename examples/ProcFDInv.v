@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StructNotation Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
+Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Inline Kami.InlineFacts Kami.Decomposition.
 Require Import Kami.Tactics Kami.Notations.
@@ -161,7 +161,7 @@ Section Invariants.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
 
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma fetchDecode_inv_ok:

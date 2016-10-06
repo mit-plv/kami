@@ -28,7 +28,7 @@ Section RegFile.
           Read full: DataArray <- ^dataArray;
         Ret (#full@[#a])
             
-        with Method ^write (w: WritePort): Void :=
+        with Method ^write (w: Struct WritePort): Void :=
           Read full: DataArray <- ^dataArray;
         Write ^dataArray <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
         Retv
@@ -56,7 +56,7 @@ Section RegFile.
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
+        with Method { ^write | rfgn write eq_refl } (w: Struct WritePort): Void :=
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
           Retv
@@ -70,7 +70,7 @@ Section RegFile.
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^write | rfgn write eq_refl } (w: WritePort): Void :=
+        with Method { ^write | rfgn write eq_refl } (w: Struct WritePort): Void :=
           Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
           Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
           Retv

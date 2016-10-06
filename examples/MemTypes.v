@@ -80,17 +80,17 @@ Section MsgTypes.
 
   Definition RqFromC := STRUCT {
                             child :: Child;
-                            rq :: RqToP
+                            rq :: Struct RqToP
                           }.
 
   Definition RsFromC := STRUCT {
                             child :: Child;
-                            rs :: RsToP
+                            rs :: Struct RsToP
                           }.
 
   Definition ToC := STRUCT {
                         child :: Child;
-                        msg :: FromP
+                        msg :: Struct FromP
                       }.
 End MsgTypes.
 

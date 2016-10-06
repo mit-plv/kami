@@ -19,20 +19,20 @@ Section F2dInst.
              (rawInst: Expr ty (SyntaxKind (Data lgDataBytes)))
              (curPc: Expr ty (SyntaxKind (Bit addrSize)))
              (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
-             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind f2dEltI) :=
+             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind (Struct f2dEltI)) :=
     STRUCT { "rawInst" ::= rawInst;
              "curPc" ::= curPc;
              "nextPc" ::= nextPc;
              "epoch" ::= epoch }%kami_expr.
 
-  Definition f2dRawInstI ty (f2d: fullType ty (SyntaxKind f2dEltI))
-    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#f2d@."rawInst")%kami_expr.
-  Definition f2dCurPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."curPc")%kami_expr.
-  Definition f2dNextPcI ty (f2d: fullType ty (SyntaxKind f2dEltI))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d@."nextPc")%kami_expr.
-  Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind f2dEltI))
-    : Expr ty (SyntaxKind Bool) := (#f2d@."epoch")%kami_expr.
+  Definition f2dRawInstI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#f2d!f2dEltI@."rawInst")%kami_expr.
+  Definition f2dCurPcI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d!f2dEltI@."curPc")%kami_expr.
+  Definition f2dNextPcI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d!f2dEltI@."nextPc")%kami_expr.
+  Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
+    : Expr ty (SyntaxKind Bool) := (#f2d!f2dEltI@."epoch")%kami_expr.
 
   Lemma f2dElt_rawInst:
     forall rawInst curPc nextPc epoch,

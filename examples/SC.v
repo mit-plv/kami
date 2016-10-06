@@ -117,15 +117,15 @@ Section MemInst.
   Definition memInstM := META {
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
-    with Repeat Method till n by "exec" (a : RqFromProc) : RsToProc :=
+    with Repeat Method till n by "exec" (a : Struct RqFromProc) : Struct RsToProc :=
       If !#a!RqFromProc@."op" then (* load *)
         Read memv <- "mem";
         LET ldval <- #memv@[#a!RqFromProc@."addr"];
-        Ret (STRUCT { "data" ::= #ldval } :: RsToProc)
+        Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
       else (* store *)
         Read memv <- "mem";
         Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
-        Ret (STRUCT { "data" ::= $$Default } :: RsToProc)
+        Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
       as na;
       Ret #na
   }.
@@ -157,7 +157,7 @@ Section ProcInst.
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
 
-  Definition execCm := MethodSig "exec"(RqFromProc addrSize lgDataBytes) : RsToProc lgDataBytes.
+  Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize lgDataBytes)) : Struct (RsToProc lgDataBytes).
   Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
 
   Definition nextPc {ty} ppc st rawInst :=

@@ -13,9 +13,9 @@ Section Middleman.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition getReq := MethodSig (inName -- "deq")() : RqFromProc.
-  Definition setRep := MethodSig (outName -- "enq")(RsToProc) : Void.
-  Definition exec := MethodSig "exec"(RqFromProc) : RsToProc.
+  Definition getReq := MethodSig (inName -- "deq")() : Struct RqFromProc.
+  Definition setRep := MethodSig (outName -- "enq")(Struct RsToProc) : Void.
+  Definition exec := MethodSig "exec"(Struct RqFromProc) : Struct RsToProc.
 
   Definition processLd {ty} : ActionT ty Void :=
     (Call req <- getReq();
@@ -48,8 +48,8 @@ Section MemAtomic.
 
   Definition minst := memInst n addrSize lgDataBytes.
 
-  Definition inQ := @simpleFifo "rqFromProc" fifoSize (RqFromProc addrSize lgDataBytes).
-  Definition outQ := @simpleFifo "rsToProc" fifoSize (RsToProc lgDataBytes).
+  Definition inQ := @simpleFifo "rqFromProc" fifoSize (Struct (RqFromProc addrSize lgDataBytes)).
+  Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc lgDataBytes)).
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition ios (i: nat) := duplicate ioQ i.

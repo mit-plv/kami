@@ -21,7 +21,7 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 
 (** Notations for Struct **) 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (Struct (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..)).
+  (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..).
 
 
 (** Notations for expressions *)
@@ -59,10 +59,11 @@ Delimit Scope kami_expr_scope with kami_expr.
 
 Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
 
-Notation "s !! f" := (Lib.VectorFacts.Vector_find (fun x => Lib.StringEq.string_eq f%string (attrName x)) (@getStructVector _ _ s eq_refl))
-                                                  (at level 0).
+Notation "s !! f" := (Lib.VectorFacts.Vector_find
+                        (fun x => Lib.StringEq.string_eq f%string (attrName x)) s)
+                       (at level 0).
 
-Notation "e ! s @. f" := (@ReadField _ _ (@getStructVector _ _ s eq_refl) (s !! f) e%kami_expr) (at level 0): kami_expr_scope.
+Notation "e ! s @. f" := (@ReadField _ _ s (s !! f) e%kami_expr) (at level 0): kami_expr_scope.
 
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.

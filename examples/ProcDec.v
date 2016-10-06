@@ -35,8 +35,8 @@ Section ProcDec.
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   (* Called method signatures *)
-  Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
-  Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
+  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
+  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
   Definition toHost := MethodSig "toHost"(Data lgDataBytes) : Void.
 
   Definition nextPc {ty} ppc st rawInst :=

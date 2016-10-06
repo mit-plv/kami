@@ -96,7 +96,7 @@ Section D2eInst.
              (rawInst: Expr ty (SyntaxKind (Data lgDataBytes)))
              (curPc: Expr ty (SyntaxKind (Bit addrSize)))
              (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
-             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind d2eEltI) :=
+             (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind (Struct d2eEltI)) :=
     STRUCT { "opType" ::= opTy;
              "dst" ::= dst;
              "addr" ::= addr;
@@ -107,24 +107,24 @@ Section D2eInst.
              "nextPc" ::= nextPc;
              "epoch" ::= epoch }%kami_expr.
 
-  Definition d2eOpTypeI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Bit 2)) := (#d2e@."opType")%kami_expr.
-  Definition d2eDstI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Bit rfIdx)) := (#d2e@."dst")%kami_expr.
-  Definition d2eAddrI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."addr")%kami_expr.
-  Definition d2eVal1I ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e@."val1")%kami_expr.
-  Definition d2eVal2I ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e@."val2")%kami_expr.
-  Definition d2eRawInstI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e@."rawInst")%kami_expr.
-  Definition d2eCurPcI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."curPc")%kami_expr.
-  Definition d2eNextPcI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e@."nextPc")%kami_expr.
-  Definition d2eEpochI ty (d2e: fullType ty (SyntaxKind d2eEltI))
-    : Expr ty (SyntaxKind Bool) := (#d2e@."epoch")%kami_expr.
+  Definition d2eOpTypeI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Bit 2)) := (#d2e!d2eEltI@."opType")%kami_expr.
+  Definition d2eDstI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Bit rfIdx)) := (#d2e!d2eEltI@."dst")%kami_expr.
+  Definition d2eAddrI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e!d2eEltI@."addr")%kami_expr.
+  Definition d2eVal1I ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e!d2eEltI@."val1")%kami_expr.
+  Definition d2eVal2I ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e!d2eEltI@."val2")%kami_expr.
+  Definition d2eRawInstI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Data lgDataBytes)) := (#d2e!d2eEltI@."rawInst")%kami_expr.
+  Definition d2eCurPcI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e!d2eEltI@."curPc")%kami_expr.
+  Definition d2eNextPcI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e!d2eEltI@."nextPc")%kami_expr.
+  Definition d2eEpochI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind Bool) := (#d2e!d2eEltI@."epoch")%kami_expr.
 
   Lemma d2eElt_opType:
     forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
@@ -219,8 +219,8 @@ Section ProcTwoStage.
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
-  Definition memReq := MethodSig (inName -- "enq")(RqFromProc) : Void.
-  Definition memRep := MethodSig (outName -- "deq")() : RsToProc.
+  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
+  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
 
   (* Abstract d2eElt *)
   Variable (d2eElt: Kind).
@@ -609,7 +609,7 @@ Section ProcTwoStage.
         Read stalled : d2eElt <- "stalled";
         Assert d2eOpType _ stalled == $$opLd;
         LET dst <- d2eDst _ stalled;
-        Call setRf (#rf@[#dst <- #val@."data"]);
+        Call setRf (#rf@[#dst <- #val!RsToProc@."data"]);
         Call sbRemove(#dst);
         Write "stall" <- $$false;
         LET ppc <- d2eCurPc _ stalled;
