@@ -3,9 +3,10 @@ Require Import Lib.FMap Lib.Word Lib.WordSupport Ex.MemTypes Lib.Indexer Lib.Str
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
         Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
-        Coq.Program.Basics Ex.Names.
+        Coq.Program.Basics Ex.Names Lib.FinNotations.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Local Notation "<| t |>" := (fullType type (SyntaxKind t)).
 
@@ -17,14 +18,21 @@ Section MemCacheInl.
 
   Variable LgNumChildren: nat.
 
+  Local Notation RqFC := (RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id).
+  Local Notation RsFC := (RsFromC LgDataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits))).
+  Local Notation RqTP := (RqToP (Bit (IdxBits + TagBits)) Id).
+  Local Notation RsTP := (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))).
+  Local Notation TC := (ToC LgDataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits)) Id).
+  Local Notation FP := (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id).
+
   Fixpoint filtRqFromC
              (c: word LgNumChildren) a
-             (ls: list (type (RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id))):
-    list (type (RqToP _ Id)) :=
+             (ls: list (type (Struct RqFC))):
+    list (type (Struct RqTP)) :=
     match ls with
-      | x :: xs => if weq c (x ``child)
-                   then if weq a (x ``rq ``addr)
-                        then x ``rq :: filtRqFromC c a xs
+      | x :: xs => if weq c (x (RqFC !! child))
+                   then if weq a (x (RqFC !! rq) (RqTP !! addr))
+                        then x (RqFC !! rq) :: filtRqFromC c a xs
                         else filtRqFromC c a xs
                    else filtRqFromC c a xs
       | nil => nil
@@ -32,13 +40,12 @@ Section MemCacheInl.
 
   Fixpoint filtRsFromC
              (c: word LgNumChildren) (a: word (IdxBits + TagBits))
-             (ls: list (type (RsFromC LgDataBytes LgNumDatas LgNumChildren
-                                      (Bit (IdxBits + TagBits))))):
-    list (type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)))) :=
+             (ls: list (type (Struct RsFC))):
+    list (type (Struct RsTP)) :=
     match ls with
-      | x :: xs => if weq c (x ``child)
-                   then if weq a (x ``rs ``addr)
-                        then x ``rs :: filtRsFromC c a xs
+      | x :: xs => if weq c (x (RsFC !! child))
+                   then if weq a (x (RsFC !! rs) (RsTP !! addr))
+                        then x (RsFC !! rs) :: filtRsFromC c a xs
                         else filtRsFromC c a xs
                    else filtRsFromC c a xs
       | nil => nil
@@ -46,13 +53,12 @@ Section MemCacheInl.
 
   Fixpoint filtToC
              (c: word LgNumChildren) a
-             (ls: list (type (ToC LgDataBytes LgNumDatas LgNumChildren
-                                  (Bit (IdxBits + TagBits)) Id))):
-    list (type (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id)) :=
+             (ls: list (type (Struct TC))):
+    list (type (Struct FP)) :=
     match ls with
-      | x :: xs => if weq c (x ``child)
-                   then if weq a (x ``msg ``addr)
-                        then x ``msg :: filtToC c a xs
+      | x :: xs => if weq c (x (TC !! child))
+                   then if weq a (x (TC !! msg) (FP !! addr))
+                        then x (TC !! msg) :: filtToC c a xs
                         else filtToC c a xs
                    else filtToC c a xs
       | nil => nil
@@ -60,10 +66,10 @@ Section MemCacheInl.
 
   Fixpoint filtRqToP
              (a: word (IdxBits + TagBits))
-             (ls: list (type (RqToP (Bit (IdxBits + TagBits)) Id))):
-    list (type (RqToP (Bit (IdxBits + TagBits)) Id)) :=
+             (ls: list (type (Struct RqTP))):
+    list (type (Struct RqTP)) :=
     match ls with
-      | x :: xs => if weq a (x ``addr)
+      | x :: xs => if weq a (x (RqTP !! addr))
                    then x :: filtRqToP a xs
                    else filtRqToP a xs
       | nil => nil
@@ -71,10 +77,10 @@ Section MemCacheInl.
 
   Fixpoint filtRsToP
              a
-             (ls: list (type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))))):
-    list (type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)))) :=
+             (ls: list (type (Struct RsTP))):
+    list (type (Struct RsTP)) :=
     match ls with
-      | x :: xs => if weq a (x ``addr)
+      | x :: xs => if weq a (x (RsTP !! addr))
                    then x :: filtRsToP a xs
                    else filtRsToP a xs
       | nil => nil
@@ -82,10 +88,10 @@ Section MemCacheInl.
 
   Fixpoint filtFromP
              a
-             (ls: list (type (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id))):
-    list (type (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id)) :=
+             (ls: list (type (Struct FP))):
+    list (type (Struct FP)) :=
     match ls with
-      | x :: xs => if weq a (x ``addr)
+      | x :: xs => if weq a (x (FP !! addr))
                    then x :: filtFromP a xs
                    else filtFromP a xs
       | nil => nil
@@ -93,23 +99,23 @@ Section MemCacheInl.
 
   Definition rqFromCToP
              (c: word LgNumChildren) a
-             (l1: list (type (RqFromC LgNumChildren _ Id)))
-             (l2: list (type (RqToP _ Id))):
-    list (type (RqToP _ Id)) :=
+             (l1: list (type (Struct RqFC)))
+             (l2: list (type (Struct RqTP))):
+    list (type (Struct RqTP)) :=
     (filtRqFromC c a l1 ++ filtRqToP a l2)%list.
 
   Definition rsFromCToP
              (c: word LgNumChildren) a
-             (l1: list (type (RsFromC LgDataBytes LgNumDatas LgNumChildren _)))
-             (l2: list (type (RsToP LgDataBytes LgNumDatas _))):
-    list (type (RsToP LgDataBytes LgNumDatas _)) :=
+             (l1: list (type (Struct RsFC)))
+             (l2: list (type (Struct RsTP))):
+    list (type (Struct RsTP)) :=
     (filtRsFromC c a l1 ++ filtRsToP a l2)%list.
 
   Definition fromPToC
              (c: word LgNumChildren) a
-             (l1: list (type (FromP LgDataBytes LgNumDatas _ Id)))
-             (l2: list (type (ToC LgDataBytes LgNumDatas LgNumChildren _ Id))):
-    list (type (FromP LgDataBytes LgNumDatas _ Id)) :=
+             (l1: list (type (Struct FP)))
+             (l2: list (type (Struct TC))):
+    list (type (Struct FP)) :=
     (filtFromP a l1 ++ filtToC c a l2)%list.
 
   Definition getCs (cs: word IdxBits -> type Msi) (tag: word IdxBits -> word TagBits)
@@ -118,30 +124,32 @@ Section MemCacheInl.
     then cs (split1 IdxBits TagBits a)
     else $ Msi.Inv.
 
-  Fixpoint rsLessTo (ls: list (type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))))) :=
+  Fixpoint rsLessTo (ls: list (type (Struct RsTP))) :=
     match ls with
       | x :: xs =>
         match xs with
           | y :: xs' =>
-            x ``to > y ``to /\ rsLessTo xs
+            x (RsTP !! to) > y (RsTP !! to) /\ rsLessTo xs
           | nil => True
         end
       | _ => True
     end.
 
+  Local Notation RqFPr := (RqFromProc LgDataBytes (Bit (LgNumDatas + (IdxBits + TagBits)))).
+  Local Notation RsTPr := (RsToProc LgDataBytes).
   Definition isCWait a procRqValid
-             (procRq: type (RqFromProc LgDataBytes (Bit (LgNumDatas + (IdxBits + TagBits)))))
+             (procRq: type (Struct RqFPr))
              csw :=
-    procRqValid = true /\ a = split2 LgNumDatas (IdxBits + TagBits) (procRq ``addr) /\
+    procRqValid = true /\ a = split2 LgNumDatas (IdxBits + TagBits) (procRq (RqFPr !! addr)) /\
     csw = true.
 
   Definition isPWait a cRqValid
-             (rqFromCList: list (type (RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id)))
+             (rqFromCList: list (type (Struct RqFC)))
              dirw (cword: word LgNumChildren) :=
     cRqValid = true /\
     dirw cword = true /\
     match hd_error rqFromCList with
-      | Some cRq => a = cRq ``rq ``addr
+      | Some cRq => a = cRq (RqFC !! rq) (RqTP !! addr)
       | _ => False
     end.
 
@@ -159,14 +167,11 @@ Section MemCacheInl.
       cRqValidFind: cRqValid === s.[cRqValidReg] ;
       dirw: <| Vector Bool LgNumChildren |> ;
       dirwFind: dirw === s.[cRqDirwReg] ;
-      rqFromCList: <[ list (type (RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id)) ]> ;
+      rqFromCList: <[ list (type (Struct RqFC)) ]> ;
       rqFromCListFind: rqFromCList === s.[rqFromChild -- elt] ;
-      rsFromCList: <[ list (type (RsFromC LgDataBytes LgNumDatas LgNumChildren
-                                          (Bit (IdxBits + TagBits)))) ]> ;
+      rsFromCList: <[ list (type (Struct RsFC)) ]> ;
       rsFromCListFind: rsFromCList === s.[rsFromChild -- elt] ;
-      toCList: <[ list (type
-                          (ToC LgDataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits)) Id))
-                ]> ;
+      toCList: <[ list (type (Struct TC)) ]>;
       toCListFind: toCList === s.[toChild -- elt] ;
       csv: <| Vector Msi IdxBits |> ;
       csFind: csv === s.[(cs -- dataArray) __ c] ;
@@ -176,157 +181,156 @@ Section MemCacheInl.
       procRqValidFind: procRqValid === s.[procRqValidReg __ c] ;
       procRqReplace: <| Bool |> ;
       procRqReplaceFind: procRqReplace === s.[procRqReplaceReg __ c] ;
-      procRq: <| RqFromProc LgDataBytes (Bit (LgNumDatas + (IdxBits + TagBits))) |> ;
+      procRq: <| Struct RqFPr |> ;
       procRqFind: procRq === s.[procRqReg __ c] ;
       csw: <| Bool |> ;
       cswFind: csw === s.[procRqWaitReg __ c] ;
-      rqToPList: <[ list (type (RqToP (Bit (IdxBits + TagBits)) Id)) ]> ;
+      rqToPList: <[ list (type (Struct RqTP)) ]> ;
       rqToPListFind:  rqToPList === s.[(rqToParent -- elt) __ c] ;
-      rsToPList: <[ list (type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)))) ]> ;
+      rsToPList: <[ list (type (Struct RsTP)) ]> ;
       rsToPListFind: rsToPList === s.[(rsToParent -- elt) __ c] ;
-      fromPList: <[ list (type (FromP LgDataBytes LgNumDatas
-                                      (Bit (IdxBits + TagBits)) Id)) ]> ;
+      fromPList: <[ list (type (Struct FP)) ]> ;
       fromPListFind: fromPList === s.[(fromParent -- elt) __ c] ;
-      cRq: <| RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id |> ;
+      cRq: <| Struct RqFC |> ;
       cRqFind: cRq === s.[cRqReg] ;
 
       i5: dir a cword >= getCs csv tagv a ;
       
       i7: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                     getCs csv tagv a <= rs ``to /\
-                     dir a cword > rs ``to ;
+                     getCs csv tagv a <= rs (RsTP !! to) /\
+                     dir a cword > rs (RsTP !! to) ;
 
       i8: forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                     rs ``isRq = false ->
-                     getCs csv tagv a < rs ``to /\
-                     dir a cword = rs ``to ;
+                     rs (FP !! isRq) = false ->
+                     getCs csv tagv a < rs (FP !! to) /\
+                     dir a cword = rs (FP !! to) ;
 
       i9: forall rq rs,
             In rq (rqFromCToP cword a rqFromCList rqToPList) ->
             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-            dir a cword <= rq ``from ->
+            dir a cword <= rq (RqTP !! from) ->
             isPWait a cRqValid rqFromCList dirw cword ;
 
       i10: (forall beg mid last rs1 rs2,
               fromPToC cword a fromPList toCList = beg ++ rs1 :: mid ++ rs2 :: last ->
-              rs1 ``isRq = false ->
-              rs2 ``isRq = false ->
+              rs1 (FP !! isRq) = false ->
+              rs2 (FP !! isRq) = false ->
               False)%list ;
       
       i11: rsFromCToP cword a rsFromCList rsToPList = nil ->
            dir a cword = getCs csv tagv a ;
            
       i12: forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                      rs ``isRq = false ->
+                      rs (FP !! isRq) = false ->
                       rsFromCToP cword a rsFromCList rsToPList = nil ;
     
       i13: rsLessTo (rsFromCToP cword a rsFromCList rsToPList) ;
 
       i14: (forall beg rs,
               rsFromCToP cword a rsFromCList rsToPList = beg ++ [rs] ->
-              rs ``to = getCs csv tagv a)%list ;
+              rs (RsTP !! to) = getCs csv tagv a)%list ;
 
       i15: (forall beg mid last rq rs,
               fromPToC cword a fromPList toCList = beg ++ rq :: mid ++ rs :: last ->
-              rq ``isRq = true ->
-              rs ``isRq = false ->
+              rq (FP !! isRq) = true ->
+              rs (FP !! isRq) = false ->
               getCs csv tagv a = $ Msi.Inv)%list ;
 
       i16: isCWait a procRqValid procRq csw ->
-           (getCs csv tagv a < if (procRq ``op):bool
+           (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
                                then $ Msi.Mod else $ Msi.Sh)
            /\
            ((exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList) /\
-                        rq ``to = (if (procRq ``op):bool then $ Msi.Mod else $ Msi.Sh) /\
-                        rq ``from >= getCs csv tagv a) \/
+                        rq (RqTP !! to) = (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) /\
+                        rq (RqTP !! from) >= getCs csv tagv a) \/
             (exists rs, In rs (fromPToC cword a fromPList toCList) /\
-                        rs ``isRq = false /\
-                        rs ``to = if (procRq ``op):bool then $ Msi.Mod else $ Msi.Sh)) ;
+                        rs (FP !! isRq) = false /\
+                        rs (FP !! to) = if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)) ;
 
       i16a: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                        isCWait a procRqValid procRq csw
-                       /\ (getCs csv tagv a < if (procRq ``op ):bool
+                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
                                             then $ Msi.Mod else $ Msi.Sh)
-                       /\ rq ``to =
-                          (if (procRq ``op):bool then $ Msi.Mod else $ Msi.Sh)
-                       /\ rq ``from >= getCs csv tagv a ;
+                       /\ rq (RqTP !! to) =
+                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)
+                       /\ rq (RqTP !! from) >= getCs csv tagv a ;
 
       i16b: forall rs, In rs (fromPToC cword a fromPList toCList) ->
                        isCWait a procRqValid procRq csw
-                       /\ (getCs csv tagv a < if (procRq ``op):bool
+                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
                                               then $ Msi.Mod else $ Msi.Sh)
-                       /\ rs ``isRq = false
-                       /\ rs ``to =
-                          (if (procRq ``op):bool then $ Msi.Mod else $ Msi.Sh) ;
+                       /\ rs (FP !! isRq) = false
+                       /\ rs (FP !! to) =
+                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) ;
     
       i16c: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                           In rs (fromPToC cword a fromPList toCList) ->
-                          rs ``isRq = true ;
+                          rs (FP !! isRq) = true ;
 
       i17: forall rq,
              In rq (fromPToC cword a fromPList toCList) ->
-             rq ``isRq = true ->
+             rq (FP !! isRq) = true ->
              getCs csv tagv a = $ Msi.Inv \/
              isPWait a cRqValid rqFromCList dirw cword ;
 
       i18: forall rq rs,
              In rq (fromPToC cword a fromPList toCList) ->
              In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             rq ``isRq = true ->
-             rs ``to = $ Msi.Inv ;
+             rq (FP !! isRq) = true ->
+             rs (RsTP !! to) = $ Msi.Inv ;
 
       i19: (forall beg mid last rq rs,
               fromPToC cword a fromPList toCList = beg ++ rs :: mid ++ rq :: last ->
-              rs ``isRq = false ->
-              rq ``isRq = true ->
+              rs (FP !! isRq) = false ->
+              rq (FP !! isRq) = true ->
               isPWait a cRqValid rqFromCList dirw cword)%list ;
 
       i20: (forall beg mid last rq1 rq2,
               fromPToC cword a fromPList toCList = beg ++ rq1 :: mid ++ rq2 :: last ->
-              rq1 ``isRq = true ->
-              rq2 ``isRq = true ->
+              rq1 (FP !! isRq) = true ->
+              rq2 (FP !! isRq) = true ->
               getCs csv tagv a = $ Msi.Inv)%list ;
 
       i21: forall rs,
              In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             rs ``isVol = false ->
+             rs (RsTP !! isVol) = false ->
              isPWait a cRqValid rqFromCList dirw cword ;
 
       i22: (forall beg mid last cToPRs1 cToPRs2,
               rsFromCToP cword a rsFromCList rsToPList =
               beg ++ cToPRs1 :: mid ++ cToPRs2 :: last ->
-              cToPRs1 ``isVol = true \/
-              cToPRs2 ``isVol = true)%list ;
+              cToPRs1 (RsTP !! isVol) = true \/
+              cToPRs2 (RsTP !! isVol) = true)%list ;
 
       i23: forall rq rs,
              In rq (rqFromCToP cword a rqFromCList rqToPList) ->
              In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             dir a cword <= rq ``from ->
-             rs ``isVol = false ;
+             dir a cword <= rq (RqTP !! from) ->
+             rs (RsTP !! isVol) = false ;
 
       i25: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                      rq ``from< rq ``to ;
+                      rq (RqTP !! from) < rq (RqTP !! to) ;
 
       i26: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                      rs ``isVol = true ->
-                      rs ``to = $ Msi.Inv ;
+                      rs (RsTP !! isVol) = true ->
+                      rs (RsTP !! to) = $ Msi.Inv ;
 
       i27: procRqValid = true -> procRqReplace = true ->
            tagv (split1 IdxBits TagBits
                         (split2 LgNumDatas (IdxBits + TagBits)
-                                (procRq ``addr))) =
+                                (procRq (RqFPr !! addr)))) =
            split2 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits)
-                                          (procRq ``addr)) ->
+                                          (procRq (RqFPr !! addr))) ->
            csv (split1 IdxBits TagBits
                        (split2 LgNumDatas (IdxBits + TagBits)
-                               (procRq ``addr))) = $ Msi.Inv ;
+                               (procRq (RqFPr !! addr)))) = $ Msi.Inv ;
       
       i28: cRqValid = true -> hd_error rqFromCList = Some cRq ;
 
       i29: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
                          In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                         rs ``isVol = true ->
-                         rq ``from = $ Msi.Inv
+                         rs (RqTP !! isVol) = true ->
+                         rq (RqTP !! from) = $ Msi.Inv
     }.
 
   Lemma nmemCache_invariants_same' s a c x (pf: c <> x) k v:
@@ -456,8 +460,8 @@ Section MemCacheInl.
   
   Ltac destructRules c HInd :=
     unfold getActionFromGen, getGenAction, strFromName in *;
-    simpl in *; subst; unfold getActionFromSin, getSinAction in *; subst;
-    SymEval; subst; simpl;
+    cbn in *; subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; cbn;
     match goal with
       | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
         destruct (HInd a _ _ H eq_refl);
@@ -466,21 +470,21 @@ Section MemCacheInl.
         destruct (HInd a _ _ H eq_refl)          
     end;
     unfold withIndex, withPrefix in *;
-    simpl in *;
+    cbn in *;
     repeat substFind; dest;
     repeat simplBool;
-    elimDiffC c; mkStruct.
+    elimDiffC c.
 
   Ltac normalInit :=
     intros HInd HInRule HS;
-    simpl in HInRule; apply invSome in HInRule;
-    unfold getActionFromSin, getSinAction at 1 in HInRule; simpl in HInRule;
+    cbn in HInRule; apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule; cbn in HInRule;
     rewrite <- HInRule in HS; clear HInRule;
     intros ? ? c ? ?; destructRules c HInd.
   
   Ltac metaInit :=
     intros HInd HInRule x xcond HS;
-    simpl in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    cbn in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
     rewrite <- HInRule in HS; clear HInRule;
     intros ? ? c ? ?; destructRules c HInd.
 
@@ -494,8 +498,8 @@ Section MemCacheInl.
           end
         end;
     unfold withIndex, withPrefix, listIsEmpty,
-    listFirstElt, listEnq, listDeq in *; simpl in *;
-    repeat substFind; dest; repeat simplBool; mkStruct;
+    listFirstElt, listEnq, listDeq in *; cbn in *;
+    repeat substFind; dest; repeat simplBool;
     repeat match goal with
            | [ H : evalConstT match ?E with _ => _ end = _ |- _ ] =>
              destruct E; try discriminate; [ clear H ]
@@ -517,22 +521,23 @@ Section MemCacheInl.
 
 
   Lemma rsLessTo_less_app ls:
-    forall (v1: type (RsToP _ _ _)),
+    forall (v1: type (Struct RsTP)),
       rsLessTo (ls ++ [v1]) ->
-      forall (v2: type (RsToP _ _ _)),
-        v1 ``to > v2 ``to ->
+      forall (v2: type (Struct RsTP)),
+        v1 (RsTP !! to) > v2 (RsTP !! to) ->
         rsLessTo ((ls ++ [v1]) ++ [v2]).
   Proof.
-    simpl.
-    induction ls; [simpl; auto| intros; simpl in *].
+    unfold VectorFacts.Vector_find.
+    cbn.
+    induction ls; [simpl; auto| intros; cbn in *].
     case_eq (ls ++ [v1])%list;
       case_eq ((ls ++ [v1]) ++ [v2])%list; intros;
       repeat match goal with
                | H: (_ ++ [_])%list = nil |- _ =>
                  apply eq_sym in H; apply app_cons_not_nil in H; exfalso; auto
-             end; simpl in *.
-    assert (sth: g = g0).
-    { destruct ls; simpl in *.
+             end; cbn in *; unfold VectorFacts.Vector_find in *; cbn in *.
+    assert (sth: y = y0).
+    { destruct ls; cbn in *.
       - inv H1;
         inv H2.
         reflexivity.
@@ -540,8 +545,8 @@ Section MemCacheInl.
         reflexivity.
     }
 
-    rewrite <- sth in *; clear sth g0.
-    rewrite H2 in *; simpl in *.
+    rewrite <- sth in *; clear sth y0.
+    rewrite H2 in *; cbn in *; unfold VectorFacts.Vector_find in *; cbn in *;
     inv H1.
 
     destruct H as [sth rsLess].
@@ -549,12 +554,12 @@ Section MemCacheInl.
 
     assert (rsLessTo (ls ++ [v1])).
     { rewrite H2.
-      simpl.
+      cbn.
       assumption.
     }
     apply IHls with (v2 := v2) in H.
     rewrite H2 in H.
-    simpl in H.
+    cbn in H.
     assumption.
     auto.
   Qed.
@@ -563,20 +568,18 @@ Section MemCacheInl.
       rsLessTo ls ->
       forall rs,
         In rs ls ->
-        rs ``to = WO~0~0 ->
+        rs (RsTP !! to) = WO~0~0 ->
         exists sth, ls = (sth ++ [rs])%list.
   Proof.
-    unfold IndexBound_head, IndexBound_tail; simpl.
-    induction ls; simpl; intros; [exfalso; auto|].
+    induction ls; cbn; intros; [exfalso; auto|].
     destruct H0, ls; subst; dest.
     - exists nil; reflexivity.
-    - unfold IndexBound_tail in *; simpl in *.
-      rewrite H1 in H; word_omega.
-    - simpl in *; intuition auto.
+    - rewrite H1 in H; word_omega.
+    - cbn in *; intuition auto.
     - specialize (IHls H2 rs H0 H1).
       dest.
       exists (a :: x).
-      simpl.
+      cbn.
       f_equal; auto.
   Qed.
 
@@ -585,13 +588,11 @@ Section MemCacheInl.
       rsLessTo (g :: ls) ->
       forall rs,
         In rs ls ->
-        rs ``to < g ``to.
+        rs (RsTP !! to) < g (RsTP !! to).
   Proof.
-    unfold IndexBound_head, IndexBound_tail; simpl.
-    induction ls; intros; simpl in *; subst; intuition auto.
+    induction ls; intros; cbn in *; subst; intuition auto.
     rewrite H in *; auto.
     apply IHls with (rs := rs) in H2; auto.
-    unfold IndexBound_head, IndexBound_tail in *; simpl in *.
     word_omega.
   Qed.
 
@@ -600,7 +601,7 @@ Section MemCacheInl.
       rsLessTo (g :: ls) -> rsLessTo ls.
   Proof.
     intros.
-    simpl in H.
+    cbn in *.
     destruct ls; dest; auto.
   Qed.
 
@@ -621,76 +622,6 @@ Section MemCacheInl.
               pose proof (@rsLessTo_cons_rsLessTo ls g H)
         end.
   
-
-  
-  Definition BoundedFlag := BoundedIndexFull.
-  Ltac specialize_msgs :=
-    repeat match goal with
-             | H: (forall x: (forall i: BoundedIndexFull ?ls, attrType (GetAttr i)), _),
-                  a: (forall i: BoundedIndexFull ?ls, attrType (GetAttr i)) |- _ =>
-               pose proof (H a);
-                 fold BoundedFlag in a;
-                 repeat match goal with
-                          | b: (forall i: BoundedIndexFull ?ls, attrType (GetAttr i)) |- _ =>
-                            pose proof (H b);
-                              fold BoundedFlag in b
-                        end;
-                 unfold BoundedFlag in *;
-                 clear H
-           end; unfold BoundedFlag in *.
-
-  Ltac specialize_beg_mid_last :=
-    repeat match goal with             
-             | [H: (?l ++ [?v] = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _] =>
-               apply beg_mid_last_add_eq in H;
-                 destruct H as [[? [? ?]] | [? [? ?]]]; subst
-             | [H: forall beg mid last v1 v2,
-                     (?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
-                  H': ?l = ?bg ++ ?val1 :: ?md ++ ?val2 :: ?lt |- _] =>
-               specialize (@H bg md lt val1 val2 H')
-             | [H: forall beg mid last v1 v2,
-                     (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
-                  H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
-               specialize (H (g :: beg') mid' last' v1' v2');
-                 simpl in H;
-                 specialize (H eq_refl)
-             | [H: forall beg v,
-                     (?g :: ?l = beg ++ (v :: nil))%list -> ?P |- _] =>
-               apply list_revcons in H
-           end.
-
-  
-
-  
-
-  Ltac simpl_hyps :=
-    repeat match goal with
-             | H: exists x, _ |- _ => destruct H
-             | H: ?P /\ ?Q |- _ => destruct H
-             | H: ?a = ?a -> _ |- _ => specialize (H eq_refl)
-             | H: ?P -> _, H': ?P |- _ =>
-               match type of P with
-                 | Prop => specialize (H H')
-               end
-           end.
-
-  Ltac rmBadHyp2 :=
-    repeat match goal with
-             | H: ?v = ?v |- _ => clear H
-             | H: In _ _ -> _ |- _ => clear H
-             | H: forall (x: (forall i: BoundedIndexFull _, attrType (GetAttr i))), _ |- _ => 
-               clear H
-             | H: forall (x: (list (forall i: BoundedIndexFull _, attrType (GetAttr i)))), _ |- _ => 
-               clear H
-           end.
-
-  Ltac unfold_index :=
-    do 2 (unfold IndexBound_head, IndexBound_tail, nth_error, addFirstBoundedIndex in *;
-           simpl in * ).
-
-
-  
-
 
   Lemma getCs_tag_match_getCs cs tag a a' upd:
     tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a ->
@@ -726,7 +657,7 @@ Section MemCacheInl.
   Lemma filtRqFromC_commute_app:
     (forall c a l1 l2, (filtRqFromC c a (l1 ++ l2)) = filtRqFromC c a l1 ++ filtRqFromC c a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
     rewrite IHl1.
     repeat match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
   Qed.
@@ -734,7 +665,7 @@ Section MemCacheInl.
   Lemma filtRsFromC_commute_app:
     (forall c a l1 l2, (filtRsFromC c a (l1 ++ l2)) = filtRsFromC c a l1 ++ filtRsFromC c a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
 
     rewrite IHl1.
     repeat match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
@@ -744,7 +675,7 @@ Section MemCacheInl.
   Lemma filtToC_commute_app:
     (forall c a l1 l2, (filtToC c a (l1 ++ l2)) = filtToC c a l1 ++ filtToC c a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
     rewrite IHl1.
     repeat match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
   Qed.
@@ -752,7 +683,7 @@ Section MemCacheInl.
   Lemma filtRqToP_commute_app:
     (forall a l1 l2, (filtRqToP a (l1 ++ l2)) = filtRqToP a l1 ++ filtRqToP a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
     rewrite IHl1.
     match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
   Qed.
@@ -760,7 +691,7 @@ Section MemCacheInl.
   Lemma filtRsToP_commute_app:
     (forall a l1 l2, (filtRsToP a (l1 ++ l2)) = filtRsToP a l1 ++ filtRsToP a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
     rewrite IHl1.
     repeat match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
   Qed.
@@ -768,19 +699,19 @@ Section MemCacheInl.
   Lemma filtFromP_commute_app:
     (forall a l1 l2, (filtFromP a (l1 ++ l2)) = filtFromP a l1 ++ filtFromP a l2)%list.
   Proof.
-    induction l1; simpl; auto; intros.
+    induction l1; cbn; auto; intros.
     rewrite IHl1.
     repeat match goal with |- context[weq ?p ?q] => destruct (weq p q) end; auto.
   Qed.
 
   Lemma rewrite_rsFromCToP_revcons:
-    forall c a rsFromCList rsToPList (v: type (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)))),
+    forall c a rsFromCList rsToPList (v: type (Struct (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))))),
       rsFromCToP c a rsFromCList (rsToPList ++ [v])%list =
       (rsFromCToP c a rsFromCList rsToPList ++ 
-                  if weq a (v ``addr)
+                  if weq a (v (RsTP !! addr))
                   then [v] else nil)%list.
   Proof.
-    unfold IndexBound_head; simpl; intros.
+    cbn; intros.
     unfold rsFromCToP.
     rewrite filtRsToP_commute_app.
     rewrite app_assoc.
@@ -788,13 +719,13 @@ Section MemCacheInl.
   Qed.
 
   Lemma rewrite_rqFromCToP_revcons:
-    forall c a rqFromCList rqToPList (v: type (RqToP (Bit (IdxBits + TagBits)) Id)),
+    forall c a rqFromCList rqToPList (v: type (Struct (RqToP (Bit (IdxBits + TagBits)) Id))),
       rqFromCToP c a rqFromCList (rqToPList ++ [v])%list =
       (rqFromCToP c a rqFromCList rqToPList ++ 
-                  if weq a (v ``addr)
+                  if weq a (v (RqTP !! addr))
                   then [v] else nil)%list.
   Proof.
-    unfold IndexBound_head; simpl; intros.
+    cbn; intros.
     unfold rqFromCToP.
     rewrite filtRqToP_commute_app.
     rewrite app_assoc.
@@ -802,14 +733,14 @@ Section MemCacheInl.
   Qed.
 
   Lemma rewrite_fromPToC_cons:
-    forall c a fromPList toCList (v: type (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id)),
+    forall c a fromPList toCList (v: type (Struct (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id))),
       fromPToC c a (v :: fromPList) toCList  =
-      if weq a (v ``addr)
+      if weq a (v (FP !!addr))
       then v :: fromPToC c a fromPList toCList
       else fromPToC c a fromPList toCList.
   Proof.
     unfold fromPToC.
-    simpl; intros.
+    cbn; intros.
     match goal with
       | |- context[if ?p then _ else _] => destruct p
     end; reflexivity.
@@ -822,6 +753,9 @@ Section MemCacheInl.
 
   Hint Rewrite rewrite_rsFromCToP_revcons rewrite_rqFromCToP_revcons rewrite_fromPToC_cons: invariant.
 
+
+
+  
   Ltac destruct_addr :=
     try match goal with
           | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
@@ -868,6 +802,74 @@ Section MemCacheInl.
 
   
   
+
+  
+  Definition FinFlag := Fin.t.
+  Ltac specialize_msgs :=
+    repeat match goal with
+             | H: (forall x: (forall i: Fin.t ?n, _ ?ls), _),
+                  a: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+               pose proof (H a);
+                 fold FinFlag in a;
+                 repeat match goal with
+                          | b: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                            pose proof (H b);
+                              fold FinFlag in b
+                        end;
+                 unfold FinFlag in *;
+                 clear H
+           end; unfold FinFlag in *.
+
+  Ltac specialize_beg_mid_last :=
+    repeat match goal with             
+             | [H: (?l ++ [?v] = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _] =>
+               apply beg_mid_last_add_eq in H;
+                 destruct H as [[? [? ?]] | [? [? ?]]]; subst
+             | [H: forall beg mid last v1 v2,
+                     (?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+                  H': ?l = ?bg ++ ?val1 :: ?md ++ ?val2 :: ?lt |- _] =>
+               specialize (@H bg md lt val1 val2 H')
+             | [H: forall beg mid last v1 v2,
+                     (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
+                  H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
+               specialize (H (g :: beg') mid' last' v1' v2');
+                 simpl in H;
+                 specialize (H eq_refl)
+             | [H: forall beg v,
+                     (?g :: ?l = beg ++ (v :: nil))%list -> ?P |- _] =>
+               apply list_revcons in H
+           end.
+
+  
+
+  
+
+  Ltac simpl_hyps :=
+    repeat match goal with
+             | H: exists x, _ |- _ => destruct H
+             | H: ?P /\ ?Q |- _ => destruct H
+             | H: ?a = ?a -> _ |- _ => specialize (H eq_refl)
+             | H: ?P -> _, H': ?P |- _ =>
+               match type of P with
+                 | Prop => specialize (H H')
+               end
+           end.
+
+  Ltac rmBadHyp2 :=
+    repeat match goal with
+             | H: ?v = ?v |- _ => clear H
+             | H: In _ _ -> _ |- _ => clear H
+             | H: forall (x: (forall i: Fin.t ?n, _ ?ls)), _ |- _ => 
+               clear H
+             | H: forall (x: (list (forall i: Fin.t ?n, _ ?ls))), _ |- _ => 
+               clear H
+           end.
+
+
+
+  
+
+
   Lemma nmemCache_invariants_hold_9 s a u cs:
     nmemCache_invariants s ->
     pProcess metaIs a ->
@@ -877,18 +879,16 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    Reset Ltac Profile.
     Set Ltac Profiling.
-    metaInit;
+    metaInit.
     try match goal with
             | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
           end; invariant_simpl;
     simplMapUpds
       ltac:(autorewrite with invariant in *;
-             unfold isCWait, isPWait, GetAttrType in *;
+             unfold isCWait, isPWait in *;
              simpl in *;
-             unfold_index;
-            rmBadHyp;
+             rmBadHyp;
             try rewrite getCs_tag_match_getCs in * by assumption;
             mkStruct;
             destruct_addr;
@@ -901,7 +901,7 @@ Section MemCacheInl.
               autorewrite with myLogic in *;
               simpl_hyps;
             rmBadHyp2
-            (* try (intuition (discriminate || word_omega)) *)
+           (* try (intuition (discriminate || word_omega)) *)
            ).
     Show Ltac Profile.
 
