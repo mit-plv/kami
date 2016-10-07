@@ -97,7 +97,7 @@ Section ProcMem.
   Qed.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
-  Proof. (* SKIP_PROOF_OFF
+  Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_memAtomic_refines_scN with (fifoSize:= rsz FifoSize); auto].
 
     kmodular.
@@ -143,7 +143,7 @@ Section ProcMem.
           
       + apply memCache_refines_memAtomic.
         
-        END_SKIP_PROOF_OFF *) admit.
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   (* Abstract d2eElt *)
