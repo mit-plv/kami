@@ -890,13 +890,11 @@ Section MemCacheInl.
              simpl in *;
              rmBadHyp;
             try rewrite getCs_tag_match_getCs in * by assumption;
-            mkStruct;
             destruct_addr;
             intros;
             rsLessTo_thms;
             specialize_msgs;
             specialize_beg_mid_last;
-            mkStruct;
             rewrite ?app_or, ?cons_or in *;
               autorewrite with myLogic in *;
               simpl_hyps;
