@@ -1,9 +1,9 @@
 Require Import Lib.FMap Lib.Word Lib.WordSupport Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
-        ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
+        Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
-        Kami.SymEvalTac Lib.StringAsList Lib.StringBound Lib.ListSupport Lib.Misc Lib.StructNotation
-        Coq.Program.Basics Ex.RegFile Ex.FifoNames Ex.Names Ex.L1CacheNames Ex.MemDirNames Ex.ChildParentNames.
+        Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
+        Coq.Program.Basics Ex.Names.
 
 Set Implicit Arguments.
 
