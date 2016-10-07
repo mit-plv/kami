@@ -1,5 +1,5 @@
 Require Import Bool String List.
-Require Import Lib.CommonTactics Lib.Word Lib.Struct Lib.StructNotation.
+Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 

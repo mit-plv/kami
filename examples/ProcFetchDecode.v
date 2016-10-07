@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcTwoStage.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcThreeStage.
 
 Set Implicit Arguments.
 
@@ -61,9 +61,9 @@ Section F2dInst.
 End F2dInst.
 
 (* A pipelined "fetch" and "decode" modules. This module substitutes the {fetch, decode} stage
- * in two-staged processor (P2st).
+ * in three-staged processor (P3st).
  *)
-Section FetchDecode.
+Section FetchAndDecode.
   Variables addrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
@@ -123,7 +123,7 @@ Section FetchDecode.
 
   Definition getRf1 := getRf1 lgDataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
-  Definition e2dDeq := e2dDeq addrSize.
+  Definition w2dDeq := w2dDeq addrSize.
   Definition sbSearch1 := sbSearch1 rfIdx.
   Definition sbSearch2 := sbSearch2 rfIdx.
   Definition sbSearch3 := sbSearch3 rfIdx.
@@ -135,7 +135,7 @@ Section FetchDecode.
     with Register "fEpoch" : Bool <- false
 
     with Rule "modifyPc" :=
-      Call correctPc <- e2dDeq();
+      Call correctPc <- w2dDeq();
       Write "pc" <- #correctPc;
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
@@ -154,8 +154,8 @@ Section FetchDecode.
 
   Definition decoder := MODULE {
     Rule "decodeLd" :=
-      Call e2dFull <- e2dFull();
-      Assert !#e2dFull;
+      Call w2dFull <- w2dFull();
+      Assert !#w2dFull;
       Call f2d <- f2dDeq();
       Call rf <- getRf1();
 
@@ -181,8 +181,8 @@ Section FetchDecode.
       Retv
 
     with Rule "decodeSt" :=
-      Call e2dFull <- e2dFull();
-      Assert !#e2dFull;
+      Call w2dFull <- w2dFull();
+      Assert !#w2dFull;
       Call f2d <- f2dDeq();
       Call rf <- getRf1();
 
@@ -209,8 +209,8 @@ Section FetchDecode.
       Retv
 
     with Rule "decodeTh" :=
-      Call e2dFull <- e2dFull();
-      Assert !#e2dFull;
+      Call w2dFull <- w2dFull();
+      Assert !#w2dFull;
       Call f2d <- f2dDeq();
       Call rf <- getRf1();
 
@@ -232,8 +232,8 @@ Section FetchDecode.
       Retv
 
     with Rule "decodeNm" :=
-      Call e2dFull <- e2dFull();
-      Assert !#e2dFull;
+      Call w2dFull <- w2dFull();
+      Assert !#w2dFull;
       Call f2d <- f2dDeq();
       Call rf <- getRf1();
 
@@ -266,14 +266,11 @@ Section FetchDecode.
                                ++ oneEltFifoEx2 f2dFifoName f2dElt
                                ++ decoder)%kami.
   
-End FetchDecode.
+End FetchAndDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf1 d2eEnq e2dDeq sbSearch1 sbSearch2 : MethDefs.
-
-(* TODO: Hint Unfold flush should be moved to ProcTwoStage.v *)
-Hint Unfold f2dFlush flush : MethDefs.
+     getRf1 d2eEnq w2dDeq sbSearch1 sbSearch2 : MethDefs.
 
 Section Facts.
   Variables addrSize lgDataBytes rfIdx: nat.
@@ -337,9 +334,8 @@ Section Facts.
     ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                         getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
                         d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     kequiv.
-    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   Hint Resolve decoder_ModEquiv.
 

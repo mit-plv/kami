@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StructNotation Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
+Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
@@ -55,7 +55,7 @@ Section ProcDecSC.
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
        mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r |> "pgm";
        mlet oev : Bool <- r |> "rsToProc"--"empty";
-       mlet oelv : (Vector RsToProc fifoSize) <- r |> "rsToProc"--"elt";
+       mlet oelv : (Vector (Struct RsToProc) fifoSize) <- r |> "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r |> "rsToProc"--"deqP";
        if oev
        then (["pgm" <- (existT _ _ pgmv)]
@@ -69,7 +69,7 @@ Section ProcDecSC.
                      then
                        (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
                                ((fun a : word rfIdx => if weq a (evalExpr (getLdDst _ rawInst))
-                                                       then oelv odv ``"data"
+                                                       then oelv odv (RsToProc !! "data")
                                                        else rfv a)
                                 : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
                                                                      rfIdx)))))
@@ -96,7 +96,7 @@ Section ProcDecSC.
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
     kami_ok decInstConfig procDec_inv_old.
-    END_SKIP_PROOF_ON *) admit.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcDecSC.

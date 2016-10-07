@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.StringBound Lib.Concat.
+Require Import Lib.CommonTactics Lib.FMap Lib.ilist Lib.Word Lib.Struct Lib.Concat.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics Kami.Specialize.
 Require Import Kami.Duplicate Kami.ParamDup Kami.Notations Kami.Substitute.
@@ -210,7 +210,7 @@ Section Refinement.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End Refinement.

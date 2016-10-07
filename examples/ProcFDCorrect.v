@@ -1,11 +1,11 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StructNotation Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
+Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
 Require Import Ex.MemTypes Ex.NativeFifo Ex.MemAtomic.
-Require Import Ex.SC Ex.ProcDec Ex.ProcTwoStage Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv.
+Require Import Ex.SC Ex.ProcDec Ex.ProcThreeStage Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv.
 Require Import Eqdep.
 
 Set Implicit Arguments.
@@ -80,9 +80,9 @@ Section FetchDecode.
                                         getStAddr getStSrc calcStAddr getStVSrc
                                         getSrc1 getSrc2 getDst predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
-  Definition fetchNDecode := ProcTwoStage.decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                                  getStAddr getStSrc calcStAddr getStVSrc
-                                                  getSrc1 getSrc2 getDst d2ePack predictNextPc.
+  Definition fetchNDecode := ProcThreeStage.fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                                                        getStAddr getStSrc calcStAddr getStVSrc
+                                                        getSrc1 getSrc2 getDst d2ePack predictNextPc.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -183,7 +183,7 @@ Section FetchDecode.
       + reflexivity.
       + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
 
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End FetchDecode.

@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
+Require Import Lib.Struct Lib.FMap Lib.StringEq.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
 Require Import Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate.
@@ -46,7 +46,7 @@ Section ProcDecSCN.
     - kduplicated.
       apply pdec_refines_pinst; auto.
     - krefl.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
@@ -63,7 +63,7 @@ Section ProcDecSCN.
     - apply duplicate_regs_ConcatMod; auto; kvr.
     - apply duplicate_rules_ConcatMod; auto; kvr.
     - apply duplicate_defs_ConcatMod; auto; kvr.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 End ProcDecSCN.

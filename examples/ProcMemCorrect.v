@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StringBound Lib.FMap Lib.StringEq.
+Require Import Lib.Struct Lib.FMap Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate Kami.ParamDup Kami.ModuleBoundEx.
 Require Import Ex.SC Ex.ProcDec Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Ex.L1Cache.
@@ -140,7 +140,7 @@ Section ProcMem.
           
       + apply memCache_refines_memAtomic.
         
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcMem.

@@ -40,20 +40,21 @@ Section Mem.
   Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
   Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
   
-  Definition rqFromCPop := MethodSig (rqFromChild -- deqName) (Void): RqFromC.
-  Definition rqFromCFirst := MethodSig (rqFromChild -- firstEltName) (Void): RqFromC.
-  Definition rsFromCPop := MethodSig (rsFromChild -- deqName) (Void): RsFromC.
+  Definition rqFromCPop := MethodSig (rqFromChild -- deqName) (Void): Struct RqFromC.
+  Definition rqFromCFirst := MethodSig (rqFromChild -- firstEltName) (Void): Struct RqFromC.
+  Definition rsFromCPop := MethodSig (rsFromChild -- deqName) (Void): Struct RsFromC.
 
-  Definition toCEnq := MethodSig (toChild -- enqName) (ToC): Void.
+  Definition toCEnq := MethodSig (toChild -- enqName) (Struct ToC): Void.
 
   Definition Dir := Vector Msi LgNumChildren.
   
   Definition Dirw := Vector Bool LgNumChildren.
   
   Definition lineRead := MethodSig (mline -- read) (Idx): Line.
-  Definition lineWrite := MethodSig (mline -- write) (WritePort IdxBits Line): Void.
+  Definition lineWrite := MethodSig (mline -- write) (Struct (WritePort IdxBits Line))
+                          : Void.
   Definition dirRead := MethodSig (mcs -- read) (Idx): Dir.
-  Definition dirWrite := MethodSig (mcs -- write) (WritePort IdxBits Dir): Void.
+  Definition dirWrite := MethodSig (mcs -- write) (Struct (WritePort IdxBits Dir)): Void.
 
   Definition Child := MemTypes.Child LgNumChildren.
   
@@ -75,8 +76,9 @@ Section Mem.
                  else old)%kami_expr ($$ true)%kami_expr.
 
     Definition findIncompat (c: (Child@var)%kami) (x: (Msi@var)%kami)
-               (dir: (Dir@var)%kami) (dirw: (Dirw@var)%kami): ((Maybe Child)@var)%kami :=
-      foldInc (fun idx (old: ((Maybe Child) @ var)%kami) =>
+               (dir: (Dir@var)%kami) (dirw: (Dirw@var)%kami):
+      ((Struct (Maybe Child))@var)%kami :=
+      foldInc (fun idx (old: ((Struct (Maybe Child)) @ var)%kami) =>
                  IF !old!(Maybe Child)@.isValid && !(c == idx) && !(isCompat x (dir@[idx])%kami) && !(dirw@[idx])%kami
                  then STRUCT{isValid ::= $$ true ; value ::= idx}
                else old)%kami_expr
@@ -90,14 +92,14 @@ Section Mem.
     META {
         Register cRqValidReg: Bool <- false
         with Register cRqDirwReg: Dirw <- dirwInit
-        with Register cRqReg: RqFromC <- Default
+        with Register cRqReg: Struct RqFromC <- Default
 
         with Rule missByState :=
           Read valid <- cRqValidReg;
           Assert !#valid;
           Call rqChild <- rqFromCFirst();
           LET c <- #rqChild!RqFromC@.child;
-          LET rqT: RqToP <- #rqChild!RqFromC@.rq;
+          LET rqT: Struct RqToP <- #rqChild!RqFromC@.rq;
           LET idx <- getIdx (#rqT!RqToP@.addr);
           Call dir <- dirRead(#idx);
           Assert (#dir@[#c] <= #rqT!RqToP@.from);
@@ -112,12 +114,12 @@ Section Mem.
           Assert #valid;
           Call rqChild <- rqFromCFirst();
           LET c <- #rqChild!RqFromC@.child;
-          LET rqT: RqToP <- #rqChild!RqFromC@.rq;
+          LET rqT: Struct RqToP <- #rqChild!RqFromC@.rq;
           Call dir <- dirRead(getIdx #rqT!RqToP@.addr);
           Read dirw <- cRqDirwReg;
           LET i <- findIncompat #c #rqT!RqToP@.to #dir #dirw;
           Assert #i!(Maybe Child)@.isValid;
-          LET rq': FromP <- STRUCT{isRq ::= $$ true; addr ::= #rqT!RqToP@.addr; to ::= toCompat #rqT!RqToP@.to; line ::= $$ Default; id ::= $$ Default};
+          LET rq': Struct FromP <- STRUCT{isRq ::= $$ true; addr ::= #rqT!RqToP@.addr; to ::= toCompat #rqT!RqToP@.to; line ::= $$ Default; id ::= $$ Default};
           Call toCEnq(STRUCT{child ::= #c; msg ::= #rq'});
           LET dirw' <- #dirw@[#c <- $$ true];
           Write cRqDirwReg <- #dirw';
@@ -126,7 +128,7 @@ Section Mem.
         with Rule dwnRs_wait :=
           Call rsChild <- rsFromCPop();
           LET c <- #rsChild!RsFromC@.child;
-          LET rs: RsToP <- #rsChild!RsFromC@.rs;
+          LET rs: Struct RsToP <- #rsChild!RsFromC@.rs;
           LET idx <- getIdx #rs!RsToP@.addr;
           Call dir <- dirRead(#idx);
           LET dir' <- #dir@[#c <- #rs!RsToP@.to];
@@ -134,8 +136,8 @@ Section Mem.
           If #dir@[#c] == $ Mod
           then Call lineWrite(STRUCT{addr ::= #idx; data ::= #rs!RsToP@.line}); Retv
           else Retv as _;
-          Read rqChild: RqFromC <- cRqReg;
-          LET rq: RqToP <- #rqChild!RqFromC@.rq;
+          Read rqChild: Struct RqFromC <- cRqReg;
+          LET rq: Struct RqToP <- #rqChild!RqFromC@.rq;
           Read valid <- cRqValidReg;
           Assert #valid && #rq!RqToP@.addr == #rs!RsToP@.addr;
           Read dirw <- cRqDirwReg;
@@ -146,7 +148,7 @@ Section Mem.
         with Rule dwnRs_noWait :=
           Call rsChild <- rsFromCPop();
           LET c <- #rsChild!RsFromC@.child;
-          LET rs: RsToP <- #rsChild!RsFromC@.rs;
+          LET rs: Struct RsToP <- #rsChild!RsFromC@.rs;
           LET idx <- getIdx #rs!RsToP@.addr;
           Call dir <- dirRead(#idx);
           LET dir' <- #dir@[#c <- #rs!RsToP@.to];
@@ -154,8 +156,8 @@ Section Mem.
           If #dir@[#c] == $ Mod
           then Call lineWrite(STRUCT{addr ::= #idx; data ::= #rs!RsToP@.line}); Retv
           else Retv as _;
-          Read rqChild: RqFromC <- cRqReg;
-          LET rq: RqToP <- #rqChild!RqFromC@.rq;
+          Read rqChild: Struct RqFromC <- cRqReg;
+          LET rq: Struct RqToP <- #rqChild!RqFromC@.rq;
           Read valid <- cRqValidReg;
           Assert !(#valid && #rq!RqToP@.addr == #rs!RsToP@.addr);
           Retv
@@ -165,13 +167,13 @@ Section Mem.
           Assert #valid;
           Call rqChild <- rqFromCPop();
           LET c <- #rqChild!RqFromC@.child;
-          LET rq: RqToP <- #rqChild!RqFromC@.rq;
+          LET rq: Struct RqToP <- #rqChild!RqFromC@.rq;
           LET idx <- getIdx (#rq!RqToP@.addr);
           Call dir <- dirRead(#idx);
           Assert #dir@[#c] <= #rq!RqToP@.from;
           Assert (othersCompat #c #rq!RqToP@.to #dir);
           Call lineT <- lineRead(#idx);
-          LET rs: FromP <-
+          LET rs: Struct FromP <-
                         STRUCT{isRq ::= $$ false; addr ::= #rq!RqToP@.addr; to ::= #rq!RqToP@.to; line ::= #lineT; id ::= #rq!RqToP@.id};
           Call toCEnq(STRUCT{child ::= #c; msg ::= #rs});
           LET dir' <- #dir@[#c <- #rq!RqToP@.to];

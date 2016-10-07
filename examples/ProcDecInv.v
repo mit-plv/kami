@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
-Require Import Lib.Struct Lib.StructNotation Lib.StringBound Lib.FMap Lib.StringEq Lib.Indexer.
+Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Inline Kami.InlineFacts Kami.Decomposition.
 Require Import Kami.Tactics Kami.Notations.
@@ -44,26 +44,30 @@ Section Invariants.
   Definition mem_request_inv
              (rawInst: fullType type (SyntaxKind (Data lgDataBytes)))
              (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
-             (insEmpty: bool) (insElt: type (Vector RqFromProc fifoSize))
+             (insEmpty: bool) (insElt: type (Vector (Struct RqFromProc) fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
   Proof.
     refine (if insEmpty then True else _).
     refine (_ /\ _).
-    - exact ((insElt insDeqP ``"op" = false -> evalExpr (getOptype _ rawInst) = opLd) /\
+    - exact ((insElt insDeqP (RqFromProc !! "op") = false ->
+              evalExpr (getOptype _ rawInst) = opLd) /\
              (evalExpr (getOptype _ rawInst) = opLd ->
-              (insElt insDeqP ``"op" = false /\
+              (insElt insDeqP (RqFromProc !! "op") = false /\
                evalExpr (getLdDst _ rawInst) <> (natToWord _ 0) /\
-               insElt insDeqP ``"addr" =
+               insElt insDeqP (RqFromProc !! "addr") =
                evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
                                     (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
-               insElt insDeqP ``"data" = evalConstT (getDefaultConst (Data lgDataBytes))))).
-    - exact ((insElt insDeqP ``"op" = true -> evalExpr (getOptype _ rawInst) = opSt) /\
+               insElt insDeqP (RqFromProc !! "data") =
+               evalConstT (getDefaultConst (Data lgDataBytes))))).
+    - exact ((insElt insDeqP (RqFromProc !! "op") = true ->
+              evalExpr (getOptype _ rawInst) = opSt) /\
              (evalExpr (getOptype _ rawInst) = opSt ->
-              (insElt insDeqP ``"op" = true /\
-               insElt insDeqP ``"addr" =
+              (insElt insDeqP (RqFromProc !! "op") = true /\
+               insElt insDeqP (RqFromProc !! "addr") =
                evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
                                     (evalExpr (#rf@[getStSrc _ rawInst])%kami_expr)) /\
-               insElt insDeqP ``"data" = evalExpr (#rf@[getStVSrc _ rawInst ])%kami_expr))).
+               insElt insDeqP (RqFromProc !! "data") =
+               evalExpr (#rf@[getStVSrc _ rawInst ])%kami_expr))).
   Defined.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
@@ -85,7 +89,7 @@ Section Invariants.
       Hienqpv : M.find "rqFromProc"--"enqP"%string o = Some (existT _ _ ienqpv);
       ideqpv : fullType type (SyntaxKind (Bit fifoSize));
       Hideqpv : M.find "rqFromProc"--"deqP"%string o = Some (existT _ _ ideqpv);
-      ieltv : fullType type (SyntaxKind (Vector RqFromProc fifoSize));
+      ieltv : fullType type (SyntaxKind (Vector (Struct RqFromProc) fifoSize));
       Hieltv : M.find "rqFromProc"--"elt"%string o = Some (existT _ _ ieltv);
       oev : fullType type (SyntaxKind Bool);
       Hoev : M.find "rsToProc"--"empty"%string o = Some (existT _ _ oev);
@@ -95,7 +99,7 @@ Section Invariants.
       Hoenqpv : M.find "rsToProc"--"enqP"%string o = Some (existT _ _ oenqpv);
       odeqpv : fullType type (SyntaxKind (Bit fifoSize));
       Hodeqpv : M.find "rsToProc"--"deqP"%string o = Some (existT _ _ odeqpv);
-      oeltv : fullType type (SyntaxKind (Vector RsToProc fifoSize));
+      oeltv : fullType type (SyntaxKind (Vector (Struct RsToProc) fifoSize));
       Hoeltv : M.find "rsToProc"--"elt"%string o = Some (existT _ _ oeltv);
 
       Hinv : or3
@@ -170,7 +174,7 @@ Section Invariants.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 2.
 
-        END_SKIP_PROOF_ON *) admit.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma procDec_inv_ok:

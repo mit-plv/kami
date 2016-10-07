@@ -27,20 +27,21 @@ Section L1Cache.
   Definition RqToP := Ex.MemTypes.RqToP TagIdx Id.
   Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas TagIdx.
 
-  Definition rqFromProcPop := MethodSig (rqFromProc -- deqName) (Void): RqFromProc.
-  Definition rqFromProcFirst := MethodSig (rqFromProc -- firstEltName) (Void): RqFromProc.
-  Definition fromPPop := MethodSig (fromParent -- deqName) (Void): FromP.
+  Definition rqFromProcPop := MethodSig (rqFromProc -- deqName) (Void): Struct RqFromProc.
+  Definition rqFromProcFirst := MethodSig (rqFromProc -- firstEltName) (Void):
+                                  Struct RqFromProc.
+  Definition fromPPop := MethodSig (fromParent -- deqName) (Void): Struct FromP.
 
-  Definition rsToProcEnq := MethodSig (rsToProc -- enqName) (RsToProc): Void.
-  Definition rqToPEnq := MethodSig (rqToParent -- enqName) (RqToP): Void.
-  Definition rsToPEnq := MethodSig (rsToParent -- enqName) (RsToP): Void.
+  Definition rsToProcEnq := MethodSig (rsToProc -- enqName) (Struct RsToProc): Void.
+  Definition rqToPEnq := MethodSig (rqToParent -- enqName) (Struct RqToP): Void.
+  Definition rsToPEnq := MethodSig (rsToParent -- enqName) (Struct RsToP): Void.
 
   Definition lineRead := MethodSig (line -- read) (Idx): Line.
-  Definition lineWrite := MethodSig (line -- write) (WritePort IdxBits Line): Void.
+  Definition lineWrite := MethodSig (line -- write) (Struct (WritePort IdxBits Line)): Void.
   Definition tagRead := MethodSig (tag -- read) (Idx): Tag.
-  Definition tagWrite := MethodSig (tag -- write) (WritePort IdxBits Tag): Void.
+  Definition tagWrite := MethodSig (tag -- write) (Struct (WritePort IdxBits Tag)): Void.
   Definition csRead := MethodSig (cs -- read) (Idx): Msi.
-  Definition csWrite := MethodSig (cs --write) (WritePort IdxBits Msi): Void.
+  Definition csWrite := MethodSig (cs --write) (Struct (WritePort IdxBits Msi)): Void.
 
 
   
@@ -74,7 +75,7 @@ Section L1Cache.
         Register procRqValidReg: Bool <- false
         with Register procRqReplaceReg: Bool <- false
         with Register procRqWaitReg: Bool <- false
-        with Register procRqReg: RqFromProc <- Default
+        with Register procRqReg: Struct RqFromProc <- Default
 
         with Rule l1MissByState :=
           Read valid <- procRqValidReg;
@@ -125,7 +126,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- procRqReplaceReg;
           Assert #replace;
-          Read rq: RqFromProc <- procRqReg;
+          Read rq: Struct RqFromProc <- procRqReg;
           LET idx <- getIdx #rq!RqFromProc@.addr;
           Call tag <- tagRead(#idx);
           Call cs <- csRead(#idx);
@@ -142,7 +143,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- procRqReplaceReg;
           Assert !#replace;
-          Read rq: RqFromProc <- procRqReg;
+          Read rq: Struct RqFromProc <- procRqReg;
           LET idx <- getIdx #rq!RqFromProc@.addr;
           Call cs <- csRead(#idx);
           LET toS: Msi <- IF #rq!RqFromProc@.op then $ Mod else $ Sh;
@@ -171,7 +172,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- procRqReplaceReg;
           Assert !#replace;
-          Read rq: RqFromProc <- procRqReg;
+          Read rq: Struct RqFromProc <- procRqReg;
           Assert !#rq!RqFromProc@.op;
           LET idx <- getIdx #rq!RqFromProc@.addr;
           Call tag <- tagRead(#idx);
@@ -193,7 +194,7 @@ Section L1Cache.
           Assert #valid;
           Read replace <- procRqReplaceReg;
           Assert !#replace;
-          Read rq: RqFromProc <- procRqReg;
+          Read rq: Struct RqFromProc <- procRqReg;
           Assert #rq!RqFromProc@.op;
           LET idx <- getIdx #rq!RqFromProc@.addr;
           Call tag <- tagRead(#idx);
@@ -231,7 +232,7 @@ Section L1Cache.
           Assert (#cs > #fromP!FromP@.to) && (#tag == getTagFromTagIdx #fromP!FromP@.addr);
           Read valid <- procRqValidReg;
           Read wait <- procRqWaitReg;
-          Read procRq: RqFromProc <- procRqReg;
+          Read procRq: Struct RqFromProc <- procRqReg;
           Assert !(#valid && !#wait && getTagIdx #procRq!RqFromProc@.addr == #fromP!FromP@.addr &&
                   (#procRq!RqFromProc@.op && #cs == $ Mod || (!#procRq!RqFromProc@.op && #cs == $ Sh)));
           Call rsToPEnq(STRUCT{addr ::= #fromP!FromP@.addr; to ::= #fromP!FromP@.to; line ::= #lineT; isVol ::= $$ false});

@@ -398,6 +398,8 @@ Section MemCacheInl.
           ret arg
 
           projT1 projT2
+
+          Lib.VectorFacts.Vector_find
       ] in m;
     simpl in m.
 
@@ -424,7 +426,7 @@ Section MemCacheInl.
 
   Qed.
 
-  Definition nmemCacheInl_1: MetaModule.
+  Definition nmemCacheInl_1_1: MetaModule.
   Proof.
     start_def nmemCacheInl_flat.
 
@@ -435,6 +437,12 @@ Section MemCacheInl.
     ssNoF (mcs -- read) dwnRs_wait.
     ssNoF (mcs -- read) dwnRs_noWait.
     ssF (mcs -- read) deferred.
+    finish_def.
+  Defined.
+
+  Definition nmemCacheInl_1_2: MetaModule.
+  Proof.
+    start_def nmemCacheInl_1_1.
 
     ssNoF (mline -- write) dwnRs_wait.
     ssF (mline -- write) dwnRs_noWait.
@@ -446,10 +454,10 @@ Section MemCacheInl.
     finish_def.
   Defined.
 
-  Theorem nmemCacheInl_1_pf:
+  Theorem nmemCacheInl_1_1_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1.
+                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
+    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
   Proof.
     (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
@@ -461,7 +469,19 @@ Section MemCacheInl.
     ssNoFilt (mcs -- read) dwnRs_wait.
     ssNoFilt (mcs -- read) dwnRs_noWait.
     ssFilt (mcs -- read) deferred.
+    finish_pf.
+       END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
 
+
+  Theorem nmemCacheInl_1_2_pf:
+    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
+                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_2) /\
+    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_2.
+  Proof.
+    (* SKIP_PROOF_ON
+    start_pf2 nmemCacheInl_1_1 nmemCacheInl_1_1_pf.
+    
     ssNoFilt (mline -- write) dwnRs_wait.
     ssFilt (mline -- write) dwnRs_noWait.
 
@@ -476,7 +496,7 @@ Section MemCacheInl.
   Definition nmemCacheInl_2: MetaModule.
   Proof.
 
-    start_def nmemCacheInl_1.
+    start_def nmemCacheInl_1_2.
     ssNoF (toChild -- enqName) dwnRq.
     ssF (toChild -- enqName) deferred.
 
@@ -498,7 +518,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
 
-    start_pf2 nmemCacheInl_1 nmemCacheInl_1_pf.
+    start_pf2 nmemCacheInl_1_2 nmemCacheInl_1_2_pf.
 
     ssNoFilt (toChild -- enqName) dwnRq.
     ssFilt (toChild -- enqName) deferred.

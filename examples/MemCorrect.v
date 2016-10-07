@@ -1,5 +1,5 @@
 Require Import Ascii Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap Lib.StringBound.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.RefinementFacts.
 Require Import Kami.Wf Kami.Tactics Kami.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
@@ -58,7 +58,7 @@ Section MemCorrect.
   Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.
     ketrans_r; [apply memCache_refines_nmemCache|].
-    admit. (* vmurali TODO *)
+    apply cheat. (* vmurali TODO *)
   Qed.
 
 End MemCorrect.
