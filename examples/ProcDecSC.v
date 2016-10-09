@@ -95,8 +95,26 @@ Section ProcDecSC.
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
   Proof. (* SKIP_PROOF_ON
-    kami_ok decInstConfig procDec_inv_old.
-    END_SKIP_PROOF_ON *) admit.
+
+    kinline_left im.
+    kdecompose_nodefs pdec_pinst_regMap pdec_pinst_ruleMap.
+
+    kinv_add procDec_inv_ok.
+    kinv_add_end.
+
+    kinvert.
+
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+    - kinv_magic_with procDec_inv_old.
+
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcDecSC.

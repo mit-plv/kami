@@ -149,39 +149,19 @@ Section FetchDecode.
     - kinv_action_dest;
         kinv_custom fetchDecode_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool; fail).
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-      + reflexivity.
-      + reflexivity.
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom fetchDecode_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool; fail).
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-      + reflexivity.
-      + reflexivity.
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom fetchDecode_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool; fail).
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-      + reflexivity.
-      + reflexivity.
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom fetchDecode_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool; fail).
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-      + reflexivity.
-      + reflexivity.
-      + rewrite <-H1; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
 
         END_SKIP_PROOF_ON *) admit.
   Qed.

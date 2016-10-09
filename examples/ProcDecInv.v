@@ -148,15 +148,11 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom procDec_inv_tac.
-        procDec_inv_next 1;
-          try (exfalso; unfold OptypeK in e, H; rewrite e in H; inv H; fail).
-        inv H.
+        procDec_inv_next 1; kinv_eq; kinv_finish.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 0.
       + kinv_dest_custom procDec_inv_tac.
-        procDec_inv_next 1;
-          try (exfalso; unfold OptypeK in e, H; rewrite e in H; inv H; fail).
-        inv H.
+        procDec_inv_next 1; kinv_eq; kinv_finish.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 0.
       + kinv_dest_custom procDec_inv_tac.

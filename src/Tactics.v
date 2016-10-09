@@ -647,38 +647,68 @@ Ltac is_not_const_bool t :=
   | _ => idtac
   end.
 
+Ltac is_not_const_word t :=
+  match t with
+  | WO => fail 1
+  | WS _ => fail 1
+  | _ => idtac
+  end.
+
 Ltac kinv_finish :=
   cbv [BoundedIndexFull
          IndexBound_head IndexBound_tail
          mapAttr addFirstBoundedIndex bindex] in *;
-  repeat autounfold with MethDefs; simpl in *;
-  repeat
-    (kinv_simpl;
-     try assumption; try discriminate;
-     try match goal with
-         | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
-         | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
-         | [H: _ <> _ |- _] => elim H; reflexivity
-         | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
-         end;
-     simpl in *; auto).
+  repeat autounfold with MethDefs in *; simpl in *; kinv_simpl;
+  repeat (
+      (* heavy rewrites *)
+      repeat
+        (match goal with
+         | [H: ?t = _ |- _] => is_not_const_bool t; is_not_const_word t; rewrite H in *
+         end);
+      repeat
+        (match goal with
+         | [H: _ = ?t |- _] => is_not_const_bool t; is_not_const_word t; rewrite <- H in *
+         end);
+      try assumption; try reflexivity; try discriminate;
+      (* rewrites end *)
+      repeat
+        (kinv_simpl;
+         try assumption; try discriminate;
+         try match goal with
+             | [H: _ <> _ |- _] => elim H; reflexivity
+             | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
+             end;
+         simpl in *; auto)
+    ).
 
 Ltac kinv_finish_with tac :=
   cbv [BoundedIndexFull
          IndexBound_head IndexBound_tail
          mapAttr addFirstBoundedIndex bindex] in *;
-  repeat autounfold with MethDefs ; simpl in *;
+  repeat autounfold with MethDefs in *; simpl in *; kinv_simpl;
   repeat (
+      (* heavy rewrites *)
       repeat
-        (kinv_simpl;
-         try assumption; try discriminate;
-         try match goal with
-             | [H: ?t = _ |- _] => is_not_const_bool t; rewrite H in *; clear H
-             | [H: _ = ?t |- _] => is_not_const_bool t; rewrite <- H in *; clear H
-             | H:_ <> _ |- _ => elim H; reflexivity
-             | |- context [if weq ?w1 ?w2 then _ else _] => destruct (weq w1 w2)
-             end; simpl in *; auto);
-      try tac).
+        (match goal with
+         | [H: ?t = _ |- _] => is_not_const_bool t; is_not_const_word t; rewrite H in *
+         end);
+      repeat
+        (match goal with
+         | [H: _ = ?t |- _] => is_not_const_bool t; is_not_const_word t; rewrite <- H in *
+         end);
+      try assumption; try reflexivity; try discriminate;
+      (* rewrites end *)
+      repeat
+        (repeat
+           (kinv_simpl;
+            try assumption; try discriminate;
+            try match goal with
+                | [H: _ <> _ |- _] => elim H; reflexivity
+                | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
+                end;
+            simpl in *; auto);
+         try tac)
+    ).
 
 Ltac invertActionRep ::=
      repeat
@@ -720,11 +750,20 @@ Ltac kinv_constr :=
             | [ |- _ = _ ] => reflexivity
             end
     ).
+
+Lemma existT_eq: forall A (x: A) P (v1 v2: P x), v1 = v2 -> existT _ x v1 = existT _ x v2.
+Proof. intros; subst; auto. Qed.
+
+Lemma pair_eq: forall A (a1 a2: A) B (b1 b2: B), a1 = a2 -> b1 = b2 -> (a1, b1) = (a2, b2).
+Proof. intros; subst; auto. Qed.
+
 Ltac kinv_eq :=
   repeat
     (first [reflexivity
            |meqReify
            |boundedMapTac
+           |apply existT_eq
+           |apply pair_eq
     ]).
 
 Ltac kinv_magic_with tac :=

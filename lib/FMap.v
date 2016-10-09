@@ -2355,9 +2355,42 @@ Ltac findReify :=
       rewrite string_eq_true
     end; cbv [string_eq ascii_eq eqb andb].
 
+(* NOTE: using f_equal instead of below destructs values also, which may generate
+ * subgoals that cannot be proven. In that case, use this reflection. 
+ *)
+Section FMapRawReflection.
+  Variable A: Type.
+
+  Fixpoint meqReifyRaw (mr1 mr2: list (string * A)) :=
+    match mr1, mr2 with
+    | nil, nil => True
+    | (s1, v1) :: mr1', (s2, v2) :: mr2' =>
+      s1 = s2 /\ v1 = v2 /\ meqReifyRaw mr1' mr2'
+    | _, _ => False
+    end.
+
+  Lemma meqReifyRaw_ok: forall mr1 mr2, meqReifyRaw mr1 mr2 -> mr1 = mr2.
+  Proof.
+    induction mr1; simpl; intros.
+    - destruct mr2; intuition idtac.
+    - destruct mr2.
+      + destruct a; intuition idtac.
+      + destruct a, p; dest; subst.
+        f_equal; auto.
+  Qed.
+
+End FMapRawReflection.
+
+Ltac meqReify_eq_tac := idtac.
+
 Ltac meqReify :=
   simpl; try reflexivity;
   apply M.elements_eq_leibniz;
   try reflexivity;
-  simpl; repeat (unfold M.Raw.key, M.OT.t; f_equal).
+  simpl; meqReify_eq_tac.
+
+Ltac meqReify_eq_tac ::= repeat (unfold M.Raw.key, M.OT.t; f_equal).
+Ltac meqReify_eq_tac ::=
+     unfold M.Raw.key, M.OT.t;
+apply meqReifyRaw_ok; repeat split; try assumption; try reflexivity.
 
