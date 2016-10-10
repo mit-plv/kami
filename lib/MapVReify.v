@@ -360,28 +360,6 @@ Ltac prelimSimplRegs n :=
   existRegs n; simplifyInvs.
 *)
 
-Ltac simplMapUpds tac :=
-  esplit;
-  unfold withIndex;
-  match goal with
-    | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t)
-                                        (addIndexToStr _ ?c ?k) ?m = Some _ =>
-      let mr := mapVR_Others t total m in
-      rewrite <- (findMVR_find_var mr k eq_refl cond)
-    | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t) ?k ?m = Some _ =>
-      let mr := mapVR_Others t total m in
-      rewrite <- (findMVR_find_string mr k eq_refl)
-    | _ => idtac
-  end; simpl;
-  match goal with
-    | |- context [eq_nat_dec ?x1 ?x2] =>
-      destruct (eq_nat_dec x1 x2); (exfalso; tauto)
-    | |- context [eq_nat_dec ?x1 ?x2] =>
-      let isEq := fresh in
-      destruct (eq_nat_dec x1 x2) as [isEq | isEq]; try (exfalso; congruence); [ clear isEq ]
-    | _ => idtac
-  end; (reflexivity || eassumption || tac).
-
 Open Scope fmap.
 
 Definition do_upd_map_key_instance (x: nat) (ls: list (string * sigT (fullType type))): RegsT :=

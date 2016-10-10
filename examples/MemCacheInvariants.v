@@ -154,7 +154,66 @@ Section MemCacheInl.
     end.
 
   Definition cache := nat.
-  
+
+(*
+  Opaque procRqValidReg.
+  Opaque procRqReplaceReg.
+  Opaque procRqWaitReg.
+  Opaque procRqReg.
+  Opaque l1MissByState.
+  Opaque l1MissByLine.
+  Opaque l1Hit.
+  Opaque writeback.
+  Opaque upgRq.
+  Opaque upgRs.
+  Opaque ld.
+  Opaque st.
+  Opaque drop.
+  Opaque pProcess.
+
+  Opaque cRqValidReg.
+  Opaque cRqDirwReg.
+  Opaque cRqReg.
+  Opaque missByState.
+  Opaque dwnRq.
+  Opaque dwnRs_wait.
+  Opaque dwnRs_noWait.
+  Opaque deferred.
+
+  Opaque rqFromProc.
+  Opaque rsToProc.
+  Opaque rqToParent.
+  Opaque rsToParent.
+  Opaque rqFromChild.
+  Opaque rsFromChild.
+  Opaque fromParent.
+  Opaque toChild.
+  Opaque line.
+  Opaque tag.
+  Opaque cs.
+  Opaque mcs.
+  Opaque mline.
+
+  Opaque elt.
+  Opaque enqName.
+  Opaque deqName.
+  Opaque enqP.
+  Opaque deqP.
+  Opaque empty.
+  Opaque full.
+  Opaque firstEltName.
+
+  Opaque addr.
+  Opaque data.
+  Opaque dataArray.
+  Opaque read.
+  Opaque write.
+
+  Opaque rqFromCToPRule.
+  Opaque rsFromCToPRule.
+  Opaque fromPToCRule.
+*)
+
 
   Open Scope fmap.
 
@@ -460,31 +519,37 @@ Section MemCacheInl.
   
   Ltac destructRules c HInd :=
     unfold getActionFromGen, getGenAction, strFromName in *;
-    cbn in *; subst; unfold getActionFromSin, getSinAction in *; subst;
-    SymEval; subst; cbn;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
     match goal with
       | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
         destruct (HInd a _ _ H eq_refl);
           specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+      | a: word (IdxBits + TagBits), H: (_ <=
+                                         _)%nat |- _ =>
         destruct (HInd a _ _ H eq_refl)          
     end;
-    unfold withIndex, withPrefix in *;
-    cbn in *;
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     repeat substFind; dest;
     repeat simplBool;
     elimDiffC c.
 
   Ltac normalInit :=
     intros HInd HInRule HS;
-    cbn in HInRule; apply invSome in HInRule;
-    unfold getActionFromSin, getSinAction at 1 in HInRule; cbn in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
     rewrite <- HInRule in HS; clear HInRule;
     intros ? ? c ? ?; destructRules c HInd.
   
   Ltac metaInit :=
     intros HInd HInRule x xcond HS;
-    cbn in HInRule; apply invSome in HInRule; apply invRepRule in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
     rewrite <- HInRule in HS; clear HInRule;
     intros ? ? c ? ?; destructRules c HInd.
 
@@ -497,8 +562,8 @@ Section MemCacheInl.
           | _ => destruct H
           end
         end;
-    unfold withIndex, withPrefix, listIsEmpty,
-    listFirstElt, listEnq, listDeq in *; cbn in *;
+    unfold withIndex, listIsEmpty,
+    listFirstElt, listEnq, listDeq in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     repeat substFind; dest; repeat simplBool;
     repeat match goal with
            | [ H : evalConstT match ?E with _ => _ end = _ |- _ ] =>
@@ -833,7 +898,7 @@ Section MemCacheInl.
                      (?g :: ?l = beg ++ v1 :: mid ++ v2 :: last)%list -> _,
                   H': (?l = ?beg' ++ ?v1' :: ?mid' ++ ?v2' :: ?last')%list |- _ ] =>
                specialize (H (g :: beg') mid' last' v1' v2');
-                 simpl in H;
+                 cbn in H;
                  specialize (H eq_refl)
              | [H: forall beg v,
                      (?g :: ?l = beg ++ (v :: nil))%list -> ?P |- _] =>
@@ -853,6 +918,7 @@ Section MemCacheInl.
                match type of P with
                  | Prop => specialize (H H')
                end
+             | H: ?a = ?b |- _ => rewrite H in *
            end.
 
   Ltac rmBadHyp2 :=
@@ -866,11 +932,89 @@ Section MemCacheInl.
            end.
 
 
+  Ltac simplMapUpds tac :=
+    esplit;
+    unfold withIndex;
+    match goal with
+      | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t)
+                                          (addIndexToStr _ ?c ?k) ?m = Some _ =>
+        let mr := mapVR_Others t total m in
+        rewrite <- (findMVR_find_var mr k eq_refl cond)
+      | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t) ?k ?m = Some _ =>
+        let mr := mapVR_Others t total m in
+        rewrite <- (findMVR_find_string mr k eq_refl)
+      | _ => idtac
+    end; simpl; unfold VectorFacts.Vector_find; simpl;
+    match goal with
+      | |- context [eq_nat_dec ?x1 ?x2] =>
+        destruct (eq_nat_dec x1 x2); (exfalso; tauto)
+      | |- context [eq_nat_dec ?x1 ?x2] =>
+        let isEq := fresh in
+        destruct (eq_nat_dec x1 x2) as [isEq | isEq]; try (exfalso; congruence); [ clear isEq ]
+      | _ => idtac
+    end; (reflexivity || eassumption || tac).
 
-  
 
+  Ltac doAll :=
+    autorewrite with invariant in *;
+    unfold isCWait, isPWait in *;
+    simpl in *;
+    unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    rmBadHyp;
+    try rewrite getCs_tag_match_getCs in * by assumption;
+    destruct_addr;
+    intros;
+    rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    specialize_msgs;
+    specialize_beg_mid_last;
+    rewrite ?app_or, ?cons_or in *;
+    autorewrite with myLogic in *;
+    simpl_hyps;
+    rmBadHyp2;
+    try rewrite getCs_cs in * by tauto;
+    
+    try (intuition (discriminate || word_omega));
+    try match goal with
+          | |- context[if ?p then _ else _] =>
+            let isEq := fresh in
+            let nEq := fresh in
+            destruct p as [isEq | nEq];
+              [rewrite isEq in *|]; intuition (discriminate || word_omega)
+        end;
+    try (firstorder (discriminate || word_omega)).
 
-  Lemma nmemCache_invariants_hold_9 s a u cs:
+  Ltac doMeta :=
+    metaInit;
+      try match goal with
+            | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+          end; invariant_simpl;
+      simplMapUpds doAll.
+
+  Lemma nmemCache_invariants_hold_7 s a u cs:
+    nmemCache_invariants s ->
+    ld metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_8 s a u cs:
+    nmemCache_invariants s ->
+    st metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_10 s a u cs:
     nmemCache_invariants s ->
     pProcess metaIs a ->
     forall x: cache,
@@ -879,20 +1023,192 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_1 s a u cs:
+    nmemCache_invariants s ->
+    l1MissByState metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_2 s a u cs:
+    nmemCache_invariants s ->
+    l1MissByLine metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_3 s a u cs:
+    nmemCache_invariants s ->
+    l1Hit metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_5 s a u cs:
+    nmemCache_invariants s ->
+    upgRq metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+    Show Ltac Profile.
+  Qed.
+
+  
+  Show Ltac Profile.
+
+  (*
+  Lemma nmemCache_invariants_hold_4 s a u cs:
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
     Set Ltac Profiling.
+    doMeta.
+    Show Ltac Profile.
+  Qed.
+
+
+   *)
+
+  Lemma nmemCache_invariants_hold_6 s a u cs:
+    nmemCache_invariants s ->
+    upgRs metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    Set Ltac Profiling.
+    doMeta.
+    Show Ltac Profile.
+    simpl.
+  Qed.
+
+=
+
+
+
+  
+    intros HInd HInRule x xcond HS.
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule.
+    apply invSome in HInRule; apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ? ?.
+    unfold getActionFromGen, getGenAction, strFromName in *;
+      simpl in *; unfold VectorFacts.Vector_find in *; simpl in *;
+      subst; unfold getActionFromSin, getSinAction in *; subst.
+    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <=
+                                         _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl)          
+    end.
+    unfold withIndex (*, withPrefix*) in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c.
+    try match goal with
+            | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+          end; invariant_simpl.
+
+   Set Ltac Profiling.
+    simplMapUpds
+      ltac:(autorewrite with invariant in *;
+             unfold isCWait, isPWait in *;
+             simpl in *;
+             unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+             rmBadHyp;
+            try rewrite getCs_tag_match_getCs in * by assumption;
+            destruct_addr;
+            intros;
+            rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+            specialize_msgs;
+            specialize_beg_mid_last;
+            rewrite ?app_or, ?cons_or in *;
+              autorewrite with myLogic in *;
+              simpl_hyps;
+            rmBadHyp2;
+            try (intuition (discriminate || word_omega));
+            match goal with
+              | |- context[if ?p then _ else _] =>
+                destruct p as [isEq | nEq];
+              [rewrite isEq in *|]; intuition (discriminate || word_omega)
+            end
+           ).
+    Show Ltac Profile.
+  Qed.
+    simpl.
+    rewrite i27 in *.
+    simpl.
+    intuition (discriminate || word_omega).
+    specialize_msgs.
+    
+    simplMapUpds idtac.
+    simpl in *.
+
+    
     metaInit.
+    simpl in *.
+    Set Ltac Profiling.
+    metaInit;
     try match goal with
             | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
           end; invariant_simpl;
     simplMapUpds
       ltac:(autorewrite with invariant in *;
              unfold isCWait, isPWait in *;
-             simpl in *;
+             cbn in *;
              rmBadHyp;
             try rewrite getCs_tag_match_getCs in * by assumption;
             destruct_addr;
             intros;
-            rsLessTo_thms;
+            rsLessTo_thms).
+    Show Ltac Profile.
+    simpl.
+            
             specialize_msgs;
             specialize_beg_mid_last;
             rewrite ?app_or, ?cons_or in *;
@@ -1230,7 +1546,7 @@ Section MemCacheInl.
 
   Lemma nmemCache_invariants_hold_9 s a u cs:
     nmemCache_invariants s ->
-    "pProcess" metaIs a ->
+    pProcess metaIs a ->
     forall x: cache,
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)

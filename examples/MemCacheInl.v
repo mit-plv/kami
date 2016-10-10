@@ -56,7 +56,8 @@ Ltac simplMod :=
            eq_rect ret arg
 
         ] in HeqmEq;
-    rewrite signature_eq in HeqmEq; unfold eq_rect in HeqmEq; simpl in HeqmEq;
+    rewrite signature_eq in HeqmEq; unfold eq_rect in HeqmEq;
+    simpl in HeqmEq;
     match type of HeqmEq with
       | ?sth = ?m => pose m; clear sth HeqmEq
     end
@@ -400,7 +401,9 @@ Section MemCacheInl.
           projT1 projT2
 
           Lib.VectorFacts.Vector_find
-      ] in m;
+      ] in m.
+    simpl in m;
+    unfold Lib.VectorFacts.Vector_find in m;
     simpl in m.
 
     finish_def.
