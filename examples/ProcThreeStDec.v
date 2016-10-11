@@ -198,7 +198,9 @@ Section ProcThreeStDec.
            | [H: false = ?t |- _] => rewrite <-H in *
            end; dest_if; kinv_simpl; intuition idtac).
 
-  Ltac p3st_inv_tac :=
+  Ltac p3st_inv_tac := d2e_abs_tac; kinv_bool.
+
+  Ltac p3st_dest_tac :=
     repeat match goal with
            | [H: context[p3st_epochs_inv] |- _] => destruct H
            | [H: context[p3st_pc_inv] |- _] => destruct H
@@ -217,80 +219,17 @@ Section ProcThreeStDec.
                                                d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                                e2wPack e2wDecInst e2wVal.
 
+  Definition p3stConfig :=
+    {| inlining := ITProvided p3stInl;
+       decomposition := DTFunctional p3st_pdec_regMap p3st_pdec_ruleMap;
+       invariants := IVCons p3st_inv_ok IVNil
+    |}.
+
   Theorem p3st_refines_pdec:
     p3st <<== pdec.
   Proof. (* SKIP_PROOF_ON
-    (* instead of: kinline_left im. *)
-    ketrans; [exact (projT2 p3stInl)|].
-    kdecompose_nodefs p3st_pdec_regMap p3st_pdec_ruleMap.
-
-    kinv_add p3st_inv_ok.
-    kinv_add_end.
-
-    kinvert.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom p3st_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-
-      END_SKIP_PROOF_ON *) admit.
-
+    kami_ok p3stConfig p3st_dest_tac p3st_inv_tac.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End ProcThreeStDec.

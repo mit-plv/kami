@@ -122,48 +122,23 @@ Section FetchDecode.
     try rewrite Hf2dNextPc in *;
     try rewrite Hf2dEpoch in *.
 
-  Ltac fetchDecode_inv_tac :=
+  Ltac fetchDecode_dest_tac :=
     repeat match goal with
            | [H: context[fetchDecode_inv] |- _] => destruct H
            end;
     kinv_red.
 
+  Definition fdConfig :=
+    {| inlining := ITProvided fetchDecodeInl;
+       decomposition := DTFunctional fetchDecode_regMap fetchDecode_ruleMap;
+       invariants := IVCons fetchDecode_inv_ok IVNil
+    |}.
+
   Theorem fetchDecode_refines_fetchNDecode:
     fetchDecode <<== fetchNDecode.
   Proof. (* SKIP_PROOF_ON
-    ketrans; [exact (projT2 fetchDecodeInl)|].
-    kdecompose_nodefs fetchDecode_regMap fetchDecode_ruleMap.
-
-    kinv_add fetchDecode_inv_ok.
-    kinv_add_end.
-
-    kinvert.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-    - kinv_action_dest;
-        kinv_custom fetchDecode_inv_tac;
-        kinv_regmap_red;
-        kinv_constr; kinv_eq; f2d_abs_tac; kinv_finish_with kinv_bool.
-
-        END_SKIP_PROOF_ON *) admit.
+    kami_ok fdConfig fetchDecode_dest_tac f2d_abs_tac.
+    END_SKIP_PROOF_ON *) admit.
   Qed.
 
 End FetchDecode.
