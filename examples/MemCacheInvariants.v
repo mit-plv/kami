@@ -818,7 +818,19 @@ Section MemCacheInl.
 
   Hint Rewrite rewrite_rsFromCToP_revcons rewrite_rqFromCToP_revcons rewrite_fromPToC_cons: invariant.
 
+  Ltac destruct_addr_base a a' :=
+    let isEq := fresh in
+    destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption].
 
+  (*
+  Ltac destruct_addr :=
+    match goal with
+      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
+        destruct_addr_base a a'
+      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
+        destruct_addr_base a a'
+    end.
+*)
 
   
   Ltac destruct_addr :=
@@ -831,11 +843,12 @@ Section MemCacheInl.
             try (destruct (weq a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption ])
         end.
 
-  Ltac rewrite_getCs :=
-    try rewrite getCs_tag_match_getCs in * by (rmForTauto; tauto);
-    destruct_addr;
-    try rewrite getCs_cs in * by (rmForTauto; tauto).
 
+  Ltac rewrite_getCs :=
+    match goal with
+      | H: ?tag (split1 IdxBits + TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+        (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
+    end.
 
 
   Lemma rmConj (P Q R: Prop): impl (P /\ Q -> R) (P -> Q -> R).
@@ -965,7 +978,8 @@ Section MemCacheInl.
     unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     rmBadHyp;
     try rewrite getCs_tag_match_getCs in * by assumption;
-    destruct_addr;
+    destruct_addr; 
+(*    try rewrite_getCs; *)
     intros;
     rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     specialize_msgs;
@@ -986,7 +1000,7 @@ Section MemCacheInl.
               [rewrite isEq in *|]; intuition (discriminate || word_omega)
         end;
     try (firstorder (discriminate || word_omega)).
-
+  
   Ltac doMeta :=
     metaInit;
       try match goal with
@@ -994,18 +1008,6 @@ Section MemCacheInl.
           end; invariant_simpl;
       simplMapUpds doAll.
 
-  
-  Lemma nmemCache_invariants_hold_9 s a u cs:
-    nmemCache_invariants s ->
-    drop metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
   
   Lemma nmemCache_invariants_hold_7 s a u cs:
     nmemCache_invariants s ->
@@ -1019,6 +1021,18 @@ Section MemCacheInl.
     doMeta.
   Qed.
 
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+  
   Lemma nmemCache_invariants_hold_8 s a u cs:
     nmemCache_invariants s ->
     st metaIs a ->

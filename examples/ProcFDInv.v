@@ -155,7 +155,7 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom fetchDecode_inv_tac.
-      + kinv_dest_custom fetchDecode_inv_tac; try reflexivity.
+      + kinv_dest_custom fetchDecode_inv_tac; kinv_eq.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.

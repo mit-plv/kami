@@ -82,6 +82,19 @@ Section ProcFDE.
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Hypotheses (Hf2dRawInst: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dRawInst _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr rawInst)
+             (Hf2dCurPc: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dCurPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr curPc)
+             (Hf2dNextPc: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dNextPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr nextPc)
+             (Hf2dEpoch: forall rawInst curPc nextPc epoch,
+                 evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
+                 evalExpr epoch).
+
   (* Abstract e2wElt *)  
   Variable (e2wElt: Kind).
   Variable (e2wPack:
@@ -126,7 +139,7 @@ Section ProcFDE.
     kmodular.
     - kdisj_edms_cms_ex O.
     - kdisj_ecms_dms_ex O.
-    - apply fetchDecode_refines_fetchNDecode.
+    - apply fetchDecode_refines_fetchNDecode; auto.
     - krefl.
       END_SKIP_PROOF_ON *) apply cheat.
   Qed.

@@ -263,44 +263,31 @@ Section ProcThreeStDec.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
-      Opaque evalExpr.
-      kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-      Transparent evalExpr.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        try (kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool; fail).
-      Opaque evalExpr.
-      kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
-      Transparent evalExpr.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
     - kinv_action_dest;
         kinv_custom p3st_inv_tac;
         kinv_regmap_red;
-        kinv_constr;
-        kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
+        kinv_constr; kinv_eq; d2e_abs_tac; kinv_finish_with kinv_bool.
 
       END_SKIP_PROOF_ON *) apply cheat.
 

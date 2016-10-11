@@ -490,7 +490,7 @@ Section Invariants.
       + mred.
       + kinv_dest_custom p3st_inv_tac;
           try (destruct x0, eepochv5; intuition idtac; fail).
-        * rewrite H14 in H4; exfalso; eapply negb_eq_false; eauto.
+        rewrite H14 in H4; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac; try reflexivity.
       + kinv_dest_custom p3st_inv_tac; try reflexivity.
       + kinv_dest_custom p3st_inv_tac; try reflexivity.
