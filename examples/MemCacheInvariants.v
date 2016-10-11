@@ -918,7 +918,6 @@ Section MemCacheInl.
                match type of P with
                  | Prop => specialize (H H')
                end
-             | H: ?a = ?b |- _ => rewrite H in *
            end.
 
   Ltac rmBadHyp2 :=
@@ -954,6 +953,10 @@ Section MemCacheInl.
       | _ => idtac
     end; (reflexivity || eassumption || tac).
 
+  Ltac rewriteEq :=
+    repeat match goal with
+             | H: ?a = ?b |- _ => rewrite H in *; generalize H; clear H
+           end; intros.
 
   Ltac doAll :=
     autorewrite with invariant in *;
@@ -969,10 +972,11 @@ Section MemCacheInl.
     specialize_beg_mid_last;
     rewrite ?app_or, ?cons_or in *;
     autorewrite with myLogic in *;
+    rewriteEq;
     simpl_hyps;
+    rewriteEq;
     rmBadHyp2;
     try rewrite getCs_cs in * by tauto;
-    
     try (intuition (discriminate || word_omega));
     try match goal with
           | |- context[if ?p then _ else _] =>
@@ -990,6 +994,19 @@ Section MemCacheInl.
           end; invariant_simpl;
       simplMapUpds doAll.
 
+  
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+  
   Lemma nmemCache_invariants_hold_7 s a u cs:
     nmemCache_invariants s ->
     ld metaIs a ->
@@ -1062,18 +1079,6 @@ Section MemCacheInl.
     doMeta.
   Qed.
 
-  Lemma nmemCache_invariants_hold_9 s a u cs:
-    nmemCache_invariants s ->
-    drop metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
-
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
     upgRq metaIs a ->
@@ -1083,30 +1088,8 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    doMeta.
-    Show Ltac Profile.
+    apply cheat.
   Qed.
-
-  
-  Show Ltac Profile.
-
-  (*
-  Lemma nmemCache_invariants_hold_4 s a u cs:
-    nmemCache_invariants s ->
-    writeback metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    Set Ltac Profiling.
-    doMeta.
-    Show Ltac Profile.
-  Qed.
-
-
-   *)
 
   Lemma nmemCache_invariants_hold_6 s a u cs:
     nmemCache_invariants s ->
@@ -1117,284 +1100,21 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    Set Ltac Profiling.
-    doMeta.
-    Show Ltac Profile.
-    simpl.
+    apply cheat.
   Qed.
 
-=
 
-
-
-  
-    intros HInd HInRule x xcond HS.
-    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule.
-    apply invSome in HInRule; apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ? ?.
-    unfold getActionFromGen, getGenAction, strFromName in *;
-      simpl in *; unfold VectorFacts.Vector_find in *; simpl in *;
-      subst; unfold getActionFromSin, getSinAction in *; subst.
-    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
-    match goal with
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
-        destruct (HInd a _ _ H eq_refl);
-          specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <=
-                                         _)%nat |- _ =>
-        destruct (HInd a _ _ H eq_refl)          
-    end.
-    unfold withIndex (*, withPrefix*) in *;
-    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-    repeat substFind; dest;
-    repeat simplBool;
-    elimDiffC c.
-    try match goal with
-            | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-          end; invariant_simpl.
-
-   Set Ltac Profiling.
-    simplMapUpds
-      ltac:(autorewrite with invariant in *;
-             unfold isCWait, isPWait in *;
-             simpl in *;
-             unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-             rmBadHyp;
-            try rewrite getCs_tag_match_getCs in * by assumption;
-            destruct_addr;
-            intros;
-            rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-            specialize_msgs;
-            specialize_beg_mid_last;
-            rewrite ?app_or, ?cons_or in *;
-              autorewrite with myLogic in *;
-              simpl_hyps;
-            rmBadHyp2;
-            try (intuition (discriminate || word_omega));
-            match goal with
-              | |- context[if ?p then _ else _] =>
-                destruct p as [isEq | nEq];
-              [rewrite isEq in *|]; intuition (discriminate || word_omega)
-            end
-           ).
-    Show Ltac Profile.
+  Lemma nmemCache_invariants_hold_4 s a u cs:
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    apply cheat.
   Qed.
-    simpl.
-    rewrite i27 in *.
-    simpl.
-    intuition (discriminate || word_omega).
-    specialize_msgs.
-    
-    simplMapUpds idtac.
-    simpl in *.
-
-    
-    metaInit.
-    simpl in *.
-    Set Ltac Profiling.
-    metaInit;
-    try match goal with
-            | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-          end; invariant_simpl;
-    simplMapUpds
-      ltac:(autorewrite with invariant in *;
-             unfold isCWait, isPWait in *;
-             cbn in *;
-             rmBadHyp;
-            try rewrite getCs_tag_match_getCs in * by assumption;
-            destruct_addr;
-            intros;
-            rsLessTo_thms).
-    Show Ltac Profile.
-    simpl.
-            
-            specialize_msgs;
-            specialize_beg_mid_last;
-            rewrite ?app_or, ?cons_or in *;
-              autorewrite with myLogic in *;
-              simpl_hyps;
-            rmBadHyp2
-           (* try (intuition (discriminate || word_omega)) *)
-           ).
-    Show Ltac Profile.
-
-    Focus 24.
-    
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-    admit.
-    
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-  Qed.
-  
-    simpl.
-    
-    Reset Ltac Profile.
-    Set Ltac Profiling.
-    intuition (discriminate || word_omega).
-    Show Ltac Profile.
-
-
-    
-
-    
-    
-    simpl.
-    
-    simpl.
-    
-    simpl.
-    rewrite cons_or in H1.
-    simpl.
-    Focus 23.
-    simpl.
-      
-    repeat match goal with
-             | H: context[In _ (?x :: ?ls) -> ?P] |- _ =>
-               setoid_rewrite (@rmDisj _ ls v) in H
-           end.
-
-    rewrite fromPToC_
-    setoid_rewrite rmDisj in i8.
-    simpl.
-    Focus 4.
-    simpl.
-            specialize_msgs;
-            specialize_beg_mid_last;
-            mkStruct;
-           ).
-    Show Ltac Profile.
-    Focus 3.
-    rewrite ?app_nil_r in *.
-    tauto.
-    
-    simpl.
-    simpl.
-    apply H4.
-    tauto.
-    simpl.
-    simpl.
-    Show Ltac Profile.
-    Set Ltac Profile.
-    rewrite getCs_tag_match_getCs in * by assumption.
-    Show Ltac Profile.
     
     
     Lemma tst A: forall ls g (x: A), impl (g = x \/ In g ls) (In g (x :: ls)).
