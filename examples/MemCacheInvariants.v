@@ -155,66 +155,6 @@ Section MemCacheInl.
 
   Definition cache := nat.
 
-(*
-  Opaque procRqValidReg.
-  Opaque procRqReplaceReg.
-  Opaque procRqWaitReg.
-  Opaque procRqReg.
-  Opaque l1MissByState.
-  Opaque l1MissByLine.
-  Opaque l1Hit.
-  Opaque writeback.
-  Opaque upgRq.
-  Opaque upgRs.
-  Opaque ld.
-  Opaque st.
-  Opaque drop.
-  Opaque pProcess.
-
-  Opaque cRqValidReg.
-  Opaque cRqDirwReg.
-  Opaque cRqReg.
-  Opaque missByState.
-  Opaque dwnRq.
-  Opaque dwnRs_wait.
-  Opaque dwnRs_noWait.
-  Opaque deferred.
-
-  Opaque rqFromProc.
-  Opaque rsToProc.
-  Opaque rqToParent.
-  Opaque rsToParent.
-  Opaque rqFromChild.
-  Opaque rsFromChild.
-  Opaque fromParent.
-  Opaque toChild.
-  Opaque line.
-  Opaque tag.
-  Opaque cs.
-  Opaque mcs.
-  Opaque mline.
-
-  Opaque elt.
-  Opaque enqName.
-  Opaque deqName.
-  Opaque enqP.
-  Opaque deqP.
-  Opaque empty.
-  Opaque full.
-  Opaque firstEltName.
-
-  Opaque addr.
-  Opaque data.
-  Opaque dataArray.
-  Opaque read.
-  Opaque write.
-
-  Opaque rqFromCToPRule.
-  Opaque rsFromCToPRule.
-  Opaque fromPToCRule.
-*)
-
-
   Open Scope fmap.
 
   Record nmemCache_invariants_rec (s: RegsT)
@@ -818,28 +758,6 @@ Section MemCacheInl.
 
   Hint Rewrite rewrite_rsFromCToP_revcons rewrite_rqFromCToP_revcons rewrite_fromPToC_cons: invariant.
 
-  Ltac destruct_addr_base a a' :=
-    let isEq := fresh in
-    destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption].
-
-  Ltac destruct_addr :=
-    match goal with
-      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
-        destruct_addr_base a a'
-      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
-        destruct_addr_base a a'
-    end.
-
-(*  
-*)
-
-  Ltac rewrite_getCs :=
-    match goal with
-      | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
-        (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
-    end.
-
-
   Lemma rmConj (P Q R: Prop): impl (P /\ Q -> R) (P -> Q -> R).
   Proof.
     unfold impl; tauto.
@@ -960,6 +878,131 @@ Section MemCacheInl.
              | H: ?a = ?b |- _ => rewrite H in *; generalize H; clear H
            end; intros.
 
+
+  Ltac destruct_addr_base a a' :=
+    let isEq := fresh in
+    destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption].
+
+  Ltac destruct_addr :=
+    match goal with
+      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
+        destruct_addr_base a a'
+      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
+        destruct_addr_base a a'
+    end.
+
+    Lemma eq_weq sz a: (@weq sz a a) = left _ eq_refl.
+    Proof.
+      rewrite rewrite_weq with (pf := eq_refl).
+      reflexivity.
+    Qed.
+
+    Lemma neq_combine1 sz1 sz2 a p:
+      p <> split2 sz1 sz2 a ->
+      a = Word.combine (split1 sz1 sz2 a) p -> False.
+    Proof.
+      intros.
+      rewrite H0 in *; clear H0.
+      rewrite split2_combine in H.
+      tauto.
+    Qed.
+    
+    Lemma neq_combine2 sz1 sz2 a p q:
+      split1 sz1 sz2 a <> p ->
+      a = Word.combine p q -> False.
+    Proof.
+      intros.
+      rewrite H0 in *; clear H0.
+      rewrite split1_combine in H.
+      tauto.
+    Qed.
+    
+    Ltac destruct_idx_tag_base a a' :=
+      let isEq := fresh in
+      let isEq' := fresh in
+      let isEq'' := fresh in
+      let neq' := fresh in
+      let neq := fresh in
+      destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
+        [destruct (@weq TagBits (tag (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+          rewrite <- ?isEq in *; clear isEq;
+          rewrite ?Word.combine_split in *;
+          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq'; rewrite ?eq_weq in * |
+                                    match goal with
+                                      | H: context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                                             (?tag (split1 IdxBits TagBits ?a)))] |- _ =>
+                                        destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                                           (tag (split1 IdxBits TagBits a)))) as
+                                            [isEq'' | ?] ; [ apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+                                                             rewrite ?app_nil_r in *;
+                                                               try assumption]
+                                    end
+                                   ] |
+         match goal with
+           | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                 (tag (split1 IdxBits TagBits a')))] |- _ =>
+             destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                (tag (split1 IdxBits TagBits a')))) as
+                 [isEq'' | ?]; [apply (@neq_combine2 _ _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+                                rewrite ?app_nil_r in *;
+                                  try assumption]
+         end].
+
+  (*
+    Ltac destruct_idx_tag_base a a' t t' :=
+      let isEq := fresh in
+      let isEq' := fresh in
+      destruct (@weq IdxBits a a') as [isEq | ?];
+        [destruct (@weq TagBits t t') as [isEq' | ?];
+          rewrite ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | assumption ] |
+         rewrite ?app_nil_r in *; assumption
+        ].
+   *)
+
+  Ltac destruct_idx_tag :=
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] => destruct_idx_tag_base a a'
+      | H: context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] |- _ => destruct_idx_tag_base a a'
+    end.
+  (*
+    match goal with
+      | H: context[if @weq IdxBits ?a ?a'
+                   then if @weq TagBits ?t ?t' then _ else _
+                   else _] |- _ => destruct_idx_tag_base a a' t t'
+      | |- context[if @weq IdxBits ?a ?a'
+                   then if @weq TagBits ?t ?t' then _ else _
+                   else _] => destruct_idx_tag_base a a' t t'
+    end.
+   *)
+
+  Lemma getCs_full cs tag a a' upd:
+    getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                      then upd
+                      else cs a'') tag a' =
+    if weq (split1 IdxBits TagBits a') (split1 IdxBits TagBits a)
+    then if weq (tag (split1 IdxBits TagBits a')) (split2 IdxBits TagBits a')
+         then upd
+         else getCs cs tag a'
+    else getCs cs tag a'.
+  Proof.
+    unfold getCs.
+    repeat match goal with
+             | |- context[if ?p then _ else _] => destruct p; try reflexivity; try congruence
+           end.
+  Qed.
+
+  Ltac rewrite_getCs :=
+    match goal with
+      | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+        (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
+      | _ => rewrite getCs_full in *; destruct_idx_tag
+    end.
+
   Ltac doAll :=
     autorewrite with invariant in *;
     unfold isCWait, isPWait in *;
@@ -968,9 +1011,6 @@ Section MemCacheInl.
     rmBadHyp;
     try rewrite_getCs;
     try destruct_addr;
-(*    try rewrite getCs_tag_match_getCs in * by assumption;
-    try destruct_addr;
-(*    try rewrite_getCs; *) *)
     intros;
     rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     specialize_msgs;
@@ -998,6 +1038,106 @@ Section MemCacheInl.
             | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
           end; invariant_simpl;
       simplMapUpds doAll.
+
+  Lemma nmemCache_invariants_hold_4 s a u cs:
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+
+    rewrite getCs_full in *.
+    simpl.
+               des
+           rewrite ?app_nil_r in *
+          ]
+    end.
+                                      admit.
+
+
+                                          weq (split1 IdxBits TagBits a0)
+      (split1 IdxBits TagBits
+         (split2 LgNumDatas (IdxBits + TagBits) (procRq F1)))
+   then
+    if weq (tagv (split1 IdxBits TagBits a0)) (split2 IdxBits TagBits a0)
+
+
+    Lemma neq_combine sz1 sz2 a p
+          (neq: p <> split2 sz1 sz2 a):
+      weq a (Word.combine (split1 sz1 sz2 a) p) = right _ (@neq_combine' _ _ _ _ neq).
+    Proof.
+      destruct (weq a (Word.combine (split1 sz1 sz2 a) p)).
+      - exfalso; rewrite e in *.
+        rewrite split2_combine in neq.
+        tauto.
+      - 
+        
+      subst.
+      
+
+    
+      .
+      subst.
+    simpl.
+
+
+
+    admit.
+
+        let isEq := fresh in
+        let isEq' := fresh in
+        destruct (@weq IdxBits a a') as [isEq | ?];
+          [destruct (@weq TagBits t t') as [isEq' | ?];
+            rewrite <- ?isEq in *; clear isEq
+            rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | ] |
+           rewrite ?app_nil_r in * ]
+    end.
+    rewrite Word.combine_split in *.
+
+           weq a0
+             (Word.combine
+                (split1 IdxBits TagBits
+                   (split2 LgNumDatas (IdxBits + TagBits) (procRq F1)))
+                (tagv
+                   (split1 IdxBits TagBits
+                      (split2 LgNumDatas (IdxBits + TagBits) (procRq F1)))))
+
+    
+
+
+      | |- context[if @weq IdxBits ?a ?a'
+                   then if @weq TagBits ?t ?t' then _ else _
+                   else _] => destruct_idx_tag_base a a' t t'
+    end.
+
+  Ltac rewrite_getCs :=
+    match goal with
+      | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+        (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
+    end.
+
+
+  Qed.
+  
+  Lemma nmemCache_invariants_hold_5 s a u cs:
+    nmemCache_invariants s ->
+    upgRq metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+    apply cheat.
+  Qed.
+
+
+
 
   
   Lemma nmemCache_invariants_hold_7 s a u cs:
@@ -1109,18 +1249,6 @@ Section MemCacheInl.
   Qed.
 
 
-  Lemma nmemCache_invariants_hold_4 s a u cs:
-    nmemCache_invariants s ->
-    writeback metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    apply cheat.
-  Qed.
-    
     
     Lemma tst A: forall ls g (x: A), impl (g = x \/ In g ls) (In g (x :: ls)).
     Proof.
