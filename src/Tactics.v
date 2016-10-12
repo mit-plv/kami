@@ -60,6 +60,7 @@ Set Asymmetric Patterns.
  *)
 
 Ltac kstring_simpl :=
+  repeat autounfold with NameDefs in *;
   cbv [withPrefix prefixSymbol append] in *.
 
 Ltac krefl :=

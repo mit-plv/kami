@@ -269,7 +269,7 @@ Section ProcMem.
       + apply p4st_refines_p3st; auto.
       + apply p3st_refines_pdec; auto.
     - krefl.
-      END_SKIP_PROOF_ON *) admit.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcMem.

@@ -6,6 +6,7 @@ Require Import Kami.Notations Kami.Tactics Kami.Decomposition.
 Require Import Ex.Fifo Ex.NativeFifo Omega.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Section ToNative.
   Variable fifoName: string.
@@ -111,11 +112,11 @@ Section ToNative.
 
   Definition fifo_nfifo_eta (r: RegsT): option (sigT (fullType type)).
   Proof.
-    kgetv ^"elt"%string eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
-    kgetv ^"empty"%string emptyv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^"full"%string fullv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^"enqP"%string enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
-    kgetv ^"deqP"%string deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.elt eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.empty emptyv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^Names.full fullv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^Names.enqP enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.deqP deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
 
     refine (Some (existT _ (listEltK dType type) _)).
     destruct (weq enqPv deqPv).
@@ -128,7 +129,7 @@ Section ToNative.
 
   Definition fifo_nfifo_theta (r: RegsT): RegsT :=
     match fifo_nfifo_eta r with
-    | Some er => M.add ^"elt" er (M.empty _)
+    | Some er => M.add ^Names.elt er (M.empty _)
     | None => M.empty _
     end.
   Hint Unfold fifo_nfifo_theta: MethDefs.
@@ -170,11 +171,11 @@ Section ToNative.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
   Proof.
-    kexistv ^"elt"%string eltv o (Vector dType rsz).
-    kexistv ^"empty"%string emptyv o Bool.
-    kexistv ^"full"%string fullv o Bool.
-    kexistv ^"enqP"%string enqPv o (Bit rsz).
-    kexistv ^"deqP"%string deqPv o (Bit rsz).
+    kexistv ^Names.elt eltv o (Vector dType rsz).
+    kexistv ^Names.empty emptyv o Bool.
+    kexistv ^Names.full fullv o Bool.
+    kexistv ^Names.enqP enqPv o (Bit rsz).
+    kexistv ^Names.deqP deqPv o (Bit rsz).
     exact True.
   Defined.
   Hint Unfold fifo_inv_0: InvDefs.
@@ -197,10 +198,10 @@ Section ToNative.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
   Proof.
-    kexistv ^"empty"%string emptyv o Bool.
-    kexistv ^"full"%string fullv o Bool.
-    kexistv ^"enqP"%string enqPv o (Bit rsz).
-    kexistv ^"deqP"%string deqPv o (Bit rsz).
+    kexistv ^Names.empty emptyv o Bool.
+    kexistv ^Names.full fullv o Bool.
+    kexistv ^Names.enqP enqPv o (Bit rsz).
+    kexistv ^Names.deqP deqPv o (Bit rsz).
     refine (or3 _ _ _).
     - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
     - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
@@ -259,7 +260,7 @@ Section ToNative.
   Proof. (* SKIP_PROOF_ON
     apply decompositionOne with (eta:= fifo_nfifo_eta)
                                   (ruleMap:= fifo_nfifo_ruleMap)
-                                  (specRegName:= ^"elt").
+                                  (specRegName:= ^Names.elt).
 
     - kequiv.
     - unfold theta; kdecompose_regmap_init; kinv_finish.
@@ -517,47 +518,47 @@ Section ToNative.
           { right; right; left; reflexivity. }
           { simpl; repeat econstructor.
             { kregmap_red; kregmap_clear; reflexivity. }
-            { destruct H9 as [|[|]]; dest; subst; [inv H1| |].
+            { destruct o as [|[|]]; dest; subst; [inv H0| |].
               { unfold rsz in *.
-                destruct (weq x4 x1); [|inv H3].
+                destruct (weq x4 x1); [|inv H2].
                 reflexivity.
               }
               { unfold rsz in *.
-                destruct (weq x4 x1); [inv H3|].
+                destruct (weq x4 x1); [inv H2|].
                 simpl; apply negb_true_iff.
                 pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).
                 assert (wordToNat (x4 ^- x1) <> 0).
                 { intro Hx.
                   assert ($ (wordToNat (x4 ^- x1)) = natToWord rsz 0)
                     by (rewrite Hx; reflexivity).
-                  rewrite natToWord_wordToNat in H4.
-                  apply sub_0_eq in H4.
+                  rewrite natToWord_wordToNat in H3.
+                  apply sub_0_eq in H3.
                   elim n; auto.
                 }
-                specialize (H2 H4); clear H4; dest.
-                rewrite H2; reflexivity.
+                specialize (H1 H3); clear H3; dest.
+                rewrite H1; reflexivity.
               }
             }
           }
           { simpl; repeat f_equal.
-            destruct H9 as [|[|]]; dest; subst; [inv H1| |].
+            destruct o as [|[|]]; dest; subst; [inv H0| |].
             { unfold rsz in *.
-              destruct (weq x4 x1); [|inv H3].
+              destruct (weq x4 x1); [|inv H2].
               reflexivity.
             }
             { unfold rsz in *.
-              destruct (weq x4 x1); [inv H3|].
+              destruct (weq x4 x1); [inv H2|].
               pose proof (@fifo_nfifo_elt_not_full_prop_2 x0 x4 (wordToNat (x4 ^- x1))).
               assert (wordToNat (x4 ^- x1) <> 0).
               { intro Hx.
                 assert ($ (wordToNat (x4 ^- x1)) = natToWord rsz 0)
                   by (rewrite Hx; reflexivity).
-                rewrite natToWord_wordToNat in H4.
-                apply sub_0_eq in H4.
+                rewrite natToWord_wordToNat in H3.
+                apply sub_0_eq in H3.
                 elim n; auto.
               }
-              specialize (H2 H4); clear H4; dest.
-              rewrite H2; unfold listFirstElt.
+              specialize (H1 H3); clear H3; dest.
+              rewrite H1; unfold listFirstElt.
               rewrite natToWord_wordToNat.
               simpl; f_equal.
               apply wplus_cancel with (c:= x4 ^- x1).
@@ -609,7 +610,7 @@ Section ToNative.
 
 End ToNative.
 
-Definition dropFirstElt fifoName := dropP (fifoName -- "firstElt").
+Definition dropFirstElt fifoName := dropP (fifoName -- Names.firstEltName).
 
 Lemma substepsInd_getRules_nil_annot:
   forall m o u l,
@@ -710,9 +711,7 @@ Section ToSimple.
           }
           { reflexivity. }
           { simpl; f_equal.
-            { 
-
-              meq; findeq_custom liftToMap1_find_tac. }
+            { meq; findeq_custom liftToMap1_find_tac. }
             { apply M.union_empty in H1; dest; subst; meq. }
           }
           
@@ -763,7 +762,7 @@ Section ToSimpleN.
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
-    kexistnv ^"elt" eltv s (listEltK dType type).
+    kexistnv ^Names.elt eltv s (listEltK dType type).
     exact (sv = Some (existT _ _ eltv)).
   Defined.
 
@@ -772,7 +771,7 @@ Section ToSimpleN.
       <<=[dropFirstElt fifoName] (nativeSimpleFifo fifoName default).
   Proof. (* SKIP_PROOF_ON
     apply decompositionOneR with
-    (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^"elt"); auto.
+    (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^Names.elt); auto.
 
     - unfold thetaR; eexists; split.
       + unfold nfifo_nsfifo_etaR; eexists; split.
@@ -818,7 +817,7 @@ Section ToSimpleN.
         kinv_magic_light.
         repeat split; auto.
 
-    - intros; inv H0; inv H1. 
+    - intros; inv H0; inv H1.
       + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
           repeat split; unfold getLabel; simpl; auto.
       + inv H4; inv H5; simpl in *; inv H2; inv H1; dest;
