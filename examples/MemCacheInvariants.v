@@ -917,7 +917,6 @@ Section MemCacheInl.
       tauto.
     Qed.
     
-(*
     Ltac destruct_idx_tag_base a a' :=
       let isEq := fresh in
       let isEq' := fresh in
@@ -948,21 +947,20 @@ Section MemCacheInl.
                                 rewrite ?app_nil_r in *;
                                   try assumption]
          end].
-*)
 
-  
-  Ltac destruct_idx_tag_base a a' t t' :=
-    let isEq := fresh in
-    let isEq' := fresh in
-    destruct (@weq IdxBits a a') as [isEq | ?];
-      [destruct (@weq TagBits t t') as [isEq' | ?];
-        rewrite ?isEq in *; clear isEq;
-        rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | assumption ] |
-       rewrite ?app_nil_r in *; assumption
-      ].
+  (*
+    Ltac destruct_idx_tag_base a a' t t' :=
+      let isEq := fresh in
+      let isEq' := fresh in
+      destruct (@weq IdxBits a a') as [isEq | ?];
+        [destruct (@weq TagBits t t') as [isEq' | ?];
+          rewrite ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | assumption ] |
+         rewrite ?app_nil_r in *; assumption
+        ].
+   *)
 
   Ltac destruct_idx_tag :=
-    (*
     match goal with
       | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
                    then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
@@ -971,7 +969,7 @@ Section MemCacheInl.
                    then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
                    else _] |- _ => destruct_idx_tag_base a a'
     end.
-*)
+  (*
     match goal with
       | H: context[if @weq IdxBits ?a ?a'
                    then if @weq TagBits ?t ?t' then _ else _
@@ -980,6 +978,7 @@ Section MemCacheInl.
                    then if @weq TagBits ?t ?t' then _ else _
                    else _] => destruct_idx_tag_base a a' t t'
     end.
+   *)
 
   Lemma getCs_full cs tag a a' upd:
     getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a)
