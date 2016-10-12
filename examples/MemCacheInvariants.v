@@ -822,7 +822,6 @@ Section MemCacheInl.
     let isEq := fresh in
     destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption].
 
-  (*
   Ltac destruct_addr :=
     match goal with
       | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
@@ -830,23 +829,13 @@ Section MemCacheInl.
       | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
         destruct_addr_base a a'
     end.
+
+(*  
 *)
-
-  
-  Ltac destruct_addr :=
-    try match goal with
-          | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
-            let isEq := fresh in
-            try (destruct (weq a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption ])
-          | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
-            let isEq := fresh in
-            try (destruct (weq a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption ])
-        end.
-
 
   Ltac rewrite_getCs :=
     match goal with
-      | H: ?tag (split1 IdxBits + TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+      | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
         (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
     end.
 
@@ -977,9 +966,11 @@ Section MemCacheInl.
     simpl in *;
     unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     rmBadHyp;
-    try rewrite getCs_tag_match_getCs in * by assumption;
-    destruct_addr; 
-(*    try rewrite_getCs; *)
+    try rewrite_getCs;
+    try destruct_addr;
+(*    try rewrite getCs_tag_match_getCs in * by assumption;
+    try destruct_addr;
+(*    try rewrite_getCs; *) *)
     intros;
     rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     specialize_msgs;
