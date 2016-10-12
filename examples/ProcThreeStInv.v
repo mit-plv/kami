@@ -9,8 +9,6 @@ Require Import Eqdep ProofIrrelevance.
 
 Set Implicit Arguments.
 
-Open Scope fmap.
-
 Section Invariants.
   Variables addrSize lgDataBytes rfIdx: nat.
 
@@ -470,7 +468,7 @@ Section Invariants.
     intuition idtac.
 
   Ltac p3st_inv_tac := p3st_inv_old; p3st_inv_new; d2e_abs_tac.
-
+  
   Lemma p3st_epochs_inv_ok':
     forall init n ll,
       init = initRegs (getRegInits p3stInl) ->
@@ -790,6 +788,4 @@ End Invariants.
 Hint Unfold p3st_scoreboard_waw_inv_body p3st_raw_inv_body
      p3st_decode_inv_body p3st_stalled_inv_body
      p3st_exec_inv_body p3st_epochs_inv_body p3st_pc_inv_body : InvDefs.
-
-Close Scope fmap.
 

@@ -85,7 +85,12 @@ Section ProcDecSC.
         end;
     kinv_red; kinv_or3;
     (* decide the current state by giving contradictions for all other states *)
-    kinv_red; kinv_contra.
+    kinv_red; kinv_contra;
+    (* to simplity struct-related invariants *)
+    repeat
+      match goal with
+      | [H: context[Vector_find] |- _] => unfold Vector_find in H; simpl in H
+      end.
 
   Definition decInstConfig :=
     {| inlining := ITManual;

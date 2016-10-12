@@ -265,13 +265,13 @@ Section FetchAndDecode.
   Definition fetchDecode := (fetcher
                                ++ oneEltFifoEx2 f2dFifoName f2dElt
                                ++ decoder)%kami.
-  
+
 End FetchAndDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf1 d2eEnq w2dDeq sbSearch1 sbSearch2 : MethDefs.
-
+     getRf1 d2eEnq w2dDeq sbSearch1 sbSearch2 sbSearch3 sbInsert : MethDefs.
+  
 Section Facts.
   Variables addrSize lgDataBytes rfIdx: nat.
 

@@ -101,8 +101,8 @@ Section ProcMem.
     ketrans; [|apply pdecN_memAtomic_refines_scN with (fifoSize:= rsz FifoSize); auto].
 
     kmodular.
-    - kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
-    - kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)).
+    - kdisj_edms_cms_ex numChildren.
+    - kdisj_ecms_dms_ex numChildren.
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
       kmodular with (dropFirstElts LgNumChildren).

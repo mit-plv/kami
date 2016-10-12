@@ -899,9 +899,8 @@ Section Facts.
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
                             d2ePack predictNextPc).
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     kequiv.
-    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   Hint Resolve decoder_ModEquiv.
 

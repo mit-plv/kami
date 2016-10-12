@@ -6,6 +6,8 @@ Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.
 Require Import Kami.Decomposition Kami.ModuleBound.
 Require Import Kami.ParametricSyntax Kami.ParametricEquiv Kami.ParametricWf.
 
+Require Import FunctionalExtensionality Program.Equality.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
@@ -186,10 +188,11 @@ Ltac get_minimal_regs_bound m :=
     let mb1 := get_minimal_regs_bound m1 in
     let mb2 := get_minimal_regs_bound m2 in
     constr:(mb1 ++ mb2)
+  | makeModule _ => constr:(getRegsBound m)
+  | Mod _ _ _ => constr:(getRegsBound m)
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_regs_bound m'
-  | _ => constr:(getRegsBound m)
   end.
 
 Ltac get_minimal_dms_bound m :=
@@ -200,11 +203,12 @@ Ltac get_minimal_dms_bound m :=
     let mb1 := get_minimal_dms_bound m1 in
     let mb2 := get_minimal_dms_bound m2 in
     constr:(mb1 ++ mb2)
+  | makeModule _ => constr:(getDmsBound m)
+  | Mod _ _ _ => constr:(getDmsBound m)
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_dms_bound m'
-  | _ => constr:(getDmsBound m)
-end.
+  end.
 
 Ltac get_minimal_cms_bound m :=
   lazymatch m with
@@ -214,10 +218,11 @@ Ltac get_minimal_cms_bound m :=
     let mb1 := get_minimal_cms_bound m1 in
     let mb2 := get_minimal_cms_bound m2 in
     constr:(mb1 ++ mb2)
+  | makeModule _ => constr:(getCmsBound m)
+  | Mod _ _ _ => constr:(getCmsBound m)
   | _ =>
     let m' := unfold_head_ret m in
     get_minimal_cms_bound m'
-  | _ => constr:(getCmsBound m)
   end.
 
 Ltac red_to_regs_bound :=
@@ -727,8 +732,6 @@ Ltac invertActionRep ::=
        end
      end.
 
-Ltac boundedMapTac := idtac.
-
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
 Ltac kinv_dest_custom tac := kinv_action_dest; kinv_custom tac.
@@ -745,6 +748,23 @@ Ltac kinv_constr :=
             end
     ).
 
+Ltac fin_func_tac :=
+  let i := fresh "i" in
+  extensionality i;
+  repeat
+    match goal with
+    | [j: Fin.t 0 |- _] => inv j
+    | [j: Fin.t _ |- _] => dependent destruction j
+    end.
+
+Ltac fin_func_eq :=
+  match goal with
+  | [ |- ?t = _ ] =>
+    match type of t with
+    | forall (_: Fin.t _), _ => fin_func_tac
+    end
+  end.
+
 Lemma existT_eq: forall A (x: A) P (v1 v2: P x), v1 = v2 -> existT _ x v1 = existT _ x v2.
 Proof. intros; subst; auto. Qed.
 
@@ -753,11 +773,11 @@ Proof. intros; subst; auto. Qed.
 
 Ltac kinv_eq :=
   repeat
-    (first [reflexivity
-           |meqReify
-           |boundedMapTac
-           |apply existT_eq
-           |apply pair_eq
+    (first [ reflexivity
+           | meqReify
+           | fin_func_eq
+           | apply existT_eq
+           | apply pair_eq
     ]).
 
 Ltac kinv_magic_with dtac itac :=

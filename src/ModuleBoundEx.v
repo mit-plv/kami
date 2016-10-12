@@ -1022,8 +1022,9 @@ Ltac get_regs_bound_ex m :=
     constr:(appendNameBound nb1 nb2)
   | modFromMeta ?mm =>
     let mm' := eval red in mm in get_regs_bound_ex (modFromMeta mm')
+  | makeModule _ => constr:(getRegsBound m)
+  | Mod _ _ _ => constr:(getRegsBound m)
   | _ => let m' := eval red in m in get_regs_bound_ex m'
-  | _ => constr:(getRegsBound m)
   end.
 
 Ltac get_dms_bound_ex m :=
@@ -1066,8 +1067,9 @@ Ltac get_dms_bound_ex m :=
        constr:(appendNameBound nb1 nb2)
      | modFromMeta ?mm =>
        let mm' := eval red in mm in get_dms_bound_ex (modFromMeta mm')
+     | makeModule _ => constr:(getDmsBound m)
+     | Mod _ _ _ => constr:(getDmsBound m)
      | _ => let m' := eval red in m in get_dms_bound_ex m'
-     | _ => constr:(getDmsBound m)
      end.
 
 Ltac get_cms_bound_ex m :=
@@ -1148,8 +1150,9 @@ Ltac get_cms_bound_ex m :=
        constr:(appendNameBound nb1 nb2)
      | modFromMeta ?mm =>
        let mm' := eval red in mm in get_cms_bound_ex (modFromMeta mm')
+     | makeModule _ => constr:(getCmsBound m)
+     | Mod _ _ _ => constr:(getCmsBound m)
      | _ => let m' := eval red in m in get_cms_bound_ex m'
-     | _ => constr:(getCmsBound m)
      end.
 
 Ltac red_to_regs_bound_ex rn :=
