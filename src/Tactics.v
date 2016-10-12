@@ -760,15 +760,15 @@ Ltac kinv_eq :=
            |apply pair_eq
     ]).
 
-Ltac kinv_magic_with tac :=
+Ltac kinv_magic_with dtac itac :=
   kinv_action_dest;
-  kinv_custom tac;
+  kinv_custom dtac;
   kinv_regmap_red;
   kinv_constr;
   kinv_eq;
-  kinv_finish.
+  kinv_finish_with itac.
 
-Ltac kinv_magic := kinv_magic_with idtac.
+Ltac kinv_magic := kinv_magic_with idtac idtac.
 
 Ltac kinv_magic_light_with tac :=
   kinv_action_dest;
@@ -807,6 +807,11 @@ Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 
 (** Final Kami proof configuration *)
 
+Inductive InliningType :=
+| ITManual: InliningType
+| ITProvided: forall (om: Modules), sigT (fun m: Modules => om <<== m) -> InliningType
+| ITNone: InliningType.
+
 Inductive DecompositionType :=
 | DTFunctional:
     forall (theta: RegsT -> RegsT)
@@ -829,17 +834,19 @@ Ltac kinv_add_rep' invs :=
 Ltac kinv_add_rep invs :=
   kinv_add_rep' invs; kinv_add_end.
 
-Record ProofConfig := { inlining : bool;
+Record ProofConfig := { inlining : InliningType;
                         decomposition : DecompositionType;
                         invariants : Invariants
                       }.
 
-Ltac kami_ok cfg inv_util :=
+Ltac kami_ok cfg dtac itac :=
   match eval hnf in (inlining cfg) with
-  | true =>
+  | ITManual =>
     let im := fresh "im" in
     kinline_left im
-  | false => idtac
+  | ITProvided ?sigM =>
+    ketrans; [exact (projT2 sigM)|]
+  | ITNone => idtac
   end;
   match eval hnf in (decomposition cfg) with
   | DTFunctional ?sm ?rm => kdecompose_nodefs sm rm
@@ -847,7 +854,7 @@ Ltac kami_ok cfg inv_util :=
   end;
   let invs := (eval hnf in (invariants cfg)) in
   kinv_add_rep invs;
-  kinvert; kinv_magic_with inv_util.
+  kinvert; kinv_magic_with dtac itac.
 
 (** Notations for rule maps *)
 Notation "from '|->' to ; cont" :=

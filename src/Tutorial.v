@@ -88,7 +88,7 @@ Qed.
 
 (** We can also build refinement proofs by the one-line tactic with a proof configuration. *)
 Definition producer_consumer_refinement_config :=
-  {| inlining := true;
+  {| inlining := ITManual;
      decomposition := DTFunctional producer_consumer_regMap producer_consumer_ruleMap;
      invariants := IVNil
   |}.
@@ -97,5 +97,5 @@ Definition producer_consumer_refinement_config :=
 Theorem producer_consumer_refinement_again:
   producerConsumerImpl <<== producerConsumerSpec.
 Proof.
-  kami_ok producer_consumer_refinement_config idtac.
+  kami_ok producer_consumer_refinement_config idtac idtac.
 Qed.

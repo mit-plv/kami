@@ -407,9 +407,6 @@ Section Invariants.
       d2efullv6 : fullType type (SyntaxKind Bool);
       Hd2efullv6 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv6);
 
-      (* NOTE: Don't remove w2dElt even if it's not used in the invariant body. *)
-      w2deltv6 : fullType type (SyntaxKind (w2dElt addrSize));
-      Hw2deltv6 : M.find "w2d"--"elt"%string o = Some (existT _ _ w2deltv6);
       w2dfullv6 : fullType type (SyntaxKind Bool);
       Hw2dfullv6 : M.find "w2d"--"full"%string o = Some (existT _ _ w2dfullv6);
 
@@ -469,7 +466,8 @@ Section Invariants.
     try rewrite Hd2eNextPc in *;
     try rewrite Hd2eEpoch in *;
     try rewrite He2wDecInst in *;
-    try rewrite He2wVal in *.
+    try rewrite He2wVal in *;
+    intuition idtac.
 
   Ltac p3st_inv_tac := p3st_inv_old; p3st_inv_new; d2e_abs_tac.
 
@@ -491,18 +489,12 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac;
           try (destruct x0, eepochv5; intuition idtac; fail).
         rewrite H14 in H4; exfalso; eapply negb_eq_false; eauto.
-      + kinv_dest_custom p3st_inv_tac; try reflexivity.
-      + kinv_dest_custom p3st_inv_tac; try reflexivity.
-      + kinv_dest_custom p3st_inv_tac; try reflexivity.
-      + kinv_dest_custom p3st_inv_tac; try reflexivity.
       + kinv_dest_custom p3st_inv_tac.
-        * reflexivity.
-        * intuition idtac.
-        * intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
-        * reflexivity.
-        * intuition idtac.
-        * intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -535,16 +527,18 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; rewrite H10 in H8; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; rewrite H10 in H8; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        rewrite H10 in H8; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        rewrite H10 in H8; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -579,8 +573,8 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail);
           try (simpl in H7; rewrite H7 in H10; rewrite H10 in H9; inv H9; fail);
           try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -646,8 +640,8 @@ Section Invariants.
         * simpl in H12; rewrite H12 in H10; unfold Src2K in *; rewrite H10 in H15; inv H15.
         * simpl in H12; rewrite H12 in H10; unfold Src1K in *; rewrite H10 in H4; inv H4.
         * simpl in H12; rewrite H12 in H10; unfold Src2K in *; rewrite H10 in H15; inv H15.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
-      + kinv_dest_custom p3st_inv_tac; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -754,10 +748,8 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-        simpl; rewrite <-H6, <-H12; reflexivity.
-      + kinv_dest_custom p3st_inv_tac.
-        elim n0; assumption.
+      + kinv_dest_custom p3st_inv_tac; simpl; rewrite <-H6, <-H12; reflexivity.
+      + kinv_dest_custom p3st_inv_tac; elim n0; assumption.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
