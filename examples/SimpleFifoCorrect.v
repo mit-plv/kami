@@ -112,11 +112,11 @@ Section Facts.
 
   Definition sfifo_nsfifo_eta (r: RegsT): option (sigT (fullType type)).
   Proof.
-    kgetv ^"elt"%string eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
-    kgetv ^"empty"%string emptyv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^"full"%string fullv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^"enqP"%string enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
-    kgetv ^"deqP"%string deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.elt eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.empty emptyv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^Names.full fullv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^Names.enqP enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^Names.deqP deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
 
     refine (Some (existT _ (listEltK dType type) _)).
     destruct (weq enqPv deqPv).
@@ -129,7 +129,7 @@ Section Facts.
 
   Definition sfifo_nsfifo_theta (r: RegsT): RegsT :=
     match sfifo_nsfifo_eta r with
-    | Some er => M.add ^"elt" er (M.empty _)
+    | Some er => M.add ^Names.elt er (M.empty _)
     | None => M.empty _
     end.
   Hint Unfold sfifo_nsfifo_theta: MethDefs.
@@ -166,11 +166,11 @@ Section Facts.
 
   Definition sfifo_inv_0 (o: RegsT): Prop.
   Proof.
-    kexistv ^"elt"%string eltv o (Vector dType rsz).
-    kexistv ^"empty"%string emptyv o Bool.
-    kexistv ^"full"%string fullv o Bool.
-    kexistv ^"enqP"%string enqPv o (Bit rsz).
-    kexistv ^"deqP"%string deqPv o (Bit rsz).
+    kexistv ^Names.elt eltv o (Vector dType rsz).
+    kexistv ^Names.empty emptyv o Bool.
+    kexistv ^Names.full fullv o Bool.
+    kexistv ^Names.enqP enqPv o (Bit rsz).
+    kexistv ^Names.deqP deqPv o (Bit rsz).
     exact True.
   Defined.
   Hint Unfold sfifo_inv_0: InvDefs.
@@ -192,10 +192,10 @@ Section Facts.
 
   Definition sfifo_inv_1 (o: RegsT): Prop.
   Proof.
-    kexistv ^"empty"%string emptyv o Bool.
-    kexistv ^"full"%string fullv o Bool.
-    kexistv ^"enqP"%string enqPv o (Bit rsz).
-    kexistv ^"deqP"%string deqPv o (Bit rsz).
+    kexistv ^Names.empty emptyv o Bool.
+    kexistv ^Names.full fullv o Bool.
+    kexistv ^Names.enqP enqPv o (Bit rsz).
+    kexistv ^Names.deqP deqPv o (Bit rsz).
     refine (or3 _ _ _).
     - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
     - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
@@ -250,7 +250,7 @@ Section Facts.
   Proof. (* SKIP_PROOF_ON
     apply decompositionOne with (eta:= sfifo_nsfifo_eta)
                                   (ruleMap:= sfifo_nsfifo_ruleMap)
-                                  (specRegName:= ^"elt").
+                                  (specRegName:= ^Names.elt).
 
     - kequiv.
     - unfold theta; kdecompose_regmap_init; kinv_finish.

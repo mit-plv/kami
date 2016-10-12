@@ -59,3 +59,23 @@ Definition rsFromCToPRule := "rsFromCToP".
 Definition fromPToCRule := "fromPToC".
 
 Close Scope string.
+
+Hint Unfold
+     procRqValidReg procRqReplaceReg procRqWaitReg procRqReg
+     l1MissByState l1MissByLine l1Hit writeback
+     upgRq upgRs ld st drop pProcess
+
+     cRqValidReg cRqDirwReg cRqReg missByState
+     dwnRq dwnRs_wait dwnRs_noWait deferred
+
+     rqFromProc rsToProc rqToParent rsToParent
+     rqFromChild rsFromChild fromParent toChild
+     line tag cs mcs mline
+
+     elt enqName deqName enqP deqP empty full firstEltName
+
+     addr data dataArray read write
+
+     rqFromCToPRule rsFromCToPRule fromPToCRule
+  : NameDefs.
+
