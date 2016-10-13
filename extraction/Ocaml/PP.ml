@@ -46,12 +46,13 @@ let bsv_keywords =
 (* Partial definition borrowed from Compcert *)
 (* TODO: '.' -> "__" / '$' -> "___" *)
 let bstring_of_charlist (s: char list) =
-  let r = Bytes.create (List.length s) in
-  let rec fill pos = function
-    | [] -> r
-    | c :: s -> Bytes.set r pos (if c = '.' || c = '$' then '_' else c); fill (pos + 1) s
+  let rec string_of_charlist (s: char list) =
+    match s with
+    | [] -> ""
+    | c :: s -> (Char.escaped (if c = '.' || c = '$' then '_' else c)) ^ (string_of_charlist s)
   in
-  let bstr = String.uncapitalize (Bytes.to_string (fill 0 s)) in
+  let str = string_of_charlist s in
+  let bstr = String.uncapitalize str in
   if List.mem bstr bsv_keywords then bstr ^ "_" else bstr
 
 let string_of_de_brujin_index (i: int) =
@@ -205,10 +206,17 @@ type bModuleDC = bModule * (string * signatureT) list * (string * signatureT) li
 let toBModuleDC (bm: bModule) = (bm, getDefsB bm, getCallsB bm)
 let toBModuleDCL (bml: bModule list) = List.map (fun bm -> toBModuleDC bm) bml
 
+let rec vectorToList (vec: 'a t0) =
+  match vec with
+  | Nil -> []
+  | Cons (e, _, v) -> e :: (vectorToList v)
+
 let rec collectStrK (k: kind) =
   match k with
   | Vector (k', _) -> collectStrK k'
-  | Struct sl -> let _ = addGlbStruct sl in collectStrKL sl
+  | Struct (_, sv) ->
+     let sl = vectorToList sv in
+     let _ = addGlbStruct sl in collectStrKL sl
   | _ -> ()
 and collectStrKL (kl: kind attribute list) =
   match kl with
@@ -219,7 +227,9 @@ and collectStrKL (kl: kind attribute list) =
 let rec collectStrC (c: constT) =
   match c with
   | ConstVector (_, _, v) -> collectStrVec v
-  | ConstStruct (kl, st) -> let _ = addGlbStruct kl in collectStrKL kl
+  | ConstStruct (_, kv, _) ->
+     let kl = vectorToList kv in
+     let _ = addGlbStruct kl in collectStrKL kl
   | _ -> ()
 and collectStrVec (v: constT vec) =
   match v with
@@ -239,7 +249,9 @@ let rec collectStrE (e: bExpr) =
   | BReadIndex (ie, ve) -> collectStrE ie; collectStrE ve
   | BReadField (fd, se) -> collectStrE se
   | BBuildVector (_, v) -> collectStrV v
-  | BBuildStruct (kl, _) -> let _ = addGlbStruct kl in collectStrKL kl
+  | BBuildStruct (_, kv, _) ->
+     let kl = vectorToList kv in
+     let _ = addGlbStruct kl in collectStrKL kl
   | BUpdateVector (ve, ie, vale) -> collectStrE ve; collectStrE ie; collectStrE vale
   | _ -> ()
 and collectStrV (v: bExpr vec) =
@@ -292,7 +304,7 @@ let rec ppKind (k: kind) =
   | Vector (k', w) -> ppVector ^ ppRBracketL
                       ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
-  | Struct sl -> addGlbStruct sl
+  | Struct (_, sv) -> let sl = vectorToList sv in addGlbStruct sl
 
 let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
@@ -322,7 +334,8 @@ let rec ppConst (c: constT) =
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
      ppVec ^ ppRBracketL ^ (String.sub ppv 0 (String.length ppv - 2)) ^ ppRBracketR
-  | ConstStruct (kl, st) ->
+  | ConstStruct (_, kv, st) ->
+     let kl = vectorToList kv in
      addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppConstStruct st ^ ppCBracketR
 and ppConstVec (v: constT vec) =
   match v with
@@ -331,9 +344,9 @@ and ppConstVec (v: constT vec) =
 and ppConstStruct (stl: (kind attribute, constT) ilist) =
   match stl with
   | Inil -> ""
-  | Icons ({ attrName = kn; attrType = _ }, _, c, Inil) ->
+  | Icons ({ attrName = kn; attrType = _ }, _, _, c, Inil) ->
      bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
-  | Icons ({ attrName = kn; attrType = _ }, _, c, stl') ->
+  | Icons ({ attrName = kn; attrType = _ }, _, _, c, stl') ->
      bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
 
@@ -409,7 +422,8 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se; ps ppRBracketR; ps ppDot; ps (bstring_of_charlist fd)
   | BBuildVector (_, v) ->
      ps ppVec; ps ppRBracketL; ppBExprVec v true; ps ppRBracketR
-  | BBuildStruct (kl, st) ->
+  | BBuildStruct (_, kv, st) ->
+     let kl = vectorToList kv in
      ps (addGlbStruct kl); print_space (); ps ppCBracketL; ppBExprStruct st; ps ppCBracketR
   | BUpdateVector (ve, ie, vale) -> 
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
@@ -419,12 +433,12 @@ and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
   | VecNext (_, v1, v2) -> ppBExprVec v1 false; ppBExprVec v2 (tail && true)
-and ppBExprStruct (stl: (kind attribute, bExpr) ilist) =
+and ppBExprStruct (stl: bExpr attribute list) =
   match stl with
-  | Inil -> ()
-  | Icons ({ attrName = kn; attrType = _ }, _, e, Inil) ->
+  | [] -> ()
+  | { attrName = kn; attrType = e } :: [] ->
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e
-  | Icons ({ attrName = kn; attrType = _ }, _, e, stl') ->
+  | { attrName = kn; attrType = e } :: stl' ->
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
 

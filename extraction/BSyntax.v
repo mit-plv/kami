@@ -20,12 +20,7 @@ Section BluespecSubset.
   | BReadIndex: BExpr -> BExpr -> BExpr
   | BReadField: string -> BExpr -> BExpr
   | BBuildVector lgn: Vec BExpr lgn -> BExpr
-  | BBuildStruct:
-      list (Attribute BExpr) -> BExpr
-  (* if we use list instead of "ilist" in BExpr,
-   * then Coq cannot find the decreasing factor while converting ExprS to BExpr
-   *)
-  (* | BBuildStruct: list (Attribute BExpr) -> BExpr *)
+  | BBuildStruct: forall n, Vector.t (Attribute Kind) n -> list (Attribute BExpr) -> BExpr
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
   | BReadReg: string -> BExpr.
 
@@ -88,10 +83,10 @@ Section BluespecSubset.
     | UniBit n1 n2 op e => (@exprSToBExpr _ e) >>= (fun be => Some (BUniBit op be))
     | BinBit n1 n2 n3 op e1 e2 =>
       (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2)
-                                          >>= (fun be2 => Some (BBinBit op be1 be2)))
+                                             >>= (fun be2 => Some (BBinBit op be1 be2)))
     | BinBitBool n1 n2 op e1 e2 =>
       (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2)
-                                          >>= (fun be2 => Some (BBinBitBool op be1 be2)))
+                                             >>= (fun be2 => Some (BBinBitBool op be1 be2)))
     | ITE _ ce te fe =>
       (@exprSToBExpr _ ce)
         >>= (fun bce =>
@@ -103,7 +98,7 @@ Section BluespecSubset.
       (@exprSToBExpr _ e1) >>= (fun be1 => (@exprSToBExpr _ e2) >>= (fun be2 => Some (BEq be1 be2)))
     | ReadIndex _ _ ie ve =>
       (@exprSToBExpr _ ie) >>= (fun bie => (@exprSToBExpr _ ve)
-                                          >>= (fun bve => Some (BReadIndex bie bve)))
+                                             >>= (fun bve => Some (BReadIndex bie bve)))
     | ReadField _ ls i e => (@exprSToBExpr _ e) >>= (fun be => Some (BReadField (Vector.nth (Vector.map (@attrName _) ls) i) be))
     | BuildVector _ lgn v =>
       (bindVec (mapVec (@exprSToBExpr _) v)) >>= (fun bv => Some (BBuildVector bv))
@@ -116,20 +111,14 @@ Section BluespecSubset.
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
     | BuildStruct n attrs st =>
       ((fix help n attrs st: option (list (Attribute BExpr)) :=
-         match st in ilist _ attrs1 return option (list (Attribute BExpr)) with
-           | inil => Some nil
-           | icons k na vs h t => match @exprSToBExpr _ h with
-                                    | Some v => (@help _ vs t) >>= (fun bl => Some (cons (attrName k :: v)%struct bl))
-                                    | None => None
-                                  end
-         end) n attrs st) >>= (fun bl => Some (BBuildStruct bl))
-                                    
-                                                   
-        (* cannot find the decreasing factor because of "ilist.map_ilist" *)
-        (* (bindList (ilist.map_ilist (fun a (e: Expr tyS (SyntaxKind (attrType a))) *)
-        (*                             => {| attrName:= attrName a; *)
-        (*                                   attrType:= exprSToBExpr e |}) st)) *)
-        (*   >>= (fun bl => Some (BBuildStruct bl)) *)
+          match st in ilist _ attrs1 return option (list (Attribute BExpr)) with
+          | inil => Some nil
+          | icons k na vs h t =>
+            match @exprSToBExpr _ h with
+            | Some v => (@help _ vs t) >>= (fun bl => Some (cons (attrName k :: v)%struct bl))
+            | None => None
+            end
+          end) n attrs st) >>= (fun bl => Some (BBuildStruct attrs bl))
     end.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
