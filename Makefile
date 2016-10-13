@@ -1,4 +1,4 @@
-IGNORE:=
+IGNORE:=examples/MemCacheInvariants
 
 LIBVS:=$(wildcard lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))

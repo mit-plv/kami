@@ -917,36 +917,52 @@ Section MemCacheInl.
       tauto.
     Qed.
     
-    Ltac destruct_idx_tag_base a a' :=
+    Ltac destruct_combine1 tagv a neq' :=
+      let isEq'' := fresh in
+      destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                         (tagv (split1 IdxBits TagBits a)))) as [isEq'' | ?];
+        [apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+         rewrite ?app_nil_r in *
+        ].
+    
+    Ltac destruct_combine2 tagv a a' neq :=
+      let isEq'' := fresh in
+      destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                         (tagv (split1 IdxBits TagBits a')))) as [isEq'' | ?];
+        [apply (@neq_combine2 _ _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+         rewrite ?app_nil_r in *
+        ].
+    
+    Ltac destruct_idx_tag_base tagv a a' :=
       let isEq := fresh in
       let isEq' := fresh in
       let isEq'' := fresh in
       let neq' := fresh in
       let neq := fresh in
       destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
-        [destruct (@weq TagBits (tag (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+        [destruct (@weq TagBits (tagv (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
           rewrite <- ?isEq in *; clear isEq;
-          rewrite ?Word.combine_split in *;
-          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq'; rewrite ?eq_weq in * |
-                                    match goal with
-                                      | H: context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
-                                                                                             (?tag (split1 IdxBits TagBits ?a)))] |- _ =>
-                                        destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
-                                                                                           (tag (split1 IdxBits TagBits a)))) as
-                                            [isEq'' | ?] ; [ apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
-                                                             rewrite ?app_nil_r in *;
-                                                               try assumption]
-                                    end
-                                   ] |
-         match goal with
-           | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
-                                                                 (tag (split1 IdxBits TagBits a')))] |- _ =>
-             destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
-                                                                (tag (split1 IdxBits TagBits a')))) as
-                 [isEq'' | ?]; [apply (@neq_combine2 _ _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
-                                rewrite ?app_nil_r in *;
-                                  try assumption]
-         end].
+          rewrite ?app_nil_r in *;
+          [rewrite ?isEq' in *; clear isEq'; rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
+           rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                       (tagv (split1 IdxBits TagBits a)))] |- _ =>
+                   destruct_combine1 tagv a neq'
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                       (tagv (split1 IdxBits TagBits a)))] =>
+                   destruct_combine1 tagv a neq'
+               end
+          ] |
+         rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] |- _ =>
+                   destruct_combine2 tagv a a' neq
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] =>
+                   destruct_combine2 tagv a a' neq
+               end].
 
   (*
     Ltac destruct_idx_tag_base a a' t t' :=
@@ -963,11 +979,11 @@ Section MemCacheInl.
   Ltac destruct_idx_tag :=
     match goal with
       | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
-                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
-                   else _] => destruct_idx_tag_base a a'
+                   then if @weq TagBits (?tagv (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] => destruct_idx_tag_base tagv a a'
       | H: context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
-                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
-                   else _] |- _ => destruct_idx_tag_base a a'
+                   then if @weq TagBits (?tagv (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] |- _ => destruct_idx_tag_base tagv a a'
     end.
   (*
     match goal with
@@ -1000,7 +1016,7 @@ Section MemCacheInl.
     match goal with
       | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
         (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
-      | _ => rewrite getCs_full in *; destruct_idx_tag
+      | _ => rewrite getCs_full in *; try destruct_idx_tag
     end.
 
   Ltac doAll :=
@@ -1011,6 +1027,7 @@ Section MemCacheInl.
     rmBadHyp;
     try rewrite_getCs;
     try destruct_addr;
+    rewrite ?split1_combine, ?split2_combine in *;
     intros;
     rsLessTo_thms; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     specialize_msgs;
@@ -1032,6 +1049,7 @@ Section MemCacheInl.
         end;
     try (firstorder (discriminate || word_omega)).
   
+  
   Ltac doMeta :=
     metaInit;
       try match goal with
@@ -1049,6 +1067,237 @@ Section MemCacheInl.
       nmemCache_invariants (M.union u s).
   Proof.
     doMeta.
+    Focus 2.
+    rewrite getCs_full in *.
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] => 
+      let isEq := fresh in
+      let isEq' := fresh in
+      let isEq'' := fresh in
+      let neq' := fresh in
+      let neq := fresh in
+      destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
+        [destruct (@weq TagBits (tag (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+          rewrite <- ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *;
+          [rewrite ?isEq' in *; clear isEq'; rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
+           rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                       (tagv (split1 IdxBits TagBits a)))] |- _ =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                      (tagv (split1 IdxBits TagBits a)))) as [isEq'' | ?];
+                     [apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (tagv (split1 IdxBits TagBits a)))] =>
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                      (tagv (split1 IdxBits TagBits a)))) as [isEq'' | ?];
+                     [apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+               end; try assumption
+          ] |
+         rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] |- _ =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                      (tagv (split1 IdxBits TagBits a')))) as [isEq'' | ?];
+                     [apply (@neq_combine2 _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                      (tagv (split1 IdxBits TagBits a')))) as [isEq'' | ?];
+                     [apply (@neq_combine2 _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+               end; try assumption
+        ]
+    end.
+    admit.
+
+    rewrite getCs_full in *.
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tagv (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] => 
+      let isEq := fresh in
+      let isEq' := fresh in
+      let isEq'' := fresh in
+      let neq' := fresh in
+      let neq := fresh in
+      destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
+        [destruct (@weq TagBits (tagv (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+          rewrite <- ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *;
+          [rewrite ?isEq' in *; clear isEq'; rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
+           rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                       (tagv (split1 IdxBits TagBits a)))] |- _ =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                      (tagv (split1 IdxBits TagBits a)))) as [isEq'' | ?];
+                     [apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (tagv (split1 IdxBits TagBits a)))] =>
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
+                                                                      (tagv (split1 IdxBits TagBits a)))) as [isEq'' | ?];
+                     [apply (@neq_combine1 _ _ _ _ neq') in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+               end; try assumption
+          ] |
+         rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] |- _ =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                      (tagv (split1 IdxBits TagBits a')))) as [isEq'' | ?];
+                     [apply (@neq_combine2 _ _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+                 | |- context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tagv (split1 IdxBits TagBits a')))] =>
+                   let isEq'' := fresh in
+                   destruct (@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                      (tagv (split1 IdxBits TagBits a')))) as [isEq'' | ?];
+                     [apply (@neq_combine2 _ _ _ _ _ neq) in isEq''; exfalso; apply isEq'' |
+                      rewrite ?app_nil_r in *
+                     ]
+               end; try assumption
+        ]
+    end.
+    admit.
+
+
+    
+    Focus 2.
+    assumption.
+    Focus 2.
+    assumption.
+    Focus 2.
+    rewrite getCs_full in *.
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] => 
+      let isEq := fresh in
+      let isEq' := fresh in
+      let isEq'' := fresh in
+      let neq' := fresh in
+      let neq := fresh in
+      destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
+        [destruct (@weq TagBits (tag (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+          rewrite <- ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *;
+          [rewrite ?isEq' in *; clear isEq'; rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
+           rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (?tag (split1 IdxBits TagBits ?a)))] |- _ =>
+                   destruct_combine a neq_combine1 neq'
+                 | |- context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (?tag (split1 IdxBits TagBits ?a)))] =>
+                   destruct_combine a neq_combine1 neq'
+               end
+          ] |
+         rewrite ?split1_combine, ?split2_combine in *;
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                       (tag (split1 IdxBits TagBits a')))] |- _ =>
+                   destruct_combine a' neq_combine2 neq
+                 | |- context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (?tag (split1 IdxBits TagBits ?a)))] =>
+                   destruct_combine a neq_combine2 neq
+               end]
+    end.
+
+    Focus 2.
+    match goal with
+      | H: context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                             (?tag (split1 IdxBits TagBits ?a)))] |- _ =>
+        destruct_combine a neq_combine1 H4
+      | |- context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                             (?tag (split1 IdxBits TagBits ?a)))] =>
+        destruct_combine a neq_combine1 H4
+    end.
+
+    
+    Focus 2.
+    rewrite ?split1_combine, ?split2_combine in *.
+
+
+
+
+
+
+    Focus 2.
+    rewrite getCs_full in *.
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] =>
+      let isEq := fresh in
+      let isEq' := fresh in
+      let isEq'' := fresh in
+      let neq' := fresh in
+      let neq := fresh in
+      destruct (@weq IdxBits (split1 IdxBits TagBits a) (split1 IdxBits TagBits a')) as [isEq | neq];
+        [destruct (@weq TagBits (tag (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
+          rewrite <- ?isEq in *; clear isEq;
+          idtac |] end.
+    rewrite Word.combine_split in *.
+          rewrite ?Word.combine_split in *;
+          rewrite ?app_nil_r in *;
+          [rewrite ?isEq' in *; clear isEq'; rewrite ?eq_weq in * |
+           try match goal with
+                 | H: context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (?tag (split1 IdxBits TagBits ?a)))] |- _ =>
+                   destruct_combine a neq_combine1 neq'
+                 | |- context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                        (?tag (split1 IdxBits TagBits ?a)))] =>
+                   destruct_combine a neq_combine1 neq'
+               end
+          ] |
+         try match goal with
+               | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a')
+                                                                     (tag (split1 IdxBits TagBits a')))] |- _ =>
+                 destruct_combine a' neq_combine2 neq
+               | |- context[@weq (IdxBits + TagBits) ?a (Word.combine (split1 IdxBits TagBits ?a)
+                                                                      (?tag (split1 IdxBits TagBits ?a)))] =>
+                 destruct_combine a neq_combine2 neq
+             end]
+    end.
+
+
+    destruct_idx_tag.
+    try rewrite_getCs.
+    rewrite Word.combine_split in *.
+    rewrite eq_weq in *.
+    
+    match goal with
+      | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] =>
+(*      | H: context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
+                   then if @weq TagBits (?tag (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
+                   else _] |- _ => destruct_idx_tag_base a a' *)
+    end.
+
+    destruct_idx_tag.
 
     rewrite getCs_full in *.
     simpl.
