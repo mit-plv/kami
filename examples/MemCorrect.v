@@ -58,6 +58,8 @@ Section MemCorrect.
   Lemma memCache_refines_memAtomic: modFromMeta memCache <<=[dropFirstElts] memAtomicWoQ.
   Proof.
     ketrans_r; [apply memCache_refines_nmemCache|].
+    ketrans_l; [|apply memAtomicWoQInl_refines_memAtomicWoQ].
+
     apply cheat. (* vmurali TODO *)
   Qed.
 

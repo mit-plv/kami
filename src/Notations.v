@@ -361,6 +361,7 @@ Notation "'Call' name : t <- meth () ; cont " :=
   (GMCall (lretT := t) (Build_NameRecIdx false (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+
 Notation "'Calli' meth ( arg ) ; cont " :=
   (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl))
           (attrType meth) arg%kami_expr (fun _ => cont))
@@ -385,6 +386,32 @@ Notation "'Calli' name : t <- meth () ; cont " :=
   (GMCall (lretT := t) (Build_NameRecIdx true (Build_NameRec (attrName meth) eq_refl)) (attrType meth)
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+
+Notation "'Calli' { meth | pf } ( arg ) ; cont " :=
+  (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) pf))
+          (attrType meth) arg%kami_expr (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name <- { meth | pf } ( arg ) ; cont " :=
+  (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) pf))
+          (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name : t <- { meth | pf } ( arg ) ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx true (Build_NameRec (attrName meth) pf))
+          (attrType meth) arg%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Calli' { meth | pf } () ; cont " :=
+  (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) pf)) (attrType meth)
+          (Const _ Default) (fun _ => cont))
+    (at level 12, right associativity, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name <- { meth | pf } () ; cont " :=
+  (GMCall (Build_NameRecIdx true (Build_NameRec (attrName meth) pf)) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+Notation "'Calli' name : t <- { meth | pf } () ; cont " :=
+  (GMCall (lretT := t) (Build_NameRecIdx true (Build_NameRec (attrName meth) pf)) (attrType meth)
+          (Const _ Default) (fun name => cont))
+    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+
 Notation "'ILET' name ; cont " :=
   (GIndex (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
