@@ -1310,6 +1310,13 @@ Proof.
   destruct H; intuition auto.
 Qed.
 
+Lemma getNatListToN_le:
+  forall i n, In i (getNatListToN n) <-> (i <= n)%nat.
+Proof.
+  induction n; simpl; split; intros; intuition.
+  inv H; intuition idtac.
+Qed.
+
 Lemma getRegInits_modFromMeta_concat:
   forall mm1 mm2,
     getRegInits (modFromMeta (mm1 +++ mm2)) =
@@ -1710,5 +1717,30 @@ Proof.
   repeat rewrite map_app, concat_app.
   rewrite getCallsR_app, getCallsM_app.
   equivList_app_tac.
+Qed.
+
+Lemma repRule_in_exists:
+  forall {A} rn rb (strA: A -> string) {B} (getConstK: A -> ConstT B) gr s ls,
+    In (rn :: rb)%struct (repRule strA getConstK gr s ls) ->
+    exists i,
+      In i ls /\
+      rn = addIndexToStr strA i s /\
+      rb = getActionFromGen strA getConstK gr i.
+Proof.
+  induction ls; simpl; intros; [inv H|].
+  destruct H.
+  - inv H; exists a; repeat split; auto.
+  - specialize (IHls H); dest; subst.
+    eexists; repeat split; auto.
+Qed.
+
+Lemma repMeth_in:
+  forall {A} i (strA: A -> string) {B} (getConstK: A -> ConstT B) fn fb ls,
+    In i ls ->
+    In ((addIndexToStr strA i fn) :: (getMethFromGen strA getConstK fb i))%struct
+       (repMeth strA getConstK fb fn ls).
+Proof.
+  induction ls; simpl; intros; auto.
+  inv H; auto.
 Qed.
 

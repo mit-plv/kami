@@ -812,6 +812,20 @@ Section Specializable.
     apply spDom_calls.
   Qed.
 
+  Lemma specializeMod_rules_in:
+    forall rn rb i,
+      In (rn :: rb)%struct (getRules m) ->
+      In ((spf i rn) :: (fun ty => Renaming.renameAction (specializer m i) (rb ty)))%struct
+         (getRules (specializeMod m i)).
+  Proof.
+    intros; unfold specializeMod.
+    rewrite renameGetRules.
+    rewrite <-specializer_dom with (m:= m); auto.
+    - apply renameInRules; auto.
+    - apply spDom_rules.
+      apply in_map with (f:= @attrName _) in H; auto.
+  Qed.
+
   Lemma specializeMod_dom_indexed:
     forall i s, In s (spDom (specializeMod m i)) ->
                 exists t, s = t __ i.

@@ -114,27 +114,31 @@ Section MemInst.
   Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := RsToProc lgDataBytes.
 
+  Definition memInstExec {ty} : ty (Struct RqFromProc) -> GenActionT Void ty (Struct RsToProc) :=
+    fun (a: ty (Struct RqFromProc)) =>
+      (If !#a!RqFromProc@."op" then (* load *)
+         Read memv <- "mem";
+         LET ldval <- #memv@[#a!RqFromProc@."addr"];
+         Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
+       else (* store *)
+         Read memv <- "mem";
+         Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
+         Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
+       as na;
+       Ret #na)%kami_gen.
+
   Definition memInstM := META {
     Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
 
     with Repeat Method till n by "exec" (a : Struct RqFromProc) : Struct RsToProc :=
-      If !#a!RqFromProc@."op" then (* load *)
-        Read memv <- "mem";
-        LET ldval <- #memv@[#a!RqFromProc@."addr"];
-        Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
-      else (* store *)
-        Read memv <- "mem";
-        Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
-        Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
-      as na;
-      Ret #na
+      (memInstExec a)
   }.
     
   Definition memInst := modFromMeta memInstM.
   
 End MemInst.
 
-Hint Unfold RqFromProc RsToProc : MethDefs.
+Hint Unfold RqFromProc RsToProc memInstExec : MethDefs.
 Hint Unfold memInstM memInst : ModuleDefs.
 
 (* The module definition for Pinst *)

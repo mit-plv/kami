@@ -488,6 +488,31 @@ Proof.
   apply M.subtractKV_idempotent.
 Qed.
 
+Lemma hide_empty:
+  forall a,
+    hide {| annot := a; defs := []%fmap; calls := []%fmap |} =
+    {| annot := a; defs := []%fmap; calls := []%fmap |}.
+Proof. reflexivity. Qed.
+
+Lemma step_empty:
+  forall m o a,
+    (a = None \/ a = Some None) ->
+    Step m o []%fmap {| annot := a; defs := []%fmap; calls := []%fmap |}.
+Proof.
+  intros; apply step_consistent.
+  rewrite <-hide_empty.
+  constructor; [|unfold wellHidden; cbn; split; apply M.KeysDisj_empty].
+
+  destruct H; subst.
+  - constructor.
+  - eapply SubstepsCons.
+    + apply SubstepsNil.
+    + apply EmptyRule.
+    + repeat split; auto.
+    + reflexivity.
+    + reflexivity.
+Qed.
+
 Lemma step_hide:
   forall m o u l,
     Step m o u l -> hide l = l.

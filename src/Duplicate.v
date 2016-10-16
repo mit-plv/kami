@@ -199,6 +199,62 @@ Section DuplicateFacts.
     - apply duplicate_specializeMod_disj_regs; auto.
   Qed.
 
+  Lemma getRegInits_duplicate_nil:
+    forall m n,
+      Specializable m -> getRegInits m = nil -> getRegInits (duplicate m n) = nil.
+  Proof.
+    intros.
+    match goal with
+    | [ |- ?P ] => assert (namesOf (getRegInits (duplicate m n)) = nil -> P) as Hm
+    end.
+    { intros; unfold namesOf in H1; eapply map_eq_nil; eauto. }
+    apply Hm; clear Hm.
+    
+    induction n.
+    - simpl; rewrite specializeMod_regs; auto.
+      rewrite H0; reflexivity.
+    - simpl; rewrite namesOf_app.
+      rewrite IHn; rewrite app_nil_r.
+      rewrite specializeMod_regs; auto.
+      rewrite H0; reflexivity.
+  Qed.
+
+  Lemma getDefs_duplicate_nil:
+    forall m n, Specializable m -> getDefs m = nil -> getDefs (duplicate m n) = nil.
+  Proof.
+    intros; induction n; simpl.
+    - rewrite specializeMod_defs; auto.
+      rewrite H0; reflexivity.
+    - rewrite getDefs_app.
+      rewrite IHn; rewrite app_nil_r.
+      rewrite specializeMod_defs; auto.
+      rewrite H0; reflexivity.
+  Qed.
+
+  Lemma getDefsBodies_duplicate_nil:
+    forall m n, Specializable m -> getDefsBodies m = nil -> getDefsBodies (duplicate m n) = nil.
+  Proof.
+    intros.
+    assert (getDefs m = nil) by (unfold getDefs; rewrite H0; reflexivity).
+    apply getDefs_duplicate_nil with (n:= n) in H1; auto.
+    eapply map_eq_nil with (f:= @attrName _); eauto.
+  Qed.
+
+  Lemma getRules_duplicate_in:
+    forall m rn rb i n,
+      Specializable m ->
+      In (rn :: rb)%struct (getRules m) ->
+      le i n ->
+      In ((rn __ i) :: (fun ty => (Renaming.renameAction (specializer m i) (rb ty))))%struct
+         (getRules (duplicate m n)).
+  Proof.
+    induction n; simpl; intros.
+    - inv H1; apply specializeMod_rules_in; auto.
+    - inv H1; [|apply in_or_app; right; auto].
+      apply in_or_app; left.
+      apply specializeMod_rules_in; auto.
+  Qed.
+
   Section TwoModules1.
     Variables (m1 m2: Modules).
     Hypotheses (Hsp1: Specializable m1)
