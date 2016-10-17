@@ -63,5 +63,112 @@ Section MemCorrect.
     apply cheat. (* vmurali TODO *)
   Qed.
 
+  (** Converting memCache to ConcatMod *)
+
+  Require Import Kami.ModuleBoundEx.
+  
+  Ltac toModules m :=
+    match m with
+    | (?m1 +++ ?m2) =>
+      let nm1 := toModules m1 in
+      let nm2 := toModules m2 in
+      constr:(ConcatMod nm1 nm2)
+    | _ => let um := eval red in m in
+               let nm := toModules um in constr:nm
+    | _ => constr:(modFromMeta m)
+    end.
+
+  Definition memCacheMod: Modules.
+    let nm := toModules memCache in (exact nm).
+  Defined.
+
+  Lemma memCacheMod_refines_memCache: memCacheMod <<== modFromMeta memCache.
+  Proof. (* SKIP_PROOF_ON
+    ketrans; [|apply modFromMeta_comm_2].
+    kmodular;
+      [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+      |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+      | |].
+    - ketrans; [|apply modFromMeta_comm_2].
+      kmodular;
+        [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+        |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+        | |].
+      + ketrans; [|apply modFromMeta_comm_2].
+        kmodular;
+          [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+          |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+          | |].
+        * ketrans; [|apply modFromMeta_comm_2].
+          kmodular;
+            [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+            |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+            | |].
+          { krefl. }
+          { ketrans; [|apply modFromMeta_comm_2].
+            kmodular;
+              [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+              |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+              | |].
+            { ketrans; [|apply modFromMeta_comm_2].
+              kmodular;
+                [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+                |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+                | |].
+              { krefl. }
+              { krefl. }
+            }
+            { krefl. }
+          }
+        * ketrans; [|apply modFromMeta_comm_2].
+          kmodular;
+            [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+            |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+            | |].
+          { ketrans; [|apply modFromMeta_comm_2].
+            kmodular;
+              [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+              |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+              | |].
+            { krefl. }
+            { krefl. }
+          }
+          { krefl. }
+      + ketrans; [|apply modFromMeta_comm_2].
+        kmodular;
+          [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+          |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+          | |].
+        * krefl.
+        * ketrans; [|apply modFromMeta_comm_2].
+          kmodular;
+            [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+            |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+          | |].
+          { ketrans; [|apply modFromMeta_comm_2].
+            kmodular;
+              [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+              |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+              | |].
+            { krefl. }
+            { krefl. }
+          }
+          { krefl. }
+    - ketrans; [|apply modFromMeta_comm_2].
+      kmodular;
+        [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+        |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+        | |].
+      + ketrans; [|apply modFromMeta_comm_2].
+        kmodular;
+          [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
+          |kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren))
+          | |].
+        * krefl.
+        * krefl.
+      + krefl.
+        END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
 End MemCorrect.
 

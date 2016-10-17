@@ -18,13 +18,13 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
 
 (** p4st + mem (memAtomic or memCache) test *)
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
-Require Import Ex.MemAtomic Ex.MemCache.
+Require Import Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 
 (* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 5) *)
 Definition idxBits := 2.
 Definition tagBits := 2.
 Definition lgNumDatas := 1.
-Definition lgNumChildren := 1. (* 2 cores *)
+Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
@@ -44,14 +44,16 @@ Definition p4st := p4st rv32iGetOptype
                         (@f2dNextPcI _ _) (@f2dEpochI _ _)
                         (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _).
 
-Definition p4stN := duplicate p4st lgNumChildren.
+Definition p4stN := duplicate p4st (Word.wordToNat (Word.wones lgNumChildren)).
 
-Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes lgNumChildren.
-(* Definition memCache := modFromMeta (memCache idxBits tagBits lgNumDatas rv32iLgDataBytes Void *)
-(*                                              fifoSize lgNumChildren). *)
+Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes
+                                  (Word.wordToNat (Word.wones lgNumChildren)).
+(* Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iLgDataBytes (Bit 1) *)
+(*                                    fifoSize lgNumChildren. *)
+(* Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataBytes lgNumChildren. *)
 
 Definition procMemAtomic := (p4stN ++ memAtomic)%kami.
-(* Definition procMemCache := (p4stN ++ memCache)%kami. *)
+(* Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami. *)
 
 (** MODIFY targetPgm to your target program *)
 Definition targetPgm := pgmLwSwTest 3 5.
