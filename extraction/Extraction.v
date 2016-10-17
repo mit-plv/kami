@@ -14,10 +14,11 @@ Unset Extraction AutoInline.
  * 3) Compile.
  *)
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
-        Kami.Notations Kami.Synthesize Ex.Isa.
+        Kami.Notations Kami.Synthesize Ex.Isa Ex.IsaTest.
 
 (** p4st + memAtomic test *)
-Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec Ex.MemAtomic.
+Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
+Require Import Ex.MemAtomic Ex.MemCache.
 
 (* AddrSize = IdxBits + TagBits + LgNumDatas *)
 Definition idxBits := 2.
@@ -45,9 +46,13 @@ Definition p4st := p4st rv32iGetOptype
                         (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _).
 
 Definition p4stN := duplicate p4st lgNumChildren.
+
 Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes lgNumChildren.
+(* Definition memCache := modFromMeta (memCache idxBits tagBits lgNumDatas lgDataBytes Void *)
+(*                                              fifoSize lgNumChildren). *)
 
 Definition procMemAtomic := (p4stN ++ memAtomic)%kami.
+(* Definition procMemCache := (p4stN ++ memCache)%kami. *)
 
 (** MODIFY targetPgm to your target program *)
 Definition targetPgm := pgmFibonacci 10.

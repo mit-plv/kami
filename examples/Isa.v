@@ -13,7 +13,7 @@ Require Import Ex.MemTypes Ex.SC.
  * - TOHOST
  *)
 Section RV32I.
-  Definition rv32iAddrSize := 4. (* 2^4 = 16 memory cells *)
+  Definition rv32iAddrSize := 5. (* 2^5 = 32 program size *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
@@ -524,90 +524,4 @@ Section UnitTests.
     natToWord _ 5 := eq_refl.
   
 End UnitTests.
-
-Section Examples.
-
-  Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
-    refine (ConstVector _).
-    refine (VecNext
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
-    - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ n)))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw (J (natToWord _ 15)))). (* 3 + 15 == 2 *)
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-  Defined.
-
-  Definition pgmBranchTest: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
-    refine (ConstVector _).
-    refine (VecNext
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
-    - exact (ConstBit (rv32iToRaw (LI x3 (natToWord _ 3)))).
-    - exact (ConstBit (rv32iToRaw (LI x4 (natToWord _ 5)))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x4))).
-    - exact (ConstBit (rv32iToRaw (BLT x3 x4 (natToWord _ 6)))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x0))).
-    - exact (ConstBit (rv32iToRaw (TOHOST x3))).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-    - exact (ConstBit (rv32iToRaw NOP)).
-  Defined.
-  
-  Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
-    refine (ConstVector _).
-    refine (VecNext
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-              (VecNext
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                 (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))).
-    - (* 00 *) exact (ConstBit (rv32iToRaw (LI x21 (natToWord _ n)))).
-    - (* 01 *) exact (ConstBit (rv32iToRaw (BLEZ x21 (natToWord _ 11)))). (* to 12 *)
-    - (* 02 *) exact (ConstBit (rv32iToRaw (LI x9 (natToWord _ 1)))).
-    - (* 03 *) exact (ConstBit (rv32iToRaw (MV x21 x6))).
-    - (* 04 *) exact (ConstBit (rv32iToRaw (MV x9 x8))).
-    - (* 05 *) exact (ConstBit (rv32iToRaw (MV x9 x7))).
-    - (* 06 *) exact (ConstBit (rv32iToRaw (ADD x7 x8 x5))).
-    - (* 07 *) exact (ConstBit (rv32iToRaw (ADDI x9 x9 (natToWord _ 1)))).
-    - (* 08 *) exact (ConstBit (rv32iToRaw (MV x8 x7))).
-    - (* 09 *) exact (ConstBit (rv32iToRaw (MV x5 x8))).
-    - (* 10 *) exact (ConstBit (rv32iToRaw (BNE x6 x9 (natToWord _ 12)))). (* 10 + 12 == 6 *)
-    - (* 11 *) exact (ConstBit (rv32iToRaw (TOHOST x5))).
-    - (* 12 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 3)))). (* to 15 *)
-    - (* 13 *) exact (ConstBit (rv32iToRaw (LI x5 (natToWord _ 1)))).
-    - (* 14 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 13)))). (* 14 + 13 == 11 *)
-    - (* 15 *) exact (ConstBit (rv32iToRaw NOP)).
-    (* - (* 15 *) exact (ConstBit (rv32iToRaw (J (natToWord _ 0)))). (* loop *) *)
-  Defined.
-
-End Examples.
 
