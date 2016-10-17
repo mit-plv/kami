@@ -332,6 +332,7 @@ Section MemCacheInl.
                          rq (RqTP !! from) = $ Msi.Inv
     }.
 
+  
   Lemma nmemCache_invariants_same' s a c x (pf: c <> x) k v:
     nmemCache_invariants_rec s a ($ c) c ->
     nmemCache_invariants_rec s#[k __ x |--> v] a ($ c) c.
@@ -638,14 +639,15 @@ Section MemCacheInl.
         end.
   
 
-  Lemma getCs_tag_match_getCs cs tag a a' upd:
+  Lemma getCs_tag_match_getCs cs tag a a':
     tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a ->
-    getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a)
-                      then upd
-                      else cs a'') tag a' =
-    if weq a' a
-    then upd
-    else getCs cs tag a'.
+    forall upd,
+      getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                        then upd
+                        else cs a'') tag a' =
+      if weq a' a
+      then upd
+      else getCs cs tag a'.
   Proof.
     intros.
     unfold getCs.
@@ -869,6 +871,8 @@ Section MemCacheInl.
                    rewrite <- ?eq1 in *;
                    rewrite <- ?eq2 in *;
                    simpl in *
+             | H: In ?x (?a :: nil) |- _ =>
+               apply in_single in H
              | [H: forall (beg: ?begT) (v: ?vT),
                     ?beg' ++ (?v' :: nil) = beg ++ (v :: nil) -> _ |- _] =>
                specialize (H beg' v' eq_refl)
@@ -924,7 +928,7 @@ Section MemCacheInl.
 
   Ltac destruct_addr_base a a' :=
     let isEq := fresh in
-    destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | assumption].
+    destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | try assumption].
 
   Ltac destruct_addr :=
     match goal with
@@ -1055,13 +1059,149 @@ Section MemCacheInl.
            end.
   Qed.
 
+  Lemma getCs_tag cs tag a a':
+    tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a \/
+    cs (split1 IdxBits TagBits a) = WO~0~0 ->
+    forall upd,
+      getCs
+        (fun a'' =>
+           if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+        (fun a'' =>
+           if weq a'' (split1 IdxBits TagBits a)
+           then split2 IdxBits TagBits a
+           else tag a'') a' = if weq a' a then upd else getCs cs tag a'.
+  Proof.
+    intros.
+    unfold getCs.
+    repeat match goal with
+             | |- context[if ?p then _ else _] => destruct p; try reflexivity
+           end.
+    - rewrite <- (@Word.combine_split IdxBits TagBits a') in n.
+      rewrite <- (@Word.combine_split IdxBits TagBits a) in n.
+      rewrite e, e0 in *.
+      tauto.
+    - rewrite <- (@Word.combine_split IdxBits TagBits a') in n.
+      rewrite <- (@Word.combine_split IdxBits TagBits a) in n.
+      rewrite e, e0 in *.
+      tauto.
+    - subst; tauto.
+    - tauto.
+    - subst.
+      rewrite eq_weq in *.
+      tauto.
+    - match goal with
+        | H: context[if ?p then _ else _] |- _ => destruct p
+      end.
+      + rewrite e0 in *.
+        destruct H.
+        * rewrite H in *.
+          tauto.
+        * rewrite H; reflexivity.
+      + tauto.
+  Qed.
+
+  Ltac rewrite_getCs_tag_help cs tag a a' upd H :=
+    let sth := fresh in
+    assert (sth: tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a \/
+                 cs (split1 IdxBits TagBits a) = WO~0~0) by tauto;
+      match H with
+        | 1 => rewrite (@getCs_tag cs tag a a' sth)
+        | _ => rewrite (@getCs_tag cs tag a a' sth) in H
+      end;
+      repeat match goal with
+               | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                   (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                                               then split2 IdxBits TagBits a
+                                               else tag a'') a'] |- _ =>
+                 rewrite (@getCs_tag cs tag a a' sth) in H'
+               | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                  (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                                              then split2 IdxBits TagBits a
+                                              else tag a'') a'] =>
+                 rewrite (@getCs_tag cs tag a a' sth)
+             end.
+
+  Ltac rewrite_getCs_full_help cs tag a a' upd H :=
+    match H with
+      | 1 => rewrite (@getCs_full cs tag a a')
+      | _ => rewrite (@getCs_full cs tag a a') in H
+    end;
+    repeat match goal with
+             | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                 tag a'] |- _ =>
+               rewrite (@getCs_full cs tag a a') in H'
+             | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                tag a'] =>
+               rewrite (@getCs_full cs tag a a')
+           end.
+
+  Ltac rewrite_getCs_tag_match_getCs_help cs tag a a' upd H' :=
+    (repeat match goal with
+              | H: context[getCs
+                             (fun a'' : word IdxBits =>
+                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] |- _ =>
+                rewrite (@getCs_tag_match_getCs cs tag a a' H') in H
+              | |- context[getCs
+                             (fun a'' : word IdxBits =>
+                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] =>               
+                rewrite (@getCs_tag_match_getCs cs tag a a' H')
+            end); destruct_addr.
+
+  (*
+  Ltac rewrite_getCs :=
+    match goal with
+      | H: context[getCs
+                     (fun a'' : word IdxBits =>
+                        if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'],
+           H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+        rewrite (@getCs_tag_match_getCs cs tag a a' H') in H;
+          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'
+      | H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |-
+        context[getCs
+                  (fun a'' : word IdxBits =>
+                     if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'] =>
+        rewrite (@getCs_tag_match_getCs cs tag a a' H');
+          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'          
+      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
+                                     then split2 IdxBits TagBits ?a
+                                     else ?tag a'') ?a'] |- _ =>
+        try rewrite_getCs_tag_help cs tag a a' upd H; destruct_addr
+      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
+                                     then split2 IdxBits TagBits ?a
+                                     else ?tag a'') ?a'] =>
+        try rewrite_getCs_tag_help cs tag a a' upd 1; destruct_addr
+      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         ?tag ?a'] |- _ =>
+        try rewrite_getCs_full_help cs tag a a' upd H; try destruct_idx_tag
+      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         ?tag ?a'] =>
+        try rewrite_getCs_full_help cs tag a a' upd 1; try destruct_idx_tag
+    end.
+   *)
+
   Ltac rewrite_getCs :=
     match goal with
       | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
         (rewrite getCs_tag_match_getCs in * by (apply H)); destruct_addr
+      | _ => rewrite getCs_tag in * by tauto; destruct_addr
       | _ => rewrite getCs_full in *; try destruct_idx_tag
     end.
 
+  Ltac existentials :=
+    repeat match goal with
+             | |- (exists x, In x (?ls ++ [?a]) /\ _) \/ _ =>
+               left; exists a; rewrite app_or;
+               simpl; unfold Lib.VectorFacts.Vector_find; simpl;
+               intuition (discriminate || word_omega)
+             | |- _ \/ (exists x, In x (?ls ++ [?a]) /\ _) =>
+               right; exists a; rewrite app_or;
+               simpl; unfold Lib.VectorFacts.Vector_find; simpl;
+               intuition (discriminate || word_omega)
+           end.
+
+  
   Ltac doAll :=
     autorewrite with invariant in *;
     unfold isCWait, isPWait in *;
@@ -1090,8 +1230,9 @@ Section MemCacheInl.
                            let isEq := fresh in
                            let nEq := fresh in
                            destruct p as [isEq | nEq];
-                         [rewrite isEq in *|]; intuition (discriminate || word_omega)
+                         [rewrite ?isEq in *|]; intuition (try (discriminate || word_omega))
                        end;
+                   existentials;
                    try (firstorder (discriminate || word_omega)))).
   
   Ltac doMeta :=
@@ -1100,84 +1241,6 @@ Section MemCacheInl.
             | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
           end; invariant_simpl;
       simplMapUpds doAll.
-
-  Lemma nmemCache_invariants_hold_4 s a u cs:
-    nmemCache_invariants s ->
-    writeback metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
-
-  (*
-  Lemma nmemCache_invariants_hold_5 s a u cs:
-    nmemCache_invariants s ->
-    upgRq metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-    apply cheat.
-  Qed.
-
-   *)
-
-
-  
-  Lemma nmemCache_invariants_hold_7 s a u cs:
-    nmemCache_invariants s ->
-    ld metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
-
-  Lemma nmemCache_invariants_hold_9 s a u cs:
-    nmemCache_invariants s ->
-    drop metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
-  
-  Lemma nmemCache_invariants_hold_8 s a u cs:
-    nmemCache_invariants s ->
-    st metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
-
-  Lemma nmemCache_invariants_hold_10 s a u cs:
-    nmemCache_invariants s ->
-    pProcess metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-  Qed.
 
   Lemma nmemCache_invariants_hold_1 s a u cs:
     nmemCache_invariants s ->
@@ -1215,6 +1278,90 @@ Section MemCacheInl.
     doMeta.
   Qed.
 
+  Lemma nmemCache_invariants_hold_4 s a u cs:
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_5 s a u cs:
+    nmemCache_invariants s ->
+    upgRq metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_6 s a u cs:
+    nmemCache_invariants s ->
+    upgRs metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    apply cheat.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_7 s a u cs:
+    nmemCache_invariants s ->
+    ld metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_8 s a u cs:
+    nmemCache_invariants s ->
+    st metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+  
+  Lemma nmemCache_invariants_hold_10 s a u cs:
+    nmemCache_invariants s ->
+    pProcess metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
     upgRq metaIs a ->
@@ -1226,6 +1373,36 @@ Section MemCacheInl.
   Proof.
     doMeta.
     Focus 3.
+    let isEq := fresh in
+    match goal with
+      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
+        destruct_addr_base a a'
+      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
+        destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | try assumption]
+    end.
+    Focus 2.
+        destruct_addr_base a a'
+    end.
+
+    destruct_addr.
+    try match goal with
+          | |- context[if ?p then _ else _] =>
+            let isEq := fresh in
+            let nEq := fresh in
+            destruct p as [isEq | nEq];
+              [rewrite isEq in *|]; intuition (discriminate || word_omega)
+        end
+
+    match goal with
+      | |- context[if ?p then _ else _] =>
+        let isEq := fresh in
+        let nEq := fresh in
+        destruct p as [isEq | nEq];
+          [try pose isEq as murali|]
+    end.
+          [rewrite ?isEq in *|]; intuition (discriminate || word_omega || idtac)
+    end.
+    try (intuition (discriminate || word_omega));
     simpl.
   Qed.
 
