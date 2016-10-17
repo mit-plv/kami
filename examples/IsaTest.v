@@ -25,6 +25,21 @@ Ltac init_pgm :=
 Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
 
+Definition pgmLwSwTest (n m: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+  init_pgm.
+  line 0 (LI x3 (natToWord _ n)).
+  line 1 (LI x4 (natToWord _ m)).
+  line 2 (SW x0 x3 (natToWord _ 0)).
+  line 3 (SW x0 x4 (natToWord _ 1)).
+  line 4 (LW x0 x5 (natToWord _ 0)).
+  line 5 (LW x0 x6 (natToWord _ 1)).
+  line 6 (ADD x5 x6 x7).
+  line 7 (TOHOST x7).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+Defined.
+
 Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
   init_pgm.
   line 0 (LI x3 (natToWord _ n)).

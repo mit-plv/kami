@@ -16,16 +16,15 @@ Unset Extraction AutoInline.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
         Kami.Notations Kami.Synthesize Ex.Isa Ex.IsaTest.
 
-(** p4st + memAtomic test *)
+(** p4st + mem (memAtomic or memCache) test *)
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemAtomic Ex.MemCache.
 
-(* AddrSize = IdxBits + TagBits + LgNumDatas *)
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 5) *)
 Definition idxBits := 2.
-Definition tagBits := 1.
+Definition tagBits := 2.
 Definition lgNumDatas := 1.
 Definition lgNumChildren := 1. (* 2 cores *)
-Definition lgDataBytes := idxBits + tagBits + lgNumDatas.
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
@@ -48,14 +47,14 @@ Definition p4st := p4st rv32iGetOptype
 Definition p4stN := duplicate p4st lgNumChildren.
 
 Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes lgNumChildren.
-(* Definition memCache := modFromMeta (memCache idxBits tagBits lgNumDatas lgDataBytes Void *)
+(* Definition memCache := modFromMeta (memCache idxBits tagBits lgNumDatas rv32iLgDataBytes Void *)
 (*                                              fifoSize lgNumChildren). *)
 
 Definition procMemAtomic := (p4stN ++ memAtomic)%kami.
 (* Definition procMemCache := (p4stN ++ memCache)%kami. *)
 
 (** MODIFY targetPgm to your target program *)
-Definition targetPgm := pgmFibonacci 10.
+Definition targetPgm := pgmLwSwTest 3 5.
 
 (** MODIFY targetM to your target module *)
 Definition targetProcM := procMemAtomic.

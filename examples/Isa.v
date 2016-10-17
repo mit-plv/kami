@@ -13,7 +13,7 @@ Require Import Ex.MemTypes Ex.SC.
  * - TOHOST
  *)
 Section RV32I.
-  Definition rv32iAddrSize := 5. (* 2^5 = 32 program size *)
+  Definition rv32iAddrSize := 5. (* 2^5 = 32 memory cells *)
   Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
