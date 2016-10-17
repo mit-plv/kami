@@ -504,6 +504,8 @@ Section Invariants.
         rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
         rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
+      + kinv_dest_custom p3st_inv_tac.
+        rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
 
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
@@ -537,6 +539,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
         rewrite H10 in H8; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -580,6 +583,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
 
         END_SKIP_PROOF_ON *) apply cheat.
@@ -648,6 +652,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
 
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
@@ -685,6 +690,8 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac;
           try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
+      + kinv_dest_custom p3st_inv_tac;
+          try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
 
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
@@ -705,6 +712,7 @@ Section Invariants.
       kinvert.
       + mred.
       + mred.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -758,6 +766,10 @@ Section Invariants.
                intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac;
+          try (find_if_inside; [elim H21; auto|];
+               find_if_inside; [elim H22; auto|];
+               intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac;
           try (find_if_inside; [elim H21; auto|];
                find_if_inside; [elim H22; auto|];

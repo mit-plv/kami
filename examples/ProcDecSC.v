@@ -45,6 +45,7 @@ Section ProcDecSC.
   Definition pdec_pinst_ruleMap (o: RegsT): string -> option string :=
     "execToHost" |-> "execToHost";
       "execNm"     |-> "execNm";
+      "execNmZ"    |-> "execNmZ";
       "processSt"  |-> "execSt";
       "reqLdZ"     |-> "execLdZ";
       "processLd"  |-> "execLd"; ||.

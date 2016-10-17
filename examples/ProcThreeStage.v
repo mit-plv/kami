@@ -525,7 +525,7 @@ Section ProcThreeStage.
   End FetchDecode.
 
   Section Execute.
-    
+
     Definition executer := MODULE {
       Rule "execNm" :=
         Call rf <- getRf2();
@@ -695,8 +695,29 @@ Section ProcThreeStage.
 
         Assert d2eOpType _ d2e == $$opNm;
         LET dst <- d2eDst _ d2e;
+        Assert (#dst != $0);
         LET val <- e2wVal _ e2w;
         Call setRf(#rf@[#dst <- #val]);
+        Call sbRemove(#dst);
+        LET ppc <- d2eCurPc _ d2e;
+        LET npcp <- d2eNextPc _ d2e;
+        LET rawInst <- d2eRawInst _ d2e;
+        checkNextPc ppc npcp rf rawInst
+
+      with Rule "wbNmZ" :=
+        Read stall <- "stall";
+        Assert !#stall;
+        Call rf <- getRf2();
+        Call e2w <- e2wDeq();
+        LET d2e <- e2wDecInst _ e2w;
+
+        LET fEpoch <- d2eEpoch _ d2e;
+        Call eEpoch <- getEpoch();
+        Assert (#fEpoch == #eEpoch);
+
+        Assert d2eOpType _ d2e == $$opNm;
+        LET dst <- d2eDst _ d2e;
+        Assert (#dst == $0);
         Call sbRemove(#dst);
         LET ppc <- d2eCurPc _ d2e;
         LET npcp <- d2eNextPc _ d2e;
