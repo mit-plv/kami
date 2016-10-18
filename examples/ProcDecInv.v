@@ -166,6 +166,8 @@ Section Invariants.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 0.
       + kinv_dest_custom procDec_inv_tac.
+        procDec_inv_next 0.
+      + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 2.
       + kinv_dest_custom procDec_inv_tac.
         procDec_inv_next 2.

@@ -149,8 +149,21 @@ Section ProcDec.
       LET src2 <- getSrc2 _ rawInst;
       LET val2 <- #rf@[#src2];
       LET dst <- getDst _ rawInst;
+      Assert (#dst != $0);
       LET execVal <- exec _ val1 val2 ppc rawInst;
       Write "rf" <- #rf@[#dst <- #execVal];
+      nextPc ppc rf rawInst
+
+    with Rule "execNmZ" :=
+      Read stall <- "stall";
+      Assert !#stall;
+      Read ppc <- "pc";
+      Read rf <- "rf";
+      Read pgm <- "pgm";
+      LET rawInst <- #pgm @[ #ppc ];
+      Assert (getOptype _ rawInst == $$opNm);
+      LET dst <- getDst _ rawInst;
+      Assert (#dst == $0);
       nextPc ppc rf rawInst
   }.
 

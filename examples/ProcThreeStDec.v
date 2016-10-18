@@ -123,7 +123,8 @@ Section ProcThreeStDec.
       "repLd" |-> "repLd";
       "repSt" |-> "repSt";
       "execToHost" |-> "execToHost";
-      "wbNm" |-> "execNm"; ||.
+      "wbNm" |-> "execNm";
+      "wbNmZ" |-> "execNmZ"; ||.
   Hint Unfold p3st_pdec_ruleMap: MethDefs.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
