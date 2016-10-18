@@ -56,7 +56,7 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataByt
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY targetPgm to your target program *)
-Definition targetPgm := pgmXorTest.
+Definition targetPgm := pgmLwSwTest2.
 
 (** MODIFY targetM to your target module *)
 Definition targetProcM := procMemCache.
