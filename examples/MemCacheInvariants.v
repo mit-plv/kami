@@ -1362,6 +1362,63 @@ Section MemCacheInl.
     doMeta.
   Qed.
 
+  Show Ltac Profile.
+
+  Lemma nmemCache_invariants_hold_11 s a u cs:
+    nmemCache_invariants s ->
+    rqFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+    simpl.
+  Qed.
+
+(*
+  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
+  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
+  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
+
+  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
+       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
+
+  Hint Rewrite rqFromCToP_revcons : invariant.
+  Hint Resolve in_app_or in_or_app in_single.
+  Hint Resolve f_equal app_single_r in_pre_suf in_single in_app_or app_cons_not_nil rsLessTo_less_app rsLessTo_in_I_last.
+
+*)
+
+
+  
+  Lemma nmemCache_invariants_hold_12 s a u cs:
+    nmemCache_invariants s ->
+    rsFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_13 s a u cs:
+    nmemCache_invariants s ->
+    fromPToCRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+  Qed.
+
+
+  
   Lemma nmemCache_invariants_hold_5 s a u cs:
     nmemCache_invariants s ->
     upgRq metaIs a ->
@@ -2438,20 +2495,6 @@ Take care of the following:
 7. destruct leftovers
 *)
 
-
-(*
-  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
-  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
-  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
-
-  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
-       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
-
-  Hint Rewrite rqFromCToP_revcons : invariant.
-  Hint Resolve in_app_or in_or_app in_single.
-  Hint Resolve f_equal app_single_r in_pre_suf in_single in_app_or app_cons_not_nil rsLessTo_less_app rsLessTo_in_I_last.
-
-*)
 
 
 
