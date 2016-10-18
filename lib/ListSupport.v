@@ -256,3 +256,13 @@ Proof.
   unfold iff; simpl.
   intuition auto.
 Qed.
+
+Lemma revcons_or A: forall l (a v: A), iff (In a (l ++ [v])) (a = v \/ In a l).
+Proof.
+  unfold iff; simpl; constructor; intros.
+  - apply in_revcons in H.
+    intuition auto.
+  - apply in_revcons_converse.
+    intuition auto.
+Qed.
+  

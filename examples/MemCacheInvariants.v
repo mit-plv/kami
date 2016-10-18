@@ -5,6 +5,112 @@ Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
         Coq.Program.Basics Ex.Names Lib.FinNotations.
 
+  (*
+    Ltac destruct_idx_tag_base a a' t t' :=
+      let isEq := fresh in
+      let isEq' := fresh in
+      destruct (@weq IdxBits a a') as [isEq | ?];
+        [destruct (@weq TagBits t t') as [isEq' | ?];
+          rewrite ?isEq in *; clear isEq;
+          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | assumption ] |
+         rewrite ?app_nil_r in *; assumption
+        ].
+   *)
+
+  (*
+    match goal with
+      | H: context[if @weq IdxBits ?a ?a'
+                   then if @weq TagBits ?t ?t' then _ else _
+                   else _] |- _ => destruct_idx_tag_base a a' t t'
+      | |- context[if @weq IdxBits ?a ?a'
+                   then if @weq TagBits ?t ?t' then _ else _
+                   else _] => destruct_idx_tag_base a a' t t'
+    end.
+   *)
+
+  (*
+  Ltac rewrite_getCs_tag_help cs tag a a' upd H :=
+    let sth := fresh in
+    assert (sth: tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a \/
+                 cs (split1 IdxBits TagBits a) = WO~0~0) by tauto;
+      match H with
+        | 1 => rewrite (@getCs_tag cs tag a a' sth)
+        | _ => rewrite (@getCs_tag cs tag a a' sth) in H
+      end;
+      repeat match goal with
+               | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                   (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                                               then split2 IdxBits TagBits a
+                                               else tag a'') a'] |- _ =>
+                 rewrite (@getCs_tag cs tag a a' sth) in H'
+               | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                  (fun a'' => if weq a'' (split1 IdxBits TagBits a)
+                                              then split2 IdxBits TagBits a
+                                              else tag a'') a'] =>
+                 rewrite (@getCs_tag cs tag a a' sth)
+             end.
+
+  Ltac rewrite_getCs_full_help cs tag a a' upd H :=
+    match H with
+      | 1 => rewrite (@getCs_full cs tag a a')
+      | _ => rewrite (@getCs_full cs tag a a') in H
+    end;
+    repeat match goal with
+             | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                 tag a'] |- _ =>
+               rewrite (@getCs_full cs tag a a') in H'
+             | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
+                                tag a'] =>
+               rewrite (@getCs_full cs tag a a')
+           end.
+
+  Ltac rewrite_getCs_tag_match_getCs_help cs tag a a' upd H' :=
+    (repeat match goal with
+              | H: context[getCs
+                             (fun a'' : word IdxBits =>
+                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] |- _ =>
+                rewrite (@getCs_tag_match_getCs cs tag a a' H') in H
+              | |- context[getCs
+                             (fun a'' : word IdxBits =>
+                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] =>               
+                rewrite (@getCs_tag_match_getCs cs tag a a' H')
+            end); destruct_addr.
+
+  Ltac rewrite_getCs :=
+    match goal with
+      | H: context[getCs
+                     (fun a'' : word IdxBits =>
+                        if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'],
+           H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
+        rewrite (@getCs_tag_match_getCs cs tag a a' H') in H;
+          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'
+      | H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |-
+        context[getCs
+                  (fun a'' : word IdxBits =>
+                     if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'] =>
+        rewrite (@getCs_tag_match_getCs cs tag a a' H');
+          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'          
+      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
+                                     then split2 IdxBits TagBits ?a
+                                     else ?tag a'') ?a'] |- _ =>
+        try rewrite_getCs_tag_help cs tag a a' upd H; destruct_addr
+      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
+                                     then split2 IdxBits TagBits ?a
+                                     else ?tag a'') ?a'] =>
+        try rewrite_getCs_tag_help cs tag a a' upd 1; destruct_addr
+      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         ?tag ?a'] |- _ =>
+        try rewrite_getCs_full_help cs tag a a' upd H; try destruct_idx_tag
+      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
+                         ?tag ?a'] =>
+        try rewrite_getCs_full_help cs tag a a' upd 1; try destruct_idx_tag
+    end.
+   *)
+
+
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
@@ -886,11 +992,16 @@ Section MemCacheInl.
                    simpl in beg, last, hyp;
                    simpl; unfold Lib.VectorFacts.Vector_find; simpl;
                    rewrite hyp in *
+             | H: In ?x (?l1 ++ ?l2) -> _ |- _ => rewrite app_or in H
+             | H: In ?x (?v :: ?l) -> _ |- _ => rewrite in_cons_full in H
+             | H: ?P \/ ?Q -> ?R |- _ => apply (@rmDisj P Q R) in H; destruct H
            end.
   
   Ltac rmBadHyp2 :=
     repeat match goal with
              | H: ?v = ?v |- _ => clear H
+             | H: true = false -> _ |- _ => clear H
+             | H: false = true -> _ |- _ => clear H
              | H: In _ _ -> _ |- _ => clear H
              | H: forall (x: (forall i: Fin.t ?n, _ ?ls)), _ |- _ => 
                clear H
@@ -1011,18 +1122,6 @@ Section MemCacheInl.
                    destruct_combine2 tagv a a' neq
                end].
 
-  (*
-    Ltac destruct_idx_tag_base a a' t t' :=
-      let isEq := fresh in
-      let isEq' := fresh in
-      destruct (@weq IdxBits a a') as [isEq | ?];
-        [destruct (@weq TagBits t t') as [isEq' | ?];
-          rewrite ?isEq in *; clear isEq;
-          rewrite ?app_nil_r in *; [rewrite ?isEq' in *; clear isEq' | assumption ] |
-         rewrite ?app_nil_r in *; assumption
-        ].
-   *)
-
   Ltac destruct_idx_tag :=
     match goal with
       | |- context[if @weq IdxBits (split1 IdxBits TagBits ?a) (split1 IdxBits TagBits ?a')
@@ -1032,16 +1131,6 @@ Section MemCacheInl.
                    then if @weq TagBits (?tagv (split1 IdxBits TagBits ?a)) (split2 IdxBits TagBits ?a) then _ else _
                    else _] |- _ => destruct_idx_tag_base tagv a a'
     end.
-  (*
-    match goal with
-      | H: context[if @weq IdxBits ?a ?a'
-                   then if @weq TagBits ?t ?t' then _ else _
-                   else _] |- _ => destruct_idx_tag_base a a' t t'
-      | |- context[if @weq IdxBits ?a ?a'
-                   then if @weq TagBits ?t ?t' then _ else _
-                   else _] => destruct_idx_tag_base a a' t t'
-    end.
-   *)
 
   Lemma getCs_full cs tag a a' upd:
     getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a)
@@ -1100,87 +1189,6 @@ Section MemCacheInl.
       + tauto.
   Qed.
 
-  Ltac rewrite_getCs_tag_help cs tag a a' upd H :=
-    let sth := fresh in
-    assert (sth: tag (split1 IdxBits TagBits a) = split2 IdxBits TagBits a \/
-                 cs (split1 IdxBits TagBits a) = WO~0~0) by tauto;
-      match H with
-        | 1 => rewrite (@getCs_tag cs tag a a' sth)
-        | _ => rewrite (@getCs_tag cs tag a a' sth) in H
-      end;
-      repeat match goal with
-               | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
-                                   (fun a'' => if weq a'' (split1 IdxBits TagBits a)
-                                               then split2 IdxBits TagBits a
-                                               else tag a'') a'] |- _ =>
-                 rewrite (@getCs_tag cs tag a a' sth) in H'
-               | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
-                                  (fun a'' => if weq a'' (split1 IdxBits TagBits a)
-                                              then split2 IdxBits TagBits a
-                                              else tag a'') a'] =>
-                 rewrite (@getCs_tag cs tag a a' sth)
-             end.
-
-  Ltac rewrite_getCs_full_help cs tag a a' upd H :=
-    match H with
-      | 1 => rewrite (@getCs_full cs tag a a')
-      | _ => rewrite (@getCs_full cs tag a a') in H
-    end;
-    repeat match goal with
-             | H': context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
-                                 tag a'] |- _ =>
-               rewrite (@getCs_full cs tag a a') in H'
-             | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits a) then upd else cs a'')
-                                tag a'] =>
-               rewrite (@getCs_full cs tag a a')
-           end.
-
-  Ltac rewrite_getCs_tag_match_getCs_help cs tag a a' upd H' :=
-    (repeat match goal with
-              | H: context[getCs
-                             (fun a'' : word IdxBits =>
-                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] |- _ =>
-                rewrite (@getCs_tag_match_getCs cs tag a a' H') in H
-              | |- context[getCs
-                             (fun a'' : word IdxBits =>
-                                if weq a'' (split1 IdxBits TagBits a) then upd else cs a'') tag a'] =>               
-                rewrite (@getCs_tag_match_getCs cs tag a a' H')
-            end); destruct_addr.
-
-  (*
-  Ltac rewrite_getCs :=
-    match goal with
-      | H: context[getCs
-                     (fun a'' : word IdxBits =>
-                        if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'],
-           H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
-        rewrite (@getCs_tag_match_getCs cs tag a a' H') in H;
-          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'
-      | H': ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |-
-        context[getCs
-                  (fun a'' : word IdxBits =>
-                     if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'') ?tag ?a'] =>
-        rewrite (@getCs_tag_match_getCs cs tag a a' H');
-          rewrite_getCs_tag_match_getCs_help cs tag a a' upd H'          
-      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
-                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
-                                     then split2 IdxBits TagBits ?a
-                                     else ?tag a'') ?a'] |- _ =>
-        try rewrite_getCs_tag_help cs tag a a' upd H; destruct_addr
-      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
-                         (fun a'' => if weq a'' (split1 IdxBits TagBits ?a)
-                                     then split2 IdxBits TagBits ?a
-                                     else ?tag a'') ?a'] =>
-        try rewrite_getCs_tag_help cs tag a a' upd 1; destruct_addr
-      | H: context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
-                         ?tag ?a'] |- _ =>
-        try rewrite_getCs_full_help cs tag a a' upd H; try destruct_idx_tag
-      | |- context[getCs (fun a'' => if weq a'' (split1 IdxBits TagBits ?a) then ?upd else ?cs a'')
-                         ?tag ?a'] =>
-        try rewrite_getCs_full_help cs tag a a' upd 1; try destruct_idx_tag
-    end.
-   *)
-
   Ltac rewrite_getCs :=
     match goal with
       | H: ?tag (split1 IdxBits TagBits ?a) = (split2 IdxBits TagBits ?a) |- _ =>
@@ -1201,6 +1209,17 @@ Section MemCacheInl.
                intuition (discriminate || word_omega)
            end.
 
+  Hint Rewrite app_or in_cons_full in_revcons_full: myLogic.
+
+  Ltac destruct_cache :=
+    match goal with
+      | H: context[weq ($ ?c) (getDefaultConstBit LgNumChildren)] |- _ =>
+        let isEq := fresh in
+        destruct (weq ($ c) (getDefaultConstBit LgNumChildren)) as [isEq | ?]; [rewrite isEq in * | try assumption]
+      | |- context[weq ($ ?c) (getDefaultConstBit LgNumChildren)] =>
+        let isEq := fresh in
+        destruct (weq ($ c) (getDefaultConstBit LgNumChildren)) as [isEq | ?]; [rewrite isEq in * | try assumption]
+    end.
   
   Ltac doAll :=
     autorewrite with invariant in *;
@@ -1216,8 +1235,7 @@ Section MemCacheInl.
                    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
                    specialize_msgs;
                    specialize_beg_mid_last;
-                   rewrite ?app_or, ?cons_or in *;
-                     autorewrite with myLogic in *;
+                   autorewrite with myLogic in *;
                      rewriteEq;
                    simpl_hyps;
                    rewriteEq;
@@ -1242,6 +1260,341 @@ Section MemCacheInl.
           end; invariant_simpl;
       simplMapUpds doAll.
 
+
+  Ltac doNormal :=
+    normalInit;
+    unfold listEnq, listDeq, listIsEmpty,
+    listFirstElt, listEltT in *;
+    match goal with
+      | H: context[match ?ls with
+                     | _ => _
+                   end] |- _ => match type of ls with
+                                  | list _ => destruct ls; try discriminate
+                                end
+    end;
+    simplMapUpds doAll.
+
+  Lemma nmemCache_invariants_hold_02 s a u cs:
+    nmemCache_invariants s ->
+    dwnRs_noWait is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    doNormal.
+    
+    normalInit;
+    unfold listEnq, listDeq, listIsEmpty,
+    listFirstElt, listEltT in *;
+    match goal with
+      | H: context[match ?ls with
+                     | _ => _
+                   end] |- _ => match type of ls with
+                                  | list _ => destruct ls; try discriminate
+                                end
+    end;
+    simpl in *.
+    simplMapUpds idtac.
+    simpl.
+
+    doNormal.
+    try destruct_cache.
+    simpl.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_01 s a u cs:
+    nmemCache_invariants s ->
+    missByState is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    normalInit;
+    unfold listEnq, listDeq, listIsEmpty,
+    listFirstElt, listEltT in *;
+    match goal with
+      | H: context[match ?ls with
+                     | _ => _
+                   end] |- _ => match type of ls with
+                                  | list _ => destruct ls
+                                end
+    end;
+    simplMapUpds idtac.
+    doNormal.
+  Qed.
+  
+  (*
+  Lemma nmemCache_invariants_hold_11 s a u cs:
+    nmemCache_invariants s ->
+    rqFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMeta.
+    simpl.
+  Qed.
+
+
+  Lemma rqFromCToP_xfer:
+    forall x a t rqFromCList rqToPList,
+      rqFromCToP $ x a rqFromCList (t :: rqToPList) =
+      rqFromCToP $ x a (rqFromCList ++ ) rqToPList
+                 (rqFromCList
+                    ++
+                    [mkStruct
+                       (ilist.icons
+                          ("child" :: Bit LgNumChildren)%struct 
+                          $ (x)
+                          (ilist.icons
+                             ("rq"
+                                :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
+                                            "from" :: Bit 2; "to" :: Bit 2; 
+                                            "id" :: Id})%struct t
+                             (ilist.inil
+                                (fun H2 : Attribute Kind => type (attrType H2)))))])
+                 rqToPList.
+  Proof.
+    unfold rqFromCToP; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
+    - rewrite filtRqFromC_commute_app;
+      simpl;
+      mkStruct;
+      destruct (weq $ x $ x); [ | intuition auto];
+      match goal with
+        | |- context [weq ?p ?q] => destruct (weq p q)
+      end; [ | intuition auto];
+      rewrite <- app_assoc; simpl;
+      reflexivity.
+    - rewrite filtRqFromC_commute_app;
+      simpl;
+      mkStruct;
+      destruct (weq $ x $ x); [ | intuition auto];
+      match goal with
+        | |- context [weq ?p ?q] => destruct (weq p q)
+      end; [ intuition auto| ].
+      rewrite ?app_nil_l, ?app_nil_r; auto.
+  Qed.
+
+  Lemma rqFromCToP_xfer_diffAddr:
+    forall c x a t rqFromCList rqToPList,
+      c <> x ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      rqFromCToP $ c a rqFromCList rqToPList =
+      rqFromCToP $ c a
+                 (rqFromCList
+                    ++
+                    [mkStruct
+                       (ilist.icons ("child" :: Bit LgNumChildren)%struct 
+                                    $ (x)
+                                    (ilist.icons
+                                       ("rq"
+                                          :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
+                                                      "from" :: Bit 2; "to" :: Bit 2; 
+                                                      "id" :: Id})%struct t
+                                       (ilist.inil
+                                          (fun H0 : Attribute Kind =>
+                                             type (attrType H0)))))])
+                 rqToPList.
+  Proof.
+    unfold rqFromCToP; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
+    rewrite filtRqFromC_commute_app; simpl in *; mkStruct.
+    destruct (weq $ c $ x).
+    exfalso.
+    assert (c = x).
+    clear - H0 H1 e.
+    assert (pow2 LgNumChildren > 0)%nat.
+    clear.
+    induction LgNumChildren; simpl; auto.
+    omega.
+    rewrite wones_pow2_minus_one in H0, H1.
+    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
+    intuition auto.
+    rewrite ?app_nil_r; auto.
+  Qed.
+
+  Lemma rsFromCToP_xfer:
+    forall x a t rsFromCList rsToPList,
+      rsFromCToP $ x a rsFromCList (t :: rsToPList) =
+      rsFromCToP $ x a
+                 (rsFromCList
+                    ++
+                    [mkStruct
+                       (ilist.icons
+                          ("child" :: Bit LgNumChildren)%struct 
+                          $ (x)
+                          (ilist.icons
+                             ("rs"
+                                :: STRUCT
+                                {"addr" :: Bit (IdxBits + TagBits);
+                                 "to" :: Bit 2;
+                                 "line" :: Vector (Bit (LgDataBytes*8)) LgNumDatas;
+                                 "isVol" :: Bool})%struct t
+                             (ilist.inil
+                                (fun H2 : Attribute Kind => type (attrType H2)))))])
+                 rsToPList.
+  Proof.
+    unfold rsFromCToP; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
+    - rewrite filtRsFromC_commute_app;
+      simpl;
+      mkStruct;
+      destruct (weq $ x $ x); [ | intuition auto];
+      match goal with
+        | |- context [weq ?p ?q] => destruct (weq p q)
+      end; [ | intuition auto];
+      rewrite <- app_assoc; simpl;
+      reflexivity.
+    - rewrite filtRsFromC_commute_app;
+      simpl;
+      mkStruct;
+      destruct (weq $ x $ x); [ | intuition auto];
+      match goal with
+        | |- context [weq ?p ?q] => destruct (weq p q)
+      end; [ intuition auto| ].
+      rewrite ?app_nil_l, ?app_nil_r; auto.
+  Qed.
+
+  Lemma rsFromCToP_xfer_diffAddr:
+    forall c x a t rsFromCList rsToPList,
+      c <> x ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      rsFromCToP $ c a rsFromCList rsToPList =
+      rsFromCToP $ c a
+                 (rsFromCList
+                    ++
+                    [mkStruct
+                       (ilist.icons ("child" :: Bit LgNumChildren)%struct 
+                                    $ (x)
+                                    (ilist.icons
+                                       ("rs"
+                                          :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
+                                                      "to" :: Bit 2; 
+                                                      "line" ::
+                                                             Vector (Bit (LgDataBytes*8))
+                                                             LgNumDatas;
+                                                      "isVol" :: Bool})%struct t
+                                       (ilist.inil
+                                          (fun H0 : Attribute Kind =>
+                                             type (attrType H0)))))])
+                 rsToPList.
+  Proof.
+    unfold rsFromCToP; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
+    rewrite filtRsFromC_commute_app; simpl in *; mkStruct.
+    destruct (weq $ c $ x).
+    exfalso.
+    assert (c = x).
+    clear - H0 H1 e.
+    assert (pow2 LgNumChildren > 0)%nat.
+    clear.
+    induction LgNumChildren; simpl; auto.
+    omega.
+    rewrite wones_pow2_minus_one in H0, H1.
+    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
+    intuition auto.
+    rewrite ?app_nil_r; auto.
+  Qed.
+  
+  Lemma fromPToC_xfer:    
+    forall x a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren _ Id))
+           fromPList toCList,
+      $ x = t ``"child" ->
+      fromPToC $ x a fromPList (t :: toCList) =
+      fromPToC $ x a
+        (fromPList ++
+         [t
+            (addFirstBoundedIndex
+               (mapAttr type ("child" :: Bit LgNumChildren)%struct)
+               ``"msg" )]) toCList.
+  Proof.
+    unfold fromPToC; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto]; try mkStruct; simpl.
+    - rewrite filtFromP_commute_app; simpl; mkStruct;
+      match goal with
+        | |- context [weq ?p ?q] =>
+          destruct (weq p q); [ | intuition auto]
+      end.
+      rewrite <- app_assoc; simpl; reflexivity.
+    - rewrite filtFromP_commute_app; simpl; mkStruct;
+      match goal with
+        | |- context [weq ?p ?q] =>
+          destruct (weq p q); intuition auto
+      end.
+      rewrite ?app_nil_r; auto.
+  Qed.
+
+  Lemma fromPToC_xfer_diffAddr:
+    forall c x a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren _ Id))
+           fromPList toCList,
+      c <> x ->
+      $ x = t ``"child" ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      fromPToC $ c a fromPList toCList =
+      fromPToC $ c a
+               fromPList
+               (t :: toCList).
+  Proof.
+    unfold fromPToC; intros; simpl; auto;
+    (repeat match goal with
+              | |- context [weq ?p ?q] => destruct (weq p q)
+            end);
+    mkStruct; subst;
+    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
+    assert (c = x).
+    simpl in *.
+    clear - H0 H1 H2 e.
+    rewrite <- H0 in e.
+    assert (pow2 LgNumChildren > 0)%nat.
+    clear.
+    induction LgNumChildren; simpl; auto.
+    omega.
+    rewrite wones_pow2_minus_one in H1, H2.
+    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
+    intuition auto.
+  Qed.
+*)
+
+(*
+  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
+  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
+  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
+
+  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
+       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
+
+  Hint Rewrite rqFromCToP_revcons : invariant.
+  Hint Resolve in_app_or in_or_app in_single.
+  Hint Resolve f_equal app_single_r in_pre_suf in_single in_app_or app_cons_not_nil rsLessTo_less_app rsLessTo_in_I_last.
+
+*)
+
   Lemma nmemCache_invariants_hold_1 s a u cs:
     nmemCache_invariants s ->
     l1MissByState metaIs a ->
@@ -1254,6 +1607,9 @@ Section MemCacheInl.
     doMeta.
   Qed.
 
+
+
+  
   Lemma nmemCache_invariants_hold_2 s a u cs:
     nmemCache_invariants s ->
     l1MissByLine metaIs a ->
@@ -1361,35 +1717,6 @@ Section MemCacheInl.
   Proof.
     doMeta.
   Qed.
-
-  Show Ltac Profile.
-
-  Lemma nmemCache_invariants_hold_11 s a u cs:
-    nmemCache_invariants s ->
-    rqFromCToPRule metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    doMeta.
-    simpl.
-  Qed.
-
-(*
-  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
-  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using congruence : invariant.
-  Hint Rewrite <- rsFromCToP_xfer rsFromCToP_xfer_diffAddr using congruence : invariant.
-
-  Hint Rewrite <- fromPToC_xfer fromPToC_xfer_diffAddr_packaged using
-       (tauto || (eexists; split; [ | split; eassumption ]; congruence)) : invariant.
-
-  Hint Rewrite rqFromCToP_revcons : invariant.
-  Hint Resolve in_app_or in_or_app in_single.
-  Hint Resolve f_equal app_single_r in_pre_suf in_single in_app_or app_cons_not_nil rsLessTo_less_app rsLessTo_in_I_last.
-
-*)
 
 
   
@@ -1700,248 +2027,6 @@ Section MemCacheInl.
       f_equal; auto.
   Qed.
 
-
-  Lemma rqFromCToP_xfer:
-    forall x a t rqFromCList rqToPList,
-      rqFromCToP $ x a rqFromCList (t :: rqToPList) =
-      rqFromCToP $ x a
-                 (rqFromCList
-                    ++
-                    [mkStruct
-                       (ilist.icons
-                          ("child" :: Bit LgNumChildren)%struct 
-                          $ (x)
-                          (ilist.icons
-                             ("rq"
-                                :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
-                                            "from" :: Bit 2; "to" :: Bit 2; 
-                                            "id" :: Id})%struct t
-                             (ilist.inil
-                                (fun H2 : Attribute Kind => type (attrType H2)))))])
-                 rqToPList.
-  Proof.
-    unfold rqFromCToP; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
-    - rewrite filtRqFromC_commute_app;
-      simpl;
-      mkStruct;
-      destruct (weq $ x $ x); [ | intuition auto];
-      match goal with
-        | |- context [weq ?p ?q] => destruct (weq p q)
-      end; [ | intuition auto];
-      rewrite <- app_assoc; simpl;
-      reflexivity.
-    - rewrite filtRqFromC_commute_app;
-      simpl;
-      mkStruct;
-      destruct (weq $ x $ x); [ | intuition auto];
-      match goal with
-        | |- context [weq ?p ?q] => destruct (weq p q)
-      end; [ intuition auto| ].
-      rewrite ?app_nil_l, ?app_nil_r; auto.
-  Qed.
-
-  Lemma rqFromCToP_xfer_diffAddr:
-    forall c x a t rqFromCList rqToPList,
-      c <> x ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      rqFromCToP $ c a rqFromCList rqToPList =
-      rqFromCToP $ c a
-                 (rqFromCList
-                    ++
-                    [mkStruct
-                       (ilist.icons ("child" :: Bit LgNumChildren)%struct 
-                                    $ (x)
-                                    (ilist.icons
-                                       ("rq"
-                                          :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
-                                                      "from" :: Bit 2; "to" :: Bit 2; 
-                                                      "id" :: Id})%struct t
-                                       (ilist.inil
-                                          (fun H0 : Attribute Kind =>
-                                             type (attrType H0)))))])
-                 rqToPList.
-  Proof.
-    unfold rqFromCToP; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
-    rewrite filtRqFromC_commute_app; simpl in *; mkStruct.
-    destruct (weq $ c $ x).
-    exfalso.
-    assert (c = x).
-    clear - H0 H1 e.
-    assert (pow2 LgNumChildren > 0)%nat.
-    clear.
-    induction LgNumChildren; simpl; auto.
-    omega.
-    rewrite wones_pow2_minus_one in H0, H1.
-    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
-    intuition auto.
-    rewrite ?app_nil_r; auto.
-  Qed.
-
-  Lemma rsFromCToP_xfer:
-    forall x a t rsFromCList rsToPList,
-      rsFromCToP $ x a rsFromCList (t :: rsToPList) =
-      rsFromCToP $ x a
-                 (rsFromCList
-                    ++
-                    [mkStruct
-                       (ilist.icons
-                          ("child" :: Bit LgNumChildren)%struct 
-                          $ (x)
-                          (ilist.icons
-                             ("rs"
-                                :: STRUCT
-                                {"addr" :: Bit (IdxBits + TagBits);
-                                 "to" :: Bit 2;
-                                 "line" :: Vector (Bit (LgDataBytes*8)) LgNumDatas;
-                                 "isVol" :: Bool})%struct t
-                             (ilist.inil
-                                (fun H2 : Attribute Kind => type (attrType H2)))))])
-                 rsToPList.
-  Proof.
-    unfold rsFromCToP; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
-    - rewrite filtRsFromC_commute_app;
-      simpl;
-      mkStruct;
-      destruct (weq $ x $ x); [ | intuition auto];
-      match goal with
-        | |- context [weq ?p ?q] => destruct (weq p q)
-      end; [ | intuition auto];
-      rewrite <- app_assoc; simpl;
-      reflexivity.
-    - rewrite filtRsFromC_commute_app;
-      simpl;
-      mkStruct;
-      destruct (weq $ x $ x); [ | intuition auto];
-      match goal with
-        | |- context [weq ?p ?q] => destruct (weq p q)
-      end; [ intuition auto| ].
-      rewrite ?app_nil_l, ?app_nil_r; auto.
-  Qed.
-
-  Lemma rsFromCToP_xfer_diffAddr:
-    forall c x a t rsFromCList rsToPList,
-      c <> x ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      rsFromCToP $ c a rsFromCList rsToPList =
-      rsFromCToP $ c a
-                 (rsFromCList
-                    ++
-                    [mkStruct
-                       (ilist.icons ("child" :: Bit LgNumChildren)%struct 
-                                    $ (x)
-                                    (ilist.icons
-                                       ("rs"
-                                          :: STRUCT  {"addr" :: Bit (IdxBits + TagBits);
-                                                      "to" :: Bit 2; 
-                                                      "line" ::
-                                                             Vector (Bit (LgDataBytes*8))
-                                                             LgNumDatas;
-                                                      "isVol" :: Bool})%struct t
-                                       (ilist.inil
-                                          (fun H0 : Attribute Kind =>
-                                             type (attrType H0)))))])
-                 rsToPList.
-  Proof.
-    unfold rsFromCToP; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
-    rewrite filtRsFromC_commute_app; simpl in *; mkStruct.
-    destruct (weq $ c $ x).
-    exfalso.
-    assert (c = x).
-    clear - H0 H1 e.
-    assert (pow2 LgNumChildren > 0)%nat.
-    clear.
-    induction LgNumChildren; simpl; auto.
-    omega.
-    rewrite wones_pow2_minus_one in H0, H1.
-    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
-    intuition auto.
-    rewrite ?app_nil_r; auto.
-  Qed.
-  
-  Lemma fromPToC_xfer:    
-    forall x a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren _ Id))
-           fromPList toCList,
-      $ x = t ``"child" ->
-      fromPToC $ x a fromPList (t :: toCList) =
-      fromPToC $ x a
-        (fromPList ++
-         [t
-            (addFirstBoundedIndex
-               (mapAttr type ("child" :: Bit LgNumChildren)%struct)
-               ``"msg" )]) toCList.
-  Proof.
-    unfold fromPToC; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto]; try mkStruct; simpl.
-    - rewrite filtFromP_commute_app; simpl; mkStruct;
-      match goal with
-        | |- context [weq ?p ?q] =>
-          destruct (weq p q); [ | intuition auto]
-      end.
-      rewrite <- app_assoc; simpl; reflexivity.
-    - rewrite filtFromP_commute_app; simpl; mkStruct;
-      match goal with
-        | |- context [weq ?p ?q] =>
-          destruct (weq p q); intuition auto
-      end.
-      rewrite ?app_nil_r; auto.
-  Qed.
-
-  Lemma fromPToC_xfer_diffAddr:
-    forall c x a (t: type (ToC LgDataBytes LgNumDatas LgNumChildren _ Id))
-           fromPList toCList,
-      c <> x ->
-      $ x = t ``"child" ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      fromPToC $ c a fromPList toCList =
-      fromPToC $ c a
-               fromPList
-               (t :: toCList).
-  Proof.
-    unfold fromPToC; intros; simpl; auto;
-    (repeat match goal with
-              | |- context [weq ?p ?q] => destruct (weq p q)
-            end);
-    mkStruct; subst;
-    rewrite ?app_nil_l, ?app_nil_r; auto; try solve [intuition auto].
-    assert (c = x).
-    simpl in *.
-    clear - H0 H1 H2 e.
-    rewrite <- H0 in e.
-    assert (pow2 LgNumChildren > 0)%nat.
-    clear.
-    induction LgNumChildren; simpl; auto.
-    omega.
-    rewrite wones_pow2_minus_one in H1, H2.
-    apply natToWord_inj with (sz := LgNumChildren); auto; try omega.
-    intuition auto.
-  Qed.
 
   Lemma rsFromCToP_sameAddr_revcons:
     forall x (a: word (IdxBits + TagBits))
