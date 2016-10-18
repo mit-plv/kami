@@ -24,8 +24,96 @@ Ltac init_pgm :=
 
 Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
+Local Notation "'Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize)).
 
-Definition pgmLwSwTest (n m: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+(* Subset of RV32I instructions (17/47):
+ * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
+ * - Memory : LW, SW
+ * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
+ * Some pseudo instructions (9):
+ * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
+ * Custom instructions (1):
+ * - TOHOST
+ *)
+
+(* Expected output : 2 *)
+Definition pgmJalTest1 : Program.
+  init_pgm.
+  line 0 (JAL x0 (natToWord _ 5)).
+  line 1 NOP.
+  line 2 NOP.
+  line 3 (LI x3 (natToWord _ 1)).
+  line 4 (TOHOST x3).
+  line 5 (LI x3 (natToWord _ 2)).
+  line 6 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.
+
+(* Expected output : 5 *)
+Definition pgmJalTest2 : Program.
+  init_pgm.
+  line 0 (JAL x1 (natToWord _ 5)).
+  line 1 NOP.
+  line 2 NOP.
+  line 3 NOP.
+  line 4 NOP.
+  line 5 (TOHOST x1).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop.
+Defined.
+
+(* Expected output : 2 *)
+Definition pgmJalrTest1 : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 5)).
+  line 1 (JALR x1 x0 (natToWord _ 0)).
+  line 2 NOP.
+  line 3 NOP.
+  line 4 (LI x3 (natToWord _ 1)).
+  line 5 (TOHOST x3).
+  line 6 (LI x3 (natToWord _ 2)).
+  line 7 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+Defined.
+
+(* Expected output : 5 *)
+Definition pgmJalrTest2 : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 5)).
+  line 1 (JALR x1 x2 (natToWord _ 0)).
+  line 2 NOP.
+  line 3 NOP.
+  line 4 NOP.
+  line 5 NOP.
+  line 6 (TOHOST x2).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.
+
+(* Expected output : n *)
+Definition pgmLwSwTest1 (n: nat) : Program.
+  init_pgm.
+  line 0 (LI x3 (natToWord _ n)).
+  line 1 (SW x0 x3 (natToWord _ 0)).
+  line 2 (LW x0 x5 (natToWord _ 0)).
+  line 3 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop.
+Defined.
+
+(* Expected output : n + m *)
+Definition pgmLwSwTest2 (n m: nat) : Program.
   init_pgm.
   line 0 (LI x3 (natToWord _ n)).
   line 1 (LI x4 (natToWord _ m)).
@@ -40,7 +128,8 @@ Definition pgmLwSwTest (n m: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32i
   nop. nop. nop. nop. nop. nop. nop. nop. 
 Defined.
 
-Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+(* Expected output : n *)
+Definition pgmToHostTest (n: nat) : Program.
   init_pgm.
   line 0 (LI x3 (natToWord _ n)).
   line 1 (TOHOST x3).
@@ -52,22 +141,8 @@ Definition pgmToHostTest (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32i
   nop. nop. nop. nop.
 Defined.
 
-Definition pgmBranchTest: ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
-  init_pgm.
-  line 0 (LI x3 (natToWord _ 3)).
-  line 1 (LI x4 (natToWord _ 5)).
-  line 2 (TOHOST x3).
-  line 3 (TOHOST x4).
-  line 4 (BLT x3 x4 (natToWord _ 6)).
-  line 5 (TOHOST x0).
-  line 6 (TOHOST x3).
-  nop. nop. nop. nop. nop. nop. nop. nop. 
-  nop. nop. nop. nop. nop. nop. nop. nop. 
-  nop. nop. nop. nop. nop. nop. nop. nop.
-  nop. 
-Defined.
-
-Definition pgmFibonacci (n: nat) : ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize).
+(* Expected output : Fib(n) *)
+Definition pgmFibonacci (n: nat) : Program.
   init_pgm.
   line 0 (LI x21 (natToWord _ n)).
   line 1 (BLEZ x21 (natToWord _ 11)). (* to 12 *)
