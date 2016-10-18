@@ -73,7 +73,7 @@ Definition pgmJalrTest1 : Program.
   nop. nop. nop. nop. nop. nop. nop. nop. 
 Defined.
 
-(* Expected output : 5 *)
+(* Expected output : 6 *)
 Definition pgmJalrTest2 : Program.
   init_pgm.
   line 0 (LI x1 (natToWord _ 5)).
@@ -153,10 +153,10 @@ Definition pgmBgeTest : Program.
   nop.
 Defined.
 
-(* Expected output : n *)
-Definition pgmLwSwTest1 (n: nat) : Program.
+(* Expected output : 2 *)
+Definition pgmLwSwTest1 : Program.
   init_pgm.
-  line 0 (LI x3 (natToWord _ n)).
+  line 0 (LI x3 (natToWord _ 2)).
   line 1 (SW x0 x3 (natToWord _ 0)).
   line 2 (LW x0 x5 (natToWord _ 0)).
   line 3 (TOHOST x5).
@@ -166,11 +166,11 @@ Definition pgmLwSwTest1 (n: nat) : Program.
   nop. nop. nop. nop.
 Defined.
 
-(* Expected output : n + m *)
-Definition pgmLwSwTest2 (n m: nat) : Program.
+(* Expected output : 2 *)
+Definition pgmLwSwTest2: Program.
   init_pgm.
-  line 0 (LI x3 (natToWord _ n)).
-  line 1 (LI x4 (natToWord _ m)).
+  line 0 (LI x3 (natToWord _ 1)).
+  line 1 (LI x4 (natToWord _ 1)).
   line 2 (SW x0 x3 (natToWord _ 0)).
   line 3 (SW x0 x4 (natToWord _ 1)).
   line 4 (LW x0 x5 (natToWord _ 0)).
@@ -211,9 +211,106 @@ Definition pgmSubTest: Program.
   nop. nop. nop. nop. nop. nop. nop. nop. 
 Defined.
 
-(* TODO: more unit-tests for following instructions:
- * SLL, SRL, SRA, OR, AND, XOR
- *)
+(** Expected output : 2 *)
+Definition pgmSllTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 3)).
+  line 1 (LI x2 (natToWord _ 2)).
+  line 2 (SLL x1 x2 x3). (* x3 = x1 << x2 *)
+  line 3 (LI x4 (natToWord _ 12)). (* 12 = 3 << 2 *)
+  line 4 (BEQ x3 x4 (natToWord _ 3)).
+  line 5 (LI x5 (natToWord _ 1)).
+  line 6 (TOHOST x5).
+  line 7 (LI x5 (natToWord _ 2)).
+  line 8 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop.
+Defined.
+
+(** Expected output : 2 *)
+Definition pgmSrlTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 12)).
+  line 1 (LI x2 (natToWord _ 2)).
+  line 2 (SRL x1 x2 x3). (* x3 = x1 >> x2 *)
+  line 3 (LI x4 (natToWord _ 3)). (* 3 = 12 >> 2 *)
+  line 4 (BEQ x3 x4 (natToWord _ 3)).
+  line 5 (LI x5 (natToWord _ 1)).
+  line 6 (TOHOST x5).
+  line 7 (LI x5 (natToWord _ 2)).
+  line 8 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop.
+Defined.
+
+(** Expected output : 2 *)
+Definition pgmSraTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 12)).
+  line 1 (LI x2 (natToWord _ 2)).
+  line 2 (SRA x1 x2 x3). (* x3 = x1 ~>> x2 *)
+  line 3 (LI x4 (natToWord _ 3)). (* 3 = 12 ~>> 2 *)
+  line 4 (BEQ x3 x4 (natToWord _ 3)).
+  line 5 (LI x5 (natToWord _ 1)).
+  line 6 (TOHOST x5).
+  line 7 (LI x5 (natToWord _ 2)).
+  line 8 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop.
+Defined.
+
+(* Expected output : 2 *)
+Definition pgmOrTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 7)).
+  line 1 (LI x2 (natToWord _ 56)).
+  line 2 (OR x1 x2 x3).
+  line 3 (LI x4 (natToWord _ 63)).
+  line 4 (BEQ x3 x4 (natToWord _ 3)).
+  line 5 (LI x5 (natToWord _ 1)).
+  line 6 (TOHOST x5).
+  line 7 (LI x5 (natToWord _ 2)).
+  line 8 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop.
+Defined.
+
+(** Expected output : 2 *)
+Definition pgmAndTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 7)).
+  line 1 (LI x2 (natToWord _ 56)).
+  line 2 (AND x1 x2 x3).
+  line 3 (BEQ x3 x0 (natToWord _ 3)).
+  line 4 (LI x5 (natToWord _ 1)).
+  line 5 (TOHOST x5).
+  line 6 (LI x5 (natToWord _ 2)).
+  line 7 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop.
+Defined.
+
+(** Expected output : 2 *)
+Definition pgmXorTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 37)). (* 100101 *)
+  line 1 (LI x2 (natToWord _ 42)). (* 101010 *)
+  line 2 (XOR x1 x2 x3).
+  line 3 (LI x4 (natToWord _ 15)). (* 001111 *)
+  line 4 (BEQ x3 x4 (natToWord _ 3)).
+  line 5 (LI x5 (natToWord _ 1)).
+  line 6 (TOHOST x5).
+  line 7 (LI x5 (natToWord _ 2)).
+  line 8 (TOHOST x5).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop.
+Defined.
 
 (* Expected output : Fib(n) *)
 Definition pgmFibonacci (n: nat) : Program.

@@ -411,10 +411,12 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
+     ps ppRBracketL;
      ppBExpr ce; print_space (); ps ppQ; print_space ();
      ps ppRBracketL; ppBExpr te; ps ppRBracketR; print_space ();
      ps ppColon; print_space ();
-     ps ppRBracketL; ppBExpr fe; ps ppRBracketR
+     ps ppRBracketL; ppBExpr fe; ps ppRBracketR;
+     ps ppRBracketR
   | BEq (se1, se2) -> ppBExpr se1; print_space (); ps ppEq; print_space (); ppBExpr se2
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
@@ -466,8 +468,10 @@ let rec ppBAction (ife: int option) (a: bAction) =
      (* let-bind for the branch return *)
      (if (bk = Bit 0) then ()
       else
-        (ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
+        (ps ppRBracketL;
+         ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ();
+         ps ppRBracketR));
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
      print_space (); ps ppBegin;
      print_break 0 4; (* force_newline (); *) open_hovbox 0;

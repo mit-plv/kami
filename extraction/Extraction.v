@@ -46,20 +46,20 @@ Definition p4st := p4st rv32iGetOptype
 
 Definition p4stN := duplicate p4st (Word.wordToNat (Word.wones lgNumChildren)).
 
-Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes
-                                  (Word.wordToNat (Word.wones lgNumChildren)).
-(* Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iLgDataBytes (Bit 1) *)
-(*                                    fifoSize lgNumChildren. *)
-(* Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataBytes lgNumChildren. *)
+(* Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes *)
+(*                                   (Word.wordToNat (Word.wones lgNumChildren)). *)
+Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iLgDataBytes (Bit 1)
+                                   fifoSize lgNumChildren.
+Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataBytes lgNumChildren.
 
-Definition procMemAtomic := (p4stN ++ memAtomic)%kami.
-(* Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami. *)
+(* Definition procMemAtomic := (p4stN ++ memAtomic)%kami. *)
+Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY targetPgm to your target program *)
-Definition targetPgm := pgmLwSwTest 3 5.
+Definition targetPgm := pgmXorTest.
 
 (** MODIFY targetM to your target module *)
-Definition targetProcM := procMemAtomic.
+Definition targetProcM := procMemCache.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)
 Definition targetProcS := getModuleS targetProcM.
