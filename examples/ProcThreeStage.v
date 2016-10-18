@@ -555,7 +555,7 @@ Section ProcThreeStage.
     
     Definition checkNextPc {ty} ppc npcp st rawInst :=
       (LET npc <- getNextPc ty st ppc rawInst;
-         If (#npc != #npcp)
+       If (#npc != #npcp)
        then
          Call toggleEpoch();
          Call w2dEnq(#npc);
@@ -577,6 +577,15 @@ Section ProcThreeStage.
         LET fEpoch <- d2eEpoch _ d2e;
         Call eEpoch <- getEpoch();
         Assert (#fEpoch != #eEpoch);
+
+        If (d2eOpType _ d2e == $$opLd || d2eOpType _ d2e == $$opNm)
+        then
+          LET dst <- d2eDst _ d2e;
+          Call sbRemove(#dst);
+          Retv
+        else
+          Retv
+        as _;
         Retv
 
       with Rule "reqLd" :=

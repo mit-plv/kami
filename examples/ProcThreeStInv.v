@@ -576,7 +576,9 @@ Section Invariants.
           try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac;
+          try (apply eq_sym, orb_true_iff in Heqic; destruct Heqic;
+               try (kinv_simpl; find_if_inside; intuition idtac)).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.

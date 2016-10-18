@@ -26,16 +26,6 @@ Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
 Local Notation "'Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize)).
 
-(* Subset of RV32I instructions (17/47):
- * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
- * - Memory : LW, SW
- * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
- * Some pseudo instructions (9):
- * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
- * Custom instructions (1):
- * - TOHOST
- *)
-
 (* Expected output : 2 *)
 Definition pgmJalTest1 : Program.
   init_pgm.
@@ -99,6 +89,70 @@ Definition pgmJalrTest2 : Program.
   nop.
 Defined.
 
+(* Expected output : 2 *)
+Definition pgmBeqTest : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 5)).
+  line 1 (LI x2 (natToWord _ 5)).
+  line 2 (BEQ x1 x2 (natToWord _ 3)).
+  line 3 (LI x3 (natToWord _ 1)).
+  line 4 (TOHOST x3).
+  line 5 (LI x3 (natToWord _ 2)).
+  line 6 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.  
+
+(* Expected output : 2 *)
+Definition pgmBneTest : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 4)).
+  line 1 (LI x2 (natToWord _ 5)).
+  line 2 (BNE x1 x2 (natToWord _ 3)).
+  line 3 (LI x3 (natToWord _ 1)).
+  line 4 (TOHOST x3).
+  line 5 (LI x3 (natToWord _ 2)).
+  line 6 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.
+
+(* Expected output : 2 *)
+Definition pgmBltTest : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 4)).
+  line 1 (LI x2 (natToWord _ 5)).
+  line 2 (BLT x1 x2 (natToWord _ 3)).
+  line 3 (LI x3 (natToWord _ 1)).
+  line 4 (TOHOST x3).
+  line 5 (LI x3 (natToWord _ 2)).
+  line 6 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.
+
+(* Expected output : 2 *)
+Definition pgmBgeTest : Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 5)).
+  line 1 (LI x2 (natToWord _ 4)).
+  line 2 (BGE x1 x2 (natToWord _ 3)).
+  line 3 (LI x3 (natToWord _ 1)).
+  line 4 (TOHOST x3).
+  line 5 (LI x3 (natToWord _ 2)).
+  line 6 (TOHOST x3).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop.
+Defined.
+
 (* Expected output : n *)
 Definition pgmLwSwTest1 (n: nat) : Program.
   init_pgm.
@@ -140,6 +194,26 @@ Definition pgmToHostTest (n: nat) : Program.
   nop. nop. nop. nop. nop. nop. nop. nop. 
   nop. nop. nop. nop.
 Defined.
+
+(* Expected output : 2 *)
+Definition pgmSubTest: Program.
+  init_pgm.
+  line 0 (LI x1 (natToWord _ 5)).
+  line 1 (LI x2 (natToWord _ 5)).
+  line 2 (SUB x1 x2 x3).
+  line 3 (BEQ x3 x0 (natToWord _ 3)).
+  line 4 (LI x4 (natToWord _ 1)).
+  line 5 (TOHOST x4).
+  line 6 (LI x4 (natToWord _ 2)).
+  line 7 (TOHOST x4).
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop. 
+Defined.
+
+(* TODO: more unit-tests for following instructions:
+ * SLL, SRL, SRA, OR, AND, XOR
+ *)
 
 (* Expected output : Fib(n) *)
 Definition pgmFibonacci (n: nat) : Program.
