@@ -15,8 +15,8 @@ Section Fold.
 
   Fixpoint foldInc' n: (A@var)%kami :=
       match n with
-        | O => init
-        | S m => f ($ m)%kami_expr (foldInc' m)
+        | O => f ($ 0)%kami_expr init
+        | S m => f ($ n)%kami_expr (foldInc' m)
       end.
 
   Definition foldInc := foldInc' (wordToNat (wones lgIdx)).

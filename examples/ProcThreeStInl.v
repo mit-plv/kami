@@ -78,6 +78,7 @@ Section Inlined.
 
   Definition p3stInl: sigT (fun m: Modules => p3st <<== m).
   Proof.
+    (* SKIP_PROOF_ON
     pose proof (inlineF_refines
                   (procThreeStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                            getStAddr getStSrc calcStAddr getStVSrc
@@ -96,6 +97,7 @@ Section Inlined.
     unfold origm in *.
     specialize (Him eq_refl).
     exact (existT _ _ Him).
+    SKIP_PROOF_OFF *) apply cheat.
   Defined.
 End Inlined.
 

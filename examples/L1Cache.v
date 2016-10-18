@@ -114,7 +114,7 @@ Section L1Cache.
           Call tag <- tagRead(#idx);
           Call cs <- csRead(#idx);
           Assert ((#tag == getTag #rq!RqFromProc@.addr) &&
-                  (#cs == $ Sh && !#rq!RqFromProc@.op || #cs == $ Mod && #rq!RqFromProc@.op));
+                  ((#cs >= $ Sh) && !#rq!RqFromProc@.op || #cs == $ Mod && #rq!RqFromProc@.op));
           Write procRqValidReg <- $$ true;
           Write procRqReplaceReg <- $$ false;
           Write procRqWaitReg <- $$ false;

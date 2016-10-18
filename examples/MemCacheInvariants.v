@@ -993,7 +993,7 @@ Section MemCacheInl.
                    simpl; unfold Lib.VectorFacts.Vector_find; simpl;
                    rewrite hyp in *
              | H: In ?x (?l1 ++ ?l2) -> _ |- _ => rewrite app_or in H
-             | H: In ?x (?v :: ?l) -> _ |- _ => rewrite in_cons_full in H
+             | H: In ?x (?v :: ?l) -> _ |- _ => rewrite cons_or in H
              | H: ?P \/ ?Q -> ?R |- _ => apply (@rmDisj P Q R) in H; destruct H
            end.
   
@@ -1209,7 +1209,7 @@ Section MemCacheInl.
                intuition (discriminate || word_omega)
            end.
 
-  Hint Rewrite app_or in_cons_full in_revcons_full: myLogic.
+  Hint Rewrite app_or cons_or revcons_or: myLogic.
 
   Ltac destruct_cache :=
     match goal with
