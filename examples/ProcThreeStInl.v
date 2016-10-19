@@ -96,7 +96,7 @@ Section Inlined.
     unfold origm in *.
     specialize (Him eq_refl).
     exact (existT _ _ Him).
-    SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Defined.
 End Inlined.
 
