@@ -211,7 +211,7 @@ Definition pgmSubTest: Program.
   nop. nop. nop. nop. nop. nop. nop. nop. 
 Defined.
 
-(** Expected output : 2 *)
+(* Expected output : 2 *)
 Definition pgmSllTest: Program.
   init_pgm.
   line 0 (LI x1 (natToWord _ 3)).
@@ -228,30 +228,13 @@ Definition pgmSllTest: Program.
   nop. nop. nop. nop. nop. nop. nop.
 Defined.
 
-(** Expected output : 2 *)
+(* Expected output : 2 *)
 Definition pgmSrlTest: Program.
   init_pgm.
   line 0 (LI x1 (natToWord _ 12)).
   line 1 (LI x2 (natToWord _ 2)).
   line 2 (SRL x1 x2 x3). (* x3 = x1 >> x2 *)
   line 3 (LI x4 (natToWord _ 3)). (* 3 = 12 >> 2 *)
-  line 4 (BEQ x3 x4 (natToWord _ 3)).
-  line 5 (LI x5 (natToWord _ 1)).
-  line 6 (TOHOST x5).
-  line 7 (LI x5 (natToWord _ 2)).
-  line 8 (TOHOST x5).
-  nop. nop. nop. nop. nop. nop. nop. nop. 
-  nop. nop. nop. nop. nop. nop. nop. nop. 
-  nop. nop. nop. nop. nop. nop. nop.
-Defined.
-
-(** Expected output : 2 *)
-Definition pgmSraTest: Program.
-  init_pgm.
-  line 0 (LI x1 (natToWord _ 12)).
-  line 1 (LI x2 (natToWord _ 2)).
-  line 2 (SRA x1 x2 x3). (* x3 = x1 ~>> x2 *)
-  line 3 (LI x4 (natToWord _ 3)). (* 3 = 12 ~>> 2 *)
   line 4 (BEQ x3 x4 (natToWord _ 3)).
   line 5 (LI x5 (natToWord _ 1)).
   line 6 (TOHOST x5).
@@ -279,7 +262,7 @@ Definition pgmOrTest: Program.
   nop. nop. nop. nop. nop. nop. nop.
 Defined.
 
-(** Expected output : 2 *)
+(* Expected output : 2 *)
 Definition pgmAndTest: Program.
   init_pgm.
   line 0 (LI x1 (natToWord _ 7)).
@@ -290,12 +273,12 @@ Definition pgmAndTest: Program.
   line 5 (TOHOST x5).
   line 6 (LI x5 (natToWord _ 2)).
   line 7 (TOHOST x5).
-  nop. nop. nop. nop. nop. nop. nop. nop. 
-  nop. nop. nop. nop. nop. nop. nop. nop. 
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop. nop. nop. nop. nop. nop. nop. nop.
   nop. nop. nop. nop. nop. nop. nop. nop.
 Defined.
 
-(** Expected output : 2 *)
+(* Expected output : 2 *)
 Definition pgmXorTest: Program.
   init_pgm.
   line 0 (LI x1 (natToWord _ 37)). (* 100101 *)
