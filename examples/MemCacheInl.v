@@ -593,7 +593,7 @@ Section MemCacheInl.
     ggNoF (cs -- read) ld.
     ggNoF (cs -- read) st.
     ggNoF (cs -- read) drop.
-    ggNoF (cs -- read) pProcess.
+    ggF (cs -- read) pProcess.
 
     finish_def.
   Defined.
@@ -629,7 +629,7 @@ Section MemCacheInl.
     ggNoFilt (cs -- read) ld.
     ggNoFilt (cs -- read) st.
     ggNoFilt (cs -- read) drop.
-    ggNoFilt (cs -- read) pProcess.
+    ggFilt (cs -- read) pProcess.
 
     finish_pf.
        END_SKIP_PROOF_ON *) apply cheat.

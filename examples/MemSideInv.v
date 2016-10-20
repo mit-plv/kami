@@ -325,7 +325,7 @@ Section MemCacheInl.
       i11: rsFromCToP cword a rsFromCList rsToPList = nil ->
            (forall msg, In msg (fromPToC cword a fromPList toCList) -> msg (FP !! isRq) = true) ->
            dir a cword = getCs csv tagv a ;
-      
+           
       i12: forall rs, In rs (fromPToC cword a fromPList toCList) ->
                       rs (FP !! isRq) = false ->
                       rsFromCToP cword a rsFromCList rsToPList = nil ;
@@ -842,6 +842,22 @@ Section MemCacheInl.
     f_equal.
   Qed.
 
+  Lemma rewrite_rsFromCToP_cons:
+    forall c a rsFromCList rsToPList (v: type (Struct (RsFC))),
+      rsFromCToP c a (v :: rsFromCList) (rsToPList)%list =
+      if weq c (v (RsFC !! child))
+      then if weq a (v (RsFC !! rs) (RsTP !! addr))
+           then v (RsFC !! rs) :: rsFromCToP c a rsFromCList rsToPList
+           else rsFromCToP c a rsFromCList rsToPList
+      else rsFromCToP c a rsFromCList rsToPList.
+  Proof.
+    cbn; intros.
+    unfold rsFromCToP.
+    repeat match goal with
+             | |- context[ if ?p then _ else _] => destruct p; simpl; try reflexivity
+           end.
+  Qed.
+
   Lemma rewrite_rqFromCToP_revcons:
     forall c a rqFromCList rqToPList (v: type (Struct (RqToP (Bit (IdxBits + TagBits)) Id))),
       rqFromCToP c a rqFromCList (rqToPList ++ [v])%list =
@@ -854,6 +870,22 @@ Section MemCacheInl.
     rewrite filtRqToP_commute_app.
     rewrite app_assoc.
     f_equal.
+  Qed.
+
+  Lemma rewrite_rqFromCToP_cons:
+    forall c a rqFromCList rqToPList (v: type (Struct (RqFC))),
+      rqFromCToP c a (v :: rqFromCList) (rqToPList)%list =
+      if weq c (v (RqFC !! child))
+      then if weq a (v (RqFC !! rs) (RqTP !! addr))
+           then v (RqFC !! rs) :: rqFromCToP c a rqFromCList rqToPList
+           else rqFromCToP c a rqFromCList rqToPList
+      else rqFromCToP c a rqFromCList rqToPList.
+  Proof.
+    cbn; intros.
+    unfold rqFromCToP.
+    repeat match goal with
+             | |- context[ if ?p then _ else _] => destruct p; simpl; try reflexivity
+           end.
   Qed.
 
   Lemma rewrite_fromPToC_cons:
@@ -870,12 +902,31 @@ Section MemCacheInl.
     end; reflexivity.
   Qed.
   
+  Lemma rewrite_fromPToC_revcons:
+    forall c a fromPList toCList (v: type (Struct TC)),
+      fromPToC c a fromPList (toCList ++ [v])  =
+      if weq c (v (TC !! child))
+      then if weq a (v (TC !! msg) (FP !!addr))
+           then fromPToC c a fromPList toCList ++ [v (TC !! msg)]
+           else fromPToC c a fromPList toCList
+      else fromPToC c a fromPList toCList.
+  Proof.
+    cbn; intros.
+    unfold fromPToC.
+    rewrite filtToC_commute_app.
+    cbn.
+    repeat match goal with
+      | |- context[if ?p then _ else _] => destruct p; simpl; rewrite ?app_assoc, ?app_nil_r; try reflexivity
+    end.
+  Qed.
+
   Ltac rmForTauto :=
     repeat match goal with
              | H: _ -> _ |- _ => clear H
            end.
 
-  Hint Rewrite rewrite_rsFromCToP_revcons rewrite_rqFromCToP_revcons rewrite_fromPToC_cons: invariant.
+  Hint Rewrite rewrite_rsFromCToP_revcons rewrite_rsFromCToP_cons rewrite_rqFromCToP_revcons rewrite_rqFromCToP_cons
+       rewrite_fromPToC_cons rewrite_fromPToC_revcons: invariant.
 
   Lemma rmConj (P Q R: Prop): impl (P /\ Q -> R) (P -> Q -> R).
   Proof.
@@ -955,10 +1006,21 @@ Section MemCacheInl.
     assumption.
   Qed.
   
+  Lemma app_or_impl A l1 l2 (x: A) (P: Prop): (In x (l1 ++ l2) -> P) -> (In x l1 -> P) /\ (In x l2 -> P).
+  Proof.
+    rewrite app_or in *.
+    tauto.
+  Qed.
+
+  Lemma cons_or_impl A l (x v: A) (P: Prop): (In x (v :: l) -> P) -> (x = v -> P) /\ (In x l -> P).
+  Proof.
+    rewrite cons_or in *.
+    tauto.
+  Qed.
   
   Ltac simpl_hyps :=
     repeat match goal with
-             | H: exists x, _ |- _ => destruct H
+(*             | H: exists x, _ |- _ => destruct H
              | H: ?P /\ ?Q |- _ => destruct H
              | H: ?a = ?a -> _ |- _ => specialize (H eq_refl)
              | H: ?P -> _, H': ?P |- _ =>
@@ -967,7 +1029,7 @@ Section MemCacheInl.
                end
              | H: Word.combine (split1 ?sz1 ?sz2 ?a) ?b = ?a |- _ =>
                apply (@eq_split sz1 sz2 a b) in H
-             | H: ?P \/ ?Q |- _ => destruct H
+             | H: ?P \/ ?Q |- _ => destruct H *)
              | H: In _ nil |- _ => exfalso; apply (@in_nil _ _ H)
              | H: ?x ++ ?a :: ?y = nil |- _ => exfalso; apply eq_sym in H; apply (@app_cons_not_nil _ x y a H)
              | H: ?ls1 ++ (?v1 :: nil) = ?ls2 ++ (?v2 :: nil) |- _ =>
@@ -993,9 +1055,11 @@ Section MemCacheInl.
                    simpl in beg, last, hyp;
                    simpl; unfold Lib.VectorFacts.Vector_find; simpl;
                    rewrite hyp in *
-(*             | H: In ?x (?l1 ++ ?l2) -> _ |- _ => rewrite app_or in H
-             | H: In ?x (?v :: ?l) -> _ |- _ => rewrite cons_or in H
-             | H: ?P \/ ?Q -> ?R |- _ => apply (@rmDisj P Q R) in H; destruct H *)
+             | H: In ?x (?l1 ++ ?l2) -> ?P |- _ => apply (@app_or_impl _ l1 l2 x P) in H; destruct H
+             | H: In ?x (?v :: ?l) -> ?P |- _ => apply (@cons_or_impl _ l x v P) in H; destruct H
+             | H: In ?x (?a ++ ?b) |- _ => apply (@in_app_or _ a b x) in H
+             | H: In ?x (?a :: ?b) |- _ => apply (@in_cons _ b a x) in H
+(*             | H: ?P \/ ?Q -> ?R |- _ => apply (@rmDisj P Q R) in H; destruct H *)
            end.
   
   Ltac rmBadHyp2 :=
@@ -1003,7 +1067,7 @@ Section MemCacheInl.
              | H: ?v = ?v |- _ => clear H
              | H: true = false -> _ |- _ => clear H
              | H: false = true -> _ |- _ => clear H
-             | H: In _ _ -> _ |- _ => clear H
+(*             | H: In _ _ -> _ |- _ => clear H *)
              | H: forall (x: (forall i: Fin.t ?n, _ ?ls)), _ |- _ => 
                clear H
              | H: forall (x: (list (forall i: Fin.t ?n, _ ?ls))), _ |- _ => 
@@ -1042,19 +1106,23 @@ Section MemCacheInl.
     let isEq := fresh in
     destruct (@weq (IdxBits + TagBits) a a') as [isEq | ?]; rewrite ?app_nil_r in *; [rewrite isEq in *; clear isEq | try assumption].
 
-  Ltac destruct_addr :=
-    match goal with
-      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
-        destruct_addr_base a a'
-      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
-        destruct_addr_base a a'
-    end.
-
     Lemma eq_weq sz a: (@weq sz a a) = left _ eq_refl.
     Proof.
       rewrite rewrite_weq with (pf := eq_refl).
       reflexivity.
     Qed.
+
+  Ltac destruct_addr :=
+    match goal with
+      | |- context[@weq (IdxBits + TagBits) ?a ?a] =>
+        rewrite (@eq_weq (IdxBits + TagBits) a) in *
+      | H: context[@weq (IdxBits + TagBits) ?a ?a] |- _ =>
+        rewrite (@eq_weq (IdxBits + TagBits) a) in *
+      | |- context[@weq (IdxBits + TagBits) ?a ?a'] =>
+        destruct_addr_base a a'
+      | H: context[@weq (IdxBits + TagBits) ?a ?a'] |- _ =>
+        destruct_addr_base a a'
+    end.
 
     Lemma neq_combine1 sz1 sz2 a p:
       p <> split2 sz1 sz2 a ->
@@ -1210,16 +1278,22 @@ Section MemCacheInl.
                intuition (discriminate || word_omega)
            end.
 
+  (*
   Hint Rewrite app_or cons_or revcons_or: myLogic.
+   *)
 
   Ltac destruct_cache :=
     match goal with
-      | H: context[weq ($ ?c) (getDefaultConstBit LgNumChildren)] |- _ =>
+      | H: context[@weq LgNumChildren ?c ?c] |- _ =>
+        rewrite (@eq_weq LgNumChildren c) in *
+      | |- context[@weq LgNumChildren ?c ?c] =>
+        rewrite (@eq_weq LgNumChildren c) in *
+      | H: context[@weq LgNumChildren ?c ?y] |- _ =>
         let isEq := fresh in
-        destruct (weq ($ c) (getDefaultConstBit LgNumChildren)) as [isEq | ?]; [rewrite isEq in * | try assumption]
-      | |- context[weq ($ ?c) (getDefaultConstBit LgNumChildren)] =>
+        destruct (@weq LgNumChildren c y) as [isEq | ?]; [rewrite isEq in * | try assumption]
+      | |- context[@weq LgNumChildren ?c ?y] =>
         let isEq := fresh in
-        destruct (weq ($ c) (getDefaultConstBit LgNumChildren)) as [isEq | ?]; [rewrite isEq in * | try assumption]
+        destruct (@weq LgNumChildren c y) as [isEq | ?]; [rewrite isEq in * | try assumption]
     end.
   
   Ltac doAll :=
@@ -1261,7 +1335,53 @@ Section MemCacheInl.
           end; invariant_simpl;
       simplMapUpds doAll.
 
+  Lemma in_single_full A (a v: A): iff (In a [v]) (a = v).
+  Proof.
+    simpl; intuition auto.
+  Qed.
 
+  Ltac helpNormal := intros;
+      rsLessTo_thms;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      repeat match goal with
+               | y: forall i: Fin.t 2, _ |- _ =>
+                 set (y F1) in *;
+                   set (y F2) in *;
+                   fold FinFlag in y
+             end;
+      unfold FinFlag in *;
+      simpl in *;
+      specialize_msgs;
+      specialize_beg_mid_last;
+      autorewrite with myLogic in *;
+      rewriteEq;
+      simpl_hyps;
+      rmBadHyp2;
+      rewriteEq;
+      try (intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega)));
+      try match goal with
+            | |- context[if ?p then _ else _] =>
+              let isEq := fresh in
+              let nEq := fresh in
+              destruct p as [isEq | nEq];
+                [rewrite ?isEq in *|]; intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))
+          end;
+      existentials.
+(*    try (firstorder (discriminate || word_omega)). *)
+(*
+
+      repeat match goal with
+               | H: ?v = ?v |- _ => clear H
+               | H: true = false -> _ |- _ => clear H
+               | H: false = true -> _ |- _ => clear H
+               | H: forall (x: (forall i: Fin.t ?n, _ ?ls)), _ |- _ => 
+                 clear H
+             end;
+      rewrite ?cons_or, ?app_or, ?in_single_full in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    intuition (rewriteEq; try (discriminate || word_omega)).
+  *)  
+  
   Ltac doNormal :=
     normalInit;
     unfold listEnq, listDeq, listIsEmpty,
@@ -1273,8 +1393,228 @@ Section MemCacheInl.
                                   | list _ => destruct ls; try discriminate
                                 end
     end;
-    simplMapUpds doAll.
+    simplMapUpds
+      ltac:(
+      autorewrite with invariant in *;
+      unfold isCWait, isPWait in *;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      rmBadHyp;
+      try destruct_addr;
+      try destruct_cache;
+      ( assumption || (try solve [helpNormal]))).
+  (*
+                   (intros;
+                    rsLessTo_thms;
+                    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+                      repeat match goal with
+                               | y: forall i: Fin.t 2, _ |- _ =>
+                                 set (y F1) in *;
+                                   set (y F2) in *;
+                                   fold FinFlag in y
+                             end;
+                    unfold FinFlag in *;
+                      simpl in *;
+                      specialize_msgs;
+                    repeat match goal with
+                             | H: ?v = ?v |- _ => clear H
+                             | H: true = false -> _ |- _ => clear H
+                               | H: false = true -> _ |- _ => clear H
+                               | H: forall (x: (forall i: Fin.t ?n, _ ?ls)), _ |- _ => 
+                                 clear H
+                           end;
+                    rewrite ?cons_or, ?app_or, ?in_single_full in *;
+                      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in * ))).
+*)
+      (*
+                      try intuition (rewriteEq; try (discriminate || word_omega))
+                   ))).
+*)
+(*
+                      specialize_beg_mid_last;
+                      autorewrite with myLogic in *;
+                        rewriteEq;
+                      simpl_hyps;
+                      rewriteEq;
+                      rmBadHyp2;
+                      idtac ))). (*
+                      rewrite ?split1_combine, ?split2_combine in *;
+                        try (intuition (discriminate || word_omega));
+                      try match goal with
+                            | |- context[if ?p then _ else _] =>
+                              let isEq := fresh in
+                              let nEq := fresh in
+                              destruct p as [isEq | nEq];
+                            [rewrite ?isEq in *|]; intuition (try (discriminate || word_omega))
+                          end;
+                      existentials;
+                      try (firstorder (discriminate || word_omega))))).
+*)
+*)
 
+  Lemma nmemCache_invariants_hold_02 s a u cs:
+    nmemCache_invariants s ->
+    deferred is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    Set Ltac Profiling.
+    doNormal.
+    Show Ltac Profile.
+    intros.
+    apply in_app_or in H1.
+    destruct H1 as [ink | ez].
+    apply (i16c (y F2)) in ink.
+    rewrite ink in H2; discriminate.
+    simpl; left; reflexivity.
+    apply in_single in ez.
+    rewrite ez in *.
+    simpl.
+    specialize (i16a (y F2)).
+    rewrite cons_or in i16a.
+    
+    specialize (i16a (or_introl eq_refl)).
+    dest.
+    specialize (i25 (y F2)); simpl in i25; specialize (i25 (or_introl eq_refl)).
+    intuition word_omega.
+    Show Ltac Profile.
+    simpl.
+    try solve [doStuff].
+
+
+    
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    doStuff.
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    clear i28.
+    repeat match goal with
+             | H: ?a = ?a \/ ?P -> ?Q |- _ => assert Q by (apply H; left; reflexivity)
+           end.
+    exfalso.
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+    solve [intuition (rewriteEq; try (discriminate || word_omega))].
+
+    Set Ltac Profiling.
+    doNormal.
+    Show Ltac Profile.
+    simpl.
+    simpl.
+    destruct H1; try intuition (discriminate || congruence || word_omega).
+    subst; simpl in *.
+    repeat match goal with
+             | H: ?x = ?x \/ ?P -> ?Q |- _ =>
+               assert Q by (apply H; left; reflexivity)
+           end.
+    rewrite ?revcons_or in *.
+    
+    simpl.
+    destruct (procRq F2); try intuition (discriminate || congruence || word_omega).
+    simpl.
+    intuition (discriminate || congruence || word_omega).
+    
+    simpl in *.
+match goal with
+              | H: (forall x: (forall i: Fin.t ?n, _ ?ls), _),
+                   a: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                idtac
+end.
+               pose proof (H a);
+                 fold FinFlag in a;
+                 repeat match goal with
+                          | b: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                            pose proof (H b);
+                              fold FinFlag in b
+                          | b := _: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                            pose proof (H b);
+                              fold FinFlag in b
+                        end;
+                 unfold FinFlag in *;
+                 clear H
+end.
+             | H := _ : (forall x: (forall i: Fin.t ?n, _ ?ls), _),
+                        a: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+               pose proof (H a);
+                 fold FinFlag in a;
+                 repeat match goal with
+                          | b: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                            pose proof (H b);
+                              fold FinFlag in b
+                          | b := _: (forall i: Fin.t ?n, _ ?ls) |- _ =>
+                            pose proof (H b);
+                              fold FinFlag in b
+                        end;
+                 unfold FinFlag in *;
+                 clear H
+           end; unfold FinFlag in *.
+
+
+    progress specialize_msgs.
+    specialize (i16a y3).
+    set (y F1) in *.
+    rsLessTo_thms.
+    destruct_cache.
+
+  
+  Lemma nmemCache_invariants_hold_01 s a u cs:
+    nmemCache_invariants s ->
+    missByState is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    doNormal.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_02 s a u cs:
+    nmemCache_invariants s ->
+    deferred is a ->
+    SemAction s a
+              u cs WO ->
+    nmemCache_invariants (M.union u s).
+  Proof.
+    doNormal.
+    simpl.
+  Qed.
+
+  
   (*
   Lemma nmemCache_invariants_hold_02 s a u cs:
     nmemCache_invariants s ->
@@ -1718,15 +2058,10 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    Reset Ltac Profiling.
-    Set Ltac Profiling.
     doMeta.
-    Show Ltac Profile.
   Qed.
 
 
-  
-  Show Ltac Profile.
   
   Lemma nmemCache_invariants_hold_12 s a u cs:
     nmemCache_invariants s ->
