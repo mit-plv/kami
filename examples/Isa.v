@@ -6,11 +6,12 @@ Require Import Ex.MemTypes Ex.SC.
 (* Subset of RV32I instructions (17/47):
  * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
  * - Memory : LW, SW
- * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, SRA, OR, AND, XOR
+ * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, OR, AND, XOR
  * Some pseudo instructions (9):
  * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
  * Custom instructions (1):
  * - TOHOST
+ * Just one RV32M instruction: MUL
  *)
 Section RV32I.
   Definition rv32iAddrSize := 5. (* 2^5 = 32 memory cells *)
@@ -87,8 +88,6 @@ Section RV32I.
 
   Section Opcodes.
 
-    Definition rv32iOpLUI     := WO~0~1~1~0~1~1~1. (* U-type, load upper immediate *)
-    Definition rv32iOpAUIPC   := WO~0~0~1~0~1~1~1. (* U-type, add upper immediate to PC *)
     Definition rv32iOpJAL     := WO~1~1~0~1~1~1~1. (* UJ-type, jump and link *)
     Definition rv32iOpJALR    := WO~1~1~0~0~1~1~1. (* I-type, jump and link register *)
     Definition rv32iOpBRANCH  := WO~1~1~0~0~0~1~1. (* SB-type, branch *)
@@ -96,8 +95,6 @@ Section RV32I.
     Definition rv32iOpSTORE   := WO~0~1~0~0~0~1~1. (* S-type, store *)
     Definition rv32iOpOPIMM   := WO~0~0~1~0~0~1~1. (* I-type, register-immediate *)
     Definition rv32iOpOP      := WO~0~1~1~0~0~1~1. (* R-type, register-register *)
-    Definition rv32iOpMISCMEM := WO~0~0~0~1~1~1~1.
-    Definition rv32iOpSYSTEM  := WO~1~1~1~0~0~1~1.
 
     Definition rv32iOpTOHOST  := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
 
@@ -168,7 +165,9 @@ Section RV32I.
 
     Definition rv32iGetDst: DstT rv32iLgDataBytes rv32iRfIdx.
       unfold DstT; intros ty inst.
-      exact (getRdE #inst)%kami_expr.
+      refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else _)%kami_expr.
+      - exact ($0)%kami_expr. (* Branch instructions should not write registers *)
+      - exact (getRdE #inst)%kami_expr.
     Defined.
 
   End Decode.
@@ -177,7 +176,6 @@ Section RV32I.
 
     Definition rv32iF7SLLI := WO~0~0~0~0~0~0~0.
     Definition rv32iF7SRLI := WO~0~0~0~0~0~0~0.
-    Definition rv32iF7SRAI := WO~0~1~0~0~0~0~0.
     Definition rv32iF7ADD := WO~0~0~0~0~0~0~0.
     Definition rv32iF7SUB := WO~0~1~0~0~0~0~0.
     Definition rv32iF7SLL := WO~0~0~0~0~0~0~0.
@@ -185,9 +183,9 @@ Section RV32I.
     Definition rv32iF7SLTU := WO~0~0~0~0~0~0~0.
     Definition rv32iF7XOR := WO~0~0~0~0~0~0~0.
     Definition rv32iF7SRL := WO~0~0~0~0~0~0~0.
-    Definition rv32iF7SRA := WO~0~1~0~0~0~0~0.
     Definition rv32iF7OR := WO~0~0~0~0~0~0~0.
     Definition rv32iF7AND := WO~0~0~0~0~0~0~0.
+    Definition rv32mF7MUL := WO~0~0~0~0~0~0~1.
 
   End Funct7.
 
@@ -216,16 +214,15 @@ Section RV32I.
     Definition rv32iF3ANDI := WO~1~1~1.
     Definition rv32iF3SLLI := WO~0~0~1.
     Definition rv32iF3SRLI := WO~1~0~1.
-    Definition rv32iF3SRAI := WO~1~0~1.
     Definition rv32iF3ADD := WO~0~0~0.
     Definition rv32iF3SUB := WO~0~0~0.
     Definition rv32iF3SLL := WO~0~0~1.
     Definition rv32iF3SLTU := WO~0~1~1.
     Definition rv32iF3XOR := WO~1~0~0.
     Definition rv32iF3SRL := WO~1~0~1.
-    Definition rv32iF3SRA := WO~1~0~1.
     Definition rv32iF3OR := WO~1~1~0.
     Definition rv32iF3AND := WO~1~1~1.
+    Definition rv32mF3MUL := WO~0~0~0.
   
   End Funct3.
 
@@ -249,16 +246,25 @@ Section RV32I.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpOP) then _ else _)%kami_expr.
 
-    - register_op_funct7 inst rv32iF7ADD (#val1 + #val2)%kami_expr.
-      register_op_funct7 inst rv32iF7SUB (#val1 - #val2)%kami_expr.
-      register_op_funct7 inst rv32iF7SLL (#val1 << (UniBit (Trunc 5 _) #val2))%kami_expr.
-      register_op_funct7 inst rv32iF7SRL (#val1 >> (UniBit (Trunc 5 _) #val2))%kami_expr.
-      register_op_funct7 inst rv32iF7SRA (#val2 ~>> (UniBit (Trunc 5 _) #val2))%kami_expr.
-      register_op_funct7 inst rv32iF7OR (#val1 ~| #val2)%kami_expr.
-      register_op_funct7 inst rv32iF7AND (#val1 ~& #val2)%kami_expr.
-      register_op_funct7 inst rv32iF7XOR (#val1 ~+ #val2)%kami_expr.
-      exact ($$Default)%kami_expr. (* undefined semantics so far *)
+    - refine (IF (getFunct7E #inst == $$(WO~0~0~0~0~0~0~0)) then _ else _)%kami_expr.
 
+      + register_op_funct3 inst rv32iF3ADD (#val1 + #val2)%kami_expr.
+        register_op_funct3 inst rv32iF3SLL (#val1 << (UniBit (Trunc 5 _) #val2))%kami_expr.
+        register_op_funct3 inst rv32iF3SRL (#val1 >> (UniBit (Trunc 5 _) #val2))%kami_expr.
+        register_op_funct3 inst rv32iF3OR (#val1 ~| #val2)%kami_expr.
+        register_op_funct3 inst rv32iF3AND (#val1 ~& #val2)%kami_expr.
+        register_op_funct3 inst rv32iF3XOR (#val1 ~+ #val2)%kami_expr.
+        exact ($$Default)%kami_expr. (* undefined semantics so far *)
+
+      + refine (IF (getFunct7E #inst == $$(WO~0~0~0~0~0~0~1)) then _ else _)%kami_expr.
+
+        * register_op_funct3 inst rv32mF3MUL (#val1 * #val2)%kami_expr.
+          exact ($$Default)%kami_expr. (* undefined semantics so far *)
+
+        * (* NOTE: now assume (getFunct7E #inst == $$(WO~0~1~0~0~0~0~0)) *)
+          register_op_funct3 inst rv32iF3SUB (#val1 - #val2)%kami_expr.
+          exact ($$Default)%kami_expr. (* undefined semantics so far *)
+      
     - refine (IF (getOpcodeE #inst == $$rv32iOpOPIMM) then _ else $$Default)%kami_expr.
 
       register_op_funct3 inst rv32iF3ADDI
@@ -336,9 +342,9 @@ Section RV32IStruct.
   | ADDI (rs1 rd: Gpr) (ofs: word 12): Rv32i
   | ADD (rs1 rs2 rd: Gpr): Rv32i
   | SUB (rs1 rs2 rd: Gpr): Rv32i
+  | MUL (rs1 rs2 rd: Gpr): Rv32i
   | SLL (rs1 rs2 rd: Gpr): Rv32i
   | SRL (rs1 rs2 rd: Gpr): Rv32i
-  | SRA (rs1 rs2 rd: Gpr): Rv32i
   | OR (rs1 rs2 rd: Gpr): Rv32i
   | AND (rs1 rs2 rd: Gpr): Rv32i
   | XOR (rs1 rs2 rd: Gpr): Rv32i
@@ -397,9 +403,9 @@ Section RV32IStruct.
     | ADDI rs1 rd ofs => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
     | ADD rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7ADD rv32iF3ADD
     | SUB rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SUB rv32iF3SUB
+    | MUL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32mF7MUL rv32mF3MUL
     | SLL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLL rv32iF3SLL
     | SRL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SRL rv32iF3SRL
-    | SRA rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SRA rv32iF3SRA
     | OR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7OR rv32iF3OR
     | AND rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7AND rv32iF3AND
     | XOR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7XOR rv32iF3XOR
@@ -424,48 +430,48 @@ Section UnitTests.
 
   Definition RtypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
     rv32iOpOP := eq_refl.
   Definition RtypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
     gprToRaw x1 := eq_refl.
   Definition RtypeToRaw_getRs2E_correct:
     evalExpr (getRs2E
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
     gprToRaw x2 := eq_refl.
   Definition RtypeToRaw_getRdE_correct:
     evalExpr (getRdE
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
     gprToRaw x3 := eq_refl.
   Definition RtypeToRaw_getFunct7E_correct:
     evalExpr (getFunct7E
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
-    rv32iF7SRAI := eq_refl.
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
+    rv32iF7SRLI := eq_refl.
   Definition RtypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
-                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRAI rv32iF3SRAI)))) =
-    rv32iF3SRAI := eq_refl.
+                (Const _ (ConstBit (RtypeToRaw rv32iOpOP x1 x2 x3 rv32iF7SRLI rv32iF3SRLI)))) =
+    rv32iF3SRLI := eq_refl.
 
   Definition ItypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
-                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
     rv32iOpOPIMM := eq_refl.
   Definition ItypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
-                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
     gprToRaw x1 := eq_refl.
   Definition ItypeToRaw_getRdE_correct:
     evalExpr (getRdE
-                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
     gprToRaw x2 := eq_refl.
   Definition ItypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
-                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
-    rv32iF3SRAI := eq_refl.
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
+    rv32iF3SRLI := eq_refl.
   Definition ItypeToRaw_getOffsetIE_correct:
     evalExpr (getOffsetIE
-                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRAI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
     natToWord _ 5 := eq_refl.
 
   Definition StypeToRaw_getOpcodeE_correct:

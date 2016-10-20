@@ -74,6 +74,7 @@ let ppSignExtend = "signExtend"
 let ppTruncate = "truncate"
 let ppAdd = "+"
 let ppSub = "-"
+let ppMul = "*"
 let ppBand = "&"
 let ppBor = "|"
 let ppBxor = "^"
@@ -386,6 +387,9 @@ let rec ppBExpr (e: bExpr) =
   | BBinBit (_, _, _, Sub _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppSub; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Mul _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppMul; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Band _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppBand; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR

@@ -263,6 +263,7 @@ Inductive UniBitOp: nat -> nat -> Set :=
 Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
 | Sub n: BinBitOp n n n
+| Mul n: BinBitOp n n n
 | Band n: BinBitOp n n n
 | Bor n: BinBitOp n n n
 | Bxor n: BinBitOp n n n
