@@ -11,6 +11,7 @@ Require Import Ex.MemTypes Ex.SC.
  * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
  * Custom instructions (1):
  * - TOHOST
+ * Just one RV32M instruction: MUL
  *)
 Section RV32I.
   Definition rv32iAddrSize := 5. (* 2^5 = 32 memory cells *)
@@ -184,6 +185,7 @@ Section RV32I.
     Definition rv32iF7SRL := WO~0~0~0~0~0~0~0.
     Definition rv32iF7OR := WO~0~0~0~0~0~0~0.
     Definition rv32iF7AND := WO~0~0~0~0~0~0~0.
+    Definition rv32mF7MUL := WO~0~0~0~0~0~0~1.
 
   End Funct7.
 
@@ -220,6 +222,7 @@ Section RV32I.
     Definition rv32iF3SRL := WO~1~0~1.
     Definition rv32iF3OR := WO~1~1~0.
     Definition rv32iF3AND := WO~1~1~1.
+    Definition rv32mF3MUL := WO~0~0~0.
   
   End Funct3.
 
@@ -253,8 +256,14 @@ Section RV32I.
         register_op_funct3 inst rv32iF3XOR (#val1 ~+ #val2)%kami_expr.
         exact ($$Default)%kami_expr. (* undefined semantics so far *)
 
-      + register_op_funct3 inst rv32iF3SUB (#val1 - #val2)%kami_expr.
-        exact ($$Default)%kami_expr. (* undefined semantics so far *)
+      + refine (IF (getFunct7E #inst == $$(WO~0~0~0~0~0~0~1)) then _ else _)%kami_expr.
+
+        * register_op_funct3 inst rv32mF3MUL (#val1 * #val2)%kami_expr.
+          exact ($$Default)%kami_expr. (* undefined semantics so far *)
+
+        * (* NOTE: now assume (getFunct7E #inst == $$(WO~0~1~0~0~0~0~0)) *)
+          register_op_funct3 inst rv32iF3SUB (#val1 - #val2)%kami_expr.
+          exact ($$Default)%kami_expr. (* undefined semantics so far *)
       
     - refine (IF (getOpcodeE #inst == $$rv32iOpOPIMM) then _ else $$Default)%kami_expr.
 
@@ -333,6 +342,7 @@ Section RV32IStruct.
   | ADDI (rs1 rd: Gpr) (ofs: word 12): Rv32i
   | ADD (rs1 rs2 rd: Gpr): Rv32i
   | SUB (rs1 rs2 rd: Gpr): Rv32i
+  | MUL (rs1 rs2 rd: Gpr): Rv32i
   | SLL (rs1 rs2 rd: Gpr): Rv32i
   | SRL (rs1 rs2 rd: Gpr): Rv32i
   | OR (rs1 rs2 rd: Gpr): Rv32i
@@ -393,6 +403,7 @@ Section RV32IStruct.
     | ADDI rs1 rd ofs => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
     | ADD rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7ADD rv32iF3ADD
     | SUB rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SUB rv32iF3SUB
+    | MUL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32mF7MUL rv32mF3MUL
     | SLL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLL rv32iF3SLL
     | SRL rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SRL rv32iF3SRL
     | OR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7OR rv32iF3OR

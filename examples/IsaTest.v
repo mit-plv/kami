@@ -318,6 +318,7 @@ Definition pgmFibonacci (n: nat) : Program.
   nop. nop. nop. nop. nop. nop. nop. nop.
 Defined.
 
+(* Expected output : Gcd(n, m) *)
 Definition pgmGcd (n m: nat) : Program.
   init_pgm.
   line 0 (LI x8 (natToWord _ n)).
@@ -337,5 +338,21 @@ Definition pgmGcd (n m: nat) : Program.
   nop. nop. nop. nop. nop. nop. nop. nop.
   nop. nop. nop. nop. nop. nop. nop. nop.
   nop. nop.
+Defined.
+
+(* Expected output : n! *)
+Definition pgmFactorial (n: nat) : Program.
+  init_pgm.
+  line 0 (LI x4 (natToWord _ 1)).
+  line 1 (MV x4 x9).
+  line 2 (LI x8 (natToWord _ (S n))).
+  line 3 (MUL x4 x9 x4).
+  line 4 (ADDI x9 x9 (natToWord _ 1)).
+  line 5 (BNE x9 x8 (natToWord _ 30)). (* 5 + 30 == 3 *)
+  line 6 (TOHOST x4).
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop.
 Defined.
 

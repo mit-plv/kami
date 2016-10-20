@@ -39,6 +39,7 @@ Infix "&&" := (BinBool And) : kami_expr_scope.
 Infix "||" := (BinBool Or) : kami_expr_scope.
 Infix "+" := (BinBit (Add _)) : kami_expr_scope.
 Infix "-" := (BinBit (Sub _)) : kami_expr_scope.
+Infix "*" := (BinBit (Mul _)) : kami_expr_scope.
 Infix "~&" := (BinBit (Band _)) (at level 0) : kami_expr_scope.
 Infix "~|" := (BinBit (Bor _)) (at level 0) : kami_expr_scope.
 Infix "~+" := (BinBit (Bxor _)) (at level 0) : kami_expr_scope.
