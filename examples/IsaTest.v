@@ -318,3 +318,24 @@ Definition pgmFibonacci (n: nat) : Program.
   nop. nop. nop. nop. nop. nop. nop. nop.
 Defined.
 
+Definition pgmGcd (n m: nat) : Program.
+  init_pgm.
+  line 0 (LI x8 (natToWord _ n)).
+  line 1 (LI x9 (natToWord _ m)).
+  line 2 (MV x8 x4).
+  line 3 (SUB x9 x8 x5).
+  line 4 (SUB x8 x9 x6).
+  line 5 (MV x9 x7).
+  line 6 (BGE x8 x9 (natToWord _ 2)).
+  line 7 (MV x5 x7).
+  line 8 (BLT x4 x9 (natToWord _ 2)).
+  line 9 (MV x6 x4).
+  line 10 (MV x4 x8).
+  line 11 (MV x7 x9).
+  line 12 (BNE x4 x7 (natToWord _ 22)). (* 12 + 22 == 2 *)
+  line 13 (TOHOST x4).
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop. nop. nop. nop. nop. nop. nop. nop.
+  nop. nop.
+Defined.
+

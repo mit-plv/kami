@@ -87,8 +87,6 @@ Section RV32I.
 
   Section Opcodes.
 
-    Definition rv32iOpLUI     := WO~0~1~1~0~1~1~1. (* U-type, load upper immediate *)
-    Definition rv32iOpAUIPC   := WO~0~0~1~0~1~1~1. (* U-type, add upper immediate to PC *)
     Definition rv32iOpJAL     := WO~1~1~0~1~1~1~1. (* UJ-type, jump and link *)
     Definition rv32iOpJALR    := WO~1~1~0~0~1~1~1. (* I-type, jump and link register *)
     Definition rv32iOpBRANCH  := WO~1~1~0~0~0~1~1. (* SB-type, branch *)
@@ -96,8 +94,6 @@ Section RV32I.
     Definition rv32iOpSTORE   := WO~0~1~0~0~0~1~1. (* S-type, store *)
     Definition rv32iOpOPIMM   := WO~0~0~1~0~0~1~1. (* I-type, register-immediate *)
     Definition rv32iOpOP      := WO~0~1~1~0~0~1~1. (* R-type, register-register *)
-    Definition rv32iOpMISCMEM := WO~0~0~0~1~1~1~1.
-    Definition rv32iOpSYSTEM  := WO~1~1~1~0~0~1~1.
 
     Definition rv32iOpTOHOST  := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
 
@@ -168,7 +164,9 @@ Section RV32I.
 
     Definition rv32iGetDst: DstT rv32iLgDataBytes rv32iRfIdx.
       unfold DstT; intros ty inst.
-      exact (getRdE #inst)%kami_expr.
+      refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else _)%kami_expr.
+      - exact ($0)%kami_expr. (* Branch instructions should not write registers *)
+      - exact (getRdE #inst)%kami_expr.
     Defined.
 
   End Decode.
