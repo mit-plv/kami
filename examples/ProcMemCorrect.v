@@ -11,7 +11,7 @@ Set Implicit Arguments.
 
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
-  Variables OpIdx RfIdx: nat. (* processor *)
+  Variables OpIdx RfIdx IAddrSize: nat. (* processor *)
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
@@ -33,7 +33,7 @@ Section ProcMem.
             (getDst: DstT LgDataBytes RfIdx)
             (exec: ExecT AddrSize LgDataBytes)
             (getNextPc: NextPcT AddrSize LgDataBytes RfIdx)
-            (alignPc: AlignPcT AddrSize)
+            (alignPc: AlignPcT AddrSize IAddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit AddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit AddrSize))).
 

@@ -13,7 +13,7 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -30,7 +30,7 @@ Section ProcDec.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -47,7 +47,7 @@ Section ProcDec.
   Definition procDec := MODULE {
     Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-    with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
+    with Register "pgm" : Vector (Data lgDataBytes) iaddrSize <- Default
     with Register "stall" : Bool <- false
                                  
     with Rule "reqLd" :=
@@ -174,7 +174,7 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -191,7 +191,7 @@ Section ProcDecM.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
@@ -208,7 +208,7 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -225,7 +225,7 @@ Section Facts.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Lemma pdec_ModEquiv:
     ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr

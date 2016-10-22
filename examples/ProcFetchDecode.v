@@ -7,7 +7,7 @@ Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic Ex.ProcThreeStage.
 Set Implicit Arguments.
 
 Section F2dInst.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   Definition f2dEltI :=
     STRUCT { "rawInst" :: Data lgDataBytes;
@@ -64,7 +64,7 @@ End F2dInst.
  * in three-staged processor (P3st).
  *)
 Section FetchAndDecode.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -81,7 +81,7 @@ Section FetchAndDecode.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -132,7 +132,7 @@ Section FetchAndDecode.
   
   Definition fetcher := MODULE {
     Register "pc" : Bit addrSize <- Default
-    with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
+    with Register "pgm" : Vector (Data lgDataBytes) iaddrSize <- Default
     with Register "fEpoch" : Bool <- false
 
     with Rule "modifyPc" :=
@@ -148,7 +148,8 @@ Section FetchAndDecode.
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
       LET npc <- predictNextPc _ pc;
-      Call f2dEnq(f2dPack #pgm@[alignPc _ pc] #pc #npc #epoch);
+      LET apc <- alignPc _ pc;
+      Call f2dEnq(f2dPack #pgm@[#apc] #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
   }.
@@ -274,7 +275,7 @@ Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1 sbSearch2 sbSearch3 sbInsert : MethDefs.
   
 Section Facts.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -291,7 +292,7 @@ Section Facts.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -328,7 +329,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    ModPhoasWf (fetcher predictNextPc alignPc f2dPack).
+    ModPhoasWf (fetcher alignPc predictNextPc f2dPack).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 

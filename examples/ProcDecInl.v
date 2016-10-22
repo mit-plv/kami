@@ -5,7 +5,7 @@ Require Import Ex.SC Ex.ProcDec.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -22,7 +22,7 @@ Section Inlined.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc

@@ -10,7 +10,7 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -27,7 +27,7 @@ Section Invariants.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -77,7 +77,7 @@ Section Invariants.
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
-      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
 
       stallv : fullType type (SyntaxKind Bool);

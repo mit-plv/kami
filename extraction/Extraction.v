@@ -20,9 +20,9 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 5) *)
-Definition idxBits := 2.
-Definition tagBits := 2.
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 12) *)
+Definition idxBits := 3.
+Definition tagBits := 3.
 Definition lgNumDatas := 1.
 Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
 Definition fifoSize := 2.
@@ -56,7 +56,7 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataByt
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY targetPgm to your target program *)
-Definition targetPgm := pgmLwSwTest2.
+Definition targetPgm := pgmJalTest1.
 
 (** MODIFY targetM to your target module *)
 Definition targetProcM := procMemCache.

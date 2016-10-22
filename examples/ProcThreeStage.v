@@ -75,7 +75,7 @@ Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
 Hint Unfold enq deq firstElt isFull flush : MethDefs.
 
 Section D2eInst.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   Definition d2eEltI :=
     STRUCT { "opType" :: Bit 2;
@@ -192,7 +192,7 @@ Section D2eInst.
 End D2eInst.
 
 Section E2wInst.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   Definition e2wEltI :=
     STRUCT { "decInst" :: Struct (d2eEltI addrSize lgDataBytes rfIdx);
@@ -228,7 +228,7 @@ End E2wInst.
  *)
 Section ProcThreeStage.
   Variable inName outName: string.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -245,7 +245,7 @@ Section ProcThreeStage.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -400,7 +400,7 @@ Section ProcThreeStage.
     
     Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- Default
-      with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
+      with Register "pgm" : Vector (Data lgDataBytes) iaddrSize <- Default
       with Register "fEpoch" : Bool <- false
                                     
       with Rule "modifyPc" :=
@@ -759,7 +759,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep
      toHost checkNextPc : MethDefs.
 
 Section ProcThreeStageM.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -776,7 +776,7 @@ Section ProcThreeStageM.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -837,7 +837,7 @@ End ProcThreeStageM.
 Hint Unfold p3st : ModuleDefs.
 
 Section Facts.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -854,7 +854,7 @@ Section Facts.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 

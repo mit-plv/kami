@@ -10,7 +10,7 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -27,7 +27,7 @@ Section Invariants.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -84,7 +84,7 @@ Section Invariants.
 
   Definition fetchDecode_inv_body
              (pcv: fullType type (SyntaxKind (Bit addrSize)))
-             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
+             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize)))
              (fepochv: fullType type (SyntaxKind Bool))
              (f2dfullv: fullType type (SyntaxKind Bool))
              (f2deltv: fullType type (SyntaxKind f2dElt)) :=
@@ -99,7 +99,7 @@ Section Invariants.
   Record fetchDecode_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
-      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
       fepochv : fullType type (SyntaxKind Bool);
       Hfepochv : M.find "fEpoch"%string o = Some (existT _ _ fepochv);

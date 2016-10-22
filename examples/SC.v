@@ -14,7 +14,7 @@ Set Implicit Arguments.
 
 (* Abstract ISA *)
 Section DecExec.
-  Variables opIdx addrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* opcode-related *)
   Definition OpcodeK := SyntaxKind (Bit opIdx).
@@ -97,7 +97,7 @@ Section DecExec.
                                    fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                                    Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
   Definition AlignPcT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                    Expr ty (SyntaxKind (Bit addrSize)). (* aligned pc *)
+                                    Expr ty (SyntaxKind (Bit iaddrSize)). (* aligned pc *)
   
 End DecExec.
 
@@ -145,7 +145,7 @@ Hint Unfold memInstM memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variables addrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -162,7 +162,7 @@ Section ProcInst.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize lgDataBytes)) : Struct (RsToProc lgDataBytes).
   Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
@@ -174,7 +174,7 @@ Section ProcInst.
   Definition procInst := MODULE {
     Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-    with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
+    with Register "pgm" : Vector (Data lgDataBytes) iaddrSize <- Default
 
     with Rule "execLd" :=
       Read ppc <- "pc";
@@ -265,7 +265,7 @@ Hint Unfold execCm toHostCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables addrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -282,7 +282,7 @@ Section SC.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Variable n: nat.
 
@@ -299,7 +299,7 @@ End SC.
 Hint Unfold pinst pinsts minst sc : ModuleDefs.
 
 Section Facts.
-  Variables addrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -316,7 +316,7 @@ Section Facts.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Lemma pinst_ModEquiv:
     ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr

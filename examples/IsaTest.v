@@ -24,7 +24,7 @@ Ltac init_pgm :=
 
 Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
-Local Notation "'Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iAddrSize)).
+Local Notation "'Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize)).
 
 Definition branchTarget {sz} (ofs: nat) := natToWord sz (ofs * 4).
 

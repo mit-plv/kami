@@ -11,7 +11,7 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -28,7 +28,7 @@ Section ProcDecSC.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
-            (alignPc: AlignPcT addrSize).
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
@@ -55,7 +55,7 @@ Section ProcDecSC.
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Bit addrSize) <- r |> "pc";
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
-       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r |> "pgm";
+       mlet pgmv : (Vector (Data lgDataBytes) iaddrSize) <- r |> "pgm";
        mlet oev : Bool <- r |> "rsToProc"--"empty";
        mlet oelv : (Vector (Struct RsToProc) fifoSize) <- r |> "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r |> "rsToProc"--"deqP";
