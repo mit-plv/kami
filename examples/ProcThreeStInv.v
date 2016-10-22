@@ -27,6 +27,7 @@ Section Invariants.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -101,7 +102,7 @@ Section Invariants.
 
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                        getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                         e2wPack e2wDecInst e2wVal).
@@ -215,7 +216,7 @@ Section Invariants.
              (d2efullv: fullType type (SyntaxKind Bool)) :=
     d2efullv = true ->
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
-    (rawInst = pgmv (evalExpr (d2eCurPc _ d2eeltv)) /\
+    (rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ d2eeltv)))) /\
      evalExpr (d2eOpType _ d2eeltv) = evalExpr (getOptype _ rawInst) /\
      (evalExpr (d2eOpType _ d2eeltv) = opLd ->
       (evalExpr (d2eDst _ d2eeltv) = evalExpr (getLdDst _ rawInst) /\
@@ -264,7 +265,7 @@ Section Invariants.
     stallv = true ->
     let rawInst := evalExpr (d2eRawInst _ stalledv) in
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
-    rawInst = pgmv (evalExpr (d2eCurPc _ stalledv)) /\
+    rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ stalledv)))) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
      evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst)).
 

@@ -96,6 +96,8 @@ Section DecExec.
                                    fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                    fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
                                    Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
+  Definition AlignPcT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
+                                    Expr ty (SyntaxKind (Bit addrSize)). (* aligned pc *)
   
 End DecExec.
 
@@ -103,7 +105,7 @@ Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opTh opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
-     StateK StateE StateT ExecT NextPcT : MethDefs.
+     StateK StateE StateT ExecT NextPcT AlignPcT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
@@ -159,7 +161,8 @@ Section ProcInst.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize).
 
   Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize lgDataBytes)) : Struct (RsToProc lgDataBytes).
   Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
@@ -172,12 +175,12 @@ Section ProcInst.
     Register "pc" : Bit addrSize <- Default
     with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
     with Register "pgm" : Vector (Data lgDataBytes) addrSize <- Default
-                                 
+
     with Rule "execLd" :=
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
@@ -195,7 +198,7 @@ Section ProcInst.
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
       Assert (#regIdx == $0);
@@ -205,7 +208,7 @@ Section ProcInst.
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
       LET srcIdx <- getStSrc _ rawInst;
@@ -222,7 +225,7 @@ Section ProcInst.
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opTh);
       LET valIdx <- getSrc1 _ rawInst;
       LET val <- #rf@[#valIdx];
@@ -233,7 +236,7 @@ Section ProcInst.
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
       LET val1 <- #rf@[#src1];
@@ -249,7 +252,7 @@ Section ProcInst.
       Read ppc <- "pc";
       Read rf <- "rf";
       Read pgm <- "pgm";
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
       Assert (#dst == $0);
@@ -278,13 +281,14 @@ Section SC.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize).
 
   Variable n: nat.
 
   Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize lgDataBytes.
 
@@ -311,12 +315,13 @@ Section Facts.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize).
 
   Lemma pinst_ModEquiv:
     ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc).
+                      getSrc1 getSrc2 getDst exec getNextPc alignPc).
   Proof.
     kequiv.
   Qed.
@@ -327,7 +332,7 @@ Section Facts.
   Lemma pinsts_ModEquiv:
     ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc n).
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc n).
   Proof.
     kequiv.
   Qed.
@@ -343,7 +348,7 @@ Section Facts.
   Lemma sc_ModEquiv:
     ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                    getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 getSrc2 getDst exec getNextPc n).
+                   getSrc1 getSrc2 getDst exec getNextPc alignPc n).
   Proof.
     kequiv.
   Qed.

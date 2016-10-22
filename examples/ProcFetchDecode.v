@@ -81,6 +81,7 @@ Section FetchAndDecode.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -147,7 +148,7 @@ Section FetchAndDecode.
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
       LET npc <- predictNextPc _ pc;
-      Call f2dEnq(f2dPack #pgm@[#pc] #pc #npc #epoch);
+      Call f2dEnq(f2dPack #pgm@[alignPc _ pc] #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
   }.
@@ -290,6 +291,7 @@ Section Facts.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -326,7 +328,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    ModPhoasWf (fetcher predictNextPc f2dPack).
+    ModPhoasWf (fetcher predictNextPc alignPc f2dPack).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -342,7 +344,7 @@ Section Facts.
   Lemma fetchDecode_ModEquiv:
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst predictNextPc d2ePack
+                            getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
                             f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof.
     kequiv.

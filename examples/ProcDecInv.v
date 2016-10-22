@@ -26,14 +26,15 @@ Section Invariants.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc.
+                                getSrc1 getSrc2 getDst exec getNextPc alignPc.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -109,7 +110,7 @@ Section Invariants.
                ((stallv = true /\
                  fifo_not_empty_inv iev ienqpv ideqpv /\
                  fifo_empty_inv oev oenqpv odeqpv) /\
-                (mem_request_inv (pgmv pcv) rfv iev ieltv ideqpv))
+                (mem_request_inv (pgmv (evalExpr (alignPc type pcv))) rfv iev ieltv ideqpv))
                (stallv = true /\
                 fifo_empty_inv iev ienqpv ideqpv /\
                 fifo_not_empty_inv oev oenqpv odeqpv)

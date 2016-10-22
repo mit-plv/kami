@@ -272,6 +272,11 @@ Section RV32I.
       exact ($$Default)%kami_expr.
   Defined.
 
+  Definition rv32iAlignPc: AlignPcT rv32iAddrSize.
+    unfold AlignPcT; intros ty pc.
+    exact (#pc >> $$(natToWord 2 2))%kami_expr.
+  Defined.
+
   (* NOTE: Because instructions are not on the memory, we give (pc + 1) for the next pc.
    * Branch offsets are not aligned, so the complete offset bits are used.
    *)
@@ -286,27 +291,27 @@ Section RV32I.
             then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st #inst))
                  + (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst)) else _)%kami_expr.
 
-    refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else #pc + $1)%kami_expr.
+    refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else #pc + $4)%kami_expr.
     (* branch instructions *)
     register_op_funct3 inst rv32iF3BEQ
                        (IF (getRs1ValueE st #inst == getRs2ValueE st #inst)
                         then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
-                        else #pc + $1)%kami_expr.
+                        else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BNE
                        (IF (getRs1ValueE st #inst != getRs2ValueE st #inst)
                         then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
-                        else #pc + $1)%kami_expr.
+                        else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BLT
                        (IF (getRs1ValueE st #inst < getRs2ValueE st #inst)
                         then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
-                        else #pc + $1)%kami_expr.
+                        else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BGE
                        (IF (getRs1ValueE st #inst >= getRs2ValueE st #inst)
                         then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
-                        else #pc + $1)%kami_expr.
-    exact (#pc + $1)%kami_expr.
+                        else #pc + $4)%kami_expr.
+    exact (#pc + $4)%kami_expr.
   Defined.
-    
+
 End RV32I.
 
 (* For easy RV32I programming *)

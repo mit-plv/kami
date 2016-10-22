@@ -27,6 +27,7 @@ Section Invariants.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -78,7 +79,7 @@ Section Invariants.
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
                                          getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 getSrc2 getDst predictNextPc
+                                         getSrc1 getSrc2 getDst alignPc predictNextPc
                                          d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
 
   Definition fetchDecode_inv_body
@@ -89,7 +90,7 @@ Section Invariants.
              (f2deltv: fullType type (SyntaxKind f2dElt)) :=
     f2dfullv = true ->
     let rawInst := evalExpr (f2dRawInst _ f2deltv) in
-    (rawInst = pgmv (evalExpr (f2dCurPc _ f2deltv)) /\
+    (rawInst = pgmv (evalExpr (alignPc _ (evalExpr (f2dCurPc _ f2deltv)))) /\
      evalExpr (f2dNextPc _ f2deltv) =
      evalExpr (predictNextPc type (evalExpr (f2dCurPc _ f2deltv))) /\
      evalExpr (f2dNextPc _ f2deltv) = pcv /\

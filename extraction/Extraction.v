@@ -29,13 +29,13 @@ Definition fifoSize := 2.
 Definition idK := Bit 1.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
-  (#ppc + $1)%kami_expr.
+  (#ppc + $4)%kami_expr.
 
 Definition p4st := p4st rv32iGetOptype
                         rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
                         rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
                         rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-                        predictNextPc (@d2ePackI _ _ _)
+                        rv32iAlignPc predictNextPc (@d2ePackI _ _ _)
                         (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
                         (@d2eVal1I _ _ _) (@d2eVal2I _ _ _)
                         (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _) (@d2eNextPcI _ _ _)

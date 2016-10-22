@@ -27,17 +27,18 @@ Section ProcDecSC.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc.
+                           getSrc1 getSrc2 getDst exec getNextPc alignPc.
   Definition pinst := pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst exec getNextPc.
+                            getSrc1 getSrc2 getDst exec getNextPc alignPc.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
@@ -63,7 +64,7 @@ Section ProcDecSC.
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
-         let rawInst := pgmv pcv in
+         let rawInst := pgmv (evalExpr (alignPc _ pcv)) in
          (["pgm" <- (existT _ _ pgmv)]
           +["rf" <- (let opc := evalExpr (getOptype _ rawInst) in
                      if weq opc opLd
@@ -82,7 +83,7 @@ Section ProcDecSC.
 
   Ltac procDec_inv_old :=
     try match goal with
-        | [H: procDec_inv _ _ _ _ _ _ _ _ _ _ _ |- _] => destruct H
+        | [H: context[procDec_inv] |- _] => destruct H
         end;
     kinv_red; kinv_or3;
     (* decide the current state by giving contradictions for all other states *)
