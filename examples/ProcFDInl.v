@@ -5,7 +5,7 @@ Require Import Ex.SC Ex.MemTypes Ex.ProcFetchDecode.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -22,6 +22,7 @@ Section Inlined.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -59,7 +60,7 @@ Section Inlined.
 
   Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst predictNextPc
+                                        getSrc1 getSrc2 getDst alignPc predictNextPc
                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
@@ -68,7 +69,7 @@ Section Inlined.
     pose proof (inlineF_refines
                   (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst predictNextPc d2ePack
+                                        getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))

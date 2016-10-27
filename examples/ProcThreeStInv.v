@@ -10,7 +10,7 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -27,6 +27,7 @@ Section Invariants.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -101,7 +102,7 @@ Section Invariants.
 
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                        getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                         e2wPack e2wDecInst e2wVal).
@@ -209,13 +210,13 @@ Section Invariants.
 
   (* NOTE: this invariant requires p3st_raw_inv *)
   Definition p3st_decode_inv_body
-             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
+             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize)))
              (rfv: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (d2efullv: fullType type (SyntaxKind Bool)) :=
     d2efullv = true ->
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
-    (rawInst = pgmv (evalExpr (d2eCurPc _ d2eeltv)) /\
+    (rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ d2eeltv)))) /\
      evalExpr (d2eOpType _ d2eeltv) = evalExpr (getOptype _ rawInst) /\
      (evalExpr (d2eOpType _ d2eeltv) = opLd ->
       (evalExpr (d2eDst _ d2eeltv) = evalExpr (getLdDst _ rawInst) /\
@@ -235,7 +236,7 @@ Section Invariants.
       evalExpr (d2eVal2 _ d2eeltv) = rfv (evalExpr (getSrc2 _ rawInst)))).
 
   Record p3st_decode_inv (o: RegsT) : Prop :=
-    { pgmv2 : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+    { pgmv2 : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
       Hpgmv2 : M.find "pgm"%string o = Some (existT _ _ pgmv2);
 
       rfv2 : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
@@ -257,19 +258,19 @@ Section Invariants.
 
   (* NOTE: this invariant requires p3st_decode_inv *)
   Definition p3st_stalled_inv_body
-             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize)))
+             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize)))
              (rfv: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
              (stallv: fullType type (SyntaxKind Bool))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
     stallv = true ->
     let rawInst := evalExpr (d2eRawInst _ stalledv) in
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
-    rawInst = pgmv (evalExpr (d2eCurPc _ stalledv)) /\
+    rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ stalledv)))) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
      evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst)).
 
   Record p3st_stalled_inv (o: RegsT) : Prop :=
-    { pgmv3 : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+    { pgmv3 : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
       Hpgmv3 : M.find "pgm"%string o = Some (existT _ _ pgmv3);
 
       rfv3 : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));

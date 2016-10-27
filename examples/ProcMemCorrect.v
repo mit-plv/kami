@@ -11,7 +11,7 @@ Set Implicit Arguments.
 
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
-  Variables OpIdx RfIdx: nat. (* processor *)
+  Variables OpIdx RfIdx IAddrSize: nat. (* processor *)
   Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
   Variable Id: Kind.
 
@@ -33,6 +33,7 @@ Section ProcMem.
             (getDst: DstT LgDataBytes RfIdx)
             (exec: ExecT AddrSize LgDataBytes)
             (getNextPc: NextPcT AddrSize LgDataBytes RfIdx)
+            (alignPc: AlignPcT AddrSize IAddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit AddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit AddrSize))).
 
@@ -41,7 +42,7 @@ Section ProcMem.
 
   Definition pdecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst exec getNextPc numChildren.
+                            getSrc1 getSrc2 getDst exec getNextPc alignPc numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
@@ -50,7 +51,7 @@ Section ProcMem.
   Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc numChildren.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc numChildren.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).
@@ -252,7 +253,7 @@ Section ProcMem.
   Definition p4stN := duplicate
                         (p4st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                              getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                               d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                               d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch

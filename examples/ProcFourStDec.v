@@ -11,7 +11,7 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcFDE.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -28,6 +28,7 @@ Section ProcFDE.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -111,7 +112,7 @@ Section ProcFDE.
   Definition fetchDecode := ProcFetchDecode.fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst predictNextPc d2ePack
+                              getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
 
   Definition p4st := (fetchDecode
@@ -129,7 +130,7 @@ Section ProcFDE.
 
   Definition p3st := ProcThreeStage.p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                         getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                          e2wPack e2wDecInst e2wVal.

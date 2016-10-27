@@ -10,7 +10,7 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -26,14 +26,15 @@ Section Invariants.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc lgDataBytes.
 
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc.
+                                getSrc1 getSrc2 getDst exec getNextPc alignPc.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -76,7 +77,7 @@ Section Invariants.
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
-      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) addrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
 
       stallv : fullType type (SyntaxKind Bool);
@@ -109,7 +110,7 @@ Section Invariants.
                ((stallv = true /\
                  fifo_not_empty_inv iev ienqpv ideqpv /\
                  fifo_empty_inv oev oenqpv odeqpv) /\
-                (mem_request_inv (pgmv pcv) rfv iev ieltv ideqpv))
+                (mem_request_inv (pgmv (evalExpr (alignPc type pcv))) rfv iev ieltv ideqpv))
                (stallv = true /\
                 fifo_empty_inv iev ienqpv ideqpv /\
                 fifo_not_empty_inv oev oenqpv odeqpv)

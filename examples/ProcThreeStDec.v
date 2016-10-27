@@ -11,7 +11,7 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcThreeStDec.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -28,6 +28,7 @@ Section ProcThreeStDec.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -103,14 +104,14 @@ Section ProcThreeStDec.
   Definition p3st := ProcThreeStage.p3st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc.
   
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
@@ -129,7 +130,7 @@ Section ProcThreeStDec.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Bit addrSize) <- r |> "pc";
-       mlet pgmv : (Vector (Data lgDataBytes) addrSize) <- r |> "pgm";
+       mlet pgmv : (Vector (Data lgDataBytes) iaddrSize) <- r |> "pgm";
        mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
        mlet d2eeltv : d2eElt <- r |> "d2e"--"elt";
        mlet d2efv : Bool <- r |> "d2e"--"full";
@@ -215,7 +216,8 @@ Section ProcThreeStDec.
 
   Definition p3stInl := ProcThreeStInl.p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                                getStAddr getStSrc calcStAddr getStVSrc
-                                               getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                               getSrc1 getSrc2 getDst exec
+                                               getNextPc alignPc predictNextPc
                                                d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                                d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                                e2wPack e2wDecInst e2wVal.

@@ -5,7 +5,7 @@ Require Import Ex.SC Ex.MemTypes Ex.ProcThreeStage.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables addrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -22,6 +22,7 @@ Section Inlined.
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
             (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -70,7 +71,7 @@ Section Inlined.
 
   Definition p3st := p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                          getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
                           d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                           d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                           e2wPack e2wDecInst e2wVal.
@@ -81,7 +82,8 @@ Section Inlined.
     pose proof (inlineF_refines
                   (procThreeStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                            getStAddr getStSrc calcStAddr getStVSrc
-                                           getSrc1 getSrc2 getDst exec getNextPc predictNextPc
+                                           getSrc1 getSrc2 getDst exec
+                                           getNextPc alignPc predictNextPc
                                            d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                            d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                            e2wPack e2wDecInst e2wVal

@@ -20,22 +20,22 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 5) *)
-Definition idxBits := 2.
-Definition tagBits := 2.
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 12) *)
+Definition idxBits := 3.
+Definition tagBits := 3.
 Definition lgNumDatas := 1.
 Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
-  (#ppc + $1)%kami_expr.
+  (#ppc + $4)%kami_expr.
 
 Definition p4st := p4st rv32iGetOptype
                         rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
                         rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
                         rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-                        predictNextPc (@d2ePackI _ _ _)
+                        rv32iAlignPc predictNextPc (@d2ePackI _ _ _)
                         (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
                         (@d2eVal1I _ _ _) (@d2eVal2I _ _ _)
                         (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _) (@d2eNextPcI _ _ _)
@@ -56,7 +56,7 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataByt
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY targetPgm to your target program *)
-Definition targetPgm := pgmLwSwTest2.
+Definition targetPgm := pgmJalTest1.
 
 (** MODIFY targetM to your target module *)
 Definition targetProcM := procMemCache.

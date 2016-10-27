@@ -11,7 +11,7 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables addrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
   Variables (getOptype: OptypeT lgDataBytes)
@@ -27,16 +27,17 @@ Section ProcDecSCN.
             (getSrc2: Src2T lgDataBytes rfIdx)
             (getDst: DstT lgDataBytes rfIdx)
             (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx).
+            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+            (alignPc: AlignPcT addrSize iaddrSize).
 
   Variable n: nat.
   
   Definition pdecN := procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc n.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc n.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -51,7 +52,7 @@ Section ProcDecSCN.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc n.
   Definition memAtomic := memAtomic addrSize fifoSize lgDataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 
