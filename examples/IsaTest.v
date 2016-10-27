@@ -26,7 +26,9 @@ Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
 Local Notation "'Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize)).
 
-Definition branchTarget {sz} (ofs: nat) := natToWord sz (ofs * 4).
+(* The final address should be obtained by multiplying two by processor, 
+ * according to RV32I specification. *)
+Definition branchTarget {sz} (ofs: nat) := natToWord sz (ofs * 2).
 
 (* Expected output : 2 *)
 Definition pgmJalTest1 : Program.

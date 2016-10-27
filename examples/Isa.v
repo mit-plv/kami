@@ -3,11 +3,11 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-(* Subset of RV32I instructions (17/47):
- * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE
+(* Subset of RV32I instructions (18/47):
+ * - Branch : JAL, JALR, BEQ, BNE, BLT, BGE, BLTU, BGEU
  * - Memory : LW, SW
  * - Arithmetic : ADD, ADDI, SUB, SLL, SRL, OR, AND, XOR
- * Some pseudo instructions (9):
+ * Some pseudo instructions of RV32I (9):
  * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
  * Custom instructions (1):
  * - TOHOST
@@ -237,7 +237,7 @@ Section RV32I.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpJAL)
             then ((UniBit (ZeroExtendTrunc _ _) #pc) +
-                  (UniBit (ZeroExtendTrunc _ _) (getOffsetUJE #inst)))
+                  (UniBit (SignExtendTrunc _ _) ((getOffsetUJE #inst) << $$(natToWord 1 1))))
             else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $$rv32iOpJALR)
             then (UniBit (ZeroExtendTrunc _ _)
@@ -269,7 +269,7 @@ Section RV32I.
     - refine (IF (getOpcodeE #inst == $$rv32iOpOPIMM) then _ else $$Default)%kami_expr.
 
       register_op_funct3 inst rv32iF3ADDI
-                         (#val1 + (UniBit (ZeroExtendTrunc _ _) (getOffsetIE #inst)))%kami_expr.
+                         (#val1 + (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst)))%kami_expr.
       exact ($$Default)%kami_expr.
   Defined.
 
@@ -287,7 +287,8 @@ Section RV32I.
 
     (* NOTE: "rd" is updated by rv32iExecState *)
     refine (IF (getOpcodeE #inst == $$rv32iOpJAL)
-            then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetUJE #inst)) else _)%kami_expr.
+            then #pc + (UniBit (SignExtendTrunc _ _)
+                               ((getOffsetUJE #inst) << $$(natToWord 1 1))) else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $$rv32iOpJALR)
             then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st #inst))
                  + (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst)) else _)%kami_expr.
@@ -296,19 +297,35 @@ Section RV32I.
     (* branch instructions *)
     register_op_funct3 inst rv32iF3BEQ
                        (IF (getRs1ValueE st #inst == getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BNE
                        (IF (getRs1ValueE st #inst != getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BLT
-                       (IF (getRs1ValueE st #inst < getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
+                       (IF ((UniBit (TruncLsb 31 1)
+                                    (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $1)
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst rv32iF3BGE
+                       (IF ((UniBit (TruncLsb 31 1)
+                                    (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $0)
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        else #pc + $4)%kami_expr.
+    register_op_funct3 inst rv32iF3BLTU
+                       (IF (getRs1ValueE st #inst < getRs2ValueE st #inst)
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        else #pc + $4)%kami_expr.
+    register_op_funct3 inst rv32iF3BGEU
                        (IF (getRs1ValueE st #inst >= getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _) (getOffsetSBE #inst))
+                        then #pc + (UniBit (SignExtendTrunc _ _)
+                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
                         else #pc + $4)%kami_expr.
     exact (#pc + $4)%kami_expr.
   Defined.
@@ -343,6 +360,8 @@ Section RV32IStruct.
   | BNE (rs1 rs2: Gpr) (ofs: word 12): Rv32i
   | BLT (rs1 rs2: Gpr) (ofs: word 12): Rv32i
   | BGE (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | BLTU (rs1 rs2: Gpr) (ofs: word 12): Rv32i
+  | BGEU (rs1 rs2: Gpr) (ofs: word 12): Rv32i
   | LW (rs1 rd: Gpr) (ofs: word 12): Rv32i
   | SW (rs1 rs2: Gpr) (ofs: word 12): Rv32i
   | ADDI (rs1 rd: Gpr) (ofs: word 12): Rv32i
@@ -404,6 +423,8 @@ Section RV32IStruct.
     | BNE rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BNE ofs
     | BLT rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BLT ofs
     | BGE rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGE ofs
+    | BLTU rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BLTU ofs
+    | BGEU rs1 rs2 ofs => SBtypeToRaw rv32iOpBRANCH rs1 rs2 rv32iF3BGEU ofs
     | LW rs1 rd ofs => ItypeToRaw rv32iOpLOAD rs1 rd rv32iF3LW ofs
     | SW rs1 rs2 ofs => StypeToRaw rv32iOpSTORE rs1 rs2 rv32iF3SW ofs
     | ADDI rs1 rd ofs => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI ofs
