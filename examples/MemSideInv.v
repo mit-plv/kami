@@ -1099,8 +1099,7 @@ Section MemCacheInl.
   Ltac rewriteEq :=
     repeat match goal with
              | H: ?a = ?b |- _ => rewrite H in *; generalize H; clear H
-           end; intros; simpl in *.
-
+           end; intros; cbn beta in *.
 
   Ltac destruct_addr_base a a' :=
     let isEq := fresh in
@@ -1271,11 +1270,11 @@ Section MemCacheInl.
              | |- (exists x, In x (?ls ++ [?a]) /\ _) \/ _ =>
                left; exists a; rewrite app_or;
                simpl; unfold Lib.VectorFacts.Vector_find; simpl;
-               intuition (discriminate || word_omega)
+               do 2 (intuition idtac; try (discriminate || word_omega))
              | |- _ \/ (exists x, In x (?ls ++ [?a]) /\ _) =>
                right; exists a; rewrite app_or;
                simpl; unfold Lib.VectorFacts.Vector_find; simpl;
-               intuition (discriminate || word_omega)
+               do 2 (intuition idtac; try (discriminate || word_omega))
            end.
 
   (*
@@ -1335,38 +1334,35 @@ Section MemCacheInl.
           end; invariant_simpl;
       simplMapUpds doAll.
 
-  Lemma in_single_full A (a v: A): iff (In a [v]) (a = v).
-  Proof.
-    simpl; intuition auto.
-  Qed.
-
-  Ltac helpNormal := intros;
-      rsLessTo_thms;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-      repeat match goal with
-               | y: forall i: Fin.t 2, _ |- _ =>
-                 set (y F1) in *;
-                   set (y F2) in *;
-                   fold FinFlag in y
-             end;
-      unfold FinFlag in *;
-      simpl in *;
-      specialize_msgs;
-      specialize_beg_mid_last;
-      autorewrite with myLogic in *;
-      rewriteEq;
-      simpl_hyps;
-      rmBadHyp2;
-      rewriteEq;
-      try (intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega)));
-      try match goal with
-            | |- context[if ?p then _ else _] =>
-              let isEq := fresh in
-              let nEq := fresh in
-              destruct p as [isEq | nEq];
-                [rewrite ?isEq in *|]; intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))
-          end;
-      existentials.
+  Ltac helpNormal :=
+    intros;
+    rsLessTo_thms;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat match goal with
+             | y: forall i: Fin.t 2, _ |- _ =>
+               set (y F1) in *;
+                 set (y F2) in *;
+                 fold FinFlag in y
+           end;
+    unfold FinFlag in *;
+    simpl in *;
+    specialize_msgs;
+    specialize_beg_mid_last;
+    autorewrite with myLogic in *;
+    rewriteEq;
+    simpl_hyps;
+    rmBadHyp2;
+    rewriteEq;
+    do 2 (intuition idtac; simpl_hyps; rewriteEq; try (discriminate || word_omega));
+(*    try (intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))); *)
+    try match goal with
+          | |- context[if ?p then _ else _] =>
+            let isEq := fresh in
+            let nEq := fresh in
+            destruct p as [isEq | nEq];
+              [rewrite ?isEq in *|]; do 2 (intuition idtac; simpl_hyps; rewriteEq; try (discriminate || word_omega))
+        end;
+    existentials.
 (*    try (firstorder (discriminate || word_omega)). *)
 (*
 
@@ -1401,7 +1397,10 @@ Section MemCacheInl.
       rmBadHyp;
       try destruct_addr;
       try destruct_cache;
-      ( assumption || (try solve [helpNormal]))).
+      try assumption
+    ).
+  (*
+      ( assumption || (try solve [helpNormal]))). *)
   (*
                    (intros;
                     rsLessTo_thms;
@@ -1437,7 +1436,8 @@ Section MemCacheInl.
                       rewriteEq;
                       rmBadHyp2;
                       idtac ))). (*
-                      rewrite ?split1_combine, ?split2_combine in *;
+                      rewrite ?split1    intuition (simpl_hyps; rewriteEq; (try (discriminate || word_omega))).
+_combine, ?split2_combine in *;
                         try (intuition (discriminate || word_omega));
                       try match goal with
                             | |- context[if ?p then _ else _] =>
@@ -1458,9 +1458,245 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    time doNormal.
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+
+    intros.
+    rsLessTo_thms.
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+    repeat match goal with
+             | y: forall i: Fin.t 2, _ |- _ =>
+               set (y F1) in *;
+                 set (y F2) in *;
+                 fold FinFlag in y
+           end.
+    unfold FinFlag in *.
+    simpl in *.
+    specialize_msgs.
+    specialize_beg_mid_last.
+    autorewrite with myLogic in *.
+    rewriteEq.
+    simpl_hyps.
+    rmBadHyp2.
+    rewriteEq.
+(*    clear - H9 H15 H18 H1. *)
+    intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega)).
+    dest.
+    repeat match goal with
+             | H: ?a = ?a -> _ |- _ => specialize (H eq_refl)
+             | H: ?P -> _, H': ?P |- _ => specialize (H H')
+           end.
+
+      i9: forall rq rs,
+            In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+            In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+            dir a cword <= rq (RqTP !! from) ->
+            isPWait a cRqValid rqFromCList dirw cword ;
+
+
+    
+
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    time solve [helpNormal].
+    intros.
+    rsLessTo_thms.
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+    repeat match goal with
+             | y: forall i: Fin.t 2, _ |- _ =>
+               set (y F1) in *;
+                 set (y F2) in *;
+                 fold FinFlag in y
+           end.
+    unfold FinFlag in *.
+    simpl in *.
+    specialize_msgs.
+    specialize_beg_mid_last.
+    autorewrite with myLogic in *.
+    rewriteEq.
+    simpl_hyps.
+    rmBadHyp2.
+    rewriteEq.
+    Ltac tac :=
+      intuition idtac; simpl_hyps; rewriteEq; try (discriminate || word_omega).
+    Focus.
+    time tac.
+    time tac.
+    
+    time tac.
+    time try (intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))).
+    try match goal with
+          | |- context[if ?p then _ else _] =>
+            let isEq := fresh in
+            let nEq := fresh in
+            destruct p as [isEq | nEq];
+              [rewrite ?isEq in *|]; intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))
+        end.
+    existentials.
+
+
     Set Ltac Profiling.
-    doNormal.
+        intros.
+    rsLessTo_thms.
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+    repeat match goal with
+             | y: forall i: Fin.t 2, _ |- _ =>
+               set (y F1) in *;
+                 set (y F2) in *;
+                 fold FinFlag in y
+           end.
+    unfold FinFlag in *.
+    simpl in *.
+    specialize_msgs.
+    specialize_beg_mid_last.
+    autorewrite with myLogic in *.
+    rewriteEq.
+    simpl_hyps.
+    rmBadHyp2.
+    rewriteEq.
+    try (intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))).
+    try match goal with
+          | |- context[if ?p then _ else _] =>
+            let isEq := fresh in
+            let nEq := fresh in
+            destruct p as [isEq | nEq];
+              [rewrite ?isEq in *|]; intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))
+        end.
+    existentials.
+
     Show Ltac Profile.
+
+    
+    
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    try solve [helpNormal].
+    Show Ltac Profile.
+    helpNormal.
+    simpl.
+    Show Ltac Profile.
+    intros;
+      rsLessTo_thms;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      repeat match goal with
+               | y: forall i: Fin.t 2, _ |- _ =>
+                 set (y F1) in *;
+                   set (y F2) in *;
+                   fold FinFlag in y
+             end;
+      unfold FinFlag in *;
+      simpl in *;
+      specialize_msgs;
+      specialize_beg_mid_last;
+      autorewrite with myLogic in *;
+      rewriteEq;
+      simpl_hyps.
+    rmBadHyp2.
+    progress rewriteEq.
+    simpl.
+    solve [intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega))].
+
+    
+(*     rmBadHyp2. *)
+    rewriteEq.
+    clear - H9 H15 H18 H1.
+    intuition (simpl_hyps; rewriteEq; try (discriminate || word_omega)).
+    destruct H1 as [m1 | m2].
+
+    intuition (simpl_hyps; rewriteEq; (try (discriminate || word_omega))).
+    intuition (simpl_hyps; rewriteEq; (try (discriminate || word_omega))).
+    simpl.
+    simpl_hyps;
+      rewriteEq.
+    intuition word_omega.
+    
+
+    
+    intuition discriminate.
+    simpl_hyps;
+      rewriteEq.
+    intuition word_omega.
+    
+    
+    destruct H18 as [sth _].
+    specialize (sth eq_refl m1).
+    discriminate.
+
+    apply in_single in m2.
+    rewriteEq.
+    intuition word_omega.
+
+    simpl.
+
+
+    intuition (try (discriminate || word_omega); repeat match goal with
+                                                          | H: In ?x (?y :: nil) |- _ =>
+                                                            apply in_single in H
+                                                        end; rewriteEq).
+    
+    destruct H1 as [m1 | m2].
+    destruct H18.
+    specialize (H18 eq_refl m1).
+    discriminate.
+
+    apply in_single in m2.
+    rewriteEq.
+    intuition word_omega.
+
+
+    
+    simpl in m2.
+    
+    
+    helpNormal.
+      repeat match goal with
+               | y: forall i: Fin.t 2, _ |- _ =>
+                 set (y F1) in *;
+                   set (y F2) in *;
+                   fold FinFlag in y
+             end.
+
+
+    simpl.
     intros.
     apply in_app_or in H1.
     destruct H1 as [ink | ez].
