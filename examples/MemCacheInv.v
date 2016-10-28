@@ -13,17 +13,17 @@ Local Notation "<| t |>" := (fullType type (SyntaxKind t)).
 Local Notation "<[ t ]>" := (fullType type (@NativeKind t nil)).
 
 Section MemCacheInl.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Local Notation RqFC := (RqFromC LgNumChildren (Bit (IdxBits + TagBits)) Id).
-  Local Notation RsFC := (RsFromC LgDataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits))).
+  Local Notation RsFC := (RsFromC DataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits))).
   Local Notation RqTP := (RqToP (Bit (IdxBits + TagBits)) Id).
-  Local Notation RsTP := (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))).
-  Local Notation TC := (ToC LgDataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits)) Id).
-  Local Notation FP := (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id).
+  Local Notation RsTP := (RsToP DataBytes LgNumDatas (Bit (IdxBits + TagBits))).
+  Local Notation TC := (ToC DataBytes LgNumDatas LgNumChildren (Bit (IdxBits + TagBits)) Id).
+  Local Notation FP := (FromP DataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id).
 
   Fixpoint filtRqFromC
              (c: word LgNumChildren) a
@@ -135,8 +135,8 @@ Section MemCacheInl.
       | _ => True
     end.
 
-  Local Notation RqFPr := (RqFromProc LgDataBytes (Bit (LgNumDatas + (IdxBits + TagBits)))).
-  Local Notation RsTPr := (RsToProc LgDataBytes).
+  Local Notation RqFPr := (RqFromProc DataBytes (Bit (LgNumDatas + (IdxBits + TagBits)))).
+  Local Notation RsTPr := (RsToProc DataBytes).
   Definition isCWait a procRqValid
              (procRq: type (Struct RqFPr))
              csw :=
@@ -431,7 +431,7 @@ Section MemCacheInl.
   Local Notation "n 'is' a" :=
     (getNormalRules n
                     (metaRules (nmemCacheInl IdxBits TagBits
-                                             LgNumDatas LgDataBytes Id LgNumChildren))
+                                             LgNumDatas DataBytes Id LgNumChildren))
      = Some a) (at level 0).
   
   Ltac substFind :=
@@ -714,7 +714,7 @@ Section MemCacheInl.
   Qed.
 
   Lemma rewrite_rsFromCToP_revcons:
-    forall c a rsFromCList rsToPList (v: type (Struct (RsToP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits))))),
+    forall c a rsFromCList rsToPList (v: type (Struct (RsToP DataBytes LgNumDatas (Bit (IdxBits + TagBits))))),
       rsFromCToP c a rsFromCList (rsToPList ++ [v])%list =
       (rsFromCToP c a rsFromCList rsToPList ++ 
                   if weq a (v (RsTP !! addr))
@@ -774,7 +774,7 @@ Section MemCacheInl.
   Qed.
 
   Lemma rewrite_fromPToC_cons:
-    forall c a fromPList toCList (v: type (Struct (FromP LgDataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id))),
+    forall c a fromPList toCList (v: type (Struct (FromP DataBytes LgNumDatas (Bit (IdxBits + TagBits)) Id))),
       fromPToC c a (v :: fromPList) toCList  =
       if weq a (v (FP !!addr))
       then v :: fromPToC c a fromPList toCList
@@ -2371,7 +2371,7 @@ Section MemCacheInl.
   Local Notation "n 'metaIs' a" :=
     (getMetaRules n
                   (metaRules (nmemCacheInl IdxBits TagBits
-                                           LgNumDatas LgDataBytes Id LgNumChildren))
+                                           LgNumDatas DataBytes Id LgNumChildren))
      = Some (RepRule string_of_nat string_of_nat_into
                      (natToWordConst LgNumChildren) withIndex_index_eq a
                      {| nameVal := n;

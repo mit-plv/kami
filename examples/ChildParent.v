@@ -7,22 +7,22 @@ Require Import Ex.MemTypes Ex.Names.
 Set Implicit Arguments.
 
 Section ChildParent.
-  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variables IdxBits LgNumDatas DataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
   Definition AddrBits := IdxBits.
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
-  Definition Data := Bit (LgDataBytes * 8).
+  Definition Data := Bit (DataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
 
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RqFromC := Ex.MemTypes.RqFromC LgNumChildren Addr Id.
-  Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
-  Definition RsFromC := Ex.MemTypes.RsFromC LgDataBytes LgNumDatas LgNumChildren Addr.
-  Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
-  Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
+  Definition RsToP := Ex.MemTypes.RsToP DataBytes LgNumDatas Addr.
+  Definition RsFromC := Ex.MemTypes.RsFromC DataBytes LgNumDatas LgNumChildren Addr.
+  Definition FromP := Ex.MemTypes.FromP DataBytes LgNumDatas Addr Id.
+  Definition ToC := Ex.MemTypes.ToC DataBytes LgNumDatas LgNumChildren Addr Id.
 
   Definition rqToPPop := MethodSig (rqToParent -- deqName) (Void): Struct RqToP.
   Definition rqFromCEnq := MethodSig (rqFromChild -- enqName) (Struct RqFromC): Void.
@@ -64,17 +64,17 @@ Hint Unfold rqToPPop rqFromCEnq rsToPPop rsFromCEnq toCPop fromPEnq : MethDefs.
 Hint Unfold childParent : ModuleDefs.
 
 Section Facts.
-  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variables IdxBits LgNumDatas DataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
   Lemma childParent_ModEquiv:
-    MetaModPhoasWf (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModPhoasWf (childParent IdxBits LgNumDatas DataBytes LgNumChildren Id).
   Proof.
     kequiv.
   Qed.
 
   Lemma childParent_ValidRegs:
-    MetaModRegsWf (childParent IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModRegsWf (childParent IdxBits LgNumDatas DataBytes LgNumChildren Id).
   Proof.
     kvr.
   Qed.

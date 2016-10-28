@@ -8,18 +8,18 @@ Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
 Set Implicit Arguments.
 
 Section MemCorrect.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
   Variable FifoSize: nat.
   Variable LgNumChildren: nat.
 
   Definition memCache :=
-    MemCache.memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
+    MemCache.memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
   Definition nmemCache :=
-    MemCache.nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren.
+    MemCache.nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren.
   Definition memAtomicWoQ :=
     memAtomicWoQ (L1Cache.AddrBits IdxBits TagBits LgNumDatas)
-                 LgDataBytes (wordToNat (Word.wones LgNumChildren)).
+                 DataBytes (wordToNat (Word.wones LgNumChildren)).
 
   Definition dropFirstElts :=
     dropN ("rqFromProc" -- "firstElt") (wordToNat (wones LgNumChildren)).
@@ -30,7 +30,7 @@ Section MemCorrect.
       forall n,
         SubList
           (duplicateElt (Indexer.withPrefix "rqFromProc" "firstElt") (wordToNat (wones n)))
-          (getDefs (modFromMeta (fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes FifoSize n))).
+          (getDefs (modFromMeta (fifoRqFromProc IdxBits TagBits LgNumDatas DataBytes FifoSize n))).
     Proof.
       unfold modFromMeta, getDefs; simpl; intros.
       repeat rewrite namesOf_app.

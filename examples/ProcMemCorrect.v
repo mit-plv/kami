@@ -12,27 +12,27 @@ Set Implicit Arguments.
 Section ProcMem.
   Variable FifoSize: nat. (* fifo *)
   Variables OpIdx RfIdx IAddrSize: nat. (* processor *)
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat. (* memory *)
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat. (* memory *)
   Variable Id: Kind.
 
   Definition AddrSize := L1Cache.AddrBits IdxBits TagBits LgNumDatas.
   Hint Unfold AddrSize: MethDefs.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT LgDataBytes)
-            (getLdDst: LdDstT LgDataBytes RfIdx)
-            (getLdAddr: LdAddrT AddrSize LgDataBytes)
-            (getLdSrc: LdSrcT LgDataBytes RfIdx)
-            (calcLdAddr: LdAddrCalcT AddrSize LgDataBytes)
-            (getStAddr: StAddrT AddrSize LgDataBytes)
-            (getStSrc: StSrcT LgDataBytes RfIdx)
-            (calcStAddr: StAddrCalcT AddrSize LgDataBytes)
-            (getStVSrc: StVSrcT LgDataBytes RfIdx)
-            (getSrc1: Src1T LgDataBytes RfIdx)
-            (getSrc2: Src2T LgDataBytes RfIdx)
-            (getDst: DstT LgDataBytes RfIdx)
-            (exec: ExecT AddrSize LgDataBytes)
-            (getNextPc: NextPcT AddrSize LgDataBytes RfIdx)
+  Variables (getOptype: OptypeT DataBytes)
+            (getLdDst: LdDstT DataBytes RfIdx)
+            (getLdAddr: LdAddrT AddrSize DataBytes)
+            (getLdSrc: LdSrcT DataBytes RfIdx)
+            (calcLdAddr: LdAddrCalcT AddrSize DataBytes)
+            (getStAddr: StAddrT AddrSize DataBytes)
+            (getStSrc: StSrcT DataBytes RfIdx)
+            (calcStAddr: StAddrCalcT AddrSize DataBytes)
+            (getStVSrc: StVSrcT DataBytes RfIdx)
+            (getSrc1: Src1T DataBytes RfIdx)
+            (getSrc2: Src2T DataBytes RfIdx)
+            (getDst: DstT DataBytes RfIdx)
+            (exec: ExecT AddrSize DataBytes)
+            (getNextPc: NextPcT AddrSize DataBytes RfIdx)
             (alignPc: AlignPcT AddrSize IAddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit AddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit AddrSize))).
@@ -45,10 +45,10 @@ Section ProcMem.
                             getSrc1 getSrc2 getDst exec getNextPc alignPc numChildren.
   Definition pmFifos :=
     modFromMeta
-      ((fifoRqFromProc IdxBits TagBits LgNumDatas LgDataBytes (rsz FifoSize) LgNumChildren)
-         +++ (fifoRsToProc LgDataBytes (rsz FifoSize) LgNumChildren)).
+      ((fifoRqFromProc IdxBits TagBits LgNumDatas DataBytes (rsz FifoSize) LgNumChildren)
+         +++ (fifoRsToProc DataBytes (rsz FifoSize) LgNumChildren)).
     
-  Definition mcache := memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize LgNumChildren.
+  Definition mcache := memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
                        getSrc1 getSrc2 getDst exec getNextPc alignPc numChildren.
@@ -93,7 +93,7 @@ Section ProcMem.
         try (intro Hx;
              apply firstElts_SubList with
              (IdxBits:= IdxBits) (TagBits:= TagBits) (LgNumDatas:= LgNumDatas)
-                                 (LgDataBytes:= LgDataBytes) (FifoSize:= FifoSize) in Hx;
+                                 (DataBytes:= DataBytes) (FifoSize:= FifoSize) in Hx;
              generalize dependent k; eapply DisjList_logic_inv; kdisj_dms).
   Qed.
 
@@ -126,7 +126,7 @@ Section ProcMem.
             apply DisjList_SubList with
             (l1:= getDefs (modFromMeta (fifoRqFromProc
                                           IdxBits TagBits LgNumDatas
-                                          LgDataBytes (rsz FifoSize) LgNumChildren)));
+                                          DataBytes (rsz FifoSize) LgNumChildren)));
               [apply firstElts_SubList|].
             apply DisjList_comm, DisjList_app_4.
             { kdisj_dms. }
@@ -154,9 +154,9 @@ Section ProcMem.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit RfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit AddrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data LgDataBytes)) -> (* val1 *)
-                Expr ty (SyntaxKind (Data LgDataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data LgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data DataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data DataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data DataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit AddrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit AddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -169,9 +169,9 @@ Section ProcMem.
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit AddrSize)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                                 Expr ty (SyntaxKind (Data LgDataBytes)))
+                                 Expr ty (SyntaxKind (Data DataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data LgDataBytes)))
+                            Expr ty (SyntaxKind (Data DataBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind (Bit AddrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -203,14 +203,14 @@ Section ProcMem.
   Variable (f2dElt: Kind).
   Variable (f2dPack:
               forall ty,
-                Expr ty (SyntaxKind (Data LgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data DataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit AddrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit AddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                            Expr ty (SyntaxKind (Data LgDataBytes)))
+                            Expr ty (SyntaxKind (Data DataBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind (Bit AddrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
@@ -236,13 +236,13 @@ Section ProcMem.
   Variable (e2wPack:
               forall ty,
                 Expr ty (SyntaxKind d2eElt) -> (* decInst *)
-                Expr ty (SyntaxKind (Data LgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind (Data DataBytes)) -> (* execVal *)
                 Expr ty (SyntaxKind e2wElt)).
   Variables
     (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
                             Expr ty (SyntaxKind d2eElt))
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
-                        Expr ty (SyntaxKind (Data LgDataBytes))).
+                        Expr ty (SyntaxKind (Data DataBytes))).
 
   Hypotheses
     (He2wDecInst: forall decInst val,

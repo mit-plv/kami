@@ -24,7 +24,7 @@ Ltac init_pgm :=
 
 Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
 Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
-Notation "'Rv32Program'" := (ConstT (Vector (Data rv32iLgDataBytes) rv32iIAddrSize)).
+Notation "'Rv32Program'" := (ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize)).
 
 (* The final address should be obtained by multiplying two by processor, 
  * according to RV32I specification. *)

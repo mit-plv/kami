@@ -46,11 +46,11 @@ Definition p4st := p4st rv32iGetOptype
 
 Definition p4stN := duplicate p4st (Word.wordToNat (Word.wones lgNumChildren)).
 
-(* Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iLgDataBytes *)
+(* Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iDataBytes *)
 (*                                   (Word.wordToNat (Word.wones lgNumChildren)). *)
-Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iLgDataBytes (Bit 1)
+Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iDataBytes (Bit 1)
                                    fifoSize lgNumChildren.
-Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iLgDataBytes lgNumChildren.
+Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes lgNumChildren.
 
 (* Definition procMemAtomic := (p4stN ++ memAtomic)%kami. *)
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.

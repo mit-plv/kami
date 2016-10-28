@@ -295,7 +295,6 @@ Section ModuleBound.
     DisjList (originals nb1) (originals nb2) /\
     DisjList (prefixes nb1) (prefixes nb2).
 
-  (* TODO: move to Reflection.v *)
   Fixpoint disjListStr (l1 l2: list string) :=
     match l1 with
     | nil => true
