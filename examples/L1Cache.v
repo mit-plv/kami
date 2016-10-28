@@ -165,6 +165,14 @@ Section L1Cache.
           Write procRqWaitReg <- $$ false;
           If #cs == $ Inv then Call lineWrite(STRUCT{addr ::= #idx; data ::= #fromP!FromP@.line}); Retv
                           else Retv as _;
+          Read valid <- procRqValidReg;
+          Assert #valid;                  
+          Read wait <- procRqWaitReg;
+          Assert #wait;
+          Read rq: Struct RqFromProc <- procRqReg;
+          Assert #fromP!FromP@.addr == getTagIdx #rq!RqFromProc@.addr;
+          Read replace <- procRqReplaceReg;
+          Assert !#replace;
           Retv
 
         with Rule ld :=
