@@ -3727,8 +3727,8 @@ Section MemCacheInl.
       | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
         destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
           specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl _ _ )
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H2: (c2 <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl)
     end;
     unfold withIndex in *;
     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
@@ -3918,7 +3918,7 @@ Section MemCacheInl.
     unfold getActionFromSin, getSinAction at 1 in HInRule;
     simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
     rewrite <- HInRule in HS; clear HInRule;
-    intros ? ? c ?;
+    intros ? ? c ? ? ? c2 ? ?;
       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
       subst; unfold getActionFromSin, getSinAction in *; subst;
     SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
@@ -3930,11 +3930,11 @@ Section MemCacheInl.
         destruct (HInd a _ _ H eq_refl)          
     end;
     match goal with
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl);
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
           specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H2: (c2 <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl)
     end;
     unfold withIndex in *;
     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
