@@ -14,7 +14,7 @@ Unset Extraction AutoInline.
  * 3) Compile.
  *)
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
-        Kami.Notations Kami.Synthesize Ex.Isa Ex.IsaTest.
+        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
 
 (** p4st + mem (memAtomic or memCache) test *)
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
@@ -65,6 +65,7 @@ Definition targetProcM := procMemCache.
 Definition targetProcS := getModuleS targetProcM.
 Definition targetProcB := ModulesSToBModules targetProcS.
 
+(* What to extract *)
 Definition target := (targetPgm, targetProcB).
 
 (* Extraction "./Ocaml/Target.ml" target. *)
