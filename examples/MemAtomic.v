@@ -8,10 +8,10 @@ Set Implicit Arguments.
 
 Section Middleman.
   Variable inName outName: string.
-  Variable addrSize lgDataBytes: nat.
+  Variable addrSize dataBytes: nat.
 
-  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
+  Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Definition getReq := MethodSig (inName -- "deq")() : Struct RqFromProc.
   Definition setRep := MethodSig (outName -- "enq")(Struct RsToProc) : Void.
@@ -66,7 +66,7 @@ Section Middleman.
            Retv)%kami_gen.
 
     Definition memAtomicWoQInlM := META {
-      Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
+      Register "mem" : Vector (Data dataBytes) addrSize <- Default
       with Repeat Rule till n by "processLd" := (processLdInlGen _)
       with Repeat Rule till n by "processSt" := (processStInlGen _)
     }.
@@ -81,19 +81,19 @@ Hint Unfold RqFromProc RsToProc getReq setRep exec
      processLd processSt : MethDefs.
 
 Section MemAtomic.
-  Variables (addrSize fifoSize lgDataBytes: nat).
+  Variables (addrSize fifoSize dataBytes: nat).
 
   Variable n: nat.
 
-  Definition minst := memInst n addrSize lgDataBytes.
+  Definition minst := memInst n addrSize dataBytes.
 
-  Definition inQ := @simpleFifo "rqFromProc" fifoSize (Struct (RqFromProc addrSize lgDataBytes)).
-  Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc lgDataBytes)).
+  Definition inQ := @simpleFifo "rqFromProc" fifoSize (Struct (RqFromProc addrSize dataBytes)).
+  Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc dataBytes)).
   Definition ioQ := ConcatMod inQ outQ.
 
   Definition ios (i: nat) := duplicate ioQ i.
 
-  Definition midQ := mid "rqFromProc" "rsToProc" addrSize lgDataBytes.
+  Definition midQ := mid "rqFromProc" "rsToProc" addrSize dataBytes.
   Definition mids (i: nat) := duplicate midQ i.
   
   Definition iom := ConcatMod ioQ midQ.
@@ -101,7 +101,7 @@ Section MemAtomic.
 
   Definition memAtomicWoQ := ConcatMod (mids n) minst.
   Definition memAtomicWoQInl :=
-    modFromMeta (memAtomicWoQInlM "rqFromProc" "rsToProc" addrSize lgDataBytes n
+    modFromMeta (memAtomicWoQInlM "rqFromProc" "rsToProc" addrSize dataBytes n
                                   eq_refl eq_refl).
   Definition memAtomic := ConcatMod (ioms n) minst.
 
@@ -111,17 +111,17 @@ Hint Unfold minst inQ outQ ioQ midQ mids iom ioms
      memAtomicWoQInl memAtomicWoQ memAtomic : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize fifoSize lgDataBytes: nat).
+  Variables (addrSize fifoSize dataBytes: nat).
 
   Lemma midQ_ModEquiv:
-    ModPhoasWf (midQ addrSize lgDataBytes).
+    ModPhoasWf (midQ addrSize dataBytes).
   Proof.
     kequiv.
   Qed.
   Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
-    ModPhoasWf (iom addrSize fifoSize lgDataBytes).
+    ModPhoasWf (iom addrSize fifoSize dataBytes).
   Proof.
     kequiv.
   Qed.
@@ -130,33 +130,33 @@ Section Facts.
   Variable n: nat.
 
   Lemma mids_ModEquiv:
-    ModPhoasWf (mids addrSize lgDataBytes n).
+    ModPhoasWf (mids addrSize dataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mids_ModEquiv.
 
   Lemma ioms_ModEquiv:
-    ModPhoasWf (ioms addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (ioms addrSize fifoSize dataBytes n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve ioms_ModEquiv.
 
   Lemma memAtomicWoQInl_ModEquiv:
-    ModPhoasWf (memAtomicWoQInl addrSize lgDataBytes n).
+    ModPhoasWf (memAtomicWoQInl addrSize dataBytes n).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAtomicWoQ_ModEquiv:
-    ModPhoasWf (memAtomicWoQ addrSize lgDataBytes n).
+    ModPhoasWf (memAtomicWoQ addrSize dataBytes n).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAtomic_ModEquiv:
-    ModPhoasWf (memAtomic addrSize fifoSize lgDataBytes n).
+    ModPhoasWf (memAtomic addrSize fifoSize dataBytes n).
   Proof.
     kequiv.
   Qed.
@@ -168,12 +168,12 @@ Hint Immediate midQ_ModEquiv iom_ModEquiv
      memAtomicWoQ_ModEquiv memAtomicWoQInl_ModEquiv memAtomic_ModEquiv.
 
 Section MemAtomicWoQ.
-  Variables (addrSize fifoSize lgDataBytes: nat).
+  Variables (addrSize fifoSize dataBytes: nat).
   Variable n: nat.
 
   Lemma ios_memAtomicWoQ_memAtomic:
-    ((ios addrSize fifoSize lgDataBytes n ++ memAtomicWoQ addrSize lgDataBytes n)%kami)
-      <<== (memAtomic addrSize fifoSize lgDataBytes n).
+    ((ios addrSize fifoSize dataBytes n ++ memAtomicWoQ addrSize dataBytes n)%kami)
+      <<== (memAtomic addrSize fifoSize dataBytes n).
   Proof.
     unfold memAtomic, memAtomicWoQ.
     krewrite assoc left.
@@ -186,7 +186,7 @@ Section MemAtomicWoQ.
 End MemAtomicWoQ.
 
 Section MemAtomicWoQInl.
-  Variables addrSize lgDataBytes: nat.
+  Variables addrSize dataBytes: nat.
   Variable n: nat.
 
   Definition memAtomicWoQ_regMap (r: RegsT) := r.
@@ -199,9 +199,9 @@ Section MemAtomicWoQInl.
               SemAction
                 o (getActionFromGen string_of_nat natToVoid
                                     (processLdInlGen "rqFromProc" "rsToProc"
-                                                     addrSize lgDataBytes eq_refl eq_refl) i
+                                                     addrSize dataBytes eq_refl eq_refl) i
                                     type) u cs WO),
-      Step (memAtomicWoQ addrSize lgDataBytes n) o u
+      Step (memAtomicWoQ addrSize dataBytes n) o u
            {| annot := Some (Some ("processLd") __ (i)); defs := []%fmap; calls := cs |}.
   Proof.
     intros; apply step_consistent.
@@ -227,12 +227,12 @@ Section MemAtomicWoQInl.
           { instantiate
               (1:= fun ty =>
                      Renaming.renameAction
-                       (specializer (midQ addrSize lgDataBytes) i)
-                       (@processLd "rqFromProc" "rsToProc" addrSize lgDataBytes ty)).
+                       (specializer (midQ addrSize dataBytes) i)
+                       (@processLd "rqFromProc" "rsToProc" addrSize dataBytes ty)).
             instantiate (1:= "processLd"%string __ i).
 
-            replace (getRules (memAtomicWoQ addrSize lgDataBytes n))
-            with (getRules (mids addrSize lgDataBytes n))
+            replace (getRules (memAtomicWoQ addrSize dataBytes n))
+            with (getRules (mids addrSize dataBytes n))
               by (simpl; rewrite app_nil_r; reflexivity).
             apply getRules_duplicate_in; auto.
             simpl; tauto.
@@ -252,13 +252,13 @@ Section MemAtomicWoQInl.
                       (getMethFromGen
                          string_of_nat
                          natToVoid
-                         (existT _ {| arg := Struct (RqFromProc addrSize lgDataBytes);
-                                      ret := Struct (RsToProc lgDataBytes) |}
-                                 (@memInstExec addrSize lgDataBytes))
+                         (existT _ {| arg := Struct (RqFromProc addrSize dataBytes);
+                                      ret := Struct (RsToProc dataBytes) |}
+                                 (@memInstExec addrSize dataBytes))
                          i) |}).
 
-          replace (getDefsBodies (memAtomicWoQ addrSize lgDataBytes n))
-          with (getDefsBodies (minst addrSize lgDataBytes n))
+          replace (getDefsBodies (memAtomicWoQ addrSize dataBytes n))
+          with (getDefsBodies (minst addrSize dataBytes n))
             by (simpl; unfold mids; rewrite getDefsBodies_duplicate_nil by reflexivity;
                 rewrite app_nil_l; reflexivity).
           simpl; rewrite app_nil_r.
@@ -304,9 +304,9 @@ Section MemAtomicWoQInl.
               SemAction
                 o (getActionFromGen string_of_nat natToVoid
                                     (processStInlGen "rqFromProc" "rsToProc"
-                                                     addrSize lgDataBytes eq_refl eq_refl) i
+                                                     addrSize dataBytes eq_refl eq_refl) i
                                     type) u cs WO),
-      Step (memAtomicWoQ addrSize lgDataBytes n) o u
+      Step (memAtomicWoQ addrSize dataBytes n) o u
            {| annot := Some (Some ("processSt") __ (i)); defs := []%fmap; calls := cs |}.
   Proof.
     intros; apply step_consistent.
@@ -332,12 +332,12 @@ Section MemAtomicWoQInl.
           { instantiate
               (1:= fun ty =>
                      Renaming.renameAction
-                       (specializer (midQ addrSize lgDataBytes) i)
-                       (@processSt "rqFromProc" "rsToProc" addrSize lgDataBytes ty)).
+                       (specializer (midQ addrSize dataBytes) i)
+                       (@processSt "rqFromProc" "rsToProc" addrSize dataBytes ty)).
             instantiate (1:= "processSt"%string __ i).
 
-            replace (getRules (memAtomicWoQ addrSize lgDataBytes n))
-            with (getRules (mids addrSize lgDataBytes n))
+            replace (getRules (memAtomicWoQ addrSize dataBytes n))
+            with (getRules (mids addrSize dataBytes n))
               by (simpl; rewrite app_nil_r; reflexivity).
             apply getRules_duplicate_in; auto.
             simpl; tauto.
@@ -356,13 +356,13 @@ Section MemAtomicWoQInl.
                       (getMethFromGen
                          string_of_nat
                          natToVoid
-                         (existT _ {| arg := Struct (RqFromProc addrSize lgDataBytes);
-                                      ret := Struct (RsToProc lgDataBytes) |}
-                                 (@memInstExec addrSize lgDataBytes))
+                         (existT _ {| arg := Struct (RqFromProc addrSize dataBytes);
+                                      ret := Struct (RsToProc dataBytes) |}
+                                 (@memInstExec addrSize dataBytes))
                          i) |}).
 
-          replace (getDefsBodies (memAtomicWoQ addrSize lgDataBytes n))
-          with (getDefsBodies (minst addrSize lgDataBytes n))
+          replace (getDefsBodies (memAtomicWoQ addrSize dataBytes n))
+          with (getDefsBodies (minst addrSize dataBytes n))
             by (simpl; unfold mids; rewrite getDefsBodies_duplicate_nil by reflexivity;
                 rewrite app_nil_l; reflexivity).
           simpl; rewrite app_nil_r.
@@ -402,7 +402,7 @@ Section MemAtomicWoQInl.
   Qed.
 
   Lemma memAtomicWoQInl_refines_memAtomicWoQ:
-    memAtomicWoQInl addrSize lgDataBytes n <<== memAtomicWoQ addrSize lgDataBytes n.
+    memAtomicWoQInl addrSize dataBytes n <<== memAtomicWoQ addrSize dataBytes n.
   Proof.
     apply stepRefinement with (ruleMap:= memAtomicWoQ_ruleMap) (theta:= memAtomicWoQ_regMap).
 
@@ -428,13 +428,13 @@ Section MemAtomicWoQInl.
                   a = getActionFromGen
                         string_of_nat
                         natToVoid
-                        (processLdInlGen "rqFromProc" "rsToProc" addrSize lgDataBytes
+                        (processLdInlGen "rqFromProc" "rsToProc" addrSize dataBytes
                                          eq_refl eq_refl) i \/
                   k = "processSt"%string __ i /\
                   a = getActionFromGen
                         string_of_nat
                         natToVoid
-                        (processStInlGen "rqFromProc" "rsToProc" addrSize lgDataBytes
+                        (processStInlGen "rqFromProc" "rsToProc" addrSize dataBytes
                                          eq_refl eq_refl) i)) as Ha.
       { clear -HInRules; cbn in HInRules.
         rewrite app_nil_r in HInRules.

@@ -11,27 +11,27 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcDecSC.
-  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize).
 
-  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
+  Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
@@ -54,8 +54,8 @@ Section ProcDecSC.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Bit addrSize) <- r |> "pc";
-       mlet rfv : (Vector (Data lgDataBytes) rfIdx) <- r |> "rf";
-       mlet pgmv : (Vector (Data lgDataBytes) iaddrSize) <- r |> "pgm";
+       mlet rfv : (Vector (Data dataBytes) rfIdx) <- r |> "rf";
+       mlet pgmv : (Vector (Data dataBytes) iaddrSize) <- r |> "pgm";
        mlet oev : Bool <- r |> "rsToProc"--"empty";
        mlet oelv : (Vector (Struct RsToProc) fifoSize) <- r |> "rsToProc"--"elt";
        mlet odv : (Bit fifoSize) <- r |> "rsToProc"--"deqP";
@@ -69,11 +69,11 @@ Section ProcDecSC.
           +["rf" <- (let opc := evalExpr (getOptype _ rawInst) in
                      if weq opc opLd
                      then
-                       (existT _ (SyntaxKind (Vector (Data lgDataBytes) rfIdx))
+                       (existT _ (SyntaxKind (Vector (Data dataBytes) rfIdx))
                                ((fun a : word rfIdx => if weq a (evalExpr (getLdDst _ rawInst))
                                                        then oelv odv (RsToProc !! "data")
                                                        else rfv a)
-                                : (fullType type (SyntaxKind (Vector (Data lgDataBytes)
+                                : (fullType type (SyntaxKind (Vector (Data dataBytes)
                                                                      rfIdx)))))
                      else
                        (existT _ _ rfv))]

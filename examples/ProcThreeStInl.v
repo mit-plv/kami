@@ -5,23 +5,23 @@ Require Import Ex.SC Ex.MemTypes Ex.ProcThreeStage.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
@@ -32,9 +32,9 @@ Section Inlined.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -47,9 +47,9 @@ Section Inlined.
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                                 Expr ty (SyntaxKind (Data lgDataBytes)))
+                                 Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data lgDataBytes)))
+                            Expr ty (SyntaxKind (Data dataBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind (Bit addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -61,13 +61,13 @@ Section Inlined.
   Variable (e2wPack:
               forall ty,
                 Expr ty (SyntaxKind d2eElt) -> (* decInst *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* execVal *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* execVal *)
                 Expr ty (SyntaxKind e2wElt)).
   Variables
     (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
                             Expr ty (SyntaxKind d2eElt))
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
-                        Expr ty (SyntaxKind (Data lgDataBytes))).
+                        Expr ty (SyntaxKind (Data dataBytes))).
 
   Definition p3st := p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc

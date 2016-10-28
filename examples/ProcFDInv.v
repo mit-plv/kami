@@ -10,23 +10,23 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize iaddrSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
@@ -37,9 +37,9 @@ Section Invariants.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -48,14 +48,14 @@ Section Invariants.
   Variable (f2dElt: Kind).
   Variable (f2dPack:
               forall ty,
-                Expr ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                            Expr ty (SyntaxKind (Data lgDataBytes)))
+                            Expr ty (SyntaxKind (Data dataBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind (Bit addrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
@@ -84,7 +84,7 @@ Section Invariants.
 
   Definition fetchDecode_inv_body
              (pcv: fullType type (SyntaxKind (Bit addrSize)))
-             (pgmv: fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize)))
+             (pgmv: fullType type (SyntaxKind (Vector (Data dataBytes) iaddrSize)))
              (fepochv: fullType type (SyntaxKind Bool))
              (f2dfullv: fullType type (SyntaxKind Bool))
              (f2deltv: fullType type (SyntaxKind f2dElt)) :=
@@ -99,7 +99,7 @@ Section Invariants.
   Record fetchDecode_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
-      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data dataBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
       fepochv : fullType type (SyntaxKind Bool);
       Hfepochv : M.find "fEpoch"%string o = Some (existT _ _ fepochv);
