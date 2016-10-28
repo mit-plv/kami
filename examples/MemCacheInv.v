@@ -3618,22 +3618,25 @@ Section MemCacheInl.
                try solve [destruct (weq a0 (y F2 F2));
                            [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply H; eauto]].
   
-  Ltac xfer3 H :=
+  Ltac xfer3 H y :=
      unfold rqFromCToP, rsFromCToP, fromPToC in *;
        rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-    match goal with
-      | neq: ?c <> ?x, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
-        |- _ =>
-        destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
-          [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
-           intros;
-             try apply isPWait_addRq;
-             try apply isPWait_addRq_contra;
-             try apply hd_error_revcons_same;
-             rewrite ?app_nil_r in *; try eapply H; eauto
-          ]
-    end.
+       match goal with
+         | H: natToWord _ _ = y F1 |- _ => rewrite <- H in *
+       end;
+       match goal with
+         | neq: ?c <> ?x, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
+           |- _ =>
+           destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
+             [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
+              intros;
+                try apply isPWait_addRq;
+                try apply isPWait_addRq_contra;
+                try apply hd_error_revcons_same;
+                rewrite ?app_nil_r in *; try eapply H; eauto
+             ]
+       end.
   
 
   
@@ -3660,274 +3663,18 @@ Section MemCacheInl.
     - xfer2 i19 a0 y.
     - xfer2 i20 a0 y.
     - xfer2 i31 a0 y.
-    -      unfold rqFromCToP, rsFromCToP, fromPToC in *;
-       rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
-       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
-    match goal with
-      | neq: ?c <> ?x, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
-        |- _ =>
-        destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
-          [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
-           intros;
-             try apply isPWait_addRq;
-             try apply isPWait_addRq_contra;
-             try apply hd_error_revcons_same;
-             rewrite ?app_nil_r in *; try eapply H; eauto
-          ]
-    end.
-
-
-
-      xfer3 i8.
-    - xfer3 i10.
-    - xfer2 i11 a0 y.
-    - xfer2 i12 a0 y.
-    - xfer2 i15 a0 y.
-    - xfer2 i16 a0 y.
-    - xfer2 i16b a0 y.
-    - xfer2 i16c a0 y.
-    - xfer2 i17 a0 y.
-    - xfer2 i18 a0 y.
-    - xfer2 i19 a0 y.
-    - xfer2 i20 a0 y.
-    - xfer2 i31 a0 y.
-
-     unfold rqFromCToP, rsFromCToP, fromPToC in *.
-       rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
-       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
-       intros;
-         match goal with
-           | H: natToWord _ _ = y F1 |- _ =>
-             rewrite H in *
-         end;
-       rewrite ?eq_weq in *;
-       intros;
-       try apply isPWait_addRq;
-       try apply isPWait_addRq_contra;
-       try apply hd_error_revcons_same.
-                   try solve [destruct (weq a0 (y F2 F2));
-                               [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply i8; eauto].
-                   destruct (weq a0 (y F2 F2));
-                               [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply i8; eauto.
-                   destruct
-
-
-      xfer i8 a0 y.
-
-  - 
-
-  match goal with
-        | inv: nmemCache_invariants ?s,
-               neq: ?x <> ?c, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
-          |- _ =>
-          destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
-            [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
-             clear - inv yle; destruct (inv a0 ($ c) c yle eq_refl); try eapply H; eauto ]
-      end.
-      
-      intros; try apply isPWait_addRq.
-      
-      eapply i9; eauto.
-    - xfer i16 a0 y.
-    - xfer i16a a0 y.
-    - xfer i16c a0 y.
-    - unfold rqFromCToP, rsFromCToP, fromPToC in *;
-      rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-      rewrite ?eq_weq in *;
-      intros;
-      destruct (weq a0 (y F1)); [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *].
-      + specialize (i17 _ H0 H2).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-      + specialize (i17 _ H0 H2).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-    - xfer i19 a0 y.
-    - xfer i21 a0 y.
-    - xfer i23 a0 y.
-    - xfer i25 a0 y.
-    - xfer i28 a0 y.
-    - xfer i29 a0 y.
-    - xfer i30 a0 y.
-
-
-
-      xfer i9 a0 y.
-      eapply i9; eassumption.
-    - xfer i16 a0 y.
-    - xfer i16a a0 y.
-    - xfer i16c a0 y.
-    - unfold rqFromCToP, rsFromCToP, fromPToC in *;
-      rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-      rewrite ?eq_weq in *;
-      intros;
-      destruct (weq a0 (y F1)); [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *].
-      + specialize (i17 _ H0 H1).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-      + specialize (i17 _ H0 H1).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-    - xfer i19 a0 y.
-    - xfer i21 a0 y.
-    - xfer i23 a0 y.
-    - xfer i25 a0 y.
-    - xfer i28 a0 y.
-    - xfer i29 a0 y.
-    - xfer i30 a0 y.
-    -
-
-      unfold rqFromCToP in *; simpl in *.
-      rewrite ?filtRqFromC_commute_app in *.
-      simpl in *.
-
-      x <> c.
-      weq ($ c) ($ x)
-      xfer i9 a0 y.
-    - xfer i16 a0 y.
-    - xfer i16a a0 y.
-    - xfer i16c a0 y.
-    - unfold rqFromCToP, rsFromCToP, fromPToC in *;
-      rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-      rewrite ?eq_weq in *;
-      intros;
-      destruct (weq a0 (y F1)); [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *].
-      + specialize (i17 _ H0 H1).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-      + specialize (i17 _ H0 H1).
-        destruct i17.
-        * left; assumption.
-        * right; apply isPWait_addRq; auto.
-    - xfer i19 a0 y.
-    - xfer i21 a0 y.
-    - xfer i23 a0 y.
-    - xfer i25 a0 y.
-    - xfer i28 a0 y.
-    - xfer i29 a0 y.
-    - xfer i30 a0 y.
+    - xfer3 i8 y.
+    - xfer3 i10 y.
+    - xfer3 i11 y.
+    - xfer3 i12 y.
+    - xfer3 i15 y.
+    - xfer3 i16 y.
+    - xfer3 i16b y.
+    - xfer3 i16c y.
+    - xfer3 i17 y.
+    - xfer3 i18 y.
+    - xfer3 i19 y.
+    - xfer3 i20 y.
+    - xfer3 i31 y.
   Qed.
-    - 
-      + 
-      + 
-      xfer i17 a0 y.
-    - 
-    - rqFromCToP_ltac1 i25 a0 y.
-    - rqFromCToP_ltac1 i29 a0 y.
-    - 
-      apply isPWait_addRq.
-      clear - i9 H0 H1 H2.
-      rqFromCToP_ltac1 i9 a0 y.
-      eapply i9; eauto.
-    - 
-    Focus.
-    unfold rqFromCToP in *;
-      rewrite filtRqFromC_commute_app in *;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-    rewrite eq_weq in *;
-    clear - i9;
-    intros;
-    try apply isPWait_addRq;
-    try apply isPWait_addRq_contra;
-    try apply hd_error_revcons_same;
-    destruct (weq a0 (y F1)); [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; firstorder fail.
-    
-    specialize (i9 rq rs).
-
-    specialize (i9 inrq).
-    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
-    Focus.
-    assumption.
-    sim
-    invariant_step.
-    match goal with
-      | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-    end.
-    subst.
-    match goal with
-      | HIn d : nmemCache_invariants _ (*, a: word (TagBits + IdxBits) *) , H: (_ <= _)%nat |- _ =>
-        idtac
-    end.
-      destruct (HInd a _ _ H eq_refl)
-    end; unfold withIndex, withPrefix, listIsEmpty,
-         listFirstElt, listEnq, listDeq in *; simpl in *;
-    repeat substFind; dest; repeat simplBool.
-    repeat match goal with
-           | [ H : evalConstT match ?E with _ => _ end = _ |- _ ] =>
-             destruct E; try discriminate; [ clear H ]
-           end; autorewrite with invariant in *.
-                   invariant_complex.
-                   invariant1.
-    invariant.
-    doMetaComplex.
-    
-  Lemma undo_rewrite_fromPToC c a fromPList toCList (rs: type (Struct FP)):
-    (a = rs (FP !! addr)) ->
-    (fromPToC c a fromPList toCList ++ [rs]) = fromPToC c a fromPList (toCList ++ [fp_to_tc c rs]).
-  Proof.
-    intros.
-    unfold fromPToC, fp_to_tc.
-    rewrite filtToC_commute_app; subst; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-    rewrite ?eq_weq; simpl in *.
-    rewrite app_assoc.
-    reflexivity.
-  Qed.
-
-  Hint Rewrite rqFromCToP_xfer rsFromCToP_xfer fromPToC_xfer rqFromCToP_xfer_diffAddr rsFromCToP_xfer_diffAddr
-       fromPToC_xfer_diffAddr: invariant.
-
-  
 End MemCacheInl.
-
-      (*
-  Notation addField c m name strct :=
-    (fun i =>
-       match i in Fin.t iV return
-             (match iV return (Fin.t iV -> Type) with
-                | 0 => fun _ => IDProp
-                | S n4 =>
-                  fun k0 =>
-                    forall vs4, (forall i, Vector.nth (Vector.map (fun p => type (attrType p)) vs4) i) ->
-                                match k0 in Fin.t m' return Vector.t Type m' -> Type with
-                                  | F1 n => Vector.caseS (fun _ _ => Type) (fun h _ _ => h)
-                                  | Fin.FS _ p' =>
-                                    fun v =>
-                                      Vector.caseS (fun n0 _ => Fin.t n0 -> Type) (fun _ _ t p0 => Vector.nth t p0) v p'
-                                end
-                                  (Vector.cons Type _ n4 (Vector.map (fun p => type (attrType p)) vs4))
-              end i) with
-         | F1 s5 =>
-           fun vs4 _ => c
-         | Fin.FS s5 f5 =>
-           fun vs5 f => f f5
-       end (STRUCT {name :: Struct strct})
-           (fun i =>
-              match i in Fin.t iV return
-                    (match iV return (Fin.t iV -> Type) with
-                       | 0 => fun _ => IDProp
-                       | S n4 =>
-                         fun k0 =>
-                           forall vs4, (forall i, Vector.nth (Vector.map (fun p => type (attrType p)) vs4) i) ->
-                                       match k0 in Fin.t m' return Vector.t Type m' -> Type with
-                                         | F1 n => Vector.caseS (fun _ _ => Type) (fun h _ _ => h)
-                                         | Fin.FS _ p' =>
-                                           fun v =>
-                                             Vector.caseS (fun n0 _ => Fin.t n0 -> Type) (fun _ _ t p0 => Vector.nth t p0) v p'
-                                       end
-                                         (Vector.cons Type _ n4 (Vector.map (fun p => type (attrType p)) vs4))
-                     end i) with
-                | F1 s5 =>
-                  fun vs4 _ => m
-                | Fin.FS s5 f5 =>
-                  fun vs5 f => f f5
-              end (Vector.nil _) (fun i0 => Fin.case0 _ i0))).
-*)
-
