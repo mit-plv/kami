@@ -1385,7 +1385,7 @@ Section MemCacheInl.
       destruct H1; dest.
       + subst; simpl in H4; discriminate.
       + eapply i31 in H7; eassumption.
-    SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma findIncompat_means (rq: type (Struct RqTP)) (c: word LgNumChildren) dir dirw:
@@ -1631,7 +1631,7 @@ Section MemCacheInl.
         dest.
         congruence.
       + eapply i31 in H7; eassumption.
-        SKIP_PROOF_ON *) apply cheat.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma beg_last_in A ls: forall v: A, In v ls -> exists beg last, ls = beg ++ v :: last.
@@ -1865,7 +1865,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H5.
       specialize (i29 _ _ H2 (or_intror H3) H5).
       assumption.
-        SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -2136,7 +2136,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H4.
       specialize (i29 _ _ H2 (or_intror H3) H4).
       assumption.
-        SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_01 s a u cs:
@@ -2187,7 +2187,7 @@ Section MemCacheInl.
     - clear - i21 H0 H1.
       specialize (i21 _ H0 H1).
       dest; discriminate.
-        SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -2406,7 +2406,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_2 s a u cs:
@@ -2420,7 +2420,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_3 s a u cs:
@@ -2434,7 +2434,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_4 s a u cs:
@@ -2448,7 +2448,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_7 s a u cs:
@@ -2462,7 +2462,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_8 s a u cs:
@@ -2476,7 +2476,7 @@ Section MemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
     doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac doMeta :=
@@ -2557,7 +2557,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
-        SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
       
   Lemma rsLessTo_in_app ls:
@@ -2732,7 +2732,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
-        SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Lemma nmemCache_invariants_hold_5 s a u cs:
@@ -2756,7 +2756,7 @@ Section MemCacheInl.
         reflexivity.
       + specialize (i16a t (or_introl eq_refl)).
         dest; discriminate.
-        SKIP_PROOF_ON *) apply cheat.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac diffAddr_sameIdx :=
@@ -3095,7 +3095,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H1) H3 H4 H5).
       assumption.
-    SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Notation addField c m name strct :=
@@ -3564,7 +3564,7 @@ Section MemCacheInl.
     - xfer i28 a0 y.
     - xfer i29 a0 y.
     - xfer i30 a0 y.
-SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
@@ -3602,7 +3602,7 @@ SKIP_PROOF_ON *) apply cheat.
     - xfer i23 a0 y.
     - xfer i26 a0 y.
     - xfer i29 a0 y.
-SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac xfer2 H a0 y :=
@@ -3681,6 +3681,6 @@ SKIP_PROOF_ON *) apply cheat.
     - xfer3 i19 y.
     - xfer3 i20 y.
     - xfer3 i31 y.
-SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
