@@ -162,7 +162,7 @@ Section MemCacheInl.
   Definition cache := nat.
 
   Open Scope fmap.
-
+  
   Record nmemCache_invariants_rec (s: RegsT)
          a cword (c: cache): Prop :=
     {
@@ -821,7 +821,7 @@ Section MemCacheInl.
   Qed.
   
   Ltac simplMapUpds tac :=
-    esplit;
+    (try esplit);
     unfold withIndex;
     match goal with
       | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t)
@@ -3683,4 +3683,669 @@ SKIP_PROOF_ON *) apply cheat.
     - xfer3 i31 y.
 SKIP_PROOF_ON *) apply cheat.
   Qed.
+
+  Record dirCompat_inv' a cword (c: cache) c2 (c2nat: cache) (s: RegsT): Prop :=
+    {
+      newdir: <| Vector (Vector Msi LgNumChildren) (IdxBits + TagBits) |> ;
+      newdirFind: newdir === s.[mcs -- dataArray] ;
+      isDirCompat:
+        cword <> c2 ->
+        newdir a cword <=
+        if weq (newdir a c2) ($ Msi.Mod)
+        then $ Msi.Inv
+        else if weq (newdir a c2) ($ Msi.Sh)
+             then $ Msi.Sh
+             else $ Msi.Mod
+    }.
+
+  Definition dirCompat_inv s := forall a cword c, (c <= wordToNat (wones LgNumChildren))%nat ->
+                                                  (cword = $ c) ->
+                                                  forall cword2 c2,
+                                                    (c2 <= wordToNat (wones LgNumChildren))%nat ->
+                                                    (cword2 = $ c2) ->
+                                                    dirCompat_inv' a cword c cword2 c2 s.
+
+  Ltac metaDir :=
+    intros HDir HInd HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+      intros ? ? c ? ? ? c2 ? ?;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl)          
+    end;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl _ _ )
+    end;
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+      simplMapUpds helpNormal.
+    
+  Lemma dirCompat_inv_hold_1 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    l1MissByState metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_2 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    l1MissByLine metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_3 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    l1Hit metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_4 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_5 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    upgRq metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_6 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    upgRs metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_7 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    ld metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_8 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    st metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_9 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_10 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    pProcess metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_xfer_1 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    rqFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_xfer_2 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    rsFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_xfer_3 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    fromPToCRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      dirCompat_inv (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+
+  Ltac normalDir :=
+    intros HDir HInd HInRule HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    intros ? ? c ?;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl)          
+    end;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl)
+    end;
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+    simplMapUpds
+      ltac:(autorewrite with invariant in *;
+             unfold isCWait, isPWait in *;
+             simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *).
+
+  
+  Lemma dirCompat_inv_hold_02 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    dwnRq is a ->
+    SemAction s a
+              u cs WO ->
+    dirCompat_inv (M.union u s).
+  Proof.
+    normalDir.
+  Qed.
+
+  Lemma dirCompat_inv_hold_01 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    missByState is a ->
+    SemAction s a
+              u cs WO ->
+    dirCompat_inv (M.union u s).
+  Proof.
+    normalDir.
+  Qed.
+
+  Lemma wordToNat_wones sz (w: word sz):
+    ( wordToNat w <= wordToNat (wones sz))%nat.
+  Proof.
+    rewrite wones_pow2_minus_one.
+    pose proof (pow2_zero sz).
+    pose proof (wordToNat_bound w).
+    Omega.omega.
+  Qed.
+
+  Lemma dirCompat_inv_hold_03 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    dwnRs_wait is a ->
+    SemAction s a
+              u cs WO ->
+    dirCompat_inv (M.union u s).
+  Proof.
+    normalDir.
+    - intros.
+      specialize (isDirCompat _ H1).
+      destruct (weq a0 (y F2 F1)); [subst|].
+      + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
+        * destruct (weq c2 (y F1)); [subst; tauto|].
+          specialize (i7 _ (or_introl eq_refl)).
+          destruct i7 as [_ useful].
+          word_omega.
+        * destruct (weq c2 (y F1)); [subst | assumption].
+          destruct (HInd (y F2 F1) (y F1) (wordToNat (y F1)) (wordToNat_wones (y F1)) (eq_sym (natToWord_wordToNat (y F1)))).
+          simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+          repeat substFind.
+          
+          specialize (i1 _ (or_introl eq_refl)).
+          destruct i7 as [_ useful].
+          subst.
+          clear - isDirCompat.
+          admit.
+          assumption.
+          assumption.
+          [ assumption].
+          
+  Qed.
+
+  
+
+  - clear; intros; dest; discriminate.
+    - clear - i16a.
+      intros.
+      specialize (i16a _ H); dest; discriminate.
+    - clear - i16b.
+      intros.
+      specialize (i16b _ H H0).
+      dest; discriminate.
+    - 
+      intros
+      specialize (i16 H).
+  Qed.
+
+  Lemma dirCompat_hold_3 s a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    l1Hit metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    metaDir.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_4 s a u cs:
+    nmemCache_invariants s ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    (* SKIP_PROOF_ON
+    doMetaComplex.
+        SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_7 s a u cs:
+    nmemCache_invariants s ->
+    ld metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    (* SKIP_PROOF_ON
+    doMetaComplex.
+        SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma nmemCache_invariants_hold_8 s a u cs:
+    nmemCache_invariants s ->
+    st metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    (* SKIP_PROOF_ON
+    doMetaComplex.
+        SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Ltac doMeta :=
+    metaInit;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+    simplMapUpds helpNormal.
+  
+  Lemma nmemCache_invariants_hold_9 s a u cs:
+    nmemCache_invariants s ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+
+
+  intros HDir HInd HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+      intros ? ? c ?;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+      subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HInd a _ _ H eq_refl)          
+    end;
+    match goal with
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl);
+          specialize (HInd a _ _ H' eq_refl)
+      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
+        destruct (HDir a _ _ H eq_refl)
+    end;
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+      simplMapUpds helpNormal.
+  Qed.
+    metaDir.
+    intro HDir.
+    intros HInd HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule.
+    intros ? ? c ? ?; destructRules c HInd.
+    metaInit.
+    metaDir.
+    intros.
+    destruct H0.
+    Print Ltac metaInit.
+    SymEval
+    destruct (H a0 ($ x) x eq_refl).
+    metaInit.
+
+
+  cRqValid: <| Bool |> ;
+      cRqValidFind: cRqValid === s.[cRqValidReg] ;
+      dirw: <| Vector Bool LgNumChildren |> ;
+      dirwFind: dirw === s.[cRqDirwReg] ;
+      rqFromCList: <[ list (type (Struct RqFC)) ]> ;
+      rqFromCListFind: rqFromCList === s.[rqFromChild -- elt] ;
+      rsFromCList: <[ list (type (Struct RsFC)) ]> ;
+      rsFromCListFind: rsFromCList === s.[rsFromChild -- elt] ;
+      toCList: <[ list (type (Struct TC)) ]>;
+      toCListFind: toCList === s.[toChild -- elt] ;
+      csv: <| Vector Msi IdxBits |> ;
+      csFind: csv === s.[(cs -- dataArray) __ c] ;
+      tagv: <| Vector (Bit TagBits) IdxBits |> ;
+      tagFind: tagv === s.[(tag -- dataArray) __ c];
+      procRqValid: <| Bool |> ;
+      procRqValidFind: procRqValid === s.[procRqValidReg __ c] ;
+      procRqReplace: <| Bool |> ;
+      procRqReplaceFind: procRqReplace === s.[procRqReplaceReg __ c] ;
+      procRq: <| Struct RqFPr |> ;
+      procRqFind: procRq === s.[procRqReg __ c] ;
+      csw: <| Bool |> ;
+      cswFind: csw === s.[procRqWaitReg __ c] ;
+      rqToPList: <[ list (type (Struct RqTP)) ]> ;
+      rqToPListFind:  rqToPList === s.[(rqToParent -- elt) __ c] ;
+      rsToPList: <[ list (type (Struct RsTP)) ]> ;
+      rsToPListFind: rsToPList === s.[(rsToParent -- elt) __ c] ;
+      fromPList: <[ list (type (Struct FP)) ]> ;
+      fromPListFind: fromPList === s.[(fromParent -- elt) __ c] ;
+      cRq: <| Struct RqFC |> ;
+      cRqFind: cRq === s.[cRqReg] ;
+
+      i5: dir a cword >= getCs csv tagv a ;
+      
+      i7: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+                     getCs csv tagv a <= rs (RsTP !! to) /\
+                     dir a cword > rs (RsTP !! to) ;
+
+      i8: forall rs, In rs (fromPToC cword a fromPList toCList) ->
+                     rs (FP !! isRq) = false ->
+                     getCs csv tagv a < rs (FP !! to) /\
+                     dir a cword = rs (FP !! to) ;
+
+      i9: forall rq rs,
+            In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+            In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+            dir a cword <= rq (RqTP !! from) ->
+            isPWait a cRqValid rqFromCList dirw cword dir ;
+
+      i10: (forall beg mid last rs1 rs2,
+              fromPToC cword a fromPList toCList = beg ++ rs1 :: mid ++ rs2 :: last ->
+              rs1 (FP !! isRq) = false ->
+              rs2 (FP !! isRq) = false ->
+              False)%list ;
+
+      i11: rsFromCToP cword a rsFromCList rsToPList = nil ->
+           (forall msg, In msg (fromPToC cword a fromPList toCList) -> msg (FP !! isRq) = true) ->
+           dir a cword = getCs csv tagv a ;
+           
+      i12: forall rs, In rs (fromPToC cword a fromPList toCList) ->
+                      rs (FP !! isRq) = false ->
+                      rsFromCToP cword a rsFromCList rsToPList = nil ;
+    
+      i13: rsLessTo (rsFromCToP cword a rsFromCList rsToPList) ;
+
+      i14: (forall beg rs,
+              rsFromCToP cword a rsFromCList rsToPList = beg ++ [rs] ->
+              rs (RsTP !! to) = getCs csv tagv a)%list ;
+
+      i15: (forall beg mid last rq rs,
+              fromPToC cword a fromPList toCList = beg ++ rq :: mid ++ rs :: last ->
+              rq (FP !! isRq) = true ->
+              rs (FP !! isRq) = false ->
+              getCs csv tagv a = $ Msi.Inv)%list ;
+
+      i16: isCWait a procRqValid procRq csw ->
+           (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
+                               then $ Msi.Mod else $ Msi.Sh)
+           /\
+           ((exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList) /\
+                        rq (RqTP !! to) = (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) /\
+                        rq (RqTP !! from) >= getCs csv tagv a) \/
+            (exists rs, In rs (fromPToC cword a fromPList toCList) /\
+                        rs (FP !! isRq) = false /\
+                        rs (FP !! to) = if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)) ;
+
+      i16a: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+                       isCWait a procRqValid procRq csw
+                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
+                                            then $ Msi.Mod else $ Msi.Sh)
+                       /\ rq (RqTP !! to) =
+                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)
+                       /\ rq (RqTP !! from) >= getCs csv tagv a ;
+
+      i16b: forall rs, In rs (fromPToC cword a fromPList toCList) ->
+                       rs (FP !! isRq) = false ->
+                       isCWait a procRqValid procRq csw
+                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
+                                              then $ Msi.Mod else $ Msi.Sh)
+                       /\ rs (FP !! to) =
+                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) ;
+    
+      i16c: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+                          In rs (fromPToC cword a fromPList toCList) ->
+                          rs (FP !! isRq) = true ;
+
+      i17: forall rq,
+             In rq (fromPToC cword a fromPList toCList) ->
+             rq (FP !! isRq) = true ->
+             getCs csv tagv a = $ Msi.Inv \/
+             isPWait a cRqValid rqFromCList dirw cword dir ;
+
+      i18: forall rq rs,
+             In rq (fromPToC cword a fromPList toCList) ->
+             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+             rq (FP !! isRq) = true ->
+             rs (RsTP !! to) = $ Msi.Inv ;
+
+      i19: (forall beg mid last rq rs,
+              fromPToC cword a fromPList toCList = beg ++ rs :: mid ++ rq :: last ->
+              rs (FP !! isRq) = false ->
+              rq (FP !! isRq) = true ->
+              isPWait a cRqValid rqFromCList dirw cword dir)%list ;
+
+      i20: (forall beg mid last rq1 rq2,
+              fromPToC cword a fromPList toCList = beg ++ rq1 :: mid ++ rq2 :: last ->
+              rq1 (FP !! isRq) = true ->
+              rq2 (FP !! isRq) = true ->
+              getCs csv tagv a = $ Msi.Inv)%list ;
+
+      i21: forall rs,
+             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+             rs (RsTP !! isVol) = false ->
+             isPWait a cRqValid rqFromCList dirw cword dir ;
+
+      i22: (forall beg mid last cToPRs1 cToPRs2,
+              rsFromCToP cword a rsFromCList rsToPList =
+              beg ++ cToPRs1 :: mid ++ cToPRs2 :: last ->
+              cToPRs1 (RsTP !! isVol) = true \/
+              cToPRs2 (RsTP !! isVol) = true)%list ;
+
+      i23: forall rq rs,
+             In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+             dir a cword <= rq (RqTP !! from) ->
+             rs (RsTP !! isVol) = false ;
+
+      i25: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+                      rq (RqTP !! from) < rq (RqTP !! to) ;
+
+      i26: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+                      rs (RsTP !! isVol) = true ->
+                      rs (RsTP !! to) = $ Msi.Inv ;
+
+      i27: procRqValid = true -> procRqReplace = true ->
+           tagv (split1 IdxBits TagBits
+                        (split2 LgNumDatas (IdxBits + TagBits)
+                                (procRq (RqFPr !! addr)))) =
+           split2 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits)
+                                          (procRq (RqFPr !! addr))) ->
+           csv (split1 IdxBits TagBits
+                       (split2 LgNumDatas (IdxBits + TagBits)
+                               (procRq (RqFPr !! addr)))) = $ Msi.Inv ;
+      
+      i27b: procRqValid = true -> procRqReplace = false ->
+            tagv (split1 IdxBits TagBits
+                         (split2 LgNumDatas (IdxBits + TagBits)
+                                 (procRq (RqFPr !! addr)))) =
+            split2 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits)
+                                           (procRq (RqFPr !! addr))) \/
+            csv (split1 IdxBits TagBits
+                        (split2 LgNumDatas (IdxBits + TagBits)
+                                (procRq (RqFPr !! addr)))) = $ Msi.Inv ;
+      
+      i28: cRqValid = true -> hd_error rqFromCList = Some cRq ;
+
+      i29: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
+                         In rs (rsFromCToP cword a rsFromCList rsToPList) ->
+                         rs (RqTP !! isVol) = true ->
+                         rq (RqTP !! from) = $ Msi.Inv ;
+
+      i30: forall rq tl, rqFromCToP cword a rqFromCList rqToPList = rq :: tl -> tl = nil ;
+
+      i31: forall beg mid1 mid2 last rs rq1 rq2,
+             fromPToC cword a fromPList toCList = beg ++ rs :: mid1 ++ rq1 :: mid2 ++ rq2 :: last ->
+             rs (FP !! isRq) = false ->
+             rq1 (FP !! isRq) = true ->
+             rq2 (FP !! isRq) = true ->
+             False
+
+    }.
+
+  
 End MemCacheInl.
