@@ -8,4 +8,3 @@ Makefile.coq.src
 *~
 .coq-native
 *.DS_Store
-extraction/*
