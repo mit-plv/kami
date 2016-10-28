@@ -3148,6 +3148,138 @@ Section MemCacheInl.
   Definition rsTP_to_rsFC (c: word LgNumChildren) (m: type (Struct RsTP)): type (Struct RsFC) :=
     addField c m.
 
+  Lemma rqFromCToP_xfer:
+    forall x a t rqFromCList rqToPList,
+      rqFromCToP x a rqFromCList (t :: rqToPList) =
+      rqFromCToP x a (rqFromCList ++ [rqTP_to_rqFC x t]) rqToPList.
+  Proof.
+    unfold rqFromCToP; intro; unfold rqTP_to_rqFC; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; subst.
+    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      simpl;
+        reflexivity.
+    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      destruct (weq a (t F1)); try tauto.
+  Qed.
+
+  Lemma rsFromCToP_xfer:
+    forall x a t rsFromCList rsToPList,
+      rsFromCToP x a rsFromCList (t :: rsToPList) =
+      rsFromCToP x a (rsFromCList ++ [rsTP_to_rsFC x t]) rsToPList.
+  Proof.
+    unfold rsFromCToP; intro; unfold rsTP_to_rsFC; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; subst.
+    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      simpl;
+        reflexivity.
+    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      destruct (weq a (t F1)); try tauto.
+  Qed.
+
+  Lemma fromPToC_xfer:
+    forall x a t fromPList toCList,
+      fromPToC x a fromPList (fp_to_tc x t :: toCList) =
+      fromPToC x a (fromPList ++ [t]) toCList.
+  Proof.
+    unfold fromPToC; intro; unfold fp_to_tc; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; subst.
+    - rewrite filtFromP_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      simpl;
+        reflexivity.
+    - rewrite filtFromP_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      destruct (weq a (t F2)); try tauto.
+    - tauto.
+  Qed.
+
+  Lemma rqFromCToP_xfer_diffAddr:
+    forall c x a t rqFromCList rqToPList,
+      c <> x ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      rqFromCToP ($ c) a rqFromCList rqToPList =
+      rqFromCToP ($ c) a (rqFromCList ++ [rqTP_to_rqFC ($ x) t]) rqToPList.
+  Proof.
+    unfold rqFromCToP; intro; unfold rqTP_to_rqFC; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; subst.
+    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
+      { pose proof (pow2_zero LgNumChildren).
+        rewrite wones_pow2_minus_one in H0, H1.
+        intro.
+        apply natToWord_inj with (sz := LgNumChildren) in H3; intuition Omega.omega.
+      }
+      destruct (weq ($ c) ($ x)); try tauto.
+  Qed.
+
+  Lemma rsFromCToP_xfer_diffAddr:
+    forall c x a t rsFromCList rsToPList,
+      c <> x ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      rsFromCToP ($ c) a rsFromCList rsToPList =
+      rsFromCToP ($ c) a (rsFromCList ++ [rsTP_to_rsFC ($ x) t]) rsToPList.
+  Proof.
+    unfold rsFromCToP; intro; unfold rsTP_to_rsFC; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; subst.
+    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
+      rewrite ?eq_weq.
+      rewrite <- app_assoc.
+      assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
+      { pose proof (pow2_zero LgNumChildren).
+        rewrite wones_pow2_minus_one in H0, H1.
+        intro.
+        apply natToWord_inj with (sz := LgNumChildren) in H3; intuition Omega.omega.
+      }
+      destruct (weq ($ c) ($ x)); try tauto.
+  Qed.
+  
+  Lemma fromPToC_xfer_diffAddr:
+    forall c x a (t: type (Struct TC)) fromPList toCList,
+      c <> x ->
+      $ x = t F1 ->
+      (c <= wordToNat (wones LgNumChildren))%nat ->
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      fromPToC ($ c) a fromPList toCList =
+      fromPToC ($ c) a fromPList (t :: toCList).
+  Proof.
+    unfold fromPToC; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
+    repeat match goal with
+             | |- context[weq ?a ?b] => destruct (weq a b)
+           end; try reflexivity.
+    
+    - assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
+      { pose proof (pow2_zero LgNumChildren).
+        rewrite wones_pow2_minus_one in H1, H2.
+        intro.
+        apply natToWord_inj with (sz := LgNumChildren) in H4; intuition Omega.omega.
+      }
+      congruence.
+  Qed.
+
   Lemma undo_rewrite_fromPToC c a fromPList toCList (rs: type (Struct FP)):
     (a = rs (FP !! addr)) ->
     (fromPToC c a fromPList toCList ++ [rs]) = fromPToC c a fromPList (toCList ++ [fp_to_tc c rs]).
@@ -3159,4 +3291,20 @@ Section MemCacheInl.
     rewrite app_assoc.
     reflexivity.
   Qed.
+
+  Hint Rewrite rqFromCToP_xfer rsFromCToP_xfer fromPToC_xfer rqFromCToP_xfer_diffAddr rsFromCToP_xfer_diffAddr
+       fromPToC_xfer_diffAddr: invariant.
+
+  Lemma nmemCache_invariants_hold_xfer_1 s a u cs:
+    nmemCache_invariants s ->
+    rqFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      nmemCache_invariants (M.union u s).
+  Proof.
+    doMetaComplex.
+    
+  
 End MemCacheInl.
