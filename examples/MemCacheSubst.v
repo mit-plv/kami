@@ -52,7 +52,7 @@ Lemma nativeSimpleFifoS_const_regs:
 Proof. intros; CommonTactics.dest_in; simpl; reflexivity. Qed.
 
 Section Refinement.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable FifoSize: nat.
@@ -60,8 +60,8 @@ Section Refinement.
   Variable n: nat. (* number of l1 caches (cores) *)
 
   Lemma fifos_refines_nfifos_memCache:
-    (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)
-      <<== (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
+    (fifosInMemCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n)
+      <<== (nfifosInNMemCache IdxBits TagBits LgNumDatas DataBytes Id n).
   Proof.
     ketrans; [apply modFromMeta_comm_1|].
     ketrans; [|apply modFromMeta_comm_2].
@@ -114,11 +114,11 @@ Section Refinement.
   Qed.
     
   Lemma getDefs_fifos_nfifos:
-    SubList (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
-            (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)).
+    SubList (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas DataBytes Id n))
+            (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n)).
   Proof.
-    replace (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)) 
-    with (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n));
+    replace (getDefs (fifosInMemCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n)) 
+    with (getDefs (nfifosInNMemCache IdxBits TagBits LgNumDatas DataBytes Id n));
       [apply SubList_refl|].
     unfold nfifosInNMemCache, fifosInMemCache.
     repeat rewrite getDefs_modFromMeta_app.
@@ -134,8 +134,8 @@ Section Refinement.
     apply SubList_app_6.
 
   Lemma getCalls_fifos_nfifos:
-    SubList (getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n))
-            (getCalls (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)).
+    SubList (getCalls (nfifosInNMemCache IdxBits TagBits LgNumDatas DataBytes Id n))
+            (getCalls (fifosInMemCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n)).
   Proof.
     unfold nfifosInNMemCache, fifosInMemCache.
     getCalls_fifos_nfifos_tac.
@@ -178,15 +178,15 @@ Section Refinement.
     simpl; repeat rewrite map_app, concat_app.
 
   Lemma memCache_refines_nmemCache:
-    (modFromMeta (memCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n))
-      <<== (modFromMeta (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)).
+    (modFromMeta (memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n))
+      <<== (modFromMeta (nmemCache IdxBits TagBits LgNumDatas DataBytes Id n)).
   Proof. (* SKIP_PROOF_ON
     ketrans.
 
     - ksubst
-        (fifosInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id FifoSize n)
-        (nfifosInNMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n)
-        (othersInMemCache IdxBits TagBits LgNumDatas LgDataBytes Id n).
+        (fifosInMemCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n)
+        (nfifosInNMemCache IdxBits TagBits LgNumDatas DataBytes Id n)
+        (othersInMemCache IdxBits TagBits LgNumDatas DataBytes Id n).
       + repeat
           match goal with
           | [ |- context[Syntax.Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)] ] =>

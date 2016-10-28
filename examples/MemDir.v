@@ -23,22 +23,22 @@ Section Fold.
 End Fold.
 
 Section Mem.
-  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variables IdxBits LgNumDatas DataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
   Definition AddrBits := IdxBits.
   Definition Addr := Bit AddrBits.
   Definition Idx := Bit IdxBits.
-  Definition Data := Bit (LgDataBytes * 8).
+  Definition Data := Bit (DataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
  
   Definition RqToP := Ex.MemTypes.RqToP Addr Id.
   Definition RqFromC := Ex.MemTypes.RqFromC LgNumChildren Addr Id.
-  Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas Addr.
-  Definition RsFromC := Ex.MemTypes.RsFromC LgDataBytes LgNumDatas LgNumChildren Addr.
-  Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas Addr Id.
-  Definition ToC := Ex.MemTypes.ToC LgDataBytes LgNumDatas LgNumChildren Addr Id.
+  Definition RsToP := Ex.MemTypes.RsToP DataBytes LgNumDatas Addr.
+  Definition RsFromC := Ex.MemTypes.RsFromC DataBytes LgNumDatas LgNumChildren Addr.
+  Definition FromP := Ex.MemTypes.FromP DataBytes LgNumDatas Addr Id.
+  Definition ToC := Ex.MemTypes.ToC DataBytes LgNumDatas LgNumChildren Addr Id.
   
   Definition rqFromCPop := MethodSig (rqFromChild -- deqName) (Void): Struct RqFromC.
   Definition rqFromCFirst := MethodSig (rqFromChild -- firstEltName) (Void): Struct RqFromC.
@@ -192,18 +192,18 @@ Hint Unfold getIdx getOffset getAddr othersCompat findIncompat dirwInit : MethDe
 Hint Unfold memDir : ModuleDefs.
 
 Section Facts.
-  Variables IdxBits LgNumDatas LgDataBytes LgNumChildren: nat.
+  Variables IdxBits LgNumDatas DataBytes LgNumChildren: nat.
   Variable Id: Kind.
 
   Lemma memDir_ModEquiv:
-    MetaModPhoasWf (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModPhoasWf (memDir IdxBits LgNumDatas DataBytes LgNumChildren Id).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma memDir_ValidRegs:
-    MetaModRegsWf (memDir IdxBits LgNumDatas LgDataBytes LgNumChildren Id).
+    MetaModRegsWf (memDir IdxBits LgNumDatas DataBytes LgNumChildren Id).
   Proof. (* SKIP_PROOF_ON
     kvr.
     END_SKIP_PROOF_ON *) apply cheat.

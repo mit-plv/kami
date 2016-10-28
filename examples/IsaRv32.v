@@ -16,58 +16,58 @@ Require Import Ex.MemTypes Ex.SC.
 Section RV32I.
   Definition rv32iAddrSize := 7. (* 2^7 memory cells *)
   Definition rv32iIAddrSize := 5. (* 2^5 = 32 program size *)
-  Definition rv32iLgDataBytes := 4. (* TODO: invalid name; DataBytes is right *)
+  Definition rv32iDataBytes := 4.
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
   Definition rv32iRfIdx := 5. (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
 
   Section Common.
 
     Definition getOpcodeE {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (Trunc 7 _) inst)%kami_expr.
 
     Definition getRs1E {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (ConstExtract 15 5 _) inst)%kami_expr.
     
     Definition getRs1ValueE {ty}
-               (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (s : StateT rv32iDataBytes rv32iRfIdx ty)
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (#s @[getRs1E inst])%kami_expr.
 
     Definition getRs2E {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (ConstExtract 20 5 _) inst)%kami_expr.
 
     Definition getRs2ValueE {ty}
-               (s : StateT rv32iLgDataBytes rv32iRfIdx ty)
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (s : StateT rv32iDataBytes rv32iRfIdx ty)
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (#s @[getRs2E inst])%kami_expr.
 
     Definition getRdE {ty}
-               (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst: Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       UniBit (ConstExtract 7 5 _) inst.
 
     Definition getFunct7E {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (TruncLsb 25 7) inst)%kami_expr.
 
     Definition getFunct3E {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (ConstExtract 12 3 _) inst)%kami_expr.
 
     Definition getOffsetIE {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (UniBit (TruncLsb 20 12) inst)%kami_expr.
 
     Definition getOffsetSE {ty}
-               (inst : Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (BinBit (Concat _ _)
               (UniBit (TruncLsb 25 7) inst)
               (UniBit (ConstExtract 7 5 _) inst))%kami_expr.
 
     Definition getOffsetSBE {ty}
-               (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst: Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (BinBit (Concat _ _)
               (BinBit (Concat _ _)
                       (UniBit (TruncLsb 31 1) inst)
@@ -77,7 +77,7 @@ Section RV32I.
                       (UniBit (ConstExtract 8 4 _) inst)))%kami_expr.
 
     Definition getOffsetUJE {ty}
-               (inst: Expr ty (SyntaxKind (Data rv32iLgDataBytes))) :=
+               (inst: Expr ty (SyntaxKind (Data rv32iDataBytes))) :=
       (BinBit (Concat _ _)
               (BinBit (Concat _ _)
                       (UniBit (TruncLsb 31 1) inst)
@@ -107,64 +107,64 @@ Section RV32I.
    *)
   Section Decode.
 
-    Definition rv32iGetOptype: OptypeT rv32iLgDataBytes.
+    Definition rv32iGetOptype: OptypeT rv32iDataBytes.
       unfold OptypeT; intros ty inst.
       refine (IF (getOpcodeE #inst == $$ rv32iOpLOAD) then $$opLd else _)%kami_expr.
       refine (IF (getOpcodeE #inst == $$ rv32iOpSTORE) then $$opSt else _)%kami_expr.
       refine (IF (getOpcodeE #inst == $$ rv32iOpTOHOST) then $$opTh else $$opNm)%kami_expr.
     Defined.
 
-    Definition rv32iGetLdDst: LdDstT rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetLdDst: LdDstT rv32iDataBytes rv32iRfIdx.
       unfold LdDstT; intros ty inst.
       exact (getRdE #inst)%kami_expr.
     Defined.
 
-    Definition rv32iGetLdAddr: LdAddrT rv32iAddrSize rv32iLgDataBytes.
+    Definition rv32iGetLdAddr: LdAddrT rv32iAddrSize rv32iDataBytes.
       unfold LdAddrT; intros ty inst.
       exact (UniBit (ZeroExtendTrunc _ _) (getOffsetIE #inst))%kami_expr.
     Defined.
 
-    Definition rv32iGetLdSrc: LdSrcT rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetLdSrc: LdSrcT rv32iDataBytes rv32iRfIdx.
       unfold LdSrcT; intros ty inst.
       exact (getRs1E #inst)%kami_expr.
     Defined.
 
-    Definition rv32iCalcLdAddr: LdAddrCalcT rv32iAddrSize rv32iLgDataBytes.
+    Definition rv32iCalcLdAddr: LdAddrCalcT rv32iAddrSize rv32iDataBytes.
       unfold LdAddrCalcT; intros ty ofs base.
       exact (UniBit (ZeroExtendTrunc _ _) #base + #ofs)%kami_expr.
     Defined.
 
-    Definition rv32iGetStAddr: StAddrT rv32iAddrSize rv32iLgDataBytes.
+    Definition rv32iGetStAddr: StAddrT rv32iAddrSize rv32iDataBytes.
       unfold StAddrT; intros ty inst.
       exact (UniBit (ZeroExtendTrunc _ _) (getOffsetSE #inst))%kami_expr.
     Defined.
       
-    Definition rv32iGetStSrc: StSrcT rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetStSrc: StSrcT rv32iDataBytes rv32iRfIdx.
       unfold StSrcT; intros ty inst.
       exact (getRs1E #inst)%kami_expr.
     Defined.
     
-    Definition rv32iCalcStAddr: StAddrCalcT rv32iAddrSize rv32iLgDataBytes.
+    Definition rv32iCalcStAddr: StAddrCalcT rv32iAddrSize rv32iDataBytes.
       unfold StAddrCalcT; intros ty ofs base.
       exact (UniBit (ZeroExtendTrunc _ _) #base + #ofs)%kami_expr.
     Defined.
 
-    Definition rv32iGetStVSrc: StVSrcT rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetStVSrc: StVSrcT rv32iDataBytes rv32iRfIdx.
       unfold StVSrcT; intros ty inst.
       exact (getRs2E #inst)%kami_expr.
     Defined.
 
-    Definition rv32iGetSrc1: Src1T rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetSrc1: Src1T rv32iDataBytes rv32iRfIdx.
       unfold Src1T; intros ty inst.
       exact (getRs1E #inst)%kami_expr.
     Defined.
     
-    Definition rv32iGetSrc2: Src2T rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetSrc2: Src2T rv32iDataBytes rv32iRfIdx.
       unfold Src2T; intros ty inst.
       exact (getRs2E #inst)%kami_expr.
     Defined.
 
-    Definition rv32iGetDst: DstT rv32iLgDataBytes rv32iRfIdx.
+    Definition rv32iGetDst: DstT rv32iDataBytes rv32iRfIdx.
       unfold DstT; intros ty inst.
       refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else _)%kami_expr.
       - exact ($0)%kami_expr. (* Branch instructions should not write registers *)
@@ -232,7 +232,7 @@ Section RV32I.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $$op) then expr else _)%kami_expr.
 
-  Definition rv32iExec: ExecT rv32iAddrSize rv32iLgDataBytes.
+  Definition rv32iExec: ExecT rv32iAddrSize rv32iDataBytes.
     unfold ExecT; intros ty val1 val2 pc inst.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpJAL)
@@ -282,7 +282,7 @@ Section RV32I.
    * Branch offsets are not aligned, so the complete offset bits are used.
    *)
 
-  Definition rv32iNextPc: NextPcT rv32iAddrSize rv32iLgDataBytes rv32iRfIdx.
+  Definition rv32iNextPc: NextPcT rv32iAddrSize rv32iDataBytes rv32iRfIdx.
     unfold NextPcT; intros ty st pc inst.
 
     (* NOTE: "rd" is updated by rv32iExecState *)

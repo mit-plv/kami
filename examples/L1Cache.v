@@ -7,7 +7,7 @@ Require Import Ex.Msi Ex.MemTypes Ex.RegFile Kami.ParametricSyntax Ex.Names.
 Set Implicit Arguments.
 
 Section L1Cache.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Definition AddrBits := LgNumDatas + (IdxBits + TagBits).
@@ -15,17 +15,17 @@ Section L1Cache.
   Definition Tag := Bit TagBits.
   Definition Idx := Bit IdxBits.
   Definition TagIdx := Bit (IdxBits + TagBits).
-  Definition Data := Bit (LgDataBytes * 8).
+  Definition Data := Bit (DataBytes * 8).
   Definition Offset := Bit LgNumDatas.
   Definition Line := Vector Data LgNumDatas.
  
-  Definition RqFromProc := Ex.MemTypes.RqFromProc LgDataBytes Addr.
-  Definition RsToProc := Ex.MemTypes.RsToProc LgDataBytes.
-  Definition FromP := Ex.MemTypes.FromP LgDataBytes LgNumDatas TagIdx Id.
+  Definition RqFromProc := Ex.MemTypes.RqFromProc DataBytes Addr.
+  Definition RsToProc := Ex.MemTypes.RsToProc DataBytes.
+  Definition FromP := Ex.MemTypes.FromP DataBytes LgNumDatas TagIdx Id.
   Definition RqFromP := Ex.MemTypes.RqFromP TagIdx.
-  Definition RsFromP := Ex.MemTypes.RsFromP LgDataBytes LgNumDatas TagIdx Id.
+  Definition RsFromP := Ex.MemTypes.RsFromP DataBytes LgNumDatas TagIdx Id.
   Definition RqToP := Ex.MemTypes.RqToP TagIdx Id.
-  Definition RsToP := Ex.MemTypes.RsToP LgDataBytes LgNumDatas TagIdx.
+  Definition RsToP := Ex.MemTypes.RsToP DataBytes LgNumDatas TagIdx.
 
   Definition rqFromProcPop := MethodSig (rqFromProc -- deqName) (Void): Struct RqFromProc.
   Definition rqFromProcFirst := MethodSig (rqFromProc -- firstEltName) (Void):
@@ -258,20 +258,20 @@ Hint Unfold getTagIdx getTag getIdx getOffset makeTagIdx : MethDefs.
 Hint Unfold l1Cache : ModuleDefs.
 
 Section Facts.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable n: nat.
 
   Lemma l1Cache_ModEquiv:
-    MetaModPhoasWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
+    MetaModPhoasWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas DataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kequiv.
     END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma l1Cache_ValidRegs:
-    MetaModRegsWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas LgDataBytes Id)).
+    MetaModRegsWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas DataBytes Id)).
   Proof. (* SKIP_PROOF_ON
     kvr.
     END_SKIP_PROOF_ON *) apply cheat.

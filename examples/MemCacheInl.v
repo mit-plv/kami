@@ -327,14 +327,14 @@ Ltac finish_pf :=
 
 
 Section MemCacheInl.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Definition nmemCacheInl_flat: MetaModule.
   Proof.
-    pose (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as m;
+    pose (nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as m;
 
     cbv [
         ChildParent.childParent
@@ -411,12 +411,12 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_flat_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_flat) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_flat) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_flat.
   Proof.
     (* SKIP_PROOF_ON
     assert (mRef: modFromMeta
-                    (nmemCache IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren)
+                    (nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)
                     <<== modFromMeta nmemCacheInl_flat) by
         (abstract (cbv [nmemCacheInl_flat]; unfold MethsT;
                    rewrite @idElementwiseId; apply traceRefines_refl)).
@@ -459,7 +459,7 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_1_1_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
   Proof.
     (* SKIP_PROOF_ON
@@ -479,7 +479,7 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_1_2_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_2) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_2) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_2.
   Proof.
     (* SKIP_PROOF_ON
@@ -516,7 +516,7 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_2_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_2) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_2) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_2.
   Proof.
     (* SKIP_PROOF_ON
@@ -553,7 +553,7 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_3_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_3) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_3.
   Proof.
     (* SKIP_PROOF_ON
@@ -600,7 +600,7 @@ Section MemCacheInl.
 
   Theorem nmemCacheInl_4_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4.
   Proof.
     (* SKIP_PROOF_ON
@@ -620,7 +620,7 @@ Section MemCacheInl.
     
   Theorem nmemCacheInl_4_5_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5.
   Proof.
     (* SKIP_PROOF_ON
@@ -638,14 +638,14 @@ End MemCacheInl.
 
 Section MemCacheInl2.
 
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Definition nmemCacheInl_4_5': MetaModule.
   Proof.
-    pose (nmemCacheInl_4_5 IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as sth.
+    pose (nmemCacheInl_4_5 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
     unfold nmemCacheInl_4_5 in sth.
     match goal with
       | m := ?mod |- _ => exact mod
@@ -654,7 +654,7 @@ Section MemCacheInl2.
 
   Theorem nmemCacheInl_4_5'_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5') /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5'.
   Proof.
     (* SKIP_PROOF_ON
@@ -683,7 +683,7 @@ Section MemCacheInl2.
 
   Theorem nmemCacheInl_5_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_5.
   Proof.
     (* SKIP_PROOF_ON
@@ -706,14 +706,14 @@ End MemCacheInl2.
   
 Section MemCacheInl3.
 
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Definition nmemCacheInl_5': MetaModule.
   Proof.
-    pose (nmemCacheInl_5 IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as sth.
+    pose (nmemCacheInl_5 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
     unfold nmemCacheInl_5 in sth.
     match goal with
       | m := ?mod |- _ => exact mod
@@ -722,7 +722,7 @@ Section MemCacheInl3.
 
   Theorem nmemCacheInl_5'_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5') /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_5'.
   Proof.
     (* SKIP_PROOF_ON
@@ -759,7 +759,7 @@ Section MemCacheInl3.
 
   Theorem nmemCacheInl_6_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6.
   Proof.
     (* SKIP_PROOF_ON
@@ -775,7 +775,7 @@ Section MemCacheInl3.
 
   Theorem nmemCacheInl_6_3_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_3) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_3.
   Proof.
     (* SKIP_PROOF_ON
@@ -790,7 +790,7 @@ Section MemCacheInl3.
 
   Theorem nmemCacheInl_6_6_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6.
   Proof.
     (* SKIP_PROOF_ON
@@ -804,14 +804,14 @@ End MemCacheInl3.
   
 Section MemCacheInl4.
 
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Definition nmemCacheInl_6_6': MetaModule.
   Proof.
-    pose (nmemCacheInl_6_6 IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as sth.
+    pose (nmemCacheInl_6_6 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
     unfold nmemCacheInl_6_6 in sth.
     match goal with
       | m := ?mod |- _ => exact mod
@@ -820,7 +820,7 @@ Section MemCacheInl4.
 
   Theorem nmemCacheInl_6_6'_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6') /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6'.
   Proof.
     (* SKIP_PROOF_ON
@@ -856,7 +856,7 @@ Section MemCacheInl4.
 
   Theorem nmemCacheInl_7_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7.
   Proof.
     (* SKIP_PROOF_ON
@@ -868,7 +868,7 @@ Section MemCacheInl4.
 
   Theorem nmemCacheInl_7_3_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_3) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_3.
   Proof.
     (* SKIP_PROOF_ON
@@ -881,7 +881,7 @@ Section MemCacheInl4.
 
   Theorem nmemCacheInl_7_7_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7.
   Proof.
     (* SKIP_PROOF_ON
@@ -895,14 +895,14 @@ Section MemCacheInl4.
 End MemCacheInl4.
 
 Section MemCacheInl5.
-  Variables IdxBits TagBits LgNumDatas LgDataBytes: nat.
+  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
   Variable Id: Kind.
 
   Variable LgNumChildren: nat.
 
   Definition nmemCacheInl_7_7': MetaModule.
   Proof.
-    pose (nmemCacheInl_7_7 IdxBits TagBits LgNumDatas LgDataBytes Id LgNumChildren) as sth.
+    pose (nmemCacheInl_7_7 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
     unfold nmemCacheInl_7_7 in sth.
     match goal with
       | m := ?mod |- _ => exact mod
@@ -911,7 +911,7 @@ Section MemCacheInl5.
 
   Theorem nmemCacheInl_7_7'_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7') /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7'.
   Proof.
     (* SKIP_PROOF_ON
@@ -959,7 +959,7 @@ Section MemCacheInl5.
 
   Theorem nmemCacheInl_8_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_8) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_8) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_8.
   Proof.
     (* SKIP_PROOF_ON
@@ -971,7 +971,7 @@ Section MemCacheInl5.
 
   Theorem nmemCacheInl_9_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_9) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_9) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_9.
   Proof.
     (* SKIP_PROOF_ON
@@ -984,7 +984,7 @@ Section MemCacheInl5.
 
   Theorem nmemCacheInl_10_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_10) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_10) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_10.
   Proof.
     (* SKIP_PROOF_ON
@@ -996,7 +996,7 @@ Section MemCacheInl5.
   
   Theorem nmemCacheInl_11_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_11) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_11) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_11.
   Proof.
     (* SKIP_PROOF_ON
@@ -1008,7 +1008,7 @@ Section MemCacheInl5.
 
   Theorem nmemCacheInl_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            LgDataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
