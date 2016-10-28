@@ -3601,6 +3601,42 @@ Section MemCacheInl.
     - xfer i29 a0 y.
   Qed.
 
+  Ltac xfer2 H a0 y :=
+     unfold rqFromCToP, rsFromCToP, fromPToC in *;
+       rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
+       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+       intros;
+       match goal with
+         | H: natToWord _ _ = y F1 |- _ =>
+           rewrite H in *
+       end;
+       rewrite ?eq_weq in *;
+       solve [intros;
+               try apply isPWait_addRq;
+               try apply isPWait_addRq_contra;
+               try apply hd_error_revcons_same;
+               try solve [destruct (weq a0 (y F2 F2));
+                           [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply H; eauto]].
+  
+  Ltac xfer3 H :=
+     unfold rqFromCToP, rsFromCToP, fromPToC in *;
+       rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
+       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    match goal with
+      | neq: ?c <> ?x, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
+        |- _ =>
+        destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
+          [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
+           intros;
+             try apply isPWait_addRq;
+             try apply isPWait_addRq_contra;
+             try apply hd_error_revcons_same;
+             rewrite ?app_nil_r in *; try eapply H; eauto
+          ]
+    end.
+  
+
+  
   Lemma nmemCache_invariants_hold_xfer_3 s a u cs:
     nmemCache_invariants s ->
     fromPToCRule metaIs a ->
@@ -3611,18 +3647,69 @@ Section MemCacheInl.
       nmemCache_invariants (M.union u s).
   Proof.
     invariant x c.
-    - xfer i8 a0 (y F2 F2).
-      
-     unfold rqFromCToP, rsFromCToP, fromPToC in *;
+    - xfer2 i8 a0 y.
+    - xfer2 i10 a0 y.
+    - xfer2 i11 a0 y.
+    - xfer2 i12 a0 y.
+    - xfer2 i15 a0 y.
+    - xfer2 i16 a0 y.
+    - xfer2 i16b a0 y.
+    - xfer2 i16c a0 y.
+    - xfer2 i17 a0 y.
+    - xfer2 i18 a0 y.
+    - xfer2 i19 a0 y.
+    - xfer2 i20 a0 y.
+    - xfer2 i31 a0 y.
+    -      unfold rqFromCToP, rsFromCToP, fromPToC in *;
        rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
-     intros;
+    match goal with
+      | neq: ?c <> ?x, xle: (?x <= wordToNat (wones LgNumChildren))%nat, yle: (?c <= wordToNat (wones LgNumChildren))%nat
+        |- _ =>
+        destruct (weq (natToWord LgNumChildren c) (natToWord LgNumChildren x)) as [isEq | ?];
+          [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
+           intros;
+             try apply isPWait_addRq;
+             try apply isPWait_addRq_contra;
+             try apply hd_error_revcons_same;
+             rewrite ?app_nil_r in *; try eapply H; eauto
+          ]
+    end.
+
+
+
+      xfer3 i8.
+    - xfer3 i10.
+    - xfer2 i11 a0 y.
+    - xfer2 i12 a0 y.
+    - xfer2 i15 a0 y.
+    - xfer2 i16 a0 y.
+    - xfer2 i16b a0 y.
+    - xfer2 i16c a0 y.
+    - xfer2 i17 a0 y.
+    - xfer2 i18 a0 y.
+    - xfer2 i19 a0 y.
+    - xfer2 i20 a0 y.
+    - xfer2 i31 a0 y.
+
+     unfold rqFromCToP, rsFromCToP, fromPToC in *.
+       rewrite ?filtRqFromC_commute_app, ?filtRsFromC_commute_app, ?filtFromP_commute_app, ?filtToC_commute_app in *;
+       simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+       intros;
+         match goal with
+           | H: natToWord _ _ = y F1 |- _ =>
+             rewrite H in *
+         end;
        rewrite ?eq_weq in *;
        intros;
        try apply isPWait_addRq;
        try apply isPWait_addRq_contra;
        try apply hd_error_revcons_same.
-                   try solve [destruct (weq a0 (y F1));
+                   try solve [destruct (weq a0 (y F2 F2));
+                               [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply i8; eauto].
+                   destruct (weq a0 (y F2 F2));
+                               [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply i8; eauto.
+                   destruct
 
 
       xfer i8 a0 y.
