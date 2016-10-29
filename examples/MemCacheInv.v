@@ -1412,6 +1412,7 @@ Section MemCacheInl.
                        else $ Msi.Mod) /\
     dirw (evalExpr (MemDir.findIncompat (#c)%kami_expr (ReadField F3 (#rq)%kami_expr) (#dir)%kami_expr (#dirw)%kami_expr) F2) = false.
   Proof.
+    (* SKIP_PROOF_ON
     unfold MemDir.findIncompat, MemDir.foldInc.
     rewrite wones_pow2_minus_one.
     generalize c.
@@ -1706,6 +1707,7 @@ Section MemCacheInl.
     simpl.
     rewrite pf.
     reflexivity.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
       
   Lemma nmemCache_invariants_hold_03 s a u cs:
@@ -3599,7 +3601,9 @@ END_SKIP_PROOF_ON *) apply cheat.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_9 s a u cs:
