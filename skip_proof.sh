@@ -1,7 +1,7 @@
 PLATFORM=`uname`
 SED="sed -i"
 if [[ "$PLATFORM" == 'Darwin' ]]; then
-	SED="$SED ''"
+	SED="$SED .orig"
 fi
 
 if [ "$1" = "-r" ]; then
@@ -21,3 +21,4 @@ else
 	done
 fi
 
+rm -f */*.orig

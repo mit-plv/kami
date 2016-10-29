@@ -265,4 +265,4 @@ Proof.
   - apply in_revcons_converse.
     intuition auto.
 Qed.
-  
+

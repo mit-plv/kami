@@ -93,3 +93,4 @@ Section find.
 
   Definition Vector_find n (v: Vector.t A (S n)): Fin.t (S n) := Vector_find' v.
 End find.
+
