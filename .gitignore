@@ -6,5 +6,6 @@ Makefile.coq.all
 Makefile.coq.src
 *.aux
 *~
+extraction/*
 .coq-native
 *.DS_Store
