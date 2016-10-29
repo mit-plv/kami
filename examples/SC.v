@@ -14,12 +14,12 @@ Set Implicit Arguments.
 
 (* Abstract ISA *)
 Section DecExec.
-  Variables opIdx addrSize iaddrSize lgDataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize dataBytes rfIdx: nat.
 
   (* opcode-related *)
   Definition OpcodeK := SyntaxKind (Bit opIdx).
   Definition OpcodeE (ty: Kind -> Type) := Expr ty OpcodeK.
-  Definition OpcodeT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> OpcodeE ty.
+  Definition OpcodeT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> OpcodeE ty.
 
   Definition opLd := WO~0~0.
   Definition opSt := WO~0~1.
@@ -28,73 +28,73 @@ Section DecExec.
   
   Definition OptypeK := SyntaxKind (Bit 2).
   Definition OptypeE (ty: Kind -> Type) := Expr ty OptypeK.
-  Definition OptypeT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> OptypeE ty.
+  Definition OptypeT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> OptypeE ty.
   
   (* load-related *)
   Definition LdDstK := SyntaxKind (Bit rfIdx).
   Definition LdDstE (ty: Kind -> Type) := Expr ty LdDstK.
-  Definition LdDstT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> LdDstE ty.
+  Definition LdDstT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> LdDstE ty.
 
   Definition LdAddrK := SyntaxKind (Bit addrSize).
   Definition LdAddrE (ty: Kind -> Type) := Expr ty LdAddrK.
-  Definition LdAddrT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> LdAddrE ty.
+  Definition LdAddrT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> LdAddrE ty.
 
   Definition LdSrcK := SyntaxKind (Bit rfIdx).
   Definition LdSrcE (ty: Kind -> Type) := Expr ty LdSrcK.
-  Definition LdSrcT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> LdSrcE ty.
+  Definition LdSrcT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> LdSrcE ty.
 
   Definition LdAddrCalcT :=
     forall ty,
       fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
-      fullType ty (SyntaxKind (Data lgDataBytes)) -> (* dst value *)
+      fullType ty (SyntaxKind (Data dataBytes)) -> (* dst value *)
       Expr ty (SyntaxKind (Bit addrSize)).
   
   (* store-related *)
   Definition StAddrK := SyntaxKind (Bit addrSize).
   Definition StAddrE (ty: Kind -> Type) := Expr ty StAddrK.
-  Definition StAddrT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> StAddrE ty.
+  Definition StAddrT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> StAddrE ty.
   
   Definition StSrcK := SyntaxKind (Bit rfIdx).
   Definition StSrcE (ty: Kind -> Type) := Expr ty StSrcK.
-  Definition StSrcT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> StSrcE ty.
+  Definition StSrcT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> StSrcE ty.
 
   Definition StAddrCalcT :=
     forall ty,
       fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
-      fullType ty (SyntaxKind (Data lgDataBytes)) -> (* dst value *)
+      fullType ty (SyntaxKind (Data dataBytes)) -> (* dst value *)
       Expr ty (SyntaxKind (Bit addrSize)).
 
   Definition StVSrcK := SyntaxKind (Bit rfIdx).
   Definition StVSrcE (ty: Kind -> Type) := Expr ty StVSrcK.
-  Definition StVSrcT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> StVSrcE ty.
+  Definition StVSrcT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> StVSrcE ty.
 
   (* general sources *)
   Definition Src1K := SyntaxKind (Bit rfIdx).
   Definition Src1E (ty: Kind -> Type) := Expr ty Src1K.
-  Definition Src1T := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> Src1E ty.
+  Definition Src1T := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> Src1E ty.
 
   Definition Src2K := SyntaxKind (Bit rfIdx).
   Definition Src2E (ty: Kind -> Type) := Expr ty Src2K.
-  Definition Src2T := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> Src2E ty.
+  Definition Src2T := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> Src2E ty.
 
   (* general destination *)
   Definition DstK := SyntaxKind (Bit rfIdx).
   Definition DstE (ty: Kind -> Type) := Expr ty DstK.
-  Definition DstT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> DstE ty.
+  Definition DstT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> DstE ty.
   
   (* execution *)
-  Definition StateK := SyntaxKind (Vector (Data lgDataBytes) rfIdx).
+  Definition StateK := SyntaxKind (Vector (Data dataBytes) rfIdx).
   Definition StateT (ty : Kind -> Type) := fullType ty StateK.
   Definition StateE (ty : Kind -> Type) := Expr ty StateK.
 
-  Definition ExecT := forall ty, fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val1 *)
-                                 fullType ty (SyntaxKind (Data lgDataBytes)) -> (* val2 *)
+  Definition ExecT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
+                                 fullType ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                                  fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                 fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
-                                 Expr ty (SyntaxKind (Data lgDataBytes)). (* executed value *)
+                                 fullType ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
+                                 Expr ty (SyntaxKind (Data dataBytes)). (* executed value *)
   Definition NextPcT := forall ty, StateT ty -> (* rf *)
                                    fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                   fullType ty (SyntaxKind (Data lgDataBytes)) -> (* rawInst *)
+                                   fullType ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
                                    Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
   Definition AlignPcT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                     Expr ty (SyntaxKind (Bit iaddrSize)). (* aligned pc *)
@@ -111,10 +111,10 @@ Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opTh opNm
 Section MemInst.
   Variable n : nat.
   Variable addrSize : nat.
-  Variable lgDataBytes : nat.
+  Variable dataBytes : nat.
 
-  Definition RqFromProc := RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := RsToProc lgDataBytes.
+  Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
+  Definition RsToProc := RsToProc dataBytes.
 
   Definition memInstExec {ty} : ty (Struct RqFromProc) -> GenActionT Void ty (Struct RsToProc) :=
     fun (a: ty (Struct RqFromProc)) =>
@@ -130,7 +130,7 @@ Section MemInst.
        Ret #na)%kami_gen.
 
   Definition memInstM := META {
-    Register "mem" : Vector (Data lgDataBytes) addrSize <- Default
+    Register "mem" : Vector (Data dataBytes) addrSize <- Default
 
     with Repeat Method till n by "exec" (a : Struct RqFromProc) : Struct RsToProc :=
       (memInstExec a)
@@ -145,27 +145,27 @@ Hint Unfold memInstM memInst : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize dataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize).
 
-  Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize lgDataBytes)) : Struct (RsToProc lgDataBytes).
-  Definition toHostCm := MethodSig "toHost"(Data lgDataBytes) : Bit 0.
+  Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize dataBytes)) : Struct (RsToProc dataBytes).
+  Definition toHostCm := MethodSig "toHost"(Data dataBytes) : Bit 0.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -173,8 +173,8 @@ Section ProcInst.
 
   Definition procInst := MODULE {
     Register "pc" : Bit addrSize <- Default
-    with Register "rf" : Vector (Data lgDataBytes) rfIdx <- Default
-    with Register "pgm" : Vector (Data lgDataBytes) iaddrSize <- Default
+    with Register "rf" : Vector (Data dataBytes) rfIdx <- Default
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
 
     with Rule "execLd" :=
       Read ppc <- "pc";
@@ -191,7 +191,7 @@ Section ProcInst.
       Call ldRep <- execCm(STRUCT { "addr" ::= #laddr;
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
-      Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc lgDataBytes)@."data"];
+      Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=
@@ -265,23 +265,23 @@ Hint Unfold execCm toHostCm nextPc : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize dataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize).
 
   Variable n: nat.
@@ -290,7 +290,7 @@ Section SC.
                                getStAddr getStSrc calcStAddr getStVSrc
                                getSrc1 getSrc2 getDst exec getNextPc alignPc.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
-  Definition minst := memInst n addrSize lgDataBytes.
+  Definition minst := memInst n addrSize dataBytes.
 
   Definition sc := ConcatMod (pinsts n) minst.
 
@@ -299,23 +299,23 @@ End SC.
 Hint Unfold pinst pinsts minst sc : ModuleDefs.
 
 Section Facts.
-  Variables addrSize iaddrSize lgDataBytes rfIdx : nat.
+  Variables addrSize iaddrSize dataBytes rfIdx : nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize).
 
   Lemma pinst_ModEquiv:
@@ -339,7 +339,7 @@ Section Facts.
   Hint Resolve pinsts_ModEquiv.
 
   Lemma memInstM_ModEquiv:
-    MetaModPhoasWf (memInstM n addrSize lgDataBytes).
+    MetaModPhoasWf (memInstM n addrSize dataBytes).
   Proof.
     kequiv.
   Qed.

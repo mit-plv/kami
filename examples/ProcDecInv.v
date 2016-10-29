@@ -10,27 +10,27 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize iaddrSize fifoSize lgDataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT lgDataBytes)
-            (getLdDst: LdDstT lgDataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize lgDataBytes)
-            (getLdSrc: LdSrcT lgDataBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize lgDataBytes)
-            (getStAddr: StAddrT addrSize lgDataBytes)
-            (getStSrc: StSrcT lgDataBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize lgDataBytes)
-            (getStVSrc: StVSrcT lgDataBytes rfIdx)
-            (getSrc1: Src1T lgDataBytes rfIdx)
-            (getSrc2: Src2T lgDataBytes rfIdx)
-            (getDst: DstT lgDataBytes rfIdx)
-            (exec: ExecT addrSize lgDataBytes)
-            (getNextPc: NextPcT addrSize lgDataBytes rfIdx)
+  Variables (getOptype: OptypeT dataBytes)
+            (getLdDst: LdDstT dataBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize dataBytes)
+            (getLdSrc: LdSrcT dataBytes rfIdx)
+            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
+            (getStAddr: StAddrT addrSize dataBytes)
+            (getStSrc: StSrcT dataBytes rfIdx)
+            (calcStAddr: StAddrCalcT addrSize dataBytes)
+            (getStVSrc: StVSrcT dataBytes rfIdx)
+            (getSrc1: Src1T dataBytes rfIdx)
+            (getSrc2: Src2T dataBytes rfIdx)
+            (getDst: DstT dataBytes rfIdx)
+            (exec: ExecT addrSize dataBytes)
+            (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize).
 
-  Definition RqFromProc := MemTypes.RqFromProc lgDataBytes (Bit addrSize).
-  Definition RsToProc := MemTypes.RsToProc lgDataBytes.
+  Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
@@ -43,8 +43,8 @@ Section Invariants.
     fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
-             (rawInst: fullType type (SyntaxKind (Data lgDataBytes)))
-             (rf: fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx)))
+             (rawInst: fullType type (SyntaxKind (Data dataBytes)))
+             (rf: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
              (insEmpty: bool) (insElt: type (Vector (Struct RqFromProc) fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
   Proof.
@@ -59,7 +59,7 @@ Section Invariants.
                evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
                                     (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
                insElt insDeqP (RqFromProc !! "data") =
-               evalConstT (getDefaultConst (Data lgDataBytes))))).
+               evalConstT (getDefaultConst (Data dataBytes))))).
     - exact ((insElt insDeqP (RqFromProc !! "op") = true ->
               evalExpr (getOptype _ rawInst) = opSt) /\
              (evalExpr (getOptype _ rawInst) = opSt ->
@@ -75,9 +75,9 @@ Section Invariants.
   Record procDec_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Bit addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
-      rfv : fullType type (SyntaxKind (Vector (Data lgDataBytes) rfIdx));
+      rfv : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
-      pgmv : fullType type (SyntaxKind (Vector (Data lgDataBytes) iaddrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data dataBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
 
       stallv : fullType type (SyntaxKind Bool);
