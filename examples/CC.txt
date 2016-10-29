@@ -55,7 +55,7 @@ cannot be a voluntary cToP response.
 26. For voluntary response, to = I
 
 Proofs:
-1.
+1. if c is in S or M, then data(c) = m
 a) If c is currently I and became S or M, it updates data. By (3), data is m,
 and m does not get changed
 b) If c is currently S or M
@@ -65,7 +65,7 @@ b) If c is currently S or M
    - response from parent, data and m remain unchanged.
    - otherwise data remains unchanged.
 
-2.
+2. if first cToP response msg for c and dir(c) = M, then data(msg) = m
 a) If it's not first message (second or third or nth message) and becomes first
 message next. Parent received response. By invariant (7), it is downgrade to
 parent. So dir(c) cannot be M.
@@ -80,7 +80,7 @@ There cannot be any msg now because of (9).
 d) If it was first message and directory is M. By (5) and (6), no other cache can
 do store. By (7), current cache can also not do store.
 
-3.
+3. if pToC response msg for c and cs(c) = I, then data(msg) = m
 a) There is already a pToC response message for c.
 By (10), there is at most only one pToC response message for c. Let's say it's for
 state x > I. By (8), dir(c) = x. So no other cache can perform store. Also by
@@ -93,7 +93,7 @@ but cs(c) = I, then by (11), there is a response msg from c. But by (9), there
 is no such response as there is a request that can be processed. So dir(c) = I.
 Thus, data(msg) = m.
 
-4.
+4. if forall i. dir(i) <= S, then mem = m
 a) If forall i, dir(i) <= S now, because of (5) and (6) no other store can take
 place in any cache. We never update mem with any msg, so mem = m remains true.
 b) If some dir(c) = M and became S or I now. This must happen by receiving a
