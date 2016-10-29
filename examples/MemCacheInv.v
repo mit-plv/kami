@@ -153,9 +153,11 @@ Section MemCacheInl.
                     (cRq (RqFC !! rq) (RqTP !! to) >
                      if weq (dir a cword) ($ Msi.Mod)
                      then $ Msi.Inv
-                     else if weq (dir a cword) ($ Msi.Sh)
+                     else if weq (dir a cword) ($ Msi.Ex)
                           then $ Msi.Sh
-                          else $ Msi.Mod)
+                          else if weq (dir a cword) ($ Msi.Sh)
+                               then $ Msi.Ex
+                               else $ Msi.Mod)
       | _ => False
     end.
 
@@ -1093,9 +1095,11 @@ Section MemCacheInl.
       c' <> c ->
       rq F3 <= if weq (dir c') ($ Msi.Mod)
                then $ Msi.Inv
-               else if weq (dir c') ($ Msi.Sh)
+               else if weq (dir c') ($ Msi.Ex)
                     then $ Msi.Sh
-                    else $ Msi.Mod.
+                    else if weq (dir c') ($ Msi.Sh)
+                         then $ Msi.Ex
+                         else $ Msi.Mod.
   Proof.
     unfold MemDir.othersCompat, MemDir.foldInc.
     remember (wordToNat (wones LgNumChildren)).
@@ -1121,6 +1125,7 @@ Section MemCacheInl.
                    end.
             - destruct (wlt_dec WO~0~0 (rq F3)); simpl in *; [discriminate | assumption].
             - destruct (wlt_dec WO~0~1 (rq F3)); simpl in *; [discriminate | assumption].
+            - destruct (wlt_dec WO~1~0 (rq F3)); simpl in *; [discriminate | assumption].
             - destruct (wlt_dec WO~1~1 (rq F3)); simpl in *; [discriminate | assumption].
           }
         * eapply IHn; try eassumption;
@@ -1137,9 +1142,11 @@ Section MemCacheInl.
       c' <> c ->
       rq F3 <= if weq (dir c') ($ Msi.Mod)
                then $ Msi.Inv
-               else if weq (dir c') ($ Msi.Sh)
+               else if weq (dir c') ($ Msi.Ex)
                     then $ Msi.Sh
-                    else $ Msi.Mod.
+                    else if weq (dir c') ($ Msi.Sh)
+                         then $ Msi.Ex
+                         else $ Msi.Mod.
   Proof.
     intros;
     eapply compatPair'; try eassumption.
@@ -1161,9 +1168,11 @@ Section MemCacheInl.
                                    (#dir)%kami_expr) eq_refl ->
       rq F3 <= if weq (dir c') ($ Msi.Mod)
                then $ Msi.Inv
-               else if weq (dir c') ($ Msi.Sh)
+               else if weq (dir c') ($ Msi.Ex)
                     then $ Msi.Sh
-                    else $ Msi.Mod.
+                    else if weq (dir c') ($ Msi.Sh)
+                         then $ Msi.Ex
+                         else $ Msi.Mod.
   Proof.
     intros.
     apply semExpr_sound in H0.
@@ -1204,7 +1213,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time doNormal; try destruct_addr; try destruct_cache; (assumption || intros; try discriminate).
     - clear - i16a i25.
       specialize (i16a (y F2) (or_introl eq_refl)).
@@ -1385,7 +1394,7 @@ Section MemCacheInl.
       destruct H1; dest.
       + subst; simpl in H4; discriminate.
       + eapply i31 in H7; eassumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma findIncompat_means (rq: type (Struct RqTP)) (c: word LgNumChildren) dir dirw:
@@ -1395,16 +1404,19 @@ Section MemCacheInl.
                                                         (#dir)%kami_expr (#dirw)%kami_expr) F2)) ($ Msi.Mod)
              then $ Msi.Inv
              else if weq (dir (evalExpr (MemDir.findIncompat (#c)%kami_expr (ReadField F3 (#rq)%kami_expr)
-                                                             (#dir)%kami_expr (#dirw%kami_expr)) F2)) ($ Msi.Sh)
+                                                             (#dir)%kami_expr (#dirw%kami_expr)) F2)) ($ Msi.Ex)
                   then $ Msi.Sh
-                  else $ Msi.Mod) /\
+                  else if weq (dir (evalExpr (MemDir.findIncompat (#c)%kami_expr (ReadField F3 (#rq)%kami_expr)
+                                                                  (#dir)%kami_expr (#dirw%kami_expr)) F2)) ($ Msi.Sh)
+                       then $ Msi.Ex
+                       else $ Msi.Mod) /\
     dirw (evalExpr (MemDir.findIncompat (#c)%kami_expr (ReadField F3 (#rq)%kami_expr) (#dir)%kami_expr (#dirw)%kami_expr) F2) = false.
   Proof.
     unfold MemDir.findIncompat, MemDir.foldInc.
     rewrite wones_pow2_minus_one.
     generalize c.
     clear c.
-    induction (pow2 LgNumChildren -1); simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros.
+    induction (pow2 LgNumChildren - 1); simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros.
     - destruct (weq c ($ 0)); subst; simpl in *.
       + discriminate.
       + destruct (weq (dir ($ 0)) WO~1~1) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
@@ -1417,22 +1429,32 @@ Section MemCacheInl.
                 tauto.
             - discriminate.
           }
-        * { destruct (weq (dir ($ 0)) WO~0~1) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
+        * { destruct (weq (dir ($ 0)) WO~1~0) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
             - destruct (wlt_dec WO~0~1 (rq F3)); simpl in *.
               + case_eq (dirw ($ 0)); intros; simpl in *.
                 * rewrite H0 in *; simpl in *.
                   discriminate.
                 * rewrite H0 in *; simpl in *.
                   rewrite isEq, eq_weq in *.
-                  destruct (weq WO~0~1 WO~1~1); tauto.
+                  tauto.
               + discriminate.
-            - destruct (wlt_dec WO~1~1 (rq F3)) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|]; simpl in *.
-              + case_eq (dirw ($ 0)); intros; simpl in *.
-                * rewrite H0 in *; simpl in *.
-                  discriminate.
-                * rewrite H0 in *; simpl in *.
-                  destruct (weq (dir ($ 0)) WO~1~1), (weq (dir ($ 0)) WO~0~1); try tauto.
-              + discriminate.
+            - { destruct (weq (dir ($ 0)) WO~0~1) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
+                - destruct (wlt_dec WO~1~0 (rq F3)); simpl in *.
+                  + case_eq (dirw ($ 0)); intros; simpl in *.
+                    * rewrite H0 in *; simpl in *.
+                      discriminate.
+                    * rewrite H0 in *; simpl in *.
+                      rewrite isEq, eq_weq in *.
+                      destruct (weq WO~0~1 WO~1~1); tauto.
+                  + discriminate.
+                - destruct (wlt_dec WO~1~1 (rq F3)) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|]; simpl in *.
+                  + case_eq (dirw ($ 0)); intros; simpl in *.
+                    * rewrite H0 in *; simpl in *.
+                      discriminate.
+                    * rewrite H0 in *; simpl in *.
+                      destruct (weq (dir ($ 0)) WO~1~1), (weq (dir ($ 0)) WO~1~0), (weq (dir ($ 0)) WO~0~1); try tauto.
+                  + discriminate.
+              }
           }
     - destruct (weq c ($ (S n))); subst; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
       + rewrite ?Bool.andb_false_r, ?Bool.andb_false_l in *.
@@ -1461,7 +1483,7 @@ Section MemCacheInl.
               simpl in *.
               specialize (IHn _ H); assumption.
           }
-        * { destruct (weq (dir ($ (S n))) WO~0~1) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
+        * { destruct (weq (dir ($ (S n))) WO~1~0) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
             - destruct (wlt_dec WO~0~1 (rq F3)); simpl in *.
               +  rewrite ?Bool.andb_true_r, ?Bool.andb_true_l in *.
                  case_eq (dirw ($ (S n))); intros; simpl in *.
@@ -1484,30 +1506,55 @@ Section MemCacheInl.
               + rewrite ?Bool.andb_true_r, ?Bool.andb_true_l, ?Bool.andb_false_l, ?Bool.andb_false_r in *.
                 simpl in *.
                 specialize (IHn _ H); assumption.
-            - destruct (wlt_dec WO~1~1 (rq F3)); simpl in *.
-              +  rewrite ?Bool.andb_true_r, ?Bool.andb_true_l in *.
-                 case_eq (dirw ($ (S n))); intros; simpl in *.
-                 * rewrite H0 in *; simpl in *.
-                   rewrite ?Bool.andb_false_r, ?Bool.andb_false_r in *.
-                   specialize (IHn _ H).
-                   assumption.
-                 *  { rewrite H0 in *; simpl in *.
-                      rewrite ?Bool.andb_false_r, ?Bool.andb_false_r, ?Bool.andb_true_r, ?Bool.andb_true_r in *.
-                      match type of H with
-                        | (if negb ?P then _ else _) F1 = true => case_eq P; intros; simpl in *
-                      end.
-                      - specialize (IHn _ H1).
-                        assumption.
-                      - rewrite H1 in *.
-                        simpl in *.
-                        rewrite ?isEq, ?H0, ?eq_weq in *.
-                        destruct (weq (dir $ (S n)) WO~1~1); try tauto.
-                        destruct (weq (dir $ (S n)) WO~0~1); try tauto.
-                    }
-              + rewrite ?Bool.andb_true_r, ?Bool.andb_true_l, ?Bool.andb_false_l, ?Bool.andb_false_r in *.
-                simpl in *.
-                specialize (IHn _ H); assumption.
-          } 
+            - { destruct (weq (dir ($ (S n))) WO~0~1) as [isEq | ?]; [rewrite ?isEq, ?eq_weq in *|].
+                - destruct (wlt_dec WO~1~0 (rq F3)); simpl in *.
+                  +  rewrite ?Bool.andb_true_r, ?Bool.andb_true_l in *.
+                     case_eq (dirw ($ (S n))); intros; simpl in *.
+                     * rewrite H0 in *; simpl in *.
+                       rewrite ?Bool.andb_false_r, ?Bool.andb_false_r in *.
+                       specialize (IHn _ H).
+                       assumption.
+                     *  { rewrite H0 in *; simpl in *.
+                          rewrite ?Bool.andb_false_r, ?Bool.andb_false_r, ?Bool.andb_true_r, ?Bool.andb_true_r in *.
+                          match type of H with
+                            | (if negb ?P then _ else _) F1 = true => case_eq P; intros; simpl in *
+                          end.
+                          - specialize (IHn _ H1).
+                            assumption.
+                          - rewrite H1 in *.
+                            simpl in *.
+                            rewrite isEq, H0, eq_weq in *.
+                            tauto.
+                        } 
+                  + rewrite ?Bool.andb_true_r, ?Bool.andb_true_l, ?Bool.andb_false_l, ?Bool.andb_false_r in *.
+                    simpl in *.
+                    specialize (IHn _ H); assumption.
+                - destruct (wlt_dec WO~1~1 (rq F3)); simpl in *.
+                  +  rewrite ?Bool.andb_true_r, ?Bool.andb_true_l in *.
+                     case_eq (dirw ($ (S n))); intros; simpl in *.
+                     * rewrite H0 in *; simpl in *.
+                       rewrite ?Bool.andb_false_r, ?Bool.andb_false_r in *.
+                       specialize (IHn _ H).
+                       assumption.
+                     *  { rewrite H0 in *; simpl in *.
+                          rewrite ?Bool.andb_false_r, ?Bool.andb_false_r, ?Bool.andb_true_r, ?Bool.andb_true_r in *.
+                          match type of H with
+                            | (if negb ?P then _ else _) F1 = true => case_eq P; intros; simpl in *
+                          end.
+                          - specialize (IHn _ H1).
+                            assumption.
+                          - rewrite H1 in *.
+                            simpl in *.
+                            rewrite ?isEq, ?H0, ?eq_weq in *.
+                            destruct (weq (dir $ (S n)) WO~1~1); try tauto.
+                            destruct (weq (dir $ (S n)) WO~1~0); try tauto.
+                            destruct (weq (dir $ (S n)) WO~0~1); try tauto.
+                        }
+                  + rewrite ?Bool.andb_true_r, ?Bool.andb_true_l, ?Bool.andb_false_l, ?Bool.andb_false_r in *.
+                    simpl in *.
+                    specialize (IHn _ H); assumption.
+              }
+          }
   Qed.
 
   Lemma evalE K (e: K@type): evalExpr (#(evalExpr e)%kami_expr) = evalExpr e.
@@ -1523,7 +1570,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doNormal;
           match goal with
             | H: evalExpr (MemDir.findIncompat (?c) (ReadField F3 (?rq)) (?dir) (?dirw)) F1 = true |- _ =>
@@ -1631,7 +1678,7 @@ Section MemCacheInl.
         dest.
         congruence.
       + eapply i31 in H7; eassumption.
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma beg_last_in A ls: forall v: A, In v ls -> exists beg last, ls = beg ++ v :: last.
@@ -1668,7 +1715,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doNormal;
           repeat destruct_addr;
           repeat destruct_cache;
@@ -1865,7 +1912,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H5.
       specialize (i29 _ _ H2 (or_intror H3) H5).
       assumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
 
@@ -1899,7 +1946,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doNormal;
           repeat destruct_addr;
           repeat destruct_cache;
@@ -2136,7 +2183,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H4.
       specialize (i29 _ _ H2 (or_intror H3) H4).
       assumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_01 s a u cs:
@@ -2146,7 +2193,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doNormal;
           repeat destruct_cache;
           repeat destruct_addr;
@@ -2187,7 +2234,7 @@ Section MemCacheInl.
     - clear - i21 H0 H1.
       specialize (i21 _ H0 H1).
       dest; discriminate.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
 
@@ -2404,9 +2451,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_2 s a u cs:
@@ -2418,9 +2465,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_3 s a u cs:
@@ -2432,9 +2479,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_4 s a u cs:
@@ -2446,9 +2493,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_7 s a u cs:
@@ -2460,9 +2507,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_8 s a u cs:
@@ -2474,9 +2521,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac doMeta :=
@@ -2496,7 +2543,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doMeta; repeat destruct_cache; repeat destruct_addr; (assumption || intros)).
     - clear - i8 H0 H1.
       specialize (i8 _ (or_intror H0) H1).
@@ -2557,7 +2604,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
       
   Lemma rsLessTo_in_app ls:
@@ -2586,7 +2633,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doMeta; repeat destruct_cache; try rewrite_getCs; try rewrite getCs_cs in * by tauto;
           repeat destruct_addr; (assumption || intros)).
     - word_omega.
@@ -2732,7 +2779,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
   
   Lemma nmemCache_invariants_hold_5 s a u cs:
@@ -2744,7 +2791,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     doMetaComplex.
     - doAll;
       destruct (rs F1); intuition discriminate.
@@ -2756,7 +2803,7 @@ Section MemCacheInl.
         reflexivity.
       + specialize (i16a t (or_introl eq_refl)).
         dest; discriminate.
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac diffAddr_sameIdx :=
@@ -2853,7 +2900,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     time (doMeta;
           try rewrite_getCs; (* try rewrite getCs_cs in * by tauto; *)
           rewrite ?tag_upd in *;
@@ -3095,7 +3142,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H1) H3 H4 H5).
       assumption.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Notation addField c m name strct :=
@@ -3518,7 +3565,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     invariant x c.
     - xfer i9 a0 (y F1).
     - xfer i16 a0 (y F1).
@@ -3564,7 +3611,7 @@ Section MemCacheInl.
     - xfer i28 a0 y.
     - xfer i29 a0 y.
     - xfer i30 a0 y.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
@@ -3576,7 +3623,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     invariant x c.
     - xfer i7 a0 (y F1).
     - xfer i9 a0 (y F1).
@@ -3602,7 +3649,7 @@ Section MemCacheInl.
     - xfer i23 a0 y.
     - xfer i26 a0 y.
     - xfer i29 a0 y.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac xfer2 H a0 y :=
@@ -3653,7 +3700,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     invariant x c.
     - xfer2 i8 a0 y.
     - xfer2 i10 a0 y.
@@ -3681,7 +3728,7 @@ Section MemCacheInl.
     - xfer3 i19 y.
     - xfer3 i20 y.
     - xfer3 i31 y.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Record dirCompat_inv' a cword (c: cache) c2 (c2nat: cache) (s: RegsT): Prop :=
@@ -3693,9 +3740,11 @@ Section MemCacheInl.
         newdir a cword <=
         if weq (newdir a c2) ($ Msi.Mod)
         then $ Msi.Inv
-        else if weq (newdir a c2) ($ Msi.Sh)
+        else if weq (newdir a c2) ($ Msi.Ex)
              then $ Msi.Sh
-             else $ Msi.Mod
+             else if weq (newdir a c2) ($ Msi.Sh)
+                  then $ Msi.Ex
+                  else $ Msi.Mod
     }.
 
   Definition dirCompat_inv s := forall a cword c, (c <= wordToNat (wones LgNumChildren))%nat ->
@@ -3930,11 +3979,12 @@ Section MemCacheInl.
         destruct (HInd a _ _ H eq_refl)          
     end;
     match goal with
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
+(*      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
         destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
-          specialize (HInd a _ _ H' eq_refl)
+          destruct (HDir a _ _ H' eq_refl _ _ H2 eq_refl); *)
       | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H2: (c2 <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl)
+        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
+          destruct (HDir a _ _ H2 eq_refl _ _ H eq_refl)
     end;
     unfold withIndex in *;
     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
@@ -3945,10 +3995,7 @@ Section MemCacheInl.
           | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
         end;
     invariant_simpl;
-    simplMapUpds
-      ltac:(autorewrite with invariant in *;
-             unfold isCWait, isPWait in *;
-             simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *).
+    simplMapUpds helpNormal.
 
   
   Lemma dirCompat_inv_hold_02 s a u cs:
@@ -3982,6 +4029,14 @@ Section MemCacheInl.
     Omega.omega.
   Qed.
 
+  Lemma neq_sym A (a b: A): a <> b -> b <> a.
+  Proof.
+    intros.
+    intro.
+    subst.
+    tauto.
+  Qed.
+  
   Lemma dirCompat_inv_hold_03 s a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
@@ -3992,360 +4047,170 @@ Section MemCacheInl.
   Proof.
     normalDir.
     - intros.
-      specialize (isDirCompat _ H1).
+      specialize (isDirCompat H2).
+      specialize (isDirCompat0 (neq_sym H2)).
       destruct (weq a0 (y F2 F1)); [subst|].
       + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
-        * destruct (weq c2 (y F1)); [subst; tauto|].
+        * destruct (weq ($ c2) (y F1)) as [isEq' | ?]; [rewrite isEq' in *; try tauto|].
+          specialize (i1 _ (or_introl eq_refl)).
+          destruct i1 as [_ useful].
+          word_omega.
+        * destruct (weq ($ c2) (y F1)) as [isEq'|?]; [rewrite isEq' in * | assumption].
           specialize (i7 _ (or_introl eq_refl)).
           destruct i7 as [_ useful].
-          word_omega.
-        * destruct (weq c2 (y F1)); [subst | assumption].
-          destruct (HInd (y F2 F1) (y F1) (wordToNat (y F1)) (wordToNat_wones (y F1)) (eq_sym (natToWord_wordToNat (y F1)))).
-          simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
-          repeat substFind.
-          
+          clear - isDirCompat isDirCompat0 useful.
+          repeat match goal with
+                   | H: context[if ?p then _ else _] |- _ => destruct p
+                   | |- context[if ?p then _ else _] => destruct p
+                 end; try word_omega.
+      + try assumption.
+    - intros.
+      specialize (isDirCompat H2).
+      specialize (isDirCompat0 (neq_sym H2)).
+      destruct (weq a0 (y F2 F1)); [subst|].
+      + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
+        * destruct (weq ($ c2) (y F1)) as [isEq' | ?]; [rewrite isEq' in *; try tauto|].
           specialize (i1 _ (or_introl eq_refl)).
+          destruct i1 as [_ useful].
+          word_omega.
+        * destruct (weq ($ c2) (y F1)) as [isEq'|?]; [rewrite isEq' in * | assumption].
+          specialize (i7 _ (or_introl eq_refl)).
           destruct i7 as [_ useful].
-          subst.
-          clear - isDirCompat.
-          admit.
-          assumption.
-          assumption.
-          [ assumption].
-          
+          clear - isDirCompat isDirCompat0 useful.
+          repeat match goal with
+                   | H: context[if ?p then _ else _] |- _ => destruct p
+                   | |- context[if ?p then _ else _] => destruct p
+                 end; try word_omega.
+      + try assumption.
   Qed.
 
-  
-
-  - clear; intros; dest; discriminate.
-    - clear - i16a.
-      intros.
-      specialize (i16a _ H); dest; discriminate.
-    - clear - i16b.
-      intros.
-      specialize (i16b _ H H0).
-      dest; discriminate.
-    - 
-      intros
-      specialize (i16 H).
-  Qed.
-
-  Lemma dirCompat_hold_3 s a u cs:
+  Lemma dirCompat_inv_hold_04 s a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
-    l1Hit metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
+    dwnRs_noWait is a ->
+    SemAction s a
+              u cs WO ->
+    dirCompat_inv (M.union u s).
   Proof.
-    metaDir.
+    normalDir.
+    - intros.
+      specialize (isDirCompat H2).
+      specialize (isDirCompat0 (neq_sym H2)).
+      destruct (weq a0 (y F2 F1)); [subst|].
+      + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
+        * destruct (weq ($ c2) (y F1)) as [isEq' | ?]; [rewrite isEq' in *; try tauto|].
+          specialize (i1 _ (or_introl eq_refl)).
+          destruct i1 as [_ useful].
+          word_omega.
+        * destruct (weq ($ c2) (y F1)) as [isEq'|?]; [rewrite isEq' in * | assumption].
+          specialize (i7 _ (or_introl eq_refl)).
+          destruct i7 as [_ useful].
+          clear - isDirCompat isDirCompat0 useful.
+          repeat match goal with
+                   | H: context[if ?p then _ else _] |- _ => destruct p
+                   | |- context[if ?p then _ else _] => destruct p
+                 end; try word_omega.
+      + try assumption.
+    - intros.
+      specialize (isDirCompat H2).
+      specialize (isDirCompat0 (neq_sym H2)).
+      destruct (weq a0 (y F2 F1)); [subst|].
+      + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
+        * destruct (weq ($ c2) (y F1)) as [isEq' | ?]; [rewrite isEq' in *; try tauto|].
+          specialize (i1 _ (or_introl eq_refl)).
+          destruct i1 as [_ useful].
+          word_omega.
+        * destruct (weq ($ c2) (y F1)) as [isEq'|?]; [rewrite isEq' in * | assumption].
+          specialize (i7 _ (or_introl eq_refl)).
+          destruct i7 as [_ useful].
+          clear - isDirCompat isDirCompat0 useful.
+          repeat match goal with
+                   | H: context[if ?p then _ else _] |- _ => destruct p
+                   | |- context[if ?p then _ else _] => destruct p
+                 end; try word_omega.
+      + try assumption.
   Qed.
 
-  Lemma nmemCache_invariants_hold_4 s a u cs:
+  Lemma dirCompat_inv_hold_05 s a u cs:
+    dirCompat_inv s ->
     nmemCache_invariants s ->
-    writeback metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
+    deferred is a ->
+    SemAction s a
+              u cs WO ->
+    dirCompat_inv (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
-    doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
+    normalDir.
+    - intros.
+      specialize (isDirCompat H0).
+      specialize (isDirCompat0 (neq_sym H0)).
+      destruct (weq a0 (y F2 F1)); [subst|].
+      + destruct (weq ($ c) (y F1)) as [isEq | ?]; [rewrite isEq in * |].
+        * destruct (weq ($ c2) (y F1)) as [isEq' | ?]; [rewrite isEq' in *; tauto|].
+          apply (@compatPair_sem (y F2) (y F1) (newdir0 (y F2 F1)) ($ c2) (neq_sym H0)) in H7.
+          assumption.
+        * destruct (weq ($ c2) (y F1)) as [isEq'|?]; [rewrite isEq' in * | assumption].
+          apply (@compatPair_sem (y F2) (y F1) (newdir0 (y F2 F1)) ($ c) H0) in H7.
+          clear - isDirCompat H7.
+          repeat match goal with
+                   | H: context[if ?p then _ else _] |- _ => destruct p
+                   | |- context[if ?p then _ else _] => destruct p
+                 end; try word_omega.
+      + assumption.
   Qed.
 
-  Lemma nmemCache_invariants_hold_7 s a u cs:
+  Record cacheCompat_inv' a (cword1: word LgNumChildren) (c1: cache) cword2 (c2: cache) (s: RegsT) csv1 csv2 tagv1 tagv2: Prop :=
+    {
+      isCacheCompat:
+        cword1 <> cword2 ->
+        getCs csv1 tagv1 a <=
+        if weq (getCs csv2 tagv2 a) ($ Msi.Mod)
+        then $ Msi.Inv
+        else if weq (getCs csv2 tagv2 a) ($ Msi.Ex)
+             then $ Msi.Sh
+             else if weq (getCs csv2 tagv2 a) ($ Msi.Sh)
+                  then $ Msi.Ex
+                  else $ Msi.Mod
+    }.
+
+  Definition cacheCompat_inv s := forall a cword1 c1, (c1 <= wordToNat (wones LgNumChildren))%nat ->
+                                                      (cword1 = $ c1) ->
+                                                      forall cword2 c2,
+                                                        (c2 <= wordToNat (wones LgNumChildren))%nat ->
+                                                        (cword2 = $ c2) ->
+                                                        forall (csv1: <| Vector Msi IdxBits |>)
+                                                               (csv2: <| Vector Msi IdxBits |>)
+                                                               (csFind1: csv1 === s.[(cs -- dataArray) __ c1])
+                                                               (csFind2: csv2 === s.[(cs -- dataArray) __ c2])
+                                                               (tagv1: <| Vector (Bit TagBits) IdxBits |>)
+                                                               (tagFind1: tagv1 === s.[(tag -- dataArray) __ c1])
+                                                               (tagv2: <| Vector (Bit TagBits) IdxBits |>)
+                                                               (tagFind2: tagv2 === s.[(tag -- dataArray) __ c2]),
+                                                          cacheCompat_inv' a cword1 c1 cword2 c2 s csv1 csv2 tagv1 tagv2.
+
+  Lemma cacheCompa_inv_holds s:
+    dirCompat_inv s ->
     nmemCache_invariants s ->
-    ld metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
+    cacheCompat_inv s.
   Proof.
-    (* SKIP_PROOF_ON
-    doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Lemma nmemCache_invariants_hold_8 s a u cs:
-    nmemCache_invariants s ->
-    st metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-  Proof.
-    (* SKIP_PROOF_ON
-    doMetaComplex.
-        SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Ltac doMeta :=
-    metaInit;
-    try match goal with
-          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-        end;
-    invariant_simpl;
-    simplMapUpds helpNormal.
-  
-  Lemma nmemCache_invariants_hold_9 s a u cs:
-    nmemCache_invariants s ->
-    drop metaIs a ->
-    forall x: cache,
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
-                u cs WO ->
-      nmemCache_invariants (M.union u s).
-
-
-  intros HDir HInd HInRule x xcond HS;
-    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
-    apply invSome in HInRule;
-    apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule;
-    unfold getActionFromGen, getGenAction, strFromName in *;
-      intros ? ? c ?;
-      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-      subst; unfold getActionFromSin, getSinAction in *; subst;
-    SymEval; subst; simpl; unfold VectorFacts.Vector_find; simpl;
-    match goal with
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
-        destruct (HInd a _ _ H eq_refl);
-          specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
-        destruct (HInd a _ _ H eq_refl)          
-    end;
-    match goal with
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl);
-          specialize (HInd a _ _ H' eq_refl)
-      | a: word (IdxBits + TagBits), H: (_ <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl)
-    end;
+    intros.
+    intros a cword1 c1 c1Le c1Eq cword2 c2 c2Le c2Eq.
+    destruct (H a cword1 c1 c1Le c1Eq cword2 c2 c2Le c2Eq), (H0 a cword1 c1 c1Le c1Eq).
+    destruct (H a cword2 c2 c2Le c2Eq cword1 c1 c1Le c1Eq), (H0 a cword2 c2 c2Le c2Eq).
+    intros csv1 csv1Find csv2 csv2Find tagv1 tagv1Find tagv2 tagv2Find.
     unfold withIndex in *;
     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     repeat substFind; dest;
     repeat simplBool;
     elimDiffC c;
-    try match goal with
-          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
-        end;
     invariant_simpl;
-      simplMapUpds helpNormal.
-  Qed.
-    metaDir.
-    intro HDir.
-    intros HInd HInRule x xcond HS;
-    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
-    apply invSome in HInRule;
-    apply invRepRule in HInRule;
-    rewrite <- HInRule in HS; clear HInRule.
-    intros ? ? c ? ?; destructRules c HInd.
-    metaInit.
-    metaDir.
+    simplMapUpds idtac.
     intros.
-    destruct H0.
-    Print Ltac metaInit.
-    SymEval
-    destruct (H a0 ($ x) x eq_refl).
-    metaInit.
-
-
-  cRqValid: <| Bool |> ;
-      cRqValidFind: cRqValid === s.[cRqValidReg] ;
-      dirw: <| Vector Bool LgNumChildren |> ;
-      dirwFind: dirw === s.[cRqDirwReg] ;
-      rqFromCList: <[ list (type (Struct RqFC)) ]> ;
-      rqFromCListFind: rqFromCList === s.[rqFromChild -- elt] ;
-      rsFromCList: <[ list (type (Struct RsFC)) ]> ;
-      rsFromCListFind: rsFromCList === s.[rsFromChild -- elt] ;
-      toCList: <[ list (type (Struct TC)) ]>;
-      toCListFind: toCList === s.[toChild -- elt] ;
-      csv: <| Vector Msi IdxBits |> ;
-      csFind: csv === s.[(cs -- dataArray) __ c] ;
-      tagv: <| Vector (Bit TagBits) IdxBits |> ;
-      tagFind: tagv === s.[(tag -- dataArray) __ c];
-      procRqValid: <| Bool |> ;
-      procRqValidFind: procRqValid === s.[procRqValidReg __ c] ;
-      procRqReplace: <| Bool |> ;
-      procRqReplaceFind: procRqReplace === s.[procRqReplaceReg __ c] ;
-      procRq: <| Struct RqFPr |> ;
-      procRqFind: procRq === s.[procRqReg __ c] ;
-      csw: <| Bool |> ;
-      cswFind: csw === s.[procRqWaitReg __ c] ;
-      rqToPList: <[ list (type (Struct RqTP)) ]> ;
-      rqToPListFind:  rqToPList === s.[(rqToParent -- elt) __ c] ;
-      rsToPList: <[ list (type (Struct RsTP)) ]> ;
-      rsToPListFind: rsToPList === s.[(rsToParent -- elt) __ c] ;
-      fromPList: <[ list (type (Struct FP)) ]> ;
-      fromPListFind: fromPList === s.[(fromParent -- elt) __ c] ;
-      cRq: <| Struct RqFC |> ;
-      cRqFind: cRq === s.[cRqReg] ;
-
-      i5: dir a cword >= getCs csv tagv a ;
-      
-      i7: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                     getCs csv tagv a <= rs (RsTP !! to) /\
-                     dir a cword > rs (RsTP !! to) ;
-
-      i8: forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                     rs (FP !! isRq) = false ->
-                     getCs csv tagv a < rs (FP !! to) /\
-                     dir a cword = rs (FP !! to) ;
-
-      i9: forall rq rs,
-            In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-            In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-            dir a cword <= rq (RqTP !! from) ->
-            isPWait a cRqValid rqFromCList dirw cword dir ;
-
-      i10: (forall beg mid last rs1 rs2,
-              fromPToC cword a fromPList toCList = beg ++ rs1 :: mid ++ rs2 :: last ->
-              rs1 (FP !! isRq) = false ->
-              rs2 (FP !! isRq) = false ->
-              False)%list ;
-
-      i11: rsFromCToP cword a rsFromCList rsToPList = nil ->
-           (forall msg, In msg (fromPToC cword a fromPList toCList) -> msg (FP !! isRq) = true) ->
-           dir a cword = getCs csv tagv a ;
-           
-      i12: forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                      rs (FP !! isRq) = false ->
-                      rsFromCToP cword a rsFromCList rsToPList = nil ;
-    
-      i13: rsLessTo (rsFromCToP cword a rsFromCList rsToPList) ;
-
-      i14: (forall beg rs,
-              rsFromCToP cword a rsFromCList rsToPList = beg ++ [rs] ->
-              rs (RsTP !! to) = getCs csv tagv a)%list ;
-
-      i15: (forall beg mid last rq rs,
-              fromPToC cword a fromPList toCList = beg ++ rq :: mid ++ rs :: last ->
-              rq (FP !! isRq) = true ->
-              rs (FP !! isRq) = false ->
-              getCs csv tagv a = $ Msi.Inv)%list ;
-
-      i16: isCWait a procRqValid procRq csw ->
-           (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
-                               then $ Msi.Mod else $ Msi.Sh)
-           /\
-           ((exists rq, In rq (rqFromCToP cword a rqFromCList rqToPList) /\
-                        rq (RqTP !! to) = (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) /\
-                        rq (RqTP !! from) >= getCs csv tagv a) \/
-            (exists rs, In rs (fromPToC cword a fromPList toCList) /\
-                        rs (FP !! isRq) = false /\
-                        rs (FP !! to) = if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)) ;
-
-      i16a: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                       isCWait a procRqValid procRq csw
-                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
-                                            then $ Msi.Mod else $ Msi.Sh)
-                       /\ rq (RqTP !! to) =
-                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh)
-                       /\ rq (RqTP !! from) >= getCs csv tagv a ;
-
-      i16b: forall rs, In rs (fromPToC cword a fromPList toCList) ->
-                       rs (FP !! isRq) = false ->
-                       isCWait a procRqValid procRq csw
-                       /\ (getCs csv tagv a < if (procRq (RqFPr !! op)):bool
-                                              then $ Msi.Mod else $ Msi.Sh)
-                       /\ rs (FP !! to) =
-                          (if (procRq (RqFPr !! op)):bool then $ Msi.Mod else $ Msi.Sh) ;
-    
-      i16c: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                          In rs (fromPToC cword a fromPList toCList) ->
-                          rs (FP !! isRq) = true ;
-
-      i17: forall rq,
-             In rq (fromPToC cword a fromPList toCList) ->
-             rq (FP !! isRq) = true ->
-             getCs csv tagv a = $ Msi.Inv \/
-             isPWait a cRqValid rqFromCList dirw cword dir ;
-
-      i18: forall rq rs,
-             In rq (fromPToC cword a fromPList toCList) ->
-             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             rq (FP !! isRq) = true ->
-             rs (RsTP !! to) = $ Msi.Inv ;
-
-      i19: (forall beg mid last rq rs,
-              fromPToC cword a fromPList toCList = beg ++ rs :: mid ++ rq :: last ->
-              rs (FP !! isRq) = false ->
-              rq (FP !! isRq) = true ->
-              isPWait a cRqValid rqFromCList dirw cword dir)%list ;
-
-      i20: (forall beg mid last rq1 rq2,
-              fromPToC cword a fromPList toCList = beg ++ rq1 :: mid ++ rq2 :: last ->
-              rq1 (FP !! isRq) = true ->
-              rq2 (FP !! isRq) = true ->
-              getCs csv tagv a = $ Msi.Inv)%list ;
-
-      i21: forall rs,
-             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             rs (RsTP !! isVol) = false ->
-             isPWait a cRqValid rqFromCList dirw cword dir ;
-
-      i22: (forall beg mid last cToPRs1 cToPRs2,
-              rsFromCToP cword a rsFromCList rsToPList =
-              beg ++ cToPRs1 :: mid ++ cToPRs2 :: last ->
-              cToPRs1 (RsTP !! isVol) = true \/
-              cToPRs2 (RsTP !! isVol) = true)%list ;
-
-      i23: forall rq rs,
-             In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-             In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-             dir a cword <= rq (RqTP !! from) ->
-             rs (RsTP !! isVol) = false ;
-
-      i25: forall rq, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                      rq (RqTP !! from) < rq (RqTP !! to) ;
-
-      i26: forall rs, In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                      rs (RsTP !! isVol) = true ->
-                      rs (RsTP !! to) = $ Msi.Inv ;
-
-      i27: procRqValid = true -> procRqReplace = true ->
-           tagv (split1 IdxBits TagBits
-                        (split2 LgNumDatas (IdxBits + TagBits)
-                                (procRq (RqFPr !! addr)))) =
-           split2 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits)
-                                          (procRq (RqFPr !! addr))) ->
-           csv (split1 IdxBits TagBits
-                       (split2 LgNumDatas (IdxBits + TagBits)
-                               (procRq (RqFPr !! addr)))) = $ Msi.Inv ;
-      
-      i27b: procRqValid = true -> procRqReplace = false ->
-            tagv (split1 IdxBits TagBits
-                         (split2 LgNumDatas (IdxBits + TagBits)
-                                 (procRq (RqFPr !! addr)))) =
-            split2 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits)
-                                           (procRq (RqFPr !! addr))) \/
-            csv (split1 IdxBits TagBits
-                        (split2 LgNumDatas (IdxBits + TagBits)
-                                (procRq (RqFPr !! addr)))) = $ Msi.Inv ;
-      
-      i28: cRqValid = true -> hd_error rqFromCList = Some cRq ;
-
-      i29: forall rq rs, In rq (rqFromCToP cword a rqFromCList rqToPList) ->
-                         In rs (rsFromCToP cword a rsFromCList rsToPList) ->
-                         rs (RqTP !! isVol) = true ->
-                         rq (RqTP !! from) = $ Msi.Inv ;
-
-      i30: forall rq tl, rqFromCToP cword a rqFromCList rqToPList = rq :: tl -> tl = nil ;
-
-      i31: forall beg mid1 mid2 last rs rq1 rq2,
-             fromPToC cword a fromPList toCList = beg ++ rs :: mid1 ++ rq1 :: mid2 ++ rq2 :: last ->
-             rs (FP !! isRq) = false ->
-             rq1 (FP !! isRq) = true ->
-             rq2 (FP !! isRq) = true ->
-             False
-
-    }.
-
-  
+    clear - i5 i0 isDirCompat isDirCompat0 H1.
+    specialize (isDirCompat H1).
+    specialize (isDirCompat0 (neq_sym H1)).
+    repeat match goal with
+             | H: context [if ?p then _ else _] |- _ => destruct p
+             | |- context [if ?p then _ else _] => destruct p
+           end; try word_omega.
+  Qed.
 End MemCacheInl.
