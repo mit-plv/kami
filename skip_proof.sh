@@ -1,3 +1,5 @@
+#!/bin/bash
+
 PLATFORM=`uname`
 SED="sed -i"
 if [[ "$PLATFORM" == 'Darwin' ]]; then
