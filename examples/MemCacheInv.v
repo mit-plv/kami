@@ -3145,297 +3145,6 @@ Section MemCacheInl.
       (* END_SKIP_PROOF_OFF *)
   Qed.
 
-  Notation addField c m name strct :=
-    (fun i1 : Fin.t 2 =>
-       match
-         i1 as k in (Fin.t iV)
-         return
-         (match iV as iV0 return (Fin.t iV0 -> Type) with
-            | 0 => fun _ : Fin.t 0 => IDProp
-            | S n4 =>
-              fun k0 : Fin.t (S n4) =>
-                forall vs4 : Vector.t (Attribute Kind) n4,
-                  (forall i : Fin.t n4,
-                     Vector.nth
-                       (Vector.map
-                          (fun p : Attribute Kind => type (attrType p)) vs4) i) ->
-                  match
-                    k0 in (Fin.t m') return (Vector.t Type m' -> Type)
-                  with
-                    | F1 n =>
-                      Vector.caseS
-                        (fun (n0 : nat) (_ : Vector.t Type (S n0)) => Type)
-                        (fun (h : Type) (n0 : nat) (_ : Vector.t Type n0) =>
-                           h)
-                    | @Fin.FS n p' =>
-                      fun v : Vector.t Type (S n) =>
-                        Vector.caseS
-                          (fun (n0 : nat) (_ : Vector.t Type (S n0)) =>
-                             Fin.t n0 -> Type)
-                          (fun (_ : Type) (n0 : nat) 
-                               (t : Vector.t Type n0) 
-                               (p0 : Fin.t n0) => Vector.nth t p0) v p'
-                  end
-                    (Vector.cons Type (word LgNumChildren) n4
-                                 (Vector.map
-                                    (fun p : Attribute Kind => type (attrType p)) vs4))
-          end k)
-       with
-         | F1 s5 =>
-           fun (vs4 : Vector.t (Attribute Kind) s5)
-               (_ : forall i : Fin.t s5,
-                      Vector.nth
-                        (Vector.map
-                           (fun p : Attribute Kind => type (attrType p)) vs4) i)
-           => c
-         | @Fin.FS s5 f5 =>
-           fun (vs5 : Vector.t (Attribute Kind) s5)
-               (f : forall i : Fin.t s5,
-                      Vector.nth
-                        (Vector.map
-                           (fun p : Attribute Kind => type (attrType p)) vs5) i)
-           => f f5
-       end
-         STRUCT {name
-                   :: Struct strct}
-         (fun i2 : Fin.t 1 =>
-            match
-              i2 as k in (Fin.t iV)
-              return
-              (match iV as iV0 return (Fin.t iV0 -> Type) with
-                 | 0 => fun _ : Fin.t 0 => IDProp
-                 | S n4 =>
-                   fun k0 : Fin.t (S n4) =>
-                     forall vs4 : Vector.t (Attribute Kind) n4,
-                       (forall i : Fin.t n4,
-                          Vector.nth
-                            (Vector.map
-                               (fun p : Attribute Kind => type (attrType p)) vs4)
-                            i) ->
-                       match
-                         k0 in (Fin.t m') return (Vector.t Type m' -> Type)
-                       with
-                         | F1 n =>
-                           Vector.caseS
-                             (fun (n0 : nat) (_ : Vector.t Type (S n0)) => Type)
-                             (fun (h : Type) (n0 : nat) (_ : Vector.t Type n0)
-                              => h)
-                         | @Fin.FS n p' =>
-                           fun v : Vector.t Type (S n) =>
-                             Vector.caseS
-                               (fun (n0 : nat) (_ : Vector.t Type (S n0)) =>
-                                  Fin.t n0 -> Type)
-                               (fun (_ : Type) (n0 : nat) 
-                                    (t : Vector.t Type n0) 
-                                    (p0 : Fin.t n0) => Vector.nth t p0) v p'
-                       end
-                         (Vector.cons Type
-                                      (forall i : Fin.t _,
-                                         match
-                                           i in (Fin.t m')
-                                           return (Vector.t Type m' -> Type)
-                                         with
-                                           | F1 n =>
-                                             Vector.caseS
-                                               (fun (n0 : nat) (_ : Vector.t Type (S n0))
-                                                => Type)
-                                               (fun (h : Type) (n0 : nat)
-                                                    (_ : Vector.t Type n0) => h)
-                                           | @Fin.FS n p' =>
-                                             fun v : Vector.t Type (S n) =>
-                                               Vector.caseS
-                                                 (fun (n0 : nat) (_ : Vector.t Type (S n0))
-                                                  => Fin.t n0 -> Type)
-                                                 (fun (_ : Type) (n0 : nat)
-                                                      (t : Vector.t Type n0) 
-                                                      (p0 : Fin.t n0) => 
-                                                    Vector.nth t p0) v p'
-                                         end
-                                           (*STRUCT {word (IdxBits + TagBits); 
-                                                   word 2; word 2; type Id}*)_) n4
-                                      (Vector.map
-                                         (fun p : Attribute Kind => type (attrType p))
-                                         vs4))
-               end k)
-            with
-              | F1 s5 =>
-                fun (vs4 : Vector.t (Attribute Kind) s5)
-                    (_ : forall i : Fin.t s5,
-                           Vector.nth
-                             (Vector.map
-                                (fun p : Attribute Kind => type (attrType p)) vs4)
-                             i) => m
-              | @Fin.FS s5 f5 =>
-                fun (vs5 : Vector.t (Attribute Kind) s5)
-                    (f : forall i : Fin.t s5,
-                           Vector.nth
-                             (Vector.map
-                                (fun p : Attribute Kind => type (attrType p)) vs5)
-                             i) => f f5
-            end (Vector.nil (Attribute Kind))
-                (fun i0 : Fin.t 0 =>
-                   Fin.case0
-                     (fun p : Fin.t 0 =>
-                        match
-                          p in (Fin.t m') return (Vector.t Type m' -> Type)
-                        with
-                          | F1 n =>
-                            Vector.caseS
-                              (fun (n0 : nat) (_ : Vector.t Type (S n0)) => Type)
-                              (fun (h : Type) (n0 : nat) (_ : Vector.t Type n0) =>
-                                 h)
-                          | @Fin.FS n p' =>
-                            fun v : Vector.t Type (S n) =>
-                              Vector.caseS
-                                (fun (n0 : nat) (_ : Vector.t Type (S n0)) =>
-                                   Fin.t n0 -> Type)
-                                (fun (_ : Type) (n0 : nat) 
-                                     (t : Vector.t Type n0) 
-                                     (p0 : Fin.t n0) => Vector.nth t p0) v p'
-                        end (Vector.nil Type)) i0))).
-
-  (*
-  Definition rqTP_to_rqFC (c: word LgNumChildren) (m: type (Struct RqTP)): type (Struct RqFC) :=
-    addField c m rq RqTP.
-
-  Definition rsTP_to_rsFC (c: word LgNumChildren) (m: type (Struct RsTP)): type (Struct RsFC) :=
-    addField c m rs RsTP.
-
-  Definition fp_to_tc (c: word LgNumChildren) (m: type (Struct FP)): type (Struct TC) :=
-    addField c m msg FP.
-   *)
-
-  Lemma rqFromCToP_xfer:
-    forall x a t rqFromCList rqToPList,
-      rqFromCToP x a rqFromCList (t :: rqToPList) =
-      rqFromCToP x a (rqFromCList ++ [(addField x t rq RqTP)]) rqToPList.
-  Proof.
-    unfold rqFromCToP; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; subst.
-    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      simpl;
-        reflexivity.
-    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      destruct (weq a (t F1)); try tauto.
-  Qed.
-
-  Lemma rsFromCToP_xfer:
-    forall x a t rsFromCList rsToPList,
-      rsFromCToP x a rsFromCList (t :: rsToPList) =
-      rsFromCToP x a (rsFromCList ++ [addField x t rs RsTP]) rsToPList.
-  Proof.
-    unfold rsFromCToP; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; subst.
-    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      simpl;
-        reflexivity.
-    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      destruct (weq a (t F1)); try tauto.
-  Qed.
-
-  Lemma fromPToC_xfer:
-    forall x a (t: type (Struct FP)) fromPList toCList,
-      fromPToC x a fromPList (addField x t msg FP :: toCList) =
-      fromPToC x a (fromPList ++ [t]) toCList.
-  Proof.
-    unfold fromPToC; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; subst.
-    - rewrite filtFromP_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      simpl;
-        reflexivity.
-    - rewrite filtFromP_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      destruct (weq a (t F2)); try tauto.
-    - tauto.
-  Qed.
-
-  Lemma rqFromCToP_xfer_diffAddr:
-    forall c x a (t: type (Struct RqTP)) rqFromCList rqToPList,
-      c <> x ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      rqFromCToP ($ c) a rqFromCList rqToPList =
-      rqFromCToP ($ c) a (rqFromCList ++ [addField ($ x) t rq RqTP]) rqToPList.
-  Proof.
-    unfold rqFromCToP; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; subst.
-    - rewrite filtRqFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
-      { pose proof (pow2_zero LgNumChildren).
-        rewrite wones_pow2_minus_one in H0, H1.
-        intro.
-        apply natToWord_inj with (sz := LgNumChildren) in H3; intuition Omega.omega.
-      }
-      destruct (weq ($ c) ($ x)); try tauto.
-  Qed.
-
-  Lemma rsFromCToP_xfer_diffAddr:
-    forall c x a (t: type (Struct RsTP)) rsFromCList rsToPList,
-      c <> x ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      rsFromCToP ($ c) a rsFromCList rsToPList =
-      rsFromCToP ($ c) a (rsFromCList ++ [addField ($ x) t rs RsTP]) rsToPList.
-  Proof.
-    unfold rsFromCToP; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; subst.
-    - rewrite filtRsFromC_commute_app; simpl; unfold Lib.VectorFacts.Vector_find; simpl.
-      rewrite ?eq_weq.
-      rewrite <- app_assoc.
-      assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
-      { pose proof (pow2_zero LgNumChildren).
-        rewrite wones_pow2_minus_one in H0, H1.
-        intro.
-        apply natToWord_inj with (sz := LgNumChildren) in H3; intuition Omega.omega.
-      }
-      destruct (weq ($ c) ($ x)); try tauto.
-  Qed.
-  
-  Lemma fromPToC_xfer_diffAddr:
-    forall c x a (t: type (Struct TC)) fromPList toCList,
-      c <> x ->
-      $ x = t F1 ->
-      (c <= wordToNat (wones LgNumChildren))%nat ->
-      (x <= wordToNat (wones LgNumChildren))%nat ->
-      fromPToC ($ c) a fromPList toCList =
-      fromPToC ($ c) a fromPList (t :: toCList).
-  Proof.
-    unfold fromPToC; intro; simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto; intros;
-    repeat match goal with
-             | |- context[weq ?a ?b] => destruct (weq a b)
-           end; try reflexivity.
-    
-    - assert ((natToWord LgNumChildren c) <> (natToWord LgNumChildren x)).
-      { pose proof (pow2_zero LgNumChildren).
-        rewrite wones_pow2_minus_one in H1, H2.
-        intro.
-        apply natToWord_inj with (sz := LgNumChildren) in H4; intuition Omega.omega.
-      }
-      congruence.
-  Qed.
 
 
   
@@ -3454,16 +3163,6 @@ Section MemCacheInl.
     assumption.
   Qed.
   
-  Lemma isPWait_addRq_contra a cRqValid
-        (rqFromCList: list (type (Struct RqFC)))
-        dirw (cword: word LgNumChildren) dir rq:
-    ~ isPWait a cRqValid (rqFromCList ++ [rq]) dirw cword dir ->
-    ~ isPWait a cRqValid rqFromCList dirw cword dir.
-  Proof.
-    unfold not at 2; intros.
-    eapply isPWait_addRq in H0; eauto.
-  Qed.
-
   Ltac invariant_complex :=
     subst;
     match goal with
@@ -3476,7 +3175,7 @@ Section MemCacheInl.
     repeat match goal with
            | [ H : evalConstT match ?E with _ => _ end = _ |- _ ] =>
              destruct E; try discriminate; [ clear H ]
-           end (*; autorewrite with invariant in * *).
+           end.
 
   Ltac invariant_notComplex c :=
     subst;
@@ -3490,11 +3189,11 @@ Section MemCacheInl.
     repeat match goal with
            | [ H : evalConstT match ?E with _ => _ end = _ |- _ ] =>
              destruct E; try discriminate; [ clear H ]
-           end (*; autorewrite with invariant in * *).
+           end.
 
 
   Ltac invariant_solve :=
-    simplMapUpds ltac:((*autorewrite with invariant in *;*) try assumption).
+    simplMapUpds ltac:(try assumption).
 
   Ltac invariant1 := invariant_complex; invariant_solve.
   Ltac invariant2 c := invariant_notComplex c; invariant_solve.
@@ -3515,8 +3214,7 @@ Section MemCacheInl.
   Ltac invariant x c := invariant_step;
                    destruct (eq_nat_dec c x); [subst; invariant1| invariant2 c].
 
-  Hint Resolve isPWait_addRq isPWait_addRq_contra hd_error_revcons_same.
-  (*  Hint Rewrite <- rqFromCToP_xfer rqFromCToP_xfer_diffAddr using assumption : invariant. *)
+  Hint Resolve isPWait_addRq hd_error_revcons_same.
 
   Lemma diffCache_absurd (x c: cache) (xle: (x <= wordToNat (wones LgNumChildren))%nat) (yle: (c <= wordToNat (wones LgNumChildren))%nat)
         (neq: c <> x) (isEq: natToWord LgNumChildren c = natToWord LgNumChildren x): False.
@@ -3537,7 +3235,6 @@ Section MemCacheInl.
          rewrite ?eq_weq in *;
            solve [intros;
                    try apply isPWait_addRq;
-                   try apply isPWait_addRq_contra;
                    try apply hd_error_revcons_same;
                    try solve [destruct (weq a0 y);
                                [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply H; eauto]])
@@ -3549,7 +3246,6 @@ Section MemCacheInl.
              [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
               intros;
               try apply isPWait_addRq;
-              try apply isPWait_addRq_contra;
               try apply hd_error_revcons_same;
               rewrite ?app_nil_r in *; try eapply H; eauto
              ]
@@ -3664,7 +3360,6 @@ Section MemCacheInl.
        rewrite ?eq_weq in *;
        solve [intros;
                try apply isPWait_addRq;
-               try apply isPWait_addRq_contra;
                try apply hd_error_revcons_same;
                try solve [destruct (weq a0 (y F2 F2));
                            [subst; rewrite <- ?app_assoc in *; simpl in *| rewrite ?app_nil_r in *]; eapply H; eauto]].
@@ -3683,7 +3378,6 @@ Section MemCacheInl.
              [pose proof (@diffCache_absurd x c xle yle neq isEq); exfalso; assumption |
               intros;
                 try apply isPWait_addRq;
-                try apply isPWait_addRq_contra;
                 try apply hd_error_revcons_same;
                 rewrite ?app_nil_r in *; try eapply H; eauto
              ]
@@ -3979,9 +3673,6 @@ Section MemCacheInl.
         destruct (HInd a _ _ H eq_refl)          
     end;
     match goal with
-(*      | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H': (c <= _)%nat, H2: (c2 <= _)%nat |- _ =>
-        destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
-          destruct (HDir a _ _ H' eq_refl _ _ H2 eq_refl); *)
       | a: word (IdxBits + TagBits), H: (_ <= _)%nat, H2: (c2 <= _)%nat |- _ =>
         destruct (HDir a _ _ H eq_refl _ _ H2 eq_refl);
           destruct (HDir a _ _ H2 eq_refl _ _ H eq_refl)
@@ -4187,7 +3878,7 @@ Section MemCacheInl.
                                                                (tagFind2: tagv2 === s.[(tag -- dataArray) __ c2]),
                                                           cacheCompat_inv' a cword1 c1 cword2 c2 s csv1 csv2 tagv1 tagv2.
 
-  Lemma cacheCompa_inv_holds s:
+  Lemma cacheCompat_inv_holds s:
     dirCompat_inv s ->
     nmemCache_invariants s ->
     cacheCompat_inv s.
