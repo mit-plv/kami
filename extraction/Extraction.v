@@ -1,4 +1,8 @@
 Require Import List String.
+Require Import Lib.Word Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
+        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
+Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
+Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 Require Import Ext.BSyntax.
 
 Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
@@ -8,19 +12,9 @@ Set Extraction Optimize.
 Set Extraction KeepSingleton.
 Unset Extraction AutoInline.
 
-(** Extraction steps:
- * 1) Define the target module.
- * 2) Change the definition "targetM" to your module.
- * 3) Compile.
- *)
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
-        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
+(** p4st + mem (memAtomic or memCache) extraction *)
 
-(** p4st + mem (memAtomic or memCache) test *)
-Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
-Require Import Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
-
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 12) *)
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 7) *)
 Definition idxBits := 3.
 Definition tagBits := 3.
 Definition lgNumDatas := 1.
@@ -55,18 +49,55 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes
 (* Definition procMemAtomic := (p4stN ++ memAtomic)%kami. *)
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
-(** MODIFY targetPgm to your target program *)
+(** MODIFY: targetPgm should be your target program *)
 Definition targetPgm := pgmJalTest1.
 
-(** MODIFY targetM to your target module *)
+(** MODIFY: targetM should be your target module *)
 Definition targetProcM := procMemCache.
+
+(** MODIFY: targetRfs should be a list of initial values of processors' register files *)
+Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
+  : ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx).
+  refine
+    (ConstVector (VecNext
+                    (VecNext
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 sp) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))
+                    (VecNext
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))));
+    exact $0.
+Defined.
+
+Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
+  (rfWithSpInit (ConstBit (natToWord _ 48)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 96)))
+    :: nil.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)
 Definition targetProcS := getModuleS targetProcM.
 Definition targetProcB := ModulesSToBModules targetProcS.
 
-(* What to extract *)
-Definition target := (targetPgm, targetProcB).
+(** What to extract *)
+Record ExtTarget :=
+  { extPgm : ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize);
+    extProc : option (list BModule);
+    extRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx))
+  }.
 
+Definition target : ExtTarget :=
+  {| extPgm := targetPgm;
+     extProc := targetProcB;
+     extRfs := targetRfs |}.
+
+(** Ocaml/Target.ml is used with Ocaml/PP.ml and Main.ml to build a converter to Bluespec. *)
 (* Extraction "./Ocaml/Target.ml" target. *)
 
