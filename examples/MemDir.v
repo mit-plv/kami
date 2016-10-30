@@ -119,7 +119,9 @@ Section Mem.
           Read dirw <- cRqDirwReg;
           LET i <- findIncompat #c #rqT!RqToP@.to #dir #dirw;
           Assert #i!(Maybe Child)@.isValid;
-          LET rq': Struct FromP <- STRUCT{isRq ::= $$ true; addr ::= #rqT!RqToP@.addr; to ::= toCompat #rqT!RqToP@.to; line ::= $$ Default; id ::= $$ Default};
+          LET rq': Struct FromP <- STRUCT{isRq ::= $$ true; addr ::= #rqT!RqToP@.addr;
+                                            to ::= IF toCompat #rqT!RqToP@.to == $ Msi.Ex then $ Msi.Sh else toCompat #rqT!RqToP@.to;
+                                            line ::= $$ Default; id ::= $$ Default};
           Call toCEnq(STRUCT{child ::= #i!(Maybe Child)@.value; msg ::= #rq'});
           LET dirw' <- #dirw@[(#i!(Maybe Child)@.value) <- $$ true];
           Write cRqDirwReg <- #dirw';

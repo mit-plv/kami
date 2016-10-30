@@ -1,4 +1,4 @@
-Require Import Lib.FMap Lib.Word Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
+Require Import Lib.FMap Lib.Word Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
@@ -1556,6 +1556,7 @@ Section MemCacheInl.
                     specialize (IHn _ H); assumption.
               }
           }
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma evalE K (e: K@type): evalExpr (#(evalExpr e)%kami_expr) = evalExpr e.
@@ -1679,9 +1680,9 @@ Section MemCacheInl.
         dest.
         congruence.
       + eapply i31 in H7; eassumption.
-        END_SKIP_PROOF_ON *) apply cheat.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
-
+  
   Lemma beg_last_in A ls: forall v: A, In v ls -> exists beg last, ls = beg ++ v :: last.
   Proof.
     induction ls; simpl; auto; try tauto; intros.
@@ -1707,7 +1708,6 @@ Section MemCacheInl.
     simpl.
     rewrite pf.
     reflexivity.
-END_SKIP_PROOF_ON *) apply cheat.
   Qed.
       
   Lemma nmemCache_invariants_hold_03 s a u cs:
@@ -3768,8 +3768,7 @@ END_SKIP_PROOF_ON *) apply cheat.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
-    (* SKIP_PROOF_ON
-    normalDir.
+    (* SKIP_PROOF_OFF *)
     normalDir.
     - intros.
       specialize (isDirCompat H2).
@@ -3807,7 +3806,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                    | |- context[if ?p then _ else _] => destruct p
                  end; try word_omega.
       + try assumption.
-END_SKIP_PROOF_ON *) apply cheat.
+(* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma dirCompat_inv_hold_04 s a u cs:
@@ -3946,4 +3945,9 @@ END_SKIP_PROOF_ON *) apply cheat.
 END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
+(*
+  Eval compute in (memAtomicWoQInlM IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren).
+  Inductive (a: word (IdxBits + TagBits)) (impl spec: RegsT) PerAddrRel: Prop :=
+  | 
+*)
 End MemCacheInl.
