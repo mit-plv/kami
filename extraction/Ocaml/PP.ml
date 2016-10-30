@@ -484,10 +484,8 @@ let rec ppBAction (ife: int option) (a: bAction) =
      (* let-bind for the branch return *)
      (if (bk = Bit 0) then ()
       else
-        (ps ppRBracketL;
-         ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ();
-         ps ppRBracketR));
+        (ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
      print_space (); ps ppBegin;
      print_break 0 4; (* force_newline (); *) open_hovbox 0;

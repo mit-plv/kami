@@ -121,7 +121,7 @@ Section RV32I.
 
     Definition rv32iGetLdAddr: LdAddrT rv32iAddrSize rv32iDataBytes.
       unfold LdAddrT; intros ty inst.
-      exact (UniBit (ZeroExtendTrunc _ _) (getOffsetIE #inst))%kami_expr.
+      exact (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst))%kami_expr.
     Defined.
 
     Definition rv32iGetLdSrc: LdSrcT rv32iDataBytes rv32iRfIdx.
@@ -131,12 +131,13 @@ Section RV32I.
 
     Definition rv32iCalcLdAddr: LdAddrCalcT rv32iAddrSize rv32iDataBytes.
       unfold LdAddrCalcT; intros ty ofs base.
-      exact (UniBit (ZeroExtendTrunc _ _) #base + #ofs)%kami_expr.
+      exact ((UniBit (ZeroExtendTrunc _ _) #base)
+             + (UniBit (SignExtendTrunc _ _) #ofs))%kami_expr.
     Defined.
 
     Definition rv32iGetStAddr: StAddrT rv32iAddrSize rv32iDataBytes.
       unfold StAddrT; intros ty inst.
-      exact (UniBit (ZeroExtendTrunc _ _) (getOffsetSE #inst))%kami_expr.
+      exact (UniBit (SignExtendTrunc _ _) (getOffsetSE #inst))%kami_expr.
     Defined.
       
     Definition rv32iGetStSrc: StSrcT rv32iDataBytes rv32iRfIdx.
@@ -146,7 +147,8 @@ Section RV32I.
     
     Definition rv32iCalcStAddr: StAddrCalcT rv32iAddrSize rv32iDataBytes.
       unfold StAddrCalcT; intros ty ofs base.
-      exact (UniBit (ZeroExtendTrunc _ _) #base + #ofs)%kami_expr.
+      exact ((UniBit (ZeroExtendTrunc _ _) #base)
+             + (UniBit (SignExtendTrunc _ _) #ofs))%kami_expr.
     Defined.
 
     Definition rv32iGetStVSrc: StVSrcT rv32iDataBytes rv32iRfIdx.

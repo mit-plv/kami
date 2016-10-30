@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.Word Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
-        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
+        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm Ex.IsaRv32PgmExt.
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 Require Import Ext.BSyntax.
@@ -50,9 +50,10 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY: targetPgm should be your target program *)
-Definition targetPgm := pgmJalTest1.
+Definition targetPgm := pgmExt.
 
 (** MODIFY: targetM should be your target module *)
+(* Definition targetProcM := procMemAtomic. *)
 Definition targetProcM := procMemCache.
 
 (** MODIFY: targetRfs should be a list of initial values of processors' register files *)
