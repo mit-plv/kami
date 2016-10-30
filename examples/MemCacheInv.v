@@ -3945,9 +3945,55 @@ END_SKIP_PROOF_ON *) apply cheat.
 END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
-(*
-  Eval compute in (memAtomicWoQInlM IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren).
-  Inductive (a: word (IdxBits + TagBits)) (impl spec: RegsT) PerAddrRel: Prop :=
-  | 
-*)
+  Section PerAddrRel.
+    Variable a: word (IdxBits + TagBits).
+    Variable impl spec: RegsT.
+    
+    Inductive PerAddrRel: Prop :=
+    | InCache
+        (c: nat)
+        (csv: <| Vector Msi IdxBits |>)
+        (csFind: csv === impl.[(cs -- dataArray) __ c])
+        (tagv: <| Vector (Bit TagBits) IdxBits |>)
+        (tagFind: tagv === impl.[(tag -- dataArray) __ c])
+        (linev: <| Vector (Vector (Data DataBytes) LgNumDatas) IdxBits |>)
+        (lineFind: linev === impl.[(line -- dataArray) __ c])
+        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
+        (mFind: m === spec.["mem" -- dataArray])
+        (cs_is_ge_s: getCs csv tagv a >= $ Msi.Sh)
+        (dataMatch: forall i, m (Word.combine i a) = linev (split1 IdxBits TagBits a) i): PerAddrRel
+    | InRsFromCToP
+        (c: nat)
+        (rsFromCList: <[ list (type (Struct RsFC)) ]>)
+        (rsFromCListFind: rsFromCList === impl.[rsFromChild -- elt])
+        (rsToPList: <[ list (type (Struct RsTP)) ]>)
+        (rsToPListFind: rsToPList === impl.[(rsToParent -- elt) __ c])
+        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
+        (mFind: m === spec.["mem" -- dataArray])
+        (rs: <| Struct RsTP |>)
+        (inRs: In rs (rsFromCToP ($ c) a rsFromCList rsToPList))
+        (dataMatch: forall i, m (Word.combine i a) = rs (RsTP!!line) i): PerAddrRel
+    | InFromPToC
+        (c: nat)
+        (fromPList: <[ list (type (Struct FP)) ]>)
+        (fromPListFind: fromPList === impl.[(fromParent -- elt) __ c])
+        (toCList: <[ list (type (Struct TC)) ]>)
+        (toCListFind: toCList === impl.[toChild -- elt])
+        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
+        (mFind: m === spec.["mem" -- dataArray])
+        (rs: <| Struct FP |>)
+        (inRs: In rs (fromPToC ($ c) a fromPList toCList))
+        (isRs: rs (FP !! isRq) = false)
+        (dataMatch: forall i, m (Word.combine i a) = rs (FP!!line) i): PerAddrRel
+    | INMem
+        (c: nat)
+        (dir: <| Vector (Vector Msi LgNumChildren) (IdxBits + TagBits) |>)
+        (dirFind: dir === impl.[mcs -- dataArray])
+        (mdata: <| Vector (Vector (Data DataBytes) LgNumDatas) (IdxBits + TagBits) |>)
+        (mlineFind: mdata === impl.[mline -- dataArray])
+        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
+        (mFind: m === spec.["mem" -- dataArray])
+        (dataMatch: forall i, m (Word.combine i a) = mdata a i): PerAddrRel.
+  End PerAddrRel.        
+
 End MemCacheInl.
