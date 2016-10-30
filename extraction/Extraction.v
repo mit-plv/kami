@@ -49,8 +49,8 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes
 (* Definition procMemAtomic := (p4stN ++ memAtomic)%kami. *)
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
-(** MODIFY: targetPgm should be your target program *)
-Definition targetPgm := pgmExt.
+(** MODIFY: targetPgms should be your target program *)
+Definition targetPgms := pgmDekker1 :: pgmDekker2 :: nil.
 
 (** MODIFY: targetM should be your target module *)
 (* Definition targetProcM := procMemAtomic. *)
@@ -89,13 +89,13 @@ Definition targetProcB := ModulesSToBModules targetProcS.
 
 (** What to extract *)
 Record ExtTarget :=
-  { extPgm : ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize);
+  { extPgms : list (ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize));
     extProc : option (list BModule);
     extRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx))
   }.
 
 Definition target : ExtTarget :=
-  {| extPgm := targetPgm;
+  {| extPgms := targetPgms;
      extProc := targetProcB;
      extRfs := targetRfs |}.
 

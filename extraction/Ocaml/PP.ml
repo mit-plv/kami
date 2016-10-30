@@ -146,14 +146,17 @@ let getStructName (_: unit) = (structIdx := !structIdx + 1);
 module StringMap = Map.Make (String)
 let glbStructs : ((kind attribute list) StringMap.t) ref = ref StringMap.empty
 
-let initMem : constT option ref = ref None
-let getInitMem (_: unit) =
-  match !initMem with
-  | Some im -> im
-  | None -> raise (Should_not_happen "Initial memory not provided")
+let initPgms : constT list option ref = ref None
+let getInitPgm (i: int) =
+  match !initPgms with
+  | Some pgms ->
+     (try
+        (List.nth pgms i)
+      with _ -> raise (Should_not_happen "Initial program not provided"))
+  | None -> raise (Should_not_happen "Initial program not provided")
 
-let setInitMem (c: constT) = initMem := Some c
-let resetInitMem (_: unit) = initMem := None
+let setInitPgms (c: constT list) = initPgms := Some c
+let resetInitPgms (_: unit) = initPgms := None
 
 let initRfs : constT list option ref = ref None
 let getInitRf (i: int) =
@@ -582,7 +585,7 @@ let rec ppBInterfaces (dl: bMethod list) =
 
 let replaceInit (tg: string) (default: string) =
   if String.sub tg 0 3 = "pgm" then
-    ppConst (getInitMem ())
+    ppConst (getInitPgm (String.length tg - 5))
   else if String.sub tg 0 2 = "rf" then
     ppConst (getInitRf (String.length tg - 4))
   else
@@ -818,10 +821,10 @@ let ppBModulesFull (bml: bModule list) =
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullInitMemRfs (bml: bModule list) (initMem: constT) (initRfs: constT list) =
-  setInitMem initMem;
+let ppBModulesFullInitPgmRfs (bml: bModule list) (initPgms: constT list) (initRfs: constT list) =
+  setInitPgms initPgms;
   setInitRfs initRfs;
   ppBModulesFull bml;
-  resetInitMem ();
+  resetInitPgms ();
   resetInitRfs ()
 

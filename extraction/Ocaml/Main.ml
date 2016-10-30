@@ -11,7 +11,7 @@ let () =
      let oc = open_out output_file in
      set_formatter_out_channel oc;
      (match target.extProc with
-      | Some bml -> ppBModulesFullInitMemRfs bml target.extPgm target.extRfs
+      | Some bml -> ppBModulesFullInitPgmRfs bml target.extPgms target.extRfs
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
       

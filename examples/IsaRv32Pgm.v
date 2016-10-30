@@ -362,5 +362,71 @@ Section TestPgms.
     nop.
   Defined.
 
+  Definition pgmDekker1 : Rv32Program.
+    init_pgm.
+    line 0 (LI x10 (natToWord _ 0)).
+    line 1 (LI x11 (natToWord _ 1)).
+    line 2 (SW x0 x11 (natToWord _ 100)). (* enter[0] <- true *)
+    line 3 (LW x0 x12 (natToWord _ 104)). (* enter[1] *)
+    line 4 (BEQZ x12 (branchTarget 7)). (* 4 + 7 == 11 *)
+
+    line 5 (LW x0 x13 (natToWord _ 108)). (* turn *)
+    line 6 (BEQZ x13 (branchTarget 29)). (* 6 + 29 == 3 *)
+
+    line 7 (SW x0 x10 (natToWord _ 100)). (* enter[0] <- false *)
+
+    line 8 (LW x0 x13 (natToWord _ 108)). (* turn *)
+    line 9 (BNEZ x13 (branchTarget 31)). (* 9 + 31 == 8 *)
+    line 10 (SW x0 x11 (natToWord _ 100)). (* enter[0] <- true *)
+
+    (* cs starts *)
+    line 11 (LW x0 x14 (natToWord _ 112)). (* counter *)
+    line 12 (ADDI x14 x14 (natToWord _ 1)).
+    line 13 (TOHOST x14).
+    line 14 (SW x0 x14 (natToWord _ 112)).
+    (* cs ends *)
+
+    line 15 (SW x0 x11 (natToWord _ 108)). (* turn <- 1 *)
+    line 16 (SW x0 x10 (natToWord _ 100)). (* enter[0] <- false *)
+
+    line 17 (JAL x0 (branchTarget 15)). (* 17 + 15 == 0 *)
+
+    nop. nop. nop. nop. nop. nop. nop. nop.
+    nop. nop. nop. nop. nop. nop.
+  Defined.
+
+  Definition pgmDekker2 : Rv32Program.
+    init_pgm.
+    line 0 (LI x10 (natToWord _ 0)).
+    line 1 (LI x11 (natToWord _ 1)).
+    line 2 (SW x0 x11 (natToWord _ 104)). (* enter[1] <- true *)
+    line 3 (LW x0 x12 (natToWord _ 100)). (* enter[0] *)
+    line 4 (BEQZ x12 (branchTarget 7)). (* 4 + 7 == 11 *)
+
+    line 5 (LW x0 x13 (natToWord _ 108)). (* turn *)
+    line 6 (BNEZ x13 (branchTarget 29)). (* 6 + 29 == 3 *)
+
+    line 7 (SW x0 x10 (natToWord _ 104)). (* enter[1] <- false *)
+
+    line 8 (LW x0 x13 (natToWord _ 108)). (* turn *)
+    line 9 (BEQZ x13 (branchTarget 31)). (* 9 + 31 == 8 *)
+    line 10 (SW x0 x11 (natToWord _ 104)). (* enter[1] <- true *)
+
+    (* cs starts *)
+    line 11 (LW x0 x14 (natToWord _ 112)). (* counter *)
+    line 12 (ADDI x14 x14 (natToWord _ 1)).
+    line 13 (TOHOST x14).
+    line 14 (SW x0 x14 (natToWord _ 112)).
+    (* cs ends *)
+
+    line 15 (SW x0 x10 (natToWord _ 108)). (* turn <- 0 *)
+    line 16 (SW x0 x10 (natToWord _ 104)). (* enter[1] <- false *)
+
+    line 17 (JAL x0 (branchTarget 15)). (* 17 + 15 == 0 *)
+
+    nop. nop. nop. nop. nop. nop. nop. nop.
+    nop. nop. nop. nop. nop. nop.
+  Defined.
+
 End TestPgms.
 
