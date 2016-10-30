@@ -180,6 +180,11 @@ let addGlbStruct (k: kind attribute list) =
     (glbStructs := StringMap.add newName k !glbStructs; newName)
   else ((); name)
 
+let debug : bool ref = ref false
+let isDebug (_: unit) = !debug
+let setDebug (_: unit) = debug := true
+let unsetDebug (_: unit) = debug := false
+
 (* Global references end *)
 
 (* Simple analyses: better to generate a new file Analysis.ml *)
@@ -521,6 +526,10 @@ let ppBRule (r: bRule) =
      open_hovbox 0;
      ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep;
      print_break 0 4; open_hovbox 0;
+     (if isDebug () then
+        (ps ("$display (\"Rule fired: " ^ (bstring_of_charlist rn) ^ " at %t\", $time);");
+         force_newline ())
+      else ());
      ppBActions true None rb;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEndRule;
@@ -821,10 +830,14 @@ let ppBModulesFull (bml: bModule list) =
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullInitPgmRfs (bml: bModule list) (initPgms: constT list) (initRfs: constT list) =
+let ppBModulesFullInitPgmRfs
+      (bml: bModule list) (initPgms: constT list) (initRfs: constT list)
+      (dbg: bool) =
   setInitPgms initPgms;
   setInitRfs initRfs;
+  (if dbg then setDebug () else unsetDebug ());
   ppBModulesFull bml;
   resetInitPgms ();
-  resetInitRfs ()
+  resetInitRfs ();
+  unsetDebug ()
 
