@@ -29,6 +29,7 @@ Section ProcFDE.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -125,12 +126,13 @@ Section ProcFDE.
                         ++ epoch
                         ++ oneEltFifo e2wFifoName e2wElt
                         ++ (wb "rqFromProc"%string "rsToProc"%string
-                               getNextPc d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
+                               getNextPc alignAddr d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
   Definition p3st := ProcThreeStage.p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
+                                         getSrc1 getSrc2 getDst exec getNextPc
+                                         alignPc alignAddr predictNextPc
                                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                          e2wPack e2wDecInst e2wVal.

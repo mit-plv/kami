@@ -280,6 +280,11 @@ Section RV32I.
     exact (UniBit (ZeroExtendTrunc _ _) (#pc >> $$(natToWord 2 2)))%kami_expr.
   Defined.
 
+  Definition rv32iAlignAddr: AlignAddrT rv32iAddrSize.
+    unfold AlignPcT; intros ty addr.
+    exact (#addr >> $$(natToWord 2 2))%kami_expr.
+  Defined.
+
   (* NOTE: Because instructions are not on the memory, we give (pc + 1) for the next pc.
    * Branch offsets are not aligned, so the complete offset bits are used.
    *)

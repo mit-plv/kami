@@ -27,14 +27,15 @@ Section Invariants.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc alignPc.
+                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -56,8 +57,10 @@ Section Invariants.
               (insElt insDeqP (RqFromProc !! "op") = false /\
                evalExpr (getLdDst _ rawInst) <> (natToWord _ 0) /\
                insElt insDeqP (RqFromProc !! "addr") =
-               evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
-                                    (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
+               evalExpr (alignAddr
+                           _ (evalExpr (calcLdAddr
+                                          _ (evalExpr (getLdAddr _ rawInst))
+                                          (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)))) /\
                insElt insDeqP (RqFromProc !! "data") =
                evalConstT (getDefaultConst (Data dataBytes))))).
     - exact ((insElt insDeqP (RqFromProc !! "op") = true ->
@@ -65,8 +68,10 @@ Section Invariants.
              (evalExpr (getOptype _ rawInst) = opSt ->
               (insElt insDeqP (RqFromProc !! "op") = true /\
                insElt insDeqP (RqFromProc !! "addr") =
-               evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
-                                    (evalExpr (#rf@[getStSrc _ rawInst])%kami_expr)) /\
+               evalExpr (alignAddr
+                           _ (evalExpr (calcStAddr
+                                          _ (evalExpr (getStAddr _ rawInst))
+                                          (evalExpr (#rf@[getStSrc _ rawInst])%kami_expr)))) /\
                insElt insDeqP (RqFromProc !! "data") =
                evalExpr (#rf@[getStVSrc _ rawInst ])%kami_expr))).
   Defined.
