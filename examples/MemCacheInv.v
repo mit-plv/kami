@@ -3998,12 +3998,14 @@ END_SKIP_PROOF_ON *) apply cheat.
        (M.add (addIndexToStr string_of_nat x name) (existT _ k v) m)) =
     (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite 2! liftToMap1_find; mred.
     - rewrite 2! dropPs_None_inv; auto; try (apply duplicateElt_In_inv; auto; fail).
     - rewrite dropPs_None_inv; auto.
       apply duplicateElt_In_inv; auto.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropDiff name name' m n x k v:
@@ -4014,6 +4016,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (M.add (addIndexToStr string_of_nat x name') (existT _ k v) m) =
     M.add (addIndexToStr string_of_nat x name') (existT _ k v) (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite liftToMap1_find; mred.
@@ -4021,6 +4024,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       apply duplicateElt_not_In; auto.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropEmpty name n:
