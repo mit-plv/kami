@@ -3585,7 +3585,6 @@ END_SKIP_PROOF_ON *) apply cheat.
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       dirCompat_inv (M.union u s).
-  Proof.
     (* SKIP_PROOF_ON
     metaDir.
 END_SKIP_PROOF_ON *) apply cheat.
@@ -3600,8 +3599,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       dirCompat_inv (M.union u s).
-  Proof.
-    (* SKIP_PROOF_ON
+  (* SKIP_PROOF_ON
     metaDir.
 END_SKIP_PROOF_ON *) apply cheat.
   Qed.
@@ -3768,7 +3766,7 @@ END_SKIP_PROOF_ON *) apply cheat.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
-    (* SKIP_PROOF_OFF *)
+    (* SKIP_PROOF_ON
     normalDir.
     - intros.
       specialize (isDirCompat H2).
@@ -3806,7 +3804,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                    | |- context[if ?p then _ else _] => destruct p
                  end; try word_omega.
       + try assumption.
-(* END_SKIP_PROOF_OFF *)
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_04 s a u cs:
@@ -3947,53 +3945,1086 @@ END_SKIP_PROOF_ON *) apply cheat.
 
   Section PerAddrRel.
     Variable a: word (IdxBits + TagBits).
+    Variable c: cache.
     Variable impl spec: RegsT.
-    
-    Inductive PerAddrRel: Prop :=
-    | InCache
-        (c: nat)
-        (csv: <| Vector Msi IdxBits |>)
-        (csFind: csv === impl.[(cs -- dataArray) __ c])
-        (tagv: <| Vector (Bit TagBits) IdxBits |>)
-        (tagFind: tagv === impl.[(tag -- dataArray) __ c])
-        (linev: <| Vector (Vector (Data DataBytes) LgNumDatas) IdxBits |>)
-        (lineFind: linev === impl.[(line -- dataArray) __ c])
-        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
-        (mFind: m === spec.["mem" -- dataArray])
-        (cs_is_ge_s: getCs csv tagv a >= $ Msi.Sh)
-        (dataMatch: forall i, m (Word.combine i a) = linev (split1 IdxBits TagBits a) i): PerAddrRel
-    | InRsFromCToP
-        (c: nat)
-        (rsFromCList: <[ list (type (Struct RsFC)) ]>)
-        (rsFromCListFind: rsFromCList === impl.[rsFromChild -- elt])
-        (rsToPList: <[ list (type (Struct RsTP)) ]>)
-        (rsToPListFind: rsToPList === impl.[(rsToParent -- elt) __ c])
-        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
-        (mFind: m === spec.["mem" -- dataArray])
-        (rs: <| Struct RsTP |>)
-        (inRs: In rs (rsFromCToP ($ c) a rsFromCList rsToPList))
-        (dataMatch: forall i, m (Word.combine i a) = rs (RsTP!!line) i): PerAddrRel
-    | InFromPToC
-        (c: nat)
-        (fromPList: <[ list (type (Struct FP)) ]>)
-        (fromPListFind: fromPList === impl.[(fromParent -- elt) __ c])
-        (toCList: <[ list (type (Struct TC)) ]>)
-        (toCListFind: toCList === impl.[toChild -- elt])
-        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
-        (mFind: m === spec.["mem" -- dataArray])
-        (rs: <| Struct FP |>)
-        (inRs: In rs (fromPToC ($ c) a fromPList toCList))
-        (isRs: rs (FP !! isRq) = false)
-        (dataMatch: forall i, m (Word.combine i a) = rs (FP!!line) i): PerAddrRel
-    | INMem
-        (c: nat)
-        (dir: <| Vector (Vector Msi LgNumChildren) (IdxBits + TagBits) |>)
-        (dirFind: dir === impl.[mcs -- dataArray])
-        (mdata: <| Vector (Vector (Data DataBytes) LgNumDatas) (IdxBits + TagBits) |>)
-        (mlineFind: mdata === impl.[mline -- dataArray])
-        (m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |>)
-        (mFind: m === spec.["mem" -- dataArray])
-        (dataMatch: forall i, m (Word.combine i a) = mdata a i): PerAddrRel.
-  End PerAddrRel.        
 
+    Record line_inv': Prop :=
+      { csv: <| Vector Msi IdxBits |> ;
+        csFind: csv === impl.[(cs -- dataArray) __ c] ;
+        tagv: <| Vector (Bit TagBits) IdxBits |> ;
+        tagFind: tagv === impl.[(tag -- dataArray) __ c] ;
+        linev: <| Vector (Vector (Data DataBytes) LgNumDatas) IdxBits |> ;
+        lineFind: linev === impl.[(line -- dataArray) __ c] ;
+        rsFromCList: <[ list (type (Struct RsFC)) ]> ;
+        rsFromCListFind: rsFromCList === impl.[rsFromChild -- elt] ;
+        rsToPList: <[ list (type (Struct RsTP)) ]> ;
+        rsToPListFind: rsToPList === impl.[(rsToParent -- elt) __ c] ;
+        fromPList: <[ list (type (Struct FP)) ]> ;
+        fromPListFind: fromPList === impl.[(fromParent -- elt) __ c] ;
+        toCList: <[ list (type (Struct TC)) ]> ;
+        toCListFind: toCList === impl.[toChild -- elt] ;
+        dir: <| Vector (Vector Msi LgNumChildren) (IdxBits + TagBits) |> ;
+        dirFind: dir === impl.[mcs -- dataArray] ;
+        mdata: <| Vector (Vector (Data DataBytes) LgNumDatas) (IdxBits + TagBits) |> ;
+        mlineFind: mdata === impl.[mline -- dataArray] ;
+        m: <| Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits)) |> ;
+        mFind: m === spec.["mem"] ;
+        cs_is_ge_s: getCs csv tagv a >= $ Msi.Sh -> forall i, m (Word.combine i a) = linev (split1 IdxBits TagBits a) i ;
+        inRsFromCToP:
+          forall rs,
+            In rs (rsFromCToP ($ c) a rsFromCList rsToPList) ->
+            forall i, m (Word.combine i a) = rs (RsTP!!line) i ;
+        inRsFromPToC:
+          forall rs,
+            In rs (fromPToC ($ c) a fromPList toCList) ->
+            rs (FP !! isRq) = false ->
+            forall i, m (Word.combine i a) = rs (FP!!line) i ;
+        inMem:
+          (forall cw, dir a cw < $ Msi.Mod) ->
+          forall i, m (Word.combine i a) = mdata a i
+      }.
+  End PerAddrRel.
+
+  Definition line_inv impl spec := forall a (c: cache), (c <= wordToNat (wones LgNumChildren))%nat -> line_inv' a c impl spec.
+
+  Require Import Kami.RefinementFacts.
+  Local Definition dropFirstElts :=
+    dropN (rqFromProc -- firstEltName) (wordToNat (wones LgNumChildren)).
+
+  Lemma dropSame name m n x k v:
+    (x <= n)%nat ->
+    (liftToMap1
+       (dropN name n)
+       (M.add (addIndexToStr string_of_nat x name)%string (existT _ k v) m)) = m.
+  Proof.
+    admit.
+  Admitted.
+
+  Ltac dropS := unfold dropFirstElts;
+      rewrite dropSame; auto.
+
+  Ltac helpNormalNoRm :=
+    autorewrite with invariant in *;
+    unfold isCWait, isPWait in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+  
+  Ltac metaLine :=
+    intros HDir HInd HLine HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; repeat split; subst; simpl; unfold VectorFacts.Vector_find; simpl; try dropS;
+    intros a0 c ccond;
+    destruct (HInd a0 _ _ ccond eq_refl);
+    destruct (HLine a0 _ ccond);
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+      simplMapUpds helpNormal.
+  
+  Lemma line_inv_hold_1 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    l1MissByState metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_2 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    l1MissByLine metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_3 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    l1Hit metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_5 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    upgRq metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_9 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    drop metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+    clear - inRsFromPToC H1; intros.
+    destruct (weq a0 (y F2)); intros.
+    - specialize (inRsFromPToC _ (or_intror H) H0 i).
+      assumption.
+    - apply inRsFromPToC; assumption.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_4 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    writeback metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+    - intros.
+      rewrite_getCs.
+      + word_omega.
+      + unfold getCs in H.
+        destruct (weq (tagv0 (split1 IdxBits TagBits a0)) (split2 IdxBits TagBits a0)); [tauto| try word_omega].
+      + apply cs_is_ge_s; auto.
+    - intros.
+      rewrite app_or in H.
+      destruct H; [eapply inRsFromCToP; eauto|].
+      match type of H with
+        | context[if ?p then _ else _] => destruct p as [hard|?]; [| exfalso; assumption]
+      end.
+      apply in_single in H.
+      rewrite H.
+      clear H.
+      clear - cs_is_ge_s H7 hard.
+      subst.
+      remember (split1 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits) (procRq F1))) as sth.
+      clear Heqsth.
+      rewrite split1_combine in cs_is_ge_s.
+      apply cs_is_ge_s.
+      unfold getCs.
+      rewrite split1_combine, split2_combine.
+      rewrite eq_weq.
+      word_omega.
+    - assert (use: csv0 (split1 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits) (procRq F1))) = WO~0~0) by word_omega.
+      intros.
+      rewrite_getCs.
+      + word_omega.
+      + apply cs_is_ge_s; auto.
+      + apply cs_is_ge_s; auto.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_6 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    upgRs metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+(* SKIP_PROOF_ON
+    metaLine.
+    - intros.
+      rewrite_getCs.
+      + rewrite eq_weq.
+        specialize (inRsFromPToC _ (or_introl eq_refl) H1 i); assumption.
+      + match goal with
+          | |- context[if ?p then _ else _] => destruct p as [isEq |?]; [rewrite <- isEq in *|]
+        end.
+        * rewrite getCs_cs in H by tauto.
+          word_omega.
+        * apply cs_is_ge_s; assumption.
+    - intros.
+      clear - inRsFromPToC rs H H0 i.
+      destruct (weq a0 (y F2)).
+      + specialize (inRsFromPToC _ (or_intror H) H0 i); assumption.
+      + specialize (inRsFromPToC _ H H0 i); assumption.
+    - intros.
+      rewrite H11 in *.
+      specialize (i27b eq_refl eq_refl).
+      rewrite getCs_tag in H by (apply i27b).
+      destruct (weq a0 (split2 LgNumDatas (IdxBits + TagBits) (procRq F1))).
+      + rewrite <- e in *.
+        destruct i27b; [ | tauto].
+        rewrite getCs_cs in cs_is_ge_s by tauto.
+        apply cs_is_ge_s; (assumption || word_omega).
+      + apply cs_is_ge_s; assumption.
+    - intros. 
+      intros.
+      clear - inRsFromPToC rs H H0 i.
+      destruct (weq a0 (y F2)).
+      + specialize (inRsFromPToC _ (or_intror H) H0 i); assumption.
+      + specialize (inRsFromPToC _ H H0 i); assumption.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_10 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    pProcess metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+    - intros.
+      simpl.
+      rewrite getCs_tag_match_getCs in * by (apply H7).
+      destruct (weq a0 (y F2)); [subst|].
+      + rewrite getCs_cs in * by tauto.
+        apply cs_is_ge_s.
+        word_omega.
+      + apply cs_is_ge_s; assumption.
+    - intros.
+      apply app_or in H; destruct H as [ez | hard]; [eapply inRsFromCToP; eassumption |].
+      destruct (weq a0 (y F2)); [apply in_single in hard; subst| simpl in hard; exfalso; assumption].
+      apply cs_is_ge_s.
+      rewrite getCs_cs by tauto.
+      word_omega.
+    - destruct (weq a0 (y F2)); [|assumption].
+      intros.
+      specialize (inRsFromPToC _ (or_intror H) H0 i).
+      assumption.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_xfer_1 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    rqFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_xfer_2 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    rsFromCToPRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+    - xfer inRsFromCToP a0 (y F1).
+    - xfer inRsFromCToP a0 y.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_xfer_3 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    fromPToCRule metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    metaLine.
+    - xfer2 inRsFromPToC a0 y.
+    - xfer3 inRsFromPToC y.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+
+  Ltac normalLine :=
+    intros HDir HInd HLine HInRule HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; repeat split; subst; simpl; unfold VectorFacts.Vector_find; simpl; try dropS;
+    intros a0 c ccond;
+    destruct (HInd a0 _ _ ccond eq_refl);
+    destruct (HLine a0 _ ccond);
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+      simplMapUpds helpNormal.
+  
+
+  Lemma line_inv_hold_01 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    missByState is a ->
+    SemAction s a
+              u cs WO ->
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    normalLine.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma line_inv_hold_02 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    dwnRq is a ->
+    SemAction s a
+              u cs WO ->
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    normalLine.
+    intros.
+    match type of H with
+      | context[if ?p then (if ?q then _ else _) else _] => destruct p; destruct q; try solve [eapply inRsFromPToC; eassumption]
+    end.
+    rewrite app_or in H; destruct H as [ez | hard]; [eapply inRsFromPToC; eassumption|].
+    apply in_single in hard; rewrite hard in *; clear hard; simpl in *.
+    discriminate.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Ltac normalLineNoRm :=
+    intros HDir HInd HLine HInRule HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    unfold getActionFromSin, getSinAction at 1 in HInRule;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    subst; unfold getActionFromSin, getSinAction in *; subst;
+    SymEval; repeat split; subst; simpl; unfold VectorFacts.Vector_find; simpl; try dropS;
+    intros a0 c ccond;
+    destruct (HInd a0 _ _ ccond eq_refl);
+    destruct (HLine a0 _ ccond);
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+      simplMapUpds helpNormalNoRm.
+  
+
+  
+  Lemma line_inv_hold_03 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    dwnRs_noWait is a ->
+    SemAction s a
+              u cs WO ->
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    normalLineNoRm; try destruct_cache; try destruct_addr; intros.
+    - specialize (inRsFromCToP _ (or_intror H0) i); assumption.
+    - specialize (inRsFromCToP _ (or_introl eq_refl) i); assumption.
+    - unfold line_inv in HLine.
+      specialize (HLine (y F2 F1) (wordToNat (y F1))).
+      specialize (HLine (wordToNat_wones _)).
+      destruct HLine.
+      rewrite natToWord_wordToNat in *.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in inRsFromCToP0.
+      simpl in inRsFromCToP0.
+      specialize (inRsFromCToP0 _ (or_introl eq_refl)).
+      apply inRsFromCToP0; assumption.
+    - specialize (inRsFromCToP _ (or_intror H0) i).
+      apply inRsFromCToP; assumption.
+    - specialize (inRsFromCToP _ (or_introl eq_refl) i).
+      specialize (i7 _ (or_introl eq_refl)).
+      destruct i7 as [u1 u2].
+      destruct (wlt_dec (dir0 (y F2 F1) (y F1)) (WO~1~1)).
+      + apply inMem.
+        intros.
+        specialize (H0 cw).
+        destruct (weq cw (y F1)).
+        * subst; assumption.
+        * assumption.
+      + clear - n H3.
+        exfalso.
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
+        simpl in H.
+        Omega.omega.
+    - specialize (HLine (y F2 F1) (wordToNat (y F1))).
+      specialize (HLine (wordToNat_wones _)).
+      destruct HLine.
+      rewrite natToWord_wordToNat in *.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in inRsFromCToP0.
+      simpl in inRsFromCToP0.
+      specialize (inRsFromCToP0 _ (or_introl eq_refl) i).
+      unfold nmemCache_invariants in HInd.
+      specialize (HInd (y F2 F1) (y F1) (wordToNat (y F1))).
+      specialize (HInd (wordToNat_wones _)).
+      rewrite natToWord_wordToNat in HInd.
+      specialize (HInd eq_refl).
+      destruct HInd.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in i1.
+      simpl in i1.
+      specialize (i1 _ (or_introl eq_refl)).
+      destruct i1 as [u1 u2].
+      clear - u1 u2 H inMem inRsFromCToP0 H3.
+      destruct (wlt_dec (dir0 (y F2 F1) (y F1)) (WO~1~1)).
+      + apply inMem.
+        intros.
+        specialize (H cw).
+        destruct (weq cw (y F1)).
+        * subst; assumption.
+        * assumption.
+      + clear - n H3.
+        exfalso.
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
+        simpl in H.
+        Omega.omega.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+  
+
+  Lemma line_inv_hold_04 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    dwnRs_wait is a ->
+    SemAction s a
+              u cs WO ->
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    normalLineNoRm; try destruct_cache; try destruct_addr; intros.
+    - specialize (inRsFromCToP _ (or_intror H0) i); assumption.
+    - specialize (inRsFromCToP _ (or_introl eq_refl) i); assumption.
+    - unfold line_inv in HLine.
+      specialize (HLine (y F2 F1) (wordToNat (y F1))).
+      specialize (HLine (wordToNat_wones _)).
+      destruct HLine.
+      rewrite natToWord_wordToNat in *.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in inRsFromCToP0.
+      simpl in inRsFromCToP0.
+      specialize (inRsFromCToP0 _ (or_introl eq_refl)).
+      apply inRsFromCToP0; assumption.
+    - specialize (inRsFromCToP _ (or_intror H0) i).
+      apply inRsFromCToP; assumption.
+    - specialize (inRsFromCToP _ (or_introl eq_refl) i).
+      specialize (i7 _ (or_introl eq_refl)).
+      destruct i7 as [u1 u2].
+      destruct (wlt_dec (dir0 (y F2 F1) (y F1)) (WO~1~1)).
+      + apply inMem.
+        intros.
+        specialize (H0 cw).
+        destruct (weq cw (y F1)).
+        * subst; assumption.
+        * assumption.
+      + clear - n H3.
+        exfalso.
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
+        simpl in H.
+        Omega.omega.
+    - specialize (HLine (y F2 F1) (wordToNat (y F1))).
+      specialize (HLine (wordToNat_wones _)).
+      destruct HLine.
+      rewrite natToWord_wordToNat in *.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in inRsFromCToP0.
+      simpl in inRsFromCToP0.
+      specialize (inRsFromCToP0 _ (or_introl eq_refl) i).
+      unfold nmemCache_invariants in HInd.
+      specialize (HInd (y F2 F1) (y F1) (wordToNat (y F1))).
+      specialize (HInd (wordToNat_wones _)).
+      rewrite natToWord_wordToNat in HInd.
+      specialize (HInd eq_refl).
+      destruct HInd.
+      repeat substFind.
+      unfold rsFromCToP in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      rewrite ?eq_weq in i1.
+      simpl in i1.
+      specialize (i1 _ (or_introl eq_refl)).
+      destruct i1 as [u1 u2].
+      clear - u1 u2 H inMem inRsFromCToP0 H3.
+      destruct (wlt_dec (dir0 (y F2 F1) (y F1)) (WO~1~1)).
+      + apply inMem.
+        intros.
+        specialize (H cw).
+        destruct (weq cw (y F1)).
+        * subst; assumption.
+        * assumption.
+      + clear - n H3.
+        exfalso.
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
+        simpl in H.
+        Omega.omega.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+  
+  Lemma line_inv_hold_05 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    deferred is a ->
+    SemAction s a
+              u cs WO ->
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+  Proof.
+    (* SKIP_PROOF_ON
+    normalLineNoRm.
+    - destruct_cache; destruct_addr; intros.
+      rewrite app_or in H1.
+      destruct H1 as [ez | hard].
+      + eapply inRsFromPToC; eassumption.
+      + apply in_single in hard; subst.
+        apply inMem.
+        unfold dirCompat_inv in HDir.
+        intros.
+        specialize (HDir (y F2 F1) (y F1) (wordToNat (y F1)) (wordToNat_wones _)).
+        rewrite natToWord_wordToNat in HDir.
+        specialize (HDir eq_refl cw (wordToNat cw) (wordToNat_wones _)).
+        rewrite natToWord_wordToNat in HDir.
+        specialize (HDir eq_refl).
+        destruct HDir.
+        autounfold with NameDefs in *; unfold withIndex, withPrefix, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+        repeat substFind.
+        specialize (i25 _ (or_introl eq_refl)).
+        clear - i25 isDirCompat H4 H5.
+        destruct (weq (y F1) cw).
+        * subst.
+          clear isDirCompat.
+          pre_word_omega.
+          pose proof (wordToNat_bound (y F2 F3)).
+          simpl in H.
+          Omega.omega.
+        * specialize (isDirCompat n).
+          apply (@compatPair_sem _ _ _ _ (neq_sym n)) in H5.
+          simpl in H5.
+          repeat match goal with
+                   | H: context[ if ?p then _ else _] |- _ => destruct p
+                 end; try word_omega.
+          pre_word_omega.
+          pose proof (wordToNat_bound (dir0 (y F2 F1) cw)).
+          simpl in H.
+          Omega.omega.
+    - destruct_addr; intros.
+      apply inMem.
+      unfold dirCompat_inv in HDir.
+      intros.
+      specialize (HDir (y F2 F1) (y F1) (wordToNat (y F1)) (wordToNat_wones _)).
+      rewrite natToWord_wordToNat in HDir.
+      specialize (HDir eq_refl cw (wordToNat cw) (wordToNat_wones _)).
+      rewrite natToWord_wordToNat in HDir.
+      specialize (HDir eq_refl).
+      destruct HDir.
+      specialize (HInd (y F2 F1) (y F1) (wordToNat (y F1)) (wordToNat_wones _)).
+      rewrite natToWord_wordToNat in HInd.
+      specialize (HInd eq_refl).
+      destruct HInd.
+      autounfold with NameDefs in *; unfold withIndex, withPrefix, prefixSymbol in *;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      repeat substFind.
+      unfold rqFromCToP in i43; simpl in i43; unfold Lib.VectorFacts.Vector_find in i43; simpl in i43; rewrite ?eq_weq in i43.
+      specialize (i43 _ (or_introl eq_refl)).
+      clear - i43 isDirCompat H4 H5.
+      destruct (weq (y F1) cw).
+      * subst.
+        clear isDirCompat.
+        pre_word_omega.
+        pose proof (wordToNat_bound (y F2 F3)).
+        simpl in H.
+        Omega.omega.
+      * specialize (isDirCompat n).
+        apply (@compatPair_sem _ _ _ _ (neq_sym n)) in H5.
+        simpl in H5.
+        repeat match goal with
+                 | H: context[ if ?p then _ else _] |- _ => destruct p
+               end; try word_omega.
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir0 (y F2 F1) cw)).
+        simpl in H.
+        Omega.omega.
+END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Lemma invRepRuleSpec n a1 name1 pf1 a2 name2 pf2:
+    RepRule string_of_nat string_of_nat_into
+            (natToVoid) withIndex_index_eq a1
+            {| nameVal := name1;
+               goodName := pf1 |}
+            (getNatListToN_NoDup (wordToNat (wones n))) =
+    RepRule string_of_nat string_of_nat_into
+            (natToVoid) withIndex_index_eq a2
+            {| nameVal := name2;
+               goodName := pf2 |}
+            (getNatListToN_NoDup (wordToNat (wones n))) ->
+    a1 = a2.
+  Proof.
+    intros.
+    inv H.
+    clear - H1.
+    apply Eqdep.EqdepTheory.inj_pair2 in H1.
+    apply H1.
+  Qed.
+
+  Lemma dropDiff name name' m n x k v:
+    name <> name' ->
+    (x <= n)%nat ->
+    liftToMap1
+       (dropN name n)
+       (M.add (addIndexToStr string_of_nat x name')%string (existT _ k v) m) =
+    M.add (addIndexToStr string_of_nat x name')%string (existT _ k v) (liftToMap1 (dropN name n) m).
+  Proof.
+    admit.
+  Admitted.
+
+  Lemma dropEmpty name n:
+    liftToMap1 (dropN name n) (M.empty _) = M.empty _.
+  Proof.
+    admit.
+  Admitted.
+  
+  Ltac dropD := unfold dropFirstElts;
+      simpl;
+      rewrite ?dropDiff, ?dropEmpty; auto.
+  
+  Local Notation "n 'metaIsSpec' a" :=
+    (getMetaRules n
+                  (metaRules (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
+                                               DataBytes (wordToNat (wones LgNumChildren))
+                                               eq_refl eq_refl))
+     = Some (RepRule string_of_nat string_of_nat_into
+                     natToVoid withIndex_index_eq a
+                     {| nameVal := n;
+                        goodName := eq_refl |}
+                     (getNatListToN_NoDup (wordToNat (wones LgNumChildren))))) (at level 0).
+  
+  Lemma line_inv_hold_7 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    ld metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      line_inv (M.union u s) mem /\
+      exists aspec,
+        "processLd" metaIsSpec aspec /\
+        SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) (M.empty _) (liftToMap1 dropFirstElts cs) WO.
+  Proof.
+    intros HDir HInd HLine HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    subst; unfold getActionFromSin, getSinAction in *; subst.
+    SymEval; repeat split; subst; simpl; unfold VectorFacts.Vector_find; simpl.
+    intros a0 c ccond;
+    destruct (HInd a0 _ _ ccond eq_refl);
+    destruct (HLine a0 _ ccond);
+    unfold withIndex in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    repeat substFind; dest;
+    repeat simplBool;
+    elimDiffC c;
+    try match goal with
+          | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+        end;
+    invariant_simpl;
+    simplMapUpds helpNormalNoRm.
+    exists (fun ty => processLdInlGen rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits)) DataBytes eq_refl eq_refl ty).
+    split; [reflexivity|].
+    dropD.
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+    destruct (HLine (split2 LgNumDatas (IdxBits + TagBits) (mret F1)) x xcond).
+    kinv_constr; kinv_eq.
+    - autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *.
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      repeat substFind.
+      assert (csv (split1 IdxBits TagBits (split2 LgNumDatas (IdxBits + TagBits) (mret F1))) >= WO~0~1) by word_omega.
+      rewrite getCs_cs in * by tauto.
+      specialize (cs_is_ge_s H0).
+      specialize (cs_is_ge_s (split1 LgNumDatas _ (mret F1))).
+      rewrite Word.combine_split in cs_is_ge_s.
+      apply eq_sym in cs_is_ge_s.
+      apply cs_is_ge_s.
+    - simpl.
+      unfold negb.
+      destruct (mret F2); auto.
+    - assumption.
+  Qed.
+
+  Lemma natToWord_neq sz c x:
+    (c <= wordToNat (wones sz))%nat ->
+    (x <= wordToNat (wones sz))%nat ->
+    c <> x -> @natToWord sz c <> $ x.
+  Proof.
+    intros.
+    intro.
+    pose proof (@wordToNat_bound sz ($ c)).
+    pose proof (@wordToNat_bound sz ($ x)).
+    rewrite wones_pow2_minus_one in H, H0.
+    pose proof (pow2_zero sz).
+    assert (c < pow2 sz)%nat by Omega.omega.
+    assert (x < pow2 sz)%nat by Omega.omega.
+    pre_word_omega.
+    rewrite ?wordToNat_natToWord_2 in H2 by assumption.
+    tauto.
+  Qed.
+  
+  Lemma line_inv_hold_8 s mem a u cs:
+    dirCompat_inv s ->
+    nmemCache_invariants s ->
+    line_inv s mem ->
+    st metaIs a ->
+    forall x: cache,
+      (x <= wordToNat (wones LgNumChildren))%nat ->
+      SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
+                u cs WO ->
+      exists aspec,
+        "processSt" metaIsSpec aspec /\
+        exists uspec,
+          line_inv (M.union u s) (M.union uspec mem) /\
+          SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) uspec (liftToMap1 dropFirstElts cs) WO.
+  Proof.
+    intros HDir HInd HLine HInRule x xcond HS;
+    simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
+    apply invSome in HInRule;
+    apply invRepRule in HInRule;
+    rewrite <- HInRule in HS; clear HInRule;
+    unfold getActionFromGen, getGenAction, strFromName in *;
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+    subst; unfold getActionFromSin, getSinAction in *; subst.
+    SymEval; repeat split; subst; simpl; unfold VectorFacts.Vector_find; simpl.
+    eexists; split; [reflexivity|].
+    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+    destruct (HLine (split2 _ _ (mret F1)) _ xcond).
+    exists (M.add "mem"%string (existT (fun k => fullType type k)
+                                       (SyntaxKind (Vector (Data DataBytes) (LgNumDatas + (IdxBits + TagBits))))
+                                       (fun x => if weq x (mret F1)
+                                                 then  mret F3
+                                                 else m x)) mem).
+    split.
+    - intros a0 c ccond.
+      destruct (HLine a0 _ ccond);
+        autounfold with NameDefs in *;
+        unfold withIndex, withPrefix, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+        repeat substFind; dest;
+        repeat simplBool;
+        elimDiffC c;
+        try match goal with
+              | [ x : cache, c : cache |- _ ] => destruct (eq_nat_dec c x)
+            end;
+        invariant_simpl;
+            (try esplit);
+            unfold withIndex;
+            match goal with
+              | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t)
+                                                  (addIndexToStr _ ?c ?k) ?m = Some _ =>
+                let mr := mapVR_Others t total m in
+                rewrite <- (findMVR_find_var mr k eq_refl cond)
+              | cond: (_ <= ?total)%nat |- M.find (elt := sigT ?t) ?k ?m = Some _ =>
+                let mr := mapVR_Others t total m in
+                rewrite <- (findMVR_find_string mr k eq_refl)
+              | _ => idtac
+            end; simpl; unfold VectorFacts.Vector_find; simpl;
+            match goal with
+              | |- context [eq_nat_dec ?x1 ?x2] =>
+                destruct (eq_nat_dec x1 x2); (exfalso; tauto)
+              | |- context [eq_nat_dec ?x1 ?x2] =>
+                let isEq := fresh in
+                destruct (eq_nat_dec x1 x2) as [isEq | isEq]; try (exfalso; congruence); [ clear isEq ]
+              | _ => idtac
+            end; try findReify; try (reflexivity || eassumption); intros.
+      + simpl.
+        repeat match goal with
+                 | |- context [if ?p then _ else _] => destruct p
+               end; try reflexivity.
+        * apply (f_equal (split1 _ _)) in e.
+          rewrite split1_combine in e.
+          tauto.
+        * apply (f_equal (split2 LgNumDatas (IdxBits + TagBits))) in e.
+          rewrite <- e in *.
+          rewrite split2_combine in n.
+          tauto.
+        * clear - H6 n e e0 H0 H8.
+          unfold getCs in H0.
+          { destruct (weq (tagv0 (split1 IdxBits TagBits a0)) (split2 IdxBits TagBits a0)); subst.
+            - rewrite <- e in H6.
+              rewrite e1 in H6.
+              rewrite <- (Word.combine_split IdxBits TagBits a0) in n.
+              rewrite H6, e in n.
+              rewrite ?Word.combine_split in n.
+              tauto.
+            - word_omega.
+          }
+        * rewrite <- e.
+          apply cs_is_ge_s0; assumption.
+        * apply cs_is_ge_s0; assumption.
+      + simpl.
+        { destruct (weq (Word.combine i a0) (mret F1)).
+          - destruct (HInd a0 ($ x) x xcond eq_refl).
+            autounfold with NameDefs in *; unfold withIndex, withPrefix, prefixSymbol in *.
+            simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+            repeat substFind.
+            specialize (i7 _ H0).
+            destruct i7 as [u1 u2].
+            apply (f_equal (split2 LgNumDatas _)) in e.
+            rewrite split2_combine in e.
+            rewrite <- e in *.
+            rewrite getCs_cs in u1 by tauto.
+            rewrite H8 in u1.
+            clear - u1 u2.
+            exfalso.
+            remember (rs F2) as sth; clear Heqsth.
+            clear - u1 u2.
+            pre_word_omega.
+            pose proof (wordToNat_bound sth).
+            simpl in H.
+            pose proof (wordToNat_bound (dir a0 ($ x))).
+            simpl in H0.
+            Omega.omega.
+          - eapply inRsFromCToP0; eassumption.
+        }
+      + simpl.
+        { destruct (weq (Word.combine i a0) (mret F1)).
+          - destruct (HInd a0 ($ x) x xcond eq_refl).
+            autounfold with NameDefs in *; unfold withIndex, withPrefix, prefixSymbol in *.
+            simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+            repeat substFind.
+            specialize (i8 _ H0 H2).
+            destruct i8 as [u1 u2].
+            apply (f_equal (split2 LgNumDatas _)) in e.
+            rewrite split2_combine in e.
+            rewrite <- e in *.
+            rewrite getCs_cs in u1 by tauto.
+            rewrite H8 in u1.
+            clear - u1 u2.
+            exfalso.
+            remember (rs F3) as sth; clear Heqsth.
+            clear - u1 u2.
+            pre_word_omega.
+            pose proof (wordToNat_bound sth).
+            simpl in H.
+            pose proof (wordToNat_bound (dir a0 ($ x))).
+            simpl in H0.
+            Omega.omega.
+          - eapply inRsFromPToC0; eassumption.
+        }
+      + simpl.
+        destruct (weq (Word.combine i a0) (mret F1)).
+        * destruct (HInd a0 ($ x) x xcond eq_refl).
+          autounfold with NameDefs in *; unfold withIndex, withPrefix, prefixSymbol in *.
+          simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+          repeat substFind.
+          clear - i5 H6 H0 H8 e.
+          pose proof (f_equal (split2 LgNumDatas (IdxBits + TagBits)) e).
+          rewrite split2_combine in H.
+          rewrite <- H in *.
+          specialize (H0 ($ x)).
+          rewrite getCs_cs in i5 by tauto.
+          word_omega.
+        * apply inMem0; assumption.
+      + simpl.
+        destruct (weq (Word.combine i a0) (mret F1)); [| eapply cs_is_ge_s0; eassumption].
+        pose proof (cacheCompat_inv_holds HDir HInd).
+        specialize (H2 a0 ($ c) c ccond eq_refl ($ x) x xcond eq_refl csv0 csv).
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+        specialize (H2 csFind0 csFind).
+        specialize (H2 tagv0 tagFind0 tagv tagFind).
+        destruct H2.
+        specialize (isCacheCompat0 (natToWord_neq ccond xcond n)).
+        pose proof (f_equal (split2 LgNumDatas (IdxBits + TagBits)) e) as sth.
+        rewrite split2_combine in sth.
+        rewrite <- sth in *.
+        rewrite <- getCs_cs with (tag := tagv) in H8 by tauto.
+        clear - H8 H0 isCacheCompat0.
+        rewrite H8 in isCacheCompat0.
+        simpl in *.
+        word_omega.
+      + simpl.
+        destruct (weq (Word.combine i a0) (mret F1)); [| eapply inRsFromCToP0; eassumption].
+        specialize (HDir a0 ($ c) c ccond eq_refl ($ x) x xcond eq_refl).
+        destruct HDir.
+        specialize (isDirCompat (natToWord_neq ccond xcond n)).
+        destruct (HInd a0 ($ c) c ccond eq_refl).
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.        
+        repeat substFind.
+        unfold rsFromCToP in i7; simpl in i7; unfold Lib.VectorFacts.Vector_find in i7; simpl in i7; rewrite ?eq_weq in i7.
+        specialize (i7 _ H0).
+        destruct i7 as [u1 u2].
+        destruct (HInd a0 ($ x) x xcond eq_refl).
+        pose proof (f_equal (split2 LgNumDatas (IdxBits + TagBits)) e) as sth.
+        rewrite split2_combine in sth.
+        rewrite <- sth in *.
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.        
+        repeat substFind.
+        clear - i0 i5 u2 isDirCompat H8 H6.
+        rewrite <- getCs_cs with (tag := tagv0) in H8 by tauto.
+        assert (sth2: dir0 a0 ($ x) = WO~1~1).
+        { pre_word_omega.
+          pose proof (wordToNat_bound (dir0 a0 ($ x))).
+          simpl in H.
+          word_omega.
+        }
+        rewrite sth2 in isDirCompat.
+        simpl in isDirCompat.
+        word_omega.
+      + simpl.
+        destruct (weq (Word.combine i a0) (mret F1)); [| eapply inRsFromPToC0; eassumption].
+        specialize (HDir a0 ($ c) c ccond eq_refl ($ x) x xcond eq_refl).
+        destruct HDir.
+        specialize (isDirCompat (natToWord_neq ccond xcond n)).
+        destruct (HInd a0 ($ c) c ccond eq_refl).
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.        
+        repeat substFind.
+        unfold fromPToC in i8; simpl in i8; unfold Lib.VectorFacts.Vector_find in i8; simpl in i8; rewrite ?eq_weq in i8.
+        specialize (i8 _ H0 H2).
+        destruct i8 as [u1 u2].
+        destruct (HInd a0 ($ x) x xcond eq_refl).
+        pose proof (f_equal (split2 LgNumDatas (IdxBits + TagBits)) e) as sth.
+        rewrite split2_combine in sth.
+        rewrite <- sth in *.
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+        repeat substFind.
+        clear - i0 i5 u1 u2 isDirCompat H8 H6.
+        rewrite <- getCs_cs with (tag := tagv0) in H8 by tauto.
+        assert (sth2: dir0 a0 ($ x) = WO~1~1).
+        { pre_word_omega.
+          pose proof (wordToNat_bound (dir0 a0 ($ x))).
+          simpl in H.
+          word_omega.
+        }
+        rewrite sth2 in isDirCompat.
+        simpl in isDirCompat.
+        word_omega.
+      + simpl.
+        destruct (weq (Word.combine i a0) (mret F1)); [| eapply inMem0; eassumption].
+        destruct (HInd a0 ($ x) x xcond eq_refl).
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.        
+        pose proof (f_equal (split2 LgNumDatas (IdxBits + TagBits)) e) as sth.
+        rewrite split2_combine in sth.
+        rewrite <- sth in *.
+        autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+        simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+        repeat substFind.
+        clear - i5 H6 H8 H0.
+        rewrite <- getCs_cs with (tag := tagv1) in H8 by tauto.
+        specialize (H0 ($ x)).
+        pre_word_omega.
+        pose proof (wordToNat_bound (dir a0 ($ x))).
+        simpl in H.
+        Omega.omega.
+    - Local Notation something := (fun i: Fin.t _ => _).
+      dropD.
+      autounfold with NameDefs in *; unfold withPrefix, withIndex, prefixSymbol in *;
+      simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *.
+      kinv_constr; kinv_eq; simpl.
+      + instantiate (1 := M.empty _).
+        admit.
+      + admit.
+      + assumption.
+      + assumption.
+      + admit.
+      + findReify.
+        reflexivity.
+      + admit.
+  Admitted.
 End MemCacheInl.

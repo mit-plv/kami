@@ -189,11 +189,11 @@ Section L1Cache.
           Assert #cs >= $ Sh;
           Call line <- lineRead(#idx);
           Write procRqValidReg <- $$ false;
+          Call rq' <- rqFromProcPop();
           Call rsToProcEnq(STRUCT {
                                data ::= #line@[getOffset #rq!RqFromProc@.addr]
                                (* id ::= #rq@.id *)
                           });
-          Call rq' <- rqFromProcPop();
           Assert #rq == #rq';
           Retv
 
@@ -212,12 +212,12 @@ Section L1Cache.
           Call line <- lineRead(#idx);
           Write procRqValidReg <- $$ false;
           LET offset <- getOffset #rq!RqFromProc@.addr;
+          Call rq' <- rqFromProcPop();
           Call rsToProcEnq(STRUCT {
                                data ::= $$Default
                                (* id ::= #rq@.id *)
                           });
           Call lineWrite(STRUCT{addr ::= #idx; data ::= #line@[#offset <- #rq!RqFromProc@.data]});
-          Call rq' <- rqFromProcPop();
           Assert #rq == #rq';
           Retv
 

@@ -183,7 +183,7 @@ Section GivenLabelMap.
     
     Section ThetaRel.
       Variable thetaR: RegsT -> RegsT -> Prop.
-      Variable ruleMap: RegsT -> string -> option string.
+(*      Variable ruleMap: RegsT -> string -> option string. *)
       Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
       Variable defsImpZero: getDefsBodies imp = nil.
       Variable defsSpecZero: getDefsBodies spec = nil.
@@ -194,15 +194,15 @@ Section GivenLabelMap.
           Substep imp oImp uImp (Rle (Some rule)) csImp ->
           forall oSpec,
             thetaR oImp oSpec ->
-            exists uSpec,
-              Substep spec oSpec uSpec (Rle (ruleMap oImp rule)) (liftToMap1 p csImp) /\
+            exists uSpec rl,
+              Substep spec oSpec uSpec (Rle rl) (liftToMap1 p csImp) /\
               thetaR (M.union uImp oImp) (M.union uSpec oSpec).
 
-      Definition xformLabelZeroR o l :=
+      Definition xformLabelZeroR l rl :=
         match l with
         | {| annot := a; defs := dfs; calls := clls |} =>
           {| annot := match a with
-                      | Some (Some r) => Some (ruleMap o r)
+                      | Some (Some r) => Some rl 
                       | Some None => Some None
                       | None => None
                       end;
@@ -214,8 +214,8 @@ Section GivenLabelMap.
         forall o (reachO: reachable o imp)
                u l (s: Step imp o u l) oSpec,
           thetaR o oSpec ->
-          exists uSpec,
-            Step spec oSpec uSpec (xformLabelZeroR o l) /\
+          exists uSpec rl,
+            Step spec oSpec uSpec (xformLabelZeroR l rl) /\
             thetaR (M.union u o) (M.union uSpec oSpec).
       Proof.
         intros; apply step_zero in s; auto; dest.
@@ -224,12 +224,12 @@ Section GivenLabelMap.
         destruct ann as [[r|]|].
 
         - pose proof (substepRuleMap reachO H1 H).
-          destruct H0 as [uSpec ?]; dest.
-          exists uSpec; split.
+          destruct H0 as [uSpec [rl ?]]; dest.
+          exists uSpec, rl; split.
           + apply substepZero_imp_step in H0; auto.
           + auto.
 
-        - inv H1; exists (M.empty _); split.
+        - inv H1; exists (M.empty _), None; split.
           + match goal with
             | [ |- Step _ _ _ ?l ] =>
               change l with (getLabel (Rle None) (M.empty _))
@@ -238,7 +238,7 @@ Section GivenLabelMap.
             constructor.
           + mred; eauto.
 
-        - inv H1; exists (M.empty _); split.
+        - inv H1; exists (M.empty _), None; split.
           + match goal with
             | [ |- Step _ _ _ ?l ] =>
               change l with (getLabel (Meth None) (M.empty _))
@@ -270,7 +270,7 @@ Section GivenLabelMap.
             [|eexists; constructor; eauto].
           destruct HStep as [uSpec ?]; dest.
 
-          exists (M.union uSpec puSpec), (xformLabelZeroR n l :: pll).
+          exists (M.union uSpec puSpec), (xformLabelZeroR l x :: pll).
           repeat split; auto.
           + constructor; auto.
             unfold equivalentLabel, xformLabelZero; simpl.
