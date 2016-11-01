@@ -28,17 +28,18 @@ Section ProcDecSC.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignPc.
+                           getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
   Definition pinst := pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst exec getNextPc alignPc.
+                            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)

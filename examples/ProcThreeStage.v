@@ -245,7 +245,8 @@ Section ProcThreeStage.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -602,7 +603,8 @@ Section ProcThreeStage.
         Assert d2eOpType _ d2e == $$opLd;
         LET dst <- d2eDst _ d2e;
         Assert #dst != $0;
-        Call memReq(STRUCT { "addr" ::= d2eAddr _ d2e;
+        LET laddr <- d2eAddr _ d2e;
+        Call memReq(STRUCT { "addr" ::= alignAddr _ laddr;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
@@ -638,7 +640,8 @@ Section ProcThreeStage.
         Assert (#fEpoch == #eEpoch);
 
         Assert d2eOpType _ d2e == $$opSt;
-        Call memReq(STRUCT { "addr" ::= d2eAddr _ d2e;
+        LET saddr <- d2eAddr _ d2e;
+        Call memReq(STRUCT { "addr" ::= alignAddr _ saddr;
                              "op" ::= $$true;
                              "data" ::= d2eVal1 _ d2e });
         Write "stall" <- $$true;
@@ -777,6 +780,7 @@ Section ProcThreeStageM.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -826,7 +830,7 @@ Section ProcThreeStageM.
   Definition p3st := procThreeStage "rqFromProc"%string "rsToProc"%string
                                     getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                     getStAddr getStSrc calcStAddr getStVSrc
-                                    getSrc1 getSrc2 getDst exec getNextPc alignPc
+                                    getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
                                     d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                     d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                     e2wPack e2wDecInst e2wVal
@@ -855,6 +859,7 @@ Section Facts.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -930,8 +935,8 @@ Section Facts.
 
   Lemma decoder_ModEquiv:
     ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                            getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst alignPc
-                            d2ePack predictNextPc).
+                            getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
+                            alignPc d2ePack predictNextPc).
   Proof.
     kequiv.
   Qed.
@@ -952,7 +957,7 @@ Section Facts.
   
   Lemma wb_ModEquiv:
     forall inName outName,
-      ModPhoasWf (wb inName outName getNextPc
+      ModPhoasWf (wb inName outName getNextPc alignAddr
                      d2eOpType d2eDst d2eAddr d2eVal1
                      d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                      e2wDecInst e2wVal).
@@ -964,7 +969,7 @@ Section Facts.
   Lemma procThreeStage_ModEquiv:
     ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
+                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr predictNextPc
                      d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                      d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                      e2wPack e2wDecInst e2wVal).

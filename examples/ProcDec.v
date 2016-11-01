@@ -30,7 +30,8 @@ Section ProcDec.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -64,7 +65,7 @@ Section ProcDec.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call memReq(STRUCT { "addr" ::= #laddr;
+      Call memReq(STRUCT { "addr" ::= alignAddr _ laddr;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
@@ -96,7 +97,7 @@ Section ProcDec.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call memReq(STRUCT { "addr" ::= #saddr;
+      Call memReq(STRUCT { "addr" ::= alignAddr _ saddr;
                            "op" ::= $$true;
                            "data" ::= #stVal });
       Write "stall" <- $$true;
@@ -191,12 +192,13 @@ Section ProcDecM.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                              getStAddr getStSrc calcStAddr getStVSrc
-                             getSrc1 getSrc2 getDst exec getNextPc alignPc.
+                             getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
   Definition pdecs (i: nat) := duplicate pdec i.
 
   Definition pdecf := ConcatMod pdec (iom addrSize fifoSize dataBytes).
@@ -225,12 +227,13 @@ Section Facts.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Lemma pdec_ModEquiv:
     ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                      getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 getDst exec getNextPc alignPc).
+                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
   Proof.
     kequiv.
   Qed.
@@ -239,7 +242,7 @@ Section Facts.
   Lemma pdecf_ModEquiv:
     ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc alignPc).
+                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
   Proof.
     kequiv.
   Qed.
@@ -250,7 +253,7 @@ Section Facts.
   Lemma pdecfs_ModEquiv:
     ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc n).
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
   Proof.
     kequiv.
   Qed.
@@ -259,7 +262,7 @@ Section Facts.
   Lemma procDecM_ModEquiv:
     ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                          getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 getSrc2 getDst exec getNextPc alignPc n).
+                         getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
   Proof.
     kequiv.
   Qed.

@@ -98,6 +98,8 @@ Section DecExec.
                                    Expr ty (SyntaxKind (Bit addrSize)). (* next pc *)
   Definition AlignPcT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                     Expr ty (SyntaxKind (Bit iaddrSize)). (* aligned pc *)
+  Definition AlignAddrT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                                      Expr ty (SyntaxKind (Bit addrSize)). (* aligned addr *)
   
 End DecExec.
 
@@ -105,7 +107,7 @@ Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opTh opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
-     StateK StateE StateT ExecT NextPcT AlignPcT : MethDefs.
+     StateK StateE StateT ExecT NextPcT AlignPcT AlignAddrT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
@@ -162,7 +164,8 @@ Section ProcInst.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize dataBytes)) : Struct (RsToProc dataBytes).
   Definition toHostCm := MethodSig "toHost"(Data dataBytes) : Bit 0.
@@ -188,7 +191,7 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- execCm(STRUCT { "addr" ::= #laddr;
+      Call ldRep <- execCm(STRUCT { "addr" ::= alignAddr _ laddr;
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
       Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
@@ -216,7 +219,7 @@ Section ProcInst.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call execCm(STRUCT { "addr" ::= #saddr;
+      Call execCm(STRUCT { "addr" ::= alignAddr _ saddr;
                            "op" ::= $$true;
                            "data" ::= #stVal });
       nextPc ppc rf rawInst
@@ -282,13 +285,14 @@ Section SC.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Variable n: nat.
 
   Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
   Definition pinsts (i: nat): Modules := duplicate pinst i.
   Definition minst := memInst n addrSize dataBytes.
 
@@ -316,12 +320,13 @@ Section Facts.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Lemma pinst_ModEquiv:
     ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                       getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc alignPc).
+                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
   Proof.
     kequiv.
   Qed.
@@ -332,7 +337,7 @@ Section Facts.
   Lemma pinsts_ModEquiv:
     ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc n).
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
   Proof.
     kequiv.
   Qed.
@@ -348,7 +353,7 @@ Section Facts.
   Lemma sc_ModEquiv:
     ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                    getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 getSrc2 getDst exec getNextPc alignPc n).
+                   getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
   Proof.
     kequiv.
   Qed.

@@ -28,16 +28,17 @@ Section ProcDecSCN.
             (getDst: DstT dataBytes rfIdx)
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize).
+            (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize).
 
   Variable n: nat.
   
   Definition pdecN := procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc n.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
 
   Lemma pdecN_refines_scN: pdecN <<== scN.
   Proof. (* SKIP_PROOF_ON
@@ -52,7 +53,7 @@ Section ProcDecSCN.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc n.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
   Definition memAtomic := memAtomic addrSize fifoSize dataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

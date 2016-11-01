@@ -28,6 +28,7 @@ Section Invariants.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
+            (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Bit addrSize))).
 
@@ -102,7 +103,8 @@ Section Invariants.
 
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst exec getNextPc alignPc predictNextPc
+                                        getSrc1 getSrc2 getDst exec getNextPc
+                                        alignPc alignAddr predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                         e2wPack e2wDecInst e2wVal).
