@@ -1,4 +1,4 @@
-Require Import Bool List String.
+Require Import Bool List String Omega.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq Lib.ListSupport.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.ModularFacts Kami.Wf.
@@ -108,12 +108,28 @@ Section LabelDrop.
     apply string_eq_dec_eq in Heqsa; auto.
   Qed.
 
+  Lemma dropPs_None_inv: forall s v ds, In s ds -> dropPs ds s v = None.
+  Proof.
+    induction ds; simpl; intros; [inv H|].
+    destruct H; subst.
+    - rewrite string_eq_true; auto.
+    - destruct (string_eq s a); auto.
+  Qed.
+
   Lemma dropPs_Some: forall s v v' ds, dropPs ds s v = Some v' -> v = v' /\ ~ In s ds.
   Proof.
     induction ds; simpl; intros; [inv H; auto|].
     remember (string_eq s a) as sa; destruct sa; [inv H|].
     specialize (IHds H); dest; split; auto.
     apply string_eq_dec_neq in Heqsa; intuition.
+  Qed.
+
+  Lemma dropPs_Some_inv: forall s v ds, ~ In s ds -> dropPs ds s v = Some v.
+  Proof.
+    induction ds; simpl; intros; auto.
+    remember (string_eq s a) as sa; destruct sa; auto.
+    apply string_eq_dec_eq in Heqsa; subst.
+    intuition.
   Qed.
 
   Fixpoint duplicateElt (ds: string) (n: nat) :=
@@ -129,6 +145,25 @@ Section LabelDrop.
     induction n; simpl; intros.
     - destruct H; [|inv H]; subst; eexists; eauto.
     - destruct H; [subst; eexists; eauto|auto].
+  Qed.
+
+  Lemma duplicateElt_In_inv:
+    forall p x n, x <= n -> In (p __ x) (duplicateElt p n).
+  Proof.
+    induction n; simpl; intros.
+    - assert (x = 0) by omega; subst; intuition.
+    - inv H; intuition.
+  Qed.
+
+  Lemma duplicateElt_not_In:
+    forall p' p x n, p <> p' -> ~ In (p' __ x) (duplicateElt p n).
+  Proof.
+    induction n; simpl; intros.
+    - intro Hx; destruct Hx; auto.
+      apply withIndex_index_eq in H0; intuition.
+    - intro Hx; destruct Hx.
+      + apply withIndex_index_eq in H0; intuition.
+      + intuition.
   Qed.
 
   Lemma duplicateElt_DisjList:

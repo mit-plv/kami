@@ -529,8 +529,8 @@ Ltac kdecompose_nodefs t r :=
   |reflexivity (* "getDefsBodies _ = nil" conditions *)
   |].
  
-Ltac kdecomposeR_nodefs t r :=
-  apply decompositionZeroR with (thetaR:= t) (ruleMap:= r); intros; subst;
+Ltac kdecomposeR_nodefs t :=
+  apply decompositionZeroR with (thetaR:= t); intros; subst;
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
   [try kdecompose_regrel_init|]. (* should have only two subgoals at this time *)
 

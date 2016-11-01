@@ -7,14 +7,14 @@ if [[ "$PLATFORM" == 'Darwin' ]]; then
 fi
 
 if [ "$1" = "-r" ]; then
-	for file in */*.v;
+	for file in examples/*.v;
 	do
 		echo "Setting SKIP_PROOF_OFF in $file"
 		$SED -e 's/(\* SKIP_PROOF_ON/(\* SKIP_PROOF_OFF \*)/g' \
 			-e 's/END_SKIP_PROOF_ON \*) apply cheat\./(\* END_SKIP_PROOF_OFF \*)/g' "$file"
 	done
 else
-	for file in */*.v
+	for file in examples/*.v
 	do
 		echo "Setting SKIP_PROOF_ON in $file"
 		#grep "SKIP_PROOF" "$file" > /dev/null &&

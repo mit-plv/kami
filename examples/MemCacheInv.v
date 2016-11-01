@@ -3995,13 +3995,41 @@ END_SKIP_PROOF_ON *) apply cheat.
     (x <= n)%nat ->
     (liftToMap1
        (dropN name n)
-       (M.add (addIndexToStr string_of_nat x name)%string (existT _ k v) m)) = m.
+       (M.add (addIndexToStr string_of_nat x name) (existT _ k v) m)) =
+    (liftToMap1 (dropN name n) m).
   Proof.
-    admit.
-  Admitted.
+    intros; rewrite dropN_dropPs.
+    M.ext y.
+    rewrite 2! liftToMap1_find; mred.
+    - rewrite 2! dropPs_None_inv; auto; try (apply duplicateElt_In_inv; auto; fail).
+    - rewrite dropPs_None_inv; auto.
+      apply duplicateElt_In_inv; auto.
+  Qed.
 
-  Ltac dropS := unfold dropFirstElts;
-      rewrite dropSame; auto.
+  Lemma dropDiff name name' m n x k v:
+    name <> name' ->
+    (x <= n)%nat ->
+    liftToMap1
+      (dropN name n)
+      (M.add (addIndexToStr string_of_nat x name') (existT _ k v) m) =
+    M.add (addIndexToStr string_of_nat x name') (existT _ k v) (liftToMap1 (dropN name n) m).
+  Proof.
+    intros; rewrite dropN_dropPs.
+    M.ext y.
+    rewrite liftToMap1_find; mred.
+    - apply dropPs_Some_inv.
+      apply duplicateElt_not_In; auto.
+    - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
+    - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
+  Qed.
+
+  Lemma dropEmpty name n:
+    liftToMap1 (dropN name n) (M.empty _) = M.empty _.
+  Proof. reflexivity. Qed.
+
+  Ltac dropS :=
+    unfold dropFirstElts;
+    repeat (rewrite dropSame; auto || rewrite dropEmpty; auto).
 
   Ltac helpNormalNoRm :=
     autorewrite with invariant in *;
@@ -4045,7 +4073,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_2 s mem a u cs:
@@ -4061,7 +4089,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_3 s mem a u cs:
@@ -4077,7 +4105,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_5 s mem a u cs:
@@ -4093,7 +4121,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_9 s mem a u cs:
@@ -4114,7 +4142,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     - specialize (inRsFromPToC _ (or_intror H) H0 i).
       assumption.
     - apply inRsFromPToC; assumption.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_4 s mem a u cs:
@@ -4161,7 +4189,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       + word_omega.
       + apply cs_is_ge_s; auto.
       + apply cs_is_ge_s; auto.
-END_SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_6 s mem a u cs:
@@ -4175,7 +4203,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
   Proof.
-(* SKIP_PROOF_ON
+    (* SKIP_PROOF_ON
     metaLine.
     - intros.
       rewrite_getCs.
@@ -4208,7 +4236,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       destruct (weq a0 (y F2)).
       + specialize (inRsFromPToC _ (or_intror H) H0 i); assumption.
       + specialize (inRsFromPToC _ H H0 i); assumption.
-END_SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_10 s mem a u cs:
@@ -4242,7 +4270,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       intros.
       specialize (inRsFromPToC _ (or_intror H) H0 i).
       assumption.
-END_SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_1 s mem a u cs:
@@ -4258,7 +4286,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_2 s mem a u cs:
@@ -4276,7 +4304,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     metaLine.
     - xfer inRsFromCToP a0 (y F1).
     - xfer inRsFromCToP a0 y.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_3 s mem a u cs:
@@ -4294,7 +4322,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     metaLine.
     - xfer2 inRsFromPToC a0 y.
     - xfer3 inRsFromPToC y.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -4335,7 +4363,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof.
     (* SKIP_PROOF_ON
     normalLine.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_02 s mem a u cs:
@@ -4356,7 +4384,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     rewrite app_or in H; destruct H as [ez | hard]; [eapply inRsFromPToC; eassumption|].
     apply in_single in hard; rewrite hard in *; clear hard; simpl in *.
     discriminate.
-END_SKIP_PROOF_ON *) apply cheat.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac normalLineNoRm :=
@@ -4463,7 +4491,7 @@ END_SKIP_PROOF_ON *) apply cheat.
         pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
         simpl in H.
         Omega.omega.
-END_SKIP_PROOF_ON *) apply cheat.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -4544,7 +4572,7 @@ END_SKIP_PROOF_ON *) apply cheat.
         pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
         simpl in H.
         Omega.omega.
-END_SKIP_PROOF_ON *) apply cheat.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Lemma line_inv_hold_05 s mem a u cs:
@@ -4631,7 +4659,7 @@ END_SKIP_PROOF_ON *) apply cheat.
         pose proof (wordToNat_bound (dir0 (y F2 F1) cw)).
         simpl in H.
         Omega.omega.
-END_SKIP_PROOF_ON *) apply cheat.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma invRepRuleSpec n a1 name1 pf1 a2 name2 pf2:
@@ -4653,23 +4681,6 @@ END_SKIP_PROOF_ON *) apply cheat.
     apply Eqdep.EqdepTheory.inj_pair2 in H1.
     apply H1.
   Qed.
-
-  Lemma dropDiff name name' m n x k v:
-    name <> name' ->
-    (x <= n)%nat ->
-    liftToMap1
-       (dropN name n)
-       (M.add (addIndexToStr string_of_nat x name')%string (existT _ k v) m) =
-    M.add (addIndexToStr string_of_nat x name')%string (existT _ k v) (liftToMap1 (dropN name n) m).
-  Proof.
-    admit.
-  Admitted.
-
-  Lemma dropEmpty name n:
-    liftToMap1 (dropN name n) (M.empty _) = M.empty _.
-  Proof.
-    admit.
-  Admitted.
   
   Ltac dropD := unfold dropFirstElts;
       simpl;
@@ -5019,7 +5030,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       kinv_constr; kinv_eq; simpl.
       + assumption.
       + assumption.
-END_SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Record CacheAtomicRel impl spec : Prop :=
