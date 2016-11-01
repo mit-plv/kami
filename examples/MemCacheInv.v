@@ -3,7 +3,7 @@ Require Import Lib.FMap Lib.Word Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
         Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
-        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.MyLogic.
+        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.MyLogic Kami.Decomposition.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -1710,7 +1710,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     reflexivity.
   Qed.
       
-  Lemma nmemCache_invariants_hold_03 s a u cs:
+  Lemma nmemCache_invariants_hold_04 s a u cs:
     nmemCache_invariants s ->
     dwnRs_noWait is a ->
     SemAction s a
@@ -1941,7 +1941,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   
-  Lemma nmemCache_invariants_hold_04 s a u cs:
+  Lemma nmemCache_invariants_hold_03 s a u cs:
     nmemCache_invariants s ->
     dwnRs_wait is a ->
     SemAction s a
@@ -4386,7 +4386,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   
 
   
-  Lemma line_inv_hold_03 s mem a u cs:
+  Lemma line_inv_hold_04 s mem a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
     line_inv s mem ->
@@ -4467,7 +4467,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
-  Lemma line_inv_hold_04 s mem a u cs:
+  Lemma line_inv_hold_03 s mem a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
     line_inv s mem ->
@@ -5021,4 +5021,128 @@ END_SKIP_PROOF_ON *) apply cheat.
       + assumption.
 END_SKIP_PROOF_ON *) apply cheat.
   Qed.
+
+  Record CacheAtomicRel impl spec : Prop :=
+    { invHolds: nmemCache_invariants impl;
+      dirHolds: dirCompat_inv impl;
+      lineHolds: line_inv impl spec }.
+
+  Lemma In_metaRules:
+    forall k a m,
+      In (k :: a)%struct (getRules (modFromMeta m)) ->
+      exists r, match r with
+                  | OneRule bd rname => k = (nameVal rname) /\ a = getActionFromSin bd
+                  | RepRule A strA goodName1 GenK getConstK goodName2 bd rname ls noDup =>
+                    exists i, In i ls /\ k = addIndexToStr strA i (nameVal rname) /\
+                              a = getActionFromGen strA getConstK bd i
+                end /\ In r (metaRules m).
+  Proof.
+    intros.
+    destruct m; simpl in *.
+    induction metaRules; simpl in *.
+    - exfalso; auto.
+    - apply in_app_or in H.
+      destruct H.
+      + exists a0.
+        split.
+        * { destruct a0; simpl in *.
+            - destruct H; [| exfalso; auto]; simpl in *.
+              inversion H; auto.
+            - unfold repRule, getListFromRep in H.
+              apply in_map_iff in H.
+              dest;
+                eexists; inversion H; constructor; eauto.
+          }
+        * auto.
+      + apply IHmetaRules in H.
+        dest.
+        destruct x; dest; eexists; constructor; simpl in *; eauto; simpl in *; eauto.
+  Qed.
+
+  Ltac solveMetaEz cacheLemma dirLemma lineLemma :=
+    match goal with
+      | [ cacheInv: nmemCache_invariants ?impl ,
+                    dirInv: dirCompat_inv ?impl ,
+                            lineInv: line_inv ?impl ?spec ,
+                                     xcond: (?x <= wordToNat (wones LgNumChildren))%nat,
+                                            HAction: @SemAction ?impl _ _ _ _ _ |- _ ] =>
+        pose proof (@cacheLemma _ _ _ _ cacheInv eq_refl _ xcond HAction) as cacheHolds;
+        pose proof (@dirLemma _ _ _ _ dirInv cacheInv eq_refl _ xcond HAction) as dirHolds;
+        pose proof (@lineLemma _ _ _ _ _ dirInv cacheInv lineInv eq_refl _ xcond HAction) as [lineHolds csEmpty];
+        rewrite csEmpty; clear csEmpty;
+        exists (M.empty _), None;
+        split; [constructor| rewrite M.union_empty_L; split; assumption]
+    end.
+
+  Ltac solveNormalEz cacheLemma dirLemma lineLemma :=
+    match goal with
+      | [ cacheInv: nmemCache_invariants ?impl ,
+                    dirInv: dirCompat_inv ?impl ,
+                            lineInv: line_inv ?impl ?spec ,
+                                     HAction: @SemAction ?impl _ _ _ _ _ |- _ ] =>
+        pose proof (@cacheLemma _ _ _ _ cacheInv eq_refl HAction) as cacheHolds;
+        pose proof (@dirLemma _ _ _ _ dirInv cacheInv eq_refl HAction) as dirHolds;
+        pose proof (@lineLemma _ _ _ _ _ dirInv cacheInv lineInv eq_refl HAction) as [lineHolds csEmpty];
+        rewrite csEmpty; clear csEmpty;
+        exists (M.empty _), None;
+        split; [constructor| rewrite M.union_empty_L; split; assumption]
+    end.
+
+  Lemma substepRel impl rlImp uImp csImp:
+    Substep (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) impl uImp (Rle (Some rlImp)) csImp ->
+    forall spec,
+      CacheAtomicRel impl spec ->
+      exists uSpec rlSpec,
+        Substep (modFromMeta (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
+                                               DataBytes (wordToNat (wones LgNumChildren))
+                                               eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstElts csImp) /\
+        CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
+  Proof.
+    intros HSubstep spec totalInv.
+    destruct totalInv as [cacheInv dirInv lineInv].
+    inv HSubstep.
+    apply In_metaRules in HInRules.
+    destruct HInRules as [r [rBody rIn]].
+    simpl in rIn.
+    repeat match goal with
+             | H: ?A \/ False |- _ => destruct H; [| exfalso; assumption]; subst
+             | H: ?A \/ ?B |- _ => destruct H; subst
+           end;
+    try match type of rBody with
+          | exists i, _ /\ _ /\ _ =>
+            destruct rBody as [x [xcond [rlName rlbody]]];
+              simpl in rlName;
+              match type of rlName with
+                | _ = addIndexToStr string_of_nat x ?name =>
+                  pose name as actualRuleName
+              end;
+              apply getNatListToN_le in xcond; subst
+          | _ /\ _ =>
+            destruct rBody as [rlName rlbody];
+              unfold getActionFromSin, getSinAction in rlbody;
+              simpl in rlName;
+              match type of rlName with
+                | _ = ?name =>
+                  pose name as actualRuleName
+              end; subst
+        end.
+  - solve [solveMetaEz nmemCache_invariants_hold_1 dirCompat_inv_hold_1 line_inv_hold_1].
+  - solve [solveMetaEz nmemCache_invariants_hold_2 dirCompat_inv_hold_2 line_inv_hold_2].
+  - solve [solveMetaEz nmemCache_invariants_hold_3 dirCompat_inv_hold_3 line_inv_hold_3].
+  - solve [solveMetaEz nmemCache_invariants_hold_4 dirCompat_inv_hold_4 line_inv_hold_4].
+  - solve [solveMetaEz nmemCache_invariants_hold_5 dirCompat_inv_hold_5 line_inv_hold_5].
+  - solve [solveMetaEz nmemCache_invariants_hold_6 dirCompat_inv_hold_6 line_inv_hold_6].
+  - admit.
+  - admit.
+  - solve [solveMetaEz nmemCache_invariants_hold_9 dirCompat_inv_hold_9 line_inv_hold_9].
+  - solve [solveMetaEz nmemCache_invariants_hold_10 dirCompat_inv_hold_10 line_inv_hold_10].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_1 dirCompat_inv_hold_xfer_1 line_inv_hold_xfer_1].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_2 dirCompat_inv_hold_xfer_2 line_inv_hold_xfer_2].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_3 dirCompat_inv_hold_xfer_3 line_inv_hold_xfer_3].
+  - solveNormalEz nmemCache_invariants_hold_01 dirCompat_inv_hold_01 line_inv_hold_01.
+  - solveNormalEz nmemCache_invariants_hold_02 dirCompat_inv_hold_02 line_inv_hold_02.
+  - solveNormalEz nmemCache_invariants_hold_03 dirCompat_inv_hold_03 line_inv_hold_03.
+  - solveNormalEz nmemCache_invariants_hold_04 dirCompat_inv_hold_04 line_inv_hold_04.
+  - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
+  Admitted.
 End MemCacheInl.
