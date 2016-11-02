@@ -1226,7 +1226,7 @@ Ltac regs_bound_tac_unit_ex :=
   match goal with
   | [ |- RegsBound (modFromMeta {| metaRegs := (OneReg _ _) :: _ |}) _ _ ] =>
     apply getOneNameBound_regs_bounded
-  | [ |- RegsBound (modFromMeta {| metaMeths := (RepReg _ _ _ _ _ _) :: _ |}) _ _ ] =>
+  | [ |- RegsBound (modFromMeta {| metaRegs := (RepReg _ _ _ _ _ _) :: _ |}) _ _ ] =>
     apply getRepNameBound_regs_bounded
   | [ |- RegsBound (ConcatMod _ _) _ (appendNameBound _ _) ] =>
     apply concatMod_regsBound_1
