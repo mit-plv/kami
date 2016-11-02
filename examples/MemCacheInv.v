@@ -3,7 +3,7 @@ Require Import Lib.FMap Lib.Word Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
         Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
-        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.MyLogic.
+        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.MyLogic Kami.Decomposition.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -1710,7 +1710,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     reflexivity.
   Qed.
       
-  Lemma nmemCache_invariants_hold_03 s a u cs:
+  Lemma nmemCache_invariants_hold_04 s a u cs:
     nmemCache_invariants s ->
     dwnRs_noWait is a ->
     SemAction s a
@@ -1941,7 +1941,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   
-  Lemma nmemCache_invariants_hold_04 s a u cs:
+  Lemma nmemCache_invariants_hold_03 s a u cs:
     nmemCache_invariants s ->
     dwnRs_wait is a ->
     SemAction s a
@@ -3998,12 +3998,14 @@ END_SKIP_PROOF_ON *) apply cheat.
        (M.add (addIndexToStr string_of_nat x name) (existT _ k v) m)) =
     (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite 2! liftToMap1_find; mred.
     - rewrite 2! dropPs_None_inv; auto; try (apply duplicateElt_In_inv; auto; fail).
     - rewrite dropPs_None_inv; auto.
       apply duplicateElt_In_inv; auto.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropDiff name name' m n x k v:
@@ -4014,6 +4016,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (M.add (addIndexToStr string_of_nat x name') (existT _ k v) m) =
     M.add (addIndexToStr string_of_nat x name') (existT _ k v) (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite liftToMap1_find; mred.
@@ -4021,6 +4024,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       apply duplicateElt_not_In; auto.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropEmpty name n:
@@ -4414,7 +4418,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   
 
   
-  Lemma line_inv_hold_03 s mem a u cs:
+  Lemma line_inv_hold_04 s mem a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
     line_inv s mem ->
@@ -4495,7 +4499,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
-  Lemma line_inv_hold_04 s mem a u cs:
+  Lemma line_inv_hold_03 s mem a u cs:
     dirCompat_inv s ->
     nmemCache_invariants s ->
     line_inv s mem ->
@@ -5032,4 +5036,213 @@ END_SKIP_PROOF_ON *) apply cheat.
       + assumption.
       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
+
+  Record CacheAtomicRel impl spec : Prop :=
+    { invHolds: nmemCache_invariants impl;
+      dirHolds: dirCompat_inv impl;
+      lineHolds: line_inv impl spec }.
+
+  Lemma In_metaRules:
+    forall k a m,
+      In (k :: a)%struct (getRules (modFromMeta m)) ->
+      exists r, match r with
+                  | OneRule bd rname => k = (nameVal rname) /\ a = getActionFromSin bd
+                  | RepRule A strA goodName1 GenK getConstK goodName2 bd rname ls noDup =>
+                    exists i, In i ls /\ k = addIndexToStr strA i (nameVal rname) /\
+                              a = getActionFromGen strA getConstK bd i
+                end /\ In r (metaRules m).
+  Proof.
+    intros.
+    destruct m; simpl in *.
+    induction metaRules; simpl in *.
+    - exfalso; auto.
+    - apply in_app_or in H.
+      destruct H.
+      + exists a0.
+        split.
+        * { destruct a0; simpl in *.
+            - destruct H; [| exfalso; auto]; simpl in *.
+              inversion H; auto.
+            - unfold repRule, getListFromRep in H.
+              apply in_map_iff in H.
+              dest;
+                eexists; inversion H; constructor; eauto.
+          }
+        * auto.
+      + apply IHmetaRules in H.
+        dest.
+        destruct x; dest; eexists; constructor; simpl in *; eauto; simpl in *; eauto.
+  Qed.
+
+  Lemma invRepRule' n a1 name1 pf1 a2 name2 pf2:
+    RepRule string_of_nat string_of_nat_into
+            natToVoid withIndex_index_eq a1
+            {| nameVal := name1;
+               goodName := pf1 |}
+            (getNatListToN_NoDup (wordToNat (wones n))) =
+    RepRule string_of_nat string_of_nat_into
+            natToVoid withIndex_index_eq a2
+            {| nameVal := name2;
+               goodName := pf2 |}
+            (getNatListToN_NoDup (wordToNat (wones n))) ->
+    a1 = a2.
+  Proof.
+    intros.
+    inv H.
+    clear - H1.
+    apply Eqdep.EqdepTheory.inj_pair2 in H1.
+    apply H1.
+  Qed.
+
+
+  
+  Ltac solveMetaEz cacheLemma dirLemma lineLemma :=
+    match goal with
+      | [ cacheInv: nmemCache_invariants ?impl ,
+                    dirInv: dirCompat_inv ?impl ,
+                            lineInv: line_inv ?impl ?spec ,
+                                     xcond: (?x <= wordToNat (wones LgNumChildren))%nat,
+                                            HAction: @SemAction ?impl _ _ _ _ _ |- _ ] =>
+        pose proof (@cacheLemma _ _ _ _ cacheInv eq_refl _ xcond HAction) as cacheHolds;
+        pose proof (@dirLemma _ _ _ _ dirInv cacheInv eq_refl _ xcond HAction) as dirHolds;
+        pose proof (@lineLemma _ _ _ _ _ dirInv cacheInv lineInv eq_refl _ xcond HAction) as [lineHolds csEmpty];
+        rewrite csEmpty; clear csEmpty;
+        exists (M.empty _), None;
+        split; [constructor| rewrite M.union_empty_L; split; assumption]
+    end.
+
+  Ltac solveNormalEz cacheLemma dirLemma lineLemma :=
+    match goal with
+      | [ cacheInv: nmemCache_invariants ?impl ,
+                    dirInv: dirCompat_inv ?impl ,
+                            lineInv: line_inv ?impl ?spec ,
+                                     HAction: @SemAction ?impl _ _ _ _ _ |- _ ] =>
+        pose proof (@cacheLemma _ _ _ _ cacheInv eq_refl HAction) as cacheHolds;
+        pose proof (@dirLemma _ _ _ _ dirInv cacheInv eq_refl HAction) as dirHolds;
+        pose proof (@lineLemma _ _ _ _ _ dirInv cacheInv lineInv eq_refl HAction) as [lineHolds csEmpty];
+        rewrite csEmpty; clear csEmpty;
+        exists (M.empty _), None;
+        split; [constructor| rewrite M.union_empty_L; split; assumption]
+    end.
+
+  Lemma inRepRule_expand name a x n:
+    (x <= n)%nat ->
+    In (addIndexToStr string_of_nat x name ::
+                      getActionFromGen string_of_nat natToVoid a x)%struct
+       (repRule string_of_nat natToVoid a name (getNatListToN n)).
+  Proof.
+    intros.
+    unfold repRule, getListFromRep.
+    apply getNatListToN_le in H.
+    apply (in_map (fun i => addIndexToStr string_of_nat i name :: getActionFromGen string_of_nat natToVoid a i)%struct) in H.
+    assumption.
+  Qed.
+
+  Lemma substepRel impl uImp rlImp csImp:
+    reachable impl (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) ->
+    Substep (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) impl uImp (Rle (Some rlImp)) csImp ->
+    forall spec,
+      CacheAtomicRel impl spec ->
+      exists uSpec rlSpec,
+        Substep (modFromMeta (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
+                                               DataBytes (wordToNat (wones LgNumChildren))
+                                               eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstElts csImp) /\
+        CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
+  Proof.
+    intros _ HSubstep spec totalInv.
+    destruct totalInv as [cacheInv dirInv lineInv].
+    inv HSubstep.
+    apply In_metaRules in HInRules.
+    destruct HInRules as [r [rBody rIn]].
+    simpl in rIn.
+    repeat match goal with
+             | H: ?A \/ False |- _ => destruct H; [| exfalso; assumption]; subst
+             | H: ?A \/ ?B |- _ => destruct H; subst
+           end;
+    try match type of rBody with
+          | exists i, _ /\ _ /\ _ =>
+            destruct rBody as [x [xcond [rlName rlbody]]];
+              simpl in rlName;
+              match type of rlName with
+                | _ = addIndexToStr string_of_nat x ?name =>
+                  pose name as actualRuleName
+              end;
+              apply getNatListToN_le in xcond; subst
+          | _ /\ _ =>
+            destruct rBody as [rlName rlbody];
+              unfold getActionFromSin, getSinAction in rlbody;
+              simpl in rlName;
+              match type of rlName with
+                | _ = ?name =>
+                  pose name as actualRuleName
+              end; subst
+        end.
+  - solve [solveMetaEz nmemCache_invariants_hold_1 dirCompat_inv_hold_1 line_inv_hold_1].
+  - solve [solveMetaEz nmemCache_invariants_hold_2 dirCompat_inv_hold_2 line_inv_hold_2].
+  - solve [solveMetaEz nmemCache_invariants_hold_3 dirCompat_inv_hold_3 line_inv_hold_3].
+  - solve [solveMetaEz nmemCache_invariants_hold_4 dirCompat_inv_hold_4 line_inv_hold_4].
+  - solve [solveMetaEz nmemCache_invariants_hold_5 dirCompat_inv_hold_5 line_inv_hold_5].
+  - solve [solveMetaEz nmemCache_invariants_hold_6 dirCompat_inv_hold_6 line_inv_hold_6].
+  - pose proof (@nmemCache_invariants_hold_7 _ _ _ _ cacheInv eq_refl _ xcond HAction) as cacheHolds.
+    pose proof (@dirCompat_inv_hold_7 _ _ _ _ dirInv cacheInv eq_refl _ xcond HAction) as dirHolds.
+    pose proof (@line_inv_hold_7 _ _ _ _ _ dirInv cacheInv lineInv eq_refl _ xcond HAction) as [lineHolds [aspec [pfEq semAction]]].
+    exists (M.empty _), (Some (addIndexToStr string_of_nat x "processLd"%string)).
+    split.
+    + econstructor; eauto.
+      simpl.
+      rewrite ?app_or.
+      left.
+      simpl in pfEq.
+      apply invSome in pfEq.
+      apply invRepRule' in pfEq.
+      subst.
+      apply inRepRule_expand; assumption.
+    + rewrite M.union_empty_L.
+      split; assumption.
+  - pose proof (@nmemCache_invariants_hold_8 _ _ _ _ cacheInv eq_refl _ xcond HAction) as cacheHolds.
+    pose proof (@dirCompat_inv_hold_8 _ _ _ _ dirInv cacheInv eq_refl _ xcond HAction) as dirHolds.
+    pose proof (@line_inv_hold_8 _ _ _ _ _ dirInv cacheInv lineInv eq_refl _ xcond HAction) as
+        [aspec [pfEq [uspec [lineHolds semAction]]]].
+    exists uspec, (Some (addIndexToStr string_of_nat x "processSt"%string)).
+    split.
+    + econstructor; eauto.
+      simpl.
+      rewrite ?app_or.
+      right; left.
+      simpl in pfEq.
+      apply invSome in pfEq.
+      apply invRepRule' in pfEq.
+      subst.
+      apply inRepRule_expand; assumption.
+    + split; assumption.
+  - solve [solveMetaEz nmemCache_invariants_hold_9 dirCompat_inv_hold_9 line_inv_hold_9].
+  - solve [solveMetaEz nmemCache_invariants_hold_10 dirCompat_inv_hold_10 line_inv_hold_10].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_1 dirCompat_inv_hold_xfer_1 line_inv_hold_xfer_1].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_2 dirCompat_inv_hold_xfer_2 line_inv_hold_xfer_2].
+  - solve [solveMetaEz nmemCache_invariants_hold_xfer_3 dirCompat_inv_hold_xfer_3 line_inv_hold_xfer_3].
+  - solveNormalEz nmemCache_invariants_hold_01 dirCompat_inv_hold_01 line_inv_hold_01.
+  - solveNormalEz nmemCache_invariants_hold_02 dirCompat_inv_hold_02 line_inv_hold_02.
+  - solveNormalEz nmemCache_invariants_hold_03 dirCompat_inv_hold_03 line_inv_hold_03.
+  - solveNormalEz nmemCache_invariants_hold_04 dirCompat_inv_hold_04 line_inv_hold_04.
+  - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
+  Qed.
+
+  Lemma initMatch:
+    CacheAtomicRel (initRegs (getRegInits (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren))))
+                   (initRegs (getRegInits
+                                (modFromMeta (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
+                                                               DataBytes (wordToNat (wones LgNumChildren))
+                                                               eq_refl eq_refl)))).
+  Proof.
+    unfold nmemCacheInl, memAtomicWoQInlM, modFromMeta, metaRegs, getRegInits, initRegs, rawInitRegs.
+    repeat (
+        rewrite single_unfold_concat;
+        rewrite makeMap_union;
+        [| apply disjList_metaRegs; simpl; intro H;
+           (repeat (destruct H; [discriminate | ]); assumption)]); simpl;
+    cbv [getListFromRep];
+    rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
+    rewrite ?makeMap_fold_eq.
+    admit.
+  Admitted.
 End MemCacheInl.
