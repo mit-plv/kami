@@ -3988,7 +3988,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Definition line_inv impl spec := forall a (c: cache), (c <= wordToNat (wones LgNumChildren))%nat -> line_inv' a c impl spec.
 
   Require Import Kami.RefinementFacts.
-  Local Definition dropFirstElts :=
+  Local Definition dropFirstEltsLocal :=
     dropN (rqFromProc -- firstEltName) (wordToNat (wones LgNumChildren)).
 
   Lemma dropSame name m n x k v:
@@ -4032,7 +4032,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   Proof. reflexivity. Qed.
 
   Ltac dropS :=
-    unfold dropFirstElts;
+    unfold dropFirstEltsLocal;
     repeat (rewrite dropSame; auto || rewrite dropEmpty; auto).
 
   Ltac helpNormalNoRm :=
@@ -4073,7 +4073,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4089,7 +4089,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4105,7 +4105,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4121,7 +4121,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4137,7 +4137,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4158,7 +4158,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4205,7 +4205,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4252,7 +4252,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4286,7 +4286,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4302,7 +4302,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4320,7 +4320,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       (x <= wordToNat (wones LgNumChildren))%nat ->
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
-      line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+      line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     metaLine.
@@ -4363,7 +4363,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     missByState is a ->
     SemAction s a
               u cs WO ->
-    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     normalLine.
@@ -4377,7 +4377,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     dwnRq is a ->
     SemAction s a
               u cs WO ->
-    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     normalLine.
@@ -4425,7 +4425,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     dwnRs_noWait is a ->
     SemAction s a
               u cs WO ->
-    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     normalLineNoRm; try destruct_cache; try destruct_addr; intros.
@@ -4506,7 +4506,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     dwnRs_wait is a ->
     SemAction s a
               u cs WO ->
-    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     normalLineNoRm; try destruct_cache; try destruct_addr; intros.
@@ -4586,7 +4586,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     deferred is a ->
     SemAction s a
               u cs WO ->
-    line_inv (M.union u s) mem /\ liftToMap1 dropFirstElts cs = [].
+    line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
     (* SKIP_PROOF_ON
     normalLineNoRm.
@@ -4686,7 +4686,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     apply H1.
   Qed.
   
-  Ltac dropD := unfold dropFirstElts;
+  Ltac dropD := unfold dropFirstEltsLocal;
       simpl;
       rewrite ?dropDiff, ?dropEmpty; auto.
   
@@ -4713,7 +4713,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       line_inv (M.union u s) mem /\
       exists aspec,
         "processLd" metaIsSpec aspec /\
-        SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) (M.empty _) (liftToMap1 dropFirstElts cs) WO.
+        SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) (M.empty _) (liftToMap1 dropFirstEltsLocal cs) WO.
   Proof.
     intros HDir HInd HLine HInRule x xcond HS;
     simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
@@ -4790,7 +4790,7 @@ END_SKIP_PROOF_ON *) apply cheat.
         "processSt" metaIsSpec aspec /\
         exists uspec,
           line_inv (M.union u s) (M.union uspec mem) /\
-          SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) uspec (liftToMap1 dropFirstElts cs) WO.
+          SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) uspec (liftToMap1 dropFirstEltsLocal cs) WO.
   Proof.
     (* SKIP_PROOF_ON
     intros HDir HInd HLine HInRule x xcond HS;
@@ -5138,7 +5138,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     assumption.
   Qed.
 
-  Lemma substepRel impl uImp rlImp csImp:
+  Lemma substepRel_cache_atomic impl uImp rlImp csImp:
     reachable impl (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) ->
     Substep (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) impl uImp (Rle (Some rlImp)) csImp ->
     forall spec,
@@ -5146,7 +5146,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       exists uSpec rlSpec,
         Substep (modFromMeta (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
                                                DataBytes (wordToNat (wones LgNumChildren))
-                                               eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstElts csImp) /\
+                                               eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstEltsLocal csImp) /\
         CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
   Proof.
     intros _ HSubstep spec totalInv.
@@ -5227,6 +5227,236 @@ END_SKIP_PROOF_ON *) apply cheat.
   - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
   Qed.
 
+  Require Import Lib.Concat.
+  Lemma map_concat_commute A B (f: A -> B) ls :
+    map f (concat ls) = concat (map (map f) ls).
+  Proof.
+    induction ls; simpl; auto.
+    rewrite map_app.
+    rewrite <- IHls.
+    reflexivity.
+  Qed.
+
+  Lemma unfold_concat A B a (f: A -> list B) (ls: list A):
+    concat (map f (a :: ls)) = (f a ++ concat (map f ls))%list.
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma getListFromRep_In_exists':
+    forall e {A} (strA: A -> string) bgen s ls,
+      In e (namesOf
+              (map
+                     (fun r : Attribute RegInitValue =>
+                        match r with
+                          | (rn :: ri)%struct =>
+                            (rn
+                               :: match ri with
+                                    | RegInitCustom ric => ric
+                                    | RegInitDefault rk =>
+                                      existT ConstFullT rk (getDefaultConstFull rk)
+                                  end)%struct
+                        end)
+                     (getListFromRep strA bgen s ls))) ->
+      exists ei, e = addIndexToStr strA ei s.
+  Proof.
+    induction ls; simpl; intros; [inv H|].
+    destruct H; auto; subst.
+    eexists; auto.
+  Qed.
+
+
+
+  Lemma disjList_metaReg':
+    forall mr1 mr2,
+      getMetaRegName mr1 <> getMetaRegName mr2 ->
+      DisjList (namesOf
+                  (map
+                     (fun r : Attribute RegInitValue =>
+                        match r with
+                          | (rn :: ri)%struct =>
+                            (rn
+                               :: match ri with
+                                    | RegInitCustom ric => ric
+                                    | RegInitDefault rk =>
+                                      existT ConstFullT rk (getDefaultConstFull rk)
+                                  end)%struct
+                        end)
+                     (getListFromMetaReg mr1))) (namesOf 
+                                                   (map
+                                                      (fun r : Attribute RegInitValue =>
+                                                         match r with
+                                                           | (rn :: ri)%struct =>
+                                                             (rn
+                                                                :: match ri with
+                                                                     | RegInitCustom ric => ric
+                                                                     | RegInitDefault rk =>
+                                                                       existT ConstFullT rk (getDefaultConstFull rk)
+                                                                   end)%struct
+                                                         end)
+                                                      (getListFromMetaReg mr2))).
+  Proof.
+    destruct mr1 as [mr1|mr1], mr2 as [mr2|mr2]; simpl; intros.
+    - unfold DisjList; intros.
+      destruct (in_dec string_dec e (nameVal s :: nil)); auto.
+      destruct (in_dec string_dec e (nameVal s0 :: nil)); auto.
+      inv i; auto.
+      inv i0; auto.
+    - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
+      unfold DisjList; intros.
+      specialize (IHls e); destruct IHls; auto.
+      destruct (in_dec string_dec e (nameVal s :: nil)); auto.
+      inv i; auto; right.
+      intro Hx; inv Hx; auto.
+      destruct s as [s]; simpl in *; subst.
+      generalize goodName; apply index_addIndexToStr_notNone.
+    - clear; induction ls; simpl; intros; [unfold DisjList; intros; auto|].
+      unfold DisjList; intros.
+      specialize (IHls e); destruct IHls; auto.
+      destruct (in_dec string_dec e (nameVal s0 :: nil)); auto.
+      inv i; auto; left.
+      intro Hx; inv Hx; auto.
+      destruct s0 as [s0]; simpl in *; subst.
+      generalize goodName; apply index_addIndexToStr_notNone.
+    - unfold DisjList; intros.
+      destruct (in_dec string_dec e (namesOf
+                                       (map
+                                          (fun r : Attribute RegInitValue =>
+                                             match r with
+                                               | (rn :: ri)%struct =>
+                                                 (rn
+                                                    :: match ri with
+                                                         | RegInitCustom ric => ric
+                                                         | RegInitDefault rk =>
+                                                           existT ConstFullT rk (getDefaultConstFull rk)
+                                                       end)%struct
+                                             end)
+                                          (getListFromRep strA bgen (nameVal s) ls)))); auto.
+      destruct (in_dec string_dec e (namesOf
+                                       (map
+                                          (fun r : Attribute RegInitValue =>
+                                             match r with
+                                               | (rn :: ri)%struct =>
+                                                 (rn
+                                                    :: match ri with
+                                                         | RegInitCustom ric => ric
+                                                         | RegInitDefault rk =>
+                                                           existT ConstFullT rk (getDefaultConstFull rk)
+                                                       end)%struct
+                                             end)
+                                          (getListFromRep strA0 bgen0 (nameVal s0) ls0)))); auto.
+      exfalso.
+      apply getListFromRep_In_exists' in i.
+      apply getListFromRep_In_exists' in i0.
+      dest; subst; clear -H H0.
+
+      destruct s as [s], s0 as [t]; simpl in *.
+      apply addIndexToStr_eq in H0; auto.
+  Qed.
+
+  Lemma disjList_metaRegs':
+    forall mr ml,
+      ~ In (getMetaRegName mr) (map getMetaRegName ml) ->
+      DisjList (namesOf
+                  (map
+                     (fun r : Attribute RegInitValue =>
+                        match r with
+                          | (rn :: ri)%struct =>
+                            (rn
+                               :: match ri with
+                                    | RegInitCustom ric => ric
+                                    | RegInitDefault rk =>
+                                      existT ConstFullT rk (getDefaultConstFull rk)
+                                  end)%struct
+                        end)
+                     (getListFromMetaReg mr)))
+               (namesOf
+                  (concat
+                     (map
+                        (fun x : MetaReg =>
+                           map
+                             (fun r : Attribute RegInitValue =>
+                                match r with
+                                  | (rn :: ri)%struct =>
+                                    (rn
+                                       :: match ri with
+                                            | RegInitCustom ric => ric
+                                            | RegInitDefault rk =>
+                                              existT ConstFullT rk (getDefaultConstFull rk)
+                                          end)%struct
+                                end) (getListFromMetaReg x)) ml))).
+  Proof.
+    induction ml; simpl; intros; [unfold DisjList; intros; right; auto|].
+    destruct (string_dec (getMetaRegName a) (getMetaRegName mr)); [elim H; auto|].
+    destruct (in_dec string_dec (getMetaRegName mr) (map getMetaRegName ml)); [elim H; auto|].
+    clear H; specialize (IHml n0); clear n0.
+    rewrite namesOf_app.
+    apply DisjList_comm, DisjList_app_4, DisjList_comm; auto.
+    apply disjList_metaReg'; auto.
+  Qed.
+
+  Ltac existRegs n :=
+    match goal with
+      | |- ?inv ?s =>
+        unfold inv;
+          intros;
+          let mr := mapVR_Regs (wordToNat (wones n)) s in
+          esplit;
+            unfold withIndex;
+            match goal with
+              | cond: (_ <= _)%nat |- _ =>
+                match goal with
+                  | |- M.find (addIndexToStr _ ?c ?k) _ = _ =>
+                    rewrite <- (findMVR_find_var mr k eq_refl cond); simpl; unfold Lib.VectorFacts.Vector_find; simpl; eauto
+                  | |- M.find ?k _ = _ =>
+                    rewrite <- (findMVR_find_string mr k eq_refl); simpl; unfold Lib.VectorFacts.Vector_find; simpl;  eauto
+                  | _ => simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto
+                end
+            end
+      | |- ?inv ?s ?spec =>
+        unfold inv;
+          intros;
+          let mr := mapVR_Regs (wordToNat (wones n)) s in
+          let mrspec := mapVR_Regs (wordToNat (wones n)) spec in
+          esplit;
+            unfold withIndex;
+            match goal with
+              | cond: (_ <= _)%nat |- _ =>
+                match goal with
+                  | |- M.find (addIndexToStr _ ?c ?k) _ = _ =>
+                    rewrite <- (findMVR_find_var mr k eq_refl cond); simpl; unfold Lib.VectorFacts.Vector_find; simpl; eauto
+                  | |- M.find ?k _ = _ =>
+                    rewrite <- (findMVR_find_string mr k eq_refl); simpl; unfold Lib.VectorFacts.Vector_find; simpl;  eauto
+                  | |- M.find (addIndexToStr _ ?c ?k) _ = _ =>
+                    rewrite <- (findMVR_find_var mrspec k eq_refl cond); simpl; unfold Lib.VectorFacts.Vector_find; simpl; eauto
+                  | |- M.find ?k _ = _ =>
+                    rewrite <- (findMVR_find_string mrspec k eq_refl); simpl; unfold Lib.VectorFacts.Vector_find; simpl;  eauto
+                  | _ => simpl; unfold Lib.VectorFacts.Vector_find; simpl; auto
+                end
+            end
+    end.
+
+  Ltac simplifyInvs :=
+    unfold getCs, fromPToC, rqFromCToP, rsFromCToP, isCWait, isPWait in *;
+    repeat autounfold with MethDefs in *;
+    intros; try (exfalso; assumption);
+    repeat (rewrite ?mapVec_replicate_commute, ?evalVec_replicate in *; simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in * );
+    dest; auto; try discriminate; try reflexivity;
+    repeat match goal with
+             | H: nil = (?a ++ ?b :: ?c)%list |- _ => apply app_cons_not_nil in H
+             | H: False |- _ => exfalso; auto
+             | |- context[weq ?p ?q] => destruct (weq p q)
+             | H: context[weq ?p ?q] |- _ => destruct (weq p q)
+             | H: andb ?a ?b = true |- _ =>
+               apply Bool.andb_true_iff in H; dest
+             | _ => word_omega || discriminate
+           end.
+
+  Ltac prelimSimplRegs n :=
+    existRegs n; simplifyInvs.
+
+  
+  
   Lemma initMatch:
     CacheAtomicRel (initRegs (getRegInits (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren))))
                    (initRegs (getRegInits
@@ -5235,13 +5465,35 @@ END_SKIP_PROOF_ON *) apply cheat.
                                                                eq_refl eq_refl)))).
   Proof.
     unfold nmemCacheInl, memAtomicWoQInlM, modFromMeta, metaRegs, getRegInits, initRegs, rawInitRegs.
-    simpl.
-    unfold getListFromRep.
-    rewrite ?map_app, ?map_map.
-    simpl.
-    rewrite makeMap_union.
-    Focus 2.
-    admit.
-    admit.
-    Admitted.
+    cbv [makeMetaModule].
+    rewrite ?map_concat_commute.
+    rewrite ?map_map.
+    repeat (
+        rewrite unfold_concat;
+        rewrite makeMap_union;
+        [| apply disjList_metaRegs'; simpl; intro H;
+           (repeat (destruct H; [discriminate | ]); assumption)]).
+    unfold getListFromMetaReg, getListFromRep.
+    rewrite ?map_map.
+    rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
+    rewrite ?makeMap_fold_eq.
+    split.
+    - prelimSimplRegs LgNumChildren.
+    - prelimSimplRegs LgNumChildren.
+    - prelimSimplRegs LgNumChildren.
+  Qed.
+
+  Lemma nmemCacheInl_refines_memAtomicWoqInlM:
+    modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)
+                <<=[dropFirstEltsLocal]
+                (modFromMeta (memAtomicWoQInlM rqFromProc rsToProc (LgNumDatas + (IdxBits + TagBits))
+                                               DataBytes (wordToNat (wones LgNumChildren))
+                                               eq_refl eq_refl)).
+  Proof.
+    apply decompositionZeroR with (thetaR := CacheAtomicRel).
+    - apply initMatch.
+    - reflexivity.
+    - reflexivity.
+    - apply substepRel_cache_atomic.
+  Qed.
 End MemCacheInl.
