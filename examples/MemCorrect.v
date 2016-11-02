@@ -1,3 +1,4 @@
+Require Import Ex.MemCacheInv Ex.MemCacheInl.
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.RefinementFacts.
@@ -60,7 +61,8 @@ Section MemCorrect.
     ketrans_r; [apply memCache_refines_nmemCache|].
     ketrans_l; [|apply memAtomicWoQInl_refines_memAtomicWoQ].
 
-    apply cheat. (* vmurali TODO *)
+    ketrans_r; [apply (proj1 (nmemCacheInl_pf IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren))|].
+    apply nmemCacheInl_refines_memAtomicWoqInlM.
   Qed.
 
   (** Converting memCache to ConcatMod *)

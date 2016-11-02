@@ -5149,6 +5149,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                                                eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstEltsLocal csImp) /\
         CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
   Proof.
+    (* SKIP_PROOF_ON
     intros _ HSubstep spec totalInv.
     destruct totalInv as [cacheInv dirInv lineInv].
     inv HSubstep.
@@ -5225,6 +5226,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   - solveNormalEz nmemCache_invariants_hold_03 dirCompat_inv_hold_03 line_inv_hold_03.
   - solveNormalEz nmemCache_invariants_hold_04 dirCompat_inv_hold_04 line_inv_hold_04.
   - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Require Import Lib.Concat.
@@ -5464,6 +5466,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                                                                DataBytes (wordToNat (wones LgNumChildren))
                                                                eq_refl eq_refl)))).
   Proof.
+    (* SKIP_PROOF_ON
     unfold nmemCacheInl, memAtomicWoQInlM, modFromMeta, metaRegs, getRegInits, initRegs, rawInitRegs.
     cbv [makeMetaModule].
     rewrite ?map_concat_commute.
@@ -5481,6 +5484,7 @@ END_SKIP_PROOF_ON *) apply cheat.
     - prelimSimplRegs LgNumChildren.
     - prelimSimplRegs LgNumChildren.
     - prelimSimplRegs LgNumChildren.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCacheInl_refines_memAtomicWoqInlM:
@@ -5490,10 +5494,12 @@ END_SKIP_PROOF_ON *) apply cheat.
                                                DataBytes (wordToNat (wones LgNumChildren))
                                                eq_refl eq_refl)).
   Proof.
+    (* SKIP_PROOF_ON
     apply decompositionZeroR with (thetaR := CacheAtomicRel).
     - apply initMatch.
     - reflexivity.
     - reflexivity.
     - apply substepRel_cache_atomic.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
