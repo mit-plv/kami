@@ -6,7 +6,8 @@ This repository contains the source code of Kami.
 Requirement
 -----------
 
-- Coq 8.4pl6
+- Coq 8.5pl2 (master)
+- Coq 8.4pl6 (freeze84)
 
 To build
 --------

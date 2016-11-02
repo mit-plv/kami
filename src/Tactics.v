@@ -520,7 +520,7 @@ Ltac kdecompose_regmap_init :=
 
 Ltac kdecompose_regrel_init :=
   unfold initRegs, rawInitRegs, getRegInits; simpl;
-  kregmap_red; kregmap_clear; eexists; split; reflexivity.
+  kregmap_red; kregmap_clear; repeat (eexists; split; try reflexivity).
 
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
@@ -838,8 +838,7 @@ Inductive DecompositionType :=
            (ruleMap: RegsT -> string -> option string),
       DecompositionType
 | DTRelational:
-    forall (thetaR: RegsT -> RegsT -> Prop)
-           (ruleMap: RegsT -> string -> option string),
+    forall (thetaR: RegsT -> RegsT -> Prop),
       DecompositionType.
 
 Inductive Invariants :=
@@ -870,7 +869,7 @@ Ltac kami_ok cfg dtac itac :=
   end;
   match eval hnf in (decomposition cfg) with
   | DTFunctional ?sm ?rm => kdecompose_nodefs sm rm
-  | DTRelational ?sr ?rm => kdecomposeR_nodefs sr rm
+  | DTRelational ?sr => kdecomposeR_nodefs sr
   end;
   let invs := (eval hnf in (invariants cfg)) in
   kinv_add_rep invs;
