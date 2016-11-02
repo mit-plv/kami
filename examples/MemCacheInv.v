@@ -5235,14 +5235,13 @@ END_SKIP_PROOF_ON *) apply cheat.
                                                                eq_refl eq_refl)))).
   Proof.
     unfold nmemCacheInl, memAtomicWoQInlM, modFromMeta, metaRegs, getRegInits, initRegs, rawInitRegs.
-    repeat (
-        rewrite single_unfold_concat;
-        rewrite makeMap_union;
-        [| apply disjList_metaRegs; simpl; intro H;
-           (repeat (destruct H; [discriminate | ]); assumption)]); simpl;
-    cbv [getListFromRep];
-    rewrite ?M.union_add, ?M.union_empty_R, ?M.union_empty_L.
-    rewrite ?makeMap_fold_eq.
+    simpl.
+    unfold getListFromRep.
+    rewrite ?map_app, ?map_map.
+    simpl.
+    rewrite makeMap_union.
+    Focus 2.
     admit.
-  Admitted.
+    admit.
+    Admitted.
 End MemCacheInl.
