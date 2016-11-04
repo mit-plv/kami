@@ -30,6 +30,6 @@ Proof.
   split; intros; firstorder fail.
 Qed.
 
-Hint Rewrite rmConj rmDisj dupConj bool_true bool_false quantConj: myLogic.
+Hint Rewrite rmConj rmDisj dupConj bool_true bool_false quantConj: basicLogic.
 
 

@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List (* Lib.Concat*) Coq.Program.Basics.
+Require Import Coq.Lists.List Coq.Program.Basics.
 
 Import ListNotations.
 

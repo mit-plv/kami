@@ -1,9 +1,9 @@
 Require Import Lib.FMap Lib.Word Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
-        FunctionalExtensionality Program.Equality Kami.Tactics Lib.MapVReify Kami.SymEval
+        FunctionalExtensionality Program.Equality Kami.Tactics Kami.MapReifyEx Kami.SymEval
         Kami.SymEvalTac Lib.StringAsList Lib.ListSupport Lib.Misc
-        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.MyLogic Kami.Decomposition.
+        Coq.Program.Basics Ex.Names Lib.FinNotations Lib.BasicLogic Kami.Decomposition.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -912,7 +912,7 @@ Section MemCacheInl.
         [destruct (@weq TagBits (tagv (split1 IdxBits TagBits a)) (split2 IdxBits TagBits a)) as [isEq' | neq'];
           rewrite <- ?isEq in *; clear isEq;
           rewrite ?app_nil_r in *;
-          [rewrite ?isEq' in *; (* clear isEq'; *) rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
+          [rewrite ?isEq' in *; rewrite ?Word.combine_split, ?split1_combine, ?split2_combine, ?eq_weq in * |
            rewrite ?split1_combine, ?split2_combine in *;
            try match goal with
                  | H: context[@weq (IdxBits + TagBits) a (Word.combine (split1 IdxBits TagBits a)
@@ -1020,10 +1020,6 @@ Section MemCacheInl.
                do 2 (intuition idtac; try (discriminate || word_omega))
            end.
 
-  (*
-  Hint Rewrite app_or cons_or revcons_or: myLogic.
-   *)
-
   Ltac destruct_cache :=
     match goal with
       | H: context[@weq LgNumChildren ?c ?c] |- _ =>
@@ -1043,10 +1039,6 @@ Section MemCacheInl.
     unfold isCWait, isPWait in *;
     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
     rmBadHyp.
-  (*
-    repeat destruct_cache;
-    repeat destruct_addr;
-    ( assumption || intros).*)
   
   Ltac doNormal :=
     normalInit;
@@ -1214,7 +1206,7 @@ Section MemCacheInl.
     nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time doNormal; try destruct_addr; try destruct_cache; (assumption || intros; try discriminate).
+    doNormal; try destruct_addr; try destruct_cache; (assumption || intros; try discriminate).
     - clear - i16a i25.
       specialize (i16a (y F2) (or_introl eq_refl)).
       specialize (i25 (y F2) (or_introl eq_refl)).
@@ -1375,10 +1367,6 @@ Section MemCacheInl.
       rewrite i30 in H1.
       simpl in H1.
       assumption.
-(*    - discriminate.
-    - discriminate.
-    - discriminate.
-    - discriminate. *)
     - exfalso.
       clear - i30 H1.
       specialize (i30 _ _ eq_refl).
@@ -1573,31 +1561,31 @@ END_SKIP_PROOF_ON *) apply cheat.
     nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doNormal;
-          match goal with
-            | H: evalExpr (MemDir.findIncompat (?c) (ReadField F3 (?rq)) (?dir) (?dirw)) F1 = true |- _ =>
-              apply findIncompat_means in H;
-            destruct H as [? [? ?]]
-          end;
-          repeat destruct_cache;
-          try match goal with
-                | H: ?y F1 = evalExpr ?c F2 |- _ =>
-                  rewrite <- ?H in *
-              end;
-          try match goal with
-                | H: ?x = ?y, H': ?x <> ?y |- _ => exfalso; apply (H' H)
-              end;
-          repeat destruct_addr;
-          try match goal with
-                | H: context[evalExpr ?c F2] |- _ =>
-                  let x := fresh "x" in
-                  let Heqx := fresh "Heqx" in
-                  remember (evalExpr c F2) as x eqn:Heqx in *
-              end;
-          unfold MemDir.Child, Child, MemDir.Dir, MemDir.Dirw, RqToP, Msi in *;
-            simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
-            rewrite <- ?Heqx in *;
-            (assumption || intros)).
+    (doNormal;
+     match goal with
+     | H: evalExpr (MemDir.findIncompat (?c) (ReadField F3 (?rq)) (?dir) (?dirw)) F1 = true |- _ =>
+       apply findIncompat_means in H;
+       destruct H as [? [? ?]]
+     end;
+     repeat destruct_cache;
+     try match goal with
+         | H: ?y F1 = evalExpr ?c F2 |- _ =>
+           rewrite <- ?H in *
+         end;
+     try match goal with
+         | H: ?x = ?y, H': ?x <> ?y |- _ => exfalso; apply (H' H)
+         end;
+     repeat destruct_addr;
+     try match goal with
+         | H: context[evalExpr ?c F2] |- _ =>
+           let x := fresh "x" in
+           let Heqx := fresh "Heqx" in
+           remember (evalExpr c F2) as x eqn:Heqx in *
+         end;
+     unfold MemDir.Child, Child, MemDir.Dir, MemDir.Dirw, RqToP, Msi in *;
+     simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
+     rewrite <- ?Heqx in *;
+     (assumption || intros)).
     - clear - i8 H4 H5.
       rewrite app_or in H4.
       destruct H4.
@@ -1718,10 +1706,10 @@ END_SKIP_PROOF_ON *) apply cheat.
     nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doNormal;
-          repeat destruct_addr;
-          repeat destruct_cache;
-          (assumption || intros)).
+    (doNormal;
+     repeat destruct_addr;
+     repeat destruct_cache;
+     (assumption || intros)).
     - clear - i7.
       specialize (i7 _ (or_introl eq_refl)).
       destruct i7; assumption.
@@ -1949,10 +1937,10 @@ END_SKIP_PROOF_ON *) apply cheat.
     nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doNormal;
-          repeat destruct_addr;
-          repeat destruct_cache;
-          (assumption || intros)).
+    (doNormal;
+     repeat destruct_addr;
+     repeat destruct_cache;
+     (assumption || intros)).
     - clear - i7.
       specialize (i7 _ (or_introl eq_refl)).
       destruct i7; assumption.
@@ -2196,10 +2184,10 @@ END_SKIP_PROOF_ON *) apply cheat.
     nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doNormal;
-          repeat destruct_cache;
-          repeat destruct_addr;
-          (assumption || intros)).
+    (doNormal;
+     repeat destruct_cache;
+     repeat destruct_addr;
+     (assumption || intros)).
     - clear - i9 H1 H2 H3.
       specialize (i9 _ _ H1 H2 H3).
       tauto.
@@ -2340,9 +2328,6 @@ END_SKIP_PROOF_ON *) apply cheat.
                    simpl in beg, last, hyp;
                    simpl; unfold Lib.VectorFacts.Vector_find; simpl;
                    rewrite hyp in *
-(*             | H: In ?x (?l1 ++ ?l2) -> _ |- _ => rewrite app_or in H
-             | H: In ?x (?v :: ?l) -> _ |- _ => rewrite cons_or in H
-             | H: ?P \/ ?Q -> ?R |- _ => apply (@rmDisj P Q R) in H; destruct H *)
            end.
   
   Ltac rmBadHyp2 :=
@@ -2363,7 +2348,7 @@ END_SKIP_PROOF_ON *) apply cheat.
            end; intros; simpl in *.
 
   
-  Hint Rewrite app_or cons_or revcons_or: myLogic.
+  Hint Rewrite app_or cons_or revcons_or: basicLogic.
 
 
   Ltac doAll :=
@@ -2380,7 +2365,7 @@ END_SKIP_PROOF_ON *) apply cheat.
                    simpl in *; unfold Lib.VectorFacts.Vector_find in *; simpl in *;
                    specialize_msgs;
                    specialize_beg_mid_last;
-                   autorewrite with myLogic in *;
+                   autorewrite with basicLogic in *;
                      rewriteEq;
                    simpl_hyps;
                    rewriteEq;
@@ -2546,7 +2531,7 @@ END_SKIP_PROOF_ON *) apply cheat.
       nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doMeta; repeat destruct_cache; repeat destruct_addr; (assumption || intros)).
+    (doMeta; repeat destruct_cache; repeat destruct_addr; (assumption || intros)).
     - clear - i8 H0 H1.
       specialize (i8 _ (or_intror H0) H1).
       assumption.
@@ -2636,8 +2621,8 @@ END_SKIP_PROOF_ON *) apply cheat.
       nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doMeta; repeat destruct_cache; try rewrite_getCs; try rewrite getCs_cs in * by tauto;
-          repeat destruct_addr; (assumption || intros)).
+    (doMeta; repeat destruct_cache; try rewrite_getCs; try rewrite getCs_cs in * by tauto;
+     repeat destruct_addr; (assumption || intros)).
     - word_omega.
     - rewrite app_or in H0.
       destruct H0 as [ez | hard].
@@ -2903,20 +2888,20 @@ END_SKIP_PROOF_ON *) apply cheat.
       nmemCache_invariants (M.union u s).
   Proof.
     (* SKIP_PROOF_ON
-    time (doMeta;
-          try rewrite_getCs; (* try rewrite getCs_cs in * by tauto; *)
-          rewrite ?tag_upd in *;
-            repeat destruct_addr;
-          repeat diffAddr_sameIdx;
-          repeat match goal with
-                   | |- context[if @weq IdxBits ?a ?b then _ else _] =>
-                     let isEq := fresh in
-                     (destruct (@weq IdxBits a b) as [isEq | ?]; [rewrite ?isEq in *| try assumption])
-                   | H: context[if @weq IdxBits ?a ?b then _ else _] |- _ =>
-                     let isEq := fresh in
-                     (destruct (@weq IdxBits a b) as [isEq | ?]; [rewrite ?isEq in *| try assumption])
-                 end;
-          rewrite ?eq_weq in *; repeat diffAddr_sameIdx; (assumption || intros)).
+    (doMeta;
+     try rewrite_getCs;
+     rewrite ?tag_upd in *;
+     repeat destruct_addr;
+     repeat diffAddr_sameIdx;
+     repeat match goal with
+            | |- context[if @weq IdxBits ?a ?b then _ else _] =>
+              let isEq := fresh in
+              (destruct (@weq IdxBits a b) as [isEq | ?]; [rewrite ?isEq in *| try assumption])
+            | H: context[if @weq IdxBits ?a ?b then _ else _] |- _ =>
+              let isEq := fresh in
+              (destruct (@weq IdxBits a b) as [isEq | ?]; [rewrite ?isEq in *| try assumption])
+            end;
+     rewrite ?eq_weq in *; repeat diffAddr_sameIdx; (assumption || intros)).
     - specialize (i8 _ (or_introl eq_refl) H2).
       dest; word_omega.
     - specialize (i12 _ (or_introl eq_refl) H2).
