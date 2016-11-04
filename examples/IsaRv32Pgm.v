@@ -368,7 +368,7 @@ Section TestPgms.
     line 1 (LI x11 (natToWord _ 1)).
     line 2 (SW x0 x11 (natToWord _ 100)). (* enter[0] <- true *)
     line 3 (LW x0 x12 (natToWord _ 104)). (* enter[1] *)
-    line 4 (BEQZ x12 (branchTarget 7)). (* 4 + 7 == 11 *)
+    line 4 (BEQZ x12 (branchTarget 8)). (* 4 + 8 == 12 *)
 
     line 5 (LW x0 x13 (natToWord _ 108)). (* turn *)
     line 6 (BEQZ x13 (branchTarget 29)). (* 6 + 29 == 3 *)
@@ -379,20 +379,22 @@ Section TestPgms.
     line 9 (BNEZ x13 (branchTarget 31)). (* 9 + 31 == 8 *)
     line 10 (SW x0 x11 (natToWord _ 100)). (* enter[0] <- true *)
 
+    line 11 (J (branchTarget 24)). (* 11 + 24 == 3 *)
+
     (* cs starts *)
-    line 11 (LW x0 x14 (natToWord _ 112)). (* counter *)
-    line 12 (ADDI x14 x14 (natToWord _ 1)).
-    line 13 (TOHOST x14).
-    line 14 (SW x0 x14 (natToWord _ 112)).
+    line 12 (LW x0 x14 (natToWord _ 112)). (* counter *)
+    line 13 (ADDI x14 x14 (natToWord _ 1)).
+    line 14 (TOHOST x14).
+    line 15 (SW x0 x14 (natToWord _ 112)).
     (* cs ends *)
 
-    line 15 (SW x0 x11 (natToWord _ 108)). (* turn <- 1 *)
-    line 16 (SW x0 x10 (natToWord _ 100)). (* enter[0] <- false *)
+    line 16 (SW x0 x11 (natToWord _ 108)). (* turn <- 1 *)
+    line 17 (SW x0 x10 (natToWord _ 100)). (* enter[0] <- false *)
 
-    line 17 (JAL x0 (branchTarget 15)). (* 17 + 15 == 0 *)
+    line 18 (JAL x0 (branchTarget 14)). (* 18 + 14 == 0 *)
 
     nop. nop. nop. nop. nop. nop. nop. nop.
-    nop. nop. nop. nop. nop. nop.
+    nop. nop. nop. nop. nop.
   Defined.
 
   Definition pgmDekker2 : Rv32Program.
@@ -401,7 +403,7 @@ Section TestPgms.
     line 1 (LI x11 (natToWord _ 1)).
     line 2 (SW x0 x11 (natToWord _ 104)). (* enter[1] <- true *)
     line 3 (LW x0 x12 (natToWord _ 100)). (* enter[0] *)
-    line 4 (BEQZ x12 (branchTarget 7)). (* 4 + 7 == 11 *)
+    line 4 (BEQZ x12 (branchTarget 8)). (* 4 + 8 == 12 *)
 
     line 5 (LW x0 x13 (natToWord _ 108)). (* turn *)
     line 6 (BNEZ x13 (branchTarget 29)). (* 6 + 29 == 3 *)
@@ -412,20 +414,22 @@ Section TestPgms.
     line 9 (BEQZ x13 (branchTarget 31)). (* 9 + 31 == 8 *)
     line 10 (SW x0 x11 (natToWord _ 104)). (* enter[1] <- true *)
 
+    line 11 (J (branchTarget 24)). (* 11 + 24 == 3 *)
+
     (* cs starts *)
-    line 11 (LW x0 x14 (natToWord _ 112)). (* counter *)
-    line 12 (ADDI x14 x14 (natToWord _ 1)).
-    line 13 (TOHOST x14).
-    line 14 (SW x0 x14 (natToWord _ 112)).
+    line 12 (LW x0 x14 (natToWord _ 112)). (* counter *)
+    line 13 (ADDI x14 x14 (natToWord _ 1)).
+    line 14 (TOHOST x14).
+    line 15 (SW x0 x14 (natToWord _ 112)).
     (* cs ends *)
 
-    line 15 (SW x0 x10 (natToWord _ 108)). (* turn <- 0 *)
-    line 16 (SW x0 x10 (natToWord _ 104)). (* enter[1] <- false *)
+    line 16 (SW x0 x10 (natToWord _ 108)). (* turn <- 0 *)
+    line 17 (SW x0 x10 (natToWord _ 104)). (* enter[1] <- false *)
 
-    line 17 (JAL x0 (branchTarget 15)). (* 17 + 15 == 0 *)
+    line 18 (JAL x0 (branchTarget 14)). (* 18 + 14 == 0 *)
 
     nop. nop. nop. nop. nop. nop. nop. nop.
-    nop. nop. nop. nop. nop. nop.
+    nop. nop. nop. nop. nop.
   Defined.
 
 End TestPgms.
