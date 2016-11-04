@@ -9,6 +9,9 @@ VS:=$(filter-out $(IGNORE:%=%.v),$(VS))
 EXVS:=$(wildcard examples/*.v)
 EXVS:=$(filter-out $(IGNORE:%=%.v),$(EXVS))
 
+EXSVS:=$(wildcard examples/isa_rv32/*.v)
+EXSVS:=$(filter-out $(IGNORE:%=%.v),$(EXSVS))
+
 EXTVS:=$(wildcard extraction/*.v)
 EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
@@ -25,8 +28,8 @@ EXTARGS := -R extraction Ext
 coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
 
-Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXTVS)
-	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXTVS) -o Makefile.coq.all
+Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS)
+	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) -o Makefile.coq.all
 
 src: Makefile.coq.src
 	$(MAKE) -f Makefile.coq.src

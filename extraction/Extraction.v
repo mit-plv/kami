@@ -1,6 +1,6 @@
 Require Import List String.
 Require Import Lib.Word Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
-        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm Ex.IsaRv32PgmExt.
+        Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 Require Import Ext.BSyntax.
@@ -14,10 +14,10 @@ Unset Extraction AutoInline.
 
 (** p4st + mem (memAtomic or memCache) extraction *)
 
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 7) *)
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 8) *)
 Definition idxBits := 3.
 Definition tagBits := 3.
-Definition lgNumDatas := 1.
+Definition lgNumDatas := 2.
 Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
@@ -50,7 +50,8 @@ Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes
 Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
 
 (** MODIFY: targetPgms should be your target program *)
-Definition targetPgms := pgmDekker1 :: pgmDekker2 :: nil.
+Require Import Ex.IsaRv32PgmExt.
+Definition targetPgms := IsaRv32PgmDekker1.pgmExt :: IsaRv32PgmDekker2.pgmExt :: nil.
 
 (** MODIFY: targetM should be your target module *)
 (* Definition targetProcM := procMemAtomic. *)
@@ -79,8 +80,8 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
 Defined.
 
 Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
-  (rfWithSpInit (ConstBit (natToWord _ 48)))
-    :: (rfWithSpInit (ConstBit (natToWord _ 96)))
+  (rfWithSpInit (ConstBit (natToWord _ 64)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 128)))
     :: nil.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)

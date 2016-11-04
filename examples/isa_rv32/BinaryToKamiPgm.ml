@@ -47,7 +47,7 @@ let bin_to_kami_word (s: string) =
 let hex_to_kami_word (s: string) =
   bin_to_kami_word (hex_string_to_bin s)
 
-let pgm_size = 32
+let pgm_size = 64
 let pgm_nop = "00000013" (* NOP *)
 let pgm_last = "00050008" (* RET should be substituted to TOHOST(a0) *)
 
