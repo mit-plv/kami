@@ -49,13 +49,20 @@ let hex_to_kami_word (s: string) =
 
 let pgm_size = 64
 let pgm_nop = "00000013" (* NOP *)
-let pgm_last = "00050008" (* RET should be substituted to TOHOST(a0) *)
+let pgm_ret = "00008067" (* RET *)
+
+(* first RET should be substituted to TOHOST(a0),
+ * assuming the main function is located first.
+ *)
+let pgm_last = "00050008"
 
 let rec substitute_ret_to_tohost (p: string list) =
   match p with
   | [] -> []
-  | i :: [] -> pgm_last :: []
-  | i :: p' -> i :: (substitute_ret_to_tohost p')
+  | i :: p' ->
+     if i = pgm_ret
+     then pgm_last :: p'
+     else i :: (substitute_ret_to_tohost p')
 
 let rec print_kami_pgm_rec (p: string list) (sz: int) =
   if (sz <= 0) then ()

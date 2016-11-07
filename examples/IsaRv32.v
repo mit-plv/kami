@@ -14,7 +14,7 @@ Require Import Ex.MemTypes Ex.SC.
  * Just one RV32M instruction: MUL
  *)
 Section RV32I.
-  Definition rv32iAddrSize := 8. (* 2^8 memory cells *)
+  Definition rv32iAddrSize := 9. (* 2^9 memory cells *)
   Definition rv32iIAddrSize := 6. (* 2^6 = 64 program size *)
   Definition rv32iDataBytes := 4.
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
@@ -238,14 +238,11 @@ Section RV32I.
     unfold ExecT; intros ty val1 val2 pc inst.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpJAL)
-            then ((UniBit (ZeroExtendTrunc _ _) #pc) +
-                  (UniBit (SignExtendTrunc _ _) ((getOffsetUJE #inst) << $$(natToWord 1 1))))
+            then (UniBit (ZeroExtendTrunc _ _) (#pc + $4))
             else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $$rv32iOpJALR)
-            then (UniBit (ZeroExtendTrunc _ _)
-                         (#pc + (UniBit (SignExtendTrunc _ _) #val1)
-                          + (UniBit (SignExtendTrunc _ _)
-                                    (getOffsetIE #inst)))) else _)%kami_expr.
+            then (UniBit (ZeroExtendTrunc _ _) (#pc + $4))
+            else _)%kami_expr.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpOP) then _ else _)%kami_expr.
 
@@ -297,7 +294,7 @@ Section RV32I.
             then #pc + (UniBit (SignExtendTrunc _ _)
                                ((getOffsetUJE #inst) << $$(natToWord 1 1))) else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $$rv32iOpJALR)
-            then #pc + (UniBit (SignExtendTrunc _ _) (getRs1ValueE st #inst))
+            then (UniBit (SignExtendTrunc _ _) (getRs1ValueE st #inst))
                  + (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst)) else _)%kami_expr.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else #pc + $4)%kami_expr.

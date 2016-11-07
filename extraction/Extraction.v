@@ -14,8 +14,8 @@ Unset Extraction AutoInline.
 
 (** p4st + mem (memAtomic or memCache) extraction *)
 
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 8) *)
-Definition idxBits := 3.
+(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 9) *)
+Definition idxBits := 4.
 Definition tagBits := 3.
 Definition lgNumDatas := 2.
 Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
@@ -80,8 +80,8 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
 Defined.
 
 Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
-  (rfWithSpInit (ConstBit (natToWord _ 64)))
-    :: (rfWithSpInit (ConstBit (natToWord _ 128)))
+  (rfWithSpInit (ConstBit (natToWord _ 192)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 384)))
     :: nil.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)
