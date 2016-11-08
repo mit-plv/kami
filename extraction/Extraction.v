@@ -1,5 +1,5 @@
 Require Import List String.
-Require Import Lib.Word Kami.Syntax Kami.ParametricSyntax Kami.Duplicate
+Require Import Lib.Word Kami.Syntax Kami.Semantics Kami.Duplicate
         Kami.Notations Kami.Synthesize Ex.IsaRv32 Ex.IsaRv32Pgm.
 Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
@@ -12,9 +12,9 @@ Set Extraction Optimize.
 Set Extraction KeepSingleton.
 Unset Extraction AutoInline.
 
-(** p4st + mem (memAtomic or memCache) extraction *)
+(** p4st + pmFifos ++ memCache extraction *)
 
-(* (IdxBits + TagBits + LgNumDatas) should equal to rv32iAddrSize (= 9) *)
+(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 9) *)
 Definition idxBits := 4.
 Definition tagBits := 3.
 Definition lgNumDatas := 2.
@@ -25,37 +25,39 @@ Definition idK := Bit 1.
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
-Definition p4st := p4st rv32iGetOptype
-                        rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
-                        rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
-                        rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-                        rv32iAlignPc rv32iAlignAddr predictNextPc (@d2ePackI _ _ _)
-                        (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
-                        (@d2eVal1I _ _ _) (@d2eVal2I _ _ _)
-                        (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _) (@d2eNextPcI _ _ _)
-                        (@d2eEpochI _ _ _)
-                        (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
-                        (@f2dNextPcI _ _) (@f2dEpochI _ _)
-                        (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _).
+Definition p4stNMemCache :=
+  ProcMemCorrect.p4stNMemCache
+    fifoSize idxBits tagBits lgNumDatas idK
+    rv32iGetOptype rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+    rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+    rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+    rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren.
 
-Definition p4stN := duplicate p4st (Word.wordToNat (Word.wones lgNumChildren)).
+(** The correctness of the extraction target is proven! Trust us! *)
+Section Correctness.
 
-(* Definition memAtomic := memAtomic rv32iAddrSize fifoSize rv32iDataBytes *)
-(*                                   (Word.wordToNat (Word.wones lgNumChildren)). *)
-Definition memCache := memCacheMod idxBits tagBits lgNumDatas rv32iDataBytes (Bit 1)
-                                   fifoSize lgNumChildren.
-Definition pmFifos := pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes lgNumChildren.
+  (* Spec: sequential consistency for multicore *)
+  Definition scN :=
+    ProcMemCorrect.scN
+      idxBits tagBits lgNumDatas
+      rv32iGetOptype rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+      rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+      rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+      rv32iAlignPc rv32iAlignAddr lgNumChildren.
 
-(* Definition procMemAtomic := (p4stN ++ memAtomic)%kami. *)
-Definition procMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
+  Theorem p4stNMemCache_refines_scN: p4stNMemCache <<== scN.
+  Proof.
+    apply p4stN_mcache_refines_scN.
+  Qed.
+
+End Correctness.
 
 (** MODIFY: targetPgms should be your target program *)
 Require Import Ex.IsaRv32PgmExt.
 Definition targetPgms := IsaRv32PgmDekker1.pgmExt :: IsaRv32PgmDekker2.pgmExt :: nil.
 
 (** MODIFY: targetM should be your target module *)
-(* Definition targetProcM := procMemAtomic. *)
-Definition targetProcM := procMemCache.
+Definition targetProcM := p4stNMemCache.
 
 (** MODIFY: targetRfs should be a list of initial values of processors' register files *)
 Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
@@ -80,8 +82,8 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
 Defined.
 
 Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
-  (rfWithSpInit (ConstBit (natToWord _ 192)))
-    :: (rfWithSpInit (ConstBit (natToWord _ 384)))
+  (rfWithSpInit (ConstBit (natToWord _ 64)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 128)))
     :: nil.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)

@@ -1,10 +1,10 @@
-Require Import Ex.MemCacheInv Ex.MemCacheInl.
 Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.RefinementFacts.
 Require Import Kami.Wf Kami.Tactics Kami.Specialize.
 Require Import Ex.Msi Ex.MemTypes Ex.Fifo Ex.RegFile Ex.L1Cache Ex.ChildParent Ex.MemDir.
 Require Import Ex.SC Ex.MemAtomic Ex.MemCache Ex.MemCacheSubst Lib.Indexer.
+Require Import Ex.MemCacheInv Ex.MemCacheInl.
 
 Set Implicit Arguments.
 
@@ -66,7 +66,6 @@ Section MemCorrect.
   Qed.
 
   (** Converting memCache to ConcatMod *)
-
   Require Import Kami.ModuleBoundEx.
   
   Ltac toModules m :=

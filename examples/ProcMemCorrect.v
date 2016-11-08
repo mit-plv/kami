@@ -148,120 +148,33 @@ Section ProcMem.
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
-  (* Abstract d2eElt *)
-  Variable (d2eElt: Kind).
-  Variable (d2ePack:
-              forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
-                Expr ty (SyntaxKind (Bit RfIdx)) -> (* dst *)
-                Expr ty (SyntaxKind (Bit AddrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data DataBytes)) -> (* val1 *)
-                Expr ty (SyntaxKind (Data DataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data DataBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit AddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit AddrSize)) -> (* nextPc *)
-                Expr ty (SyntaxKind Bool) -> (* epoch *)
-                Expr ty (SyntaxKind d2eElt)).
-  Variables
-    (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
-    (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                        Expr ty (SyntaxKind (Bit RfIdx)))
-    (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                         Expr ty (SyntaxKind (Bit AddrSize)))
-    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                                 Expr ty (SyntaxKind (Data DataBytes)))
-    (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data DataBytes)))
-    (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Bit AddrSize)))
-    (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit AddrSize)))
-    (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind Bool)).
+  (** Module definitions for the last theorem:
+   * note that struct definitions are now concretized.
+   *)
+  Definition p4stN :=
+    duplicate
+      (p4st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+            getStAddr getStSrc calcStAddr getStVSrc
+            getSrc1 getSrc2 getDst exec getNextPc
+            alignPc alignAddr predictNextPc
+            (@d2ePackI _ _ _) (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
+            (@d2eVal1I _ _ _) (@d2eVal2I _ _ _) (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _)
+            (@d2eNextPcI _ _ _) (@d2eEpochI _ _ _)
+            (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
+            (@f2dNextPcI _ _) (@f2dEpochI _ _)
+            (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _)) numChildren.
 
-  Hypotheses
-    (Hd2eOpType: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eOpType _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr opType)
-    (Hd2eDst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eDst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr dst)
-    (Hd2eAddr: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eAddr _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr addr)
-    (Hd2eVal1: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eVal1 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val1)
-    (Hd2eVal2: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eVal2 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val2)
-    (Hd2eRawInst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eRawInst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr rawInst)
-    (Hd2eCurPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eCurPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr curPc)
-    (Hd2eNextPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eNextPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr nextPc)
-    (Hd2eEpoch: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-        evalExpr (d2eEpoch _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr epoch).
+  Definition memCacheMod :=
+    memCacheMod IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
 
-  (* Abstract f2dElt *)  
-  Variable (f2dElt: Kind).
-  Variable (f2dPack:
-              forall ty,
-                Expr ty (SyntaxKind (Data DataBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit AddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit AddrSize)) -> (* nextPc *)
-                Expr ty (SyntaxKind Bool) -> (* epoch *)
-                Expr ty (SyntaxKind f2dElt)).
-  Variables
-    (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                            Expr ty (SyntaxKind (Data DataBytes)))
-    (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Bit AddrSize)))
-    (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Bit AddrSize)))
-    (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind Bool)).
+  (** The final system:
+   * p4stN (4-staged multicore processor) ++
+   * pmFifos (fifos connecting the processor and memory) ++
+   * memCacheMod (two-level cache-based memory)
+   *)
+  Definition p4stNMemCache := (p4stN ++ pmFifos ++ memCacheMod)%kami.
 
-  Hypotheses (Hf2dRawInst: forall rawInst curPc nextPc epoch,
-                 evalExpr (f2dRawInst _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
-                 evalExpr rawInst)
-             (Hf2dCurPc: forall rawInst curPc nextPc epoch,
-                 evalExpr (f2dCurPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
-                 evalExpr curPc)
-             (Hf2dNextPc: forall rawInst curPc nextPc epoch,
-                 evalExpr (f2dNextPc _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
-                 evalExpr nextPc)
-             (Hf2dEpoch: forall rawInst curPc nextPc epoch,
-                 evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
-                 evalExpr epoch).
-
-  (* Abstract e2wElt *)  
-  Variable (e2wElt: Kind).
-  Variable (e2wPack:
-              forall ty,
-                Expr ty (SyntaxKind d2eElt) -> (* decInst *)
-                Expr ty (SyntaxKind (Data DataBytes)) -> (* execVal *)
-                Expr ty (SyntaxKind e2wElt)).
-  Variables
-    (e2wDecInst: forall ty, fullType ty (SyntaxKind e2wElt) ->
-                            Expr ty (SyntaxKind d2eElt))
-    (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
-                        Expr ty (SyntaxKind (Data DataBytes))).
-
-  Hypotheses
-    (He2wDecInst: forall decInst val,
-        evalExpr (e2wDecInst _ (evalExpr (e2wPack decInst val))) = evalExpr decInst)
-    (He2wVal: forall decInst val,
-        evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
-
-  Definition p4stN := duplicate
-                        (p4st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst exec getNextPc
-                              alignPc alignAddr predictNextPc
-                              d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                              d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                              e2wPack e2wDecInst e2wVal) numChildren.
-
-  Theorem p4stN_mcache_refines_scN: (p4stN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
+  Theorem p4stN_mcache_refines_scN: p4stNMemCache <<== scN.
   Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_mcache_refines_scN].
     kmodular.
@@ -271,8 +184,12 @@ Section ProcMem.
       ketrans.
       + apply p4st_refines_p3st; auto.
       + apply p3st_refines_pdec; auto.
-    - krefl.
-      END_SKIP_PROOF_ON *) apply cheat.
+    - kmodular.
+      + kdisj_edms_cms_ex numChildren.
+      + kdisj_ecms_dms_ex numChildren.
+      + krefl.
+      + apply memCacheMod_refines_memCache.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcMem.

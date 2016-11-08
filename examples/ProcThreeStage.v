@@ -126,69 +126,6 @@ Section D2eInst.
   Definition d2eEpochI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind Bool) := (#d2e!d2eEltI@."epoch")%kami_expr.
 
-  Lemma d2eElt_opType:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eOpTypeI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                 rawInst curPc nextPc epoch)))
-      = evalExpr opType.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_dst:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eDstI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                              rawInst curPc nextPc epoch)))
-      = evalExpr dst.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_addr:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eAddrI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                               rawInst curPc nextPc epoch)))
-      = evalExpr addr.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_val1:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eVal1I _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                    rawInst curPc nextPc epoch)))
-      = evalExpr val1.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_val2:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eVal2I _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                               rawInst curPc nextPc epoch)))
-      = evalExpr val2.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_rawInst:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eRawInstI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                  rawInst curPc nextPc epoch)))
-      = evalExpr rawInst.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_curPc:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eCurPcI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                rawInst curPc nextPc epoch)))
-      = evalExpr curPc.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_nextPc:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eNextPcI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                 rawInst curPc nextPc epoch)))
-      = evalExpr nextPc.
-  Proof. reflexivity. Qed.
-
-  Lemma d2eElt_epoch:
-    forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
-      evalExpr (d2eEpochI _ (evalExpr (d2ePackI opType dst addr val1 val2
-                                                rawInst curPc nextPc epoch)))
-      = evalExpr epoch.
-  Proof. reflexivity. Qed.
-
 End D2eInst.
 
 Section E2wInst.
@@ -208,16 +145,6 @@ Section E2wInst.
     : Expr ty (SyntaxKind (Struct (d2eEltI addrSize dataBytes rfIdx))) := (#e2w!e2wEltI@."decInst")%kami_expr.
   Definition e2wValI ty (e2w: fullType ty (SyntaxKind (Struct e2wEltI)))
     : Expr ty (SyntaxKind (Data dataBytes)) := (#e2w!e2wEltI@."val")%kami_expr.
-
-  Lemma e2wElt_decInst:
-    forall decInst val,
-      evalExpr (e2wDecInstI _ (evalExpr (e2wPackI decInst val))) = evalExpr decInst.
-  Proof. reflexivity. Qed.
-
-  Lemma e2wElt_val:
-    forall decInst val,
-      evalExpr (e2wValI _ (evalExpr (e2wPackI decInst val))) = evalExpr val.
-  Proof. reflexivity. Qed.
 
 End E2wInst.
   

@@ -34,30 +34,6 @@ Section F2dInst.
   Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
     : Expr ty (SyntaxKind Bool) := (#f2d!f2dEltI@."epoch")%kami_expr.
 
-  Lemma f2dElt_rawInst:
-    forall rawInst curPc nextPc epoch,
-      evalExpr (f2dRawInstI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
-      = evalExpr rawInst.
-  Proof. reflexivity. Qed.
-
-  Lemma f2dElt_curPc:
-    forall rawInst curPc nextPc epoch,
-      evalExpr (f2dCurPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
-      = evalExpr curPc.
-  Proof. reflexivity. Qed.
-
-  Lemma f2dElt_nextPc:
-    forall rawInst curPc nextPc epoch,
-      evalExpr (f2dNextPcI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
-      = evalExpr nextPc.
-  Proof. reflexivity. Qed.
-
-  Lemma f2dElt_epoch:
-    forall rawInst curPc nextPc epoch,
-      evalExpr (f2dEpochI _ (evalExpr (f2dPackI rawInst curPc nextPc epoch)))
-      = evalExpr epoch.
-  Proof. reflexivity. Qed.
-
 End F2dInst.
 
 (* A pipelined "fetch" and "decode" modules. This module substitutes the {fetch, decode} stage
