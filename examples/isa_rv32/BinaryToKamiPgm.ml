@@ -51,18 +51,19 @@ let pgm_size = 64
 let pgm_nop = "00000013" (* NOP *)
 let pgm_ret = "00008067" (* RET *)
 
-(* first RET should be substituted to TOHOST(a0),
+(* first RET should be substituted to "TOHOST a0; J 0x0",
  * assuming the main function is located first.
  *)
 let pgm_last = "00050008"
+let pgm_back (sz: int) = "0" ^ (Printf.sprintf "%02x" (4 * (pgm_size - sz))) ^ "0006f"
 
-let rec substitute_ret_to_tohost (p: string list) =
+let rec substitute_ret (p: string list) (main_sz: int) =
   match p with
   | [] -> []
   | i :: p' ->
      if i = pgm_ret
-     then pgm_last :: p'
-     else i :: (substitute_ret_to_tohost p')
+     then pgm_last :: (pgm_back (main_sz + 1)) :: p'
+     else i :: (substitute_ret p' (main_sz + 1))
 
 let rec print_kami_pgm_rec (p: string list) (sz: int) =
   if (sz <= 0) then ()
@@ -96,7 +97,7 @@ let print_kami_pgm_footer (_: unit) =
 let print_kami_pgm (_: unit) =
   print_kami_pgm_header ();
   print_newline ();
-  print_kami_pgm_rec (substitute_ret_to_tohost !pgm) pgm_size;
+  print_kami_pgm_rec (substitute_ret !pgm 0) pgm_size;
   print_newline ();
   print_kami_pgm_footer ()
                    
