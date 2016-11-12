@@ -54,6 +54,10 @@ Set Asymmetric Patterns.
   + kinv_magic_light : a lightweight version of "kinv_magic"
     * kinv_magic_light_with _tactic_ : also try to apply _tactic_ alternately
   + kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
+  + krewrite dup_dist left : convert (dup (m1 + m2) n <<== m) to (dup m1 n + dup m2 n <<== m)
+  + krewrite <- dup_dist left : convert (dup m1 n + dup m2 n <<== m) to (dup (m1 + m2) n <<== m)
+  + krewrite dup_dist right : convert (m <<== dup (m1 + m2) n) to (m <<== dup m1 n + dup m2 n)
+  + krewrite <- dup_dist right : convert (m <<== dup m1 n + dup m2 n) to (m <<== dup (m1 + m2) n)
   + kgetv/kexistv/kexistnv : used to construct register or label mappings
 
 - Kami Hints
@@ -806,6 +810,15 @@ Ltac kduplicated :=
    |kvr|kvr
    |auto (* SubList (getExtMeth _) (getExtMeth _) *)
    |].
+
+Tactic Notation "krewrite" "dup_dist" "left" :=
+  ketrans; [apply duplicate_concatMod_comm_1; auto; try kequiv; try kvr|].
+Tactic Notation "krewrite" "<-" "dup_dist" "left" :=
+  ketrans; [apply duplicate_concatMod_comm_2; auto; try kequiv; try kvr|].
+Tactic Notation "krewrite" "dup_dist" "right" :=
+  ketrans; [|apply duplicate_concatMod_comm_2; auto; try kequiv; try kvr].
+Tactic Notation "krewrite" "<-" "dup_dist" "right" :=
+  ketrans; [|apply duplicate_concatMod_comm_1; auto; try kequiv; try kvr].
 
 Ltac kgetv k v m t f :=
   destruct (M.find k m) as [[[kind|] v]|]; [|exact f|exact f];

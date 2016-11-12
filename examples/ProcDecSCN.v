@@ -33,23 +33,9 @@ Section ProcDecSCN.
 
   Variable n: nat.
   
-  Definition pdecN := procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                               getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
-
-  Lemma pdecN_refines_scN: pdecN <<== scN.
-  Proof. (* SKIP_PROOF_ON
-    kmodular.
-    - kdisj_edms_cms_ex n.
-    - kdisj_ecms_dms_ex n.
-    - kduplicated.
-      apply pdec_refines_pinst; auto.
-    - krefl.
-      END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
@@ -59,12 +45,14 @@ Section ProcDecSCN.
 
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
-    ketrans; [|apply pdecN_refines_scN; auto].
     krewrite assoc left.
-    kmodular_sim_l.
-    - apply duplicate_regs_ConcatMod; auto; kvr.
-    - apply duplicate_rules_ConcatMod; auto; kvr.
-    - apply duplicate_defs_ConcatMod; auto; kvr.
+    kmodular.
+    - kdisj_edms_cms_ex n.
+    - kdisj_ecms_dms_ex n.
+    - krewrite <- dup_dist left.
+      kduplicated.
+      apply pdec_refines_pinst; auto.
+    - krefl.
       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
