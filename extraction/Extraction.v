@@ -103,5 +103,5 @@ Definition target : ExtTarget :=
      extRfs := targetRfs |}.
 
 (** Ocaml/Target.ml is used with Ocaml/PP.ml and Main.ml to build a converter to Bluespec. *)
-(* Extraction "./Ocaml/Target.ml" target. *)
+Extraction "./extraction/Ocaml/Target.ml" target.
 
