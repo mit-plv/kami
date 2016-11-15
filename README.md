@@ -45,7 +45,7 @@ Instructions
 ```
 $ cd $TOP/extraction/Ocaml
 $ make
-$ ./Main.native -d Proc.bsv
+$ ./Main.native Proc.bsv
 ```
 
 This generates the file Proc.bsv, which is the Bluespec code representing the multiprocessor system with coherent caches.
@@ -66,29 +66,22 @@ Once Proc.bsv is generated, do the following:
 ```
 $ cp $TOP/extraction/Ocaml/Proc.bsv $TOP/extraction/BluespecFrontEnd/fpgaConnectal
 $ cd $TOP/extraction/BluespecFrontEnd/fpgaConnectal
-$ make
+$ make build.vc707g2
 ```
 
 ### To change the benchmark being compiled
-Multithreaded benchmarks can be run on 2 cores by modifying the program bein
-executed in line 57. For instance, replacing IsaRv32PgmDekker1 and
-IsaRv32PgmDekker2 in line 57 in $TOP/extraction/Extraction.v to
-onIsaRv32PgmPeterson1 and IsaRv32PgmPeterson2, respectively, will run the
-2-core version of Peterson's algorithm for incrementing counter.
+Multithreaded benchmarks can be run on 4 cores by modifying the program being
+executed in line 57. For instance, replacing _IsaRv32PgmMatMul*_ in line 57 
+in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker*_, respectively, will run the
+4-core version of the Banker example.
 
-In order to run the single-threaded programs, Extraction.v file has to be
-changed considerably. First, line 21 denotes lg of the number of cores. That
-should be changed to 0 for single-threaded programs. Then, the list in line 57
-should contain just one element among the following:
-IsaRv32PgmGcd, IsaRv32PgmFact, IsaRv32PgmBsort or IsaRv32PgmHanoi.
-
-Then redo all the instructions from the beginning to execute the new benchmark.
+See the list of benchmarks (directly converted from C code), which are shown in $TOP/examples/IsaRv32PgmExt.v.
 
 ### To add a new benchmark
 `$ cd $TOP/example/isa_rv32`
 
 Here are the steps following that:
-1) Write the C code that you want to compile into Kami (1 program for each core).
+1) Write the C code that you want to compile into Kami (one program for each core).
 2) Compile the C code (say test.c) into an assembly code using the RISC-V gcc
 compiler as follows (assuming risc-v GCC is in your path):
 ```
@@ -98,6 +91,6 @@ $ riscv32-unknown-elf-objdump -d a.out > test.objdump
 $ ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v
 ```
 
-Now add IsaTest.v to `$TOP/IsaRv32PgmExt.v`
+Now add IsaTest.v to $TOP/examples/IsaRv32PgmExt.v
 
 This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to execute this.
