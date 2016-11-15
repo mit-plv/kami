@@ -14,11 +14,11 @@ Unset Extraction AutoInline.
 
 (** p4st + pmFifos ++ memCache extraction *)
 
-(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 9) *)
+(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 10) *)
 Definition idxBits := 4.
 Definition tagBits := 3.
-Definition lgNumDatas := 2.
-Definition lgNumChildren := 1. (* 2^1 = 2 cores *)
+Definition lgNumDatas := 3.
+Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
@@ -54,12 +54,16 @@ End Correctness.
 
 (** MODIFY: targetPgms should be your target program *)
 Require Import Ex.IsaRv32PgmExt.
-Definition targetPgms := IsaRv32PgmDekker1.pgmExt :: IsaRv32PgmDekker2.pgmExt :: nil.
+Definition targetPgms :=
+  IsaRv32PgmMatMulInit.pgmExt
+    :: IsaRv32PgmMatMulNormal1.pgmExt
+    :: IsaRv32PgmMatMulNormal2.pgmExt
+    :: IsaRv32PgmMatMulReport.pgmExt :: nil.
 
 (** MODIFY: targetM should be your target module *)
 Definition targetProcM := p4stNMemCache.
 
-(** MODIFY: targetRfs should be a list of initial values of processors' register files *)
+(* A utility function for setting the stack pointer in rf *)
 Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
   : ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx).
   refine
@@ -81,9 +85,12 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
     exact $0.
 Defined.
 
+(** MODIFY: targetRfs should be a list of initial values of processors' register files *)
 Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
   (rfWithSpInit (ConstBit (natToWord _ 64)))
     :: (rfWithSpInit (ConstBit (natToWord _ 128)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 192)))
+    :: (rfWithSpInit (ConstBit (natToWord _ 256)))
     :: nil.
 
 (** DON'T REMOVE OR MODIFY BELOW LINES *)

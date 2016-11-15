@@ -2,6 +2,8 @@ open String
 open List
 open Batteries
 
+let pgm_size = 256
+
 let inst_line_regex_str =
   "[0-9a-f]+:[ \t]+[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
 let inst_regex_str = "[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]"
@@ -47,7 +49,6 @@ let bin_to_kami_word (s: string) =
 let hex_to_kami_word (s: string) =
   bin_to_kami_word (hex_string_to_bin s)
 
-let pgm_size = 64
 let pgm_nop = "00000013" (* NOP *)
 let pgm_ret = "00008067" (* RET *)
 
@@ -55,7 +56,7 @@ let pgm_ret = "00008067" (* RET *)
  * assuming the main function is located first.
  *)
 let pgm_last = "00050008"
-let pgm_back (sz: int) = "0" ^ (Printf.sprintf "%02x" (4 * (pgm_size - sz))) ^ "0006f"
+let pgm_back (sz: int) = (Printf.sprintf "%03x" (4 * (pgm_size - sz))) ^ "0006f"
 
 let rec substitute_ret (p: string list) (main_sz: int) =
   match p with
