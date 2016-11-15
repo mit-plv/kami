@@ -15,20 +15,20 @@ Requirements
 ------------
 To Verify Kami modules
 ----------------------
-- Coq 8.5pl2
+- Coq 8.5pl2 (with $PATH containing the standard Coq binaries)
 
 To Generate Bluespec Programs
 -----------------------------
-- OCaml 4.0.2.3
+- OCaml 4.0.2.3 (with $PATH containing the standard OCaml binaries)
 - Batteries Library for OCaml (2.5.2)
 
 To Run Bluespec code (i.e. simulation)
 --------------------------------------
-- Bluespec 2014.07.A
+- Bluespec 2014.07.A (with $PATH containing the Bluespec binaries and $LM_LICENSE_FILE contains Bluespec license)
 
 To Run Bluespec code on FPGAs
 -----------------------------
-- Vivado 2015.4
+- Vivado 2015.4 (with $PATH containing the Bluespec binaries and $LM_LICENSE_FILE contains Bluespec license)
 - Xilinx Virtex-7 VC707 Evaluation Kit FPGA
 
 To Compile C code to run on multiprocessor
