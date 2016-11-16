@@ -71,11 +71,13 @@ $ make build.vc707g2
 
 ### To change the benchmark being compiled
 Multithreaded benchmarks can be run on 4 cores by modifying the program being
-executed in line 57. For instance, replacing _IsaRv32PgmMatMul*_ in line 57 
-in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker*_, respectively, will run the
+executed in line 57. For instance, replacing _IsaRv32PgmMatMul1_, _IsaRv32PgmMatMul2_, etc. in line 57 
+in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker1_, _IsaRv32PgmBanker2_, etc. respectively, will run the
 4-core version of the Banker example.
 
 See the list of benchmarks (directly converted from C code), which are shown in $TOP/examples/IsaRv32PgmExt.v.
+
+Redo all the steps from the beginning to build and run the new Benchmark.
 
 ### To add a new benchmark
 `$ cd $TOP/example/isa_rv32`
@@ -93,4 +95,4 @@ $ ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v
 
 Now add IsaTest.v to $TOP/examples/IsaRv32PgmExt.v
 
-This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to execute this.
+This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to build and run the new Benchmark.
