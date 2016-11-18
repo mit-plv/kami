@@ -414,7 +414,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_flat) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_flat.
   Proof.
-    (* SKIP_PROOF_ON
     assert (mRef: modFromMeta
                     (nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)
                     <<== modFromMeta nmemCacheInl_flat) by
@@ -425,8 +424,6 @@ Section MemCacheInl.
                     kequiv)).
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-
   Qed.
 
   Definition nmemCacheInl_1_1: MetaModule.
@@ -462,7 +459,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
     
     ssFilt (mline -- read) deferred.
@@ -473,7 +469,6 @@ Section MemCacheInl.
     ssNoFilt (mcs -- read) dwnRs_noWait.
     ssFilt (mcs -- read) deferred.
     finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -482,7 +477,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_2) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_2.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_1_1 nmemCacheInl_1_1_pf.
     
     ssNoFilt (mline -- write) dwnRs_wait.
@@ -493,7 +487,6 @@ Section MemCacheInl.
     ssFilt (mcs -- write) deferred.
 
     finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition nmemCacheInl_2: MetaModule.
@@ -519,8 +512,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_2) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_2.
   Proof.
-    (* SKIP_PROOF_ON
-
     start_pf2 nmemCacheInl_1_2 nmemCacheInl_1_2_pf.
 
     ssNoFilt (toChild -- enqName) dwnRq.
@@ -534,7 +525,6 @@ Section MemCacheInl.
     ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
     ssFilt (rsFromChild -- deqName) dwnRs_noWait.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition nmemCacheInl_3: MetaModule.
@@ -556,8 +546,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_3.
   Proof.
-    (* SKIP_PROOF_ON
-
     start_pf2 nmemCacheInl_2 nmemCacheInl_2_pf.
 
     gsFilt (rsFromChild -- enqName) rsFromCToPRule.
@@ -567,7 +555,6 @@ Section MemCacheInl.
     gsFilt (toChild -- deqName) fromPToCRule.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -603,8 +590,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4.
   Proof.
-    (* SKIP_PROOF_ON
-
     start_pf2 nmemCacheInl_3 nmemCacheInl_3_pf.
 
     ggNoFilt (cs -- read) l1MissByState.
@@ -615,7 +600,6 @@ Section MemCacheInl.
     ggNoFilt (cs -- read) upgRs.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
     
   Theorem nmemCacheInl_4_5_pf:
@@ -623,7 +607,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_4 nmemCacheInl_4_pf.
 
     ggNoFilt (cs -- read) ld.
@@ -632,7 +615,6 @@ Section MemCacheInl.
     ggFilt (cs -- read) pProcess.
 
     finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
 
@@ -657,9 +639,7 @@ Section MemCacheInl2.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5'.
   Proof.
-    (* SKIP_PROOF_ON
     eapply nmemCacheInl_4_5_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -686,7 +666,6 @@ Section MemCacheInl2.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_5.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_4_5' nmemCacheInl_4_5'_pf.
 
     ggNoFilt (tag -- read) l1MissByState.
@@ -700,7 +679,6 @@ Section MemCacheInl2.
     ggFilt (tag -- read) pProcess.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl2.
   
@@ -725,9 +703,7 @@ Section MemCacheInl3.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_5'.
   Proof.
-    (* SKIP_PROOF_ON
     eapply nmemCacheInl_5_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -762,7 +738,6 @@ Section MemCacheInl3.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_5' nmemCacheInl_5'_pf.
     
     ggNoFilt (line -- read) writeback.
@@ -770,7 +745,6 @@ Section MemCacheInl3.
     ggNoFilt (line -- read) st.
     ggFilt (line -- read) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_6_3_pf:
@@ -778,14 +752,12 @@ Section MemCacheInl3.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_3.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6 nmemCacheInl_6_pf.
     
     ggNoFilt (cs -- write) writeback.
     ggNoFilt (cs -- write) upgRs.
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_6_6_pf:
@@ -793,12 +765,10 @@ Section MemCacheInl3.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6_3 nmemCacheInl_6_3_pf.
     
     ggFilt (cs -- write) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl3.
   
@@ -823,9 +793,7 @@ Section MemCacheInl4.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6'.
   Proof.
-    (* SKIP_PROOF_ON
     eapply nmemCacheInl_6_6_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -859,11 +827,9 @@ Section MemCacheInl4.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_6_6' nmemCacheInl_6_6'_pf.
     ggFilt (tag -- write) upgRs.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_7_3_pf:
@@ -871,12 +837,10 @@ Section MemCacheInl4.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_3) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_3.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7 nmemCacheInl_7_pf.
     ggNoFilt (line -- write) upgRs.
     ggFilt (line -- write) st.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_7_7_pf:
@@ -884,13 +848,11 @@ Section MemCacheInl4.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7_3 nmemCacheInl_7_3_pf.
     ggNoFilt (fromParent -- deqName) upgRs.
     ggNoFilt (fromParent -- deqName) drop.
     ggFilt (fromParent -- deqName) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl4.
 
@@ -914,9 +876,7 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7') /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7'.
   Proof.
-    (* SKIP_PROOF_ON
     eapply nmemCacheInl_7_7_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -962,11 +922,9 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_8) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_8.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_7_7' nmemCacheInl_7_7'_pf.
     ggFilt (rqToParent -- enqName) upgRq.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_9_pf:
@@ -974,12 +932,10 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_9) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_9.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_8 nmemCacheInl_8_pf.
     ggNoFilt (rsToParent -- enqName) writeback.
     ggFilt (rsToParent -- enqName) pProcess.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_10_pf:
@@ -987,11 +943,9 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_10) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_10.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_9 nmemCacheInl_9_pf.
     ggFilt (rqToParent -- deqName) rqFromCToPRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Theorem nmemCacheInl_11_pf:
@@ -999,11 +953,9 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_11) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_11.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_10 nmemCacheInl_10_pf.
     ggFilt (rsToParent -- deqName) rsFromCToPRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem nmemCacheInl_pf:
@@ -1011,11 +963,9 @@ Section MemCacheInl5.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
-    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_11 nmemCacheInl_11_pf.
     ggFilt (fromParent -- enqName) fromPToCRule.
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl5.
 

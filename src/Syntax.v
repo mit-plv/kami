@@ -329,7 +329,6 @@ Inductive RegInitValue :=
 | RegInitCustom: sigT ConstFullT -> RegInitValue
 | RegInitDefault: FullKind -> RegInitValue.
 
-(* TODO MUST MAKE THEM PAIRS *)
 Require Import Lib.Struct.
 
 Definition RegInitT := Attribute RegInitValue.
@@ -805,8 +804,6 @@ Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
 (** Notations *)
-
-(* TODO MUST CHANGE *)
 
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
 Notation "name :: ty" := {| attrName := name; attrType := ty |} : kami_struct_scope.

@@ -84,7 +84,7 @@ Section MemCorrect.
   Defined.
 
   Lemma memCacheMod_refines_memCache: memCacheMod <<== modFromMeta memCache.
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     ketrans; [|apply modFromMeta_comm_2].
     kmodular;
       [kdisj_edms_cms_ex (wordToNat (wones LgNumChildren))
@@ -168,7 +168,6 @@ Section MemCorrect.
         * krefl.
         * krefl.
       + krefl.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End MemCorrect.
