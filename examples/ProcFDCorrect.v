@@ -139,8 +139,9 @@ Section FetchDecode.
 
   Theorem fetchDecode_refines_fetchNDecode:
     fetchDecode <<== fetchNDecode.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     kami_ok fdConfig fetchDecode_dest_tac f2d_abs_tac.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End FetchDecode.

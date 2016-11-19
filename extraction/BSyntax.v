@@ -41,7 +41,11 @@ Section BluespecSubset.
                       brules : list BRule;
                       bdms : list BMethod }.
 
-  Definition BModules := list BModule.
+  Inductive BRegModule :=
+  | RegFileB (dataArray read write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): BRegModule
+  | BModuleB (b: BModule): BRegModule.
+
+  Definition BModules := list BRegModule.
 
   (** Conversion from Kami modules to BModules *)
 
@@ -179,11 +183,13 @@ Section BluespecSubset.
 
   Fixpoint ModulesSToBModules (m: ModulesS) :=
     match m with
+      | RegFileS dataArray read write _ _ init =>
+        Some (RegFileB dataArray read write init :: nil)
     | ModS regs rules dms =>
       (rulesToBRules rules)
         >>= (fun brules =>
                (methsToBMethods dms)
-                 >>= (fun bdms => Some ((Build_BModule regs brules bdms) :: nil)))
+                 >>= (fun bdms => Some (BModuleB (Build_BModule regs brules bdms) :: nil)))
     | ConcatModsS m1 m2 =>
       (ModulesSToBModules m1)
         >>= (fun bm1 =>

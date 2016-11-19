@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist Lib.Struct.
+Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist Lib.Struct Lib.Indexer.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
@@ -342,6 +342,7 @@ Definition filterDms (dms: list DefMethT) (filt: list string) :=
 
 Definition Void := Bit 0.
 Inductive Modules: Type :=
+| RegFile (dataArray read write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): Modules
 | Mod (regs: list RegInitT)
       (rules: list (Attribute (Action Void)))
       (dms: list DefMethT):
@@ -351,22 +352,59 @@ Inductive Modules: Type :=
 
 Fixpoint getRules m := 
   match m with
+    | RegFile _ _ _ _ _ _ => nil
     | Mod _ rules _ => rules
     | ConcatMod m1 m2 => getRules m1 ++ getRules m2
   end.
 
 Fixpoint getRegInits m :=
   match m with
+    | RegFile dataArray read write IdxBits Data init =>
+      {| attrName := dataArray;
+         attrType := RegInitCustom (existT ConstFullT (SyntaxKind (Vector Data IdxBits)) (SyntaxConst init)) |}
+        :: nil
     | Mod regs _ _ => regs
     | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
   end.
 
 Fixpoint getDefsBodies (m: Modules): list DefMethT :=
   match m with
+    | RegFile dataArray read write IdxBits Data init =>
+      {| attrName := read;
+         attrType :=
+           existT MethodT {| arg := Bit IdxBits; ret := Data |}
+                  (fun ty (ar: ty (Bit IdxBits)) =>
+                     (ReadReg dataArray%string
+                              (SyntaxKind (Vector Data IdxBits))
+                              (fun x: ty (Vector Data IdxBits) =>
+                                 Return
+                                   (ReadIndex
+                                      (Var ty (SyntaxKind (Bit IdxBits)) ar)
+                                      (Var ty (SyntaxKind (Vector Data IdxBits)) x)))))
+      |} ::
+         {| attrName := write%string;
+            attrType :=
+              existT MethodT {| arg := Struct
+                                         (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                                      (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)));
+                                ret := Void |}
+                     (fun ty (ar: ty (Struct
+                                        (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                                     (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)))))
+                          =>
+                            (ReadReg dataArray%string
+                                     (SyntaxKind (Vector Data IdxBits))
+                                     (fun x: ty (Vector Data IdxBits) =>
+                                        WriteReg dataArray%string
+                                                 (UpdateVector (Var ty (SyntaxKind (Vector Data IdxBits)) x)
+                                                               (ReadField Fin.F1 (Var ty (SyntaxKind _) ar))
+                                                               (ReadField (Fin.FS Fin.F1) (Var ty (SyntaxKind _) ar)))
+                                                 (Return (Const _ (k := Void) WO)))))
+         |} :: nil
     | Mod _ _ meths => meths
     | ConcatMod m1 m2 => (getDefsBodies m1) ++ (getDefsBodies m2)
   end.
-
+      
 Definition getDefs m: list string := namesOf (getDefsBodies m).
 
 Lemma getDefs_in:

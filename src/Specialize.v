@@ -314,7 +314,7 @@ Section SpecializeFacts.
   Proof.
     induction 1; simpl; intros; try (constructor; auto).
   Qed.
-
+  
   Lemma renameRules_RulesEquiv:
     forall ty1 ty2 rules,
       RulesEquiv ty1 ty2 rules ->
@@ -339,6 +339,21 @@ Section SpecializeFacts.
     - inv H; apply IHmeths; auto.
   Qed.
 
+  Lemma renameAction_MethEquiv:
+    forall ty1 ty2 meth,
+      MethEquiv ty1 ty2 meth ->
+      forall f, 
+        MethEquiv ty1 ty2 (renameMeth f meth).
+  Proof.
+    intros.
+    destruct meth.
+    unfold MethEquiv.
+    intros.
+    specialize (H arg1 arg2).
+    simpl in *.
+    apply renameAction_ActionEquiv; auto.
+  Qed.
+  
   Lemma renameModules_ModEquiv:
     forall ty1 ty2 m,
       ModEquiv ty1 ty2 m ->
@@ -346,6 +361,22 @@ Section SpecializeFacts.
         ModEquiv ty1 ty2 (renameModules f m).
   Proof.
     induction m; simpl; intros.
+    - inv H; simpl in *.
+      constructor; simpl.
+      + auto.
+      + inv H1.
+        inv H4.
+        clear - H3 H2.
+        repeat match goal with
+                 | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
+               end.
+        simpl in *.
+        apply (f_equal (renameMeth f)) in Heqa;
+          apply (f_equal (renameMeth f)) in Heqa0.
+        simpl in *.
+        unfold MethodT in *.
+        rewrite <- Heqa, <- Heqa0.
+        repeat constructor; try apply renameAction_MethEquiv; auto.
     - inv H; simpl in *.
       constructor; simpl.
       + apply renameRules_RulesEquiv; auto.
@@ -416,6 +447,7 @@ Section SpecializeFacts.
         ValidRegsModules type (renameModules (specializer m2 i) m1).
   Proof.
     induction m1; simpl; intros.
+    - repeat constructor; auto.
     - dest; split.
       + apply specializer_validRegsRules; auto.
       + apply specializer_validRegsDms; auto.
@@ -434,6 +466,7 @@ Section SpecializeFacts.
       ValidRegsModules type (specializeMod m i).
   Proof.
     induction m; simpl; intros.
+    - repeat constructor; auto.
     - dest; split.
       + apply specializer_validRegsRules; auto.
         apply SubList_refl.
@@ -497,6 +530,21 @@ Section SpecializeFacts.
       renameModules f m = renameModules g m.
   Proof.
     induction m; simpl; intros.
+    - clear - H.
+      f_equal.
+      + assert (forall s, In s (namesOf (getRegInits (RegFile dataArray read write init))) -> f s = g s)
+          by (intros; apply H; apply spDom_regs; auto).
+        simpl in *.
+        specialize (H0 dataArray).
+        apply H0; left; auto.
+      + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
+          by (intros; apply H; apply spDom_defs; auto).
+        simpl in *.
+        specialize (H0 read); apply H0; left; auto.
+      + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
+          by (intros; apply H; apply spDom_defs; auto).
+        simpl in *.
+        specialize (H0 write); apply H0; right; left; auto.
     - f_equal.
       + assert (forall s, In s (namesOf regs) -> f s = g s)
           by (intros; apply H; apply spDom_regs; auto).

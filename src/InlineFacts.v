@@ -431,6 +431,7 @@ Proof.
   simpl.
 
   clear; induction m; unfold getDefs in *; simpl in *.
+  - reflexivity.
   - clear; induction dms; [auto|].
     simpl; f_equal; auto.
   - apply inlineDmToDms_names.
@@ -700,6 +701,9 @@ Lemma inlineDmToMod_dms_names:
     namesOf (getDefsBodies m).
 Proof.
   destruct m; intros; simpl in *.
+  - unfold inlineDmToMod.
+    try destruct (getAttribute _ _);
+      try (reflexivity; fail).
   - unfold inlineDmToMod.
     try destruct (getAttribute _ _);
     try (reflexivity; fail).

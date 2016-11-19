@@ -1205,6 +1205,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doNormal; try destruct_addr; try destruct_cache; (assumption || intros; try discriminate).
     - clear - i16a i25.
       specialize (i16a (y F2) (or_introl eq_refl)).
@@ -1381,6 +1382,7 @@ Section MemCacheInl.
       destruct H1; dest.
       + subst; simpl in H4; discriminate.
       + eapply i31 in H7; eassumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma findIncompat_means (rq: type (Struct RqTP)) (c: word LgNumChildren) dir dirw:
@@ -1398,6 +1400,7 @@ Section MemCacheInl.
                        else $ Msi.Mod) /\
     dirw (evalExpr (MemDir.findIncompat (#c)%kami_expr (ReadField F3 (#rq)%kami_expr) (#dir)%kami_expr (#dirw)%kami_expr) F2) = false.
   Proof.
+    (* SKIP_PROOF_ON
     unfold MemDir.findIncompat, MemDir.foldInc.
     rewrite wones_pow2_minus_one.
     generalize c.
@@ -1541,6 +1544,7 @@ Section MemCacheInl.
                     specialize (IHn _ H); assumption.
               }
           }
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma evalE K (e: K@type): evalExpr (#(evalExpr e)%kami_expr) = evalExpr e.
@@ -1556,6 +1560,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doNormal;
      match goal with
      | H: evalExpr (MemDir.findIncompat (?c) (ReadField F3 (?rq)) (?dir) (?dirw)) F1 = true |- _ =>
@@ -1663,6 +1668,7 @@ Section MemCacheInl.
         dest.
         congruence.
       + eapply i31 in H7; eassumption.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Lemma beg_last_in A ls: forall v: A, In v ls -> exists beg last, ls = beg ++ v :: last.
@@ -1699,6 +1705,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doNormal;
      repeat destruct_addr;
      repeat destruct_cache;
@@ -1895,6 +1902,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H5.
       specialize (i29 _ _ H2 (or_intror H3) H5).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -1928,6 +1936,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doNormal;
      repeat destruct_addr;
      repeat destruct_cache;
@@ -2164,6 +2173,7 @@ Section MemCacheInl.
     - clear - i29 H2 H3 H4.
       specialize (i29 _ _ H2 (or_intror H3) H4).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_01 s a u cs:
@@ -2173,6 +2183,7 @@ Section MemCacheInl.
               u cs WO ->
     nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doNormal;
      repeat destruct_cache;
      repeat destruct_addr;
@@ -2213,6 +2224,7 @@ Section MemCacheInl.
     - clear - i21 H0 H1.
       specialize (i21 _ H0 H1).
       dest; discriminate.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -2426,7 +2438,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_2 s a u cs:
@@ -2438,7 +2452,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_3 s a u cs:
@@ -2450,7 +2466,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_4 s a u cs:
@@ -2462,7 +2480,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_7 s a u cs:
@@ -2474,7 +2494,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_8 s a u cs:
@@ -2486,7 +2508,9 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac doMeta :=
@@ -2506,6 +2530,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doMeta; repeat destruct_cache; repeat destruct_addr; (assumption || intros)).
     - clear - i8 H0 H1.
       specialize (i8 _ (or_intror H0) H1).
@@ -2566,6 +2591,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
       
   Lemma rsLessTo_in_app ls:
@@ -2594,6 +2620,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doMeta; repeat destruct_cache; try rewrite_getCs; try rewrite getCs_cs in * by tauto;
      repeat destruct_addr; (assumption || intros)).
     - word_omega.
@@ -2739,6 +2766,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H0) H1 H3 H4).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Lemma nmemCache_invariants_hold_5 s a u cs:
@@ -2750,6 +2778,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     doMetaComplex.
     - doAll;
       destruct (rs F1); intuition discriminate.
@@ -2761,6 +2790,7 @@ Section MemCacheInl.
         reflexivity.
       + specialize (i16a t (or_introl eq_refl)).
         dest; discriminate.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac diffAddr_sameIdx :=
@@ -2857,6 +2887,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     (doMeta;
      try rewrite_getCs;
      rewrite ?tag_upd in *;
@@ -3098,6 +3129,7 @@ Section MemCacheInl.
       simpl in i31.
       specialize (i31 (f_equal (cons y) H1) H3 H4 H5).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -3216,6 +3248,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     invariant x c.
     - xfer i9 a0 (y F1).
     - xfer i16 a0 (y F1).
@@ -3261,6 +3294,7 @@ Section MemCacheInl.
     - xfer i28 a0 y.
     - xfer i29 a0 y.
     - xfer i30 a0 y.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCache_invariants_hold_xfer_2 s a u cs:
@@ -3272,6 +3306,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     invariant x c.
     - xfer i7 a0 (y F1).
     - xfer i9 a0 (y F1).
@@ -3297,6 +3332,7 @@ Section MemCacheInl.
     - xfer i23 a0 y.
     - xfer i26 a0 y.
     - xfer i29 a0 y.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac xfer2 H a0 y :=
@@ -3345,6 +3381,7 @@ Section MemCacheInl.
                 u cs WO ->
       nmemCache_invariants (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     invariant x c.
     - xfer2 i8 a0 y.
     - xfer2 i10 a0 y.
@@ -3372,6 +3409,7 @@ Section MemCacheInl.
     - xfer3 i19 y.
     - xfer3 i20 y.
     - xfer3 i31 y.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Record dirCompat_inv' a cword (c: cache) c2 (c2nat: cache) (s: RegsT): Prop :=
@@ -3443,7 +3481,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_2 s a u cs:
@@ -3456,7 +3496,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_3 s a u cs:
@@ -3469,7 +3511,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_4 s a u cs:
@@ -3482,7 +3526,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_5 s a u cs:
@@ -3495,7 +3541,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_6 s a u cs:
@@ -3508,7 +3556,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_7 s a u cs:
@@ -3520,8 +3570,9 @@ Section MemCacheInl.
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       dirCompat_inv (M.union u s).
-  Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_8 s a u cs:
@@ -3533,8 +3584,9 @@ Section MemCacheInl.
       SemAction s (getActionFromGen string_of_nat (natToWordConst LgNumChildren) a x type)
                 u cs WO ->
       dirCompat_inv (M.union u s).
-  Proof.
+  (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_9 s a u cs:
@@ -3547,7 +3599,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_10 s a u cs:
@@ -3560,7 +3614,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_xfer_1 s a u cs:
@@ -3573,7 +3629,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_xfer_2 s a u cs:
@@ -3586,7 +3644,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_xfer_3 s a u cs:
@@ -3599,7 +3659,9 @@ Section MemCacheInl.
                 u cs WO ->
       dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     metaDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -3646,7 +3708,9 @@ Section MemCacheInl.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     normalDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_01 s a u cs:
@@ -3657,7 +3721,9 @@ Section MemCacheInl.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     normalDir.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma wordToNat_wones sz (w: word sz):
@@ -3685,6 +3751,7 @@ Section MemCacheInl.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     normalDir.
     - intros.
       specialize (isDirCompat H2).
@@ -3722,6 +3789,7 @@ Section MemCacheInl.
                    | |- context[if ?p then _ else _] => destruct p
                  end; try word_omega.
       + try assumption.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_04 s a u cs:
@@ -3732,6 +3800,7 @@ Section MemCacheInl.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     normalDir.
     - intros.
       specialize (isDirCompat H2).
@@ -3769,6 +3838,7 @@ Section MemCacheInl.
                    | |- context[if ?p then _ else _] => destruct p
                  end; try word_omega.
       + try assumption.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dirCompat_inv_hold_05 s a u cs:
@@ -3779,6 +3849,7 @@ Section MemCacheInl.
               u cs WO ->
     dirCompat_inv (M.union u s).
   Proof.
+    (* SKIP_PROOF_ON
     normalDir.
     - intros.
       specialize (isDirCompat H0).
@@ -3796,6 +3867,7 @@ Section MemCacheInl.
                    | |- context[if ?p then _ else _] => destruct p
                  end; try word_omega.
       + assumption.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Record cacheCompat_inv' a (cword1: word LgNumChildren) (c1: cache) cword2 (c2: cache) (s: RegsT) csv1 csv2 tagv1 tagv2: Prop :=
@@ -3832,6 +3904,7 @@ Section MemCacheInl.
     nmemCache_invariants s ->
     cacheCompat_inv s.
   Proof.
+    (* SKIP_PROOF_ON
     intros.
     intros a cword1 c1 c1Le c1Eq cword2 c2 c2Le c2Eq.
     destruct (H a cword1 c1 c1Le c1Eq cword2 c2 c2Le c2Eq), (H0 a cword1 c1 c1Le c1Eq).
@@ -3852,6 +3925,7 @@ Section MemCacheInl.
              | H: context [if ?p then _ else _] |- _ => destruct p
              | |- context [if ?p then _ else _] => destruct p
            end; try word_omega.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Section PerAddrRel.
@@ -3909,12 +3983,14 @@ Section MemCacheInl.
        (M.add (addIndexToStr string_of_nat x name) (existT _ k v) m)) =
     (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite 2! liftToMap1_find; mred.
     - rewrite 2! dropPs_None_inv; auto; try (apply duplicateElt_In_inv; auto; fail).
     - rewrite dropPs_None_inv; auto.
       apply duplicateElt_In_inv; auto.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropDiff name name' m n x k v:
@@ -3925,6 +4001,7 @@ Section MemCacheInl.
       (M.add (addIndexToStr string_of_nat x name') (existT _ k v) m) =
     M.add (addIndexToStr string_of_nat x name') (existT _ k v) (liftToMap1 (dropN name n) m).
   Proof.
+    (* SKIP_PROOF_ON
     intros; rewrite dropN_dropPs.
     M.ext y.
     rewrite liftToMap1_find; mred.
@@ -3932,6 +4009,7 @@ Section MemCacheInl.
       apply duplicateElt_not_In; auto.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
     - rewrite liftToMap1_find; rewrite <-Heqv0; reflexivity.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma dropEmpty name n:
@@ -3982,7 +4060,9 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_2 s mem a u cs:
@@ -3996,7 +4076,9 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_3 s mem a u cs:
@@ -4010,7 +4092,9 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_5 s mem a u cs:
@@ -4024,7 +4108,9 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_9 s mem a u cs:
@@ -4038,12 +4124,14 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     clear - inRsFromPToC H1; intros.
     destruct (weq a0 (y F2)); intros.
     - specialize (inRsFromPToC _ (or_intror H) H0 i).
       assumption.
     - apply inRsFromPToC; assumption.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_4 s mem a u cs:
@@ -4057,6 +4145,7 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     - intros.
       rewrite_getCs.
@@ -4089,6 +4178,7 @@ Section MemCacheInl.
       + word_omega.
       + apply cs_is_ge_s; auto.
       + apply cs_is_ge_s; auto.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_6 s mem a u cs:
@@ -4102,6 +4192,7 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     - intros.
       rewrite_getCs.
@@ -4134,6 +4225,7 @@ Section MemCacheInl.
       destruct (weq a0 (y F2)).
       + specialize (inRsFromPToC _ (or_intror H) H0 i); assumption.
       + specialize (inRsFromPToC _ H H0 i); assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_10 s mem a u cs:
@@ -4147,6 +4239,7 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     - intros.
       simpl.
@@ -4166,6 +4259,7 @@ Section MemCacheInl.
       intros.
       specialize (inRsFromPToC _ (or_intror H) H0 i).
       assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_1 s mem a u cs:
@@ -4179,7 +4273,9 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_2 s mem a u cs:
@@ -4193,9 +4289,11 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     - xfer inRsFromCToP a0 (y F1).
     - xfer inRsFromCToP a0 y.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_xfer_3 s mem a u cs:
@@ -4209,9 +4307,11 @@ Section MemCacheInl.
                 u cs WO ->
       line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     metaLine.
     - xfer2 inRsFromPToC a0 y.
     - xfer3 inRsFromPToC y.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 
@@ -4250,7 +4350,9 @@ Section MemCacheInl.
               u cs WO ->
     line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     normalLine.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma line_inv_hold_02 s mem a u cs:
@@ -4262,6 +4364,7 @@ Section MemCacheInl.
               u cs WO ->
     line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     normalLine.
     intros.
     match type of H with
@@ -4270,6 +4373,7 @@ Section MemCacheInl.
     rewrite app_or in H; destruct H as [ez | hard]; [eapply inRsFromPToC; eassumption|].
     apply in_single in hard; rewrite hard in *; clear hard; simpl in *.
     discriminate.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac normalLineNoRm :=
@@ -4308,6 +4412,7 @@ Section MemCacheInl.
               u cs WO ->
     line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     normalLineNoRm; try destruct_cache; try destruct_addr; intros.
     - specialize (inRsFromCToP _ (or_intror H0) i); assumption.
     - specialize (inRsFromCToP _ (or_introl eq_refl) i); assumption.
@@ -4375,6 +4480,7 @@ Section MemCacheInl.
         pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
         simpl in H.
         Omega.omega.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 
@@ -4387,6 +4493,7 @@ Section MemCacheInl.
               u cs WO ->
     line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     normalLineNoRm; try destruct_cache; try destruct_addr; intros.
     - specialize (inRsFromCToP _ (or_intror H0) i); assumption.
     - specialize (inRsFromCToP _ (or_introl eq_refl) i); assumption.
@@ -4454,6 +4561,7 @@ Section MemCacheInl.
         pose proof (wordToNat_bound (dir0 (y F2 F1) (y F1))).
         simpl in H.
         Omega.omega.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
   Lemma line_inv_hold_05 s mem a u cs:
@@ -4465,6 +4573,7 @@ Section MemCacheInl.
               u cs WO ->
     line_inv (M.union u s) mem /\ liftToMap1 dropFirstEltsLocal cs = [].
   Proof.
+    (* SKIP_PROOF_ON
     normalLineNoRm.
     - destruct_cache; destruct_addr; intros.
       rewrite app_or in H1.
@@ -4539,6 +4648,7 @@ Section MemCacheInl.
         pose proof (wordToNat_bound (dir0 (y F2 F1) cw)).
         simpl in H.
         Omega.omega.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma invRepRuleSpec n a1 name1 pf1 a2 name2 pf2:
@@ -4667,6 +4777,7 @@ Section MemCacheInl.
           line_inv (M.union u s) (M.union uspec mem) /\
           SemAction mem (getActionFromGen string_of_nat (natToVoid) aspec x type) uspec (liftToMap1 dropFirstEltsLocal cs) WO.
   Proof.
+    (* SKIP_PROOF_ON
     intros HDir HInd HLine HInRule x xcond HS;
     simpl in HInRule; unfold Lib.VectorFacts.Vector_find in HInRule; simpl in HInRule;
     apply invSome in HInRule;
@@ -4908,6 +5019,7 @@ Section MemCacheInl.
       kinv_constr; kinv_eq; simpl.
       + assumption.
       + assumption.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Record CacheAtomicRel impl spec : Prop :=
@@ -5022,6 +5134,7 @@ Section MemCacheInl.
                                                eq_refl eq_refl)) spec uSpec (Rle rlSpec) (liftToMap1 dropFirstEltsLocal csImp) /\
         CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
   Proof.
+    (* SKIP_PROOF_ON
     intros _ HSubstep spec totalInv.
     destruct totalInv as [cacheInv dirInv lineInv].
     inv HSubstep.
@@ -5098,6 +5211,7 @@ Section MemCacheInl.
   - solveNormalEz nmemCache_invariants_hold_03 dirCompat_inv_hold_03 line_inv_hold_03.
   - solveNormalEz nmemCache_invariants_hold_04 dirCompat_inv_hold_04 line_inv_hold_04.
   - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Require Import Lib.Concat.
@@ -5337,6 +5451,7 @@ Section MemCacheInl.
                                                                DataBytes (wordToNat (wones LgNumChildren))
                                                                eq_refl eq_refl)))).
   Proof.
+    (* SKIP_PROOF_ON
     unfold nmemCacheInl, memAtomicWoQInlM, modFromMeta, metaRegs, getRegInits, initRegs, rawInitRegs.
     cbv [makeMetaModule].
     rewrite ?map_concat_commute.
@@ -5354,6 +5469,7 @@ Section MemCacheInl.
     - prelimSimplRegs LgNumChildren.
     - prelimSimplRegs LgNumChildren.
     - prelimSimplRegs LgNumChildren.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma nmemCacheInl_refines_memAtomicWoqInlM:
@@ -5363,10 +5479,12 @@ Section MemCacheInl.
                                                DataBytes (wordToNat (wones LgNumChildren))
                                                eq_refl eq_refl)).
   Proof.
+    (* SKIP_PROOF_ON
     apply decompositionZeroR with (thetaR := CacheAtomicRel).
     - apply initMatch.
     - reflexivity.
     - reflexivity.
     - apply substepRel_cache_atomic.
+END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.

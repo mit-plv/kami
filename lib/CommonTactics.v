@@ -271,6 +271,8 @@ Notation "'nosimpl' t" := (match tt with tt => t end) (at level 10).
 Notation Yes := (left _).
 Notation "e1 ;; e2" := (if e1 then e2 else right _) (right associativity, at level 60).
 
+Axiom cheat: forall t, t.
+
 Hint Extern 1 (_ /\ _) => repeat split.
 Hint Extern 1 (NoDup _) => (repeat constructor; simpl; intro; intuition auto; discriminate).
 

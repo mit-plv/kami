@@ -224,8 +224,13 @@ let getDefsB (bm: bModule) =
 
 type bModuleDC = bModule * (string * signatureT) list * (string * signatureT) list
 
+let toBModule (bm: bRegModule) =
+  match bm with
+  | RegFileB _ -> { bregs = []; brules = []; bdms = [] }
+  | BModuleB bm' -> bm'
+
 let toBModuleDC (bm: bModule) = (bm, getDefsB bm, getCallsB bm)
-let toBModuleDCL (bml: bModule list) = List.map (fun bm -> toBModuleDC bm) bml
+let toBModuleDCL (bml: bRegModule list) = List.map (fun bm -> toBModuleDC bm) (List.map toBModule bml)
 
 let rec vectorToList (vec: 'a t0) =
   match vec with
@@ -706,12 +711,16 @@ let ppBModuleFull (ifcn: string) (m: bModule) =
   ppBModuleInterface ifcn m;
   ppBModule ifcn m
 
-let rec ppBModules (bml: bModule list) (idx: int) =
+let rec ppBModules (bml: bRegModule list) (idx: int) =
   match bml with
   | [] -> ()
-  | bm :: bml' -> ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
-                  force_newline ();
-                  ppBModules bml' (succ idx)
+  | bm' :: bml' ->
+      match bm' with
+      | RegFileB _ -> force_newline ()
+      | BModuleB bm ->
+          ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
+                        force_newline ();
+                        ppBModules bml' (succ idx)
 
 let rec preAnalyses (bml: bModule list) =
   match bml with
@@ -812,7 +821,7 @@ let rec permute (ls: 'a list) (ps: int list) =
   | p :: ps' -> (List.nth ls p) :: (permute ls ps')
 
 (* NOTE: idxInit should be larger than 0 *)
-let ppBModulesFull (bml: bModule list) =
+let ppBModulesFull (bml: bRegModule list) =
   let idxInit = 1 in
   let bmdcl = toBModuleDCL bml in
   let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
@@ -823,7 +832,7 @@ let ppBModulesFull (bml: bModule list) =
                     (makeModuleOrderPairs (makeDefMap bmdcl 0)
                                           (makeCallMap bmdcl 0)) in
   ppImports ();
-  preAnalyses bml;
+  preAnalyses (List.map toBModule bml);
   ppGlbStructs ();
   ppBModules (permute bml moduleOrder) idxInit;
   ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
@@ -831,7 +840,7 @@ let ppBModulesFull (bml: bModule list) =
   print_newline ()
 
 let ppBModulesFullInitPgmRfs
-      (bml: bModule list) (initPgms: constT list) (initRfs: constT list)
+      (bml: bRegModule list) (initPgms: constT list) (initRfs: constT list)
       (dbg: bool) =
   setInitPgms initPgms;
   setInitRfs initRfs;

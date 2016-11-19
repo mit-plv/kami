@@ -99,7 +99,7 @@ Section ProcMem.
   Qed.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_memAtomic_refines_scN with (fifoSize:= rsz FifoSize); auto].
 
     kmodular.
@@ -144,6 +144,8 @@ Section ProcMem.
           apply fifoS_const_regs.
           
       + apply memCache_refines_memAtomic.
+        
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   (** Module definitions for the last theorem:
@@ -173,7 +175,7 @@ Section ProcMem.
   Definition p4stNMemCache := (p4stN ++ pmFifos ++ memCacheMod)%kami.
 
   Theorem p4stN_mcache_refines_scN: p4stNMemCache <<== scN.
-  Proof.
+  Proof. (* SKIP_PROOF_ON
     ketrans; [|apply pdecN_mcache_refines_scN].
     kmodular.
     - kdisj_edms_cms_ex numChildren.
@@ -187,6 +189,7 @@ Section ProcMem.
       + kdisj_ecms_dms_ex numChildren.
       + krefl.
       + apply memCacheMod_refines_memCache.
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcMem.

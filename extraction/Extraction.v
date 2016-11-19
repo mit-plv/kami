@@ -100,7 +100,7 @@ Definition targetProcB := ModulesSToBModules targetProcS.
 (** What to extract *)
 Record ExtTarget :=
   { extPgms : list (ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize));
-    extProc : option (list BModule);
+    extProc : option (list BRegModule);
     extRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx))
   }.
 
@@ -110,5 +110,5 @@ Definition target : ExtTarget :=
      extRfs := targetRfs |}.
 
 (** Ocaml/Target.ml is used with Ocaml/PP.ml and Main.ml to build a converter to Bluespec. *)
-Extraction "./extraction/Ocaml/Target.ml" target.
+Extraction "./Ocaml/Target.ml" target.
 

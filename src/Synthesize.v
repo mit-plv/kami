@@ -67,6 +67,7 @@ Definition MethodTS sig := ActionS (ret sig).
 Definition DefMethTS := Attribute (sigT MethodTS).
 
 Inductive ModulesS: Type :=
+| RegFileS (dataArray read write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits))
 | ModS (regs: list RegInitT)
       (rules: list (Attribute (ActionS Void)))
       (dms: list DefMethTS):
@@ -82,6 +83,7 @@ Definition getMethS (x: sigT MethodT): sigT MethodTS :=
 Fixpoint getModuleS (m: Modules): ModulesS.
 Proof.
   refine (match m with
+            | RegFile dataArray read write IdxBits Data init => RegFileS dataArray read write init
             | Mod regs rules dms =>
               ModS regs (map (fun a => {| attrName := attrName a;
                                           attrType := snd (getActionS 0 _) |} ) rules)
