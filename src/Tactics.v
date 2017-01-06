@@ -114,9 +114,11 @@ Ltac kequiv_red :=
   | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
+  | [ |- ModEquiv _ _ _ ] => apply metaModulesEquiv_modEquiv
   | [ |- MetaModEquiv _ _ _ ] => apply metaModEquiv_modular
   | [ |- ModEquiv _ _ ?m ] => unfold_head m
   | [ |- MetaModEquiv _ _ ?m ] => unfold_head m
+  | [ |- MetaModulesEquiv _ _ ?m ] => unfold_head m
   end.
  
 Ltac kequiv_unit :=
@@ -154,7 +156,7 @@ Ltac kvr_red :=
   | [ |- ValidRegsModules _ (Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)) ] =>
     apply validRegsModules_flatten
   | [ |- ValidRegsModules _ (duplicate _ _) ] => apply duplicate_validRegsModules
-  | [ |- ValidRegsModules _ (modFromMeta _) ] => apply validRegsMetaModule_validRegsModules
+  | [ |- ValidRegsModules _ (modFromMetaModules _) ] => apply validRegsMetaModule_validRegsModules
   | [ |- ValidRegsMetaModule _ (_ +++ _) ] => apply validRegsMetaModule_modular
   | [ |- ValidRegsModules _ ?m ] => unfold_head m
   | [ |- ValidRegsMetaModule _ ?mm ] => unfold_head mm

@@ -382,7 +382,115 @@ Section Equiv.
     - apply MetaMethsEquiv_app; auto.
   Qed.
 
+  Definition SinRuleEquiv r :=
+    SinActionEquiv (ruleGen r t1) (ruleGen r t2).
+
+  Inductive SinRulesEquiv: list SinRule -> Prop :=
+  | SinRulesEquivNil: SinRulesEquiv nil
+  | SinRulesEquivCons: forall r: SinRule, SinRuleEquiv r -> forall rules: list SinRule, SinRulesEquiv rules ->
+                                                                                        SinRulesEquiv (r :: rules).
+
+  Definition SinMethEquiv m :=
+    forall (v1: t1 (arg (projT1 (methGen m)))) (v2: t2 (arg (projT1 (methGen m)))),
+                SinActionEquiv (projT2 (methGen m) t1 v1) (projT2 (methGen m) t2 v2).
+
+  Inductive SinMethsEquiv: list SinMeth -> Prop :=
+  | SinMethsEquivNil: SinMethsEquiv nil
+  | SinMethsEquivCons: forall m: SinMeth, SinMethEquiv m -> forall meths: list SinMeth, SinMethsEquiv meths ->
+                                                                                        SinMethsEquiv (m :: meths).
+
+  Fixpoint MetaModulesEquiv m :=
+    match m with
+      | MetaRegFile _ _ _ _ _ _ => MetaModEquiv (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m))
+      | MetaMod m' => MetaModEquiv m'
+      | ConcatMetaMod m1 m2 => MetaModulesEquiv m1 /\ MetaModulesEquiv m2
+      | RepeatSinMod _ _ _ _ _ _ _ _ m => SinRulesEquiv (sinRules m) /\ SinMethsEquiv (sinMeths m)
+    end.
+
+  Lemma SinActionEquiv_GetGenActionEquiv A strA GenK getConstK (i: A):
+    forall k (a1: SinActionT t1 k) (a2: SinActionT t2 k),
+      SinActionEquiv a1 a2 ->
+      ActionEquiv
+        (getGenAction strA getConstK i (convSinToGen true GenK a1))
+        (getGenAction strA getConstK i (convSinToGen true GenK a2)).
+  Proof.
+    induction 1; simpl; try constructor; auto; intros; simpl in *.
+  Qed.
+  
+  Lemma SinRulesEquiv_RulesEquiv A strA GenK getConstK (i: A) rules:
+    SinRulesEquiv rules ->
+    RulesEquiv t1 t2
+               (map
+                  (fun sr : SinRule =>
+                     (Indexer.addIndexToStr strA i (nameVal (ruleName sr))
+                                            :: getActionFromGen strA getConstK
+                                            (fun ty : Kind -> Type =>
+                                               convSinToGen true GenK (ruleGen sr ty)) i)%struct)
+                  rules).
+  Proof.
+    unfold getActionFromGen.
+    induction rules; auto; simpl; intros; [constructor |].
+    inv H.
+    specialize (IHrules H3).
+    constructor; auto.
+    clear - H2.
+    unfold SinRuleEquiv, RuleEquiv in *; simpl.
+    eapply SinActionEquiv_GetGenActionEquiv in H2; eauto.
+  Qed.
+
+  Lemma SinMethsEquiv_MethsEquiv A strA GenK getConstK (i: A) meths:
+    SinMethsEquiv meths ->
+    MethsEquiv t1 t2
+               (map
+                  (fun sf : SinMeth =>
+                     (Indexer.addIndexToStr strA i (nameVal (methName sf))
+                                            :: getMethFromGen strA getConstK
+                                            (existT (fun sig : SignatureT => GenMethodT GenK sig)
+                                                    (projT1 (methGen sf))
+                                                    (fun (ty : Kind -> Type)
+                                                         (argv : ty (arg (projT1 (methGen sf)))) =>
+                                                       convSinToGen true GenK (projT2 (methGen sf) ty argv))) i)%struct)
+                  meths).
+  Proof.
+    unfold getMethFromGen.
+    induction meths; auto; simpl; intros; [constructor |].
+    inv H.
+    specialize (IHmeths H3).
+    constructor; auto.
+    clear - H2.
+    unfold SinMethEquiv, MethEquiv in *; simpl.
+    intros.
+    specialize (H2 arg1 arg2).
+    eapply SinActionEquiv_GetGenActionEquiv in H2; eauto.
+  Qed.
+
+  Lemma metaModulesEquiv_modEquiv m:
+    MetaModulesEquiv m -> ModEquiv t1 t2 (modFromMetaModules m).
+  Proof.
+    intros.
+    induction m.
+    - simpl in *.
+      unfold ModEquiv; simpl in *.
+      apply metaModEquiv_modEquiv in H; simpl in *.
+      auto.
+    - simpl in *.
+      destruct m.
+      apply metaModEquiv_modEquiv in H; simpl in *.
+      auto.
+    - simpl in *; dest.
+      apply ModEquiv_modular; tauto.
+    - simpl in *; dest.
+      induction ls; simpl in *; auto.
+      + repeat constructor.
+      + inv noDupLs.
+        specialize (IHls H4).
+        apply ModEquiv_modular; auto.
+        split; simpl in *.
+        * eapply SinRulesEquiv_RulesEquiv; eauto.
+        * eapply SinMethsEquiv_MethsEquiv; eauto.
+  Qed.
 End Equiv.
 
 (* NOTE: Defining "MetaModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
 Notation "'MetaModPhoasWf' m" := (forall ty1 ty2, MetaModEquiv ty1 ty2 m) (at level 0).
+Notation "'MetaModulesPhoasWf' m" := (forall ty1 ty2, MetaModulesEquiv ty1 ty2 m) (at level 0).

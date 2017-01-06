@@ -2,7 +2,7 @@ Require Import Kami.Syntax String Lib.Word Lib.Struct Lib.FMap List.
 Require Import Kami.Inline Kami.InlineFacts.
 Require Import Lib.CommonTactics Program.Equality Lib.StringEq FunctionalExtensionality.
 Require Import Bool Lib.Indexer Kami.Semantics Kami.SemFacts Kami.RefinementFacts Lib.StringAsList Ascii.
-Require Import Lib.Concat Omega.
+Require Import Lib.Concat Omega Lib.ListSupport.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -1500,6 +1500,13 @@ Section SinModuleToMeta.
         RepReg strA goodStrFn goodStrFn2 rg rn noDupLs :: regsToRep rs'
     end.
 
+  Lemma regsToRepIsMap rs: regsToRep rs = map (fun sr => RepReg strA goodStrFn goodStrFn2 (regGen sr) (regName sr) noDupLs) rs.
+  Proof.
+    induction rs; simpl; auto.
+    rewrite IHrs.
+    destruct a; reflexivity.
+  Qed.
+  
   Fixpoint rulesToRep (rs: list SinRule) :=
     match rs with
       | nil => nil
@@ -1509,6 +1516,15 @@ Section SinModuleToMeta.
                 rulesToRep rs'
     end.
 
+  Lemma rulesToRepIsMap rs: rulesToRep rs =
+                            map (fun sr => RepRule strA goodStrFn getConstK goodStrFn2
+                                                   (fun ty => convSinToGen true _ (ruleGen sr ty)) (ruleName sr) noDupLs) rs.
+  Proof.
+    induction rs; simpl; auto.
+    rewrite IHrs.
+    destruct a; reflexivity.
+  Qed.
+  
   Fixpoint methsToRep (rs: list SinMeth) :=
     match rs with
       | nil => nil
@@ -1520,6 +1536,18 @@ Section SinModuleToMeta.
                 rn noDupLs :: methsToRep rs'
     end.
 
+  Lemma methsToRepIsMap rs: methsToRep rs =
+                            map (fun sr => RepMeth strA goodStrFn getConstK goodStrFn2
+                                                   (existT (fun sig: SignatureT =>
+                                                              GenMethodT GenK sig) (projT1 (methGen sr))
+                                                           (fun ty argv => convSinToGen true GenK (projT2 (methGen sr) ty argv)))
+                                                   (methName sr) noDupLs) rs.
+  Proof.
+    induction rs; simpl; auto.
+    rewrite IHrs.
+    destruct a; reflexivity.
+  Qed.
+  
   Definition getMetaFromSin m :=
     {| metaRegs := regsToRep (sinRegs m);
        metaRules := rulesToRep (sinRules m);
@@ -1743,4 +1771,758 @@ Proof.
   induction ls; simpl; intros; auto.
   inv H; auto.
 Qed.
+
+Inductive MetaModules :=
+| MetaRegFile (dataArray read write: NameRec) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): MetaModules
+| MetaMod (m: MetaModule): MetaModules
+| ConcatMetaMod (m1 m2: MetaModules): MetaModules
+| RepeatSinMod
+    (A: Type)
+    (strA: A -> string)
+    (goodStrFn: forall i j, strA i = strA j -> i = j)
+    (GenK: Kind)
+    (getConstK: A -> ConstT GenK)
+    (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                   si = sj /\ i = j)
+    (ls: list A)
+    (noDupLs: NoDup ls)
+    (sm: SinModule A): MetaModules.
+
+Section RepeatSinMod.
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+
+  Fixpoint repeatSinMod sm ls :=
+    match ls with
+      | nil => Mod nil nil nil
+      | x :: xs =>
+        ConcatMod
+          (Mod
+             (map (fun sr => (addIndexToStr strA x (nameVal (regName sr)) :: regGen sr x)%struct)
+                  (sinRegs sm))
+             (map
+                (fun sr =>
+                   (addIndexToStr
+                      strA x (nameVal (ruleName sr)) ::
+                      getActionFromGen strA getConstK (fun ty => convSinToGen true GenK (ruleGen sr ty)) x
+                   )%struct) (sinRules sm))
+             (map
+                (fun sf =>
+                   (addIndexToStr
+                      strA x (nameVal (methName sf)) ::
+                      (getMethFromGen strA getConstK
+                                      (existT (fun sig: SignatureT =>
+                                                 GenMethodT GenK sig) (projT1 (methGen sf))
+                                              (fun ty argv => convSinToGen true GenK (projT2 (methGen sf) ty argv))) x)
+                      )%struct) (sinMeths sm))
+          ) (repeatSinMod sm xs)
+    end.
+End RepeatSinMod.
+
+
+Fixpoint modFromMetaModules m :=
+  match m with
+    | MetaRegFile dataArray read write IdxBits Data init => RegFile (nameVal dataArray) (nameVal read) (nameVal write) init
+    | MetaMod (Build_MetaModule regs rules dms) =>
+      Mod (concat (map getListFromMetaReg regs))
+          (concat (map getListFromMetaRule rules))
+          (concat (map getListFromMetaMeth dms))
+    | ConcatMetaMod m1 m2 => ConcatMod (modFromMetaModules m1) (modFromMetaModules m2)
+    | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
+      repeatSinMod strA getConstK sm ls
+  end.
+
+Section InRepeatSinMod.
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable ls: list A.
+
+  Lemma In_getRegInits_repeatSinMod m:
+    forall r, In r (getRegInits (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinRegs m) /\
+                           r = {| attrName := addIndexToStr strA x (nameVal (regName rf));
+                                  attrType := regGen rf x |}.
+  Proof.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+
+
+  Lemma In_getRules_repeatSinMod m:
+    forall r, In r (getRules (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinRules m) /\
+                           r = {| attrName := addIndexToStr strA x (nameVal (ruleName rf));
+                                  attrType := getActionFromGen strA getConstK
+                                                               (fun ty => convSinToGen true GenK (ruleGen rf ty))
+                                                               x |}.
+  Proof.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+
+  Lemma In_getDefsBodies_repeatSinMod m:
+    forall r, In r (getDefsBodies (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinMeths m) /\
+                           r =
+                           (addIndexToStr
+                              strA x (nameVal (methName rf)) ::
+                              (getMethFromGen strA getConstK
+                                              (existT (fun sig: SignatureT =>
+                                                         GenMethodT GenK sig) (projT1 (methGen rf))
+                                                      (fun ty argv => convSinToGen true GenK (projT2 (methGen rf) ty argv))) x)
+                           )%struct.
+  Proof.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+End InRepeatSinMod.
+
+Notation "m1 ++++ m2" := (ConcatMetaMod m1 m2) (at level 0).
+
+Fixpoint metaModulesRegs m :=
+  match m with
+    | MetaRegFile dataArray read write IdxBits Data init =>
+      OneReg (RegInitCustom (existT ConstFullT (SyntaxKind (Vector Data IdxBits)) (SyntaxConst init))) dataArray :: nil
+    | MetaMod (Build_MetaModule regs _ _) => regs
+    | ConcatMetaMod m1 m2 => metaModulesRegs m1 ++ metaModulesRegs m2
+    | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
+      regsToRep strA goodStrFn goodStrFn2 noDupLs (sinRegs sm)
+  end.
+
+Fixpoint metaModulesRules m :=
+  match m with
+    | MetaRegFile dataArray read write IdxBits Data init =>
+      nil
+    | MetaMod (Build_MetaModule regs rules meths) => rules
+    | ConcatMetaMod m1 m2 => metaModulesRules m1 ++ metaModulesRules m2
+    | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
+      rulesToRep strA goodStrFn getConstK goodStrFn2 noDupLs (sinRules sm)
+  end.
+
+Fixpoint metaModulesMeths m :=
+  match m with
+    | MetaRegFile dataArray read write IdxBits Data init =>
+      OneMeth
+        (existT SinMethodT {| arg := Bit IdxBits; ret := Data |}
+                (fun ty (ar: ty (Bit IdxBits)) =>
+                   (SReadReg dataArray
+                            (SyntaxKind (Vector Data IdxBits))
+                            (fun x: ty (Vector Data IdxBits) =>
+                               SReturn
+                                 (ReadIndex
+                                    (Var ty (SyntaxKind (Bit IdxBits)) ar)
+                                    (Var ty (SyntaxKind (Vector Data IdxBits)) x)))))
+        ) read ::
+        OneMeth
+        (existT SinMethodT
+                {| arg := Struct
+                            (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                         (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)));
+                   ret := Void |}
+                (fun ty
+                     (ar:ty
+                           (Struct
+                              (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                           (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)))))
+                 =>
+                   (SReadReg dataArray
+                            (SyntaxKind (Vector Data IdxBits))
+                            (fun x: ty (Vector Data IdxBits) =>
+                               SWriteReg dataArray
+                                        (UpdateVector (Var ty (SyntaxKind (Vector Data IdxBits)) x)
+                                                      (ReadField Fin.F1 (Var ty (SyntaxKind _) ar))
+                                                      (ReadField (Fin.FS Fin.F1) (Var ty (SyntaxKind _) ar)))
+                                        (SReturn (Const _ (k := Void) WO)))))
+        ) write :: nil
+    | MetaMod (Build_MetaModule regs rules meths) => meths
+    | ConcatMetaMod m1 m2 => metaModulesMeths m1 ++ metaModulesMeths m2
+    | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
+      methsToRep strA goodStrFn getConstK goodStrFn2 noDupLs (sinMeths sm)
+  end.
+
+Definition flattenMeta m := MetaMod (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
+
+Lemma EquivList_In_iff A l1 l2: (forall x: A, In x l1 <-> In x l2) <-> (EquivList l1 l2).
+Proof.
+  unfold EquivList, SubList; intros; firstorder fail.
+Qed.
+
+Ltac concat_map_iff :=
+  repeat (match goal with
+            | H: context [In _ (concat _)] |- _ => setoid_rewrite in_concat_iff in H
+            | |- context [In _ (concat _)] => setoid_rewrite in_concat_iff
+            | H: context [In _ (map _ _)] |- _ => setoid_rewrite in_map_iff in H
+            | |- context [In _ (map _ _)] => setoid_rewrite in_map_iff
+          end; dest; subst).
+
+Ltac handleReps :=
+  rewrite ?map_map in *;
+  unfold getListFromRep in *;
+  repeat (concat_map_iff; eexists; eauto).
+
+Lemma metaModulesRegsSame' m:
+  forall x, In x (concat (map getListFromMetaReg (metaModulesRegs m))) <-> In x (getRegInits (modFromMetaModules m)).
+Proof.
+  induction m; simpl; intuition idtac; rewrite ?map_app, ?concat_app, ?app_or in *.
+  - destruct m; simpl in *; auto.
+  - destruct m; simpl in *; auto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - unfold getListFromMetaReg in *;
+    rewrite regsToRepIsMap, In_getRegInits_repeatSinMod in *;
+    handleReps.
+  - unfold getListFromMetaReg in *;
+    rewrite regsToRepIsMap, In_getRegInits_repeatSinMod in *;
+    handleReps.
+Qed.
+
+Lemma metaModulesRegsSame m: EquivList (concat (map getListFromMetaReg (metaModulesRegs m))) (getRegInits (modFromMetaModules m)).
+Proof.
+  apply EquivList_In_iff.
+  apply metaModulesRegsSame'.
+Qed.
+
+Lemma metaModulesRulesSame' m:
+  forall x, In x (concat (map getListFromMetaRule (metaModulesRules m))) <-> In x (getRules (modFromMetaModules m)).
+Proof.
+  induction m; simpl; intuition idtac; rewrite ?map_app, ?concat_app, ?app_or in *.
+  - destruct m; simpl in *; auto.
+  - destruct m; simpl in *; auto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - unfold getListFromMetaRule, repRule in *.
+    rewrite rulesToRepIsMap, In_getRules_repeatSinMod in *.
+    handleReps.
+  - unfold getListFromMetaRule, repRule in *.
+    rewrite rulesToRepIsMap, In_getRules_repeatSinMod in *.
+    handleReps.
+Qed.
+
+Lemma metaModulesRulesSame m:
+  EquivList (concat (map getListFromMetaRule (metaModulesRules m))) (getRules (modFromMetaModules m)).
+Proof.
+  apply EquivList_In_iff.
+  apply metaModulesRulesSame'.
+Qed.
+
+Lemma metaModulesMethsSame' m:
+  forall x, In x (concat (map getListFromMetaMeth (metaModulesMeths m))) <-> In x (getDefsBodies (modFromMetaModules m)).
+Proof.
+  induction m; simpl; intuition idtac; rewrite ?map_app, ?concat_app, ?app_or in *.
+  - destruct m; simpl in *; auto.
+  - destruct m; simpl in *; auto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - specialize (IHm1 x); specialize (IHm2 x).
+    tauto.
+  - unfold getListFromMetaMeth, repMeth in *.
+    rewrite methsToRepIsMap, In_getDefsBodies_repeatSinMod in *.
+    handleReps.
+  - unfold getListFromMetaMeth, repMeth in *.
+    rewrite methsToRepIsMap, In_getDefsBodies_repeatSinMod in *.
+    handleReps.
+Qed.
+
+Lemma metaModulesMethsSame m:
+  EquivList (concat (map getListFromMetaMeth (metaModulesMeths m))) (getDefsBodies (modFromMetaModules m)).
+Proof.
+  apply EquivList_In_iff.
+  apply metaModulesMethsSame'.
+Qed.
+
+Section PigeonHole.
+  Variable A: Type.
+  Variable a: A.
+  Variable l1 l2: list A.
+  Variable in_in: forall x, (a = x \/ In x l1) -> (a = x \/ In x l2).
+  Variable sameLength: length l1 = length l2.
+  Variable notIn: ~ In a l1.
+  Variable noDup: NoDup l1.
+  Variable is_in: In a l2.
+
+  Lemma pigeon_hole: exists x, In x l1 /\ ~ In x l2.
+  Proof.
+    generalize a l2 in_in sameLength notIn noDup is_in.
+    clear a l2 in_in sameLength notIn noDup is_in.
+    induction l1; intros.
+    - simpl in *.
+      apply eq_sym in sameLength.
+      rewrite length_zero_iff_nil in sameLength; subst.
+      exfalso; assumption.
+    - assert (sth: In a l2).
+      { specialize (@in_in a).
+        specialize (@in_in (or_intror (or_introl eq_refl))).
+        destruct in_in as [ez|hard]; [subst; simpl in *; tauto| assumption].
+      }
+      apply in_split in sth.
+      destruct sth as [l3 [l4 l4Eq]]; subst.
+      specialize (IHl a0 (l3 ++ l4)).
+      rewrite app_length in *; simpl in *.
+      rewrite <- plus_n_Sm in sameLength.
+      inversion sameLength; clear sameLength.
+      assert (forall x, a0 = x \/ In x l -> a0 = x \/ In x (l3 ++ l4)).
+      { intros.
+        specialize (@in_in x).
+        assert (a0 = x \/ In x (l3 ++ a :: l4)) by tauto.
+        destruct H; [tauto |].
+        destruct H1; [tauto|].
+        rewrite ListSupport.app_or in *; simpl in H1.
+        inversion noDup; subst; clear noDup.
+        destruct H1; [tauto|].
+        destruct H1; [subst|]; tauto.
+      }
+      assert (~ In a0 l) by tauto.
+      inversion noDup; subst; clear noDup.
+      assert (In a0 (l3 ++ l4)).
+      { rewrite ListSupport.app_or in *; simpl in *.
+        destruct is_in; [tauto|].
+        destruct H2; [subst; tauto|tauto].
+      } 
+      apply IHl in H5; try assumption.
+      destruct H5 as [x [inx notinx]].
+      exists x.
+      split; [tauto | intro].
+      rewrite ListSupport.app_or in *; simpl in *.
+      destruct H3; [tauto | destruct H3; [subst; tauto | tauto] ].
+  Qed.
+End PigeonHole.
+
+Section Dup.
+  Variable A: Type.
+
+  Lemma NoDup_remove_inv:
+    forall l1 l2 (x: A),
+      ~ In x (l1 ++ l2) ->
+      NoDup (l1 ++ l2) ->
+      NoDup (l1 ++ x :: l2).
+  Proof.
+    induction l1; simpl; auto; intros.
+    - apply NoDup_cons; assumption.
+    - inversion H0; subst; clear H0.
+      apply IHl1 with (x := x) in H4; try tauto.
+      apply NoDup_cons with (x := a) in H4; try assumption.
+      intro.
+      rewrite ListSupport.app_or in *; simpl in *; intuition congruence.
+  Qed.
+  
+  Variable l1 l2: list A.
+  Variable in_in: forall x, In x l1 -> In x l2.
+  Variable sameLength: length l1 = length l2.
+  Variable noDup: NoDup l1.
+
+  Lemma NoDup_superlist: NoDup l2.
+  Proof.
+    generalize l2 in_in sameLength noDup.
+    clear l2 in_in sameLength noDup.
+    induction l1; intros.
+    - simpl in *.
+      apply eq_sym in sameLength.
+      rewrite length_zero_iff_nil in sameLength; subst.
+      assumption.
+    - assert (sth: In a l2).
+      { specialize (@in_in a).
+        apply (@in_in (or_introl eq_refl)).
+      } 
+      apply in_split in sth.
+      destruct sth as [l3 [l4 l4Eq]]; subst.
+      specialize (IHl (l3 ++ l4)).
+      rewrite app_length in *; simpl in *.
+      rewrite <- plus_n_Sm in sameLength.
+      inversion sameLength; clear sameLength.
+      inversion noDup; subst; clear noDup.
+      assert (forall x, In x l -> In x (l3 ++ l4)).
+      { intros.
+        specialize (@in_in x).
+        assert (In x (l3 ++ a :: l4)) by tauto.
+        rewrite ListSupport.app_or in *; simpl in H1.
+        destruct H1; [tauto |].
+        destruct H1; [subst |tauto].
+        tauto.
+      }
+      apply IHl in H; try assumption.
+      apply NoDup_remove_inv; try assumption.
+      clear - in_in H0 H2 H3.
+      setoid_rewrite ListSupport.app_or in in_in; simpl in *.
+      setoid_rewrite or_comm at 2 in in_in.
+      setoid_rewrite or_assoc in in_in.
+      setoid_rewrite or_comm at 3 in in_in.
+      setoid_rewrite <- ListSupport.app_or in in_in; simpl in *.
+      rewrite <- app_length in H0.
+      intro sth.
+      eapply pigeon_hole in sth; eauto.
+      destruct sth as [x [inx notinx]].
+      specialize (in_in x (or_intror inx)).
+      destruct in_in; intuition congruence.
+  Qed.
+End Dup.
+
+Lemma NoDup_samelist A:
+  forall (l1 l2: list A)
+         (in_in: forall x, In x l1 <-> In x l2)
+         (sameLength: length l1 = length l2),
+    NoDup l1 <-> NoDup l2.
+Proof.
+  unfold iff at 2; intros.
+  constructor; apply NoDup_superlist; auto; firstorder idtac.
+Qed.
+
+Lemma concat_nil_length_zero A B: forall (ls: list A), length (concat (map (fun _ => @nil B) ls)) = 0.
+Proof.
+  induction ls; simpl; auto.
+Qed.
+
+
+Lemma concat_nil_length_map_cons A B (f: A -> list B) (b: A -> B):
+  forall (ls: list A), length (concat (map (fun a => b a :: f a) ls))
+                       = length (map b ls ++ concat (map f ls)).
+Proof.
+  induction ls; simpl; auto.
+  f_equal.
+  rewrite ?app_length.
+  rewrite IHls.
+  rewrite ?app_length.
+  rewrite ?Nat.add_assoc.
+  f_equal.
+  rewrite Nat.add_comm.
+  reflexivity.
+Qed.
+
+
+Lemma metaRegsSameLength m:
+  length (concat (map getListFromMetaReg (metaModulesRegs m))) = length (getRegInits (modFromMetaModules m)).
+Proof.
+  induction m; simpl; intuition auto; rewrite ?map_app, ?concat_app, ?ListSupport.app_or in *.
+  - destruct m; simpl in *; auto.
+  - rewrite ?app_length; congruence.
+  - rewrite regsToRepIsMap.
+    rewrite map_map; simpl.
+    clear.
+    induction ls; simpl.
+    + rewrite concat_nil_length_zero; reflexivity.
+    + rewrite ?app_length.
+      rewrite <- IHls.
+      rewrite <- app_length.
+      rewrite concat_nil_length_map_cons.
+      reflexivity.
+Qed.
+
+
+Lemma metaRegs_NoDup_names:
+  forall mm,
+    NoDup (map getMetaRegName (metaModulesRegs mm)) ->
+    NoDup (namesOf (getRegInits (modFromMetaModules mm))).
+Proof.
+  simpl; intros.
+  induction mm.
+  - simpl in *; auto.
+  - simpl in *; destruct m as [regs rules meths].
+    induction regs; intros; auto.
+    inv H; specialize (IHregs H3); clear H3.
+    simpl; rewrite namesOf_app.
+    apply NoDup_DisjList; auto.
+    + apply getListFromMetaReg_NoDup.
+    + apply disjList_metaRegs; auto.
+  - simpl in *;
+    rewrite map_app in H.
+    specialize (IHmm1 (ListSupport.NoDup_app_1 _ _ H)).
+    specialize (IHmm2 (ListSupport.NoDup_app_2 _ _ H)).
+    unfold namesOf in *; rewrite map_app; auto.
+    apply NoDup_DisjList; auto.
+    clear - H; intros.
+    unfold DisjList.
+    setoid_rewrite in_map_iff.
+    setoid_rewrite <- metaModulesRegsSame'.
+    setoid_rewrite <- in_map_iff.
+    match goal with
+      | |- forall _, ~ In _ ?x \/ ~ In _ ?y =>
+        fold (DisjList x y)
+    end.
+    induction (metaModulesRegs mm1); simpl in *; auto; intros.
+    + intro; tauto.
+    + apply NoDup_cons_iff in H; dest.
+      specialize (IHl H0).
+      rewrite map_app.
+      apply DisjList_app_4; auto.
+      clear IHl.
+      assert (sth: ~ In (getMetaRegName a) (map getMetaRegName (metaModulesRegs mm2))) by (rewrite app_or in H; tauto).
+      apply disjList_metaRegs; auto.
+  - pose proof (metaModulesRegsSame' (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDupLs sm)).
+    pose proof (metaRegsSameLength (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDupLs sm)).
+    simpl in *; auto.
+    rewrite regsToRepIsMap, map_map in *; simpl in *.
+    match goal with
+      | H: forall x, In x ?l1 <-> In x ?l2 |- _ =>
+        assert (forall x, In x (namesOf l1) <-> In x (namesOf l2))
+    end.
+    { intros.
+      constructor; intros; unfold namesOf in *.
+      - rewrite in_map_iff in *; dest; subst.
+        apply H0 in H3.
+        exists x0; auto.
+      - rewrite in_map_iff in *; dest; subst.
+        apply H0 in H3.
+        exists x0; auto.
+    }
+    clear H0.
+    rewrite <- ?map_length with (f := (@attrName _)) in H1.
+    apply NoDup_samelist in H2; try assumption.
+    apply H2.
+    clear H1 H2.
+    generalize H.
+    clear H.
+    induction (sinRegs sm); simpl; auto; intros.
+    + inversion H; subst; clear H.
+      apply IHl in H3; try assumption.
+      unfold namesOf in *.
+      rewrite map_app in *.
+      apply noDupApp; try assumption; intros.
+      * fold (namesOf (getListFromRep strA (regGen a) (nameVal (regName a)) ls)).
+        eapply getListFromRep_NoDup; auto.
+      * intro.
+        rewrite in_map_iff in H2; dest; subst.
+        rewrite in_map_iff in H0; dest; subst.
+        apply getListFromRep_In_exists in H; dest; subst.
+        rewrite in_concat_iff in H1; dest; subst.
+        rewrite in_map_iff in H0; dest; subst.
+        apply in_map with (f := @attrName _) in H1.        
+        apply getListFromRep_In_exists in H1; dest; subst.
+        rewrite H0 in H.
+        apply goodStrFn2 in H.
+        dest; subst.
+        clear - H2 H H4.
+        firstorder fail.
+Qed.
+
+Section PermuteRefines.
+  Variable A B: Modules.
+  Variable sameRegs: EquivList (getRegInits A) (getRegInits B).
+  Variable sameRules: EquivList (getRules A) (getRules B).
+  Variable sameMeths: EquivList (getDefsBodies A) (getDefsBodies B).
+  Variable noDupImpl: NoDup (namesOf (getRegInits A)).
+  Variable noDupSpec: NoDup (namesOf (getRegInits B)).
+
+  Lemma permute_refines_left: A <<== B.
+  Proof.
+    unfold traceRefines; intros.
+    exists s1, sig1; split.
+    - inv H; constructor; simpl in *.
+      remember (initRegs (getRegInits A)).
+      induction HMultistepBeh; subst.
+      + constructor; subst.
+        apply eq_sym.
+        erewrite initRegs_eq; eauto.
+      + constructor; auto.
+        specialize (IHHMultistepBeh eq_refl).
+        eapply module_structure_indep_step; eauto.
+    - clear; induction sig1; constructor; auto.
+      rewrite idElementwiseId.
+      constructor; destruct (annot a); auto.
+  Qed.
+End PermuteRefines.
+
+Section PermuteRefines2.
+  Variable A B: Modules.
+  Variable sameRegs: EquivList (getRegInits A) (getRegInits B).
+  Variable sameRules: EquivList (getRules A) (getRules B).
+  Variable sameMeths: EquivList (getDefsBodies A) (getDefsBodies B).
+  Variable noDupImpl: NoDup (namesOf (getRegInits A)).
+  Variable noDupSpec: NoDup (namesOf (getRegInits B)).
+
+  Lemma permute_equivalent: (A <<== B) /\ (B <<== A).
+  Proof.
+    constructor.
+    apply permute_refines_left; auto; try apply EquivList_comm; auto.
+    apply permute_refines_left; auto; try apply EquivList_comm; auto.
+  Qed.
+
+  Lemma permute_refines_right: (B <<== A).
+  Proof.
+    apply permute_refines_left; auto; try apply EquivList_comm; auto.
+  Qed.
+End PermuteRefines2.
+
+Notation "a <|=|> b" := ((modFromMetaModules (a) <<== modFromMetaModules (b)) /\
+                         (modFromMetaModules (b) <<== modFromMetaModules (a))) (at level 70).
+
+Section concat_Map.
+  Variable A B: Type.
+  Variable f: A -> B.
+  Lemma map_concat: forall l, map f (concat l) = concat (map (map f) l).
+  Proof.
+    induction l; simpl; auto.
+    rewrite map_app.
+    f_equal.
+    assumption.
+  Qed.
+End concat_Map.
+
+Lemma mapRegName:
+  (fun x =>
+     map (attrName (A:=RegInitValue))
+         match x with
+           | OneReg b s => [(nameVal s :: b)%struct]
+           | @RepReg A strA _ _ bgen s ls _ =>
+             map
+               (fun i : A =>
+                  (addIndexToStr strA i (nameVal s) :: bgen i)%struct) ls
+         end) = fun x => match x with
+                           | OneReg _ s => [nameVal s]
+                           | @RepReg A strA _ _ _ s ls _ =>
+                             map (fun i => addIndexToStr strA i (nameVal s)) ls
+                         end.
+Proof.
+  extensionality x.
+  intros.
+  destruct x; auto.
+  rewrite map_map; auto.
+Qed.
+
+Section string.
+  Variable v: Ascii.ascii.
+  Open Scope string.
+  Lemma notPresentPrefix:
+    forall p1 p2 s1 s2,
+      ~ S_In v p1 ->
+      ~ S_In v p2 ->
+      (p1 ++ String v s1 = p2 ++ String v s2)%string ->
+      p1 = p2 /\ s1 = s2.
+  Proof.
+    induction p1; intros; auto.
+    - destruct p2; rewrite ?S_app_nil_l in H1.
+      + inversion H1.
+        auto.
+      + rewrite <- S_app_comm_cons in H1.
+        inversion H1; subst.
+        simpl in H0.
+        tauto.
+    - destruct p2; rewrite ?S_app_nil_l in H1.
+      + rewrite <- S_app_comm_cons in H1.
+        inversion H1; subst.
+        simpl in H.
+        tauto.
+      + rewrite <- ?S_app_comm_cons in H1.
+        inversion H1; subst.
+        apply S_not_in_cons in H0.
+        apply S_not_in_cons in H.
+        destruct H0, H.
+        apply IHp1 in H4; auto.
+        repeat (split; f_equal; tauto).
+  Qed.
+End string.
+
+
+Section flattenRefines.
+  Variable m: MetaModules.
+  Variable noDupRegs:  NoDup (map getMetaRegName (metaModulesRegs m)).
+
+  Lemma flattenMetaEquiv: flattenMeta m <|=|> m.
+  Proof.
+    unfold flattenMeta.
+    apply permute_equivalent.
+    - apply metaModulesRegsSame.
+    - apply metaModulesRulesSame.
+    - apply metaModulesMethsSame.
+    - simpl.
+      unfold getListFromMetaReg, namesOf, getMetaRegName, getListFromRep in *.
+      rewrite map_concat, map_map, mapRegName.
+      generalize noDupRegs; clear noDupRegs.
+      induction (metaModulesRegs m); clear m; simpl; auto; intros.
+      inv noDupRegs.
+      specialize (IHl H2).
+      apply noDupApp; auto; intros.
+      + generalize H2; clear.
+        induction l; simpl; auto; intros.
+        * destruct a; simpl; auto.
+          pose proof (@getListFromRep_NoDup A strA goodStrFn2 _ bgen s ls noDup) as sth.
+          unfold getListFromRep, namesOf in *.
+          rewrite map_map in *; simpl in *.
+          auto.
+        * inv H2.
+          specialize (IHl H3).
+          apply IHl.
+      + intro.
+        destruct a; simpl in *; intuition idtac; subst.
+        * destruct s; simpl in *.
+          concat_map_iff.
+          { destruct x0; simpl in *; intuition idtac; subst.
+            - match goal with
+                | H: ?A -> False |- _ => assert A by (exists (OneReg b0 s); auto)
+              end.
+              auto.
+            - concat_map_iff.
+              apply badIndex in goodName0; auto.
+          }
+        * concat_map_iff.
+          { destruct x0; simpl in *; intuition idtac; subst.
+            - destruct s0; simpl in *; subst.
+              exfalso; clear - goodName0.
+              apply badIndex in goodName0.
+              auto.
+            - concat_map_iff.
+              unfold addIndexToStr in H.
+              unfold indexSymbol in *.
+              apply notPresentPrefix in H; dest; subst.
+              + apply H1.
+                match type of H4 with
+                  | In ?x l => exists x; auto
+                end.
+              + apply index_not_in; destruct s0; auto.
+              + apply index_not_in; destruct s; auto.
+          } 
+    - apply metaRegs_NoDup_names; assumption.
+  Qed.
+End flattenRefines.
 
