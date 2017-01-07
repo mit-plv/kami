@@ -277,13 +277,18 @@ Section ValidRegs.
       firstorder fail.
     Qed.
   End Regs2.
-  
-  Fixpoint ValidRegsMetaModule (mm: MetaModules): Prop :=
+
+  Fixpoint ValidRegsMetaModule (mm: MetaModule): Prop :=
+    ValidRegsMetaRules (metaRegs mm) (metaRules mm) /\
+    ValidRegsMetaMeths (metaRegs mm) (metaMeths mm).
+
+
+  Fixpoint ValidRegsMetaModules (mm: MetaModules): Prop :=
     match mm with
       | MetaRegFile _ _ _ _ _ _ => ValidRegsMetaRules (metaModulesRegs mm) (metaModulesRules mm) /\
                                    ValidRegsMetaMeths (metaModulesRegs mm) (metaModulesMeths mm)
       | MetaMod (Build_MetaModule regs rules meths) => ValidRegsMetaRules regs rules /\ ValidRegsMetaMeths regs meths
-      | ConcatMetaMod m1 m2 => ValidRegsMetaModule m1 /\ ValidRegsMetaModule m2
+      | ConcatMetaMod m1 m2 => ValidRegsMetaModules m1 /\ ValidRegsMetaModules m2
       | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs m =>
         ValidSinRegsSinRules (map (@regName _) (sinRegs m)) (sinRules m) /\
         ValidSinRegsSinMeths (map (@regName _) (sinRegs m)) (sinMeths m)
@@ -473,16 +478,31 @@ Section Facts.
     specialize (H3 argV).
     apply (validSinRegsSinAction_validRegsAction strA getConstK a0) in H3; simpl in *; rewrite map_map in H3; auto.
   Qed.
-  
+
   Lemma validRegsMetaModule_validRegsModules:
     forall ty mm,
       ValidRegsMetaModule ty mm ->
+      ValidRegsModules ty (modFromMeta mm).
+  Proof.
+    destruct mm as [regs rules dms]; simpl; intros; dest; split.
+    - clear -H; induction rules; [constructor|]; inv H.
+      simpl; apply validRegsRules_app; auto.
+      apply validRegsMetaRule_validRegsRules; auto.
+    - clear -H0; induction dms; [constructor|]; inv H0.
+      simpl; apply validRegsDms_app; auto.
+      apply validRegsMetaMeth_validRegsDms; auto.
+  Qed.
+
+
+  Lemma validRegsMetaModules_validRegsModules:
+    forall ty mm,
+      ValidRegsMetaModules ty mm ->
       ValidRegsModules ty (modFromMetaModules mm).
   Proof.
     induction mm.
     - simpl in *; intros; dest; split; simpl in *.
       + constructor.
-      + unfold ValidRegsMetaModule in H; simpl in H.
+      + unfold ValidRegsMetaModules in H; simpl in H.
         dest.
         inv H0.
         inv H3.
@@ -559,9 +579,9 @@ Section Facts.
    
   Lemma validRegsMetaModule_modular:
     forall ty mm1 mm2,
-      ValidRegsMetaModule ty (MetaMod mm1) ->
-      ValidRegsMetaModule ty (MetaMod mm2) ->
-      ValidRegsMetaModule ty (MetaMod (mm1 +++ mm2)).
+      ValidRegsMetaModule ty (mm1) ->
+      ValidRegsMetaModule ty (mm2) ->
+      ValidRegsMetaModule ty ((mm1 +++ mm2)).
   Proof.
     destruct mm1 as [regs1 rules1 dms1], mm2 as [regs2 rules2 dms2].
     simpl; intros; dest; split.

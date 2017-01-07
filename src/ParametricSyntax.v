@@ -2526,3 +2526,7 @@ Section flattenRefines.
   Qed.
 End flattenRefines.
 
+Definition getMetaModulesFromSinNat lgn s :=
+  RepeatSinMod string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
+               (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.
+

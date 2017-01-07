@@ -690,6 +690,12 @@ Notation "'META' { m1 'with' .. 'with' mN }" :=
      (ConsInMetaModule m1%kami_meta .. (ConsInMetaModule mN%kami_meta NilInMetaModule) ..))
     (at level 0, only parsing).
 
+Notation "'META_MOD' { m1 'with' .. 'with' mN }" :=
+  (MetaMod
+     (makeMetaModule
+        (ConsInMetaModule m1%kami_meta .. (ConsInMetaModule mN%kami_meta NilInMetaModule) ..)))
+    (at level 0, only parsing).
+
 
 (** Notation for sin-modules *)
 
@@ -829,4 +835,3 @@ Notation "'SIN' { m1 'with' .. 'with' mN }" :=
      (ConsInSinModule
         m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..))
     (at level 0, only parsing).
-
