@@ -86,31 +86,7 @@ Section MemCache.
   Lemma memCache_flatten:
     flattenMeta memCache1 = MetaMod (memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren).
   Proof.
-    unfold memCache1, memDirC1, mline1, memDir1, childParentC1, fifoToC1, fifoRsFromC1, fifoRqFromC1, l1C1, fifoFromP1,
-    fifoRsToP1, fifoRqToP1, l11, l1tag1, l1cs1, l1Cache1.
-    unfold l1C1, l1Cache1.
-    unfold l11,
-      fifoRqToP1, fifoRsToP1, 
-       fifoFromP1, childParentC1,
-       memDirC1.
-    unfold l1Cache1,
-    l1cs1, l1tag1,
-    l1line1; simpl in *.
-
-    unfold childParent,
-    fifoRqFromC,
-    fifoRsFromC,
-    fifoToC,
-    memDir, mline,
-    mdir; simpl in *.
-
-    unfold memCache.
-    unfold l1C, childParentC, memDirC.
-    unfold l1, fifoRqToP, fifoRsToP, fifoFromP, childParent, fifoRqFromC, fifoRsFromC, fifoToC, memDir, mline, mdir.
-    unfold l1Cache, l1cs, l1tag, l1line.
-    simpl in *.
-
-    unfold flattenMeta, concatMetaMod; simpl in *; reflexivity.
+    reflexivity.
   Qed.
 
   Lemma memCache_refines:
