@@ -1786,7 +1786,18 @@ Inductive MetaModules :=
                                    si = sj /\ i = j)
     (ls: list A)
     (noDupLs: NoDup ls)
-    (sm: SinModule A): MetaModules.
+    (sm: SinModule A): MetaModules
+| RepeatRegFile
+    (A: Type)
+    (strA: A -> string)
+    (goodStrFn: forall i j, strA i = strA j -> i = j)
+    (GenK: Kind)
+    (getConstK: A -> ConstT GenK)
+    (goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                   si = sj /\ i = j)
+    (ls: list A)
+    (noDupLs: NoDup ls)
+    (dataArray read write: NameRec) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): MetaModules.
 
 Section RepeatSinMod.
   Variable A: Type.
@@ -1819,6 +1830,16 @@ Section RepeatSinMod.
                       )%struct) (sinMeths sm))
           ) (repeatSinMod sm xs)
     end.
+
+  Fixpoint repeatRegFile dataArray read write IdxBits Data (init: ConstT (Vector Data IdxBits)) ls :=
+    match ls with
+      | nil => Mod nil nil nil
+      | x :: xs =>
+        ConcatMod (RegFile (addIndexToStr strA x (nameVal dataArray))
+                           (addIndexToStr strA x (nameVal read))
+                           (addIndexToStr strA x (nameVal write))
+                           init) (repeatRegFile dataArray read write init xs)
+    end.
 End RepeatSinMod.
 
 
@@ -1832,99 +1853,9 @@ Fixpoint modFromMetaModules m :=
     | ConcatMetaMod m1 m2 => ConcatMod (modFromMetaModules m1) (modFromMetaModules m2)
     | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
       repeatSinMod strA getConstK sm ls
+    | RepeatRegFile A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs dataArray read write IdxBits Data init =>
+      repeatRegFile strA dataArray read write init ls
   end.
-
-Section InRepeatSinMod.
-  Variable A: Type.
-  Variable strA: A -> string.
-  Variable GenK: Kind.
-  Variable getConstK: A -> ConstT GenK.
-  Variable ls: list A.
-
-  Lemma In_getRegInits_repeatSinMod m:
-    forall r, In r (getRegInits (repeatSinMod strA getConstK m ls)) <->
-              exists x rf, In x ls /\ In rf (sinRegs m) /\
-                           r = {| attrName := addIndexToStr strA x (nameVal (regName rf));
-                                  attrType := regGen rf x |}.
-  Proof.
-    induction ls; intros; simpl; auto.
-    - constructor; intros; dest; tauto.
-    - constructor; intros.
-      + rewrite app_or in H; simpl in H.
-        destruct H; [|
-                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
-                     repeat eexists; intuition idtac; f_equal].
-        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
-      + dest; subst.
-        rewrite app_or.
-        destruct H; subst.
-        * rewrite in_map_iff.
-          left; eexists; tauto.
-        * right.
-          apply IHl.
-          exists x, x0.
-          tauto.
-  Qed.
-
-
-  Lemma In_getRules_repeatSinMod m:
-    forall r, In r (getRules (repeatSinMod strA getConstK m ls)) <->
-              exists x rf, In x ls /\ In rf (sinRules m) /\
-                           r = {| attrName := addIndexToStr strA x (nameVal (ruleName rf));
-                                  attrType := getActionFromGen strA getConstK
-                                                               (fun ty => convSinToGen true GenK (ruleGen rf ty))
-                                                               x |}.
-  Proof.
-    induction ls; intros; simpl; auto.
-    - constructor; intros; dest; tauto.
-    - constructor; intros.
-      + rewrite app_or in H; simpl in H.
-        destruct H; [|
-                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
-                     repeat eexists; intuition idtac; f_equal].
-        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
-      + dest; subst.
-        rewrite app_or.
-        destruct H; subst.
-        * rewrite in_map_iff.
-          left; eexists; tauto.
-        * right.
-          apply IHl.
-          exists x, x0.
-          tauto.
-  Qed.
-
-  Lemma In_getDefsBodies_repeatSinMod m:
-    forall r, In r (getDefsBodies (repeatSinMod strA getConstK m ls)) <->
-              exists x rf, In x ls /\ In rf (sinMeths m) /\
-                           r =
-                           (addIndexToStr
-                              strA x (nameVal (methName rf)) ::
-                              (getMethFromGen strA getConstK
-                                              (existT (fun sig: SignatureT =>
-                                                         GenMethodT GenK sig) (projT1 (methGen rf))
-                                                      (fun ty argv => convSinToGen true GenK (projT2 (methGen rf) ty argv))) x)
-                           )%struct.
-  Proof.
-    induction ls; intros; simpl; auto.
-    - constructor; intros; dest; tauto.
-    - constructor; intros.
-      + rewrite app_or in H; simpl in H.
-        destruct H; [|
-                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
-                     repeat eexists; intuition idtac; f_equal].
-        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
-      + dest; subst.
-        rewrite app_or.
-        destruct H; subst.
-        * rewrite in_map_iff.
-          left; eexists; tauto.
-        * right.
-          apply IHl.
-          exists x, x0.
-          tauto.
-  Qed.
-End InRepeatSinMod.
 
 Notation "m1 ++++ m2" := (ConcatMetaMod m1 m2) (at level 0).
 
@@ -1936,6 +1867,9 @@ Fixpoint metaModulesRegs m :=
     | ConcatMetaMod m1 m2 => metaModulesRegs m1 ++ metaModulesRegs m2
     | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
       regsToRep strA goodStrFn goodStrFn2 noDupLs (sinRegs sm)
+    | RepeatRegFile A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs dataArray read write IdxBits Data init =>
+      RepReg strA goodStrFn goodStrFn2 (fun _ => RegInitCustom (existT ConstFullT (SyntaxKind (Vector Data IdxBits))
+                                                                       (SyntaxConst init))) dataArray noDupLs :: nil
   end.
 
 Fixpoint metaModulesRules m :=
@@ -1946,6 +1880,8 @@ Fixpoint metaModulesRules m :=
     | ConcatMetaMod m1 m2 => metaModulesRules m1 ++ metaModulesRules m2
     | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
       rulesToRep strA goodStrFn getConstK goodStrFn2 noDupLs (sinRules sm)
+    | RepeatRegFile A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs dataArray read write IdxBits Data init =>
+      nil
   end.
 
 Fixpoint metaModulesMeths m :=
@@ -1987,7 +1923,242 @@ Fixpoint metaModulesMeths m :=
     | ConcatMetaMod m1 m2 => metaModulesMeths m1 ++ metaModulesMeths m2
     | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs sm =>
       methsToRep strA goodStrFn getConstK goodStrFn2 noDupLs (sinMeths sm)
+    | RepeatRegFile A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs dataArray read write IdxBits Data init =>
+      RepMeth strA goodStrFn getConstK goodStrFn2
+              (existT (GenMethodT GenK) {| arg := Bit IdxBits; ret := Data |}
+                      (fun ty (ar: ty (Bit IdxBits)) =>
+                         (GReadReg {| isRep := true; nameRec := dataArray |}
+                                   (SyntaxKind (Vector Data IdxBits))
+                                   (fun x: ty (Vector Data IdxBits) =>
+                                      GReturn GenK
+                                        (ReadIndex
+                                           (Var ty (SyntaxKind (Bit IdxBits)) ar)
+                                           (Var ty (SyntaxKind (Vector Data IdxBits)) x)))))
+              ) read noDupLs ::
+              RepMeth strA goodStrFn  getConstK goodStrFn2
+              (existT (GenMethodT GenK)
+                      {| arg := Struct
+                                  (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                               (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)));
+                         ret := Void |}
+                      (fun ty
+                           (ar:ty
+                                 (Struct
+                                    (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                                 (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)))))
+                       =>
+                         (GReadReg {| isRep := true; nameRec := dataArray |}
+                                   (SyntaxKind (Vector Data IdxBits))
+                                   (fun x: ty (Vector Data IdxBits) =>
+                                      GWriteReg {| isRep := true; nameRec := dataArray |}
+                                                (UpdateVector (Var ty (SyntaxKind (Vector Data IdxBits)) x)
+                                                              (ReadField Fin.F1 (Var ty (SyntaxKind _) ar))
+                                                              (ReadField (Fin.FS Fin.F1) (Var ty (SyntaxKind _) ar)))
+                                                (GReturn GenK (Const _ (k := Void) WO)))))
+              ) write noDupLs :: nil
+
   end.
+
+Section InRepeatSinMod.
+  Variable A: Type.
+  Variable strA: A -> string.
+  Variable goodStrFn:
+    (forall i j : A, strA i = strA j -> i = j).
+  Variable GenK: Kind.
+  Variable getConstK: A -> ConstT GenK.
+  Variable goodStrFn2:
+    (forall (si sj : string) (i j : A),
+       addIndexToStr strA i si = addIndexToStr strA j sj ->
+       si = sj /\ i = j).
+  Variable ls: list A.
+  Variable noDupLs: NoDup ls.
+
+  Lemma In_getRegInits_repeatSinMod m:
+    forall r, In r (getRegInits (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinRegs m) /\
+                           r = {| attrName := addIndexToStr strA x (nameVal (regName rf));
+                                  attrType := regGen rf x |}.
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+
+  Lemma In_getRules_repeatSinMod m:
+    forall r, In r (getRules (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinRules m) /\
+                           r = {| attrName := addIndexToStr strA x (nameVal (ruleName rf));
+                                  attrType := getActionFromGen strA getConstK
+                                                               (fun ty => convSinToGen true GenK (ruleGen rf ty))
+                                                               x |}.
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+
+  Lemma In_getDefsBodies_repeatSinMod m:
+    forall r, In r (getDefsBodies (repeatSinMod strA getConstK m ls)) <->
+              exists x rf, In x ls /\ In rf (sinMeths m) /\
+                           r =
+                           (addIndexToStr
+                              strA x (nameVal (methName rf)) ::
+                              (getMethFromGen strA getConstK
+                                              (existT (fun sig: SignatureT =>
+                                                         GenMethodT GenK sig) (projT1 (methGen rf))
+                                                      (fun ty argv => convSinToGen true GenK (projT2 (methGen rf) ty argv))) x)
+                           )%struct.
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + rewrite app_or in H; simpl in H.
+        destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        rewrite in_map_iff in H; dest; subst; repeat eexists; tauto.
+      + dest; subst.
+        rewrite app_or.
+        destruct H; subst.
+        * rewrite in_map_iff.
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x, x0.
+          tauto.
+  Qed.
+
+  Lemma In_getRegInits_repeatRegFile dataArray read write IdxBits Data init:
+    forall r, In r (getRegInits (repeatRegFile strA dataArray read write init ls)) <->
+              exists x, In x ls /\ r = {| attrName := addIndexToStr strA x (nameVal dataArray);
+                                          attrType := RegInitCustom
+                                                        (existT ConstFullT (SyntaxKind (Vector Data IdxBits)) (SyntaxConst init)) |}.
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - constructor; intros.
+      + destruct H; [|
+                     destruct (IHl r) as [sth1 sth2]; specialize (sth1 H); dest; subst;
+                     repeat eexists; intuition idtac; f_equal].
+        subst; repeat eexists; tauto.
+      + dest; subst.
+        destruct H; subst.
+        * subst;
+          left; eexists; tauto.
+        * right.
+          apply IHl.
+          exists x.
+          tauto.
+  Qed.
+
+  Lemma In_getRules_repeatRegFile dataArray read write (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)):
+    forall r, In r (getRules (repeatRegFile strA dataArray read write init ls)) <-> False.
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto; tauto.
+  Qed.
+
+  Lemma In_getDefsBodies_repeatRegFile
+        dataArray read write (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)):
+    forall g: DefMethT,
+      In g (getDefsBodies (repeatRegFile strA dataArray read write init ls)) <->
+      exists x, In x ls /\
+                ((g =
+                 (addIndexToStr
+                    strA x (nameVal read) ::
+                    (getMethFromGen strA getConstK
+                                    (existT (GenMethodT GenK)
+                                            {| arg := Bit IdxBits; ret := Data |}
+                                            (fun ty (ar: ty (Bit IdxBits)) =>
+                                               (GReadReg {| isRep := true; nameRec := dataArray |}
+                                                         (SyntaxKind (Vector Data IdxBits))
+                                                         (fun x: ty (Vector Data IdxBits) =>
+                                                            GReturn GenK
+                                                                    (ReadIndex
+                                                                       (Var ty (SyntaxKind (Bit IdxBits)) ar)
+                                                                       (Var ty (SyntaxKind (Vector Data IdxBits)) x)))))) x)
+                 )%struct \/
+                 g =
+                 (addIndexToStr
+                    strA x (nameVal write) ::
+                    (getMethFromGen
+                       strA getConstK
+                       (existT (GenMethodT GenK)
+                               {| arg := Struct
+                                           (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                                        (Vector.cons _ {| attrName := "data"%string; attrType := Data |}
+                                                                     _ (Vector.nil _)));
+                                  ret := Void |}
+                               (fun ty
+                                    (ar:ty
+                                          (Struct
+                                             (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
+                                                          (Vector.cons _ {| attrName := "data"%string; attrType := Data |}
+                                                                       _ (Vector.nil _)))))
+                                =>
+                                  (GReadReg {| isRep := true; nameRec := dataArray |}
+                                            (SyntaxKind (Vector Data IdxBits))
+                                            (fun x: ty (Vector Data IdxBits) =>
+                                               GWriteReg {| isRep := true; nameRec := dataArray |}
+                                                         (UpdateVector (Var ty (SyntaxKind (Vector Data IdxBits)) x)
+                                                                       (ReadField Fin.F1 (Var ty (SyntaxKind _) ar))
+                                                                       (ReadField (Fin.FS Fin.F1) (Var ty (SyntaxKind _) ar)))
+                                                         (GReturn GenK (Const _ (k := Void) WO)))))) x))%struct)).
+  Proof.
+    clear goodStrFn goodStrFn2 noDupLs.
+    induction ls; intros; simpl; auto.
+    - constructor; intros; dest; tauto.
+    - split; intros.
+      + simpl in H; subst.
+        destruct H; subst.
+        * dest; subst; repeat eexists; tauto.
+        * { destruct H; subst.
+            - dest; subst; repeat eexists; tauto.
+            - destruct (IHl g) as [sth1 sth2]; specialize (sth1 H); dest; subst.
+              exists x.
+              split; [tauto|].
+              auto.
+          } 
+      + dest; subst; simpl in *; subst.
+        destruct H; subst.
+        * repeat destruct H0; subst; try tauto.
+        * do 2 right.
+          apply IHl.
+          eexists; eauto.
+  Qed.
+End InRepeatSinMod.
 
 Definition flattenMeta m := MetaMod (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
 
@@ -2025,6 +2196,14 @@ Proof.
   - unfold getListFromMetaReg in *;
     rewrite regsToRepIsMap, In_getRegInits_repeatSinMod in *;
     handleReps.
+  - unfold getListFromMetaReg in *;
+    rewrite In_getRegInits_repeatRegFile with (GenK := GenK) in *; eauto.
+    destruct H; [|simpl in H; tauto].
+    handleReps.
+  - unfold getListFromMetaReg in *;
+    rewrite In_getRegInits_repeatRegFile with (GenK := GenK) in *; eauto.
+    dest; subst; left.
+    handleReps.
 Qed.
 
 Lemma metaModulesRegsSame m: EquivList (concat (map getListFromMetaReg (metaModulesRegs m))) (getRegInits (modFromMetaModules m)).
@@ -2049,6 +2228,7 @@ Proof.
   - unfold getListFromMetaRule, repRule in *.
     rewrite rulesToRepIsMap, In_getRules_repeatSinMod in *.
     handleReps.
+  - rewrite In_getRules_repeatRegFile in H; auto.
 Qed.
 
 Lemma metaModulesRulesSame m:
@@ -2074,6 +2254,20 @@ Proof.
   - unfold getListFromMetaMeth, repMeth in *.
     rewrite methsToRepIsMap, In_getDefsBodies_repeatSinMod in *.
     handleReps.
+  - unfold repMeth in *.
+    rewrite In_getDefsBodies_repeatRegFile in *.
+    destruct H.
+    + handleReps.
+    + destruct o.
+      * handleReps.
+      * simpl in *; tauto.
+  - unfold repMeth, getMethFromGen in *.
+    simpl in *.
+    rewrite In_getDefsBodies_repeatRegFile with (GenK := GenK) (getConstK := getConstK) in H.
+    dest; subst.
+    destruct H0; subst.
+    + left; handleReps.
+    + right; left; handleReps.
 Qed.
 
 Lemma metaModulesMethsSame m:
@@ -2257,6 +2451,11 @@ Proof.
       rewrite <- app_length.
       rewrite concat_nil_length_map_cons.
       reflexivity.
+  - rewrite app_nil_r.
+    unfold getListFromRep.
+    rewrite map_length.
+    clear.
+    induction ls; simpl; auto.
 Qed.
 
 
@@ -2344,6 +2543,28 @@ Proof.
         dest; subst.
         clear - H2 H H4.
         firstorder fail.
+  - simpl in *.
+    generalize noDupLs.
+    clear - goodStrFn2.
+    induction ls; simpl; auto.
+    intros noDupLs.
+    inv noDupLs.
+    pose proof (IHls H2).
+    apply NoDup_cons; auto.
+    unfold namesOf; intro.
+    rewrite in_map_iff in H0; dest.
+    destruct x; simpl in *; subst.
+    clear - H1 H2 H3 goodStrFn2.
+    induction ls; simpl; auto.
+    inv H2.
+    simpl in H1.
+    assert (a0 <> a /\ ~ In a ls) by tauto; dest.
+    specialize (IHls H0 H5).
+    simpl in H3.
+    destruct H3.
+    inv H2.
+    apply goodStrFn2 in H6; dest; subst; tauto.
+    apply IHls; auto.
 Qed.
 
 Section PermuteRefines.

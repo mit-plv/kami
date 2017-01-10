@@ -65,9 +65,15 @@ Section MemCorrect.
     apply nmemCacheInl_refines_memAtomicWoqInlM.
   Qed.
 
+  (* TODO: THIS HAS TO BE CHANGED 
+     a) First define a new memCache' which uses the new modular constructs and regfile
+     b) convert memCache' to Modules (as memCacheMod) and carry the proofs of equiv, wf and
+        refines modFromMeta memCache
+   *)
+  
   (** Converting memCache to ConcatMod *)
   Require Import Kami.ModuleBoundEx.
-  
+
   Ltac toModules m :=
     match m with
     | (?m1 +++ ?m2) =>
