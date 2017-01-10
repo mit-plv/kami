@@ -2751,3 +2751,7 @@ Definition getMetaModulesFromSinNat lgn s :=
   RepeatSinMod string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
                (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) s.
 
+Definition getMetaModulesFromRegFile lgn dataArray read write (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)) :=
+  RepeatRegFile string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
+                (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) dataArray read write init.
+

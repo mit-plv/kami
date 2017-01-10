@@ -292,6 +292,7 @@ Section ValidRegs.
       | RepeatSinMod A strA goodStrFn GenK getConstK goodStrFn2 ls noDupLs m =>
         ValidSinRegsSinRules (map (@regName _) (sinRegs m)) (sinRules m) /\
         ValidSinRegsSinMeths (map (@regName _) (sinRegs m)) (sinMeths m)
+      | _ => True
     end.
 End ValidRegs.
 
@@ -531,6 +532,16 @@ Section Facts.
       repeat split; unfold namesOf; rewrite ?map_map; simpl in *; auto; clear - H H0; unfold getActionFromGen, getMethFromGen; simpl.
       + apply validSinRegsSinRules_validRegsRules; auto.
       + apply validSinRegsSinMeths_validRegsDms; auto.
+    - intros.
+      simpl in *.
+      clear; induction ls; simpl; auto.
+      + split; constructor; auto.
+      + repeat split; auto.
+        * constructor; auto.
+        * { constructor; simpl; intros.
+            - repeat (constructor; auto).
+            - repeat (constructor; auto).
+          }
   Qed.
 
   Lemma validRegsSinAction_regs_weakening:

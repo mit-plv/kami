@@ -405,6 +405,7 @@ Section Equiv.
       | MetaMod m' => MetaModEquiv m'
       | ConcatMetaMod m1 m2 => MetaModulesEquiv m1 /\ MetaModulesEquiv m2
       | RepeatSinMod _ _ _ _ _ _ _ _ m => SinRulesEquiv (sinRules m) /\ SinMethsEquiv (sinMeths m)
+      | RepeatRegFile _ _ _ _ _ _ _ _ dataArray read write IdxBits Data init => True
     end.
 
   Lemma SinActionEquiv_GetGenActionEquiv A strA GenK getConstK (i: A):
@@ -488,6 +489,23 @@ Section Equiv.
         split; simpl in *.
         * eapply SinRulesEquiv_RulesEquiv; eauto.
         * eapply SinMethsEquiv_MethsEquiv; eauto.
+    - simpl in *; dest.
+      induction ls; simpl; auto.
+      + constructor; simpl; auto; constructor.
+      + inv noDupLs.
+        specialize (IHls H3).
+        destruct IHls.
+        constructor; simpl; auto.
+        constructor.
+        constructor.
+        intros.
+        simpl in *.
+        solve [constructor; simpl in *].
+        simpl in *.
+        constructor; auto.
+        constructor; intros; simpl in *.
+        constructor; intros; simpl in *.
+        constructor; intros; simpl in *.
   Qed.
 End Equiv.
 
