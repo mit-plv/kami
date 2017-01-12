@@ -145,7 +145,7 @@ Section ProcMem.
           
       + apply memCache_refines_memAtomic.
         
-        END_SKIP_PROOF_ON *) apply cheat.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   (** Module definitions for the last theorem:
@@ -172,10 +172,100 @@ Section ProcMem.
    * pmFifos (fifos connecting the processor and memory) ++
    * memCacheMod (two-level cache-based memory)
    *)
+  Definition p4stNMemCache' := (p4stN ++ pmFifos ++ modFromMeta mcache)%kami.
   Definition p4stNMemCache := (p4stN ++ pmFifos ++ memCacheMod)%kami.
+  
+  Require Import Kami.ParametricSyntax Lib.Reflection Ex.MemCacheSynth Ex.MemCorrect.
+
+  Definition mCache1 :=
+     memCache1 IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
+
+  Lemma modFromMeta_m m m': flattenMeta m' = MetaMod m -> modFromMeta m = modFromMetaModules (flattenMeta m').
+  Proof.
+    clear.
+    intros.
+    rewrite H.
+    simpl.
+    destruct m.
+    reflexivity.
+  Qed.
+
+  Lemma EquivList_map A B (f: A -> B): forall l1 l2, EquivList l1 l2 -> EquivList (map f l1) (map f l2).
+  Proof.
+    clear.
+    unfold EquivList, SubList; intros.
+    setoid_rewrite in_map_iff.
+    destruct H.
+    split; intros; firstorder fail.
+  Qed.
+
+  Lemma namesOf_map A: @namesOf A = map (@attrName A).
+  Proof.
+    clear.
+    reflexivity.
+  Qed.
+
+  Lemma metaModulesRegs_flatten m m':
+    flattenMeta m' = MetaMod m ->
+    metaModulesRegs m' = metaRegs m.
+  Proof.
+    clear.
+    intros.
+    unfold flattenMeta in H.
+    inversion H.
+    reflexivity.
+  Qed.
+
+  Lemma getRegInits_m m:
+    getRegInits (modFromMeta m) = Concat.concat (map getListFromMetaReg (metaRegs m)).
+  Proof.
+    clear.
+    reflexivity.
+  Qed.
+
+  Lemma p4stNMemCache_refines: p4stNMemCache <<== p4stNMemCache'.
+  Proof.
+    unfold p4stNMemCache', p4stNMemCache.
+    krewrite assoc left.
+    krewrite assoc right.
+    rewrite idElementwiseId.
+    apply traceRefines_same_module_structure_modular_2.
+    - apply metaRegs_NoDup_names.
+      simpl.
+      unfold Indexer.withPrefix, Indexer.prefixSymbol.
+      autounfold with NameDefs.
+      simpl.
+      noDup_tac.
+    - knodup_regs.
+    - knodup_regs.
+    - pose proof (metaModulesRegsSame mCache1) as sth.
+      unfold memCacheMod, MemCorrect.memCacheMod, ProcMem.memCacheMod, memCacheMod, mCache1 in *.
+      apply EquivList_map with (f := (@attrName _)) in sth.
+      unfold namesOf.
+      destruct sth as [st1 st2].
+      apply (DisjList_SubList st2).
+      erewrite metaModulesRegs_flatten by (apply memCache_flatten).
+      rewrite <- namesOf_map.
+      rewrite <- getRegInits_m.
+      kdisj_regs.
+    - kdisj_regs.
+    - unfold mcache.
+      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      apply EquivList_comm.
+      apply metaModulesRegsSame.
+    - unfold mcache.
+      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      apply EquivList_comm.
+      apply metaModulesRulesSame.
+    - unfold mcache.
+      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      apply EquivList_comm.
+      apply metaModulesMethsSame.
+  Qed.
 
   Theorem p4stN_mcache_refines_scN: p4stNMemCache <<== scN.
   Proof. (* SKIP_PROOF_ON
+    ktrans p4stNMemCache'; unfold MethsT; rewrite <- idElementwiseId; [apply p4stNMemCache_refines|].
     ketrans; [|apply pdecN_mcache_refines_scN].
     kmodular.
     - kdisj_edms_cms_ex numChildren.
@@ -188,8 +278,8 @@ Section ProcMem.
       + kdisj_edms_cms_ex numChildren.
       + kdisj_ecms_dms_ex numChildren.
       + krefl.
-      + apply memCacheMod_refines_memCache.
-        END_SKIP_PROOF_ON *) apply cheat.
+      + krefl.
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcMem.
