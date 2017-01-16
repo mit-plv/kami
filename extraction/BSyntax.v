@@ -24,8 +24,13 @@ Section BluespecSubset.
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
   | BReadReg: string -> BExpr.
 
+  (* NOTE: BBCall is not used for translationg from Kami to Bluespec,
+   * but defined in order to support multi-parameter methods.
+   *)
   Inductive BAction: Type :=
   | BMCall: nat (* binder *) -> string (* meth *) -> SignatureT -> BExpr -> BAction
+  | BBCall: nat (* binder *) -> string (* meth *) -> bool (* Action in Bluespec? *) ->
+            list BExpr -> BAction
   | BLet: nat (* binder *) -> option Kind (* type annotation, if possible *) ->
           BExpr -> BAction
   | BWriteReg: string -> BExpr -> BAction

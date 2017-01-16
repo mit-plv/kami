@@ -44,12 +44,11 @@ let bsv_keywords =
     "xnor"; "xor"]
 
 (* Partial definition borrowed from Compcert *)
-(* TODO: '.' -> "__" / '$' -> "___" *)
 let bstring_of_charlist (s: char list) =
   let rec string_of_charlist (s: char list) =
     match s with
     | [] -> ""
-    | c :: s -> (Char.escaped (if c = '.' || c = '$' then '_' else c)) ^ (string_of_charlist s)
+    | c :: s -> (Char.escaped (if c = '.' || c = '$' then '_' else if c = '@' then '.' else c)) ^ (string_of_charlist s)
   in
   let str = string_of_charlist s in
   let bstr = String.uncapitalize str in
@@ -120,8 +119,10 @@ let ppEndModule = "endmodule"
 let ppInterface = "interface"
 let ppEndInterface = "endinterface"
 let ppReg = "Reg#"
+let ppRegFile = "RegFile#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
+let ppMkRegFile = "mkRegFileFull"
 let ppDefaultValue = "unpack(0)"
 let ppBool = "Bool"
 let ppVoid = "void"
@@ -137,6 +138,58 @@ let ppFunction = "function"
 
 let ppNoRules = "// No rules in this module"
 let ppNoMeths = "// No methods in this module"
+
+(* For the RegFile primitive *)
+let regFileAddrName = 'a'::'d'::'d'::'r'::[]
+let regFileDataName = 'd'::'a'::'t'::'a'::[]
+
+let regFileSubName rfName = List.append rfName ('@'::'s'::'u'::'b'::[])
+let regFileUpdName rfName = List.append rfName ('@'::'u'::'p'::'d'::[])
+
+let regFileUpdVec ibits dk =
+  (Cons
+     ({ attrName = regFileAddrName;
+        attrType = Bit ibits },
+      1,
+      (Cons
+         ({ attrName = regFileDataName;
+            attrType = dk }, 0, Nil))))
+let regFileUpdStr ibits dk = Struct (2, regFileUpdVec ibits dk)
+
+let regFileUpdSig ibits dk =
+  { arg = regFileUpdStr ibits dk;
+    ret = Bit 0 }
+
+let regFileSubSig ibits dk = { arg = Bit ibits; ret = dk }
+
+let regFileUpdAction rfName aidx ibits dk =
+  (* Index 0 is for the argument, so assign 1 for the return *)
+  (BBCall (1, regFileUpdName rfName, true,
+           ((BReadField (regFileAddrName, (BVar aidx)))
+            :: (BReadField (regFileDataName, (BVar aidx))) :: []))) ::
+    (BReturn (BConst (Bit 0, ConstBit (0, WO)))) :: []
+
+let regFileSubAction rfName aidx ibits dk =
+  (* Index 0 is for the argument, so assign 1 for the return *)
+  (BBCall (1, regFileSubName rfName, false, (BVar aidx :: []))) ::
+    (BReturn (BVar 1)) :: []
+
+let regFileUpdMeth rfName writeName ibits dk =
+  (* Index 0 is for the argument *)
+  { attrName = writeName;
+    attrType = (regFileUpdSig ibits dk,
+                regFileUpdAction rfName 0 ibits dk) }
+
+let regFileSubMeth rfName readName ibits dk =
+  (* Index 0 is for the argument *)
+  { attrName = readName;
+    attrType = (regFileSubSig ibits dk,
+                regFileSubAction rfName 0 ibits dk) }
+
+let regFileRules = []
+let regFileMeths rfName readName writeName ibits dk =
+  (regFileSubMeth rfName readName ibits dk) ::
+    (regFileUpdMeth rfName writeName ibits dk) :: []
 
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
@@ -209,28 +262,27 @@ let rec getCallsBM (ml: bMethod list) =
   | { attrName = _; attrType = (_, mb) } :: tl ->
      List.append (getCallsBA mb) (getCallsBM tl)
 
-let getCallsB (bm: bModule) =
+let getCallsB (bm: bRegModule) =
   match bm with
-  | { bregs = _; brules = rl; bdms = ml } ->
+  | RegFileB _ -> []
+  | BModuleB { bregs = _; brules = rl; bdms = ml } ->
      let calls = List.append (getCallsBR rl) (getCallsBM ml) in
      List.fold_left (fun acc e -> if List.mem e acc then acc else e :: acc) [] calls
 
-let getDefsB (bm: bModule) =
+let getDefsB (bm: bRegModule) =
   match bm with
-  | { bregs = _; brules = _; bdms = ml } ->
+  | RegFileB (_, readName, writeName, ibits, dk, _) ->
+     (bstring_of_charlist readName, { arg = Bit ibits; ret = dk }) ::
+       (bstring_of_charlist writeName, regFileUpdSig ibits dk) :: []
+  | BModuleB { bregs = _; brules = _; bdms = ml } ->
      List.map (fun bm -> match bm with
                          | { attrName = mn; attrType = (msig, _) } ->
                             (bstring_of_charlist mn, msig)) ml
 
-type bModuleDC = bModule * (string * signatureT) list * (string * signatureT) list
+type bRegModuleDC = bRegModule * (string * signatureT) list * (string * signatureT) list
 
-let toBModule (bm: bRegModule) =
-  match bm with
-  | RegFileB _ -> { bregs = []; brules = []; bdms = [] }
-  | BModuleB bm' -> bm'
-
-let toBModuleDC (bm: bModule) = (bm, getDefsB bm, getCallsB bm)
-let toBModuleDCL (bml: bRegModule list) = List.map (fun bm -> toBModuleDC bm) (List.map toBModule bml)
+let toBRegModuleDC (bm: bRegModule) = (bm, getDefsB bm, getCallsB bm)
+let toBRegModuleDCL (bml: bRegModule list) = List.map (fun bm -> toBRegModuleDC bm) bml
 
 let rec vectorToList (vec: 'a t0) =
   match vec with
@@ -285,6 +337,11 @@ and collectStrV (v: bExpr vec) =
   | Vec0 e -> collectStrE e
   | VecNext (_, v1, v2) -> collectStrV v1; collectStrV v2
 
+let rec collectStrEL (el: bExpr list) =
+  match el with
+  | [] -> ()
+  | e :: el' -> collectStrE e; collectStrEL el'
+
 let rec collectStrAL (al: bAction list) =
   match al with
   | [] -> ()
@@ -292,6 +349,7 @@ let rec collectStrAL (al: bAction list) =
 and collectStrA (a: bAction) =
   match a with
   | BMCall (_, _, msig, _) -> collectStrK (arg msig); collectStrK (ret msig)
+  | BBCall (_, _, _, el) -> collectStrEL el
   | BLet (_, ok, e) ->
      (match ok with
       | Some k -> collectStrK k
@@ -314,9 +372,11 @@ let rec collectStrBM (ml: bMethod list) =
      collectStrK (arg msig); collectStrK (ret msig);
      collectStrAL mb; collectStrBM tl
 
-let collectStrB (bm: bModule) =
+let collectStrB (bm: bRegModule) =
   match bm with
-  | { bregs = _; brules = rl; bdms = ml } ->
+  | RegFileB (_, _, _, ibits, dk, _) ->
+     let _ = addGlbStruct (vectorToList (regFileUpdVec ibits dk)) in ()
+  | BModuleB { bregs = _; brules = rl; bdms = ml } ->
      collectStrBR rl; collectStrBM ml
 
 (* Simple analyses end *)
@@ -473,15 +533,27 @@ and ppBExprStruct (stl: bExpr attribute list) =
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
 
+let rec ppBExprs (el: bExpr list) =
+  match el with
+  | [] -> ()
+  | e :: [] -> ppBExpr e
+  | e :: el' -> ppBExpr e; ps ppComma; print_space (); ppBExprs el'
+
 let rec ppBAction (ife: int option) (a: bAction) =
   match a with
   | BMCall (bind, meth, msig, e) ->
      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-     (* (if ret msig = Bit 0 then ps ppBind else ps ppAssign); *) ps ppAssign;
-     print_space ();
+     ps ppAssign; print_space ();
      ps (bstring_of_charlist meth);
      ps ppRBracketL;
      (if arg msig = Bit 0 then () else ppBExpr e);
+     ps ppRBracketR; ps ppSep
+  | BBCall (bind, meth, isAction, el) ->
+     ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
+     (if isAction then ps ppAssign else ps ppBind); print_space ();
+     ps (bstring_of_charlist meth);
+     ps ppRBracketL;
+     ppBExprs el;
      ps ppRBracketR; ps ppSep
   | BLet (bind, ok, e) ->
      (match ok with
@@ -638,7 +710,8 @@ let rec ppRegInits (rl: regInitT list) =
 
 let ppImports (_: unit) =
   ps "import Vector::*;"; print_cut(); force_newline ();
-  ps "import BuildVector::*;"; print_cut(); force_newline ()
+  ps "import BuildVector::*;"; print_cut(); force_newline ();
+  ps "import RegFile::*;"; print_cut(); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -653,7 +726,7 @@ let ppGlbStructs (_: unit) =
 
 let ppBModuleInterface (n: string) (m: bModule) =
   match m with
-  | { bregs = br; brules = brl; bdms = bd } ->
+  | { bregs = _; brules = brl; bdms = bd } ->
      ps ppInterface; print_space (); ps n; ps ppSep;
      print_break 1 4; open_hovbox 0;
      ppBInterfaces bd;
@@ -694,7 +767,7 @@ let ppBModule (ifcn: string) (m: bModule) =
   | { bregs = br; brules = brl; bdms = bd } ->
      open_hovbox 2;
      ps ppModule; print_space ();
-     ps ("mk" ^ ifcn); ppBModuleCallArgs (getCallsB m); print_space ();
+     ps ("mk" ^ ifcn); ppBModuleCallArgs (getCallsB (BModuleB m)); print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      close_box ();
      print_break 0 4; open_hovbox 0;
@@ -711,18 +784,61 @@ let ppBModuleFull (ifcn: string) (m: bModule) =
   ppBModuleInterface ifcn m;
   ppBModule ifcn m
 
+(* TODO: apply "init" *)
+let ppRegFileFull (ifcn: string)
+                  rfName readName writeName
+                  (ibits: int) (dk: kind) (init: constT) =
+  (* NOTE: interface pp is nothing to do with registers *)
+  let rfRules = regFileRules in
+  let rfDms = regFileMeths rfName readName writeName ibits dk in
+  ppBModuleInterface ifcn { bregs = []; brules = rfRules; bdms = rfDms };
+
+  (* similar to ppBModule *)
+  open_hovbox 2;
+  ps ppModule; print_space ();
+  ps ("mk" ^ ifcn); print_space ();
+  ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
+  close_box ();
+  print_break 0 4; open_hovbox 0;
+
+  (* For registers; similar to ppRegInit *)
+  open_hbox ();
+  ps ppRegFile; ps ppRBracketL; ps (ppKind (Bit ibits)); ps ppComma; print_space ();
+  ps (ppKind dk); ps ppRBracketR; print_space ();
+  ps (bstring_of_charlist rfName); print_space ();
+  ps ppAssign; print_space ();
+  ps ppMkRegFile; ps ppRBracketL; (* TODO: init here *) ps ppRBracketR; ps ppSep;
+  close_box ();
+
+  (* No rules in the RegFile primitive! *)
+  print_cut (); force_newline ();
+  ps ppNoRules;
+
+  (* For methods *)
+  print_cut (); force_newline ();
+  ppBMethods rfDms;
+
+  close_box(); print_break 0 (-4); force_newline ();
+  ps ppEndModule;
+  print_cut (); force_newline ()
+
 let rec ppBModules (bml: bRegModule list) (idx: int) =
   match bml with
   | [] -> ()
   | bm' :: bml' ->
       match bm' with
-      | RegFileB _ -> force_newline ()
+      | RegFileB (rfName, readName, writeName, ibits, dk, init) ->
+         ppRegFileFull (ppModuleNamePrefix ^ string_of_int idx)
+                       rfName readName writeName
+                       ibits dk init;
+         force_newline ();
+         ppBModules bml' (succ idx)
       | BModuleB bm ->
-          ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
-                        force_newline ();
-                        ppBModules bml' (succ idx)
+         ppBModuleFull (ppModuleNamePrefix ^ string_of_int idx) bm;
+         force_newline ();
+         ppBModules bml' (succ idx)
 
-let rec preAnalyses (bml: bModule list) =
+let rec preAnalyses (bml: bRegModule list) =
   match bml with
   | [] -> ()
   | bm :: bml' -> collectStrB bm; preAnalyses bml'
@@ -747,7 +863,7 @@ let rec ppCallInsts (cis: (int * string) list) =
         (ps ("m" ^ string_of_int idx); ps ppDot)
       else ()); ps meth; ps ppComma; print_space (); ppCallInsts cis'
 
-let ppModuleInst (dmap: int StringMap.t) (bmdc: bModuleDC) (idx: int) =
+let ppModuleInst (dmap: int StringMap.t) (bmdc: bRegModuleDC) (idx: int) =
   ps (ppModuleNamePrefix ^ string_of_int idx); print_space ();
   ps ("m" ^ string_of_int idx); print_space (); ps ppAssign; print_space ();
   ps ("mk" ^ ppModuleNamePrefix ^ string_of_int idx); print_space ();
@@ -755,20 +871,20 @@ let ppModuleInst (dmap: int StringMap.t) (bmdc: bModuleDC) (idx: int) =
   ppCallInsts (callsToInsts dmap ((fun (_, _, c) -> c) bmdc));
   ps ppRBracketR; ps ppSep
 
-let rec ppModulesInst (dmap: int StringMap.t) (bmdcl: bModuleDC list) (idx: int) =
+let rec ppModulesInst (dmap: int StringMap.t) (bmdcl: bRegModuleDC list) (idx: int) =
   match bmdcl with
   | [] -> ()
   | bmdc :: bmdcl' -> ppModuleInst dmap bmdc idx; print_cut (); force_newline ();
                       ppModulesInst dmap bmdcl' (succ idx)
 
-let rec makeDefMap (bmdcl: bModuleDC list) (idx: int) =
+let rec makeDefMap (bmdcl: bRegModuleDC list) (idx: int) =
   match bmdcl with
   | [] -> StringMap.empty
   | (_, d, _) :: bmdcl' ->
      List.fold_left (fun dmap df -> StringMap.add (fst df) idx dmap)
                     (makeDefMap bmdcl' (succ idx)) d
 
-let rec makeCallMap (bmdcl: bModuleDC list) (idx: int) =
+let rec makeCallMap (bmdcl: bRegModuleDC list) (idx: int) =
   match bmdcl with
   | [] -> StringMap.empty
   | (_, _, c) :: bmdcl' ->
@@ -799,7 +915,7 @@ let rec makeModuleOrder (mids: int list) (pairs: (int * int) list) =
                                   (List.filter (fun ii -> not (List.mem (fst ii) no_incomings))
                                                pairs))
 
-let ppTopModule (bmdcl: bModuleDC list) (idx: int)
+let ppTopModule (bmdcl: bRegModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
   open_hovbox 2;
   ps ppModule; print_space ();
@@ -823,7 +939,7 @@ let rec permute (ls: 'a list) (ps: int list) =
 (* NOTE: idxInit should be larger than 0 *)
 let ppBModulesFull (bml: bRegModule list) =
   let idxInit = 1 in
-  let bmdcl = toBModuleDCL bml in
+  let bmdcl = toBRegModuleDCL bml in
   let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
   let callsAll = List.concat (List.map (fun (_, _, c) -> c) bmdcl) in
   let extCallsAll = List.filter (fun meth -> not (List.mem meth defsAll)) callsAll in
@@ -832,7 +948,7 @@ let ppBModulesFull (bml: bRegModule list) =
                     (makeModuleOrderPairs (makeDefMap bmdcl 0)
                                           (makeCallMap bmdcl 0)) in
   ppImports ();
-  preAnalyses (List.map toBModule bml);
+  preAnalyses bml;
   ppGlbStructs ();
   ppBModules (permute bml moduleOrder) idxInit;
   ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
