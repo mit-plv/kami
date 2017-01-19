@@ -122,7 +122,7 @@ let ppReg = "Reg#"
 let ppRegFile = "RegFile#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
-let ppMkRegFile = "mkRegFileFull"
+let ppMkRegFile = "mkRegFileFullReplicate(unpack(0))" (* TODO: with an initial value *)
 let ppDefaultValue = "unpack(0)"
 let ppBool = "Bool"
 let ppVoid = "void"
@@ -709,9 +709,10 @@ let rec ppRegInits (rl: regInitT list) =
      ppRegInit r; print_cut (); ppRegInits rl'
 
 let ppImports (_: unit) =
-  ps "import Vector::*;"; print_cut(); force_newline ();
-  ps "import BuildVector::*;"; print_cut(); force_newline ();
-  ps "import RegFile::*;"; print_cut(); force_newline ()
+  ps "import Vector::*;"; print_cut (); force_newline ();
+  ps "import BuildVector::*;"; print_cut (); force_newline ();
+  ps "import RegFile::*;"; print_cut (); force_newline ();
+  ps "import RegFileUtil::*;"; print_cut (); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -807,7 +808,7 @@ let ppRegFileFull (ifcn: string)
   ps (ppKind dk); ps ppRBracketR; print_space ();
   ps (bstring_of_charlist rfName); print_space ();
   ps ppAssign; print_space ();
-  ps ppMkRegFile; ps ppRBracketL; (* TODO: init here *) ps ppRBracketR; ps ppSep;
+  ps ppMkRegFile; (* ps ppRBracketL; *) (* TODO: init here *) (* ps ppRBracketR; *) ps ppSep;
   close_box ();
 
   (* No rules in the RegFile primitive! *)
