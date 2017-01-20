@@ -3,3 +3,4 @@
 -R examples Ex
 -R examples/isa_rv32 Ex
 -R extraction Ext
+-R processors Proc

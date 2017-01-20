@@ -15,21 +15,22 @@ EXSVS:=$(filter-out $(IGNORE:%=%.v),$(EXSVS))
 EXTVS:=$(wildcard extraction/*.v)
 EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
+PROCVS:=$(wildcard processors/*.v)
+PROCVS:=$(filter-out $(IGNORE:%=%.v),$(PROCVS))
+
 .PHONY: coq src clean
 
 LIBARGS := -R lib Lib
-
 ARGS := -R src Kami
-
 EXARGS := -R examples Ex
-
 EXTARGS := -R extraction Ext
+PROCARGS := -R processors Proc
 
 coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
 
-Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS)
-	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) -o Makefile.coq.all
+Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(PROCVS)
+	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(PROCARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(PROCVS) -o Makefile.coq.all
 
 src: Makefile.coq.src
 	$(MAKE) -f Makefile.coq.src
