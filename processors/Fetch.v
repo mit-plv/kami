@@ -1,6 +1,6 @@
 Require Import Kami.
 Require Import Lib.Indexer.
-Require Import Ex.MemTypes.
+Require Import Ex.MemTypes Ex.OneEltFifo.
 
 Set Implicit Arguments.
 
@@ -10,7 +10,7 @@ Set Implicit Arguments.
  * 2) Control Status Registers (CSRs) and exceptions
  *)
 
-Section InOrderSixStage.
+Section Processor.
   Variables addrSize dataBytes rfIdx: nat.
 
   Section BTB.
@@ -31,11 +31,11 @@ Section InOrderSixStage.
                         (#pcv)%kami_expr
                         Haddr).
 
-    Definition BtbUpdate :=
+    Definition btbUpdateStr :=
       STRUCT { "curPc" :: Bit addrSize; "nextPc" :: Bit addrSize }.
 
     Definition btbPredPc := MethodSig "predPc"(Bit addrSize): Bit addrSize.
-    Definition btbUpdate := MethodSig "update"(Struct BtbUpdate): Void.
+    Definition btbUpdate := MethodSig "update"(Struct btbUpdateStr): Void.
 
     Definition btb :=
       MODULE {
@@ -58,9 +58,9 @@ Section InOrderSixStage.
             
             Ret #npc
                 
-          with Method "update" (upd: Struct BtbUpdate): Void :=
-            LET curPc <- #upd ! BtbUpdate @."curPc";
-            LET nextPc <- #upd ! BtbUpdate @."nextPc";
+          with Method "update" (upd: Struct btbUpdateStr): Void :=
+            LET curPc <- #upd ! btbUpdateStr @."curPc";
+            LET nextPc <- #upd ! btbUpdateStr @."nextPc";
             LET index <- getIndex curPc;
             LET tag <- getTag curPc;
 
@@ -88,8 +88,6 @@ Section InOrderSixStage.
       }.
 
   End BTB.
-
-  (* TODO: Pipeline fifo design (for easy proof) *)
 
   Section Redirect.
     Variable redirName: string.
@@ -144,10 +142,16 @@ Section InOrderSixStage.
   End Epoch.
 
   Section Fetch.
-    Variables (iMemReqName iMemRepName: string).
-    
+    Variables (iMemReqName f2dName: string).
+
     Definition iMemReq := MethodSig iMemReqName(Struct (RqFromProc dataBytes (Bit addrSize))): Void.
-    Definition iMemRep := MethodSig iMemRepName(): Struct (RsToProc dataBytes).
+
+    Definition F2D :=
+      STRUCT { "pc" :: Bit addrSize;
+               "predPc" :: Bit addrSize;
+               "decEpoch" :: Bool;
+               "exeEpoch" :: Bool }.
+    Definition f2dEnq := MethodSig (f2dName -- "enq")(Struct F2D): Void.
 
     Definition fetch :=
       MODULE {
@@ -161,7 +165,13 @@ Section InOrderSixStage.
           Call predPc <- btbPredPc(#pc);
           Write "pc" <- #predPc;
 
-          (* TODO: f2d.enq *)
+          Call decEpoch <- (getEpoch "dec")();
+          Call exeEpoch <- (getEpoch "exe")();
+
+          Call f2dEnq (STRUCT { "pc" ::= #pc;
+                                "predPc" ::= #predPc;
+                                "decEpoch" ::= #decEpoch;
+                                "exeEpoch" ::= #exeEpoch });
           Retv
 
         with Rule "redirect" :=
@@ -196,5 +206,5 @@ Section InOrderSixStage.
 
   End Fetch.
 
-End InOrderSixStage.
+End Processor.
 
