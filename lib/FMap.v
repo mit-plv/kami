@@ -550,6 +550,10 @@ Module LeibnizFacts (M : MapLeibniz).
     fold (fun k v m' =>
             if in_dec E.eq_dec k d then add k v m' else m') m (empty _).
 
+  Definition complement {A} (m: t A) (d: list E.t) :=
+    fold (fun k v m' =>
+            if in_dec E.eq_dec k d then m' else add k v m') m (empty _).
+
   (* NOTE: do not add "subtractKV" and "restrict" to below *)
   Hint Unfold update Sub subtract : MapDefs.
   Hint Unfold E.eq.
@@ -1402,7 +1406,90 @@ Module LeibnizFacts (M : MapLeibniz).
     repeat (rewrite restrict_find || rewrite find_union).
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
-  
+
+  Lemma transpose_neqkey_complement:
+    forall {A} d,
+      P.transpose_neqkey
+        eq
+        (fun (k : key) (v0 : A) (m' : t A) =>
+           if in_dec P.F.eq_dec k d then m' else add k v0 m').
+  Proof.
+    unfold P.transpose_neqkey; intros.
+    destruct (in_dec E.eq_dec k d), (in_dec E.eq_dec k' d); auto.
+    apply add_comm; auto.
+  Qed.
+  Hint Immediate transpose_neqkey_complement.
+
+  Lemma complement_find:
+    forall {A} d (m: t A) k,
+      find k (complement m d) =
+      if in_dec E.eq_dec k d then None else find k m.
+  Proof.
+    mintros; unfold complement; mind m.
+    - rewrite P.fold_Empty; auto.
+      rewrite find_empty.
+      destruct (in_dec _ _ _); auto.
+    - cmp k k0.
+      + rewrite P.fold_add with (eqA:= eq); auto.
+        destruct (in_dec E.eq_dec k0 d); auto.
+        do 2 rewrite find_add_1; auto.
+      + rewrite P.fold_add with (eqA:= eq); auto.
+        destruct (in_dec E.eq_dec k0 d).
+        * rewrite find_add_2 by auto; auto.
+        * do 2 rewrite find_add_2 by auto; auto.
+  Qed.
+
+  Lemma complement_empty:
+    forall A d,
+      complement (empty A) d = empty A.
+  Proof.
+    intros.
+    ext y.
+    rewrite complement_find.
+    rewrite find_empty.
+    destruct (in_dec P.F.eq_dec y d); intuition.
+  Qed.
+
+  Lemma complement_add_not_in A (m: t A) d:
+    forall k v,
+      ~ List.In k d ->
+      add k v (complement m d) = complement (add k v m) d.
+  Proof.
+    intros; ext y.
+    rewrite complement_find.
+    destruct (in_dec P.F.eq_dec y d).
+    - cmp k y; intuition.
+      rewrite find_add_2 by auto.
+      rewrite complement_find.
+      destruct (in_dec P.F.eq_dec y d); intuition.
+    - cmp k y.
+      + rewrite 2! find_add_1; auto.
+      + rewrite 2! find_add_2 by auto.
+        rewrite complement_find.
+        destruct (in_dec P.F.eq_dec y d); intuition.
+  Qed.
+
+  Lemma complement_add_in A (m: t A) d:
+    forall k v,
+      List.In k d ->
+      complement (add k v m) d = complement m d.
+  Proof.
+    intros; ext y.
+    rewrite 2! complement_find.
+    destruct (in_dec P.F.eq_dec y d); auto.
+    cmp k y; intuition.
+    rewrite find_add_2 by auto; auto.
+  Qed.
+
+  Lemma complement_union:
+    forall {A} (m1 m2: t A) d,
+      complement (union m1 m2) d = union (complement m1 d) (complement m2 d).
+  Proof.
+    mintros; ext y.
+    repeat (rewrite complement_find || rewrite find_union).
+    destruct (in_dec E.eq_dec y d); auto.
+  Qed.
+
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
     intros. apply union_smothered. unfold Sub. auto.
