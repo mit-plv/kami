@@ -281,6 +281,5 @@ Section ProcMem.
       + krefl.
       END_SKIP_PROOF_ON *) apply cheat.
   Qed.
-
 End ProcMem.
 
