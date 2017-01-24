@@ -1,7 +1,9 @@
 Require Import Kami.
 Require Import Lib.Indexer.
 Require Import Ex.MemTypes Ex.OneEltFifo.
-Require Import Proc.Fetch.
+Require Import Proc.Fetch Proc.AbstractIsa.
+
+Set Implicit Arguments.
 
 Section Processor.
   Variables addrSize dataBytes rfIdx: nat.
@@ -62,6 +64,7 @@ Section Processor.
 
   Section Decode.
     Variables (f2dName iMemRepName: string).
+    Variable decodeInst: DecodeT rfIdx dataBytes.
 
     Definition f2dDeq := MethodSig (f2dName -- "deq")(): Struct (F2D addrSize).
     Definition iMemRep := MethodSig iMemRepName(): Struct (RsToProc dataBytes).
@@ -70,7 +73,8 @@ Section Processor.
       MODULE {
         Rule "doDecode" :=
           Call f2d <- f2dDeq();
-          Call inst <- iMemRep();
+          Call instStr <- iMemRep();
+          LET inst <- #instStr!(RsToProc dataBytes)@."data";
 
           Call decEpoch <- (getEpoch "dec")();
           Call exeEpoch <- (getEpoch "exe")();
@@ -78,7 +82,8 @@ Section Processor.
           If (#exeEpoch == #f2d!(F2D addrSize)@."exeEpoch"
               && #decEpoch == #f2d!(F2D addrSize)@."decEpoch")
           then
-            (* TODO: decode *)
+            LET dInst <- decodeInst _ inst;
+              (* TODO: implement *)
             Retv
           else
             Retv
