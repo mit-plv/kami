@@ -414,7 +414,6 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_flat) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl_flat.
   Proof.
-    (* SKIP_PROOF_ON
     assert (mRef: modFromMeta
                     (nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)
                     <<== modFromMeta nmemCacheInl_flat) by
@@ -425,8 +424,6 @@ Section MemCacheInl.
                     kequiv)).
 
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-
   Qed.
 
   Definition nmemCacheInl_1_1: MetaModule.
@@ -440,12 +437,6 @@ Section MemCacheInl.
     ssNoF (mcs -- read) dwnRs_wait.
     ssNoF (mcs -- read) dwnRs_noWait.
     ssF (mcs -- read) deferred.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_1_2: MetaModule.
-  Proof.
-    start_def nmemCacheInl_1_1.
 
     ssNoF (mline -- write) dwnRs_wait.
     ssF (mline -- write) dwnRs_noWait.
@@ -454,52 +445,6 @@ Section MemCacheInl.
     ssNoF (mcs -- write) dwnRs_noWait.
     ssF (mcs -- write) deferred.
 
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_1_1_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
-    
-    ssFilt (mline -- read) deferred.
-  
-    ssNoFilt (mcs -- read) missByState.
-    ssNoFilt (mcs -- read) dwnRq.
-    ssNoFilt (mcs -- read) dwnRs_wait.
-    ssNoFilt (mcs -- read) dwnRs_noWait.
-    ssFilt (mcs -- read) deferred.
-    finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-
-  Theorem nmemCacheInl_1_2_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_2) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_2.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_1_1 nmemCacheInl_1_1_pf.
-    
-    ssNoFilt (mline -- write) dwnRs_wait.
-    ssFilt (mline -- write) dwnRs_noWait.
-
-    ssNoFilt (mcs -- write) dwnRs_wait.
-    ssNoFilt (mcs -- write) dwnRs_noWait.
-    ssFilt (mcs -- write) deferred.
-
-    finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Definition nmemCacheInl_2: MetaModule.
-  Proof.
-
-    start_def nmemCacheInl_1_2.
     ssNoF (toChild -- enqName) dwnRq.
     ssF (toChild -- enqName) deferred.
 
@@ -511,70 +456,11 @@ Section MemCacheInl.
     ssNoF (rsFromChild -- deqName) dwnRs_wait.
     ssF (rsFromChild -- deqName) dwnRs_noWait.
 
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_2_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_2) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_2.
-  Proof.
-    (* SKIP_PROOF_ON
-
-    start_pf2 nmemCacheInl_1_2 nmemCacheInl_1_2_pf.
-
-    ssNoFilt (toChild -- enqName) dwnRq.
-    ssFilt (toChild -- enqName) deferred.
-
-    ssNoFilt (rqFromChild -- firstEltName) missByState.
-    ssFilt (rqFromChild -- firstEltName) dwnRq.
-    
-    ssFilt (rqFromChild -- deqName) deferred.
-
-    ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
-    ssFilt (rsFromChild -- deqName) dwnRs_noWait.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Definition nmemCacheInl_3: MetaModule.
-  Proof.
-
-    start_def nmemCacheInl_2.
-    
     gsF (rsFromChild -- enqName) rsFromCToPRule.
 
     gsF (rqFromChild -- enqName) rqFromCToPRule.
     
     gsF (toChild -- deqName) fromPToCRule.
-
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_3_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_3) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_3.
-  Proof.
-    (* SKIP_PROOF_ON
-
-    start_pf2 nmemCacheInl_2 nmemCacheInl_2_pf.
-
-    gsFilt (rsFromChild -- enqName) rsFromCToPRule.
-
-    gsFilt (rqFromChild -- enqName) rqFromCToPRule.
-    
-    gsFilt (toChild -- deqName) fromPToCRule.
-
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-
-  
-  Definition nmemCacheInl_4: MetaModule.
-  Proof.
-    start_def nmemCacheInl_3.
 
     ggNoF (cs -- read) l1MissByState.
     ggNoF (cs -- read) l1MissByLine.
@@ -583,90 +469,10 @@ Section MemCacheInl.
     ggNoF (cs -- read) upgRq.
     ggNoF (cs -- read) upgRs.
 
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_4_5: MetaModule.
-  Proof.
-    start_def nmemCacheInl_4.
-    
     ggNoF (cs -- read) ld.
     ggNoF (cs -- read) st.
     ggNoF (cs -- read) drop.
     ggF (cs -- read) pProcess.
-
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_4_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_4.
-  Proof.
-    (* SKIP_PROOF_ON
-
-    start_pf2 nmemCacheInl_3 nmemCacheInl_3_pf.
-
-    ggNoFilt (cs -- read) l1MissByState.
-    ggNoFilt (cs -- read) l1MissByLine.
-    ggNoFilt (cs -- read) l1Hit.
-    ggNoFilt (cs -- read) writeback.
-    ggNoFilt (cs -- read) upgRq.
-    ggNoFilt (cs -- read) upgRs.
-
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-    
-  Theorem nmemCacheInl_4_5_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_4 nmemCacheInl_4_pf.
-
-    ggNoFilt (cs -- read) ld.
-    ggNoFilt (cs -- read) st.
-    ggNoFilt (cs -- read) drop.
-    ggFilt (cs -- read) pProcess.
-
-    finish_pf.
-       END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-End MemCacheInl.
-
-Section MemCacheInl2.
-
-  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
-  Variable Id: Kind.
-
-  Variable LgNumChildren: nat.
-
-  Definition nmemCacheInl_4_5': MetaModule.
-  Proof.
-    pose (nmemCacheInl_4_5 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
-    unfold nmemCacheInl_4_5 in sth.
-    match goal with
-      | m := ?mod |- _ => exact mod
-    end.
-  Defined.
-
-  Theorem nmemCacheInl_4_5'_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_4_5') /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_4_5'.
-  Proof.
-    (* SKIP_PROOF_ON
-    eapply nmemCacheInl_4_5_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-
-  
-  Definition nmemCacheInl_5: MetaModule.
-  Proof.
-    start_def nmemCacheInl_4_5'.
 
     ggNoF (tag -- read) l1MissByState.
     ggNoF (tag -- read) l1MissByLine.
@@ -678,16 +484,81 @@ Section MemCacheInl2.
     ggNoF (tag -- read) drop.
     ggF (tag -- read) pProcess.
 
+    ggNoF (line -- read) writeback.
+    ggNoF (line -- read) ld.
+    ggNoF (line -- read) st.
+    ggF (line -- read) pProcess.
+    ggNoF (cs -- write) writeback.
+    ggNoF (cs -- write) upgRs.
+    ggF (cs -- write) pProcess.
+
+    ggF (tag -- write) upgRs.
+    ggNoF (line -- write) upgRs.
+    ggF (line -- write) st.
+    ggNoF (fromParent -- deqName) upgRs.
+    ggNoF (fromParent -- deqName) drop.
+    ggF (fromParent -- deqName) pProcess.
+    ggF (rqToParent -- enqName) upgRq.
+    ggNoF (rsToParent -- enqName) writeback.
+    ggF (rsToParent -- enqName) pProcess.
+    ggF (rqToParent -- deqName) rqFromCToPRule.
+    ggF (rsToParent -- deqName) rsFromCToPRule.
+    ggF (fromParent -- enqName) fromPToCRule.
+
+    
     finish_def.
   Defined.
 
-  Theorem nmemCacheInl_5_pf:
+  Theorem nmemCacheInl_1_1_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_5.
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
+    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
   Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_4_5' nmemCacheInl_4_5'_pf.
+    start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
+    
+    ssFilt (mline -- read) deferred.
+  
+    ssNoFilt (mcs -- read) missByState.
+    ssNoFilt (mcs -- read) dwnRq.
+    ssNoFilt (mcs -- read) dwnRs_wait.
+    ssNoFilt (mcs -- read) dwnRs_noWait.
+    ssFilt (mcs -- read) deferred.
+
+    ssNoFilt (mline -- write) dwnRs_wait.
+    ssFilt (mline -- write) dwnRs_noWait.
+
+    ssNoFilt (mcs -- write) dwnRs_wait.
+    ssNoFilt (mcs -- write) dwnRs_noWait.
+    ssFilt (mcs -- write) deferred.
+
+    ssNoFilt (toChild -- enqName) dwnRq.
+    ssFilt (toChild -- enqName) deferred.
+
+    ssNoFilt (rqFromChild -- firstEltName) missByState.
+    ssFilt (rqFromChild -- firstEltName) dwnRq.
+    
+    ssFilt (rqFromChild -- deqName) deferred.
+
+    ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
+    ssFilt (rsFromChild -- deqName) dwnRs_noWait.
+
+    gsFilt (rsFromChild -- enqName) rsFromCToPRule.
+
+    gsFilt (rqFromChild -- enqName) rqFromCToPRule.
+    
+    gsFilt (toChild -- deqName) fromPToCRule.
+
+    ggNoFilt (cs -- read) l1MissByState.
+    ggNoFilt (cs -- read) l1MissByLine.
+    ggNoFilt (cs -- read) l1Hit.
+    ggNoFilt (cs -- read) writeback.
+    ggNoFilt (cs -- read) upgRq.
+    ggNoFilt (cs -- read) upgRs.
+
+    ggNoFilt (cs -- read) ld.
+    ggNoFilt (cs -- read) st.
+    ggNoFilt (cs -- read) drop.
+    ggFilt (cs -- read) pProcess.
 
     ggNoFilt (tag -- read) l1MissByState.
     ggNoFilt (tag -- read) l1MissByLine.
@@ -699,324 +570,31 @@ Section MemCacheInl2.
     ggNoFilt (tag -- read) drop.
     ggFilt (tag -- read) pProcess.
 
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-End MemCacheInl2.
-  
-Section MemCacheInl3.
-
-  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
-  Variable Id: Kind.
-
-  Variable LgNumChildren: nat.
-
-  Definition nmemCacheInl_5': MetaModule.
-  Proof.
-    pose (nmemCacheInl_5 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
-    unfold nmemCacheInl_5 in sth.
-    match goal with
-      | m := ?mod |- _ => exact mod
-    end.
-  Defined.
-
-  Theorem nmemCacheInl_5'_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_5') /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_5'.
-  Proof.
-    (* SKIP_PROOF_ON
-    eapply nmemCacheInl_5_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-
-  Definition nmemCacheInl_6: MetaModule.
-  Proof.
-    start_def nmemCacheInl_5'.
-    ggNoF (line -- read) writeback.
-    ggNoF (line -- read) ld.
-    ggNoF (line -- read) st.
-    ggF (line -- read) pProcess.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_6_3: MetaModule.
-  Proof.
-    start_def nmemCacheInl_6.
-    ggNoF (cs -- write) writeback.
-    ggNoF (cs -- write) upgRs.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_6_6: MetaModule.
-  Proof.
-    start_def nmemCacheInl_6_3.
-    ggF (cs -- write) pProcess.
-
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_6_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_6.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_5' nmemCacheInl_5'_pf.
-    
     ggNoFilt (line -- read) writeback.
     ggNoFilt (line -- read) ld.
     ggNoFilt (line -- read) st.
     ggFilt (line -- read) pProcess.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
 
-  Theorem nmemCacheInl_6_3_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_3) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_3.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_6 nmemCacheInl_6_pf.
-    
+
     ggNoFilt (cs -- write) writeback.
     ggNoFilt (cs -- write) upgRs.
 
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_6_6_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_6_3 nmemCacheInl_6_3_pf.
-    
     ggFilt (cs -- write) pProcess.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-End MemCacheInl3.
-  
-Section MemCacheInl4.
-
-  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
-  Variable Id: Kind.
-
-  Variable LgNumChildren: nat.
-
-  Definition nmemCacheInl_6_6': MetaModule.
-  Proof.
-    pose (nmemCacheInl_6_6 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
-    unfold nmemCacheInl_6_6 in sth.
-    match goal with
-      | m := ?mod |- _ => exact mod
-    end.
-  Defined.
-
-  Theorem nmemCacheInl_6_6'_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_6_6') /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_6_6'.
-  Proof.
-    (* SKIP_PROOF_ON
-    eapply nmemCacheInl_6_6_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-
-  Definition nmemCacheInl_7: MetaModule.
-  Proof.
-    start_def nmemCacheInl_6_6'.
-    ggF (tag -- write) upgRs.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_7_3: MetaModule.
-  Proof.
-    start_def nmemCacheInl_7.
-    ggNoF (line -- write) upgRs.
-    ggF (line -- write) st.
-    finish_def.
-  Defined.
-  
-  Definition nmemCacheInl_7_7: MetaModule.
-  Proof.
-    start_def nmemCacheInl_7_3.
-
-    ggNoF (fromParent -- deqName) upgRs.
-    ggNoF (fromParent -- deqName) drop.
-    ggF (fromParent -- deqName) pProcess.
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_7_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_7.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_6_6' nmemCacheInl_6_6'_pf.
     ggFilt (tag -- write) upgRs.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_7_3_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_3) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_3.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_7 nmemCacheInl_7_pf.
     ggNoFilt (line -- write) upgRs.
     ggFilt (line -- write) st.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_7_7_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_7_3 nmemCacheInl_7_3_pf.
     ggNoFilt (fromParent -- deqName) upgRs.
     ggNoFilt (fromParent -- deqName) drop.
     ggFilt (fromParent -- deqName) pProcess.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-End MemCacheInl4.
-
-Section MemCacheInl5.
-  Variables IdxBits TagBits LgNumDatas DataBytes: nat.
-  Variable Id: Kind.
-
-  Variable LgNumChildren: nat.
-
-  Definition nmemCacheInl_7_7': MetaModule.
-  Proof.
-    pose (nmemCacheInl_7_7 IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as sth.
-    unfold nmemCacheInl_7_7 in sth.
-    match goal with
-      | m := ?mod |- _ => exact mod
-    end.
-  Defined.
-
-  Theorem nmemCacheInl_7_7'_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_7_7') /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_7_7'.
-  Proof.
-    (* SKIP_PROOF_ON
-    eapply nmemCacheInl_7_7_pf; eauto.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-
-  Definition nmemCacheInl_8: MetaModule.
-  Proof.
-    start_def nmemCacheInl_7_7'.
-    ggF (rqToParent -- enqName) upgRq.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_9: MetaModule.
-  Proof.
-    start_def nmemCacheInl_8.
-    ggNoF (rsToParent -- enqName) writeback.
-    ggF (rsToParent -- enqName) pProcess.
-    finish_def.
-  Defined.
-
-  Definition nmemCacheInl_10: MetaModule.
-  Proof.
-    start_def nmemCacheInl_9.
-    ggF (rqToParent -- deqName) rqFromCToPRule.
-    finish_def.
-  Defined.
-    
-  Definition nmemCacheInl_11: MetaModule.
-  Proof.
-    start_def nmemCacheInl_10.
-    ggF (rsToParent -- deqName) rsFromCToPRule.
-    finish_def.
-  Defined.
-
-  
-  Definition nmemCacheInl: MetaModule.
-  Proof.
-    start_def nmemCacheInl_11.
-    ggF (fromParent -- enqName) fromPToCRule.
-    finish_def.
-  Defined.
-
-  Theorem nmemCacheInl_8_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_8) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_8.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_7_7' nmemCacheInl_7_7'_pf.
     ggFilt (rqToParent -- enqName) upgRq.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_9_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_9) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_9.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_8 nmemCacheInl_8_pf.
     ggNoFilt (rsToParent -- enqName) writeback.
     ggFilt (rsToParent -- enqName) pProcess.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_10_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_10) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_10.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_9 nmemCacheInl_9_pf.
     ggFilt (rqToParent -- deqName) rqFromCToPRule.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-  
-  Theorem nmemCacheInl_11_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_11) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_11.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_10 nmemCacheInl_10_pf.
     ggFilt (rsToParent -- deqName) rsFromCToPRule.
-    finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
-  Qed.
-
-  Theorem nmemCacheInl_pf:
-    (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl.
-  Proof.
-    (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_11 nmemCacheInl_11_pf.
     ggFilt (fromParent -- enqName) fromPToCRule.
+
     finish_pf.
-        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
-End MemCacheInl5.
+End MemCacheInl.
 
 Close Scope string.
