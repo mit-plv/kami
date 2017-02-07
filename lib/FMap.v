@@ -1707,6 +1707,12 @@ Module LeibnizFacts (M : MapLeibniz).
     intuition.
   Qed.
 
+  Lemma KeysDisj_app A (x: t A):
+    forall d1 d2, KeysDisj x d1 -> KeysDisj x d2 -> KeysDisj x (d1 ++ d2).
+  Proof.
+    mintros; apply in_app_or in H1; destruct H1; firstorder.
+  Qed.
+
   Lemma KeysDisj_add:
     forall {A} k v (m: t A) d,
       KeysDisj m d -> ~ List.In k d -> KeysDisj (add k v m) d.
@@ -1779,6 +1785,50 @@ Module LeibnizFacts (M : MapLeibniz).
       apply eq_sym, P.F.not_find_in_iff in Heqov; intuition.
   Qed.
 
+  Lemma subtractKV_KeysDisj_1:
+    forall {A} deceqA (m1 m2: t A) d,
+      KeysDisj m1 d -> KeysDisj (subtractKV deceqA m1 m2) d.
+  Proof.
+    mintros.
+    specialize (H k H0).
+    rewrite P.F.not_find_in_iff in *.
+    rewrite subtractKV_find; rewrite H; auto.
+  Qed.
+
+  Lemma subtractKV_KeysDisj_2:
+    forall {A} deceqA (m1 m2: t A) d,
+      (forall k, List.In k d -> find k m1 <> None -> find k m1 = find k m2) ->
+      KeysDisj (subtractKV deceqA m1 m2) d.
+  Proof.
+    mintros.
+    specialize (H k H0).
+    rewrite P.F.not_find_in_iff.
+    rewrite subtractKV_find.
+    destruct (find k m1); auto.
+    rewrite <-H by discriminate.
+    destruct (deceqA _ _); intuition.
+  Qed.
+
+  Lemma subtractKV_disj_1:
+    forall {A} deceqA (m1 m2 m3: t A),
+      Disj m1 m2 -> Disj (subtractKV deceqA m1 m3) m2.
+  Proof.
+    mintros.
+    specialize (H k); destruct H; auto.
+    left; rewrite P.F.not_find_in_iff in *.
+    rewrite subtractKV_find; rewrite H; auto.
+  Qed.
+
+  Lemma subtractKV_disj_2:
+    forall {A} deceqA (m1 m2 m3: t A),
+      Disj m1 m2 -> Disj m1 (subtractKV deceqA m2 m3).
+  Proof.
+    mintros.
+    specialize (H k); destruct H; auto.
+    right; rewrite P.F.not_find_in_iff in *.
+    rewrite subtractKV_find; rewrite H; auto.
+  Qed.
+
   Lemma subtractKV_disj_invalid:
     forall {A} deceqA (m1 m2: t A),
       Disj m1 m2 -> subtractKV deceqA m1 m2 = m1.
@@ -1826,6 +1876,64 @@ Module LeibnizFacts (M : MapLeibniz).
     inv H; inv H0.
   Qed.
 
+  Lemma subtractKV_disj_union_3:
+    forall {A} (deceqA : forall x y : A, {x = y} + {x <> y})
+           (m1 m2 m : t A),
+      Disj m1 m ->
+      subtractKV deceqA (union m1 m2) m = union m1 (subtractKV deceqA m2 m).
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    rewrite 2! P.F.in_find_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m1), (find y m); intuition;
+      try (elim H0; intros; inv H).
+  Qed.
+
+  Lemma subtractKV_disj_union_4:
+    forall {A} (deceqA : forall x y : A, {x = y} + {x <> y})
+           (m1 m2 m : t A),
+      Disj m2 m ->
+      subtractKV deceqA (union m1 m2) m = union (subtractKV deceqA m1 m) m2.
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    rewrite 2! P.F.in_find_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m1), (find y m), (find y m2); auto.
+    - destruct H; elim H; discriminate.
+    - destruct (deceqA a a0); auto.
+    - destruct H; elim H; discriminate.
+  Qed.
+
+  Lemma subtractKV_disj_union_5:
+    forall {A} deceqA (m m1 m2: t A),
+      Disj m m1 ->
+      subtractKV deceqA m (union m1 m2) =
+      subtractKV deceqA m m2.
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    rewrite 2! P.F.in_find_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m), (find y m1); auto.
+    destruct H; elim H; discriminate.
+  Qed.
+
+  Lemma subtractKV_disj_union_6:
+    forall {A} deceqA (m m1 m2: t A),
+      Disj m m2 ->
+      subtractKV deceqA m (union m1 m2) =
+      subtractKV deceqA m m1.
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    rewrite 2! P.F.in_find_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m), (find y m1), (find y m2); auto.
+    destruct H; elim H; discriminate.
+  Qed.
+    
   Lemma subtractKV_subtractKVD_1:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
            (m1 m2: t A) dom,
