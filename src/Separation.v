@@ -196,8 +196,9 @@ Qed.
 (*** End *)
 
 Definition NonInteractingExcept (fs: list string) (m1 m2: Modules) :=
-  (forall f, In f (getExtCalls m1) -> In f (getExtDefs m2) -> In f fs) /\
-  (forall f, In f (getExtDefs m1) -> In f (getExtCalls m2) -> In f fs).
+  (forall f, In f (getExtCalls m1) /\ In f (getExtDefs m2) -> In f fs) /\
+  (forall f, In f (getExtDefs m1) /\ In f (getExtCalls m2) -> In f fs) /\
+  (DisjList fs (getExtMeths (m1 ++ m2)%kami)).
 
 Section TwoModuleFacts.
   Variables (m1 m2: Modules).
@@ -240,7 +241,7 @@ Section TwoModuleFacts.
       destruct (annot l1), (annot l2), (annot la), (annot lb); auto.
   Qed.
 
-  Lemma nonInteractingExcept_Dual:
+  Lemma nonInteractingExcept_wellHiddenModular:
     forall fs,
       NonInteractingExcept fs m1 m2 ->
       forall l1 l2,
@@ -287,7 +288,7 @@ Section TwoModuleFacts.
           -- assumption.
         * pose proof (dual_restrictLabel H2) as Hdr; simpl in Hdr.
           apply M.subtractKV_KeysDisj_2; intros.
-          apply Hdr, (proj2 H).
+          apply Hdr, (proj2 H); split.
           -- apply H7; findeq.
           -- apply getCalls_not_getDefs_getExtCalls; auto.
              destruct (Hddisj k); auto.
@@ -296,7 +297,7 @@ Section TwoModuleFacts.
         apply M.KeysDisj_app.
         * pose proof (dual_restrictLabel H2) as Hdr; simpl in Hdr.
           apply M.subtractKV_KeysDisj_2; intros.
-          apply eq_sym, Hdr, (proj1 H).
+          apply eq_sym, Hdr, (proj1 H); split.
           -- apply getCalls_not_getDefs_getExtCalls; auto.
              destruct (Hddisj k); auto.
              elim H11; apply getExtDefs_getDefs; apply H9; findeq.
@@ -319,7 +320,7 @@ Section TwoModuleFacts.
           -- assumption.
         * pose proof (dual_restrictLabel H2) as Hdr; simpl in Hdr.
           apply M.subtractKV_KeysDisj_2; intros.
-          apply Hdr, (proj1 H).
+          apply Hdr, (proj1 H); split.
           -- apply H8; findeq.
           -- apply getDefs_not_getCalls_getExtDefs; auto.
              destruct (Hcdisj k); auto.
@@ -327,7 +328,7 @@ Section TwoModuleFacts.
       + rewrite getDefs_app; apply M.KeysDisj_app.
         * pose proof (dual_restrictLabel H2) as Hdr; simpl in Hdr.
           apply M.subtractKV_KeysDisj_2; intros.
-          apply eq_sym, Hdr, (proj2 H).
+          apply eq_sym, Hdr, (proj2 H); split.
           -- apply getDefs_not_getCalls_getExtDefs; auto.
              destruct (Hcdisj k); auto.
              elim H11; apply getExtCalls_getCalls; apply H10; findeq.
@@ -338,7 +339,7 @@ Section TwoModuleFacts.
           -- assumption.
   Qed.
 
-  Lemma nonInteractingExcept_DualSeq:
+  Lemma nonInteractingExcept_wellHiddenModularSeq:
     forall fs,
       NonInteractingExcept fs m1 m2 ->
       forall ll1 ll2,
@@ -352,44 +353,86 @@ Section TwoModuleFacts.
     destruct ll2 as [|l2 ll2]; inv H2.
     inv H0; inv H1.
     constructor; auto.
-    eauto using nonInteractingExcept_Dual.
+    eauto using nonInteractingExcept_wellHiddenModular.
   Qed.
+
+  Lemma nonInteractingExcept_Dual:
+    forall fs,
+      NonInteractingExcept fs m1 m2 ->
+      forall l1 l2,
+        ValidLabel m1 l1 -> ValidLabel m2 l2 ->
+        Hidden l1 -> Hidden l2 -> (* TODO: do we realy need Hidden? *)
+        WellHiddenConcat m1 m2 l1 l2 ->
+        Dual (restrictLabel l1 fs) (restrictLabel l2 fs).
+  Proof.
+  Admitted.
+
+  Lemma nonInteractingExcept_DualSeq:
+    forall fs,
+      NonInteractingExcept fs m1 m2 ->
+      forall ll1 ll2,
+        Forall (fun l => ValidLabel m1 l) ll1 ->
+        Forall (fun l => ValidLabel m2 l) ll2 ->
+        HiddenSeq ll1 -> HiddenSeq ll2 ->
+        WellHiddenConcatSeq m1 m2 ll1 ll2 ->
+        DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs).
+  Proof.
+    induction ll1 as [|l1 ll1]; simpl; intros; [inv H4; constructor|].
+    destruct ll2 as [|l2 ll2]; [inv H4|].
+    inv H0; inv H1; inv H2; inv H3; inv H4.
+    simpl; constructor; auto.
+    apply nonInteractingExcept_Dual; auto.
+  Qed.
+
+End TwoModuleFacts.
+
+Section FourModuleFacts.
+  Variables (m1 m2 m3 m4: Modules).
+  Hypotheses (Hwf1: ModEquiv type typeUT m1)
+             (Hwf2: ModEquiv type typeUT m2)
+             (Hddisj12: DisjList (getDefs m1) (getDefs m2))
+             (Hcdisj12: DisjList (getCalls m1) (getCalls m2))
+             (Hddisj34: DisjList (getDefs m3) (getDefs m4))
+             (Hcdisj34: DisjList (getCalls m3) (getCalls m4)).
 
   Lemma equivalentLabelSeqWithout_WellHiddenModularSeq:
     forall p fs ll1 ll2 lsa lsb,
       NonInteractingExcept fs m1 m2 ->
+      NonInteractingExcept fs m3 m4 ->
       HiddenSeq ll1 -> HiddenSeq ll2 ->
-      EquivalentLabelSeqWithout p fs lsa ll1 ->
-      EquivalentLabelSeqWithout p fs lsb ll2 ->
-      forall q,
-        DualComm q ->
-        q (restrictLabelSeq lsa fs) = restrictLabelSeq ll1 fs ->
-        q (restrictLabelSeq lsb fs) = restrictLabelSeq ll2 fs ->
-        DisjList (getExtMeths (m1 ++ m2)%kami) fs ->
-        WellHiddenConcatSeq m1 m2 lsa lsb ->
-        forall m3 m4 n3 n4,
-          (* SubInterface m3 m1 -> SubInterface m4 m2 -> *)
-          Multistep m3 (initRegs (getRegInits m3)) n3 ll1 ->
-          Multistep m4 (initRegs (getRegInits m4)) n4 ll2 ->
+      forall n1 n2,
+        Multistep m1 (initRegs (getRegInits m1)) n1 lsa ->
+        Multistep m2 (initRegs (getRegInits m2)) n2 lsb ->
+        EquivalentLabelSeqWithout p fs lsa ll1 ->
+        EquivalentLabelSeqWithout p fs lsb ll2 ->
+        forall q,
+          DualComm q ->
+          q (restrictLabelSeq lsa fs) = restrictLabelSeq ll1 fs ->
+          q (restrictLabelSeq lsb fs) = restrictLabelSeq ll2 fs ->
+          DisjList (getExtMeths (m1 ++ m2)%kami) fs ->
+          WellHiddenConcatSeq m1 m2 lsa lsb ->
           WellHiddenModularSeq m3 m4 ll1 ll2.
   Proof.
     intros.
 
     (* Step 1: All internal communication should belong to "fs." *)
-    assert (DualSeq (restrictLabelSeq lsa fs) (restrictLabelSeq lsb fs)).
-    { admit. }
+    assert (DualSeq (restrictLabelSeq lsa fs) (restrictLabelSeq lsb fs)) as Hidual.
+    { pose proof (behavior_ValidLabel Hwf1 (BehaviorIntro H3)).
+      pose proof (behavior_ValidLabel Hwf2 (BehaviorIntro H4)).
+      eauto using nonInteractingExcept_DualSeq, multistep_hiddenSeq.
+    }
     
     (* Step 2: "q" preserves duality. *)
-    assert (DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs)).
-    { rewrite <-H5, <-H6; apply H4; auto. }
+    assert (DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs)) as Hsdual.
+    { rewrite <-H8, <-H9; apply H7; auto. }
     
     (* Step 3: We don't need to consider external defs/calls for this lemma.
-     In other words, we only need the duality for proving the well-hidden property! *)
-    (* clear -H H10. *)
-    eauto using nonInteractingExcept_DualSeq.
-  Admitted.
+     * In other words, we only need the duality for proving the well-hidden property! 
+     *)
+    eapply nonInteractingExcept_wellHiddenModularSeq; eauto.
+  Qed.
 
-End TwoModuleFacts.
+End FourModuleFacts.
   
 Section Modularity.
   
@@ -409,7 +452,8 @@ Section Modularity.
 
   Section NonInteractingExcept.
     Variable fs: list string.
-    Hypothesis (Hpni: NonInteractingExcept fs m1 m2).
+    Hypothesis (Hpni1: NonInteractingExcept fs m1 m2)
+               (Hpni2: NonInteractingExcept fs m3 m4).
 
     Theorem traceRefinesSep_modular:
       forall vp q,
@@ -424,8 +468,8 @@ Section Modularity.
       apply behavior_split in H3; auto.
       destruct H3 as [sa [lsa [sb [lsb ?]]]]; dest; subst.
 
-      specialize (H0 _ _ H3); clear H3; destruct H0 as [s3 [ll3 ?]]; dest.
-      specialize (H1 _ _ H4); clear H4; destruct H1 as [s4 [ll4 ?]]; dest.
+      specialize (H0 _ _ H3); destruct H0 as [s3 [ll3 ?]]; dest.
+      specialize (H1 _ _ H4); destruct H1 as [s4 [ll4 ?]]; dest.
 
       exists (M.union s3 s4).
       exists (composeLabels ll3 ll4).
@@ -433,10 +477,10 @@ Section Modularity.
       split.
       - apply behavior_modular; auto.
         + inv H0; inv H1; eauto using equivalentLabelSeqWithout_CanCombineLabelSeq.
-        + inv H0; inv H1.
+        + inv H0; inv H1; inv H3; inv H4.
           pose proof (multistep_hiddenSeq HMultistepBeh).
           pose proof (multistep_hiddenSeq HMultistepBeh0).
-          eauto using equivalentLabelSeqWithout_WellHiddenModularSeq.
+          eauto using equivalentLabelSeqWithout_WellHiddenModularSeq, Hwf1, Hwf2.
       - admit.
     Admitted.
 
