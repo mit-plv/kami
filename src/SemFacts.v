@@ -1724,4 +1724,94 @@ Proof.
   eapply substep_oldRegs_weakening; eauto.
 Qed.
 
+Definition ValidLabel (m: Modules) (l: LabelT) :=
+  M.KeysSubset (defs l) (getDefs m) /\ M.KeysSubset (calls l) (getCalls m).
+
+Lemma validLabel_wellHidden_getExtDefs:
+  forall m l, ValidLabel m l -> wellHidden m l -> M.KeysSubset (defs l) (getExtDefs m).
+Proof.
+  unfold ValidLabel, wellHidden; intros; dest.
+  clear H1 H2.
+  unfold M.KeysSubset, M.KeysDisj in *; intros.
+  specialize (H k H1).
+  specialize (H0 k).
+  destruct (in_dec string_dec k (getCalls m)); intuition idtac.
+  apply filter_In; split; auto.
+  apply negb_true_iff.
+  remember (string_in k (getCalls m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; elim n; auto.
+Qed.
+
+Lemma validLabel_wellHidden_getExtCalls:
+  forall m l, ValidLabel m l -> wellHidden m l -> M.KeysSubset (calls l) (getExtCalls m).
+Proof.
+  unfold ValidLabel, wellHidden; intros; dest.
+  clear H H0.
+  unfold M.KeysSubset, M.KeysDisj in *; intros.
+  specialize (H2 k H).
+  specialize (H1 k).
+  destruct (in_dec string_dec k (getDefs m)); intuition idtac.
+  apply filter_In; split; auto.
+  apply negb_true_iff.
+  remember (string_in k (getDefs m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; elim n; auto.
+Qed.
+
+Lemma extDefs_calls_disj:
+  forall m, DisjList (getExtDefs m) (getCalls m).
+Proof.
+  unfold DisjList; intros.
+  destruct (in_dec string_dec e (getExtDefs m)) as [Hin|Hin].
+  - right; intro Hx; unfold getExtDefs in *.
+    apply filter_In in Hin; dest.
+    apply negb_true_iff, eq_sym, string_in_dec_not_in in H0; auto.
+  - left; auto.
+Qed.
+
+Lemma extCalls_defs_disj:
+  forall m, DisjList (getExtCalls m) (getDefs m).
+Proof.
+  unfold DisjList; intros.
+  destruct (in_dec string_dec e (getExtCalls m)) as [Hin|Hin].
+  - right; intro Hx; unfold getExtCalls in *.
+    apply filter_In in Hin; dest.
+    apply negb_true_iff, eq_sym, string_in_dec_not_in in H0; auto.
+  - left; auto.
+Qed.
+
+Lemma extDefs_extCalls_disj:
+  forall m, DisjList (getExtDefs m) (getExtCalls m).
+Proof.
+  intros; apply DisjList_comm, DisjList_SubList with (l1:= getCalls m).
+  - apply getExtCalls_getCalls.
+  - apply DisjList_comm, extDefs_calls_disj.
+Qed.
+
+Lemma getCalls_not_getDefs_getExtCalls:
+  forall m k, In k (getCalls m) -> ~ In k (getDefs m) -> In k (getExtCalls m).
+Proof.
+  intros; unfold getExtCalls.
+  apply filter_In; split; auto.
+  remember (string_in k (getDefs m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; auto.
+Qed.
+
+Lemma getDefs_not_getCalls_getExtDefs:
+  forall m k, In k (getDefs m) -> ~ In k (getCalls m) -> In k (getExtDefs m).
+Proof.
+  intros; unfold getExtCalls.
+  apply filter_In; split; auto.
+  remember (string_in k (getCalls m)) as kin; destruct kin; auto.
+  apply string_in_dec_in in Heqkin; auto.
+Qed.
+
+Lemma step_wellHidden: forall m o u l, Step m o u l -> wellHidden m l.
+Proof. intros; inv H; auto. Qed.
+
+Lemma multistep_wellHidden:
+  forall m o ll n, Multistep m o n ll -> Forall (fun l => wellHidden m l) ll.
+Proof.
+  induction ll; simpl; intros; constructor; auto; inv H; eauto.
+  eapply step_wellHidden; eauto.
+Qed.
 
