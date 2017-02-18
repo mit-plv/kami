@@ -426,7 +426,7 @@ Section MemCacheInl.
     finish_pf.
   Qed.
 
-  Definition nmemCacheInl_1_1: MetaModule.
+  Definition nmemCacheInl: MetaModule.
   Proof.
     start_def nmemCacheInl_flat.
 
@@ -509,10 +509,10 @@ Section MemCacheInl.
     finish_def.
   Defined.
 
-  Theorem nmemCacheInl_1_1_pf:
+  Theorem nmemCacheInl_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
-                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl_1_1) /\
-    forall ty, MetaModEquiv ty typeUT nmemCacheInl_1_1.
+                            DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
+    forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
     
