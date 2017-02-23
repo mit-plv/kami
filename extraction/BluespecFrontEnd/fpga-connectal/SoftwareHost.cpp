@@ -16,6 +16,14 @@ public:
 		printf("Got the message: (%d, 2)\n", v);
 	}
 
+	virtual void msg_to_host3(uint32_t v) {
+		printf("Got the message: (%d, 3)\n", v);
+	}
+
+	virtual void msg_to_host4(uint32_t v) {
+		printf("Got the message: (%d, 4)\n", v);
+	}
+
 	HostIndication(unsigned int id) : HostIndicationWrapper(id) {}
 };
 

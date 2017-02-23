@@ -14,10 +14,10 @@ Unset Extraction AutoInline.
 
 (** p4st + pmFifos ++ memCache extraction *)
 
-(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 10) *)
-Definition idxBits := 4.
-Definition tagBits := 3.
-Definition lgNumDatas := 3.
+(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 16) *)
+Definition idxBits := 8.
+Definition tagBits := 4.
+Definition lgNumDatas := 4.
 Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
@@ -55,10 +55,20 @@ End Correctness.
 (** MODIFY: targetPgms should be your target program *)
 Require Import Ex.IsaRv32PgmExt.
 Definition targetPgms :=
-  IsaRv32PgmMatMulInit.pgmExt
-    :: IsaRv32PgmMatMulNormal1.pgmExt
-    :: IsaRv32PgmMatMulNormal2.pgmExt
-    :: IsaRv32PgmMatMulReport.pgmExt :: nil.
+  IsaRv32PgmBankerInit.pgmExt
+    :: IsaRv32PgmBankerWorker1.pgmExt
+    :: IsaRv32PgmBankerWorker2.pgmExt
+    :: IsaRv32PgmBankerWorker3.pgmExt :: nil.
+(* Definition targetPgms := *)
+(*   IsaRv32PgmMatMulInit.pgmExt *)
+(*     :: IsaRv32PgmMatMulNormal1.pgmExt *)
+(*     :: IsaRv32PgmMatMulNormal2.pgmExt *)
+(*     :: IsaRv32PgmMatMulReport.pgmExt :: nil. *)
+(* Definition targetPgms := *)
+(*   IsaRv32PgmGcd.pgmExt *)
+(*     :: IsaRv32PgmGcd.pgmExt *)
+(*     :: IsaRv32PgmGcd.pgmExt *)
+(*     :: IsaRv32PgmGcd.pgmExt :: nil. *)
 
 (** MODIFY: targetM should be your target module *)
 Definition targetProcM := p4stNMemCache.

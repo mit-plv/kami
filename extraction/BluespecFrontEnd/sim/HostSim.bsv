@@ -20,6 +20,14 @@ module mkFrontEnd (FrontEnd);
     	$display ("Got the message: (%d, 2)\n", val);
     endmethod
 
+    method Action toHost_aaa (Bit#(32) val);
+        $display ("Got the message: (%d, 3)\n", val);
+    endmethod
+
+    method Action toHost_aaaa (Bit#(32) val);
+        $display ("Got the message: (%d, 4)\n", val);
+    endmethod
+
 endmodule
 
 (* synthesize *)

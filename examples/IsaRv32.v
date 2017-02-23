@@ -14,7 +14,7 @@ Require Import Ex.MemTypes Ex.SC.
  * Just one RV32M instruction: MUL
  *)
 Section RV32I.
-  Definition rv32iAddrSize := 10. (* 2^10 memory cells *)
+  Definition rv32iAddrSize := 16. (* 2^16 memory cells *)
   Definition rv32iIAddrSize := 8. (* 2^8 = 256 program size *)
   Definition rv32iDataBytes := 4.
   Definition rv32iOpIdx := 7. (* always inst[6-0] *)
