@@ -122,7 +122,7 @@ let ppReg = "Reg#"
 let ppRegFile = "RegFile#"
 let ppAssign = "<-"
 let ppMkReg = "mkReg"
-let ppMkRegFile = "mkRegFileFullReplicate(unpack(0))" (* TODO: with an initial value *)
+let ppMkRegFile = "mkRegFileFullZero()" (* TODO: with an initial value *)
 let ppDefaultValue = "unpack(0)"
 let ppBool = "Bool"
 let ppVoid = "void"
@@ -712,7 +712,7 @@ let ppImports (_: unit) =
   ps "import Vector::*;"; print_cut (); force_newline ();
   ps "import BuildVector::*;"; print_cut (); force_newline ();
   ps "import RegFile::*;"; print_cut (); force_newline ();
-  ps "import RegFileUtil::*;"; print_cut (); force_newline ()
+  ps "import RegFileZero::*;"; print_cut (); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
