@@ -33,7 +33,7 @@ Definition p4stNMemCache :=
     rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
     rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren.
 
-(** The correctness of the extraction target is proven! Trust us! *)
+(** * The correctness of the extraction target is proven! Trust us! *)
 Section Correctness.
 
   (* Spec: sequential consistency for multicore *)
@@ -52,25 +52,15 @@ Section Correctness.
 
 End Correctness.
 
-(** MODIFY: targetPgms should be your target program *)
+(** targetPgms should be your target program *)
 Require Import Ex.IsaRv32PgmExt.
 Definition targetPgms :=
   IsaRv32PgmBankerInit.pgmExt
     :: IsaRv32PgmBankerWorker1.pgmExt
     :: IsaRv32PgmBankerWorker2.pgmExt
     :: IsaRv32PgmBankerWorker3.pgmExt :: nil.
-(* Definition targetPgms := *)
-(*   IsaRv32PgmMatMulInit.pgmExt *)
-(*     :: IsaRv32PgmMatMulNormal1.pgmExt *)
-(*     :: IsaRv32PgmMatMulNormal2.pgmExt *)
-(*     :: IsaRv32PgmMatMulReport.pgmExt :: nil. *)
-(* Definition targetPgms := *)
-(*   IsaRv32PgmGcd.pgmExt *)
-(*     :: IsaRv32PgmGcd.pgmExt *)
-(*     :: IsaRv32PgmGcd.pgmExt *)
-(*     :: IsaRv32PgmGcd.pgmExt :: nil. *)
 
-(** MODIFY: targetM should be your target module *)
+(** targetM should be your target module *)
 Definition targetProcM := p4stNMemCache.
 
 (* A utility function for setting the stack pointer in rf *)
@@ -95,7 +85,7 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
     exact $0.
 Defined.
 
-(** MODIFY: targetRfs should be a list of initial values of processors' register files *)
+(** targetRfs should be a list of initial values of processors' register files *)
 Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :=
   (rfWithSpInit (ConstBit (natToWord _ 64)))
     :: (rfWithSpInit (ConstBit (natToWord _ 128)))
@@ -107,7 +97,7 @@ Definition targetRfs : list (ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx)) :
 Definition targetProcS := getModuleS targetProcM.
 Definition targetProcB := ModulesSToBModules targetProcS.
 
-(** What to extract *)
+(* What to extract *)
 Record ExtTarget :=
   { extPgms : list (ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize));
     extProc : option (list BRegModule);
