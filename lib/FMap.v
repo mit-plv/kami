@@ -2185,6 +2185,32 @@ Module LeibnizFacts (M : MapLeibniz).
     - elim H0; auto.
   Qed.
 
+  Lemma complement_KeysSubset:
+    forall {A} (m: t A) d,
+      KeysSubset m d -> complement m d = empty _.
+  Proof.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite complement_find, find_empty.
+    destruct (in_dec E.eq_dec y d); auto.
+    destruct (find y m); auto.
+    elim n; apply H; discriminate.
+  Qed.
+
+  Lemma complement_DisjList:
+    forall {A} (m: t A) d1 d2,
+      KeysSubset m d1 -> DisjList d1 d2 -> complement m d2 = m.
+  Proof.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite complement_find.
+    destruct (in_dec E.eq_dec y d2); auto.
+    destruct (find y m); auto.
+    specialize (H0 y); destruct H0.
+    - elim H0; apply H; discriminate.
+    - elim H0; auto.
+  Qed.
+
   Lemma KeysSubset_subtractKV:
     forall {A} (m1 m2: t A) deceqA d,
       KeysSubset m1 d -> KeysSubset (subtractKV deceqA m1 m2) d.
