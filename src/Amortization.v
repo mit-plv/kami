@@ -87,7 +87,22 @@ Section NoRules.
         l = {| annot := Some None; defs := ds; calls := cs |} ->
         SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
   Proof.
-  Admitted.
+    induction 1; simpl; intros; [inv H|].
+    subst; inv H0.
+    - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
+      destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      destruct ann; intuition idtac.
+    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      mred; auto.
+    - rewrite Hrules in HInRules; inv HInRules.
+    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      econstructor.
+      + apply IHSubstepsInd; auto.
+      + eapply SingleMeth; eauto.
+      + repeat split; auto.
+      + auto.
+      + reflexivity.
+  Qed.
 
   Lemma step_rule_annot_1:
     forall o u ds cs,
@@ -120,6 +135,13 @@ Section NoRules.
   Qed.
 
 End NoRules.
+
+Lemma Forall_app:
+  forall {A} (l1 l2: list A) P, Forall P l1 -> Forall P l2 -> Forall P (l1 ++ l2).
+Proof.
+  induction l1; simpl; intros; auto.
+  inv H; constructor; auto.
+Qed.
 
 (*** End *)
 
@@ -273,10 +295,24 @@ Section AmortARefl.
     eapply M.KeysSubset_SubList in H1; eauto.
     destruct l as [a d c]; unfold restrictLabel; simpl in *.
     rewrite 2! M.restrict_KeysSubset by assumption.
-
+    
     pose proof (step_getRules_nil Hrules H); simpl in *.
     destruct H2; subst; auto.
     apply step_rule_annot_2; auto.
+  Qed.
+
+  Lemma step_restrictLabel_inv:
+    forall o u l,
+      Step m o u (restrictLabel l fs) ->
+      M.KeysSubset (defs l) fs ->
+      M.KeysSubset (calls l) fs ->
+      (annot l = Some None \/ annot l = None) ->
+      Step m o u l.
+  Proof.
+    destruct l as [a d c]; unfold restrictLabel; simpl; intros.
+    rewrite 2! M.restrict_KeysSubset in H by assumption.
+    destruct H2; subst; auto.
+    apply step_rule_annot_1; auto.
   Qed.
 
   Lemma absorber_amortizeSeq_invariant:
@@ -318,7 +354,25 @@ Section AmortARefl.
         apply step_getRules_nil in HStep0; simpl in *; intuition idtac.
       + apply step_restrictLabel; auto.
 
-    - admit.
+    - rewrite rev_app_distr; simpl.
+      destruct ll0; inv H0.
+      destruct ll3; inv H1.
+      inv H2; inv H3.
+      specialize (IHAmortizedSeq _ _ eq_refl eq_refl _ HMultistep _ HMultistep0).
+      simpl in *; rewrite <-app_assoc in IHAmortizedSeq; simpl in *.
+      apply multistep_app in IHAmortizedSeq; dest; inv H0.
+
+      constructor; [|apply step_restrictLabel; auto].
+      eapply multistep_app_inv; eauto.
+      constructor; auto.
+
+      apply step_restrictLabel_inv; auto.
+      + apply M.KeysSubset_SubList with (d1:= getExtMeths m); auto.
+        eapply step_defs_ext_in; eauto.
+      + apply M.KeysSubset_SubList with (d1:= getExtMeths m); auto.
+        eapply step_calls_ext_in; eauto.
+      + eapply step_getRules_nil; eauto.
+        
     - destruct ll0; inv H0.
       destruct ll3; inv H1.
       inv H2; inv H3.
@@ -344,7 +398,47 @@ Section AmortARefl.
       destruct H6; destruct H7; subst; auto.
       + apply step_rule_annot_2; auto.
       + apply step_rule_annot_1; auto.
-  Admitted.
+  Qed.
+
+  Lemma amortizedSeq_restrictLabelSeq:
+    forall rll1 ll2 amt,
+      AmortizedSeq amt rll1 ll2 ->
+      forall ll1,
+        rll1 = restrictLabelSeq ll1 fs ->
+        Forall (fun l => annot l = None /\
+                         M.restrict (defs l) fs = defs l /\
+                         M.restrict (calls l) fs = calls l) amt /\
+        Forall (fun l => annot l = None /\
+                         M.restrict (defs l) fs = defs l /\
+                         M.restrict (calls l) fs = calls l) ll2.
+  Proof.
+    induction 1; simpl; intros.
+    - destruct ll1; inv H.
+      split; constructor.
+    - destruct ll0; inv H0.
+      specialize (IHAmortizedSeq _ eq_refl); dest.
+      split.
+      + apply Forall_app; auto.
+        constructor; auto.
+        destruct l as [a d c]; simpl.
+        repeat split; apply M.restrict_idempotent.
+      + constructor; auto.
+    - destruct ll0; inv H0.
+      specialize (IHAmortizedSeq _ eq_refl); dest.
+      inv H0.
+      split.
+      + apply Forall_app; auto.
+        constructor; auto.
+        destruct l as [a d c]; simpl.
+        repeat split; apply M.restrict_idempotent.
+      + constructor; auto.
+    - destruct ll0; inv H0.
+      specialize (IHAmortizedSeq _ eq_refl); dest.
+      split; auto.
+      constructor; auto.
+      destruct l0 as [a d c]; simpl.
+      repeat split; apply M.restrict_idempotent.
+  Qed.
 
   Lemma traceRefinesAmortA_refl':
     forall s1 ll1 o,
@@ -361,6 +455,8 @@ Section AmortARefl.
       [inv H1; do 2 eexists; repeat split; repeat constructor|].
 
     subst.
+    pose proof (amortizedSeq_restrictLabelSeq H1 (l :: a) eq_refl) as Hrest.
+    destruct Hrest as [_ Hrest].
     destruct rll2 as [|rl2 rll2]; [inv H1|].
     inv H1.
 
@@ -385,16 +481,55 @@ Section AmortARefl.
 
     - specialize (IHMultistep eq_refl _ _ H3).
       destruct IHMultistep as [ps2 [pll2 ?]]; dest; subst.
-
       inv H.
       eapply absorber_amortizeSeq_invariant in H3; eauto.
-      simpl in H3.
-      admit.
+      simpl in H3; rewrite <-app_assoc in H3; simpl in H3.
+      apply multistep_app in H3; dest.
+
+      exists x; exists ({| annot := annot l;
+                           defs := defs rl2;
+                           calls := calls rl2 |} :: pll2).
+      inv H.
+
+      pose proof (step_defs_ext_in Hwf HStep).
+      pose proof (step_calls_ext_in Hwf HStep).
+      pose proof (step_defs_ext_in Hwf HStep0).
+      pose proof (step_calls_ext_in Hwf HStep0).
+      eapply M.KeysSubset_SubList in H; eauto.
+      eapply M.KeysSubset_SubList in H3; eauto.
+      eapply M.KeysSubset_SubList in H4; eauto.
+      eapply M.KeysSubset_SubList in H5; eauto.
+      
+      repeat split.
+      + constructor; auto.
+        pose proof (step_getRules_nil Hrules HStep).
+        pose proof (step_getRules_nil Hrules HStep0).
+        destruct rl2 as [ra2 rd2 rc2]; simpl in *.
+        destruct l as [la ld lc]; simpl in *.
+        destruct H6, H7; subst; auto.
+        * apply step_rule_annot_1; auto.
+        * apply step_rule_annot_2; auto.
+      + constructor; auto.
+        repeat split; unfold id; simpl.
+        * rewrite 2! M.complement_KeysSubset; auto.
+        * rewrite 2! M.complement_KeysSubset; auto.
+        * destruct (annot l); auto.
+      + simpl; f_equal.
+        unfold restrictLabel; simpl.
+        inv Hrest; destruct rl2 as [a2 d2 c2]; simpl in *; dest.
+        f_equal; auto.
 
     - specialize (IHMultistep eq_refl _ _ H3).
       destruct IHMultistep as [ps2 [pll2 ?]]; dest; subst.
-      admit.
-  Admitted.
+      inv H.
+      eapply absorber_amortizeSeq_invariant in H3; eauto.
+      simpl in H3.
+      eexists; eexists (_ :: _); repeat split.
+      + constructor; eauto.
+      + constructor; auto.
+        repeat split.
+        destruct (annot l); auto.
+  Qed.
 
   Lemma traceRefinesAmortA_refl:
     traceRefinesAmortA id fs m m.

@@ -1407,6 +1407,15 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
 
+  Lemma restrict_idempotent:
+    forall {A} (m: t A) d,
+      restrict (restrict m d) d = restrict m d.
+  Proof.
+    mintros; ext y.
+    repeat rewrite restrict_find.
+    destruct (in_dec E.eq_dec y d); auto.
+  Qed.
+
   Lemma transpose_neqkey_complement:
     forall {A} d,
       P.transpose_neqkey
@@ -1487,6 +1496,15 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     mintros; ext y.
     repeat (rewrite complement_find || rewrite find_union).
+    destruct (in_dec E.eq_dec y d); auto.
+  Qed.
+
+  Lemma complement_idempotent:
+    forall {A} (m: t A) d,
+      complement (complement m d) d = complement m d.
+  Proof.
+    mintros; ext y.
+    repeat rewrite complement_find.
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
 
