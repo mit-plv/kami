@@ -1,8 +1,5 @@
 Require Import String Lib.StringEq List Compare_dec Omega.
 
-Set Implicit Arguments.
-Set Asymmetric Patterns.
-
 Section intersect.
   Variable A: Type.
   Variable decA: forall a1 a2: A, {a1 = a2} + {a1 <> a2}.
