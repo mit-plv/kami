@@ -1,5 +1,9 @@
 Require Import String Lib.StringEq List Compare_dec Omega.
 
+Set Implicit Arguments.
+Set Asymmetric Patterns.
+
+
 Section intersect.
   Variable A: Type.
   Variable decA: forall a1 a2: A, {a1 = a2} + {a1 <> a2}.
@@ -27,103 +31,20 @@ Section intersect.
 
   Definition find_pos s ls := find_pos' s ls 0.
 
-End intersect.
-
-Section GenerateRegIndicies.
-  Variable regs: list string.
-  Variable regReads: string -> list string.
-  Variable regWrites: string -> list string.
-  Variable totalOrder: list string.
-  Variable ignoreLess: list (string * string).
-
-  Local Fixpoint find_all_prev' s (ignoreLess': list (string * string)) :=
-    match ignoreLess' with
-      | nil => nil
-      | (l, g) :: xs => if string_eq l s
-                        then g :: find_all_prev' s xs
-                        else find_all_prev' s xs
+  Local Fixpoint sameList' s (ls: list A) :=
+    match ls with
+      | nil => true
+      | x :: xs => if decA s x
+                   then sameList' s xs
+                   else false
     end.
 
-  Local Definition find_all_prev s := find_all_prev' s ignoreLess.
-
-  Section FindWritePrevPos.
-    Variable reg: string.
-    Variable pos: nat.
-
-    Local Fixpoint find_write_prev_pos' currPos (ls: list string) :=
-      match ls with
-        | nil => None
-        | x :: xs => match find_write_prev_pos' (S currPos) xs with
-                       | None =>
-                         if in_dec string_dec reg (regWrites x)
-                         then if lt_dec currPos pos
-                              then Some (currPos, x)
-                              else None
-                         else None
-                       | Some y => Some y
-                     end
-      end.
-
-    Local Lemma find_write_prev_pos'_correct:
-      forall ls currPos i x, Some (i, x) = find_write_prev_pos' currPos ls  -> i < pos.
-    Proof.
-      induction ls; simpl; intros; try congruence.
-      specialize (IHls (S currPos) i x).
-      repeat match goal with
-               | H: context [match ?P with _ => _ end] |- _ => destruct P
-             end; try solve [congruence || eapply IHls; eauto].
-    Qed.
-
-    Local Definition find_write_prev_pos := find_write_prev_pos' 0 totalOrder.
-    
-    Local Lemma find_write_prev_pos_correct:
-      forall i x, Some (i, x) = find_write_prev_pos  -> i < pos.
-    Proof.
-      eapply find_write_prev_pos'_correct.
-    Qed.
-  End FindWritePrevPos.
-
-  Variable cheat: forall t, t.
-
-  Section Reg.
-    Variable reg: string.
-
-    Local Definition find_reg_index: nat -> nat :=
-      Fix
-        Wf_nat.lt_wf (fun _ => nat)
-        (fun (pos: nat)
-             (find_reg_index: forall pos', pos' < pos -> nat) =>
-           match pos return (forall pos', pos' < pos -> nat) -> nat with
-             | 0 => fun _ => 0
-             | S m =>
-               fun find_reg_index =>
-                 match nth_error totalOrder (S m) with
-                   | Some a =>
-                     if in_dec string_dec reg (regReads a ++ regWrites a)%list
-                     then
-                       match
-                         find_write_prev_pos reg (S m) as val
-                         return (forall i x, Some (i, x) = val -> i < S m) -> nat with
-                         | None => fun _ => find_reg_index m (ltac:(Omega.omega))
-                         | Some (prev_pos, a') =>
-                           if in_dec string_dec reg (regWrites a')
-                           then fun pf => max (S (find_reg_index  prev_pos (pf _ _ eq_refl)))
-                                              (find_reg_index m (ltac:(Omega.omega)))
-                           else fun _ => find_reg_index m (ltac:(Omega.omega))
-                       end (find_write_prev_pos_correct reg (S m))
-                     else find_reg_index m (ltac:(Omega.omega))
-                   | None => 0
-                 end
-           end find_reg_index).
-
-    Local Definition find_max_reg_index :=
-      match length totalOrder with
-        | 0 => 0
-        | S m => find_reg_index m
-      end.
-      
-  End Reg.
-End GenerateRegIndicies.
+  Definition sameList (ls: list A) :=
+    match ls with
+      | nil => true
+      | x :: xs => sameList' x xs
+    end.
+End intersect.
 
 Section CallChain.
   Variable A: Type.
@@ -169,7 +90,7 @@ Section CallChain.
         destruct H; [subst; tauto|auto].
   Qed.
 
-  Definition getConnectedChain: (A * list A) -> list A :=
+  Definition getConnectedChain': (A * list A) -> list A :=
     Fix lengthOrder_wf (fun _ => list A)
         (fun (ls: A * list A)
              (getConnectedChain: forall ls': A * list A, lengthOrder ls' ls -> list A) =>
@@ -196,5 +117,8 @@ Section CallChain.
                         end) vs'
                end
            end).
+
+  Definition getConnectedChain v :=
+    getConnectedChain' (v, map fst graph).
 End CallChain.
 
