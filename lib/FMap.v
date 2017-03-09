@@ -1407,6 +1407,15 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
 
+  Lemma restrict_idempotent:
+    forall {A} (m: t A) d,
+      restrict (restrict m d) d = restrict m d.
+  Proof.
+    mintros; ext y.
+    repeat rewrite restrict_find.
+    destruct (in_dec E.eq_dec y d); auto.
+  Qed.
+
   Lemma transpose_neqkey_complement:
     forall {A} d,
       P.transpose_neqkey
@@ -1487,6 +1496,15 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     mintros; ext y.
     repeat (rewrite complement_find || rewrite find_union).
+    destruct (in_dec E.eq_dec y d); auto.
+  Qed.
+
+  Lemma complement_idempotent:
+    forall {A} (m: t A) d,
+      complement (complement m d) d = complement m d.
+  Proof.
+    mintros; ext y.
+    repeat rewrite complement_find.
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
 
@@ -2178,6 +2196,32 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; ext y.
     specialize (H y); rewrite P.F.in_find_iff in H.
     rewrite restrict_find, find_empty.
+    destruct (in_dec E.eq_dec y d2); auto.
+    destruct (find y m); auto.
+    specialize (H0 y); destruct H0.
+    - elim H0; apply H; discriminate.
+    - elim H0; auto.
+  Qed.
+
+  Lemma complement_KeysSubset:
+    forall {A} (m: t A) d,
+      KeysSubset m d -> complement m d = empty _.
+  Proof.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite complement_find, find_empty.
+    destruct (in_dec E.eq_dec y d); auto.
+    destruct (find y m); auto.
+    elim n; apply H; discriminate.
+  Qed.
+
+  Lemma complement_DisjList:
+    forall {A} (m: t A) d1 d2,
+      KeysSubset m d1 -> DisjList d1 d2 -> complement m d2 = m.
+  Proof.
+    mintros; ext y.
+    specialize (H y); rewrite P.F.in_find_iff in H.
+    rewrite complement_find.
     destruct (in_dec E.eq_dec y d2); auto.
     destruct (find y m); auto.
     specialize (H0 y); destruct H0.
