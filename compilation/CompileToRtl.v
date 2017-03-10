@@ -362,22 +362,46 @@ Section UsefulFunctions.
                  andb prev (sameList PeanoNat.Nat.eq_dec (map (regIndex r) (methPos f))))
               (getAllReads f ++ getAllWrites f) true.
 
-  (*
-  Fixpoint shareReg posFirst posSecond :=
-    match getAllWrites (nth posFirst 0 totalOrder), getAllReads (nth posSecond 0 totalOrder)
-                                                                ++
-                                                                getAllWrites (nth posSecond 0 totalOrder) with
-      | nil, _ => false
-      | _, nil => false
-      | x :: xs, y :: ys =>
-        
-        if PeanoNat.Nat.eq_dec (regIndex x posFirst) (regIndex y posSecond)
+  Definition shareRegDisable posFirst posSecond :=
+    fold_left (fun disable reg => if PeanoNat.Nat.eq_dec (regIndex reg posFirst) (regIndex reg posSecond)
+                                  then true
+                                  else disable) (intersect
+                                                   string_dec
+                                                   (nth posFirst (map getAllWrites totalOrder) nil)
+                                                   (nth posSecond (map getAllReads totalOrder) nil
+                                                        ++
+                                                        nth posSecond (map getAllWrites totalOrder) nil)) false.
 
-  Fixpoint disables rule :=
-    match nth_error rule totalOrder with
+  Definition shareMethDisable posFirst posSecond :=
+    not_nil (intersect string_dec (nth posFirst (map getAllCalls totalOrder) nil)
+                       (nth posSecond (map getAllCalls totalOrder) nil)).
+
+  Definition shareDisable posFirst posSecond := orb (shareRegDisable posFirst posSecond) (shareMethDisable posFirst posSecond).
+
+  Local Fixpoint disables' posFirst posSecond :=
+    if lt_dec posFirst posSecond
+    then
+      match posFirst with
+        | 0 => if shareDisable posFirst posSecond
+               then match nth_error totalOrder posFirst with
+                      | None => nil
+                      | Some r => r :: nil
+                    end
+               else nil
+        | S m => if shareDisable posFirst posSecond
+                 then match nth_error totalOrder posFirst with
+                        | None => disables' m posSecond
+                        | Some r => r :: disables' m posSecond
+                      end
+                 else disables' m posSecond
+      end
+    else nil.
+
+  Definition disables rule : list string :=
+    match find_pos string_dec rule totalOrder with
       | None => nil
-      | Some pos => 
-    *)
+      | Some posSecond => disables' (pred posSecond) posSecond
+    end.
 End UsefulFunctions.
 
 Require Import Kami.Tutorial.
