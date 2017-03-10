@@ -5,6 +5,12 @@ Import ListNotations.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Lemma Forall_app:
+  forall {A} (l1 l2: list A) P, Forall P l1 -> Forall P l2 -> Forall P (l1 ++ l2).
+Proof.
+  induction l1; simpl; intros; auto.
+  inversion H; constructor; auto.
+Qed.
 
 Lemma NoDup_app_comm:
   forall {A} (l1 l2: list A), NoDup (l1 ++ l2) -> NoDup (l2 ++ l1).

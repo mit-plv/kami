@@ -1,157 +1,18 @@
 Require Import Bool List String Omega.
-Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
+Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.ListSupport Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf.
 Require Import Kami.ModularFacts Kami.RefinementFacts.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-(*** Move to SemFacts.v *)
-
-Lemma multistep_app:
-  forall m ll1 ll2 o n,
-    Multistep m o n (ll1 ++ ll2) ->
-    exists n', Multistep m o n' ll2 /\ Multistep m n' n ll1.
-Proof.
-  induction ll1; simpl; intros.
-  - eexists; split; eauto.
-    constructor; auto.
-  - inv H; specialize (IHll1 _ _ _ HMultistep); dest.
-    eexists; split; eauto.
-    constructor; auto.
-Qed.
-
-Lemma multistep_app_inv:
-  forall m ll1 ll2 o n n',
-    Multistep m o n' ll2 ->
-    Multistep m n' n ll1 ->
-    Multistep m o n (ll1 ++ ll2).
-Proof.
-  induction ll1; simpl; intros.
-  - inv H0; auto.
-  - inv H0; constructor; eauto.
-Qed.
-
-Section NoRules.
-  Variable m: Modules.
-  Hypothesis (Hrules: getRules m = nil).
-
-  Lemma substep_getRules_nil:
-    forall o u ul cs,
-      Substep m o u ul cs -> ul = Rle None \/ exists d, ul = Meth d.
-  Proof.
-    destruct 1; auto.
-    - right; eexists; auto.
-    - rewrite Hrules in HInRules; inv HInRules.
-    - right; eexists; auto.
-  Qed.
-
-  Lemma substepsInd_getRules_nil:
-    forall o u l,
-      SubstepsInd m o u l -> annot l = Some None \/ annot l = None.
-  Proof.
-    induction 1; auto.
-    apply substep_getRules_nil in H0; destruct H0; dest; subst.
-    - destruct l as [a d c]; simpl in *.
-      destruct IHSubstepsInd; subst; simpl; auto.
-    - destruct l as [a d c]; simpl in *; auto.
-  Qed.
-
-  Lemma step_getRules_nil:
-    forall o u l,
-      Step m o u l -> annot l = Some None \/ annot l = None.
-  Proof.
-    intros; apply step_consistent in H.
-    inv H; apply substepsInd_getRules_nil in HSubSteps.
-    destruct l0 as [a d c]; simpl in *; auto.
-  Qed.
-
-  Lemma substepsInd_rule_annot_1:
-    forall o u ds cs,
-      SubstepsInd m o u {| annot := None; defs := ds; calls := cs |} ->
-      SubstepsInd m o u {| annot := Some None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    econstructor.
-    - eassumption.
-    - apply EmptyRule.
-    - repeat split; auto.
-    - auto.
-    - reflexivity.
-  Qed.
-
-  Lemma substepsInd_rule_annot_2:
-    forall o u l,
-      SubstepsInd m o u l ->
-      forall ds cs,
-        l = {| annot := Some None; defs := ds; calls := cs |} ->
-        SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
-  Proof.
-    induction 1; simpl; intros; [inv H|].
-    subst; inv H0.
-    - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
-      destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      destruct ann; intuition idtac.
-    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      mred; auto.
-    - rewrite Hrules in HInRules; inv HInRules.
-    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      econstructor.
-      + apply IHSubstepsInd; auto.
-      + eapply SingleMeth; eauto.
-      + repeat split; auto.
-      + auto.
-      + reflexivity.
-  Qed.
-
-  Lemma step_rule_annot_1:
-    forall o u ds cs,
-      Step m o u {| annot := None; defs := ds; calls := cs |} ->
-      Step m o u {| annot := Some None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    apply step_consistent; apply step_consistent in H.
-    inv H.
-    destruct l as [a d c]; simpl in *; subst.
-    change {| annot := _; defs := _; calls := _ |}
-    with (hide {| annot := Some None; defs := d; calls := c |}).
-    constructor; auto.
-    apply substepsInd_rule_annot_1; auto.
-  Qed.
-
-  Lemma step_rule_annot_2:
-    forall o u ds cs,
-      Step m o u {| annot := Some None; defs := ds; calls := cs |} ->
-      Step m o u {| annot := None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    apply step_consistent; apply step_consistent in H.
-    inv H.
-    destruct l as [a d c]; simpl in *; subst.
-    change {| annot := _; defs := _; calls := _ |}
-    with (hide {| annot := None; defs := d; calls := c |}).
-    constructor; auto.
-    eapply substepsInd_rule_annot_2; eauto.
-  Qed.
-
-End NoRules.
-
-Lemma Forall_app:
-  forall {A} (l1 l2: list A) P, Forall P l1 -> Forall P l2 -> Forall P (l1 ++ l2).
-Proof.
-  induction l1; simpl; intros; auto.
-  inv H; constructor; auto.
-Qed.
-
-(*** End *)
-
 (** Extension of the restrict notion *)
 
-(* TODO: should consider to remove annotation (to force to be None). *)
+(* Note that annot is restricted to [None]. *)
 Definition restrictLabel (l: LabelT) (d: list string): LabelT :=
   {| defs := M.restrict (defs l) d;
      calls := M.restrict (calls l) d;
-     annot := (* annot l *) None |}.
+     annot := None |}.
 
 Definition restrictLabelSeq (ll: LabelSeqT) (d: list string): LabelSeqT :=
   map (fun l => restrictLabel l d) ll.
@@ -160,6 +21,40 @@ Lemma restrictLabelSeq_nil:
   forall ll d, restrictLabelSeq ll d = nil -> ll = nil.
 Proof.
   induction ll; simpl; intros; auto; inv H.
+Qed.
+
+Definition MethLabel (l: LabelT) := annot l = None.
+Inductive MethLabelSeq: LabelSeqT -> Prop :=
+| MLSNil: MethLabelSeq nil
+| MLSCons: forall ll,
+    MethLabelSeq ll ->
+    forall l, MethLabel l -> MethLabelSeq (l :: ll).
+
+Lemma methLabelSeq_app:
+  forall ll1 ll2,
+    MethLabelSeq ll1 -> MethLabelSeq ll2 -> MethLabelSeq (ll1 ++ ll2).
+Proof.
+  induction ll1; simpl; intros; auto.
+  inv H; constructor; auto.
+Qed.
+
+Lemma methLabelSeq_rev:
+  forall ll, MethLabelSeq ll -> MethLabelSeq (rev ll).
+Proof.
+  induction 1; simpl; intros; [constructor|].
+  apply methLabelSeq_app; auto.
+  constructor; auto.
+  constructor.
+Qed.
+
+Lemma restrictLabel_MethLabel: forall l fs, MethLabel (restrictLabel l fs).
+Proof. firstorder. Qed.
+
+Lemma restrictLabelSeq_MethLabelSeq: forall ll fs, MethLabelSeq (restrictLabelSeq ll fs).
+Proof.
+  induction ll; simpl; constructor.
+  - intuition.
+  - apply restrictLabel_MethLabel.
 Qed.
 
 (** * Notion of amortization *)
@@ -182,6 +77,21 @@ Inductive AmortizedSeq: LabelSeqT (* amortization *) -> LabelSeqT -> LabelSeqT -
 Lemma amortizedSeq_length:
   forall amt ll1 ll2, AmortizedSeq amt ll1 ll2 -> List.length ll1 = List.length ll2.
 Proof. induction 1; simpl; intros; auto. Qed.
+
+Lemma amortizedSeq_methLabelSeq:
+  forall amt ll1 ll2,
+    AmortizedSeq amt ll1 ll2 -> MethLabelSeq ll1 -> MethLabelSeq ll2 ->
+    MethLabelSeq amt.
+Proof.
+  induction 1; simpl; intros; try constructor.
+  - inv H0; inv H1.
+    apply methLabelSeq_app; auto.
+    repeat constructor; auto.
+  - inv H0; inv H1.
+    specialize (IHAmortizedSeq H4 H3); inv IHAmortizedSeq.
+    apply methLabelSeq_app; auto.
+    repeat constructor; auto.
+Qed.
 
 Section AboutCertainMethods.
   Variable p: MethsT -> MethsT.
@@ -206,22 +116,22 @@ Section AboutCertainMethods.
           EquivalentLabelSeqWithout (l1 :: ll1) (l2 :: ll2).
 
   Definition traceRefinesAmort m1 m2 :=
-    forall s1 sig1,
-      Behavior m1 s1 sig1 ->
-      exists s2 sig2,
-        Behavior m2 s2 sig2 /\
-        EquivalentLabelSeqWithout sig1 sig2 /\
-        exists amt, AmortizedSeq amt (restrictLabelSeq sig1 fs) (restrictLabelSeq sig2 fs).
+    forall s1 ll1,
+      Behavior m1 s1 ll1 ->
+      exists s2 ll2,
+        Behavior m2 s2 ll2 /\
+        EquivalentLabelSeqWithout ll1 ll2 /\
+        exists amt, AmortizedSeq amt (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs).
 
   Definition traceRefinesAmortA m1 m2 :=
-    forall s1 sig1,
-      Behavior m1 s1 sig1 ->
-      forall amt col2,
-        AmortizedSeq amt (restrictLabelSeq sig1 fs) (restrictLabelSeq col2 fs) ->
-        exists s2 sig2,
-          Behavior m2 s2 sig2 /\
-          EquivalentLabelSeqWithout sig1 sig2 /\
-          restrictLabelSeq col2 fs = restrictLabelSeq sig2 fs.
+    forall s1 ll1,
+      Behavior m1 s1 ll1 ->
+      forall amt all2,
+        AmortizedSeq amt (restrictLabelSeq ll1 fs) all2 ->
+        exists s2 ll2,
+          Behavior m2 s2 ll2 /\
+          EquivalentLabelSeqWithout ll1 ll2 /\
+          all2 = restrictLabelSeq ll2 fs.
 
 End AboutCertainMethods.
 
@@ -541,6 +451,150 @@ Section AmortARefl.
 
 End AmortARefl.
 
+Section Duality.
+
+  Definition Dual (l1 l2: LabelT) := defs l1 = calls l2 /\ calls l1 = defs l2.
+  Inductive DualSeq: LabelSeqT -> LabelSeqT -> Prop :=
+  | DSNil: DualSeq nil nil
+  | DSCons: forall ll1 ll2,
+      DualSeq ll1 ll2 ->
+      forall l1 l2,
+        Dual l1 l2 ->
+        DualSeq (l1 :: ll1) (l2 :: ll2).
+
+  Definition dualOf (l: LabelT) :=
+    {| annot := annot l; defs := calls l; calls := defs l |}.
+  Fixpoint dualSeqOf (ll: LabelSeqT) :=
+    match ll with
+    | nil => nil
+    | l :: ll' => dualOf l :: dualSeqOf ll'
+    end.
+
+  Lemma dualOf_dual: forall l, Dual l (dualOf l).
+  Proof. firstorder. Qed.
+
+  Lemma dualSeqOf_dualSeq: forall ll, DualSeq ll (dualSeqOf ll).
+  Proof. induction ll; simpl; constructor; firstorder. Qed.
+
+  Lemma dualOf_methLabel: forall l, MethLabel l -> MethLabel (dualOf l).
+  Proof. firstorder. Qed.
+
+  Lemma dualSeqOf_methLabelSeq: forall ll, MethLabelSeq ll -> MethLabelSeq (dualSeqOf ll).
+  Proof.
+    induction ll; simpl; intros; auto.
+    inv H; constructor; auto.
+  Qed.
+
+  Lemma dual_sym: forall l1 l2, Dual l1 l2 -> Dual l2 l1.
+  Proof. firstorder. Qed.
+
+  Lemma dual_methLabel_trans:
+    forall l1 l2 l3, Dual l1 l2 -> Dual l1 l3 -> MethLabel l2 -> MethLabel l3 -> l2 = l3.
+  Proof.
+    destruct l1, l2, l3; unfold Dual, MethLabel; simpl;
+      intros; dest; repeat subst; auto.
+  Qed.
+
+  Lemma dual_emptyMethLabel:
+    forall l, Dual emptyMethLabel l -> MethLabel l -> l = emptyMethLabel.
+  Proof.
+    destruct l; unfold Dual, MethLabel; simpl; intros; dest; subst; auto.
+  Qed.
+
+  Lemma dualSeqOf_app:
+    forall all1 bll1 all2 bll2,
+      DualSeq all1 all2 -> DualSeq bll1 bll2 -> DualSeq (all1 ++ bll1) (all2 ++ bll2).
+  Proof.
+    induction 1; simpl; intros; auto.
+    constructor; auto.
+  Qed.
+
+  Lemma dualSeqOf_rev:
+    forall ll1 ll2, DualSeq ll1 ll2 -> DualSeq (rev ll1) (rev ll2).
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    apply dualSeqOf_app; auto.
+    constructor; auto.
+    constructor.
+  Qed.
+
+  Lemma dualSeqOf_cons_rev:
+    forall ll1 l1 mll2,
+      DualSeq (ll1 ++ [l1]) mll2 ->
+      exists ll2 l2, mll2 = ll2 ++ [l2] /\ DualSeq ll1 ll2 /\ Dual l1 l2.
+  Proof.
+    induction ll1; simpl; intros.
+    - inv H; inv H2.
+      exists nil, l2; intuition.
+      constructor.
+    - inv H.
+      specialize (IHll1 _ _ H2); dest; subst.
+      exists (l2 :: x), x0; intuition.
+      constructor; auto.
+  Qed.
+
+  Lemma amortizedSeq_dual:
+    forall amt ll1 ll2,
+      AmortizedSeq amt ll1 ll2 ->
+      forall damt dll1 dll2,
+        DualSeq amt damt -> DualSeq ll1 dll1 -> DualSeq ll2 dll2 ->
+        MethLabelSeq damt -> MethLabelSeq dll1 -> MethLabelSeq dll2 ->
+        AmortizedSeq damt dll1 dll2.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H; inv H0; inv H1; constructor.
+    - inv H1; inv H2; inv H4; inv H5.
+      apply dualSeqOf_cons_rev in H0; dest; subst.
+      apply methLabelSeq_rev in H3.
+      rewrite rev_app_distr in H3; simpl in H3; inv H3.
+      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
+      assert (x0 = l2) by (eapply dual_methLabel_trans; eauto); subst.
+      assert (l3 = emptyMethLabel) by (apply dual_emptyMethLabel; auto); subst.
+      econstructor; eauto.
+    - inv H1; inv H2; inv H4; inv H5.
+      apply dualSeqOf_cons_rev in H0; dest; subst.
+      apply methLabelSeq_rev in H3.
+      rewrite rev_app_distr in H3; simpl in H3; inv H3.
+      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
+      assert (x0 = l3) by (eapply dual_methLabel_trans; eauto); subst.
+      constructor.
+      apply IHAmortizedSeq; auto; constructor; auto.
+    - inv H0; inv H1; inv H2; inv H4; inv H5.
+      assert (l2 = l0) by (eapply dual_methLabel_trans; eauto); subst.
+      constructor.
+      apply IHAmortizedSeq; auto; constructor.
+  Qed.
+
+  Lemma wellHiddenConcat_restrictLabel_Dual:
+    forall m1 m2 fs,
+      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
+      forall l1 l2,
+        ValidLabel m1 l1 -> ValidLabel m2 l2 ->
+        WellHiddenConcat m1 m2 l1 l2 ->
+        Dual (restrictLabel l1 fs) (restrictLabel l2 fs).
+  Proof.
+    unfold WellHiddenConcat, wellHidden, hide, ValidLabel, Dual, restrictLabel;
+      unfold getExtMeths, getExtDefs, getExtCalls;
+      destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl; intros; dest; split.
+  Admitted.
+
+  Lemma wellHiddenConcatSeq_restrictLabelSeq_DualSeq:
+    forall m1 m2 fs,
+      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
+      forall ll1 ll2,
+        WellHiddenConcatSeq m1 m2 ll1 ll2 ->
+        Forall (fun l => ValidLabel m1 l) ll1 ->
+        Forall (fun l => ValidLabel m2 l) ll2 ->
+        DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs).
+  Proof.
+    induction 2; [constructor|]; intros.
+    inv H2; inv H3.
+    simpl; constructor; auto.
+    eapply wellHiddenConcat_restrictLabel_Dual; eauto.
+  Qed.
+
+End Duality.
+
 (** * This is an interacting case within amortized labels. *)
 (* NOTE1: we need one more interacting case within non-amortizing labels.
  * Informally, the statement should be like:
@@ -557,12 +611,18 @@ Section Modularity.
   Hypotheses (Hwf1: ModEquiv type typeUT m1)
              (Hwf2: ModEquiv type typeUT m2)
              (Hwf3: ModEquiv type typeUT m3)
-             (Hwf4: ModEquiv type typeUT m4).
-  (* (Hrdisj: DisjList (namesOf (getRegInits m1)) (namesOf (getRegInits m2))) *)
-  (* (Hddisj: DisjList (getDefs m1) (getDefs m2)) *)
-  (* (Hcdisj: DisjList (getCalls m1) (getCalls m2)) *)
-  (* (Hvr1: ValidRegsModules type m1) *)
-  (* (Hvr2: ValidRegsModules type m2) *)
+             (Hwf4: ModEquiv type typeUT m4)
+             (Hrdisj13: DisjList (namesOf (getRegInits m1)) (namesOf (getRegInits m3)))
+             (Hrdisj24: DisjList (namesOf (getRegInits m2)) (namesOf (getRegInits m4)))
+             (Hddisj13: DisjList (getDefs m1) (getDefs m3))
+             (Hcdisj13: DisjList (getCalls m1) (getCalls m3))
+             (Hddisj24: DisjList (getDefs m2) (getDefs m4))
+             (Hcdisj24: DisjList (getCalls m2) (getCalls m4))
+             (Hvr1: ValidRegsModules type m1)
+             (Hvr2: ValidRegsModules type m2)
+             (Hvr3: ValidRegsModules type m3)
+             (Hvr4: ValidRegsModules type m4)
+             (Hfs: DisjList fs (getExtMeths (m1 ++ m3)%kami)).
 
   Theorem traceRefinesAmort_absorbed_modular:
     forall vp,
@@ -570,23 +630,76 @@ Section Modularity.
       traceRefinesAmortA (liftToMap1 vp) fs m3 m4 ->
       (m1 ++ m3)%kami <<=[vp] (m2 ++ m4)%kami.
   Proof.
+    unfold traceRefines, traceRefinesAmort, traceRefinesAmortA in *; intros ? ? ? s13 ll13 ?.
+
+    apply behavior_split in H1; auto; [|constructor; auto].
+    destruct H1 as [s1 [ll1 [s3 [ll3 ?]]]]; dest; subst.
+
+    specialize (H _ _ H1).
+    destruct H as [s2 [ll2 ?]]; dest.
+    specialize (H0 _ _ H2).
+
+    apply wellHiddenConcatSeq_restrictLabelSeq_DualSeq with (fs:= fs) in H6;
+      eauto using behavior_ValidLabel.
+
+    specialize (H0 (dualSeqOf x) (dualSeqOf (restrictLabelSeq ll2 fs))).
+
+    assert (Hdamt: AmortizedSeq (dualSeqOf x) (restrictLabelSeq ll3 fs)
+                                (dualSeqOf (restrictLabelSeq ll2 fs))).
+    { eapply amortizedSeq_dual; eauto.
+      { apply dualSeqOf_dualSeq. }
+      { apply dualSeqOf_dualSeq. }
+      { apply dualSeqOf_methLabelSeq.
+        eapply amortizedSeq_methLabelSeq; eauto;
+          apply restrictLabelSeq_MethLabelSeq.
+      }
+      { apply restrictLabelSeq_MethLabelSeq. }
+      { apply dualSeqOf_methLabelSeq, restrictLabelSeq_MethLabelSeq. }
+    }
+    specialize (H0 Hdamt); clear Hdamt.
+    destruct H0 as [s4 [ll4 ?]]; dest.
+
+    do 2 eexists; split.
+    - apply behavior_modular; auto.
+      + constructor; auto.
+      + eassumption.
+      + eassumption.
+      + admit. (* CanCombine --> Dual --> CanCombine *)
+      + admit.
+    - admit.
   Admitted.
 
 End Modularity.
 
-Corollary traceRefinesAmort_refl_modular:
-  forall m1 m2 fs,
-    ModEquiv type typeUT m1 ->
-    ModEquiv type typeUT m2 ->
+Section Substitution.
+  Variables (m1 m2 ctxt: Modules).
+  Variable fs: list string.
+  
+  Hypotheses (Hwf1: ModEquiv type typeUT m1)
+             (Hwf2: ModEquiv type typeUT m2)
+             (Hwfc: ModEquiv type typeUT ctxt)
+             (Hrdisj1: DisjList (namesOf (getRegInits m1)) (namesOf (getRegInits ctxt)))
+             (Hrdisj2: DisjList (namesOf (getRegInits m2)) (namesOf (getRegInits ctxt)))
+             (Hddisj1: DisjList (getDefs m1) (getDefs ctxt))
+             (Hcdisj1: DisjList (getCalls m1) (getCalls ctxt))
+             (Hddisj2: DisjList (getDefs m2) (getDefs ctxt))
+             (Hcdisj2: DisjList (getCalls m2) (getCalls ctxt))
+             (Hvr1: ValidRegsModules type m1)
+             (Hvr2: ValidRegsModules type m2)
+             (Hvrc: ValidRegsModules type ctxt)
+             (Hfs: SubList (getExtMeths ctxt) fs)
+             (Hcr: getRules ctxt = nil).
+
+  Corollary traceRefinesAmort_refl_modular:
     traceRefinesAmort id fs m1 m2 ->
-    forall ctxt,
-      ModEquiv type typeUT ctxt ->
-      SubList (getExtMeths ctxt) fs ->
-      getRules ctxt = nil ->
-      (m1 ++ ctxt)%kami <<== (m2 ++ ctxt)%kami.
-Proof.
-  intros.
-  eapply traceRefinesAmort_absorbed_modular; eauto; rewrite idElementwiseId; eauto.
-  apply traceRefinesAmortA_refl; auto.
-Qed.
+    (m1 ++ ctxt)%kami <<== (m2 ++ ctxt)%kami.
+  Proof.
+    intros.
+    eapply traceRefinesAmort_absorbed_modular; eauto.
+    - rewrite idElementwiseId; eauto.
+    - rewrite idElementwiseId.
+      apply traceRefinesAmortA_refl; auto.
+  Qed.
+
+End Substitution.
 
