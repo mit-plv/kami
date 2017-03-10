@@ -1827,6 +1827,22 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (deceqA _ _); intuition.
   Qed.
 
+  Lemma subtractKV_KeysDisj_cases:
+    forall {A} deceqA (m1 m2: t A) d,
+      KeysDisj (subtractKV deceqA m1 m2) d ->
+      forall k v, List.In k d -> find k m1 = Some v -> find k m2 = Some v.
+  Proof.
+    unfold KeysDisj; intros.
+    specialize (H _ H0).
+    apply F.P.F.not_find_in_iff in H.
+    rewrite subtractKV_find in H.
+    rewrite H1 in H.
+    destruct (M.find k m2).
+    - destruct (deceqA v a); subst; auto.
+      inv H.
+    - inv H.
+  Qed.
+
   Lemma subtractKV_disj_1:
     forall {A} deceqA (m1 m2 m3: t A),
       Disj m1 m2 -> Disj (subtractKV deceqA m1 m3) m2.

@@ -1815,6 +1815,12 @@ Proof.
   eapply step_wellHidden; eauto.
 Qed.
 
+Lemma behavior_wellHidden:
+  forall m ll n, Behavior m n ll -> Forall (fun l => wellHidden m l) ll.
+Proof.
+  intros; inv H; eapply multistep_wellHidden; eauto.
+Qed.
+
 Lemma multistep_app:
   forall m ll1 ll2 o n,
     Multistep m o n (ll1 ++ ll2) ->
