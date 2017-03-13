@@ -1815,3 +1815,137 @@ Proof.
   eapply step_wellHidden; eauto.
 Qed.
 
+Lemma behavior_wellHidden:
+  forall m ll n, Behavior m n ll -> Forall (fun l => wellHidden m l) ll.
+Proof.
+  intros; inv H; eapply multistep_wellHidden; eauto.
+Qed.
+
+Lemma multistep_app:
+  forall m ll1 ll2 o n,
+    Multistep m o n (ll1 ++ ll2) ->
+    exists n', Multistep m o n' ll2 /\ Multistep m n' n ll1.
+Proof.
+  induction ll1; simpl; intros.
+  - eexists; split; eauto.
+    constructor; auto.
+  - inv H; specialize (IHll1 _ _ _ HMultistep); dest.
+    eexists; split; eauto.
+    constructor; auto.
+Qed.
+
+Lemma multistep_app_inv:
+  forall m ll1 ll2 o n n',
+    Multistep m o n' ll2 ->
+    Multistep m n' n ll1 ->
+    Multistep m o n (ll1 ++ ll2).
+Proof.
+  induction ll1; simpl; intros.
+  - inv H0; auto.
+  - inv H0; constructor; eauto.
+Qed.
+
+Section NoRules.
+  Variable m: Modules.
+  Hypothesis (Hrules: getRules m = nil).
+
+  Lemma substep_getRules_nil:
+    forall o u ul cs,
+      Substep m o u ul cs -> ul = Rle None \/ exists d, ul = Meth d.
+  Proof.
+    destruct 1; auto.
+    - right; eexists; auto.
+    - rewrite Hrules in HInRules; inv HInRules.
+    - right; eexists; auto.
+  Qed.
+
+  Lemma substepsInd_getRules_nil:
+    forall o u l,
+      SubstepsInd m o u l -> annot l = Some None \/ annot l = None.
+  Proof.
+    induction 1; auto.
+    apply substep_getRules_nil in H0; destruct H0; dest; subst.
+    - destruct l as [a d c]; simpl in *.
+      destruct IHSubstepsInd; subst; simpl; auto.
+    - destruct l as [a d c]; simpl in *; auto.
+  Qed.
+
+  Lemma step_getRules_nil:
+    forall o u l,
+      Step m o u l -> annot l = Some None \/ annot l = None.
+  Proof.
+    intros; apply step_consistent in H.
+    inv H; apply substepsInd_getRules_nil in HSubSteps.
+    destruct l0 as [a d c]; simpl in *; auto.
+  Qed.
+
+  Lemma substepsInd_rule_annot_1:
+    forall o u ds cs,
+      SubstepsInd m o u {| annot := None; defs := ds; calls := cs |} ->
+      SubstepsInd m o u {| annot := Some None; defs := ds; calls := cs |}.
+  Proof.
+    intros.
+    econstructor.
+    - eassumption.
+    - apply EmptyRule.
+    - repeat split; auto.
+    - auto.
+    - reflexivity.
+  Qed.
+
+  Lemma substepsInd_rule_annot_2:
+    forall o u l,
+      SubstepsInd m o u l ->
+      forall ds cs,
+        l = {| annot := Some None; defs := ds; calls := cs |} ->
+        SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
+  Proof.
+    induction 1; simpl; intros; [inv H|].
+    subst; inv H0.
+    - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
+      destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      destruct ann; intuition idtac.
+    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      mred; auto.
+    - rewrite Hrules in HInRules; inv HInRules.
+    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      econstructor.
+      + apply IHSubstepsInd; auto.
+      + eapply SingleMeth; eauto.
+      + repeat split; auto.
+      + auto.
+      + reflexivity.
+  Qed.
+
+  Lemma step_rule_annot_1:
+    forall o u ds cs,
+      Step m o u {| annot := None; defs := ds; calls := cs |} ->
+      Step m o u {| annot := Some None; defs := ds; calls := cs |}.
+  Proof.
+    intros.
+    apply step_consistent; apply step_consistent in H.
+    inv H.
+    destruct l as [a d c]; simpl in *; subst.
+    change {| annot := _; defs := _; calls := _ |}
+    with (hide {| annot := Some None; defs := d; calls := c |}).
+    constructor; auto.
+    apply substepsInd_rule_annot_1; auto.
+  Qed.
+
+  Lemma step_rule_annot_2:
+    forall o u ds cs,
+      Step m o u {| annot := Some None; defs := ds; calls := cs |} ->
+      Step m o u {| annot := None; defs := ds; calls := cs |}.
+  Proof.
+    intros.
+    apply step_consistent; apply step_consistent in H.
+    inv H.
+    destruct l as [a d c]; simpl in *; subst.
+    change {| annot := _; defs := _; calls := _ |}
+    with (hide {| annot := None; defs := d; calls := c |}).
+    constructor; auto.
+    eapply substepsInd_rule_annot_2; eauto.
+  Qed.
+
+End NoRules.
+
