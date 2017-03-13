@@ -18,6 +18,7 @@ Definition getMethDefArg f := f ++ "$arg".
 Definition getMethDefGuard f := f ++ "$g".
 
 Definition getRuleGuard r := r ++ "$g".
+Definition getRuleEn r := r ++ "$en".
 
 Close Scope string.
 
@@ -402,6 +403,12 @@ Section UsefulFunctions.
       | None => nil
       | Some posSecond => disables' (pred posSecond) posSecond
     end.
+
+  Definition getRuleEnAssign rule :=
+    (getRuleEn rule, nil: list nat,
+     existT RtlExpr Bool
+            (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool And e (RtlReadWire Bool (getRuleEn r, nil)))
+                       (disables rule) (RtlConst true))).
 End UsefulFunctions.
 
 Require Import Kami.Tutorial.
