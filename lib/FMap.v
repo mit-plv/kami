@@ -1508,6 +1508,16 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (in_dec E.eq_dec y d); auto.
   Qed.
 
+  Lemma restrict_complement_union:
+    forall {A} (m: t A) d,
+      m = union (restrict m d) (complement m d).
+  Proof.
+    mintros; ext y.
+    rewrite find_union, restrict_find, complement_find.
+    destruct (in_dec P.F.eq_dec y d); auto.
+    destruct (find y m); auto.
+  Qed.
+
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
   Proof. 
     intros. apply union_smothered. unfold Sub. auto.
@@ -1597,6 +1607,26 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros.
     specialize (H k); specialize (H0 k).
     destruct H; auto.
+  Qed.
+
+  Lemma restrict_DomainSubset:
+    forall {A} (m: t A) d,
+      DomainSubset (restrict m d) m.
+  Proof.
+    mintros.
+    apply P.F.in_find_iff; apply P.F.in_find_iff in H.
+    rewrite restrict_find in H.
+    destruct (in_dec P.F.eq_dec k d); auto.
+  Qed.
+
+  Lemma complement_DomainSubset:
+    forall {A} (m: t A) d,
+      DomainSubset (complement m d) m.
+  Proof.
+    mintros.
+    apply P.F.in_find_iff; apply P.F.in_find_iff in H.
+    rewrite complement_find in H.
+    destruct (in_dec P.F.eq_dec k d); auto.
   Qed.
 
   Lemma find_KeysSubset {A} :
@@ -1967,6 +1997,20 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (find y m), (find y m1), (find y m2); auto.
     destruct H; elim H; discriminate.
   Qed.
+
+  Lemma subtractKV_disj_union_7:
+    forall {A} deceqA (m m1 m2: t A),
+      Disj m1 m2 ->
+      subtractKV deceqA m (union m1 m2) =
+      subtractKV deceqA m (union m2 m1).
+  Proof.
+    mintros; ext y.
+    specialize (H y).
+    rewrite 2! P.F.in_find_iff in H.
+    repeat (rewrite subtractKV_find || rewrite find_union).
+    destruct (find y m), (find y m1), (find y m2); auto.
+    destruct H; elim H; discriminate.
+  Qed.
     
   Lemma subtractKV_subtractKVD_1:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
@@ -2243,6 +2287,16 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H0 y); destruct H0.
     - elim H0; apply H; discriminate.
     - elim H0; auto.
+  Qed.
+
+  Lemma restrict_complement_disj:
+    forall {A} (m1 m2: t A) d,
+      Disj (restrict m1 d) (complement m2 d).
+  Proof.
+    mintros.
+    rewrite 2! P.F.not_find_in_iff.
+    rewrite restrict_find, complement_find.
+    destruct (in_dec P.F.eq_dec k d); auto.
   Qed.
 
   Lemma KeysSubset_subtractKV:

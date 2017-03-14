@@ -6,7 +6,7 @@ Require Import Kami.ModularFacts Kami.RefinementFacts.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-(** Extension of the restrict notion *)
+(** Lifting M.restrict and M.complement to the level of labels *)
 
 (* Note that annot is restricted to [None]. *)
 Definition restrictLabel (l: LabelT) (d: list string): LabelT :=
@@ -21,6 +21,157 @@ Lemma restrictLabelSeq_nil:
   forall ll d, restrictLabelSeq ll d = nil -> ll = nil.
 Proof.
   induction ll; simpl; intros; auto; inv H.
+Qed.
+
+Lemma restrictLabel_mergeLabel_comm:
+  forall l1 l2 d, restrictLabel (mergeLabel l1 l2) d =
+                  mergeLabel (restrictLabel l1 d) (restrictLabel l2 d).
+Proof.
+  unfold restrictLabel, mergeLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
+    simpl; intros; f_equal; apply M.restrict_union.
+Qed.
+
+Definition complementLabel (l: LabelT) (d: list string): LabelT :=
+  {| defs := M.complement (defs l) d;
+     calls := M.complement (calls l) d;
+     annot := annot l |}.
+
+Definition complementLabelSeq (ll: LabelSeqT) (d: list string): LabelSeqT :=
+  map (fun l => complementLabel l d) ll.
+
+Lemma complementLabel_mergeLabel_comm:
+  forall l1 l2 d, complementLabel (mergeLabel l1 l2) d =
+                  mergeLabel (complementLabel l1 d) (complementLabel l2 d).
+Proof.
+  unfold complementLabel, mergeLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
+    simpl; intros; f_equal; apply M.complement_union.
+Qed.
+
+Lemma restrictLabel_complementLabel_mergeLabel:
+  forall l d, l = mergeLabel (restrictLabel l d) (complementLabel l d).
+Proof.
+  unfold mergeLabel, restrictLabel, complementLabel; destruct l;
+    simpl; intros; f_equal; apply M.restrict_complement_union.
+Qed.
+
+Definition DisjLabel (l1 l2: LabelT) :=
+  M.Disj (defs l1) (defs l2) /\ M.Disj (calls l1) (calls l2).
+Definition NonInteractingLabel (l1 l2: LabelT) :=
+  M.Disj (defs l1) (calls l2) /\ M.Disj (defs l2) (calls l1).
+
+Lemma disjLabel_restrictLabel:
+  forall l1 l2, DisjLabel l1 l2 ->
+                forall d1 d2, DisjLabel (restrictLabel l1 d1) (restrictLabel l2 d2).
+Proof.
+  unfold DisjLabel, restrictLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
+    simpl; intros; split.
+  - apply M.DomainSubset_Disj with (m2:= d1); [|apply M.restrict_DomainSubset].
+    apply M.Disj_comm, M.DomainSubset_Disj with (m2:= d2); [|apply M.restrict_DomainSubset].
+    apply M.Disj_comm; auto.
+  - apply M.DomainSubset_Disj with (m2:= c1); [|apply M.restrict_DomainSubset].
+    apply M.Disj_comm, M.DomainSubset_Disj with (m2:= c2); [|apply M.restrict_DomainSubset].
+    apply M.Disj_comm; auto.
+Qed.
+
+Lemma disjLabel_complementLabel:
+  forall l1 l2, DisjLabel l1 l2 ->
+                forall d1 d2, DisjLabel (complementLabel l1 d1) (complementLabel l2 d2).
+Proof.
+  unfold DisjLabel, complementLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
+    simpl; intros; split.
+  - apply M.DomainSubset_Disj with (m2:= d1); [|apply M.complement_DomainSubset].
+    apply M.Disj_comm, M.DomainSubset_Disj with (m2:= d2); [|apply M.complement_DomainSubset].
+    apply M.Disj_comm; auto.
+  - apply M.DomainSubset_Disj with (m2:= c1); [|apply M.complement_DomainSubset].
+    apply M.Disj_comm, M.DomainSubset_Disj with (m2:= c2); [|apply M.complement_DomainSubset].
+    apply M.Disj_comm; auto.
+Qed.
+
+Lemma restrictLabel_complementLabel_DisjLabel:
+  forall l d, DisjLabel (restrictLabel l d) (complementLabel l d).
+Proof.
+  unfold DisjLabel, restrictLabel, complementLabel; destruct l as [a d c]; simpl; intros.
+  split; apply M.restrict_complement_disj.
+Qed.
+  
+Lemma restrictLabel_complementLabel_NonInteractingLabel:
+  forall l d, NonInteractingLabel (restrictLabel l d) (complementLabel l d).
+Proof.
+  unfold NonInteractingLabel, restrictLabel, complementLabel;
+    destruct l as [a d c]; simpl; intros.
+  split; auto using M.Disj_comm, M.restrict_complement_disj.
+Qed.
+
+Lemma disjLabel_NonInteractingLabel_hide_mergeLabel:
+  forall l1 l2,
+    DisjLabel l1 l2 -> NonInteractingLabel l1 l2 ->
+    hide (mergeLabel l1 l2) = mergeLabel (hide l1) (hide l2).
+Proof.
+  unfold DisjLabel, NonInteractingLabel, hide, mergeLabel;
+    destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl; intros; dest.
+  f_equal.
+  - repeat rewrite M.subtractKV_disj_union_1 by assumption.
+    rewrite M.union_comm with (m1:= c1) (m2:= c2) at 1 by assumption.
+    repeat rewrite M.subtractKV_disj_union_2 by eauto using M.Disj_comm.
+    rewrite M.subtractKV_disj_invalid with (m1:= d1) (m2:= c2) by assumption.
+    rewrite M.subtractKV_disj_invalid with (m1:= d2) (m2:= c1) by assumption.
+    reflexivity.
+  - repeat rewrite M.subtractKV_disj_union_1 by assumption.
+    rewrite M.union_comm with (m1:= d1) (m2:= d2) at 1 by assumption.
+    repeat rewrite M.subtractKV_disj_union_2 by eauto using M.Disj_comm.
+    rewrite M.subtractKV_disj_invalid with (m1:= c1) (m2:= d2) by eauto using M.Disj_comm.
+    rewrite M.subtractKV_disj_invalid with (m1:= c2) (m2:= d1) by eauto using M.Disj_comm.
+    reflexivity.
+Qed.
+
+Lemma disjList_KeysSubset_DisjLabel:
+  forall l1 l2 d1 c1 d2 c2,
+    M.KeysSubset (defs l1) d1 -> M.KeysSubset (calls l1) c1 ->
+    M.KeysSubset (defs l2) d2 -> M.KeysSubset (calls l2) c2 ->
+    DisjList d1 d2 -> DisjList c1 c2 ->
+    DisjLabel l1 l2.
+Proof.
+  unfold DisjLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl; intros.
+  split; eauto using M.DisjList_KeysSubset_Disj.
+Qed.
+
+Lemma disjList_KeysSubset_NonInteractingLabel:
+  forall l1 l2 d1 c1 d2 c2,
+    M.KeysSubset (defs l1) d1 -> M.KeysSubset (calls l1) c1 ->
+    M.KeysSubset (defs l2) d2 -> M.KeysSubset (calls l2) c2 ->
+    DisjList d1 c2 -> DisjList d2 c1 ->
+    NonInteractingLabel l1 l2.
+Proof.
+  unfold NonInteractingLabel; destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl; intros.
+  split; eauto using M.DisjList_KeysSubset_Disj.
+Qed.
+
+Lemma validLabel_complementLabel_NonInteractingLabel:
+  forall d1 c1 d2 c2 fs l1 l2,
+    M.KeysSubset (defs l1) d1 -> M.KeysSubset (calls l1) c1 ->
+    M.KeysSubset (defs l2) d2 -> M.KeysSubset (calls l2) c2 ->
+    (forall f, In f c1 /\ In f d2 -> In f fs) ->
+    (forall f, In f d1 /\ In f c2 -> In f fs) ->
+    NonInteractingLabel (complementLabel l1 fs) (complementLabel l2 fs).
+Proof.
+  unfold NonInteractingLabel, complementLabel;
+    destruct l1 as [la1 ld1 lc1], l2 as [la2 ld2 lc2]; simpl; intros; split.
+  - intro y.
+    repeat rewrite M.F.P.F.not_find_in_iff, M.complement_find.
+    destruct (in_dec M.F.P.F.eq_dec y fs); auto.
+    remember (M.find y ld1) as dv1; destruct dv1; auto.
+    remember (M.find y lc2) as cv2; destruct cv2; auto.
+    elim n; apply H4; split.
+    + apply H; findeq.
+    + apply H2; findeq.
+  - intro y.
+    repeat rewrite M.F.P.F.not_find_in_iff, M.complement_find.
+    destruct (in_dec M.F.P.F.eq_dec y fs); auto.
+    remember (M.find y ld2) as dv2; destruct dv2; auto.
+    remember (M.find y lc1) as cv1; destruct cv1; auto.
+    elim n; apply H3; split.
+    + apply H0; findeq.
+    + apply H1; findeq.
 Qed.
 
 Definition MethLabel (l: LabelT) := annot l = None.
@@ -142,6 +293,338 @@ Notation "ma <<~[ p ]{ fs } mb" :=
 Notation "ma <|~[ p ]{ fs } mb" :=
   (traceRefinesAmortA (liftToMap1 p) fs ma mb)
     (at level 100, format "ma  <|~[  p  ]{  fs  }  mb").
+
+Section Duality.
+
+  Definition Dual (l1 l2: LabelT) := defs l1 = calls l2 /\ calls l1 = defs l2.
+  Inductive DualSeq: LabelSeqT -> LabelSeqT -> Prop :=
+  | DSNil: DualSeq nil nil
+  | DSCons: forall ll1 ll2,
+      DualSeq ll1 ll2 ->
+      forall l1 l2,
+        Dual l1 l2 ->
+        DualSeq (l1 :: ll1) (l2 :: ll2).
+
+  Definition dualOf (l: LabelT) :=
+    {| annot := annot l; defs := calls l; calls := defs l |}.
+  Fixpoint dualSeqOf (ll: LabelSeqT) :=
+    match ll with
+    | nil => nil
+    | l :: ll' => dualOf l :: dualSeqOf ll'
+    end.
+
+  Lemma dualOf_dual: forall l, Dual l (dualOf l).
+  Proof. firstorder. Qed.
+
+  Lemma dualSeqOf_dualSeq: forall ll, DualSeq ll (dualSeqOf ll).
+  Proof. induction ll; simpl; constructor; firstorder. Qed.
+
+  Lemma dualOf_methLabel: forall l, MethLabel l -> MethLabel (dualOf l).
+  Proof. firstorder. Qed.
+
+  Lemma dualSeqOf_methLabelSeq: forall ll, MethLabelSeq ll -> MethLabelSeq (dualSeqOf ll).
+  Proof.
+    induction ll; simpl; intros; auto.
+    inv H; constructor; auto.
+  Qed.
+
+  Lemma dual_sym: forall l1 l2, Dual l1 l2 -> Dual l2 l1.
+  Proof. firstorder. Qed.
+
+  Lemma dual_methLabel_trans:
+    forall l1 l2 l3, Dual l1 l2 -> Dual l1 l3 -> MethLabel l2 -> MethLabel l3 -> l2 = l3.
+  Proof.
+    destruct l1, l2, l3; unfold Dual, MethLabel; simpl;
+      intros; dest; repeat subst; auto.
+  Qed.
+
+  Lemma dual_emptyMethLabel:
+    forall l, Dual emptyMethLabel l -> MethLabel l -> l = emptyMethLabel.
+  Proof.
+    destruct l; unfold Dual, MethLabel; simpl; intros; dest; subst; auto.
+  Qed.
+
+  Lemma restrictLabel_dual_implies:
+    forall l1 l2 fs,
+      Dual (restrictLabel l1 fs) (restrictLabel l2 fs) ->
+      forall f, In f fs -> M.find f (defs l1) = M.find f (calls l2) /\
+                           M.find f (calls l1) = M.find f (defs l2).
+  Proof.
+    unfold Dual, restrictLabel; simpl; intros; dest; split.
+    - apply M.Equal_val with (k:= f) in H.
+      rewrite 2! M.restrict_find in H.
+      destruct (in_dec _ f fs); intuition idtac.
+    - apply M.Equal_val with (k:= f) in H1.
+      rewrite 2! M.restrict_find in H1.
+      destruct (in_dec _ f fs); intuition idtac.
+  Qed.
+  
+  Lemma dualSeqOf_app:
+    forall all1 bll1 all2 bll2,
+      DualSeq all1 all2 -> DualSeq bll1 bll2 -> DualSeq (all1 ++ bll1) (all2 ++ bll2).
+  Proof.
+    induction 1; simpl; intros; auto.
+    constructor; auto.
+  Qed.
+
+  Lemma dualSeqOf_rev:
+    forall ll1 ll2, DualSeq ll1 ll2 -> DualSeq (rev ll1) (rev ll2).
+  Proof.
+    induction 1; simpl; intros; [constructor|].
+    apply dualSeqOf_app; auto.
+    constructor; auto.
+    constructor.
+  Qed.
+
+  Lemma dualSeqOf_cons_rev:
+    forall ll1 l1 mll2,
+      DualSeq (ll1 ++ [l1]) mll2 ->
+      exists ll2 l2, mll2 = ll2 ++ [l2] /\ DualSeq ll1 ll2 /\ Dual l1 l2.
+  Proof.
+    induction ll1; simpl; intros.
+    - inv H; inv H2.
+      exists nil, l2; intuition.
+      constructor.
+    - inv H.
+      specialize (IHll1 _ _ H2); dest; subst.
+      exists (l2 :: x), x0; intuition.
+      constructor; auto.
+  Qed.
+
+  Lemma amortizedSeq_dual:
+    forall amt ll1 ll2,
+      AmortizedSeq amt ll1 ll2 ->
+      forall damt dll1 dll2,
+        DualSeq amt damt -> DualSeq ll1 dll1 -> DualSeq ll2 dll2 ->
+        MethLabelSeq damt -> MethLabelSeq dll1 -> MethLabelSeq dll2 ->
+        AmortizedSeq damt dll1 dll2.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H; inv H0; inv H1; constructor.
+    - inv H1; inv H2; inv H4; inv H5.
+      apply dualSeqOf_cons_rev in H0; dest; subst.
+      apply methLabelSeq_rev in H3.
+      rewrite rev_app_distr in H3; simpl in H3; inv H3.
+      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
+      assert (x0 = l2) by (eapply dual_methLabel_trans; eauto); subst.
+      assert (l3 = emptyMethLabel) by (apply dual_emptyMethLabel; auto); subst.
+      econstructor; eauto.
+    - inv H1; inv H2; inv H4; inv H5.
+      apply dualSeqOf_cons_rev in H0; dest; subst.
+      apply methLabelSeq_rev in H3.
+      rewrite rev_app_distr in H3; simpl in H3; inv H3.
+      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
+      assert (x0 = l3) by (eapply dual_methLabel_trans; eauto); subst.
+      constructor.
+      apply IHAmortizedSeq; auto; constructor; auto.
+    - inv H0; inv H1; inv H2; inv H4; inv H5.
+      assert (l2 = l0) by (eapply dual_methLabel_trans; eauto); subst.
+      constructor.
+      apply IHAmortizedSeq; auto; constructor.
+  Qed.
+
+  Definition getIntMethsBetween (m1 m2: Modules) :=
+    (filter (fun d => string_in d (getCalls m2)) (getDefs m1))
+      ++ (filter (fun c => string_in c (getDefs m2)) (getCalls m1)).
+
+  Lemma wellHiddenConcat_restrictLabel_Dual:
+    forall m1 m2 fs,
+      DisjList (getDefs m1) (getDefs m2) ->
+      DisjList (getCalls m1) (getCalls m2) ->
+      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
+      forall l1 l2,
+        ValidLabel m1 l1 -> ValidLabel m2 l2 ->
+        wellHidden m1 l1 -> wellHidden m2 l2 ->
+        WellHiddenConcat m1 m2 l1 l2 ->
+        Dual (restrictLabel l1 fs) (restrictLabel l2 fs).
+  Proof.
+    intros.
+    pose proof (validLabel_wellHidden_getExtDefs H2 H4).
+    pose proof (validLabel_wellHidden_getExtDefs H3 H5).
+    pose proof (validLabel_wellHidden_getExtCalls H2 H4).
+    pose proof (validLabel_wellHidden_getExtCalls H3 H5).
+    clear H2 H3 H4 H5.
+    destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
+      unfold WellHiddenConcat, wellHidden, hide in *; simpl in *; dest.
+
+    assert (DisjList (getExtDefs m1) (getExtDefs m2)).
+    { eapply DisjList_SubList; [apply getExtDefs_getDefs|].
+      apply DisjList_comm.
+      eapply DisjList_SubList; [apply getExtDefs_getDefs|].
+      apply DisjList_comm; auto.
+    }
+    assert (DisjList (getExtCalls m1) (getExtCalls m2)).
+    { eapply DisjList_SubList; [apply getExtCalls_getCalls|].
+      apply DisjList_comm.
+      eapply DisjList_SubList; [apply getExtCalls_getCalls|].
+      apply DisjList_comm; auto.
+    }
+
+    rewrite M.subtractKV_disj_union_1 in H2 by (eauto using M.DisjList_KeysSubset_Disj).
+    rewrite M.subtractKV_disj_union_5 in H2
+      by (eauto using M.DisjList_KeysSubset_Disj, extDefs_extCalls_disj).
+    rewrite M.subtractKV_disj_union_6 in H2
+      by (eauto using M.DisjList_KeysSubset_Disj, extDefs_extCalls_disj).
+    rewrite M.subtractKV_disj_union_1 in H3 by (eauto using M.DisjList_KeysSubset_Disj).
+    rewrite M.subtractKV_disj_union_5 in H3
+      by (eauto using M.DisjList_KeysSubset_Disj, DisjList_comm, extDefs_extCalls_disj).
+    rewrite M.subtractKV_disj_union_6 in H3
+      by (eauto using M.DisjList_KeysSubset_Disj, DisjList_comm, extDefs_extCalls_disj).
+    pose proof (M.KeysDisj_union_1 H2).
+    pose proof (M.KeysDisj_union_2 H2).
+    pose proof (M.KeysDisj_union_1 H3).
+    pose proof (M.KeysDisj_union_2 H3).
+    clear H2 H3.
+
+    unfold Dual, restrictLabel; simpl; split.
+    - M.ext k.
+      rewrite 2! M.restrict_find.
+      destruct (in_dec M.F.P.F.eq_dec k fs); auto.
+
+      remember (M.find k d1) as ov1; destruct ov1 as [v1|]; intros.
+      + destruct (in_dec string_dec k (getCalls (m1 ++ m2)%kami)).
+        * apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v1) in H6; auto.
+        * apply DisjList_logic_inv with (e:= k) in H1; intuition.
+          apply in_or_app; left.
+          apply filter_In; split.
+          -- apply getDefs_in_1, getExtDefs_getDefs, H7; findeq.
+          -- apply negb_true_iff.
+             remember (string_in _ _); destruct b; auto.
+             apply string_in_dec_in in Heqb; elim n; auto.
+      + remember (M.find k c2) as ov2; destruct ov2 as [v2|]; auto.
+        apply DisjList_logic_inv with (e:= k) in H1; intuition.
+        apply in_or_app; right.
+        apply filter_In; split.
+        * apply getCalls_in_2, getExtCalls_getCalls, H10; findeq.
+        * apply negb_true_iff.
+          remember (string_in _ _); destruct b; auto.
+          apply string_in_dec_in in Heqb.
+          apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v2) in H13; auto.
+          rewrite H13 in Heqov1; inv Heqov1.
+    - M.ext k.
+      rewrite 2! M.restrict_find.
+      destruct (in_dec M.F.P.F.eq_dec k fs); auto.
+
+      remember (M.find k c1) as ov1; destruct ov1 as [v1|]; intros.
+      + destruct (in_dec string_dec k (getDefs (m1 ++ m2)%kami)).
+        * apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v1) in H12; auto.
+        * apply DisjList_logic_inv with (e:= k) in H1; intuition.
+          apply in_or_app; right.
+          apply filter_In; split.
+          -- apply getCalls_in_1, getExtCalls_getCalls, H9; findeq.
+          -- apply negb_true_iff.
+             remember (string_in _ _); destruct b; auto.
+             apply string_in_dec_in in Heqb; elim n; auto.
+      + remember (M.find k d2) as ov2; destruct ov2 as [v2|]; auto.
+        apply DisjList_logic_inv with (e:= k) in H1; intuition.
+        apply in_or_app; left.
+        apply filter_In; split.
+        * apply getDefs_in_2, getExtDefs_getDefs, H8; findeq.
+        * apply negb_true_iff.
+          remember (string_in _ _); destruct b; auto.
+          apply string_in_dec_in in Heqb.
+          apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v2) in H11; auto.
+          rewrite H11 in Heqov1; inv Heqov1.
+  Qed.
+
+  Lemma wellHiddenConcatSeq_restrictLabelSeq_DualSeq:
+    forall m1 m2 fs,
+      DisjList (getDefs m1) (getDefs m2) ->
+      DisjList (getCalls m1) (getCalls m2) ->
+      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
+      forall ll1 ll2,
+        WellHiddenConcatSeq m1 m2 ll1 ll2 ->
+        Forall (fun l => ValidLabel m1 l) ll1 ->
+        Forall (fun l => ValidLabel m2 l) ll2 ->
+        Forall (fun l => wellHidden m1 l) ll1 ->
+        Forall (fun l => wellHidden m2 l) ll2 ->
+        DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs).
+  Proof.
+    induction 4; [constructor|]; intros.
+    inv H4; inv H5; inv H6; inv H7.
+    simpl; constructor; auto.
+    eapply wellHiddenConcat_restrictLabel_Dual; eauto.
+  Qed.
+
+  Lemma dual_DisjLabel_hide_mergeLabel:
+    forall l1 l2,
+      Dual l1 l2 -> DisjLabel l1 l2 ->
+      defs (hide (mergeLabel l1 l2)) = M.empty _ /\
+      calls (hide (mergeLabel l1 l2)) = M.empty _.
+  Proof.
+    unfold Dual, DisjLabel, hide, mergeLabel;
+      destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2]; simpl; intros; dest; subst.
+    rewrite M.union_comm by assumption.
+    rewrite M.subtractKV_empty_3; auto.
+  Qed.
+
+  Lemma dual_restrictLabel_hide_mergeLabel_complementLabel:
+    forall d l1 l2,
+      Dual (restrictLabel l1 d) (restrictLabel l2 d) ->
+      DisjLabel l1 l2 ->
+      hide (mergeLabel l1 l2) =
+      hide (mergeLabel (complementLabel l1 d) (complementLabel l2 d)).
+  Proof.
+    intros.
+    rewrite restrictLabel_complementLabel_mergeLabel with (l:= mergeLabel l1 l2) (d:= d).
+    pose proof (restrictLabel_complementLabel_NonInteractingLabel (mergeLabel l1 l2) d).
+    inv H1; rewrite hide_mergeLabel_disj by eauto using M.Disj_comm; clear H2 H3.
+    rewrite restrictLabel_mergeLabel_comm.
+    apply disjLabel_restrictLabel with (d1:= d) (d2:= d) in H0.
+    pose proof (dual_DisjLabel_hide_mergeLabel H H0).
+    remember (hide (mergeLabel (restrictLabel l1 d) (restrictLabel l2 d))) as rl.
+    rewrite complementLabel_mergeLabel_comm.
+    remember (hide (complementLabel (mergeLabel l1 l2) d)) as cl.
+    destruct rl as [ra rd rc], cl as [ca cd cc]; simpl in *; dest; subst; mred.
+    f_equal.
+    destruct ra, ca; auto; inv Heqrl.
+  Qed.
+
+End Duality.
+
+Section Hidden.
+  Definition Hidden (l: LabelT) := hide l = l.
+  Definition HiddenSeq (ll: LabelSeqT) := Forall (fun l => Hidden l) ll.
+
+  Lemma hide_hidden: forall l, Hidden (hide l).
+  Proof.
+    unfold Hidden; intros.
+    apply eq_sym, hide_idempotent.
+  Qed.
+
+  Lemma step_hidden: forall m o u l, Step m o u l -> Hidden l.
+  Proof.
+    intros; inv H.
+    apply hide_hidden.
+  Qed.
+
+  Lemma multistep_hiddenSeq: forall m o ll n, Multistep m o n ll -> HiddenSeq ll.
+  Proof.
+    induction ll; simpl; intros; [constructor|].
+    constructor; inv H.
+    - eauto using step_hidden.
+    - eapply IHll; eauto.
+  Qed.
+
+  Lemma behavior_hiddenSeq: forall m ll n, Behavior m n ll -> HiddenSeq ll.
+  Proof. intros; inv H; eapply multistep_hiddenSeq; eauto. Qed.
+
+  Lemma hidden_complementLabel:
+    forall l, Hidden l -> forall dom, Hidden (complementLabel l dom).
+  Proof.
+    unfold Hidden, hide, complementLabel; destruct l as [a d c]; simpl; intros.
+    f_equal.
+    - assert (M.subtractKV signIsEq d c = d) by (inversion_clear H; auto); clear H.
+      M.ext y; apply M.Equal_val with (k:= y) in H0.
+      findeq; repeat rewrite M.complement_find.
+      destruct (in_dec M.F.P.F.eq_dec y dom); auto.
+    - assert (M.subtractKV signIsEq c d = c) by (inversion_clear H; auto); clear H.
+      M.ext y; apply M.Equal_val with (k:= y) in H0.
+      findeq; repeat rewrite M.complement_find.
+      destruct (in_dec M.F.P.F.eq_dec y dom); auto.
+  Qed.
+
+End Hidden.
 
 Section TwoModuleFacts.
   Variables (m1 m2: Modules).
@@ -451,286 +934,6 @@ Section AmortARefl.
 
 End AmortARefl.
 
-Section Duality.
-
-  Definition Dual (l1 l2: LabelT) := defs l1 = calls l2 /\ calls l1 = defs l2.
-  Inductive DualSeq: LabelSeqT -> LabelSeqT -> Prop :=
-  | DSNil: DualSeq nil nil
-  | DSCons: forall ll1 ll2,
-      DualSeq ll1 ll2 ->
-      forall l1 l2,
-        Dual l1 l2 ->
-        DualSeq (l1 :: ll1) (l2 :: ll2).
-
-  Definition dualOf (l: LabelT) :=
-    {| annot := annot l; defs := calls l; calls := defs l |}.
-  Fixpoint dualSeqOf (ll: LabelSeqT) :=
-    match ll with
-    | nil => nil
-    | l :: ll' => dualOf l :: dualSeqOf ll'
-    end.
-
-  Lemma dualOf_dual: forall l, Dual l (dualOf l).
-  Proof. firstorder. Qed.
-
-  Lemma dualSeqOf_dualSeq: forall ll, DualSeq ll (dualSeqOf ll).
-  Proof. induction ll; simpl; constructor; firstorder. Qed.
-
-  Lemma dualOf_methLabel: forall l, MethLabel l -> MethLabel (dualOf l).
-  Proof. firstorder. Qed.
-
-  Lemma dualSeqOf_methLabelSeq: forall ll, MethLabelSeq ll -> MethLabelSeq (dualSeqOf ll).
-  Proof.
-    induction ll; simpl; intros; auto.
-    inv H; constructor; auto.
-  Qed.
-
-  Lemma dual_sym: forall l1 l2, Dual l1 l2 -> Dual l2 l1.
-  Proof. firstorder. Qed.
-
-  Lemma dual_methLabel_trans:
-    forall l1 l2 l3, Dual l1 l2 -> Dual l1 l3 -> MethLabel l2 -> MethLabel l3 -> l2 = l3.
-  Proof.
-    destruct l1, l2, l3; unfold Dual, MethLabel; simpl;
-      intros; dest; repeat subst; auto.
-  Qed.
-
-  Lemma dual_emptyMethLabel:
-    forall l, Dual emptyMethLabel l -> MethLabel l -> l = emptyMethLabel.
-  Proof.
-    destruct l; unfold Dual, MethLabel; simpl; intros; dest; subst; auto.
-  Qed.
-
-  Lemma dual_restrictLabel:
-    forall l1 l2 fs,
-      Dual (restrictLabel l1 fs) (restrictLabel l2 fs) ->
-      forall f, In f fs -> M.find f (defs l1) = M.find f (calls l2) /\
-                           M.find f (calls l1) = M.find f (defs l2).
-  Proof.
-    unfold Dual, restrictLabel; simpl; intros; dest; split.
-    - apply M.Equal_val with (k:= f) in H.
-      rewrite 2! M.restrict_find in H.
-      destruct (in_dec _ f fs); intuition idtac.
-    - apply M.Equal_val with (k:= f) in H1.
-      rewrite 2! M.restrict_find in H1.
-      destruct (in_dec _ f fs); intuition idtac.
-  Qed.
-  
-  Lemma dualSeqOf_app:
-    forall all1 bll1 all2 bll2,
-      DualSeq all1 all2 -> DualSeq bll1 bll2 -> DualSeq (all1 ++ bll1) (all2 ++ bll2).
-  Proof.
-    induction 1; simpl; intros; auto.
-    constructor; auto.
-  Qed.
-
-  Lemma dualSeqOf_rev:
-    forall ll1 ll2, DualSeq ll1 ll2 -> DualSeq (rev ll1) (rev ll2).
-  Proof.
-    induction 1; simpl; intros; [constructor|].
-    apply dualSeqOf_app; auto.
-    constructor; auto.
-    constructor.
-  Qed.
-
-  Lemma dualSeqOf_cons_rev:
-    forall ll1 l1 mll2,
-      DualSeq (ll1 ++ [l1]) mll2 ->
-      exists ll2 l2, mll2 = ll2 ++ [l2] /\ DualSeq ll1 ll2 /\ Dual l1 l2.
-  Proof.
-    induction ll1; simpl; intros.
-    - inv H; inv H2.
-      exists nil, l2; intuition.
-      constructor.
-    - inv H.
-      specialize (IHll1 _ _ H2); dest; subst.
-      exists (l2 :: x), x0; intuition.
-      constructor; auto.
-  Qed.
-
-  Lemma amortizedSeq_dual:
-    forall amt ll1 ll2,
-      AmortizedSeq amt ll1 ll2 ->
-      forall damt dll1 dll2,
-        DualSeq amt damt -> DualSeq ll1 dll1 -> DualSeq ll2 dll2 ->
-        MethLabelSeq damt -> MethLabelSeq dll1 -> MethLabelSeq dll2 ->
-        AmortizedSeq damt dll1 dll2.
-  Proof.
-    induction 1; simpl; intros.
-    - inv H; inv H0; inv H1; constructor.
-    - inv H1; inv H2; inv H4; inv H5.
-      apply dualSeqOf_cons_rev in H0; dest; subst.
-      apply methLabelSeq_rev in H3.
-      rewrite rev_app_distr in H3; simpl in H3; inv H3.
-      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
-      assert (x0 = l2) by (eapply dual_methLabel_trans; eauto); subst.
-      assert (l3 = emptyMethLabel) by (apply dual_emptyMethLabel; auto); subst.
-      econstructor; eauto.
-    - inv H1; inv H2; inv H4; inv H5.
-      apply dualSeqOf_cons_rev in H0; dest; subst.
-      apply methLabelSeq_rev in H3.
-      rewrite rev_app_distr in H3; simpl in H3; inv H3.
-      apply methLabelSeq_rev in H13; rewrite rev_involutive in H13.
-      assert (x0 = l3) by (eapply dual_methLabel_trans; eauto); subst.
-      constructor.
-      apply IHAmortizedSeq; auto; constructor; auto.
-    - inv H0; inv H1; inv H2; inv H4; inv H5.
-      assert (l2 = l0) by (eapply dual_methLabel_trans; eauto); subst.
-      constructor.
-      apply IHAmortizedSeq; auto; constructor.
-  Qed.
-
-  Definition getIntMethsBetween (m1 m2: Modules) :=
-    (filter (fun d => string_in d (getCalls m2)) (getDefs m1))
-      ++ (filter (fun c => string_in c (getDefs m2)) (getCalls m1)).
-
-  Lemma wellHiddenConcat_restrictLabel_Dual:
-    forall m1 m2 fs,
-      DisjList (getDefs m1) (getDefs m2) ->
-      DisjList (getCalls m1) (getCalls m2) ->
-      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
-      forall l1 l2,
-        ValidLabel m1 l1 -> ValidLabel m2 l2 ->
-        wellHidden m1 l1 -> wellHidden m2 l2 ->
-        WellHiddenConcat m1 m2 l1 l2 ->
-        Dual (restrictLabel l1 fs) (restrictLabel l2 fs).
-  Proof.
-    intros.
-    pose proof (validLabel_wellHidden_getExtDefs H2 H4).
-    pose proof (validLabel_wellHidden_getExtDefs H3 H5).
-    pose proof (validLabel_wellHidden_getExtCalls H2 H4).
-    pose proof (validLabel_wellHidden_getExtCalls H3 H5).
-    clear H2 H3 H4 H5.
-    destruct l1 as [a1 d1 c1], l2 as [a2 d2 c2];
-      unfold WellHiddenConcat, wellHidden, hide in *; simpl in *; dest.
-
-    assert (DisjList (getExtDefs m1) (getExtDefs m2)).
-    { eapply DisjList_SubList; [apply getExtDefs_getDefs|].
-      apply DisjList_comm.
-      eapply DisjList_SubList; [apply getExtDefs_getDefs|].
-      apply DisjList_comm; auto.
-    }
-    assert (DisjList (getExtCalls m1) (getExtCalls m2)).
-    { eapply DisjList_SubList; [apply getExtCalls_getCalls|].
-      apply DisjList_comm.
-      eapply DisjList_SubList; [apply getExtCalls_getCalls|].
-      apply DisjList_comm; auto.
-    }
-
-    rewrite M.subtractKV_disj_union_1 in H2 by (eauto using M.DisjList_KeysSubset_Disj).
-    rewrite M.subtractKV_disj_union_5 in H2
-      by (eauto using M.DisjList_KeysSubset_Disj, extDefs_extCalls_disj).
-    rewrite M.subtractKV_disj_union_6 in H2
-      by (eauto using M.DisjList_KeysSubset_Disj, extDefs_extCalls_disj).
-    rewrite M.subtractKV_disj_union_1 in H3 by (eauto using M.DisjList_KeysSubset_Disj).
-    rewrite M.subtractKV_disj_union_5 in H3
-      by (eauto using M.DisjList_KeysSubset_Disj, DisjList_comm, extDefs_extCalls_disj).
-    rewrite M.subtractKV_disj_union_6 in H3
-      by (eauto using M.DisjList_KeysSubset_Disj, DisjList_comm, extDefs_extCalls_disj).
-    pose proof (M.KeysDisj_union_1 H2).
-    pose proof (M.KeysDisj_union_2 H2).
-    pose proof (M.KeysDisj_union_1 H3).
-    pose proof (M.KeysDisj_union_2 H3).
-    clear H2 H3.
-
-    unfold Dual, restrictLabel; simpl; split.
-    - M.ext k.
-      rewrite 2! M.restrict_find.
-      destruct (in_dec M.F.P.F.eq_dec k fs); auto.
-
-      remember (M.find k d1) as ov1; destruct ov1 as [v1|]; intros.
-      + destruct (in_dec string_dec k (getCalls (m1 ++ m2)%kami)).
-        * apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v1) in H6; auto.
-        * apply DisjList_logic_inv with (e:= k) in H1; intuition.
-          apply in_or_app; left.
-          apply filter_In; split.
-          -- apply getDefs_in_1, getExtDefs_getDefs, H7; findeq.
-          -- apply negb_true_iff.
-             remember (string_in _ _); destruct b; auto.
-             apply string_in_dec_in in Heqb; elim n; auto.
-      + remember (M.find k c2) as ov2; destruct ov2 as [v2|]; auto.
-        apply DisjList_logic_inv with (e:= k) in H1; intuition.
-        apply in_or_app; right.
-        apply filter_In; split.
-        * apply getCalls_in_2, getExtCalls_getCalls, H10; findeq.
-        * apply negb_true_iff.
-          remember (string_in _ _); destruct b; auto.
-          apply string_in_dec_in in Heqb.
-          apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v2) in H13; auto.
-          rewrite H13 in Heqov1; inv Heqov1.
-    - M.ext k.
-      rewrite 2! M.restrict_find.
-      destruct (in_dec M.F.P.F.eq_dec k fs); auto.
-
-      remember (M.find k c1) as ov1; destruct ov1 as [v1|]; intros.
-      + destruct (in_dec string_dec k (getDefs (m1 ++ m2)%kami)).
-        * apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v1) in H12; auto.
-        * apply DisjList_logic_inv with (e:= k) in H1; intuition.
-          apply in_or_app; right.
-          apply filter_In; split.
-          -- apply getCalls_in_1, getExtCalls_getCalls, H9; findeq.
-          -- apply negb_true_iff.
-             remember (string_in _ _); destruct b; auto.
-             apply string_in_dec_in in Heqb; elim n; auto.
-      + remember (M.find k d2) as ov2; destruct ov2 as [v2|]; auto.
-        apply DisjList_logic_inv with (e:= k) in H1; intuition.
-        apply in_or_app; left.
-        apply filter_In; split.
-        * apply getDefs_in_2, getExtDefs_getDefs, H8; findeq.
-        * apply negb_true_iff.
-          remember (string_in _ _); destruct b; auto.
-          apply string_in_dec_in in Heqb.
-          apply M.subtractKV_KeysDisj_cases with (k0:= k) (v:= v2) in H11; auto.
-          rewrite H11 in Heqov1; inv Heqov1.
-  Qed.
-
-  Lemma wellHiddenConcatSeq_restrictLabelSeq_DualSeq:
-    forall m1 m2 fs,
-      DisjList (getDefs m1) (getDefs m2) ->
-      DisjList (getCalls m1) (getCalls m2) ->
-      DisjList fs (getExtMeths (m1 ++ m2)%kami) ->
-      forall ll1 ll2,
-        WellHiddenConcatSeq m1 m2 ll1 ll2 ->
-        Forall (fun l => ValidLabel m1 l) ll1 ->
-        Forall (fun l => ValidLabel m2 l) ll2 ->
-        Forall (fun l => wellHidden m1 l) ll1 ->
-        Forall (fun l => wellHidden m2 l) ll2 ->
-        DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll2 fs).
-  Proof.
-    induction 4; [constructor|]; intros.
-    inv H4; inv H5; inv H6; inv H7.
-    simpl; constructor; auto.
-    eapply wellHiddenConcat_restrictLabel_Dual; eauto.
-  Qed.
-
-End Duality.
-
-Section Hidden.
-  Definition Hidden (l: LabelT) := hide l = l.
-  Definition HiddenSeq (ll: LabelSeqT) := Forall (fun l => Hidden l) ll.
-
-  Lemma hide_hidden: forall l, Hidden (hide l).
-  Proof.
-    unfold Hidden; intros.
-    apply eq_sym, hide_idempotent.
-  Qed.
-
-  Lemma step_hidden: forall m o u l, Step m o u l -> Hidden l.
-  Proof.
-    intros; inv H.
-    apply hide_hidden.
-  Qed.
-
-  Lemma multistep_hiddenSeq: forall m o ll n, Multistep m o n ll -> HiddenSeq ll.
-  Proof.
-    induction ll; simpl; intros; [constructor|].
-    constructor; inv H.
-    - eauto using step_hidden.
-    - eapply IHll; eauto.
-  Qed.
-
-End Hidden.
-
 Section Modularity.
   Variables (m1 m2 m3 m4: Modules).
   Variable fs: list string.
@@ -755,6 +958,8 @@ Section Modularity.
   Section AmortizedInteracting.
     
     Definition AmortizedInteracting :=
+      (forall f, In f (getExtCalls m1) /\ In f (getExtDefs m3) -> In f fs) /\
+      (forall f, In f (getExtDefs m1) /\ In f (getExtCalls m3) -> In f fs) /\
       (forall f, In f (getExtCalls m2) /\ In f (getExtDefs m4) -> In f fs) /\
       (forall f, In f (getExtDefs m2) /\ In f (getExtCalls m4) -> In f fs).
 
@@ -803,7 +1008,7 @@ Section Modularity.
             eapply DisjList_KeysSubset_KeysDisj.
             -- apply extDefs_calls_disj.
             -- assumption.
-          * pose proof (dual_restrictLabel H1) as Hdr; simpl in Hdr.
+          * pose proof (restrictLabel_dual_implies H1) as Hdr; simpl in Hdr.
             apply M.subtractKV_KeysDisj_2; intros.
             apply Hdr, (proj2 Hai); split.
             -- apply H6; findeq.
@@ -812,9 +1017,9 @@ Section Modularity.
                elim H10; apply getExtDefs_getDefs; apply H6; findeq.
         + eapply M.KeysDisj_SubList; [|eapply getCalls_subList_2].
           apply M.KeysDisj_app.
-          * pose proof (dual_restrictLabel H1) as Hdr; simpl in Hdr.
+          * pose proof (restrictLabel_dual_implies H1) as Hdr; simpl in Hdr.
             apply M.subtractKV_KeysDisj_2; intros.
-            apply eq_sym, Hdr, (proj1 Hai); split.
+            apply eq_sym, Hdr, (proj1 (proj2 (proj2 Hai))); split.
             -- apply getCalls_not_getDefs_getExtCalls; auto.
                destruct (Hddisj24 k); auto.
                elim H10; apply getExtDefs_getDefs; apply H8; findeq.
@@ -835,15 +1040,15 @@ Section Modularity.
             eapply DisjList_KeysSubset_KeysDisj.
             -- apply extCalls_defs_disj.
             -- assumption.
-          * pose proof (dual_restrictLabel H1) as Hdr; simpl in Hdr.
+          * pose proof (restrictLabel_dual_implies H1) as Hdr; simpl in Hdr.
             apply M.subtractKV_KeysDisj_2; intros.
-            apply Hdr, (proj1 Hai); split.
+            apply Hdr, (proj1 (proj2 (proj2 Hai))); split.
             -- apply H7; findeq.
             -- apply getDefs_not_getCalls_getExtDefs; auto.
                destruct (Hcdisj24 k); auto.
                elim H10; apply getExtCalls_getCalls; apply H7; findeq.
         + rewrite getDefs_app; apply M.KeysDisj_app.
-          * pose proof (dual_restrictLabel H1) as Hdr; simpl in Hdr.
+          * pose proof (restrictLabel_dual_implies H1) as Hdr; simpl in Hdr.
             apply M.subtractKV_KeysDisj_2; intros.
             apply eq_sym, Hdr, (proj2 Hai); split.
             -- apply getDefs_not_getCalls_getExtDefs; auto.
@@ -869,6 +1074,101 @@ Section Modularity.
       inv H; inv H0.
       constructor; auto.
       eauto using amortizedInteracting_wellHiddenModular.
+    Qed.
+
+    Lemma equivalentLabelWithout_dual_equivalentLabel:
+      forall vp l1 l2,
+        ValidLabel m1 l1 -> ValidLabel m2 l2 ->
+        wellHidden m1 l1 -> wellHidden m2 l2 ->
+        Hidden l1 -> Hidden l2 ->
+        EquivalentLabelWithout (liftToMap1 vp) fs l1 l2 ->
+        forall l3 l4,
+          ValidLabel m3 l3 -> ValidLabel m4 l4 ->
+          wellHidden m3 l3 -> wellHidden m4 l4 ->
+          Hidden l3 -> Hidden l4 ->
+          EquivalentLabelWithout (liftToMap1 vp) fs l3 l4 ->
+          Dual (restrictLabel l1 fs) (restrictLabel l3 fs) ->
+          Dual (restrictLabel l2 fs) (restrictLabel l4 fs) ->
+          equivalentLabel (liftToMap1 vp) (hide (mergeLabel l1 l3)) (hide (mergeLabel l2 l4)).
+    Proof.
+      intros.
+      assert (Hdl13: DisjLabel l1 l3)
+        by (inv H; inv H6; eapply disjList_KeysSubset_DisjLabel; eauto).
+      assert (Hdl24: DisjLabel l2 l4)
+        by (inv H0; inv H7; eapply disjList_KeysSubset_DisjLabel; eauto).
+      rewrite dual_restrictLabel_hide_mergeLabel_complementLabel
+      with (d:= fs) (l1:= l1) (l2:= l3); try assumption.
+      rewrite dual_restrictLabel_hide_mergeLabel_complementLabel
+      with (d:= fs) (l1:= l2) (l2:= l4); try assumption.
+
+      rewrite 2! disjLabel_NonInteractingLabel_hide_mergeLabel;
+        [|apply disjLabel_complementLabel; auto|
+         |apply disjLabel_complementLabel; auto|].
+
+      - replace (hide (complementLabel l1 fs)) with (complementLabel l1 fs)
+          by (apply eq_sym, hidden_complementLabel; assumption).
+        replace (hide (complementLabel l2 fs)) with (complementLabel l2 fs)
+          by (apply eq_sym, hidden_complementLabel; assumption).
+        replace (hide (complementLabel l3 fs)) with (complementLabel l3 fs)
+          by (apply eq_sym, hidden_complementLabel; assumption).
+        replace (hide (complementLabel l4 fs)) with (complementLabel l4 fs)
+          by (apply eq_sym, hidden_complementLabel; assumption).
+
+        unfold EquivalentLabelWithout in H5, H12.
+        apply disjLabel_complementLabel with (d1:= fs) (d2:= fs) in Hdl13.
+        apply disjLabel_complementLabel with (d1:= fs) (d2:= fs) in Hdl24.
+        unfold DisjLabel in Hdl13, Hdl24.
+        unfold complementLabel in *; simpl in *.
+
+        dest; subst; unfold equivalentLabel; simpl; repeat split.
+        + rewrite <-H5, <-H12; apply liftToMap1_union; assumption.
+        + rewrite <-H19, <-H21; apply liftToMap1_union; assumption.
+        + destruct (annot l1), (annot l2), (annot l3), (annot l4); auto.
+
+      - inv Hai; dest.
+        eapply validLabel_complementLabel_NonInteractingLabel.
+        + eapply validLabel_wellHidden_getExtDefs; eauto.
+        + eapply validLabel_wellHidden_getExtCalls; eauto.
+        + eapply validLabel_wellHidden_getExtDefs; eauto.
+        + eapply validLabel_wellHidden_getExtCalls; eauto.
+        + assumption.
+        + assumption.
+      - inv Hai; dest.
+        eapply validLabel_complementLabel_NonInteractingLabel.
+        + eapply validLabel_wellHidden_getExtDefs; eauto.
+        + eapply validLabel_wellHidden_getExtCalls; eauto.
+        + eapply validLabel_wellHidden_getExtDefs; eauto.
+        + eapply validLabel_wellHidden_getExtCalls; eauto.
+        + assumption.
+        + assumption.
+    Qed.
+
+    Lemma equivalentLabelSeqWithout_dualSeq_equivalentLabelSeq:
+      forall vp ll1 ll2,
+        EquivalentLabelSeqWithout (liftToMap1 vp) fs ll1 ll2 ->
+        Forall (fun l1 => ValidLabel m1 l1) ll1 ->
+        Forall (fun l2 => ValidLabel m2 l2) ll2 ->
+        Forall (fun l1 => wellHidden m1 l1) ll1 ->
+        Forall (fun l2 => wellHidden m2 l2) ll2 ->
+        HiddenSeq ll1 -> HiddenSeq ll2 ->
+        forall ll3 ll4,
+          Forall (fun l3 => ValidLabel m3 l3) ll3 ->
+          Forall (fun l4 => ValidLabel m4 l4) ll4 ->
+          Forall (fun l3 => wellHidden m3 l3) ll3 ->
+          Forall (fun l4 => wellHidden m4 l4) ll4 ->
+          HiddenSeq ll3 -> HiddenSeq ll4 ->
+          EquivalentLabelSeqWithout (liftToMap1 vp) fs ll3 ll4 ->
+          DualSeq (restrictLabelSeq ll1 fs) (restrictLabelSeq ll3 fs) ->
+          DualSeq (restrictLabelSeq ll2 fs) (restrictLabelSeq ll4 fs) ->
+          equivalentLabelSeq (liftToMap1 vp) (composeLabels ll1 ll3) (composeLabels ll2 ll4).
+    Proof.
+      induction 1; simpl; intros; [constructor|].
+      destruct ll3 as [|l3 ll3]; inv H14.
+      destruct ll4 as [|l4 ll4]; inv H15.
+      inv H1; inv H2; inv H3; inv H4; inv H5; inv H6.
+      inv H7; inv H8; inv H9; inv H10; inv H11; inv H12.
+      inv H13; constructor; auto.
+      eauto using equivalentLabelWithout_dual_equivalentLabel.
     Qed.
 
     Theorem traceRefinesAmort_modular_interacting:
@@ -918,8 +1218,10 @@ Section Modularity.
           * inv H; eauto using multistep_hiddenSeq.
           * inv H0; eauto using multistep_hiddenSeq.
           * rewrite <-H10; apply dualSeqOf_dualSeq.
-      - admit. (* equivalentLabel --> Dual --> equivalentLabel *)
-    Admitted.
+      - apply equivalentLabelSeqWithout_dualSeq_equivalentLabelSeq;
+          eauto using behavior_ValidLabel, behavior_wellHidden, behavior_hiddenSeq.
+        rewrite <-H10; apply dualSeqOf_dualSeq.
+    Qed.
 
   End AmortizedInteracting.
   
@@ -941,10 +1243,8 @@ Section Substitution.
              (Hvr1: ValidRegsModules type m1)
              (Hvr2: ValidRegsModules type m2)
              (Hvrc: ValidRegsModules type ctxt)
-             (* TODO: reduce below three hypotheses about [fs]. *)
              (Hfs1: SubList (getExtMeths ctxt) fs)
              (Hfs2: DisjList fs (getExtMeths (m1 ++ ctxt)%kami))
-             (Hai: AmortizedInteracting m2 ctxt fs)
              (Hcr: getRules ctxt = nil).
 
   Corollary traceRefinesAmort_refl_modular:
@@ -953,6 +1253,7 @@ Section Substitution.
   Proof.
     intros.
     eapply traceRefinesAmort_modular_interacting; eauto.
+    - repeat split; intros; dest; apply Hfs1; auto; apply in_or_app; auto.
     - rewrite idElementwiseId; eauto.
     - rewrite idElementwiseId.
       apply traceRefinesAmortA_refl; auto.
