@@ -347,6 +347,16 @@ Proof.
       specialize (H0 k); destruct H0; auto.
 Qed.
 
+Lemma hide_mergeLabel_disj:
+  forall la lb,
+    M.Disj (defs la) (calls lb) ->
+    M.Disj (defs lb) (calls la) ->
+    hide (mergeLabel la lb) = mergeLabel (hide la) (hide lb).
+Proof.
+  unfold hide; destruct la as [anna dsa csa], lb as [annb dsb csb]; simpl; intros.
+  f_equal; meq.
+Qed.
+
 Lemma hide_mergeLabel_idempotent:
   forall la lb,
     M.Disj (defs la) (defs lb) ->
@@ -354,8 +364,7 @@ Lemma hide_mergeLabel_idempotent:
     hide (mergeLabel la lb) = hide (mergeLabel (hide la) (hide lb)).
 Proof.
   intros; destruct la as [anna dsa csa], lb as [annb dsb csb].
-  simpl in *.
-  unfold hide; simpl; f_equal; meq.
+  simpl in *; unfold hide; simpl; f_equal; meq.
 Qed.
 
 Lemma wellHidden_combine:
@@ -1785,6 +1794,16 @@ Proof.
   intros; apply DisjList_comm, DisjList_SubList with (l1:= getCalls m).
   - apply getExtCalls_getCalls.
   - apply DisjList_comm, extDefs_calls_disj.
+Qed.
+
+Lemma validLabel_wellHidden_disj:
+  forall m l, ValidLabel m l -> wellHidden m l -> M.Disj (defs l) (calls l).
+Proof.
+  intros.
+  pose proof (validLabel_wellHidden_getExtCalls H H0).
+  pose proof (validLabel_wellHidden_getExtDefs H H0).
+  pose proof (extDefs_extCalls_disj m).
+  eauto using M.DisjList_KeysSubset_Disj.
 Qed.
 
 Lemma getCalls_not_getDefs_getExtCalls:
