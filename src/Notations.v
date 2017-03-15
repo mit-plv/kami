@@ -23,14 +23,9 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..).
 
-
 (** Notations for expressions *)
 
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope.
-
-(*
-Notation "`` A" := ({| Lib.Struct.bindex := A%string |}) (at level 0, format "`` A").
-*)
 
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_expr_scope.
 (* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_expr_scope. *)
@@ -55,7 +50,6 @@ Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 
-
 Delimit Scope kami_expr_scope with kami_expr.
 
 Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
@@ -63,9 +57,7 @@ Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq
 Notation "s !! f" := (Lib.VectorFacts.Vector_find
                         (fun x => Lib.StringEq.string_eq f%string (attrName x)) s)
                        (at level 0).
-
 Notation "e ! s @. f" := (@ReadField _ _ s (s !! f) e%kami_expr) (at level 0): kami_expr_scope.
-
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.
 Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_expr_scope.
@@ -84,14 +76,8 @@ Notation "name ::= value" :=
           (Build_Attribute name _) value) (at level 50) : init_scope.
 Delimit Scope init_scope with init.
 
-
-
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..)) : kami_expr_scope.
-
-
-
-
 Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
 
 Definition isValid := "isValid"%string.
@@ -154,6 +140,12 @@ Notation "'Write' reg : kind <- expr ; cont " :=
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (IfElse cexpr%kami_expr tact fact (fun name => cont))
     (at level 13, right associativity, name at level 0, cexpr at level 0, tact at next level, fact at next level) : kami_action_scope.
+Notation "'If' cexpr 'then' tact 'else' fact ; cont " :=
+  (IfElse cexpr%kami_expr tact fact (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level, fact at next level) : kami_action_scope.
+Notation "'If' cexpr 'then' tact ; cont" :=
+  (IfElse cexpr%kami_expr tact (Return (Const _ (k := Void) Default)) (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level) : kami_action_scope.
 Notation "'Assert' expr ; cont " :=
   (Assert_ expr%kami_expr cont)
     (at level 12, right associativity) : kami_action_scope.
@@ -327,6 +319,12 @@ Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (SIfElse cexpr%kami_expr tact fact (fun name => cont))
     (at level 13, right associativity, name at level 0,
      cexpr at level 0, tact at next level, fact at next level) : kami_sin_scope.
+Notation "'If' cexpr 'then' tact 'else' fact ; cont " :=
+  (SIfElse cexpr%kami_expr tact fact (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level, fact at next level) : kami_sin_scope.
+Notation "'If' cexpr 'then' tact ; cont " :=
+  (SIfElse cexpr%kami_expr tact (SReturn (Const _ (k := Void) Default)) (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level) : kami_sin_scope.
 Notation "'Assert' expr ; cont " :=
   (SAssert_ expr%kami_expr cont)
     (at level 12, right associativity) : kami_sin_scope.
@@ -479,6 +477,12 @@ Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
   (GIfElse cexpr%kami_expr tact fact (fun name => cont))
     (at level 13, right associativity, name at level 0,
      cexpr at level 0, tact at next level, fact at next level) : kami_gen_scope.
+Notation "'If' cexpr 'then' tact 'else' fact ; cont " :=
+  (GIfElse cexpr%kami_expr tact fact (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level, fact at next level) : kami_gen_scope.
+Notation "'If' cexpr 'then' tact ; cont " :=
+  (GIfElse cexpr%kami_expr tact (GReturn _ (Const _ (k := Void) Default)) (fun _ => cont))
+    (at level 13, right associativity, cexpr at level 0, tact at next level) : kami_gen_scope.
 Notation "'Assert' expr ; cont " :=
   (GAssert_ expr%kami_expr cont)
     (at level 12, right associativity) : kami_gen_scope.
