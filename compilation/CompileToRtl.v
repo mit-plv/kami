@@ -3,26 +3,31 @@ Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct Lib.StringEq 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-
 Open Scope string.
-Definition getRegActionRead a s := a ++ "$" ++ s ++ "$read".
-Definition getRegActionWrite a s := a ++ "$" ++ s ++ "$write".
-Definition getRegActionEn a s := a ++ "$" ++ s ++ "$en".
+Fixpoint string_of_nat n :=
+  match n with
+    | 0 => "0"
+    | S m => "S" ++ string_of_nat m
+  end.
 
-Definition getMethCallRet f := f ++ "$ret".
-Definition getMethCallActionArg a f := a ++ "$" ++ f ++ "$arg".
-Definition getMethCallActionEn a f := a ++ "$" ++ f ++ "$en".
+Local Notation nil_nat := (nil: list nat).
+Definition getRegActionRead a s := (a ++ "$" ++ s ++ "$read", nil_nat).
+Definition getRegActionWrite a s := (a ++ "$" ++ s ++ "$write", nil_nat).
+Definition getRegActionEn a s := (a ++ "$" ++ s ++ "$en", nil_nat).
 
-Definition getMethDefRet f := f ++ "$ret".
-Definition getMethDefArg f := f ++ "$arg".
-Definition getMethDefGuard f := f ++ "$g".
+Definition getMethCallRet f := (f ++ "$ret", nil_nat).
+Definition getMethCallActionArg a f := (a ++ "$" ++ f ++ "$arg", nil_nat).
+Definition getMethCallActionEn a f := (a ++ "$" ++ f ++ "$en", nil_nat).
 
-Definition getRuleGuard r := r ++ "$g".
-Definition getRuleEn r := r ++ "$en".
+Definition getMethRet f := (f ++ "$ret", nil_nat).
+Definition getMethArg f := (f ++ "$arg", nil_nat).
 
-Definition getRegIndexWrite r i := r ++ "$write$" ++ String (ascii_of_nat i) "".
-Definition getRegIndexWriteEn r i := r ++ "$writeEn$" ++ String (ascii_of_nat i) "".
-Definition getRegIndexRead r i := r ++ "$read" ++ String (ascii_of_nat i) "".
+Definition getActionGuard r := (r ++ "$g", nil_nat).
+Definition getActionEn r := (r ++ "$en", nil_nat).
+
+Definition getRegIndexWrite r i := (r ++ "$write$" ++ string_of_nat i, nil_nat).
+Definition getRegIndexWriteEn r i := (r ++ "$writeEn$" ++ string_of_nat i, nil_nat).
+Definition getRegIndexRead r i := (r ++ "$read$" ++ string_of_nat i, nil_nat).
 
 Close Scope string.
 
@@ -84,9 +89,9 @@ Section Compile.
   Fixpoint convertActionToRtl_noGuard k (a: ActionT (fun _ => list nat) k) enable startList retList :=
     match a in ActionT _ _ with
       | MCall meth k argExpr cont =>
-        (getMethCallActionArg name meth, nil, existT _ (arg k) (convertExprToRtl argExpr)) ::
-        (getMethCallActionEn name meth, nil, existT _ Bool enable) ::
-        (name, startList, existT _ (ret k) (RtlReadWire (ret k) (getMethCallRet meth, nil))) ::
+        (getMethCallActionArg name meth, existT _ (arg k) (convertExprToRtl argExpr)) ::
+        (getMethCallActionEn name meth, existT _ Bool enable) ::
+        (name, startList, existT _ (ret k) (RtlReadWire (ret k) (getMethCallRet meth))) ::
         convertActionToRtl_noGuard (cont startList) enable (inc startList) retList
       | Let_ k' expr cont =>
         let wires := convertActionToRtl_noGuard (cont (cast k' startList)) enable (inc startList) retList in
@@ -98,14 +103,14 @@ Section Compile.
         let wires := convertActionToRtl_noGuard (cont (cast k' startList)) enable (inc startList) retList in
         match k' return list (string * list nat * sigT RtlExpr) with
           | SyntaxKind k => (name, startList,
-                             existT _ k (RtlReadReg k (getRegActionRead name r))) :: wires
+                             existT _ k (RtlReadWire k (getRegActionRead name r))) :: wires
           | _ => wires
         end
       | WriteReg r k' expr cont =>
         let wires := convertActionToRtl_noGuard cont enable startList retList in
         match k' return Expr (fun _ => list nat) k' -> list (string * list nat * sigT RtlExpr) with
-          | SyntaxKind k => fun expr => (getRegActionWrite name r, nil, existT _ k (convertExprToRtl expr)) ::
-                                        (getRegActionEn name r, nil, existT _ Bool enable) :: wires
+          | SyntaxKind k => fun expr => (getRegActionWrite name r, existT _ k (convertExprToRtl expr)) ::
+                                        (getRegActionEn name r, existT _ Bool enable) :: wires
           | _ => fun _ => wires
         end expr
       | Assert_ pred cont => convertActionToRtl_noGuard cont enable startList retList
@@ -141,20 +146,20 @@ Section Compile.
 End Compile.
   
 Definition convertRuleToRtl (r: Attribute (Action Void)) :=
-  (getRuleGuard (attrName r), nil,
+  (getActionGuard (attrName r),
    existT _ Bool (convertActionToRtl_guard (attrName r) (attrType r (fun _ => list nat)) (1 :: nil))) ::
   convertActionToRtl_noGuard (attrName r) (attrType r (fun _ => list nat)) (RtlConst (ConstBool true)) (1 :: nil) (0 :: nil).
 
 Definition convertMethodToRtl_wire (f: DefMethT) :=
-  (getMethDefGuard (attrName f), nil,
+  (getActionGuard (attrName f),
    existT _ Bool (convertActionToRtl_guard (attrName f) (projT2 (attrType f) (fun _ => list nat) (1 :: nil)) (2 :: nil))) ::
   (attrName f, 1 :: nil,
-   existT _ (arg (projT1 (attrType f))) (RtlReadWire (arg (projT1 (attrType f))) (getMethDefArg (attrName f), nil))) ::
+   existT _ (arg (projT1 (attrType f))) (RtlReadWire (arg (projT1 (attrType f))) (getMethArg (attrName f)))) ::
   convertActionToRtl_noGuard (attrName f) (projT2 (attrType f) (fun _ => list nat) (1 :: nil))
    (RtlConst (ConstBool true)) (2 :: nil) (0 :: nil).
 
 Definition convertMethodToRtl_output (f: DefMethT) :=
-  (getMethDefRet (attrName f), existT _ _ (RtlReadWire (ret (projT1 (attrType f))) (attrName f, 0 :: nil))).
+  (getMethRet (attrName f), existT _ _ (RtlReadWire (ret (projT1 (attrType f))) (attrName f, 0 :: nil))).
 
 Fixpoint getWritesAction k (a: ActionT typeUT k) :=
   match a with
@@ -178,16 +183,16 @@ Fixpoint getReadsAction k (a: ActionT typeUT k) :=
     | Return x => nil
   end.
 
-Definition getReadsRule (r: Attribute (Action Void)) :=
+Definition getReadsRuleBody (r: Attribute (Action Void)) :=
   (getReadsAction (attrType r typeUT)).
 
-Definition getReadsMeth (f: DefMethT) :=
+Definition getReadsMethBody (f: DefMethT) :=
   (getReadsAction (projT2 (attrType f) typeUT tt)).
 
-Definition getWritesRule (r: Attribute (Action Void)) :=
+Definition getWritesRuleBody (r: Attribute (Action Void)) :=
   (getWritesAction (attrType r typeUT)).
 
-Definition getWritesMeth (f: DefMethT) :=
+Definition getWritesMethBody (f: DefMethT) :=
   (getWritesAction (projT2 (attrType f) typeUT tt)).
 
 Section UsefulFunctions.
@@ -201,18 +206,20 @@ Section UsefulFunctions.
       | Some rule => getRegs rule
     end.
 
-  Definition getReadsRuleName r := (getFromName getRules getReadsRule r).
-  Definition getWritesRuleName r := (getFromName getRules getWritesRule r).
-  Definition getReadsMethName f := (getFromName getDefsBodies getReadsMeth f).
-  Definition getWritesMethName f := (getFromName getDefsBodies getWritesMeth f).
+  Definition getReadsRule r := (getFromName getRules getReadsRuleBody r).
+  Definition getWritesRule r := (getFromName getRules getWritesRuleBody r).
+  Definition getReadsMeth f := (getFromName getDefsBodies getReadsMethBody f).
+  Definition getWritesMeth f := (getFromName getDefsBodies getWritesMethBody f).
 
-  Definition getReads x := getReadsRuleName x ++ getReadsMethName x.
-  Definition getWrites x := getWritesRuleName x ++ getWritesMethName x.
+  Definition getReads x := getReadsRule x ++ getReadsMeth x.
+  Definition getWrites x := getWritesRule x ++ getWritesMeth x.
   
   Definition getCallGraph :=
     fold_left (fun g (r: Attribute (Action Void)) => (attrName r, getCallsRule r) :: g) (getRules m) nil
               ++
               fold_left (fun g (f: DefMethT) => (attrName f, getCallsDm f) :: g) (getDefsBodies m) nil.
+
+  Definition getCallers f := map fst (filter (fun x => if find (string_eq f) (snd x) then true else false) getCallGraph).
 
   Definition getAllCalls a := getConnectedChain string_dec (getCallGraph) a.
 
@@ -224,7 +231,13 @@ Section UsefulFunctions.
 
   Definition correctIgnoreLess :=
     filter (fun x => is_nil (intersect string_dec (getAllCalls (fst x))
-                            (getAllCalls (snd x)))) ignoreLess.
+                                       (getAllCalls (snd x)))) ignoreLess.
+
+  Definition getWritesWhichCall reg calls := find (fun call => if find (string_eq reg) (getWritesMeth call) then true else false) calls.
+
+  Definition getWhoWrote rule reg := if in_dec string_dec reg (getWritesRule rule)
+                                     then Some rule
+                                     else getWritesWhichCall reg (getAllCalls rule).
 
   Section GenerateRegIndicies.
     Variable reg: string.
@@ -237,7 +250,7 @@ Section UsefulFunctions.
           | nil => None
           | x :: xs => match find_write_prev_pos' (S currPos) xs with
                          | None =>
-                           if in_dec string_dec reg (getAllWrites x)
+                           if find (string_eq reg) (getAllWrites x)
                            then if lt_dec currPos pos
                                 then Some (currPos, x)
                                 else None
@@ -276,7 +289,7 @@ Section UsefulFunctions.
                fun findRegIndex =>
                  match nth_error totalOrder (S m) with
                    | Some a =>
-                     if in_dec string_dec reg (getAllReads a ++ getAllWrites a)%list
+                     if find (string_eq reg) (getAllReads a ++ getAllWrites a)%list
                      then
                        match
                          find_write_prev_pos (S m) as val
@@ -306,7 +319,7 @@ Section UsefulFunctions.
   Local Fixpoint methPos' f ls n :=
     match ls with
       | nil => nil
-      | x :: xs => if in_dec string_dec f (getAllCalls x)
+      | x :: xs => if find (string_eq f) (getAllCalls x)
                    then n :: methPos' f xs (S n)
                    else methPos' f xs (S n)
     end.
@@ -353,54 +366,101 @@ Section UsefulFunctions.
       end
     else nil.
 
-  Definition disables rule : list string :=
-    match find_pos string_dec rule totalOrder with
-      | None => nil
-      | Some posSecond => disables' (pred posSecond) posSecond
+  Definition getRegType reg :=
+    match attrType reg with
+      | RegInitCustom (existT (SyntaxKind k) _) => k
+      | RegInitDefault (SyntaxKind k) => k
+      | _ => Void
     end.
 
-  Definition computeRuleEnAssign rule :=
-    (getRuleEn rule, nil: list nat,
-     existT RtlExpr Bool
-            (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool And e (RtlReadWire Bool (getRuleEn r, nil)))
-                       (disables rule) (RtlConst true))).
+  Section OneRule.
+    Variable rule: string.
 
-  Definition getRulePos r := find_pos string_dec r totalOrder.
+    Definition disables: list string :=
+      match find_pos string_dec rule totalOrder with
+        | None => nil
+        | Some posSecond => disables' (pred posSecond) posSecond
+      end.
 
-  Definition getRuleRegIndex rule reg :=
-    match getRulePos rule with
-      | None => 0
-      | Some x => regIndex reg x
-    end.
+    Definition computeRuleEnAssign :=
+      (getActionEn rule,
+       existT RtlExpr Bool
+              (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool And e (RtlUniBool Neg (RtlReadWire Bool (getActionEn r))))
+                         disables (RtlConst true))).
+
+    Definition getRulePos := find_pos string_dec rule totalOrder.
+
+    Definition getRuleRegIndex reg :=
+      match getRulePos with
+        | None => 0
+        | Some x => regIndex reg x
+      end.
+  End OneRule.
+
+  Definition getPos a := match getRulePos a, head (methPos a) with
+                           | Some x, _ => Some x
+                           | _, Some y => Some y
+                           | None, None => None
+                         end.
   
-  Definition getRegIndexWriteRules reg idx :=
-    fold_left (fun rest x => match getRulePos x with
-                               | None => rest
-                               | Some p => if Nat.eq_dec (regIndex reg p) idx
-                                           then if find (string_eq reg) (getWritesRuleName x)
-                                                then x :: rest
-                                                else rest
-                                           else rest
-                             end) (map (@attrName _) (getRules m)) nil.
-  
-  Definition computeRegIndexWrite ty reg idx :=
-    (getRegIndexWrite reg idx, (nil: list nat),
-     existT RtlExpr ty
-            (fold_left (fun expr r => RtlITE (RtlReadWire Bool (getRuleEn r, nil))
-                                             (RtlReadWire ty (getRegActionWrite r reg, nil)) expr) (getRegIndexWriteRules reg idx)
-                       (RtlReadWire ty (getRegIndexRead reg idx, nil)))).
+  Definition computeActionReadIndices a :=
+    fold_left (fun rest reg => match getPos a with
+                                 | None => rest
+                                 | Some idx =>
+                                   if find (string_eq (attrName reg)) (getReads a)
+                                   then
+                                     (getRegActionRead a (attrName reg),
+                                      existT RtlExpr (getRegType reg)
+                                             (RtlReadWire (getRegType reg)
+                                                          (getRegIndexRead (attrName reg) (regIndex (attrName reg) idx))))
+                                       ::
+                                       rest
+                                   else rest
+                               end) (getRegInits m) nil.
 
-  Definition computeRegFinalWrite ty reg := (reg, existT RtlExpr ty (RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg), nil))).
-
-  (*
-  Local Fixpoint computeLastRegWrite' ty reg n :=
-    match maxRegIndex reg with
-      | 0 => RtlReadReg ty (getRegIndexWrite reg 0)
-      | S m => RtlExpr ty (RtlITE (RtlReadWire Bool (getRegIndexWriteEn reg (S m))) (RtlReadWire ty (getRegIndexWrite reg (S m)))
-                                  (computeLastRegWrite' ty reg m))
-    end.
-   *)
   
+  Section OneReg.
+    Variable ty: Kind.
+    Variable reg: string.
+    
+    Local Definition getRegIndexWriters idx :=
+      fold_left (fun rest x => match getRulePos x with
+                                 | None => rest
+                                 | Some p => if Nat.eq_dec (regIndex reg p) idx
+                                             then match getWhoWrote x reg with
+                                                    | None => rest
+                                                    | Some y => y :: rest
+                                                  end
+                                             else rest
+                               end) (map (@attrName _) (getRules m)) nil.
+    
+    Local Definition computeRegIndexWrite idx :=
+      (getRegIndexWrite reg idx,
+       existT RtlExpr ty
+              (fold_left (fun expr r => RtlITE (RtlReadWire Bool (getActionEn r))
+                                               (RtlReadWire ty (getRegActionWrite r reg)) expr) (getRegIndexWriters idx)
+                         (RtlReadWire ty (getRegIndexRead reg idx)))).
+
+    Definition computeRegFinalWrite := (reg, existT RtlExpr ty (RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg)))).
+
+    Local Fixpoint computeLastRegWrite' n :=
+      match n with
+        | 0 => RtlReadWire ty (getRegIndexWrite reg 0)
+        | S m => RtlITE (RtlReadWire Bool (getRegIndexWriteEn reg (S m))) (RtlReadWire ty (getRegIndexWrite reg (S m)))
+                        (computeLastRegWrite' m)
+      end.
+
+    Definition computeLastRegWrite := computeLastRegWrite' (maxRegIndex reg).
+
+    Local Fixpoint connectRegWritesToReads' n :=
+      match n with
+        | 0 => (getRegIndexRead reg 0, RtlReadReg ty reg)
+        | S m => (getRegIndexRead reg (S m), RtlReadWire ty (getRegIndexWrite reg m))
+      end.
+
+    Definition connectRegWritesToReads := connectRegWritesToReads' (maxRegIndex reg).  
+  End OneReg.
+
 End UsefulFunctions.
 
 Require Import Kami.Tutorial.
