@@ -512,6 +512,10 @@ Section GetCalls.
       f_equal; f_equal; auto.
   Qed.
 
+  Fixpoint getCallsRule (r: Attribute (Action (Bit 0)))
+  : list string :=
+    getCallsA (attrType r typeUT).
+
   Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with

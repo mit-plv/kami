@@ -19,6 +19,11 @@ Section intersect.
   Definition not_nil (a: list A) := match a with
                                      | x :: xs => true
                                      | _ => false
+                                    end.
+
+  Definition is_nil (a: list A) := match a with
+                                     | x :: xs => false
+                                     | _ => true
                                    end.
 
   Fixpoint find_pos' s (ls: list A) n :=

@@ -1,4 +1,4 @@
-Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct Lib.StringEq List Compare_dec Compile.Helpers.
+Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct Lib.StringEq List Compare_dec Compile.Helpers Coq.Strings.Ascii PeanoNat.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -19,6 +19,10 @@ Definition getMethDefGuard f := f ++ "$g".
 
 Definition getRuleGuard r := r ++ "$g".
 Definition getRuleEn r := r ++ "$en".
+
+Definition getRegIndexWrite r i := r ++ "$write$" ++ String (ascii_of_nat i) "".
+Definition getRegIndexWriteEn r i := r ++ "$writeEn$" ++ String (ascii_of_nat i) "".
+Definition getRegIndexRead r i := r ++ "$read" ++ String (ascii_of_nat i) "".
 
 Close Scope string.
 
@@ -152,12 +156,6 @@ Definition convertMethodToRtl_wire (f: DefMethT) :=
 Definition convertMethodToRtl_output (f: DefMethT) :=
   (getMethDefRet (attrName f), existT _ _ (RtlReadWire (ret (projT1 (attrType f))) (attrName f, 0 :: nil))).
 
-Local Notation getCallsRule r :=
-   (getCallsA (attrType r typeUT)).
-
-Local Notation getCallsMeth f :=
-  (getCallsA (projT2 (attrType f) typeUT tt)).
-
 Fixpoint getWritesAction k (a: ActionT typeUT k) :=
   match a with
     | MCall meth k argExpr cont => getWritesAction (cont tt)
@@ -180,16 +178,16 @@ Fixpoint getReadsAction k (a: ActionT typeUT k) :=
     | Return x => nil
   end.
 
-Local Notation getReadsRule r :=
+Definition getReadsRule (r: Attribute (Action Void)) :=
   (getReadsAction (attrType r typeUT)).
 
-Local Notation getReadsMeth f :=
+Definition getReadsMeth (f: DefMethT) :=
   (getReadsAction (projT2 (attrType f) typeUT tt)).
 
-Local Notation getWritesRule r :=
+Definition getWritesRule (r: Attribute (Action Void)) :=
   (getWritesAction (attrType r typeUT)).
 
-Local Notation getWritesMeth f :=
+Definition getWritesMeth (f: DefMethT) :=
   (getWritesAction (projT2 (attrType f) typeUT tt)).
 
 Section UsefulFunctions.
@@ -197,79 +195,36 @@ Section UsefulFunctions.
   Variable totalOrder: list string.
   Variable ignoreLess: list (string * string).
 
-  Definition regLessRuleRule s1 s2 :=
-    match find (fun r => string_eq s1 (attrName r)) (getRules m), find (fun r => string_eq s2 (attrName r)) (getRules m) with
-      | Some r1, Some r2 => not_nil (intersect string_dec (getReadsRule r1 ++ getWritesRule r1) (getWritesRule r2))
-      | _, _ => false
+  Local Notation getFromName getObjects getRegs r :=
+    match find (fun a => string_eq r (attrName a)) (getObjects m) with
+      | None => nil
+      | Some rule => getRegs rule
     end.
 
-  Definition regLessMethMeth s1 s2 :=
-    match find (fun r => string_eq s1 (attrName r)) (getDefsBodies m), find (fun r => string_eq s2 (attrName r)) (getDefsBodies m) with
-      | Some r1, Some r2 => not_nil (intersect string_dec (getReadsMeth r1 ++ getWritesMeth r1) (getWritesMeth r2))
-      | _, _ => false
-    end.
+  Definition getReadsRuleName r := (getFromName getRules getReadsRule r).
+  Definition getWritesRuleName r := (getFromName getRules getWritesRule r).
+  Definition getReadsMethName f := (getFromName getDefsBodies getReadsMeth f).
+  Definition getWritesMethName f := (getFromName getDefsBodies getWritesMeth f).
 
-  Definition regLessRuleMeth s1 s2 :=
-    match find (fun r => string_eq s1 (attrName r)) (getRules m), find (fun r => string_eq s2 (attrName r)) (getDefsBodies m) with
-      | Some r1, Some r2 => not_nil (intersect string_dec (getReadsRule r1 ++ getWritesRule r1) (getWritesMeth r2))
-      | _, _ => false
-    end.
-
-  Definition regLessMethRule s1 s2 :=
-    match find (fun r => string_eq s1 (attrName r)) (getDefsBodies m), find (fun r => string_eq s2 (attrName r)) (getRules m) with
-      | Some r1, Some r2 => not_nil (intersect string_dec (getReadsMeth r1 ++ getWritesMeth r1) (getWritesRule r2))
-      | _, _ => false
-    end.
-
-  Definition regLessAA s1 s2 :=
-    (regLessRuleRule s1 s2 || regLessRuleMeth s1 s2 || regLessMethRule s1 s2 || regLessMethMeth s1 s2)%bool.
-
+  Definition getReads x := getReadsRuleName x ++ getReadsMethName x.
+  Definition getWrites x := getWritesRuleName x ++ getWritesMethName x.
+  
   Definition getCallGraph :=
-    fold_left (fun g (r: Attribute (Action Void)) => (attrName r, getReadsRule r) :: g) (getRules m) nil
+    fold_left (fun g (r: Attribute (Action Void)) => (attrName r, getCallsRule r) :: g) (getRules m) nil
               ++
-              fold_left (fun g (f: DefMethT) => (attrName f, getReadsMeth f) :: g) (getDefsBodies m) nil.
+              fold_left (fun g (f: DefMethT) => (attrName f, getCallsDm f) :: g) (getDefsBodies m) nil.
 
   Definition getAllCalls a := getConnectedChain string_dec (getCallGraph) a.
 
   Definition getAllReads a :=
-    fold_left (fun regs f => regs ++ match find (fun f' => string_eq f (attrName f')) (getDefsBodies m) with
-                                       | None => nil
-                                       | Some f_body => getReadsMeth f_body
-                                     end)
-              (getAllCalls a)
-              (match find (fun f' => string_eq a (attrName f')) (getRules m) with
-                 | None => nil
-                 | Some body => getReadsRule body
-               end
-                 ++
-                 match find (fun f' => string_eq a (attrName f')) (getDefsBodies m) with
-                   | None => nil
-                   | Some body => getReadsMeth body
-                 end).
+    fold_left (fun regs f => regs ++ getReads f) (getAllCalls a) (getReads a).
 
   Definition getAllWrites a :=
-    fold_left (fun regs f => regs ++ match find (fun f' => string_eq f (attrName f')) (getDefsBodies m) with
-                                       | None => nil
-                                       | Some f_body => getWritesMeth f_body
-                                     end)
-              (getAllCalls a)
-              (match find (fun f' => string_eq a (attrName f')) (getRules m) with
-                 | None => nil
-                 | Some body => getWritesRule body
-               end
-                 ++
-                 match find (fun f' => string_eq a (attrName f')) (getDefsBodies m) with
-                   | None => nil
-                   | Some body => getWritesMeth body
-                 end).
+    fold_left (fun regs f => regs ++ getWrites f) (getAllCalls a) (getWrites a).
 
   Definition correctIgnoreLess :=
-    filter (fun x =>
-              match intersect string_dec (getAllCalls (fst x))
-                              (getAllCalls (snd x)) with
-                | nil => true
-                | _ => false
-              end) ignoreLess.
+    filter (fun x => is_nil (intersect string_dec (getAllCalls (fst x))
+                            (getAllCalls (snd x)))) ignoreLess.
 
   Section GenerateRegIndicies.
     Variable reg: string.
@@ -360,11 +315,11 @@ Section UsefulFunctions.
 
   Definition noMethContradiction f :=
     fold_left (fun prev r =>
-                 andb prev (sameList PeanoNat.Nat.eq_dec (map (regIndex r) (methPos f))))
+                 andb prev (sameList Nat.eq_dec (map (regIndex r) (methPos f))))
               (getAllReads f ++ getAllWrites f) true.
 
   Definition shareRegDisable posFirst posSecond :=
-    fold_left (fun disable reg => if PeanoNat.Nat.eq_dec (regIndex reg posFirst) (regIndex reg posSecond)
+    fold_left (fun disable reg => if Nat.eq_dec (regIndex reg posFirst) (regIndex reg posSecond)
                                   then true
                                   else disable) (intersect
                                                    string_dec
@@ -404,16 +359,53 @@ Section UsefulFunctions.
       | Some posSecond => disables' (pred posSecond) posSecond
     end.
 
-  Definition getRuleEnAssign rule :=
+  Definition computeRuleEnAssign rule :=
     (getRuleEn rule, nil: list nat,
      existT RtlExpr Bool
             (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool And e (RtlReadWire Bool (getRuleEn r, nil)))
                        (disables rule) (RtlConst true))).
+
+  Definition getRulePos r := find_pos string_dec r totalOrder.
+
+  Definition getRuleRegIndex rule reg :=
+    match getRulePos rule with
+      | None => 0
+      | Some x => regIndex reg x
+    end.
+  
+  Definition getRegIndexWriteRules reg idx :=
+    fold_left (fun rest x => match getRulePos x with
+                               | None => rest
+                               | Some p => if Nat.eq_dec (regIndex reg p) idx
+                                           then if find (string_eq reg) (getWritesRuleName x)
+                                                then x :: rest
+                                                else rest
+                                           else rest
+                             end) (map (@attrName _) (getRules m)) nil.
+  
+  Definition computeRegIndexWrite ty reg idx :=
+    (getRegIndexWrite reg idx, (nil: list nat),
+     existT RtlExpr ty
+            (fold_left (fun expr r => RtlITE (RtlReadWire Bool (getRuleEn r, nil))
+                                             (RtlReadWire ty (getRegActionWrite r reg, nil)) expr) (getRegIndexWriteRules reg idx)
+                       (RtlReadWire ty (getRegIndexRead reg idx, nil)))).
+
+  Definition computeRegFinalWrite ty reg := (reg, existT RtlExpr ty (RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg), nil))).
+
+  (*
+  Local Fixpoint computeLastRegWrite' ty reg n :=
+    match maxRegIndex reg with
+      | 0 => RtlReadReg ty (getRegIndexWrite reg 0)
+      | S m => RtlExpr ty (RtlITE (RtlReadWire Bool (getRegIndexWriteEn reg (S m))) (RtlReadWire ty (getRegIndexWrite reg (S m)))
+                                  (computeLastRegWrite' ty reg m))
+    end.
+   *)
+  
 End UsefulFunctions.
 
 Require Import Kami.Tutorial.
 
 Eval compute in match head (getDefsBodies consumer) with
-                  | Some t => getCallsMeth t
+                  | Some t => getCallsDm t
                   | None => nil
                 end.

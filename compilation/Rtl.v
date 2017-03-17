@@ -32,6 +32,6 @@ Section Syntax.
     { regs: list (string * Kind);
       inputs: list (string * Kind);
       outputs: list (string * sigT RtlExpr);
-      regWrites: list (string * (RtlExpr Bool * sigT RtlExpr));
+      regWrites: list (string * sigT RtlExpr);
       wires: list (string * list nat * sigT RtlExpr) }.
 End Syntax.
