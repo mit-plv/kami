@@ -29,9 +29,8 @@ Section Syntax.
                        -> RtlExpr ((Vector k i)).
 
   Record RtlModule :=
-    { regs: list (string * Kind);
-      inputs: list (string * Kind);
-      outputs: list (string * sigT RtlExpr);
+    { inputs: list (string * Kind);
+      outputs: list string;
       regWrites: list (string * sigT RtlExpr);
       wires: list (string * list nat * sigT RtlExpr) }.
 End Syntax.

@@ -478,6 +478,28 @@ Section GetCalls.
       | SyntaxKind _ => tt
       | NativeKind t c => c
     end.
+
+  Fixpoint getCallsA_Sig {k} (a: ActionT typeUT k): list (string * SignatureT) :=
+    match a with
+      | MCall m s _ c => (m, s) :: (getCallsA_Sig (c tt))
+      | Let_ fk e c => getCallsA_Sig
+                         (c match fk as fk' return fullType typeUT fk' with
+                              | SyntaxKind _ => tt
+                              | NativeKind _ c' => c'
+                            end)
+      | ReadReg _ fk c => getCallsA_Sig
+                            (c match fk as fk' return fullType typeUT fk' with
+                                 | SyntaxKind _ => tt
+                                 | NativeKind _ c' => c'
+                               end)
+      | WriteReg _ _ _ c => getCallsA_Sig c
+      | IfElse _ _ aT aF c =>
+        (getCallsA_Sig aT) ++ (getCallsA_Sig aF)
+                           ++ (getCallsA_Sig (c tt))
+      | Assert_ _ c => getCallsA_Sig c
+      | Return _ => nil
+    end.
+
   
   Fixpoint getCallsA {k} (a: ActionT typeUT k): list string :=
     match a with
@@ -500,6 +522,13 @@ Section GetCalls.
       | Return _ => nil
     end.
 
+  Lemma getCallsA_Sig_getCallsA k (a: ActionT typeUT k):
+    map fst (getCallsA_Sig a) = getCallsA a.
+  Proof.
+    induction a; auto; simpl; try f_equal; firstorder idtac.
+    rewrite ?map_app; congruence.
+  Qed.
+
   Lemma getCallsA_appendAction:
     forall {retK1} (a1: ActionT typeUT retK1)
            {retK2} (a2: typeUT retK1 -> ActionT typeUT retK2),
@@ -512,10 +541,22 @@ Section GetCalls.
       f_equal; f_equal; auto.
   Qed.
 
-  Fixpoint getCallsRule (r: Attribute (Action (Bit 0)))
+  Definition getCallsRule (r: Attribute (Action (Bit 0)))
   : list string :=
     getCallsA (attrType r typeUT).
 
+  Definition getCallsRule_Sig (r: Attribute (Action (Bit 0))) :=
+    getCallsA_Sig (attrType r typeUT).
+
+  Lemma getCallsRule_Sig_getCallsRule r:
+    map fst (getCallsRule_Sig r) = getCallsRule r.
+  Proof.
+    unfold getCallsRule_Sig, getCallsRule.
+    rewrite getCallsA_Sig_getCallsA.
+    auto.
+  Qed.
+
+  
   Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
@@ -523,9 +564,37 @@ Section GetCalls.
       | r :: rl' => (getCallsA (attrType r typeUT)) ++ (getCallsR rl')
     end.
 
+  Fixpoint getCallsR_Sig (rl: list (Attribute (Action (Bit 0)))) :=
+    match rl with
+      | nil => nil
+      | r :: rl' => (getCallsA_Sig (attrType r typeUT)) ++ (getCallsR_Sig rl')
+    end.
+
+  Lemma getCallsR_Sig_getCallsR r:
+    map fst (getCallsR_Sig r) = getCallsR r.
+  Proof.
+    induction r; auto; simpl.
+    rewrite map_app.
+    rewrite IHr.
+    rewrite getCallsA_Sig_getCallsA.
+    auto.
+  Qed.
+
   Definition getCallsDm (dm: DefMethT): list string :=
     getCallsA (projT2 (attrType dm) typeUT tt).
                
+  Definition getCallsDm_Sig (dm: DefMethT) :=
+    getCallsA_Sig (projT2 (attrType dm) typeUT tt).
+               
+  Lemma getCallsDm_Sig_getCallsDm r:
+    map fst (getCallsDm_Sig r) = getCallsDm r.
+  Proof.
+    unfold getCallsDm_Sig, getCallsDm.
+    rewrite getCallsA_Sig_getCallsA.
+    auto.
+  Qed.
+
+
   Fixpoint getCallsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
@@ -533,6 +602,23 @@ Section GetCalls.
                       ++ (getCallsM ms')
     end.
 
+  Fixpoint getCallsM_Sig (ms: list DefMethT) :=
+    match ms with
+      | nil => nil
+      | m :: ms' => (getCallsA_Sig ((projT2 (attrType m)) typeUT tt))
+                      ++ (getCallsM_Sig ms')
+    end.
+
+  Lemma getCallsM_Sig_getCallsM r:
+    map fst (getCallsM_Sig r) = getCallsM r.
+  Proof.
+    induction r; simpl; auto.
+    rewrite map_app, IHr, getCallsA_Sig_getCallsA.
+    auto.
+  Qed.
+
+
+  
   Lemma getCallsM_implies_getCallsDm s ms: In s (getCallsM ms) ->
                                            exists dm, In dm ms /\ In s (getCallsDm dm).
   Proof.
@@ -563,6 +649,16 @@ Section GetCalls.
 
   Definition getCalls m := getCallsR (getRules m) ++ getCallsM (getDefsBodies m).
 
+  Definition getCalls_Sig m := getCallsR_Sig (getRules m) ++ getCallsM_Sig (getDefsBodies m).
+
+  Lemma getCalls_Sig_getCalls m:
+    map fst (getCalls_Sig m) = getCalls m.
+  Proof.
+    unfold getCalls_Sig, getCalls.
+    rewrite map_app, getCallsR_Sig_getCallsR, getCallsM_Sig_getCallsM.
+    auto.
+  Qed.
+    
   Lemma getCalls_in:
     forall ma mb k,
       In k (getCalls (ConcatMod ma mb)) ->
