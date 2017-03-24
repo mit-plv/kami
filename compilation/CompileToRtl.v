@@ -493,6 +493,9 @@ Section UsefulFunctions.
                          (RtlConst false))).
   End Meth.
 
+  Definition getExternalCallOrder :=
+    fold_left (fun rest x => intersect string_dec x (map fst getExternalCalls) :: rest) (map getAllCalls totalOrder) nil.
+
   Definition computeAllAssigns :=
     concat (map computeRuleAssigns (getRules m))
            ++
