@@ -30,7 +30,7 @@ Section Syntax.
 
   Record RtlModule :=
     { inputs: list (string * Kind);
-      outputs: list string;
+      outputs: list (string * Kind);
       regWrites: list (string * sigT RtlExpr);
       wires: list (string * list nat * sigT RtlExpr) }.
 End Syntax.

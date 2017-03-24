@@ -519,9 +519,9 @@ Section UsefulFunctions.
     map (fun x => computeRegFinalWrite (getRegType x) (attrName x)) (getRegInits m).
 
   Definition computeAllOutputs :=
-    map (fun x => fst (getMethArg (fst x))) getExternalCalls
+    map (fun x => (fst (getMethArg (fst x)), arg (snd x))) getExternalCalls
         ++
-        map (fun x => fst (getActionEn (fst x))) getExternalCalls.
+        map (fun x => (fst (getActionEn (fst x)), Bool)) getExternalCalls.
 
   Definition computeAllInputs :=
     map (fun x => (fst (getActionGuard (fst x)), Bool)) getExternalCalls
