@@ -10,7 +10,7 @@ Extraction Language Haskell.
 
 Set Extraction Optimize.
 Set Extraction KeepSingleton.
-(* Unset Extraction AutoInline. *)
+Unset Extraction AutoInline.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
@@ -28,6 +28,15 @@ Definition p4stKami :=
        (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _).
 
 Definition p4stRtl := computeModule p4stKami (map (@attrName _) (getRules p4stKami)) nil.
+
+Extract Inductive sigT => "(,)" ["(,)"].
+Extract Inductive word => "[Prelude.Bool]" ["([])" "(\ b _ bs -> b : bs)"].
+Extract Inlined Constant fst => "Prelude.fst".
+Extract Inlined Constant snd => "Prelude.snd".
+Extract Inlined Constant projT1 => "Prelude.fst".
+Extract Inlined Constant projT2 => "Prelude.snd".
+Extract Inlined Constant map => "Prelude.map".
+Extract Inlined Constant concat => "Prelude.concat".
 
 Extraction "P4st.hs" p4stRtl.
 

@@ -1,4 +1,5 @@
-Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct Lib.StringEq List Compare_dec Compile.Helpers Coq.Strings.Ascii PeanoNat.
+Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct
+        Lib.StringEq List Compare_dec Compile.Helpers Coq.Strings.Ascii PeanoNat Lib.Word.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -262,7 +263,7 @@ Section UsefulFunctions.
         end.
 
       Local Lemma find_write_prev_pos'_correct:
-        forall ls currPos i x, Some (i, x) = find_write_prev_pos' currPos ls  -> i < pos.
+        forall ls currPos i x, Some (i, x) = find_write_prev_pos' currPos ls  -> (i < pos)%nat.
       Proof.
         induction ls; simpl; intros; try congruence.
         specialize (IHls (S currPos) i x).
@@ -274,7 +275,7 @@ Section UsefulFunctions.
       Local Definition find_write_prev_pos := find_write_prev_pos' 0 totalOrder.
       
       Local Lemma find_write_prev_pos_correct:
-        forall i x, Some (i, x) = find_write_prev_pos  -> i < pos.
+        forall i x, Some (i, x) = find_write_prev_pos  -> (i < pos)%nat.
       Proof.
         eapply find_write_prev_pos'_correct.
       Qed.
@@ -284,8 +285,8 @@ Section UsefulFunctions.
       Fix
         Wf_nat.lt_wf (fun _ => nat)
         (fun (pos: nat)
-             (findRegIndex: forall pos', pos' < pos -> nat) =>
-           match pos return (forall pos', pos' < pos -> nat) -> nat with
+             (findRegIndex: forall pos', (pos' < pos)%nat -> nat) =>
+           match pos return (forall pos', (pos' < pos)%nat -> nat) -> nat with
              | 0 => fun _ => 0
              | S m =>
                fun findRegIndex =>
@@ -295,7 +296,7 @@ Section UsefulFunctions.
                      then
                        match
                          find_write_prev_pos (S m) as val
-                         return (forall i x, Some (i, x) = val -> i < S m) -> nat with
+                         return (forall i x, Some (i, x) = val -> (i < S m)%nat) -> nat with
                          | None => fun _ => findRegIndex m (ltac:(abstract Omega.omega))
                          | Some (prev_pos, a') =>
                            if in_dec string_dec reg (getAllWrites a')
@@ -359,6 +360,26 @@ Section UsefulFunctions.
       | RegInitDefault (SyntaxKind k) => k
       | _ => Void
     end.
+
+  Definition getRegInitValue reg: ConstT (getRegType reg) :=
+      match attrType reg as regT return ConstT match regT with
+                                                 | RegInitCustom (existT (SyntaxKind k) _) => k
+                                                 | RegInitDefault (SyntaxKind k) => k
+                                                 | _ => Void
+                                               end with
+      | RegInitCustom (existT k v) =>
+        match k return ConstFullT k -> ConstT match k with
+                                                | SyntaxKind k' => k'
+                                                | NativeKind _ _ => Void
+                                              end with
+          | SyntaxKind _ => fun v => match v with
+                                       | SyntaxConst _ v' => v'
+                                     end
+          | _ => fun _ => WO
+        end v
+      | RegInitDefault (SyntaxKind k) => getDefaultConst k
+      | _ => WO
+      end.
 
   Section OneRule.
     Variable rule: string.
@@ -451,7 +472,7 @@ Section UsefulFunctions.
 
     Definition computeRegIndexWrite := computeRegIndexWrite' (maxRegIndex reg).
     
-    Definition computeRegFinalWrite := (reg, existT RtlExpr ty (RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg)))).
+    Definition computeRegFinalWrite := RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg)).
 
     (*
     Local Fixpoint computeLastRegWrite' n :=
@@ -516,17 +537,20 @@ Section UsefulFunctions.
            map (fun x => connectRegWritesToReads (getRegType x) (attrName x)) (getRegInits m).
 
   Definition computeAllRegWrites :=
-    map (fun x => computeRegFinalWrite (getRegType x) (attrName x)) (getRegInits m).
-
+    map (fun x: Attribute RegInitValue =>
+           (attrName x,
+            existT (fun k => (ConstT k * RtlExpr k)%type) (getRegType x)
+                   (getRegInitValue x, computeRegFinalWrite (getRegType x) (attrName x)))) (getRegInits m).
+         
   Definition computeAllOutputs :=
-    map (fun x => (fst (getMethArg (fst x)), arg (snd x))) getExternalCalls
+    map (fun x => (getMethArg (fst x), arg (snd x))) getExternalCalls
         ++
-        map (fun x => (fst (getActionEn (fst x)), Bool)) getExternalCalls.
+        map (fun x => (getActionEn (fst x), Bool)) getExternalCalls.
 
   Definition computeAllInputs :=
-    map (fun x => (fst (getActionGuard (fst x)), Bool)) getExternalCalls
+    map (fun x => (getActionGuard (fst x), Bool)) getExternalCalls
         ++
-        map (fun x => (fst (getMethRet (fst x)), ret (snd x))) getExternalCalls.
+        map (fun x => (getMethRet (fst x), ret (snd x))) getExternalCalls.
 
   Definition computeModule :=
     {| inputs := computeAllInputs;

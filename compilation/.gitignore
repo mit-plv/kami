@@ -1,1 +1,4 @@
-*.hs
+P4st.hs
+*.hi
+*.o
+PrettyPrint

@@ -7,7 +7,7 @@ Section Syntax.
   
   Inductive RtlExpr: Kind -> Type :=
 | RtlReadReg k: string -> RtlExpr k
-| RtlReadInput k: string -> RtlExpr k
+| RtlReadInput k: (string * list nat) -> RtlExpr k
 | RtlReadWire k: (string * list nat) -> RtlExpr k
 | RtlConst k: ConstT k -> RtlExpr k
 | RtlUniBool: UniBoolOp -> RtlExpr Bool -> RtlExpr Bool
@@ -29,8 +29,8 @@ Section Syntax.
                        -> RtlExpr ((Vector k i)).
 
   Record RtlModule :=
-    { inputs: list (string * Kind);
-      outputs: list (string * Kind);
-      regWrites: list (string * sigT RtlExpr);
+    { inputs: list (string * list nat * Kind);
+      outputs: list (string * list nat * Kind);
+      regWrites: list (string * sigT (fun k => (ConstT k * RtlExpr k)%type));
       wires: list (string * list nat * sigT RtlExpr) }.
 End Syntax.
