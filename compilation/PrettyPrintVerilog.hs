@@ -61,7 +61,7 @@ ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (map ppConst (snd (unzip (
 ppRtlExpr :: String -> RtlExpr -> State [(Int, Kind, String)] String
 ppRtlExpr who e =
   case e of
-    RtlReadReg k s -> return s
+    RtlReadReg k s -> return (sanitizeString s)
     RtlReadInput k var -> return $ ppPrintVar var
     RtlReadWire k var -> return $ ppPrintVar var
     RtlConst k c -> return $ ppConst c
@@ -136,7 +136,7 @@ ppRtlExpr who e =
     optionAddToTrunc :: Kind -> RtlExpr -> String -> State [(Int, Kind, String)] String
     optionAddToTrunc k e rest =
       case e of
-        RtlReadReg k s -> return $ s ++ rest
+        RtlReadReg k s -> return $ sanitizeString s ++ rest
         RtlReadInput k var -> return $ ppPrintVar var ++ rest
         RtlReadWire k var -> return $ ppPrintVar var ++ rest
         _ -> do
