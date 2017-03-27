@@ -1,4 +1,4 @@
-import P4st
+import Target
 import Data.List
 import Control.Monad.State.Lazy
 
@@ -213,4 +213,4 @@ ppRtlModule (Build_RtlModule ins' outs' regs assigns') =
     (regExprs, regTruncs) = runState convRegs []
 
 
-main = putStrLn $ ppRtlModule p4stRtl
+main = putStrLn $ ppRtlModule target

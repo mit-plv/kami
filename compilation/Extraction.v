@@ -1,7 +1,6 @@
 Require Import List String.
 Require Import Lib.Word Kami.Syntax Kami.Semantics
-        Kami.Notations Ex.IsaRv32 Lib.Struct.
-Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
+        Kami.Notations Lib.Struct.
 
 Require Import ExtrHaskellBasic ExtrHaskellNatInt ExtrHaskellString.
 Require Import Compile.CompileToRtl Compile.Rtl.
@@ -12,6 +11,22 @@ Set Extraction Optimize.
 Set Extraction KeepSingleton.
 Unset Extraction AutoInline.
 
+Extract Inductive sigT => "(,)" ["(,)"].
+Extract Inductive word => "[Prelude.Bool]" ["([])" "(\ b _ bs -> b : bs)"].
+Extract Inlined Constant fst => "Prelude.fst".
+Extract Inlined Constant snd => "Prelude.snd".
+Extract Inlined Constant projT1 => "Prelude.fst".
+Extract Inlined Constant projT2 => "Prelude.snd".
+Extract Inlined Constant map => "Prelude.map".
+Extract Inlined Constant concat => "Prelude.concat".
+
+Require Import Kami.Tutorial.
+Definition mod := producerConsumerImpl.
+Definition target := computeModule mod (map (@attrName _) (getRules mod)) nil.
+Extraction "Target.hs" target.
+
+(*
+Require Import Ex.IsaRv32  Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
@@ -29,14 +44,5 @@ Definition p4stKami :=
 
 Definition p4stRtl := computeModule p4stKami (map (@attrName _) (getRules p4stKami)) nil.
 
-Extract Inductive sigT => "(,)" ["(,)"].
-Extract Inductive word => "[Prelude.Bool]" ["([])" "(\ b _ bs -> b : bs)"].
-Extract Inlined Constant fst => "Prelude.fst".
-Extract Inlined Constant snd => "Prelude.snd".
-Extract Inlined Constant projT1 => "Prelude.fst".
-Extract Inlined Constant projT2 => "Prelude.snd".
-Extract Inlined Constant map => "Prelude.map".
-Extract Inlined Constant concat => "Prelude.concat".
-
 Extraction "P4st.hs" p4stRtl.
-
+*)

@@ -1,4 +1,4 @@
-P4st.hs
+Target.hs
 *.hi
 *.o
 PrettyPrintVerilog
