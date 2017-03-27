@@ -190,7 +190,7 @@ ppRtlExpr who e =
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
 ppRtlModule :: RtlModule -> String
-ppRtlModule m@(Build_RtlModule ins' outs' regs assigns') =
+ppRtlModule m@(Build_RtlModule ins' outs' regs' assigns') =
   "module top(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
@@ -225,6 +225,7 @@ ppRtlModule m@(Build_RtlModule ins' outs' regs assigns') =
                      _ -> s
     ins = nubBy (\(a, _) (b, _) -> a == b) ins'
     outs = nubBy (\(a, _) (b, _) -> a == b) outs'
+    regs = nubBy (\(a, _) (b, _) -> a == b) regs'
     assigns = nubBy (\(a, _) (b, _) -> a == b) assigns'
     convAssigns =
       mapM (\(nm, (ty, expr)) ->
