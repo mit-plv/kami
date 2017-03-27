@@ -2,8 +2,11 @@ import Target
 import Data.List
 import Control.Monad.State.Lazy
 
+instance Show a => Show (Attribute a) where
+  show (Build_Attribute x y) = "(" ++ show x ++ ", " ++ show y ++ ")"
+
 ppVecLen :: Int -> String
-ppVecLen n = "[" ++ show (2 ^ n) ++ "]"
+ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
 
 finToInt :: T -> Int
 finToInt (F1 _) = 0
@@ -12,6 +15,12 @@ finToInt (FS _ x) = succ (finToInt x)
 vectorToList :: T0 a -> [a]
 vectorToList Nil = []
 vectorToList (Cons x _ xs) = x : vectorToList xs
+
+instance Show Kind where
+  show Bool = "Bool"
+  show (Bit n) = "(Bit " ++ show n ++ ")"
+  show (Vector k i) = "(Vector " ++ show k ++ " " ++ show i ++ ")"
+  show (Struct n vec) = "(Struct " ++ show (vectorToList vec) ++ ")"
 
 ilistToList :: Ilist a b -> [(a, b)]
 ilistToList Inil = []
@@ -22,7 +31,13 @@ vecToList (Vec0 a) = [a]
 vecToList (VecNext _ xs ys) = vecToList xs ++ vecToList ys
 
 ppDecl :: String -> (String, [Int]) -> String
-ppDecl s (x, v) = x ++ ' ' : s ++ concatMap ppVecLen v
+ppDecl s (x, v) =
+  case v of
+    [] -> x ++ ' ' : s
+    _ -> case x of
+           'l' : 'o' : 'g' : 'i' : 'c' : ' ' : ys -> "logic " ++ concatMap ppVecLen (reverse v) ++ ys ++ ' ' : s
+           _ -> x ++ concatMap ppVecLen v ++ ' ' : s
+--  x ++ concatMap ppVecLen v ++ ' ' : s 
 
 ppType :: Kind -> (String, [Int])
 ppType Bool = ("logic", [])
@@ -31,7 +46,7 @@ ppType (Bit i) = if i > 0
                  else ("logic", [])
 ppType (Vector k i) = (fst v, i : snd v)
                       where v = ppType k
-ppType (Struct n v) = ("struct {" ++ concatMap (\x -> ppDecl (attrName x) (ppType (attrType x)) ++ "; ") (vectorToList v) ++ "}", [])
+ppType (Struct n v) = ("struct packed {" ++ concatMap (\x -> ppDecl (attrName x) (ppType (attrType x)) ++ "; ") (vectorToList v) ++ "}", [])
 
 
 replChar :: Char -> String
@@ -81,9 +96,8 @@ ppRtlExpr who e =
     RtlUniBit sz retSz (SignExtendTrunc _ _) e -> if sz < retSz
                                                   then
                                                     do
-                                                      new <- optionAddToTrunc (Bit sz) e ('[' : show sz ++ "]")
-                                                      return $ "{{" ++ show (retSz - sz) ++ '{' : new ++ "[" ++
-                                                        show sz ++ "]" ++ "}}, " ++ new ++ "}"
+                                                      (new, rest) <- optionAddToTrunc (Bit sz) e ('[' : show (sz - 1) ++ "]")
+                                                      return $ "{{" ++ show (retSz - sz) ++ '{' : new ++ rest ++ "}}, " ++ new ++ "}"
                                                   else createTrunc (Bit sz) e (retSz - 1) 0
     RtlBinBit _ _ _ (Add _) e1 e2 -> binExpr e1 "+" e2
     RtlBinBit _ _ _ (Sub _) e1 e2 -> binExpr e1 "-" e2
@@ -106,11 +120,12 @@ ppRtlExpr who e =
     RtlBinBitBool _ _ (Lt _) e1 e2 -> binExpr e1 "<" e2
     RtlITE _ p e1 e2 -> triExpr p "?" e1 ":" e2
     RtlEq _ e1 e2 -> binExpr e1 "==" e2
-    RtlReadIndex n k e1 e2 ->
+    RtlReadIndex n k idx vec ->
       do
-        x1 <- ppRtlExpr who e1
-        x2 <- ppRtlExpr who e2
-        optionAddToTrunc (Vector k n) e1 ('[' : x2 ++ "]")
+        xidx <- ppRtlExpr who idx
+        xvec <- ppRtlExpr who vec
+        (new, rest) <- optionAddToTrunc (Vector k n) vec ('[' : xidx ++ "]")
+        return $ new ++ rest
     RtlReadField _ fields idx e ->
       do
         x <- ppRtlExpr who e
@@ -133,18 +148,21 @@ ppRtlExpr who e =
                  ":" ++ xv ++ "[" ++ show i ++ "]")
            [0 .. ((2^n)-1)]) ++ "}"
   where
-    optionAddToTrunc :: Kind -> RtlExpr -> String -> State [(Int, Kind, String)] String
+    optionAddToTrunc :: Kind -> RtlExpr -> String -> State [(Int, Kind, String)] (String, String)
     optionAddToTrunc k e rest =
       case e of
-        RtlReadReg k s -> return $ sanitizeString s ++ rest
-        RtlReadInput k var -> return $ ppPrintVar var ++ rest
-        RtlReadWire k var -> return $ ppPrintVar var ++ rest
+        RtlReadReg k s -> return $ (sanitizeString s, rest)
+        RtlReadInput k var -> return $ (ppPrintVar var, rest)
+        RtlReadWire k var -> return $ (ppPrintVar var, rest)
         _ -> do
           x <- ppRtlExpr who e
           new <- addToTrunc k x
-          return $ new ++ rest
+          return $ (new, rest)
     createTrunc :: Kind -> RtlExpr -> Int -> Int -> State [(Int, Kind, String)] String
-    createTrunc k e msb lsb = optionAddToTrunc k e ('[' : show msb ++ ':' : show lsb ++ "]")
+    createTrunc k e msb lsb =
+      do
+        (new, rest) <- optionAddToTrunc k e ('[' : show msb ++ ':' : show lsb ++ "]")
+        return $ new ++ rest
     addToTrunc :: Kind -> String -> State [(Int, Kind, String)] String
     addToTrunc k s =
       do
@@ -183,19 +201,28 @@ ppRtlModule m@(Build_RtlModule ins' outs' regs assigns') =
   concatMap (\(nm, (ty, expr)) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") assigns ++ "\n" ++
   
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$wire$" ++ show pos) ty ++ ";\n") assignTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ sexpr ++ ";\n") assignTruncs ++ "\n" ++
+  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") assignTruncs ++ "\n" ++
   
-  concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ sexpr ++ ";\n") assignExprs ++ "\n" ++
+  concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ doArray ty sexpr ++ ";\n") assignExprs ++ "\n" ++
   
   "  always @(posedge CLK) begin\n" ++
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$reg$" ++ show pos) ty ++ ";\n") regTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ sexpr ++ ";\n") regTruncs ++ "\n" ++
+  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") regTruncs ++ "\n" ++
   
-  concatMap (\(nm, (ty, (init, sexpr))) -> "    " ++ sanitizeString nm ++
-                                           " <= RESET? " ++ ppConst init ++ ":" ++ sexpr ++ ";\n") regExprs ++
+  concatMap (\(nm, (ty, (init, sexpr))) -> "    if(RESET) begin\n" ++
+              "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst init) ++ ";\n" ++
+              "    end\n" ++
+              "    else begin\n" ++
+              "      " ++ sanitizeString nm ++ " <= " ++ doArray ty sexpr ++ ";\n" ++
+              "    end\n") regExprs ++
   "  end\n\n" ++
   "endmodule\n"
   where
+    doArray ty s = case ty of
+                     Vector _ _ -> if head s == '{'
+                                   then s
+                                   else s
+                     _ -> s
     ins = nubBy (\(a, _) (b, _) -> a == b) ins'
     outs = nubBy (\(a, _) (b, _) -> a == b) outs'
     assigns = nubBy (\(a, _) (b, _) -> a == b) assigns'
