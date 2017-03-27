@@ -106,8 +106,8 @@ Section CallChain.
                  | nil => nil
                  | v :: vs' =>
                    (if in_dec decA v (snd ls)
-                    then getConnectedChain (v, remove decA v (snd ls))
-                                           (ltac:(eapply remove_length_in_lt; eauto))
+                    then v :: getConnectedChain (v, remove decA v (snd ls))
+                           (ltac:(eapply remove_length_in_lt; eauto))
                     else nil)
                      ++
                      (fix help vs' :=
@@ -115,9 +115,9 @@ Section CallChain.
                           | nil => nil
                           | y :: ys =>
                             if in_dec decA y (snd ls)
-                            then getConnectedChain (y, remove decA y (snd ls))
-                                                   (ltac:(eapply remove_length_in_lt; eauto))
-                                                   ++ help ys
+                            then y :: getConnectedChain (y, remove decA y (snd ls))
+                                   (ltac:(eapply remove_length_in_lt; eauto))
+                                   ++ help ys
                             else help ys
                         end) vs'
                end

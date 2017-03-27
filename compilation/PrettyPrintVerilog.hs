@@ -172,7 +172,7 @@ ppRtlExpr who e =
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
 ppRtlModule :: RtlModule -> String
-ppRtlModule (Build_RtlModule ins' outs' regs assigns') =
+ppRtlModule m@(Build_RtlModule ins' outs' regs assigns') =
   "module top(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
@@ -213,4 +213,9 @@ ppRtlModule (Build_RtlModule ins' outs' regs assigns') =
     (regExprs, regTruncs) = runState convRegs []
 
 
-main = putStrLn $ ppRtlModule target
+main =
+  do
+    --putStrLn $ show (methPos Target.mod (map attrName (getRules Target.mod)) "enq.f2d")
+    --putStrLn $ show (map attrName (getRules Target.mod))
+    --putStrLn $ show (getCallGraph Target.mod)
+    putStrLn $ ppRtlModule target
