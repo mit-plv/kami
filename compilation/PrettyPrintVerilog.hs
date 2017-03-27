@@ -1,9 +1,7 @@
 import Target
 import Data.List
+import Data.List.Split
 import Control.Monad.State.Lazy
-
-instance Show a => Show (Attribute a) where
-  show (Build_Attribute x y) = "(" ++ show x ++ ", " ++ show y ++ ")"
 
 ppVecLen :: Int -> String
 ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
@@ -16,52 +14,54 @@ vectorToList :: T0 a -> [a]
 vectorToList Nil = []
 vectorToList (Cons x _ xs) = x : vectorToList xs
 
-instance Show Kind where
-  show Bool = "Bool"
-  show (Bit n) = "(Bit " ++ show n ++ ")"
-  show (Vector k i) = "(Vector " ++ show k ++ " " ++ show i ++ ")"
-  show (Struct n vec) = "(Struct " ++ show (vectorToList vec) ++ ")"
-
-ilistToList :: Ilist a b -> [(a, b)]
+ilistToList :: Ilist a b -> [b]
 ilistToList Inil = []
-ilistToList (Icons a _ _ b vs) = (a,b): ilistToList vs
+ilistToList (Icons _ _ _ b vs) = b: ilistToList vs
 
 vecToList :: Vec a -> [a]
 vecToList (Vec0 a) = [a]
 vecToList (VecNext _ xs ys) = vecToList xs ++ vecToList ys
 
-ppDecl :: String -> (String, [Int]) -> String
-ppDecl s (x, v) =
-  case v of
-    [] -> x ++ ' ' : s
-    _ -> case x of
-           'l' : 'o' : 'g' : 'i' : 'c' : ' ' : ys -> "logic " ++ concatMap ppVecLen (reverse v) ++ ys ++ ' ' : s
-           _ -> x ++ concatMap ppVecLen v ++ ' ' : s
---  x ++ concatMap ppVecLen v ++ ' ' : s 
+{-
+instance Show a => Show (Attribute a) where
+  show (Build_Attribute x y) = "(" ++ show x ++ ", " ++ show y ++ ")"
 
-ppType :: Kind -> (String, [Int])
-ppType Bool = ("logic", [])
-ppType (Bit i) = if i > 0
-                 then ("logic [" ++ show (i-1) ++ ":0]", [])
-                 else ("logic", [])
-ppType (Vector k i) = (fst v, i : snd v)
-                      where v = ppType k
-ppType (Struct n v) = ("struct packed {" ++ concatMap (\x -> ppDecl (attrName x) (ppType (attrType x)) ++ "; ") (vectorToList v) ++ "}", [])
+instance Show Kind where
+  show Bool = "Bool"
+  show (Bit n) = "(Bit " ++ show n ++ ")"
+  show (Vector k i) = "(Vector " ++ show k ++ " " ++ show i ++ ")"
+  show (Struct n vec) = "(Struct " ++ show (vectorToList vec) ++ ")"
+-}
 
+ppType1 :: Kind -> String
+ppType1 (Struct _ _) = "struct packed "
+ppType1 _ = "logic "
 
-replChar :: Char -> String
-replChar '.' = "$_$"
-replChar c = c : []
+ppType2 :: Kind -> String
+ppType2 Bool = ""
+ppType2 (Bit i) = if i > 0
+                  then "[" ++ show (i-1) ++ ":0]"
+                  else ""
+ppType2 (Vector k i) = ppVecLen i ++ ppType2 k
+ppType2 (Struct n v) = '{' : concatMap (\x -> ppDeclType (ppName $ attrName x) (attrType x) ++ "; ") (vectorToList v) ++ "}"
 
-sanitizeString :: String -> String
-sanitizeString s = concatMap replChar s
+ppName :: String -> String
+ppName s =
+  map (\x -> case x of
+               '#' -> '$'
+               c -> c)
+  (if elem '.' s
+   then concat $ case splitOneOf ".#" s of
+                   x : y : xs -> y : x : xs
+                   ys -> ys
+   else s)
 
 
 ppDeclType :: String -> Kind -> String
-ppDeclType s k = ppDecl s (ppType k)
+ppDeclType s k = ppType1 k ++ ppType2 k ++ " " ++ s
 
 ppPrintVar :: (String, [Int]) -> String
-ppPrintVar (s, vs) = sanitizeString s ++ concatMap (\v -> '$' : show v) vs
+ppPrintVar (s, vs) = ppName $ s ++ concatMap (\v -> '#' : show v) vs
 
 ppWord :: [Bool] -> String
 ppWord [] = []
@@ -71,12 +71,12 @@ ppConst :: ConstT -> String
 ppConst (ConstBool b) = if b then "1'b1" else "1'b0"
 ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord w
 ppConst (ConstVector k _ vs) = '{' : intercalate ", " (map ppConst (vecToList vs)) ++ "}"
-ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (map ppConst (snd (unzip (ilistToList is)))) ++ "}"
+ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (map ppConst (ilistToList is)) ++ "}"
 
 ppRtlExpr :: String -> RtlExpr -> State [(Int, Kind, String)] String
 ppRtlExpr who e =
   case e of
-    RtlReadReg k s -> return (sanitizeString s)
+    RtlReadReg k s -> return (ppName s)
     RtlReadInput k var -> return $ ppPrintVar var
     RtlReadWire k var -> return $ ppPrintVar var
     RtlConst k c -> return $ ppConst c
@@ -136,7 +136,7 @@ ppRtlExpr who e =
         return $ '{': intercalate ", " strs ++ "}"
     RtlBuildStruct _ _ es ->
       do
-        strs <- mapM (ppRtlExpr who) (map snd (ilistToList es))
+        strs <- mapM (ppRtlExpr who) (ilistToList es)
         return $ '{': intercalate ", " strs ++ "}"
     RtlUpdateVector n _ v idx val ->
       do
@@ -151,7 +151,7 @@ ppRtlExpr who e =
     optionAddToTrunc :: Kind -> RtlExpr -> String -> State [(Int, Kind, String)] (String, String)
     optionAddToTrunc k e rest =
       case e of
-        RtlReadReg k s -> return $ (sanitizeString s, rest)
+        RtlReadReg k s -> return $ (ppName s, rest)
         RtlReadInput k var -> return $ (ppPrintVar var, rest)
         RtlReadWire k var -> return $ (ppPrintVar var, rest)
         _ -> do
@@ -189,41 +189,70 @@ ppRtlExpr who e =
         x3 <- ppRtlExpr who e3
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
+{-
+ppRegFileInstance :: (String, String, String, ((Int, Kind), RegInitValue)) -> String
+ppRegFileInstance (name, read, write, ((idxType, dataType), init)) =
+  ppName name ++ " " ++
+  (case init of
+      RegInitCustom (SyntaxKind k, SyntaxConst _ v) -> "#(.init(" ++ ppConst v ++ "))) "
+        _ -> "") ++
+  ppName name ++ "$inst(.CLK(CLK), .RESET(RESET), ." ++
+  ppName read ++ "$en(" ++ ppName read ++ "$en), ." ++
+  ppName read ++ "$arg(" ++ ppName read ++ "$arg), ." ++
+  ppName read ++ "$ret(" ++ ppName read ++ "$ret), ." ++
+  ppName read ++ "$g(" ++ ppName read ++ "$g), ." ++
+  ppName write ++ "$g(" ++ ppName write ++ "$g)" ++
+  ppName write ++ "$en(" ++ ppName write ++ "$en)" ++
+  ppName write ++ "$arg(" ++ ppName write ++ "$arg));\n\n"
+  
+ppRegFileModule :: (String, String, String, ((Int, Kind), RegInitValue)) -> String
+ppRegFileModule (name, read, write, ((idxType, dataType), init)) =
+  "module " ++ name ++ "(" ++
+  "  input " ++ ppDeclType (ppName read ++ "$en") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName read ++ "$arg") (Bit idxType) ++ ",\n" ++
+  "  output " ++ ppDeclType (ppName read ++ "$ret") dataType ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName write ++ "$en") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName write ++ "$en") Bool ++ ",\n" ++
+  "  input logic CLK,\n" ++
+  "  input logic RESET\n" ++
+  ");\n"
+  -}
+  
+                 
+
+
 ppRtlModule :: RtlModule -> String
-ppRtlModule m@(Build_RtlModule ins' outs' regInits' regWrites' assigns') =
+ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   "module top(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
   "  input CLK,\n" ++
   "  input RESET\n" ++
   ");\n" ++
-  concatMap (\(nm, (ty, init)) -> "  " ++ ppDeclType (sanitizeString nm) ty ++ ";\n") regInits ++ "\n" ++
+  concatMap (\(nm, (ty, init)) -> "  " ++ ppDeclType (ppName nm) ty ++ ";\n") regInits ++ "\n" ++
+
   concatMap (\(nm, (ty, expr)) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") assigns ++ "\n" ++
   
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$wire$" ++ show pos) ty ++ ";\n") assignTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") assignTruncs ++ "\n" ++
-  
-  concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ doArray ty sexpr ++ ";\n") assignExprs ++ "\n" ++
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$reg$" ++ show pos) ty ++ ";\n") regTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") regTruncs ++ "\n" ++
+
+  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ sexpr ++ ";\n") assignTruncs ++ "\n" ++
+  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ sexpr ++ ";\n") regTruncs ++ "\n" ++
+  
+  concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ sexpr ++ ";\n") assignExprs ++ "\n" ++
   
   "  always @(posedge CLK) begin\n" ++
   "    if(RESET) begin\n" ++
   concatMap (\(nm, (ty, init)) -> case init of
                                     Nothing -> ""
-                                    Just i -> "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst i) ++ ";\n") regInits ++
+                                    Just i -> "      " ++ ppName nm ++ " <= " ++ ppConst i ++ ";\n") regInits ++
   "    end\n" ++
   "    else begin\n" ++
-  concatMap (\(nm, (ty, sexpr)) -> "      " ++ sanitizeString nm ++ " <= " ++ sexpr ++ ";\n") regExprs ++
+  concatMap (\(nm, (ty, sexpr)) -> "      " ++ ppName nm ++ " <= " ++ sexpr ++ ";\n") regExprs ++
   "    end\n\n" ++
   "  end\n\n" ++
   "endmodule\n"
   where
-    doArray ty s = case ty of
-                     Vector _ _ -> if head s == '{'
-                                   then s
-                                   else s
-                     _ -> s
     ins = nubBy (\(a, _) (b, _) -> a == b) ins'
     outs = nubBy (\(a, _) (b, _) -> a == b) outs'
     regInits = nubBy (\(a, _) (b, _) -> a == b) regInits'

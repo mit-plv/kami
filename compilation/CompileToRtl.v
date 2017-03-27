@@ -5,29 +5,24 @@ Set Implicit Arguments.
 Set Asymmetric Patterns.
 
 Open Scope string.
-Fixpoint string_of_nat n :=
-  match n with
-    | 0 => "0"
-    | S m => "S" ++ string_of_nat m
-  end.
 
 Local Notation nil_nat := (nil: list nat).
-Definition getRegActionRead a s := (a ++ "$" ++ s ++ "$read", nil_nat).
-Definition getRegActionWrite a s := (a ++ "$" ++ s ++ "$write", nil_nat).
-Definition getRegActionEn a s := (a ++ "$" ++ s ++ "$en", nil_nat).
+Definition getRegActionRead a s := (a ++ "#" ++ s ++ "#_read", nil_nat).
+Definition getRegActionWrite a s := (a ++ "#" ++ s ++ "#_write", nil_nat).
+Definition getRegActionEn a s := (a ++ "#" ++ s ++ "#_en", nil_nat).
 
-Definition getMethCallActionArg a f := (a ++ "$" ++ f ++ "$arg", nil_nat).
-Definition getMethCallActionEn a f := (a ++ "$" ++ f ++ "$en", nil_nat).
+Definition getMethCallActionArg a f := (a ++ "#" ++ f ++ "#_arg", nil_nat).
+Definition getMethCallActionEn a f := (a ++ "#" ++ f ++ "#_en", nil_nat).
 
-Definition getMethRet f := (f ++ "$ret", nil_nat).
-Definition getMethArg f := (f ++ "$arg", nil_nat).
+Definition getMethRet f := (f ++ "#_ret", nil_nat).
+Definition getMethArg f := (f ++ "#_arg", nil_nat).
 
-Definition getActionGuard r := (r ++ "$g", nil_nat).
-Definition getActionEn r := (r ++ "$en", nil_nat).
+Definition getActionGuard r := (r ++ "#_g", nil_nat).
+Definition getActionEn r := (r ++ "#_en", nil_nat).
 
-Definition getRegIndexWrite r i := (r ++ "$write$" ++ string_of_nat i, nil_nat).
-Definition getRegIndexWriteEn r i := (r ++ "$writeEn$" ++ string_of_nat i, nil_nat).
-Definition getRegIndexRead r i := (r ++ "$read$" ++ string_of_nat i, nil_nat).
+Definition getRegIndexWrite r (i: nat) := (r ++ "#_write#", i :: nil).
+Definition getRegIndexWriteEn r (i: nat) := (r ++ "#_writeEn#", i :: nil).
+Definition getRegIndexRead r (i: nat) := (r ++ "#_read#", i :: nil).
 
 Close Scope string.
 
@@ -195,8 +190,27 @@ Definition getWritesRuleBody (r: Attribute (Action Void)) :=
 Definition getWritesMethBody (f: DefMethT) :=
   (getWritesAction (projT2 (attrType f) typeUT tt)).
 
+Fixpoint separateRegFiles m :=
+  match m with
+    | RegFile dataArray read write idxBits data init =>
+      ((dataArray, read, write, existT (fun x => ConstT (Vector (snd x) (fst x))) (idxBits, data) init) :: nil, Mod nil nil nil)
+    | Mod _ _ _ => (nil, m)
+    | ConcatMod m1 m2 =>
+      let '(regFiles1, mods1) := separateRegFiles m1 in
+      let '(regFiles2, mods2) := separateRegFiles m2 in
+      (regFiles1 ++ regFiles2, match mods1, mods2 with
+                                 | Mod nil nil nil, xs => xs
+                                 | xs, Mod nil nil nil => xs
+                                 | xs, ys => ConcatMod xs ys
+                               end)
+  end.
+
 Section UsefulFunctions.
-  Variable m: Modules.
+  Variable m': Modules.
+
+  Definition m := snd (separateRegFiles m').
+  Definition regFs := fst (separateRegFiles m').
+
   Variable totalOrder: list string.
   Variable ignoreLess: list (string * string).
 
@@ -231,6 +245,8 @@ Section UsefulFunctions.
     apply string_dec.
   Qed.
    *)
+
+  (* Must change this to reflect regfiles *)
   
   Definition getExternalCalls :=
     filter (fun f => if find (string_eq (fst f)) (getDefs m) then false else true)
@@ -569,18 +585,10 @@ Section UsefulFunctions.
         map (fun x => (getMethRet (fst x), ret (snd x))) getExternalCalls.
 
   Definition computeModule :=
-    {| inputs := computeAllInputs;
+    {| regFiles := regFs;
+       inputs := computeAllInputs;
        outputs := computeAllOutputs;
        regInits := computeAllRegInits;
        regWrites := computeAllRegWrites;
        wires := computeAllAssigns |}.
 End UsefulFunctions.
-
-(*
-Require Import Kami.Tutorial.
-
-Eval compute in match head (getDefsBodies consumer) with
-                  | Some t => getCallsDm t
-                  | None => nil
-                end.
-*)
