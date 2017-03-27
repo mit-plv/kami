@@ -223,14 +223,24 @@ Section UsefulFunctions.
 
   Definition getAllCalls a := getConnectedChain string_dec (getCallGraph) a.
 
+  (*
+  Lemma string_signature_dec: forall a b: (string * SignatureT), {a = b} + {a <> b}.
+  Proof.
+    decide equality.
+    apply SignatureT_dec.
+    apply string_dec.
+  Qed.
+   *)
+  
   Definition getExternalCalls :=
-    filter (fun f => if find (string_eq (fst f)) (getDefs m) then false else true) (getCalls_Sig m).
+    filter (fun f => if find (string_eq (fst f)) (getDefs m) then false else true)
+           (getCalls_Sig m).
   
   Definition getAllReads a :=
-    fold_left (fun regs f => regs ++ getReads f) (getAllCalls a) (getReads a).
+    fold_left (fun regs f => regs ++ getReads f) (getAllCalls a) (nodup string_dec (getReads a)).
 
   Definition getAllWrites a :=
-    fold_left (fun regs f => regs ++ getWrites f) (getAllCalls a) (getWrites a).
+    fold_left (fun regs f => regs ++ getWrites f) (getAllCalls a) (nodup string_dec (getWrites a)).
 
   Definition correctIgnoreLess :=
     filter (fun x => is_nil (intersect string_dec (getAllCalls (fst x))

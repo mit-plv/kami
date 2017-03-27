@@ -232,7 +232,6 @@ Record SignatureT :=
 
 Definition SignatureT_dec: forall (s1 s2: SignatureT), {s1 = s2} + {s1 <> s2}.
 Proof.
-  intros.
   decide equality.
   apply decKind.
   apply decKind.
