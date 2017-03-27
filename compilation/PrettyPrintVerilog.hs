@@ -241,9 +241,4 @@ ppRtlModule m@(Build_RtlModule ins' outs' regs' assigns') =
     (regExprs, regTruncs) = runState convRegs []
 
 
-main =
-  do
-    --putStrLn $ show (methPos Target.mod (map attrName (getRules Target.mod)) "enq.f2d")
-    --putStrLn $ show (map attrName (getRules Target.mod))
-    --putStrLn $ show (getCallGraph Target.mod)
-    putStrLn $ ppRtlModule target
+main = putStrLn $ ppRtlModule target
