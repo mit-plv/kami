@@ -371,24 +371,24 @@ Section UsefulFunctions.
       | _ => Void
     end.
 
-  Definition getRegInitValue reg: ConstT (getRegType reg) :=
-      match attrType reg as regT return ConstT match regT with
-                                                 | RegInitCustom (existT (SyntaxKind k) _) => k
-                                                 | RegInitDefault (SyntaxKind k) => k
-                                                 | _ => Void
-                                               end with
+  Definition getRegInitValue reg: option (ConstT (getRegType reg)) :=
+      match attrType reg as regT return option (ConstT match regT with
+                                                         | RegInitCustom (existT (SyntaxKind k) _) => k
+                                                         | RegInitDefault (SyntaxKind k) => k
+                                                         | _ => Void
+                                                       end) with
       | RegInitCustom (existT k v) =>
-        match k return ConstFullT k -> ConstT match k with
-                                                | SyntaxKind k' => k'
-                                                | NativeKind _ _ => Void
-                                              end with
+        match k return ConstFullT k -> option (ConstT match k with
+                                                        | SyntaxKind k' => k'
+                                                        | NativeKind _ _ => Void
+                                                      end) with
           | SyntaxKind _ => fun v => match v with
-                                       | SyntaxConst _ v' => v'
+                                       | SyntaxConst _ v' => Some v'
                                      end
-          | _ => fun _ => WO
+          | _ => fun _ => None
         end v
-      | RegInitDefault (SyntaxKind k) => getDefaultConst k
-      | _ => WO
+      | RegInitDefault (SyntaxKind k) => None
+      | _ => None
       end.
 
   Section OneRule.
@@ -549,12 +549,12 @@ Section UsefulFunctions.
   Definition computeAllRegInits :=
     map (fun x: Attribute RegInitValue =>
            (attrName x,
-            existT ConstT (getRegType x)
+            existT (fun x => option (ConstT x)) (getRegType x)
                    (getRegInitValue x))) (getRegInits m).
 
   Definition computeAllRegWrites :=
     map (fun x: Attribute RegInitValue =>
-           (attrName x, nil: list nat,
+           (attrName x,
             existT RtlExpr (getRegType x)
                    (computeRegFinalWrite (getRegType x) (attrName x)))) (getRegInits m).
 

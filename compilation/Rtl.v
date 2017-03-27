@@ -3,9 +3,7 @@ Require Import Kami.Syntax String Lib.Struct Lib.ilist.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-Section Syntax.
-  
-  Inductive RtlExpr: Kind -> Type :=
+Inductive RtlExpr: Kind -> Type :=
 | RtlReadReg k: string -> RtlExpr k
 | RtlReadInput k: (string * list nat) -> RtlExpr k
 | RtlReadWire k: (string * list nat) -> RtlExpr k
@@ -28,10 +26,9 @@ Section Syntax.
 | RtlUpdateVector i k: RtlExpr ((Vector k i)) -> RtlExpr ((Bit i)) -> RtlExpr (k)
                        -> RtlExpr ((Vector k i)).
 
-  Record RtlModule :=
-    { inputs: list (string * list nat * Kind);
-      outputs: list (string * list nat * Kind);
-      regInits: list (string * sigT ConstT);
-      regWrites: list (string * list nat * sigT RtlExpr);
-      wires: list (string * list nat * sigT RtlExpr) }.
-End Syntax.
+Record RtlModule :=
+  { inputs: list (string * list nat * Kind);
+    outputs: list (string * list nat * Kind);
+    regInits: list (string * sigT (fun x => option (ConstT x)));
+    regWrites: list (string * sigT RtlExpr);
+    wires: list (string * list nat * sigT RtlExpr) }.

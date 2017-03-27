@@ -209,11 +209,12 @@ ppRtlModule m@(Build_RtlModule ins' outs' regInits' regWrites' assigns') =
   
   "  always @(posedge CLK) begin\n" ++
   "    if(RESET) begin\n" ++
-  concatMap (\(nm, (ty, init)) -> "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst init) ++ ";\n") regInits ++
+  concatMap (\(nm, (ty, init)) -> case init of
+                                    Nothing -> ""
+                                    Just i -> "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst i) ++ ";\n") regInits ++
   "    end\n" ++
   "    else begin\n" ++
-  concatMap (\(nm, listNat, (ty, sexpr)) -> "      " ++ sanitizeString nm ++ concatMap (\x -> '[' : show x ++ "]") listNat ++
-              " <= " ++ sexpr ++ ";\n") regExprs ++
+  concatMap (\(nm, (ty, sexpr)) -> "      " ++ sanitizeString nm ++ " <= " ++ sexpr ++ ";\n") regExprs ++
   "    end\n\n" ++
   "  end\n\n" ++
   "endmodule\n"
@@ -234,10 +235,10 @@ ppRtlModule m@(Build_RtlModule ins' outs' regInits' regWrites' assigns') =
                 s <- ppRtlExpr "wire" expr
                 return (nm, (ty, s))) assigns
     convRegs =
-      mapM (\((nm, listNat), (ty, expr)) ->
+      mapM (\(nm, (ty, expr)) ->
               do
                 s <- ppRtlExpr "reg" expr
-                return (nm, listNat, (ty, s))) regWrites
+                return (nm, (ty, s))) regWrites
     (assignExprs, assignTruncs) = runState convAssigns []
     (regExprs, regTruncs) = runState convRegs []
 
