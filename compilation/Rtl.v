@@ -31,6 +31,7 @@ Section Syntax.
   Record RtlModule :=
     { inputs: list (string * list nat * Kind);
       outputs: list (string * list nat * Kind);
-      regWrites: list (string * sigT (fun k => (ConstT k * RtlExpr k)%type));
+      regInits: list (string * sigT ConstT);
+      regWrites: list (string * list nat * sigT RtlExpr);
       wires: list (string * list nat * sigT RtlExpr) }.
 End Syntax.

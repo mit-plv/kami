@@ -190,31 +190,31 @@ ppRtlExpr who e =
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
 ppRtlModule :: RtlModule -> String
-ppRtlModule m@(Build_RtlModule ins' outs' regs' assigns') =
+ppRtlModule m@(Build_RtlModule ins' outs' regInits' regWrites' assigns') =
   "module top(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
   "  input CLK,\n" ++
   "  input RESET\n" ++
   ");\n" ++
-  concatMap (\(nm, (ty, (init, expr))) -> "  " ++ ppDeclType (sanitizeString nm) ty ++ ";\n") regs ++ "\n" ++
+  concatMap (\(nm, (ty, init)) -> "  " ++ ppDeclType (sanitizeString nm) ty ++ ";\n") regInits ++ "\n" ++
   concatMap (\(nm, (ty, expr)) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") assigns ++ "\n" ++
   
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$wire$" ++ show pos) ty ++ ";\n") assignTruncs ++ "\n" ++
   concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") assignTruncs ++ "\n" ++
   
   concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ doArray ty sexpr ++ ";\n") assignExprs ++ "\n" ++
-  
-  "  always @(posedge CLK) begin\n" ++
   concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$reg$" ++ show pos) ty ++ ";\n") regTruncs ++ "\n" ++
   concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ doArray ty sexpr ++ ";\n") regTruncs ++ "\n" ++
   
-  concatMap (\(nm, (ty, (init, sexpr))) -> "    if(RESET) begin\n" ++
-              "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst init) ++ ";\n" ++
-              "    end\n" ++
-              "    else begin\n" ++
-              "      " ++ sanitizeString nm ++ " <= " ++ doArray ty sexpr ++ ";\n" ++
-              "    end\n") regExprs ++
+  "  always @(posedge CLK) begin\n" ++
+  "    if(RESET) begin\n" ++
+  concatMap (\(nm, (ty, init)) -> "      " ++ sanitizeString nm ++ " <= " ++ doArray ty (ppConst init) ++ ";\n") regInits ++
+  "    end\n" ++
+  "    else begin\n" ++
+  concatMap (\(nm, listNat, (ty, sexpr)) -> "      " ++ sanitizeString nm ++ concatMap (\x -> '[' : show x ++ "]") listNat ++
+              " <= " ++ sexpr ++ ";\n") regExprs ++
+  "    end\n\n" ++
   "  end\n\n" ++
   "endmodule\n"
   where
@@ -225,7 +225,8 @@ ppRtlModule m@(Build_RtlModule ins' outs' regs' assigns') =
                      _ -> s
     ins = nubBy (\(a, _) (b, _) -> a == b) ins'
     outs = nubBy (\(a, _) (b, _) -> a == b) outs'
-    regs = nubBy (\(a, _) (b, _) -> a == b) regs'
+    regInits = nubBy (\(a, _) (b, _) -> a == b) regInits'
+    regWrites = nubBy (\(a, _) (b, _) -> a == b) regWrites'
     assigns = nubBy (\(a, _) (b, _) -> a == b) assigns'
     convAssigns =
       mapM (\(nm, (ty, expr)) ->
@@ -233,10 +234,10 @@ ppRtlModule m@(Build_RtlModule ins' outs' regs' assigns') =
                 s <- ppRtlExpr "wire" expr
                 return (nm, (ty, s))) assigns
     convRegs =
-      mapM (\(nm, (ty, (init, expr))) ->
+      mapM (\((nm, listNat), (ty, expr)) ->
               do
                 s <- ppRtlExpr "reg" expr
-                return (nm, (ty, (init, s)))) regs
+                return (nm, listNat, (ty, s))) regWrites
     (assignExprs, assignTruncs) = runState convAssigns []
     (regExprs, regTruncs) = runState convRegs []
 

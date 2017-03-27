@@ -546,12 +546,18 @@ Section UsefulFunctions.
            ++
            map (fun x => connectRegWritesToReads (getRegType x) (attrName x)) (getRegInits m).
 
-  Definition computeAllRegWrites :=
+  Definition computeAllRegInits :=
     map (fun x: Attribute RegInitValue =>
            (attrName x,
-            existT (fun k => (ConstT k * RtlExpr k)%type) (getRegType x)
-                   (getRegInitValue x, computeRegFinalWrite (getRegType x) (attrName x)))) (getRegInits m).
-         
+            existT ConstT (getRegType x)
+                   (getRegInitValue x))) (getRegInits m).
+
+  Definition computeAllRegWrites :=
+    map (fun x: Attribute RegInitValue =>
+           (attrName x, nil: list nat,
+            existT RtlExpr (getRegType x)
+                   (computeRegFinalWrite (getRegType x) (attrName x)))) (getRegInits m).
+
   Definition computeAllOutputs :=
     map (fun x => (getMethArg (fst x), arg (snd x))) getExternalCalls
         ++
@@ -565,6 +571,7 @@ Section UsefulFunctions.
   Definition computeModule :=
     {| inputs := computeAllInputs;
        outputs := computeAllOutputs;
+       regInits := computeAllRegInits;
        regWrites := computeAllRegWrites;
        wires := computeAllAssigns |}.
 End UsefulFunctions.
