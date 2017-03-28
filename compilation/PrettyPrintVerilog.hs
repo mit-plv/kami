@@ -2,6 +2,7 @@ import Target
 import Data.List
 import Data.List.Split
 import Control.Monad.State.Lazy
+import qualified Data.HashMap.Strict as H
 
 ppVecLen :: Int -> String
 ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
@@ -22,28 +23,27 @@ vecToList :: Vec a -> [a]
 vecToList (Vec0 a) = [a]
 vecToList (VecNext _ xs ys) = vecToList xs ++ vecToList ys
 
-{-
-instance Show a => Show (Attribute a) where
-  show (Build_Attribute x y) = "(" ++ show x ++ ", " ++ show y ++ ")"
+ppTypeName :: Kind -> String
+ppTypeName (Struct _ _) = "struct packed"
+ppTypeName _ = "logic"
 
-instance Show Kind where
-  show Bool = "Bool"
-  show (Bit n) = "(Bit " ++ show n ++ ")"
-  show (Vector k i) = "(Vector " ++ show k ++ " " ++ show i ++ ")"
-  show (Struct n vec) = "(Struct " ++ show (vectorToList vec) ++ ")"
--}
+ppTypeVec :: Kind -> Int -> (Kind, [Int])
+ppTypeVec k@(Vector _ _) i =
+  let (k', is) = ppTypeVec k i
+  in (k', i : is)
+ppTypeVec k i = (k, i : [])
 
-ppType1 :: Kind -> String
-ppType1 (Struct _ _) = "struct packed"
-ppType1 _ = "logic"
-
-ppType2 :: Kind -> String
-ppType2 Bool = ""
-ppType2 (Bit i) = if i > 0
-                  then "[" ++ show (i-1) ++ ":0]"
-                  else ""
-ppType2 (Vector k i) = ppVecLen i ++ ppType2 k
-ppType2 (Struct n v) = '{' : concatMap (\x -> ' ' : ppDeclType (ppName $ attrName x) (attrType x) ++ ";") (vectorToList v) ++ "}"
+ppType :: Kind -> String
+ppType Bool = ""
+ppType (Bit i) = if i > 0
+                      then "[" ++ show (i-1) ++ ":0]"
+                      else ""
+ppType v@(Vector k i) =
+  let (k', is) = ppTypeVec k i
+  in case k' of
+       Struct _ _ -> ppType k' ++ concatMap ppVecLen is
+       _ -> concatMap ppVecLen is ++ ppType k'
+ppType (Struct n v) = "{" ++ concatMap (\x -> ' ' : ppDeclType (ppName $ attrName x) (attrType x) ++ ";") (vectorToList v) ++ "}"
 
 ppName :: String -> String
 ppName s =
@@ -57,7 +57,7 @@ ppName s =
 
 
 ppDeclType :: String -> Kind -> String
-ppDeclType s k = ppType1 k ++ ppType2 k ++ " " ++ s
+ppDeclType s k = ppTypeName k ++ ppType k ++ " " ++ s
 
 ppPrintVar :: (String, [Int]) -> String
 ppPrintVar (s, vs) = ppName $ s ++ concatMap (\v -> '#' : show v) vs
@@ -72,7 +72,9 @@ ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord
 ppConst (ConstVector k _ vs) = '{' : intercalate ", " (map ppConst (vecToList vs)) ++ "}"
 ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (map ppConst (ilistToList is)) ++ "}"
 
-ppRtlExpr :: String -> RtlExpr -> State [(Int, Kind, String)] String
+
+
+ppRtlExpr :: String -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
 ppRtlExpr who e =
   case e of
     RtlReadReg k s -> return (ppName s)
@@ -147,7 +149,7 @@ ppRtlExpr who e =
                  ":" ++ xv ++ "[" ++ show i ++ "]")
            [0 .. ((2^n)-1)]) ++ "}"
   where
-    optionAddToTrunc :: Kind -> RtlExpr -> String -> State [(Int, Kind, String)] (String, String)
+    optionAddToTrunc :: Kind -> RtlExpr -> String -> State (H.HashMap String (Int, Kind)) (String, String)
     optionAddToTrunc k e rest =
       case e of
         RtlReadReg k s -> return $ (ppName s, rest)
@@ -157,21 +159,21 @@ ppRtlExpr who e =
           x <- ppRtlExpr who e
           new <- addToTrunc k x
           return $ (new, rest)
-    createTrunc :: Kind -> RtlExpr -> Int -> Int -> State [(Int, Kind, String)] String
+    createTrunc :: Kind -> RtlExpr -> Int -> Int -> State (H.HashMap String (Int, Kind)) String
     createTrunc k e msb lsb =
       do
         (new, rest) <- optionAddToTrunc k e ('[' : show msb ++ ':' : show lsb ++ "]")
         return $ new ++ rest
-    addToTrunc :: Kind -> String -> State [(Int, Kind, String)] String
-    addToTrunc k s =
+    addToTrunc :: Kind -> String -> State (H.HashMap String (Int, Kind)) String
+    addToTrunc kind s =
       do
         x <- get
-        case Data.List.find (\(_, k', s') -> s' == s) x of
-          Just (pos, _, _) -> return $ "_trunc$" ++ who ++ "$" ++ show pos
+        case H.lookup s x of
+          Just (pos, _) -> return $ "_trunc$" ++ who ++ "$" ++ show pos
           Nothing ->
             do
-              put ((Data.List.length x, k, s) : x)
-              return $ "_trunc$" ++ who ++ "$" ++ show (Data.List.length x)
+              put (H.insert s (H.size x, kind) x)
+              return $ "_trunc$" ++ who ++ "$" ++ show (H.size x)
     uniExpr op e =
       do
         x <- ppRtlExpr who e
@@ -249,11 +251,11 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
 
   concatMap (\(nm, (ty, expr)) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") assigns ++ "\n" ++
   
-  concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$wire$" ++ show pos) ty ++ ";\n") assignTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  " ++ ppDeclType ("_trunc$reg$" ++ show pos) ty ++ ";\n") regTruncs ++ "\n" ++
+  concatMap (\(sexpr, (pos, ty)) -> "  " ++ ppDeclType ("_trunc$wire$" ++ show pos) ty ++ ";\n") assignTruncs ++ "\n" ++
+  concatMap (\(sexpr, (pos, ty)) -> "  " ++ ppDeclType ("_trunc$reg$" ++ show pos) ty ++ ";\n") regTruncs ++ "\n" ++
 
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ sexpr ++ ";\n") assignTruncs ++ "\n" ++
-  concatMap (\(pos, ty, sexpr) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ sexpr ++ ";\n") regTruncs ++ "\n" ++
+  concatMap (\(sexpr, (pos, ty)) -> "  assign " ++ "_trunc$wire$" ++ show pos ++ " = " ++ sexpr ++ ";\n") assignTruncs ++ "\n" ++
+  concatMap (\(sexpr, (pos, ty)) -> "  assign " ++ "_trunc$reg$" ++ show pos ++ " = " ++ sexpr ++ ";\n") regTruncs ++ "\n" ++
   
   concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ sexpr ++ ";\n") assignExprs ++ "\n" ++
   
@@ -282,8 +284,10 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
               do
                 s <- ppRtlExpr "reg" expr
                 return (nm, (ty, s))) regWrites
-    (assignExprs, assignTruncs) = runState convAssigns []
-    (regExprs, regTruncs) = runState convRegs []
+    (assignExprs, assignTruncs') = runState convAssigns H.empty
+    (regExprs, regTruncs') = runState convRegs H.empty
+    assignTruncs = H.toList assignTruncs'
+    regTruncs = H.toList regTruncs'
 
 
 ppTopModule :: RtlModule -> String
