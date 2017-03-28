@@ -188,8 +188,8 @@ ppRtlExpr who e =
         x3 <- ppRtlExpr who e3
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
-ppRfInstance :: (((String, String), String), (((Int, Kind)), ConstT)) -> String
-ppRfInstance (((name, read), write), ((idxType, dataType), _)) =
+ppRfInstance :: ((((String, String), String), (((Int, Kind)), ConstT)), Bool) -> String
+ppRfInstance ((((name, read), write), ((idxType, dataType), _)), _) =
   "  " ++ ppName name ++ " " ++
   ppName name ++ "$inst(.CLK(CLK), .RESET(RESET), ." ++
   ppName read ++ "$_g(" ++ ppName read ++ "$_g), ." ++
@@ -200,8 +200,8 @@ ppRfInstance (((name, read), write), ((idxType, dataType), _)) =
   ppName write ++ "$_en(" ++ ppName write ++ "$_en)" ++
   ppName write ++ "$_arg(" ++ ppName write ++ "$_arg));\n\n"
   
-ppRfModule :: (((String, String), String), ((Int, Kind), ConstT)) -> String
-ppRfModule (((name, read), write), ((idxType, dataType), init)) =
+ppRfModule :: ((((String, String), String), ((Int, Kind), ConstT)), Bool) -> String
+ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   "module " ++ ppName name ++ "(" ++
   "  output " ++ ppDeclType (ppName read ++ "$_g") Bool ++ ",\n" ++
   "  input " ++ ppDeclType (ppName read ++ "$_en") Bool ++ ",\n" ++
@@ -219,7 +219,10 @@ ppRfModule (((name, read), write), ((idxType, dataType), init)) =
   "    " ++ ppName name ++ " = " ++ '\'' : ppConst init ++ ";\n" ++
   "  end\n" ++
   "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
-  "  assign " ++ ppName read ++ "$_ret = " ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n" ++
+  "  assign " ++ ppName read ++ "$_ret = " ++
+  if bypass
+  then ppName write ++ "$_en && " ++ ppName write ++ "$_arg.addr == " ++ ppName read ++ "$_arg ? " ++ ppName write ++ "$_data : "
+  else "" ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n" ++
   "  assign " ++ ppName write ++ "$_g = 1'b1;\n" ++
   "  always@(posedge CLK) begin\n" ++
   "    " ++ ppName name ++ "$_data[" ++ ppName write ++ "$_arg.addr] <= " ++ ppName write ++ "$_arg.data;\n" ++
@@ -261,8 +264,8 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   "    else begin\n" ++
   concatMap (\(nm, (ty, sexpr)) -> "      " ++ ppName nm ++ " <= " ++ sexpr ++ ";\n") regExprs ++
   "    end\n" ++
-  "  end\n\n" ++
-  "endmodule\n"
+  "  end\n" ++
+  "endmodule\n\n"
   where
     ins = removeDups ins'
     outs = removeDups outs'
@@ -292,17 +295,17 @@ ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   "  input CLK,\n" ++
   "  input RESET\n" ++
   ");\n" ++
-  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") insAll ++ "\n" ++
-  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outsAll ++ "\n" ++
+  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") insAll ++ "\n" ++
+  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") outsAll ++ "\n" ++
   concatMap ppRfInstance regFs ++
   ppRtlInstance m ++
-  "endmodule\n\n"
+  "endmodule\n"
   where
     insAll = removeDups ins'
     outsAll = removeDups outs'
     ins = Data.List.filter filtCond insAll
     outs = Data.List.filter filtCond outsAll
-    filtCond ((x, _), _) = case Data.List.find (\(((_, read), write), (_, _)) ->
+    filtCond ((x, _), _) = case Data.List.find (\((((_, read), write), (_, _)), _) ->
                                                   x == read ++ "#_g" ||
                                                   x == read ++ "#_en" ||
                                                   x == read ++ "#_arg" ||
@@ -314,4 +317,4 @@ ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
                           _ -> False
   
   
-main = putStrLn $ ppRtlModule target
+main = putStrLn $ ppTopModule target

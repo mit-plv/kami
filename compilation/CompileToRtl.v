@@ -206,10 +206,7 @@ Fixpoint separateRegFiles m :=
   end.
 
 Section UsefulFunctions.
-  Variable m': Modules.
-
-  Definition m := snd (separateRegFiles m').
-  Definition regFs := fst (separateRegFiles m').
+  Variable m: Modules.
 
   Variable totalOrder: list string.
   Variable ignoreLess: list (string * string).
@@ -582,12 +579,35 @@ Section UsefulFunctions.
     map (fun x => (getActionGuard (fst x), Bool)) getExternalCalls
         ++
         map (fun x => (getMethRet (fst x), ret (snd x))) getExternalCalls.
-
-  Definition computeModule :=
-    {| regFiles := regFs;
-       inputs := computeAllInputs;
-       outputs := computeAllOutputs;
-       regInits := computeAllRegInits;
-       regWrites := computeAllRegWrites;
-       wires := computeAllAssigns |}.
 End UsefulFunctions.
+
+Section FinalResult.
+  Variable m: Modules.
+  Variable totalOrder: list string.
+  Variable ignoreLess: list (string * string).
+
+
+  Definition m' := snd (separateRegFiles m).
+  Definition regFs := fst (separateRegFiles m).
+
+  Local Definition checkBypass (r: string * string * string * sigT (fun x => ConstT (Vector (snd x) (fst x)))) :=
+    match r with
+      | (data, read, write, _) =>
+        match head (methPos m totalOrder read) with
+          | None => (r, false)
+          | Some n => match regIndex m totalOrder ignoreLess data n with
+                        | 0 => (r, false)
+                        | _ => (r, true)
+                      end
+        end
+    end.
+
+  
+  Definition computeModule :=
+    {| regFiles := map checkBypass regFs;
+       inputs := computeAllInputs m';
+       outputs := computeAllOutputs m';
+       regInits := computeAllRegInits m';
+       regWrites := computeAllRegWrites m' totalOrder ignoreLess;
+       wires := computeAllAssigns m' totalOrder ignoreLess|}.
+End FinalResult.

@@ -27,7 +27,7 @@ Inductive RtlExpr: Kind -> Type :=
                        -> RtlExpr ((Vector k i)).
 
 Record RtlModule :=
-  { regFiles: list (string * string * string * sigT (fun x => ConstT (Vector (snd x) (fst x))));
+  { regFiles: list (string * string * string * sigT (fun x => ConstT (Vector (snd x) (fst x))) * bool);
     inputs: list (string * list nat * Kind);
     outputs: list (string * list nat * Kind);
     regInits: list (string * sigT (fun x => ConstT x));
