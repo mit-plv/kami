@@ -20,9 +20,9 @@ Definition getMethArg f := (f ++ "#_arg", nil_nat).
 Definition getActionGuard r := (r ++ "#_g", nil_nat).
 Definition getActionEn r := (r ++ "#_en", nil_nat).
 
-Definition getRegIndexWrite r (i: nat) := (r ++ "#_write#", i :: nil).
-Definition getRegIndexWriteEn r (i: nat) := (r ++ "#_writeEn#", i :: nil).
-Definition getRegIndexRead r (i: nat) := (r ++ "#_read#", i :: nil).
+Definition getRegIndexWrite r (i: nat) := (r ++ "#_write", i :: nil).
+Definition getRegIndexWriteEn r (i: nat) := (r ++ "#_writeEn", i :: nil).
+Definition getRegIndexRead r (i: nat) := (r ++ "#_read", i :: nil).
 
 Close Scope string.
 
@@ -387,24 +387,24 @@ Section UsefulFunctions.
       | _ => Void
     end.
 
-  Definition getRegInitValue reg: option (ConstT (getRegType reg)) :=
-      match attrType reg as regT return option (ConstT match regT with
-                                                         | RegInitCustom (existT (SyntaxKind k) _) => k
-                                                         | RegInitDefault (SyntaxKind k) => k
-                                                         | _ => Void
-                                                       end) with
+  Definition getRegInitValue reg: ConstT (getRegType reg) :=
+      match attrType reg as regT return ConstT match regT with
+                                                 | RegInitCustom (existT (SyntaxKind k) _) => k
+                                                 | RegInitDefault (SyntaxKind k) => k
+                                                 | _ => Void
+                                               end with
       | RegInitCustom (existT k v) =>
-        match k return ConstFullT k -> option (ConstT match k with
-                                                        | SyntaxKind k' => k'
-                                                        | NativeKind _ _ => Void
-                                                      end) with
+        match k return ConstFullT k -> ConstT match k with
+                                                | SyntaxKind k' => k'
+                                                | NativeKind _ _ => Void
+                                              end with
           | SyntaxKind _ => fun v => match v with
-                                       | SyntaxConst _ v' => Some v'
+                                       | SyntaxConst _ v' => v'
                                      end
-          | _ => fun _ => None
+          | _ => fun _ => WO
         end v
-      | RegInitDefault (SyntaxKind k) => None
-      | _ => None
+      | RegInitDefault (SyntaxKind k) => getDefaultConst k
+      | _ => WO
       end.
 
   Section OneRule.
@@ -565,8 +565,7 @@ Section UsefulFunctions.
   Definition computeAllRegInits :=
     map (fun x: Attribute RegInitValue =>
            (attrName x,
-            existT (fun x => option (ConstT x)) (getRegType x)
-                   (getRegInitValue x))) (getRegInits m).
+            existT ConstT (getRegType x) (getRegInitValue x))) (getRegInits m).
 
   Definition computeAllRegWrites :=
     map (fun x: Attribute RegInitValue =>

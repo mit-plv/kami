@@ -34,8 +34,8 @@ instance Show Kind where
 -}
 
 ppType1 :: Kind -> String
-ppType1 (Struct _ _) = "struct packed "
-ppType1 _ = "logic "
+ppType1 (Struct _ _) = "struct packed"
+ppType1 _ = "logic"
 
 ppType2 :: Kind -> String
 ppType2 Bool = ""
@@ -43,18 +43,17 @@ ppType2 (Bit i) = if i > 0
                   then "[" ++ show (i-1) ++ ":0]"
                   else ""
 ppType2 (Vector k i) = ppVecLen i ++ ppType2 k
-ppType2 (Struct n v) = '{' : concatMap (\x -> ppDeclType (ppName $ attrName x) (attrType x) ++ "; ") (vectorToList v) ++ "}"
+ppType2 (Struct n v) = '{' : concatMap (\x -> ' ' : ppDeclType (ppName $ attrName x) (attrType x) ++ ";") (vectorToList v) ++ "}"
 
 ppName :: String -> String
 ppName s =
-  map (\x -> case x of
-               '#' -> '$'
-               c -> c)
-  (if elem '.' s
-   then concat $ case splitOneOf ".#" s of
-                   x : y : xs -> y : x : xs
-                   ys -> ys
-   else s)
+  if elem '.' s
+  then intercalate "$" (case splitOneOf ".#" s of
+                          x : y : xs -> y : x : xs
+                          ys -> ys)
+  else map (\x -> case x of
+                    '#' -> '$'
+                    c -> c) s
 
 
 ppDeclType :: String -> Kind -> String
@@ -189,41 +188,55 @@ ppRtlExpr who e =
         x3 <- ppRtlExpr who e3
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
-{-
-ppRegFileInstance :: (String, String, String, ((Int, Kind), RegInitValue)) -> String
-ppRegFileInstance (name, read, write, ((idxType, dataType), init)) =
-  ppName name ++ " " ++
-  (case init of
-      RegInitCustom (SyntaxKind k, SyntaxConst _ v) -> "#(.init(" ++ ppConst v ++ "))) "
-        _ -> "") ++
+ppRfInstance :: (((String, String), String), (((Int, Kind)), ConstT)) -> String
+ppRfInstance (((name, read), write), ((idxType, dataType), _)) =
+  "  " ++ ppName name ++ " " ++
   ppName name ++ "$inst(.CLK(CLK), .RESET(RESET), ." ++
-  ppName read ++ "$en(" ++ ppName read ++ "$en), ." ++
-  ppName read ++ "$arg(" ++ ppName read ++ "$arg), ." ++
-  ppName read ++ "$ret(" ++ ppName read ++ "$ret), ." ++
-  ppName read ++ "$g(" ++ ppName read ++ "$g), ." ++
-  ppName write ++ "$g(" ++ ppName write ++ "$g)" ++
-  ppName write ++ "$en(" ++ ppName write ++ "$en)" ++
-  ppName write ++ "$arg(" ++ ppName write ++ "$arg));\n\n"
+  ppName read ++ "$_g(" ++ ppName read ++ "$_g), ." ++
+  ppName read ++ "$_en(" ++ ppName read ++ "$_en), ." ++
+  ppName read ++ "$_arg(" ++ ppName read ++ "$_arg), ." ++
+  ppName read ++ "$_ret(" ++ ppName read ++ "$_ret), ." ++
+  ppName write ++ "$_g(" ++ ppName write ++ "$_g)" ++
+  ppName write ++ "$_en(" ++ ppName write ++ "$_en)" ++
+  ppName write ++ "$_arg(" ++ ppName write ++ "$_arg));\n\n"
   
-ppRegFileModule :: (String, String, String, ((Int, Kind), RegInitValue)) -> String
-ppRegFileModule (name, read, write, ((idxType, dataType), init)) =
-  "module " ++ name ++ "(" ++
-  "  input " ++ ppDeclType (ppName read ++ "$en") Bool ++ ",\n" ++
-  "  input " ++ ppDeclType (ppName read ++ "$arg") (Bit idxType) ++ ",\n" ++
-  "  output " ++ ppDeclType (ppName read ++ "$ret") dataType ++ ",\n" ++
-  "  input " ++ ppDeclType (ppName write ++ "$en") Bool ++ ",\n" ++
-  "  input " ++ ppDeclType (ppName write ++ "$en") Bool ++ ",\n" ++
+ppRfModule :: (((String, String), String), ((Int, Kind), ConstT)) -> String
+ppRfModule (((name, read), write), ((idxType, dataType), init)) =
+  "module " ++ ppName name ++ "(" ++
+  "  output " ++ ppDeclType (ppName read ++ "$_g") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName read ++ "$_en") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName read ++ "$_arg") (Bit idxType) ++ ",\n" ++
+  "  output " ++ ppDeclType (ppName read ++ "$_ret") dataType ++ ",\n" ++
+  "  output " ++ ppDeclType (ppName write ++ "$_g") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName write ++ "$_en") Bool ++ ",\n" ++
+  "  input " ++ ppDeclType (ppName write ++ "$_arg")
+  (Struct 2 (Cons (Build_Attribute "addr" (Bit idxType)) 2 (Cons (Build_Attribute "data" dataType) 1 Nil))) ++ ",\n" ++
   "  input logic CLK,\n" ++
   "  input logic RESET\n" ++
-  ");\n"
-  -}
+  ");\n" ++
+  "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (idxType - 1) ++ "];\n" ++
+  "  init begin\n" ++
+  "    " ++ ppName name ++ " = " ++ '\'' : ppConst init ++ ";\n" ++
+  "  end\n" ++
+  "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
+  "  assign " ++ ppName read ++ "$_ret = " ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n" ++
+  "  assign " ++ ppName write ++ "$_g = 1'b1;\n" ++
+  "  always@(posedge CLK) begin\n" ++
+  "    " ++ ppName name ++ "$_data[" ++ ppName write ++ "$_arg.addr] <= " ++ ppName write ++ "$_arg.data;\n" ++
+  "  end\n" ++
+  "endmodule\n\n"
+
+removeDups :: Eq a => [(a, b)] -> [(a, b)]
+removeDups = nubBy (\(a, _) (b, _) -> a == b)
+
+ppRtlInstance :: RtlModule -> String
+ppRtlInstance m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
+  "  _design _designInst(.CLK(CLK), .RESET(RESET)" ++
+  concatMap (\(nm, ty) -> ", ." ++ ppPrintVar nm ++ '(' : ppPrintVar nm ++ ")") (removeDups ins' ++ removeDups outs') ++ ");\n"
   
-                 
-
-
 ppRtlModule :: RtlModule -> String
 ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
-  "module top(\n" ++
+  "module _design(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
   "  input CLK,\n" ++
@@ -243,21 +256,19 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   
   "  always @(posedge CLK) begin\n" ++
   "    if(RESET) begin\n" ++
-  concatMap (\(nm, (ty, init)) -> case init of
-                                    Nothing -> ""
-                                    Just i -> "      " ++ ppName nm ++ " <= " ++ ppConst i ++ ";\n") regInits ++
+  concatMap (\(nm, (ty, init)) -> "      " ++ ppName nm ++ " <= " ++ ppConst init ++ ";\n") regInits ++
   "    end\n" ++
   "    else begin\n" ++
   concatMap (\(nm, (ty, sexpr)) -> "      " ++ ppName nm ++ " <= " ++ sexpr ++ ";\n") regExprs ++
-  "    end\n\n" ++
+  "    end\n" ++
   "  end\n\n" ++
   "endmodule\n"
   where
-    ins = nubBy (\(a, _) (b, _) -> a == b) ins'
-    outs = nubBy (\(a, _) (b, _) -> a == b) outs'
-    regInits = nubBy (\(a, _) (b, _) -> a == b) regInits'
-    regWrites = nubBy (\(a, _) (b, _) -> a == b) regWrites'
-    assigns = nubBy (\(a, _) (b, _) -> a == b) assigns'
+    ins = removeDups ins'
+    outs = removeDups outs'
+    regInits = removeDups regInits'
+    regWrites = removeDups regWrites'
+    assigns = removeDups assigns'
     convAssigns =
       mapM (\(nm, (ty, expr)) ->
               do
@@ -272,4 +283,35 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
     (regExprs, regTruncs) = runState convRegs []
 
 
+ppTopModule :: RtlModule -> String
+ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
+  concatMap ppRfModule regFs ++ ppRtlModule m ++
+  "module _top(\n" ++
+  concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
+  concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
+  "  input CLK,\n" ++
+  "  input RESET\n" ++
+  ");\n" ++
+  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") insAll ++ "\n" ++
+  concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outsAll ++ "\n" ++
+  concatMap ppRfInstance regFs ++
+  ppRtlInstance m ++
+  "endmodule\n\n"
+  where
+    insAll = removeDups ins'
+    outsAll = removeDups outs'
+    ins = Data.List.filter filtCond insAll
+    outs = Data.List.filter filtCond outsAll
+    filtCond ((x, _), _) = case Data.List.find (\(((_, read), write), (_, _)) ->
+                                                  x == read ++ "#_g" ||
+                                                  x == read ++ "#_en" ||
+                                                  x == read ++ "#_arg" ||
+                                                  x == read ++ "#_ret" ||
+                                                  x == write ++ "#_g" ||
+                                                  x == write ++ "#_en" ||
+                                                  x == write ++ "#_arg") regFs of
+                          Nothing -> True
+                          _ -> False
+  
+  
 main = putStrLn $ ppRtlModule target
