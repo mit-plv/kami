@@ -142,7 +142,7 @@ ppRtlExpr who e =
         x1 <- ppRtlExpr who e1
         x2 <- ppRtlExpr who e2
         return $ '{' : x1 ++ ", " ++ x2 ++ "}"
-    RtlBinBitBool _ _ (Lt _) e1 e2 -> binExpr e1 "<" e2
+    RtlBinBitBool _ _ (Lt0 _) e1 e2 -> binExpr e1 "<" e2
     RtlITE _ p e1 e2 -> triExpr p "?" e1 ":" e2
     RtlEq _ e1 e2 -> binExpr e1 "==" e2
     RtlReadIndex n k idx vec ->
@@ -399,4 +399,8 @@ main =
     mod = getCallGraph targetMod
     fullGraph = Data.List.map (\x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))
 -}
-  putStrLn $ ppTopModule target
+--  putStrLn $ ppTopModule target
+
+  do
+    let Build_RtlModule _ ins outs regIs regAssigns assigns = target
+    putStrLn $ show ins ++ show outs ++ show regIs ++ show regAssigns ++ show assigns

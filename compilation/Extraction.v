@@ -3,7 +3,7 @@ Require Import Lib.Word Kami.Syntax Kami.Semantics
         Kami.Notations Lib.Struct.
 
 Require Import ExtrHaskellBasic ExtrHaskellNatInt ExtrHaskellString.
-Require Import Compile.CompileToRtl Compile.Rtl.
+Require Import Compile.CompileToRtlTryOpt Compile.Rtl.
 
 Extraction Language Haskell.
 
