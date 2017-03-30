@@ -1,8 +1,26 @@
+{-# OPTIONS_GHC -XStandaloneDeriving #-}
+
 import Target
 import Data.List
 import Data.List.Split
 import Control.Monad.State.Lazy
 import qualified Data.HashMap.Strict as H
+
+deriving instance Show T
+deriving instance Show a => Show (T0 a)
+deriving instance Show a => Show (Attribute a)
+deriving instance (Show a, Show b) => Show (Ilist a b)
+deriving instance Show Target.Word
+deriving instance Show a => Show (Vec a)
+deriving instance Show Kind
+deriving instance Show ConstT
+deriving instance Show UniBoolOp
+deriving instance Show BinBoolOp
+deriving instance Show UniBitOp
+deriving instance Show BinBitOp
+deriving instance Show BinBitBoolOp
+deriving instance Show RtlExpr
+deriving instance Show RtlModule
 
 ppVecLen :: Int -> String
 ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
@@ -124,7 +142,7 @@ ppRtlExpr who e =
         x1 <- ppRtlExpr who e1
         x2 <- ppRtlExpr who e2
         return $ '{' : x1 ++ ", " ++ x2 ++ "}"
-    RtlBinBitBool _ _ (Lt0 _) e1 e2 -> binExpr e1 "<" e2
+    RtlBinBitBool _ _ (Lt _) e1 e2 -> binExpr e1 "<" e2
     RtlITE _ p e1 e2 -> triExpr p "?" e1 ":" e2
     RtlEq _ e1 e2 -> binExpr e1 "==" e2
     RtlReadIndex n k idx vec ->

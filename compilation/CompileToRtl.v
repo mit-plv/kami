@@ -190,21 +190,6 @@ Definition getWritesRuleBody (r: Attribute (Action Void)) :=
 Definition getWritesMethBody (f: DefMethT) :=
   (getWritesAction (projT2 (attrType f) typeUT tt)).
 
-Fixpoint separateRegFiles m :=
-  match m with
-    | RegFile dataArray read write idxBits data init =>
-      ((dataArray, read, write, existT (fun x => ConstT (Vector (snd x) (fst x))) (idxBits, data) init) :: nil, Mod nil nil nil)
-    | Mod _ _ _ => (nil, m)
-    | ConcatMod m1 m2 =>
-      let '(regFiles1, mods1) := separateRegFiles m1 in
-      let '(regFiles2, mods2) := separateRegFiles m2 in
-      (regFiles1 ++ regFiles2, match mods1, mods2 with
-                                 | Mod nil nil nil, xs => xs
-                                 | xs, Mod nil nil nil => xs
-                                 | xs, ys => ConcatMod xs ys
-                               end)
-  end.
-
 Section UsefulFunctions.
   Variable m: Modules.
 
@@ -580,6 +565,21 @@ Section UsefulFunctions.
         ++
         map (fun x => (getMethRet (fst x), ret (snd x))) getExternalCalls.
 End UsefulFunctions.
+
+Fixpoint separateRegFiles m :=
+  match m with
+    | RegFile dataArray read write idxBits data init =>
+      ((dataArray, read, write, existT (fun x => ConstT (Vector (snd x) (fst x))) (idxBits, data) init) :: nil, Mod nil nil nil)
+    | Mod _ _ _ => (nil, m)
+    | ConcatMod m1 m2 =>
+      let '(regFiles1, mods1) := separateRegFiles m1 in
+      let '(regFiles2, mods2) := separateRegFiles m2 in
+      (regFiles1 ++ regFiles2, match mods1, mods2 with
+                                 | Mod nil nil nil, xs => xs
+                                 | xs, Mod nil nil nil => xs
+                                 | xs, ys => ConcatMod xs ys
+                               end)
+  end.
 
 Section FinalResult.
   Variable m: Modules.
