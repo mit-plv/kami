@@ -9,7 +9,7 @@ ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
 
 finToInt :: T -> Int
 finToInt (F1 _) = 0
-finToInt (FS _ x) = succ (finToInt x)
+finToInt (FS _ x) = Prelude.succ (finToInt x)
 
 vectorToList :: T0 a -> [a]
 vectorToList Nil = []
@@ -23,15 +23,21 @@ vecToList :: Vec a -> [a]
 vecToList (Vec0 a) = [a]
 vecToList (VecNext _ xs ys) = vecToList xs ++ vecToList ys
 
-ppTypeName :: Kind -> String
-ppTypeName (Struct _ _) = "struct packed"
-ppTypeName _ = "logic"
+wordToList :: Target.Word -> [Bool]
+wordToList WO = []
+wordToList (WS b _ w) = b : wordToList w
 
 ppTypeVec :: Kind -> Int -> (Kind, [Int])
 ppTypeVec k@(Vector _ _) i =
   let (k', is) = ppTypeVec k i
   in (k', i : is)
 ppTypeVec k i = (k, i : [])
+
+ppTypeName :: Kind -> String
+ppTypeName k =
+  case ppTypeVec k 0 of
+    (Struct _ _, _) -> "struct packed"
+    (_, _) -> "logic"
 
 ppType :: Kind -> String
 ppType Bool = ""
@@ -51,9 +57,9 @@ ppName s =
   then intercalate "$" (case splitOneOf ".#" s of
                           x : y : xs -> y : x : xs
                           ys -> ys)
-  else map (\x -> case x of
-                    '#' -> '$'
-                    c -> c) s
+  else Data.List.map (\x -> case x of
+                         '#' -> '$'
+                         c -> c) s
 
 
 ppDeclType :: String -> Kind -> String
@@ -68,9 +74,9 @@ ppWord (b : bs) = (if b then '1' else '0') : ppWord bs
 
 ppConst :: ConstT -> String
 ppConst (ConstBool b) = if b then "1'b1" else "1'b0"
-ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord w
-ppConst (ConstVector k _ vs) = '{' : intercalate ", " (map ppConst (vecToList vs)) ++ "}"
-ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (map ppConst (ilistToList is)) ++ "}"
+ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (wordToList w)
+ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (vecToList vs)) ++ "}"
+ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (Data.List.map ppConst (ilistToList is)) ++ "}"
 
 
 
@@ -118,7 +124,7 @@ ppRtlExpr who e =
         x1 <- ppRtlExpr who e1
         x2 <- ppRtlExpr who e2
         return $ '{' : x1 ++ ", " ++ x2 ++ "}"
-    RtlBinBitBool _ _ (Lt _) e1 e2 -> binExpr e1 "<" e2
+    RtlBinBitBool _ _ (Lt0 _) e1 e2 -> binExpr e1 "<" e2
     RtlITE _ p e1 e2 -> triExpr p "?" e1 ":" e2
     RtlEq _ e1 e2 -> binExpr e1 "==" e2
     RtlReadIndex n k idx vec ->
@@ -145,8 +151,8 @@ ppRtlExpr who e =
         xidx <- ppRtlExpr who idx
         xval <- ppRtlExpr who val
         return $  '{' : intercalate ", "
-          (map (\i -> xidx ++ "==" ++ show n ++ "'d" ++ show i ++ " ? " ++ xval ++
-                 ":" ++ xv ++ "[" ++ show i ++ "]")
+          (Data.List.map (\i -> xidx ++ "==" ++ show n ++ "'d" ++ show i ++ " ? " ++ xval ++
+                           ":" ++ xv ++ "[" ++ show i ++ "]")
            [0 .. ((2^n)-1)]) ++ "}"
   where
     optionAddToTrunc :: Kind -> RtlExpr -> String -> State (H.HashMap String (Int, Kind)) (String, String)
@@ -217,7 +223,7 @@ ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   "  input logic RESET\n" ++
   ");\n" ++
   "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (idxType - 1) ++ "];\n" ++
-  "  init begin\n" ++
+  "  initial begin\n" ++
   "    " ++ ppName name ++ " = " ++ '\'' : ppConst init ++ ";\n" ++
   "  end\n" ++
   "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
@@ -227,7 +233,9 @@ ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   else "" ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n" ++
   "  assign " ++ ppName write ++ "$_g = 1'b1;\n" ++
   "  always@(posedge CLK) begin\n" ++
-  "    " ++ ppName name ++ "$_data[" ++ ppName write ++ "$_arg.addr] <= " ++ ppName write ++ "$_arg.data;\n" ++
+  "    if(" ++ ppName write ++ "$_en) begin\n" ++
+  "      " ++ ppName name ++ "$_data[" ++ ppName write ++ "$_arg.addr] <= " ++ ppName write ++ "$_arg.data;\n" ++
+  "    end\n" ++
   "  end\n" ++
   "endmodule\n\n"
 
@@ -289,6 +297,21 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
     assignTruncs = H.toList assignTruncs'
     regTruncs = H.toList regTruncs'
 
+ppGraph :: [(String, [String])] -> String
+ppGraph x = case x of
+              [] -> ""
+              (a, b) : ys -> "(" ++ show a ++ ", " ++ show b ++ ", " ++ show (Data.List.length b) ++ "),\n" ++ ppGraph ys
+
+
+maxOutEdge :: [(String, [String])] -> Int
+maxOutEdge x = case x of
+                 [] -> 0
+                 (a, b) : ys -> Prelude.max (Data.List.length b) (maxOutEdge ys)
+
+sumOutEdge :: [(String, [String])] -> Int
+sumOutEdge x = case x of
+                 [] -> 0
+                 (a, b) : ys -> Data.List.length b + sumOutEdge ys
 
 ppTopModule :: RtlModule -> String
 ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
@@ -319,6 +342,43 @@ ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
                                                   x == write ++ "#_arg") regFs of
                           Nothing -> True
                           _ -> False
+
+printDiff :: [(String, [String])] -> [(String, [String])] -> IO ()
+printDiff (x:xs) (y:ys) =
+  do
+    if x == y
+    then printDiff xs ys
+    else putStrLn $ (show x) ++ " " ++ (show y)
+printDiff [] [] = return ()
+printDiff _ _ = putStrLn "Wrong lengths"
   
-  
-main = putStrLn $ ppTopModule target
+
+main =
+  {-
+  do
+    let Build_RtlModule _ ins outs regIs regAssigns assigns = target
+    let regIndice = (\i -> Data.List.map
+                           (\(r, _) ->
+                               (r, regIndex targetMod (Data.List.map (\x -> attrName x) (getRules targetMod)) [] r i)) regIs)
+    let regIndices = Data.List.map (\i -> (attrName (getRules targetMod !! i), regIndice i)) [0 .. (Data.List.length (getRules targetMod) - 1)]
+    putStrLn $ show (Data.List.length regIs) ++ " " ++ show (Data.List.length (getRules targetMod))
+    putStrLn $ show regIndices
+-}
+    {-
+  do
+    putStrLn $ ppGraph mod ++ show (maxOutEdge mod) ++ " " ++ show (sumOutEdge mod) ++ " " ++ show (Data.List.length mod) ++ " " ++
+      show (Data.List.length (getCallGraph targetMod)) ++ "\n" ++ ppGraph fullGraph ++ "\n" ++
+      show (mod == fullGraph)
+    printDiff mod fullGraph
+  {-
+  putStrLn $ ppGraph (getCallGraph targetMod) ++
+    show (maxOutEdge (getCallGraph targetMod)) ++ " " ++ show (sumOutEdge (getCallGraph targetMod)) ++ " " ++
+    show (Data.List.length (getRules targetMod)) ++ " " ++ show (Data.List.length (getCallGraph targetMod)) ++ "\n" ++
+    ppGraph (Data.List.map (\ x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod)))
+-}
+    -- show (getCallGraph targetMod == (Data.List.map (\ x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))))
+  where
+    mod = getCallGraph targetMod
+    fullGraph = Data.List.map (\x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))
+-}
+  putStrLn $ ppTopModule target
