@@ -219,17 +219,6 @@ Section UsefulFunctions.
 
   Definition getAllCalls a := getConnectedChain string_dec (getCallGraph) a.
 
-  (*
-  Lemma string_signature_dec: forall a b: (string * SignatureT), {a = b} + {a <> b}.
-  Proof.
-    decide equality.
-    apply SignatureT_dec.
-    apply string_dec.
-  Qed.
-   *)
-
-  (* Must change this to reflect regfiles *)
-  
   Definition getExternalCalls :=
     filter (fun f => if find (string_eq (fst f)) (getDefs m) then false else true)
            (getCalls_Sig m).
@@ -481,17 +470,6 @@ Section UsefulFunctions.
     Definition computeRegIndexWrite := computeRegIndexWrite' (maxRegIndex reg).
     
     Definition computeRegFinalWrite := RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg)).
-
-    (*
-    Local Fixpoint computeLastRegWrite' n :=
-      match n with
-        | 0 => RtlReadWire ty (getRegIndexWrite reg 0)
-        | S m => RtlITE (RtlReadWire Bool (getRegIndexWriteEn reg (S m))) (RtlReadWire ty (getRegIndexWrite reg (S m)))
-                        (computeLastRegWrite' m)
-      end.
-
-    Definition computeLastRegWrite := computeLastRegWrite' (maxRegIndex reg).
-     *)
 
     Local Fixpoint connectRegWritesToReads' n :=
       match n with

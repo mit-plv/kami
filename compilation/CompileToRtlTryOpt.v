@@ -4,10 +4,6 @@ Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct
 Require Import Coq.FSets.FSetAVL Coq.Structures.OrderedType Lib.StringAsOT Lib.StringStringAsOT.
 Module M := FSetAVL.Make(String_as_OT).
 Module MM := FSetAVL.Make(StringString_as_OT).
-(*
-Definition fromList l := fold_left (fun rest elt => M.add elt rest) l M.empty.
-Definition fromListList l := fold_left (fun rest elt => MM.add elt rest) l MM.empty.
-*)
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -466,17 +462,6 @@ Section UsefulFunctions.
     Definition computeRegIndexWrite := computeRegIndexWrite' (maxRegIndex reg).
     
     Definition computeRegFinalWrite := RtlReadWire ty (getRegIndexWrite reg (maxRegIndex reg)).
-
-    (*
-    Local Fixpoint computeLastRegWrite' n :=
-      match n with
-        | 0 => RtlReadWire ty (getRegIndexWrite reg 0)
-        | S m => RtlITE (RtlReadWire Bool (getRegIndexWriteEn reg (S m))) (RtlReadWire ty (getRegIndexWrite reg (S m)))
-                        (computeLastRegWrite' m)
-      end.
-
-    Definition computeLastRegWrite := computeLastRegWrite' (maxRegIndex reg).
-     *)
 
     Local Fixpoint connectRegWritesToReads' n :=
       match n with

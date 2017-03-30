@@ -46,8 +46,8 @@ wordToList WO = []
 wordToList (WS b _ w) = b : wordToList w
 
 ppTypeVec :: Kind -> Int -> (Kind, [Int])
-ppTypeVec k@(Vector _ _) i =
-  let (k', is) = ppTypeVec k i
+ppTypeVec k@(Vector k' i') i =
+  let (k'', is) = ppTypeVec k' i'
   in (k', i : is)
 ppTypeVec k i = (k, i : [])
 
@@ -151,10 +151,10 @@ ppRtlExpr who e =
         xvec <- ppRtlExpr who vec
         (new, rest) <- optionAddToTrunc (Vector k n) vec ('[' : xidx ++ "]")
         return $ new ++ rest
-    RtlReadField _ fields idx e ->
+    RtlReadField num fields idx e ->
       do
-        x <- ppRtlExpr who e
-        return $ x ++ '.' : attrName (vectorToList fields !! finToInt idx)
+        (new, rest) <- optionAddToTrunc (Struct num fields) e ('.' : attrName (vectorToList fields !! finToInt idx))
+        return $ new ++ rest
     RtlBuildVector _ _ vs ->
       do
         strs <- mapM (ppRtlExpr who) (vecToList vs)
@@ -222,8 +222,8 @@ ppRfInstance ((((name, read), write), ((idxType, dataType), _)), _) =
   ppName read ++ "$_en(" ++ ppName read ++ "$_en), ." ++
   ppName read ++ "$_arg(" ++ ppName read ++ "$_arg), ." ++
   ppName read ++ "$_ret(" ++ ppName read ++ "$_ret), ." ++
-  ppName write ++ "$_g(" ++ ppName write ++ "$_g)" ++
-  ppName write ++ "$_en(" ++ ppName write ++ "$_en)" ++
+  ppName write ++ "$_g(" ++ ppName write ++ "$_g), ." ++
+  ppName write ++ "$_en(" ++ ppName write ++ "$_en), ." ++
   ppName write ++ "$_arg(" ++ ppName write ++ "$_arg));\n\n"
   
 ppRfModule :: ((((String, String), String), ((Int, Kind), ConstT)), Bool) -> String
@@ -240,9 +240,9 @@ ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   "  input logic CLK,\n" ++
   "  input logic RESET\n" ++
   ");\n" ++
-  "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (idxType - 1) ++ "];\n" ++
+  "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (2^idxType - 1) ++ "];\n" ++
   "  initial begin\n" ++
-  "    " ++ ppName name ++ " = " ++ '\'' : ppConst init ++ ";\n" ++
+  "    " ++ ppName name ++ "$_data = " ++ '\'' : ppConst init ++ ";\n" ++
   "  end\n" ++
   "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
   "  assign " ++ ppName read ++ "$_ret = " ++
@@ -400,7 +400,9 @@ main =
     fullGraph = Data.List.map (\x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))
 -}
 --  putStrLn $ ppTopModule target
-
+{-
   do
     let Build_RtlModule _ ins outs regIs regAssigns assigns = target
     putStrLn $ show ins ++ show outs ++ show regIs ++ show regAssigns ++ show assigns
+-}
+  putStrLn $ ppTopModule target
