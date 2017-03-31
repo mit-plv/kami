@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sed -i -e "s/import qualified Prelude/import qualified Prelude\nimport qualified Data.Bits\nimport qualified Data.Char\n/g" ../Target.hs
-ln -s ../Target.hs
+ln -sf ../Target.hs
 ghc --make ./PrettyPrintVerilog.hs
 time ./PrettyPrintVerilog > ./top.ver
 
