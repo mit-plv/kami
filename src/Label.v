@@ -67,6 +67,12 @@ Definition DisjLabel (l1 l2: LabelT) :=
   M.Disj (defs l1) (defs l2) /\ M.Disj (calls l1) (calls l2).
 Definition NonInteractingLabel (l1 l2: LabelT) :=
   M.Disj (defs l1) (calls l2) /\ M.Disj (defs l2) (calls l1).
+Inductive DisjLabelSeq: LabelSeqT -> LabelSeqT -> Prop :=
+| DLSNil: DisjLabelSeq nil nil
+| DLSCons: forall ll1 ll2,
+    DisjLabelSeq ll1 ll2 ->
+    forall l1 l2,
+      DisjLabel l1 l2 -> DisjLabelSeq (l1 :: ll1) (l2 :: ll2).
 
 Lemma disjLabel_restrictLabel:
   forall l1 l2,

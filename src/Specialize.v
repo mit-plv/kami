@@ -1028,7 +1028,93 @@ Proof.
   - destruct (dec_eq_nat i j); subst.
     + apply spf_onto in H4; auto.
     + apply spf_neq with (a:= x0) (b:= x) in H2; auto.
-Qed.    
+Qed.
+
+Lemma specializeMod_disj_regs_different_indices:
+  forall m1 m2 i j,
+    Specializable m1 -> Specializable m2 ->
+    i <> j ->
+    DisjList (namesOf (getRegInits (specializeMod m1 i)))
+             (namesOf (getRegInits (specializeMod m2 j))).
+Proof.
+  intros; do 2 (rewrite specializeMod_regs; auto).
+  unfold DisjList in *; intros.
+  destruct (in_dec string_dec e (map (spf i) (namesOf (getRegInits m1)))); auto.
+  destruct (in_dec string_dec e (map (spf j) (namesOf (getRegInits m2)))); auto.
+  exfalso.
+  apply in_map_iff in i0; apply in_map_iff in i1; dest.
+  rewrite <-H2 in H4.
+  generalize H4; apply spf_neq; auto.
+Qed.
+
+Lemma specializeMod_disj_defs_different_indices:
+  forall m1 m2 i j,
+    Specializable m1 -> Specializable m2 ->
+    i <> j ->
+    DisjList (getDefs (specializeMod m1 i))
+             (getDefs (specializeMod m2 j)).
+Proof.
+  intros; do 2 (rewrite specializeMod_defs; auto).
+  unfold DisjList in *; intros.
+  destruct (in_dec string_dec e (map (spf i) (getDefs m1))); auto.
+  destruct (in_dec string_dec e (map (spf j) (getDefs m2))); auto.
+  exfalso.
+  apply in_map_iff in i0; apply in_map_iff in i1; dest.
+  rewrite <-H2 in H4.
+  generalize H4; apply spf_neq; auto.
+Qed.
+
+Lemma specializeMod_disj_calls_different_indices:
+  forall m1 m2 i j,
+    Specializable m1 -> Specializable m2 ->
+    i <> j ->
+    DisjList (getCalls (specializeMod m1 i))
+             (getCalls (specializeMod m2 j)).
+Proof.
+  intros; do 2 (rewrite specializeMod_calls; auto).
+  unfold DisjList in *; intros.
+  destruct (in_dec string_dec e (map (spf i) (getCalls m1))); auto.
+  destruct (in_dec string_dec e (map (spf j) (getCalls m2))); auto.
+  exfalso.
+  apply in_map_iff in i0; apply in_map_iff in i1; dest.
+  rewrite <-H2 in H4.
+  generalize H4; apply spf_neq; auto.
+Qed.
+
+Lemma specializable_noninteracting_2:
+  forall m1 m2,
+    Specializable m1 -> Specializable m2 ->
+    forall i j,
+      i <> j ->
+      NonInteracting (specializeMod m1 i) (specializeMod m2 j).
+Proof.
+  unfold NonInteracting; intros.
+  do 2 rewrite specializeMod_calls by assumption.
+  do 2 rewrite specializeMod_defs by assumption.
+  unfold DisjList; split; intros.
+  - destruct (in_dec string_dec e (map (spf i) (getDefs m1)));
+      destruct (in_dec string_dec e (map (spf j) (getCalls m2)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getDefs m1) (l2:= getCalls m2); eauto.
+    + unfold Specializable in H.
+      eapply hasNoIndex_SubList with (l2:= spDom m1); eauto.
+      apply spDom_defs.
+    + unfold Specializable in H0.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_calls.
+  - destruct (in_dec string_dec e (map (spf i) (getCalls m1)));
+      destruct (in_dec string_dec e (map (spf j) (getDefs m2)));
+      intuition idtac.
+    exfalso.
+    eapply hasNoIndex_disj_imgs with (l1:= getCalls m1) (l2:= getDefs m2); eauto.
+    + unfold Specializable in H.
+      eapply hasNoIndex_SubList with (l2:= spDom m1); eauto.
+      apply spDom_calls.
+    + unfold Specializable in H0.
+      eapply hasNoIndex_SubList; eauto.
+      apply spDom_defs.
+Qed.
 
 Lemma specializeMod_concatMod:
   forall m1 m2
