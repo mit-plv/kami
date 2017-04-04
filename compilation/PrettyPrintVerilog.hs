@@ -121,8 +121,8 @@ ppRtlExpr who e =
     RtlUniBit sz retSz (SignExtendTrunc _ _) e -> if sz < retSz
                                                   then
                                                     do
-                                                      (new, rest) <- optionAddToTrunc (Bit sz) e ('[' : show (sz - 1) ++ "]")
-                                                      return $ "{{" ++ show (retSz - sz) ++ '{' : new ++ rest ++ "}}, " ++ new ++ "}"
+                                                      new <- optionAddToTrunc (Bit sz) e
+                                                      return $ "{{" ++ show (retSz - sz) ++ '{' : new ++ '[' : show (sz - 1) ++ "]}}, " ++ new ++ "}"
                                                   else createTrunc (Bit sz) e (retSz - 1) 0
     RtlBinBit _ _ _ (Add _) e1 e2 -> binExpr e1 "+" e2
     RtlBinBit _ _ _ (Sub _) e1 e2 -> binExpr e1 "-" e2
@@ -149,12 +149,12 @@ ppRtlExpr who e =
       do
         xidx <- ppRtlExpr who idx
         xvec <- ppRtlExpr who vec
-        (new, rest) <- optionAddToTrunc (Vector k n) vec ('[' : xidx ++ "]")
-        return $ new ++ rest
+        new <- optionAddToTrunc (Vector k n) vec
+        return $ new ++ '[' : xidx ++ "]"
     RtlReadField num fields idx e ->
       do
-        (new, rest) <- optionAddToTrunc (Struct num fields) e ('.' : attrName (vectorToList fields !! finToInt idx))
-        return $ new ++ rest
+        new <- optionAddToTrunc (Struct num fields) e
+        return $ new ++ '.' : attrName (vectorToList fields !! finToInt idx)
     RtlBuildVector _ _ vs ->
       do
         strs <- mapM (ppRtlExpr who) (vecToList vs)
@@ -173,21 +173,21 @@ ppRtlExpr who e =
                            ":" ++ xv ++ "[" ++ show i ++ "]")
            [0 .. ((2^n)-1)]) ++ "}"
   where
-    optionAddToTrunc :: Kind -> RtlExpr -> String -> State (H.HashMap String (Int, Kind)) (String, String)
-    optionAddToTrunc k e rest =
+    optionAddToTrunc :: Kind -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
+    optionAddToTrunc k e =
       case e of
-        RtlReadReg k s -> return $ (ppName s, rest)
-        RtlReadInput k var -> return $ (ppPrintVar var, rest)
-        RtlReadWire k var -> return $ (ppPrintVar var, rest)
+        RtlReadReg k s -> return $ ppName s
+        RtlReadInput k var -> return $ ppPrintVar var
+        RtlReadWire k var -> return $ ppPrintVar var
         _ -> do
           x <- ppRtlExpr who e
           new <- addToTrunc k x
-          return $ (new, rest)
+          return new
     createTrunc :: Kind -> RtlExpr -> Int -> Int -> State (H.HashMap String (Int, Kind)) String
     createTrunc k e msb lsb =
       do
-        (new, rest) <- optionAddToTrunc k e ('[' : show msb ++ ':' : show lsb ++ "]")
-        return $ new ++ rest
+        new <- optionAddToTrunc k e
+        return $ new ++ '[' : show msb ++ ':' : show lsb ++ "]"
     addToTrunc :: Kind -> String -> State (H.HashMap String (Int, Kind)) String
     addToTrunc kind s =
       do
@@ -372,37 +372,4 @@ printDiff _ _ = putStrLn "Wrong lengths"
   
 
 main =
-  {-
-  do
-    let Build_RtlModule _ ins outs regIs regAssigns assigns = target
-    let regIndice = (\i -> Data.List.map
-                           (\(r, _) ->
-                               (r, regIndex targetMod (Data.List.map (\x -> attrName x) (getRules targetMod)) [] r i)) regIs)
-    let regIndices = Data.List.map (\i -> (attrName (getRules targetMod !! i), regIndice i)) [0 .. (Data.List.length (getRules targetMod) - 1)]
-    putStrLn $ show (Data.List.length regIs) ++ " " ++ show (Data.List.length (getRules targetMod))
-    putStrLn $ show regIndices
--}
-    {-
-  do
-    putStrLn $ ppGraph mod ++ show (maxOutEdge mod) ++ " " ++ show (sumOutEdge mod) ++ " " ++ show (Data.List.length mod) ++ " " ++
-      show (Data.List.length (getCallGraph targetMod)) ++ "\n" ++ ppGraph fullGraph ++ "\n" ++
-      show (mod == fullGraph)
-    printDiff mod fullGraph
-  {-
-  putStrLn $ ppGraph (getCallGraph targetMod) ++
-    show (maxOutEdge (getCallGraph targetMod)) ++ " " ++ show (sumOutEdge (getCallGraph targetMod)) ++ " " ++
-    show (Data.List.length (getRules targetMod)) ++ " " ++ show (Data.List.length (getCallGraph targetMod)) ++ "\n" ++
-    ppGraph (Data.List.map (\ x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod)))
--}
-    -- show (getCallGraph targetMod == (Data.List.map (\ x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))))
-  where
-    mod = getCallGraph targetMod
-    fullGraph = Data.List.map (\x -> (x, getAllCalls targetMod x)) (Data.List.map fst (getCallGraph targetMod))
--}
---  putStrLn $ ppTopModule target
-{-
-  do
-    let Build_RtlModule _ ins outs regIs regAssigns assigns = target
-    putStrLn $ show ins ++ show outs ++ show regIs ++ show regAssigns ++ show assigns
--}
   putStrLn $ ppTopModule target
