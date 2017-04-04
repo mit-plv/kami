@@ -95,35 +95,91 @@ Section CallChain.
         destruct H; [subst; tauto|auto].
   Qed.
 
-  Definition getConnectedChain': (A * list A) -> list A :=
-    Fix lengthOrder_wf (fun _ => list A)
-        (fun (ls: A * list A)
-             (getConnectedChain: forall ls': A * list A, lengthOrder ls' ls -> list A) =>
-           match find (fun v => if decA (fst ls) (fst v) then true else false) graph with
-             | None => nil
-             | Some (_, vs) =>
-               match vs with
-                 | nil => nil
-                 | v :: vs' =>
-                   (if in_dec decA v (snd ls)
-                    then v :: getConnectedChain (v, remove decA v (snd ls))
-                           (ltac:(eapply remove_length_in_lt; eauto))
-                    else nil)
-                     ++
-                     (fix help vs' :=
-                        match vs' with
-                          | nil => nil
-                          | y :: ys =>
-                            if in_dec decA y (snd ls)
-                            then y :: getConnectedChain (y, remove decA y (snd ls))
-                                   (ltac:(eapply remove_length_in_lt; eauto))
-                                   ++ help ys
-                            else help ys
-                        end) vs'
-               end
-           end).
+  Lemma fold_left_remove_nil ls:
+    fold_left (fun rest x => remove decA x rest) ls nil = nil.
+  Proof.
+    induction ls;simpl; auto; intros.
+  Qed.
+
+  Lemma fold_left_remove_le ls1:
+    forall a ls2,
+      length (fold_left (fun rest x => remove decA x rest) ls1 (a :: ls2)) <=
+      S (length (fold_left (fun rest x => remove decA x rest) ls1 ls2)).
+  Proof.
+    induction ls1;simpl; auto; intros.
+    destruct (decA a a0); [subst | ].
+    - Omega.omega.
+    - apply IHls1.
+  Qed.
+
+
+  Lemma remove_length_in_fold_lt' init ls:
+    length (fold_left (fun rest x => remove decA x rest) init ls) <= length ls.
+  Proof.
+    induction ls; simpl; auto; intros.
+    - rewrite fold_left_remove_nil; simpl; Omega.omega.
+    - pose proof (fold_left_remove_le init a ls).
+      Omega.omega.
+  Qed.  
+
+  Theorem remove_length_in_fold_lt ls:
+    forall a init,
+      In a ls ->
+      length (fold_left (fun rest x => remove decA x rest) (a :: init) ls) < length ls.
+  Proof.
+    simpl; intros.
+    pose proof (remove_length_in_fold_lt' init (remove decA a ls)).
+    pose proof (remove_length_in_lt ls a H).
+    Omega.omega.
+  Qed.
+
+  (*
+  lengthOrder
+    (y,
+    fold_left (fun (rest : list A) (x : A) => remove decA x rest) visited
+      (remove decA y (snd vRemaining))) vRemaining
+   *)
+
+  Definition getConnectedChain': (A * list A) -> list A.
+    refine
+      (Fix lengthOrder_wf (fun _ => list A)
+           (fun (vRemaining: A * list A)
+                (getConnectedChain: forall ls': A * list A, lengthOrder ls' vRemaining -> list A) =>
+              match find (fun v => if decA (fst vRemaining) (fst v) then true else false) graph with
+                | None => nil
+                | Some (_, nghs) =>
+                  match nghs with
+                    | nil => nil
+                    | n :: ns =>
+                      (if in_dec decA n (snd vRemaining)
+                       then n :: getConnectedChain (n, fold_left (fun rest x => remove decA x rest) (n :: ns) (snd vRemaining))
+                              (ltac:(eapply remove_length_in_fold_lt; eauto))
+                       else
+                         match find (fun v => if decA n (fst v) then true else false) graph with
+                           | None => n :: nil
+                           | Some _ => nil
+                         end)
+                        ++
+                        (fix help ns :=
+                           match ns with
+                             | nil => nil
+                             | y :: ys =>
+                               if in_dec decA y (snd vRemaining)
+                               then y :: getConnectedChain (y, fold_left (fun rest x => remove decA x rest) (y :: n :: ys)
+                                                                         (snd vRemaining))
+                                      (ltac:(eapply remove_length_in_fold_lt; eauto))
+                                      ++ help ys
+                               else
+                                 match find (fun v => if decA y (fst v) then true else false) graph with
+                                   | None => y :: help ys
+                                   | Some _ => help ys
+                                 end
+                           end) ns
+                  end
+              end)).
+  Defined.
 
   Definition getConnectedChain v :=
-    getConnectedChain' (v, map fst graph).
+    getConnectedChain' (v, remove decA v (map fst graph)).
 End CallChain.
 

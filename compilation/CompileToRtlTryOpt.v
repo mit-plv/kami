@@ -1,6 +1,10 @@
 Require Import Kami.Syntax String Compile.Rtl Lib.ilist Lib.Struct
         Lib.StringEq List Compare_dec Compile.Helpers Coq.Strings.Ascii PeanoNat Lib.Word.
 
+Require Import Coq.FSets.FSetAVL Coq.Structures.OrderedType Lib.StringAsOT Lib.StringStringAsOT.
+Module M := FSetAVL.Make(String_as_OT).
+Module MM := FSetAVL.Make(StringString_as_OT).
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
@@ -161,21 +165,21 @@ Fixpoint getWritesAction k (a: ActionT typeUT k) :=
     | MCall meth k argExpr cont => getWritesAction (cont tt)
     | Let_ k' expr cont => getWritesAction (cont (cast k' tt))
     | ReadReg r k' cont => getWritesAction (cont (cast k' tt))
-    | WriteReg r k expr cont => r :: getWritesAction cont
-    | IfElse _ _ t f cont => getWritesAction t ++ getWritesAction f ++ getWritesAction (cont tt)
+    | WriteReg r k expr cont => M.add r (getWritesAction cont)
+    | IfElse _ _ t f cont => M.union (M.union (getWritesAction t) (getWritesAction f)) (getWritesAction (cont tt))
     | Assert_ x cont => getWritesAction cont
-    | Return x => nil
+    | Return x => M.empty
   end.
 
 Fixpoint getReadsAction k (a: ActionT typeUT k) :=
   match a with
     | MCall meth k argExpr cont => getReadsAction (cont tt)
     | Let_ k' expr cont => getReadsAction (cont (cast k' tt))
-    | ReadReg r k' cont => r :: getReadsAction (cont (cast k' tt))
+    | ReadReg r k' cont => M.add r (getReadsAction (cont (cast k' tt)))
     | WriteReg r k expr cont => getReadsAction cont
-    | IfElse _ _ t f cont => getReadsAction t ++ getReadsAction f ++ getReadsAction (cont tt)
+    | IfElse _ _ t f cont => M.union (M.union (getReadsAction t) (getReadsAction f)) (getReadsAction (cont tt))
     | Assert_ x cont => getReadsAction cont
-    | Return x => nil
+    | Return x => M.empty
   end.
 
 Definition getReadsRuleBody (r: Attribute (Action Void)) :=
@@ -198,7 +202,7 @@ Section UsefulFunctions.
 
   Local Notation getFromName getObjects getRegs r :=
     match find (fun a => string_eq r (attrName a)) (getObjects m) with
-      | None => nil
+      | None => M.empty
       | Some rule => getRegs rule
     end.
 
@@ -207,8 +211,8 @@ Section UsefulFunctions.
   Definition getReadsMeth f := (getFromName getDefsBodies getReadsMethBody f).
   Definition getWritesMeth f := (getFromName getDefsBodies getWritesMethBody f).
 
-  Definition getReads x := getReadsRule x ++ getReadsMeth x.
-  Definition getWrites x := getWritesRule x ++ getWritesMeth x.
+  Definition getReads x := M.union (getReadsRule x) (getReadsMeth x).
+  Definition getWrites x := M.union (getWritesRule x) (getWritesMeth x).
   
   Definition getCallGraph :=
     fold_left (fun g (r: Attribute (Action Void)) => (attrName r, getCallsRule r) :: g) (getRules m) nil
@@ -224,18 +228,21 @@ Section UsefulFunctions.
            (getCalls_Sig m).
   
   Definition getAllReads a :=
-    fold_left (fun regs f => regs ++ getReads f) (getAllCalls a) (nodup string_dec (getReads a)).
+    fold_left (fun regs f => M.union regs (getReads f)) (getAllCalls a) (getReads a).
 
   Definition getAllWrites a :=
-    fold_left (fun regs f => regs ++ getWrites f) (getAllCalls a) (nodup string_dec (getWrites a)).
+    fold_left (fun regs f => M.union regs (getWrites f)) (getAllCalls a) (getWrites a).
 
   Definition correctIgnoreLess :=
-    filter (fun x => is_nil (intersect string_dec (getAllCalls (fst x))
-                                       (getAllCalls (snd x)))) ignoreLess.
+    fold_left (fun rest x => match intersect string_dec (getAllCalls (fst x))
+                                             (getAllCalls (snd x)) with
+                               | nil => MM.add x rest
+                               | _ => rest
+                             end) ignoreLess MM.empty.
 
-  Definition getWritesWhichCall reg calls := find (fun call => if find (string_eq reg) (getWritesMeth call) then true else false) calls.
+  Definition getWritesWhichCall reg calls := find (fun call => M.mem reg (getWritesMeth call)) calls.
 
-  Definition getWhoWrote rule reg := if in_dec string_dec reg (getWritesRule rule)
+  Definition getWhoWrote rule reg := if M.mem reg (getWritesRule rule)
                                      then Some rule
                                      else getWritesWhichCall reg (getAllCalls rule).
 
@@ -244,86 +251,71 @@ Section UsefulFunctions.
 
     Section FindWritePrevPos.
       Variable pos: nat.
+      Variable currRule: string.
 
       Local Fixpoint find_write_prev_pos' currPos (ls: list string) :=
-        match ls with
-          | nil => None
-          | x :: xs => match find_write_prev_pos' (S currPos) xs with
-                         | None =>
-                           if find (string_eq reg) (getAllWrites x)
-                           then if lt_dec currPos pos
-                                then Some (currPos, x)
-                                else None
-                           else None
-                         | Some y => Some y
-                       end
-        end.
+        if lt_dec currPos pos
+        then match ls with
+               | nil => None
+               | x :: xs =>
+                 if M.mem reg (getAllWrites x)
+                 then
+                   if MM.mem (currRule, x) correctIgnoreLess
+                   then Some currPos
+                   else find_write_prev_pos' (S currPos) xs
+                 else find_write_prev_pos' (S currPos) xs
+             end
+        else None.
 
       Local Lemma find_write_prev_pos'_correct:
-        forall ls currPos i x, Some (i, x) = find_write_prev_pos' currPos ls  -> (i < pos)%nat.
+        forall ls currPos i, Some i = find_write_prev_pos' currPos ls  -> (i < pos)%nat.
       Proof.
-        induction ls; simpl; intros; try congruence.
-        specialize (IHls (S currPos) i x).
-        repeat match goal with
-                 | H: context [match ?P with _ => _ end] |- _ => destruct P
-               end; try solve [congruence || eapply IHls; eauto].
+        induction ls; simpl; intros.
+        - destruct (lt_dec currPos pos); discriminate.
+        - destruct (lt_dec currPos pos); [ | discriminate].
+          destruct (M.mem reg (getAllWrites a)).
+          + destruct (MM.mem (currRule, a) correctIgnoreLess) as [H|H]; inversion H; subst; auto; eapply IHls; eauto.
+          + eapply IHls; eauto.
       Qed.
 
       Local Definition find_write_prev_pos := find_write_prev_pos' 0 totalOrder.
       
       Local Lemma find_write_prev_pos_correct:
-        forall i x, Some (i, x) = find_write_prev_pos  -> (i < pos)%nat.
+        forall i, Some i = find_write_prev_pos -> (i < pos)%nat.
       Proof.
         eapply find_write_prev_pos'_correct.
       Qed.
     End FindWritePrevPos.
 
-    Definition regIndex: nat -> nat :=
-      Fix
-        Wf_nat.lt_wf (fun _ => nat)
-        (fun (pos: nat)
-             (findRegIndex: forall pos', (pos' < pos)%nat -> nat) =>
-           match pos return (forall pos', (pos' < pos)%nat -> nat) -> nat with
-             | 0 => fun _ => 0
-             | S m =>
-               fun findRegIndex =>
-                 match nth_error totalOrder (S m) with
-                   | Some a =>
-                     if find (string_eq reg) (getAllReads a ++ getAllWrites a)%list
-                     then
-                       match
-                         find_write_prev_pos (S m) as val
-                         return (forall i x, Some (i, x) = val -> (i < S m)%nat) -> nat with
-                         | None => fun _ => findRegIndex m (ltac:(abstract Omega.omega))
-                         | Some (prev_pos, a') =>
-                           if in_dec string_dec reg (getAllWrites a')
-                           then if in_dec (prod_dec string_dec string_dec) (a, a') correctIgnoreLess
-                                then fun pf => max (S (findRegIndex  prev_pos (pf _ _ eq_refl)))
-                                                   (findRegIndex m (ltac:(abstract Omega.omega)))
-                                else fun _ => findRegIndex m (ltac:(abstract Omega.omega))
-                           else fun _ => findRegIndex m (ltac:(abstract Omega.omega))
-                       end (find_write_prev_pos_correct (S m))
-                     else findRegIndex m (ltac:(abstract Omega.omega))
-                   | None => 0
-                 end
-           end findRegIndex).
-
-    Definition maxRegIndex :=
-      match length totalOrder with
-        | 0 => 0
-        | S m => regIndex m
+    Fixpoint regIndex' ruleList currPos currTable: list nat :=
+      match ruleList with
+        | nil => nil
+        | x :: xs =>
+          match currTable with
+            | nil => 0 :: nil
+            | y :: ys =>
+              (if M.mem reg (M.union (getAllReads x) (getAllWrites x))
+               then match find_write_prev_pos currPos x with
+                      | Some prev =>
+                        max y (nth (currPos - 1 - prev) currTable 0)
+                      | None => y
+                    end
+               else y) :: y :: ys
+          end
       end.
+
+    Definition regIndex currPos := nth (length totalOrder - 1 - currPos) (regIndex' totalOrder 0 nil) 0.
+
+    Definition maxRegIndex := hd 0 (regIndex' totalOrder 0 nil).
   End GenerateRegIndicies.
 
   Definition shareRegDisable posFirst posSecond :=
     fold_left (fun disable reg => if Nat.eq_dec (regIndex reg posFirst) (regIndex reg posSecond)
                                   then true
-                                  else disable) (intersect
-                                                   string_dec
-                                                   (nth posFirst (map getAllWrites totalOrder) nil)
-                                                   (nth posSecond (map getAllReads totalOrder) nil
-                                                        ++
-                                                        nth posSecond (map getAllWrites totalOrder) nil)) false.
+                                  else disable)
+              (M.elements (M.inter (nth posFirst (map getAllWrites totalOrder) M.empty)
+                                   (nth posSecond (map (fun x => M.union (getAllReads x) (getAllWrites x)) totalOrder) M.empty)
+                          )) false.
 
   Definition shareMethDisable posFirst posSecond :=
     not_nil (intersect string_dec (nth posFirst (map getAllCalls totalOrder) nil)
@@ -415,7 +407,7 @@ Section UsefulFunctions.
   Definition noMethContradiction f :=
     fold_left (fun prev r =>
                  andb prev (sameList Nat.eq_dec (map (regIndex r) (methPos f))))
-              (getAllReads f ++ getAllWrites f) true.
+              (M.elements (M.union (getAllReads f) (getAllWrites f))) true.
 
   Definition getPos a := match getRulePos a, head (methPos a) with
                            | Some x, _ => Some x
@@ -427,7 +419,7 @@ Section UsefulFunctions.
     fold_left (fun rest reg => match getPos a with
                                  | None => rest
                                  | Some idx =>
-                                   if find (string_eq (attrName reg)) (getReads a)
+                                   if M.mem (attrName reg) (getReads a)
                                    then
                                      (getRegActionRead a (attrName reg),
                                       existT RtlExpr (getRegType reg)
