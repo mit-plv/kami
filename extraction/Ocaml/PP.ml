@@ -199,30 +199,6 @@ let getStructName (_: unit) = (structIdx := !structIdx + 1);
 module StringMap = Map.Make (String)
 let glbStructs : ((kind attribute list) StringMap.t) ref = ref StringMap.empty
 
-let initPgms : constT list option ref = ref None
-let getInitPgm (i: int) =
-  match !initPgms with
-  | Some pgms ->
-     (try
-        (List.nth pgms i)
-      with _ -> raise (Should_not_happen "Initial program not provided"))
-  | None -> raise (Should_not_happen "Initial program not provided")
-
-let setInitPgms (c: constT list) = initPgms := Some c
-let resetInitPgms (_: unit) = initPgms := None
-
-let initRfs : constT list option ref = ref None
-let getInitRf (i: int) =
-  match !initRfs with
-  | Some rfs ->
-     (try
-        (List.nth rfs i)
-      with _ -> raise (Should_not_happen "Initial rf not provided"))
-  | None -> raise (Should_not_happen "Initial rf not provided")
-
-let setInitRfs (c: constT list) = initRfs := Some c
-let resetInitRfs (_: unit) = initRfs := None
-
 let resetGlbStructs (_: unit) = glbStructs := StringMap.empty
 let findGlbStructName (k: kind attribute list) =
   StringMap.fold (fun s k' cs -> if (k = k') then s else cs) !glbStructs ""
@@ -669,14 +645,6 @@ let rec ppBInterfaces (dl: bMethod list) =
   | [] -> ()
   | d :: dl' -> ppBInterface d; print_cut(); ppBInterfaces dl'
 
-let replaceInit (tg: string) (default: string) =
-  if String.sub tg 0 3 = "pgm" then
-    ppConst (getInitPgm (String.length tg - 5))
-  else if String.sub tg 0 2 = "rf" then
-    ppConst (getInitRf (String.length tg - 4))
-  else
-    default
-
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = riv } ->
@@ -687,7 +655,7 @@ let ppRegInit (r: regInitT) =
          ps (bstring_of_charlist rn); print_space ();
          ps ppAssign; print_space ();
          ps ppMkReg; ps ppRBracketL;
-         ps (replaceInit (bstring_of_charlist rn) (ppConst c));
+         ps (ppConst c);
          ps ppRBracketR; ps ppSep;
          close_box ()
       | RegInitDefault (SyntaxKind k) ->
@@ -696,7 +664,7 @@ let ppRegInit (r: regInitT) =
          ps (bstring_of_charlist rn); print_space ();
          ps ppAssign; print_space ();
          ps ppMkReg; ps ppRBracketL;
-         ps (replaceInit (bstring_of_charlist rn) ppDefaultValue);
+         ps ppDefaultValue;
          ps ppRBracketR; ps ppSep;
          close_box ()
       | _ -> raise (Should_not_happen
@@ -956,14 +924,8 @@ let ppBModulesFull (bml: bRegModule list) =
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullInitPgmRfs
-      (bml: bRegModule list) (initPgms: constT list) (initRfs: constT list)
-      (dbg: bool) =
-  setInitPgms initPgms;
-  setInitRfs initRfs;
+let ppBModulesFullDbg (bml: bRegModule list) (dbg: bool) =
   (if dbg then setDebug () else unsetDebug ());
   ppBModulesFull bml;
-  resetInitPgms ();
-  resetInitRfs ();
   unsetDebug ()
 

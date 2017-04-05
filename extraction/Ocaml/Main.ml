@@ -10,8 +10,8 @@ let () =
     (let output_file = Sys.argv.(argnum - 1) in
      let oc = open_out output_file in
      set_formatter_out_channel oc;
-     (match target.extProc with
-      | Some bml -> ppBModulesFullInitPgmRfs bml target.extPgms target.extRfs (argnum > 2)
+     (match targetProcB with
+      | Some bml -> ppBModulesFullDbg bml (argnum > 2)
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
       

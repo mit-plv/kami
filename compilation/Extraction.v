@@ -27,10 +27,12 @@ Definition targetProcM := producerConsumerImpl.
 *)
 
 
-Require Import Ex.IsaRv32 Ex.IsaRv32Pgm Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
+Require Import Ex.SC Ex.IsaRv32 Ex.IsaRv32Pgm Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
 Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 
-(** p4st + pmFifos ++ memCache extraction *)
+(** * p4st + pmFifos ++ memCache extraction *)
+
+(** Some numbers *)
 
 (* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 16) *)
 Definition idxBits := 8.
@@ -39,6 +41,48 @@ Definition lgNumDatas := 4.
 Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
+
+(** Some initial values *)
+Eval compute in ((numChildren lgNumChildren) + 1).
+
+(* A utility function for setting the stack pointer in rf *)
+Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
+  : ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx).
+  refine
+    (ConstVector (VecNext
+                    (VecNext
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 sp) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))
+                    (VecNext
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+                       (VecNext
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))));
+    exact $0.
+Defined.
+
+Require Import Ex.IsaRv32PgmExt.
+
+Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
+  {| pcInit := Default;
+     rfInit := rfWithSpInit (ConstBit (natToWord _ 64));
+     pgmInit := IsaRv32PgmBankerInit.pgmExt |}
+    :: {| pcInit := Default;
+          rfInit := rfWithSpInit (ConstBit (natToWord _ 128));
+          pgmInit := IsaRv32PgmBankerWorker1.pgmExt |}
+    :: {| pcInit := Default;
+          rfInit := rfWithSpInit (ConstBit (natToWord _ 192));
+          pgmInit := IsaRv32PgmBankerWorker2.pgmExt |}
+    :: {| pcInit := Default;
+          rfInit := rfWithSpInit (ConstBit (natToWord _ 256));
+          pgmInit := IsaRv32PgmBankerWorker3.pgmExt |}
+    :: nil.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
@@ -49,7 +93,7 @@ Definition p4stNMemCache :=
     rv32iGetOptype rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
     rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
     rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
-    rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren.
+    rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren procInits.
 
 (** targetM should be your target module *)
 Definition targetMod := p4stNMemCache.
