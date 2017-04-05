@@ -357,7 +357,8 @@ ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
                                                   x == read ++ "#_ret" ||
                                                   x == write ++ "#_g" ||
                                                   x == write ++ "#_en" ||
-                                                  x == write ++ "#_arg") regFs of
+                                                  x == write ++ "#_arg" ||
+                                                  x == write ++ "#_ret") regFs of
                           Nothing -> True
                           _ -> False
 
