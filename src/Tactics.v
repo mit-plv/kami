@@ -111,7 +111,7 @@ Tactic Notation "krewrite" "<-" "assoc" "right" :=
 Ltac kequiv_red :=
   eauto;
   match goal with
-  | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv
+  | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv; intros
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
 (*  | [ |- ModEquiv _ _ _ ] => apply metaModulesEquiv_modEquiv *)
@@ -155,7 +155,7 @@ Ltac kvr_red :=
   | [ |- ValidRegsModules _ (ConcatMod _ _) ] => split
   | [ |- ValidRegsModules _ (Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)) ] =>
     apply validRegsModules_flatten
-  | [ |- ValidRegsModules _ (duplicate _ _) ] => apply duplicate_validRegsModules
+  | [ |- ValidRegsModules _ (duplicate _ _) ] => apply duplicate_validRegsModules; intros
   | [ |- ValidRegsModules _ (modFromMeta _) ] => apply validRegsMetaModule_validRegsModules
   | [ |- ValidRegsMetaModule _ (_ +++ _) ] => apply validRegsMetaModule_modular
   | [ |- ValidRegsModules _ ?m ] => unfold_head m

@@ -115,7 +115,7 @@ Section ProcMem.
       + kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)).
       + apply dropFirstElts_Interacting.
       + ketrans_r; [apply modFromMeta_comm_1|].
-        ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kvr|kvr|kequiv|kequiv]].
+        ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kequiv|kequiv|kvr|kvr]].
         replace (dropFirstElts LgNumChildren) with
         (compLabelMaps (dropFirstElts LgNumChildren) (@idElementwise _))
           by apply compLabelMaps_id_right.
@@ -138,7 +138,7 @@ Section ProcMem.
           }
         * ketrans_r; [apply sinModule_duplicate_1;
                       [kequiv|kvr|knodup_regs|apply fifoS_const_regs]|].
-          apply duplicate_traceRefines_drop; auto; [kequiv|kvr| |].
+          apply duplicate_traceRefines_drop; auto; intros; [kequiv|kvr| |].
           { vm_compute; tauto. }
           { rewrite <-Fifo.fifo_fifoS.
             apply fifo_refines_sfifo.
