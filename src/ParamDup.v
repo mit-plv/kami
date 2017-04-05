@@ -179,8 +179,8 @@ Section SinModuleDup.
                            (getNatListToN_NoDup n) l)))
         (getRegInits
            (duplicate
-              (Mod (map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
-                   rules dms) n)).
+              (fun _ => Mod (map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
+                            rules dms) n)).
   Proof.
     intros; induction l; [simpl; induction n; [apply EquivList_nil|auto]|].
     destruct a as [arg arn]; simpl.
@@ -189,14 +189,14 @@ Section SinModuleDup.
               ((getListFromRep string_of_nat arg (nameVal arn) (getNatListToN n))
                  ++ (getRegInits
                        (duplicate
-                          (Mod (map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
-                               rules dms) n)))
+                          (fun _ => Mod (map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
+                                        rules dms) n)))
               (getRegInits
                  (duplicate
-                    (Mod
-                       (((nameVal arn :: arg 0)%struct)
-                          :: map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
-                       rules dms) n))).
+                    (fun _ => Mod
+                                (((nameVal arn :: arg 0)%struct)
+                                   :: map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l)
+                                rules dms) n))).
     { clear -H H0.
       simpl in H0; generalize dependent H0.
       generalize (map (fun sr => (nameVal (regName sr) :: regGen sr 0)%struct) l) as ml.
@@ -216,11 +216,12 @@ Section SinModuleDup.
           rewrite specializer_dom; auto.
           apply makeNoDup_SubList_2; left; auto.
       - generalize dependent IHn.
-        unfold duplicate at 3. fold (duplicate (Mod ml rules dms)).
-        generalize (duplicate (Mod ml rules dms) n) as nm1.
+        unfold duplicate at 3. fold (duplicate (fun _ => Mod ml rules dms)).
+        generalize (duplicate (fun _ => Mod ml rules dms) n) as nm1.
         unfold duplicate at 2.
-        fold (duplicate (Mod ((nameVal arn :: arg 0)%struct :: ml) rules dms)).
-        generalize (duplicate (Mod ((nameVal arn :: arg 0)%struct :: ml) rules dms) n) as nm2.
+        fold (duplicate (fun _ => Mod ((nameVal arn :: arg 0)%struct :: ml) rules dms)).
+        generalize (duplicate (fun _ => Mod ((nameVal arn :: arg 0)%struct :: ml) rules dms) n)
+          as nm2.
         simpl.
         generalize (getListFromRep string_of_nat arg (nameVal arn) (getNatListToN n)) as rr1.
         rewrite renameListAttr_specializer_regs; [|auto|apply SubList_refl].
@@ -277,9 +278,9 @@ Section SinModuleDup.
                             l)))
         (getRules
            (duplicate
-              (Mod regs (map (fun sr => (nameVal (ruleName sr)
-                                                 :: getActionFromSin (ruleGen sr))%struct) 
-                             l) dms) n)).
+              (fun _ => Mod regs (map (fun sr => (nameVal (ruleName sr)
+                                                          :: getActionFromSin (ruleGen sr))%struct) 
+                                      l) dms) n)).
   Proof.
     intros; induction l; [simpl; induction n; [apply EquivList_nil|auto]|].
     destruct a as [arg arn]; simpl.
@@ -289,19 +290,19 @@ Section SinModuleDup.
                         (nameVal arn) (getNatListToN n))
                  ++ (getRules
                        (duplicate
-                          (Mod regs
-                               (map (fun sr => ((nameVal (ruleName sr))
-                                                  :: getActionFromSin (ruleGen sr))%struct)
-                                    l) dms) n)))
+                          (fun _ => Mod regs
+                                        (map (fun sr => ((nameVal (ruleName sr))
+                                                           :: getActionFromSin (ruleGen sr))%struct)
+                                             l) dms) n)))
               (getRules
                  (duplicate
-                    (Mod regs
-                         (((nameVal arn :: getActionFromSin arg)%struct)
-                            :: (map
-                                  (fun sr : SinRule =>
-                                     ((nameVal (ruleName sr))
-                                        :: getActionFromSin (ruleGen sr))%struct)
-                                  l)) dms) n))).
+                    (fun _ => Mod regs
+                                  (((nameVal arn :: getActionFromSin arg)%struct)
+                                     :: (map
+                                           (fun sr : SinRule =>
+                                              ((nameVal (ruleName sr))
+                                                 :: getActionFromSin (ruleGen sr))%struct)
+                                           l)) dms) n))).
     { clear -H H0 H1.
       simpl in H; generalize dependent H.
       simpl in H0; generalize dependent H0.
@@ -344,13 +345,13 @@ Section SinModuleDup.
             { specialize (H ty); inv H; auto. }
             
       - generalize dependent IHn.
-        unfold duplicate at 3. fold (duplicate (Mod regs ml dms)).
-        generalize (duplicate (Mod regs ml dms) n) as nm1.
+        unfold duplicate at 3. fold (duplicate (fun _ => Mod regs ml dms)).
+        generalize (duplicate (fun _ => Mod regs ml dms) n) as nm1.
         unfold duplicate at 2.
         fold (duplicate
-                (Mod regs ((nameVal arn :: getActionFromSin arg)%struct :: ml) dms)).
+                (fun _ => Mod regs ((nameVal arn :: getActionFromSin arg)%struct :: ml) dms)).
         generalize (duplicate
-                      (Mod regs ((nameVal arn :: getActionFromSin arg)%struct :: ml) dms)
+                      (fun _ => Mod regs ((nameVal arn :: getActionFromSin arg)%struct :: ml) dms)
                       n) as nm2.
         simpl.
         generalize (repRule string_of_nat getConst
@@ -434,10 +435,10 @@ Section SinModuleDup.
                             l)))
         (getDefsBodies
            (duplicate
-              (Mod regs rules
-                   (map
-                      (fun sd => (nameVal (methName sd) :: getMethFromSin (methGen sd))%struct) 
-                      l)) n)).
+              (fun _ => Mod regs rules
+                            (map
+                               (fun sd => (nameVal (methName sd) :: getMethFromSin (methGen sd))%struct) 
+                               l)) n)).
   Proof.
     intros; induction l; [simpl; induction n; [apply EquivList_nil|auto]|].
     destruct a as [arg arn]; simpl.
@@ -451,16 +452,16 @@ Section SinModuleDup.
                         (nameVal arn) (getNatListToN n))
                  ++ (getDefsBodies
                        (duplicate
-                          (Mod regs rules
-                               (map
-                                  (fun sd => ((nameVal (methName sd))
-                                                :: getMethFromSin (methGen sd))%struct) l)) n)))
+                          (fun _ => Mod regs rules
+                                        (map
+                                           (fun sd => ((nameVal (methName sd))
+                                                         :: getMethFromSin (methGen sd))%struct) l)) n)))
               (getDefsBodies
                  (duplicate
-                    (Mod regs rules
-                         (((nameVal arn :: getMethFromSin arg)%struct)
-                            :: map (fun sd => ((nameVal (methName sd))
-                                                 :: getMethFromSin (methGen sd))%struct) l)) n))).
+                    (fun _ => Mod regs rules
+                                  (((nameVal arn :: getMethFromSin arg)%struct)
+                                     :: map (fun sd => ((nameVal (methName sd))
+                                                          :: getMethFromSin (methGen sd))%struct) l)) n))).
     { clear -H H0 H1.
       simpl in H; generalize dependent H.
       simpl in H0; generalize dependent H0.
@@ -507,13 +508,13 @@ Section SinModuleDup.
             { specialize (H ty); inv H; auto. }
             
       - generalize dependent IHn.
-        unfold duplicate at 3. fold (duplicate (Mod regs rules ml)).
-        generalize (duplicate (Mod regs rules ml) n) as nm1.
+        unfold duplicate at 3. fold (duplicate (fun _ => Mod regs rules ml)).
+        generalize (duplicate (fun _ => Mod regs rules ml) n) as nm1.
         unfold duplicate at 2.
         fold (duplicate
-                (Mod regs rules ((nameVal arn :: getMethFromSin arg)%struct :: ml))).
+                (fun _ => Mod regs rules ((nameVal arn :: getMethFromSin arg)%struct :: ml))).
         generalize (duplicate
-                      (Mod regs rules ((nameVal arn :: getMethFromSin arg)%struct :: ml)) n) as nm2.
+                      (fun _ => Mod regs rules ((nameVal arn :: getMethFromSin arg)%struct :: ml)) n) as nm2.
         simpl.
         remember (repMeth _ _ _ _ _) as rr1; clear Heqrr1.
         rewrite specializer_weakening_dms with
@@ -579,13 +580,13 @@ Section SinModuleDup.
 
   Lemma sinModule_duplicate_1:
     forall n, (modFromMeta (getMetaFromSinNat n sm) <<==
-                           duplicate (getModFromSin sm) (wordToNat (wones n))).
+                           duplicate (fun _ => getModFromSin sm) (wordToNat (wones n))).
   Proof.
     intros; unfold MethsT; rewrite SemFacts.idElementwiseId.
     apply traceRefines_same_module_structure.
     - apply noDup_metaRegs.
       simpl; rewrite getMetaRegName_sinRegs; auto.
-    - apply duplicate_regs_NoDup; auto.
+    - apply duplicate_regs_NoDup; auto; intros.
       + apply getModFromSin_Specializable.
       + p_equal HnoDupRegs; unfold getModFromSin; simpl.
         clear; induction (sinRegs sm); simpl; auto.
@@ -603,12 +604,12 @@ Section SinModuleDup.
   Qed.
 
   Lemma sinModule_duplicate_2:
-    forall n, (duplicate (getModFromSin sm) (wordToNat (wones n)) <<==
+    forall n, (duplicate (fun _ => getModFromSin sm) (wordToNat (wones n)) <<==
                          modFromMeta (getMetaFromSinNat n sm)).
   Proof.
     intros; unfold MethsT; rewrite SemFacts.idElementwiseId.
     apply traceRefines_same_module_structure.
-    - apply duplicate_regs_NoDup; auto.
+    - apply duplicate_regs_NoDup; auto; intros.
       + apply getModFromSin_Specializable.
       + p_equal HnoDupRegs; unfold getModFromSin; simpl.
         clear; induction (sinRegs sm); simpl; auto.

@@ -188,7 +188,7 @@ Ltac kvr :=
 
 Ltac get_minimal_regs_bound m :=
   lazymatch m with
-  | duplicate ?sm _ => constr:(getRegsBound sm)
+  | duplicate ?sm _ => constr:(getRegsBound (sm 0))
   | modFromMeta ?mm => constr:(getRegsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_regs_bound m1 in
@@ -203,7 +203,7 @@ Ltac get_minimal_regs_bound m :=
 
 Ltac get_minimal_dms_bound m :=
   lazymatch m with
-  | duplicate ?sm _ => constr:(getDmsBound sm)
+  | duplicate ?sm _ => constr:(getDmsBound (sm 0))
   | modFromMeta ?mm => constr:(getDmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_dms_bound m1 in
@@ -218,7 +218,7 @@ Ltac get_minimal_dms_bound m :=
 
 Ltac get_minimal_cms_bound m :=
   lazymatch m with
-  | duplicate ?sm _ => constr:(getCmsBound sm)
+  | duplicate ?sm _ => constr:(getCmsBound (sm 0))
   | modFromMeta ?mm => constr:(getCmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_cms_bound m1 in
@@ -806,7 +806,7 @@ Ltac kinv_magic_light_with tac :=
 Ltac kinv_magic_light := kinv_magic_light_with idtac.
 
 Ltac kduplicated :=
-  apply duplicate_traceRefines;
+  apply duplicate_traceRefines; intros;
   [auto|auto (* Specializable *)
    |kequiv|kequiv
    |kvr|kvr

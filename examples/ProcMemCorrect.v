@@ -41,9 +41,12 @@ Section ProcMem.
   Variable LgNumChildren: nat.
   Definition numChildren := (wordToNat (wones LgNumChildren)).
 
+  Variable (inits: list (ProcInit AddrSize IAddrSize DataBytes RfIdx)).
+  
   Definition pdecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr numChildren.
+                            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                            inits numChildren.
   Definition pmFifos :=
     modFromMeta
       ((fifoRqFromProc IdxBits TagBits LgNumDatas DataBytes (rsz FifoSize) LgNumChildren)
@@ -52,7 +55,7 @@ Section ProcMem.
   Definition mcache := memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr numChildren.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr numChildren inits.
 
   Lemma dropFirstElts_Interacting:
     Interacting pmFifos (modFromMeta mcache) (dropFirstElts LgNumChildren).
@@ -153,16 +156,19 @@ Section ProcMem.
    *)
   Definition p4stN :=
     duplicate
-      (p4st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-            getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc
-            alignPc alignAddr predictNextPc
-            (@d2ePackI _ _ _) (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
-            (@d2eVal1I _ _ _) (@d2eVal2I _ _ _) (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _)
-            (@d2eNextPcI _ _ _) (@d2eEpochI _ _ _)
-            (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
-            (@f2dNextPcI _ _) (@f2dEpochI _ _)
-            (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _)) numChildren.
+      (fun i =>
+         p4st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+              getStAddr getStSrc calcStAddr getStVSrc
+              getSrc1 getSrc2 getDst exec getNextPc
+              alignPc alignAddr predictNextPc
+              (@d2ePackI _ _ _) (@d2eOpTypeI _ _ _) (@d2eDstI _ _ _) (@d2eAddrI _ _ _)
+              (@d2eVal1I _ _ _) (@d2eVal2I _ _ _) (@d2eRawInstI _ _ _) (@d2eCurPcI _ _ _)
+              (@d2eNextPcI _ _ _) (@d2eEpochI _ _ _)
+              (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
+              (@f2dNextPcI _ _) (@f2dEpochI _ _)
+              (@e2wPackI _ _ _) (@e2wDecInstI _ _ _) (@e2wValI _ _ _)
+              (nth_default (procInitDefault AddrSize IAddrSize DataBytes RfIdx)
+                           inits i)) numChildren.
 
   Definition memCacheMod :=
     memCacheMod IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
@@ -180,7 +186,9 @@ Section ProcMem.
   Definition mCache1 :=
      memCache1 IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
 
-  Lemma modFromMeta_m m m': flattenMeta m' = MetaMod m -> modFromMeta m = modFromMetaModules (flattenMeta m').
+  Lemma modFromMeta_m m m':
+    flattenMeta m' = MetaMod m ->
+    modFromMeta m = modFromMetaModules (flattenMeta m').
   Proof.
     clear.
     intros.
@@ -190,7 +198,8 @@ Section ProcMem.
     reflexivity.
   Qed.
 
-  Lemma EquivList_map A B (f: A -> B): forall l1 l2, EquivList l1 l2 -> EquivList (map f l1) (map f l2).
+  Lemma EquivList_map A B (f: A -> B):
+    forall l1 l2, EquivList l1 l2 -> EquivList (map f l1) (map f l2).
   Proof.
     clear.
     unfold EquivList, SubList; intros.

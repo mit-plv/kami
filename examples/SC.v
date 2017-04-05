@@ -174,10 +174,18 @@ Section ProcInst.
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
+  Record ProcInit := { pcInit : ConstT (Bit addrSize);
+                       rfInit : ConstT (Vector (Data dataBytes) rfIdx);
+                       pgmInit : ConstT (Vector (Data dataBytes) iaddrSize) }.
+  Definition procInitDefault :=
+    {| pcInit := Default; rfInit := Default; pgmInit := Default |}.
+    
+  Variables (procInit: ProcInit).
+
   Definition procInst := MODULE {
-    Register "pc" : Bit addrSize <- Default
-    with Register "rf" : Vector (Data dataBytes) rfIdx <- Default
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+    Register "pc" : Bit addrSize <- (pcInit procInit)
+    with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- (pgmInit procInit)
 
     with Rule "execLd" :=
       Read ppc <- "pc";
@@ -264,7 +272,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold execCm toHostCm nextPc : MethDefs.
+Hint Unfold execCm toHostCm nextPc procInitDefault : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -293,7 +301,11 @@ Section SC.
   Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
-  Definition pinsts (i: nat): Modules := duplicate pinst i.
+
+  Variables (procInits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
+  Definition pinsts (i: nat): Modules :=
+    duplicate (fun iv => pinst (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+                                            procInits iv)) i.
   Definition minst := memInst n addrSize dataBytes.
 
   Definition sc := ConcatMod (pinsts n) minst.
@@ -324,9 +336,10 @@ Section Facts.
             (alignAddr: AlignAddrT addrSize).
 
   Lemma pinst_ModEquiv:
-    ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                      getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
+    forall init,
+      ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                        getStAddr getStSrc calcStAddr getStVSrc
+                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init).
   Proof.
     kequiv.
   Qed.
@@ -335,9 +348,10 @@ Section Facts.
   Variable n: nat.
   
   Lemma pinsts_ModEquiv:
-    ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
+    forall inits,
+      ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                         getStAddr getStSrc calcStAddr getStVSrc
+                         getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n).
   Proof.
     kequiv.
   Qed.
@@ -351,9 +365,10 @@ Section Facts.
   Hint Resolve memInstM_ModEquiv.
 
   Lemma sc_ModEquiv:
-    ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                   getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
+    forall inits,
+      ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                     getStAddr getStSrc calcStAddr getStVSrc
+                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n inits).
   Proof.
     kequiv.
   Qed.

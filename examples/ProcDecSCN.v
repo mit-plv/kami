@@ -32,14 +32,15 @@ Section ProcDecSCN.
             (alignAddr: AlignAddrT addrSize).
 
   Variable n: nat.
+  Variable (inits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
   
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n inits.
 
   Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n.
+                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n.
   Definition memAtomic := memAtomic addrSize fifoSize dataBytes n.
   Definition pdecAN := (procDecN ++ memAtomic)%kami.
 

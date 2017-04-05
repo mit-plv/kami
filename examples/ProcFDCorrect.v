@@ -77,15 +77,20 @@ Section FetchDecode.
                  evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                  evalExpr epoch).
 
+  Variables (pcInit : ConstT (Bit addrSize))
+            (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
+
   Definition fetchDecode := fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
                               getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
+                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                              pcInit pgmInit.
   Definition fetchNDecode := ProcThreeStage.fetchDecode
                                getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst alignPc d2ePack predictNextPc.
+                               getSrc1 getSrc2 getDst alignPc d2ePack predictNextPc
+                               pcInit pgmInit.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -117,7 +122,8 @@ Section FetchDecode.
                                  getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                  getStAddr getStSrc calcStAddr getStVSrc
                                  getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
-                                 f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
+                                 f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                                 pcInit pgmInit.
 
   Ltac f2d_abs_tac :=
     try rewrite Hf2dRawInst in *;

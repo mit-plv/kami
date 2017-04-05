@@ -350,31 +350,37 @@ Section Bounds.
 
   Lemma getRegsBound_duplicate:
     forall m n,
-      Specializable m ->
-      RegsBound (duplicate m n) (getRegsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getRegsBound (m i) = getRegsBound (m j)) ->
+      RegsBound (duplicate m n) (getRegsBound (m 0)).
   Proof.
     induction n; simpl; intros; [apply getRegsBound_specialize; auto|].
     apply concatMod_regsBound_2; auto.
+    rewrite H0 with (j:= (S n)).
     apply getRegsBound_specialize; auto.
   Qed.
 
   Lemma getDmsBound_duplicate:
     forall m n,
-      Specializable m ->
-      DmsBound (duplicate m n) (getDmsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getDmsBound (m i) = getDmsBound (m j)) ->
+      DmsBound (duplicate m n) (getDmsBound (m 0)).
   Proof.
     induction n; simpl; intros; [apply getDmsBound_specialize; auto|].
     apply concatMod_dmsBound_2; auto.
+    rewrite H0 with (j:= (S n)).
     apply getDmsBound_specialize; auto.
   Qed.
 
   Lemma getCmsBound_duplicate:
     forall m n,
-      Specializable m ->
-      CmsBound (duplicate m n) (getCmsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getCmsBound (m i) = getCmsBound (m j)) ->
+      CmsBound (duplicate m n) (getCmsBound (m 0)).
   Proof.
     induction n; simpl; intros; [apply getCmsBound_specialize; auto|].
     apply concatMod_cmsBound_2; auto.
+    rewrite H0 with (j:= (S n)).
     apply getCmsBound_specialize; auto.
   Qed.
 

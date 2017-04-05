@@ -70,12 +70,14 @@ Section Inlined.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data dataBytes))).
 
+  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+
   Definition p3st := p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
                           getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr predictNextPc
                           d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                           d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                          e2wPack e2wDecInst e2wVal.
+                          e2wPack e2wDecInst e2wVal init.
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
 
   Definition p3stInl: sigT (fun m: Modules => p3st <<== m).
@@ -87,7 +89,7 @@ Section Inlined.
                                            getNextPc alignPc alignAddr predictNextPc
                                            d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                            d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                           e2wPack e2wDecInst e2wVal
+                                           e2wPack e2wDecInst e2wVal init
                                            type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p3st)) eq_refl))
       as Him.

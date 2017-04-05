@@ -45,10 +45,12 @@ Section ProcDec.
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
+  Variable (procInit: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  
   Definition procDec := MODULE {
-    Register "pc" : Bit addrSize <- Default
-    with Register "rf" : Vector (Data dataBytes) rfIdx <- Default
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+    Register "pc" : Bit addrSize <- (pcInit procInit)
+    with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- (pgmInit procInit)
     with Register "stall" : Bool <- false
                                  
     with Rule "reqLd" :=
@@ -195,15 +197,23 @@ Section ProcDecM.
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
-  Definition pdec := procDec "rqFromProc"%string "rsToProc"%string
-                             getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                             getStAddr getStSrc calcStAddr getStVSrc
-                             getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
-  Definition pdecs (i: nat) := duplicate pdec i.
+  Definition pdec init :=
+    procDec "rqFromProc"%string "rsToProc"%string
+            getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+            getStAddr getStSrc calcStAddr getStVSrc
+            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
 
-  Definition pdecf := ConcatMod pdec (iom addrSize fifoSize dataBytes).
-  Definition pdecfs (i: nat) := duplicate pdecf i.
-  Definition procDecM (n: nat) := ConcatMod (pdecfs n) (minst addrSize dataBytes n).
+  Variables (procInits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
+
+  Definition pdecs (i: nat) :=
+    duplicate (fun iv => pdec (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+                                           procInits iv)) i.
+
+  Definition pdecf init := (pdec init ++ iom addrSize fifoSize dataBytes)%kami.
+  Definition pdecfs (i: nat) :=
+    duplicate (fun iv => pdecf (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+                                            procInits iv)) i.
+  Definition procDecM (n: nat) := (pdecfs n ++ minst addrSize dataBytes n)%kami.
 
 End ProcDecM.
 
@@ -231,18 +241,20 @@ Section Facts.
             (alignAddr: AlignAddrT addrSize).
 
   Lemma pdec_ModEquiv:
-    ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                     getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
+    forall init,
+      ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                      getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr).
+    forall init,
+      ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                        getStAddr getStSrc calcStAddr getStVSrc
+                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init).
   Proof.
     kequiv.
   Qed.
@@ -251,18 +263,20 @@ Section Facts.
   Variable n: nat.
 
   Lemma pdecfs_ModEquiv:
-    ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
+    forall inits,
+      ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                         getStAddr getStSrc calcStAddr getStVSrc
+                         getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecfs_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                         getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n).
+    forall inits,
+      ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                           getStAddr getStSrc calcStAddr getStVSrc
+                           getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n).
   Proof.
     kequiv.
   Qed.

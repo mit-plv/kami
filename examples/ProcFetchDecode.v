@@ -105,10 +105,13 @@ Section FetchAndDecode.
   Definition sbSearch2 := sbSearch2 rfIdx.
   Definition sbSearch3 := sbSearch3 rfIdx.
   Definition sbInsert := sbInsert rfIdx.
+
+  Variables (pcInit : ConstT (Bit addrSize))
+            (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
   
   Definition fetcher := MODULE {
-    Register "pc" : Bit addrSize <- Default
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+    Register "pc" : Bit addrSize <- pcInit
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- pgmInit
     with Register "fEpoch" : Bool <- false
 
     with Rule "modifyPc" :=
@@ -305,7 +308,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    ModPhoasWf (fetcher alignPc predictNextPc f2dPack).
+    forall pcInit pgmInit, ModPhoasWf (fetcher alignPc predictNextPc f2dPack pcInit pgmInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -319,10 +322,11 @@ Section Facts.
   Hint Resolve decoder_ModEquiv.
 
   Lemma fetchDecode_ModEquiv:
-    ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                            getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
-                            f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
+    forall pcInit pgmInit,
+      ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                              getStAddr getStSrc calcStAddr getStVSrc
+                              getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
+                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit pgmInit).
   Proof.
     kequiv.
   Qed.

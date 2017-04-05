@@ -33,9 +33,11 @@ Section Invariants.
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
+  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
+                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.

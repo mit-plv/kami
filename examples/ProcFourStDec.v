@@ -110,14 +110,17 @@ Section ProcFDE.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data dataBytes))).
 
+  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+
   Definition fetchDecode := ProcFetchDecode.fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
                               getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
+                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                              (pcInit init) (pgmInit init).
 
   Definition p4st := (fetchDecode
-                        ++ regFile dataBytes rfIdx
+                        ++ regFile (rfInit init)
                         ++ scoreBoard rfIdx
                         ++ oneEltFifo d2eFifoName d2eElt
                         ++ oneEltFifoEx1 w2dFifoName (Bit addrSize)
@@ -135,7 +138,7 @@ Section ProcFDE.
                                          alignPc alignAddr predictNextPc
                                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                         e2wPack e2wDecInst e2wVal.
+                                         e2wPack e2wDecInst e2wVal init.
 
   Lemma p4st_refines_p3st: p4st <<== p3st.
   Proof. (* SKIP_PROOF_ON

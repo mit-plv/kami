@@ -91,13 +91,13 @@ Section MemAtomic.
   Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc dataBytes)).
   Definition ioQ := ConcatMod inQ outQ.
 
-  Definition ios (i: nat) := duplicate ioQ i.
+  Definition ios (i: nat) := duplicate (fun _ => ioQ) i.
 
   Definition midQ := mid "rqFromProc" "rsToProc" addrSize dataBytes.
-  Definition mids (i: nat) := duplicate midQ i.
+  Definition mids (i: nat) := duplicate (fun _ => midQ) i.
   
   Definition iom := ConcatMod ioQ midQ.
-  Definition ioms (i: nat) := duplicate iom i.
+  Definition ioms (i: nat) := duplicate (fun _ => iom) i.
 
   Definition memAtomicWoQ := ConcatMod (mids n) minst.
   Definition memAtomicWoQInl :=
@@ -234,6 +234,7 @@ Section MemAtomicWoQInl.
             replace (getRules (memAtomicWoQ addrSize dataBytes n))
             with (getRules (mids addrSize dataBytes n))
               by (simpl; rewrite app_nil_r; reflexivity).
+            change (midQ addrSize dataBytes) with ((fun _ => midQ addrSize dataBytes) i).
             apply getRules_duplicate_in; auto.
             simpl; tauto.
           }
@@ -339,6 +340,7 @@ Section MemAtomicWoQInl.
             replace (getRules (memAtomicWoQ addrSize dataBytes n))
             with (getRules (mids addrSize dataBytes n))
               by (simpl; rewrite app_nil_r; reflexivity).
+            change (midQ addrSize dataBytes) with ((fun _ => midQ addrSize dataBytes) i).
             apply getRules_duplicate_in; auto.
             simpl; tauto.
           }

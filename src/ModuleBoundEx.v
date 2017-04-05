@@ -483,13 +483,14 @@ Section Bounds.
 
   Lemma getDupRegsBound_bounded:
     forall m n,
-      Specializable m ->
-      RegsBound (duplicate m n) n (getDupRegsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getDupRegsBound (m i) = getDupRegsBound (m j)) ->
+      RegsBound (duplicate m n) n (getDupRegsBound (m 0)).
   Proof.
     unfold RegsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
     - rewrite specializeMod_regs by auto.
-      generalize (namesOf (getRegInits m)) as regs; clear.
+      generalize (namesOf (getRegInits (m 0))) as regs; clear.
       induction regs; simpl; intros; [apply EquivList_nil|].
       apply EquivList_cons; auto.
     - unfold RegInitT; rewrite namesOf_app.
@@ -498,19 +499,21 @@ Section Bounds.
       | [H: EquivList ?ilhs _ |- EquivList ?lhs (?nl ++ _) ] =>
         apply EquivList_trans with (l2:= (nl ++ ilhs))
       end.
-      + apply getDupNameBound_concat_vertical.
+      + specialize (H0 0 (S n)); inv H0.
+        apply getDupNameBound_concat_vertical.
       + apply EquivList_app; [apply EquivList_refl|auto].
   Qed.
 
   Lemma getDupDmsBound_bounded:
     forall m n,
-      Specializable m ->
-      DmsBound (duplicate m n) n (getDupDmsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getDupDmsBound (m i) = getDupDmsBound (m j)) ->
+      DmsBound (duplicate m n) n (getDupDmsBound (m 0)).
   Proof.
     unfold DmsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
     - rewrite specializeMod_defs by auto.
-      generalize (getDefs m) as dms; clear.
+      generalize (getDefs (m 0)) as dms; clear.
       induction dms; simpl; intros; [apply EquivList_nil|].
       apply EquivList_cons; auto.
     - rewrite getDefs_app.
@@ -519,30 +522,33 @@ Section Bounds.
       | [H: EquivList ?ilhs _ |- EquivList ?lhs (?nl ++ _) ] =>
         apply EquivList_trans with (l2:= (nl ++ ilhs))
       end.
-      + apply getDupNameBound_concat_vertical.
+      + specialize (H0 0 (S n)); inv H0.
+        apply getDupNameBound_concat_vertical.
       + apply EquivList_app; [apply EquivList_refl|auto].
   Qed.
 
   Lemma getDupCmsBound_bounded:
     forall m n,
-      Specializable m ->
-      CmsBound (duplicate m n) n (getDupCmsBound m).
+      (forall i, Specializable (m i)) ->
+      (forall i j, getDupCmsBound (m i) = getDupCmsBound (m j)) ->
+      CmsBound (duplicate m n) n (getDupCmsBound (m 0)).
   Proof.
     unfold CmsBound, Abstracted, unfoldNameBound; simpl; intros.
     induction n; simpl; intros.
     - rewrite specializeMod_calls by auto.
-      generalize (getCalls m) as cms; clear.
+      generalize (getCalls (m 0)) as cms; clear.
       induction cms; simpl; intros; [apply EquivList_nil|].
       apply EquivList_cons; auto.
     - apply EquivList_trans with
-      (l2:= getCalls (specializeMod m (S n)) ++ getCalls (duplicate m n));
+      (l2:= getCalls (specializeMod (m (S n)) (S n)) ++ getCalls (duplicate m n));
         [|split; [apply getCalls_subList_1|apply getCalls_subList_2]].
       rewrite specializeMod_calls by auto.
       match goal with
       | [H: EquivList ?ilhs _ |- EquivList ?lhs (?nl ++ _) ] =>
         apply EquivList_trans with (l2:= (nl ++ ilhs))
       end.
-      + apply getDupNameBound_concat_vertical.
+      + specialize (H0 0 (S n)); inv H0.
+        apply getDupNameBound_concat_vertical.
       + apply EquivList_app; [apply EquivList_refl|auto].
   Qed.
 
@@ -995,7 +1001,7 @@ Ltac get_regs_bound_ex m :=
     let nb1 := get_regs_bound_ex m1 in
     let nb2 := get_regs_bound_ex m2 in
     constr:(appendNameBound nb1 nb2)
-  | duplicate ?sm _ => constr:(getDupRegsBound sm)
+  | duplicate ?sm _ => constr:(getDupRegsBound (sm 0))
   | modFromMeta {| metaRegs := nil |} => constr:emptyNameBound
   | modFromMeta {| metaRegs := (OneReg _ ?nr :: ?mregs);
                    metaRules := ?mrules;
@@ -1032,7 +1038,7 @@ Ltac get_dms_bound_ex m :=
        let nb1 := get_dms_bound_ex m1 in
        let nb2 := get_dms_bound_ex m2 in
        constr:(appendNameBound nb1 nb2)
-     | duplicate ?sm _ => constr:(getDupDmsBound sm)
+     | duplicate ?sm _ => constr:(getDupDmsBound (sm 0))
      | modFromMeta {| metaMeths := nil |} => constr:(emptyNameBound)
      | modFromMeta {| metaRegs := ?mregs;
                       metaRules := ?mrules;
@@ -1077,7 +1083,7 @@ Ltac get_cms_bound_ex m :=
        let nb1 := get_cms_bound_ex m1 in
        let nb2 := get_cms_bound_ex m2 in
        constr:(appendNameBound nb1 nb2)
-     | duplicate ?sm _ => constr:(getDupCmsBound sm)
+     | duplicate ?sm _ => constr:(getDupCmsBound (sm 0))
      | modFromMeta {| metaRules := nil; metaMeths := nil |} => constr:(emptyNameBound)
      | modFromMeta {| metaRegs := ?mregs;
                       metaRules := rulesToRep ?rr1 ?rr2 ?rr3 ?rr4 ?rr5 ?rr6;

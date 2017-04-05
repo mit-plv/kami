@@ -102,17 +102,19 @@ Section ProcThreeStDec.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
+  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+
   Definition p3st := ProcThreeStage.p3st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                       e2wPack e2wDecInst e2wVal.
+                       e2wPack e2wDecInst e2wVal init.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
   
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
@@ -221,7 +223,7 @@ Section ProcThreeStDec.
                                                getNextPc alignPc alignAddr predictNextPc
                                                d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                                d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                               e2wPack e2wDecInst e2wVal.
+                                               e2wPack e2wDecInst e2wVal init.
 
   Definition p3stConfig :=
     {| inlining := ITProvided p3stInl;

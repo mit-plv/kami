@@ -58,10 +58,14 @@ Section Inlined.
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Variables (pcInit : ConstT (Bit addrSize))
+            (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
+
   Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
                                         getSrc1 getSrc2 getDst alignPc predictNextPc
-                                        d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch.
+                                        d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                                        pcInit pgmInit.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
   Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
@@ -71,6 +75,7 @@ Section Inlined.
                                         getStAddr getStSrc calcStAddr getStVSrc
                                         getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                                        pcInit pgmInit
                                         type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))
       as Him.

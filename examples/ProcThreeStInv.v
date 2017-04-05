@@ -101,13 +101,15 @@ Section Invariants.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
+  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
                                         getSrc1 getSrc2 getDst exec getNextPc
                                         alignPc alignAddr predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                        e2wPack e2wDecInst e2wVal).
+                                        e2wPack e2wDecInst e2wVal init).
 
   (** Now invariants are defined below *)
 

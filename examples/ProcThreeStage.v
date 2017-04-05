@@ -174,9 +174,10 @@ Section ProcThreeStage.
   Definition e2wDeq := MethodSig (e2wFifoName -- "deq")() : e2wElt.
   
   Section RegFile.
+    Variable rfInit: ConstT (Vector (Data dataBytes) rfIdx).
 
     Definition regFile := MODULE {
-      Register "rf" : Vector (Data dataBytes) rfIdx <- Default
+      Register "rf" : Vector (Data dataBytes) rfIdx <- rfInit
 
       with Method "getRf1" () : Vector (Data dataBytes) rfIdx :=
         Read rf <- "rf";
@@ -257,10 +258,12 @@ Section ProcThreeStage.
                                      Expr ty (SyntaxKind (Bit addrSize)).
 
   Section FetchDecode.
+    Variables (pcInit : ConstT (Bit addrSize))
+              (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
     
     Definition fetchDecode := MODULE {
-      Register "pc" : Bit addrSize <- Default
-      with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+      Register "pc" : Bit addrSize <- pcInit
+      with Register "pgm" : Vector (Data dataBytes) iaddrSize <- pgmInit
       with Register "fEpoch" : Bool <- false
                                     
       with Rule "modifyPc" :=
@@ -599,15 +602,16 @@ Section ProcThreeStage.
     
   End WriteBack.
 
-  Definition procThreeStage := (fetchDecode
-                                  ++ regFile
-                                  ++ scoreBoard
-                                  ++ oneEltFifo d2eFifoName d2eElt
-                                  ++ oneEltFifoEx1 w2dFifoName (Bit addrSize)
-                                  ++ executer
-                                  ++ epoch
-                                  ++ oneEltFifo e2wFifoName e2wElt
-                                  ++ wb)%kami.
+  Definition procThreeStage (init: ProcInit addrSize iaddrSize dataBytes rfIdx) :=
+    ((fetchDecode (pcInit init) (pgmInit init))
+       ++ regFile (rfInit init)
+       ++ scoreBoard
+       ++ oneEltFifo d2eFifoName d2eElt
+       ++ oneEltFifoEx1 w2dFifoName (Bit addrSize)
+       ++ executer
+       ++ epoch
+       ++ oneEltFifo e2wFifoName e2wElt
+       ++ wb)%kami.
 
 End ProcThreeStage.
 
@@ -686,14 +690,15 @@ Section ProcThreeStageM.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data dataBytes))).
 
-  Definition p3st := procThreeStage "rqFromProc"%string "rsToProc"%string
-                                    getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                    getStAddr getStSrc calcStAddr getStVSrc
-                                    getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
-                                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                    e2wPack e2wDecInst e2wVal
-                                    predictNextPc.
+  Definition p3st init :=
+    procThreeStage "rqFromProc"%string "rsToProc"%string
+                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                   getStAddr getStSrc calcStAddr getStVSrc
+                   getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                   d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                   d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                   e2wPack e2wDecInst e2wVal
+                   predictNextPc init.
 
 End ProcThreeStageM.
 
@@ -768,7 +773,7 @@ Section Facts.
                         Expr ty (SyntaxKind (Data dataBytes))).
 
   Lemma regFile_ModEquiv:
-    ModPhoasWf (regFile dataBytes rfIdx).
+    forall init, ModPhoasWf (@regFile dataBytes rfIdx init).
   Proof. kequiv. Qed.
   Hint Resolve regFile_ModEquiv.
 
@@ -792,14 +797,15 @@ Section Facts.
   Proof. kequiv. Qed.
   Hint Resolve oneEltFifoEx2_ModEquiv.
 
-  Lemma decoder_ModEquiv:
-    ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                            getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                            alignPc d2ePack predictNextPc).
+  Lemma fetchDecode_ModEquiv:
+    forall pcInit pgmInit,
+      ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                              getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
+                              alignPc d2ePack predictNextPc pcInit pgmInit).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve decoder_ModEquiv.
+  Hint Resolve fetchDecode_ModEquiv.
 
   Lemma executer_ModEquiv:
     ModPhoasWf (executer rfIdx exec d2eOpType d2eVal1 d2eVal2
@@ -826,12 +832,13 @@ Section Facts.
   Hint Resolve wb_ModEquiv.
   
   Lemma procThreeStage_ModEquiv:
-    ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                     getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr predictNextPc
-                     d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                     d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                     e2wPack e2wDecInst e2wVal).
+    forall init,
+      ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr predictNextPc
+                       d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                       e2wPack e2wDecInst e2wVal init).
   Proof.
     kequiv.
   Qed.
@@ -843,7 +850,7 @@ Hint Resolve regFile_ModEquiv
      oneEltFifo_ModEquiv
      oneEltFifoEx1_ModEquiv
      oneEltFifoEx2_ModEquiv
-     decoder_ModEquiv
+     fetchDecode_ModEquiv
      executer_ModEquiv
      epoch_ModEquiv
      wb_ModEquiv
