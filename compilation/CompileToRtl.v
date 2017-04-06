@@ -122,7 +122,7 @@ Section Compile.
   Fixpoint convertActionToRtl_guard k (a: ActionT (fun _ => list nat) k) startList: RtlExpr Bool :=
     match a in ActionT _ _ with
       | MCall meth k argExpr cont =>
-        convertActionToRtl_guard (cont startList) (inc startList)
+        RtlBinBool And (RtlReadWire Bool (getActionGuard meth)) (convertActionToRtl_guard (cont startList) (inc startList))
       | Let_ k' expr cont =>
         convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
       | ReadReg r k' cont =>
@@ -484,12 +484,26 @@ Section UsefulFunctions.
     Variable meth: string.
     Variable argT: Kind.
 
+    Fixpoint computeMethArg' argT ls :=
+      match ls with
+        | nil => RtlConst (getDefaultConst argT)
+        | x :: nil => RtlReadWire argT (getMethCallActionArg x meth)
+        | x :: xs => RtlITE (RtlReadWire Bool (getActionEn x))
+                            (RtlReadWire argT (getMethCallActionArg x meth)) (computeMethArg' argT xs)
+      end.
+
+    Definition computeMethArg :=
+      (getMethArg meth,
+       existT RtlExpr argT (computeMethArg' argT (getCallers meth))).
+    (*
+
     Definition computeMethArg :=
       (getMethArg meth,
        existT RtlExpr argT
               (fold_left (fun expr r => RtlITE (RtlReadWire Bool (getActionEn r))
                                                (RtlReadWire argT (getMethCallActionArg r meth)) expr) (getCallers meth)
                          (RtlConst (getDefaultConst argT)))).
+     *)
     
     Definition computeMethEn :=
       (getActionEn meth,

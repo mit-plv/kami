@@ -69,15 +69,23 @@ ppType v@(Vector k i) =
        _ -> concatMap ppVecLen is ++ ppType k'
 ppType (Struct n v) = "{" ++ concatMap (\x -> ' ' : ppDeclType (ppName $ attrName x) (attrType x) ++ ";") (vectorToList v) ++ "}"
 
+ppDottedName :: String -> String
+ppDottedName s =
+  case splitOn "." s of
+    x : y : nil -> y ++ "$" ++ x
+    x : nil -> x
+
 ppName :: String -> String
-ppName s =
+ppName s = intercalate "$" (Data.List.map (\x -> ppDottedName x) (splitOneOf "$#" s))
+  {-
   if elem '.' s
   then intercalate "$" (case splitOneOf ".#" s of
-                          x : y : xs -> y : x : xs
+                          x : y : xs -> x : y : xs
                           ys -> ys)
   else Data.List.map (\x -> case x of
                          '#' -> '$'
                          c -> c) s
+-}
 
 
 ppDeclType :: String -> Kind -> String
