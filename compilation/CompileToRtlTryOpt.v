@@ -143,11 +143,14 @@ Section Compile.
                    (convertActionToRtl_guard (cont (inc (inc startList))) (inc (inc (inc startList))))
     end.
 End Compile.
-  
+
+
+(* Set the enables correctly in the following two functions *)
+
 Definition computeRuleAssigns (r: Attribute (Action Void)) :=
   (getActionGuard (attrName r),
    existT _ Bool (convertActionToRtl_guard (attrName r) (attrType r (fun _ => list nat)) (1 :: nil))) ::
-  convertActionToRtl_noGuard (attrName r) (attrType r (fun _ => list nat)) (RtlConst (ConstBool true)) (1 :: nil) (0 :: nil).
+  convertActionToRtl_noGuard (attrName r) (attrType r (fun _ => list nat)) (RtlReadWire Bool (getActionEn (attrName r))) (1 :: nil) (0 :: nil).
 
 Definition computeMethAssigns (f: DefMethT) :=
   (getActionGuard (attrName f),
@@ -155,7 +158,7 @@ Definition computeMethAssigns (f: DefMethT) :=
   (attrName f, 1 :: nil,
    existT _ (arg (projT1 (attrType f))) (RtlReadWire (arg (projT1 (attrType f))) (getMethArg (attrName f)))) ::
   convertActionToRtl_noGuard (attrName f) (projT2 (attrType f) (fun _ => list nat) (1 :: nil))
-   (RtlConst (ConstBool true)) (2 :: nil) (0 :: nil).
+   (RtlReadWire Bool (getActionEn (attrName f))) (2 :: nil) (0 :: nil).
 
 Definition computeMethRets (f: DefMethT) :=
   (getMethRet (attrName f), existT _ _ (RtlReadWire (ret (projT1 (attrType f))) (attrName f, 0 :: nil))).
@@ -500,7 +503,7 @@ Section UsefulFunctions.
       (getActionEn meth,
        existT RtlExpr Bool
               (fold_left (fun expr r => RtlBinBool Or
-                                                   (RtlReadWire Bool (getActionEn r))
+                                                   (RtlReadWire Bool (getMethCallActionEn r meth))
                                                    expr) (getCallers meth)
                          (RtlConst false))).
   End Meth.

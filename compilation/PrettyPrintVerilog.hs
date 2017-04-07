@@ -100,8 +100,8 @@ ppWord (b : bs) = (if b then '1' else '0') : ppWord bs
 
 ppConst :: ConstT -> String
 ppConst (ConstBool b) = if b then "1'b1" else "1'b0"
-ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (reverse (wordToList w))
-ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (vecToList vs)) ++ "}"
+ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (reverse $ wordToList w)
+ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (reverse $ vecToList vs)) ++ "}"
 ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (Data.List.map ppConst (ilistToList is)) ++ "}"
 
 
@@ -165,7 +165,7 @@ ppRtlExpr who e =
         return $ new ++ '.' : attrName (vectorToList fields !! finToInt idx)
     RtlBuildVector _ _ vs ->
       do
-        strs <- mapM (ppRtlExpr who) (vecToList vs)
+        strs <- mapM (ppRtlExpr who) (reverse $ vecToList vs)
         return $ '{': intercalate ", " strs ++ "}"
     RtlBuildStruct _ _ es ->
       do
@@ -179,7 +179,7 @@ ppRtlExpr who e =
         return $  '{' : intercalate ", "
           (Data.List.map (\i -> xidx ++ "==" ++ show n ++ "'d" ++ show i ++ " ? " ++ xval ++
                            ":" ++ xv ++ "[" ++ show i ++ "]")
-           [0 .. ((2^n)-1)]) ++ "}"
+           (reverse [0 .. ((2^n)-1)])) ++ "}"
   where
     optionAddToTrunc :: Kind -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
     optionAddToTrunc k e =
