@@ -100,7 +100,7 @@ ppWord (b : bs) = (if b then '1' else '0') : ppWord bs
 
 ppConst :: ConstT -> String
 ppConst (ConstBool b) = if b then "1'b1" else "1'b0"
-ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (wordToList w)
+ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (reverse (wordToList w))
 ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (vecToList vs)) ++ "}"
 ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (Data.List.map ppConst (ilistToList is)) ++ "}"
 

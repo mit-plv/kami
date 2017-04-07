@@ -27,7 +27,8 @@ Definition targetProcM := producerConsumerImpl.
 *)
 
 
-Require Import Ex.SC Ex.IsaRv32 Ex.IsaRv32Pgm Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec.
+Require Import Ex.SC Ex.IsaRv32 Ex.IsaRv32Pgm Ex.ProcFetchDecode Ex.ProcThreeStage.
+Require Import Ex.ProcFourStDec.
 Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 
 (** * p4st + pmFifos ++ memCache extraction *)

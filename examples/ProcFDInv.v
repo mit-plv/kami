@@ -165,7 +165,6 @@ Section Invariants.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
-
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 

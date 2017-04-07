@@ -101,9 +101,14 @@ Section FetchAndDecode.
   Definition getRf1 := getRf1 dataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
   Definition w2dDeq := w2dDeq addrSize.
-  Definition sbSearch1 := sbSearch1 rfIdx.
-  Definition sbSearch2 := sbSearch2 rfIdx.
-  Definition sbSearch3 := sbSearch3 rfIdx.
+  Definition sbSearch1_Ld := sbSearch1_Ld rfIdx.
+  Definition sbSearch2_Ld := sbSearch2_Ld rfIdx.
+  Definition sbSearch1_St := sbSearch1_St rfIdx.
+  Definition sbSearch2_St := sbSearch2_St rfIdx.
+  Definition sbSearch1_Th := sbSearch1_Th rfIdx.
+  Definition sbSearch1_Nm := sbSearch1_Nm rfIdx.
+  Definition sbSearch2_Nm := sbSearch2_Nm rfIdx.
+  Definition sbSearch3_Nm := sbSearch3_Nm rfIdx.
   Definition sbInsert := sbInsert rfIdx.
 
   Variables (pcInit : ConstT (Bit addrSize))
@@ -147,8 +152,8 @@ Section FetchAndDecode.
 
       LET srcIdx <- getLdSrc _ rawInst;
       LET dst <- getLdDst _ rawInst;
-      Call stall1 <- sbSearch1(#srcIdx);
-      Call stall2 <- sbSearch2(#dst);
+      Call stall1 <- sbSearch1_Ld(#srcIdx);
+      Call stall2 <- sbSearch2_Ld(#dst);
       Assert !(#stall1 || #stall2);
       LET addr <- getLdAddr _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
@@ -174,8 +179,8 @@ Section FetchAndDecode.
 
       LET srcIdx <- getStSrc _ rawInst;
       LET vsrcIdx <- getStVSrc _ rawInst;
-      Call stall1 <- sbSearch1(#srcIdx);
-      Call stall2 <- sbSearch2(#vsrcIdx);
+      Call stall1 <- sbSearch1_St(#srcIdx);
+      Call stall2 <- sbSearch2_St(#vsrcIdx);
       Assert !(#stall1 || #stall2);
 
       LET addr <- getStAddr _ rawInst;
@@ -201,7 +206,7 @@ Section FetchAndDecode.
       Assert (#opType == $$opTh);
 
       LET srcIdx <- getSrc1 _ rawInst;
-      Call stall1 <- sbSearch1(#srcIdx);
+      Call stall1 <- sbSearch1_Th(#srcIdx);
       Assert !#stall1;
 
       LET srcVal <- #rf@[#srcIdx];
@@ -226,9 +231,9 @@ Section FetchAndDecode.
       LET dst <- getDst _ rawInst;
       LET idx1 <- getSrc1 _ rawInst;
       LET idx2 <- getSrc2 _ rawInst;
-      Call stall1 <- sbSearch1(#idx1);
-      Call stall2 <- sbSearch2(#idx2);
-      Call stall3 <- sbSearch3(#dst);
+      Call stall1 <- sbSearch1_Nm(#idx1);
+      Call stall2 <- sbSearch2_Nm(#idx2);
+      Call stall3 <- sbSearch3_Nm(#dst);
       Assert !(#stall1 || #stall2 || #stall3);
 
       LET val1 <- #rf@[#idx1];
@@ -251,7 +256,9 @@ End FetchAndDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
-     getRf1 d2eEnq w2dDeq sbSearch1 sbSearch2 sbSearch3 sbInsert : MethDefs.
+     getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
+     sbSearch1_St sbSearch2_St sbSearch1_Th
+     sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm sbInsert : MethDefs.
   
 Section Facts.
   Variables addrSize iaddrSize dataBytes rfIdx: nat.

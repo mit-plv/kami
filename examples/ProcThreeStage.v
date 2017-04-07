@@ -223,15 +223,35 @@ Section ProcThreeStage.
     Definition scoreBoard := MODULE {
       Register "sbFlags" : Vector Bool rfIdx <- Default
                                  
-      with Method "sbSearch1" (sidx: Bit rfIdx) : Bool :=
+      with Method "sbSearch1_Ld" (sidx: Bit rfIdx) : Bool :=
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
 
-      with Method "sbSearch2" (sidx: Bit rfIdx) : Bool :=
+      with Method "sbSearch2_Ld" (sidx: Bit rfIdx) : Bool :=
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
 
-      with Method "sbSearch3" (sidx: Bit rfIdx) : Bool :=
+      with Method "sbSearch1_St" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+            
+      with Method "sbSearch2_St" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+
+      with Method "sbSearch1_Th" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+
+      with Method "sbSearch1_Nm" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+            
+      with Method "sbSearch2_Nm" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+
+      with Method "sbSearch3_Nm" (sidx: Bit rfIdx) : Bool :=
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
             
@@ -246,9 +266,14 @@ Section ProcThreeStage.
         Retv
     }.
 
-    Definition sbSearch1 := MethodSig "sbSearch1"(Bit rfIdx) : Bool.
-    Definition sbSearch2 := MethodSig "sbSearch2"(Bit rfIdx) : Bool.
-    Definition sbSearch3 := MethodSig "sbSearch3"(Bit rfIdx) : Bool.
+    Definition sbSearch1_Ld := MethodSig "sbSearch1_Ld"(Bit rfIdx) : Bool.
+    Definition sbSearch2_Ld := MethodSig "sbSearch2_Ld"(Bit rfIdx) : Bool.
+    Definition sbSearch1_St := MethodSig "sbSearch1_St"(Bit rfIdx) : Bool.
+    Definition sbSearch2_St := MethodSig "sbSearch2_St"(Bit rfIdx) : Bool.
+    Definition sbSearch1_Th := MethodSig "sbSearch1_Th"(Bit rfIdx) : Bool.
+    Definition sbSearch1_Nm := MethodSig "sbSearch1_Nm"(Bit rfIdx) : Bool.
+    Definition sbSearch2_Nm := MethodSig "sbSearch2_Nm"(Bit rfIdx) : Bool.
+    Definition sbSearch3_Nm := MethodSig "sbSearch3_Nm"(Bit rfIdx) : Bool.
     Definition sbInsert := MethodSig "sbInsert"(Bit rfIdx) : Void.
     Definition sbRemove := MethodSig "sbRemove"(Bit rfIdx) : Void.
     
@@ -290,8 +315,8 @@ Section ProcThreeStage.
 
         LET srcIdx <- getLdSrc _ rawInst;
         LET dst <- getLdDst _ rawInst;
-        Call stall1 <- sbSearch1(#srcIdx);
-        Call stall2 <- sbSearch2(#dst);
+        Call stall1 <- sbSearch1_Ld(#srcIdx);
+        Call stall2 <- sbSearch2_Ld(#dst);
         Assert !(#stall1 || #stall2);
         LET addr <- getLdAddr _ rawInst;
         LET srcVal <- #rf@[#srcIdx];
@@ -318,8 +343,8 @@ Section ProcThreeStage.
 
         LET srcIdx <- getStSrc _ rawInst;
         LET vsrcIdx <- getStVSrc _ rawInst;
-        Call stall1 <- sbSearch1(#srcIdx);
-        Call stall2 <- sbSearch2(#vsrcIdx);
+        Call stall1 <- sbSearch1_St(#srcIdx);
+        Call stall2 <- sbSearch2_St(#vsrcIdx);
         Assert !(#stall1 || #stall2);
 
         LET addr <- getStAddr _ rawInst;
@@ -346,7 +371,7 @@ Section ProcThreeStage.
         Assert (#opType == $$opTh);
 
         LET srcIdx <- getSrc1 _ rawInst;
-        Call stall1 <- sbSearch1(#srcIdx);
+        Call stall1 <- sbSearch1_Th(#srcIdx);
         Assert !#stall1;
 
         LET srcVal <- #rf@[#srcIdx];
@@ -372,9 +397,9 @@ Section ProcThreeStage.
         LET dst <- getDst _ rawInst;
         LET idx1 <- getSrc1 _ rawInst;
         LET idx2 <- getSrc2 _ rawInst;
-        Call stall1 <- sbSearch1(#idx1);
-        Call stall2 <- sbSearch2(#idx2);
-        Call stall3 <- sbSearch3(#dst);
+        Call stall1 <- sbSearch1_Nm(#idx1);
+        Call stall2 <- sbSearch2_Nm(#idx2);
+        Call stall3 <- sbSearch3_Nm(#dst);
         Assert !(#stall1 || #stall2 || #stall3);
 
         LET val1 <- #rf@[#idx1];
@@ -621,7 +646,10 @@ Hint Unfold RqFromProc RsToProc memReq memRep
      w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
      e2wFifoName e2wEnq e2wDeq
-     sbSearch1 sbSearch2 sbSearch3 sbInsert sbRemove
+     sbSearch1_Ld sbSearch2_Ld sbSearch1_St sbSearch2_St
+     sbSearch1_Th
+     sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm
+     sbInsert sbRemove
      toHost checkNextPc : MethDefs.
 
 Section ProcThreeStageM.
