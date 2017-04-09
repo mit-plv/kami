@@ -150,7 +150,7 @@ End Compile.
 Definition computeRuleAssigns (r: Attribute (Action Void)) :=
   (getActionGuard (attrName r),
    existT _ Bool (convertActionToRtl_guard (attrName r) (attrType r (fun _ => list nat)) (1 :: nil))) ::
-  convertActionToRtl_noGuard (attrName r) (attrType r (fun _ => list nat)) (RtlReadWire Bool (getActionEn (attrName r))) (1 :: nil) (0 :: nil).
+  convertActionToRtl_noGuard (attrName r) (attrType r (fun _ => list nat)) (RtlConst (ConstBool true)) (1 :: nil) (0 :: nil).
 
 Definition computeMethAssigns (f: DefMethT) :=
   (getActionGuard (attrName f),
@@ -158,7 +158,7 @@ Definition computeMethAssigns (f: DefMethT) :=
   (attrName f, 1 :: nil,
    existT _ (arg (projT1 (attrType f))) (RtlReadWire (arg (projT1 (attrType f))) (getMethArg (attrName f)))) ::
   convertActionToRtl_noGuard (attrName f) (projT2 (attrType f) (fun _ => list nat) (1 :: nil))
-   (RtlReadWire Bool (getActionEn (attrName f))) (2 :: nil) (0 :: nil).
+   ((* RtlReadWire Bool (getActionEn (attrName f)) *) RtlConst (ConstBool true)) (2 :: nil) (0 :: nil).
 
 Definition computeMethRets (f: DefMethT) :=
   (getMethRet (attrName f), existT _ _ (RtlReadWire (ret (projT1 (attrType f))) (attrName f, 0 :: nil))).
@@ -503,7 +503,8 @@ Section UsefulFunctions.
       (getActionEn meth,
        existT RtlExpr Bool
               (fold_left (fun expr r => RtlBinBool Or
-                                                   (RtlReadWire Bool (getMethCallActionEn r meth))
+                                                   (RtlBinBool And (RtlReadWire Bool (getActionEn r))
+                                                               (RtlReadWire Bool (getMethCallActionEn r meth)))
                                                    expr) (getCallers meth)
                          (RtlConst false))).
   End Meth.
@@ -520,9 +521,14 @@ Section UsefulFunctions.
            ++
            map computeMethRets (getDefsBodies m)
            ++
+           map (fun x => computeMethArg (fst x) (arg (snd x))) (getCalls_Sig m)
+           ++
+           map computeMethEn (getCalls m)
+           (*
            map (fun x => computeMethArg (attrName x) (arg (projT1 (attrType x)))) (getDefsBodies m)
            ++
            map computeMethEn (getDefs m)
+            *)
            ++
            concat (map computeActionReadIndices (map (@attrName _) (getRules m) ++ getDefs m))
            ++
@@ -571,7 +577,6 @@ Section FinalResult.
   Variable m: Modules.
   Variable totalOrder: list string.
   Variable ignoreLess: list (string * string).
-
 
   Definition m' := snd (separateRegFiles m).
   Definition regFs := fst (separateRegFiles m).

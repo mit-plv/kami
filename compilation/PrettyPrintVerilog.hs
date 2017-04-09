@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -XStandaloneDeriving #-}
 
+import Vtor
 import Target
 import Data.List
 import Data.List.Split
@@ -7,7 +8,7 @@ import Control.Monad.State.Lazy
 import qualified Data.HashMap.Strict as H
 
 deriving instance Show T
-deriving instance Show a => Show (T0 a)
+deriving instance Show a => Show (Vtor a)
 deriving instance Show a => Show (Attribute a)
 deriving instance (Show a, Show b) => Show (Ilist a b)
 deriving instance Show Target.Word
@@ -16,6 +17,7 @@ deriving instance Show Kind
 deriving instance Show ConstT
 deriving instance Show UniBoolOp
 deriving instance Show BinBoolOp
+
 deriving instance Show UniBitOp
 deriving instance Show BinBitOp
 deriving instance Show BinBitBoolOp
@@ -29,9 +31,9 @@ finToInt :: T -> Int
 finToInt (F1 _) = 0
 finToInt (FS _ x) = Prelude.succ (finToInt x)
 
-vectorToList :: T0 a -> [a]
-vectorToList Nil = []
-vectorToList (Cons x _ xs) = x : vectorToList xs
+vectorToList :: Vtor a -> [a]
+vectorToList NilV = []
+vectorToList (ConsV x _ xs) = x : vectorToList xs
 
 ilistToList :: Ilist a b -> [b]
 ilistToList Inil = []
@@ -244,7 +246,7 @@ ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   "  output " ++ ppDeclType (ppName write ++ "$_g") Bool ++ ",\n" ++
   "  input " ++ ppDeclType (ppName write ++ "$_en") Bool ++ ",\n" ++
   "  input " ++ ppDeclType (ppName write ++ "$_arg")
-  (Struct 2 (Cons (Build_Attribute "addr" (Bit idxType)) 2 (Cons (Build_Attribute "data" dataType) 1 Nil))) ++ ",\n" ++
+  (Struct 2 (ConsV (Build_Attribute "addr" (Bit idxType)) 2 (ConsV (Build_Attribute "data" dataType) 1 NilV))) ++ ",\n" ++
   "  input logic CLK,\n" ++
   "  input logic RESET\n" ++
   ");\n" ++

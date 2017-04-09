@@ -20,6 +20,8 @@ Extract Inlined Constant projT2 => "Prelude.snd".
 Extract Inlined Constant map => "Prelude.map".
 Extract Inlined Constant concat => "Prelude.concat".
 
+Extract Inductive Vector.t => "Vtor" ["NilV" "ConsV"].
+
 (*
 Require Import Kami.Tutorial.
 
@@ -68,6 +70,22 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
     exact $0.
 Defined.
 
+Require Import Kami.Inline.
+
+Section DoInline.
+  Variable m: Modules.
+  Local Definition inlineTargetMod1 := fst (inlineF (snd (separateRegFiles m))).
+  Local Definition inlineTargetMod2 :=
+    fold_left (fun rest x => ConcatMod rest match x with
+                                              | (data, read, write, x) =>
+                                                ConcatMod (RegFile data read write (projT2 x)) rest
+                                            end) (fst (separateRegFiles m)) (Mod nil nil nil).
+Definition inlineTargetMod := (inlineTargetMod1 ++ inlineTargetMod2)%kami.
+End DoInline.
+
+
+
+
 Require Import Ex.IsaRv32PgmExt.
 
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
@@ -88,6 +106,23 @@ Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataByte
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
+Definition p4stN :=
+  ProcMemCorrect.p4stN
+    idxBits tagBits lgNumDatas
+    rv32iGetOptype rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+    rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+    rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
+    rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren procInits.
+
+Definition pmFifos :=
+  ProcMemCorrect.pmFifos fifoSize idxBits tagBits lgNumDatas rv32iDataBytes lgNumChildren.
+
+Definition memCache :=
+  fst (Kami.Inline.inlineF (ProcMemCorrect.memCacheMod fifoSize idxBits tagBits lgNumDatas rv32iDataBytes idK lgNumChildren)).
+
+Definition p4stNMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
+
+(*
 Definition p4stNMemCache :=
   ProcMemCorrect.p4stNMemCache
     fifoSize idxBits tagBits lgNumDatas idK
@@ -95,9 +130,10 @@ Definition p4stNMemCache :=
     rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
     rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
     rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren procInits.
+*)
 
 (** targetM should be your target module *)
-Definition targetMod := p4stNMemCache.
+Definition targetMod := inlineTargetMod p4stNMemCache.
 
 Definition target := computeModule targetMod (map (@attrName _) (getRules targetMod)) nil.
 

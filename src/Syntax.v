@@ -113,6 +113,19 @@ Section Pair_dec.
   Defined.
 End Pair_dec.
 
+Lemma vector_0_nil A: forall ls: Vector.t A 0, Vector.nil A = ls.
+Proof.
+  intros.
+  apply (Vector.case0 (fun v => Vector.nil A = v) eq_refl ls).
+Qed.
+
+Lemma two_eq A: forall x y z: A, x = y -> z = y -> x = z.
+Proof.
+  intros.
+  subst.
+  reflexivity.
+Qed.
+
 Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
   refine match k1, k2 return {k1 = k2} + {k1 <> k2} with
            | Bool, Bool => left eq_refl
@@ -132,20 +145,43 @@ Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
                                                          end
                                              | right r => right _
                                            end
-           | Struct n1 l1, Struct n2 l2 => _
+           | Struct n1 l1, Struct n2 l2 =>
+             match PeanoNat.Nat.eq_dec n1 n2 with
+               | left l =>
+                 match l in _ = Y return
+                       forall l2: Vector.t _ Y,
+                         {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+                   | eq_refl =>
+                     fun l2 =>
+                       (fix help n l1 :=
+                          match l1 in Vector.t _ n'
+                                return forall l2: Vector.t _ n',
+                                         {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+                            | Vector.nil => fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
+                            | Vector.cons h n'' t =>
+                              fun l2 => _
+                          end) n1 l1 l2
+                 end l2
+               | right r => right _
+             end
            | _, _ => right _
-         end; try (clear decKind; abstract (intro; try inversion H; congruence)).
-  - dependent induction l1; dependent destruction l2.
-    + clear decKind; left; abstract reflexivity.
-    + clear decKind; right; abstract (intro H; inversion H).
-    + clear decKind; right; abstract (intro H; inversion H).
-    + destruct h0, h.
-      destruct (string_dec attrName0 attrName); [| clear decKind; abstract (right; intro H; inversion H; subst; tauto)].
-      destruct (decKind attrType0 attrType); clear decKind;
-      [| right; abstract (intro H; inversion H; try apply inj_pair2 in H; subst; tauto)].
-      destruct (IHl1 _ l2); clear IHl1.
-      * left; abstract (subst; inversion e1; try apply inj_pair2 in H1; subst; tauto).
-      * right; abstract (subst; intros H; inversion H; subst; apply inj_pair2 in H3; subst; tauto).
+         end; try (clear decKind; abstract (intro; try inversion H; try inversion H0; destruct_existT; congruence)).
+
+  generalize t (help _ t); clear help t.
+  apply (Vector.caseS (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
+                         forall t1, (forall t2: Vector.t (Attribute Kind) n,
+                                       {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
+                                    {Struct (Vector.cons _ h n t1) = Struct l2} + {Struct (Vector.cons _ h n t1) <> Struct l2})).
+  intros.
+  destruct h, h0.
+  destruct (decKind attrType attrType0).
+  destruct (string_dec attrName attrName0).
+  destruct (H t).
+  inversion e1; destruct_existT.
+  left; reflexivity.
+  clear decKind; right; abstract (intro; inversion H0; destruct_existT; congruence).
+  clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
+  clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
 Defined.
 
 Lemma kind_eq: forall k, decKind k k = left eq_refl.
