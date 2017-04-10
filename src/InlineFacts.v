@@ -431,7 +431,8 @@ Proof.
   simpl.
 
   clear; induction m; unfold getDefs in *; simpl in *.
-  - reflexivity.
+  - induction read; simpl; auto.
+    unfold namesOf in *; inversion IHread; rewrite map_map in *; repeat f_equal; auto.
   - clear; induction dms; [auto|].
     simpl; f_equal; auto.
   - apply inlineDmToDms_names.
@@ -704,6 +705,8 @@ Proof.
   - unfold inlineDmToMod.
     try destruct (getAttribute _ _);
       try (reflexivity; fail).
+    induction read; simpl; auto.
+    inversion IHread; unfold namesOf in *; rewrite? map_map in *; repeat f_equal; auto.
   - unfold inlineDmToMod.
     try destruct (getAttribute _ _);
     try (reflexivity; fail).

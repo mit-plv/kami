@@ -506,11 +506,15 @@ Section Facts.
       + unfold ValidRegsMetaModules in H; simpl in H.
         dest.
         inv H0.
-        inv H3.
-        clear H H2.
         apply validRegsMetaMeth_validRegsDms in H4.
-        apply validRegsMetaMeth_validRegsDms in H5.
-        simpl in H4, H5.
+        simpl in H4.
+        repeat constructor; auto.
+        clear H H4.
+        induction read; simpl; auto; repeat constructor; auto.
+        inv H3.
+        specialize (IHread H1).
+        apply validRegsMetaMeth_validRegsDms in H2.
+        simpl in H2.
         repeat constructor; auto.
     - intros.
       unfold ValidRegsMetaModule in H.
@@ -540,6 +544,8 @@ Section Facts.
         * constructor; auto.
         * { constructor; simpl; intros.
             - repeat (constructor; auto).
+              clear IHls.
+              induction read; simpl; auto; repeat constructor; auto.
             - repeat (constructor; auto).
           }
   Qed.

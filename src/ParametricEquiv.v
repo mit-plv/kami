@@ -474,6 +474,18 @@ Section Equiv.
       unfold ModEquiv; simpl in *.
       apply metaModEquiv_modEquiv in H; simpl in *.
       auto.
+      simpl in *.
+      inv H; simpl in *.
+      split; auto.
+      unfold getMethFromSin in *; simpl in *.
+      inv H1.
+      constructor; auto.
+      clear - H4.
+      induction read; concat_map_iff; auto.
+      simpl in H4.
+      inv H4.
+      specialize (IHread H2).
+      constructor; auto.
     - simpl in *.
       destruct m.
       apply metaModEquiv_modEquiv in H; simpl in *.
@@ -500,12 +512,12 @@ Section Equiv.
         constructor.
         intros.
         simpl in *.
-        solve [constructor; simpl in *].
+        repeat constructor; auto.
+        rewrite map_map.
         simpl in *.
-        constructor; auto.
-        constructor; intros; simpl in *.
-        constructor; intros; simpl in *.
-        constructor; intros; simpl in *.
+        apply MethsEquiv_app; auto.
+        clear H0 H1.
+        induction read; simpl; auto; repeat constructor; auto.
   Qed.
 End Equiv.
 

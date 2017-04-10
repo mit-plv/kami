@@ -581,16 +581,17 @@ Section FinalResult.
   Definition m' := snd (separateRegFiles m).
   Definition regFs := fst (separateRegFiles m).
 
-  Local Definition checkBypass (r: string * string * string * sigT (fun x => ConstT (Vector (snd x) (fst x)))) :=
+  Local Definition checkBypass (r: string * list string * string * sigT (fun x => ConstT (Vector (snd x) (fst x)))) :=
     match r with
-      | (data, read, write, _) =>
-        match head (methPos m totalOrder read) with
-          | None => (r, false)
-          | Some n => match regIndex m totalOrder ignoreLess data n with
-                        | 0 => (r, false)
-                        | _ => (r, true)
-                      end
-        end
+      | (data, reads, write, v) =>
+        (data, map (fun read =>
+                      match head (methPos m totalOrder read) with
+                        | None => (read, false)
+                        | Some n => match regIndex m totalOrder ignoreLess data n with
+                                      | 0 => (read, false)
+                                      | _ => (read, true)
+                                    end
+                      end) reads, write, v)
     end.
 
   

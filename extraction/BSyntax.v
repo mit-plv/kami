@@ -47,7 +47,8 @@ Section BluespecSubset.
                       bdms : list BMethod }.
 
   Inductive BRegModule :=
-  | RegFileB (dataArray read write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): BRegModule
+  | RegFileB (dataArray: string) (read: list string) (write: string)
+             (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): BRegModule
   | BModuleB (b: BModule): BRegModule.
 
   Definition BModules := list BRegModule.

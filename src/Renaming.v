@@ -105,7 +105,7 @@ Section Rename.
 
   Fixpoint renameModules (m: Modules) :=
     match m with
-      | RegFile dataArray read write IdxBits Data init => RegFile (rename dataArray) (rename read) (rename write) init
+      | RegFile dataArray read write IdxBits Data init => RegFile (rename dataArray) (map rename read) (rename write) init
       | Mod regs rules dms => Mod (renameListAttr regs) (renameRules rules) (renameMeths dms)
       | ConcatMod m1 m2 => ConcatMod (renameModules m1) (renameModules m2)
     end.
@@ -143,7 +143,9 @@ Section Rename.
   Lemma renameGetMeths m: getDefsBodies (renameModules m) = renameMeths (getDefsBodies m).
   Proof.
     induction m.
-    - reflexivity.
+    - unfold renameMeths, renameMeth; simpl.
+      rewrite ?map_map; simpl.
+      reflexivity.
     - reflexivity.
     - simpl; rewrite IHm1, IHm2.
       unfold renameMeths.
@@ -832,7 +834,7 @@ Section Rename.
     getCallsM (getDefsBodies (renameModules m)) = map rename (getCallsM (getDefsBodies m)).
   Proof.
     induction m; simpl.
-    - reflexivity.
+    - induction read; simpl; auto.
     - apply renameGetCallsM.
     - repeat rewrite getCallsM_app.
       rewrite List.map_app.

@@ -365,18 +365,34 @@ Section SpecializeFacts.
       constructor; simpl.
       + auto.
       + inv H1.
-        inv H4.
-        clear - H3 H2.
-        repeat match goal with
-                 | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
-               end.
-        simpl in *.
-        apply (f_equal (renameMeth f)) in Heqa;
+        constructor.
+        (* inv H4. *)
+        * clear - H3.
+          repeat match goal with
+                   | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
+                 end.
+          simpl in *.
+          apply (f_equal (renameMeth f)) in Heqa.
+          (* apply (f_equal (renameMeth f)) in Heqa0. *)
+          simpl in *.
+          unfold MethodT in *.
+          rewrite <- Heqa.
+          (* rewrite <- Heqa0. *)
+          repeat constructor; try apply renameAction_MethEquiv; auto.
+        * clear - H4.
+          induction read; simpl; auto.
+          simpl in H4.
+          inv H4.
+          specialize (IHread H2).
+          repeat match goal with
+                   | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
+                 end.
+          simpl in *.
           apply (f_equal (renameMeth f)) in Heqa0.
-        simpl in *.
-        unfold MethodT in *.
-        rewrite <- Heqa, <- Heqa0.
-        repeat constructor; try apply renameAction_MethEquiv; auto.
+          simpl in *.
+          unfold MethodT in *.
+          rewrite <- Heqa0.
+          repeat constructor; try apply renameAction_MethEquiv; auto.
     - inv H; simpl in *.
       constructor; simpl.
       + apply renameRules_RulesEquiv; auto.
@@ -448,6 +464,22 @@ Section SpecializeFacts.
   Proof.
     induction m1; simpl; intros.
     - repeat constructor; auto.
+      inv H.
+      inv H3.
+      simpl in *.
+      clear H0 H2.
+      apply SubList_cons_inv in H1.
+      destruct H1 as [_ stuff].
+      induction read; simpl; auto.
+      constructor; auto.
+      simpl in stuff.
+      apply SubList_cons_inv in stuff.
+      destruct stuff as [use stuff].
+      specialize (IHread stuff).
+      clear stuff.
+      repeat constructor; auto.
+      inv H5.
+      apply IHread; auto.
     - dest; split.
       + apply specializer_validRegsRules; auto.
       + apply specializer_validRegsDms; auto.
@@ -465,14 +497,17 @@ Section SpecializeFacts.
       ValidRegsModules type m ->
       ValidRegsModules type (specializeMod m i).
   Proof.
-    induction m; simpl; intros.
-    - repeat constructor; auto.
-    - dest; split.
+    induction m; intros.
+    - apply specializeMod_validRegsModules_weakening.
+      + assumption.
+      + apply SubList_refl.
+      + apply SubList_refl.
+    - simpl in *; dest; split.
       + apply specializer_validRegsRules; auto.
         apply SubList_refl.
       + apply specializer_validRegsDms; auto.
         apply SubList_refl.
-    - dest; split.
+    - simpl in *; dest; split.
       + apply specializeMod_validRegsModules_weakening; eauto.
         * simpl; apply SubList_app_1, SubList_refl.
         * simpl; apply SubList_app_1, SubList_refl.
@@ -540,11 +575,21 @@ Section SpecializeFacts.
       + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
           by (intros; apply H; apply spDom_defs; auto).
         simpl in *.
-        specialize (H0 read); apply H0; left; auto.
+        unfold namesOf in *; rewrite ?map_map in *; simpl in *.
+        rewrite map_id in H0.
+        assert (forall s, In s read -> f s = g s) by (firstorder; fail).
+        clear - H1.
+        induction read; simpl in *; auto.
+        assert (forall s, In s read -> f s = g s) by (firstorder; fail).
+        specialize (IHread H).
+        f_equal; auto.
       + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
           by (intros; apply H; apply spDom_defs; auto).
         simpl in *.
-        specialize (H0 write); apply H0; right; left; auto.
+        simpl in *.
+        unfold namesOf in *; rewrite ?map_map in *; simpl in *.
+        rewrite map_id in H0.
+        specialize (H0 write); apply H0; left; auto.
     - f_equal.
       + assert (forall s, In s (namesOf regs) -> f s = g s)
           by (intros; apply H; apply spDom_regs; auto).

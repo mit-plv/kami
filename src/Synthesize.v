@@ -67,7 +67,7 @@ Definition MethodTS sig := ActionS (ret sig).
 Definition DefMethTS := Attribute (sigT MethodTS).
 
 Inductive ModulesS: Type :=
-| RegFileS (dataArray read write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits))
+| RegFileS (dataArray: string) (read: list string) (write: string) (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits))
 | ModS (regs: list RegInitT)
       (rules: list (Attribute (ActionS Void)))
       (dms: list DefMethTS):
