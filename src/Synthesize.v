@@ -14,6 +14,8 @@ Inductive ActionS (lretT: Kind) : Type :=
       ActionS lretT ->
       ActionS lretT
   | LetS_ lretT': ExprS lretT' -> nat -> ActionS lretT -> ActionS lretT
+  | ReadNondetS:
+      nat -> ActionS lretT -> ActionS lretT
   | ReadRegS (r: string):
       nat -> ActionS lretT -> ActionS lretT
   | WriteRegS (r: string) k:
@@ -39,6 +41,14 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}: (nat * Actio
                          end (@getActionS (S n) _ (cn match lret' with
                                                         | SyntaxKind k => n
                                                         | NativeKind t c => c
+                                                      end))
+    | ReadNondet k cn => match k return (nat * ActionS lret) -> nat * ActionS lret with
+                         | SyntaxKind k => fun v => (fst v,
+                                                     ReadNondetS n (snd v))
+                         | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+                         end (@getActionS (S n) _ (cn match k with
+                                                      | SyntaxKind _ => n
+                                                      | NativeKind t c => c
                                                       end))
     | ReadReg r k cn => match k return (nat * ActionS lret) -> nat * ActionS lret with
                           | SyntaxKind k => fun v => (fst v,

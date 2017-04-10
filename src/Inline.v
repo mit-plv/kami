@@ -33,6 +33,7 @@ Section Base.
           | None => MCall name sig ar (fun ak => inlineDm (cont ak) dm)
         end
       | Let_ _ ar cont => Let_ ar (fun a => inlineDm (cont a) dm)
+      | ReadNondet k cont => ReadNondet k (fun a => inlineDm (cont a) dm)
       | ReadReg reg k cont => ReadReg reg k (fun a => inlineDm (cont a) dm)
       | WriteReg reg _ e cont => WriteReg reg e (inlineDm cont dm)
       | IfElse ce _ ta fa cont => IfElse ce (inlineDm ta dm) (inlineDm fa dm)

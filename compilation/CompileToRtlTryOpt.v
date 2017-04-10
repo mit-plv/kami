@@ -98,6 +98,9 @@ Section Compile.
           | SyntaxKind k => fun expr => (name, startList, existT _ k (convertExprToRtl expr)) :: wires
           | _ => fun _ => wires
         end expr
+      | ReadNondet k' cont =>
+        (* should be same as the case of NativeKind Let_ *)
+        convertActionToRtl_noGuard (cont (cast k' startList)) enable (inc startList) retList
       | ReadReg r k' cont =>
         let wires := convertActionToRtl_noGuard (cont (cast k' startList)) enable (inc startList) retList in
         match k' return list (string * list nat * sigT RtlExpr) with
@@ -128,6 +131,8 @@ Section Compile.
       | MCall meth k argExpr cont =>
         RtlBinBool And (RtlReadWire Bool (getActionGuard meth)) (convertActionToRtl_guard (cont startList) (inc startList))
       | Let_ k' expr cont =>
+        convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
+      | ReadNondet k' cont =>
         convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
       | ReadReg r k' cont =>
         convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
@@ -167,6 +172,7 @@ Fixpoint getWritesAction k (a: ActionT typeUT k) :=
   match a with
     | MCall meth k argExpr cont => getWritesAction (cont tt)
     | Let_ k' expr cont => getWritesAction (cont (cast k' tt))
+    | ReadNondet k' cont => getWritesAction (cont (cast k' tt))
     | ReadReg r k' cont => getWritesAction (cont (cast k' tt))
     | WriteReg r k expr cont => M.add r (getWritesAction cont)
     | IfElse _ _ t f cont => M.union (M.union (getWritesAction t) (getWritesAction f)) (getWritesAction (cont tt))
@@ -178,6 +184,7 @@ Fixpoint getReadsAction k (a: ActionT typeUT k) :=
   match a with
     | MCall meth k argExpr cont => getReadsAction (cont tt)
     | Let_ k' expr cont => getReadsAction (cont (cast k' tt))
+    | ReadNondet k' cont => getReadsAction (cont (cast k' tt))
     | ReadReg r k' cont => M.add r (getReadsAction (cont (cast k' tt)))
     | WriteReg r k expr cont => getReadsAction cont
     | IfElse _ _ t f cont => M.union (M.union (getReadsAction t) (getReadsAction f)) (getReadsAction (cont tt))
