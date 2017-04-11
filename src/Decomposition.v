@@ -1019,6 +1019,150 @@ Section GivenLabelMap.
 
   End DecompositionOne.
 
+  Section DecompositionDrop.
+    Variable imp spec: Modules.
+    Hypothesis HimpEquiv: ModEquiv type typeUT imp.
+
+    Hypothesis HdefSubset: forall f, In f (getDefs spec) -> In f (getDefs imp).
+    Hypothesis HcallSubset: forall f, In f (getCalls spec) -> In f (getCalls imp).
+
+    Hypothesis (Hp: forall c1 c2, M.Disj c1 c2 -> M.Disj (liftToMap1 p c1) (liftToMap1 p c2)).
+
+    Variable theta: RegsT -> RegsT.
+    Hypotheses
+      (HthetaInit: theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec))
+      (Htheta1: theta (M.empty _) = M.empty _)
+      (Htheta2: forall s1 s2,
+          theta (M.union s1 s2) = M.union (theta s1) (theta s2))
+      (Htheta3: forall s1 s2, M.Disj s1 s2 -> M.Disj (theta s1) (theta s2)).
+    
+    Variable ruleMap: RegsT -> string -> option string.
+    
+    Variable substepRuleMap:
+      forall oImp uImp rule csImp,
+        reachable oImp imp ->
+        Substep imp oImp uImp (Rle (Some rule)) csImp ->
+        Substep spec (theta oImp) (theta uImp) (Rle (ruleMap oImp rule)) (liftToMap1 p csImp).
+
+    Variable substepMethMap:
+      forall oImp uImp meth csImp,
+        reachable oImp imp ->
+        Substep imp oImp uImp (Meth (Some meth)) csImp ->
+        Substep spec (theta oImp) (theta uImp) (Meth (liftP meth)) (liftToMap1 p csImp).
+
+    Definition liftPUnitLabel o ul :=
+      match ul with
+      | Rle (Some r) => Rle (ruleMap o r)
+      | Rle None => Rle None
+      | Meth (Some dm) => Meth (liftP dm)
+      | Meth None => Meth None
+      end.
+
+    Lemma decompositionDrop_substep:
+      forall o u ul cs,
+        reachable o imp ->
+        Substep imp o u ul cs ->
+        Substep spec (theta o) (theta u) (liftPUnitLabel o ul) (liftToMap1 p cs).
+    Proof.
+      intros; destruct ul as [[|]|[|]].
+      - apply substepRuleMap in H0; auto.
+      - inv H0; simpl; rewrite Htheta1; constructor.
+      - apply substepMethMap in H0; auto.
+      - inv H0; simpl; rewrite Htheta1; constructor.
+    Qed.
+
+    Lemma p_disj_unitLabel:
+      forall n d,
+        ~ M.In n d ->
+        ~ M.In n (liftToMap1 p d).
+    Proof.
+      intros; findeq.
+      rewrite liftToMap1_find.
+      rewrite H; auto.
+    Qed.
+
+    Lemma decompositionDrop_substepsInd:
+      forall o u l,
+        reachable o imp ->
+        SubstepsInd imp o u l ->
+        SubstepsInd spec (theta o) (theta u) (liftPLabel (liftToMap1 p) ruleMap o l).
+    Proof.
+      induction 2; [simpl; rewrite Htheta1; constructor|].
+      subst.
+      rewrite Htheta2.
+      rewrite liftPLabel_mergeLabel.
+      - econstructor.
+        + apply IHSubstepsInd.
+        + apply decompositionDrop_substep; auto.
+          eassumption.
+        + unfold CanCombineUUL in *; dest; simpl in *.
+          repeat split; auto.
+          * destruct l as [a d c]; simpl in *; auto.
+          * destruct l as [a d c]; simpl in *.
+            destruct a as [[|]|]; destruct sul as [[|]|[|]]; simpl in *; auto;
+              try (destruct a as [n t]; simpl in *;
+                   case_eq (p n t); simpl; intros; auto;
+                   apply p_disj_unitLabel; auto).
+        + reflexivity.
+        + f_equal.
+          unfold getLabel; cbn; f_equal.
+          * unfold liftPUnitLabel.
+            destruct sul as [[|]|[|]]; try reflexivity.
+          * unfold liftToMap1, liftPUnitLabel; simpl.
+            destruct sul as [[|]|[|]]; try reflexivity.
+            destruct a; cbn.
+            unfold rmModify.
+            destruct (p attrName attrType); try reflexivity.
+      - clear -H2.
+        unfold CanCombineUUL in H2; unfold CanCombineLabel.
+        destruct l as [a d c]; simpl in *; dest.
+        repeat split; auto;
+          try (destruct a as [|]; destruct sul as [[|]|[|]]; auto;
+               destruct a; simpl in *; auto).
+    Qed.
+
+    Lemma decompositionDrop_stepInd:
+      forall o u l,
+        reachable o imp ->
+        StepInd imp o u l ->
+        StepInd spec (theta o) (theta u) (liftPLabel (liftToMap1 p) ruleMap o l).
+    Proof.
+      intros; inv H0.
+      rewrite liftPLabel_hide with (imp:= imp); auto.
+      - constructor.
+        + apply decompositionDrop_substepsInd; auto.
+        + rewrite <-liftPLabel_hide with (imp:= imp); auto.
+          * eapply liftPLabel_wellHidden; eauto.
+          * eapply substepsInd_defs_in; eauto.
+          * eapply substepsInd_calls_in; eauto.
+      - eapply substepsInd_defs_in; eauto.
+      - eapply substepsInd_calls_in; eauto.
+    Qed.
+
+    Lemma decompositionDrop_step:
+      forall o u l,
+        reachable o imp ->
+        Step imp o u l ->
+        Step spec (theta o) (theta u) (liftPLabel (liftToMap1 p) ruleMap o l).
+    Proof.
+      intros.
+      apply step_consistent in H0.
+      apply step_consistent.
+      apply decompositionDrop_stepInd; auto.
+    Qed.
+
+    Theorem decompositionDrop:
+      traceRefines (liftToMap1 p) imp spec.
+    Proof.
+      unfold traceRefines; intros.
+      eapply stepRefinement with (ruleMap:= ruleMap); eauto.
+      intros.
+      exists (theta u); split; auto.
+      apply decompositionDrop_step; auto.
+    Qed.
+    
+  End DecompositionDrop.
+
 End GivenLabelMap.
 
 Hint Unfold theta etaRState thetaR: MethDefs.
