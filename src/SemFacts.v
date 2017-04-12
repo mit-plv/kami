@@ -758,6 +758,8 @@ Section Calls.
       apply (H0 _ _ _ _ _ H1 x H2).
     - dependent destruction H1.
       apply (H0 _ _ _ _ _ _ H1 x H2).
+    - dependent destruction H1.
+      apply (H0 _ _ _ _ _ _ H1 x H2).
     - dependent destruction H.
       apply (@IHae _ _ _ _ H x H0).
     - dependent destruction H1.
@@ -1697,6 +1699,7 @@ Lemma semAction_oldRegs_weakening:
       SemAction so a u cs retv.
 Proof.
   induction 1; simpl; intros; subst.
+  - econstructor; eauto.
   - econstructor; eauto.
   - econstructor; eauto.
   - econstructor; eauto.

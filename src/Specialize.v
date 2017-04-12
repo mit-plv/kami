@@ -532,6 +532,7 @@ Section SpecializeFacts.
         * apply in_or_app; auto.
         * apply in_or_app; right; right; eauto.
     - inv Hvr; destruct_existT; f_equal; extensionality v; eauto.
+    - inv Hvr; destruct_existT; f_equal; extensionality v; eauto.
     - inv Hvr; destruct_existT.
       f_equal; [|extensionality v; eauto].
       apply H1, in_or_app; auto.

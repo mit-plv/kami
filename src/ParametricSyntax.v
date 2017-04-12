@@ -210,6 +210,8 @@ Section Rep.
     | GIndex: (ty GenK -> GenActionT lretT) -> GenActionT lretT
     | GLet_ lretT': Expr ty lretT' -> (fullType ty lretT' -> GenActionT lretT) ->
                     GenActionT lretT
+    | GReadNondet:
+        forall k, (fullType ty k -> GenActionT lretT) -> GenActionT lretT
     | GReadReg (r: NameRecIdx):
         forall k, (fullType ty k -> GenActionT lretT) -> GenActionT lretT
     | GWriteReg (r: NameRecIdx) k:
@@ -228,6 +230,7 @@ Section Rep.
       | GMCall name sig ar cont => GMCall name sig ar (fun a => appendGenGenAction (cont a) a2)
       | GIndex cont => GIndex (fun a => appendGenGenAction (cont a) a2)
       | GLet_ _ ar cont => GLet_ ar (fun a => appendGenGenAction (cont a) a2)
+      | GReadNondet k cont => GReadNondet k (fun a => appendGenGenAction (cont a) a2)
       | GReadReg reg k cont => GReadReg reg k (fun a => appendGenGenAction (cont a) a2)
       | GWriteReg reg _ e cont => GWriteReg reg e (appendGenGenAction cont a2)
       | GIfElse ce _ ta fa cont => GIfElse ce ta fa (fun a => appendGenGenAction (cont a) a2)
@@ -248,6 +251,7 @@ Section Rep.
           | GMCall meth s e c => MCall ^meth s e (fun v => getGenAction (c v))
           | GIndex c => Let_ (Const ty (getConstK i)) (fun v => getGenAction (c v))
           | GLet_ k' e c => Let_ e (fun v => getGenAction (c v))
+          | GReadNondet k c => ReadNondet k (fun v => getGenAction (c v))
           | GReadReg r k c => ReadReg ^r k (fun v => getGenAction (c v))
           | GWriteReg r k e c => WriteReg ^r e (getGenAction c)
           | GIfElse e k aT aF c => IfElse e (getGenAction aT) (getGenAction aF)
@@ -279,6 +283,11 @@ Section Rep.
                                           | SyntaxKind _ => tt
                                           | NativeKind _ c' => c'
                                         end)
+      | GReadNondet fk c => getCallsGenA
+                              (c match fk as fk' return fullType typeUT fk' with
+                                 | SyntaxKind _ => tt
+                                 | NativeKind _ c' => c'
+                                 end)
       | GReadReg _ fk c => getCallsGenA
                              (c match fk as fk' return fullType typeUT fk' with
                                   | SyntaxKind _ => tt
@@ -300,6 +309,7 @@ Section Rep.
         && (noCallDmSigGenA (cont tt) dmn dsig)
     | GIndex c => noCallDmSigGenA (c tt) dmn dsig
     | GLet_ _ ar cont => noCallDmSigGenA (cont (getUT _)) dmn dsig
+    | GReadNondet k cont => noCallDmSigGenA (cont (getUT _)) dmn dsig
     | GReadReg reg k cont => noCallDmSigGenA (cont (getUT _)) dmn dsig
     | GWriteReg reg _ e cont => noCallDmSigGenA cont dmn dsig
     | GIfElse ce _ ta fa cont =>
@@ -388,6 +398,7 @@ Section Rep.
         end
       | GIndex cont => GIndex (fun a => inlineGenGenDm (cont a) dn dm)
       | GLet_ _ ar cont => GLet_ ar (fun a => inlineGenGenDm (cont a) dn dm)
+      | GReadNondet k cont => GReadNondet k (fun a => inlineGenGenDm (cont a) dn dm)
       | GReadReg reg k cont => GReadReg reg k (fun a => inlineGenGenDm (cont a) dn dm)
       | GWriteReg reg _ e cont => GWriteReg reg e (inlineGenGenDm cont dn dm)
       | GIfElse ce _ ta fa cont =>
@@ -472,6 +483,7 @@ Proof.
       constructor; auto.
       eapply H; eauto.
     + eapply H; eauto.
+  - eapply H; eauto.
   - eapply H; eauto.
   - eapply H; eauto.
   - eapply H; eauto.
@@ -569,6 +581,8 @@ Section Sin.
         SinActionT lretT
     | SLet_ lretT': Expr ty lretT' -> (fullType ty lretT' -> SinActionT lretT) ->
                     SinActionT lretT
+    | SReadNondet:
+        forall k, (fullType ty k -> SinActionT lretT) -> SinActionT lretT
     | SReadReg (r: NameRec):
         forall k, (fullType ty k -> SinActionT lretT) -> SinActionT lretT
     | SWriteReg (r: NameRec) k:
@@ -586,6 +600,7 @@ Section Sin.
         | SMCall name sig ar cont => GMCall (convNameRec rep name) sig ar
                                             (fun a => convSinToGen rep GenK (cont a))
         | SLet_ _ ar cont => GLet_ ar (fun a => convSinToGen rep GenK (cont a))
+        | SReadNondet k cont => GReadNondet k (fun a => convSinToGen rep GenK (cont a))
         | SReadReg reg k cont => GReadReg (convNameRec rep reg) k
                                           (fun a => convSinToGen rep GenK (cont a))
         | SWriteReg reg _ e cont => GWriteReg (convNameRec rep reg) e
@@ -603,6 +618,7 @@ Section Sin.
       | SMCall name sig ar cont => GMCall (convNameRec false name) sig ar
                                           (fun a => appendSinGenAction (cont a) a2)
       | SLet_ _ ar cont => GLet_ ar (fun a => appendSinGenAction (cont a) a2)
+      | SReadNondet k cont => GReadNondet k (fun a => appendSinGenAction (cont a) a2)
       | SReadReg reg k cont => GReadReg (convNameRec false reg) k
                                         (fun a => appendSinGenAction (cont a) a2)
       | SWriteReg reg _ e cont => GWriteReg (convNameRec false reg) e
@@ -620,6 +636,7 @@ Section Sin.
       | SMCall name sig ar cont => SMCall name sig ar
                                           (fun a => appendSinSinAction (cont a) a2)
       | SLet_ _ ar cont => SLet_ ar (fun a => appendSinSinAction (cont a) a2)
+      | SReadNondet k cont => SReadNondet k (fun a => appendSinSinAction (cont a) a2)
       | SReadReg reg k cont => SReadReg reg k
                                         (fun a => appendSinSinAction (cont a) a2)
       | SWriteReg reg _ e cont => SWriteReg reg e (appendSinSinAction cont a2)
@@ -633,6 +650,7 @@ Section Sin.
       match a with
         | SMCall meth s e c => MCall (nameVal meth) s e (fun v => getSinAction (c v))
         | SLet_ k' e c => Let_ e (fun v => getSinAction (c v))
+        | SReadNondet k c => ReadNondet k (fun v => getSinAction (c v))
         | SReadReg r k c => ReadReg (nameVal r) k (fun v => getSinAction (c v))
         | SWriteReg r k e c => WriteReg (nameVal r) e (getSinAction c)
         | SIfElse e k aT aF c => IfElse e (getSinAction aT) (getSinAction aF)
@@ -676,6 +694,11 @@ Section Sin.
                                           | SyntaxKind _ => tt
                                           | NativeKind _ c' => c'
                                         end)
+      | SReadNondet fk c => getCallsSinA
+                              (c match fk as fk' return fullType typeUT fk' with
+                                 | SyntaxKind _ => tt
+                                 | NativeKind _ c' => c'
+                                 end)
       | SReadReg _ fk c => getCallsSinA
                              (c match fk as fk' return fullType typeUT fk' with
                                   | SyntaxKind _ => tt
@@ -695,6 +718,7 @@ Section Sin.
        || (if SignatureT_dec sig dsig then false else true))
         && (noCallDmSigSinA (cont tt) dmn dsig)
     | SLet_ _ ar cont => noCallDmSigSinA (cont (getUT _)) dmn dsig
+    | SReadNondet k cont => noCallDmSigSinA (cont (getUT _)) dmn dsig
     | SReadReg reg k cont => noCallDmSigSinA (cont (getUT _)) dmn dsig
     | SWriteReg reg _ e cont => noCallDmSigSinA cont dmn dsig
     | SIfElse ce _ ta fa cont =>
@@ -762,6 +786,7 @@ Section Sin.
         end
       | GIndex cont => GIndex (fun a => inlineGenSinDm (cont a) dn dm)
       | GLet_ _ ar cont => GLet_ ar (fun a => inlineGenSinDm (cont a) dn dm)
+      | GReadNondet k cont => GReadNondet k (fun a => inlineGenSinDm (cont a) dn dm)
       | GReadReg reg k cont => GReadReg reg k (fun a => inlineGenSinDm (cont a) dn dm)
       | GWriteReg reg _ e cont => GWriteReg reg e (inlineGenSinDm cont dn dm)
       | GIfElse ce _ ta fa cont =>
@@ -842,6 +867,7 @@ Section Sin.
           | None => SMCall name sig ar (fun ak => inlineSinSinDm (cont ak) dn dm)
         end
       | SLet_ _ ar cont => SLet_ ar (fun a => inlineSinSinDm (cont a) dn dm)
+      | SReadNondet k cont => SReadNondet k (fun a => inlineSinSinDm (cont a) dn dm)
       | SReadReg reg k cont => SReadReg reg k (fun a => inlineSinSinDm (cont a) dn dm)
       | SWriteReg reg _ e cont => SWriteReg reg e (inlineSinSinDm cont dn dm)
       | SIfElse ce _ ta fa cont =>

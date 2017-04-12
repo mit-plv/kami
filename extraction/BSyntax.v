@@ -24,7 +24,7 @@ Section BluespecSubset.
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
   | BReadReg: string -> BExpr.
 
-  (* NOTE: BBCall is not used for translationg from Kami to Bluespec,
+  (* NOTE: BBCall is not used for translation from Kami to Bluespec,
    * but defined in order to support multi-parameter methods.
    *)
   Inductive BAction: Type :=
@@ -144,6 +144,8 @@ Section BluespecSubset.
                (exprSToBExpr e)
                  >>= (fun be => Some (BLet idx (Some k) be :: bc)))
     | LetS_ (NativeKind _ _) _ _ _ => None
+    (* Currently nondeterministic reads are not allowed to be synthesized. *)
+    | ReadNondetS _ _ => None 
     | ReadRegS reg idx cont =>
       (actionSToBAction cont)
         >>= (fun bc => Some (BLet idx None (BReadReg reg) :: bc))

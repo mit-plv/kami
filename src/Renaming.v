@@ -50,6 +50,7 @@ Section Rename.
     match a with
     | MCall meth s e cont => MCall (rename meth) s e (fun v => renameAction (cont v))
     | Let_ lret' e cont => Let_ e (fun v => renameAction (cont v))
+    | ReadNondet k cont => ReadNondet k (fun v => renameAction (cont v))
     | ReadReg r k cont => ReadReg (rename r) k (fun v => renameAction (cont v))
     | WriteReg r k e cont => WriteReg (rename r) e (renameAction cont)
     | IfElse e k t f cont => IfElse e (renameAction t) (renameAction f)
@@ -309,6 +310,7 @@ Section Rename.
       apply M.F.P.F.not_find_in_iff.
       unfold not; intros H; apply renameMapIn in H; auto.
     - eapply SemLet; eauto; intuition.
+    - eapply SemReadNondet; eauto.
     - rewrite renameMapFind in HRegVal.
       eapply SemReadReg; eauto.
     - apply M.F.P.F.not_find_in_iff in HDisjRegs.
@@ -317,7 +319,7 @@ Section Rename.
       unfold not; intros H; apply renameMapIn in H; auto.
       rewrite <- renameMapAdd.
       f_equal; intuition.
-    - constructor 5 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
+    - constructor 6 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
                                                           (calls1 := renameMap calls1)
                                                           (calls2 := renameMap calls2)
                                                           (r1 := r1); auto.
@@ -327,7 +329,7 @@ Section Rename.
       f_equal; intuition.
       rewrite <- renameMapUnion.
       f_equal; intuition.
-    - constructor 6 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
+    - constructor 7 with (newRegs1 := renameMap newRegs1) (newRegs2 := renameMap newRegs2)
                                                           (calls1 := renameMap calls1)
                                                           (calls2 := renameMap calls2)
                                                           (r1 := r1); auto.
@@ -514,6 +516,10 @@ Section Rename.
       destruct (IHsa rename1To1 o' (a (evalExpr e0)) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       repeat (econstructor; eauto).
+    - generalize dependent sa; generalize dependent IHsa; inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' (a valueV) JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst.
+      repeat (econstructor; eauto).
     - generalize dependent regV; inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' (a regV) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
@@ -554,7 +560,7 @@ Section Rename.
       exists (M.union u1' u2'), (M.union cs1' cs2').
       constructor; rewrite renameMapUnion; auto.
       constructor; auto.
-      econstructor 6; eauto.
+      econstructor 7; eauto.
     - inv x; destruct_existT; intros.
       destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
           [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;

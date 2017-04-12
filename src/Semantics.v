@@ -252,6 +252,12 @@ Section Semantics.
       (cont: fullType type k -> ActionT type retK) newRegs calls
       (HSemAction: SemAction (cont (evalExpr e)) newRegs calls fret):
       SemAction (Let_ e cont) newRegs calls fret
+  | SemReadNondet
+      valueT (valueV: fullType type valueT)
+      retK (fret: type retK) (cont: fullType type valueT -> ActionT type retK)
+      newRegs calls
+      (HSemAction: SemAction (cont valueV) newRegs calls fret):
+      SemAction (ReadNondet _ cont) newRegs calls fret
   | SemReadReg
       (r: string) regT (regV: fullType type regT)
       retK (fret: type retK) (cont: fullType type regT -> ActionT type retK)
@@ -322,6 +328,9 @@ Section Semantics.
       calls = M.add m (existT _ _ (evalExpr e, mret)) pcalls
     | Let_ _ e cont =>
       SemAction (cont (evalExpr e)) news calls retC
+    | ReadNondet k c =>
+      exists rv,
+      SemAction (c rv) news calls retC
     | ReadReg r k c =>
       exists rv,
       M.find r oldRegs = Some (existT _ k rv) /\
@@ -403,12 +412,13 @@ Section AppendAction.
       apply M.union_In in H6; intuition.
     - invertAction H2; econstructor; eauto. 
     - invertAction H2; econstructor; eauto.
+    - invertAction H2; econstructor; eauto.
     - invertAction H1.
       dest_disj.
       rewrite M.union_add.
       simpl in *.
       specialize (@IHa1 _ _ _ _ _ _ _ _ H H0 H3 H2); simpl in *.
-      constructor 4 with (newRegs := M.union x news2); auto.
+      constructor 5 with (newRegs := M.union x news2); auto.
       apply M.F.P.F.not_find_in_iff.
       apply M.F.P.F.not_find_in_iff in H1.
       unfold not; intros.

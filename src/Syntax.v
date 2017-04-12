@@ -128,50 +128,56 @@ Qed.
 
 Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
   refine match k1, k2 return {k1 = k2} + {k1 <> k2} with
-           | Bool, Bool => left eq_refl
-           | Bit n, Bit m => match PeanoNat.Nat.eq_dec n m with
-                               | left l => left match l in _ = Y return Bit n = Bit Y with
-                                                  | eq_refl => eq_refl
-                                                end
-                               | right r => right _
-                             end
-           | Vector k1 n1, Vector k2 n2 => match PeanoNat.Nat.eq_dec n1 n2 with
-                                             | left l => match decKind k1 k2 with
-                                                           | left kl => left match l in _ = Y, kl in _ = kY
-                                                                                   return Vector k1 n1 = Vector kY Y with
-                                                                               | eq_refl, eq_refl => eq_refl
-                                                                             end
-                                                           | right kr => right _
-                                                         end
-                                             | right r => right _
-                                           end
-           | Struct n1 l1, Struct n2 l2 =>
-             match PeanoNat.Nat.eq_dec n1 n2 with
-               | left l =>
-                 match l in _ = Y return
-                       forall l2: Vector.t _ Y,
-                         {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
-                   | eq_refl =>
-                     fun l2 =>
-                       (fix help n l1 :=
-                          match l1 in Vector.t _ n'
-                                return forall l2: Vector.t _ n',
-                                         {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
-                            | Vector.nil => fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
-                            | Vector.cons h n'' t =>
-                              fun l2 => _
-                          end) n1 l1 l2
-                 end l2
-               | right r => right _
-             end
-           | _, _ => right _
-         end; try (clear decKind; abstract (intro; try inversion H; try inversion H0; destruct_existT; congruence)).
+         | Bool, Bool => left eq_refl
+         | Bit n, Bit m =>
+           match PeanoNat.Nat.eq_dec n m with
+           | left l => left match l in _ = Y return Bit n = Bit Y with
+                            | eq_refl => eq_refl
+                            end
+           | right r => right _
+           end
+         | Vector k1 n1, Vector k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Vector k1 n1 = Vector kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
+         | Struct n1 l1, Struct n2 l2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l =>
+             match l in _ = Y return
+                   forall l2: Vector.t _ Y,
+                     {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+             | eq_refl =>
+               fun l2 =>
+                 (fix help n l1 :=
+                    match l1 in Vector.t _ n'
+                          return forall l2: Vector.t _ n',
+                        {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+                    | Vector.nil => fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
+                    | Vector.cons h n'' t =>
+                      fun l2 => _
+                    end) n1 l1 l2
+             end l2
+           | right r => right _
+           end
+         | _, _ => right _
+         end;
+    try (clear decKind;
+         abstract (intro; try inversion H; try inversion H0; destruct_existT; congruence)).
 
   generalize t (help _ t); clear help t.
-  apply (Vector.caseS (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
-                         forall t1, (forall t2: Vector.t (Attribute Kind) n,
-                                       {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
-                                    {Struct (Vector.cons _ h n t1) = Struct l2} + {Struct (Vector.cons _ h n t1) <> Struct l2})).
+  apply (Vector.caseS
+           (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
+              forall t1, (forall t2: Vector.t (Attribute Kind) n,
+                             {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
+                         {Struct (Vector.cons _ h n t1) = Struct l2}
+                         + {Struct (Vector.cons _ h n t1) <> Struct l2})).
   intros.
   destruct h, h0.
   destruct (decKind attrType attrType0).
@@ -219,40 +225,41 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
 
 Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrType a)) vs) {struct ils}: type (Struct vs) :=
   match vs in Vector.t _ k return ilist (fun a => type (attrType a)) vs -> type (Struct vs) with
-    | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
-    | Vector.cons a1 n1 vs1 =>
-      fun ils1 i1 =>
-        match ils1 in ilist _ (Vector.cons a n2 vs2)
-              return forall i2: Fin.t (S n2),
-                       Vector.nth
-                         (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
-          | inil => idProp
-          | icons t3 n3 vs3 b ils3 =>
-            fun k =>
-              match k as k4 in Fin.t (S n4) return
-                    forall (vs4: Vector.t _ n4), type (Struct vs4) ->
-                                                 (Vector.nth (Vector.map (fun p => type (attrType p))
-                                                                         (Vector.cons _ t3 n4 vs4)) k4)
-              with
-                | Fin.F1 s5 => fun _ _ => b
-                | Fin.FS s5 f5 => fun vs5 f => f f5
-              end vs3 (@evalConstStruct _ _ ils3)
-        end i1
+  | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
+  | Vector.cons a1 n1 vs1 =>
+    fun ils1 i1 =>
+      match ils1 in ilist _ (Vector.cons a n2 vs2)
+            return forall i2: Fin.t (S n2),
+          Vector.nth
+            (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
+      | inil => idProp
+      | icons t3 n3 vs3 b ils3 =>
+        fun k =>
+          match k as k4 in Fin.t (S n4) return
+                forall (vs4: Vector.t _ n4),
+                  type (Struct vs4) ->
+                  (Vector.nth (Vector.map (fun p => type (attrType p))
+                                          (Vector.cons _ t3 n4 vs4)) k4)
+          with
+          | Fin.F1 s5 => fun _ _ => b
+          | Fin.FS s5 f5 => fun vs5 f => f f5
+          end vs3 (@evalConstStruct _ _ ils3)
+      end i1
   end ils.
 
 Fixpoint getDefaultConstNative (k: Kind): type k :=
   match k return type k with
-    | Bool => false
-    | Bit n => getDefaultConstBit n
-    | Vector k n => fun _ => getDefaultConstNative k
-    | Struct n attrs =>
-      fun i =>
-        ilist_to_fun _ ((fix help n (ls: Vector.t _ n) :=
-                           match ls return ilist (fun a => type (attrType a)) ls with
-                             | Vector.nil => inil _
-                             | Vector.cons x _ xs =>
-                               icons x (getDefaultConstNative (attrType x)) (help _ xs)
-                           end) n attrs) i
+  | Bool => false
+  | Bit n => getDefaultConstBit n
+  | Vector k n => fun _ => getDefaultConstNative k
+  | Struct n attrs =>
+    fun i =>
+      ilist_to_fun _ ((fix help n (ls: Vector.t _ n) :=
+                         match ls return ilist (fun a => type (attrType a)) ls with
+                         | Vector.nil => inil _
+                         | Vector.cons x _ xs =>
+                           icons x (getDefaultConstNative (attrType x)) (help _ xs)
+                         end) n attrs) i
   end.
 
 Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
@@ -323,20 +330,25 @@ Section Phoas.
   | UniBool: UniBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
   | BinBool: BinBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
   | UniBit n1 n2: UniBitOp n1 n2 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2))
-  | BinBit n1 n2 n3: BinBitOp n1 n2 n3 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
+  | BinBit n1 n2 n3: BinBitOp n1 n2 n3 ->
+                     Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
                      Expr (SyntaxKind (Bit n3))
-  | BinBitBool n1 n2: BinBitBoolOp n1 n2 -> Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
+  | BinBitBool n1 n2: BinBitBoolOp n1 n2 ->
+                      Expr (SyntaxKind (Bit n1)) -> Expr (SyntaxKind (Bit n2)) ->
                       Expr (SyntaxKind Bool)
   | ITE k: Expr (SyntaxKind Bool) -> Expr k -> Expr k -> Expr k
   | Eq k: Expr (SyntaxKind k) -> Expr (SyntaxKind k) -> Expr (SyntaxKind Bool)
-  | ReadIndex i k: Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
+  | ReadIndex i k: Expr (SyntaxKind (Bit i)) ->
+                   Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
   | ReadField n (ls: Vector.t _ n) (i: Fin.t n):
-      Expr (SyntaxKind (Struct ls)) -> Expr (SyntaxKind (Vector.nth (Vector.map (@attrType _) ls) i))
+      Expr (SyntaxKind (Struct ls)) ->
+      Expr (SyntaxKind (Vector.nth (Vector.map (@attrType _) ls) i))
   | BuildVector n k: Vec (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Vector n k))
   | BuildStruct n (attrs: Vector.t _ n):
       ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))
-  | UpdateVector i k: Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k)
-                      -> Expr (SyntaxKind (Vector k i)).
+  | UpdateVector i k: Expr (SyntaxKind (Vector k i)) ->
+                      Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k) ->
+                      Expr (SyntaxKind (Vector k i)).
 
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
@@ -344,6 +356,8 @@ Section Phoas.
       (ty (ret s) -> ActionT lretT) ->
       ActionT lretT
   | Let_ lretT': Expr lretT' -> (fullType lretT' -> ActionT lretT) -> ActionT lretT
+  | ReadNondet: 
+      forall k, (fullType k -> ActionT lretT) -> ActionT lretT
   | ReadReg (r: string):
       forall k, (fullType k -> ActionT lretT) -> ActionT lretT
   | WriteReg (r: string) k:
@@ -355,6 +369,7 @@ Section Phoas.
                                         ActionT lretT
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
+
 End Phoas.
 
 Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
@@ -442,7 +457,7 @@ Fixpoint getDefsBodies (m: Modules): list DefMethT :=
     | Mod _ _ meths => meths
     | ConcatMod m1 m2 => (getDefsBodies m1) ++ (getDefsBodies m2)
   end.
-      
+
 Definition getDefs m: list string := namesOf (getDefsBodies m).
 
 Lemma getDefs_in:
@@ -490,6 +505,7 @@ Section AppendAction.
     match a1 with
       | MCall name sig ar cont => MCall name sig ar (fun a => appendAction (cont a) a2)
       | Let_ _ ar cont => Let_ ar (fun a => appendAction (cont a) a2)
+      | ReadNondet k cont => ReadNondet k (fun a => appendAction (cont a) a2)
       | ReadReg reg k cont => ReadReg reg k (fun a => appendAction (cont a) a2)
       | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
       | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
@@ -525,6 +541,11 @@ Section GetCalls.
                               | SyntaxKind _ => tt
                               | NativeKind _ c' => c'
                             end)
+      | ReadNondet fk c => getCallsA_Sig
+                             (c match fk as fk' return fullType typeUT fk' with
+                                | SyntaxKind _ => tt
+                                | NativeKind _ c' => c'
+                                end)
       | ReadReg _ fk c => getCallsA_Sig
                             (c match fk as fk' return fullType typeUT fk' with
                                  | SyntaxKind _ => tt
@@ -537,7 +558,6 @@ Section GetCalls.
       | Assert_ _ c => getCallsA_Sig c
       | Return _ => nil
     end.
-
   
   Fixpoint getCallsA {k} (a: ActionT typeUT k): list string :=
     match a with
@@ -547,6 +567,11 @@ Section GetCalls.
                               | SyntaxKind _ => tt
                               | NativeKind _ c' => c'
                             end)
+      | ReadNondet fk c => getCallsA
+                            (c match fk as fk' return fullType typeUT fk' with
+                                 | SyntaxKind _ => tt
+                                 | NativeKind _ c' => c'
+                               end)
       | ReadReg _ fk c => getCallsA
                             (c match fk as fk' return fullType typeUT fk' with
                                  | SyntaxKind _ => tt
@@ -654,7 +679,6 @@ Section GetCalls.
     rewrite map_app, IHr, getCallsA_Sig_getCallsA.
     auto.
   Qed.
-
 
   
   Lemma getCallsM_implies_getCallsDm s ms: In s (getCallsM ms) ->
@@ -834,6 +858,7 @@ Section NoInternalCalls.
     match a with
     | MCall name _ _ cont => (negb (string_in name cs)) && (isLeaf (cont tt) cs)
     | Let_ _ ar cont => isLeaf (cont (getUT _)) cs
+    | ReadNondet k cont => isLeaf (cont (getUT _)) cs
     | ReadReg reg k cont => isLeaf (cont (getUT _)) cs
     | WriteReg reg _ e cont => isLeaf cont cs
     | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)

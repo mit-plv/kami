@@ -119,6 +119,9 @@ Notation "'LET' name <- expr ; cont " :=
 Notation "'LET' name : t <- expr ; cont " :=
   (Let_ (lretT' := SyntaxKind t) expr%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_action_scope.
+Notation "'Nondet' name : kind ; cont" :=
+  (ReadNondet kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_action_scope.
 Notation "'ReadN' name : kind <- reg ; cont " :=
   (ReadReg reg kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_action_scope.
@@ -279,6 +282,9 @@ Notation "'LET' name <- expr ; cont " :=
 Notation "'LET' name : t <- expr ; cont " :=
   (SLet_ (lretT' := SyntaxKind t) expr%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_sin_scope.
+Notation "'Nondet' name : kind ; cont " :=
+  (SReadNondet kind (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_sin_scope.
 Notation "'ReadN' name : kind <- reg ; cont " :=
   (SReadReg (Build_NameRec reg eq_refl) kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_sin_scope.
@@ -422,6 +428,9 @@ Notation "'LET' name <- expr ; cont " :=
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
 Notation "'LET' name : t <- expr ; cont " :=
   (GLet_ (lretT' := SyntaxKind t) expr%kami_expr (fun name => cont))
+    (at level 12, right associativity, name at level 0) : kami_gen_scope.
+Notation "'Nondet' name : kind ; cont " :=
+  (GReadNondet kind (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
 Notation "'ReadN' name : kind <- reg ; cont " :=
   (GReadReg (Build_NameRecIdx false (Build_NameRec reg eq_refl)) kind (fun name => cont))

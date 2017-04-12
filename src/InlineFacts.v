@@ -39,6 +39,7 @@ Proof.
   - simpl; constructor; auto.
   - simpl; econstructor; eauto.
   - simpl; econstructor; eauto.
+  - simpl; econstructor; eauto.
 
   - subst; eapply SemIfElseTrue; eauto.
     + apply IHSemAction1.
@@ -137,8 +138,10 @@ Proof.
     constructor; auto.
   - inv H4; destruct_existT.
     econstructor; eauto.
+  - inv H4; destruct_existT.
+    econstructor; eauto.
   - inv H3; destruct_existT.
-    constructor 4 with (newRegs := M.union u1 newRegs).
+    constructor 5 with (newRegs := M.union u1 newRegs).
     + apply M.F.P.F.not_find_in_iff.
       apply M.F.P.F.not_find_in_iff in HDisjRegs.
       unfold not; intros.
@@ -275,6 +278,9 @@ Proof.
       rewrite M.find_add_2 by assumption.
       eapply H0; eauto.
 
+  - inv H2; destruct_existT.
+    simpl in H1.
+    eapply H0; eauto.
   - inv H2; destruct_existT.
     simpl in H1.
     eapply H0; eauto.
@@ -1222,6 +1228,7 @@ Section NoCallDmSig.
        || (if SignatureT_dec sig dsig then false else true))
         && (noCallDmSigA (cont tt) dmn dsig)
     | Let_ _ ar cont => noCallDmSigA (cont (getUT _)) dmn dsig
+    | ReadNondet k cont => noCallDmSigA (cont (getUT _)) dmn dsig
     | ReadReg reg k cont => noCallDmSigA (cont (getUT _)) dmn dsig
     | WriteReg reg _ e cont => noCallDmSigA cont dmn dsig
     | IfElse ce _ ta fa cont =>
@@ -1268,6 +1275,7 @@ Proof.
       rewrite M.find_add_2 in H3 by intuition.
       eapply H0; eauto.
 
+  - inv H2; destruct_existT; eapply H0; eauto.
   - inv H2; destruct_existT; eapply H0; eauto.
   - inv H2; destruct_existT; eapply H0; eauto.
   - inv H0; destruct_existT; eapply IHHequiv; eauto.

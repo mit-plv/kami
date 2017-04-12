@@ -30,6 +30,12 @@ Section Equiv.
       (forall (v1: ft1 k1') (v2: ft2 k2'),
           ActionEquiv (cont1 v1) (cont2 v2)) ->
       ActionEquiv (Let_ e1 cont1) (Let_ e2 cont2)
+  | AEReadNondet: forall {k k1' k2'}
+                         (cont1: fullType t1 k1' -> ActionT t1 k)
+                         (cont2: fullType t2 k2' -> ActionT t2 k),
+      (forall (v1: ft1 k1') (v2: ft2 k2'),
+          ActionEquiv (cont1 v1) (cont2 v2)) ->
+      ActionEquiv (ReadNondet _ cont1) (ReadNondet _ cont2)
   | AEReadReg: forall {k k1' k2'} rn
                       (cont1: fullType t1 k1' -> ActionT t1 k)
                       (cont2: fullType t2 k2' -> ActionT t2 k),
@@ -237,6 +243,10 @@ Section ValidRegs.
         forall {argT retT} ar cont,
           (forall t, ValidRegsAction (cont t)) ->
           ValidRegsAction (Let_ (lretT':= argT) (lretT:= retT) ar cont)
+    | VRReadNondet:
+        forall {retT} k cont,
+          (forall t, ValidRegsAction (cont t)) ->
+          ValidRegsAction (ReadNondet (lretT:= retT) k cont)
     | VRReadReg:
         forall {retT} reg k cont,
           In reg regs ->
@@ -461,6 +471,7 @@ Section ValidRegsFacts.
     induction 1; simpl; intros.
     - inv H1; destruct_existT; econstructor; eauto.
     - inv H1; destruct_existT; econstructor; eauto.
+    - inv H1; destruct_existT; econstructor; eauto.
     - inv H2; destruct_existT; econstructor; eauto.
       findeq.
     - inv H1; destruct_existT; econstructor; eauto.
@@ -478,6 +489,7 @@ Section ValidRegsFacts.
         M.KeysSubset u regs.
   Proof.
     induction 1; simpl; intros.
+    - inv H1; destruct_existT; eapply H0; eauto.
     - inv H1; destruct_existT; eapply H0; eauto.
     - inv H1; destruct_existT; eapply H0; eauto.
     - inv H2; destruct_existT; eapply H1; eauto.

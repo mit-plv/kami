@@ -77,6 +77,9 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
     end
   | Let_ _ e cont =>
     SymSemAction (cont (evalExpr e)) rs rs' cs kf
+  | ReadNondet k cont =>
+    forall valueV,
+      SymSemAction (cont valueV) rs rs' cs kf
   | ReadReg r k cont =>
     forall regV,
       regV === rs.[r] ->
@@ -203,6 +206,7 @@ Proof.
     rewrite H1 in H0.
     apply IHSemAction; auto.
 
+  - apply IHSemAction; auto.
   - apply IHSemAction; auto.
 
   - subst.

@@ -45,6 +45,10 @@ Section ActionNoCall.
       destruct k1'; simpl in *.
       + eapply H0; eauto.
       + eapply H0; eauto.
+    - f_equal; extensionality v1.
+      destruct k1'; simpl in *.
+      + eapply H0; eauto.
+      + eapply H0; eauto.
     - f_equal; intuition.
     - f_equal.
       + assert (In (attrName dm) (getCallsA ta2) -> False) by intuition.
