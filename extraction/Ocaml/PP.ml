@@ -187,9 +187,9 @@ let regFileSubMeth rfName readName ibits dk =
                 regFileSubAction rfName 0 ibits dk) }
 
 let regFileRules = []
-let regFileMeths rfName readName writeName ibits dk =
-  (regFileSubMeth rfName readName ibits dk) ::
-    (regFileUpdMeth rfName writeName ibits dk) :: []
+let regFileMeths rfName readNames writeName ibits dk =
+    (regFileUpdMeth rfName writeName ibits dk) :: List.map (fun readName -> regFileSubMeth rfName readName ibits dk) readNames
+
 
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
@@ -247,9 +247,9 @@ let getCallsB (bm: bRegModule) =
 
 let getDefsB (bm: bRegModule) =
   match bm with
-  | RegFileB (_, readName, writeName, ibits, dk, _) ->
-     (bstring_of_charlist readName, { arg = Bit ibits; ret = dk }) ::
-       (bstring_of_charlist writeName, regFileUpdSig ibits dk) :: []
+  | RegFileB (_, readNames, writeName, ibits, dk, _) ->
+       (bstring_of_charlist writeName, regFileUpdSig ibits dk) ::
+        List.map (fun readName -> bstring_of_charlist readName, { arg = Bit ibits; ret = dk }) readNames
   | BModuleB { bregs = _; brules = _; bdms = ml } ->
      List.map (fun bm -> match bm with
                          | { attrName = mn; attrType = (msig, _) } ->
