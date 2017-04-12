@@ -566,11 +566,7 @@ Fixpoint separateRegFiles m :=
     | ConcatMod m1 m2 =>
       let '(regFiles1, mods1) := separateRegFiles m1 in
       let '(regFiles2, mods2) := separateRegFiles m2 in
-      (regFiles1 ++ regFiles2, match mods1, mods2 with
-                                 | Mod nil nil nil, xs => xs
-                                 | xs, Mod nil nil nil => xs
-                                 | xs, ys => ConcatMod xs ys
-                               end)
+      (regFiles1 ++ regFiles2, ConcatMod mods1 mods2)
   end.
 
 Section FinalResult.
@@ -594,7 +590,6 @@ Section FinalResult.
                       end) reads, write, v)
     end.
 
-  
   Definition computeModule :=
     {| regFiles := map checkBypass regFs;
        inputs := computeAllInputs m';

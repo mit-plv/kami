@@ -58,6 +58,17 @@ Definition rqFromCToPRule := "rqFromCToP".
 Definition rsFromCToPRule := "rsFromCToP".
 Definition fromPToCRule := "fromPToC".
 
+Definition read0 := "read0".
+Definition read1 := "read1".
+Definition read2 := "read2".
+Definition read3 := "read3".
+Definition read4 := "read4".
+Definition read5 := "read5".
+Definition read6 := "read6".
+Definition read7 := "read7".
+Definition read8 := "read8".
+Definition read9 := "read9".
+
 Close Scope string.
 
 Hint Unfold
@@ -75,6 +86,7 @@ Hint Unfold
      elt enqName deqName enqP deqP empty full firstEltName
 
      addr data dataArray read write
+     read0 read1 read2 read3 read4 read5 read6 read7 read8 read9
 
      rqFromCToPRule rsFromCToPRule fromPToCRule
   : NameDefs.

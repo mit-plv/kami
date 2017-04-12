@@ -70,6 +70,7 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
     exact $0.
 Defined.
 
+(*
 Require Import Kami.Inline.
 
 Section DoInline.
@@ -82,7 +83,7 @@ Section DoInline.
                                             end) (fst (separateRegFiles m)) (Mod nil nil nil).
 Definition inlineTargetMod := (inlineTargetMod1 ++ inlineTargetMod2)%kami.
 End DoInline.
-
+*)
 
 
 
@@ -106,6 +107,7 @@ Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataByte
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
+(*
 Definition p4stN :=
   ProcMemCorrect.p4stN
     idxBits tagBits lgNumDatas
@@ -121,8 +123,9 @@ Definition memCache :=
   fst (Kami.Inline.inlineF (ProcMemCorrect.memCacheMod fifoSize idxBits tagBits lgNumDatas rv32iDataBytes idK lgNumChildren)).
 
 Definition p4stNMemCache := (p4stN ++ pmFifos ++ memCache)%kami.
+*)
 
-(*
+
 Definition p4stNMemCache :=
   ProcMemCorrect.p4stNMemCache
     fifoSize idxBits tagBits lgNumDatas idK
@@ -130,10 +133,10 @@ Definition p4stNMemCache :=
     rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
     rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
     rv32iAlignPc rv32iAlignAddr predictNextPc lgNumChildren procInits.
-*)
+
 
 (** targetM should be your target module *)
-Definition targetMod := inlineTargetMod p4stNMemCache.
+Definition targetMod := p4stNMemCache.
 
 Definition target := computeModule targetMod (map (@attrName _) (getRules targetMod)) nil.
 

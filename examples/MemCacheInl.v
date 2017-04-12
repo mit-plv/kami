@@ -4,6 +4,7 @@ Require Import Kami.ParametricSyntax Lib.CommonTactics Lib.Reflection Kami.Tacti
 Require Import Ex.L1Cache Ex.MemDir Ex.ChildParent.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 Open Scope string.
 
@@ -35,8 +36,15 @@ Ltac simplMod :=
            L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
            L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
            L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-           L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite
-           L1Cache.csRead L1Cache.csWrite
+           L1Cache.lineWrite L1Cache.tagWrite
+           L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
+           L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
+           L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
+           L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
+           L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
+           L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
+
+           L1Cache.csWrite
 
            MemCache.MIdxBits
 
@@ -45,7 +53,10 @@ Ltac simplMod :=
            MemDir.RqToP MemDir.RqFromC MemDir.RsToP
            MemDir.RsFromC MemDir.FromP MemDir.ToC
            MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-           MemDir.lineRead MemDir.lineWrite MemDir.dirRead
+           MemDir.lineRead MemDir.lineWrite
+
+           MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
+
            MemDir.dirWrite MemDir.Child
 
            MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
@@ -62,98 +73,6 @@ Ltac simplMod :=
       | ?sth = ?m => pose m; clear sth HeqmEq
     end
   end.
-
-Ltac simplifyMod :=
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      unfold m in mRef, mEquiv;
-  clear m;
-  cbv [inlineGenGenDm
-         inlineGenSinDm inlineSinSinDm
-         getGenGenBody
-         getGenSinBody getSinSinBody
-         appendGenGenAction appendSinSinAction appendSinGenAction
-         convNameRec nameVal nameRec isRep projT1
-         
-         ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
-         ChildParent.Offset ChildParent.Line
-         ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
-         ChildParent.FromP ChildParent.ToC
-         ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
-         ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
-         
-         L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
-         L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
-         L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
-         L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-         L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-         L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite
-         L1Cache.csRead L1Cache.csWrite
-
-         MemCache.MIdxBits
-
-         MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset
-         MemDir.Line
-         MemDir.RqToP MemDir.RqFromC MemDir.RsToP
-         MemDir.RsFromC MemDir.FromP MemDir.ToC
-         MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-         MemDir.lineRead MemDir.lineWrite MemDir.dirRead
-         MemDir.dirWrite MemDir.Child
-
-         MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
-         MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
-
-         Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
-
-         eq_rect ret arg
-
-      ] in mRef, mEquiv;
-  rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
-  simpl in mRef, mEquiv
-end;
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      let newm := fresh in
-      pose m as newm;
-        fold newm in mRef;
-        fold newm in mEquiv
-  end.
-
-
-Ltac noFilt ltac dm r :=
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      ltac dm r;
-        match goal with
-          | m'Ref:
-              modFromMeta ?m <<== modFromMeta ?m',
-              m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-            apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-            let newm := fresh in
-            pose m' as newm;
-              fold newm in m'Ref;
-              fold newm in m'Equiv;
-              simpl in newm; clear m mEquiv
-        end
-  end; simplifyMod.
-
-Ltac ggNoFilt dm r := noFilt inlineGenDmGenRule_NoFilt dm r.
-Ltac gsNoFilt dm r := noFilt inlineSinDmGenRule_NoFilt dm r.
-Ltac ssNoFilt dm r := noFilt inlineSinDmSinRule_NoFilt dm r.
-
-Ltac ggFilt dm r := noFilt inlineGenDmGenRule_Filt dm r.
-Ltac gsFilt dm r := noFilt inlineSinDmGenRule_Filt dm r.
-Ltac ssFilt dm r := noFilt inlineSinDmSinRule_Filt dm r.
-
 
 Ltac ggNoF dm r :=
   match goal with
@@ -325,6 +244,112 @@ Ltac finish_pf :=
 
 
 
+Ltac simplifyMod :=
+  match goal with
+    | mRef:
+        modFromMeta _
+                    <<== modFromMeta ?m,
+        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+      unfold m in mRef, mEquiv;
+  clear m;
+  cbv [inlineGenGenDm
+         inlineGenSinDm inlineSinSinDm
+         getGenGenBody
+         getGenSinBody getSinSinBody
+         appendGenGenAction appendSinSinAction appendSinGenAction
+         convNameRec nameVal nameRec isRep projT1
+         
+         ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
+         ChildParent.Offset ChildParent.Line
+         ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
+         ChildParent.FromP ChildParent.ToC
+         ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
+         ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
+         
+         L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
+         L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
+         L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
+         L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
+         L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
+         L1Cache.lineWrite L1Cache.tagWrite
+         L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
+         L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
+         L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
+         L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
+         L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
+         L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
+
+         L1Cache.csWrite
+
+         MemCache.MIdxBits
+
+         MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset
+         MemDir.Line
+         MemDir.RqToP MemDir.RqFromC MemDir.RsToP
+         MemDir.RsFromC MemDir.FromP MemDir.ToC
+         MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
+         MemDir.lineRead MemDir.lineWrite
+         MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
+
+         MemDir.dirWrite MemDir.Child
+
+         MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
+         MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
+
+         Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
+
+         eq_rect ret arg
+
+      ] in mRef, mEquiv;
+  rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
+  simpl in mRef, mEquiv
+end;
+  match goal with
+    | mRef:
+        modFromMeta _
+                    <<== modFromMeta ?m,
+        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+      let newm := fresh in
+      pose m as newm;
+        fold newm in mRef;
+        fold newm in mEquiv
+  end.
+
+
+Ltac noFilt ltac dm r :=
+  match goal with
+    | mRef:
+        modFromMeta _
+                    <<== modFromMeta ?m,
+        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
+      ltac dm r;
+        match goal with
+          | m'Ref:
+              modFromMeta ?m <<== modFromMeta ?m',
+              m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
+            apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
+            let newm := fresh in
+            pose m' as newm;
+              fold newm in m'Ref;
+              fold newm in m'Equiv;
+              simpl in newm; clear m mEquiv
+        end
+  end; simplifyMod.
+
+Ltac ggNoFilt dm r := noFilt inlineGenDmGenRule_NoFilt dm r.
+Ltac gsNoFilt dm r := noFilt inlineSinDmGenRule_NoFilt dm r.
+Ltac ssNoFilt dm r := noFilt inlineSinDmSinRule_NoFilt dm r.
+
+Ltac ggFilt dm r := noFilt inlineGenDmGenRule_Filt dm r.
+Ltac gsFilt dm r := noFilt inlineSinDmGenRule_Filt dm r.
+Ltac ssFilt dm r := noFilt inlineSinDmSinRule_Filt dm r.
+
+
+  
+
+
+
+
 
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas DataBytes: nat.
@@ -374,7 +399,14 @@ Section MemCacheInl.
           L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
           L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
           L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-          L1Cache.lineWrite L1Cache.tagRead L1Cache.tagWrite L1Cache.csRead L1Cache.csWrite
+          L1Cache.lineWrite L1Cache.tagWrite L1Cache.csWrite
+
+          L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
+          L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
+          L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
+          L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
+          L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
+          L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
 
           L1Cache.RqFromProc L1Cache.rqFromProcFirst
 
@@ -383,7 +415,9 @@ Section MemCacheInl.
           MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset MemDir.Line
           MemDir.RqToP MemDir.RqFromC MemDir.RsToP MemDir.RsFromC MemDir.FromP MemDir.ToC
           MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-          MemDir.lineRead MemDir.lineWrite MemDir.dirRead MemDir.dirWrite MemDir.Child
+          MemDir.lineRead MemDir.lineWrite MemDir.dirWrite MemDir.Child
+
+          MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
 
           MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line
           MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC
@@ -432,11 +466,11 @@ Section MemCacheInl.
 
     ssF (mline -- read) deferred.
   
-    ssNoF (mcs -- read) missByState.
-    ssNoF (mcs -- read) dwnRq.
-    ssNoF (mcs -- read) dwnRs_wait.
-    ssNoF (mcs -- read) dwnRs_noWait.
-    ssF (mcs -- read) deferred.
+    ssF (mcs -- read1) missByState.
+    ssF (mcs -- read2) dwnRq.
+    ssNoF (mcs -- read0) dwnRs_wait.
+    ssF (mcs -- read0) dwnRs_noWait.
+    ssF (mcs -- read3) deferred.
 
     ssNoF (mline -- write) dwnRs_wait.
     ssF (mline -- write) dwnRs_noWait.
@@ -462,27 +496,27 @@ Section MemCacheInl.
     
     gsF (toChild -- deqName) fromPToCRule.
 
-    ggNoF (cs -- read) l1MissByState.
-    ggNoF (cs -- read) l1MissByLine.
-    ggNoF (cs -- read) l1Hit.
-    ggNoF (cs -- read) writeback.
-    ggNoF (cs -- read) upgRq.
-    ggNoF (cs -- read) upgRs.
+    ggF (cs -- read1) l1MissByState.
+    ggF (cs -- read2) l1MissByLine.
+    ggF (cs -- read3) l1Hit.
+    ggNoF (cs -- read0) writeback.
+    ggF (cs -- read4) upgRq.
+    ggF (cs -- read0) upgRs.
 
-    ggNoF (cs -- read) ld.
-    ggNoF (cs -- read) st.
-    ggNoF (cs -- read) drop.
-    ggF (cs -- read) pProcess.
+    ggF (cs -- read5) ld.
+    ggF (cs -- read6) st.
+    ggF (cs -- read7) drop.
+    ggF (cs -- read8) pProcess.
 
-    ggNoF (tag -- read) l1MissByState.
-    ggNoF (tag -- read) l1MissByLine.
-    ggNoF (tag -- read) l1Hit.
-    ggNoF (tag -- read) writeback.
-    ggNoF (tag -- read) upgRq.
-    ggNoF (tag -- read) ld.
-    ggNoF (tag -- read) st.
-    ggNoF (tag -- read) drop.
-    ggF (tag -- read) pProcess.
+    ggF (tag -- read1) l1MissByState.
+    ggF (tag -- read2) l1MissByLine.
+    ggF (tag -- read3) l1Hit.
+    ggF (tag -- read0) writeback.
+    ggF (tag -- read4) upgRq.
+    ggF (tag -- read5) ld.
+    ggF (tag -- read6) st.
+    ggF (tag -- read7) drop.
+    ggF (tag -- read8) pProcess.
 
     ggNoF (line -- read) writeback.
     ggNoF (line -- read) ld.
@@ -509,20 +543,23 @@ Section MemCacheInl.
     finish_def.
   Defined.
 
+
+
   Theorem nmemCacheInl_pf:
     (modFromMeta (nmemCache IdxBits TagBits LgNumDatas
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
+    (* SKIP_PROOF_ON
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
-    
+  
     ssFilt (mline -- read) deferred.
   
-    ssNoFilt (mcs -- read) missByState.
-    ssNoFilt (mcs -- read) dwnRq.
-    ssNoFilt (mcs -- read) dwnRs_wait.
-    ssNoFilt (mcs -- read) dwnRs_noWait.
-    ssFilt (mcs -- read) deferred.
+    ssFilt (mcs -- read1) missByState.
+    ssFilt (mcs -- read2) dwnRq.
+    ssNoFilt (mcs -- read0) dwnRs_wait.
+    ssFilt (mcs -- read0) dwnRs_noWait.
+    ssFilt (mcs -- read3) deferred.
 
     ssNoFilt (mline -- write) dwnRs_wait.
     ssFilt (mline -- write) dwnRs_noWait.
@@ -548,27 +585,27 @@ Section MemCacheInl.
     
     gsFilt (toChild -- deqName) fromPToCRule.
 
-    ggNoFilt (cs -- read) l1MissByState.
-    ggNoFilt (cs -- read) l1MissByLine.
-    ggNoFilt (cs -- read) l1Hit.
-    ggNoFilt (cs -- read) writeback.
-    ggNoFilt (cs -- read) upgRq.
-    ggNoFilt (cs -- read) upgRs.
+    ggFilt (cs -- read1) l1MissByState.
+    ggFilt (cs -- read2) l1MissByLine.
+    ggFilt (cs -- read3) l1Hit.
+    ggNoFilt (cs -- read0) writeback.
+    ggFilt (cs -- read4) upgRq.
+    ggFilt (cs -- read0) upgRs.
 
-    ggNoFilt (cs -- read) ld.
-    ggNoFilt (cs -- read) st.
-    ggNoFilt (cs -- read) drop.
-    ggFilt (cs -- read) pProcess.
+    ggFilt (cs -- read5) ld.
+    ggFilt (cs -- read6) st.
+    ggFilt (cs -- read7) drop.
+    ggFilt (cs -- read8) pProcess.
 
-    ggNoFilt (tag -- read) l1MissByState.
-    ggNoFilt (tag -- read) l1MissByLine.
-    ggNoFilt (tag -- read) l1Hit.
-    ggNoFilt (tag -- read) writeback.
-    ggNoFilt (tag -- read) upgRq.
-    ggNoFilt (tag -- read) ld.
-    ggNoFilt (tag -- read) st.
-    ggNoFilt (tag -- read) drop.
-    ggFilt (tag -- read) pProcess.
+    ggFilt (tag -- read1) l1MissByState.
+    ggFilt (tag -- read2) l1MissByLine.
+    ggFilt (tag -- read3) l1Hit.
+    ggFilt (tag -- read0) writeback.
+    ggFilt (tag -- read4) upgRq.
+    ggFilt (tag -- read5) ld.
+    ggFilt (tag -- read6) st.
+    ggFilt (tag -- read7) drop.
+    ggFilt (tag -- read8) pProcess.
 
     ggNoFilt (line -- read) writeback.
     ggNoFilt (line -- read) ld.
@@ -594,6 +631,7 @@ Section MemCacheInl.
     ggFilt (fromParent -- enqName) fromPToCRule.
 
     finish_pf.
+    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
 

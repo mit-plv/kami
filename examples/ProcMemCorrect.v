@@ -102,17 +102,17 @@ Section ProcMem.
   Qed.
 
   Theorem pdecN_mcache_refines_scN: (pdecN ++ pmFifos ++ modFromMeta mcache)%kami <<== scN.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     ketrans; [|apply pdecN_memAtomic_refines_scN with (fifoSize:= rsz FifoSize); auto].
 
     kmodular.
-    - kdisj_edms_cms_ex numChildren.
-    - kdisj_ecms_dms_ex numChildren.
+    - apply cheat. (* kdisj_edms_cms_ex numChildren. *)
+    - apply cheat. (* kdisj_ecms_dms_ex numChildren. *)
     - krefl.
     - ketrans; [|apply ios_memAtomicWoQ_memAtomic].
       kmodular with (dropFirstElts LgNumChildren).
-      + kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)).
-      + kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)).
+      + apply cheat. (* kdisj_edms_cms_ex (wordToNat (wones LgNumChildren)). *)
+      + apply cheat. (* kdisj_ecms_dms_ex (wordToNat (wones LgNumChildren)). *)
       + apply dropFirstElts_Interacting.
       + ketrans_r; [apply modFromMeta_comm_1|].
         ketrans_l; [|apply duplicate_concatMod_comm_2; auto; [kequiv|kequiv|kvr|kvr]].
@@ -148,7 +148,7 @@ Section ProcMem.
           
       + apply memCache_refines_memAtomic.
         
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   (** Module definitions for the last theorem:
@@ -273,22 +273,22 @@ Section ProcMem.
   Qed.
 
   Theorem p4stN_mcache_refines_scN: p4stNMemCache <<== scN.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     ktrans p4stNMemCache'; unfold MethsT; rewrite <- idElementwiseId; [apply p4stNMemCache_refines|].
     ketrans; [|apply pdecN_mcache_refines_scN].
     kmodular.
-    - kdisj_edms_cms_ex numChildren.
-    - kdisj_ecms_dms_ex numChildren.
+    - apply cheat. (* kdisj_edms_cms_ex numChildren. *)
+    - apply cheat. (* kdisj_ecms_dms_ex numChildren. *)
     - kduplicated.
       ketrans.
       + apply p4st_refines_p3st; auto.
       + apply p3st_refines_pdec; auto.
     - kmodular.
-      + kdisj_edms_cms_ex numChildren.
-      + kdisj_ecms_dms_ex numChildren.
+      + apply cheat. (* kdisj_edms_cms_ex numChildren. *)
+      + apply cheat. (* kdisj_ecms_dms_ex numChildren. *)
       + krefl.
       + krefl.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 End ProcMem.
 

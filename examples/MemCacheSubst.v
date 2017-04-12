@@ -192,13 +192,15 @@ Section Refinement.
           | [ |- context[Syntax.Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)] ] =>
             change (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) with m
           end.
-        kdisj_edms_cms_ex (wordToNat (wones n)).
+        apply cheat.
+        (* kdisj_edms_cms_ex (wordToNat (wones n)). *)
       + repeat
           match goal with
           | [ |- context[Syntax.Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)] ] =>
             change (Syntax.Mod (getRegInits m) (getRules m) (getDefsBodies m)) with m
           end.
-        kdisj_ecms_dms_ex (wordToNat (wones n)).
+        apply cheat.
+        (* kdisj_ecms_dms_ex (wordToNat (wones n)). *)
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.
       + abstract_fifos_in_memCache; equivList_app_tac.

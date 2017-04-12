@@ -53,7 +53,10 @@ Section Mem.
   Definition lineRead := MethodSig (mline -- read) (Idx): Line.
   Definition lineWrite := MethodSig (mline -- write) (Struct (WritePort IdxBits Line))
                           : Void.
-  Definition dirRead := MethodSig (mcs -- read) (Idx): Dir.
+  Definition dirRead0 := MethodSig (mcs -- read0) (Idx): Dir.
+  Definition dirRead1 := MethodSig (mcs -- read1) (Idx): Dir.
+  Definition dirRead2 := MethodSig (mcs -- read2) (Idx): Dir.
+  Definition dirRead3 := MethodSig (mcs -- read3) (Idx): Dir.
   Definition dirWrite := MethodSig (mcs -- write) (Struct (WritePort IdxBits Dir)): Void.
 
   Definition Child := MemTypes.Child LgNumChildren.
@@ -101,7 +104,7 @@ Section Mem.
           LET c <- #rqChild!RqFromC@.child;
           LET rqT: Struct RqToP <- #rqChild!RqFromC@.rq;
           LET idx <- getIdx (#rqT!RqToP@.addr);
-          Call dir <- dirRead(#idx);
+          Call dir <- dirRead1(#idx);
           Assert (#dir@[#c] <= #rqT!RqToP@.from);
           Write cRqValidReg <- $$ true;
           LET dirw: Dirw <- VEC (replicate ($$ false) _);
@@ -115,7 +118,7 @@ Section Mem.
           Call rqChild <- rqFromCFirst();
           LET c <- #rqChild!RqFromC@.child;
           LET rqT: Struct RqToP <- #rqChild!RqFromC@.rq;
-          Call dir <- dirRead(getIdx #rqT!RqToP@.addr);
+          Call dir <- dirRead2(getIdx #rqT!RqToP@.addr);
           Read dirw <- cRqDirwReg;
           LET i <- findIncompat #c #rqT!RqToP@.to #dir #dirw;
           Assert #i!(Maybe Child)@.isValid;
@@ -132,7 +135,7 @@ Section Mem.
           LET c <- #rsChild!RsFromC@.child;
           LET rs: Struct RsToP <- #rsChild!RsFromC@.rs;
           LET idx <- getIdx #rs!RsToP@.addr;
-          Call dir <- dirRead(#idx);
+          Call dir <- dirRead0(#idx);
           LET dir' <- #dir@[#c <- #rs!RsToP@.to];
           Call dirWrite(STRUCT{addr ::= #idx; data ::= #dir'});
           If #dir@[#c] == $ Mod
@@ -152,7 +155,7 @@ Section Mem.
           LET c <- #rsChild!RsFromC@.child;
           LET rs: Struct RsToP <- #rsChild!RsFromC@.rs;
           LET idx <- getIdx #rs!RsToP@.addr;
-          Call dir <- dirRead(#idx);
+          Call dir <- dirRead0(#idx);
           LET dir' <- #dir@[#c <- #rs!RsToP@.to];
           Call dirWrite(STRUCT{addr ::= #idx; data ::= #dir'});
           If #dir@[#c] == $ Mod
@@ -171,7 +174,7 @@ Section Mem.
           LET c <- #rqChild!RqFromC@.child;
           LET rq: Struct RqToP <- #rqChild!RqFromC@.rq;
           LET idx <- getIdx (#rq!RqToP@.addr);
-          Call dir <- dirRead(#idx);
+          Call dir <- dirRead3(#idx);
           Assert #dir@[#c] <= #rq!RqToP@.from;
           Assert (othersCompat #c #rq!RqToP@.to #dir);
           Call lineT <- lineRead(#idx);
@@ -188,7 +191,7 @@ End Mem.
 Hint Unfold AddrBits Addr Idx Data Offset Line : MethDefs.
 Hint Unfold RqToP RqFromC RsToP RsFromC FromP ToC : MethDefs.
 Hint Unfold rqFromCPop rsFromCPop toCEnq Dir Dirw : MethDefs.
-Hint Unfold lineRead lineWrite dirRead dirWrite Child : MethDefs.
+Hint Unfold lineRead lineWrite dirRead0 dirRead1 dirRead2 dirRead3 dirWrite Child : MethDefs.
 Hint Unfold getIdx getOffset getAddr othersCompat findIncompat dirwInit : MethDefs.
 
 Hint Unfold memDir : ModuleDefs.

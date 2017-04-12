@@ -224,25 +224,27 @@ ppRtlExpr who e =
         x3 <- ppRtlExpr who e3
         return $ '(' : x1 ++ " " ++ op1 ++ " " ++ x2 ++ " " ++ op2 ++ " " ++ x3 ++ ")"
 
-ppRfInstance :: ((((String, String), String), (((Int, Kind)), ConstT)), Bool) -> String
-ppRfInstance ((((name, read), write), ((idxType, dataType), _)), _) =
+ppRfInstance :: (((String, [(String, Bool)]), String), (((Int, Kind)), ConstT)) -> String
+ppRfInstance (((name, reads), write), ((idxType, dataType), _)) =
   "  " ++ ppName name ++ " " ++
   ppName name ++ "$inst(.CLK(CLK), .RESET(RESET), ." ++
-  ppName read ++ "$_g(" ++ ppName read ++ "$_g), ." ++
-  ppName read ++ "$_en(" ++ ppName read ++ "$_en), ." ++
-  ppName read ++ "$_arg(" ++ ppName read ++ "$_arg), ." ++
-  ppName read ++ "$_ret(" ++ ppName read ++ "$_ret), ." ++
+  concatMap (\(read, _) ->
+               ppName read ++ "$_g(" ++ ppName read ++ "$_g), ." ++
+               ppName read ++ "$_en(" ++ ppName read ++ "$_en), ." ++
+               ppName read ++ "$_arg(" ++ ppName read ++ "$_arg), ." ++
+               ppName read ++ "$_ret(" ++ ppName read ++ "$_ret), .") reads ++
   ppName write ++ "$_g(" ++ ppName write ++ "$_g), ." ++
   ppName write ++ "$_en(" ++ ppName write ++ "$_en), ." ++
   ppName write ++ "$_arg(" ++ ppName write ++ "$_arg));\n\n"
   
-ppRfModule :: ((((String, String), String), ((Int, Kind), ConstT)), Bool) -> String
-ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
-  "module " ++ ppName name ++ "(" ++
-  "  output " ++ ppDeclType (ppName read ++ "$_g") Bool ++ ",\n" ++
-  "  input " ++ ppDeclType (ppName read ++ "$_en") Bool ++ ",\n" ++
-  "  input " ++ ppDeclType (ppName read ++ "$_arg") (Bit idxType) ++ ",\n" ++
-  "  output " ++ ppDeclType (ppName read ++ "$_ret") dataType ++ ",\n" ++
+ppRfModule :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
+ppRfModule (((name, reads), write), ((idxType, dataType), init)) =
+  "module " ++ ppName name ++ "(\n" ++
+  concatMap (\(read, _) ->
+               "  output " ++ ppDeclType (ppName read ++ "$_g") Bool ++ ",\n" ++
+              "  input " ++ ppDeclType (ppName read ++ "$_en") Bool ++ ",\n" ++
+              "  input " ++ ppDeclType (ppName read ++ "$_arg") (Bit idxType) ++ ",\n" ++
+              "  output " ++ ppDeclType (ppName read ++ "$_ret") dataType ++ ",\n") reads ++
   "  output " ++ ppDeclType (ppName write ++ "$_g") Bool ++ ",\n" ++
   "  input " ++ ppDeclType (ppName write ++ "$_en") Bool ++ ",\n" ++
   "  input " ++ ppDeclType (ppName write ++ "$_arg")
@@ -254,11 +256,13 @@ ppRfModule ((((name, read), write), ((idxType, dataType), init)), bypass) =
   "  initial begin\n" ++
   "    " ++ ppName name ++ "$_data = " ++ '\'' : ppConst init ++ ";\n" ++
   "  end\n" ++
-  "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
-  "  assign " ++ ppName read ++ "$_ret = " ++
-  if bypass
-  then ppName write ++ "$_en && " ++ ppName write ++ "$_arg.addr == " ++ ppName read ++ "$_arg ? " ++ ppName write ++ "$_data : "
-  else "" ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n" ++
+  concatMap (\(read, bypass) ->
+               "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
+              "  assign " ++ ppName read ++ "$_ret = " ++
+              if bypass
+              then ppName write ++ "$_en && " ++ ppName write ++ "$_arg.addr == " ++
+                   ppName read ++ "$_arg ? " ++ ppName write ++ "$_data : "
+              else "" ++ ppName name ++ "$_data[" ++ ppName read ++ "$_arg];\n") reads ++
   "  assign " ++ ppName write ++ "$_g = 1'b1;\n" ++
   "  always@(posedge CLK) begin\n" ++
   "    if(" ++ ppName write ++ "$_en) begin\n" ++
@@ -360,11 +364,16 @@ ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
     outsAll = removeDups outs'
     ins = Data.List.filter filtCond insAll
     outs = Data.List.filter filtCond outsAll
-    filtCond ((x, _), _) = case Data.List.find (\((((_, read), write), (_, _)), _) ->
+    badRead x read = x == read ++ "#_g" || x == read ++ "#_en" || x == read ++ "#_arg" || x == read ++ "#_ret"
+    badReads x reads = foldl (\accum (v, _) -> badRead x v || accum) False reads
+    filtCond ((x, _), _) = case Data.List.find (\((((_, reads), write), (_, _))) ->
+                                                  badReads x reads ||
+                                                  {-
                                                   x == read ++ "#_g" ||
                                                   x == read ++ "#_en" ||
                                                   x == read ++ "#_arg" ||
                                                   x == read ++ "#_ret" ||
+                                                  -}
                                                   x == write ++ "#_g" ||
                                                   x == write ++ "#_en" ||
                                                   x == write ++ "#_arg" ||
