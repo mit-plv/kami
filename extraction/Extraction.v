@@ -20,7 +20,7 @@ Unset Extraction AutoInline.
 Definition idxBits := 8.
 Definition tagBits := 4.
 Definition lgNumDatas := 4.
-Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
+Definition lgNumChildren := 1. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
@@ -54,17 +54,19 @@ Require Import Ex.IsaRv32PgmExt.
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
   {| pcInit := Default;
      rfInit := rfWithSpInit (ConstBit (natToWord _ 64));
-     pgmInit := IsaRv32PgmBankerInit.pgmExt |}
+     pgmInit := IsaRv32PgmDekker1.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 128));
-          pgmInit := IsaRv32PgmBankerWorker1.pgmExt |}
+          pgmInit := IsaRv32PgmDekker2.pgmExt |} :: nil.
+(*
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 192));
-          pgmInit := IsaRv32PgmBankerWorker2.pgmExt |}
+          pgmInit := IsaRv32PgmDekker1.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 256));
-          pgmInit := IsaRv32PgmBankerWorker3.pgmExt |}
+          pgmInit := IsaRv32PgmDekker2.pgmExt |}
     :: nil.
+*)
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
