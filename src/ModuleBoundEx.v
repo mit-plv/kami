@@ -1021,6 +1021,16 @@ Ltac get_regs_bound_ex m :=
                                  metaRules := mrules;
                                  metaMeths := mdms |}) in
     constr:(appendNameBound (getRepNameBound nr) pnb)
+  | modFromMeta {| metaRegs := metaModulesRegs ?mmr;
+                   metaRules := ?mrules;
+                   metaMeths := ?mdms
+                |} =>
+    let smmr := (eval simpl in (metaModulesRegs mmr)) in
+    get_regs_bound_ex
+      (modFromMeta {| metaRegs := smmr;
+                      metaRules := mrules;
+                      metaMeths := mdms
+                   |})
   | modFromMeta (?mm1 +++ ?mm2) =>
     let nb1 := get_regs_bound_ex (modFromMeta mm1) in
     let nb2 := get_regs_bound_ex (modFromMeta mm2) in
@@ -1066,6 +1076,16 @@ Ltac get_dms_bound_ex m :=
          (modFromMeta {| metaRegs := mregs;
                          metaRules := mrules;
                          metaMeths := sdd |})
+     | modFromMeta {| metaRegs := ?mregs;
+                      metaRules := ?mrules;
+                      metaMeths := metaModulesMeths ?mmm;
+                   |} =>
+       let smmm := (eval simpl in (metaModulesMeths mmm)) in
+       get_dms_bound_ex
+         (modFromMeta {| metaRegs := mregs;
+                         metaRules := mrules;
+                         metaMeths := smmm
+                      |})
      | modFromMeta (?mm1 +++ ?mm2) =>
        let nb1 := get_dms_bound_ex (modFromMeta mm1) in
        let nb2 := get_dms_bound_ex (modFromMeta mm2) in
@@ -1149,6 +1169,17 @@ Ltac get_cms_bound_ex m :=
          constr:(appendNameBound
                    (getNameRecIdxNameBound (getCallsMetaRule rr)) pnb)
        end
+     | modFromMeta {| metaRegs := ?mregs;
+                      metaRules := metaModulesRules ?mmr;
+                      metaMeths := metaModulesMeths ?mmm;
+                   |} =>
+       let smmr := (eval simpl in (metaModulesRules mmr)) in
+       let smmm := (eval simpl in (metaModulesMeths mmm)) in
+       get_cms_bound_ex
+         (modFromMeta {| metaRegs := mregs;
+                         metaRules := smmr;
+                         metaMeths := smmm
+                      |})
      | modFromMeta (?mm1 +++ ?mm2) =>
        let nb1 := get_cms_bound_ex (modFromMeta mm1) in
        let nb2 := get_cms_bound_ex (modFromMeta mm2) in
@@ -1230,6 +1261,9 @@ Ltac red_to_ecd_bound_ex cn :=
 
 Ltac regs_bound_tac_unit_ex :=
   match goal with
+  | [ |- RegsBound (modFromMeta {| metaRegs := metaModulesRegs ?mmr |}) _ _ ] =>
+    let smmr := (eval simpl in (metaModulesRegs mmr)) in
+    change (metaModulesRegs mmr) with smmr
   | [ |- RegsBound (modFromMeta {| metaRegs := (OneReg _ _) :: _ |}) _ _ ] =>
     apply getOneNameBound_regs_bounded
   | [ |- RegsBound (modFromMeta {| metaRegs := (RepReg _ _ _ _ _ _) :: _ |}) _ _ ] =>
@@ -1255,6 +1289,9 @@ Ltac dms_bound_tac_unit_ex :=
                      _ _ ] =>
        let sdd := (eval simpl in (methsToRep dd1 dd2 dd3 dd4 dd5 dd6)) in
        change (methsToRep dd1 dd2 dd3 dd4 dd5 dd6) with sdd
+     | [ |- DmsBound (modFromMeta {| metaMeths := metaModulesMeths ?mmm |}) _ _ ] =>
+       let smmm := (eval simpl in (metaModulesMeths mmm)) in
+       change (metaModulesMeths mmm) with smmm
      | [ |- DmsBound (modFromMeta {| metaMeths := (OneMeth _ _) :: _ |}) _ _ ] =>
        apply getOneNameBound_dms_bounded
      | [ |- DmsBound (modFromMeta {| metaMeths := (RepMeth _ _ _ _ _ _ _) :: _ |}) _ _ ] =>
@@ -1285,6 +1322,12 @@ Ltac cms_bound_tac_unit_ex :=
                      _ _ ] =>
        let sdd := (eval simpl in (methsToRep dd1 dd2 dd3 dd4 dd5 dd6)) in
        change (methsToRep dd1 dd2 dd3 dd4 dd5 dd6) with sdd
+     | [ |- CmsBound (modFromMeta {| metaRules := metaModulesRules ?mmr |}) _ _ ] =>
+       let smmr := (eval simpl in (metaModulesRules mmr)) in
+       change (metaModulesRules mmr) with smmr
+     | [ |- CmsBound (modFromMeta {| metaMeths := metaModulesMeths ?mmm |}) _ _ ] =>
+       let smmm := (eval simpl in (metaModulesMeths mmm)) in
+       change (metaModulesMeths mmm) with smmm
      | [ |- CmsBound (modFromMeta {| metaRules := (OneRule _ _) :: _ |}) _ _ ] =>
        apply getOneNameBound_rule_cms_bounded
      | [ |- CmsBound (modFromMeta {| metaRules := (RepRule _ _ _ _ _ _ _) :: _ |}) _ _ ] =>
