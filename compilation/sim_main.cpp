@@ -15,21 +15,21 @@ int main(int argc, char ** argv, char **env) {
   
   vluint64_t main_time = 0;
 
-  top->RESET = 1;
+  top->RESET_N = 0;
   while (!Verilated::gotFinish()) {
     top->toHost__024a__024_g = 1;
     top->toHost__024aa__024_g = 1;
-//    top->toHost__024aaa__024_g = 1;
-//    top->toHost__024aaaa__024_g = 1;
+    top->toHost__024aaa__024_g = 1;
+    top->toHost__024aaaa__024_g = 1;
 
     top->toHost__024a__024_ret = 1;
     top->toHost__024aa__024_ret = 1;
-//    top->toHost__024aaa__024_ret = 1;
-//    top->toHost__024aaaa__024_ret = 1;
+    top->toHost__024aaa__024_ret = 1;
+    top->toHost__024aaaa__024_ret = 1;
 
     top->CLK = main_time%2;
     if (main_time > 10)
-      top->RESET = 0;
+      top->RESET_N = 1;
     top->eval();
 
     //std :: cout << "clk: " << main_time / 2 << endl;
@@ -41,13 +41,11 @@ int main(int argc, char ** argv, char **env) {
       if(top->toHost__024aa__024_en == 1)
         std :: cout << main_time/2 << " 1: " << top->toHost__024aa__024_arg << std :: endl;
 
-      /*
       if(top->toHost__024aaa__024_en == 1)
         std :: cout << main_time/2 << " 2: " << top->toHost__024aaa__024_arg << std :: endl;
 
       if(top->toHost__024aaaa__024_en == 1)
         std :: cout << main_time/2 << " 3: " << top->toHost__024aaaa__024_arg << std :: endl;
-      */
     }
 
     //tfp->dump(main_time);

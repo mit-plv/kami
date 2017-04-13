@@ -227,7 +227,7 @@ ppRtlExpr who e =
 ppRfInstance :: (((String, [(String, Bool)]), String), (((Int, Kind)), ConstT)) -> String
 ppRfInstance (((name, reads), write), ((idxType, dataType), _)) =
   "  " ++ ppName name ++ " " ++
-  ppName name ++ "$inst(.CLK(CLK), .RESET(RESET), ." ++
+  ppName name ++ "$inst(.CLK(CLK), .RESET_N(RESET_N), ." ++
   concatMap (\(read, _) ->
                ppName read ++ "$_g(" ++ ppName read ++ "$_g), ." ++
                ppName read ++ "$_en(" ++ ppName read ++ "$_en), ." ++
@@ -250,7 +250,7 @@ ppRfModule (((name, reads), write), ((idxType, dataType), init)) =
   "  input " ++ ppDeclType (ppName write ++ "$_arg")
   (Struct 2 (ConsV (Build_Attribute "addr" (Bit idxType)) 2 (ConsV (Build_Attribute "data" dataType) 1 NilV))) ++ ",\n" ++
   "  input logic CLK,\n" ++
-  "  input logic RESET\n" ++
+  "  input logic RESET_N\n" ++
   ");\n" ++
   "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (2^idxType - 1) ++ "];\n" ++
   "  initial begin\n" ++
@@ -276,7 +276,7 @@ removeDups = nubBy (\(a, _) (b, _) -> a == b)
 
 ppRtlInstance :: RtlModule -> String
 ppRtlInstance m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
-  "  _design _designInst(.CLK(CLK), .RESET(RESET)" ++
+  "  _design _designInst(.CLK(CLK), .RESET_N(RESET_N)" ++
   concatMap (\(nm, ty) -> ", ." ++ ppPrintVar nm ++ '(' : ppPrintVar nm ++ ")") (removeDups ins' ++ removeDups outs') ++ ");\n"
   
 ppRtlModule :: RtlModule -> String
@@ -285,7 +285,7 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
   "  input CLK,\n" ++
-  "  input RESET\n" ++
+  "  input RESET_N\n" ++
   ");\n" ++
   concatMap (\(nm, (ty, init)) -> "  " ++ ppDeclType (ppName nm) ty ++ ";\n") regInits ++ "\n" ++
 
@@ -300,7 +300,7 @@ ppRtlModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   concatMap (\(nm, (ty, sexpr)) -> "  assign " ++ ppPrintVar nm ++ " = " ++ sexpr ++ ";\n") assignExprs ++ "\n" ++
   
   "  always @(posedge CLK) begin\n" ++
-  "    if(RESET) begin\n" ++
+  "    if(!RESET_N) begin\n" ++
   concatMap (\(nm, (ty, init)) -> "      " ++ ppName nm ++ " <= " ++ ppConst init ++ ";\n") regInits ++
   "    end\n" ++
   "    else begin\n" ++
@@ -348,11 +348,11 @@ sumOutEdge x = case x of
 ppTopModule :: RtlModule -> String
 ppTopModule m@(Build_RtlModule regFs ins' outs' regInits' regWrites' assigns') =
   concatMap ppRfModule regFs ++ ppRtlModule m ++
-  "module _top(\n" ++
+  "module top(\n" ++
   concatMap (\(nm, ty) -> "  input " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") ins ++ "\n" ++
   concatMap (\(nm, ty) -> "  output " ++ ppDeclType (ppPrintVar nm) ty ++ ",\n") outs ++ "\n" ++
   "  input CLK,\n" ++
-  "  input RESET\n" ++
+  "  input RESET_N\n" ++
   ");\n" ++
   concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") insAll ++ "\n" ++
   concatMap (\(nm, ty) -> "  " ++ ppDeclType (ppPrintVar nm) ty ++ ";\n") outsAll ++ "\n" ++

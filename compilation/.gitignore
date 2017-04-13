@@ -4,5 +4,5 @@ Target.hs
 *.o
 PrettyPrintVerilog
 obj_dir
-top.ver
+top.sv
 *.vcd
