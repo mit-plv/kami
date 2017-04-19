@@ -41,7 +41,7 @@ Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 Definition idxBits := 8.
 Definition tagBits := 4.
 Definition lgNumDatas := 4.
-Definition lgNumChildren := 1. (* 2^2 = 4 cores *)
+Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
 
@@ -70,41 +70,22 @@ Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
     exact $0.
 Defined.
 
-(*
-Require Import Kami.Inline.
-
-Section DoInline.
-  Variable m: Modules.
-  Local Definition inlineTargetMod1 := fst (inlineF (snd (separateRegFiles m))).
-  Local Definition inlineTargetMod2 :=
-    fold_left (fun rest x => ConcatMod rest match x with
-                                              | (data, read, write, x) =>
-                                                ConcatMod (RegFile data read write (projT2 x)) rest
-                                            end) (fst (separateRegFiles m)) (Mod nil nil nil).
-Definition inlineTargetMod := (inlineTargetMod1 ++ inlineTargetMod2)%kami.
-End DoInline.
-*)
-
-
-
 Require Import Ex.IsaRv32PgmExt.
 
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
   {| pcInit := Default;
      rfInit := rfWithSpInit (ConstBit (natToWord _ 64));
-     pgmInit := IsaRv32PgmDekker1.pgmExt |}
+     pgmInit := IsaRv32PgmBankerInit.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 128));
-          pgmInit := IsaRv32PgmDekker2.pgmExt |} :: nil.
-(*
+          pgmInit := IsaRv32PgmBankerWorker1.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 192));
-          pgmInit := IsaRv32PgmDekker1.pgmExt |}
+          pgmInit := IsaRv32PgmBankerWorker2.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 256));
-          pgmInit := IsaRv32PgmDekker2.pgmExt |}
+          pgmInit := IsaRv32PgmBankerWorker3.pgmExt |}
     :: nil.
-*)
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
