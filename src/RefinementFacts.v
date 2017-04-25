@@ -272,6 +272,71 @@ Section StepToRefinement.
   Qed.
 End StepToRefinement.
 
+Section StepToRefinementR.
+  Variable imp spec: Modules.
+  Variable p: MethsT -> MethsT.
+  Variable thetaR: RegsT -> RegsT -> Prop.
+  Hypothesis (HthetaInit:
+                thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec))).
+
+  Definition labelR il sa :=
+    match il with
+    | {| annot := ia; defs := ids; calls := ics |} =>
+      {| annot := match ia with
+                  | None => None
+                  | Some _ => Some sa
+                  end; defs := p ids; calls := p ics |}
+    end.
+
+  Variable stepMapR:
+    forall o u l,
+      reachable o imp ->
+      Step imp o u l ->
+      forall so,
+        thetaR o so ->
+        exists sa su,
+          Step spec so su (labelR l sa) /\
+          thetaR (M.union u o) (M.union su so).
+
+  Lemma stepRefinementR':
+    forall o s sig,
+      o = initRegs (getRegInits imp) ->
+      Multistep imp o s sig ->
+      forall os,
+        thetaR o os ->
+        exists ss ssig,
+          thetaR s ss /\
+          Multistep spec os ss ssig /\ 
+          equivalentLabelSeq p sig ssig.
+  Proof.
+    induction 2; simpl; intros.
+    - repeat subst; do 2 eexists; repeat split; eauto.
+      + constructor; auto.
+      + constructor.
+    - specialize (IHMultistep H _ H1); dest.
+      apply stepMapR with (so:= x) in HStep; auto;
+        [|subst; eexists; constructor; eauto].
+      dest.
+      
+      do 2 eexists; repeat split; eauto.
+      + econstructor 2; eauto.
+      + econstructor; eauto.
+        destruct l as [ann ds cs]; unfold equivalentLabel, liftPLabel; simpl.
+        repeat split.
+        destruct ann as [[|]|]; auto.
+  Qed.
+
+  Theorem stepRefinementR: traceRefines p imp spec.
+  Proof.
+    unfold traceRefines; intros.
+    inv H.
+    apply stepRefinementR' with (os:= initRegs (getRegInits spec)) in HMultistepBeh; auto.
+    dest; do 2 eexists; split; eauto.
+    constructor; eauto.
+  Qed.
+
+End StepToRefinementR.
+
 Lemma liftPLabel_mergeLabel:
   forall ruleMap o p l1 l2,
     CanCombineLabel l1 l2 ->
