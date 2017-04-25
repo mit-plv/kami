@@ -84,20 +84,20 @@ module mkProc(Proc);
   default_clock clk(CLK) <- exposeCurrentClock;
   default_reset rst (RESET_N) clocked_by(clk) <- exposeCurrentReset;
 
-  method toHost$aaaa$_arg toHost_aaaa();
-  method toHost$aaa$_arg toHost_aaa();
-  method toHost$aa$_arg toHost_aa();
-  method toHost$a$_arg toHost_a();
+  method toHost_aaaa__arg toHost_aaaa();
+  method toHost_aaa__arg toHost_aaa();
+  method toHost_aa__arg toHost_aa();
+  method toHost_a__arg toHost_a();
 
-  method toHost$aaaa$_en toHost_aaaa_en();
-  method toHost$aaa$_en toHost_aaa_en();
-  method toHost$aa$_en toHost_aa_en();
-  method toHost$a$_en toHost_a_en();
+  method toHost_aaaa__en toHost_aaaa_en();
+  method toHost_aaa__en toHost_aaa_en();
+  method toHost_aa__en toHost_aa_en();
+  method toHost_a__en toHost_a_en();
 
-  method toHost_aaaa_g() enable(toHost$aaaa$_g);
-  method toHost_aaa_g() enable(toHost$aaa$_g);
-  method toHost_aa_g() enable(toHost$aa$_g);
-  method toHost_a_g() enable(toHost$a$_g);
+  method toHost_aaaa_g() enable(toHost_aaaa__g);
+  method toHost_aaa_g() enable(toHost_aaa__g);
+  method toHost_aa_g() enable(toHost_aa__g);
+  method toHost_a_g() enable(toHost_a__g);
 
   schedule (toHost_aaaa, toHost_aaa, toHost_aa, toHost_a,
             toHost_aaaa_en, toHost_aaa_en, toHost_aa_en, toHost_a_en,

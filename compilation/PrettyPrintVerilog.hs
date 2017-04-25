@@ -106,8 +106,6 @@ ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord
 ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (reverse $ vecToList vs)) ++ "}"
 ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (Data.List.map ppConst (ilistToList is)) ++ "}"
 
-
-
 ppRtlExpr :: String -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
 ppRtlExpr who e =
   case e of
@@ -236,6 +234,13 @@ ppRfInstance (((name, reads), write), ((idxType, dataType), _)) =
   ppName write ++ "$_g(" ++ ppName write ++ "$_g), ." ++
   ppName write ++ "$_en(" ++ ppName write ++ "$_en), ." ++
   ppName write ++ "$_arg(" ++ ppName write ++ "$_arg));\n\n"
+
+
+sizeKind :: Kind -> Int
+sizeKind Bool = 1
+sizeKind (Bit sz) = sz
+sizeKind (Vector k sz) = 2^sz * sizeKind k
+sizeKind (Struct _ vs) = foldl (\accum v -> accum + sizeKind (attrType v)) 0 (vectorToList vs)
   
 ppRfModule :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
 ppRfModule (((name, reads), write), ((idxType, dataType), init)) =
@@ -252,9 +257,11 @@ ppRfModule (((name, reads), write), ((idxType, dataType), init)) =
   "  input logic CLK,\n" ++
   "  input logic RESET_N\n" ++
   ");\n" ++
-  "  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (2^idxType - 1) ++ "];\n" ++
+  --"  " ++ ppDeclType (ppName name ++ "$_data") dataType ++ "[0:" ++ show (2^idxType - 1) ++ "];\n" ++
+  "  " ++ ppDeclType (ppName name ++ "$_data") (Bit (sizeKind dataType)) ++ "[0:" ++ show (2^idxType - 1) ++ "];\n" ++
   "  initial begin\n" ++
-  "    " ++ ppName name ++ "$_data = " ++ '\'' : ppConst init ++ ";\n" ++
+  -- "    " ++ ppName name ++ "$_data = " ++ '\'' : ppConst init ++ ";\n" ++
+  "    $readmemb(" ++ "\"" ++ ppName name ++ ".mem" ++ "\", " ++ ppName name ++ "$_data, 0, " ++ show (2^idxType - 1) ++ ");\n" ++
   "  end\n" ++
   concatMap (\(read, bypass) ->
                "  assign " ++ ppName read ++ "$_g = 1'b1;\n" ++
@@ -389,7 +396,22 @@ printDiff (x:xs) (y:ys) =
     else putStrLn $ (show x) ++ " " ++ (show y)
 printDiff [] [] = return ()
 printDiff _ _ = putStrLn "Wrong lengths"
-  
 
+ppConstMem :: ConstT -> String
+ppConstMem (ConstBool b) = if b then "1" else "0"
+ppConstMem (ConstBit sz w) = if sz == 0 then "0" else ppWord (reverse $ wordToList w)
+ppConstMem (ConstVector k _ vs) = Data.List.concatMap ppConstMem (reverse $ vecToList vs)
+ppConstMem (ConstStruct _ _ is) = Data.List.concatMap ppConstMem (ilistToList is)
+
+ppRfFile :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
+ppRfFile (((name, reads), write), ((idxType, dataType), ConstVector k _ vs)) =
+  concatMap (\v -> ppConstMem v ++ "\n") (reverse $ vecToList vs) ++ "\n"
+
+ppRfName :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
+ppRfName (((name, reads), write), ((idxType, dataType), ConstVector k _ vs)) = ppName name ++ ".mem"
+  
 main =
-  putStrLn $ ppTopModule target
+  do
+    putStrLn $ ppTopModule target
+    let (Build_RtlModule regFs _ _ _ _ _) = target in
+      mapM_ (\rf -> writeFile (ppRfName rf) (ppRfFile rf)) regFs

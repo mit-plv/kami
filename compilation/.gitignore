@@ -6,3 +6,4 @@ PrettyPrintVerilog
 obj_dir
 top.sv
 *.vcd
+*.mem
