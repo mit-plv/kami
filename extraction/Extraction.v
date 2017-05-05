@@ -12,22 +12,32 @@ Set Extraction Optimize.
 Set Extraction KeepSingleton.
 Unset Extraction AutoInline.
 
-(** * p4st + pmFifos ++ memCache extraction *)
+(** Extraction of
+ *  "Four-stage pipelined processor [p4st] + 
+ *   FIFOs connecting processors and the memory subsystem [pmFifos] +
+ *   2-level coherent caches and memory [memCache]"
+ *)
 
-(** Some numbers *)
+(** Parameter instantiation *)
 
-(* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 16) *)
+(* idxBits: the number of bits for the cache index
+ * tagBits: the number of bits for the cache tag
+ * lgNumDatas: the log number of data in a cache line
+ * 
+ * Note that [idxBits + tagBits + lgNumDatas] should be equal to 
+ * [rv32iAddrSize] in examples/IsaRv32.v (= 16) 
+ *)
 Definition idxBits := 8.
 Definition tagBits := 4.
 Definition lgNumDatas := 4.
-Definition lgNumChildren := 1. (* 2^2 = 4 cores *)
+
+(* lgNumChildren: the log number of cores (e.g., 2 cores for [lgNumChildren = 1])
+ * fifoSize: the log number of elements for FIFOs used in the memory subsystem
+ *)
+Definition lgNumChildren := 2.
 Definition fifoSize := 2.
-Definition idK := Bit 1.
 
-(** Some initial values *)
-Eval compute in ((numChildren lgNumChildren) + 1).
-
-(* A utility function for setting the stack pointer in rf *)
+(* A utility function for setting the initial stack pointer values in rf *)
 Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
   : ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx).
   refine
@@ -51,29 +61,31 @@ Defined.
 
 Require Import Ex.IsaRv32PgmExt.
 
+Definition pgmSize := (wordToNat (wones rv32iIAddrSize) + 1) * 4.
+Definition stackSize := 512. (* per core *)
+
+(* The initial values (pc, register file, and program) for each processor *)
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
   {| pcInit := Default;
-     rfInit := rfWithSpInit (ConstBit (natToWord _ 64));
-     pgmInit := IsaRv32PgmDekker1.pgmExt |}
+     rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + stackSize)));
+     pgmInit := IsaRv32PgmBankerInit.pgmExt |}
     :: {| pcInit := Default;
-          rfInit := rfWithSpInit (ConstBit (natToWord _ 128));
-          pgmInit := IsaRv32PgmDekker2.pgmExt |} :: nil.
-(*
+          rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 2 * stackSize)));
+          pgmInit := IsaRv32PgmBankerWorker1.pgmExt |}
     :: {| pcInit := Default;
-          rfInit := rfWithSpInit (ConstBit (natToWord _ 192));
-          pgmInit := IsaRv32PgmDekker1.pgmExt |}
+          rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 3 * stackSize)));
+          pgmInit := IsaRv32PgmBankerWorker2.pgmExt |}
     :: {| pcInit := Default;
-          rfInit := rfWithSpInit (ConstBit (natToWord _ 256));
-          pgmInit := IsaRv32PgmDekker2.pgmExt |}
+          rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 4 * stackSize)));
+          pgmInit := IsaRv32PgmBankerWorker3.pgmExt |}
     :: nil.
-*)
-
+ 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
 Definition p4stNMemCache :=
   ProcMemCorrect.p4stNMemCache
-    fifoSize idxBits tagBits lgNumDatas idK
+    fifoSize idxBits tagBits lgNumDatas (Bit 1)
     rv32iGetOptype rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
     rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
     rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iExec rv32iNextPc
@@ -98,12 +110,21 @@ Section Correctness.
 
 End Correctness.
 
-(** DON'T REMOVE OR MODIFY BELOW LINES *)
+(** * DON'T REMOVE OR MODIFY BELOW LINES *)
+
 (* targetM should be your target module *)
 Definition targetProcM := p4stNMemCache.
 Definition targetProcS := getModuleS targetProcM.
 Definition targetProcB := ModulesSToBModules targetProcS.
 
-(** Ocaml/Target.ml is used with Ocaml/PP.ml and Main.ml to build a converter to Bluespec. *)
+(* If you are testing directly on this file with ProofGeneral or CoqIde, 
+ * then use the below extraction command, instead of the one at the last line.
+ *)
+(* Extraction "./Ocaml/Target.ml" targetProcB. *)
+
+(* [Target.ml] will be generated after executing the below extraction command.
+ * To generate the corresponding Bluespec program, do [make] in the directory
+ * [./extraction/Ocaml/]. See [./extraction/Ocaml/README.md] for details.
+ *)
 Extraction "./extraction/Ocaml/Target.ml" targetProcB.
 

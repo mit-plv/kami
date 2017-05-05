@@ -1,4 +1,8 @@
-#include <stdio.h>
+/* 
+ * fact.c: to calculate the factorial for a given unsigned integer [n].
+ *
+ * Expected output: 3628800
+ */
 
 int main () {
   unsigned int n, i;

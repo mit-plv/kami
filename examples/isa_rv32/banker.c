@@ -1,3 +1,24 @@
+/* 
+ * banker.c: four threads simulate the concurrent bank transactions. We have
+ * some deposits and a number of transaction requests. Each thread tries to take
+ * a request from the request pool and to execute the transaction. Careful
+ * locking is certainly required for such concurrent transactions.
+ *
+ * Expected output: the thread which handles the last transaction request should
+ * print "11000".
+ */
+
+/*
+ * - 0x000 -- 0xBFF: program + stack
+ *   + 0x000 -- 0x3FF: program
+ *   + 0x400 -- 0x5FF: stack for the first thread
+ *   + 0x600 -- 0x7FF: stack for the second thread
+ *   + 0x800 -- 0x9FF: stack for the third thread
+ *   + 0xA00 -- 0xBFF: stack for the fourth thread
+ * - 0xC00 -- : heap
+ */
+#define HEAP_STARTS_AT 0xC00
+
 #define NUM_DEPOSITS 2
 #define NUM_REQUESTS 10
 #define NUM_THREADS 4
@@ -5,28 +26,24 @@
 
 int main()
 {
-  /*
-   * - 0x000 -- 0x0FF: stack
-   * - 0x100 -- 0x1FF: heap
-   */
-  volatile unsigned int* deposits = (unsigned int *)(0x100); // 2 * 4
-  volatile unsigned int* deposit_locks = (unsigned int *)(0x108); // 2 * 4
+  volatile unsigned int* deposits = (unsigned int *)(HEAP_STARTS_AT); // 2 * 4
+  volatile unsigned int* deposit_locks = (unsigned int *)(HEAP_STARTS_AT + 0x8); // 2 * 4
 
-  volatile unsigned int* high_flags = (unsigned int *)(0x110); // 4 * 4
-  volatile unsigned int* low_flags = (unsigned int *)(0x120); // 4 * 4
-  volatile unsigned int* high_turns = (unsigned int *)(0x130); // 4 * 4
-  volatile unsigned int* low_turns = (unsigned int *)(0x140); // 4 * 4
+  volatile unsigned int* high_flags = (unsigned int *)(HEAP_STARTS_AT + 0x10); // 4 * 4
+  volatile unsigned int* low_flags = (unsigned int *)(HEAP_STARTS_AT + 0x20); // 4 * 4
+  volatile unsigned int* high_turns = (unsigned int *)(HEAP_STARTS_AT + 0x30); // 4 * 4
+  volatile unsigned int* low_turns = (unsigned int *)(HEAP_STARTS_AT + 0x40); // 4 * 4
 
-  volatile unsigned int* from_requests = (unsigned int *)(0x150); // 10 * 4 == 0x28
-  volatile unsigned int* to_requests = (unsigned int *)(0x178); // 10 * 4 == 0x28
-  volatile unsigned int* amt_requests = (unsigned int *)(0x1A0); // 10 * 4 == 0x28
+  volatile unsigned int* from_requests = (unsigned int *)(HEAP_STARTS_AT + 0x50); // 10 * 4 == 0x28
+  volatile unsigned int* to_requests = (unsigned int *)(HEAP_STARTS_AT + 0x78); // 10 * 4 == 0x28
+  volatile unsigned int* amt_requests = (unsigned int *)(HEAP_STARTS_AT + 0xA0); // 10 * 4 == 0x28
   
-  volatile unsigned int* cur_request = (unsigned int *)(0x1C8); // 4
+  volatile unsigned int* cur_request = (unsigned int *)(HEAP_STARTS_AT + 0xC8); // 4
 
-  volatile unsigned int* request_flags = (unsigned int *)(0x1CC); // 4 * 4
-  volatile unsigned int* request_turns = (unsigned int *)(0x1DC); // 4 * 4
+  volatile unsigned int* request_flags = (unsigned int *)(HEAP_STARTS_AT + 0xCC); // 4 * 4
+  volatile unsigned int* request_turns = (unsigned int *)(HEAP_STARTS_AT + 0xDC); // 4 * 4
 
-  volatile unsigned int* init = (unsigned int *)(0x1EC);
+  volatile unsigned int* init = (unsigned int *)(HEAP_STARTS_AT + 0xEC);
 
   // initialization for anything
   unsigned int i;

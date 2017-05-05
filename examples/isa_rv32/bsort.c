@@ -1,3 +1,10 @@
+/* 
+ * bsort.c: to sort a given unsigned integer array [targets] by using the bubble
+ * sort algorithm.
+ *
+ * Expected output: 349
+ */
+
 int main () {
   unsigned int targets[] = {4, 20, 120, 53, 24, 349, 29, 83, 126, 78};
   unsigned int i, j, tmp;
