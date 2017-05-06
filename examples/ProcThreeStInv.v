@@ -479,7 +479,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_epochs_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -512,7 +512,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
         rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_pc_inv_ok':
@@ -520,7 +520,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_pc_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -550,7 +550,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_scoreboard_waw_inv_ok':
@@ -558,7 +558,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_scoreboard_waw_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2.
 
     - p3st_inv_old.
@@ -593,7 +593,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
   
   Lemma p3st_raw_inv_ok':
@@ -601,7 +601,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_raw_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -661,7 +661,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_decode_inv_ok':
@@ -669,7 +669,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_decode_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -700,7 +700,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac;
           try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
   
   Lemma p3st_stalled_inv_ok':
@@ -708,7 +708,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_stalled_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -736,7 +736,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_exec_inv_ok':
@@ -744,7 +744,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_exec_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -782,7 +782,7 @@ Section Invariants.
                find_if_inside; [elim H22; auto|];
                intuition idtac; fail).
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_inv_ok:

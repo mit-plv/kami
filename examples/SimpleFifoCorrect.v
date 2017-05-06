@@ -145,7 +145,7 @@ Section Facts.
       CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2) ->
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
@@ -161,7 +161,7 @@ Section Facts.
     - exfalso.
       inv H1; inv H17; simpl in *.
       clear -H1; findeq.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Definition sfifo_inv_0 (o: RegsT): Prop.
@@ -177,7 +177,7 @@ Section Facts.
 
   Lemma sfifo_inv_0_ok:
     forall o, reachable o sfifo -> sfifo_inv_0 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionInv.
     - simpl; kinv_action_dest.
       unfold initRegs, rawInitRegs, getRegInits; simpl.
@@ -187,7 +187,7 @@ Section Facts.
       + kinv_magic.
       + kinv_magic.
     - apply sfifo_substeps_updates.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Definition sfifo_inv_1 (o: RegsT): Prop.
@@ -207,7 +207,7 @@ Section Facts.
     forall o,
       reachable o sfifo ->
       sfifo_inv_1 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionInv.
     - simpl; kinv_action_dest.
       unfold initRegs, rawInitRegs, getRegInits; simpl.
@@ -243,11 +243,11 @@ Section Facts.
           { or3_fst; auto. }
           { or3_thd; auto. }
     - apply sfifo_substeps_updates.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma sfifo_refines_nsfifo: sfifo <<== nsfifo.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     apply decompositionOne with (eta:= sfifo_nsfifo_eta)
                                   (ruleMap:= sfifo_nsfifo_ruleMap)
                                   (specRegName:= ^Names.elt).
@@ -528,7 +528,7 @@ Section Facts.
         * exfalso; clear HAction1 HAction2 Hsig Hsig0.
           invertActionRep; inv H2; findeq.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) apply cheat.
+          (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End Facts.

@@ -202,16 +202,16 @@ Section Facts.
 
   Lemma memDir_ModEquiv:
     MetaModPhoasWf (memDir IdxBits LgNumDatas DataBytes LgNumChildren Id).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kequiv.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma memDir_ValidRegs:
     MetaModRegsWf (memDir IdxBits LgNumDatas DataBytes LgNumChildren Id).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kvr.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End Facts.

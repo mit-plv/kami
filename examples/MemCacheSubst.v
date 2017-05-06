@@ -180,7 +180,7 @@ Section Refinement.
   Lemma memCache_refines_nmemCache:
     (modFromMeta (memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize n))
       <<== (modFromMeta (nmemCache IdxBits TagBits LgNumDatas DataBytes Id n)).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     ketrans.
 
     - ksubst
@@ -210,7 +210,7 @@ Section Refinement.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
       + abstract_fifos_in_nmemCache; equivList_app_tac.
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End Refinement.

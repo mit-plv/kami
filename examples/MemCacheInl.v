@@ -550,7 +550,7 @@ Section MemCacheInl.
                             DataBytes Id LgNumChildren) <<== modFromMeta nmemCacheInl) /\
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
-    (* SKIP_PROOF_ON
+    (* SKIP_PROOF_OFF *)
     start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
   
     ssFilt (mline -- read) deferred.
@@ -631,7 +631,7 @@ Section MemCacheInl.
     ggFilt (fromParent -- enqName) fromPToCRule.
 
     finish_pf.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 End MemCacheInl.
 

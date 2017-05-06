@@ -284,16 +284,16 @@ Section Facts.
 
   Lemma l1Cache_ModEquiv:
     MetaModPhoasWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas DataBytes Id)).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kequiv.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma l1Cache_ValidRegs:
     MetaModRegsWf (getMetaFromSinNat n (l1Cache IdxBits TagBits LgNumDatas DataBytes Id)).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kvr.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End Facts.

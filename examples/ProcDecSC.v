@@ -104,9 +104,9 @@ Section ProcDecSC.
     |}.
 
   Lemma pdec_refines_pinst: pdec <<== pinst.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kami_ok decInstConfig procDec_inv_old idtac.
-    END_SKIP_PROOF_ON *) apply cheat.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End ProcDecSC.
