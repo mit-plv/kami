@@ -1,0 +1,58 @@
+/* Links */
+a:link {
+    color: #e74c3c;
+    text-decoration: none;
+}
+
+a:visited,
+a:hover {
+    color: #e74c3c;
+    text-decoration: underline;
+}
+
+/* Custom default button */
+.btn-default,
+.btn-default:hover,
+.btn-default:focus {
+    color: #ecf0f1;
+    background-color: #ecf0f1;
+}
+
+/*
+ * Base structure
+ */
+html,
+body {
+    height: 100%;
+    background-color: #ecf0f1;
+}
+body {
+    font-family: "Lato";
+    font-weight: 400;
+    color: #2c3e50;
+}
+
+/* Paragraphs, lists, and em */
+ul,
+li,
+p {
+    font-size: 16px;
+    line-height: 150%;
+}
+em {
+    color: #2980b9;
+}
+
+/* path */
+.path {
+    /* border-color: #2980b9; */
+    /* border-style: solid; */
+    /* border-width: 1px; */
+    color: #2980b9;
+}
+
+/* code */
+.code {
+    color: #2980b9;
+}
+

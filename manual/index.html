@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <meta name="generator" content="pandoc" />
+    <title>Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification</title>
+
+    <!-- Custom styles for this template -->
+    <link href="cover.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="header">
+      <h1 class="title">Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification</h1>
+      <h3 class="subtitle">ICFP 2017 Artifact Evaluation</h3>
+    </div>
+    <div id="tabs">
+      <ul>
+	<li><a href="#installation">Quick installation guide</a></li>
+	<li><a href="#contents">Explore the contents</a></li>
+	<li><a href="#instructions">Detailed instructions for compiling, extracting, and simulating Kami programs</a></li>
+	<li><a href="#details">Technical details</a>
+	  <ul>
+	    <li><a href="#requirements">System requirements</a></li>
+	    <li><a href="#synthesis">Hardware synthesis</a></li>
+	  </ul>
+	</li>
+      </ul>
+    </div>
+    <p class="introduction">Thanks for evaluating this artifact for Kami! This
+      page describes the generic installation procedure for the Kami framework
+      as well as exploring our multiprocessor and memory implementation that can
+      run several RISC-V programs.
+    </p>
+
+    <h2 id="installation">Quick installation guide</h2>
+    <p>If you are running on the virtual machine we provided, then you can just
+      follow below procedure. The VM meets all requirements we suggested in the
+      <a href="#requirements">requirements</a> section.
+    </p>
+    <ol>
+      <li>If you just have the source tarball, extract it. If you are running
+	the VM, the source is already extracted
+	at <span class="path">/home/Kami/kami/</span>.
+      </li>
+      <li> <span class="code">make</span> in the top directory. </li>
+      <li> <span class="code">make</span>
+	in <span class="path">./extraction/Ocaml/</span>. It generates a
+	pretty-printer <span class="code">./Main.native</span> from Kami to
+	Bluespec.
+      </li>
+      <li> <span class="code">./Main.native Proc.bsv</span>
+	in <span class="path">./extraction/Ocaml/</span>. It generates a
+	Bluespec program <span class="code">Proc.bsv</span>.
+      </li>
+      <li> Copy <span class="code">Proc.bsv</span>
+	to <span class="path">./extraction/BluespecFrontEnd/sim/</span>, and
+	do <span class="code">make</span> in that directory. It compiles the
+	Bluespec program and generates an executable which simulates the
+	program.
+      </li>
+      <li> Run the executable <span class="code">a.out</span> in the
+	directory <span class="path">./extraction/BluespecFrontEnd/sim/</span>.
+      </li>
+    </ol>
+    
+    <h2 id="contents">Explore the contents</h2>
+    <p>Here we explain the entire contents by directory.</p>
+    <ul>
+      <li><span class="path">lib</span>: Contains the generic library files that
+	we developed for Kami, extending the standard Coq library,
+	e.g. bit-vectors, decidable finite maps with strings as keys, etc.
+      </li>
+      <li><span class="path">src</span>: Contains the source code for syntax,
+	semantics, theorems/properties and proof automation for Kami.
+      </li>
+      <li><span class="path">examples</span>: Contains the multiprocessor
+	implementation, spec, and proof of correctness. Contains both the
+	4-stage processor implementation and the coherent caches attached to a
+	backing memory.
+      </li>
+      <li><span class="path">extraction</span>: Contains files needed to extract
+	designs developed in Kami into Bluespec.
+	<ul>
+	  <li><span class="path">BluespecFrontEnd/sim</span>: Contains the files
+	    to simulate Kami modules on the Bluespec simulator.
+	  </li>
+	  <li><span class="path">Ocaml</span>: Contains the files to
+	    pretty-print the OCaml code extracted from Coq.
+	  </li>
+	</ul>
+      </li>
+    </ul>
+
+    <h2 id="instructions">Detailed instructions for compiling, extracting, and simulating Kami programs</h2>
+
+    <h3>Compilation</h3>
+
+    <!-- ### To Verify Multiprocessor system and extract OCaml ASTs  -->
+    <!-- - Run $ make in the top-level directory of Kami, i.e. the directory containing lib, src, examples and extraction directory, henceforth called $TOP. -->
+
+    <h3>Extraction</h3>
+
+    <!-- ### To Generate Bluespec code from OCaml ASTs -->
+    <!-- ``` -->
+    <!-- $ cd $TOP/extraction/Ocaml -->
+    <!-- $ make -->
+    <!-- $ ./Main.native Proc.bsv -->
+    <!-- ``` -->
+    <!-- This generates the file Proc.bsv, which is the Bluespec code representing the multiprocessor system with coherent caches. -->
+
+
+    <h3>Simulation</h3>
+
+    <!-- ### To Simulate the Multiprocessor code in Bluespec (with already compiled benchmarks) -->
+    <!-- Once Proc.bsv is generated, do the following: -->
+
+    <!-- ``` -->
+    <!-- $ cp $TOP/extraction/Ocaml/Proc.bsv $TOP/extraction/BluespecFrontEnd/sim -->
+    <!-- $ cd $TOP/extraction/BluespecFrontEnd/sim -->
+    <!-- $ make -->
+    <!-- $ ./ProcSim -->
+    <!-- ``` -->
+
+    <h3>One step further: to change/add the benchmark being compiled</h3>
+    
+    <!-- ### To change the benchmark being compiled -->
+    <!-- Multithreaded benchmarks can be run on 4 cores by modifying the program being -->
+    <!-- executed in line 57. For instance, replacing _IsaRv32PgmMatMul1_, _IsaRv32PgmMatMul2_, etc. in line 57  -->
+    <!-- in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker1_, _IsaRv32PgmBanker2_, etc. respectively, will run the -->
+    <!-- 4-core version of the Banker example. -->
+
+    <!-- See the list of benchmarks (directly converted from C code), which are shown in $TOP/examples/IsaRv32PgmExt.v. -->
+
+    <!-- Redo all the steps from the beginning to build and run the new Benchmark. -->
+
+    <!-- ### To add a new benchmark -->
+    <!-- `$ cd $TOP/example/isa_rv32` -->
+
+    <!-- Here are the steps following that: -->
+    <!-- 1) Write the C code that you want to compile into Kami (one program for each core). -->
+    <!-- 2) Compile the C code (say test.c) into an assembly code using the RISC-V gcc -->
+    <!-- compiler as follows (assuming risc-v GCC is in your path): -->
+    <!-- ``` -->
+    <!-- $ riscv32-unknown-elf-gcc -O1 -nostartfiles -nodefaultlibs -nostdlib -static -S -T config.ld test.c -->
+    <!-- $ riscv32-unknown-elf-gcc -O1 -nostartfiles -nodefaultlibs -nostdlib -static -s -T config.ld test.c -->
+    <!-- $ riscv32-unknown-elf-objdump -d a.out > test.objdump -->
+    <!-- $ ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v -->
+    <!-- ``` -->
+
+    <!-- Now add IsaTest.v to $TOP/examples/IsaRv32PgmExt.v -->
+
+    <!-- This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to build and run the new Benchmark. -->
+    
+    <h2 id="details">Technical details</h2>
+    
+    <h3 id="requirements">System requirements</h3>
+    <p>Note again that the VM we provided meets all below requirements.</p>
+    <ul>
+      <li><em>Coq 8.5</em> is required to define and verify Kami modules. We
+      tested both <em>Coq 8.5pl2</em> and <em>Coq 8.5pl3</em> working.
+      </li>
+      <li><em>OCaml 4.0.2.3</em> and <em>Batteries Library for OCaml 2.5.2</em>
+	are required to generate Bluespec programs from Kami programs.
+      </li>
+      <li><em>Bluespec compiler/simulator 2014.07.A</em> is required to run
+	(simulate) Bluespec programs.
+      </li>
+      <li><em>RISC-V gcc compiler 6.1.0</em> is required to compile C code to
+	run on multiprocessor.
+      </li>
+    </ul>
+
+    <h3 id="synthesis">Hardware synthesis</h3>
+
+  </body>
+</html>
