@@ -68,16 +68,16 @@ Definition stackSize := 512. (* per core *)
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
   {| pcInit := Default;
      rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + stackSize)));
-     pgmInit := IsaRv32PgmBankerInit.pgmExt |}
+     pgmInit := IsaRv32PgmMatMulInit.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 2 * stackSize)));
-          pgmInit := IsaRv32PgmBankerWorker1.pgmExt |}
+          pgmInit := IsaRv32PgmMatMulNormal1.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 3 * stackSize)));
-          pgmInit := IsaRv32PgmBankerWorker2.pgmExt |}
+          pgmInit := IsaRv32PgmMatMulNormal2.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 4 * stackSize)));
-          pgmInit := IsaRv32PgmBankerWorker3.pgmExt |}
+          pgmInit := IsaRv32PgmMatMulReport.pgmExt |}
     :: nil.
  
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=

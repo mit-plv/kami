@@ -11,6 +11,7 @@
     <!-- Custom styles for this template -->
     <link href="cover.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
   </head>
 
   <body>
@@ -26,70 +27,72 @@
 	<li><a href="#details">Technical details</a>
 	  <ul>
 	    <li><a href="#requirements">System requirements</a></li>
-	    <li><a href="#synthesis">Hardware synthesis</a></li>
+	    <li><a href="#bluespec">Compilation/simulation by Bluespec</a></li>
 	  </ul>
 	</li>
       </ul>
     </div>
-    <p class="introduction">Thanks for evaluating this artifact for Kami! This
-      page describes the generic installation procedure for the Kami framework
-      as well as exploring our multiprocessor and memory implementation that can
+    <p class="introduction">Thanks for evaluating this artifact! This page
+      describes the generic installation procedure for the Kami framework as
+      well as exploring our multiprocessor and memory implementation that can
       run several RISC-V programs.
     </p>
 
     <h2 id="installation">Quick installation guide</h2>
     <p>If you are running on the virtual machine we provided, then you can just
-      follow below procedure. The VM meets all requirements we suggested in the
-      <a href="#requirements">requirements</a> section.
+      follow the below procedure for a quick tour. The VM meets all requirements
+      we suggested in the <a href="#requirements">requirements</a> section.
     </p>
     <ol>
-      <li>If you just have the source tarball, extract it. If you are running
-	the VM, the source is already extracted
-	at <span class="path">/home/Kami/kami/</span>.
+      <li>If you have just the source tarball, extract it. If you are running
+	the VM, the source code is already extracted
+	at <span class="code">/home/Kami/kami/</span>.
       </li>
-      <li> <span class="code">make</span> in the top directory. </li>
-      <li> <span class="code">make</span>
-	in <span class="path">./extraction/Ocaml/</span>. It generates a
-	pretty-printer <span class="code">./Main.native</span> from Kami to
-	Bluespec.
+      <li> Do <span class="code">make</span> in the top-level directory. Let's
+	take <span class="code">./</span> as the top-level directory.
       </li>
-      <li> <span class="code">./Main.native Proc.bsv</span>
-	in <span class="path">./extraction/Ocaml/</span>. It generates a
+      <li> Do <span class="code">make</span>
+	in <span class="code">./extraction/Ocaml/</span>. It will generate a
+	pretty-printer <span class="code">Main.native</span>.
+      </li>
+      <li> Run <span class="code">./Main.native Proc.bsv</span>
+	in <span class="code">./extraction/Ocaml/</span>. It will generate a
 	Bluespec program <span class="code">Proc.bsv</span>.
       </li>
       <li> Copy <span class="code">Proc.bsv</span>
-	to <span class="path">./extraction/BluespecFrontEnd/sim/</span>, and
-	do <span class="code">make</span> in that directory. It compiles the
-	Bluespec program and generates an executable which simulates the
-	program.
+	to <span class="code">./extraction/BluespecFrontEnd/sim/</span>, and
+	do <span class="code">make</span> in that directory. It will compile the
+	Bluespec program and generate an
+	executable <span class="code">ProcSim</span> that simulates the program.
       </li>
-      <li> Run the executable <span class="code">a.out</span> in the
-	directory <span class="path">./extraction/BluespecFrontEnd/sim/</span>.
+      <li> Run <span class="code">ProcSim</span>
+	in <span class="code">./extraction/BluespecFrontEnd/sim/</span> to check
+	the simulation.
       </li>
     </ol>
     
     <h2 id="contents">Explore the contents</h2>
     <p>Here we explain the entire contents by directory.</p>
     <ul>
-      <li><span class="path">lib</span>: Contains the generic library files that
+      <li><span class="code">lib</span>: Contains the generic library files that
 	we developed for Kami, extending the standard Coq library,
 	e.g. bit-vectors, decidable finite maps with strings as keys, etc.
       </li>
-      <li><span class="path">src</span>: Contains the source code for syntax,
+      <li><span class="code">src</span>: Contains the source code for syntax,
 	semantics, theorems/properties and proof automation for Kami.
       </li>
-      <li><span class="path">examples</span>: Contains the multiprocessor
+      <li><span class="code">examples</span>: Contains the multiprocessor
 	implementation, spec, and proof of correctness. Contains both the
 	4-stage processor implementation and the coherent caches attached to a
 	backing memory.
       </li>
-      <li><span class="path">extraction</span>: Contains files needed to extract
+      <li><span class="code">extraction</span>: Contains files needed to extract
 	designs developed in Kami into Bluespec.
 	<ul>
-	  <li><span class="path">BluespecFrontEnd/sim</span>: Contains the files
+	  <li><span class="code">BluespecFrontEnd/sim</span>: Contains the files
 	    to simulate Kami modules on the Bluespec simulator.
 	  </li>
-	  <li><span class="path">Ocaml</span>: Contains the files to
+	  <li><span class="code">Ocaml</span>: Contains the files to
 	    pretty-print the OCaml code extracted from Coq.
 	  </li>
 	</ul>
@@ -100,61 +103,105 @@
 
     <h3>Compilation</h3>
 
-    <!-- ### To Verify Multiprocessor system and extract OCaml ASTs  -->
-    <!-- - Run $ make in the top-level directory of Kami, i.e. the directory containing lib, src, examples and extraction directory, henceforth called $TOP. -->
+    <ul>
+      <li><span class="code">make</span>: To fully compile library, framework,
+	and example code including all related proofs. It takes around 6 hours
+	with a single-core.
+      </li>
+      <li><span class="code">make src</span>: To compile just the library and
+	framework. Note that it does not compile examples.
+      </li>
+    </ul>
 
     <h3>Extraction</h3>
 
-    <!-- ### To Generate Bluespec code from OCaml ASTs -->
-    <!-- ``` -->
-    <!-- $ cd $TOP/extraction/Ocaml -->
-    <!-- $ make -->
-    <!-- $ ./Main.native Proc.bsv -->
-    <!-- ``` -->
-    <!-- This generates the file Proc.bsv, which is the Bluespec code representing the multiprocessor system with coherent caches. -->
-
+    <ul>
+      <li>To extract OCaml ASTs from a target Kami program:
+	run <span class="code">./extraction/Extraction.v</span>. It will
+	generate <span class="code">./extraction/Ocaml/Target.ml (.mli)</span>.
+      </li>
+      <li>To generate Bluespec code from OCaml ASTs:
+	<ol>
+	  <li>Do <span class="code">make</span> in the
+	    directory <span class="code">./extraction/Ocaml/</span>.
+	  </li>
+	  <li>Run <span class="code">./Main.native Proc.bsv</span> to generate
+	  the Bluespec (.bsv) program.
+	  </li>
+	</ol>
+      </li>
+    </ul>
 
     <h3>Simulation</h3>
 
-    <!-- ### To Simulate the Multiprocessor code in Bluespec (with already compiled benchmarks) -->
-    <!-- Once Proc.bsv is generated, do the following: -->
+    <p>Once <span class="code">Proc.bsv</span> is generated by extraction, do
+      the following to simulate the Bluespec program.
+    </p>
 
-    <!-- ``` -->
-    <!-- $ cp $TOP/extraction/Ocaml/Proc.bsv $TOP/extraction/BluespecFrontEnd/sim -->
-    <!-- $ cd $TOP/extraction/BluespecFrontEnd/sim -->
-    <!-- $ make -->
-    <!-- $ ./ProcSim -->
-    <!-- ``` -->
+    <ol>
+      <li>Copy <span class="code">Proc.bsv</span>
+	to <span class="code">./extraction/BluespecFrontEnd/sim/</span>.
+      </li>
+      <li>Do <span class="code">make</span> in the
+	directory <span class="code">./extraction/BluespecFrontEnd/sim/</span>. It
+	will generate an executable <span class="code">ProcSim</span> that
+	simulates the program.
+      </li>
+      <li>Run <span class="code">ProcSim</span> to check the simulation.
+      </li>
+    </ol>
 
     <h3>One step further: to change/add the benchmark being compiled</h3>
-    
-    <!-- ### To change the benchmark being compiled -->
-    <!-- Multithreaded benchmarks can be run on 4 cores by modifying the program being -->
-    <!-- executed in line 57. For instance, replacing _IsaRv32PgmMatMul1_, _IsaRv32PgmMatMul2_, etc. in line 57  -->
-    <!-- in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker1_, _IsaRv32PgmBanker2_, etc. respectively, will run the -->
-    <!-- 4-core version of the Banker example. -->
 
-    <!-- See the list of benchmarks (directly converted from C code), which are shown in $TOP/examples/IsaRv32PgmExt.v. -->
-
-    <!-- Redo all the steps from the beginning to build and run the new Benchmark. -->
-
-    <!-- ### To add a new benchmark -->
-    <!-- `$ cd $TOP/example/isa_rv32` -->
-
-    <!-- Here are the steps following that: -->
-    <!-- 1) Write the C code that you want to compile into Kami (one program for each core). -->
-    <!-- 2) Compile the C code (say test.c) into an assembly code using the RISC-V gcc -->
-    <!-- compiler as follows (assuming risc-v GCC is in your path): -->
-    <!-- ``` -->
-    <!-- $ riscv32-unknown-elf-gcc -O1 -nostartfiles -nodefaultlibs -nostdlib -static -S -T config.ld test.c -->
-    <!-- $ riscv32-unknown-elf-gcc -O1 -nostartfiles -nodefaultlibs -nostdlib -static -s -T config.ld test.c -->
-    <!-- $ riscv32-unknown-elf-objdump -d a.out > test.objdump -->
-    <!-- $ ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v -->
-    <!-- ``` -->
-
-    <!-- Now add IsaTest.v to $TOP/examples/IsaRv32PgmExt.v -->
-
-    <!-- This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to build and run the new Benchmark. -->
+    <ul>
+      <li>Our multithreaded benchmarks can be run on 2 or 4 cores by modifying
+	the program being executed in line 68
+	in <span class="code">./extraction/Extraction.v</span>. For instance,
+	replacing (IsaRv32PgmMatMulInit, IsaRv32PgmMatMulNormal1,
+	IsaRv32PgmMatMulNormal2, IsaRv32PgmMatMulReport) in line 68 to
+	(IsaRv32PgmBankerInit, IsaRv32PgmBankerWorker1, IsaRv32PgmBankerWorker2,
+	IsaRv32PgmBankerWorker3) respectively will run the 4-core version of the
+	Banker example.
+      </li>
+      <li>See the list of benchmarks (directly converted from C code), which are
+	shown in <span class="code">./examples/IsaRv32PgmExt.v</span>. You
+	should redo all the steps above to build and run the new Benchmark.
+      </li>
+      <li>To add a new benchmark, move
+	to <span class="code">./example/isa_rv32/</span> and do the following
+	steps:
+	<ol>
+	  <li>Write the C code that you want to compile into Kami (one program
+	    for each core).
+	  </li>
+	  <li>Compile the C code (say test.c) into an assembly code using the
+	    RISC-V gcc compiler as follows (assuming risc-v GCC is in your path,
+	    sometimes you will need <span class="code">-O1</span> to optimize
+	    the risc-v assembly code since we currently restricts the program
+	    size less than 256): <br />
+	    <span class="code">
+	      riscv32-unknown-elf-gcc [-O1] -nostartfiles -nodefaultlibs -nostdlib -static -S -T config.ld test.c
+	    </span> <br />
+	    <span class="code">
+	      riscv32-unknown-elf-gcc [-O1] -nostartfiles -nodefaultlibs -nostdlib -static -s -T config.ld test.c
+	    </span> <br />
+	    <span class="code">
+	      riscv32-unknown-elf-objdump -d a.out &gt; test.objdump
+	    </span> <br />
+	    <span class="code">
+	      ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v
+	    </span>
+	  </li>
+	  <li>Now add <span class="code">IsaTest.v</span>
+	    to <span class="code">./examples/IsaRv32PgmExt.v</span>. This adds a
+	    new benchmark <span class="code">IsaTest.v</span>
+	  </li>
+	  <li>Redo all the steps from the beginning to build and run the new
+	    Benchmark.
+	  </li>
+	</ol>
+      </li>
+    </ul>
     
     <h2 id="details">Technical details</h2>
     
@@ -175,7 +222,13 @@
       </li>
     </ul>
 
-    <h3 id="synthesis">Hardware synthesis</h3>
+    <h3 id="bluespec">Compilation/simulation by Bluespec</h3>
+    <p>In the virtual machine, we provide a temporal license for the Bluespec
+      compiler/simulator that expires on June 15, 2017.
+    </p>
+    <p>Here we thank for this kind support by Bluespec.</p>
+
+    <br />
 
   </body>
 </html>

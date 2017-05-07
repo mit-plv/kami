@@ -10,14 +10,6 @@ a:hover {
     text-decoration: underline;
 }
 
-/* Custom default button */
-.btn-default,
-.btn-default:hover,
-.btn-default:focus {
-    color: #ecf0f1;
-    background-color: #ecf0f1;
-}
-
 /*
  * Base structure
  */
@@ -40,19 +32,14 @@ p {
     line-height: 150%;
 }
 em {
-    color: #2980b9;
-}
-
-/* path */
-.path {
-    /* border-color: #2980b9; */
-    /* border-style: solid; */
-    /* border-width: 1px; */
-    color: #2980b9;
+    color: #468966;
+    font-style: normal;
 }
 
 /* code */
 .code {
-    color: #2980b9;
+    color: #468966;
+    font-family: "Ubuntu Mono";
+    margin: 2px;
 }
 
