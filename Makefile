@@ -26,7 +26,7 @@ coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
 
 Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS)
-	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) -o Makefile.coq.all
+	ulimit -s unlimited; coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) -o Makefile.coq.all
 
 src: Makefile.coq.src
 	$(MAKE) -f Makefile.coq.src

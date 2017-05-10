@@ -50,6 +50,9 @@
 	larger RAM. We haven't tested how large the RAM should be to
 	use multicore make.
       </li>
+      <li>12GB storage: in order for stable installation, 12GB storage (or more)
+	is required.
+      </li>
     </ul>
 
     <h2 id="installation">Quick installation guide</h2>
@@ -62,7 +65,7 @@
 	the VM, the source code is already extracted
 	at <span class="code">/home/Kami/kami/</span>.
       </li>
-      <li> Run <span class="code">configure.sh</span> in the top-level
+      <li> Run <span class="code">source configure.sh</span> in the top-level
 	directory. It should not give any errors.
       </li>
       <li> Do <span class="code">make</span>. It is fine to increase the number
@@ -122,18 +125,23 @@
     <h3>Compilation</h3>
 
     <ul>
-      <li> <span class="code">configure.sh</span> exports several
+      <li> <span class="code">source configure.sh</span> exports several
 	Bluespec-related variables and
 	changes <span class="code">PATH</span>. You should set these variables
-	properly by modifying the script. It also sets the stack size as
-	unlimited, which doesn't need any modification.
+	properly by modifying the script.
       </li>
       <li><span class="code">make</span>: To fully compile library, framework,
-	and example code including all related proofs. It takes around 6 hours
-	with a single-core.
+	and example code including all related proofs. It takes around 10 hours
+	with a single-core. A stack limit should be set to "unlimited" to
+	compile all stuffs, so we use <span class="code">ulimit -s
+	unlimited</span> in Makefile. Some operating systems, however, do not
+	allow such stack limit manipulation. If you
+	find <span class="code">ulimit</span> does not work, you should manually
+	set the stack size properly depending on your operating system.
       </li>
       <li><span class="code">make src</span>: To compile just the library and
-	framework. Note that it does not compile examples.
+	framework. It takes within an hour with a single-core. Note that it does
+	not compile examples.
       </li>
     </ul>
 
