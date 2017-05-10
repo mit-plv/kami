@@ -21,12 +21,13 @@
     </div>
     <div id="tabs">
       <ul>
+	<li><a href="#system">System requirements</a></li>
 	<li><a href="#installation">Quick installation guide</a></li>
 	<li><a href="#contents">Explore the contents</a></li>
 	<li><a href="#instructions">Detailed instructions for compiling, extracting, and simulating Kami programs</a></li>
 	<li><a href="#details">Technical details</a>
 	  <ul>
-	    <li><a href="#requirements">System requirements</a></li>
+	    <li><a href="#library">Library requirements</a></li>
 	    <li><a href="#bluespec">Compilation/simulation by Bluespec</a></li>
 	  </ul>
 	</li>
@@ -38,18 +39,35 @@
       run several RISC-V programs.
     </p>
 
+    <h2 id="system">System requirements</h2>
+    <p>Below is the recommended system requirements to run the framework:</p>
+    <ul>
+      <li>8GB RAM: we checked that the framework doesn't compile with
+	6GB RAM. 8GB is required to avoid "out-of-memory" errors. Note
+	that the requirement is based on single-core compilation. If
+	you want to do <span class="code">make</span>
+	using <span class="code">-j</span> option, you will need even
+	larger RAM. We haven't tested how large the RAM should be to
+	use multicore make.
+      </li>
+    </ul>
+
     <h2 id="installation">Quick installation guide</h2>
     <p>If you are running on the virtual machine we provided, then you can just
-      follow the below procedure for a quick tour. The VM meets all requirements
-      we suggested in the <a href="#requirements">requirements</a> section.
+      follow the below procedure for running Kami. The VM meets all requirements
+      we suggested in the <a href="#library">Library requirements</a> section.
     </p>
     <ol>
       <li>If you have just the source tarball, extract it. If you are running
 	the VM, the source code is already extracted
 	at <span class="code">/home/Kami/kami/</span>.
       </li>
-      <li> Do <span class="code">make</span> in the top-level directory. Let's
-	take <span class="code">./</span> as the top-level directory.
+      <li> Run <span class="code">configure.sh</span> in the top-level
+	directory. It should not give any errors.
+      </li>
+      <li> Do <span class="code">make</span>. It is fine to increase the number
+	of cores using <span class="code">-j</span> option, but you will need
+	enough RAM (larger than 8GB) to avoid "out-of-memory" errors.
       </li>
       <li> Do <span class="code">make</span>
 	in <span class="code">./extraction/Ocaml/</span>. It will generate a
@@ -104,6 +122,12 @@
     <h3>Compilation</h3>
 
     <ul>
+      <li> <span class="code">configure.sh</span> exports several
+	Bluespec-related variables and
+	changes <span class="code">PATH</span>. You should set these variables
+	properly by modifying the script. It also sets the stack size as
+	unlimited, which doesn't need any modification.
+      </li>
       <li><span class="code">make</span>: To fully compile library, framework,
 	and example code including all related proofs. It takes around 6 hours
 	with a single-core.
@@ -205,26 +229,27 @@
     
     <h2 id="details">Technical details</h2>
     
-    <h3 id="requirements">System requirements</h3>
+    <h3 id="library">Library requirements</h3>
     <p>Note again that the VM we provided meets all below requirements.</p>
     <ul>
       <li><em>Coq 8.5</em> is required to define and verify Kami modules. We
       tested both <em>Coq 8.5pl2</em> and <em>Coq 8.5pl3</em> working.
       </li>
-      <li><em>OCaml 4.0.2.3</em> and <em>Batteries Library for OCaml 2.5.2</em>
-	are required to generate Bluespec programs from Kami programs.
+      <li><em>OCaml 4.02.3</em> and <em>Batteries Library for OCaml 2.5.2 (or
+	higher)</em> are required to generate Bluespec programs from Kami
+	programs.
       </li>
       <li><em>Bluespec compiler/simulator 2014.07.A</em> is required to run
 	(simulate) Bluespec programs.
       </li>
-      <li><em>RISC-V gcc compiler 6.1.0</em> is required to compile C code to
-	run on multiprocessor.
+      <li><em>32-bit RISC-V gcc compiler 6.1.0 (or higher)</em> is required to
+	compile C code to run on multiprocessor.
       </li>
     </ul>
 
     <h3 id="bluespec">Compilation/simulation by Bluespec</h3>
     <p>In the virtual machine, we provide a temporal license for the Bluespec
-      compiler/simulator that expires on June 15, 2017.
+      compiler/simulator that expires on June 30, 2017.
     </p>
     <p>Here we thank for this kind support by Bluespec.</p>
 
