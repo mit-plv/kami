@@ -132,14 +132,15 @@
 	changes <span class="code">PATH</span>. You should set these variables
 	properly by modifying the script.
       </li>
-      <li>Run <span class="code">make</span> to fully compile library, framework,
-	and example code including all related proofs. It takes around 10 hours
-	with a single-core. A stack limit should be set to "unlimited" to
-	compile everything, so we use <span class="code">ulimit -s
-	unlimited</span> in the Makefile. Some operating systems, however, do 
-        not allow such stack limit manipulation. If you
-	find <span class="code">ulimit</span> does not work, you should manually
-	set the stack size properly depending on your operating system.
+      <li>Run <span class="code">make</span> to fully compile library,
+	framework, and example code including all related proofs. It takes
+	around 7 hours with a single-core. A stack limit should be set to
+	"unlimited" to compile everything, so we use <span class="code">ulimit
+	-s unlimited</span> in <span class="code">Makefile</span>. Some
+	operating systems, however, do not allow such stack limit
+	manipulation. If you find <span class="code">ulimit</span> does not
+	work, you should manually set the stack size properly depending on your
+	operating system.
       </li>
       <li>Run <span class="code">make src</span> to compile just the library and
 	framework. It takes under an hour with a single-core. Note that it does
@@ -176,6 +177,11 @@
       <li>Copy <span class="code">Proc.bsv</span>
 	to <span class="code">./extraction/BluespecFrontEnd/sim/</span>.
       </li>
+      <li>Copy <span class="code">HostSim_2cores.bsv__</span>
+	or <span class="code">HostSim_4cores.bsv__</span>
+	to <span class="code">HostSim.bsv</span>, which depends on how many
+	cores are built in the processor.
+      </li>
       <li>Run <span class="code">make</span> in the
 	directory <span class="code">./extraction/BluespecFrontEnd/sim/</span>. It
 	will generate an executable <span class="code">ProcSim</span> that
@@ -210,8 +216,8 @@
 	  <li>Compile the C code (say test.c) into an assembly code using the
 	    RISC-V gcc compiler as follows (assuming risc-v GCC is in your path,
 	    sometimes you will need <span class="code">-O1</span> to optimize
-	    the risc-v assembly code since we currently restrict the program
-	    size to less than 256): <br />
+	    the risc-v assembly code since we currently restrict the number of
+	    instructions in the program to be less than 256): <br />
 	    <span class="code">
 	      riscv32-unknown-elf-gcc [-O1] -nostartfiles -nodefaultlibs -nostdlib -static -S -T config.ld test.c
 	    </span> <br />
