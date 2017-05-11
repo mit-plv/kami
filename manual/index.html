@@ -35,8 +35,8 @@
     </div>
     <p class="introduction">Thanks for evaluating this artifact! This page
       describes the generic installation procedure for the Kami framework as
-      well as exploring our multiprocessor and memory implementation that can
-      run several RISC-V programs.
+      well as how to explore our multiprocessor and memory implementation,
+      which can run several RISC-V programs.
     </p>
 
     <h2 id="system">System requirements</h2>
@@ -47,8 +47,8 @@
 	that the requirement is based on single-core compilation. If
 	you want to do <span class="code">make</span>
 	using <span class="code">-j</span> option, you will need even
-	larger RAM. We haven't tested how large the RAM should be to
-	use multicore make.
+	more RAM. We haven't tested how much RAM is required for a
+	multicore make.
       </li>
       <li>12GB storage: in order for stable installation, 12GB storage (or more)
 	is required.
@@ -58,7 +58,7 @@
     <h2 id="installation">Quick installation guide</h2>
     <p>If you are running on the virtual machine we provided, then you can just
       follow the below procedure for running Kami. The VM meets all requirements
-      we suggested in the <a href="#library">Library requirements</a> section.
+      we suggest in the <a href="#library">Library requirements</a> section.
     </p>
     <ol>
       <li>If you have just the source tarball, extract it. If you are running
@@ -68,11 +68,11 @@
       <li> Run <span class="code">source configure.sh</span> in the top-level
 	directory. It should not give any errors.
       </li>
-      <li> Do <span class="code">make</span>. It is fine to increase the number
+      <li> Run <span class="code">make</span>. It is fine to increase the number
 	of cores using <span class="code">-j</span> option, but you will need
-	enough RAM (larger than 8GB) to avoid "out-of-memory" errors.
+	enough RAM (more than 8GB) to avoid "out-of-memory" errors.
       </li>
-      <li> Do <span class="code">make</span>
+      <li> Run <span class="code">make</span>
 	in <span class="code">./extraction/Ocaml/</span>. It will generate a
 	pretty-printer <span class="code">Main.native</span>.
       </li>
@@ -82,8 +82,8 @@
       </li>
       <li> Copy <span class="code">Proc.bsv</span>
 	to <span class="code">./extraction/BluespecFrontEnd/sim/</span>, and
-	do <span class="code">make</span> in that directory. It will compile the
-	Bluespec program and generate an
+	run <span class="code">make</span> in that directory. It will compile
+        the Bluespec program and generate an
 	executable <span class="code">ProcSim</span> that simulates the program.
 	It will also generate verilog files.
       </li>
@@ -96,9 +96,10 @@
     <h2 id="contents">Explore the contents</h2>
     <p>Here we explain the entire contents by directory.</p>
     <ul>
-      <li><span class="code">lib</span>: Contains the generic library files that
-	we developed for Kami, extending the standard Coq library,
-	e.g. bit-vectors, decidable finite maps with strings as keys, etc.
+      <li><span class="code">lib</span>: Contains some fairly generic Coq code 
+        for common types and data structures that
+	we developed for Kami,
+	such as bit-vectors, decidable finite maps with strings as keys, etc.
       </li>
       <li><span class="code">src</span>: Contains the source code for syntax,
 	semantics, theorems/properties and proof automation for Kami.
@@ -131,18 +132,18 @@
 	changes <span class="code">PATH</span>. You should set these variables
 	properly by modifying the script.
       </li>
-      <li><span class="code">make</span>: To fully compile library, framework,
+      <li>Run <span class="code">make</span> to fully compile library, framework,
 	and example code including all related proofs. It takes around 10 hours
 	with a single-core. A stack limit should be set to "unlimited" to
-	compile all stuffs, so we use <span class="code">ulimit -s
-	unlimited</span> in Makefile. Some operating systems, however, do not
-	allow such stack limit manipulation. If you
+	compile everything, so we use <span class="code">ulimit -s
+	unlimited</span> in the Makefile. Some operating systems, however, do 
+        not allow such stack limit manipulation. If you
 	find <span class="code">ulimit</span> does not work, you should manually
 	set the stack size properly depending on your operating system.
       </li>
-      <li><span class="code">make src</span>: To compile just the library and
-	framework. It takes within an hour with a single-core. Note that it does
-	not compile examples.
+      <li>Run <span class="code">make src</span> to compile just the library and
+	framework. It takes under an hour with a single-core. Note that it does
+	not compile the examples.
       </li>
     </ul>
 
@@ -155,7 +156,7 @@
       </li>
       <li>To generate Bluespec code from OCaml ASTs:
 	<ol>
-	  <li>Do <span class="code">make</span> in the
+	  <li>Run <span class="code">make</span> in the
 	    directory <span class="code">./extraction/Ocaml/</span>.
 	  </li>
 	  <li>Run <span class="code">./Main.native Proc.bsv</span> to generate
@@ -167,15 +168,15 @@
 
     <h3>Simulation</h3>
 
-    <p>Once <span class="code">Proc.bsv</span> is generated by extraction, do
-      the following to simulate the Bluespec program.
+    <p>Once <span class="code">Proc.bsv</span> has been generated by 
+      extraction, do the following to simulate the Bluespec program.
     </p>
 
     <ol>
       <li>Copy <span class="code">Proc.bsv</span>
 	to <span class="code">./extraction/BluespecFrontEnd/sim/</span>.
       </li>
-      <li>Do <span class="code">make</span> in the
+      <li>Run <span class="code">make</span> in the
 	directory <span class="code">./extraction/BluespecFrontEnd/sim/</span>. It
 	will generate an executable <span class="code">ProcSim</span> that
 	simulates the program. It will also generate verilog files.
@@ -191,7 +192,7 @@
 	the program being executed in line 68
 	in <span class="code">./extraction/Extraction.v</span>. For instance,
 	replacing (IsaRv32PgmMatMulInit, IsaRv32PgmMatMulNormal1,
-	IsaRv32PgmMatMulNormal2, IsaRv32PgmMatMulReport) in line 68 to
+	IsaRv32PgmMatMulNormal2, IsaRv32PgmMatMulReport) in line 68 with
 	(IsaRv32PgmBankerInit, IsaRv32PgmBankerWorker1, IsaRv32PgmBankerWorker2,
 	IsaRv32PgmBankerWorker3) respectively will run the 4-core version of the
 	Banker example.
@@ -200,9 +201,8 @@
 	shown in <span class="code">./examples/IsaRv32PgmExt.v</span>. You
 	should redo all the steps above to build and run the new Benchmark.
       </li>
-      <li>To add a new benchmark, move
-	to <span class="code">./example/isa_rv32/</span> and do the following
-	steps:
+      <li>To add a new benchmark, do the following steps in the directory
+	<span class="code">./example/isa_rv32/</span>:
 	<ol>
 	  <li>Write the C code that you want to compile into Kami (one program
 	    for each core).
@@ -210,8 +210,8 @@
 	  <li>Compile the C code (say test.c) into an assembly code using the
 	    RISC-V gcc compiler as follows (assuming risc-v GCC is in your path,
 	    sometimes you will need <span class="code">-O1</span> to optimize
-	    the risc-v assembly code since we currently restricts the program
-	    size less than 256): <br />
+	    the risc-v assembly code since we currently restrict the program
+	    size to less than 256): <br />
 	    <span class="code">
 	      riscv32-unknown-elf-gcc [-O1] -nostartfiles -nodefaultlibs -nostdlib -static -S -T config.ld test.c
 	    </span> <br />
@@ -227,10 +227,10 @@
 	  </li>
 	  <li>Now add <span class="code">IsaTest.v</span>
 	    to <span class="code">./examples/IsaRv32PgmExt.v</span>. This adds a
-	    new benchmark <span class="code">IsaTest.v</span>
+	    new benchmark <span class="code">IsaTest.v</span>.
 	  </li>
 	  <li>Redo all the steps from the beginning to build and run the new
-	    Benchmark.
+	    benchmark.
 	  </li>
 	</ol>
       </li>
@@ -239,10 +239,12 @@
     <h2 id="details">Technical details</h2>
     
     <h3 id="library">Library requirements</h3>
-    <p>Note again that the VM we provided meets all below requirements.</p>
+    <p>The following tools/libraries are necessary for compilation.
+       The VM that we provided provides all of these dependencies.</p>
     <ul>
       <li><em>Coq 8.5</em> is required to define and verify Kami modules. We
-      tested both <em>Coq 8.5pl2</em> and <em>Coq 8.5pl3</em> working.
+      tested that Kami compiles with both <em>Coq 8.5pl2</em> and 
+      <em>Coq 8.5pl3</em>.
       </li>
       <li><em>OCaml 4.02.3</em> and <em>Batteries Library for OCaml 2.5.2 (or
 	higher)</em> are required to generate Bluespec programs from Kami
@@ -257,10 +259,10 @@
     </ul>
 
     <h3 id="bluespec">Compilation/simulation by Bluespec</h3>
-    <p>In the virtual machine, we provide a temporal license for the Bluespec
+    <p>In the virtual machine, we provide a temporary license for the Bluespec
       compiler/simulator that expires on June 30, 2017.
     </p>
-    <p>Here we thank for this kind support by Bluespec.</p>
+    <p>We thank Bluespec, Inc. for their kind support.</p>
 
     <br />
 
