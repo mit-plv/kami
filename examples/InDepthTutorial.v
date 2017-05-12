@@ -11,10 +11,9 @@ Open Scope string.
 (** Welcome to the Kami tutorial! This tutorial consists of following sections:
  * 1) An introduction to the Kami language and its semantics
  * 2) Refinement / specifications as Kami modules
- * 3) 
+ * _) ...
+ * _) Proving the correctness of a 3-stage pipelined system
  *)
-
-(** Kami has its own syntax, which is very similar to Bluespec. The language uses a shallow embedding in terms of local variable binders. It is built with rich "Notation" in Coq. *)
 
 Variable dataSize: nat.
 
@@ -43,10 +42,10 @@ Definition enq2 :=
 
 Definition stage2 :=
   MODULE {
-    Rule "doSquare" :=
+    Rule "doDouble" :=
       Call data <- deq1();
-      LET squared <- #data * #data;
-      Call enq2(#squared);
+      LET doubled <- $2 * #data;
+      Call enq2(#doubled);
       Retv
   }.
 
@@ -89,13 +88,14 @@ Definition spec :=
     Register "data" : Bit dataSize <- Default
     with Register "acc" : Bit dataSize <- Default
 
-    with Rule "accSquares" :=
+    with Rule "accDoubles" :=
       Read data <- "data";
-      LET squared <- #data * #data;
+      LET doubled <- $2 * #data;
       Read acc <- "acc";
-      LET nacc <- #acc + #squared;
+      LET nacc <- #acc + #doubled;
       Call sendAcc(#nacc);
       Write "acc" <- #nacc;
+      Write "data" <- #data + $1;
       Retv
   }.
 Hint Unfold spec : ModuleDefs.
@@ -189,59 +189,15 @@ Proof.
   - krefl.
 Qed.
 
-Definition spec12 :=
-  MODULE {
-    Register "data" : Bit dataSize <- Default
-
-    with Rule "produceSquare" :=
-      Read data <- "data";
-      LET squared <- #data * #data;
-      Call enq2(#squared);
-      Write "data" <- #data + $1;
-      Retv
-  }.
-Hint Unfold spec12 : ModuleDefs.
-Lemma spec12_PhoasWf: ModPhoasWf spec12.
-Proof. kequiv. Qed.
-Hint Resolve spec12_PhoasWf.
-Lemma spec12_RegsWf: ModRegsWf spec12.
-Proof. kvr. Qed.
-Hint Resolve spec12_RegsWf.
-
-Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
-Hint Unfold impl12 : ModuleDefs.
-Lemma impl12_PhoasWf: ModPhoasWf impl12.
-Proof. kequiv. Qed.
-Hint Resolve impl12_PhoasWf.
-Lemma impl12_RegsWf: ModRegsWf impl12.
-Proof. kvr. Qed.
-Hint Resolve impl12_RegsWf.
-
-Definition impl12Inl: Modules * bool.
-Proof.
-  remember (inlineF impl12) as inlined.
-  kinline_compute_in Heqinlined.
-  match goal with
-  | [H: inlined = ?m |- _] =>
-    exact m
-  end.
-Defined.
-
-Definition impl12_ruleMap (_: RegsT): string -> option string :=
-  "doSquare" |-> "produceSquare"; ||.
-
-Definition impl12_regMap (ir sr: RegsT): Prop.
-  kexistv "data" datav ir (Bit dataSize).
-  kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
-  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
-  refine (hd datav eltv).
-Defined.
-Hint Unfold impl12_ruleMap impl12_regMap: MethDefs.
-
 Section PipelineInv.
   Variables (next: word dataSize -> word dataSize)
             (f: word dataSize -> word dataSize).
 
+  (* NOTE:
+   * for the complete proof, we need the following property:
+   * [forall w1 w2, f w1 = f w2 -> f (next w1) = f (next w2)].
+   * This is weaker than "one-to-one" property of [f].
+   *)
   Fixpoint pipeline_inv (l: list (type (Bit dataSize))) :=
     match l with
     | nil => True
@@ -284,6 +240,52 @@ Section PipelineInv.
   Qed.
 
 End PipelineInv.
+
+Definition spec12 :=
+  MODULE {
+    Register "data" : Bit dataSize <- Default
+
+    with Rule "produceDouble" :=
+      Read data <- "data";
+      LET doubled <- $2 * #data;
+      Call enq2(#doubled);
+      Write "data" <- #data + $1;
+      Retv
+  }.
+Hint Unfold spec12 : ModuleDefs.
+Lemma spec12_PhoasWf: ModPhoasWf spec12.
+Proof. kequiv. Qed.
+Hint Resolve spec12_PhoasWf.
+Lemma spec12_RegsWf: ModRegsWf spec12.
+Proof. kvr. Qed.
+Hint Resolve spec12_RegsWf.
+
+Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
+Hint Unfold impl12 : ModuleDefs.
+Lemma impl12_PhoasWf: ModPhoasWf impl12.
+Proof. kequiv. Qed.
+Hint Resolve impl12_PhoasWf.
+Lemma impl12_RegsWf: ModRegsWf impl12.
+Proof. kvr. Qed.
+Hint Resolve impl12_RegsWf.
+
+Definition impl12Inl: Modules * bool.
+Proof.
+  remember (inlineF impl12) as inlined.
+  kinline_compute_in Heqinlined.
+  match goal with
+  | [H: inlined = ?m |- _] =>
+    exact m
+  end.
+Defined.
+
+Definition impl12_regMap (ir sr: RegsT): Prop.
+  kexistv "data" datav ir (Bit dataSize).
+  kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
+  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
+  refine (hd datav eltv).
+Defined.
+Hint Unfold impl12_regMap: MethDefs.
 
 Definition next12 := fun w : word dataSize => w ^+ $1.
 Opaque next12.
@@ -345,7 +347,7 @@ Proof.
   eapply impl12_inv_ok'; eauto.
 Qed.
 
-Lemma firstTwoStages_ok: impl12 <<== spec12.
+Lemma impl12_ok: impl12 <<== spec12.
 Proof.
   kinline_left inlined.
 
@@ -362,7 +364,7 @@ Proof.
   + kinv_action_dest.
     destruct Hr; dest.
     kinv_regmap_red.
-    eexists; exists (Some "produceSquare"); split; kinv_constr.
+    eexists; exists (Some "produceDouble"); split; kinv_constr.
     * kinv_eq.
       destruct x; [inv H2|reflexivity].
     * destruct x as [|hd tl]; [inv H2|].
@@ -376,11 +378,147 @@ Proof.
   ketrans; [apply impl_intSpec1|].
   ktrans (spec12 ++ fifo2 ++ stage3)%kami.
   - kmodular.
-    + apply firstTwoStages_ok.
+    + apply impl12_ok.
     + krefl.
   - 
 Abort.
 
 
+Definition impl123 := (spec12 ++ nfifo2 ++ stage3)%kami.
+Hint Unfold impl123 : ModuleDefs.
+Lemma impl123_PhoasWf: ModPhoasWf impl123.
+Proof. kequiv. Qed.
+Hint Resolve impl123_PhoasWf.
+Lemma impl123_RegsWf: ModRegsWf impl123.
+Proof. kvr. Qed.
+Hint Resolve impl123_RegsWf.
 
+Definition impl123Inl: Modules * bool.
+Proof.
+  remember (inlineF impl123) as inlined.
+  kinline_compute_in Heqinlined.
+  match goal with
+  | [H: inlined = ?m |- _] =>
+    exact m
+  end.
+Defined.
+
+Definition next123 := fun w : word dataSize => w ^+ $1.
+Definition f123 := fun w : word dataSize => $2 ^* w.
+
+Lemma next_f_consistent:
+  forall w1 w2,
+    f123 w1 = f123 w2 ->
+    f123 (next123 w1) = f123 (next123 w2).
+Proof.
+  unfold f123, next123; intros.
+  rewrite 2! wmult_comm with (x:= $2).
+  repeat rewrite wmult_plus_distr.
+  f_equal.
+  rewrite 2! wmult_comm with (y:= $2).
+  auto.
+Qed.
+Hint Immediate next_f_consistent.
+Opaque next123 f123.
+
+Record impl123_inv (o: RegsT) : Prop :=
+  { datav : fullType type (SyntaxKind (Bit dataSize));
+    Hdatav : M.find "data" o = Some (existT _ _ datav);
+    eltv : fullType type (listEltK (Bit dataSize) type);
+    Heltv : M.find "fifo2"--"elt"%string o = Some (existT _ _ eltv);
+
+    Hinv : pipeline_inv next123 f123 (eltv ++ [$2 ^* datav])
+  }.
+Hint Unfold pipeline_inv: InvDefs.
+
+Ltac impl123_inv_old :=
+  try match goal with
+      | [H: impl123_inv _ |- _] => destruct H
+      end;
+  kinv_red.
+
+Ltac impl123_inv_new :=
+  econstructor;
+  try (findReify; (reflexivity || eassumption); fail);
+  kregmap_clear.
+
+Ltac impl123_inv_tac := impl123_inv_old; impl123_inv_new.
+
+Lemma impl123_inv_ok':
+  forall init n ll,
+    init = initRegs (getRegInits (fst impl123Inl)) ->
+    Multistep (fst impl123Inl) init n ll ->
+    impl123_inv n.
+Proof.
+  induction 2; [kinv_dest_custom impl123_inv_tac; simpl; auto|].
+  
+  kinvert.
+  - mred.
+  - mred.
+  - kinv_dest_custom impl123_inv_tac.
+    change (x ^+ $1) with (next123 x).
+    fold (pipeline_inv next123 f123) in *.
+    change ($2 ^* x) with (f123 x) in Hinv.
+    change ($2 ^* x) with (f123 x).
+    change ($2 ^* next123 x) with (f123 (next123 x)).
+    apply pipeline_inv_enq; auto.
+  - kinv_dest_custom impl123_inv_tac.
+    destruct x; [inv H3|]; subst.
+    fold (pipeline_inv next123 f123) in *.
+    eapply pipeline_inv_deq; eauto.
+Qed.
+
+Lemma impl123_inv_ok:
+  forall o,
+    reachable o (fst impl123Inl) ->
+    impl123_inv o.
+Proof.
+  intros; inv H; inv H0.
+  eapply impl123_inv_ok'; eauto.
+Qed.
+
+Definition impl123_regMap (ir sr: RegsT): Prop.
+  kexistv "data" datav ir (Bit dataSize).
+  kexistv "acc" accv ir (Bit dataSize).
+  kexistnv "fifo2"--"elt" eltv ir (listEltK (Bit dataSize) type).
+  refine (
+      exists sdatav,
+        sr = (["acc" <- existT _ (SyntaxKind (Bit dataSize)) accv]
+              +["data" <- existT _ (SyntaxKind (Bit dataSize)) sdatav]
+             )%fmap /\
+        $2 ^* sdatav = hd ($2 ^* datav) eltv).
+Defined.
+Hint Unfold impl123_regMap: MethDefs.
+
+Lemma impl123_ok: impl123 <<== spec.
+Proof.
+  kinline_left inlined.
+
+  kdecomposeR_nodefs impl123_regMap.
+  kinv_add impl123_inv_ok.
+  kinv_add_end.
+  
+  kinvert.
+  + kinv_action_dest.
+    kinv_regmap_red.
+    eexists; exists None; split; kinv_constr.
+    kinv_eq.
+    destruct x0; auto.
+  + kinv_action_dest.
+    destruct Hr; dest.
+    kinv_regmap_red.
+    eexists; exists (Some "accDoubles"); split; kinv_constr.
+    * simpl; destruct x; [inv H2|].
+      simpl in *; subst.
+      reflexivity.
+    * kinv_eq.
+      destruct x; [inv H2|].
+      simpl in *; subst.
+      reflexivity.
+    * destruct x as [|hd tl]; [inv H2|].
+      change ($2 ^* (x5 ^+ $ (1))) with (f123 (next123 x5)).
+      simpl in Hinv.
+      destruct tl; simpl in *; dest; subst; auto.
+      rewrite H1; auto.
+Qed.
 
