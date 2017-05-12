@@ -1,19 +1,102 @@
-Require Import Kami.Kami.
+Require Import Kami.
+(* begin hide *)
 Require Import Lib.Indexer.
+(* end hide *)
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
 Open Scope string.
 
-(** * Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification *)
+(*+ Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification +*)
 
-(** Welcome to the Kami tutorial! This tutorial consists of following sections:
- * 1) An introduction to the Kami language and its semantics
- * 2) Refinement / specifications as Kami modules
- * _) ...
- * _) Proving the correctness of a 3-stage pipelined system
- *)
+(*! Welcome to the Kami in-depth tutorial! This tutorial consists of following sections:
+ * 1) Kami language: syntax and semantics
+ * 2) Refinement between Kami modules
+ * 3) Verification with Kami: proving the correctness of a 3-stage pipelined system as a case study
+ !*)
+
+(******************************************************************************)
+
+(*+ Language Syntax +*)
+
+(** Kami has its own syntax, which is very similar to Bluespec. Syntax is built with "Notation" in Coq, so module definitions are automatically type-checked internally by the Gallina type-checker. *)
+
+(** A module consists of registers, rules, and methods. *)
+Print Mod.
+
+(** A rule or a method is defined as a sequence of actions. *)
+Print ActionT.
+Print Expr.
+
+(** Rules are executed by a global rule scheduler. Methods are executed by method calls, which can be called by other modules once they are composed. *)
+
+(** Here is a simple Kami module. *)
+Definition kamiModule :=
+  MODULE {
+    Register "data" : Bit 8 <- Default
+
+    with Rule "produce" :=
+      Read data <- "data";
+      Call (MethodSig ("fifo1" -- "enq") (Bit 8): Void)(#data);
+      Write "data" <- #data + $1;
+      Retv
+
+    with Method "setData" (d: Bit 8) : Void :=
+      Write "data" <- #d;
+      Retv
+  }.
+
+(******************************************************************************)
+
+(*+ Semantics +*)
+
+(** Denotational semantics for [Expr] *)
+Print evalExpr.
+
+(** Operational semantics for [Action] *)
+Print SemAction.
+
+(** One-rule-at-a-time semantics *)
+
+(** Label *)
+Print LabelT.
+
+(** Substep: semantics for a single rule or a method *)
+Print Substep.
+
+(** Substeps: for zero-or-one rule and multiple methods *)
+Print SubstepsInd.
+
+(** Step: lifted from [SubstepsInd], all internal communication is hidden *)
+Print StepInd.
+
+(** Multistep: (Step)^* *)
+Print Multistep.
+
+(** Behavior: [Multistep] started from the initial state *)
+Print Behavior.
+
+(******************************************************************************)
+
+(*+ Trace Refinement +*)
+
+Print traceRefines.
+
+(** Reflexivity and transitivity *)
+Check traceRefines_refl.
+Check traceRefines_trans.
+
+(** Commutativity and associativity w.r.t. module combination *)
+Check traceRefines_comm.
+Check traceRefines_assoc_1.
+Check traceRefines_assoc_2.
+
+(******************************************************************************)
+
+(*+ Case study: a 3-stage pipelined system +*)
+
+(*! The first stage !*)
 
 Variable dataSize: nat.
 
@@ -35,6 +118,10 @@ Definition stage1 :=
 Hint Unfold enq1 : MethDefs.
 Hint Unfold stage1 : ModuleDefs.
 
+(******************************************************************************)
+
+(*! The second stage !*)
+
 Definition deq1 :=
   MethodSig ("fifo1" -- "deq") (): Bit dataSize.
 Definition enq2 :=
@@ -51,6 +138,10 @@ Definition stage2 :=
 
 Hint Unfold deq1 enq2 : MethDefs.
 Hint Unfold stage2 : ModuleDefs.
+
+(******************************************************************************)
+
+(*! The third stage !*)
 
 Definition deq2 :=
   MethodSig ("fifo2" -- "deq") (): Bit dataSize.
@@ -73,6 +164,10 @@ Definition stage3 :=
 Hint Unfold deq2 sendAcc : MethDefs.
 Hint Unfold stage3 : ModuleDefs.
 
+(******************************************************************************)
+
+(*! Fifos: the most fundamental hardware component for asynchronicity !*)
+
 Require Import Fifo.
 
 Definition fifo1 := simpleFifo "fifo1" 8 (Bit dataSize).
@@ -82,6 +177,10 @@ Hint Unfold fifo1 fifo2 : ModuleDefs.
 Definition impl :=
   (stage1 ++ fifo1 ++ stage2 ++ fifo2 ++ stage3)%kami.
 Hint Unfold impl : ModuleDefs.
+
+(******************************************************************************)
+
+(*! What is the spec of a pipelined system? !*)
 
 Definition spec :=
   MODULE {
@@ -100,7 +199,11 @@ Definition spec :=
   }.
 Hint Unfold spec : ModuleDefs.
 
-(** Well-formedness *)
+(******************************************************************************)
+
+(*! Well-formedness (for some properties) !*)
+
+(** PHOAS well-formedness *)
 Lemma stage1_PhoasWf: ModPhoasWf stage1.
 Proof. kequiv. Qed.
 Lemma stage2_PhoasWf: ModPhoasWf stage2.
@@ -108,11 +211,11 @@ Proof. kequiv. Qed.
 Lemma stage3_PhoasWf: ModPhoasWf stage3.
 Proof. kequiv. Qed.
 Hint Resolve stage1_PhoasWf stage2_PhoasWf stage3_PhoasWf.
-
 Lemma impl_PhoasWf: ModPhoasWf impl.
 Proof. kequiv. Qed.
 Hint Resolve impl_PhoasWf.
 
+(** Well-formedness for valid register uses *)
 Lemma stage1_RegsWf: ModRegsWf stage1.
 Proof. kvr. Qed.
 Lemma stage2_RegsWf: ModPhoasWf stage2.
@@ -125,13 +228,18 @@ Lemma impl_RegsWf: ModRegsWf impl.
 Proof. kvr. Qed.
 Hint Resolve impl_RegsWf.
 
-(** * Correctness proof *)
+(******************************************************************************)
+
+(*+ Correctness proof +*)
+
+(* begin hide *)
 Require Import Kami.ModuleBoundEx.
+(* end hide *)
 
 Theorem impl_ok: impl <<== spec.
 Abort.
 
-(* TODO: hide *)
+(* begin hide *)
 Ltac kmodular :=
   try (unfold MethsT; rewrite <-SemFacts.idElementwiseId);
   apply traceRefines_modular_interacting with
@@ -153,27 +261,33 @@ Ltac kmodularn :=
      | kdisj_dms_ex O | kdisj_cms_ex O | kdisj_dms_ex O | kdisj_cms_ex O
      | knoninteracting | knoninteracting
      | | ].
+(* end hide *)
 
-(** Changing fifos to native fifos *)
+(******************************************************************************)
+
+(*+ Substituting fifos to native-fifos +*)
+
 Require Import NativeFifo SimpleFifoCorrect.
            
 Definition nfifo1 :=
   @nativeSimpleFifo "fifo1" (Bit dataSize) Default.
 Definition nfifo2 :=
   @nativeSimpleFifo "fifo2" (Bit dataSize) Default.
-Hint Unfold nfifo1 nfifo2 : ModuleDefs.
 
 Definition intSpec1 :=
   ((stage1 ++ nfifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
 Hint Unfold intSpec1 : ModuleDefs.
 
+(* Some hints registered here *)
+(* begin hide *)
+Hint Unfold nfifo1 nfifo2 : ModuleDefs.
 Lemma intSpec1_PhoasWf: ModPhoasWf intSpec1.
 Proof. kequiv. Qed.
 Hint Resolve intSpec1_PhoasWf.
-
 Lemma intSpec1_RegsWf: ModRegsWf intSpec1.
 Proof. kvr. Qed.
 Hint Resolve intSpec1_RegsWf.
+(* end hide *)
 
 Theorem impl_intSpec1: impl <<== intSpec1.
 Proof.
@@ -189,15 +303,14 @@ Proof.
   - krefl.
 Qed.
 
+(******************************************************************************)
+
+(*+ Generic invariants for pipelined systems +*)
+
 Section PipelineInv.
   Variables (next: word dataSize -> word dataSize)
             (f: word dataSize -> word dataSize).
 
-  (* NOTE:
-   * for the complete proof, we need the following property:
-   * [forall w1 w2, f w1 = f w2 -> f (next w1) = f (next w2)].
-   * This is weaker than "one-to-one" property of [f].
-   *)
   Fixpoint pipeline_inv (l: list (type (Bit dataSize))) :=
     match l with
     | nil => True
@@ -211,6 +324,8 @@ Section PipelineInv.
       end
     end.
 
+  (** Inversion theorems: for [enq] and [deq] *)
+  
   Lemma pipeline_inv_enq:
     forall e d,
       pipeline_inv (e ++ [f d]) ->
@@ -231,15 +346,31 @@ Section PipelineInv.
   Qed.
 
   Lemma pipeline_inv_deq:
-    forall e h d,
-      pipeline_inv ((h :: e) ++ [d]) ->
-      pipeline_inv (e ++ [d]).
+    forall e h,
+      pipeline_inv (h :: e) ->
+      pipeline_inv e.
   Proof.
     induction e; simpl; intros; auto.
     dest; auto.
   Qed.
 
 End PipelineInv.
+
+(******************************************************************************)
+
+(*+ Mergine the first two stages +*)
+
+Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
+
+(* begin hide *)
+Hint Unfold impl12 : ModuleDefs.
+Lemma impl12_PhoasWf: ModPhoasWf impl12.
+Proof. kequiv. Qed.
+Hint Resolve impl12_PhoasWf.
+Lemma impl12_RegsWf: ModRegsWf impl12.
+Proof. kvr. Qed.
+Hint Resolve impl12_RegsWf.
+(* end hide *)
 
 Definition spec12 :=
   MODULE {
@@ -252,6 +383,8 @@ Definition spec12 :=
       Write "data" <- #data + $1;
       Retv
   }.
+
+(* begin hide *)
 Hint Unfold spec12 : ModuleDefs.
 Lemma spec12_PhoasWf: ModPhoasWf spec12.
 Proof. kequiv. Qed.
@@ -259,15 +392,14 @@ Hint Resolve spec12_PhoasWf.
 Lemma spec12_RegsWf: ModRegsWf spec12.
 Proof. kvr. Qed.
 Hint Resolve spec12_RegsWf.
+(* end hide *)
 
-Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
-Hint Unfold impl12 : ModuleDefs.
-Lemma impl12_PhoasWf: ModPhoasWf impl12.
-Proof. kequiv. Qed.
-Hint Resolve impl12_PhoasWf.
-Lemma impl12_RegsWf: ModRegsWf impl12.
-Proof. kvr. Qed.
-Hint Resolve impl12_RegsWf.
+Lemma impl12_ok: impl12 <<== spec12.
+Abort.
+
+(******************************************************************************)
+
+(*+ Inlining +*)
 
 Definition impl12Inl: Modules * bool.
 Proof.
@@ -279,13 +411,9 @@ Proof.
   end.
 Defined.
 
-Definition impl12_regMap (ir sr: RegsT): Prop.
-  kexistv "data" datav ir (Bit dataSize).
-  kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
-  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
-  refine (hd datav eltv).
-Defined.
-Hint Unfold impl12_regMap: MethDefs.
+(******************************************************************************)
+
+(*+ Proving the invariant for [impl12] +*)
 
 Definition next12 := fun w : word dataSize => w ^+ $1.
 Opaque next12.
@@ -347,6 +475,18 @@ Proof.
   eapply impl12_inv_ok'; eauto.
 Qed.
 
+(******************************************************************************)
+
+(*+ Proving refinement by decomposition  +*)
+
+Definition impl12_regMap (ir sr: RegsT): Prop.
+  kexistv "data" datav ir (Bit dataSize).
+  kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
+  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
+  refine (hd datav eltv).
+Defined.
+Hint Unfold impl12_regMap: MethDefs.
+
 Lemma impl12_ok: impl12 <<== spec12.
 Proof.
   kinline_left inlined.
@@ -373,6 +513,10 @@ Proof.
       destruct tl; dest; subst; simpl in *; dest; subst; auto.
 Qed.
 
+(******************************************************************************)
+
+(*+ What we've done so far +*)
+
 Theorem impl_ok: impl <<== spec.
 Proof.
   ketrans; [apply impl_intSpec1|].
@@ -380,11 +524,16 @@ Proof.
   - kmodular.
     + apply impl12_ok.
     + krefl.
-  - 
+  - (* ?! *)
 Abort.
 
+(******************************************************************************)
+
+(*+ Pipeline merging, once more +*)
 
 Definition impl123 := (spec12 ++ nfifo2 ++ stage3)%kami.
+
+(* begin hide *)
 Hint Unfold impl123 : ModuleDefs.
 Lemma impl123_PhoasWf: ModPhoasWf impl123.
 Proof. kequiv. Qed.
@@ -392,6 +541,7 @@ Hint Resolve impl123_PhoasWf.
 Lemma impl123_RegsWf: ModRegsWf impl123.
 Proof. kvr. Qed.
 Hint Resolve impl123_RegsWf.
+(* end hide *)
 
 Definition impl123Inl: Modules * bool.
 Proof.
@@ -406,6 +556,7 @@ Defined.
 Definition next123 := fun w : word dataSize => w ^+ $1.
 Definition f123 := fun w : word dataSize => $2 ^* w.
 
+(** We need this consistency lemma for this time. *)
 Lemma next_f_consistent:
   forall w1 w2,
     f123 w1 = f123 w2 ->
@@ -520,5 +671,24 @@ Proof.
       simpl in Hinv.
       destruct tl; simpl in *; dest; subst; auto.
       rewrite H1; auto.
+Qed.
+
+(******************************************************************************)
+
+(*+ The final proof +*)
+
+Theorem impl_ok: impl <<== spec.
+Proof.
+  ketrans; [apply impl_intSpec1|].
+  ktrans (spec12 ++ fifo2 ++ stage3)%kami.
+  - kmodular.
+    + apply impl12_ok.
+    + krefl.
+  - ktrans (spec12 ++ nfifo2 ++ stage3)%kami.
+    + kmodular; [krefl|].
+      kmodular; [|krefl].
+      apply sfifo_refines_nsfifo.
+    + unfold MethsT; rewrite <-SemFacts.idElementwiseId.
+      apply impl123_ok.
 Qed.
 
