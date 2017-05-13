@@ -21,56 +21,79 @@
     </div>
     <div id="tabs">
       <ul>
+	<li><a href="#before">Before getting started</a></li>
 	<li><a href="#system">System requirements</a></li>
 	<li><a href="#installation">Quick installation guide</a></li>
 	<li><a href="#contents">Explore the contents</a></li>
 	<li><a href="#instructions">Detailed instructions for compiling, extracting, and simulating Kami programs</a></li>
-	<li><a href="#details">Technical details</a>
-	  <ul>
-	    <li><a href="#library">Library requirements</a></li>
-	    <li><a href="#bluespec">Compilation/simulation by Bluespec</a></li>
-	  </ul>
-	</li>
+	<li><a href="#details">Technical details</a></li>
       </ul>
     </div>
+
+    <hr />
+    <h2 id="before">Before getting started</h2>
     <p class="introduction">Thanks for evaluating this artifact! This page
       describes the generic installation procedure for the Kami framework as
       well as how to explore our multiprocessor and memory implementation,
       which can run several RISC-V programs.
     </p>
 
+    <h3>How to run the artifact</h3>
+    <p>You should first choose whether to run the artifact on a virtual machine
+      (VM) we provide or just with the source code. You should manually set
+      proper environment (following <a href="#library">Library requirements</a>)
+      if you choose the source tarball. The VM meets all requirements we
+      require.
+    </p>
+
+    <h3>What to evaluate</h3>
+    <p>The evaluation basically involves checking what we claim in our paper.
+      It includes following items:
+    </p>
+    <ul>
+      <li>A Kami implementation of multiprocessor and memory.</li>
+      <li>A correctness proof for the implementation.</li>
+      <li>Bluespec code generation from the Kami implementation.</li>
+      <li>Simulation of the Bluespec code.</li>
+    </ul>
+    <p>Note that we could not provide the FPGA-synthesis procedure from Bluespec
+      programs, which is also claimed in our paper, because it requires an
+      actual FPGA board.
+    </p>
+
+    <hr />
     <h2 id="system">System requirements</h2>
     <p>Below is the recommended system requirements to run the framework:</p>
     <ul>
-      <li>8GB RAM: we checked that the framework doesn't compile with
-	6GB RAM. 8GB is required to avoid "out-of-memory" errors. Note
-	that the requirement is based on single-core compilation. If
-	you want to do <span class="code">make</span>
-	using <span class="code">-j</span> option, you will need even
-	more RAM. We haven't tested how much RAM is required for a
-	multicore make.
+      <li>8GB RAM: we checked that the framework doesn't compile with 6GB
+	RAM. 8GB is required to avoid "out-of-memory" errors. Note that the
+	requirement is based on single-core compilation. If you want to
+	do <span class="code">make</span> using <span class="code">-j</span>
+	option, you will need even more RAM. For instance, 12GB is required for
+	dual-core compilation.
       </li>
       <li>12GB storage: in order for stable installation, 12GB storage (or more)
 	is required.
       </li>
     </ul>
 
+    <hr />
     <h2 id="installation">Quick installation guide</h2>
     <p>If you are running on the virtual machine we provided, then you can just
-      follow the below procedure for running Kami. The VM meets all requirements
-      we suggest in the <a href="#library">Library requirements</a> section.
+      follow the below procedure for running Kami.
     </p>
     <ol>
-      <li>If you have just the source tarball, extract it. If you are running
-	the VM, the source code is already extracted
-	at <span class="code">/home/Kami/kami/</span>.
+      <li>Go to <span class="code">/home/Kami/kami/</span>, where the source
+	code is extracted.
       </li>
-      <li> Run <span class="code">source configure.sh</span> in the top-level
-	directory. It should not give any errors.
+      <li> Run <span class="code">source configure.sh</span>. It is for setting
+	some Bluespec-related environmental variables.
       </li>
       <li> Run <span class="code">make</span>. It is fine to increase the number
 	of cores using <span class="code">-j</span> option, but you will need
-	enough RAM (more than 8GB) to avoid "out-of-memory" errors.
+	enough RAM (more than 8GB) to avoid "out-of-memory" errors. Source code
+	is pre-compiled first, but you will need to
+	run <span class="code">make</span> again when you change the code.
       </li>
       <li> Run <span class="code">make</span>
 	in <span class="code">./extraction/Ocaml/</span>. It will generate a
@@ -85,7 +108,7 @@
 	run <span class="code">make</span> in that directory. It will compile
         the Bluespec program and generate an
 	executable <span class="code">ProcSim</span> that simulates the program.
-	It will also generate verilog files.
+	It will also generate Verilog files.
       </li>
       <li> Run <span class="code">ProcSim</span>
 	in <span class="code">./extraction/BluespecFrontEnd/sim/</span> to check
@@ -93,6 +116,7 @@
       </li>
     </ol>
     
+    <hr />
     <h2 id="contents">Explore the contents</h2>
     <p>Here we explain the entire contents by directory.</p>
     <ul>
@@ -122,6 +146,7 @@
       </li>
     </ul>
 
+    <hr />
     <h2 id="instructions">Detailed instructions for compiling, extracting, and simulating Kami programs</h2>
 
     <h3>Compilation</h3>
@@ -134,13 +159,13 @@
       </li>
       <li>Run <span class="code">make</span> to fully compile library,
 	framework, and example code including all related proofs. It takes
-	around 7 hours with a single-core. A stack limit should be set to
-	"unlimited" to compile everything, so we use <span class="code">ulimit
-	-s unlimited</span> in <span class="code">Makefile</span>. Some
-	operating systems, however, do not allow such stack limit
-	manipulation. If you find <span class="code">ulimit</span> does not
-	work, you should manually set the stack size properly depending on your
-	operating system.
+	around 8 hours with a single-core, 6.5 hours with dual-cores. A stack
+	limit should be set to "unlimited" to compile everything, so we
+	use <span class="code">ulimit -s unlimited</span>
+	in <span class="code">Makefile</span>. Some operating systems, however,
+	do not allow such stack limit manipulation. If you
+	find <span class="code">ulimit</span> does not work, you should manually
+	set the stack size properly depending on your operating system.
       </li>
       <li>Run <span class="code">make src</span> to compile just the library and
 	framework. It takes under an hour with a single-core. Note that it does
@@ -158,7 +183,8 @@
       <li>To generate Bluespec code from OCaml ASTs:
 	<ol>
 	  <li>Run <span class="code">make</span> in the
-	    directory <span class="code">./extraction/Ocaml/</span>.
+	    directory <span class="code">./extraction/Ocaml/</span>. It should
+	    take within a minute.
 	  </li>
 	  <li>Run <span class="code">./Main.native Proc.bsv</span> to generate
 	  the Bluespec (.bsv) program.
@@ -185,7 +211,8 @@
       <li>Run <span class="code">make</span> in the
 	directory <span class="code">./extraction/BluespecFrontEnd/sim/</span>. It
 	will generate an executable <span class="code">ProcSim</span> that
-	simulates the program. It will also generate verilog files.
+	simulates the program and Verilog files as well. It takes around 15
+	minutes.
       </li>
       <li>Run <span class="code">ProcSim</span> to check the simulation.
       </li>
@@ -242,6 +269,7 @@
       </li>
     </ul>
     
+    <hr />
     <h2 id="details">Technical details</h2>
     
     <h3 id="library">Library requirements</h3>
