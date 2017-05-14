@@ -17,7 +17,7 @@
   <body>
     <div id="header">
       <h1 class="title">Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification</h1>
-      <h3 class="subtitle">ICFP 2017 Artifact Evaluation</h3>
+      <h3 class="subtitle"><a href="http://icfp17.sigplan.org/track/icfp-2017-Artifacts">ICFP 2017 Artifact Evaluation</a></h3>
     </div>
     <div id="tabs">
       <ul>
@@ -35,26 +35,25 @@
     <p class="introduction">Thanks for evaluating this artifact! This page
       describes the generic installation procedure for the Kami framework as
       well as how to explore our multiprocessor and memory implementation,
-      which can run several RISC-V programs.
+      which can run several <a href="https://riscv.org/">RISC-V</a> programs.
     </p>
 
     <h3>How to run the artifact</h3>
     <p>You should first choose whether to run the artifact on a virtual machine
-      (VM) we provide or just with the source code. You should manually set
-      proper environment (following <a href="#library">Library requirements</a>)
-      if you choose the source tarball. The VM meets all requirements we
-      require.
+      (VM) we provide or just with the source code. You should manually set up
+      your environment (following <a href="#library">Library requirements</a>)
+      if you choose the source tarball. The VM is already fully configured.
     </p>
 
     <h3>What to evaluate</h3>
     <p>The evaluation basically involves checking what we claim in our paper.
-      It includes following items:
+      It includes the following items:
     </p>
     <ul>
-      <li>A Kami implementation of multiprocessor and memory.</li>
-      <li>A correctness proof for the implementation.</li>
-      <li>Bluespec code generation from the Kami implementation.</li>
-      <li>Simulation of the Bluespec code.</li>
+      <li>A Kami implementation of multiprocessor and memory</li>
+      <li>A correctness proof for the implementation</li>
+      <li>Bluespec code generation from the Kami implementation</li>
+      <li>Simulation of the Bluespec code</li>
     </ul>
     <p>Note that we could not provide the FPGA-synthesis procedure from Bluespec
       programs, which is also claimed in our paper, because it requires an
@@ -68,11 +67,11 @@
       <li>8GB RAM: we checked that the framework doesn't compile with 6GB
 	RAM. 8GB is required to avoid "out-of-memory" errors. Note that the
 	requirement is based on single-core compilation. If you want to
-	do <span class="code">make</span> using <span class="code">-j</span>
+	do <span class="code">make</span> using the <span class="code">-j</span>
 	option, you will need even more RAM. For instance, 12GB is required for
 	dual-core compilation.
       </li>
-      <li>12GB storage: in order for stable installation, 12GB storage (or more)
+      <li>12GB storage: for stable installation, 12GB storage (or more)
 	is required.
       </li>
     </ul>
@@ -86,13 +85,13 @@
       <li>Go to <span class="code">/home/Kami/kami/</span>, where the source
 	code is extracted.
       </li>
-      <li> Run <span class="code">source configure.sh</span>. It is for setting
+      <li> Run <span class="code">source configure.sh</span>, to set
 	some Bluespec-related environmental variables.
       </li>
       <li> Run <span class="code">make</span>. It is fine to increase the number
-	of cores using <span class="code">-j</span> option, but you will need
-	enough RAM (more than 8GB) to avoid "out-of-memory" errors. Source code
-	is pre-compiled first, but you will need to
+	of cores using the <span class="code">-j</span> option, but you will need
+	enough RAM (more than 8GB) to avoid "out-of-memory" errors. The source code
+	precompiled, but you will need to
 	run <span class="code">make</span> again when you change the code.
       </li>
       <li> Run <span class="code">make</span>
@@ -126,7 +125,7 @@
 	such as bit-vectors, decidable finite maps with strings as keys, etc.
       </li>
       <li><span class="code">src</span>: Contains the source code for syntax,
-	semantics, theorems/properties and proof automation for Kami.
+	semantics, theorems/properties, and proof automation for Kami.
       </li>
       <li><span class="code">examples</span>: Contains the multiprocessor
 	implementation, spec, and proof of correctness. Contains both the
@@ -159,7 +158,7 @@
       </li>
       <li>Run <span class="code">make</span> to fully compile library,
 	framework, and example code including all related proofs. It takes
-	around 8 hours with a single-core, 6.5 hours with dual-cores. A stack
+	around 8 hours with a single core, 6.5 hours with dual cores. A stack
 	limit should be set to "unlimited" to compile everything, so we
 	use <span class="code">ulimit -s unlimited</span>
 	in <span class="code">Makefile</span>. Some operating systems, however,
@@ -168,7 +167,7 @@
 	set the stack size properly depending on your operating system.
       </li>
       <li>Run <span class="code">make src</span> to compile just the library and
-	framework. It takes under an hour with a single-core. Note that it does
+	framework. It takes under an hour with a single core. Note that it does
 	not compile the examples.
       </li>
     </ul>
@@ -184,7 +183,7 @@
 	<ol>
 	  <li>Run <span class="code">make</span> in the
 	    directory <span class="code">./extraction/Ocaml/</span>. It should
-	    take within a minute.
+	    finish within a minute.
 	  </li>
 	  <li>Run <span class="code">./Main.native Proc.bsv</span> to generate
 	  the Bluespec (.bsv) program.
@@ -285,10 +284,13 @@
 	programs.
       </li>
       <li><em>Bluespec compiler/simulator 2014.07.A</em> is required to run
-	(simulate) Bluespec programs.
+	(simulate) Bluespec programs.  Unfortunately, Bluespec is closed-source,
+        but our VM includes a specially licensed version for this artifact
+        evaluation, and in general free licenses are available from
+        <a href="http://bluespec.com/">Bluespec, Inc.</a> for academic use.
       </li>
       <li><em>32-bit RISC-V gcc compiler 6.1.0 (or higher)</em> is required to
-	compile C code to run on multiprocessor.
+	compile C code to run on our multiprocessor.
       </li>
     </ul>
 
