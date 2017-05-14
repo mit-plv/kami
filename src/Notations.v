@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Lib.Struct Lib.Word Lib.ilist Lib.Indexer.
+Require Import Lib.Struct Lib.Word Lib.ilist Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax.
 Require Import Kami.ParametricSyntax.
 
@@ -456,30 +456,30 @@ Notation "'Readi' name : kind <- reg ; cont " :=
             (SyntaxKind kind) (fun name => cont))
     (at level 12, right associativity, name at level 0) : kami_gen_scope.
 Notation "'WriteN' reg : kind <- expr ; cont " :=
-  (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
+  (@GWriteReg _ _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'WriteNi' reg : kind <- expr ; cont " :=
-  (@GWriteReg _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
+  (@GWriteReg _ _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl)) kind expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' reg <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx false (Build_NameRec reg eq_refl)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' reg : kind <- expr ; cont " :=
-  (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl))
+  (@GWriteReg _ _ _ (Build_NameRecIdx false (Build_NameRec reg eq_refl))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' { reg | pf } <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx false (Build_NameRec reg pf)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Write' { reg | pf } : kind <- expr ; cont " :=
-  (@GWriteReg _ _ (Build_NameRecIdx false (Build_NameRec reg pf))
+  (@GWriteReg _ _ _ (Build_NameRecIdx false (Build_NameRec reg pf))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Writei' reg <- expr ; cont " :=
   (GWriteReg (Build_NameRecIdx true (Build_NameRec reg eq_refl)) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'Writei' reg : kind <- expr ; cont " :=
-  (@GWriteReg _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl))
+  (@GWriteReg _ _ _ (Build_NameRecIdx true (Build_NameRec reg eq_refl))
               (SyntaxKind kind) expr%kami_expr cont)
     (at level 12, right associativity, reg at level 0) : kami_gen_scope.
 Notation "'If' cexpr 'then' tact 'else' fact 'as' name ; cont " :=
@@ -503,9 +503,42 @@ Delimit Scope kami_gen_scope with kami_gen.
 
 (** Notation for meta-modules *)
 
+Fixpoint multiMetaRule (f: nat -> MetaRule) n :=
+  match n with
+  | 0 => nil
+  | S m => f (S m) :: multiMetaRule f m
+  end.
+
+Lemma string_of_nat_no_indexSymbol: forall s, index 0 indexSymbol (string_of_nat s) = None.
+Proof.
+  induction s; auto; simpl.
+  rewrite IHs.
+  reflexivity.
+Qed.
+
+Section AddIndex.
+  Variable name: string.
+  Local Notation "^ s" := (name -- (string_of_nat s)) (at level 0).
+  Hypothesis Hname: index 0 indexSymbol name = None.
+  Lemma noIndexSymbol:
+    forall s, index 0 indexSymbol (^s) = None.
+  Proof.
+    unfold withPrefix; intros.
+    pose proof (string_of_nat_no_indexSymbol s) as H.
+    apply index_not_in; apply index_not_in in H; apply index_not_in in Hname.
+    intro Hx; elim H; clear H.
+    apply S_in_app_or in Hx; destruct Hx; auto.
+    apply S_in_app_or in H; destruct H.
+    - unfold prefixSymbol in *; simpl in *.
+      inversion H; inversion H0.
+    - elim Hname; auto.
+  Qed.
+End AddIndex.
+
 Inductive MetaModuleElt :=
 | MMERegister (_ : MetaReg)
 | MMERule (_ : MetaRule)
+| MMEMultiRule (_: list MetaRule)
 | MMEMeth (_ : MetaMeth).
 
 Inductive InMetaModule :=
@@ -522,6 +555,7 @@ Fixpoint makeMetaModule (im : InMetaModule) :=
     match e with
     | MMERegister mreg => Build_MetaModule (mreg :: iregs) irules imeths
     | MMERule mrule => Build_MetaModule iregs (mrule :: irules) imeths
+    | MMEMultiRule mrules => Build_MetaModule iregs (mrules ++ irules) imeths 
     | MMEMeth mmeth => Build_MetaModule iregs irules (mmeth :: imeths)
     end
   end.
@@ -689,6 +723,36 @@ Notation "'Repeat' 'Rule' 'till' n 'with' sz 'by' name := c" :=
                     {| nameVal := name; goodName := eq_refl |}
                     (getNatListToN_NoDup n)))
      (at level 0, name at level 0) : kami_meta_scope.
+
+Notation "'MultiRule' 'until' x 'as' i 'by' name := c" :=
+  (MMEMultiRule (multiMetaRule (fun i => OneRule (fun ty => c%kami_sin : SinActionT ty Void)
+                                                 {| nameVal := name -- (string_of_nat i);
+                                                    goodName := noIndexSymbol name eq_refl i |})
+                               x))
+    (at level 0, name at level 0) : kami_meta_scope.
+
+Notation "'Repeat' 'MultiRule' 'until' x 'as' i 'till' n 'by' name := c" :=
+  (MMEMultiRule (multiMetaRule (fun i => (RepRule string_of_nat
+                                                  string_of_nat_into
+                                                  natToVoid
+                                                  withIndex_index_eq
+                                                  (fun ty => c%kami_gen : GenActionT Void ty Void)
+                                                  {| nameVal := name -- (string_of_nat i);
+                                                     goodName := noIndexSymbol name eq_refl i |}
+                                                  (getNatListToN_NoDup n))) x))
+    (at level 0, name at level 0) : kami_meta_scope.
+
+Notation "'Repeat' 'MultiRule' 'until' x 'as' i 'till' n 'with' sz 'by' name := c" :=
+  (MMEMultiRule (multiMetaRule (fun i => (RepRule string_of_nat
+                                                  string_of_nat_into
+                                                  (natToWordConst sz)
+                                                  withIndex_index_eq
+                                                  (fun ty => c%kami_gen : GenActionT (Bit sz) ty Void)
+                                                  {| nameVal := name -- (string_of_nat i);
+                                                     goodName := noIndexSymbol name eq_refl i |}
+                                                  (getNatListToN_NoDup n))) x))
+    (at level 0, name at level 0) : kami_meta_scope.
+
 
 Delimit Scope kami_meta_scope with kami_meta.
 
