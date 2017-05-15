@@ -52,6 +52,13 @@
 	(following <a href="#library">Library requirements</a>) if you choose
 	the source tarball. The VM is already fully configured.
       </li>
+      <li>While importing the VM (<span class="code">.ova</span>), make sure
+	your virtualizer also imports the eth0 MAC address from the file. It is
+	necessary to run the Bluespec simulator. If the virtualizer does not
+	properly imports the address, you should manually change the address
+	to <span class="code">08:00:27:78:4b:d0</span> before executing the
+	machine.
+      </li>
       <li>Here is the user ID/password to log into the VM:
 	<ul>
 	  <li>User ID: <span class="code">kami</span></li>
@@ -126,7 +133,12 @@
       </li>
       <li> Run <span class="code">ProcSim</span>
 	in <span class="code">./extraction/BluespecFrontEnd/sim/</span> to check
-	the simulation.
+	the simulation. For the default example, the expected output is as
+	follows: <br />
+	<span class="code">Got the message: (0, 1)</span><br />
+	<span class="code">Got the message: (0, 3)</span><br />
+	<span class="code">Got the message: (0, 2)</span><br />
+	<span class="code">Got the message: (16, 4)</span>
       </li>
     </ol>
     
@@ -228,7 +240,17 @@
 	simulates the program and Verilog files as well. It takes around 15
 	minutes.
       </li>
-      <li>Run <span class="code">ProcSim</span> to check the simulation.
+      <li>Run <span class="code">ProcSim</span> to check the simulation. If you
+	run the default example (if you didn't change any Coq code), the
+	expected output is as follows: <br />
+	<span class="code">Got the message: (0, 1)</span><br />
+	<span class="code">Got the message: (0, 3)</span><br />
+	<span class="code">Got the message: (0, 2)</span><br />
+	<span class="code">Got the message: (16, 4)</span><br />
+
+	If you run some other benchmarks by following the next section, then
+	expected outputs are described in
+	corresponding <span class="code">./examples/isa_rv32/*.c</span> files.
       </li>
     </ol>
 
