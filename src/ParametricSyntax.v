@@ -2202,7 +2202,7 @@ Section InRepeatSinMod.
   Qed.
 End InRepeatSinMod.
 
-Definition flattenMeta m := MetaMod (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
+Definition flattenMeta m := (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
 
 Lemma EquivList_In_iff A l1 l2: (forall x: A, In x l1 <-> In x l2) <-> (EquivList l1 l2).
 Proof.
@@ -2765,7 +2765,7 @@ Section flattenRefines.
   Variable m: MetaModules.
   Variable noDupRegs:  NoDup (map getMetaRegName (metaModulesRegs m)).
 
-  Lemma flattenMetaEquiv: flattenMeta m <|=|> m.
+  Lemma flattenMetaEquiv: MetaMod (flattenMeta m) <|=|> m.
   Proof.
     unfold flattenMeta.
     apply permute_equivalent.

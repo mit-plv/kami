@@ -6,350 +6,72 @@ Require Import Ex.L1Cache Ex.MemDir Ex.ChildParent.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-Open Scope string.
+Ltac cacheCbv H :=
+  cbv
+    [ ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
+      ChildParent.Offset ChildParent.Line
+      ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
+      ChildParent.FromP ChildParent.ToC
+      ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
+      ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
+      
+      L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
+      L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
+      L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
+      L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
+      L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
+      L1Cache.lineWrite L1Cache.tagWrite
+      L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
+      L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
+      L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
+      L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
+      L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
+      L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
 
-Ltac simplMod :=
-  match goal with
-    | m :=
-  ?modM: MetaModule |- _ =>
-  let mEq := fresh "mEq" in
-  let HeqmEq := fresh "HeqmEq" in
-  remember m as mEq;
-    unfold m in HeqmEq;
-    clear m;
-    cbv [inlineGenGenDm
-           inlineGenSinDm inlineSinSinDm
-           getGenGenBody
-           getGenSinBody getSinSinBody
-           appendGenGenAction appendSinSinAction appendSinGenAction
-           convNameRec nameVal nameRec isRep projT1
-           
-           ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
-           ChildParent.Offset ChildParent.Line
-           ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
-           ChildParent.FromP ChildParent.ToC
-           ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
-           ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
-           
-           L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
-           L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
-           L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
-           L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-           L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-           L1Cache.lineWrite L1Cache.tagWrite
-           L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
-           L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
-           L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
-           L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
-           L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
-           L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
+      L1Cache.csWrite L1Cache.rqFromProcFirst
 
-           L1Cache.csWrite
+      MemCache.MIdxBits
 
-           MemCache.MIdxBits
+      MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset
+      MemDir.Line
+      MemDir.RqToP MemDir.RqFromC MemDir.RsToP
+      MemDir.RsFromC MemDir.FromP MemDir.ToC
+      MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
+      MemDir.lineRead MemDir.lineWrite
 
-           MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset
-           MemDir.Line
-           MemDir.RqToP MemDir.RqFromC MemDir.RsToP
-           MemDir.RsFromC MemDir.FromP MemDir.ToC
-           MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-           MemDir.lineRead MemDir.lineWrite
+      MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
 
-           MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
+      MemDir.dirWrite MemDir.Child
 
-           MemDir.dirWrite MemDir.Child
+      MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
+      MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
 
-           MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
-           MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
+      Msi.Msi
+      RegFile.Addr RegFile.regFileM RegFile.regFileS RegFile.regFile
 
-           Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
+      ChildParent.childParent
 
-           eq_rect ret arg
+      Fifo.fifo Fifo.simpleFifo
+      Fifo.fifoS Fifo.simpleFifoS
 
-        ] in HeqmEq;
-    rewrite signature_eq in HeqmEq; unfold eq_rect in HeqmEq;
-    simpl in HeqmEq;
-    match type of HeqmEq with
-      | ?sth = ?m => pose m; clear sth HeqmEq
-    end
-  end.
+      FifoCorrect.fifo FifoCorrect.nfifo
 
-Ltac ggNoF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                 ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          RepRule strA goodFn getConstK goodFn2
-                                          (fun ty =>
-                                             inlineGenGenDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn noDup :: sufR;
-                        metaMeths := mts |}; clear m
-               end
-           end
-  end; simplMod.
+      L1Cache.l1Cache l1 l1cs l1tag l1line l1Cache childParent
 
-Ltac ggF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @RepMeth ?A ?strA ?goodFn ?GenK ?getConstK
-                                 ?goodFn2 ?bdm ?dmn ?ls ?noDup, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          RepRule strA goodFn getConstK goodFn2
-                                          (fun ty =>
-                                             inlineGenGenDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn noDup :: sufR;
-                        metaMeths := preDm ++ sufDm |}; clear m
-               end
-           end
-  end; simplMod.
+      MemCache.memDir MemCache.mline MemCache.mdir MemCache.memDirC MemCache.memCache
+      MemCache.nl1C MemCache.nfifoRqFromC MemCache.nfifoRsFromC MemCache.nfifoToC
+      MemCache.nchildParentC MemCache.nmemCache
 
-Ltac gsNoF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          RepRule strA goodFn getConstK goodFn2
-                                          (fun ty =>
-                                             inlineGenSinDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn noDup :: sufR;
-                        metaMeths := mts |}; clear m
-               end
-           end
-  end.
+      MemDir.memDir
 
-Ltac gsF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @RepRule ?A ?strA ?goodFn ?GenK ?getConstK
-                                    ?goodFn2 ?bdr ?rn ?ls ?noDup, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          RepRule strA goodFn getConstK goodFn2
-                                          (fun ty =>
-                                             inlineGenSinDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn noDup :: sufR;
-                        metaMeths := preDm ++ sufDm |}; clear m
-               end
-           end
-  end; simplMod.
+      NativeFifo.nativeFifo NativeFifo.nativeSimpleFifo NativeFifo.nativeFifoS
+      NativeFifo.nativeSimpleFifoS NativeFifo.nativeFifoM
+      NativeFifo.nativeSimpleFifoM
+      
+      nfifoRqToP nfifoRsToP nfifoFromP
 
-Ltac ssNoF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @OneRule ?bdr ?rn, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          OneRule
-                                          (fun ty =>
-                                             inlineSinSinDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn :: sufR;
-                        metaMeths := mts |}; clear m
-               end
-           end
-  end; simplMod.
-
-Ltac ssF dm r :=
-  match goal with
-    | m := {| metaRegs :=?rgs; metaRules := ?rls; metaMeths := ?mts |} |- _ =>
-           let dmTriple := find dm (@nil MetaMeth) mts in
-           let rTriple := find r (@nil MetaRule) rls in
-           match dmTriple with
-             | (?preDm, @OneMeth ?bdm ?dmn, ?sufDm) =>
-               match rTriple with
-                 | (?preR, @OneRule ?bdr ?rn, ?sufR) =>
-                   pose
-                     {| metaRegs := rgs;
-                        metaRules := preR ++
-                                          OneRule
-                                          (fun ty =>
-                                             inlineSinSinDm
-                                               (bdr ty)
-                                               (nameVal dmn) bdm) rn :: sufR;
-                        metaMeths := preDm ++ sufDm |}; clear m
-               end
-           end
-  end; simplMod.
-
-Ltac start_def m := let mod := fresh in pose m as mod; cbv [m] in mod.
-
-Ltac finish_def :=
-  match goal with
-    | m := ?mod: MetaModule |- _ =>
-           cbv [NativeFifo.listEltK NativeFifo.listEnq NativeFifo.listEltT] in m;
-             simpl in m; clear -m;
-             exact mod
-  end.
-
-
-Ltac start_pf2 m mpf :=
-  let mod := fresh in
-  let pf1 := fresh in
-  let pf2 := fresh in
-  pose m as mod;
-    pose proof mpf as [pf1 pf2];
-    fold mod in pf1, pf2;
-    cbv [m] in mod.
-
-Ltac finish_pf :=
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      (abstract exact (conj mRef mEquiv))
-  end.
-
-
-
-
-Ltac simplifyMod :=
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      unfold m in mRef, mEquiv;
-  clear m;
-  cbv [inlineGenGenDm
-         inlineGenSinDm inlineSinSinDm
-         getGenGenBody
-         getGenSinBody getSinSinBody
-         appendGenGenAction appendSinSinAction appendSinGenAction
-         convNameRec nameVal nameRec isRep projT1
-         
-         ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
-         ChildParent.Offset ChildParent.Line
-         ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
-         ChildParent.FromP ChildParent.ToC
-         ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
-         ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
-         
-         L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
-         L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
-         L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
-         L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-         L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-         L1Cache.lineWrite L1Cache.tagWrite
-         L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
-         L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
-         L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
-         L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
-         L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
-         L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
-
-         L1Cache.csWrite
-
-         MemCache.MIdxBits
-
-         MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset
-         MemDir.Line
-         MemDir.RqToP MemDir.RqFromC MemDir.RsToP
-         MemDir.RsFromC MemDir.FromP MemDir.ToC
-         MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-         MemDir.lineRead MemDir.lineWrite
-         MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
-
-         MemDir.dirWrite MemDir.Child
-
-         MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line MemTypes.RqToP
-         MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC MemTypes.FromP
-
-         Msi.Msi RegFile.Addr StringEq.string_eq StringEq.ascii_eq Bool.eqb andb
-
-         eq_rect ret arg
-
-      ] in mRef, mEquiv;
-  rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
-  simpl in mRef, mEquiv
-end;
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      let newm := fresh in
-      pose m as newm;
-        fold newm in mRef;
-        fold newm in mEquiv
-  end.
-
-
-Ltac noFilt ltac dm r :=
-  match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
-        mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      ltac dm r;
-        match goal with
-          | m'Ref:
-              modFromMeta ?m <<== modFromMeta ?m',
-              m'Equiv: forall ty, MetaModEquiv ty typeUT ?m' |- _ =>
-            apply (traceRefines_trans_elem mRef) in m'Ref; clear mRef;
-            let newm := fresh in
-            pose m' as newm;
-              fold newm in m'Ref;
-              fold newm in m'Equiv;
-              simpl in newm; clear m mEquiv
-        end
-  end; simplifyMod.
-
-Ltac ggNoFilt dm r := noFilt inlineGenDmGenRule_NoFilt dm r.
-Ltac gsNoFilt dm r := noFilt inlineSinDmGenRule_NoFilt dm r.
-Ltac ssNoFilt dm r := noFilt inlineSinDmSinRule_NoFilt dm r.
-
-Ltac ggFilt dm r := noFilt inlineGenDmGenRule_Filt dm r.
-Ltac gsFilt dm r := noFilt inlineSinDmGenRule_Filt dm r.
-Ltac ssFilt dm r := noFilt inlineSinDmSinRule_Filt dm r.
-
-
-  
-
-
-
-
+      NativeFifo.listEltK NativeFifo.listEnq NativeFifo.listEltT
+    ] in H.
 
 Section MemCacheInl.
   Variables IdxBits TagBits LgNumDatas DataBytes: nat.
@@ -360,82 +82,7 @@ Section MemCacheInl.
   Definition nmemCacheInl_flat: MetaModule.
   Proof.
     pose (nmemCache IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren) as m;
-
-    cbv [
-        ChildParent.childParent
-
-          Fifo.fifo Fifo.simpleFifo
-          Fifo.fifoS Fifo.simpleFifoS
-
-          FifoCorrect.fifo FifoCorrect.nfifo
-
-          L1Cache.l1Cache l1 l1cs l1tag l1line l1Cache childParent
-
-          MemCache.memDir MemCache.mline MemCache.mdir MemCache.memDirC MemCache.memCache
-          MemCache.nl1C MemCache.nfifoRqFromC MemCache.nfifoRsFromC MemCache.nfifoToC
-          MemCache.nchildParentC MemCache.nmemCache
-
-          MemDir.memDir
-
-          NativeFifo.nativeFifo NativeFifo.nativeSimpleFifo NativeFifo.nativeFifoS
-          NativeFifo.nativeSimpleFifoS NativeFifo.nativeFifoM
-          NativeFifo.nativeSimpleFifoM
-        
-          makeMetaModule
-          getMetaFromSinNat makeSinModule getMetaFromSin
-          sinRegs sinRules sinMeths rulesToRep regsToRep methsToRep
-          convSinToGen concatMetaMod app metaRegs
-          metaRules metaMeths
-
-          ChildParent.AddrBits ChildParent.Addr ChildParent.Idx ChildParent.Data
-          ChildParent.Offset ChildParent.Line
-          ChildParent.RqToP ChildParent.RqFromC ChildParent.RsToP ChildParent.RsFromC
-          ChildParent.FromP ChildParent.ToC
-          ChildParent.rqToPPop ChildParent.rqFromCEnq ChildParent.rsToPPop
-          ChildParent.rsFromCEnq ChildParent.toCPop ChildParent.fromPEnq
-          
-          L1Cache.AddrBits L1Cache.Addr L1Cache.Tag L1Cache.Idx L1Cache.TagIdx
-          L1Cache.Data L1Cache.Offset L1Cache.Line L1Cache.RqFromProc
-          L1Cache.RsToProc L1Cache.FromP L1Cache.RqFromP L1Cache.RsFromP
-          L1Cache.RqToP L1Cache.RsToP L1Cache.rqFromProcPop L1Cache.fromPPop
-          L1Cache.rsToProcEnq L1Cache.rqToPEnq L1Cache.rsToPEnq L1Cache.lineRead
-          L1Cache.lineWrite L1Cache.tagWrite L1Cache.csWrite
-
-          L1Cache.csRead0 L1Cache.csRead1 L1Cache.csRead2
-          L1Cache.csRead3 L1Cache.csRead4 L1Cache.csRead5
-          L1Cache.csRead6 L1Cache.csRead7 L1Cache.csRead8
-          L1Cache.tagRead0 L1Cache.tagRead1 L1Cache.tagRead2
-          L1Cache.tagRead3 L1Cache.tagRead4 L1Cache.tagRead5
-          L1Cache.tagRead6 L1Cache.tagRead7 L1Cache.tagRead8
-
-          L1Cache.RqFromProc L1Cache.rqFromProcFirst
-
-          MemCache.MIdxBits
-
-          MemDir.AddrBits MemDir.Addr MemDir.Idx MemDir.Data MemDir.Offset MemDir.Line
-          MemDir.RqToP MemDir.RqFromC MemDir.RsToP MemDir.RsFromC MemDir.FromP MemDir.ToC
-          MemDir.rqFromCPop MemDir.rsFromCPop MemDir.toCEnq MemDir.Dir MemDir.Dirw
-          MemDir.lineRead MemDir.lineWrite MemDir.dirWrite MemDir.Child
-
-          MemDir.dirRead0 MemDir.dirRead1 MemDir.dirRead2 MemDir.dirRead3
-
-          MemTypes.MemOp MemTypes.Child MemTypes.Data MemTypes.Line
-          MemTypes.RsToP MemTypes.RqFromC MemTypes.RsFromC MemTypes.ToC
-
-          RegFile.regFileM RegFile.regFileS RegFile.regFile
-
-          nfifoRqToP nfifoRsToP nfifoFromP
-
-          String.append
-
-          fullType
-
-          ret arg
-
-          projT1 projT2
-
-          Lib.VectorFacts.Vector_find
-      ] in m.
+      cacheCbv m; commonCbv m.
     simpl in m;
     unfold Lib.VectorFacts.Vector_find in m;
     simpl in m.
@@ -457,87 +104,87 @@ Section MemCacheInl.
       by (abstract (cbv [nmemCacheInl_flat];
                     kequiv)).
 
-    finish_pf.
+    finish_ref.
   Qed.
 
   Definition nmemCacheInl: MetaModule.
   Proof.
     start_def nmemCacheInl_flat.
 
-    ssF (mline -- read) deferred.
+    ssF cacheCbv (mline -- read) deferred.
   
-    ssF (mcs -- read1) missByState.
-    ssF (mcs -- read2) dwnRq.
-    ssNoF (mcs -- read0) dwnRs_wait.
-    ssF (mcs -- read0) dwnRs_noWait.
-    ssF (mcs -- read3) deferred.
+    ssF cacheCbv (mcs -- read1) missByState.
+    ssF cacheCbv (mcs -- read2) dwnRq.
+    ssNoF cacheCbv (mcs -- read0) dwnRs_wait.
+    ssF cacheCbv (mcs -- read0) dwnRs_noWait.
+    ssF cacheCbv (mcs -- read3) deferred.
 
-    ssNoF (mline -- write) dwnRs_wait.
-    ssF (mline -- write) dwnRs_noWait.
+    ssNoF cacheCbv (mline -- write) dwnRs_wait.
+    ssF cacheCbv (mline -- write) dwnRs_noWait.
 
-    ssNoF (mcs -- write) dwnRs_wait.
-    ssNoF (mcs -- write) dwnRs_noWait.
-    ssF (mcs -- write) deferred.
+    ssNoF cacheCbv (mcs -- write) dwnRs_wait.
+    ssNoF cacheCbv (mcs -- write) dwnRs_noWait.
+    ssF cacheCbv (mcs -- write) deferred.
 
-    ssNoF (toChild -- enqName) dwnRq.
-    ssF (toChild -- enqName) deferred.
+    ssNoF cacheCbv (toChild -- enqName) dwnRq.
+    ssF cacheCbv (toChild -- enqName) deferred.
 
-    ssNoF (rqFromChild -- firstEltName) missByState.
-    ssF (rqFromChild -- firstEltName) dwnRq.
+    ssNoF cacheCbv (rqFromChild -- firstEltName) missByState.
+    ssF cacheCbv (rqFromChild -- firstEltName) dwnRq.
     
-    ssF (rqFromChild -- deqName) deferred.
+    ssF cacheCbv (rqFromChild -- deqName) deferred.
 
-    ssNoF (rsFromChild -- deqName) dwnRs_wait.
-    ssF (rsFromChild -- deqName) dwnRs_noWait.
+    ssNoF cacheCbv (rsFromChild -- deqName) dwnRs_wait.
+    ssF cacheCbv (rsFromChild -- deqName) dwnRs_noWait.
 
-    gsF (rsFromChild -- enqName) rsFromCToPRule.
+    gsF cacheCbv (rsFromChild -- enqName) rsFromCToPRule.
 
-    gsF (rqFromChild -- enqName) rqFromCToPRule.
+    gsF cacheCbv (rqFromChild -- enqName) rqFromCToPRule.
     
-    gsF (toChild -- deqName) fromPToCRule.
+    gsF cacheCbv (toChild -- deqName) fromPToCRule.
 
-    ggF (cs -- read1) l1MissByState.
-    ggF (cs -- read2) l1MissByLine.
-    ggF (cs -- read3) l1Hit.
-    ggNoF (cs -- read0) writeback.
-    ggF (cs -- read4) upgRq.
-    ggF (cs -- read0) upgRs.
+    ggF cacheCbv (cs -- read1) l1MissByState.
+    ggF cacheCbv (cs -- read2) l1MissByLine.
+    ggF cacheCbv (cs -- read3) l1Hit.
+    ggNoF cacheCbv (cs -- read0) writeback.
+    ggF cacheCbv (cs -- read4) upgRq.
+    ggF cacheCbv (cs -- read0) upgRs.
 
-    ggF (cs -- read5) ld.
-    ggF (cs -- read6) st.
-    ggF (cs -- read7) drop.
-    ggF (cs -- read8) pProcess.
+    ggF cacheCbv (cs -- read5) ld.
+    ggF cacheCbv (cs -- read6) st.
+    ggF cacheCbv (cs -- read7) drop.
+    ggF cacheCbv (cs -- read8) pProcess.
 
-    ggF (tag -- read1) l1MissByState.
-    ggF (tag -- read2) l1MissByLine.
-    ggF (tag -- read3) l1Hit.
-    ggF (tag -- read0) writeback.
-    ggF (tag -- read4) upgRq.
-    ggF (tag -- read5) ld.
-    ggF (tag -- read6) st.
-    ggF (tag -- read7) drop.
-    ggF (tag -- read8) pProcess.
+    ggF cacheCbv (tag -- read1) l1MissByState.
+    ggF cacheCbv (tag -- read2) l1MissByLine.
+    ggF cacheCbv (tag -- read3) l1Hit.
+    ggF cacheCbv (tag -- read0) writeback.
+    ggF cacheCbv (tag -- read4) upgRq.
+    ggF cacheCbv (tag -- read5) ld.
+    ggF cacheCbv (tag -- read6) st.
+    ggF cacheCbv (tag -- read7) drop.
+    ggF cacheCbv (tag -- read8) pProcess.
 
-    ggNoF (line -- read) writeback.
-    ggNoF (line -- read) ld.
-    ggNoF (line -- read) st.
-    ggF (line -- read) pProcess.
-    ggNoF (cs -- write) writeback.
-    ggNoF (cs -- write) upgRs.
-    ggF (cs -- write) pProcess.
+    ggNoF cacheCbv (line -- read) writeback.
+    ggNoF cacheCbv (line -- read) ld.
+    ggNoF cacheCbv (line -- read) st.
+    ggF cacheCbv (line -- read) pProcess.
+    ggNoF cacheCbv (cs -- write) writeback.
+    ggNoF cacheCbv (cs -- write) upgRs.
+    ggF cacheCbv (cs -- write) pProcess.
 
-    ggF (tag -- write) upgRs.
-    ggNoF (line -- write) upgRs.
-    ggF (line -- write) st.
-    ggNoF (fromParent -- deqName) upgRs.
-    ggNoF (fromParent -- deqName) drop.
-    ggF (fromParent -- deqName) pProcess.
-    ggF (rqToParent -- enqName) upgRq.
-    ggNoF (rsToParent -- enqName) writeback.
-    ggF (rsToParent -- enqName) pProcess.
-    ggF (rqToParent -- deqName) rqFromCToPRule.
-    ggF (rsToParent -- deqName) rsFromCToPRule.
-    ggF (fromParent -- enqName) fromPToCRule.
+    ggF cacheCbv (tag -- write) upgRs.
+    ggNoF cacheCbv (line -- write) upgRs.
+    ggF cacheCbv (line -- write) st.
+    ggNoF cacheCbv (fromParent -- deqName) upgRs.
+    ggNoF cacheCbv (fromParent -- deqName) drop.
+    ggF cacheCbv (fromParent -- deqName) pProcess.
+    ggF cacheCbv (rqToParent -- enqName) upgRq.
+    ggNoF cacheCbv (rsToParent -- enqName) writeback.
+    ggF cacheCbv (rsToParent -- enqName) pProcess.
+    ggF cacheCbv (rqToParent -- deqName) rqFromCToPRule.
+    ggF cacheCbv (rsToParent -- deqName) rsFromCToPRule.
+    ggF cacheCbv (fromParent -- enqName) fromPToCRule.
 
     
     finish_def.
@@ -551,88 +198,86 @@ Section MemCacheInl.
     forall ty, MetaModEquiv ty typeUT nmemCacheInl.
   Proof.
     (* SKIP_PROOF_ON
-    start_pf2 nmemCacheInl_flat nmemCacheInl_flat_pf.
+    start_ref nmemCacheInl_flat nmemCacheInl_flat_pf.
   
-    ssFilt (mline -- read) deferred.
+    ssFilt cacheCbv (mline -- read) deferred.
   
-    ssFilt (mcs -- read1) missByState.
-    ssFilt (mcs -- read2) dwnRq.
-    ssNoFilt (mcs -- read0) dwnRs_wait.
-    ssFilt (mcs -- read0) dwnRs_noWait.
-    ssFilt (mcs -- read3) deferred.
+    ssFilt cacheCbv (mcs -- read1) missByState.
+    ssFilt cacheCbv (mcs -- read2) dwnRq.
+    ssNoFilt cacheCbv (mcs -- read0) dwnRs_wait.
+    ssFilt cacheCbv (mcs -- read0) dwnRs_noWait.
+    ssFilt cacheCbv (mcs -- read3) deferred.
 
-    ssNoFilt (mline -- write) dwnRs_wait.
-    ssFilt (mline -- write) dwnRs_noWait.
+    ssNoFilt cacheCbv (mline -- write) dwnRs_wait.
+    ssFilt cacheCbv (mline -- write) dwnRs_noWait.
 
-    ssNoFilt (mcs -- write) dwnRs_wait.
-    ssNoFilt (mcs -- write) dwnRs_noWait.
-    ssFilt (mcs -- write) deferred.
+    ssNoFilt cacheCbv (mcs -- write) dwnRs_wait.
+    ssNoFilt cacheCbv (mcs -- write) dwnRs_noWait.
+    ssFilt cacheCbv (mcs -- write) deferred.
 
-    ssNoFilt (toChild -- enqName) dwnRq.
-    ssFilt (toChild -- enqName) deferred.
+    ssNoFilt cacheCbv (toChild -- enqName) dwnRq.
+    ssFilt cacheCbv (toChild -- enqName) deferred.
 
-    ssNoFilt (rqFromChild -- firstEltName) missByState.
-    ssFilt (rqFromChild -- firstEltName) dwnRq.
+    ssNoFilt cacheCbv (rqFromChild -- firstEltName) missByState.
+    ssFilt cacheCbv (rqFromChild -- firstEltName) dwnRq.
     
-    ssFilt (rqFromChild -- deqName) deferred.
+    ssFilt cacheCbv (rqFromChild -- deqName) deferred.
 
-    ssNoFilt (rsFromChild -- deqName) dwnRs_wait.
-    ssFilt (rsFromChild -- deqName) dwnRs_noWait.
+    ssNoFilt cacheCbv (rsFromChild -- deqName) dwnRs_wait.
+    ssFilt cacheCbv (rsFromChild -- deqName) dwnRs_noWait.
 
-    gsFilt (rsFromChild -- enqName) rsFromCToPRule.
+    gsFilt cacheCbv (rsFromChild -- enqName) rsFromCToPRule.
 
-    gsFilt (rqFromChild -- enqName) rqFromCToPRule.
+    gsFilt cacheCbv (rqFromChild -- enqName) rqFromCToPRule.
     
-    gsFilt (toChild -- deqName) fromPToCRule.
+    gsFilt cacheCbv (toChild -- deqName) fromPToCRule.
 
-    ggFilt (cs -- read1) l1MissByState.
-    ggFilt (cs -- read2) l1MissByLine.
-    ggFilt (cs -- read3) l1Hit.
-    ggNoFilt (cs -- read0) writeback.
-    ggFilt (cs -- read4) upgRq.
-    ggFilt (cs -- read0) upgRs.
+    ggFilt cacheCbv (cs -- read1) l1MissByState.
+    ggFilt cacheCbv (cs -- read2) l1MissByLine.
+    ggFilt cacheCbv (cs -- read3) l1Hit.
+    ggNoFilt cacheCbv (cs -- read0) writeback.
+    ggFilt cacheCbv (cs -- read4) upgRq.
+    ggFilt cacheCbv (cs -- read0) upgRs.
 
-    ggFilt (cs -- read5) ld.
-    ggFilt (cs -- read6) st.
-    ggFilt (cs -- read7) drop.
-    ggFilt (cs -- read8) pProcess.
+    ggFilt cacheCbv (cs -- read5) ld.
+    ggFilt cacheCbv (cs -- read6) st.
+    ggFilt cacheCbv (cs -- read7) drop.
+    ggFilt cacheCbv (cs -- read8) pProcess.
 
-    ggFilt (tag -- read1) l1MissByState.
-    ggFilt (tag -- read2) l1MissByLine.
-    ggFilt (tag -- read3) l1Hit.
-    ggFilt (tag -- read0) writeback.
-    ggFilt (tag -- read4) upgRq.
-    ggFilt (tag -- read5) ld.
-    ggFilt (tag -- read6) st.
-    ggFilt (tag -- read7) drop.
-    ggFilt (tag -- read8) pProcess.
+    ggFilt cacheCbv (tag -- read1) l1MissByState.
+    ggFilt cacheCbv (tag -- read2) l1MissByLine.
+    ggFilt cacheCbv (tag -- read3) l1Hit.
+    ggFilt cacheCbv (tag -- read0) writeback.
+    ggFilt cacheCbv (tag -- read4) upgRq.
+    ggFilt cacheCbv (tag -- read5) ld.
+    ggFilt cacheCbv (tag -- read6) st.
+    ggFilt cacheCbv (tag -- read7) drop.
+    ggFilt cacheCbv (tag -- read8) pProcess.
 
-    ggNoFilt (line -- read) writeback.
-    ggNoFilt (line -- read) ld.
-    ggNoFilt (line -- read) st.
-    ggFilt (line -- read) pProcess.
+    ggNoFilt cacheCbv (line -- read) writeback.
+    ggNoFilt cacheCbv (line -- read) ld.
+    ggNoFilt cacheCbv (line -- read) st.
+    ggFilt cacheCbv (line -- read) pProcess.
 
 
-    ggNoFilt (cs -- write) writeback.
-    ggNoFilt (cs -- write) upgRs.
+    ggNoFilt cacheCbv (cs -- write) writeback.
+    ggNoFilt cacheCbv (cs -- write) upgRs.
 
-    ggFilt (cs -- write) pProcess.
-    ggFilt (tag -- write) upgRs.
-    ggNoFilt (line -- write) upgRs.
-    ggFilt (line -- write) st.
-    ggNoFilt (fromParent -- deqName) upgRs.
-    ggNoFilt (fromParent -- deqName) drop.
-    ggFilt (fromParent -- deqName) pProcess.
-    ggFilt (rqToParent -- enqName) upgRq.
-    ggNoFilt (rsToParent -- enqName) writeback.
-    ggFilt (rsToParent -- enqName) pProcess.
-    ggFilt (rqToParent -- deqName) rqFromCToPRule.
-    ggFilt (rsToParent -- deqName) rsFromCToPRule.
-    ggFilt (fromParent -- enqName) fromPToCRule.
+    ggFilt cacheCbv (cs -- write) pProcess.
+    ggFilt cacheCbv (tag -- write) upgRs.
+    ggNoFilt cacheCbv (line -- write) upgRs.
+    ggFilt cacheCbv (line -- write) st.
+    ggNoFilt cacheCbv (fromParent -- deqName) upgRs.
+    ggNoFilt cacheCbv (fromParent -- deqName) drop.
+    ggFilt cacheCbv (fromParent -- deqName) pProcess.
+    ggFilt cacheCbv (rqToParent -- enqName) upgRq.
+    ggNoFilt cacheCbv (rsToParent -- enqName) writeback.
+    ggFilt cacheCbv (rsToParent -- enqName) pProcess.
+    ggFilt cacheCbv (rqToParent -- deqName) rqFromCToPRule.
+    ggFilt cacheCbv (rsToParent -- deqName) rsFromCToPRule.
+    ggFilt cacheCbv (fromParent -- enqName) fromPToCRule.
 
-    finish_pf.
+    finish_ref.
     END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
-
-Close Scope string.

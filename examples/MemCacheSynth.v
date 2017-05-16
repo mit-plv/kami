@@ -168,7 +168,7 @@ Section MemCache.
   Require Import Ex.MemCache Kami.Tactics.
   
   Lemma memCache_flatten:
-    flattenMeta memCache1 = MetaMod (memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren).
+    flattenMeta memCache1 = memCache IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
   Proof.
     reflexivity.
   Qed.

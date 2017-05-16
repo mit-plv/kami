@@ -186,15 +186,9 @@ Section ProcMem.
   Definition mCache1 :=
      memCache1 IdxBits TagBits LgNumDatas DataBytes Id FifoSize LgNumChildren.
 
-  Lemma modFromMeta_m m m':
-    flattenMeta m' = MetaMod m ->
-    modFromMeta m = modFromMetaModules (flattenMeta m').
+  Lemma modFromMeta_m m:
+    modFromMeta (flattenMeta m) = modFromMetaModules (MetaMod (flattenMeta m)).
   Proof.
-    clear.
-    intros.
-    rewrite H.
-    simpl.
-    destruct m.
     reflexivity.
   Qed.
 
@@ -214,14 +208,9 @@ Section ProcMem.
     reflexivity.
   Qed.
 
-  Lemma metaModulesRegs_flatten m m':
-    flattenMeta m' = MetaMod m ->
-    metaModulesRegs m' = metaRegs m.
+  Lemma metaModulesRegs_flatten m:
+    metaModulesRegs m = metaRegs (flattenMeta m).
   Proof.
-    clear.
-    intros.
-    unfold flattenMeta in H.
-    inversion H.
     reflexivity.
   Qed.
 
@@ -259,15 +248,18 @@ Section ProcMem.
       kdisj_regs.
     - kdisj_regs.
     - unfold mcache.
-      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      rewrite <- memCache_flatten.
+      rewrite modFromMeta_m.
       apply EquivList_comm.
       apply metaModulesRegsSame.
     - unfold mcache.
-      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      rewrite <- memCache_flatten.
+      rewrite modFromMeta_m.
       apply EquivList_comm.
       apply metaModulesRulesSame.
     - unfold mcache.
-      rewrite modFromMeta_m with (m' := mCache1) by (apply memCache_flatten).
+      rewrite <- memCache_flatten.
+      rewrite modFromMeta_m.
       apply EquivList_comm.
       apply metaModulesMethsSame.
   Qed.
