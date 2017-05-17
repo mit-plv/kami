@@ -13,23 +13,24 @@ Open Scope string.
 (*! Welcome to the Kami in-depth tutorial! This tutorial consists of following sections:
  * 1) Kami language: syntax and semantics
  * 2) Refinement between Kami modules
- * 3) Verification with Kami: proving the correctness of a 3-stage pipelined system as a case study
+ * 3) A case study: proving the correctness of a 3-stage pipelined system
+ * 4) Demo: simulating a Kami program (with the Bluespec simulator)
  !*)
 
 (******************************************************************************)
 
 (*+ Language Syntax +*)
 
-(** Kami has its own syntax, which is very similar to Bluespec. Syntax is built with "Notation" in Coq, so module definitions are automatically type-checked internally by the Gallina type-checker. *)
+(** Kami has its own syntax, which is very similar to Bluespec. It uses shallow embedding with respect to variable binding, and has fancy notations built with "Notation" in Coq. *)
 
 (** A module consists of registers, rules, and methods. *)
 Print Mod.
 
+(** Rules are executed by a global rule scheduler. Methods are executed by method calls, which can be called by other modules once they are composed. *)
+
 (** A rule or a method is defined as a sequence of actions. *)
 Print ActionT.
 Print Expr.
-
-(** Rules are executed by a global rule scheduler. Methods are executed by method calls, which can be called by other modules once they are composed. *)
 
 (** Here is a simple Kami module. *)
 Definition kamiModule :=
@@ -57,7 +58,13 @@ Print evalExpr.
 (** Operational semantics for [Action] *)
 Print SemAction.
 
-(** One-rule-at-a-time semantics *)
+(**
+ * A global rule scheduler tries to execute rules as many as possible with following conditions:
+ * 1) Two rules should not conflict in terms of register writes and method calls
+ * 2) [One-rule-at-a-time semantics] In order to execute {r1, r2, ..., rn} simultaneously,
+ *    there should exist a permutation of {ri} s.t. 
+ *    (r1 | r2 | ... | rn)(s) = (r_i1 (r_i2 (... (r_in(s)) ...))).
+ *)
 
 (** Label *)
 Print LabelT.
@@ -82,6 +89,7 @@ Print Behavior.
 (*+ Trace Refinement +*)
 
 Print traceRefines.
+(** Let's just ignore p-mapping for now *)
 
 (** Reflexivity and transitivity *)
 Check traceRefines_refl.
@@ -92,11 +100,17 @@ Check traceRefines_comm.
 Check traceRefines_assoc_1.
 Check traceRefines_assoc_2.
 
+(** Modular refinement *)
+Check traceRefines_modular_noninteracting.
+(* Check traceRefines_modular_interacting. *)
+
 (******************************************************************************)
 
-(*+ Case study: a 3-stage pipelined system +*)
+(*+ A case study: a 3-stage pipelined system +*)
 
 (*! The first stage !*)
+
+Section DataSizeAbs.
 
 Variable dataSize: nat.
 
@@ -180,7 +194,7 @@ Hint Unfold impl : ModuleDefs.
 
 (******************************************************************************)
 
-(*! What is the spec of a pipelined system? !*)
+(*! What is the spec of this pipelined system? !*)
 
 Definition spec :=
   MODULE {
@@ -267,6 +281,9 @@ Ltac kmodularn :=
 
 (*+ Substituting fifos to native-fifos +*)
 
+(** Why? The fifo implementation is not simple to deal with. *)
+Check simpleFifo.
+
 Require Import NativeFifo SimpleFifoCorrect.
            
 Definition nfifo1 :=
@@ -278,7 +295,6 @@ Definition intSpec1 :=
   ((stage1 ++ nfifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
 Hint Unfold intSpec1 : ModuleDefs.
 
-(* Some hints registered here *)
 (* begin hide *)
 Hint Unfold nfifo1 nfifo2 : ModuleDefs.
 Lemma intSpec1_PhoasWf: ModPhoasWf intSpec1.
@@ -291,16 +307,16 @@ Hint Resolve intSpec1_RegsWf.
 
 Theorem impl_intSpec1: impl <<== intSpec1.
 Proof.
-  ktrans ((stage1 ++ fifo1 ++ stage2) ++ fifo2 ++ stage3)%kami;
-    [ksimilar; vm_compute; intuition idtac|].
+  ktrans ((stage1 ++ fifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
 
-  kmodular.
+  - ksimilar; vm_compute; intuition idtac.
   - kmodular.
-    + krefl.
     + kmodular.
-      * apply sfifo_refines_nsfifo.
       * krefl.
-  - krefl.
+      * kmodular.
+        -- apply sfifo_refines_nsfifo.
+        -- krefl.
+    + krefl.
 Qed.
 
 (******************************************************************************)
@@ -430,6 +446,7 @@ Record impl12_inv (o: RegsT) : Prop :=
   }.
 Hint Unfold pipeline_inv: InvDefs.
 
+(* begin hide *)
 Ltac impl12_inv_old :=
   try match goal with
       | [H: impl12_inv _ |- _] => destruct H
@@ -442,6 +459,7 @@ Ltac impl12_inv_new :=
   kregmap_clear.
 
 Ltac impl12_inv_tac := impl12_inv_old; impl12_inv_new.
+(* end hide *)
 
 Lemma impl12_inv_ok':
   forall init n ll,
@@ -582,6 +600,7 @@ Record impl123_inv (o: RegsT) : Prop :=
   }.
 Hint Unfold pipeline_inv: InvDefs.
 
+(* begin hide *)
 Ltac impl123_inv_old :=
   try match goal with
       | [H: impl123_inv _ |- _] => destruct H
@@ -594,6 +613,7 @@ Ltac impl123_inv_new :=
   kregmap_clear.
 
 Ltac impl123_inv_tac := impl123_inv_old; impl123_inv_new.
+(* end hide *)
 
 Lemma impl123_inv_ok':
   forall init n ll,
@@ -691,4 +711,24 @@ Proof.
     + unfold MethsT; rewrite <-SemFacts.idElementwiseId.
       apply impl123_ok.
 Qed.
+
+End DataSizeAbs.
+
+(******************************************************************************)
+
+(*+ Extraction +*)
+
+Require Import Kami.Synthesize Ext.BSyntax.
+Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
+Extraction Language Ocaml.
+
+Set Extraction Optimize.
+Set Extraction KeepSingleton.
+Unset Extraction AutoInline.
+
+Print impl.
+
+Definition targetProcB := ModulesSToBModules (getModuleS (impl 32)).
+
+(* Extraction "../extraction/Ocaml/Target.ml" targetProcB. *)
 
