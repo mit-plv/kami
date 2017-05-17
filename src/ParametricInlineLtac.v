@@ -587,11 +587,9 @@ Ltac start_ref m mpf :=
 
 Ltac finish_ref :=
   match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
+    | mRef: _ _ <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
-      (abstract exact (conj mRef mEquiv))
+      (exact (conj mRef mEquiv))
   end.
 
 
@@ -599,9 +597,7 @@ Ltac finish_ref :=
 
 Ltac simplifyMod whichCbv :=
   match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
+    | mRef: _ _ <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       unfold m in mRef, mEquiv;
   clear m;
@@ -611,9 +607,7 @@ Ltac simplifyMod whichCbv :=
   simpl in mRef, mEquiv
 end;
   match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
+    | mRef: _ _ <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       let newm := fresh in
       pose m as newm;
@@ -624,9 +618,7 @@ end;
 
 Ltac noFilt whichCbv ltac dm r :=
   match goal with
-    | mRef:
-        modFromMeta _
-                    <<== modFromMeta ?m,
+    | mRef: _ _ <<== modFromMeta ?m,
         mEquiv: forall ty, MetaModEquiv ty typeUT ?m |- _ =>
       ltac dm r;
         match goal with

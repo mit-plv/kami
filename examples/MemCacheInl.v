@@ -107,7 +107,7 @@ Section MemCacheInl.
     finish_ref.
   Qed.
 
-  Definition nmemCacheInl: MetaModule.
+  Local Definition nmemCacheInl': MetaModule.
   Proof.
     start_def nmemCacheInl_flat.
 
@@ -190,6 +190,8 @@ Section MemCacheInl.
     finish_def.
   Defined.
 
+  Definition nmemCacheInl := ltac:(let y := eval cbv [nmemCacheInl'] in
+                                   nmemCacheInl' in exact y).
 
 
   Theorem nmemCacheInl_pf:
@@ -277,7 +279,6 @@ Section MemCacheInl.
     ggFilt cacheCbv (rsToParent -- deqName) rsFromCToPRule.
     ggFilt cacheCbv (fromParent -- enqName) fromPToCRule.
 
-    finish_ref.
     END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
