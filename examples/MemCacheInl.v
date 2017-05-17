@@ -279,6 +279,7 @@ Section MemCacheInl.
     ggFilt cacheCbv (rsToParent -- deqName) rsFromCToPRule.
     ggFilt cacheCbv (fromParent -- enqName) fromPToCRule.
 
+    finish_ref.
     END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
