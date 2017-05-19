@@ -290,7 +290,119 @@ Section GivenLabelMap.
 
     End ThetaRel.
 
+    Section ThetaRel2.
+      Variable thetaR: RegsT -> RegsT -> Prop.
+(*      Variable ruleMap: RegsT -> string -> option string. *)
+      Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
+      Variable defsImpZero: getDefsBodies imp = nil.
+      Variable defsSpecZero: getDefsBodies spec = nil.
+
+      Variable substepRuleMap:
+        forall oImp uImp rule csImp (Hreach: reachable oImp imp),
+          Substep imp oImp uImp (Rle (Some rule)) csImp ->
+          forall oSpec,
+            thetaR oImp oSpec ->
+            exists uSpec rl,
+              Substep spec oSpec uSpec (Rle rl) (liftToMap1 p csImp) /\
+              thetaR (M.union uImp oImp) (M.union uSpec oSpec).
+
+      Definition xformLabelZeroRBad l rl :=
+        match l with
+        | {| annot := a; defs := dfs; calls := clls |} =>
+          {| annot := match a with
+                      | Some (Some r) => Some rl 
+                      | Some None => Some None
+                      | None => None
+                      end;
+             defs := liftToMap1 p dfs;
+             calls := liftToMap1 p clls |}
+        end.
+
+      Lemma stepMapZeroRBad:
+        forall o (reachO: reachable o imp) u l (s: Step imp o u l) oSpec,
+          thetaR o oSpec ->
+          exists uSpec rl,
+            Step spec oSpec uSpec (xformLabelZeroR l rl) /\
+            thetaR (M.union u o) (M.union uSpec oSpec).
+      Proof.
+        intros; apply step_zero in s; auto; dest.
+        destruct l as [ann ds cs]; simpl in *; subst.
+
+        destruct ann as [[r|]|].
+
+        - pose proof (substepRuleMap reachO H1 H).
+          destruct H0 as [uSpec [rl ?]]; dest.
+          exists uSpec, rl; split.
+          + apply substepZero_imp_step in H0; auto.
+          + auto.
+
+        - inv H1; exists (M.empty _), None; split.
+          + match goal with
+            | [ |- Step _ _ _ ?l ] =>
+              change l with (getLabel (Rle None) (M.empty _))
+            end.
+            apply substepZero_imp_step; auto.
+            constructor.
+          + mred; eauto.
+
+        - inv H1; exists (M.empty _), None; split.
+          + match goal with
+            | [ |- Step _ _ _ ?l ] =>
+              change l with (getLabel (Meth None) (M.empty _))
+            end.
+            apply substepZero_imp_step; auto.
+            constructor.
+          + mred; eauto.
+      Qed.
+
+      Lemma multistepMapZeroRBad:
+        forall o u l,
+          o = initRegs (getRegInits imp) ->
+          Multistep imp o u l ->
+          exists uSpec ll,
+            thetaR u uSpec /\
+            equivalentLabelSeq (liftToMap1 p) l ll /\
+            Multistep spec (initRegs (getRegInits spec)) uSpec ll.
+      Proof.
+        induction 2; simpl; intros; repeat subst.
+
+        - do 2 eexists; repeat split.
+          + instantiate (1:= initRegs (getRegInits spec)); auto.
+          + instantiate (1:= nil); constructor.
+          + constructor; auto.
+
+        - specialize (IHMultistep eq_refl).
+          destruct IHMultistep as [puSpec [pll ?]]; dest.
+          apply stepMapZeroRBad with (oSpec:= puSpec) in HStep; auto;
+            [|eexists; constructor; eauto].
+          destruct HStep as [uSpec ?]; dest.
+
+          exists (M.union uSpec puSpec), (xformLabelZeroR l x :: pll).
+          repeat split; auto.
+          + constructor; auto.
+            unfold equivalentLabel, xformLabelZero; simpl.
+            destruct l; destruct annot; simpl; intuition.
+            destruct o; simpl; intuition.
+          + constructor; auto.
+      Qed.
+
+      Theorem decompositionZeroRBad:
+        traceRefines (liftToMap1 p) imp spec.
+      Proof.
+        unfold traceRefines; intros.
+        inv H.
+        apply multistepMapZeroRBad in HMultistepBeh; auto.
+        destruct HMultistepBeh as [uSpec [ll ?]]; dest.
+        exists uSpec, ll.
+        split; auto.
+        constructor; auto.
+      Qed.
+
+    End ThetaRel2.
+
   End DecompositionZero.
+
+
 
   Section DecompositionOne.
     Variable imp spec: Modules.
