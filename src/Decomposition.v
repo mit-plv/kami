@@ -189,8 +189,7 @@ Section GivenLabelMap.
       Variable defsSpecZero: getDefsBodies spec = nil.
 
       Variable substepRuleMap:
-        forall oImp uImp rule csImp
-               (Hreach: reachable oImp imp),
+        forall oImp uImp rule csImp,
           Substep imp oImp uImp (Rle (Some rule)) csImp ->
           forall oSpec,
             thetaR oImp oSpec ->
@@ -211,8 +210,7 @@ Section GivenLabelMap.
         end.
 
       Lemma stepMapZeroR:
-        forall o (reachO: reachable o imp)
-               u l (s: Step imp o u l) oSpec,
+        forall o u l (s: Step imp o u l) oSpec,
           thetaR o oSpec ->
           exists uSpec rl,
             Step spec oSpec uSpec (xformLabelZeroR l rl) /\
@@ -223,7 +221,7 @@ Section GivenLabelMap.
 
         destruct ann as [[r|]|].
 
-        - pose proof (substepRuleMap reachO H1 H).
+        - pose proof (substepRuleMap H1 H).
           destruct H0 as [uSpec [rl ?]]; dest.
           exists uSpec, rl; split.
           + apply substepZero_imp_step in H0; auto.
@@ -266,8 +264,7 @@ Section GivenLabelMap.
 
         - specialize (IHMultistep eq_refl).
           destruct IHMultistep as [puSpec [pll ?]]; dest.
-          apply stepMapZeroR with (oSpec:= puSpec) in HStep; auto;
-            [|eexists; constructor; eauto].
+          apply stepMapZeroR with (oSpec:= puSpec) in HStep; auto.
           destruct HStep as [uSpec ?]; dest.
 
           exists (M.union uSpec puSpec), (xformLabelZeroR l x :: pll).

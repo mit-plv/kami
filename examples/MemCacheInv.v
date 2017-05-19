@@ -5124,7 +5124,6 @@ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma substepRel_cache_atomic impl uImp rlImp csImp:
-    reachable impl (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) ->
     Substep (modFromMeta (nmemCacheInl IdxBits TagBits LgNumDatas DataBytes Id LgNumChildren)) impl uImp (Rle (Some rlImp)) csImp ->
     forall spec,
       CacheAtomicRel impl spec ->
@@ -5135,7 +5134,7 @@ END_SKIP_PROOF_ON *) apply cheat.
         CacheAtomicRel (M.union uImp impl) (M.union uSpec spec).
   Proof.
     (* SKIP_PROOF_ON
-    intros _ HSubstep spec totalInv.
+    intros HSubstep spec totalInv.
     destruct totalInv as [cacheInv dirInv lineInv].
     inv HSubstep.
     apply In_metaRules in HInRules.
@@ -5211,7 +5210,7 @@ END_SKIP_PROOF_ON *) apply cheat.
   - solveNormalEz nmemCache_invariants_hold_03 dirCompat_inv_hold_03 line_inv_hold_03.
   - solveNormalEz nmemCache_invariants_hold_04 dirCompat_inv_hold_04 line_inv_hold_04.
   - solveNormalEz nmemCache_invariants_hold_05 dirCompat_inv_hold_05 line_inv_hold_05.
-END_SKIP_PROOF_ON *) apply cheat.
+ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Require Import Lib.Concat.
@@ -5485,6 +5484,6 @@ END_SKIP_PROOF_ON *) apply cheat.
     - reflexivity.
     - reflexivity.
     - apply substepRel_cache_atomic.
-END_SKIP_PROOF_ON *) apply cheat.
+ END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 End MemCacheInl.
