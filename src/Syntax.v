@@ -3,7 +3,6 @@ Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
-Require Import Program.Equality.
 
 Require Vector.
 
@@ -370,6 +369,241 @@ Section Phoas.
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
+
+  Section StructUpdate.
+    Fixpoint getFinList n: Vector.t (Fin.t n) n :=
+      match n with
+      | 0 => Vector.nil _
+      | S m => Vector.cons _ Fin.F1 _ (Vector.map (fun x => Fin.FS x) (getFinList m))
+      end.
+
+    Fixpoint zipVector (A: Type) B n (va: Vector.t A n): Vector.t B n -> Vector.t (A * B) n :=
+      match va in Vector.t _ n return Vector.t B n -> Vector.t (A * B) n
+      with
+      | Vector.nil => fun _ => Vector.nil _
+      | Vector.cons a n' va' =>
+        fun vb => match vb in Vector.t _ n2 return Vector.t A (pred n2) ->
+                                                   Vector.t (A * B) n2 with
+                  | Vector.nil => fun _ => Vector.nil _
+                  | Vector.cons b n3 vb' =>
+                    fun va' => Vector.cons _ (a, b) _ (zipVector va' vb')
+                  end va'
+      end.
+
+    Definition getVectorFin (A: Type) n (ls: Vector.t A n) :=
+      zipVector ls (getFinList n).
+
+    Definition getIlistExpr' n (ls: Vector.t (Attribute Kind) n)
+               (e: Expr (SyntaxKind (Struct ls))):
+      ilist@{Set Type}
+           (fun i : Attribute Kind * Fin.t n =>
+           Expr (SyntaxKind (attrType (Vector.nth ls (snd i)))))
+        (zipVector ls (getFinList n))
+      :=
+      imap_list _ (fun i => match Vector.nth_map (@attrType _) ls (snd i) (snd i) eq_refl in _ = Y
+                                  return Expr (SyntaxKind Y) with
+                            | eq_refl => ReadField (snd i) e
+                            end) (zipVector ls (getFinList n)).
+
+    Lemma Vector_in_cons (A: Type) (P: A -> Prop) (h: A) n (ls: Vector.t A n):
+      (forall a, Vector.In a (Vector.cons A h n ls) -> P a) ->
+      forall x, Vector.In x ls -> P x.
+    Proof.
+      intros pf x in_pf.
+      specialize (pf x ltac:(constructor; auto)); assumption.
+    Qed.
+
+    Section Vec.
+      Section VIn.
+        Variable A: Type.
+        Inductive vIn : A -> forall (n : nat), Vector.t A n -> Prop :=
+          In_cons_hd : forall a (m : nat) (v : Vector.t A m), vIn a (Vector.cons A a m v)
+        | In_cons_tl : forall a (m : nat) (x : A) (v : Vector.t A m),
+            vIn a v -> vIn a (Vector.cons A x m v).
+
+        Local Lemma vIn_In: forall (a: A) n vs, @vIn a n vs <-> @Vector.In _ a n vs.
+        Proof.
+          intros.
+          split; intros.
+          - induction H.
+            + apply Vector.In_cons_hd.
+            + apply Vector.In_cons_tl; auto.
+          - induction H.
+            + constructor.
+            + constructor; auto.
+        Qed.
+
+        Fixpoint VIn (a: A) n (l: Vector.t A n) : Prop :=
+          match l with
+          | Vector.nil => False
+          | Vector.cons b n' ls' => a = b \/ VIn a ls'
+          end.
+        
+        Local Lemma VIn_In: forall (a: A) n vs, @VIn a n vs <-> @Vector.In _ a n vs.
+        Proof.
+          intros.
+          split; intros.
+          - induction vs.
+            + simpl in *.
+              exfalso; auto.
+            + simpl in H.
+              destruct H; subst; constructor; auto.
+          - induction H; simpl; auto.
+        Qed.
+
+        Local Lemma in_cons: forall n (ls: Vector.t A n) a b,
+            Vector.In a (Vector.cons _ b _ ls) -> a = b \/ Vector.In a ls.
+        Proof.
+          intros.
+          rewrite <- VIn_In in H.
+          rewrite <- VIn_In.
+          simpl in H.
+          auto.
+        Qed.
+
+        Lemma Vector_In_nil : forall a, ~ Vector.In a (Vector.nil A).
+        Proof.
+          unfold not; intros.
+          rewrite <- VIn_In in H.
+          simpl in H.
+          assumption.
+        Qed.
+      End VIn.
+
+      Variable A B: Type.
+      Local Lemma in_zip2: forall n a b (la: Vector.t A n) (lb: Vector.t B n),
+          Vector.In (a, b) (zipVector la lb) -> Vector.In b lb.
+      Proof.
+        induction la; intros.
+        - rewrite <- vector_0_nil with (ls := lb) in H.
+          simpl in H.
+          apply Vector_In_nil in H.
+          exfalso; auto.
+        - specialize (IHla (Vector.tl lb)).
+          rewrite Vector.eta with (v := lb) in H.
+          simpl in H.
+          apply in_cons in H.
+          destruct H.
+          + rewrite Vector.eta with (v := lb).
+            inv H.
+            apply Vector.In_cons_hd.
+          + specialize (IHla H).
+            rewrite Vector.eta with (v := lb).
+            econstructor; eauto.
+      Qed.
+    End Vec.
+
+    Section Overall.
+      Section Imap_change_vec.
+        Variable A: Set.
+        Variable B: Set.
+        Variable f: A -> Type.
+        Variable g: B -> Type.
+        Variable h: A -> B.
+        Fixpoint imap_change_vec n (ls: Vector.t A n):
+          ilist f ls -> (forall a, Vector.In a ls -> f a = g (h a)) -> ilist g (Vector.map h ls)
+          := match ls in Vector.t _ n
+                   return ilist f ls -> (forall a, Vector.In a ls -> f a = g (h a)) ->
+                          ilist g (Vector.map h ls)
+             with
+             | Vector.nil => fun _ _ => inil _
+             | Vector.cons h0 n0 ls0 =>
+               fun ila pf =>
+                 icons (h h0) match pf _ (Vector.In_cons_hd _ _) in _ = Y return Y with
+                              | eq_refl => ilist_hd' ila
+                              end (imap_change_vec (ilist_tl' ila) (Vector_in_cons _ pf))
+             end.
+      End Imap_change_vec.
+
+      Section Map.
+        Variable A B C: Type.
+        Variable f: B -> C.
+
+        Local Lemma map_zip n (la: Vector.t A n):
+          forall (lb: Vector.t B n),
+            Vector.map fst (zipVector la lb) = la.
+        Proof.
+          induction la; intros; auto.
+          specialize (IHla (Vector.tl lb)).
+          rewrite Vector.eta with (v := lb).
+          simpl.
+          f_equal; auto.
+        Qed.
+        
+        Local Lemma in_zip_map n (la: Vector.t A n):
+          forall (lb: Vector.t B n) a c,
+            Vector.In (a, c) (zipVector la (Vector.map f lb)) ->
+            exists b, c = f b /\ Vector.In (a, b) (zipVector la lb).
+        Proof.
+          induction la; intros; auto.
+          - apply Vector_In_nil in H; exfalso; auto.
+          - rewrite Vector.eta with (v := lb) in H.
+            simpl in H.
+            apply in_cons in H.
+            destruct H.
+            + inversion H; subst.
+              exists (Vector.hd lb).
+              rewrite Vector.eta with (v := lb) at 4.
+              simpl.
+              split; auto.
+              apply Vector.In_cons_hd.
+            + rewrite Vector.eta with (v := lb).
+              specialize (IHla _ _ _ H).
+              destruct IHla as [b [ceq vin]].
+              simpl.
+              exists b.
+              split; auto.
+              apply Vector.In_cons_tl; auto.
+        Qed.
+      End Map.
+      
+      Variable A: Set.
+      Variable f: A -> Type.
+
+      Set Printing Universes.
+      Local Lemma in_eq n ls:
+        (forall a : A * Fin.t n,
+            Vector.In a (zipVector ls (getFinList n)) ->
+            (fun i : A * Fin.t n => f (Vector.nth ls (snd i))) a = f (fst a)).
+      Proof.
+        induction ls; intros; destruct a.
+        - apply Fin.case0; assumption.
+        - simpl in H.
+          cbv [fst snd].
+          apply in_cons in H.
+          destruct H.
+          + inversion H; subst.
+            reflexivity.
+          + apply in_zip_map in H.
+            dest; subst.
+            apply IHls in H0.
+            apply H0.
+      Qed.
+      
+      Definition elim_fin n (ls: Vector.t A n)
+                 (il: ilist@{Set Type} (fun i: (A * Fin.t n) => f (Vector.nth ls (snd i)))
+                            (zipVector ls (getFinList n))): ilist@{Set Type} f ls :=
+        match map_zip ls (getFinList n) in _ = Y return _ Y with
+        | eq_refl => imap_change_vec f (@fst A (Fin.t n)) il (in_eq ls)
+        end.
+    End Overall.
+
+    Definition getIlistExpr n (ls: Vector.t (Attribute Kind) n)
+               (e: Expr (SyntaxKind (Struct ls))):
+      ilist@{Set Type} (fun a => Expr (SyntaxKind (attrType a))) ls :=
+      elim_fin _ _ (getIlistExpr' e).
+
+    Definition updStruct n (ls: Vector.t (Attribute Kind) n) (e: Expr (SyntaxKind (Struct ls)))
+               (i: Fin.t n)
+               (v: Expr (SyntaxKind (Vector.nth (Vector.map (@attrType _) ls) i))):
+      Expr (SyntaxKind (Struct ls)) :=
+      BuildStruct
+        (replace_Index (getIlistExpr e) i
+                       match Vector.nth_map (@attrType _) ls i i eq_refl in _ = Y return
+                             Expr (SyntaxKind Y) with
+                       | eq_refl => v
+                       end).
+  End StructUpdate.
 End Phoas.
 
 Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
