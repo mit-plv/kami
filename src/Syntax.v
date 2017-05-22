@@ -560,7 +560,6 @@ Section Phoas.
       Variable A: Set.
       Variable f: A -> Type.
 
-      Set Printing Universes.
       Local Lemma in_eq n ls:
         (forall a : A * Fin.t n,
             Vector.In a (zipVector ls (getFinList n)) ->
