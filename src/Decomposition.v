@@ -1370,3 +1370,26 @@ Section DecompositionInv.
       
 End DecompositionInv.
 
+Section DecompositionRelSimpl.
+  Variable imp spec: Modules.
+  Variable thetaR: RegsT -> RegsT -> Prop.
+  Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
+  Variable defsImpZero: getDefsBodies imp = nil.
+  Variable defsSpecZero: getDefsBodies spec = nil.
+
+  Variable substepRuleMap:
+    forall oImp uImp rule csImp,
+      Substep imp oImp uImp (Rle (Some rule)) csImp ->
+      forall oSpec,
+        thetaR oImp oSpec ->
+        exists uSpec rl,
+          Substep spec oSpec uSpec (Rle rl) csImp /\
+          thetaR (M.union uImp oImp) (M.union uSpec oSpec).
+
+  Theorem decompositionZeroR_id:
+    imp <<== spec.
+  Proof.
+    eapply decompositionZeroR; eauto.
+    rewrite idElementwiseId; auto.
+  Qed.
+End DecompositionRelSimpl.
