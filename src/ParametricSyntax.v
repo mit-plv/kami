@@ -1578,6 +1578,17 @@ Section SinModuleToMeta.
     {| metaRegs := regsToRep (sinRegs m);
        metaRules := rulesToRep (sinRules m);
        metaMeths := methsToRep (sinMeths m) |}.
+
+  Section Single.
+    Variable a: A.
+    Definition sinRegToMetaReg (r: SinReg A) := OneReg (regGen r a) (regName r).
+    Definition sinRuleToMetaRule (r: SinRule) := OneRule (ruleGen r) (ruleName r).
+    Definition sinMethToMetaMeth (r: SinMeth) := OneMeth (methGen r) (methName r).
+    Definition sinModuleToMetaModule (m: SinModule A) :=
+      {| metaRegs := map sinRegToMetaReg (sinRegs m);
+         metaRules := map sinRuleToMetaRule (sinRules m);
+         metaMeths := map sinMethToMetaMeth (sinMeths m) |}.
+  End Single.
 End SinModuleToMeta.
 
 (* NOTE: it's assuming register types are independent to indices *)

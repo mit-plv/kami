@@ -408,6 +408,7 @@ Ltac commonCbv H :=
            metaRules metaMeths
            flattenMeta
            metaModulesRegs metaModulesRules metaModulesMeths
+           sinRegToMetaReg sinRuleToMetaRule sinMethToMetaMeth sinModuleToMetaModule
         ] in H.
 
 Ltac simplMod whichCbv :=
