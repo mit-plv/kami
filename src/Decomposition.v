@@ -1393,3 +1393,39 @@ Section DecompositionRelSimpl.
     rewrite idElementwiseId; auto.
   Qed.
 End DecompositionRelSimpl.
+
+Section DecompositionRelSimpl2.
+  Variable imp spec: Modules.
+  Variable thetaR: RegsT -> RegsT -> Prop.
+  Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
+  Variable defsImpZero: getDefsBodies imp = nil.
+  Variable defsSpecZero: getDefsBodies spec = nil.
+
+  Variable ruleMap:
+    forall oImp uImp ruleImp csImp oSpec,
+      thetaR oImp oSpec ->
+      In ruleImp (getRules imp) ->
+      SemAction oImp (attrType ruleImp type) uImp csImp WO ->
+      ((csImp = []%fmap /\ thetaR (M.union uImp oImp) oSpec) \/
+       (exists ruleSpec,
+           In ruleSpec (getRules spec) /\
+           exists uSpec,
+             SemAction oSpec (attrType ruleSpec type) uSpec csImp WO /\
+             thetaR (M.union uImp oImp) (M.union uSpec oSpec))).
+         
+  Theorem decompositionZeroR_Id_Rule:
+    imp <<== spec.
+  Proof.
+    eapply decompositionZeroR_id; eauto; intros.
+    inv H.
+    specialize (@ruleMap _ _ _ _ _ H0 HInRules HAction).
+    destruct ruleMap; clear ruleMap; dest; subst.
+    - exists (M.empty _), None.
+      rewrite M.union_empty_L.
+      repeat constructor; auto.
+    - exists x0, (Some (attrName x)).
+      repeat constructor; auto.
+      destruct x;
+        econstructor; eauto.
+  Qed.
+End DecompositionRelSimpl2.
