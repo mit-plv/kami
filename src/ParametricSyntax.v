@@ -1,5 +1,5 @@
 Require Import Kami.Syntax String Lib.Word Lib.Struct Lib.FMap List.
-Require Import Kami.Inline Kami.InlineFacts.
+Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Lib.CommonTactics Program.Equality Lib.StringEq FunctionalExtensionality.
 Require Import Bool Lib.Indexer Kami.Semantics Kami.SemFacts Kami.RefinementFacts Lib.StringAsList Ascii.
 Require Import Lib.Concat Omega Lib.ListSupport.
@@ -2842,3 +2842,48 @@ Definition getMetaModulesFromRegFile lgn dataArray read write (IdxBits: nat) (Da
   RepeatRegFile string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
                 (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) dataArray read write init.
 
+Lemma concat_map_list A B (f: A -> B) (ls: list A):
+  concat (map (fun x => [f x]) ls) = map f ls.
+Proof.
+  induction ls; simpl; auto.
+  rewrite IHls.
+  reflexivity.
+Qed.
+  
+
+(*
+Section SinRep.
+    Variable A: Type.
+    Variable strA: A -> string.
+    Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+    Variable GenK: Kind.
+    Variable getConstK: A -> ConstT GenK.
+    Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                           si = sj /\ i = j.
+    Variable impl spec: SinModule A.
+
+    Variable implEquiv: SinEquiv impl.
+    
+    Variable refines:
+      forall a,
+        modFromMeta (sinModuleToMetaModule a impl) <<==
+                    modFromMeta (sinModuleToMetaModule a spec).
+
+    Lemma repeatSinRefines:
+      forall ls (noDup: NoDup ls),
+        modFromMetaModules
+          (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDup impl) <<==
+          modFromMetaModules (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDup spec).
+    Proof.
+      induction ls; simpl; auto; intros; try krefl.
+      inv noDup.
+      specialize (IHls H2).
+      specialize (@refines a).
+      simpl in IHls, refines.
+      unfold sinModuleToMetaModule, modFromMeta, getListFromMetaReg, getListFromMetaRule,
+      getListFromMetaMeth, metaRegs, metaRules, metaMeths, sinRegToMetaReg, sinRuleToMetaRule,
+      sinMethToMetaMeth in refines.
+      rewrite ?map_map, ?concat_map_list in refines.
+      try (unfold MethsT; rewrite <-idElementwiseId);
+        apply traceRefines_modular_noninteracting.
+*)
