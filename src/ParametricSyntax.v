@@ -1,5 +1,5 @@
 Require Import Kami.Syntax String Lib.Word Lib.Struct Lib.FMap List.
-Require Import Kami.Inline Kami.InlineFacts.
+Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Lib.CommonTactics Program.Equality Lib.StringEq FunctionalExtensionality.
 Require Import Bool Lib.Indexer Kami.Semantics Kami.SemFacts Kami.RefinementFacts Lib.StringAsList Ascii.
 Require Import Lib.Concat Omega Lib.ListSupport.
@@ -1578,6 +1578,17 @@ Section SinModuleToMeta.
     {| metaRegs := regsToRep (sinRegs m);
        metaRules := rulesToRep (sinRules m);
        metaMeths := methsToRep (sinMeths m) |}.
+
+  Section Single.
+    Variable a: A.
+    Definition sinRegToMetaReg (r: SinReg A) := OneReg (regGen r a) (regName r).
+    Definition sinRuleToMetaRule (r: SinRule) := OneRule (ruleGen r) (ruleName r).
+    Definition sinMethToMetaMeth (r: SinMeth) := OneMeth (methGen r) (methName r).
+    Definition sinModuleToMetaModule (m: SinModule A) :=
+      {| metaRegs := map sinRegToMetaReg (sinRegs m);
+         metaRules := map sinRuleToMetaRule (sinRules m);
+         metaMeths := map sinMethToMetaMeth (sinMeths m) |}.
+  End Single.
 End SinModuleToMeta.
 
 (* NOTE: it's assuming register types are independent to indices *)
@@ -2202,7 +2213,7 @@ Section InRepeatSinMod.
   Qed.
 End InRepeatSinMod.
 
-Definition flattenMeta m := MetaMod (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
+Definition flattenMeta m := (Build_MetaModule (metaModulesRegs m) (metaModulesRules m) (metaModulesMeths m)).
 
 Lemma EquivList_In_iff A l1 l2: (forall x: A, In x l1 <-> In x l2) <-> (EquivList l1 l2).
 Proof.
@@ -2765,7 +2776,7 @@ Section flattenRefines.
   Variable m: MetaModules.
   Variable noDupRegs:  NoDup (map getMetaRegName (metaModulesRegs m)).
 
-  Lemma flattenMetaEquiv: flattenMeta m <|=|> m.
+  Lemma flattenMetaEquiv: MetaMod (flattenMeta m) <|=|> m.
   Proof.
     unfold flattenMeta.
     apply permute_equivalent.
@@ -2831,3 +2842,48 @@ Definition getMetaModulesFromRegFile lgn dataArray read write (IdxBits: nat) (Da
   RepeatRegFile string_of_nat string_of_nat_into (natToWordConst lgn) withIndex_index_eq
                 (getNatListToN_NoDup (Word.wordToNat (Word.wones lgn))) dataArray read write init.
 
+Lemma concat_map_list A B (f: A -> B) (ls: list A):
+  concat (map (fun x => [f x]) ls) = map f ls.
+Proof.
+  induction ls; simpl; auto.
+  rewrite IHls.
+  reflexivity.
+Qed.
+  
+
+(*
+Section SinRep.
+    Variable A: Type.
+    Variable strA: A -> string.
+    Variable goodStrFn: forall i j, strA i = strA j -> i = j.
+    Variable GenK: Kind.
+    Variable getConstK: A -> ConstT GenK.
+    Variable goodStrFn2: forall si sj i j, addIndexToStr strA i si = addIndexToStr strA j sj ->
+                                           si = sj /\ i = j.
+    Variable impl spec: SinModule A.
+
+    Variable implEquiv: SinEquiv impl.
+    
+    Variable refines:
+      forall a,
+        modFromMeta (sinModuleToMetaModule a impl) <<==
+                    modFromMeta (sinModuleToMetaModule a spec).
+
+    Lemma repeatSinRefines:
+      forall ls (noDup: NoDup ls),
+        modFromMetaModules
+          (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDup impl) <<==
+          modFromMetaModules (RepeatSinMod strA goodStrFn getConstK goodStrFn2 noDup spec).
+    Proof.
+      induction ls; simpl; auto; intros; try krefl.
+      inv noDup.
+      specialize (IHls H2).
+      specialize (@refines a).
+      simpl in IHls, refines.
+      unfold sinModuleToMetaModule, modFromMeta, getListFromMetaReg, getListFromMetaRule,
+      getListFromMetaMeth, metaRegs, metaRules, metaMeths, sinRegToMetaReg, sinRuleToMetaRule,
+      sinMethToMetaMeth in refines.
+      rewrite ?map_map, ?concat_map_list in refines.
+      try (unfold MethsT; rewrite <-idElementwiseId);
+        apply traceRefines_modular_noninteracting.
+*)
