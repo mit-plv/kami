@@ -60,8 +60,9 @@ Print SemAction.
 
 (**
  * A global rule scheduler tries to execute rules as many as possible with following conditions:
- * 1) Two rules should not conflict in terms of register writes and method calls
- * 2) [One-rule-at-a-time semantics] In order to execute {r1, r2, ..., rn} simultaneously,
+ * 1) Any two rules should not conflict in terms of register writes and method calls
+ * 2) A target rule should satisfy assertions (guards)
+ * 3) [One-rule-at-a-time semantics] In order to execute {r1, r2, ..., rn} simultaneously,
  *    there should exist a permutation of {ri} s.t. 
  *    (r1 | r2 | ... | rn)(s) = (r_i1 (r_i2 (... (r_in(s)) ...))).
  *)
