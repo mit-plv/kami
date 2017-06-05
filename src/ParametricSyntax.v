@@ -1,5 +1,5 @@
 Require Import Kami.Syntax String Lib.Word Lib.Struct Lib.FMap List.
-Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
+Require Import Kami.Inline Kami.InlineFacts.
 Require Import Lib.CommonTactics Program.Equality Lib.StringEq FunctionalExtensionality.
 Require Import Bool Lib.Indexer Kami.Semantics Kami.SemFacts Kami.RefinementFacts Lib.StringAsList Ascii.
 Require Import Lib.Concat Omega Lib.ListSupport.

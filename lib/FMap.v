@@ -554,7 +554,7 @@ Module LeibnizFacts (M : MapLeibniz).
     fold (fun k v m' =>
             if in_dec E.eq_dec k d then m' else add k v m') m (empty _).
 
-  (* NOTE: do not add "subtractKV" and "restrict" to below *)
+  (* NOTE: do not add [subtractKV], [restrict], and [complement] to below *)
   Hint Unfold update Sub subtract : MapDefs.
   Hint Unfold E.eq.
 
@@ -1444,6 +1444,19 @@ Module LeibnizFacts (M : MapLeibniz).
       reflexivity.
   Qed.
 
+  Lemma restrict_subtractKV_empty:
+    forall {A} deceqA (m: t A) d,
+      subtractKV deceqA (restrict m d) m = M.empty _.
+  Proof.
+    mintros; ext y.
+    rewrite subtractKV_find.
+    rewrite restrict_find.
+    destruct (in_dec F.P.F.eq_dec y d); [|rewrite find_empty; reflexivity].
+    destruct (M.find y m); [|rewrite find_empty; reflexivity].
+    destruct (deceqA a a); [|elim n; auto].
+    rewrite find_empty; reflexivity.
+  Qed.
+
   Lemma transpose_neqkey_complement:
     forall {A} d,
       P.transpose_neqkey
@@ -1582,6 +1595,20 @@ Module LeibnizFacts (M : MapLeibniz).
     rewrite find_union, restrict_find, complement_find.
     destruct (in_dec P.F.eq_dec y d); auto.
     destruct (find y m); auto.
+  Qed.
+
+  Lemma complement_restrict_subtractKV:
+    forall {A} deceqA (m: t A) d,
+      subtractKV deceqA m (restrict m d) = complement m d.
+  Proof.
+    mintros; ext y.
+    rewrite subtractKV_find, complement_find, restrict_find.
+    destruct (in_dec P.F.eq_dec y d).
+    { destruct (M.find y m); auto.
+      destruct (deceqA a a); auto.
+      elim n; auto.
+    }
+    { destruct (M.find y m); auto. }
   Qed.
 
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
@@ -2315,6 +2342,16 @@ Module LeibnizFacts (M : MapLeibniz).
     elim n; apply H; discriminate.
   Qed.
 
+  Lemma KeysSubset_restrict:
+    forall {A} (m: t A) d, KeysSubset (restrict m d) d.
+  Proof.
+    mintros.
+    apply P.F.in_find_iff in H.
+    rewrite restrict_find in H.
+    destruct (in_dec P.F.eq_dec k d); auto.
+    elim H; auto.
+  Qed.
+
   Lemma restrict_DisjList:
     forall {A} (m: t A) d1 d2,
       KeysSubset m d1 -> DisjList d1 d2 -> restrict m d2 = empty _.
@@ -2364,6 +2401,16 @@ Module LeibnizFacts (M : MapLeibniz).
     specialize (H0 y); destruct H0.
     - elim H0; apply H; discriminate.
     - elim H0; auto.
+  Qed.
+
+  Lemma complement_KeysDisj:
+    forall {A} (m: t A) d, KeysDisj (complement m d) d.
+  Proof.
+    mintros.
+    apply P.F.not_find_in_iff.
+    rewrite complement_find.
+    destruct (in_dec _ k d); auto.
+    elim n; auto.
   Qed.
 
   Lemma complement_Disj:
@@ -2629,6 +2676,48 @@ Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 
 Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
 Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
+
+Lemma elements_cons:
+  forall {A} m (k: string) (v: A) l,
+    (k, v) :: l = M.elements m ->
+    exists pm,
+      m = M.add k v pm /\ M.find k pm = None /\
+      l = M.elements pm.
+Proof.
+  intros.
+  exists (M.remove k m); repeat split.
+  - case_eq (M.find k m); intros.
+    + pose proof H0.
+      rewrite M.F.P.F.elements_o in H0.
+      rewrite <-H in H0.
+      simpl in H0.
+      unfold M.F.P.F.eqb in H0.
+      destruct (M.F.P.F.eq_dec k k); [|elim n; auto].
+      inv H0.
+      meq.
+    + rewrite M.F.P.F.elements_o in H0.
+      rewrite <-H in H0.
+      simpl in H0.
+      unfold M.F.P.F.eqb in H0.
+      destruct (M.F.P.F.eq_dec k k); try discriminate.
+      elim n; auto.
+  - findeq.
+  - unfold M.elements, M.Raw.elements in *.
+    unfold M.remove; simpl.
+    rewrite <-H; simpl.
+    pose proof (@M.F.ME.elim_compare_eq k k eq_refl); dest.
+    rewrite H0; auto.
+Qed.
+
+Lemma eqlistA_eqke_eq_compat:
+  forall {A} l1 l2,
+    SetoidList.eqlistA (M.F.O.eqke (elt:=A)) l1 l2 ->
+    SetoidList.eqlistA eq l1 l2.
+Proof.
+  induction 1; simpl; intros; [constructor|].
+  constructor; auto.
+  destruct x, x'; inv H; simpl in *; subst; auto.
+Qed.
 
 Section MakeMap.
   Variable A: Type.

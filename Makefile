@@ -35,8 +35,8 @@ Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(RTLVS)
 src: Makefile.coq.src
 	$(MAKE) -f Makefile.coq.src
 
-Makefile.coq.src: Makefile $(LIBVS) $(VS) $(RTLVS)
-	coq_makefile $(LIBARGS) $(ARGS) $(RTLARGS) $(LIBVS) $(VS) $(RTLVS) -o Makefile.coq.src
+Makefile.coq.src: Makefile $(LIBVS) $(VS)
+	coq_makefile $(LIBARGS) $(ARGS) $(LIBVS) $(VS) -o Makefile.coq.src
 
 clean:: Makefile.coq.all Makefile.coq.src
 	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean

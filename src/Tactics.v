@@ -1,7 +1,8 @@
 Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
-Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts Kami.Notations.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.StepDet Kami.Wf.
+Require Import Kami.RefinementFacts Kami.Notations.
 Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.Substitute.
 Require Import Kami.Decomposition Kami.ModuleBound.
 Require Import Kami.ParametricSyntax Kami.ParametricEquiv Kami.ParametricWf.
@@ -804,6 +805,51 @@ Ltac kinv_magic_light_with tac :=
   kinv_eq.
 
 Ltac kinv_magic_light := kinv_magic_light_with idtac.
+
+Ltac kinvert_det_unit :=
+  match goal with
+  | [H: SubstepMeths _ _ _ _ |- _] => apply substepMeths_inv in H; simpl in H; dest
+  | [H: Substep _ _ _ (Meth (Some _)) _ |- _] =>
+    apply substep_meth_inv with (Haeq:= eq_refl) in H; [|noDup_tac];
+    simpl in H
+  end.
+
+Ltac kinvert_det := repeat kinvert_det_unit.
+
+Ltac kinv_constr_det_unit :=
+  match goal with
+  | [ |- exists _, _ /\ _ ] => eexists; split
+  | [ |- Step _ _ _ _ ] =>
+    apply stepDet_implies_step; [kequiv|repeat (constructor || reflexivity)|]
+  | [ |- StepDet _ _ _ _ ] => econstructor
+  | [ |- SubstepMeths _ _ _ _ ] => econstructor
+  | [ |- Substep _ _ _ (Meth (Some (?fn :: _)%struct)) _ ] =>
+    eapply SingleMeth with (f:= (fn :: _)%struct)
+  | [ |- Substep _ _ _ _ _ ] => econstructor
+  | [ |- In _ _ ] => simpl; tauto
+  | [ |- SemAction _ _ _ _ _ ] => econstructor
+  | [ |- _ = _ ] => reflexivity
+  end.
+
+Ltac kinv_constr_det := repeat kinv_constr_det_unit.
+
+Ltac kinv_constr_det_false_unit :=
+  match goal with
+  | [ |- exists _, _ /\ _ ] => eexists; split
+  | [ |- Step _ _ _ _ ] =>
+    apply stepDet_implies_step; [kequiv|repeat (constructor || reflexivity)|]
+  | [ |- StepDet _ _ _ _ ] => econstructor
+  | [ |- SubstepMeths _ _ _ _ ] => econstructor
+  | [ |- Substep _ _ _ (Meth (Some (?fn :: _)%struct)) _ ] =>
+    eapply SingleMeth with (f:= (fn :: _)%struct)
+  | [ |- Substep _ _ _ _ _ ] => econstructor
+  | [ |- In _ _ ] => simpl; tauto
+  | [ |- SemAction _ (IfElse _ _ _ _) _ _ _ ] => eapply SemIfElseFalse
+  | [ |- SemAction _ _ _ _ _ ] => econstructor
+  | [ |- _ = _ ] => reflexivity
+  end.
+
+Ltac kinv_constr_det_false := repeat kinv_constr_det_false_unit.
 
 Ltac kduplicated :=
   apply duplicate_traceRefines; intros;
