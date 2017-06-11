@@ -38,12 +38,12 @@ Requirements
 Instructions
 ------------
 
-### To Verify Multiprocessor system and extract OCaml ASTs 
-- Run $ make in the top-level directory of Kami, i.e. the directory containing lib, src, examples and extraction directory, henceforth called $TOP.
+### To Verify Multiprocessor system and extract OCaml ASTs
+- Run $ make in the top-level directory of Kami, i.e. the directory containing the Kami directory, henceforth called $TOP.
 
 ### To Generate Bluespec code from OCaml ASTs
 ```
-$ cd $TOP/extraction/Ocaml
+$ cd $TOP/Kami/Ext/Ocaml
 $ make
 $ ./Main.native Proc.bsv
 ```
@@ -54,8 +54,8 @@ This generates the file Proc.bsv, which is the Bluespec code representing the mu
 Once Proc.bsv is generated, do the following:
 
 ```
-$ cp $TOP/extraction/Ocaml/Proc.bsv $TOP/extraction/BluespecFrontEnd/sim
-$ cd $TOP/extraction/BluespecFrontEnd/sim
+$ cp $TOP/Kami/Ext/Ocaml/Proc.bsv $TOP/Kami/Ext/BluespecFrontEnd/sim
+$ cd $TOP/Kami/Ext/BluespecFrontEnd/sim
 $ make
 $ ./ProcSim
 ```
@@ -64,18 +64,18 @@ $ ./ProcSim
 Once Proc.bsv is generated, do the following:
 
 ```
-$ cp $TOP/extraction/Ocaml/Proc.bsv $TOP/extraction/BluespecFrontEnd/fpgaConnectal
-$ cd $TOP/extraction/BluespecFrontEnd/fpgaConnectal
+$ cp $TOP/Kami/Ext/Ocaml/Proc.bsv $TOP/Kami/Ext/BluespecFrontEnd/fpgaConnectal
+$ cd $TOP/Kami/Ext/BluespecFrontEnd/fpgaConnectal
 $ make build.vc707g2
 ```
 
 ### To change the benchmark being compiled
 Multithreaded benchmarks can be run on 4 cores by modifying the program being
-executed in line 57. For instance, replacing _IsaRv32PgmMatMul1_, _IsaRv32PgmMatMul2_, etc. in line 57 
-in $TOP/extraction/Extraction.v to _IsaRv32PgmBanker1_, _IsaRv32PgmBanker2_, etc. respectively, will run the
+executed in line 57. For instance, replacing _IsaRv32.PgmMatMul1_, _IsaRv32.PgmMatMul2_, etc. in line 57
+in $TOP/Kami/Ext/Extraction.v to _IsaRv32.PgmBanker1_, _IsaRv32.PgmBanker2_, etc. respectively, will run the
 4-core version of the Banker example.
 
-See the list of benchmarks (directly converted from C code), which are shown in $TOP/examples/IsaRv32PgmExt.v.
+See the list of benchmarks (directly converted from C code), which are shown in $TOP/Ex/IsaRv32PgmExt.v.
 
 Redo all the steps from the beginning to build and run the new Benchmark.
 
@@ -93,6 +93,6 @@ $ riscv32-unknown-elf-objdump -d a.out > test.objdump
 $ ./gen_kami_rv32_pgm.sh test.objdump IsaTest.v
 ```
 
-Now add IsaTest.v to $TOP/examples/IsaRv32PgmExt.v
+Now add IsaTest.v to $TOP/Ex/IsaRv32PgmExt.v
 
 This adds a new benchmark IsaTest.v. Redo all the steps from the beginning to build and run the new Benchmark.

@@ -6,7 +6,7 @@ Makefile.coq.all
 Makefile.coq.src
 *.aux
 *~
-extraction/*
+Kami/Ext/*
 .coq-native
 *.DS_Store
 Target.hs

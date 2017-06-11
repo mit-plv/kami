@@ -1,0 +1,16 @@
+Require Export IsaRv32.PgmGcd.
+Require Export IsaRv32.PgmFact.
+Require Export IsaRv32.PgmBsort.
+Require Export IsaRv32.PgmHanoi.
+Require Export IsaRv32.PgmDekker1.
+Require Export IsaRv32.PgmDekker2.
+Require Export IsaRv32.PgmPeterson1.
+Require Export IsaRv32.PgmPeterson2.
+Require Export IsaRv32.PgmMatMulInit.
+Require Export IsaRv32.PgmMatMulNormal1.
+Require Export IsaRv32.PgmMatMulNormal2.
+Require Export IsaRv32.PgmMatMulReport.
+Require Import IsaRv32.PgmBankerInit.
+Require Import IsaRv32.PgmBankerWorker1.
+Require Import IsaRv32.PgmBankerWorker2.
+Require Import IsaRv32.PgmBankerWorker3.

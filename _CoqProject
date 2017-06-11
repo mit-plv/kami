@@ -1,6 +1,1 @@
--R lib Lib
--R src Kami
--R examples Ex
--R examples/isa_rv32 Ex
--R extraction Ext
--R compilation Compile
+-R Kami Kami
