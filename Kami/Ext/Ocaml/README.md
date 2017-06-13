@@ -3,7 +3,7 @@
 Requirement
 -----------
 
-- Target.ml, Target.mli: they are automatically generated from `extraction/Extraction.v`
+- Target.ml, Target.mli: they are automatically generated from `Kami/Ext/Extraction.v`
 
 To build
 --------

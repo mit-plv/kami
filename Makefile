@@ -1,42 +1,38 @@
 IGNORE:=
 
-LIBVS:=$(wildcard lib/*.v)
+LIBVS:=$(wildcard Kami/Lib/*.v)
 LIBVS:=$(filter-out $(IGNORE:%=%.v),$(LIBVS))
 
-VS:=$(wildcard src/*.v)
-VS:=$(filter-out $(IGNORE:%=%.v),$(VS))
-
-EXVS:=$(wildcard examples/*.v)
-EXVS:=$(filter-out $(IGNORE:%=%.v),$(EXVS))
-
-EXSVS:=$(wildcard examples/isa_rv32/*.v)
+EXSVS:=$(wildcard Kami/Ex/IsaRv32/*.v)
 EXSVS:=$(filter-out $(IGNORE:%=%.v),$(EXSVS))
 
-EXTVS:=$(wildcard extraction/*.v)
+EXVS:=$(wildcard Kami/Ex/*.v)
+EXVS:=$(filter-out $(EXSVS) $(IGNORE:%=%.v),$(EXVS))
+
+EXTVS:=$(wildcard Kami/Ext/*.v)
 EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
-RTLVS:=$(wildcard compilation/*.v)
+RTLVS:=$(wildcard Kami/Compile/*.v)
 RTLVS:=$(filter-out $(IGNORE:%=%.v),$(RTLVS))
+
+VS:=$(wildcard Kami/*.v)
+VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(RTLVS) $(IGNORE:%=%.v),$(VS))
 
 .PHONY: coq src clean
 
-LIBARGS := -R lib Lib
-ARGS := -R src Kami
-EXARGS := -R examples Ex
-EXTARGS := -R extraction Ext
-RTLARGS := -R compilation Compile
+ARGS := -R Kami Kami
 
 coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
 
 Makefile.coq.all: Makefile $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(RTLVS)
-	coq_makefile $(LIBARGS) $(ARGS) $(EXARGS) $(EXTARGS) $(RTLARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(RTLVS) -o Makefile.coq.all
+	$(COQBIN)coq_makefile $(ARGS) $(LIBVS) $(VS) $(EXVS) $(EXSVS) $(EXTVS) $(RTLVS) -o Makefile.coq.all
 
 src: Makefile.coq.src
 	$(MAKE) -f Makefile.coq.src
 
 Makefile.coq.src: Makefile $(LIBVS) $(VS)
-	coq_makefile $(LIBARGS) $(ARGS) $(LIBVS) $(VS) -o Makefile.coq.src
+	$(COQBIN)coq_makefile $(ARGS) $(LIBVS) $(VS) -o Makefile.coq.src
 
 clean:: Makefile.coq.all Makefile.coq.src
 	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean
