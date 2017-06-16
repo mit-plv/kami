@@ -604,7 +604,7 @@ Ltac simplifyMod whichCbv :=
   clear m;
   whichCbv mRef; commonCbv mRef;
   whichCbv mEquiv; commonCbv mEquiv;
-  rewrite signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
+  rewrite ?signature_eq in mRef, mEquiv; unfold eq_rect in mRef, mEquiv;
   simpl in mRef, mEquiv
 end;
   match goal with
