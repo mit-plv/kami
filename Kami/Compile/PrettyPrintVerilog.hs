@@ -151,6 +151,11 @@ ppRtlExpr who e =
         x2 <- ppRtlExpr who e2
         return $ '{' : x1 ++ ", " ++ x2 ++ "}"
     RtlBinBitBool _ _ (Lt0 _) e1 e2 -> binExpr e1 "<" e2
+    RtlBinBitBool _ _ (Slt _) e1 e2 ->
+      do
+        x1 <- ppRtlExpr who e1
+        x2 <- ppRtlExpr who e2
+        return $ "($signed(" ++ x1 ++ ") < $signed(" ++ x2 ++ "))"
     RtlITE _ p e1 e2 -> triExpr p "?" e1 ":" e2
     RtlEq _ e1 e2 -> binExpr e1 "==" e2
     RtlReadIndex n k idx vec ->

@@ -41,12 +41,24 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
              fun e => match op with
                         | Lt _ => wlt (match op in BinBitBoolOp n1' n2' return
                                              Expr type (SyntaxKind (Bit n1')) -> word n1' with
-                                         | Lt _ => fun e => evalExpr e
+                                       | Lt _ => fun e => evalExpr e
+                                       | Slt _ => fun e => evalExpr e
                                        end e1)
                                       (match op in BinBitBoolOp n1' n2' return
                                              Expr type (SyntaxKind (Bit n2')) -> word n1' with
-                                         | Lt _ => fun e => evalExpr e
+                                       | Lt _ => fun e => evalExpr e
+                                       | Slt _ => fun e => evalExpr e
                                        end e2)
+                        | Slt _ => wslt (match op in BinBitBoolOp n1' n2' return
+                                               Expr type (SyntaxKind (Bit n1')) -> word n1' with
+                                         | Lt _ => fun e => evalExpr e
+                                         | Slt _ => fun e => evalExpr e
+                                         end e1)
+                                        (match op in BinBitBoolOp n1' n2' return
+                                               Expr type (SyntaxKind (Bit n2')) -> word n1' with
+                                         | Lt _ => fun e => evalExpr e
+                                         | Slt _ => fun e => evalExpr e
+                                         end e2)
                       end
            | ITE k' e1 e2 e3 => fun ise => (eq_rect k' (fullType type)
                                                     (evalExpr (ITE e1 e2 e3))

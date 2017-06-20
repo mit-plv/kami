@@ -154,6 +154,7 @@ Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
   : word n1 -> word n2 -> bool :=
   match op with
     | Lt n => fun a b => if @wlt_dec n a b then true else false
+    | Slt n => fun a b => if @wslt_dec n a b then true else false
   end.
 
 

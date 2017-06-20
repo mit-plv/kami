@@ -314,7 +314,8 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Concat n1 n2: BinBitOp n1 n2 (n2 + n1). (* MSB : n1, LSB : n2 *)
 
 Inductive BinBitBoolOp: nat -> nat -> Set :=
-| Lt n: BinBitBoolOp n n.
+| Lt n: BinBitBoolOp n n
+| Slt n: BinBitBoolOp n n.
 
 Section Phoas.
   Variable ty: Kind -> Type.

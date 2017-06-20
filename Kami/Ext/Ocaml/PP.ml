@@ -475,6 +475,9 @@ let rec ppBExpr (e: bExpr) =
   | BBinBitBool (_, _, Lt _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBitBool (_, _, Slt _, se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+     ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
      ps ppRBracketL;
      ppBExpr ce; print_space (); ps ppQ; print_space ();
