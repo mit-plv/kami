@@ -612,7 +612,7 @@ Proof.
     remember (initRegs (getRegInits ((ma ++ mb) ++ mc)%kami)).
     induction HMultistepBeh.
     + subst; constructor.
-      p_equal H; f_equal.
+      f_equal.
       simpl; rewrite app_assoc; auto.
     + constructor; auto.
       clear -HStep.
@@ -633,7 +633,7 @@ Proof.
     remember (initRegs (getRegInits (ma ++ mb ++ mc)%kami)).
     induction HMultistepBeh.
     + subst; constructor.
-      p_equal H; f_equal.
+      f_equal.
       simpl; rewrite app_assoc; auto.
     + constructor; auto.
       clear -HStep.
@@ -1367,7 +1367,7 @@ Proof.
     remember (initRegs (regs1 ++ regs2)).
     induction HMultistepBeh.
     + subst; constructor.
-      p_equal H; f_equal.
+      f_equal.
     + constructor; auto.
       clear -HStep.
       apply module_structure_indep_step with
