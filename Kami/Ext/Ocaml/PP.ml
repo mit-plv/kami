@@ -73,7 +73,15 @@ let ppSignExtend = "signExtend"
 let ppTruncate = "truncate"
 let ppAdd = "+"
 let ppSub = "-"
-let ppMul = "*"
+let ppMulUU = "multiply_unsigned"
+let ppMulSS = "multiply_signed"
+let ppMulSU = "multiply_signed_unsigned"
+let ppDivUU = "divide_unsigned"
+let ppDivSS = "divide_signed"
+let ppDivSU = "divide_signed_unsigned"
+let ppRemUU = "remainder_unsigned"
+let ppRemSS = "remainder_signed"
+let ppRemSU = "remainder_signed_unsigned"
 let ppBand = "&"
 let ppBor = "|"
 let ppBxor = "^"
@@ -448,9 +456,51 @@ let rec ppBExpr (e: bExpr) =
   | BBinBit (_, _, _, Sub _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppSub; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
-  | BBinBit (_, _, _, Mul _, se1, se2) ->
-     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
-     ps ppMul; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+  | BBinBit (_, _, _, Mul (_, SignUU), se1, se2) ->
+     ps ppMulUU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Mul (_, SignSS), se1, se2) ->
+     ps ppMulSS; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Mul (_, SignSU), se1, se2) ->
+     ps ppMulSU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Div (_, SignUU), se1, se2) ->
+     ps ppDivUU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Div (_, SignSS), se1, se2) ->
+     ps ppDivSS; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Div (_, SignSU), se1, se2) ->
+     ps ppDivSU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Rem (_, SignUU), se1, se2) ->
+     ps ppRemUU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Rem (_, SignSS), se1, se2) ->
+     ps ppRemSS; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
+  | BBinBit (_, _, _, Rem (_, SignSU), se1, se2) ->
+     ps ppRemSU; print_space (); ps ppRBracketL;
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
+     ps ppRBracketR
   | BBinBit (_, _, _, Band _, se1, se2) ->
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppBand; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
@@ -683,7 +733,8 @@ let ppImports (_: unit) =
   ps "import Vector::*;"; print_cut (); force_newline ();
   ps "import BuildVector::*;"; print_cut (); force_newline ();
   ps "import RegFile::*;"; print_cut (); force_newline ();
-  ps "import RegFileZero::*;"; print_cut (); force_newline ()
+  ps "import RegFileZero::*;"; print_cut (); force_newline ();
+  ps "import MulDiv::*;"; print_cut (); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =

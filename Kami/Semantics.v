@@ -140,7 +140,15 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   match op with
     | Add n => @wplus n
     | Sub n => @wminus n
-    | Mul n => @wmult n
+    | Mul n SignSS => @wmultZ n
+    | Mul n SignSU => @wmultZsu n
+    | Mul n SignUU => @wmult n
+    | Div n SignSS => @wdivZ n
+    | Div n SignSU => @wdivZsu n
+    | Div n SignUU => @wdiv n
+    | Rem n SignSS => @wremZ n
+    | Rem n SignSU => @wremZsu n
+    | Rem n SignUU => @wrem n
     | Band n => @wand n
     | Bor n => @wor n
     | Bxor n => @wxor n

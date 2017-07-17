@@ -301,10 +301,14 @@ Inductive UniBitOp: nat -> nat -> Set :=
 | SignExtendTrunc n1 n2: UniBitOp n1 n2
 | TruncLsb n1 n2: UniBitOp (n1 + n2) n2. (* MSB : n2 *)
 
+Inductive BinSign := SignSS | SignSU | SignUU.
+
 Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
 | Sub n: BinBitOp n n n
-| Mul n: BinBitOp n n n
+| Mul n: BinSign -> BinBitOp n n n
+| Div n: BinSign -> BinBitOp n n n
+| Rem n: BinSign -> BinBitOp n n n
 | Band n: BinBitOp n n n
 | Bor n: BinBitOp n n n
 | Bxor n: BinBitOp n n n
