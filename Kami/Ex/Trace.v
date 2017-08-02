@@ -187,3 +187,11 @@ Inductive hasTrace : registers -> memory -> word 32 -> word 32 -> list TraceEven
     mget mem pc = Some (rv32iToRaw (TOHOST rs1)) ->
     hasTrace regs mem (pc ^+ $4) maxsp trace' ->
     hasTrace regs mem pc maxsp (Rd pc :: ToHost :: trace').
+
+
+Definition hiding (hidden : list Gpr) (regs : registers) (mem : memory) (pc maxsp : word 32) : Prop :=
+  forall regs',
+    (forall r, ~(In r hidden) -> rget regs' r = rget regs r) ->
+    forall trace,
+      (hasTrace regs mem pc maxsp trace <->
+       hasTrace regs' mem pc maxsp trace).
