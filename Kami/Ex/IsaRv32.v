@@ -312,6 +312,30 @@ Section RV32I.
     exact (#addr >> $$(natToWord 2 2))%kami_expr.
   Defined.
 
+  Definition rv32iBranchTaken:
+    forall ty : Kind -> Type,
+      StateT rv32iDataBytes rv32iRfIdx ty ->
+      fullType ty (SyntaxKind (MemTypes.Data rv32iDataBytes)) ->
+      (Bool) @ (ty).
+    intros ty st inst.
+    refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else Const ty (ConstBool false))%kami_expr.
+    register_op_funct3 inst rv32iF3BEQ
+                       (getRs1ValueE st #inst == getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BNE
+                       (getRs1ValueE st #inst != getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BLT
+                       ((UniBit (TruncLsb 31 1)
+                                (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $1)%kami_expr.
+    register_op_funct3 inst rv32iF3BGE
+                       ((UniBit (TruncLsb 31 1)
+                                (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $0)%kami_expr.
+    register_op_funct3 inst rv32iF3BLTU
+                       (getRs1ValueE st #inst < getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BGEU
+                       (getRs1ValueE st #inst >= getRs2ValueE st #inst)%kami_expr.
+    exact (Const ty (ConstBool false)).
+  Defined.
+
   (* NOTE: Because instructions are not on the memory, we give (pc + 1) for the next pc.
    * Branch offsets are not aligned, so the complete offset bits are used.
    *)
@@ -328,40 +352,10 @@ Section RV32I.
                  + (UniBit (SignExtendTrunc _ _) (getOffsetIE #inst)) else _)%kami_expr.
 
     refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else #pc + $4)%kami_expr.
-    (* branch instructions *)
-    register_op_funct3 inst rv32iF3BEQ
-                       (IF (getRs1ValueE st #inst == getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    register_op_funct3 inst rv32iF3BNE
-                       (IF (getRs1ValueE st #inst != getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    register_op_funct3 inst rv32iF3BLT
-                       (IF ((UniBit (TruncLsb 31 1)
-                                    (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $1)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    register_op_funct3 inst rv32iF3BGE
-                       (IF ((UniBit (TruncLsb 31 1)
-                                    (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $0)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    register_op_funct3 inst rv32iF3BLTU
-                       (IF (getRs1ValueE st #inst < getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    register_op_funct3 inst rv32iF3BGEU
-                       (IF (getRs1ValueE st #inst >= getRs2ValueE st #inst)
-                        then #pc + (UniBit (SignExtendTrunc _ _)
-                                           ((getOffsetSBE #inst) << $$(natToWord 1 1)))
-                        else #pc + $4)%kami_expr.
-    exact (#pc + $4)%kami_expr.
+    exact (IF (rv32iBranchTaken ty st inst)
+           then #pc + (UniBit (SignExtendTrunc _ _)
+                              ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+           else #pc + $4)%kami_expr.
   Defined.
 
 End RV32I.
