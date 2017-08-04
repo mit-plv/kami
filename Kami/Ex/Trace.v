@@ -95,3 +95,51 @@ Inductive hasTrace : regfile -> memory -> address -> data -> list TraceEvent -> 
     let execVal := evalExpr (rv32iExec type val1 val2 pc inst) in
     hasTrace (rset rf dst execVal) mem (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
     hasTrace rf mem pc maxsp (Rd pc :: trace').
+
+
+Definition censorLabel censorMeth (l : LabelT) : LabelT :=
+  match l with
+  | {| annot := a;
+       defs := d;
+       calls := c; |} =>
+    {| annot := a;
+       defs := FMap.M.mapi censorMeth d;
+       calls := FMap.M.mapi censorMeth c; |}
+  end.
+
+Definition censorLabelSeq censorMeth : LabelSeqT -> LabelSeqT :=
+  map (censorLabel censorMeth).
+
+Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
+  if String.string_dec n "exec"
+  then match t with
+       | existT _
+                {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                          "op" :: Bool;
+                                          "data" :: Bit 32});
+                   ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                (argV, retV) =>
+         existT _
+                {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                          "op" :: Bool;
+                                          "data" :: Bit 32});
+                   ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                (evalExpr (STRUCT { "addr" ::= #argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr";
+                                    "op" ::= #argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op";
+                                    "data" ::= $0 })%kami_expr,
+                 evalExpr (STRUCT { "data" ::= $0 })%kami_expr)
+       | _ => t
+       end
+  else if String.string_dec n "toHost"
+  then match t with
+       | existT _
+                {| arg := Bit 32;
+                   ret := Bit 0 |}
+                (argV, retV) =>
+         existT _
+                {| arg := Bit 32;
+                   ret := Bit 0 |}
+                (wzero _, retV)
+       | _ => t
+       end
+  else t.
