@@ -37,7 +37,8 @@ Inductive TraceEvent : Type :=
 | Rd (addr : address)
 | Wr (addr : address)
 | Branch (taken : bool)
-| ToHost.
+| ToHost
+| FromHost.
 
 Inductive hasTrace : regfile -> memory -> address -> data -> list TraceEvent -> Prop :=
 | htStackDone : forall rf mem pc maxsp,
@@ -75,6 +76,13 @@ Inductive hasTrace : regfile -> memory -> address -> data -> list TraceEvent -> 
     evalExpr (rv32iGetOptype type inst) = opTh ->
     hasTrace rf mem (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
     hasTrace rf mem pc maxsp (Rd pc :: ToHost :: trace')
+| htFh : forall inst rf val mem pc maxsp trace',
+    rget rf spReg <= maxsp ->
+    mget mem pc = Some inst ->
+    evalExpr (rv32iGetOptype type inst) = opFh ->
+    let dst := evalExpr (rv32iGetDst type inst) in
+    hasTrace (rset rf dst val) mem (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+    hasTrace rf mem pc maxsp (Rd pc :: FromHost :: trace')
 | htNmBranch : forall inst rf mem pc maxsp trace',
     rget rf spReg <= maxsp ->
     mget mem pc = Some inst ->
@@ -139,7 +147,19 @@ Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {
          existT _
                 {| arg := Bit 32;
                    ret := Bit 0 |}
-                (wzero _, retV)
+                ($0, retV)
+       | _ => t
+       end
+  else if String.string_dec n "fromHost"
+  then match t with
+       | existT _
+                {| arg := Bit 0;
+                   ret := Bit 32 |}
+                (argV, retV) =>
+         existT _
+                {| arg := Bit 0;
+                   ret := Bit 32 |}
+                (argV, $0)
        | _ => t
        end
   else t.
