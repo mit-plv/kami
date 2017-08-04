@@ -10,7 +10,7 @@ Section D2eInst.
   Variables addrSize iaddrSize dataBytes rfIdx: nat.
 
   Definition d2eEltI :=
-    STRUCT { "opType" :: Bit 2;
+    STRUCT { "opType" :: Bit optypeBits;
              "dst" :: Bit rfIdx;
              "addr" :: Bit addrSize;
              "val1" :: Data dataBytes;
@@ -21,7 +21,7 @@ Section D2eInst.
              "epoch" :: Bool }.
 
   Definition d2ePackI ty 
-             (opTy: Expr ty (SyntaxKind (Bit 2)))
+             (opTy: Expr ty (SyntaxKind (Bit optypeBits)))
              (dst: Expr ty (SyntaxKind (Bit rfIdx)))
              (addr: Expr ty (SyntaxKind (Bit addrSize)))
              (val1 val2: Expr ty (SyntaxKind (Data dataBytes)))
@@ -40,7 +40,7 @@ Section D2eInst.
              "epoch" ::= epoch }%kami_expr.
 
   Definition d2eOpTypeI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
-    : Expr ty (SyntaxKind (Bit 2)) := (#d2e!d2eEltI@."opType")%kami_expr.
+    : Expr ty (SyntaxKind (Bit optypeBits)) := (#d2e!d2eEltI@."opType")%kami_expr.
   Definition d2eDstI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind (Bit rfIdx)) := (#d2e!d2eEltI@."dst")%kami_expr.
   Definition d2eAddrI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
@@ -117,7 +117,7 @@ Section ProcThreeStage.
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit optypeBits)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
@@ -129,7 +129,7 @@ Section ProcThreeStage.
                 Expr ty (SyntaxKind d2eElt)).
   Variables
     (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
+                           Expr ty (SyntaxKind (Bit optypeBits)))
     (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -678,7 +678,7 @@ Section ProcThreeStageM.
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit optypeBits)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
@@ -690,7 +690,7 @@ Section ProcThreeStageM.
                 Expr ty (SyntaxKind d2eElt)).
   Variables
     (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
+                           Expr ty (SyntaxKind (Bit optypeBits)))
     (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -758,7 +758,7 @@ Section Facts.
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit optypeBits)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
@@ -770,7 +770,7 @@ Section Facts.
                 Expr ty (SyntaxKind d2eElt)).
   Variables
     (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
+                           Expr ty (SyntaxKind (Bit optypeBits)))
     (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
