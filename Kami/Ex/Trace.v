@@ -49,8 +49,7 @@ Section AbstractTrace.
   | FromHost.
 
   Inductive hasTrace : regfile -> memory -> progMem -> address -> data -> list TraceEvent -> Prop :=
-  | htStackDone : forall rf mem pm pc maxsp,
-      rget rf spReg > maxsp ->
+  | htNil : forall rf mem pm pc maxsp,
       hasTrace rf mem pm pc maxsp nil
   | htLd : forall inst val rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
@@ -113,14 +112,12 @@ Section AbstractTrace.
       hasTrace rf mem pm pc maxsp (Rd pc :: trace').
 
 
-  (* With this representation, the property "fromhost values don't
-   * affect the trace" is equivalent to "hasTrace is deterministic",
-   * since the trace hides fromhost values. *)
   Definition abstractHiding rf mem pm pc maxsp : Prop :=
     forall trace trace',
       hasTrace rf mem pm pc maxsp trace ->
       hasTrace rf mem pm pc maxsp trace' ->
-      trace = trace'.
+      exists suffix,
+        trace = trace' ++ suffix \/ trace' = trace ++ suffix.
 
 End AbstractTrace.
 
