@@ -5,6 +5,8 @@ Require Import Lib.Word.
 Require Import Kami.Syntax Kami.Semantics.
 Require Import Ex.SC Ex.IsaRv32.
 
+Open Scope string_scope.
+
 Definition spReg := gprToRaw x2.
 
 Section AbstractTrace.
@@ -192,7 +194,6 @@ Section KamiTrace.
   Definition extractFhLabelSeq extractFh : LabelSeqT -> list (option (word 32)) :=
     map (extractFhLabel extractFh).
 
-  Open Scope string_scope.
 
   Definition extractFhSC (cs : MethsT) : option (word 32) :=
     match FMap.M.find "fromHost" cs with
@@ -237,3 +238,28 @@ Section KamiTrace.
           censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
+
+
+Definition rv32iProcInst :=
+  procInst rv32iGetOptype
+           rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+           rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+           rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
+           rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
+           (procInitDefault  _ _ _ _).
+
+Definition SCRegs rf pm pc : RegsT :=
+  FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
+  (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
+   (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
+    (FMap.M.empty _))).
+
+Theorem abstractToSC :
+  forall rf mem pm pc maxsp,
+    abstractHiding rf mem pm pc maxsp ->
+    kamiHiding censorSCMeth extractFhSC
+               rv32iProcInst
+               maxsp
+               (SCRegs rf pm pc).
+Proof.
+Abort.
