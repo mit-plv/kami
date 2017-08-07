@@ -5,6 +5,8 @@ Require Import Lib.Word.
 Require Import Kami.Syntax Kami.Semantics.
 Require Import Ex.SC Ex.IsaRv32.
 
+Definition spReg := gprToRaw x2.
+
 Section AbstractTrace.
   Definition address := type (Bit rv32iAddrSize).
   Definition iaddress := type (Bit rv32iIAddrSize).
@@ -36,8 +38,6 @@ Section AbstractTrace.
   Definition progMem := iaddress -> data.
   Definition pmget (pm : progMem) (iaddr : iaddress) : data :=
     pm iaddr.
-
-  Definition spReg : register := gprToRaw x2.
 
   Inductive TraceEvent : Type :=
   | Rd (addr : address)
@@ -195,7 +195,7 @@ Section KamiTrace.
   Open Scope string_scope.
 
   Definition extractFhSC (cs : MethsT) : option (word 32) :=
-    match (FMap.M.find "fromHost" cs) with
+    match FMap.M.find "fromHost" cs with
     | Some (existT _
                    {| arg := Bit 0;
                       ret := Bit 32 |}
@@ -209,14 +209,31 @@ Section KamiTrace.
                | None => false
                end).
 
-  Definition kamiHiding censorMeth extractFh m regs : Prop :=
+  Definition inBounds (maxsp : word 32) (regs : RegsT) : Prop :=
+    match FMap.M.find "rf" regs with
+    | Some (existT _
+                   (SyntaxKind (Vector (Bit 32) 5))
+                   rf) => rf spReg <= maxsp
+    | _ => True
+    end.
+
+  Inductive BoundedMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
+    NilBMultistep : forall o1 o2 : RegsT,
+      o1 = o2 -> BoundedMultistep m maxsp o1 o2 nil
+  | BMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT),
+      BoundedMultistep m maxsp o n a ->
+      inBounds maxsp n ->
+      forall (u : UpdatesT) (l : LabelT),
+        Step m n u l -> BoundedMultistep m maxsp o (FMap.M.union u n) (l :: a).
+
+  Definition kamiHiding censorMeth extractFh m maxsp regs : Prop :=
     forall labels newRegs fhs,
-      Multistep m regs newRegs labels ->
+      BoundedMultistep m maxsp regs newRegs labels ->
       extractFhLabelSeq extractFh labels = fhs ->
       forall fhs',
         fhTiming fhs = fhTiming fhs' ->
         exists labels' newRegs',
-          Multistep m regs newRegs' labels' /\
+          BoundedMultistep m maxsp regs newRegs' labels' /\
           censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
