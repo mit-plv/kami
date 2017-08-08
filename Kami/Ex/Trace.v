@@ -42,11 +42,12 @@ Section AbstractTrace.
     pm iaddr.
 
   Inductive TraceEvent : Type :=
-  | Rd (addr : address)
-  | Wr (addr : address)
+  | Instr (pc : address)
+  | Rd (addr : address) (val : data)
+  | Wr (addr : address) (val : data)
   | Branch (taken : bool)
-  | ToHost
-  | FromHost.
+  | ToHost (val : data)
+  | FromHost (val : data).
 
   Inductive hasTrace : regfile -> memory -> progMem -> address -> data -> list TraceEvent -> Prop :=
   | htNil : forall rf mem pm pc maxsp,
@@ -63,7 +64,7 @@ Section AbstractTrace.
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
       mget mem laddr_aligned = Some val ->
       hasTrace (rset rf dstIdx val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: Rd laddr_aligned :: trace')
+      hasTrace rf mem pm pc maxsp (Instr pc :: Rd laddr_aligned val :: trace')
   | htSt : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -76,27 +77,29 @@ Section AbstractTrace.
       let saddr := evalExpr (rv32iCalcStAddr type addr srcVal) in
       let saddr_aligned := evalExpr (rv32iAlignAddr type saddr) in
       hasTrace rf (mset mem saddr_aligned stVal) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: Wr saddr_aligned :: trace')
+      hasTrace rf mem pm pc maxsp (Instr pc :: Wr saddr_aligned stVal :: trace')
   | htTh : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opTh ->
+      let srcIdx := evalExpr (rv32iGetSrc1 type inst) in
+      let srcVal := rget rf srcIdx in
       hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: ToHost :: trace')
+      hasTrace rf mem pm pc maxsp (Instr pc :: ToHost srcVal :: trace')
   | htFh : forall inst rf val mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opFh ->
       let dst := evalExpr (rv32iGetDst type inst) in
       hasTrace (rset rf dst val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: FromHost :: trace')
+      hasTrace rf mem pm pc maxsp (Instr pc :: FromHost val :: trace')
   | htNmBranch : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr = rv32iOpBRANCH ->
       hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: Branch (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
+      hasTrace rf mem pm pc maxsp (Instr pc :: Branch (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
   | htNm : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -109,15 +112,41 @@ Section AbstractTrace.
       let dst := evalExpr (rv32iGetDst type inst) in
       let execVal := evalExpr (rv32iExec type val1 val2 pc inst) in
       hasTrace (rset rf dst execVal) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc :: trace').
+      hasTrace rf mem pm pc maxsp (Instr pc :: trace').
 
+
+  Definition censorTrace : list TraceEvent -> list TraceEvent :=
+    map (fun te => match te with
+                | Instr _ => te
+                | Branch _ => te
+                | Rd addr val => Rd addr $0
+                | Wr addr val => Wr addr $0
+                | ToHost val => ToHost $0
+                | FromHost val => FromHost $0
+                end).
+
+  Definition extractFhTrace : list TraceEvent -> list (option data) :=
+    map (fun te => match te with
+                | FromHost val => Some val
+                | _ => None
+                end).
+
+  Definition fhTiming : list (option data) -> list bool :=
+    map (fun o => match o with
+               | Some _ => true
+               | None => false
+               end).
 
   Definition abstractHiding rf mem pm pc maxsp : Prop :=
-    forall trace trace',
+    forall trace fhTrace,
       hasTrace rf mem pm pc maxsp trace ->
-      hasTrace rf mem pm pc maxsp trace' ->
-      exists suffix,
-        trace = trace' ++ suffix \/ trace' = trace ++ suffix.
+      extractFhTrace trace = fhTrace ->
+      forall fhTrace',
+        fhTiming fhTrace = fhTiming fhTrace' ->
+        exists trace',
+          hasTrace rf mem pm pc maxsp trace' /\
+          censorTrace trace = censorTrace trace' /\
+          extractFhTrace trace' = fhTrace'.
 
 End AbstractTrace.
 
@@ -200,12 +229,6 @@ Section KamiTrace.
                    (argV, retV)) => Some retV
     | _ => None
     end.
-
-  Definition fhTiming : list (option (word 32)) -> list bool :=
-    map (fun o => match o with
-               | Some _ => true
-               | None => false
-               end).
 
   Definition inBounds (maxsp : word 32) (regs : RegsT) : Prop :=
     match FMap.M.find "rf" regs with
