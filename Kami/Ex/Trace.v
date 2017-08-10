@@ -274,7 +274,112 @@ Definition SCRegs rf pm pc : RegsT :=
    (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
     (FMap.M.empty _))).
 
-Theorem abstractToSC :
+Definition labelToTraceEvent (l : LabelT) : option TraceEvent :=
+    match l with
+    | {| annot := _;
+         defs := _;
+         calls := c; |} =>
+      match FMap.M.find "exec" c with
+      | Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (argV, retV)) =>
+        let addr := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr")%kami_expr in
+        let val := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
+        if evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op")%kami_expr
+        then Some (Wr addr val)
+        else Some (Rd addr val)
+      | None =>
+        match FMap.M.find "toHost" c with
+        | Some (existT _
+                       {| arg := Bit 32;
+                          ret := Bit 0 |}
+                       (argV, retV)) =>
+          Some (ToHost argV)
+        | None =>
+          match FMap.M.find "fromHost" c with
+          | Some (existT _
+                         {| arg := Bit 0;
+                            ret := Bit 32 |}
+                         (argV, retV)) =>
+            Some (FromHost retV)
+          | _ => None
+          end
+        | _ => None
+        end
+      | _ => None
+      end
+    end.
+
+Inductive relatedTrace : list TraceEvent -> LabelSeqT -> Prop :=
+| RtNil : relatedTrace nil nil
+| RtRd : forall pc addr val lbl trace' ls',
+    labelToTraceEvent lbl = Some (Rd addr val) ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: Rd addr val :: trace') (lbl :: ls')
+| RtWr : forall pc addr val lbl trace' ls',
+    labelToTraceEvent lbl = Some (Wr addr val) ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: Wr addr val :: trace') (lbl :: ls')
+| RtTh : forall pc val lbl trace' ls',
+    labelToTraceEvent lbl = Some (ToHost val) ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: ToHost val :: trace') (lbl :: ls')
+| RtFh : forall pc val lbl trace' ls',
+    labelToTraceEvent lbl = Some (FromHost val) ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: FromHost val :: trace') (lbl :: ls')
+| RtBranch : forall pc taken lbl trace' ls',
+    labelToTraceEvent lbl = None ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: Branch taken :: trace') (lbl :: ls')
+| RtNm : forall pc lbl trace' ls',
+    labelToTraceEvent lbl = None ->
+    relatedTrace trace' ls' ->
+    relatedTrace (Instr pc :: trace') (lbl :: ls').
+
+Lemma relatedFhTrace :
+  forall trace ls,
+    relatedTrace trace ls -> extractFhTrace trace = extractFhLabelSeq extractFhSC ls.
+Proof.
+Admitted.
+
+Lemma abstractToSCRelated :
+  forall rf mem pm pc maxsp trace,
+    hasTrace rf mem pm pc maxsp trace ->
+    exists newRegs ls,
+      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
+      relatedTrace trace ls.
+Proof.
+Admitted.
+
+Lemma SCToAbstractRelated :
+  forall rf mem pm pc maxsp newRegs ls,
+    BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
+    exists trace,
+      hasTrace rf mem pm pc maxsp trace /\
+      relatedTrace trace ls.
+Proof.
+Admitted.
+
+Lemma relatedCensor :
+  forall trace1 trace2 ls1 ls2,
+    relatedTrace trace1 ls1 ->
+    relatedTrace trace2 ls2 ->
+    censorTrace trace1 = censorTrace trace2 ->
+    censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
+Proof.
+Admitted.
+
+Ltac shatter :=
+  repeat match goal with
+         | [ H : exists _, _ |- _ ] => destruct H
+         | [ H : _ /\ _ |- _ ] => destruct H
+         end.
+
+Theorem abstractToSCHiding :
   forall rf mem pm pc maxsp,
     abstractHiding rf mem pm pc maxsp ->
     kamiHiding censorSCMeth extractFhSC
@@ -282,4 +387,35 @@ Theorem abstractToSC :
                maxsp
                (SCRegs rf pm pc).
 Proof.
-Abort.
+  unfold abstractHiding, kamiHiding.
+  intros.
+  match goal with
+  | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => eapply SCToAbstractRelated in H
+  end.
+  shatter.
+  match goal with
+  | [ Hrel : relatedTrace ?t ?ls,
+      Hextract : extractFhLabelSeq extractFhSC ?ls = _,
+      Htrace : hasTrace _ _ _ _ _ _,
+      Habs : forall _ _, hasTrace _ _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, fhTiming _ = fhTiming _ -> _,
+      Htiming : fhTiming _ = fhTiming _
+      |- context[extractFhLabelSeq _ _ = ?fhTrace] ] =>
+    rewrite <- (relatedFhTrace _ _ Hrel) in Hextract; specialize (Habs _ _ Htrace Hextract fhTrace Htiming)
+  end.
+  shatter.
+  match goal with
+  | [ Htrace : hasTrace _ _ _ _ _ ?t,
+      Hextract : extractFhTrace ?t = ?fhTrace
+      |- context[?fhTrace] ] => apply abstractToSCRelated in Htrace
+  end.
+  shatter.
+  match goal with
+  | [ H : BoundedMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
+  end.
+  repeat split;
+    match goal with
+    | [ |- BoundedMultistep _ _ _ _ _ ] => assumption
+    | [ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply relatedCensor; eassumption
+    | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
+    end.
+Qed.
