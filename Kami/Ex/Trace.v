@@ -125,24 +125,18 @@ Section AbstractTrace.
                 | FromHost val => FromHost $0
                 end).
 
-  Definition extractFhTrace : list TraceEvent -> list (option data) :=
-    map (fun te => match te with
-                | FromHost val => Some val
-                | _ => None
+  Definition extractFhTrace : list TraceEvent -> list data :=
+    flat_map (fun te => match te with
+                | FromHost val => cons val nil
+                | _ => nil
                 end).
-
-  Definition fhTiming : list (option data) -> list bool :=
-    map (fun o => match o with
-               | Some _ => true
-               | None => false
-               end).
 
   Definition abstractHiding rf mem pm pc maxsp : Prop :=
     forall trace fhTrace,
       hasTrace rf mem pm pc maxsp trace ->
       extractFhTrace trace = fhTrace ->
       forall fhTrace',
-        fhTiming fhTrace = fhTiming fhTrace' ->
+        length fhTrace = length fhTrace' ->
         exists trace',
           hasTrace rf mem pm pc maxsp trace' /\
           censorTrace trace = censorTrace trace' /\
@@ -163,6 +157,62 @@ Section KamiTrace.
 
   Definition censorLabelSeq censorMeth : LabelSeqT -> LabelSeqT :=
     map (censorLabel censorMeth).
+
+  Definition extractFhLabel extractFh (l : LabelT) : list (word 32) :=
+    match l with
+    | {| annot := _;
+         defs := _;
+         calls := c; |} => extractFh c
+    end.
+
+  Definition extractFhLabelSeq extractFh : LabelSeqT -> list (word 32) :=
+    flat_map (extractFhLabel extractFh).
+
+
+  Definition inBounds (maxsp : word 32) (regs : RegsT) : Prop :=
+    match FMap.M.find "rf" regs with
+    | Some (existT _
+                   (SyntaxKind (Vector (Bit 32) 5))
+                   rf) => rf spReg <= maxsp
+    | _ => True
+    end.
+
+  Inductive BoundedMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
+    NilBMultistep : forall o1 o2 : RegsT,
+      o1 = o2 -> BoundedMultistep m maxsp o1 o2 nil
+  | BMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT),
+      BoundedMultistep m maxsp o n a ->
+      inBounds maxsp n ->
+      forall (u : UpdatesT) (l : LabelT),
+        Step m n u l -> BoundedMultistep m maxsp o (FMap.M.union u n) (l :: a).
+
+  Definition kamiHiding censorMeth extractFh m maxsp regs : Prop :=
+    forall labels newRegs fhs,
+      BoundedMultistep m maxsp regs newRegs labels ->
+      extractFhLabelSeq extractFh labels = fhs ->
+      forall fhs',
+        length fhs = length fhs' ->
+        exists labels' newRegs',
+          BoundedMultistep m maxsp regs newRegs' labels' /\
+          censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
+          extractFhLabelSeq extractFh labels' = fhs'.
+End KamiTrace.
+
+Section SCTiming.
+
+  Definition rv32iProcInst :=
+    procInst rv32iGetOptype
+             rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+             rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+             rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
+             rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
+             (procInitDefault  _ _ _ _).
+
+  Definition SCRegs rf pm pc : RegsT :=
+    FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
+               (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
+                           (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
+                                       (FMap.M.empty _))).
 
   Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n "exec"
@@ -210,212 +260,175 @@ Section KamiTrace.
          end
     else t.
 
-  Definition extractFhLabel extractFh (l : LabelT) : option (word 32) :=
-    match l with
-    | {| annot := _;
-         defs := _;
-         calls := c; |} => extractFh c
-    end.
-
-  Definition extractFhLabelSeq extractFh : LabelSeqT -> list (option (word 32)) :=
-    map (extractFhLabel extractFh).
-
-
-  Definition extractFhSC (cs : MethsT) : option (word 32) :=
-    match FMap.M.find "fromHost" cs with
+  Definition callsToTraceEvent (c : MethsT) : option TraceEvent :=
+    match FMap.M.find "exec" c with
     | Some (existT _
-                   {| arg := Bit 0;
-                      ret := Bit 32 |}
-                   (argV, retV)) => Some retV
-    | _ => None
-    end.
-
-  Definition inBounds (maxsp : word 32) (regs : RegsT) : Prop :=
-    match FMap.M.find "rf" regs with
-    | Some (existT _
-                   (SyntaxKind (Vector (Bit 32) 5))
-                   rf) => rf spReg <= maxsp
-    | _ => True
-    end.
-
-  Inductive BoundedMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
-    NilBMultistep : forall o1 o2 : RegsT,
-      o1 = o2 -> BoundedMultistep m maxsp o1 o2 nil
-  | BMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT),
-      BoundedMultistep m maxsp o n a ->
-      inBounds maxsp n ->
-      forall (u : UpdatesT) (l : LabelT),
-        Step m n u l -> BoundedMultistep m maxsp o (FMap.M.union u n) (l :: a).
-
-  Definition kamiHiding censorMeth extractFh m maxsp regs : Prop :=
-    forall labels newRegs fhs,
-      BoundedMultistep m maxsp regs newRegs labels ->
-      extractFhLabelSeq extractFh labels = fhs ->
-      forall fhs',
-        fhTiming fhs = fhTiming fhs' ->
-        exists labels' newRegs',
-          BoundedMultistep m maxsp regs newRegs' labels' /\
-          censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
-          extractFhLabelSeq extractFh labels' = fhs'.
-End KamiTrace.
-
-
-Definition rv32iProcInst :=
-  procInst rv32iGetOptype
-           rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
-           rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
-           rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
-           rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
-           (procInitDefault  _ _ _ _).
-
-Definition SCRegs rf pm pc : RegsT :=
-  FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
-  (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
-   (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
-    (FMap.M.empty _))).
-
-Definition labelToTraceEvent (l : LabelT) : option TraceEvent :=
-    match l with
-    | {| annot := _;
-         defs := _;
-         calls := c; |} =>
-      match FMap.M.find "exec" c with
+                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                             "op" :: Bool;
+                                             "data" :: Bit 32});
+                      ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                   (argV, retV)) =>
+      let addr := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr")%kami_expr in
+      let val := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
+      if evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op")%kami_expr
+      then Some (Wr addr val)
+      else Some (Rd addr val)
+    | None =>
+      match FMap.M.find "toHost" c with
       | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     {| arg := Bit 32;
+                        ret := Bit 0 |}
                      (argV, retV)) =>
-        let addr := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr")%kami_expr in
-        let val := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
-        if evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op")%kami_expr
-        then Some (Wr addr val)
-        else Some (Rd addr val)
+        Some (ToHost argV)
       | None =>
-        match FMap.M.find "toHost" c with
+        match FMap.M.find "fromHost" c with
         | Some (existT _
-                       {| arg := Bit 32;
-                          ret := Bit 0 |}
+                       {| arg := Bit 0;
+                          ret := Bit 32 |}
                        (argV, retV)) =>
-          Some (ToHost argV)
-        | None =>
-          match FMap.M.find "fromHost" c with
-          | Some (existT _
-                         {| arg := Bit 0;
-                            ret := Bit 32 |}
-                         (argV, retV)) =>
-            Some (FromHost retV)
-          | _ => None
-          end
+          Some (FromHost retV)
         | _ => None
         end
       | _ => None
       end
+    | _ => None
     end.
 
-Inductive relatedTrace : list TraceEvent -> LabelSeqT -> Prop :=
-| RtNil : relatedTrace nil nil
-| RtRd : forall pc addr val lbl trace' ls',
-    labelToTraceEvent lbl = Some (Rd addr val) ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: Rd addr val :: trace') (lbl :: ls')
-| RtWr : forall pc addr val lbl trace' ls',
-    labelToTraceEvent lbl = Some (Wr addr val) ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: Wr addr val :: trace') (lbl :: ls')
-| RtTh : forall pc val lbl trace' ls',
-    labelToTraceEvent lbl = Some (ToHost val) ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: ToHost val :: trace') (lbl :: ls')
-| RtFh : forall pc val lbl trace' ls',
-    labelToTraceEvent lbl = Some (FromHost val) ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: FromHost val :: trace') (lbl :: ls')
-| RtBranch : forall pc taken lbl trace' ls',
-    labelToTraceEvent lbl = None ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: Branch taken :: trace') (lbl :: ls')
-| RtNm : forall pc lbl trace' ls',
-    labelToTraceEvent lbl = None ->
-    relatedTrace trace' ls' ->
-    relatedTrace (Instr pc :: trace') (lbl :: ls').
+  Definition labelToTraceEvent (l : LabelT) : option TraceEvent :=
+    match l with
+    | {| annot := _;
+         defs := _;
+         calls := c; |} => callsToTraceEvent c
+    end.
 
-Lemma relatedFhTrace :
-  forall trace ls,
-    relatedTrace trace ls -> extractFhTrace trace = extractFhLabelSeq extractFhSC ls.
-Proof.
-Admitted.
+  Definition extractFhSC (cs : MethsT) : list (word 32) :=
+    match callsToTraceEvent cs with
+    | Some (FromHost val) => cons val nil
+    | _ => nil
+    end.
 
-Lemma abstractToSCRelated :
-  forall rf mem pm pc maxsp trace,
-    hasTrace rf mem pm pc maxsp trace ->
-    exists newRegs ls,
-      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
-      relatedTrace trace ls.
-Proof.
-Admitted.
+  Inductive relatedTrace : list TraceEvent -> LabelSeqT -> Prop :=
+  | RtNil : relatedTrace nil nil
+  | RtRd : forall pc addr val lbl trace' ls',
+      labelToTraceEvent lbl = Some (Rd addr val) ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: Rd addr val :: trace') (lbl :: ls')
+  | RtWr : forall pc addr val lbl trace' ls',
+      labelToTraceEvent lbl = Some (Wr addr val) ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: Wr addr val :: trace') (lbl :: ls')
+  | RtTh : forall pc val lbl trace' ls',
+      labelToTraceEvent lbl = Some (ToHost val) ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: ToHost val :: trace') (lbl :: ls')
+  | RtFh : forall pc val lbl trace' ls',
+      labelToTraceEvent lbl = Some (FromHost val) ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: FromHost val :: trace') (lbl :: ls')
+  | RtBranch : forall pc taken lbl trace' ls',
+      labelToTraceEvent lbl = None ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: Branch taken :: trace') (lbl :: ls')
+  | RtNm : forall pc lbl trace' ls',
+      labelToTraceEvent lbl = None ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Instr pc :: trace') (lbl :: ls').
 
-Lemma SCToAbstractRelated :
-  forall rf mem pm pc maxsp newRegs ls,
-    BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
-    exists trace,
-      hasTrace rf mem pm pc maxsp trace /\
-      relatedTrace trace ls.
-Proof.
-Admitted.
+  Lemma relatedFhTrace :
+    forall trace ls,
+      relatedTrace trace ls -> extractFhTrace trace = extractFhLabelSeq extractFhSC ls.
+  Proof.
+    induction 1;
+      try solve
+          [ eauto |
+            simpl;
+            match goal with
+            | [ H : ?a = ?b |- ?a = ?c ++ ?b ] => assert (Hnil : c = nil); [ idtac | rewrite Hnil; simpl; assumption ]
+            | [ H : ?a = ?b |- ?v :: ?a = ?c ++ ?b ] => assert (Hval : c = cons val nil); [ idtac | rewrite Hval; simpl; rewrite H; reflexivity ]
+            end;
+            match goal with
+            | [ |- extractFhLabel extractFhSC ?l = _ ] => destruct l
+            end;
+            unfold labelToTraceEvent in *;
+            unfold extractFhLabel, extractFhSC;
+            match goal with
+            | [ H : ?t = _ |- context[?t] ] => rewrite H
+            end;
+            reflexivity ].
+  Qed.
 
-Lemma relatedCensor :
-  forall trace1 trace2 ls1 ls2,
-    relatedTrace trace1 ls1 ->
-    relatedTrace trace2 ls2 ->
-    censorTrace trace1 = censorTrace trace2 ->
-    censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
-Proof.
-Admitted.
+  Lemma relatedCensor :
+    forall trace1 trace2 ls1 ls2,
+      relatedTrace trace1 ls1 ->
+      relatedTrace trace2 ls2 ->
+      censorTrace trace1 = censorTrace trace2 ->
+      censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
+  Proof.
+  Admitted.
 
-Ltac shatter :=
-  repeat match goal with
-         | [ H : exists _, _ |- _ ] => destruct H
-         | [ H : _ /\ _ |- _ ] => destruct H
-         end.
+  Lemma abstractToSCRelated :
+    forall rf mem pm pc maxsp trace,
+      hasTrace rf mem pm pc maxsp trace ->
+      exists newRegs ls,
+        BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
+        relatedTrace trace ls.
+  Proof.
+  Admitted.
 
-Theorem abstractToSCHiding :
-  forall rf mem pm pc maxsp,
-    abstractHiding rf mem pm pc maxsp ->
-    kamiHiding censorSCMeth extractFhSC
-               rv32iProcInst
-               maxsp
-               (SCRegs rf pm pc).
-Proof.
-  unfold abstractHiding, kamiHiding.
-  intros.
-  match goal with
-  | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => eapply SCToAbstractRelated in H
-  end.
-  shatter.
-  match goal with
-  | [ Hrel : relatedTrace ?t ?ls,
-      Hextract : extractFhLabelSeq extractFhSC ?ls = _,
-      Htrace : hasTrace _ _ _ _ _ _,
-      Habs : forall _ _, hasTrace _ _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, fhTiming _ = fhTiming _ -> _,
-      Htiming : fhTiming _ = fhTiming _
-      |- context[extractFhLabelSeq _ _ = ?fhTrace] ] =>
-    rewrite <- (relatedFhTrace _ _ Hrel) in Hextract; specialize (Habs _ _ Htrace Hextract fhTrace Htiming)
-  end.
-  shatter.
-  match goal with
-  | [ Htrace : hasTrace _ _ _ _ _ ?t,
-      Hextract : extractFhTrace ?t = ?fhTrace
-      |- context[?fhTrace] ] => apply abstractToSCRelated in Htrace
-  end.
-  shatter.
-  match goal with
-  | [ H : BoundedMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
-  end.
-  repeat split;
+  Lemma SCToAbstractRelated :
+    forall rf mem pm pc maxsp newRegs ls,
+      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
+      exists trace,
+        hasTrace rf mem pm pc maxsp trace /\
+        relatedTrace trace ls.
+  Proof.
+  Admitted.
+
+  Ltac shatter :=
+    repeat match goal with
+           | [ H : exists _, _ |- _ ] => destruct H
+           | [ H : _ /\ _ |- _ ] => destruct H
+           end.
+
+  Theorem abstractToSCHiding :
+    forall rf mem pm pc maxsp,
+      abstractHiding rf mem pm pc maxsp ->
+      kamiHiding censorSCMeth extractFhSC
+                 rv32iProcInst
+                 maxsp
+                 (SCRegs rf pm pc).
+  Proof.
+    unfold abstractHiding, kamiHiding.
+    intros.
     match goal with
-    | [ |- BoundedMultistep _ _ _ _ _ ] => assumption
-    | [ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply relatedCensor; eassumption
-    | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
+    | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => eapply SCToAbstractRelated in H
     end.
-Qed.
+    shatter.
+    match goal with
+    | [ Hrel : relatedTrace ?t ?ls,
+               Hextract : extractFhLabelSeq extractFhSC ?ls = _,
+                          Htrace : hasTrace _ _ _ _ _ _,
+                                   Habs : forall _ _, hasTrace _ _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, length _ = length _ -> _,
+          Hlen : length _ = length _
+          |- context[extractFhLabelSeq _ _ = ?fhTrace] ] =>
+      rewrite <- (relatedFhTrace _ _ Hrel) in Hextract; specialize (Habs _ _ Htrace Hextract fhTrace Hlen)
+    end.
+    shatter.
+    match goal with
+    | [ Htrace : hasTrace _ _ _ _ _ ?t,
+                 Hextract : extractFhTrace ?t = ?fhTrace
+        |- context[?fhTrace] ] => apply abstractToSCRelated in Htrace
+    end.
+    shatter.
+    match goal with
+    | [ H : BoundedMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
+    end.
+    repeat split;
+      match goal with
+      | [ |- BoundedMultistep _ _ _ _ _ ] => assumption
+      | [ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply relatedCensor; eassumption
+      | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
+      end.
+  Qed.
+
+End SCTiming.
