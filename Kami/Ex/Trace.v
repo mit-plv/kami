@@ -358,7 +358,11 @@ Section SCTiming.
   Qed.
 
   Lemma relatedCensor :
-    forall trace1 trace2 ls1 ls2,
+    forall rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
+      hasTrace rf mem pm pc maxsp trace1 ->
+      hasTrace rf mem pm pc maxsp trace2 ->
+      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
+      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
@@ -401,7 +405,7 @@ Section SCTiming.
     unfold abstractHiding, kamiHiding.
     intros.
     match goal with
-    | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => eapply SCToAbstractRelated in H
+    | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
     end.
     shatter.
     match goal with
@@ -417,7 +421,7 @@ Section SCTiming.
     match goal with
     | [ Htrace : hasTrace _ _ _ _ _ ?t,
                  Hextract : extractFhTrace ?t = ?fhTrace
-        |- context[?fhTrace] ] => apply abstractToSCRelated in Htrace
+        |- context[?fhTrace] ] => pose (abstractToSCRelated _ _ _ _ _ _ Htrace)
     end.
     shatter.
     match goal with
@@ -426,7 +430,7 @@ Section SCTiming.
     repeat split;
       match goal with
       | [ |- BoundedMultistep _ _ _ _ _ ] => assumption
-      | [ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply relatedCensor; eassumption
+      | [ Htrace1 : hasTrace _ _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
       | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
   Qed.
