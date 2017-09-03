@@ -307,8 +307,8 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
 | Sub n: BinBitOp n n n
 | Mul n: BinSign -> BinBitOp n n n
-| Div n: BinSign -> BinBitOp n n n
-| Rem n: BinSign -> BinBitOp n n n
+| Div n: bool -> BinBitOp n n n
+| Rem n: bool -> BinBitOp n n n
 | Band n: BinBitOp n n n
 | Bor n: BinBitOp n n n
 | Bxor n: BinBitOp n n n

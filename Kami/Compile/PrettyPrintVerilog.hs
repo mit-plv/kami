@@ -19,6 +19,7 @@ deriving instance Show UniBoolOp
 deriving instance Show BinBoolOp
 
 deriving instance Show UniBitOp
+deriving instance Show BinSign
 deriving instance Show BinBitOp
 deriving instance Show BinBitBoolOp
 deriving instance Show RtlExpr
@@ -134,7 +135,13 @@ ppRtlExpr who e =
                                                   else createTrunc (Bit sz) e (retSz - 1) 0
     RtlBinBit _ _ _ (Add _) e1 e2 -> binExpr e1 "+" e2
     RtlBinBit _ _ _ (Sub _) e1 e2 -> binExpr e1 "-" e2
-    RtlBinBit _ _ _ (Mul _) e1 e2 -> binExpr e1 "*" e2
+    RtlBinBit _ _ _ (Mul _ SignUU) e1 e2 -> binExpr e1 "*" e2
+    RtlBinBit _ _ _ (Mul _ SignSS) e1 e2 ->
+      do
+        x1 <- ppRtlExpr who e1
+        x2 <- ppRtlExpr who e2
+        return $ "($signed(" ++ x1 ++ ") * " ++
+          "($signed(" ++ x2 ++ "))"
     RtlBinBit _ _ _ (Band _) e1 e2 -> binExpr e1 "&" e2
     RtlBinBit _ _ _ (Bor _) e1 e2 -> binExpr e1 "|" e2
     RtlBinBit _ _ _ (Bxor _) e1 e2 -> binExpr e1 "^" e2
