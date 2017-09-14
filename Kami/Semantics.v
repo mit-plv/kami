@@ -56,6 +56,78 @@ Section WordFunc.
   Qed.
 End WordFunc.
 
+Definition fin_tl' n (x: Fin.t (S n)) :=
+match x return match x with
+               | Fin.F1 _ => unit
+               | Fin.FS m y => Fin.t m
+               end with
+| Fin.F1 _ => tt
+| Fin.FS _ y => y
+end.
+
+Definition fin_tl n (x: Fin.t (S n)) (pf: x <> Fin.F1): Fin.t n :=
+  Fin.caseS (fun n' x' => x' <> Fin.F1 -> Fin.t n')
+            (fun n' pf' => match pf' eq_refl with
+                           end)
+            (fun n' p _ => p) x pf.
+
+Theorem shatter_fin n (a: Fin.t (S n)):
+  a = Fin.F1 \/ (exists pf: a <> Fin.F1, a = Fin.FS (fin_tl pf)).
+refine
+  match a with
+  | Fin.F1 _ => or_introl eq_refl
+  | Fin.FS _ y => or_intror _
+  end.
+assert (pf: Fin.FS y <> Fin.F1) by (intros; discriminate).
+exists pf; f_equal.
+Qed.
+
+Section FinFunc.
+  Variable A: Type.
+
+  (* a lemma for wordVecDec *)
+  Definition finVecDec':
+    forall n (f g: Fin.t n -> A), (forall x: Fin.t n, {f x = g x} + {f x <> g x}) ->
+                                  {forall x, f x = g x} + {exists x, f x <> g x}.
+  Proof.
+    intro n.
+    induction n; intros f g H.
+    - left; intros.
+      eapply Fin.case0; eauto.
+    - assert (Hn: forall (x: Fin.t n),
+                    {f (Fin.FS x) = g (Fin.FS x)} + {f (Fin.FS x) <> g (Fin.FS x)}) by
+             (intros; specialize (H (Fin.FS x)); intuition).
+      destruct (IHn _ _ Hn) as [ef | nf].
+      + destruct (IHn _ _ Hn) as [et | nt].
+        * { destruct (H Fin.F1).
+            - left; intros x.
+              pose proof (shatter_fin x).
+              destruct H0; subst; auto.
+              destruct H0.
+              specialize (ef (fin_tl x0)).
+              specialize (et (fin_tl x0)).
+              rewrite H0.
+              auto.
+            - right.
+              eexists; eauto.
+          }
+        * right; destruct_ex; eauto.
+      + right; destruct_ex; eauto.
+  Qed.
+
+  Definition finVecDec:
+    forall n (f g: Fin.t n -> A), (forall x: Fin.t n, {f x = g x} + {f x <> g x}) ->
+                                  {f = g} + {f <> g}.
+  Proof.
+    intros.
+    pose proof (finVecDec' _ _ H) as [lt | rt].
+    left; apply functional_extensionality; intuition.
+    right; unfold not; intros eq; rewrite eq in *.
+    destruct rt; intuition.
+  Qed.
+End FinFunc.
+
+Print Assumptions finVecDec.
 
 Fixpoint isEq k: forall (e1: type k) (e2: type k),
                    {e1 = e2} + {e1 <> e2}.
@@ -79,7 +151,10 @@ Proof.
                             @help _ atts' (fun i => vs1 (Fin.FS i)) (fun i => vs2 (Fin.FS i));;
                             Yes
                  end) n ls
-          end); clear isEq help.
+            | Array n nt =>
+              fun e1 e2 =>
+                finVecDec e1 e2 (fun x => isEq _ (e1 x) (e2 x))
+          end); clear isEq; try clear help.
   - abstract (extensionality x;
               apply Fin.case0; assumption).
   - abstract (extensionality x;
@@ -165,6 +240,14 @@ Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
     | Slt n => fun a b => if @wslt_dec n a b then true else false
   end.
 
+Fixpoint evalArray A n (vs: Vector.t A n): Fin.t n -> A :=
+  match vs in (Vector.t _ n0) return (Fin.t n0 -> A) with
+  | Vector.nil => fun i => Fin.case0 _ i
+  | Vector.cons a n' vs' => fun i => match i in Fin.t n'' return Vector.t A (pred n'') -> A with
+                                     | Fin.F1 _ => fun _ => a
+                                     | Fin.FS n1 j => fun vs' => evalArray vs' j
+                                     end vs'
+  end.
 
 Fixpoint evalConstT k (e: ConstT k): type k :=
   match e in ConstT k return type k with
@@ -194,6 +277,7 @@ Fixpoint evalConstT k (e: ConstT k): type k :=
                      end vs3 (@help _ _ ils3)
                end i1
          end ils) n vs ils
+    | ConstArray k' n v => evalArray (Vector.map (@evalConstT k') v)
   end.
 
 Definition evalConstFullT k (e: ConstFullT k) :=
@@ -237,7 +321,15 @@ Section Semantics.
       | BuildStruct n attrs ils =>
         ilist_to_fun_m _ _ (fun sk => SyntaxKind (attrType sk)) evalExpr ils
       | UpdateVector _ _ fn i v =>
-          fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
+        fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
+      | ReadArrayIndex i k idx vec =>
+        (@evalExpr _ vec) (natToFin i (wordToNat (@evalExpr _ idx)))
+      | BuildArray i k vecVal =>
+        evalArray (Vector.map (@evalExpr _) vecVal)
+      | UpdateArray i k arr idx val =>
+        fun fini => if Fin.eq_dec fini (natToFin i (wordToNat (@evalExpr _ idx)))
+                    then @evalExpr _ val
+                    else @evalExpr _ arr fini
     end.
 
   (* register values just before the current cycle *)

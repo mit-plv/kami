@@ -26,7 +26,8 @@ deriving instance Show RtlExpr
 deriving instance Show RtlModule
 
 ppVecLen :: Int -> String
-ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
+--ppVecLen n = "[" ++ show (2^n-1) ++ ":0]"
+ppVecLen n = "[" ++ show n ++ ":0]"
 
 finToInt :: T -> Int
 finToInt (F1 _) = 0
@@ -52,6 +53,9 @@ ppTypeVec :: Kind -> Int -> (Kind, [Int])
 ppTypeVec k@(Vector k' i') i =
   let (k'', is) = ppTypeVec k' i'
   in (k', i : is)
+ppTypeVec k@(Array k' i') i =
+  let (k'', is) = ppTypeVec k' i'
+  in (k', i : is)
 ppTypeVec k i = (k, i : [])
 
 ppTypeName :: Kind -> String
@@ -66,6 +70,11 @@ ppType (Bit i) = if i > 0
                       then "[" ++ show (i-1) ++ ":0]"
                       else ""
 ppType v@(Vector k i) =
+  let (k', is) = ppTypeVec k ((2^i) - 1)
+  in case k' of
+       Struct _ _ -> ppType k' ++ concatMap ppVecLen is
+       _ -> concatMap ppVecLen is ++ ppType k'
+ppType v@(Array k i) =
   let (k', is) = ppTypeVec k i
   in case k' of
        Struct _ _ -> ppType k' ++ concatMap ppVecLen is
@@ -106,6 +115,7 @@ ppConst (ConstBool b) = if b then "1'b1" else "1'b0"
 ppConst (ConstBit sz w) = if sz == 0 then "1'b0" else show sz ++ "\'b" ++ ppWord (reverse $ wordToList w)
 ppConst (ConstVector k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (reverse $ vecToList vs)) ++ "}"
 ppConst (ConstStruct _ _ is) = '{' : intercalate ", " (Data.List.map ppConst (ilistToList is)) ++ "}"
+ppConst (ConstArray k _ vs) = '{' : intercalate ", " (Data.List.map ppConst (reverse $ vectorToList vs)) ++ "}"
 
 ppRtlExpr :: String -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
 ppRtlExpr who e =
@@ -192,6 +202,25 @@ ppRtlExpr who e =
           (Data.List.map (\i -> xidx ++ "==" ++ show n ++ "'d" ++ show i ++ " ? " ++ xval ++
                            ":" ++ xv ++ "[" ++ show i ++ "]")
            (reverse [0 .. ((2^n)-1)])) ++ "}"
+    RtlReadArrayIndex n k idx vec ->
+      do
+        xidx <- ppRtlExpr who idx
+        xvec <- ppRtlExpr who vec
+        new <- optionAddToTrunc (Array k n) vec
+        return $ new ++ '[' : xidx ++ "]"
+    RtlBuildArray _ _ vs ->
+      do
+        strs <- mapM (ppRtlExpr who) (reverse $ vectorToList vs)
+        return $ '{': intercalate ", " strs ++ "}"
+    RtlUpdateArray n _ v idx val ->
+      do
+        xv <- ppRtlExpr who v
+        xidx <- ppRtlExpr who idx
+        xval <- ppRtlExpr who val
+        return $  '{' : intercalate ", "
+          (Data.List.map (\i -> xidx ++ "==" ++ show n ++ "'d" ++ show i ++ " ? " ++ xval ++
+                           ":" ++ xv ++ "[" ++ show i ++ "]")
+           (reverse [0 .. n])) ++ "}"
   where
     optionAddToTrunc :: Kind -> RtlExpr -> State (H.HashMap String (Int, Kind)) String
     optionAddToTrunc k e =
@@ -253,6 +282,7 @@ sizeKind Bool = 1
 sizeKind (Bit sz) = sz
 sizeKind (Vector k sz) = 2^sz * sizeKind k
 sizeKind (Struct _ vs) = foldl (\accum v -> accum + sizeKind (attrType v)) 0 (vectorToList vs)
+sizeKind (Array k sz) = (sz + 1) * sizeKind k
   
 ppRfModule :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
 ppRfModule (((name, reads), write), ((idxType, dataType), init)) =
@@ -414,6 +444,7 @@ ppConstMem (ConstBool b) = if b then "1" else "0"
 ppConstMem (ConstBit sz w) = if sz == 0 then "0" else ppWord (reverse $ wordToList w)
 ppConstMem (ConstVector k _ vs) = Data.List.concatMap ppConstMem (reverse $ vecToList vs)
 ppConstMem (ConstStruct _ _ is) = Data.List.concatMap ppConstMem (ilistToList is)
+ppConstMem (ConstArray k _ vs) = Data.List.concatMap ppConstMem (reverse $ vectorToList vs)
 
 ppRfFile :: (((String, [(String, Bool)]), String), ((Int, Kind), ConstT)) -> String
 ppRfFile (((name, reads), write), ((idxType, dataType), ConstVector k _ vs)) =

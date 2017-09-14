@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sed -i -e "s/import qualified Prelude/import qualified Prelude\nimport qualified Data.Bits\nimport qualified Data.Char\nimport Vtor\n/g" ../Target.hs
+#sed -i -e "s/import qualified Prelude/import qualified Prelude\nimport qualified Data.Bits\nimport qualified Data.Char\nimport Vtor\n/g" ../Target.hs
 ln -sf ../Target.hs
 ghc --make ./PrettyPrintVerilog.hs
 time ./PrettyPrintVerilog > ./top.sv
