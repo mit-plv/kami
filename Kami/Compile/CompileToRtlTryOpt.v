@@ -290,7 +290,7 @@ Section UsefulFunctions.
         - destruct (lt_dec currPos pos); discriminate.
         - destruct (lt_dec currPos pos); [ | discriminate].
           destruct (M.mem reg (getAllWrites a)).
-          + destruct (MM.mem (currRule, a) correctIgnoreLess) as [H|H]; inversion H; subst; auto; eapply IHls; eauto.
+          + destruct (MM.mem (currRule, a) correctIgnoreLess); inversion H; subst; auto; eapply IHls; eauto.
           + eapply IHls; eauto.
       Qed.
 
