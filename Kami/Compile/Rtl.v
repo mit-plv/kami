@@ -24,7 +24,11 @@ Inductive RtlExpr: Kind -> Type :=
 | RtlBuildStruct n (attrs: Vector.t _ n):
     ilist (fun a => RtlExpr ((attrType a))) attrs -> RtlExpr ((Struct attrs))
 | RtlUpdateVector i k: RtlExpr ((Vector k i)) -> RtlExpr ((Bit i)) -> RtlExpr (k)
-                       -> RtlExpr ((Vector k i)).
+                       -> RtlExpr ((Vector k i))
+| RtlReadArrayIndex i k: RtlExpr ((Bit (Nat.log2 (2 * i)))) -> RtlExpr ((Array k i)) -> RtlExpr k
+| RtlBuildArray n k: Vector.t (RtlExpr n) (S k) -> RtlExpr (Array n k)
+| RtlUpdateArray i k: RtlExpr (Array k i) -> RtlExpr (Bit (Nat.log2 (2 * i))) -> RtlExpr k ->
+                      RtlExpr (Array k i).
 
 Record RtlModule :=
   { regFiles: list (string * list (string * bool) * string * sigT (fun x => ConstT (Vector (snd x) (fst x))));

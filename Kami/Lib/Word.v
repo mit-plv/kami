@@ -514,33 +514,68 @@ Definition sra (sz : nat) (w : word sz) (ln : nat) : word sz :=
                      (S sz') (Nat.add_1_r sz')
   end w.
 
-(** * Arithmetic *)
+(** * Arithmetic (unsigned) *)
 
 Definition wneg sz (x : word sz) : word sz :=
   NToWord sz (Npow2 sz - wordToN x).
-
 Definition wordBin (f : N -> N -> N) sz (x y : word sz) : word sz :=
   NToWord sz (f (wordToN x) (wordToN y)).
-
 Definition wplus := wordBin Nplus.
+Definition wminus sz (x y : word sz) : word sz := wplus x (wneg y).
 Definition wmult := wordBin Nmult.
 Definition wmult' sz (x y : word sz) : word sz := 
   split2 sz sz (NToWord (sz + sz) (Nmult (wordToN x) (wordToN y))).
-Definition wminus sz (x y : word sz) : word sz := wplus x (wneg y).
+Definition wdiv := wordBin Ndiv.
+Definition wrem := wordBin Nmod.
 
 Definition wnegN sz (x : word sz) : word sz :=
   natToWord sz (pow2 sz - wordToNat x).
-
 Definition wordBinN (f : nat -> nat -> nat) sz (x y : word sz) : word sz :=
   natToWord sz (f (wordToNat x) (wordToNat y)).
-
 Definition wplusN := wordBinN plus.
-
+Definition wminusN sz (x y : word sz) : word sz := wplusN x (wnegN y).
 Definition wmultN := wordBinN mult.
 Definition wmultN' sz (x y : word sz) : word sz := 
   split2 sz sz (natToWord (sz + sz) (mult (wordToNat x) (wordToNat y))).
+Definition wdivN := wordBinN Nat.div.
+Definition wremN := wordBinN Nat.modulo.
 
-Definition wminusN sz (x y : word sz) : word sz := wplusN x (wnegN y).
+(** * Arithmetic (signed) *)
+Fixpoint wordToZ sz (w : word sz) : Z :=
+  if wmsb w true then 
+    (** Negative **)
+    match wordToN (wneg w) with
+    | N0 => 0%Z
+    | Npos x => Zneg x
+    end
+  else 
+    (** Positive **)
+    match wordToN w with
+    | N0 => 0%Z
+    | Npos x => Zpos x
+    end.
+
+Definition ZToWord (sz : nat) (z : Z) : word sz :=
+  match z with
+  | Z0 => wzero' sz
+  | Zpos x => posToWord sz x
+  | Zneg x => wneg (posToWord sz x)
+  end.
+
+Definition wordBinZ (f : Z -> Z -> Z) sz (x y : word sz) : word sz :=
+  ZToWord sz (f (wordToZ x) (wordToZ y)).
+
+Definition wplusZ := wordBinZ Z.add.
+Definition wminusZ := wordBinZ Z.sub.
+Definition wmultZ := wordBinZ Z.mul.
+Definition wmultZsu sz (x y : word sz) :=
+  ZToWord sz (Z.mul (wordToZ x) (Z.of_N (wordToN y))).
+Definition wdivZ := wordBinZ Z.div.
+Definition wdivZsu sz (x y : word sz) :=
+  ZToWord sz (Z.div (wordToZ x) (Z.of_N (wordToN y))).
+Definition wremZ := wordBinZ Z.modulo.
+Definition wremZsu sz (x y : word sz) :=
+  ZToWord sz (Z.modulo (wordToZ x) (Z.of_N (wordToN y))).
 
 (** * Notations *)
 
@@ -1035,21 +1070,6 @@ Ltac word_contra1 := match goal with
                      end.
 
 Open Scope word_scope.
-
-(** * Signed Logic **)
-Fixpoint wordToZ sz (w : word sz) : Z :=
-  if wmsb w true then 
-    (** Negative **)
-    match wordToN (wneg w) with
-      | N0 => 0%Z
-      | Npos x => Zneg x
-    end
-  else 
-    (** Positive **)
-    match wordToN w with
-      | N0 => 0%Z
-      | Npos x => Zpos x
-    end.
 
 (** * Comparison Predicates and Deciders **)
 Definition wlt sz (l r : word sz) : Prop :=

@@ -22,7 +22,10 @@ Section BluespecSubset.
   | BBuildVector lgn: Vec BExpr lgn -> BExpr
   | BBuildStruct: forall n, Vector.t (Attribute Kind) n -> list (Attribute BExpr) -> BExpr
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
-  | BReadReg: string -> BExpr.
+  | BReadReg: string -> BExpr
+  | BReadArrayIndex: BExpr -> BExpr -> BExpr
+  | BBuildArray n: Vector.t BExpr (S n) -> BExpr
+  | BUpdateArray: BExpr -> BExpr -> BExpr -> BExpr.
 
   (* NOTE: BBCall is not used for translation from Kami to Bluespec,
    * but defined in order to support multi-parameter methods.
@@ -67,6 +70,13 @@ Section BluespecSubset.
     | Vec0 oa => oa >>= (fun a => Some (Vec0 a))
     | VecNext _ v1 v2 =>
       (bindVec v1) >>= (fun bv1 => (bindVec v2) >>= (fun bv2 => Some (VecNext bv1 bv2)))
+    end.
+
+  Fixpoint bindVector {A n} (v: Vector.t (option A) n): option (Vector.t A n) :=
+    match v with
+    | Vector.nil => Some (Vector.nil _)
+    | Vector.cons a n vs =>
+      a >>= (fun bv1 => (bindVector vs) >>= (fun bv2 => Some (Vector.cons _ bv1 _ bv2)))
     end.
 
   Fixpoint bindList n attrs (il: @ilist _ (fun _ : Attribute Kind => option BExpr) n attrs):
@@ -129,6 +139,20 @@ Section BluespecSubset.
             | None => None
             end
           end) n attrs st) >>= (fun bl => Some (BBuildStruct attrs bl))
+    | ReadArrayIndex _ _ ie ve =>
+      (@exprSToBExpr _ ie) >>= (fun bie => (@exprSToBExpr _ ve)
+                                             >>= (fun bve =>
+                                                    Some (BReadIndex bie bve)))
+    | BuildArray _ n v =>
+      (bindVector (Vector.map (@exprSToBExpr _) v)) >>= (fun bv => Some (BBuildArray bv))
+    | UpdateArray _ _ ve ie ke =>
+      (@exprSToBExpr _ ve)
+        >>= (fun bve =>
+               (@exprSToBExpr _ ie)
+                 >>= (fun bie => 
+                        (@exprSToBExpr _ ke)
+                          >>= (fun bke => Some (BUpdateArray bve bie bke))))
+      
     end.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=

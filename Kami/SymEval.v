@@ -75,6 +75,14 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
            | BuildVector _ _ _ => fun ise => _
            | BuildStruct _ _ _ => fun ise => _
            | UpdateVector _ _ _ _ _ => fun ise => _
+           | ReadArrayIndex _ k' i f => fun ise =>
+                                          (eq_rect (SyntaxKind k')
+                                                   (fullType type)
+                                                   ((evalExpr f)
+                                                      (natToFin _ (wordToNat (evalExpr i))))
+                                                   (SyntaxKind Bool) ise) = true
+           | BuildArray _ _ _ => fun ise => _
+           | UpdateArray _ _ _ _ _ => fun ise => _
          end; clear semExpr;
   try abstract (inversion ise).
 Defined.
@@ -156,6 +164,7 @@ Section InductionBool.
   Variable HReadField: forall n attrs fld e (tEq: SyntaxKind (Vector.nth (Vector.map (@attrType _) attrs) fld) =
                                                   SyntaxKind Bool),
                          P tEq (@ReadField type n attrs fld e).
+  Variable HReadArrayIndex: forall i idx vec, P eq_refl (@ReadArrayIndex type i _ idx vec).
 
   Lemma boolInduction: forall k (tEq: k = SyntaxKind Bool) (e: Expr type k),
                          P tEq e.
