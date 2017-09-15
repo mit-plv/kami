@@ -19,10 +19,10 @@ Requirements
 ------------
 
 ### To Verify Kami modules
-- Coq 8.5pl2 (with $PATH containing the standard Coq binaries)
+- Coq 8.6.1 (with $PATH containing the standard Coq binaries)
 
 ### To Generate Bluespec programs
-- OCaml 4.0.2.3 (with $PATH containing the standard OCaml binaries)
+- OCaml 4.0.4 (with $PATH containing the standard OCaml binaries)
 - Batteries Library for OCaml (2.5.2)
 
 ### To Run Bluespec code (i.e. simulation)
