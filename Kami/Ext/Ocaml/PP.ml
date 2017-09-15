@@ -471,33 +471,23 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
      ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
      ps ppRBracketR
-  | BBinBit (_, _, _, Div (_, SignUU), se1, se2) ->
+  | BBinBit (_, _, _, Div (_, false), se1, se2) ->
      ps ppDivUU; print_space (); ps ppRBracketL;
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
      ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
      ps ppRBracketR
-  | BBinBit (_, _, _, Div (_, SignSS), se1, se2) ->
+  | BBinBit (_, _, _, Div (_, true), se1, se2) ->
      ps ppDivSS; print_space (); ps ppRBracketL;
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
      ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
      ps ppRBracketR
-  | BBinBit (_, _, _, Div (_, SignSU), se1, se2) ->
-     ps ppDivSU; print_space (); ps ppRBracketL;
-     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
-     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
-     ps ppRBracketR
-  | BBinBit (_, _, _, Rem (_, SignUU), se1, se2) ->
+  | BBinBit (_, _, _, Rem (_, false), se1, se2) ->
      ps ppRemUU; print_space (); ps ppRBracketL;
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
      ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
      ps ppRBracketR
-  | BBinBit (_, _, _, Rem (_, SignSS), se1, se2) ->
+  | BBinBit (_, _, _, Rem (_, true), se1, se2) ->
      ps ppRemSS; print_space (); ps ppRBracketL;
-     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
-     ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
-     ps ppRBracketR
-  | BBinBit (_, _, _, Rem (_, SignSU), se1, se2) ->
-     ps ppRemSU; print_space (); ps ppRBracketL;
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; ps ppComma; print_space ();
      ps ppRBracketL; ppBExpr se2; ps ppRBracketR;
      ps ppRBracketR
