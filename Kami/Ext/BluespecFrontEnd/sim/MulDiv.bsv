@@ -25,7 +25,7 @@ function Bit#(n) divide_unsigned( Bit#(n) a, Bit#(n) b );
     UInt#(n) a_uint = unpack(a);
     UInt#(n) b_uint = unpack(b);
     UInt#(TAdd#(n,n)) product_uint = zeroExtend(a_uint) / zeroExtend(b_uint);
-    return pack( product_uint );
+    return pack( truncate(product_uint) );
 endfunction
 
 function Bit#(n) divide_signed( Bit#(n) a, Bit#(n) b );
@@ -48,7 +48,7 @@ function Bit#(n) remainder_unsigned( Bit#(n) a, Bit#(n) b );
     UInt#(n) a_uint = unpack(a);
     UInt#(n) b_uint = unpack(b);
     UInt#(TAdd#(n,n)) product_uint = zeroExtend(a_uint) % zeroExtend(b_uint);
-    return pack( product_uint );
+    return pack( truncate(product_uint) );
 endfunction
 
 function Bit#(n) remainder_signed( Bit#(n) a, Bit#(n) b );

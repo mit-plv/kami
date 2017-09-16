@@ -66,7 +66,8 @@ Inductive Kind :=
 | Bool    : Kind
 | Bit     : nat -> Kind
 | Vector  : Kind -> nat -> Kind
-| Struct  : forall n, Vector.t (Attribute Kind) n -> Kind.
+| Struct  : forall n, Vector.t (Attribute Kind) n -> Kind
+| Array   : Kind -> nat -> Kind.
 
 Fixpoint type (t: Kind): Type :=
   match t with
@@ -74,6 +75,7 @@ Fixpoint type (t: Kind): Type :=
     | Bit n => word n
     | Vector nt n => word n -> type nt
     | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
+    | Array nt n => Fin.t (S n) -> type nt
   end.
 
 Inductive FullKind: Type :=
@@ -165,6 +167,17 @@ Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
              end l2
            | right r => right _
            end
+         | Array k1 n1, Array k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Array k1 n1 = Array kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
          | _, _ => right _
          end;
     try (clear decKind;
@@ -200,7 +213,8 @@ Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
-| ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls).
+| ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls)
+| ConstArray k n: Vector.t (ConstT k) (S n) -> ConstT (Array k n).
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
@@ -208,6 +222,12 @@ Inductive ConstFullT: FullKind -> Type :=
 
 Coercion ConstBool : bool >-> ConstT.
 Coercion ConstBit : word >-> ConstT.
+
+Fixpoint vector_repeat A n (a: A) :=
+  match n return Vector.t A n with
+  | 0 => Vector.nil A
+  | S m => Vector.cons A a m (@vector_repeat A m a)
+  end.
 
 Fixpoint getDefaultConst (k: Kind): ConstT k :=
   match k with
@@ -220,6 +240,7 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
                         | Vector.nil => inil _
                         | Vector.cons x m xs => icons x (getDefaultConst (attrType x)) (help m xs)
                       end) n ls)
+    | Array k n => ConstArray (vector_repeat (S n) (getDefaultConst k))
   end.
 
 Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrType a)) vs) {struct ils}: type (Struct vs) :=
@@ -259,6 +280,7 @@ Fixpoint getDefaultConstNative (k: Kind): type k :=
                          | Vector.cons x _ xs =>
                            icons x (getDefaultConstNative (attrType x)) (help _ xs)
                          end) n attrs) i
+  | Array k n => fun _ => getDefaultConstNative k
   end.
 
 Definition getDefaultConstFull (k: FullKind): ConstFullT k :=
@@ -307,8 +329,8 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 | Add n: BinBitOp n n n
 | Sub n: BinBitOp n n n
 | Mul n: BinSign -> BinBitOp n n n
-| Div n: BinSign -> BinBitOp n n n
-| Rem n: BinSign -> BinBitOp n n n
+| Div n: bool -> BinBitOp n n n
+| Rem n: bool -> BinBitOp n n n
 | Band n: BinBitOp n n n
 | Bor n: BinBitOp n n n
 | Bxor n: BinBitOp n n n
@@ -320,6 +342,12 @@ Inductive BinBitOp: nat -> nat -> nat -> Set :=
 Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n
 | Slt n: BinBitBoolOp n n.
+
+Fixpoint natToFin sz (n: nat): Fin.t (S sz) :=
+  match n with
+  | 0 => Fin.F1
+  | S m => natToFin sz m
+  end.
 
 Section Phoas.
   Variable ty: Kind -> Type.
@@ -352,7 +380,14 @@ Section Phoas.
       ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) ->
                       Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k) ->
-                      Expr (SyntaxKind (Vector k i)).
+                      Expr (SyntaxKind (Vector k i))
+  | ReadArrayIndex i k: Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
+                        Expr (SyntaxKind (Array k i)) -> Expr (SyntaxKind k)
+  | BuildArray n k: Vector.t (Expr (SyntaxKind n)) (S k) -> Expr (SyntaxKind (Array n k))
+  | UpdateArray i k: Expr (SyntaxKind (Array k i)) ->
+                     Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
+                     Expr (SyntaxKind k) ->
+                     Expr (SyntaxKind (Array k i)).
 
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:

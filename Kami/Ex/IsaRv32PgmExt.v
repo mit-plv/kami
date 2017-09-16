@@ -14,3 +14,11 @@ Require Import IsaRv32.PgmBankerInit.
 Require Import IsaRv32.PgmBankerWorker1.
 Require Import IsaRv32.PgmBankerWorker2.
 Require Import IsaRv32.PgmBankerWorker3.
+Require Import IsaRv32.Banker0.
+Require Import IsaRv32.Banker1.
+Require Import IsaRv32.Banker2.
+Require Import IsaRv32.Banker3.
+Require Import IsaRv32.Matmul_init.
+Require Import IsaRv32.Matmul_normal1.
+Require Import IsaRv32.Matmul_normal2.
+Require Import IsaRv32.Matmul_report.

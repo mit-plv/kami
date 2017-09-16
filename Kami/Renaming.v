@@ -1155,7 +1155,7 @@ Section Rename.
     dependent induction m.
     - repeat (econstructor; eauto).
       reflexivity.
-    - specialize (IHm rename1To1 JMeq_refl).
+    - specialize (IHm rename1To1 _ eq_refl JMeq_refl).
       dest; subst.
       apply renameStepRev in HStep.
       dest; subst.
@@ -1231,7 +1231,7 @@ Section Rename.
     repeat (econstructor; eauto).
     - apply renameInitRegs.
     - reflexivity.
-    - specialize (IHHMultistepBeh rename1To1).
+    - specialize (IHHMultistepBeh rename1To1 _ eq_refl eq_refl).
       dest; subst.
       apply renameStepRev in HStep.
       dest; subst.

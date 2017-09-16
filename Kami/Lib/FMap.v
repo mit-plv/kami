@@ -411,24 +411,28 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
   Lemma Equal_this: forall elt L1 L2,
                       Equal (elt:=elt) L1 L2 -> this L1 = this L2.
   Proof.
-    unfold Equal; destruct L1, L2; simpl. intros.
+    unfold Equal; destruct L1, L2; simpl; intros.
     lapply (SortA_equivlistA_eqlistA _ _ _ sorted0 sorted1); intros.
-    clear H.
-    rewrite eqke_sub_eq in H0.
-    apply eq_leibniz_list in H0.
-    assumption.
-    * red.
-      apply Facts.P.F.Equal_Equiv in H. destruct H.
+    - clear H.
+      rewrite eqke_sub_eq in H0.
+      apply eq_leibniz_list in H0.
+      assumption.
+    - red.
+      apply Facts.P.F.Equal_Equiv in H; destruct H.
       intros [a e].
       specialize (H a).
-      repeat rewrite Facts.P.F.elements_in_iff in H. simpl in H.
+      repeat rewrite Facts.P.F.elements_in_iff in H; simpl in H.
       specialize (H0 a).
-      setoid_rewrite Facts.P.F.elements_mapsto_iff in H0. simpl in H0.
-      firstorder.
-      edestruct H as [??]; eauto.
-      specialize (H0 e x H2 H3); subst; auto.
-      edestruct H1 as [??]; eauto.
-      specialize (H0 x e H3 H2); subst; auto.
+      setoid_rewrite Facts.P.F.elements_mapsto_iff in H0; simpl in H0.
+      destruct H; split; intros.
+      + assert (exists e, InA (M.eq_key_elt (elt:=elt)) (a, e) this0)
+          by (eexists; eauto).
+        specialize (H H3); dest.
+        specialize (H0 e x0 H2 H); subst; auto.
+      + assert (exists e, InA (M.eq_key_elt (elt:=elt)) (a, e) this1)
+          by (eexists; eauto).
+        specialize (H1 H3); dest.
+        specialize (H0 x0 e H1 H2); subst; auto.
   Qed.
 
   Theorem lt_irrel_leibniz {A : Type}

@@ -1268,9 +1268,6 @@ Proof.
     apply andb_true_iff in H1; dest.
     remember (string_eq n (attrName dm)) as ndeq; destruct ndeq.
     + apply string_eq_dec_eq in Heqndeq; subst; mred.
-      simpl in H4; clear -H1 H4; subst.
-      destruct (SignatureT_dec _ _); auto.
-      discriminate.
     + apply string_eq_dec_neq in Heqndeq.
       rewrite M.find_add_2 in H3 by intuition.
       eapply H0; eauto.

@@ -491,7 +491,7 @@ Section Invariants.
       + mred.
       + kinv_dest_custom p3st_inv_tac;
           try (destruct x0, eepochv5; intuition idtac; fail).
-        rewrite H14 in H4; exfalso; eapply negb_eq_false; eauto.
+        rewrite H13 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -501,16 +501,16 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
+        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
+        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
+        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H4 in H2; exfalso; eapply negb_eq_false; eauto.
+        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
 
         END_SKIP_PROOF_ON *) apply cheat.
   Qed.
@@ -540,10 +540,10 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H10 in H8; intuition idtac.
+        rewrite H10 in H7; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H10 in H8; intuition idtac.
+        rewrite H10 in H7; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -570,14 +570,14 @@ Section Invariants.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H9; inv H9; fail);
+          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H12; inv H12; fail);
           try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H2; inv H2; fail);
           try (rewrite e in H8; inv H8; fail).
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H2; inv H2; fail);
           try (rewrite e in H7; inv H7; fail).
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H9; inv H9; fail);
+          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H12; inv H12; fail);
           try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -761,7 +761,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; simpl; rewrite <-H6, <-H12; reflexivity.
+      + kinv_dest_custom p3st_inv_tac; simpl; rewrite <-H10, <-H12; reflexivity.
       + kinv_dest_custom p3st_inv_tac; elim n0; assumption.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.

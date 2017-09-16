@@ -42,6 +42,7 @@ Local Notation cast k' v := match k' with
 
 Section Compile.
   Variable name: string.
+  Axiom cheat: forall t, t.
   Fixpoint convertExprToRtl k (e: Expr (fun _ => list nat) (SyntaxKind k)): RtlExpr k :=
     match e in Expr _ (SyntaxKind k) return RtlExpr k with
       | Var k' x' =>   match k' return
@@ -83,6 +84,11 @@ Section Compile.
           | SyntaxKind k => fun x0 x1 => RtlITE (@convertExprToRtl _ x) (@convertExprToRtl _ x0) (@convertExprToRtl _ x1)
           | NativeKind t c => fun _ _ => idProp
         end x0' x1'
+      | ReadArrayIndex i k idx arr =>
+        RtlReadArrayIndex (@convertExprToRtl _ idx) (@convertExprToRtl _ arr)
+      | BuildArray k n x => RtlBuildArray (Vector.map (@convertExprToRtl _) x)
+      | UpdateArray i k x x0 x1 =>
+        RtlUpdateArray (@convertExprToRtl _ x) (@convertExprToRtl _ x0) (@convertExprToRtl _ x1)
     end.
 
   Fixpoint convertActionToRtl_noGuard k (a: ActionT (fun _ => list nat) k) enable startList retList :=
@@ -284,7 +290,7 @@ Section UsefulFunctions.
         - destruct (lt_dec currPos pos); discriminate.
         - destruct (lt_dec currPos pos); [ | discriminate].
           destruct (M.mem reg (getAllWrites a)).
-          + destruct (MM.mem (currRule, a) correctIgnoreLess) as [H|H]; inversion H; subst; auto; eapply IHls; eauto.
+          + destruct (MM.mem (currRule, a) correctIgnoreLess); inversion H; subst; auto; eapply IHls; eauto.
           + eapply IHls; eauto.
       Qed.
 

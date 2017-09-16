@@ -17,7 +17,7 @@ Ltac find dm pre ls :=
     | ?x :: ?xs =>
       match x with
         | context[dm] =>
-          constr:(pre, x, xs)
+          constr:((pre, x, xs))
         | _ =>
           let y := app_ltac pre x in
           find dm y xs

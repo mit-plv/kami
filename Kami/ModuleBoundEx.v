@@ -1002,7 +1002,7 @@ Ltac get_regs_bound_ex m :=
     let nb2 := get_regs_bound_ex m2 in
     constr:(appendNameBound nb1 nb2)
   | duplicate ?sm _ => constr:(getDupRegsBound (sm 0))
-  | modFromMeta {| metaRegs := nil |} => constr:emptyNameBound
+  | modFromMeta {| metaRegs := nil |} => constr:(emptyNameBound)
   | modFromMeta {| metaRegs := (OneReg _ ?nr :: ?mregs);
                    metaRules := ?mrules;
                    metaMeths := ?mdms
