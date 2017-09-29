@@ -1,10 +1,10 @@
 (** Fixed precision machine words *)
 
 Require Import Arith Div2 NArith Bool Omega.
-Require Import Lib.Nomega.
+Require Import Lib.Nomega Lib.NatLib.
+Require Import Eqdep_dec.
 
 Set Implicit Arguments.
-Set Asymmetric Patterns.
 
 (** * Basic definitions and conversion to and from [nat] *)
 
@@ -15,15 +15,15 @@ Inductive word : nat -> Set :=
 Fixpoint wordToNat sz (w : word sz) : nat :=
   match w with
     | WO => O
-    | WS false _ w' => (wordToNat w') * 2
-    | WS true _ w' => S (wordToNat w' * 2)
+    | WS false w' => (wordToNat w') * 2
+    | WS true w' => S (wordToNat w' * 2)
   end.
 
 Fixpoint wordToNat' sz (w : word sz) : nat :=
   match w with
     | WO => O
-    | WS false _ w' => 2 * wordToNat w'
-    | WS true _ w' => S (2 * wordToNat w')
+    | WS false w' => 2 * wordToNat w'
+    | WS true w' => S (2 * wordToNat w')
   end.
 
 Theorem wordToNat_wordToNat' : forall sz (w : word sz),
@@ -31,13 +31,6 @@ Theorem wordToNat_wordToNat' : forall sz (w : word sz),
 Proof.
   induction w. auto. simpl. rewrite mult_comm. reflexivity.
 Qed.
-
-Fixpoint mod2 (n : nat) : bool :=
-  match n with
-    | 0 => false
-    | 1 => true
-    | S (S n') => mod2 n'
-  end.
 
 Fixpoint natToWord (sz n : nat) : word sz :=
   match sz with
@@ -48,8 +41,8 @@ Fixpoint natToWord (sz n : nat) : word sz :=
 Fixpoint wordToN sz (w : word sz) : N :=
   match w with
     | WO => 0
-    | WS false _ w' => 2 * wordToN w'
-    | WS true _ w' => Nsucc (2 * wordToN w')
+    | WS false w' => 2 * wordToN w'
+    | WS true w' => Nsucc (2 * wordToN w')
   end%N.
 
 Definition Nmod2 (n : N) : bool :=
@@ -90,42 +83,13 @@ Fixpoint Npow2 (n : nat) : N :=
     | S n' => 2 * Npow2 n'
   end%N.
 
-
-Ltac rethink :=
-  match goal with
-    | [ H : ?f ?n = _ |- ?f ?m = _ ] => replace m with n; simpl; auto
-  end.
-
-Theorem mod2_S_double : forall n, mod2 (S (2 * n)) = true.
-  induction n; simpl; intuition; rethink.
-Qed.
-
-Theorem mod2_double : forall n, mod2 (2 * n) = false.
-  induction n; simpl; intuition; rewrite <- plus_n_Sm; rethink.
-Qed.
-
-Local Hint Resolve mod2_S_double mod2_double.
-
-Theorem div2_double : forall n, div2 (2 * n) = n.
-  induction n; simpl; intuition; rewrite <- plus_n_Sm; f_equal; rethink.
-Qed.
-
-Theorem div2_S_double : forall n, div2 (S (2 * n)) = n.
-  induction n; simpl; intuition; f_equal; rethink.
-Qed.
-
 Hint Rewrite div2_double div2_S_double : div2.
+Local Hint Resolve mod2_S_double mod2_double.
 
 Theorem natToWord_wordToNat : forall sz w, natToWord sz (wordToNat w) = w.
   induction w; rewrite wordToNat_wordToNat'; intuition; f_equal; unfold natToWord, wordToNat'; fold natToWord; fold wordToNat';
     destruct b; f_equal; autorewrite with div2; intuition.
 Qed.
-
-Fixpoint pow2 (n : nat) : nat :=
-  match n with
-    | O => 1
-    | S n' => 2 * pow2 n'
-  end.
 
 Theorem roundTrip_0 : forall sz, wordToNat (natToWord sz 0) = 0.
   induction sz; simpl; intuition.
@@ -134,49 +98,6 @@ Qed.
 Hint Rewrite roundTrip_0 : wordToNat.
 
 Local Hint Extern 1 (@eq nat _ _) => omega.
-
-Theorem untimes2 : forall n, n + (n + 0) = 2 * n.
-  auto.
-Qed.
-
-Section strong.
-  Variable P : nat -> Prop.
-
-  Hypothesis PH : forall n, (forall m, m < n -> P m) -> P n.
-
-  Lemma strong' : forall n m, m <= n -> P m.
-    induction n; simpl; intuition; apply PH; intuition.
-    elimtype False; omega.
-  Qed.
-
-  Theorem strong : forall n, P n.
-    intros; eapply strong'; eauto.
-  Qed.
-End strong.
-
-Theorem div2_odd : forall n,
-  mod2 n = true
-  -> n = S (2 * div2 n).
-  induction n using strong; simpl; intuition.
-
-  destruct n; simpl in *; intuition.
-    discriminate.
-  destruct n; simpl in *; intuition.
-  do 2 f_equal.
-  replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
-Qed.
-
-Theorem div2_even : forall n,
-  mod2 n = false
-  -> n = 2 * div2 n.
-  induction n using strong; simpl; intuition.
-
-  destruct n; simpl in *; intuition.
-  destruct n; simpl in *; intuition.
-    discriminate.
-  f_equal.
-  replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
-Qed.
 
 Lemma wordToNat_natToWord' : forall sz w, exists k, wordToNat (natToWord sz w) + k * pow2 sz = w.
   induction sz; simpl; intuition; repeat rewrite untimes2.
@@ -243,7 +164,7 @@ Fixpoint wones (sz : nat) : word sz :=
 Fixpoint wmsb sz (w : word sz) (a : bool) : bool :=
   match w with
     | WO => a
-    | WS b _ x => wmsb x b
+    | WS b x => wmsb x b
   end.
 
 (* head of a word with at least 1 bit *)
@@ -253,7 +174,7 @@ Definition whd sz (w : word (S sz)) : bool :=
                                | S _ => bool
                              end with
     | WO => tt
-    | WS b _ _ => b
+    | WS b _ => b
   end.
 
 (* tail of a word with at least 1 bit *)
@@ -263,7 +184,7 @@ Definition wtl sz (w : word (S sz)) : word sz :=
                                | S sz'' => word sz''
                              end with
     | WO => tt
-    | WS _ _ w' => w'
+    | WS _ w' => w'
   end.
 
 Theorem WS_neq : forall b1 b2 sz (w1 w2 : word sz),
@@ -273,6 +194,12 @@ Theorem WS_neq : forall b1 b2 sz (w1 w2 : word sz),
   apply (f_equal (@whd _)) in H0; tauto.
   apply (f_equal (@wtl _)) in H0; tauto.
 Qed.
+
+Fixpoint rep_bit (n : nat) (b : word 1) : word n :=
+  match n as n0 return (word n0) with
+  | 0 => WO
+  | S n0 => WS (whd b) (rep_bit n0 b)
+  end.
 
 
 (** Shattering **)
@@ -298,13 +225,16 @@ Qed.
 
 Hint Resolve shatter_word_0.
 
-Require Import Eqdep_dec.
+Theorem word0: forall (w : word 0), w = WO.
+Proof.
+  firstorder.
+Qed.
 
 Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
   refine (fix weq sz (x : word sz) : forall y : word sz, {x = y} + {x <> y} :=
     match x in word sz return forall y : word sz, {x = y} + {x <> y} with
       | WO => fun _ => left _ _
-      | WS b _ x' => fun y => if bool_dec b (whd y)
+      | WS b x' => fun y => if bool_dec b (whd y)
         then if weq _ x' (wtl y) then left _ _ else right _ _
         else right _ _
     end); clear weq.
@@ -321,7 +251,7 @@ Defined.
 Fixpoint weqb sz (x : word sz) : word sz -> bool :=
   match x in word sz return word sz -> bool with
     | WO => fun _ => true
-    | WS b _ x' => fun y => 
+    | WS b x' => fun y => 
       if eqb b (whd y)
       then if @weqb _ x' (wtl y) then true else false
       else false
@@ -341,14 +271,165 @@ Proof.
     eapply Peano_dec.eq_nat_dec.
     split; intros; try congruence.
     inversion H0. apply eqb_false_iff in H. congruence. }
-Qed.    
+Qed.
+
+(** * Dependent type helpers *)
+
+Theorem eq_rect_nat_double : forall T (a b c : nat) x ab bc,
+  eq_rect b T (eq_rect a T x b ab) c bc = eq_rect a T x c (eq_trans ab bc).
+Proof.
+  intros.
+  destruct ab.
+  destruct bc.
+  rewrite (UIP_dec eq_nat_dec (eq_trans eq_refl eq_refl) eq_refl).
+  simpl.
+  auto.
+Qed.
+
+Hint Rewrite eq_rect_nat_double.
+Hint Rewrite <- (eq_rect_eq_dec eq_nat_dec).
+
+Ltac generalize_proof :=
+    match goal with
+    | [ |- context[eq_rect _ _ _ _ ?H ] ] => generalize H
+    end.
+
+Ltac eq_rect_simpl :=
+  unfold eq_rec_r, eq_rec;
+  repeat rewrite eq_rect_nat_double;
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+
+Lemma eq_rect_word_offset_helper : forall a b c,
+  a = b -> c + a = c + b.
+Proof.
+  intros; congruence.
+Qed.
+
+Theorem eq_rect_word_offset : forall n n' offset w Heq,
+  eq_rect n (fun n => word (offset + n)) w n' Heq =
+  eq_rect (offset + n) (fun n => word n) w (offset + n') (eq_rect_word_offset_helper _ Heq).
+Proof.
+  intros.
+  destruct Heq.
+  rewrite (UIP_dec eq_nat_dec (eq_rect_word_offset_helper offset eq_refl) eq_refl).
+  reflexivity.
+Qed.
+
+Lemma eq_rect_word_mult_helper : forall a b c,
+  a = b -> a * c = b * c.
+Proof.
+  intros; congruence.
+Qed.
+
+Theorem eq_rect_word_mult : forall n n' scale w Heq,
+  eq_rect n (fun n => word (n * scale)) w n' Heq =
+  eq_rect (n * scale) (fun n => word n) w (n' * scale) (eq_rect_word_mult_helper _ Heq).
+Proof.
+  intros.
+  destruct Heq.
+  rewrite (UIP_dec eq_nat_dec (eq_rect_word_mult_helper scale eq_refl) eq_refl).
+  reflexivity.
+Qed.
+
+Theorem eq_rect_word_match : forall n n' (w : word n) (H : n = n'),
+  match H in (_ = N) return (word N) with
+  | eq_refl => w
+  end = eq_rect n (fun n => word n) w n' H.
+Proof.
+  intros.
+  destruct H.
+  rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Theorem whd_match : forall n n' (w : word (S n)) (Heq : S n = S n'),
+  whd w = whd (match Heq in (_ = N) return (word N) with
+               | eq_refl => w
+               end).
+Proof.
+  intros.
+  rewrite eq_rect_word_match.
+  generalize dependent w.
+  remember Heq as Heq'. clear HeqHeq'.
+  generalize dependent Heq'.
+  replace (n') with (n) by omega.
+  intros. rewrite <- (eq_rect_eq_dec eq_nat_dec). reflexivity.
+Qed.
+
+Theorem wtl_match : forall n n' (w : word (S n)) (Heq : S n = S n') (Heq' : n = n'),
+  (match Heq' in (_ = N) return (word N) with
+   | eq_refl => wtl w
+   end) = wtl (match Heq in (_ = N) return (word N) with
+               | eq_refl => w
+               end).
+Proof.
+  intros.
+  repeat match goal with
+           | [ |- context[match ?pf with refl_equal => _ end] ] => generalize pf
+         end.
+  generalize dependent w; clear.
+  intros.
+  generalize Heq Heq'.
+  subst.
+  intros.
+  rewrite (UIP_dec eq_nat_dec Heq' (refl_equal _)).
+  rewrite (UIP_dec eq_nat_dec Heq0 (refl_equal _)).
+  reflexivity.
+Qed.
+
+Lemma whd_eq_rect : forall n w Heq,
+  whd (eq_rect (S n) word w (S (n + 0)) Heq) =
+  whd w.
+Proof.
+  intros.
+  generalize Heq.
+  replace (n + 0) with n by omega.
+  intros.
+  f_equal.
+  eq_rect_simpl.
+  reflexivity.
+Qed.
+
+Lemma wtl_eq_rect : forall n w Heq Heq',
+  wtl (eq_rect (S n) word w (S (n + 0)) Heq) =
+  eq_rect n word (wtl w) (n + 0) Heq'.
+Proof.
+  intros.
+  generalize dependent Heq.
+  rewrite <- Heq'; simpl; intros.
+  rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Lemma whd_eq_rect_mul : forall n w Heq,
+  whd (eq_rect (S n) word w (S (n * 1)) Heq) =
+  whd w.
+Proof.
+  intros.
+  generalize Heq.
+  replace (n * 1) with n by auto.
+  intros.
+  eq_rect_simpl.
+  reflexivity.
+Qed.
+
+Lemma wtl_eq_rect_mul : forall n w b Heq Heq',
+  wtl (eq_rect (S n) word (WS b w) (S (n * 1)) Heq) =
+  eq_rect _ word w _ Heq'.
+Proof.
+  intros.
+  generalize Heq.
+  rewrite <- Heq'.
+  intros. eq_rect_simpl.
+  reflexivity.
+Qed.
 
 (** * Combining and splitting *)
 
 Fixpoint combine (sz1 : nat) (w : word sz1) : forall sz2, word sz2 -> word (sz1 + sz2) :=
   match w in word sz1 return forall sz2, word sz2 -> word (sz1 + sz2) with
     | WO => fun _ w' => w'
-    | WS b _ w' => fun _ w'' => WS b (combine w' w'')
+    | WS b w' => fun _ w'' => WS b (combine w' w'')
   end.
 
 Fixpoint split1 (sz1 sz2 : nat) : word (sz1 + sz2) -> word sz1 :=
@@ -368,29 +449,56 @@ Ltac shatterer := simpl; intuition;
     | [ w : _ |- _ ] => rewrite (shatter_word w); simpl
   end; f_equal; auto.
 
+Theorem split1_0 : forall n w Heq,
+  split1 n 0 (eq_rect _ word w _ Heq) = w.
+Proof.
+  intros.
+  induction n; intros.
+  shatterer.
+  simpl.
+  erewrite wtl_eq_rect.
+  rewrite IHn.
+  rewrite whd_eq_rect.
+  simpl.
+  shatterer.
+
+  Grab Existential Variables.
+  omega.
+Qed.
+
+Theorem split2_0 : forall n w Heq,
+  split2 0 n (eq_rect _ word w _ Heq) = w.
+Proof.
+  intros.
+  simpl.
+  eq_rect_simpl.
+  reflexivity.
+Qed.
+
 Theorem combine_split : forall sz1 sz2 (w : word (sz1 + sz2)),
   combine (split1 sz1 sz2 w) (split2 sz1 sz2 w) = w.
+Proof.
   induction sz1; shatterer.
 Qed.
 
 Theorem split1_combine : forall sz1 sz2 (w : word sz1) (z : word sz2),
   split1 sz1 sz2 (combine w z) = w.
+Proof.
   induction sz1; shatterer.
 Qed.
 
 Theorem split2_combine : forall sz1 sz2 (w : word sz1) (z : word sz2),
   split2 sz1 sz2 (combine w z) = z.
+Proof.
   induction sz1; shatterer.
 Qed.
-
-Require Import Eqdep_dec.
-
 
 Theorem combine_assoc : forall n1 (w1 : word n1) n2 n3 (w2 : word n2) (w3 : word n3) Heq,
   combine (combine w1 w2) w3
   = match Heq in _ = N return word N with
       | refl_equal => combine w1 (combine w2 w3)
     end.
+Proof.
   induction w1; simpl; intuition.
 
   rewrite (UIP_dec eq_nat_dec Heq (refl_equal _)); reflexivity.
@@ -411,6 +519,7 @@ Theorem split2_iter : forall n1 n2 n3 Heq w,
   = split2 (n1 + n2) n3 (match Heq in _ = N return word N with
                            | refl_equal => w
                          end).
+Proof.
   induction n1; simpl; intuition.
 
   rewrite (UIP_dec eq_nat_dec Heq (refl_equal _)); reflexivity.
@@ -439,6 +548,7 @@ Theorem combine_end : forall n1 n2 n3 Heq w,
                           | refl_equal => w
                         end))
   = split2 n1 (n2 + n3) w.
+Proof.
   induction n1; simpl; intros.
 
   rewrite (UIP_dec eq_nat_dec Heq (refl_equal _)).
@@ -460,6 +570,266 @@ Theorem combine_end : forall n1 n2 n3 Heq w,
   reflexivity.
 Qed.
 
+Theorem combine_0_n : forall sz2 (w: word 0) (v: word sz2),
+  combine w v = v.
+Proof.
+  intros.
+  replace w with WO.
+  auto.
+  rewrite word0; auto.
+Qed.
+
+Lemma WS_eq_rect : forall b n (w: word n) n' H H',
+  eq_rect _ word (@WS b n w) _ H = @WS b n' (eq_rect _ word w _ H').
+Proof.
+  destruct n; intros; subst;
+    eq_rect_simpl; auto.
+Qed.
+
+Theorem combine_n_0 : forall sz1 (w : word sz1) (v : word 0),
+  combine w v = eq_rect _ word w _ (plus_n_O sz1).
+Proof.
+  induction w; intros.
+  - replace v with WO; auto.
+  - simpl; rewrite IHw.
+    erewrite WS_eq_rect.
+    reflexivity.
+Qed.
+
+Theorem combine_wzero : forall sz1 sz2, combine (wzero sz1) (wzero sz2) = wzero (sz1 + sz2).
+Proof.
+  induction sz1; auto.
+  unfold wzero in *.
+  intros; simpl; f_equal; auto.
+Qed.
+
+Theorem combine_wones : forall sz1 sz2, combine (wones sz1) (wones sz2) = wones (sz1 + sz2).
+Proof.
+  induction sz1; auto.
+  intros; simpl; f_equal; auto.
+Qed.
+
+Theorem eq_rect_combine : forall n1 n2 n2' (w1 : word n1) (w2 : word n2') Heq,
+  eq_rect (n1 + n2') (fun n => word n)
+    (combine w1 w2) (n1 + n2) Heq =
+  combine w1 (eq_rect n2' (fun n => word n) w2 n2 (plus_reg_l _ _ _ Heq)).
+Proof.
+  intros.
+  generalize (plus_reg_l n2' n2 n1 Heq); intros.
+  generalize dependent Heq.
+  generalize dependent w2.
+  rewrite e; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+
+Lemma eq_rect_combine_assoc' : forall a b c H wa wb wc,
+  eq_rect (a + (b + c)) word (combine wa (combine wb wc)) _ H = combine (combine wa wb) wc.
+Proof.
+  intros.
+  erewrite combine_assoc, eq_rect_word_match.
+  reflexivity.
+Qed.
+
+Lemma eq_rect_split2_helper : forall a b c,
+  a = b -> c + a = c + b.
+Proof.
+  intros; omega.
+Qed.
+
+Theorem eq_rect_split2 : forall n1 n2 n2' (w : word (n1 + n2')) Heq,
+  eq_rect n2' (fun n => word n)
+    (split2 n1 n2' w) n2 Heq =
+  split2 n1 n2 (eq_rect (n1+n2') (fun n => word n) w (n1+n2) (eq_rect_split2_helper _ Heq)).
+Proof.
+  intros.
+  generalize (eq_rect_split2_helper n1 Heq); intros.
+  generalize dependent Heq.
+  generalize dependent w.
+  assert (n2' = n2) as H' by omega.
+  generalize dependent e.
+  rewrite H'; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Theorem eq_rect_split2_eq2 : forall n1 n2 n2' (w : word (n1 + n2)) Heq Heq2,
+  eq_rect n2 (fun n => word n)
+    (split2 n1 n2 w) n2' Heq =
+  split2 n1 n2' (eq_rect (n1+n2) (fun n => word n) w (n1+n2') Heq2).
+Proof.
+  intros.
+  assert (H' := Heq).
+  generalize dependent w.
+  generalize dependent Heq.
+  generalize dependent Heq2.
+  rewrite H'; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Theorem eq_rect_split2_eq1 : forall n1 n1' n2 (w: word (n1 + n2)) Heq,
+     split2 n1 n2 w = split2 n1' n2
+        (eq_rect (n1 + n2) (fun y : nat => word y) w
+     (n1' + n2) Heq).
+Proof.
+  intros.
+  assert (n1 = n1') as H' by omega.
+  generalize dependent w.
+  generalize dependent Heq.
+  rewrite H'; intros.
+  rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Theorem combine_split_eq_rect2 : forall n1 n2 n2' (w : word (n1 + n2)) Heq,
+  combine (split1 n1 n2 w)
+          (eq_rect n2 (fun n => word n) (split2 n1 n2 w)
+                   n2' Heq) =
+  eq_rect (n1 + n2) (fun n => word n) w
+          (n1 + n2') (eq_rect_split2_helper _ Heq).
+Proof.
+  intros.
+  assert (n2 = n2') by omega.
+  generalize dependent Heq.
+  generalize dependent w.
+  rewrite <- H; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  apply combine_split.
+Qed.
+
+Lemma eq_rect_split1_helper : forall a b c,
+  a = b -> a + c = b + c.
+Proof.
+  intros; omega.
+Qed.
+
+Lemma eq_rect_split1_eq2_helper : forall a b c,
+  a = b -> c + a = c + b.
+Proof.
+  intros; omega.
+Qed.
+
+Theorem eq_rect_split1 : forall n1 n1' n2 (w : word (n1' + n2)) Heq,
+  eq_rect n1' (fun n => word n)
+    (split1 n1' n2 w) n1 Heq =
+  split1 n1 n2 (eq_rect (n1'+n2) (fun n => word n) w (n1+n2) (eq_rect_split1_helper _ Heq)).
+Proof.
+  intros.
+  generalize (eq_rect_split1_helper n2 Heq); intros.
+  generalize dependent Heq.
+  generalize dependent w.
+  assert (n1' = n1) as H' by omega.
+  generalize dependent e.
+  rewrite H'; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Theorem eq_rect_split1_eq1 : forall n1 n1' n2 (w : word (n1 + n2)) Heq Heq1,
+  eq_rect n1 (fun n => word n)
+    (split1 n1 n2 w) n1' Heq =
+  split1 n1' n2 (eq_rect (n1+n2) (fun n => word n) w (n1'+n2) Heq1).
+Proof.
+  intros.
+  generalize dependent w.
+  generalize dependent Heq1.
+  rewrite Heq; intros.
+  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Lemma split1_eq_rect_eq1_helper : forall a b c, b = a -> a + c = b + c.
+Proof. intros. subst. reflexivity. Qed.
+
+Theorem split1_eq_rect_eq1 : forall a a' b H w,
+  split1 a b w = eq_rect _ word (split1 a' b
+    (eq_rect _ word w _ (split1_eq_rect_eq1_helper b H))) _ H.
+Proof.
+  intros a a' b H.
+  subst a'; intros; eq_rect_simpl; auto.
+Qed.
+
+Theorem eq_rect_split1_eq2 : forall n1 n2 n2' (w: word (n1 + n2)) Heq,
+     split1 n1 n2 w = split1 n1 n2'
+        (eq_rect (n1 + n2) (fun y : nat => word y) w
+     (n1 + n2') Heq).
+Proof.
+  intros.
+  assert (n2 = n2') as H' by omega.
+  generalize dependent w.
+  generalize dependent Heq.
+  rewrite H'; intros.
+  rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  reflexivity.
+Qed.
+
+Fact eq_rect_combine_dist_helper1 : forall a b c d, b * c = d -> (a + b) * c = a * c + d.
+Proof. intros; subst. apply Nat.mul_add_distr_r. Qed.
+
+Fact eq_rect_combine_dist_helper2 : forall a b c d, b * c = d -> a * c + d = (a + b) * c.
+Proof. intros; subst. symmetry; apply Nat.mul_add_distr_r. Qed.
+
+Theorem eq_rect_combine_dist : forall a b c d (w : word ((a + b) * c)) (H : b * c = d),
+  b * c = d ->
+  let H1 := (eq_rect_combine_dist_helper1 a b c H) in
+  let H2 := (eq_rect_combine_dist_helper2 a b c H) in
+  let w' := eq_rec ((a + b) * c) word w _ H1 in
+  w = eq_rec _ word (combine (split1 (a * c) d w') (split2 (a * c) d w')) _ H2.
+Proof.
+  intros.
+  subst d.
+  rewrite combine_split.
+  eq_rect_simpl.
+  generalize dependent w.
+  generalize dependent H2.
+  rewrite H1.
+  intros.
+  eq_rect_simpl; auto.
+Qed.
+
+Lemma wzero_dist : forall a b c H,
+  wzero ((a + b) * c) = eq_rect _ word (wzero (a * c + b * c)) _ H.
+Proof.
+  intros a b c H.
+  rewrite H.
+  reflexivity.
+Qed.
+
+Lemma wzero_rev : forall (a b : nat) H,
+   wzero (a + b) = eq_rect _ word (wzero (b + a)) _ H.
+Proof. intros a b H. rewrite H. auto. Qed.
+
+Lemma split1_zero : forall sz1 sz2, split1 sz1 sz2 (natToWord _ O) = natToWord _ O.
+Proof.
+  induction sz1; auto; simpl; intros.
+  f_equal. eauto.
+Qed.
+
+Lemma split2_zero : forall sz1 sz2, split2 sz1 sz2 (natToWord _ O) = natToWord _ O.
+Proof.
+  induction sz1; auto.
+Qed.
+
+Theorem combine_inj : forall sz1 sz2 a b c d,
+  @combine sz1 a sz2 b = @combine sz1 c sz2 d -> a = c /\ b = d.
+Proof.
+  induction sz1; simpl; intros.
+  - rewrite (word0 a) in *.
+    rewrite (word0 c) in *.
+    simpl in *.
+    intuition.
+  - rewrite (shatter_word a) in *.
+    rewrite (shatter_word c) in *.
+    simpl in *.
+    inversion H.
+    apply (inj_pair2_eq_dec _ eq_nat_dec) in H2.
+    destruct (IHsz1 _ _ _ _ _ H2).
+    intuition.
+    f_equal; auto.
+Qed.
+
 
 (** * Extension operators *)
 
@@ -472,47 +842,87 @@ Definition sext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
 Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
   combine w (wzero sz').
 
+
 (** * Shift operators *)
 
-Fixpoint rtrunc (sz : nat) (w : word sz) (sz' : nat) : word (sz - sz').
-  destruct sz' as [|psz'].
-  - destruct sz as [|sz']; exact w.
-  - destruct sz as [|sz'].
-    + exact WO.
-    + inversion w as [|lsb n rem Heq]; subst n.
-      exact (rtrunc sz' rem psz').
+Lemma sz_minus_nshift : forall sz nshift, (nshift < sz)%nat -> sz = sz - nshift + nshift.
+Proof.
+  intros; omega.
+Qed.
+
+Lemma nshift_plus_nkeep : forall sz nshift, (nshift < sz)%nat -> nshift + (sz - nshift) = sz.
+Proof.
+  intros; omega.
+Qed.
+
+Definition wlshift (sz : nat) (w : word sz) (n : nat) : word sz.
+  refine (split1 sz n _).
+  rewrite plus_comm.
+  exact (combine (wzero n) w).
 Defined.
 
-Fixpoint rev (sz : nat) (w : word sz) : word sz :=
-  match w in (word n) return (word n) with
-  | WO => WO
-  | WS b sz' w' =>
-    eq_rec (sz' + 1) (fun n => word n) (combine (rev w') (WS b WO)) 
-           (S sz') (Nat.add_1_r sz')
-         end.
+Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz.
+  refine (split2 n sz _).
+  rewrite plus_comm.
+  exact (combine w (wzero n)).
+Defined.
 
-Definition ltrunc (sz : nat) (w : word sz) (sz' : nat) : word (sz - sz') :=
-  rev (rtrunc (rev w) sz').
+Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz.
+  refine (split2 n sz _).
+  rewrite plus_comm.
+  exact (sext w _).
+Defined.
 
-Fixpoint sll' (sz : nat) (w : word sz) (ln : nat) : word (ln + sz) :=
-  match ln as n return (word (n + sz)) with
-  | 0 => w
-  | S ln' => WS false (sll' w ln')
-  end.
+Theorem wlshift_0 : forall sz (w : word sz), @wlshift sz w 0 = w.
+Proof.
+  intros.
+  unfold wlshift.
+  eapply split1_0.
+Qed.
 
-Definition sll (sz : nat) (w : word sz) (ln : nat) : word sz :=
-  eq_rec (ln + sz - ln) (fun n => word n) (ltrunc (sll' w ln) ln) sz (minus_plus ln sz).
+Theorem wrshift_0 : forall sz (w : word sz), @wrshift sz w 0 = w.
+Proof.
+  intros.
+  unfold wrshift.
+  simpl.
+  rewrite combine_n_0.
+  eq_rect_simpl. reflexivity.
+Qed.
 
-Definition srl (sz : nat) (w : word sz) (ln : nat) : word sz :=
-  eq_rec (sz + ln - ln) (fun n => word n) (rtrunc (zext w ln) ln) sz (Nat.add_sub sz ln).
+Theorem wlshift_gt : forall sz n (w : word sz), (n > sz)%nat ->
+  wlshift w n = wzero sz.
+Proof.
+  intros sz n w H.
+  generalize dependent w.
+  remember (n - sz) as e.
+  assert (n = sz + e) by omega; subst n.
+  intros w.
+  unfold wlshift.
+  rewrite <- combine_wzero.
+  erewrite combine_assoc, eq_rect_word_match.
+  eq_rect_simpl.
+  rewrite eq_rect_combine.
+  apply split1_combine.
+  Grab Existential Variables. omega.
+Qed.
 
-Definition sra (sz : nat) (w : word sz) (ln : nat) : word sz :=
-  match sz as n return (word n -> word n) with
-  | 0 => fun _ => WO
-  | S sz' =>
-    fun w0 => eq_rec (sz' + 1) (fun n => word n) (combine (srl (wtl w0) ln) (WS (whd w0) WO)) 
-                     (S sz') (Nat.add_1_r sz')
-  end w.
+Theorem wrshift_gt : forall sz n (w : word sz), (n > sz)%nat ->
+  wrshift w n = wzero sz.
+Proof.
+  intros sz n w H.
+  generalize dependent w.
+  remember (n - sz) as e.
+  assert (n = sz + e) by omega; subst n.
+  intros w.
+  unfold wrshift.
+  erewrite wzero_rev, <- combine_wzero.
+  eq_rect_simpl.
+  rewrite <- eq_rect_word_match, <- eq_rect_combine, eq_rect_word_match.
+  eq_rect_simpl.
+  rewrite eq_rect_combine_assoc', split2_combine.
+  reflexivity.
+  Grab Existential Variables. omega.
+Qed.
 
 (** * Arithmetic (unsigned) *)
 
@@ -591,6 +1001,9 @@ Notation "^~" := wneg.
 Notation "l ^+ r" := (@wplus _ l%word r%word) (at level 50, left associativity).
 Notation "l ^* r" := (@wmult _ l%word r%word) (at level 40, left associativity).
 Notation "l ^- r" := (@wminus _ l%word r%word) (at level 50, left associativity).
+Notation "l ^<< r" := (@wlshift _ _ l%word r%word) (at level 35).
+Notation "l ^>> r" := (@wrshift _ _ l%word r%word) (at level 35).
+Notation "l ^~>> r" := (@wrshifta _ _ l%word r%word) (at level 35).
 
 Theorem wordToN_nat : forall sz (w : word sz), wordToN w = N_of_nat (wordToNat w).
   induction w; intuition.
@@ -711,47 +1124,6 @@ Qed.
 
 Theorem wplus_comm : forall sz (x y : word sz), x ^+ y = y ^+ x.
   intros; repeat rewrite wplus_alt; unfold wplusN, wordBinN; f_equal; auto.
-Qed.
-
-Theorem drop_mod2 : forall n k,
-  2 * k <= n
-  -> mod2 (n - 2 * k) = mod2 n.
-  induction n using strong; intros.
-
-  do 2 (destruct n; simpl in *; repeat rewrite untimes2 in *; intuition).
-
-  destruct k; simpl in *; intuition.
-
-  destruct k; simpl; intuition.
-  rewrite <- plus_n_Sm.
-  repeat rewrite untimes2 in *.
-  simpl; auto.
-  apply H; omega.
-Qed.
-
-Theorem div2_minus_2 : forall n k,
-  2 * k <= n
-  -> div2 (n - 2 * k) = div2 n - k.
-  induction n using strong; intros.
-
-  do 2 (destruct n; simpl in *; intuition; repeat rewrite untimes2 in *).
-  destruct k; simpl in *; intuition.
-
-  destruct k; simpl in *; intuition.
-  rewrite <- plus_n_Sm.
-  apply H; omega.
-Qed.
-
-Theorem div2_bound : forall k n,
-  2 * k <= n
-  -> k <= div2 n.
-  intros; case_eq (mod2 n); intro Heq.
-
-  rewrite (div2_odd _ Heq) in H.
-  omega.
-
-  rewrite (div2_even _ Heq) in H.
-  omega.
 Qed.
 
 Theorem drop_sub : forall sz n k,
@@ -976,16 +1348,24 @@ Add Ring wring8 : wring8 (decidable (weqb_sound 8), constants [wcst]).
 
 (** * Bitwise operators *)
 
+Fixpoint rev (sz : nat) (w : word sz) : word sz :=
+  match w in (word n) return (word n) with
+  | WO => WO
+  | @WS b sz' w' =>
+    eq_rec (sz' + 1) (fun n => word n) (combine (rev w') (WS b WO)) 
+           (S sz') (Nat.add_1_r sz')
+  end.
+
 Fixpoint wnot sz (w : word sz) : word sz :=
   match w with
     | WO => WO
-    | WS b _ w' => WS (negb b) (wnot w')
+    | WS b w' => WS (negb b) (wnot w')
   end.
 
 Fixpoint bitwp (f : bool -> bool -> bool) sz (w1 : word sz) : word sz -> word sz :=
   match w1 with
     | WO => fun _ => WO
-    | WS b _ w1' => fun w2 => WS (f b (whd w2)) (bitwp f w1' (wtl w2))
+    | WS b w1' => fun w2 => WS (f b (whd w2)) (bitwp f w1' (wtl w2))
   end.
 
 Definition wor := bitwp orb.

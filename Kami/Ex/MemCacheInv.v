@@ -1,4 +1,4 @@
-Require Import Lib.FMap Lib.Word Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
+Require Import Lib.FMap Lib.Word Lib.NatLib Ex.MemAtomic Ex.MemTypes Lib.Indexer Lib.Struct Ex.Msi
         Ex.NativeFifo Kami.Notations String Ex.MemCacheInl Kami.Syntax List Kami.Semantics
         Kami.ParametricSyntax Lib.CommonTactics Kami.SemFacts Lib.FMap Lib.Concat Arith
         FunctionalExtensionality Program.Equality Kami.Tactics Kami.MapReifyEx Kami.SymEval
