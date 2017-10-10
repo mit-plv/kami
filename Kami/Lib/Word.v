@@ -951,8 +951,8 @@ Definition wdivN := wordBinN Nat.div.
 Definition wremN := wordBinN Nat.modulo.
 
 (** * Arithmetic (signed) *)
-Fixpoint wordToZ sz (w : word sz) : Z :=
-  if wmsb w true then 
+Definition wordToZ sz (w : word sz) : Z :=
+  if wmsb w false then
     (** Negative **)
     match wordToN (wneg w) with
     | N0 => 0%Z
