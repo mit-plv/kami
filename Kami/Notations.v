@@ -55,6 +55,16 @@ Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 
+Notation "a $[ i : j ]@ w":=
+  (UniBit
+     (ConstExtract
+        j
+        (i + 1 - j)%nat
+        (w - 1 - i)%nat
+     ) a) (at level 100, i at level 99) : kami_expr_scope.
+
+Notation "{ a , b }" := (BinBit (Concat _ _) a b) (at level 0, a at level 99) : kami_expr_scope.
+
 Delimit Scope kami_expr_scope with kami_expr.
 
 Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
@@ -116,12 +126,12 @@ Notation "'Call' name : t <- meth () ; cont " :=
   (MCall (lretT := t) (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 
-Notation "'CallM' meth ( a :# argT ) ; cont " :=
+Notation "'CallM' meth ( a : argT ) ; cont " :=
   (MCall meth%string {| arg := argT; ret := Void |} a%kami_expr (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_action_scope.
-Notation "'CallM' name : retT <- meth ( a :# argT ) ; cont " :=
+    (at level 12, right associativity, meth at level 0, a at level 99) : kami_action_scope.
+Notation "'CallM' name : retT <- meth ( a : argT ) ; cont " :=
   (MCall meth%string {| arg := argT; ret := retT |} a%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
+    (at level 12, right associativity, name at level 0, meth at level 0, a at level 99) : kami_action_scope.
 Notation "'CallM' meth () ; cont " :=
   (MCall meth%string {| arg := Void; ret := Void |} (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_action_scope.
@@ -272,12 +282,12 @@ Notation "'Call' name : t <- meth () ; cont " :=
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 
-Notation "'CallM' meth ( a :# argT ) ; cont " :=
+Notation "'CallM' meth ( a : argT ) ; cont " :=
   (SMCall (Build_NameRec meth%string eq_refl) {| arg := argT; ret := Void |} a%kami_expr (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_sin_scope.
-Notation "'CallM' name : retT <- meth ( a :# argT ) ; cont " :=
+    (at level 12, right associativity, meth at level 0, a at level 99) : kami_sin_scope.
+Notation "'CallM' name : retT <- meth ( a : argT ) ; cont " :=
   (SMCall (Build_NameRec meth%string eq_refl) {| arg := argT; ret := retT |} a%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+    (at level 12, right associativity, name at level 0, meth at level 0, a at level 99) : kami_sin_scope.
 Notation "'CallM' meth () ; cont " :=
   (SMCall (Build_NameRec meth%string eq_refl) {| arg := Void; ret := Void |} (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_sin_scope.
@@ -307,12 +317,12 @@ Notation "'Call' name : t <- { meth | pf } () ; cont " :=
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
 
-Notation "'CallM' { meth | pf } ( a :# argT ) ; cont " :=
+Notation "'CallM' { meth | pf } ( a : argT ) ; cont " :=
   (SMCall (Build_NameRec meth%string pf) {| arg := argT; ret := Void |} a%kami_expr (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_sin_scope.
-Notation "'CallM' name : retT <- { meth | pf } ( a :# argT ) ; cont " :=
+    (at level 12, right associativity, meth at level 0, a at level 99) : kami_sin_scope.
+Notation "'CallM' name : retT <- { meth | pf } ( a : argT ) ; cont " :=
   (SMCall (Build_NameRec meth%string pf) {| arg := argT; ret := retT |} a%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_sin_scope.
+    (at level 12, right associativity, name at level 0, meth at level 0, a at level 99) : kami_sin_scope.
 Notation "'CallM' { meth | pf } () ; cont " :=
   (SMCall (Build_NameRec meth%string pf) {| arg := Void; ret := Void |} (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_sin_scope.
@@ -416,12 +426,12 @@ Notation "'Call' name : t <- meth () ; cont " :=
           (Const _ Default) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
 
-Notation "'CallM' meth ( a :# argT ) ; cont " :=
+Notation "'CallM' meth ( a : argT ) ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec meth%string eq_refl)) {| arg := argT; ret := Void |} a%kami_expr (fun _ => cont))
-    (at level 12, right associativity, meth at level 0) : kami_gen_scope.
-Notation "'CallM' name : retT <- meth ( a :# argT ) ; cont " :=
+    (at level 12, right associativity, meth at level 0, a at level 99) : kami_gen_scope.
+Notation "'CallM' name : retT <- meth ( a : argT ) ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec meth%string eq_refl)) {| arg := argT; ret := retT |} a%kami_expr (fun name => cont))
-    (at level 12, right associativity, name at level 0, meth at level 0) : kami_gen_scope.
+    (at level 12, right associativity, name at level 0, meth at level 0, a at level 99) : kami_gen_scope.
 Notation "'CallM' meth () ; cont " :=
   (GMCall (Build_NameRecIdx false (Build_NameRec meth%string eq_refl)) {| arg := Void; ret := Void |} (Const _ Default) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_gen_scope.
