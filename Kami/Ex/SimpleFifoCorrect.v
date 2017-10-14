@@ -365,11 +365,11 @@ Section Facts.
                   reflexivity.
                 }
                 { pose proof (wordToNat_bound (x5 ^- x6)).
-                  remember (pow2 (S sz)) as pt; destruct pt.
+                  remember (Lib.NatLib.pow2 (S sz)) as pt; destruct pt.
                   { pose proof (pow2_zero (S sz)); omega. }
                   { apply Lt.lt_n_S.
                     assert (wordToNat (x5 ^- x6) <> pt).
-                    { replace pt with (pow2 (S sz) - 1) by omega.
+                    { replace pt with (Lib.NatLib.pow2 (S sz) - 1) by omega.
                       intro Hx.
                       apply pow2_minus_one_wones in Hx.
                       elim n0.
