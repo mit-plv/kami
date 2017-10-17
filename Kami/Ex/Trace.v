@@ -42,12 +42,12 @@ Section AbstractTrace.
     pm iaddr.
 
   Inductive TraceEvent : Type :=
-  | Instr (pc : address)
-  | Rd (addr : address) (val : data)
-  | Wr (addr : address) (val : data)
-  | Branch (taken : bool)
-  | ToHost (val : data)
-  | FromHost (val : data).
+  | Nm (pc : address)
+  | Rd (pc : address) (addr : address) (val : data)
+  | Wr (pc : address) (addr : address) (val : data)
+  | Branch (pc : address) (taken : bool)
+  | ToHost (pc : address) (val : data)
+  | FromHost (pc : address) (val : data).
 
   Inductive hasTrace : regfile -> memory -> progMem -> address -> data -> list TraceEvent -> Prop :=
   | htNil : forall rf mem pm pc maxsp,
@@ -64,7 +64,7 @@ Section AbstractTrace.
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
       mget mem laddr_aligned = Some val ->
       hasTrace (rset rf dstIdx val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: Rd laddr_aligned val :: trace')
+      hasTrace rf mem pm pc maxsp (Rd pc laddr_aligned val :: trace')
   | htSt : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -77,7 +77,7 @@ Section AbstractTrace.
       let saddr := evalExpr (rv32iCalcStAddr type addr srcVal) in
       let saddr_aligned := evalExpr (rv32iAlignAddr type saddr) in
       hasTrace rf (mset mem saddr_aligned stVal) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: Wr saddr_aligned stVal :: trace')
+      hasTrace rf mem pm pc maxsp (Wr pc saddr_aligned stVal :: trace')
   | htTh : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -85,21 +85,21 @@ Section AbstractTrace.
       let srcIdx := evalExpr (rv32iGetSrc1 type inst) in
       let srcVal := rget rf srcIdx in
       hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: ToHost srcVal :: trace')
+      hasTrace rf mem pm pc maxsp (ToHost pc srcVal :: trace')
   | htFh : forall inst rf val mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opFh ->
       let dst := evalExpr (rv32iGetDst type inst) in
       hasTrace (rset rf dst val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: FromHost val :: trace')
+      hasTrace rf mem pm pc maxsp (FromHost pc val :: trace')
   | htNmBranch : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr = rv32iOpBRANCH ->
       hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: Branch (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
+      hasTrace rf mem pm pc maxsp (Branch pc (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
   | htNm : forall inst rf mem pm pc maxsp trace',
       rget rf spReg <= maxsp ->
       pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -112,22 +112,22 @@ Section AbstractTrace.
       let dst := evalExpr (rv32iGetDst type inst) in
       let execVal := evalExpr (rv32iExec type val1 val2 pc inst) in
       hasTrace (rset rf dst execVal) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Instr pc :: trace').
+      hasTrace rf mem pm pc maxsp (Nm pc :: trace').
 
 
   Definition censorTrace : list TraceEvent -> list TraceEvent :=
     map (fun te => match te with
-                | Instr _ => te
-                | Branch _ => te
-                | Rd addr val => Rd addr $0
-                | Wr addr val => Wr addr $0
-                | ToHost val => ToHost $0
-                | FromHost val => FromHost $0
+                | Nm _ => te
+                | Branch _ _ => te
+                | Rd pc addr val => Rd pc addr $0
+                | Wr pc addr val => Wr pc addr $0
+                | ToHost pc val => ToHost pc $0
+                | FromHost pc val => FromHost pc $0
                 end).
 
   Definition extractFhTrace : list TraceEvent -> list data :=
     flat_map (fun te => match te with
-                | FromHost val => cons val nil
+                | FromHost _ val => cons val nil
                 | _ => nil
                 end).
 
@@ -177,23 +177,58 @@ Section KamiTrace.
     | _ => True
     end.
 
-  Inductive BoundedMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
-    NilBMultistep : forall o1 o2 : RegsT,
-      o1 = o2 -> BoundedMultistep m maxsp o1 o2 nil
-  | BMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT),
-      BoundedMultistep m maxsp o n a ->
-      inBounds maxsp n ->
-      forall (u : UpdatesT) (l : LabelT),
-        Step m n u l -> BoundedMultistep m maxsp o (FMap.M.union u n) (l :: a).
+  Inductive BoundedForwardMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
+    NilBFMultistep : forall o1 o2 : RegsT,
+      o1 = o2 -> BoundedForwardMultistep m maxsp o1 o2 nil
+  | BFMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT) (u : UpdatesT) (l : LabelT),
+      inBounds maxsp o ->
+      Step m o u l ->
+      BoundedForwardMultistep m maxsp (FMap.M.union u o) n a ->
+      BoundedForwardMultistep m maxsp o n (l :: a).
 
+  Lemma BFMulti_Multi : forall m maxsp o n a,
+      BoundedForwardMultistep m maxsp o n a ->
+      Multistep m o n (List.rev a).
+  Proof.
+    intros m maxsp o n a.
+    move a at top.
+    generalize m maxsp o n.
+    clear - a.
+    induction a; intros;
+    match goal with
+    | [ H : BoundedForwardMultistep _ _ _ _ _ |- _ ] => inversion H; clear H
+    end.
+    - constructor.
+      assumption.
+    - simpl.
+      subst.
+      match goal with
+      | [ H : BoundedForwardMultistep _ _ _ _ _, IH : forall _ _ _ _, BoundedForwardMultistep _ _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ _ H)
+      end.
+      match goal with
+      | [ HM : Multistep ?m (FMap.M.union ?u ?o) ?n (List.rev ?a), HS : Step ?m ?o ?u ?l |- _ ] =>
+        let a' := fresh in
+        remember (List.rev a) as a'; clear - HM HS; move a' at top; generalize m u o n l HM HS; clear - a'; induction a'
+      end;
+        simpl;
+        intros;
+        match goal with
+        | [ HM : Multistep _ _ _ _ |- _ ] => inversion HM
+        end;
+        subst;
+        repeat constructor; 
+        try assumption.
+      eapply IHlist; eassumption.
+  Qed.
+      
   Definition kamiHiding censorMeth extractFh m maxsp regs : Prop :=
     forall labels newRegs fhs,
-      BoundedMultistep m maxsp regs newRegs labels ->
+      BoundedForwardMultistep m maxsp regs newRegs labels ->
       extractFhLabelSeq extractFh labels = fhs ->
       forall fhs',
         length fhs = length fhs' ->
         exists labels' newRegs',
-          BoundedMultistep m maxsp regs newRegs' labels' /\
+          BoundedForwardMultistep m maxsp regs newRegs' labels' /\
           censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
@@ -271,22 +306,22 @@ Section SCTiming.
       let addr := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr")%kami_expr in
       let val := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
       if evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op")%kami_expr
-      then Some (Wr addr val)
-      else Some (Rd addr val)
+      then Some (Wr $0 addr val)
+      else Some (Rd $0 addr val)
     | None =>
       match FMap.M.find "toHost" c with
       | Some (existT _
                      {| arg := Bit 32;
                         ret := Bit 0 |}
                      (argV, retV)) =>
-        Some (ToHost argV)
+        Some (ToHost $0 argV)
       | None =>
         match FMap.M.find "fromHost" c with
         | Some (existT _
                        {| arg := Bit 0;
                           ret := Bit 32 |}
                        (argV, retV)) =>
-          Some (FromHost retV)
+          Some (FromHost $0 retV)
         | _ => None
         end
       | _ => None
@@ -303,36 +338,36 @@ Section SCTiming.
 
   Definition extractFhSC (cs : MethsT) : list (word 32) :=
     match callsToTraceEvent cs with
-    | Some (FromHost val) => cons val nil
+    | Some (FromHost _ val) => cons val nil
     | _ => nil
     end.
 
   Inductive relatedTrace : list TraceEvent -> LabelSeqT -> Prop :=
   | RtNil : relatedTrace nil nil
   | RtRd : forall pc addr val lbl trace' ls',
-      labelToTraceEvent lbl = Some (Rd addr val) ->
+      labelToTraceEvent lbl = Some (Rd $0 addr val) ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: Rd addr val :: trace') (lbl :: ls')
+      relatedTrace (Rd pc addr val :: trace') (lbl :: ls')
   | RtWr : forall pc addr val lbl trace' ls',
-      labelToTraceEvent lbl = Some (Wr addr val) ->
+      labelToTraceEvent lbl = Some (Wr $0 addr val) ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: Wr addr val :: trace') (lbl :: ls')
+      relatedTrace (Wr pc addr val :: trace') (lbl :: ls')
   | RtTh : forall pc val lbl trace' ls',
-      labelToTraceEvent lbl = Some (ToHost val) ->
+      labelToTraceEvent lbl = Some (ToHost $0 val) ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: ToHost val :: trace') (lbl :: ls')
+      relatedTrace (ToHost pc val :: trace') (lbl :: ls')
   | RtFh : forall pc val lbl trace' ls',
-      labelToTraceEvent lbl = Some (FromHost val) ->
+      labelToTraceEvent lbl = Some (FromHost $0 val) ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: FromHost val :: trace') (lbl :: ls')
+      relatedTrace (FromHost pc val :: trace') (lbl :: ls')
   | RtBranch : forall pc taken lbl trace' ls',
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: Branch taken :: trace') (lbl :: ls')
+      relatedTrace (Branch pc taken :: trace') (lbl :: ls')
   | RtNm : forall pc lbl trace' ls',
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
-      relatedTrace (Instr pc :: trace') (lbl :: ls').
+      relatedTrace (Nm pc :: trace') (lbl :: ls').
 
   Lemma relatedFhTrace :
     forall trace ls,
@@ -357,17 +392,91 @@ Section SCTiming.
             reflexivity ].
   Qed.
 
+  (* A [subst] tactic that doesn't unfold definitions *)
+  Ltac opaque_subst :=
+    repeat match goal with
+           | [ Heq : ?x = ?y |- _ ] => ((tryif unfold x then fail else subst x) || (tryif unfold y then fail else subst y))
+           end.
+
   Lemma relatedCensor :
     forall rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
       hasTrace rf mem pm pc maxsp trace1 ->
       hasTrace rf mem pm pc maxsp trace2 ->
-      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
-      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
+      BoundedForwardMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
+      BoundedForwardMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
       censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
   Proof.
+    intros rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
+    move Hht1 at top.
+    generalize trace2 newRegs1 newRegs2 ls1 ls2.
+    clear trace2 newRegs1 newRegs2 ls1 ls2.
+    induction Hht1; intros.
+    - match goal with
+      | [ H : censorTrace nil = censorTrace ?l |- _ ] => destruct l; simpl in H; try congruence
+      end.
+      match goal with
+      | [ H1 : relatedTrace nil _, H2 : relatedTrace nil _ |- _ ] => inversion H1; inversion H2
+      end.
+      reflexivity.
+    - match goal with
+      | [ Hct : censorTrace (Rd _ _ _ :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2
+      end.
+      opaque_subst.
+      simpl;
+      f_equal;
+        repeat match goal with
+               | [ Hbm : BoundedForwardMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+                 inversion Hbm;
+                   clear Hbm;
+                   match goal with
+                   | [ Hst : Step _ _ _ lbl |- _ ] =>
+                     inversion Hst;
+                       clear Hst
+                   end
+               end;
+        opaque_subst.
+      + dependent inversion ss.
+        apply substepsComb_substepsInd in HSubsteps.
+        inversion HSubsteps.
+      + match goal with
+        | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+        end;
+        try match goal with
+            | [ HBFM : BoundedForwardMultistep _ _ ?r1 _ ?l |- BoundedForwardMultistep _ _ ?r2 _ ?l ] =>
+              let H := fresh in
+              assert (r2 = r1) as H(* by admit;
+                rewrite H;
+                eassumption
+            | [ |- censorTrace _ = censorTrace _ ] => eassumption*)
+            end; try eassumption.
+        apply substepsComb_substepsInd in HSubsteps0.
+        induction HSubsteps0.
+        * simpl in H18.
+          rewrite FMap.M.subtractKV_empty_1 in H18.
+          unfold callsToTraceEvent in H18.
+          repeat rewrite FMap.M.find_empty in H18.
+          congruence.
+        * 
+        inversion H3.
+        replace dstIdx0 with dstIdx in * by (subst; reflexivity).
+        replace val0 with val in *.
+        * subst; assumption.
+        * admit.
+    
   Admitted.
 
   Lemma abstractToSCRelated :
