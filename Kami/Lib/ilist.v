@@ -165,7 +165,7 @@ Section ilist_imap.
     : ilist _ As -> ilist _ As :=
     match As return ilist _ As -> ilist _ As with
     | [] => fun il => inil _
-    | a :: As' => fun il => icons _ (f (ilist_hd il)) (@imap _ As' (ilist_tl il))
+    | a :: As' => fun il => icons _ (@f a (ilist_hd il)) (@imap _ As' (ilist_tl il))
     end.
 
   (* [imap] behaves as expected with the [ith_default] lookup
@@ -202,7 +202,7 @@ Section ilist_replace.
   Fixpoint replace_Index
              {m}
              (As : Vector.t A m)
-             (il : ilist _ As)
+             (il : ilist B As)
              (n : Fin.t m)
              (new_b : B (Vector.nth As n))
              {struct n}
