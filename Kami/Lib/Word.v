@@ -980,10 +980,10 @@ Definition wminusZ := wordBinZ Z.sub.
 Definition wmultZ := wordBinZ Z.mul.
 Definition wmultZsu sz (x y : word sz) :=
   ZToWord sz (Z.mul (wordToZ x) (Z.of_N (wordToN y))).
-Definition wdivZ := wordBinZ Z.div.
+Definition wdivZ := wordBinZ Z.quot.
 Definition wdivZsu sz (x y : word sz) :=
   ZToWord sz (Z.div (wordToZ x) (Z.of_N (wordToN y))).
-Definition wremZ := wordBinZ Z.modulo.
+Definition wremZ := wordBinZ Z.rem.
 Definition wremZsu sz (x y : word sz) :=
   ZToWord sz (Z.modulo (wordToZ x) (Z.of_N (wordToN y))).
 
