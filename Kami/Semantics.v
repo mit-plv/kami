@@ -220,10 +220,10 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Mul n SignUU => @wmult n
     | Div n true => @wdivZ n
     (* | Div n SignSU => @wdivZsu n *)
-    | Div n false => @wdiv n
+    | Div n false => @wdivN n
     | Rem n true => @wremZ n
     (* | Rem n SignSU => @wremZsu n *)
-    | Rem n false => @wrem n
+    | Rem n false => @wremN n
     | Band n => @wand n
     | Bor n => @wor n
     | Bxor n => @wxor n
