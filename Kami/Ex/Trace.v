@@ -177,17 +177,18 @@ Section KamiTrace.
     | _ => True
     end.
 
-  Inductive BoundedForwardMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
+  Inductive BoundedForwardActiveMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
     NilBFMultistep : forall o1 o2 : RegsT,
-      o1 = o2 -> BoundedForwardMultistep m maxsp o1 o2 nil
+      o1 = o2 -> BoundedForwardActiveMultistep m maxsp o1 o2 nil
   | BFMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT) (u : UpdatesT) (l : LabelT),
       inBounds maxsp o ->
       Step m o u l ->
-      BoundedForwardMultistep m maxsp (FMap.M.union u o) n a ->
-      BoundedForwardMultistep m maxsp o n (l :: a).
+      annot l <> None ->
+      BoundedForwardActiveMultistep m maxsp (FMap.M.union u o) n a ->
+      BoundedForwardActiveMultistep m maxsp o n (l :: a).
 
   Lemma BFMulti_Multi : forall m maxsp o n a,
-      BoundedForwardMultistep m maxsp o n a ->
+      BoundedForwardActiveMultistep m maxsp o n a ->
       Multistep m o n (List.rev a).
   Proof.
     intros m maxsp o n a.
@@ -196,14 +197,14 @@ Section KamiTrace.
     clear - a.
     induction a; intros;
     match goal with
-    | [ H : BoundedForwardMultistep _ _ _ _ _ |- _ ] => inversion H; clear H
+    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] => inversion H; clear H
     end.
     - constructor.
       assumption.
     - simpl.
       subst.
       match goal with
-      | [ H : BoundedForwardMultistep _ _ _ _ _, IH : forall _ _ _ _, BoundedForwardMultistep _ _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ _ H)
+      | [ H : BoundedForwardActiveMultistep _ _ _ _ _, IH : forall _ _ _ _, BoundedForwardActiveMultistep _ _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ _ H)
       end.
       match goal with
       | [ HM : Multistep ?m (FMap.M.union ?u ?o) ?n (List.rev ?a), HS : Step ?m ?o ?u ?l |- _ ] =>
@@ -223,12 +224,12 @@ Section KamiTrace.
       
   Definition kamiHiding censorMeth extractFh m maxsp regs : Prop :=
     forall labels newRegs fhs,
-      BoundedForwardMultistep m maxsp regs newRegs labels ->
+      BoundedForwardActiveMultistep m maxsp regs newRegs labels ->
       extractFhLabelSeq extractFh labels = fhs ->
       forall fhs',
         length fhs = length fhs' ->
         exists labels' newRegs',
-          BoundedForwardMultistep m maxsp regs newRegs' labels' /\
+          BoundedForwardActiveMultistep m maxsp regs newRegs' labels' /\
           censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
@@ -242,12 +243,12 @@ Section SCTiming.
              rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
              rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
              (procInitDefault  _ _ _ _).
-
+  
   Definition SCRegs rf pm pc : RegsT :=
     FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
                (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
                            (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
-                                       (FMap.M.empty _))).
+                                                   (FMap.M.empty _))).
 
   Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n "exec"
@@ -402,8 +403,8 @@ Section SCTiming.
     forall rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
       hasTrace rf mem pm pc maxsp trace1 ->
       hasTrace rf mem pm pc maxsp trace2 ->
-      BoundedForwardMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
-      BoundedForwardMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
+      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
+      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
@@ -439,7 +440,7 @@ Section SCTiming.
       simpl;
       f_equal;
         repeat match goal with
-               | [ Hbm : BoundedForwardMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
                  inversion Hbm;
                    clear Hbm;
                    match goal with
@@ -449,20 +450,32 @@ Section SCTiming.
                    end
                end;
         opaque_subst.
-      + dependent inversion ss.
-        apply substepsComb_substepsInd in HSubsteps.
+      + apply substepsComb_substepsInd in HSubsteps.
         inversion HSubsteps.
+        * simpl.
+          destruct ss.
+          -- simpl in H9.
+             rewrite FMap.M.subtractKV_empty_1 in H9.
+             unfold callsToTraceEvent in H9.
+             simpl in H9.
+             congruence.
+          -- simpl in H5.
+             unfold addLabelLeft in H5.
+             unfold mergeLabel in H5.
+             simpl in H5.
+             admit.
+        * admit.
       + match goal with
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
         try match goal with
-            | [ HBFM : BoundedForwardMultistep _ _ ?r1 _ ?l |- BoundedForwardMultistep _ _ ?r2 _ ?l ] =>
+            | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
               let H := fresh in
-              assert (r2 = r1) as H(* by admit;
+              assert (r2 = r1) as H by admit;
                 rewrite H;
                 eassumption
-            | [ |- censorTrace _ = censorTrace _ ] => eassumption*)
-            end; try eassumption.
+            | [ |- censorTrace _ = censorTrace _ ] => eassumption
+            end.
         apply substepsComb_substepsInd in HSubsteps0.
         induction HSubsteps0.
         * simpl in H18.
@@ -470,38 +483,203 @@ Section SCTiming.
           unfold callsToTraceEvent in H18.
           repeat rewrite FMap.M.find_empty in H18.
           congruence.
-        * 
-        inversion H3.
+          (*
+        * inversion H3.
         replace dstIdx0 with dstIdx in * by (subst; reflexivity).
         replace val0 with val in *.
         * subst; assumption.
         * admit.
-    
+    *)
   Admitted.
+
+  Ltac shatter := repeat match goal with
+                         | [ H : exists _, _ |- _ ] => destruct H
+                         | [ H : _ /\ _ |- _ ] => destruct H
+                         end.
+
+  Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
+    simpl.
+    intros.
+    rewrite H.
+    destruct (weq c c); tauto.
+  Qed.
+
+  (* Lemma no_meths_wellHidden : forall regs rules label,  (Step (Mod regs rules nil) wellHidden*)
 
   Lemma abstractToSCRelated :
     forall rf mem pm pc maxsp trace,
       hasTrace rf mem pm pc maxsp trace ->
       exists newRegs ls,
-        BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
+        BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
         relatedTrace trace ls.
   Proof.
+    induction 1.
+    - repeat eexists; repeat econstructor.
+    - shatter.
+      assert (substep : SubstepRec rv32iProcInst (SCRegs rf pm pc)).
+      + destruct (weq dstIdx (wzero _)); econstructor.
+        * eapply SingleRule.
+          -- instantiate (2 := "execLdZ").
+             simpl.
+             tauto.
+             -- repeat (econstructor; try FMap.findeq).
+                ++ match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
+                   end.
+                   ** reflexivity.
+                      ** rewrite H6.
+                         rewrite H0.
+                         rewrite eval_const; tauto.
+                ++ rewrite eval_const.
+                   ** reflexivity.
+                   ** unfold evalExpr; fold evalExpr.
+                      unfold pmget in *.
+                      rewrite H0.
+                      assumption.
+                ++ FMap.findeq.
+        * eapply SingleRule.
+          -- instantiate (2 := "execLd").
+             simpl.
+             tauto.
+             -- repeat (econstructor; try FMap.findeq).
+                ++ match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
+                   end.
+                   ** reflexivity.
+                   ** rewrite H6.
+                      rewrite H0.
+                      rewrite eval_const; tauto.
+                ++ unfold evalExpr; fold evalExpr.
+                   unfold evalUniBool.
+                   rewrite Bool.negb_true_iff.
+                   unfold isEq.
+                   match goal with
+                   | |- (if ?b then _ else _) = _ => destruct b
+                   end.
+                   ** unfold pmget in *.
+                      rewrite H0 in e.
+                      tauto.
+                   ** reflexivity.
+                ++ FMap.findeq.
+                ++ FMap.findeq.
+                ++ FMap.findeq.
+      + repeat eexists.
+        * eapply BFMulti.
+          -- tauto.
+          -- constructor.
+             ++ apply AddSubstep.
+                apply NilSubsteps.
+                simpl.
+                tauto.
+             ++ instantiate (1 := substep).
+                unfold wellHidden.
+                simpl.
+                split; FMap.findeq.
+(*                
+                unfold substep.
+                unfold unitAnnot
+                
+                match goal with
+                | |- wellHidden _ (hide (_ [?P])) =>
+               match type of P with
+               | ?TP => assert (sth: TP); pose P
+               end
+             end.
+             ++ admit.
+             ++ Set Printing All.
+                simpl.
+                clear - sth y.
+                
+                  instantiate (1 := sth).
+             ++ destruct (weq dstIdx (wzero _)); econstructor.
+                ** eapply SingleRule.
+                   --- instantiate (2 := "execLdZ").
+                       simpl.
+                       tauto.
+                   --- repeat (econstructor; try FMap.findeq).
+                       +++ match goal with
+                           | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
+                           end.
+                           *** reflexivity.
+                           *** rewrite H6.
+                               rewrite H0.
+                               rewrite eval_const; tauto.
+                       +++ rewrite eval_const.
+                           *** reflexivity.
+                           *** unfold evalExpr; fold evalExpr.
+                               unfold pmget in *.
+                               rewrite H0.
+                               assumption.
+                       +++ FMap.findeq.
+                ** eapply SingleRule.
+                   --- instantiate (2 := "execLd").
+                       simpl.
+                       tauto.
+                   --- repeat (econstructor; try FMap.findeq).
+                       +++ match goal with
+                           | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
+                           end.
+                           *** reflexivity.
+                           *** rewrite H6.
+                               rewrite H0.
+                               rewrite eval_const; tauto.
+                       +++ unfold evalExpr; fold evalExpr.
+                           unfold evalUniBool.
+                           rewrite Bool.negb_true_iff.
+                           unfold isEq.
+                           match goal with
+                           | |- (if ?b then _ else _) = _ => destruct b
+                           end.
+                           *** unfold pmget in *.
+                               rewrite H0 in e.
+                               tauto.
+                           *** reflexivity.
+                       +++ FMap.findeq.
+                       +++ FMap.findeq.
+                       +++ FMap.findeq.
+             ++ instantiate (1 := sth).
+                ** 
+                     Lemma evalExprVarRewrite: forall k e, evalExpr (Var type k e) = e.
+                       Proof.
+                         intros; reflexivity.
+                       Qed.
+                       unfold pmget in *.
+                       
+                       rewrite evalExprVarRewrite.
+
+                   --- *)
   Admitted.
 
   Lemma SCToAbstractRelated :
     forall rf mem pm pc maxsp newRegs ls,
-      BoundedMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
+      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
       exists trace,
         hasTrace rf mem pm pc maxsp trace /\
         relatedTrace trace ls.
   Proof.
+    induction 1.
+    - eexists; repeat econstructor.
+    - shatter.
+      destruct H0.
+      destruct HSubsteps.
+      + simpl in H1.
+        congruence.
+      + destruct s.
+        destruct unitAnnot.
+        * simpl in *.
+          unfold addLabelLeft, getSLabel in *.
+          simpl in *.
+          destruct (foldSSLabel ss).
+          destruct annot.
+          -- simpl in *.
+             unfold hide in *.
+             FMap.findeq.
+             simpl in *.
+        simpl in *.
+        unfold addLabelLeft in *.
+        unfold getSLabel in *.
+        simpl in *.
   Admitted.
-
-  Ltac shatter :=
-    repeat match goal with
-           | [ H : exists _, _ |- _ ] => destruct H
-           | [ H : _ /\ _ |- _ ] => destruct H
-           end.
 
   Theorem abstractToSCHiding :
     forall rf mem pm pc maxsp,
@@ -514,7 +692,7 @@ Section SCTiming.
     unfold abstractHiding, kamiHiding.
     intros.
     match goal with
-    | [ H : BoundedMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
+    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
     end.
     shatter.
     match goal with
@@ -534,11 +712,11 @@ Section SCTiming.
     end.
     shatter.
     match goal with
-    | [ H : BoundedMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
+    | [ H : BoundedForwardActiveMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
     end.
     repeat split;
       match goal with
-      | [ |- BoundedMultistep _ _ _ _ _ ] => assumption
+      | [ |- BoundedForwardActiveMultistep _ _ _ _ _ ] => assumption
       | [ Htrace1 : hasTrace _ _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
       | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
