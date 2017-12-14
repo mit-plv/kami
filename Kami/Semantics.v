@@ -188,7 +188,9 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wneg n).
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
+  - rewrite <- e; exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - exact (fun w => split1 n1 n2 w).
+  - rewrite <- e; exact (fun w => split1 n1 n2 w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
@@ -208,6 +210,7 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
     + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
       exact (split1 _ _ w).
   - exact (fun w => split2 n1 n2 w).
+  - rewrite <- e; exact (fun w => split2 n1 n2 w).
 Defined.
 
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
@@ -231,6 +234,9 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Srl n m => (fun x y => wrshift x (wordToNat y))
     | Sra n m => (fun x y => wrshifta x (wordToNat y))
     | Concat n1 n2 => fun x y => (combine y x)
+    | ConcatPf n1 n2 n3 pf => match pf in _ = Y with
+                              | eq_refl => fun x y => combine y x
+                              end
   end.
 
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
