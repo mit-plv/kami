@@ -4,6 +4,7 @@ Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word.
 Require Import Kami.Syntax Kami.Semantics.
 Require Import Ex.SC Ex.IsaRv32.
+Require Import Lib.CommonTactics.
 
 Open Scope string_scope.
 
@@ -19,28 +20,12 @@ Section AbstractTrace.
 
   Definition regfile := StateT rv32iDataBytes rv32iRfIdx type.
 
-  Definition rget (rf : regfile) (r : register) : data :=
-    if weq r (wzero _)
-    then wzero _
-    else evalExpr (ReadIndex #r #rf)%kami_expr.
-
   Definition rset (rf : regfile) (r : register) (v : data) : regfile :=
     if weq r (wzero _)
     then rf
     else evalExpr (UpdateVector #rf #r #v)%kami_expr.
 
-  Definition memory := address -> option data.
-
-  Definition mget (m : memory) (addr : address) : option data :=
-    m addr.
-
-  Definition mset (m : memory) (addr : address) (val : data) : memory :=
-    fun a => if weq a addr then Some val else m a.
-
   Definition progMem := iaddress -> data.
-  Definition pmget (pm : progMem) (iaddr : iaddress) : data :=
-    pm iaddr.
-
   Inductive TraceEvent : Type :=
   | Nm (pc : address)
   | Rd (pc : address) (addr : address) (val : data)
@@ -49,70 +34,70 @@ Section AbstractTrace.
   | ToHost (pc : address) (val : data)
   | FromHost (pc : address) (val : data).
 
-  Inductive hasTrace : regfile -> memory -> progMem -> address -> data -> list TraceEvent -> Prop :=
-  | htNil : forall rf mem pm pc maxsp,
-      hasTrace rf mem pm pc maxsp nil
-  | htLd : forall inst val rf mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+  Inductive hasTrace : regfile -> progMem -> address -> data -> list TraceEvent -> Prop :=
+  | htNil : forall rf pm pc maxsp,
+      hasTrace rf pm pc maxsp nil
+  | htLd : forall inst val rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opLd ->
       let addr := evalExpr (rv32iGetLdAddr type inst) in
       let dstIdx := evalExpr (rv32iGetLdDst type inst) in
+      dstIdx <> wzero _ ->
       let srcIdx := evalExpr (rv32iGetLdSrc type inst) in
-      let srcVal := rget rf srcIdx in
+      let srcVal := rf srcIdx in
       let laddr := evalExpr (rv32iCalcLdAddr type addr srcVal) in
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
-      mget mem laddr_aligned = Some val ->
-      hasTrace (rset rf dstIdx val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Rd pc laddr_aligned val :: trace')
-  | htSt : forall inst rf mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      hasTrace (rset rf dstIdx val) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (Rd pc laddr_aligned val :: trace')
+  | htSt : forall inst rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opSt ->
       let addr := evalExpr (rv32iGetStAddr type inst) in
       let srcIdx := evalExpr (rv32iGetStSrc type inst) in
-      let srcVal := rget rf srcIdx in
+      let srcVal := rf srcIdx in
       let vsrcIdx := evalExpr (rv32iGetStVSrc type inst) in
-      let stVal := rget rf vsrcIdx in
+      let stVal := rf vsrcIdx in
       let saddr := evalExpr (rv32iCalcStAddr type addr srcVal) in
       let saddr_aligned := evalExpr (rv32iAlignAddr type saddr) in
-      hasTrace rf (mset mem saddr_aligned stVal) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Wr pc saddr_aligned stVal :: trace')
-  | htTh : forall inst rf mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (Wr pc saddr_aligned stVal :: trace')
+  | htTh : forall inst rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opTh ->
       let srcIdx := evalExpr (rv32iGetSrc1 type inst) in
-      let srcVal := rget rf srcIdx in
-      hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (ToHost pc srcVal :: trace')
-  | htFh : forall inst rf val mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      let srcVal := rf srcIdx in
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (ToHost pc srcVal :: trace')
+  | htFh : forall inst rf val pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opFh ->
       let dst := evalExpr (rv32iGetDst type inst) in
-      hasTrace (rset rf dst val) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (FromHost pc val :: trace')
-  | htNmBranch : forall inst rf mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      hasTrace (rset rf dst val) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (FromHost pc val :: trace')
+  | htNmBranch : forall inst rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr = rv32iOpBRANCH ->
-      hasTrace rf mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Branch pc (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
-  | htNm : forall inst rf mem pm pc maxsp trace',
-      rget rf spReg <= maxsp ->
-      pmget pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (Branch pc (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
+  | htNm : forall inst rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr <> rv32iOpBRANCH ->
       let src1 := evalExpr (rv32iGetSrc1 type inst) in
-      let val1 := rget rf src1 in
+      let val1 := rf src1 in
       let src2 := evalExpr (rv32iGetSrc2 type inst) in
-      let val2 := rget rf src2 in
+      let val2 := rf src2 in
       let dst := evalExpr (rv32iGetDst type inst) in
       let execVal := evalExpr (rv32iExec type val1 val2 pc inst) in
-      hasTrace (rset rf dst execVal) mem pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf mem pm pc maxsp (Nm pc :: trace').
+      hasTrace (rset rf dst execVal) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (Nm pc :: trace').
 
 
   Definition censorTrace : list TraceEvent -> list TraceEvent :=
@@ -131,14 +116,14 @@ Section AbstractTrace.
                 | _ => nil
                 end).
 
-  Definition abstractHiding rf mem pm pc maxsp : Prop :=
+  Definition abstractHiding rf pm pc maxsp : Prop :=
     forall trace fhTrace,
-      hasTrace rf mem pm pc maxsp trace ->
+      hasTrace rf pm pc maxsp trace ->
       extractFhTrace trace = fhTrace ->
       forall fhTrace',
         length fhTrace = length fhTrace' ->
         exists trace',
-          hasTrace rf mem pm pc maxsp trace' /\
+          hasTrace rf pm pc maxsp trace' /\
           censorTrace trace = censorTrace trace' /\
           extractFhTrace trace' = fhTrace'.
 
@@ -184,6 +169,7 @@ Section KamiTrace.
       inBounds maxsp o ->
       Step m o u l ->
       annot l <> None ->
+      annot l <> Some None ->
       BoundedForwardActiveMultistep m maxsp (FMap.M.union u o) n a ->
       BoundedForwardActiveMultistep m maxsp o n (l :: a).
 
@@ -305,10 +291,11 @@ Section SCTiming.
                       ret := Struct (STRUCT {"data" :: Bit 32}) |}
                    (argV, retV)) =>
       let addr := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr")%kami_expr in
-      let val := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
+      let argval := evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."data")%kami_expr in
+      let retval := evalExpr (#retV!(RsToProc rv32iDataBytes)@."data")%kami_expr in
       if evalExpr (#argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op")%kami_expr
-      then Some (Wr $0 addr val)
-      else Some (Rd $0 addr val)
+      then Some (Wr $0 addr argval)
+      else Some (Rd $0 addr retval)
     | None =>
       match FMap.M.find "toHost" c with
       | Some (existT _
@@ -400,9 +387,9 @@ Section SCTiming.
            end.
 
   Lemma relatedCensor :
-    forall rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
-      hasTrace rf mem pm pc maxsp trace1 ->
-      hasTrace rf mem pm pc maxsp trace2 ->
+    forall rf pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
+      hasTrace rf pm pc maxsp trace1 ->
+      hasTrace rf pm pc maxsp trace2 ->
       BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
       BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
       relatedTrace trace1 ls1 ->
@@ -410,7 +397,7 @@ Section SCTiming.
       censorTrace trace1 = censorTrace trace2 ->
       censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
   Proof.
-    intros rf mem pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
+    intros rf pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
     move Hht1 at top.
     generalize trace2 newRegs1 newRegs2 ls1 ls2.
     clear trace2 newRegs1 newRegs2 ls1 ls2.
@@ -454,11 +441,7 @@ Section SCTiming.
         inversion HSubsteps.
         * simpl.
           destruct ss.
-          -- simpl in H9.
-             rewrite FMap.M.subtractKV_empty_1 in H9.
-             unfold callsToTraceEvent in H9.
-             simpl in H9.
-             congruence.
+          -- FMap.findeq.
           -- simpl in H5.
              unfold addLabelLeft in H5.
              unfold mergeLabel in H5.
@@ -478,13 +461,8 @@ Section SCTiming.
             end.
         apply substepsComb_substepsInd in HSubsteps0.
         induction HSubsteps0.
-        * simpl in H18.
-          rewrite FMap.M.subtractKV_empty_1 in H18.
-          unfold callsToTraceEvent in H18.
-          repeat rewrite FMap.M.find_empty in H18.
-          congruence.
-          (*
-        * inversion H3.
+        * FMap.findeq.
+(*        * inversion H3.
         replace dstIdx0 with dstIdx in * by (subst; reflexivity).
         replace val0 with val in *.
         * subst; assumption.
@@ -504,11 +482,10 @@ Section SCTiming.
     destruct (weq c c); tauto.
   Qed.
 
-  (* Lemma no_meths_wellHidden : forall regs rules label,  (Step (Mod regs rules nil) wellHidden*)
 
   Lemma abstractToSCRelated :
-    forall rf mem pm pc maxsp trace,
-      hasTrace rf mem pm pc maxsp trace ->
+    forall rf pm pc maxsp trace,
+      hasTrace rf pm pc maxsp trace ->
       exists newRegs ls,
         BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls /\
         relatedTrace trace ls.
@@ -516,148 +493,432 @@ Section SCTiming.
     induction 1.
     - repeat eexists; repeat econstructor.
     - shatter.
-      assert (substep : SubstepRec rv32iProcInst (SCRegs rf pm pc)).
-      + destruct (weq dstIdx (wzero _)); econstructor.
-        * eapply SingleRule.
-          -- instantiate (2 := "execLdZ").
-             simpl.
-             tauto.
-             -- repeat (econstructor; try FMap.findeq).
-                ++ match goal with
-                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
+      repeat eexists.
+      + eapply BFMulti.
+        * tauto.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply SingleRule.
+             ++ instantiate (2 := "execLd").
+                simpl.
+                tauto.
+             ++ repeat match goal with
+                       | [ |- SemAction _ (MCall _ _ _ _) _ _ _ ] => fail 1
+                       | _ => econstructor
+                       end; try FMap.findeq.
+                ** match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                     let Heq := fresh in
+                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       rewrite Heq;
+                       rewrite H0;
+                       rewrite eval_const;
+                       tauto
                    end.
-                   ** reflexivity.
-                      ** rewrite H6.
-                         rewrite H0.
-                         rewrite eval_const; tauto.
-                ++ rewrite eval_const.
-                   ** reflexivity.
-                   ** unfold evalExpr; fold evalExpr.
-                      unfold pmget in *.
-                      rewrite H0.
-                      assumption.
-                ++ FMap.findeq.
-        * eapply SingleRule.
-          -- instantiate (2 := "execLd").
-             simpl.
-             tauto.
-             -- repeat (econstructor; try FMap.findeq).
-                ++ match goal with
-                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
-                   end.
-                   ** reflexivity.
-                   ** rewrite H6.
-                      rewrite H0.
-                      rewrite eval_const; tauto.
-                ++ unfold evalExpr; fold evalExpr.
+                ** unfold evalExpr; fold evalExpr.
                    unfold evalUniBool.
                    rewrite Bool.negb_true_iff.
                    unfold isEq.
                    match goal with
                    | |- (if ?b then _ else _) = _ => destruct b
                    end.
-                   ** unfold pmget in *.
-                      rewrite H0 in e.
-                      tauto.
-                   ** reflexivity.
-                ++ FMap.findeq.
-                ++ FMap.findeq.
-                ++ FMap.findeq.
+                   --- rewrite H0 in e.
+                       tauto.
+                   --- reflexivity.
+                ** eapply SemMCall.
+                   --- instantiate (1 := FMap.M.empty _).
+                       FMap.findeq.
+                   --- instantiate (1 := evalExpr (STRUCT { "data" ::= #val })%kami_expr).
+                       reflexivity.
+                   --- repeat econstructor; try FMap.findeq.
+        * simpl. congruence.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          unfold SCRegs, rset.
+          eauto.
+      + constructor; try assumption.
+        unfold labelToTraceEvent, getLabel.
+        unfold callsToTraceEvent.
+        repeat (match goal with
+                | [ |- context[match ?x with _ => _ end] ] =>
+                  let x' := eval hnf in x in change x with x'
+                end; cbv beta iota).
+        unfold evalExpr; fold evalExpr.
+        match goal with
+        | [ |- Some (Rd $ (0) ?x1 ?y1) = Some (Rd $ (0) ?x2 ?y2) ] => replace x1 with x2; [ reflexivity | idtac ]
+        end.
+        match goal with
+        | [ |- context[icons' ("addr" ::= ?x)%init _] ] => replace laddr_aligned with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
+        end.
+        subst.
+        repeat match goal with
+               | [ x : fullType type _ |- _ ] =>
+                 progress unfold x
+               | [ x : word _ |- _ ] =>
+                 progress unfold x
+               end.
+        reflexivity.
+    - shatter.
+      repeat eexists.
+      + eapply BFMulti.
+        * tauto.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply SingleRule.
+             ++ instantiate (2 := "execSt").
+                simpl.
+                tauto.
+             ++ repeat econstructor; try FMap.findeq.
+                ** match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                     let Heq := fresh in
+                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       rewrite Heq;
+                       rewrite H0;
+                       rewrite eval_const;
+                       tauto
+                   end.
+        * simpl. congruence.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          unfold SCRegs.
+          eauto.
+      + constructor; try assumption.
+        unfold labelToTraceEvent, getLabel.
+        unfold callsToTraceEvent.
+        repeat (match goal with
+                | [ |- context[match ?x with _ => _ end] ] =>
+                  let x' := eval hnf in x in change x with x'
+                end; cbv beta iota).
+        unfold evalExpr; fold evalExpr.
+        match goal with
+        | [ |- Some (Wr $ (0) ?x1 ?y1) = Some (Wr $ (0) ?x2 ?y2) ] => replace x1 with x2; [ replace y1 with y2; [ reflexivity | idtac ] | idtac ]
+        end.
+        * match goal with
+          | [ |- context[icons' ("data" ::= ?x)%init _] ] => replace stVal with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
+          end.
+          subst.
+          unfold evalExpr; fold evalExpr.
+          repeat match goal with
+                 | [ x : fullType type _ |- _ ] =>
+                   progress unfold x
+                 | [ x : word _ |- _ ] =>
+                   progress unfold x
+                 end.
+          reflexivity.
+        * match goal with
+          | [ |- context[icons' ("addr" ::= ?x)%init _] ] => replace saddr_aligned with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
+          end.
+          subst.
+          repeat match goal with
+                 | [ x : fullType type _ |- _ ] =>
+                   progress unfold x
+                 | [ x : word _ |- _ ] =>
+                   progress unfold x
+                 end.
+          reflexivity.
+    - shatter.
+      repeat eexists.
+      + eapply BFMulti.
+        * tauto.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply SingleRule.
+             ++ instantiate (2 := "execToHost").
+                simpl.
+                tauto.
+             ++ repeat econstructor; try FMap.findeq.
+                ** match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                     let Heq := fresh in
+                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       rewrite Heq;
+                       rewrite H0;
+                       rewrite eval_const;
+                       tauto
+                   end.
+        * simpl. congruence.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          unfold SCRegs.
+          eauto.
+      + constructor; try assumption.
+        unfold labelToTraceEvent, getLabel.
+        unfold callsToTraceEvent.
+        repeat (match goal with
+                | [ |- context[match ?x with _ => _ end] ] =>
+                  let x' := eval hnf in x in change x with x'
+                end; cbv beta iota).
+        unfold evalExpr; fold evalExpr.
+        match goal with
+        | [ |- Some (ToHost $ (0) ?x1) = Some (ToHost $ (0) ?x2) ] => replace x1 with x2; [ reflexivity | idtac ]
+        end.
+        subst.
+        repeat match goal with
+               | [ x : fullType type _ |- _ ] =>
+                 progress unfold x
+               | [ x : word _ |- _ ] =>
+                 progress unfold x
+               end.
+          reflexivity.
+    - shatter.
+      destruct (isEq (Bit rv32iRfIdx)
+                     dst
+                     (wzero _)).
       + repeat eexists.
         * eapply BFMulti.
           -- tauto.
-          -- constructor.
-             ++ apply AddSubstep.
-                apply NilSubsteps.
+          -- apply SemFacts.substepZero_imp_step.
+             ++ reflexivity.
+             ++ eapply SingleRule.
+                ** instantiate (2 := "execFromHostZ").
+                   simpl.
+                   tauto.
+                ** repeat econstructor; try FMap.findeq.
+                   --- match goal with
+                       | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                         let Heq := fresh in
+                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           rewrite Heq;
+                           rewrite H0;
+                           rewrite eval_const;
+                           tauto
+                       end.
+                   --- unfold evalExpr; fold evalExpr.
+                       unfold isEq.
+                       match goal with
+                       | |- (if ?b then _ else _) = _ => destruct b
+                       end.
+                       +++ reflexivity.
+                       +++ unfold dst in e.
+                           rewrite <- H0 in e.
+                           tauto.
+          -- simpl. congruence.
+          -- simpl. congruence.
+          -- match goal with
+             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             end.
+             unfold SCRegs, rset.
+             eauto.
+        * constructor; try assumption.
+          reflexivity.
+      + repeat eexists.
+        * eapply BFMulti.
+          -- tauto.
+          -- apply SemFacts.substepZero_imp_step.
+             ++ reflexivity.
+             ++ eapply SingleRule.
+                ** instantiate (2 := "execFromHost").
+                   simpl.
+                   tauto.
+                ** repeat match goal with
+                          | [ |- SemAction _ (MCall _ _ _ _) _ _ _ ] => fail 1
+                          | _ => econstructor
+                          end; try FMap.findeq.
+                   --- match goal with
+                       | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                         let Heq := fresh in
+                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           rewrite Heq;
+                           rewrite H0;
+                           rewrite eval_const;
+                           tauto
+                       end.
+                   --- unfold evalExpr; fold evalExpr.
+                       unfold evalUniBool.
+                       unfold isEq.
+                       rewrite Bool.negb_true_iff.
+                       match goal with
+                       | |- (if ?b then _ else _) = _ => destruct b
+                       end.
+                       +++ unfold dst in n.
+                           rewrite <- H0 in n.
+                           tauto.
+                       +++ reflexivity.
+                   --- eapply SemMCall.
+                       +++ instantiate (1 := FMap.M.empty _).
+                           FMap.findeq.
+                       +++ instantiate (1 := val).
+                           reflexivity.
+                       +++ repeat econstructor; FMap.findeq.
+          -- simpl. congruence.
+          -- simpl. congruence.
+          -- match goal with
+             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             end.
+             unfold SCRegs, rset.
+             eauto.
+        * constructor; try assumption.
+          reflexivity.
+    - shatter.
+      repeat eexists.
+      + eapply BFMulti.
+        * tauto.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply SingleRule.
+             ++ instantiate (2 := "execNmZ").
                 simpl.
                 tauto.
-             ++ instantiate (1 := substep).
-                unfold wellHidden.
-                simpl.
-                split; FMap.findeq.
-(*                
-                unfold substep.
-                unfold unitAnnot
-                
-                match goal with
-                | |- wellHidden _ (hide (_ [?P])) =>
-               match type of P with
-               | ?TP => assert (sth: TP); pose P
-               end
+             ++ repeat econstructor; try FMap.findeq.
+                ** match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                     let Heq := fresh in
+                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       rewrite Heq;
+                       rewrite H0;
+                       rewrite eval_const;
+                       tauto
+                   end.
+                ** unfold rv32iGetDst.
+                   unfold evalExpr; fold evalExpr.
+                   rewrite H0.
+                   rewrite H2.
+                   simpl.
+                   reflexivity.
+        * simpl. congruence.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          unfold SCRegs, rset.
+          eauto.
+      + constructor; try assumption.
+        reflexivity.
+    - shatter.
+      destruct (isEq (Bit rv32iRfIdx)
+                     dst
+                     (wzero _)).
+      + repeat eexists.
+        * eapply BFMulti.
+          -- tauto.
+          -- apply SemFacts.substepZero_imp_step.
+             ++ reflexivity.
+             ++ eapply SingleRule.
+                ** instantiate (2 := "execNmZ").
+                   simpl.
+                   tauto.
+                ** repeat econstructor; try FMap.findeq.
+                   --- match goal with
+                       | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                         let Heq := fresh in
+                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           rewrite Heq;
+                           rewrite H0;
+                           rewrite eval_const;
+                           tauto
+                       end.
+                   --- unfold evalExpr; fold evalExpr.
+                       unfold isEq.
+                       match goal with
+                       | |- (if ?b then _ else _) = _ => destruct b
+                       end.
+                       +++ reflexivity.
+                       +++ unfold dst in e.
+                           rewrite <- H0 in e.
+                           tauto.
+          -- simpl. congruence.
+          -- simpl. congruence.
+          -- match goal with
+             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
-             ++ admit.
-             ++ Set Printing All.
-                simpl.
-                clear - sth y.
-                
-                  instantiate (1 := sth).
-             ++ destruct (weq dstIdx (wzero _)); econstructor.
-                ** eapply SingleRule.
-                   --- instantiate (2 := "execLdZ").
-                       simpl.
-                       tauto.
-                   --- repeat (econstructor; try FMap.findeq).
-                       +++ match goal with
-                           | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
-                           end.
-                           *** reflexivity.
-                           *** rewrite H6.
-                               rewrite H0.
-                               rewrite eval_const; tauto.
-                       +++ rewrite eval_const.
-                           *** reflexivity.
-                           *** unfold evalExpr; fold evalExpr.
-                               unfold pmget in *.
-                               rewrite H0.
-                               assumption.
-                       +++ FMap.findeq.
-                ** eapply SingleRule.
-                   --- instantiate (2 := "execLd").
-                       simpl.
-                       tauto.
-                   --- repeat (econstructor; try FMap.findeq).
-                       +++ match goal with
-                           | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true => assert (x = pmget pm (evalExpr (rv32iAlignPc type pc)))
-                           end.
-                           *** reflexivity.
-                           *** rewrite H6.
-                               rewrite H0.
-                               rewrite eval_const; tauto.
-                       +++ unfold evalExpr; fold evalExpr.
-                           unfold evalUniBool.
-                           rewrite Bool.negb_true_iff.
-                           unfold isEq.
-                           match goal with
-                           | |- (if ?b then _ else _) = _ => destruct b
-                           end.
-                           *** unfold pmget in *.
-                               rewrite H0 in e.
-                               tauto.
-                           *** reflexivity.
-                       +++ FMap.findeq.
-                       +++ FMap.findeq.
-                       +++ FMap.findeq.
-             ++ instantiate (1 := sth).
-                ** 
-                     Lemma evalExprVarRewrite: forall k e, evalExpr (Var type k e) = e.
-                       Proof.
-                         intros; reflexivity.
-                       Qed.
-                       unfold pmget in *.
-                       
-                       rewrite evalExprVarRewrite.
-
-                   --- *)
+             unfold SCRegs, rset.
+             eauto.
+        * constructor; try assumption.
+          reflexivity.
+      + repeat eexists.
+        * eapply BFMulti.
+          -- tauto.
+          -- apply SemFacts.substepZero_imp_step.
+             ++ reflexivity.
+             ++ eapply SingleRule.
+                ** instantiate (2 := "execNm").
+                   simpl.
+                   tauto.
+                ** repeat econstructor; try FMap.findeq.
+                   --- match goal with
+                       | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                         let Heq := fresh in
+                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           rewrite Heq;
+                           rewrite H0;
+                           rewrite eval_const;
+                           tauto
+                       end.
+                   --- unfold evalExpr; fold evalExpr.
+                       unfold evalUniBool.
+                       unfold isEq.
+                       rewrite Bool.negb_true_iff.
+                       match goal with
+                       | |- (if ?b then _ else _) = _ => destruct b
+                       end.
+                       +++ unfold dst in n.
+                           rewrite <- H0 in n.
+                           tauto.
+                       +++ reflexivity.
+          -- simpl. congruence.
+          -- simpl. congruence.
+          -- match goal with
+             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             end.
+             unfold SCRegs, rset.
+             eauto.
+        * constructor; try assumption.
+          reflexivity.
+          Unshelve.
+          -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
+          -- exact (wzero _).
+  Qed.
   Admitted.
 
+  Definition getrf (regs : RegsT) : regfile :=
+    match FMap.M.find "rf" regs with
+    | Some (existT _
+                   (SyntaxKind (Vector (Bit 32) 5))
+                   rf) => rf
+    | _ => (fun _ => wzero _)
+    end.
+
+  Definition getpm (regs : RegsT) : progMem :=
+    match FMap.M.find "pgm" regs with
+    | Some (existT _
+                   (SyntaxKind (Vector (Bit 32) 8))
+                   pm) => pm
+    | _ => (fun _ => wzero _)
+    end.
+
+  Definition getpc (regs : RegsT) : word 16 :=
+    match FMap.M.find "pc" regs with
+    | Some (existT _
+                   (SyntaxKind (Bit 16))
+                   pc) => pc
+    | _ => (wzero _)
+    end.
+
   Lemma SCToAbstractRelated :
-    forall rf mem pm pc maxsp newRegs ls,
+    forall rf pm pc maxsp newRegs ls,
       BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
       exists trace,
-        hasTrace rf mem pm pc maxsp trace /\
+        hasTrace rf pm pc maxsp trace /\
         relatedTrace trace ls.
   Proof.
-    induction 1.
+    intros.
+    let Heq := fresh in
+    remember (SCRegs rf pm pc) as regs eqn:Heq; unfold SCRegs in Heq;
+    replace rf with (getrf regs) by (subst; FMap.findeq);
+    replace pm with (getpm regs) by (subst; FMap.findeq);
+    replace pc with (getpc regs) by (subst; FMap.findeq);
+    clear rf pm pc Heq.
+    match goal with
+    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] =>
+      induction H
+    end.
     - eexists; repeat econstructor.
     - shatter.
       destruct H0.
@@ -675,6 +936,23 @@ Section SCTiming.
              unfold hide in *.
              FMap.findeq.
              simpl in *.
+             inversion substep.
+             ++ subst.
+                tauto.
+             ++ subst.
+                simpl in *.
+                intuition idtac;
+                match goal with
+                | [ Heq : _ = (_ :: _)%struct |- _ ] =>
+                  inversion Heq; clear Heq
+                end; subst.
+                ** simple inversion HAction.
+                inversion H6. clear H6.
+                subst.
+                simpl in *.
+                match goal with
+                  inv
+                | [ Heq : _ 
         simpl in *.
         unfold addLabelLeft in *.
         unfold getSLabel in *.
