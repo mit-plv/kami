@@ -939,8 +939,8 @@ Section SCTiming.
   Admitted.
 
   Theorem abstractToSCHiding :
-    forall rf mem pm pc maxsp,
-      abstractHiding rf mem pm pc maxsp ->
+    forall rf pm pc maxsp,
+      abstractHiding rf pm pc maxsp ->
       kamiHiding censorSCMeth extractFhSC
                  rv32iProcInst
                  maxsp
@@ -955,17 +955,17 @@ Section SCTiming.
     match goal with
     | [ Hrel : relatedTrace ?t ?ls,
                Hextract : extractFhLabelSeq extractFhSC ?ls = _,
-                          Htrace : hasTrace _ _ _ _ _ _,
-                                   Habs : forall _ _, hasTrace _ _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, length _ = length _ -> _,
+                          Htrace : hasTrace _ _ _ _ _,
+                                   Habs : forall _ _, hasTrace _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, length _ = length _ -> _,
           Hlen : length _ = length _
           |- context[extractFhLabelSeq _ _ = ?fhTrace] ] =>
       rewrite <- (relatedFhTrace _ _ Hrel) in Hextract; specialize (Habs _ _ Htrace Hextract fhTrace Hlen)
     end.
     shatter.
     match goal with
-    | [ Htrace : hasTrace _ _ _ _ _ ?t,
+    | [ Htrace : hasTrace _ _ _ _ ?t,
                  Hextract : extractFhTrace ?t = ?fhTrace
-        |- context[?fhTrace] ] => pose (abstractToSCRelated _ _ _ _ _ _ Htrace)
+        |- context[?fhTrace] ] => pose (abstractToSCRelated _ _ _ _ _ Htrace)
     end.
     shatter.
     match goal with
@@ -974,7 +974,7 @@ Section SCTiming.
     repeat split;
       match goal with
       | [ |- BoundedForwardActiveMultistep _ _ _ _ _ ] => assumption
-      | [ Htrace1 : hasTrace _ _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
+      | [ Htrace1 : hasTrace _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
       | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
   Qed.
