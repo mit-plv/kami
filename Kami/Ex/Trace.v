@@ -2,7 +2,7 @@ Require Import List.
 Require Import Notations.
 Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word.
-Require Import Kami.Syntax Kami.Semantics.
+Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
 Require Import Ex.SC Ex.IsaRv32.
 Require Import Lib.CommonTactics.
 
@@ -387,19 +387,19 @@ Section SCTiming.
            end.
 
   Lemma relatedCensor :
-    forall rf pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
-      hasTrace rf pm pc maxsp trace1 ->
-      hasTrace rf pm pc maxsp trace2 ->
-      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs1 ls1 ->
-      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs2 ls2 ->
+    forall rf1 rf2 pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
+      hasTrace rf1 pm pc maxsp trace1 ->
+      hasTrace rf2 pm pc maxsp trace2 ->
+      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf1 pm pc) newRegs1 ls1 ->
+      BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf2 pm pc) newRegs2 ls2 ->
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
       censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
   Proof.
-    intros rf pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
+    intros rf1 rf2 pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
     move Hht1 at top.
-    generalize trace2 newRegs1 newRegs2 ls1 ls2.
+    generalize rf2 trace2 newRegs1 newRegs2 ls1 ls2.
     clear trace2 newRegs1 newRegs2 ls1 ls2.
     induction Hht1; intros.
     - match goal with
@@ -421,7 +421,7 @@ Section SCTiming.
           opaque_subst
       end.
       match goal with
-      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
       end.
       opaque_subst.
       simpl;
@@ -438,36 +438,26 @@ Section SCTiming.
                end;
         opaque_subst.
       + apply substepsComb_substepsInd in HSubsteps.
-        inversion HSubsteps.
-        * simpl.
-          destruct ss.
-          -- FMap.findeq.
-          -- simpl in H5.
-             unfold addLabelLeft in H5.
-             unfold mergeLabel in H5.
-             simpl in H5.
-             admit.
-        * admit.
+        admit.
       + match goal with
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
         try match goal with
             | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
-              let H := fresh in
-              assert (r2 = r1) as H by admit;
-                rewrite H;
-                eassumption
+              replace r2 with r1; try eassumption
             | [ |- censorTrace _ = censorTrace _ ] => eassumption
+            | [ |- relatedTrace _ _ ] => eassumption
             end.
-        apply substepsComb_substepsInd in HSubsteps0.
-        induction HSubsteps0.
-        * FMap.findeq.
-(*        * inversion H3.
-        replace dstIdx0 with dstIdx in * by (subst; reflexivity).
-        replace val0 with val in *.
-        * subst; assumption.
-        * admit.
-    *)
+        * match goal with
+          | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+          end.
+          subst.
+          match goal with
+          | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1; try eassumption
+          end.
+          unfold rv32iNextPc.
+          unfold rv32iGetOptype in H1.
+          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).
   Admitted.
 
   Ltac shatter := repeat match goal with
@@ -874,8 +864,7 @@ Section SCTiming.
           Unshelve.
           -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
           -- exact (wzero _).
-  Qed.
-  Admitted.
+  (*Qed.*) Admitted.
 
   Definition getrf (regs : RegsT) : regfile :=
     match FMap.M.find "rf" regs with
@@ -946,17 +935,7 @@ Section SCTiming.
                 | [ Heq : _ = (_ :: _)%struct |- _ ] =>
                   inversion Heq; clear Heq
                 end; subst.
-                ** simple inversion HAction.
-                inversion H6. clear H6.
-                subst.
-                simpl in *.
-                match goal with
-                  inv
-                | [ Heq : _ 
-        simpl in *.
-        unfold addLabelLeft in *.
-        unfold getSLabel in *.
-        simpl in *.
+                ** SymEval.
   Admitted.
 
   Theorem abstractToSCHiding :
