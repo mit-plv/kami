@@ -5,6 +5,7 @@ Require Import Lib.Word.
 Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
 Require Import Ex.SC Ex.IsaRv32.
 Require Import Lib.CommonTactics.
+Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
 
 Open Scope string_scope.
 
@@ -438,7 +439,57 @@ Section SCTiming.
                end;
         opaque_subst.
       + apply substepsComb_substepsInd in HSubsteps.
-        admit.
+        destruct HSubsteps.
+        * simpl in H10.
+          congruence.
+        * destruct sul.
+          -- simpl in H6.
+             destruct l.
+             replace ll with {| annot := Some o;
+                                defs := FMap.M.union (FMap.M.empty {x : SignatureT & SignT x}) defs;
+                                calls := FMap.M.union scs calls |} in * by (destruct annot; subst; reflexivity).
+             inversion H0; subst.
+             ++ simpl in H14.
+                congruence.
+             ++ simpl in HInRules.
+                intuition idtac.
+(*        Check (existT _
+                                      {| arg := Struct
+                                                  (STRUCT
+                                                     {"addr" :: Bit 16;
+                                                      "op" :: Bool;
+                                                      "data" :: Bit 32});
+                                         ret := Struct
+                                                  (STRUCT
+                                                     {"data" :: Bit 32})
+                                      |}
+                                      (evalExpr (STRUCT { "addr" ::= #laddr_aligned;
+                                                                   "op" ::= _;
+                                                                   "data" ::= $0 })%kami_expr,
+                                                evalExpr (STRUCT { "data" ::= #val0 })%kami_expr)).
+        assert (foldSSLabel ss =
+                {| annot := Some (Some "execLd");
+                   defs := FMap.M.empty _;
+                   calls := FMap.M.add
+                              "exec"
+                              (existT _
+                                      {| arg := Struct
+                                                  (STRUCT
+                                                     {"addr" :: Bit 16;
+                                                      "op" :: Bool;
+                                                      "data" :: Bit 32});
+                                         ret := Struct
+                                                  (STRUCT
+                                                     {"data" :: Bit 32})
+                                      |}
+                                      (evalExpr (STRUCT { "addr" ::= #laddr_aligned;
+                                                                   "op" ::= #(false);
+                                                                   "data" ::= $0 })%kami_expr,
+                                                evalExpr (STRUCT { "data" ::= #val0 })%kami_expr)) |}).
+        induction HSubsteps.
+        * simpl in H10.
+          congruence.
+        * 
       + match goal with
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
@@ -457,7 +508,7 @@ Section SCTiming.
           end.
           unfold rv32iNextPc.
           unfold rv32iGetOptype in H1.
-          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).
+          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).*)
   Admitted.
 
   Ltac shatter := repeat match goal with
@@ -935,7 +986,7 @@ Section SCTiming.
                 | [ Heq : _ = (_ :: _)%struct |- _ ] =>
                   inversion Heq; clear Heq
                 end; subst.
-                ** SymEval.
+                ** (*SymEval.*)
   Admitted.
 
   Theorem abstractToSCHiding :
@@ -980,3 +1031,9 @@ Section SCTiming.
   Qed.
 
 End SCTiming.
+
+Section Compilation.
+
+  Definition RtlHiding : Prop := True.
+
+End Compilation.
