@@ -586,7 +586,7 @@ Section SCTiming.
                 | [ |- context[match ?x with _ => _ end] ] =>
                   let x' := eval hnf in x in change x with x'
                 end; cbv beta iota).
-        unfold evalExpr; fold evalExpr.
+        unfold evalExpr.
         match goal with
         | [ |- Some (Rd $ (0) ?x1 ?y1) = Some (Rd $ (0) ?x2 ?y2) ] => replace x1 with x2; [ reflexivity | idtac ]
         end.
@@ -600,6 +600,7 @@ Section SCTiming.
                | [ x : word _ |- _ ] =>
                  progress unfold x
                end.
+        unfold evalExpr.
         reflexivity.
     - shatter.
       repeat eexists.
@@ -635,7 +636,7 @@ Section SCTiming.
                 | [ |- context[match ?x with _ => _ end] ] =>
                   let x' := eval hnf in x in change x with x'
                 end; cbv beta iota).
-        unfold evalExpr; fold evalExpr.
+        unfold evalExpr.
         match goal with
         | [ |- Some (Wr $ (0) ?x1 ?y1) = Some (Wr $ (0) ?x2 ?y2) ] => replace x1 with x2; [ replace y1 with y2; [ reflexivity | idtac ] | idtac ]
         end.
@@ -643,7 +644,7 @@ Section SCTiming.
           | [ |- context[icons' ("data" ::= ?x)%init _] ] => replace stVal with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
           end.
           subst.
-          unfold evalExpr; fold evalExpr.
+          unfold evalExpr.
           repeat match goal with
                  | [ x : fullType type _ |- _ ] =>
                    progress unfold x
@@ -661,6 +662,7 @@ Section SCTiming.
                  | [ x : word _ |- _ ] =>
                    progress unfold x
                  end.
+          unfold evalExpr.
           reflexivity.
     - shatter.
       repeat eexists.
@@ -915,7 +917,7 @@ Section SCTiming.
           Unshelve.
           -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
           -- exact (wzero _).
-  (*Qed.*) Admitted.
+  Qed.
 
   Definition getrf (regs : RegsT) : regfile :=
     match FMap.M.find "rf" regs with
@@ -986,7 +988,7 @@ Section SCTiming.
                 | [ Heq : _ = (_ :: _)%struct |- _ ] =>
                   inversion Heq; clear Heq
                 end; subst.
-                ** (*SymEval.*)
+                ** SymEval.
   Admitted.
 
   Theorem abstractToSCHiding :
