@@ -442,7 +442,7 @@ Section SCTiming.
         destruct HSubsteps.
         * simpl in H10.
           congruence.
-        * destruct sul.
+        * admit. (* destruct sul.
           -- simpl in H6.
              destruct l.
              replace ll with {| annot := Some o;
@@ -453,7 +453,7 @@ Section SCTiming.
                 congruence.
              ++ simpl in HInRules.
                 intuition idtac.
-(*        Check (existT _
+        Check (existT _
                                       {| arg := Struct
                                                   (STRUCT
                                                      {"addr" :: Bit 16;
@@ -489,7 +489,7 @@ Section SCTiming.
         induction HSubsteps.
         * simpl in H10.
           congruence.
-        * 
+        * *)
       + match goal with
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
@@ -508,7 +508,7 @@ Section SCTiming.
           end.
           unfold rv32iNextPc.
           unfold rv32iGetOptype in H1.
-          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).*)
+          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).
   Admitted.
 
   Ltac shatter := repeat match goal with
@@ -988,7 +988,9 @@ Section SCTiming.
                 | [ Heq : _ = (_ :: _)%struct |- _ ] =>
                   inversion Heq; clear Heq
                 end; subst.
-                ** SymEval.
+                ** Opaque evalExpr.
+                   kinv_action_dest.
+                   Transparent evalExpr.
   Admitted.
 
   Theorem abstractToSCHiding :
