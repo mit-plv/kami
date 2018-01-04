@@ -59,6 +59,7 @@ Proof.
 
   - simpl; constructor; auto.
   - simpl; constructor; auto.
+  - simpl; constructor; auto.
 Qed.
 
 Lemma inlineDm_correct_SemAction:
@@ -245,6 +246,9 @@ Proof.
           (calls2 := M.union cm1 (M.remove (attrName meth) calls2)); eauto.
         rewrite M.remove_find_None by auto.
         destruct meth; eapply inlineDm_SemAction_intact; eauto.
+
+  - inv H3; destruct_existT.
+    constructor; auto.
 
   - inv H3; destruct_existT.
     constructor; auto.
@@ -1234,6 +1238,7 @@ Section NoCallDmSig.
     | IfElse ce _ ta fa cont =>
       (noCallDmSigA ta dmn dsig) && (noCallDmSigA fa dmn dsig) && (noCallDmSigA (cont tt) dmn dsig)
     | Assert_ ae cont => noCallDmSigA cont dmn dsig
+    | Displ ls cont => noCallDmSigA cont dmn dsig
     | Return e => true
     end.
 

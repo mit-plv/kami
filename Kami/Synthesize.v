@@ -69,6 +69,7 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}: (nat * Actio
     | Assert_ e c =>
       let (m, a') := @getActionS n _ c in
       (m, AssertS_ e a')
+    | Displ ls c => @getActionS n _ c
     | Return e => (n, ReturnS e)
   end.
   

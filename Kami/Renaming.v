@@ -56,6 +56,7 @@ Section Rename.
     | IfElse e k t f cont => IfElse e (renameAction t) (renameAction f)
                                    (fun v => renameAction (cont v))
     | Assert_ e cont => Assert_ e (renameAction cont)
+    | Displ ls cont => Displ ls (renameAction cont)
     | Return e => Return e
     end.
 
@@ -340,6 +341,7 @@ Section Rename.
       rewrite <- renameMapUnion.
       f_equal; intuition.
     - eapply SemAssertTrue; eauto.
+    - eapply SemDispl; eauto.
     - eapply SemReturn; eauto.
   Qed.
 
@@ -566,6 +568,11 @@ Section Rename.
           [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
         clear IHsa.
       repeat (econstructor; eauto).
+    - inv x; destruct_existT; intros.
+      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+          [u' [cs' [uEq [csEq sa']]]]; subst; clear IHsa.
+      exists u', cs'; repeat (split; auto).
+      constructor; auto.
     - inv x; destruct_existT; intros.
       repeat (econstructor; eauto; try (rewrite renameMapEmpty; reflexivity)).
   Qed.

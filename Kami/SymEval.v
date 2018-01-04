@@ -121,6 +121,8 @@ Fixpoint SymSemAction k (a : ActionT type k) (rs rs' : RegsT) (cs : MethsT) (kf 
        SymSemAction a rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
     ((semExpr p eq_refl -> False) ->
      SymSemAction a' rs rs' cs (fun rs'' cs' rv => SymSemAction (cont rv) rs rs'' cs' kf))
+  | Displ ls cont =>
+    SymSemAction cont rs rs' cs kf
   | Assert_ p cont =>
     semExpr p eq_refl
     -> SymSemAction cont rs rs' cs kf

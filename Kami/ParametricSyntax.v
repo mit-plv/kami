@@ -222,6 +222,7 @@ Section Rep.
                                               (ty k -> GenActionT lretT) ->
                                               GenActionT lretT
     | GAssert_: Expr ty (SyntaxKind Bool) -> GenActionT lretT -> GenActionT lretT
+    | GDispl: list (Disp ty) -> GenActionT lretT -> GenActionT lretT
     | GReturn: Expr ty (SyntaxKind lretT) -> GenActionT lretT.
 
     Fixpoint appendGenGenAction {retT1 retT2} (a1: GenActionT retT1)
@@ -235,6 +236,7 @@ Section Rep.
       | GWriteReg reg _ e cont => GWriteReg reg e (appendGenGenAction cont a2)
       | GIfElse ce _ ta fa cont => GIfElse ce ta fa (fun a => appendGenGenAction (cont a) a2)
       | GAssert_ ae cont => GAssert_ ae (appendGenGenAction cont a2)
+      | GDispl ls cont => GDispl ls (appendGenGenAction cont a2)
       | GReturn e => GLet_ e a2
     end.
     
@@ -257,6 +259,7 @@ Section Rep.
           | GIfElse e k aT aF c => IfElse e (getGenAction aT) (getGenAction aF)
                                           (fun v => getGenAction (c v))
           | GAssert_ e c => Assert_ e (getGenAction c)
+          | GDispl ls c => Displ ls (getGenAction c)
           | GReturn e => Return e
         end.
 
@@ -266,6 +269,7 @@ Section Rep.
       Proof.
         induction a1; simpl in *; intros; f_equal;
         repeat let x := fresh in extensionality x; apply H.
+        apply IHa1.
         apply IHa1.
         apply IHa1.
       Qed.
@@ -296,6 +300,7 @@ Section Rep.
       | GWriteReg r k e c => getCallsGenA c
       | GIfElse e k aT aF c => getCallsGenA aT ++ getCallsGenA aF ++ getCallsGenA (c tt)
       | GAssert_ e c => getCallsGenA c
+      | GDispl ls c => getCallsGenA c
       | GReturn e => nil
     end.
 
@@ -317,6 +322,7 @@ Section Rep.
                                     (noCallDmSigGenA fa dmn dsig) &&
                                     (noCallDmSigGenA (cont tt) dmn dsig)
     | GAssert_ ae cont => noCallDmSigGenA cont dmn dsig
+    | GDispl ls cont => noCallDmSigGenA cont dmn dsig
     | GReturn e => true
     end.
 
@@ -405,6 +411,7 @@ Section Rep.
         GIfElse ce (inlineGenGenDm ta dn dm) (inlineGenGenDm fa dn dm)
                 (fun a => inlineGenGenDm (cont a) dn dm)
       | GAssert_ ae cont => GAssert_ ae (inlineGenGenDm cont dn dm)
+      | GDispl ls cont => GDispl ls (inlineGenGenDm cont dn dm)
       | GReturn e => GReturn e
     end.
 
@@ -593,6 +600,7 @@ Section Sin.
                                               (ty k -> SinActionT lretT) ->
                                               SinActionT lretT
     | SAssert_: Expr ty (SyntaxKind Bool) -> SinActionT lretT -> SinActionT lretT
+    | SDispl: list (Disp ty) -> SinActionT lretT -> SinActionT lretT
     | SReturn: Expr ty (SyntaxKind lretT) -> SinActionT lretT.
 
     Fixpoint convSinToGen rep GenK k (a: SinActionT k): GenActionT GenK ty k :=
@@ -609,6 +617,7 @@ Section Sin.
                                              (convSinToGen rep GenK fa)
                                              (fun a => convSinToGen rep GenK (cont a))
         | SAssert_ ae cont => GAssert_ ae (convSinToGen rep GenK cont)
+        | SDispl ls cont => GDispl ls (convSinToGen rep GenK cont)
         | SReturn e => GReturn _ e
       end.
     
@@ -627,6 +636,7 @@ Section Sin.
                                            (convSinToGen false GenK fa)
                                            (fun a => appendSinGenAction (cont a) a2)
       | SAssert_ ae cont => GAssert_ ae (appendSinGenAction cont a2)
+      | SDispl ls cont => GDispl ls (appendSinGenAction cont a2)
       | SReturn e => GLet_ e a2
     end.
 
@@ -643,6 +653,7 @@ Section Sin.
       | SIfElse ce _ ta fa cont => SIfElse ce ta fa
                                            (fun a => appendSinSinAction (cont a) a2)
       | SAssert_ ae cont => SAssert_ ae (appendSinSinAction cont a2)
+      | SDispl ls cont => SDispl ls (appendSinSinAction cont a2)
       | SReturn e => SLet_ e a2
     end.
     
@@ -656,6 +667,7 @@ Section Sin.
         | SIfElse e k aT aF c => IfElse e (getSinAction aT) (getSinAction aF)
                                         (fun v => getSinAction (c v))
         | SAssert_ e c => Assert_ e (getSinAction c)
+        | SDispl ls c => Displ ls (getSinAction c)
         | SReturn e => Return e
       end.
 
@@ -679,6 +691,7 @@ Section Sin.
         apply IHa1.
         apply genSinSameF.
         apply genSinSameF.
+        apply IHa1.
         apply IHa1.
       Qed.
     End SpecificIdx.
@@ -707,6 +720,7 @@ Section Sin.
       | SWriteReg r k e c => getCallsSinA c
       | SIfElse e k aT aF c => getCallsSinA aT ++ getCallsSinA aF ++ getCallsSinA (c tt)
       | SAssert_ e c => getCallsSinA c
+      | SDispl ls c => getCallsSinA c
       | SReturn e => nil
     end.
 
@@ -726,6 +740,7 @@ Section Sin.
                                     (noCallDmSigSinA fa dmn dsig) &&
                                     (noCallDmSigSinA (cont tt) dmn dsig)
     | SAssert_ ae cont => noCallDmSigSinA cont dmn dsig
+    | SDispl ls cont => noCallDmSigSinA cont dmn dsig
     | SReturn e => true
     end.
   
@@ -793,6 +808,7 @@ Section Sin.
         GIfElse ce (inlineGenSinDm ta dn dm) (inlineGenSinDm fa dn dm)
                 (fun a => inlineGenSinDm (cont a) dn dm)
       | GAssert_ ae cont => GAssert_ ae (inlineGenSinDm cont dn dm)
+      | GDispl ls cont => GDispl ls (inlineGenSinDm cont dn dm)
       | GReturn e => GReturn _ e
     end.
 
@@ -874,6 +890,7 @@ Section Sin.
         SIfElse ce (inlineSinSinDm ta dn dm) (inlineSinSinDm fa dn dm)
                 (fun a => inlineSinSinDm (cont a) dn dm)
       | SAssert_ ae cont => SAssert_ ae (inlineSinSinDm cont dn dm)
+      | SDispl ls cont => SDispl ls (inlineSinSinDm cont dn dm)
       | SReturn e => SReturn e
     end.
 
@@ -884,6 +901,7 @@ Section Sin.
   Proof.
     induction a1; simpl in *; intros; f_equal;
     repeat let x := fresh in extensionality x; auto.
+    apply IHa1.
     apply IHa1.
     apply IHa1.
   Qed.

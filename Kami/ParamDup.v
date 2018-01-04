@@ -14,6 +14,7 @@ Proof.
   - f_equal; auto.
     extensionality v; auto.
   - f_equal; auto.
+  - f_equal; auto.
 Qed.
 
 Lemma getSinAction_getCallsA_hasNoIndex:

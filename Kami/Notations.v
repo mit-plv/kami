@@ -1012,3 +1012,119 @@ Notation "'SIN' { m1 'with' .. 'with' mN }" :=
      (ConsInSinModule
         m1%kami_sin .. (ConsInSinModule mN%kami_sin NilInSinModule) ..))
     (at level 0, only parsing).
+
+Require Import Psatz.
+
+Notation ExtractBitsVerbose e lsb msb wout :=
+  ltac:(match type of e with
+        | Expr _ (SyntaxKind ?k) =>
+          let w := (match k with
+                    | Bit ?w => w
+                    | _ =>
+                      let bw := eval compute in k in
+                          match bw with
+                          | Bit ?w => w
+                          end
+                    end) in
+          refine (UniBit
+                    (@ConstExtractPf
+                       w wout lsb msb
+                       ltac:(abstract (fold Nat.add in *; lia))
+                              ltac:(abstract (fold Nat.add in *; lia))
+                                     ltac:(abstract (fold Nat.add in *; lia))
+                    ) e)
+        end).
+
+Notation ExtractBits e lsb msb :=
+  ltac:(match type of e with
+        | Expr _ (SyntaxKind ?k) =>
+          let w := (match k with
+                    | Bit ?w => w
+                    | _ =>
+                      let bw := eval compute in k in
+                          match bw with
+                          | Bit ?w => w
+                          end
+                    end) in
+          refine (UniBit
+                    (@ConstExtractPf
+                       w (msb - lsb + 1) lsb msb
+                       ltac:(abstract (fold Nat.add in *; lia))
+                              eq_refl
+                              ltac:(abstract (fold Nat.add in *; lia))
+                    ) e)
+        end).
+
+Notation GetLsb e lsb :=
+  ltac:(match type of e with
+        | Expr _ (SyntaxKind ?k) =>
+          let w := (match k with
+                    | Bit ?w => w
+                    | _ =>
+                      let bw := eval compute in k in
+                          match bw with
+                          | Bit ?w => w
+                          end
+                    end) in
+          refine (UniBit
+                    (@TruncPf
+                       w lsb ltac:(abstract (fold Nat.add in *; lia))) e)
+        end).
+  
+Notation GetMsb e msb :=
+  ltac:(match type of e with
+        | Expr _ (SyntaxKind ?k) =>
+          let w := (match k with
+                    | Bit ?w => w
+                    | _ =>
+                      let bw := eval compute in k in
+                          match bw with
+                          | Bit ?w => w
+                          end
+                    end) in
+          refine (UniBit
+                    (@TruncLsbPf
+                       w msb ltac:(abstract (fold Nat.add in *; lia))) e)
+        end).
+
+Notation ConcatVerbose e1 e2 n :=
+  ltac:(match type of e1 with
+        | Expr _ (SyntaxKind ?k1) =>
+          match type of e2 with
+          | Expr _ (SyntaxKind ?k2) =>
+            let w1 := (match k1 with
+                       | Bit ?w => w
+                       | _ =>
+                         let bw := eval compute in k1 in
+                             match bw with
+                             | Bit ?w => w
+                             end
+                       end) in
+             let w2 := (match k2 with
+                        | Bit ?w => w
+                        | _ =>
+                          let bw := eval compute in k2 in
+                              match bw with
+                              | Bit ?w => w
+                              end
+                        end) in
+             let n' := eval cbv in n in
+             refine (BinBit (@ConcatPf w1 w2 n'
+                                       ltac:(abstract (fold Nat.add in *; lia)))
+                            e1 e2)
+          end
+        end).
+
+Definition test1 w1 w2 ty (pf1: (w1 > 0)%nat) (pf2: (w2 > 0)%nat)
+           (e: (Bit (w1 + w2 + 2)) @ ty) :=
+  (ExtractBitsVerbose e w1 (w1 + w2 - 1) w2).
+
+Definition test2 w lsb msb (pf1: (lsb < w)%nat) (pf2: (msb < w)%nat) (pf3: (lsb < msb)%nat) ty
+           (e: (Bit w) @ ty) := ExtractBits e lsb msb.
+
+(* Definition test3 n1 n2 ty (e1: (Bit n1) @ ty) (e2: (Bit n2) @ ty) := *)
+(*   ConcatVerbose (Const ltac:(assumption) (WO~0~1))%kami_expr *)
+(*                 (ConcatVerbose e1 e2 (n1 + n2)) (1 + n1 + 1 + n2 - n2 + n2). *)
+
+Notation lg i:= (S (Nat.log2 i)).
+

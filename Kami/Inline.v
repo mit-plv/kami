@@ -39,6 +39,7 @@ Section Base.
       | IfElse ce _ ta fa cont => IfElse ce (inlineDm ta dm) (inlineDm fa dm)
                                          (fun a => inlineDm (cont a) dm)
       | Assert_ ae cont => Assert_ ae (inlineDm cont dm)
+      | Displ ls cont => Displ ls (inlineDm cont dm)
       | Return e => Return e
     end.
 

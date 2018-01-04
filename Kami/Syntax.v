@@ -318,13 +318,18 @@ Inductive BinBoolOp: Set :=
 Inductive UniBitOp: nat -> nat -> Set :=
 | Inv n: UniBitOp n n
 | ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2 (* LSB : n1, MSB : n3 *)
-| ConstExtractPf n1 n2 n3 n4 : n1 + n2 + n3 = n4 -> UniBitOp n4 n2 (* LSB : n1, MSB : n3 *)
+| ConstExtractPf
+    win wout lsb msb:
+    (lsb <= msb)%nat ->
+    wout = msb - lsb + 1 ->
+    (msb < win)%nat ->
+    UniBitOp win wout
 | Trunc n1 n2: UniBitOp (n1 + n2) n1 (* LSB : n1 *)
-| TruncPf n1 n2 n3: n1 + n2 = n3 -> UniBitOp n3 n1
+| TruncPf win wout: (win >= wout)%nat -> UniBitOp win wout
 | ZeroExtendTrunc n1 n2: UniBitOp n1 n2
 | SignExtendTrunc n1 n2: UniBitOp n1 n2
 | TruncLsb n1 n2 : UniBitOp (n1 + n2) n2 (* MSB : n2 *)
-| TruncLsbPf n1 n2 n3 : n1 + n2 = n3 -> UniBitOp n3 n2.
+| TruncLsbPf win wout: (win >= wout)%nat -> UniBitOp win wout.
 
 Inductive BinSign := SignSS | SignSU | SignUU.
 
@@ -393,6 +398,20 @@ Section Phoas.
                      Expr (SyntaxKind k) ->
                      Expr (SyntaxKind (Array k i)).
 
+  Inductive BitFormat :=
+  | Binary
+  | Decimal
+  | Hex.
+
+  Definition FullBitFormat := (nat * BitFormat)%type.
+
+  Inductive Disp: Type :=
+  | DispBool: FullBitFormat -> Expr (SyntaxKind Bool) -> Disp
+  | DispBit: FullBitFormat -> forall n, Expr (SyntaxKind (Bit n)) -> Disp
+  | DispStruct n: (Vector.t FullBitFormat n) -> forall ls, Expr (SyntaxKind (@Struct n ls))
+                                                                -> Disp
+  | DispArray: FullBitFormat -> forall n k, Expr (SyntaxKind (Array n k)) -> Disp.
+  
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
       Expr (SyntaxKind (arg s)) ->
@@ -411,6 +430,7 @@ Section Phoas.
                                         (ty k -> ActionT lretT) ->
                                         ActionT lretT
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
+  | Displ: list Disp -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
 
@@ -787,6 +807,7 @@ Section AppendAction.
       | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
       | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
       | Assert_ ae cont => Assert_ ae (appendAction cont a2)
+      | Displ ls cont => Displ ls (appendAction cont a2)
       | Return e => Let_ e a2
     end.
 
@@ -833,6 +854,7 @@ Section GetCalls.
         (getCallsA_Sig aT) ++ (getCallsA_Sig aF)
                            ++ (getCallsA_Sig (c tt))
       | Assert_ _ c => getCallsA_Sig c
+      | Displ ls c => getCallsA_Sig c
       | Return _ => nil
     end.
   
@@ -859,6 +881,7 @@ Section GetCalls.
         (getCallsA aT) ++ (getCallsA aF)
                        ++ (getCallsA (c tt))
       | Assert_ _ c => getCallsA c
+      | Displ ls c => getCallsA c
       | Return _ => nil
     end.
 
@@ -1140,6 +1163,7 @@ Section NoInternalCalls.
     | WriteReg reg _ e cont => isLeaf cont cs
     | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
     | Assert_ ae cont => isLeaf cont cs
+    | Displ ls cont => isLeaf cont cs
     | Return e => true
     end.
 

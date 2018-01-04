@@ -188,9 +188,20 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wneg n).
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
-  - rewrite <- e; exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
+  - assert (sth: win = msb + 1 + (win - msb - 1)) by (abstract Omega.omega).
+    assert (sth2: msb + 1 = lsb + wout) by (abstract Omega.omega).
+    exact (fun w => split2 lsb wout match sth2 in _ = Z return _ Z with
+                                    | eq_refl =>
+                                      split1 (msb + 1) ((win - msb) - 1)
+                                             match sth in _ = Y return _ Y with
+                                             | eq_refl => w
+                                             end
+                                    end).
   - exact (fun w => split1 n1 n2 w).
-  - rewrite <- e; exact (fun w => split1 n1 n2 w).
+  - assert (sth: win = wout + (win - wout)) by (abstract Omega.omega).
+    exact (fun w => split1 wout (win - wout) match sth in _ = Y return _ Y with
+                                             | eq_refl => w
+                                             end).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
@@ -210,7 +221,10 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
     + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
       exact (split1 _ _ w).
   - exact (fun w => split2 n1 n2 w).
-  - rewrite <- e; exact (fun w => split2 n1 n2 w).
+  - assert (sth: win = (win - wout) + wout) by (abstract Omega.omega).
+    exact (fun w => split2 (win - wout) wout match sth in _ = Y return _ Y with
+                                             | eq_refl => w
+                                             end).
 Defined.
 
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
@@ -419,6 +433,9 @@ Section Semantics.
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
       SemAction (Assert_ p cont) newRegs2 calls2 r2
+  | SemDispl ls k2 cont newRegs2 calls2 (r2: type k2)
+             (HSemAction: SemAction cont newRegs2 calls2 r2):
+      SemAction (Displ ls cont) newRegs2 calls2 r2
   | SemReturn
       k (e: Expr type (SyntaxKind k)) evale
       (HEvalE: evale = evalExpr e):
@@ -466,6 +483,8 @@ Section Semantics.
     | Assert_ e c =>
       SemAction c news calls retC /\
       evalExpr e = true
+    | Displ ls c =>
+      SemAction c news calls retC
     | Return e =>
       retC = evalExpr e /\
       news = M.empty _ /\
@@ -543,6 +562,7 @@ Section AppendAction.
     - invertAction H1.
       specialize (@IHa1 _ _ _ _ _ _ _ _ H H0 H1 H2);
         econstructor; eauto.
+    - invertAction H1; econstructor; eauto.
     - invertAction H1; econstructor; eauto.
   Qed.
 

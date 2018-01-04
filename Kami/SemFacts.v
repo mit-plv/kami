@@ -1708,6 +1708,7 @@ Proof.
   - eapply SemIfElseFalse; eauto.
   - econstructor; eauto.
   - econstructor; eauto.
+  - econstructor; eauto.
 Qed.
 
 Lemma substep_oldRegs_weakening:
