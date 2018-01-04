@@ -122,6 +122,7 @@ Section Compile.
           | _ => fun _ => wires
         end expr
       | Assert_ pred cont => convertActionToRtl_noGuard cont enable startList retList
+      | Displ ls cont => convertActionToRtl_noGuard cont enable startList retList
       | Return x => (name, retList, existT _ k (convertExprToRtl x)) :: nil
       | IfElse pred ktf t f cont =>
         convertActionToRtl_noGuard t (RtlBinBool And enable (convertExprToRtl pred)) (0 :: startList) (startList) ++
@@ -146,6 +147,7 @@ Section Compile.
         convertActionToRtl_guard cont startList
       | Assert_ pred cont => RtlBinBool And (convertExprToRtl pred)
                                         (convertActionToRtl_guard cont startList)
+      | Displ ls cont => convertActionToRtl_guard cont (inc startList)
       | Return x => RtlConst (ConstBool true)
       | IfElse pred ktf t f cont =>
         RtlBinBool And
@@ -183,6 +185,7 @@ Fixpoint getWritesAction k (a: ActionT typeUT k) :=
     | WriteReg r k expr cont => M.add r (getWritesAction cont)
     | IfElse _ _ t f cont => M.union (M.union (getWritesAction t) (getWritesAction f)) (getWritesAction (cont tt))
     | Assert_ x cont => getWritesAction cont
+    | Displ ls cont => getWritesAction cont
     | Return x => M.empty
   end.
 
@@ -195,6 +198,7 @@ Fixpoint getReadsAction k (a: ActionT typeUT k) :=
     | WriteReg r k expr cont => getReadsAction cont
     | IfElse _ _ t f cont => M.union (M.union (getReadsAction t) (getReadsAction f)) (getReadsAction (cont tt))
     | Assert_ x cont => getReadsAction cont
+    | Displ ls cont => getReadsAction cont
     | Return x => M.empty
   end.
 
