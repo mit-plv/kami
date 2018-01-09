@@ -30,6 +30,7 @@ Section AbstractTrace.
   Inductive TraceEvent : Type :=
   | Nm (pc : address)
   | Rd (pc : address) (addr : address) (val : data)
+  | RdZ (pc : address) (addr : address)
   | Wr (pc : address) (addr : address) (val : data)
   | Branch (pc : address) (taken : bool)
   | ToHost (pc : address) (val : data)
@@ -51,6 +52,18 @@ Section AbstractTrace.
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
       hasTrace (rset rf dstIdx val) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
       hasTrace rf pm pc maxsp (Rd pc laddr_aligned val :: trace')
+  | htLdZ : forall inst rf pm pc maxsp trace',
+      rf spReg <= maxsp ->
+      pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
+      evalExpr (rv32iGetOptype type inst) = opLd ->
+      evalExpr (rv32iGetLdDst type inst) = wzero _ ->
+      let addr := evalExpr (rv32iGetLdAddr type inst) in
+      let srcIdx := evalExpr (rv32iGetLdSrc type inst) in
+      let srcVal := rf srcIdx in
+      let laddr := evalExpr (rv32iCalcLdAddr type addr srcVal) in
+      let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
+      hasTrace rf pm pc maxsp (RdZ pc laddr_aligned :: trace')
   | htSt : forall inst rf pm pc maxsp trace',
       rf spReg <= maxsp ->
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
@@ -89,7 +102,9 @@ Section AbstractTrace.
   | htNm : forall inst rf pm pc maxsp trace',
       rf spReg <= maxsp ->
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
-      evalExpr (rv32iGetOptype type inst) = opNm ->
+      (evalExpr (rv32iGetOptype type inst) = opNm
+       \/ (evalExpr (rv32iGetOptype type inst) = opLd
+          /\ evalExpr (rv32iGetLdDst type inst) = wzero _)) ->
       evalExpr (getOpcodeE #inst)%kami_expr <> rv32iOpBRANCH ->
       let src1 := evalExpr (rv32iGetSrc1 type inst) in
       let val1 := rf src1 in
@@ -105,6 +120,7 @@ Section AbstractTrace.
     map (fun te => match te with
                 | Nm _ => te
                 | Branch _ _ => te
+                | RdZ _ _ => te
                 | Rd pc addr val => Rd pc addr $0
                 | Wr pc addr val => Wr pc addr $0
                 | ToHost pc val => ToHost pc $0
@@ -356,7 +372,11 @@ Section SCTiming.
   | RtNm : forall pc lbl trace' ls',
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
-      relatedTrace (Nm pc :: trace') (lbl :: ls').
+      relatedTrace (Nm pc :: trace') (lbl :: ls')
+  | RtRdZ : forall pc addr lbl trace' ls',
+      labelToTraceEvent lbl = None ->
+      relatedTrace trace' ls' ->
+      relatedTrace (RdZ pc addr :: trace') (lbl :: ls'). 
 
   Lemma relatedFhTrace :
     forall trace ls,
@@ -508,7 +528,20 @@ Section SCTiming.
           end.
           unfold rv32iNextPc.
           unfold rv32iGetOptype in H1.
-          try destruct (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc0)))%kami_expr).
+          unfold evalExpr; fold evalExpr.
+          unfold evalExpr in H1; fold evalExpr in H1.
+          repeat match goal with
+                 | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                 | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                 end;
+            unfold evalConstT in *;
+            try reflexivity;
+            try match goal with
+                | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                end;
+            discriminate H1.
+        * admit.
+        * admit.
   Admitted.
 
   Ltac shatter := repeat match goal with
@@ -559,6 +592,62 @@ Section SCTiming.
                 ** unfold evalExpr; fold evalExpr.
                    unfold evalUniBool.
                    rewrite Bool.negb_true_iff.
+                   unfold isEq.
+                   match goal with
+                   | |- (if ?b then _ else _) = _ => destruct b
+                   end.
+                   --- rewrite H0 in e.
+                       tauto.
+                   --- reflexivity.
+                ** eapply SemMCall.
+                   --- instantiate (1 := FMap.M.empty _).
+                       FMap.findeq.
+                   --- instantiate (1 := evalExpr (STRUCT { "data" ::= #val })%kami_expr).
+                       reflexivity.
+                   --- repeat econstructor; try FMap.findeq.
+        * simpl. congruence.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          unfold SCRegs, rset.
+          eauto.
+      + constructor; try assumption.
+        unfold labelToTraceEvent, getLabel.
+        unfold callsToTraceEvent.
+        repeat (match goal with
+                | [ |- context[match ?x with _ => _ end] ] =>
+                  let x' := eval hnf in x in change x with x'
+                end; cbv beta iota).
+        unfold evalExpr.
+        match goal with
+        | [ |- Some (Rd $ (0) ?x1 ?y1) = Some (Rd $ (0) ?x2 ?y2) ] => replace x1 with x2; [ reflexivity | idtac ]
+        end.
+        match goal with
+        | [ |- context[icons' ("addr" ::= ?x)%init _] ] => replace laddr_aligned with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
+        end.
+        subst.
+        repeat match goal with
+               | [ x : fullType type _ |- _ ] =>
+                 progress unfold x
+               | [ x : word _ |- _ ] =>
+                 progress unfold x
+               end.
+        unfold evalExpr.
+        reflexivity.
+    - shatter.
+      repeat eexists.
+      + eapply BFMulti.
+        * tauto.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply SingleRule.
+             ++ instantiate (2 := "execLdZ").
+                simpl.
+                tauto.
+             ++ repeat econstructor; try FMap.findeq.
+                ** unfold evalExpr; fold evalExpr.
+                   unfold evalUniBool.
                    unfold isEq.
                    match goal with
                    | |- (if ?b then _ else _) = _ => destruct b
@@ -943,6 +1032,70 @@ Section SCTiming.
     | _ => (wzero _)
     end.
 
+  Lemma SCSubsteps :
+    forall o (ss : Substeps rv32iProcInst o),
+      SubstepsInd rv32iProcInst o (foldSSUpds ss) (foldSSLabel ss) ->
+      (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
+        \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
+       /\ (foldSSUpds ss) = FMap.M.empty _)
+      \/ (exists k a u cs,
+            In (k :: a)%struct (getRules rv32iProcInst)
+            /\ SemAction o (a type) u cs WO
+            /\ (foldSSLabel ss) = {| annot := Some (Some k); defs := FMap.M.empty _; calls := cs |}
+            /\ (foldSSUpds ss) = u).
+  Proof.
+    intros.
+    match goal with
+    | [ H : SubstepsInd _ _ _ _ |- _ ] => induction H
+    end.
+    - tauto.
+    - intuition idtac;
+        simpl;
+        shatter;
+        intuition idtac;
+        subst;
+        match goal with
+        | [ H : Substep _ _ _ _ _ |- _ ] => destruct H
+        end;
+        try tauto;
+        match goal with
+        | [ HCCU : CanCombineUUL _ {| annot := Some _; defs := FMap.M.empty _; calls := _ |} _ _ (Rle _) |- _ ] =>
+          unfold CanCombineUUL in HCCU;
+            simpl in HCCU;
+            tauto
+        | [ HIn : In _ (getDefsBodies rv32iProcInst) |- _ ] =>
+          simpl in HIn;
+            tauto
+        | [ HIR : In (?k :: ?a)%struct _, HA : SemAction _ _ ?u ?cs _ |- _ ] =>
+          right;
+            exists k, a, u, cs;
+            simpl in HIR;
+            intuition idtac;
+            simpl;
+            FMap.findeq
+        end.
+  Qed.
+
+  Ltac evex H := unfold evalExpr in H; fold evalExpr in H.
+  Ltac evexg := unfold evalExpr; fold evalExpr.
+
+  Ltac boolex :=
+    try match goal with
+        | [ H : evalUniBool Neg _ = _ |- _ ] =>
+          unfold evalUniBool in H;
+          rewrite Bool.negb_true_iff in H
+        end;
+    match goal with
+    | [ H : (if ?x then true else false) = _ |- _ ] =>
+      destruct x; try discriminate
+    end.
+
+  Ltac simplify_match :=
+    repeat (match goal with
+            | [ |- context[match ?x with _ => _ end] ] =>
+              let x' := eval hnf in x in change x with x'
+            end; cbv beta iota).
+
   Lemma SCToAbstractRelated :
     forall rf pm pc maxsp newRegs ls,
       BoundedForwardActiveMultistep rv32iProcInst maxsp (SCRegs rf pm pc) newRegs ls ->
@@ -964,33 +1117,160 @@ Section SCTiming.
     - eexists; repeat econstructor.
     - shatter.
       destruct H0.
-      destruct HSubsteps.
-      + simpl in H1.
-        congruence.
-      + destruct s.
-        destruct unitAnnot.
-        * simpl in *.
-          unfold addLabelLeft, getSLabel in *.
-          simpl in *.
-          destruct (foldSSLabel ss).
-          destruct annot.
-          -- simpl in *.
-             unfold hide in *.
-             FMap.findeq.
-             simpl in *.
-             inversion substep.
-             ++ subst.
-                tauto.
-             ++ subst.
-                simpl in *.
-                intuition idtac;
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ Hle : foldSSLabel ss = _, Hue : foldSSUpds ss = _ |- _ ] => rewrite Hle in *; rewrite Hue in *
+        end; try tauto.
+      Opaque evalExpr.
+      match goal with
+      | [ HIn : In (_ :: _)%struct (getRules _) |- _ ] => simpl in HIn; intuition idtac
+      end;
+      match goal with
+      | [ Heq : _ = (_ :: _)%struct |- _ ] =>
+        inversion Heq; clear Heq
+      end; subst;
+        kinv_action_dest;
+        match goal with
+        | [ Hpc : FMap.M.find "pc" o = Some (existT _ _ ?pc),
+            Hrf : FMap.M.find "rf" o = Some (existT _ _ ?rf),
+            Hpm : FMap.M.find "pgm" o = Some (existT _ _ ?pm)
+            |- _ ] =>
+          replace (getpc o) with pc by (unfold getpc; FMap.findeq);
+            replace (getrf o) with rf by (unfold getrf; FMap.findeq);
+            replace (getpm o) with pm by (unfold getpm; FMap.findeq)
+        end.
+      Transparent evalExpr.
+      + eexists.
+        split.
+        * apply htLd.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ H : context[rv32iGetLdDst] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
+               let Heq := fresh in
+               assert (x1 = y1) as Heq;
+                 [ idtac |
+                   rewrite Heq in Hht;
+                   clear Heq;
+                   assert (x2 = y2) as Heq;
+                   [ idtac |
+                     rewrite Heq in Hht;
+                     clear Heq;
+                     assert (x3 = y3) as Heq;
+                     [ idtac |
+                       rewrite Heq in Hht;
+                       clear Heq;
+                       eassumption
+                     ]
+                   ]
+                 ]
+             end.
+             ++ rewrite H14. unfold getrf.
+                FMap.findeq.
+                simplify_match.
+                evexg.
+                Require Import Logic.FunctionalExtensionality.
+                apply functional_extensionality.
+                intros.
+                unfold rset.
+                evex H11.
+                boolex.
                 match goal with
-                | [ Heq : _ = (_ :: _)%struct |- _ ] =>
-                  inversion Heq; clear Heq
-                end; subst.
-                ** Opaque evalExpr.
-                   kinv_action_dest.
-                   Transparent evalExpr.
+                | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
+                end.
+             ++ rewrite H14.
+                unfold getpm.
+                FMap.findeq.
+             ++ rewrite H14.
+                unfold getpc.
+                FMap.findeq.
+        * constructor; try assumption.
+          FMap.findeq.
+      + eexists.
+        split.
+        * eapply htNm.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ H : context[rv32iGetLdDst] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
+               let Heq := fresh in
+               assert (x1 = y1) as Heq;
+                 [ idtac |
+                   rewrite Heq in Hht;
+                   clear Heq;
+                   assert (x2 = y2) as Heq;
+                   [ idtac |
+                     rewrite Heq in Hht;
+                     clear Heq;
+                     assert (x3 = y3) as Heq;
+                     [ idtac |
+                       rewrite Heq in Hht;
+                       clear Heq;
+                       eassumption
+                     ]
+                   ]
+                 ]
+             end.
+             ++ rewrite H14. unfold getrf.
+                FMap.findeq.
+                simplify_match.
+                evexg.
+                Require Import Logic.FunctionalExtensionality.
+                apply functional_extensionality.
+                intros.
+                unfold rset.
+                evex H11.
+                boolex.
+                match goal with
+                | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
+                end.
+             ++ rewrite H14.
+                unfold getpm.
+                FMap.findeq.
+             ++ rewrite H14.
+                unfold getpc.
+                FMap.findeq.
+        * constructor; try assumption.
+          FMap.findeq.
+        
   Admitted.
 
   Theorem abstractToSCHiding :
