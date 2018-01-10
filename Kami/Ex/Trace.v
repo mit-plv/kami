@@ -6,6 +6,7 @@ Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
 Require Import Ex.SC Ex.IsaRv32.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
+Require Import Logic.FunctionalExtensionality.
 
 Open Scope string_scope.
 
@@ -102,9 +103,7 @@ Section AbstractTrace.
   | htNm : forall inst rf pm pc maxsp trace',
       rf spReg <= maxsp ->
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
-      (evalExpr (rv32iGetOptype type inst) = opNm
-       \/ (evalExpr (rv32iGetOptype type inst) = opLd
-          /\ evalExpr (rv32iGetLdDst type inst) = wzero _)) ->
+      evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr <> rv32iOpBRANCH ->
       let src1 := evalExpr (rv32iGetSrc1 type inst) in
       let val1 := rf src1 in
@@ -646,21 +645,24 @@ Section SCTiming.
                 simpl.
                 tauto.
              ++ repeat econstructor; try FMap.findeq.
+                ** match goal with
+                   | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
+                     let Heq := fresh in
+                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       rewrite Heq;
+                       rewrite H0;
+                       rewrite eval_const;
+                       tauto
+                   end.
                 ** unfold evalExpr; fold evalExpr.
                    unfold evalUniBool.
                    unfold isEq.
                    match goal with
                    | |- (if ?b then _ else _) = _ => destruct b
                    end.
-                   --- rewrite H0 in e.
-                       tauto.
                    --- reflexivity.
-                ** eapply SemMCall.
-                   --- instantiate (1 := FMap.M.empty _).
-                       FMap.findeq.
-                   --- instantiate (1 := evalExpr (STRUCT { "data" ::= #val })%kami_expr).
-                       reflexivity.
-                   --- repeat econstructor; try FMap.findeq.
+                   --- rewrite H0 in n.
+                       tauto.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
@@ -675,21 +677,6 @@ Section SCTiming.
                 | [ |- context[match ?x with _ => _ end] ] =>
                   let x' := eval hnf in x in change x with x'
                 end; cbv beta iota).
-        unfold evalExpr.
-        match goal with
-        | [ |- Some (Rd $ (0) ?x1 ?y1) = Some (Rd $ (0) ?x2 ?y2) ] => replace x1 with x2; [ reflexivity | idtac ]
-        end.
-        match goal with
-        | [ |- context[icons' ("addr" ::= ?x)%init _] ] => replace laddr_aligned with (evalExpr x)%kami_expr; [ reflexivity | idtac ] 
-        end.
-        subst.
-        repeat match goal with
-               | [ x : fullType type _ |- _ ] =>
-                 progress unfold x
-               | [ x : word _ |- _ ] =>
-                 progress unfold x
-               end.
-        unfold evalExpr.
         reflexivity.
     - shatter.
       repeat eexists.
@@ -1106,10 +1093,10 @@ Section SCTiming.
     intros.
     let Heq := fresh in
     remember (SCRegs rf pm pc) as regs eqn:Heq; unfold SCRegs in Heq;
-    replace rf with (getrf regs) by (subst; FMap.findeq);
-    replace pm with (getpm regs) by (subst; FMap.findeq);
-    replace pc with (getpc regs) by (subst; FMap.findeq);
-    clear rf pm pc Heq.
+      replace rf with (getrf regs) by (subst; FMap.findeq);
+      replace pm with (getpm regs) by (subst; FMap.findeq);
+      replace pc with (getpc regs) by (subst; FMap.findeq);
+      clear rf pm pc Heq.
     match goal with
     | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] =>
       induction H
@@ -1127,20 +1114,20 @@ Section SCTiming.
       match goal with
       | [ HIn : In (_ :: _)%struct (getRules _) |- _ ] => simpl in HIn; intuition idtac
       end;
-      match goal with
-      | [ Heq : _ = (_ :: _)%struct |- _ ] =>
-        inversion Heq; clear Heq
-      end; subst;
-        kinv_action_dest;
         match goal with
-        | [ Hpc : FMap.M.find "pc" o = Some (existT _ _ ?pc),
-            Hrf : FMap.M.find "rf" o = Some (existT _ _ ?rf),
-            Hpm : FMap.M.find "pgm" o = Some (existT _ _ ?pm)
-            |- _ ] =>
-          replace (getpc o) with pc by (unfold getpc; FMap.findeq);
-            replace (getrf o) with rf by (unfold getrf; FMap.findeq);
-            replace (getpm o) with pm by (unfold getpm; FMap.findeq)
-        end.
+        | [ Heq : _ = (_ :: _)%struct |- _ ] =>
+          inversion Heq; clear Heq
+        end; subst;
+          kinv_action_dest;
+          match goal with
+          | [ Hpc : FMap.M.find "pc" o = Some (existT _ _ ?pc),
+                    Hrf : FMap.M.find "rf" o = Some (existT _ _ ?rf),
+                          Hpm : FMap.M.find "pgm" o = Some (existT _ _ ?pm)
+              |- _ ] =>
+            replace (getpc o) with pc by (unfold getpc; FMap.findeq);
+              replace (getrf o) with rf by (unfold getrf; FMap.findeq);
+              replace (getpm o) with pm by (unfold getpm; FMap.findeq)
+          end.
       Transparent evalExpr.
       + eexists.
         split.
@@ -1185,11 +1172,13 @@ Section SCTiming.
                    ]
                  ]
              end.
-             ++ rewrite H14. unfold getrf.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                unfold getrf.
                 FMap.findeq.
                 simplify_match.
                 evexg.
-                Require Import Logic.FunctionalExtensionality.
                 apply functional_extensionality.
                 intros.
                 unfold rset.
@@ -1208,7 +1197,7 @@ Section SCTiming.
           FMap.findeq.
       + eexists.
         split.
-        * eapply htNm.
+        * eapply htLdZ.
           -- match goal with
              | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
              end.
@@ -1230,48 +1219,315 @@ Section SCTiming.
              boolex.
              assumption.
           -- match goal with
-             | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
-               let Heq := fresh in
-               assert (x1 = y1) as Heq;
-                 [ idtac |
-                   rewrite Heq in Hht;
-                   clear Heq;
-                   assert (x2 = y2) as Heq;
-                   [ idtac |
-                     rewrite Heq in Hht;
-                     clear Heq;
-                     assert (x3 = y3) as Heq;
-                     [ idtac |
-                       rewrite Heq in Hht;
-                       clear Heq;
-                       eassumption
-                     ]
-                   ]
-                 ]
+             | [ Hfu : foldSSUpds ss = _,
+                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                 eassumption
              end.
-             ++ rewrite H14. unfold getrf.
+        * constructor; try assumption.
+          FMap.findeq.
+      + eexists.
+        split.
+        * eapply htSt.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hfu : foldSSUpds ss = _,
+                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                 eassumption
+             end.
+        * constructor; try assumption.
+          FMap.findeq.
+      + eexists.
+        split.
+        * eapply htTh.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hfu : foldSSUpds ss = _,
+                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                 eassumption
+             end.
+        * constructor; try assumption.
+          FMap.findeq.
+      + eexists.
+        split.
+        * eapply htFh.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hfu : foldSSUpds ss = _,
+                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+               replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                 replace (getrf o') with x1 in Hht;
+                 try eassumption
+             end.
+             match goal with
+             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+             end.
+             unfold getrf.
+             FMap.findeq.
+             simplify_match.
+             evexg.
+             apply functional_extensionality.
+             intros.
+             unfold rset.
+             evex H11.
+             boolex.
+             match goal with
+             | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
+             end.
+        * constructor; try assumption.
+          FMap.findeq.
+      + eexists.
+        split.
+        * eapply htFh.
+          -- match goal with
+             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+             end.
+             match goal with
+             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+             end.
+             assumption.
+          -- reflexivity.
+          -- match goal with
+             | [ H : context[rv32iGetOptype] |- _ ] =>
+               evex H
+             end.
+             boolex.
+             assumption.
+          -- match goal with
+             | [ Hfu : foldSSUpds ss = _,
+                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+               replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                 replace (getrf o') with x1 in Hht;
+                 try eassumption
+             end.
+             match goal with
+             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+             end.
+             unfold getrf.
+             FMap.findeq.
+             simplify_match.
+             unfold rset.
+             evexg.
+             apply functional_extensionality.
+             intros.
+             evex H11.
+             boolex.
+             match goal with
+             | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
+             end.
+        * constructor; try assumption.
+          FMap.findeq.
+      + destruct (weq
+                    (evalExpr (getOpcodeE # (x2 (evalExpr (rv32iAlignPc type x0)))%kami_expr))
+                    rv32iOpBRANCH).
+        * eexists.
+          split.
+          -- eapply htNmBranch.
+             ++ match goal with
+                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+                end.
+                match goal with
+                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+                end.
+                assumption.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
+             ++ assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    replace (getrf o') with x1 in Hht;
+                    try eassumption
+                end.
+                match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                unfold getrf.
                 FMap.findeq.
                 simplify_match.
                 evexg.
-                Require Import Logic.FunctionalExtensionality.
                 apply functional_extensionality.
                 intros.
+                evex H11.
+                boolex.
+                unfold rv32iGetDst in n0.
+                evex n0.
+                rewrite e in n0.
+                tauto.
+          -- constructor; try assumption.
+             FMap.findeq.
+        * eexists.
+          split.
+          -- eapply htNm.
+             ++ match goal with
+                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+                end.
+                match goal with
+                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+                end.
+                assumption.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
+             ++ assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    replace (getrf o') with x1 in Hht;
+                    try eassumption
+                end.
+                match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                unfold getrf.
+                FMap.findeq.
+                simplify_match.
                 unfold rset.
+                evexg.
+                apply functional_extensionality.
+                intros.
                 evex H11.
                 boolex.
                 match goal with
-                | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
+                | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
                 end.
-             ++ rewrite H14.
-                unfold getpm.
+          -- constructor; try assumption.
+             FMap.findeq.
+      + destruct (weq
+                    (evalExpr (getOpcodeE # (x2 (evalExpr (rv32iAlignPc type x0)))%kami_expr))
+                    rv32iOpBRANCH).
+        * eexists.
+          split.
+          -- eapply htNmBranch.
+             ++ match goal with
+                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+                end.
+                match goal with
+                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+                end.
+                assumption.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
+             ++ assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                    eassumption
+                end.
+          -- constructor; try assumption.
+             FMap.findeq.
+        * eexists.
+          split.
+          -- eapply htNm.
+             ++ match goal with
+                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
+                end.
+                match goal with
+                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
+                end.
+                assumption.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
+             ++ assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    replace (getrf o') with x1 in Hht;
+                    try eassumption
+                end.
+                match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                unfold getrf.
                 FMap.findeq.
-             ++ rewrite H14.
-                unfold getpc.
-                FMap.findeq.
-        * constructor; try assumption.
-          FMap.findeq.
-        
-  Admitted.
+                simplify_match.
+                unfold rset.
+                evexg.
+                evex H11.
+                boolex.
+                match goal with
+                | [ |- (if ?eq then _ else _) = _ ] => destruct eq; tauto
+                end.
+          -- constructor; try assumption.
+             FMap.findeq.
+  Qed.
 
   Theorem abstractToSCHiding :
     forall rf pm pc maxsp,
