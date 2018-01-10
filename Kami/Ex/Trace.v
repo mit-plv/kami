@@ -406,6 +406,75 @@ Section SCTiming.
            | [ Heq : ?x = ?y |- _ ] => ((tryif unfold x then fail else subst x) || (tryif unfold y then fail else subst y))
            end.
 
+  Ltac shatter := repeat match goal with
+                         | [ H : exists _, _ |- _ ] => destruct H
+                         | [ H : _ /\ _ |- _ ] => destruct H
+                         end.
+
+  Lemma SCSubsteps :
+    forall o (ss : Substeps rv32iProcInst o),
+      SubstepsInd rv32iProcInst o (foldSSUpds ss) (foldSSLabel ss) ->
+      (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
+        \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
+       /\ (foldSSUpds ss) = FMap.M.empty _)
+      \/ (exists k a u cs,
+            In (k :: a)%struct (getRules rv32iProcInst)
+            /\ SemAction o (a type) u cs WO
+            /\ (foldSSLabel ss) = {| annot := Some (Some k); defs := FMap.M.empty _; calls := cs |}
+            /\ (foldSSUpds ss) = u).
+  Proof.
+    intros.
+    match goal with
+    | [ H : SubstepsInd _ _ _ _ |- _ ] => induction H
+    end.
+    - tauto.
+    - intuition idtac;
+        simpl;
+        shatter;
+        intuition idtac;
+        subst;
+        match goal with
+        | [ H : Substep _ _ _ _ _ |- _ ] => destruct H
+        end;
+        try tauto;
+        match goal with
+        | [ HCCU : CanCombineUUL _ {| annot := Some _; defs := FMap.M.empty _; calls := _ |} _ _ (Rle _) |- _ ] =>
+          unfold CanCombineUUL in HCCU;
+            simpl in HCCU;
+            tauto
+        | [ HIn : In _ (getDefsBodies rv32iProcInst) |- _ ] =>
+          simpl in HIn;
+            tauto
+        | [ HIR : In (?k :: ?a)%struct _, HA : SemAction _ _ ?u ?cs _ |- _ ] =>
+          right;
+            exists k, a, u, cs;
+            simpl in HIR;
+            intuition idtac;
+            simpl;
+            FMap.findeq
+        end.
+  Qed.
+
+  Ltac evex H := unfold evalExpr in H; fold evalExpr in H.
+  Ltac evexg := unfold evalExpr; fold evalExpr.
+
+  Ltac boolex :=
+    try match goal with
+        | [ H : evalUniBool Neg _ = _ |- _ ] =>
+          unfold evalUniBool in H;
+          rewrite Bool.negb_true_iff in H
+        end;
+    match goal with
+    | [ H : (if ?x then true else false) = _ |- _ ] =>
+      destruct x; try discriminate
+    end.
+
+  Ltac simplify_match :=
+    repeat (match goal with
+            | [ |- context[match ?x with _ => _ end] ] =>
+              let x' := eval hnf in x in change x with x'
+            end; cbv beta iota).
+
   Lemma relatedCensor :
     forall rf1 rf2 pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
       hasTrace rf1 pm pc maxsp trace1 ->
@@ -458,6 +527,46 @@ Section SCTiming.
                end;
         opaque_subst.
       + apply substepsComb_substepsInd in HSubsteps.
+        apply SCSubsteps in HSubsteps.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * apply substepsComb_substepsInd in HSubsteps0.
+          apply SCSubsteps in HSubsteps0.
+          intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+          match goal with
+          | [ H : In _ _ |- _ ] => simpl in H
+          end.
+          Opaque evalExpr.
+          intuition idtac; kinv_action_dest.
+          Transparent evalExpr.
+          -- unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
+             f_equal.
+
+(*             FMap.findeq.
+             simplify_match.
+             reflexivity.
+            unfold SCRegs in H0.
+            rewrite H25 in H0.
+             evexg.
+             simplify_match.
+            
+        * apply substepsC
+        * match goal with
+          | [ H : evalExpr (rv32iGetOptype type _ == _)%kami_expr = true |- _ ] => evex H; boolex
+          end.
+        * 
+                                                                                                   
         destruct HSubsteps.
         * simpl in H10.
           congruence.
@@ -540,13 +649,8 @@ Section SCTiming.
                 end;
             discriminate H1.
         * admit.
-        * admit.
+        * admit.*)
   Admitted.
-
-  Ltac shatter := repeat match goal with
-                         | [ H : exists _, _ |- _ ] => destruct H
-                         | [ H : _ /\ _ |- _ ] => destruct H
-                         end.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
     simpl.
@@ -554,7 +658,6 @@ Section SCTiming.
     rewrite H.
     destruct (weq c c); tauto.
   Qed.
-
 
   Lemma abstractToSCRelated :
     forall rf pm pc maxsp trace,
@@ -1018,70 +1121,6 @@ Section SCTiming.
                    pc) => pc
     | _ => (wzero _)
     end.
-
-  Lemma SCSubsteps :
-    forall o (ss : Substeps rv32iProcInst o),
-      SubstepsInd rv32iProcInst o (foldSSUpds ss) (foldSSLabel ss) ->
-      (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
-        \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
-       /\ (foldSSUpds ss) = FMap.M.empty _)
-      \/ (exists k a u cs,
-            In (k :: a)%struct (getRules rv32iProcInst)
-            /\ SemAction o (a type) u cs WO
-            /\ (foldSSLabel ss) = {| annot := Some (Some k); defs := FMap.M.empty _; calls := cs |}
-            /\ (foldSSUpds ss) = u).
-  Proof.
-    intros.
-    match goal with
-    | [ H : SubstepsInd _ _ _ _ |- _ ] => induction H
-    end.
-    - tauto.
-    - intuition idtac;
-        simpl;
-        shatter;
-        intuition idtac;
-        subst;
-        match goal with
-        | [ H : Substep _ _ _ _ _ |- _ ] => destruct H
-        end;
-        try tauto;
-        match goal with
-        | [ HCCU : CanCombineUUL _ {| annot := Some _; defs := FMap.M.empty _; calls := _ |} _ _ (Rle _) |- _ ] =>
-          unfold CanCombineUUL in HCCU;
-            simpl in HCCU;
-            tauto
-        | [ HIn : In _ (getDefsBodies rv32iProcInst) |- _ ] =>
-          simpl in HIn;
-            tauto
-        | [ HIR : In (?k :: ?a)%struct _, HA : SemAction _ _ ?u ?cs _ |- _ ] =>
-          right;
-            exists k, a, u, cs;
-            simpl in HIR;
-            intuition idtac;
-            simpl;
-            FMap.findeq
-        end.
-  Qed.
-
-  Ltac evex H := unfold evalExpr in H; fold evalExpr in H.
-  Ltac evexg := unfold evalExpr; fold evalExpr.
-
-  Ltac boolex :=
-    try match goal with
-        | [ H : evalUniBool Neg _ = _ |- _ ] =>
-          unfold evalUniBool in H;
-          rewrite Bool.negb_true_iff in H
-        end;
-    match goal with
-    | [ H : (if ?x then true else false) = _ |- _ ] =>
-      destruct x; try discriminate
-    end.
-
-  Ltac simplify_match :=
-    repeat (match goal with
-            | [ |- context[match ?x with _ => _ end] ] =>
-              let x' := eval hnf in x in change x with x'
-            end; cbv beta iota).
 
   Lemma SCToAbstractRelated :
     forall rf pm pc maxsp newRegs ls,
