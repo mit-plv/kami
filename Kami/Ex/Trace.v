@@ -469,11 +469,22 @@ Section SCTiming.
       destruct x; try discriminate
     end.
 
+  Ltac evbool_auto :=
+    match goal with
+    | [ H : _ = true |- _ ] => evex H; boolex
+    end.
+
   Ltac simplify_match :=
-    repeat (match goal with
-            | [ |- context[match ?x with _ => _ end] ] =>
-              let x' := eval hnf in x in change x with x'
-            end; cbv beta iota).
+    repeat match goal with
+           | [ |- context[match ?x with _ => _ end] ] =>
+             let x' := eval hnf in x in change x with x'; cbv beta iota
+           end.
+
+  Ltac simplify_match_hyp :=
+    repeat multimatch goal with
+           | [ H : context[match ?x with _ => _ end] |- _ ] =>
+             let x' := eval hnf in x in change x with x' in H; cbv beta iota
+           end.
 
   Lemma relatedCensor :
     forall rf1 rf2 pm pc maxsp trace1 trace2 newRegs1 newRegs2 ls1 ls2,
@@ -526,6 +537,50 @@ Section SCTiming.
                    end
                end;
         opaque_subst.
+(*      Lemma SCSubstepsLd :
+        forall rf pm pc (ss : Substeps rv32iProcInst (SCRegs rf pm pc)),
+          evalExpr (rv32iGetOptype type (pm (evalExpr (rv32iAlignPc type pc)))) = opLd
+          -> evalExpr (rv32iGetLdDst type (pm (evalExpr (rv32iAlignPc type pc)))) <> wzero _
+          -> substepsComb ss
+          -> (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
+              \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
+             /\ (foldSSUpds ss) = FMap.M.empty _)
+            \/ (exists a u cs,
+                  In ("execLd" :: a)%struct (getRules rv32iProcInst)
+                  /\ SemAction (SCRegs rf pm pc) (a type) u cs WO
+                  /\ (foldSSLabel ss) = {| annot := Some (Some "execLd"); defs := FMap.M.empty _; calls := cs |}
+                  /\ (foldSSUpds ss) = u).
+      Proof.
+        intros.
+        apply substepsComb_substepsInd in H1.
+        apply SCSubsteps in H1.
+        intuition idtac; shatter; intuition idtac.
+        right.
+        simpl in H1.
+        intuition idtac;
+          match goal with
+          | [ Heq : (_ :: _)%struct = (_ :: _)%struct |- _ ] => inversion Heq; clear Heq
+          end; exists x0, x1, x2; subst.
+        - intuition idtac.
+          simpl.
+          tauto.
+        - Opaque evalExpr.
+          kinv_action_dest.
+          Transparent evalExpr.
+          replace (FMap.M.find "pc" (SCRegs rf pm pc)) with (Some (existT (fullType type) (SyntaxKind (Bit rv32iAddrSize)) pc)) in H1 by eauto.
+          inversion H1.
+          inversion H11.
+          replace (FMap.M.find "pgm" (SCRegs rf pm pc)) with (Some (existT (fullType type) (SyntaxKind (Vector (MemTypes.Data rv32iDataBytes) rv32iIAddrSize)) pm)) in H4 by eauto.
+          repeat evbool_auto.
+          replace 
+          inversion H5.
+          exists x0, x1, x2.
+          subst.
+          intuition idtac.
+          + simpl.
+            tauto.
+        -
+      Qed.*)
       + apply substepsComb_substepsInd in HSubsteps.
         apply SCSubsteps in HSubsteps.
         intuition idtac; shatter;
@@ -550,74 +605,49 @@ Section SCTiming.
           Opaque evalExpr.
           intuition idtac; kinv_action_dest.
           Transparent evalExpr.
-          -- unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
+          -- do 2 match goal with
+                  | [ |- context[@evalExpr ?t (STRUCT {"addr" ::= rv32iAlignAddr ?ty ?adr; "op" ::= ?o; "data" ::= ?d})%kami_expr] ] => replace (@evalExpr t (STRUCT {"addr" ::= rv32iAlignAddr ty adr; "op" ::= _; "data" ::= _})%kami_expr) with (@evalExpr t (STRUCT {"addr" ::= #(evalExpr (rv32iAlignAddr ty adr)); "op" ::= o; "data" ::= d})%kami_expr) by eauto
+                  end.
+             unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
              f_equal.
-
-(*             FMap.findeq.
-             simplify_match.
-             reflexivity.
-            unfold SCRegs in H0.
-            rewrite H25 in H0.
-             evexg.
-             simplify_match.
-            
-        * apply substepsC
-        * match goal with
-          | [ H : evalExpr (rv32iGetOptype type _ == _)%kami_expr = true |- _ ] => evex H; boolex
-          end.
-        * 
-                                                                                                   
-        destruct HSubsteps.
-        * simpl in H10.
-          congruence.
-        * admit. (* destruct sul.
-          -- simpl in H6.
-             destruct l.
-             replace ll with {| annot := Some o;
-                                defs := FMap.M.union (FMap.M.empty {x : SignatureT & SignT x}) defs;
-                                calls := FMap.M.union scs calls |} in * by (destruct annot; subst; reflexivity).
-             inversion H0; subst.
-             ++ simpl in H14.
+             match goal with
+             | [ H1 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr1; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _,
+                 H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
+                 |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
+             end.
+             ++ eauto.
+             ++ match goal with
+                | [ H : labelToTraceEvent ?l = _,
+                    x : forall _ : Fin.t 1, _
+                    |- evalExpr ?adr = _ ] =>
+                  replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
+                end.
+                match goal with
+                | [ H : labelToTraceEvent ?l = _,
+                    x : forall _ : Fin.t 1, _
+                    |- _ = evalExpr ?adr ] =>
+                  replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
+             end.
+                Opaque evalExpr.
+                repeat match goal with
+                       | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                       end.
                 congruence.
-             ++ simpl in HInRules.
-                intuition idtac.
-        Check (existT _
-                                      {| arg := Struct
-                                                  (STRUCT
-                                                     {"addr" :: Bit 16;
-                                                      "op" :: Bool;
-                                                      "data" :: Bit 32});
-                                         ret := Struct
-                                                  (STRUCT
-                                                     {"data" :: Bit 32})
-                                      |}
-                                      (evalExpr (STRUCT { "addr" ::= #laddr_aligned;
-                                                                   "op" ::= _;
-                                                                   "data" ::= $0 })%kami_expr,
-                                                evalExpr (STRUCT { "data" ::= #val0 })%kami_expr)).
-        assert (foldSSLabel ss =
-                {| annot := Some (Some "execLd");
-                   defs := FMap.M.empty _;
-                   calls := FMap.M.add
-                              "exec"
-                              (existT _
-                                      {| arg := Struct
-                                                  (STRUCT
-                                                     {"addr" :: Bit 16;
-                                                      "op" :: Bool;
-                                                      "data" :: Bit 32});
-                                         ret := Struct
-                                                  (STRUCT
-                                                     {"data" :: Bit 32})
-                                      |}
-                                      (evalExpr (STRUCT { "addr" ::= #laddr_aligned;
-                                                                   "op" ::= #(false);
-                                                                   "data" ::= $0 })%kami_expr,
-                                                evalExpr (STRUCT { "data" ::= #val0 })%kami_expr)) |}).
-        induction HSubsteps.
-        * simpl in H10.
-          congruence.
-        * *)
+                Transparent evalExpr.
+          -- evbool_auto.
+          -- evbool_auto.
+          -- evbool_auto.
+          -- evbool_auto.
+          -- evbool_auto.
+          -- evbool_auto.
+          -- evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
       + match goal with
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
@@ -636,8 +666,8 @@ Section SCTiming.
           end.
           unfold rv32iNextPc.
           unfold rv32iGetOptype in H1.
-          unfold evalExpr; fold evalExpr.
-          unfold evalExpr in H1; fold evalExpr in H1.
+          evexg.
+          evex H1.
           repeat match goal with
                  | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
                  | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
@@ -648,7 +678,7 @@ Section SCTiming.
                 | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
                 end;
             discriminate H1.
-        * admit.
+        * 
         * admit.*)
   Admitted.
 
