@@ -252,6 +252,49 @@ Section SCTiming.
                            (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
                                                    (FMap.M.empty _))).
 
+  Lemma SCRegs_find_rf : forall rf pm pc rf',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "rf"
+                                   (SCRegs rf pm pc) =
+                       Some
+                         (existT (fullType type) (SyntaxKind (Vector (Bit 32) 5)) rf') -> rf = rf'.
+  Proof.
+    intros.
+    unfold SCRegs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Lemma SCRegs_find_pm : forall rf pm pc pm',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "pgm"
+                  (SCRegs rf pm pc) =
+      Some
+        (existT (fullType type) (SyntaxKind (Vector (Bit 32) 8)) pm') -> pm = pm'.
+  Proof.
+    intros.
+    unfold SCRegs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Lemma SCRegs_find_pc : forall rf pm pc pc',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "pc"
+                  (SCRegs rf pm pc) =
+      Some
+        (existT (fullType type) (SyntaxKind (Bit 16)) pc') -> pc = pc'.
+  Proof.
+    intros.
+    unfold SCRegs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Ltac SCRegs_find :=
+    repeat match goal with
+           | [ H : FMap.M.find "rf" (SCRegs ?rf _ _) = Some (existT _ _ ?rf') |- _ ] => assert (rf = rf') by (eapply SCRegs_find_rf; eassumption); subst; clear H
+           | [ H : FMap.M.find "pgm" (SCRegs _ ?pm _) = Some (existT _ _ ?pm') |- _ ] => assert (pm = pm') by (eapply SCRegs_find_pm; eassumption); subst; clear H
+           | [ H : FMap.M.find "pc" (SCRegs _ _ ?pc) = Some (existT _ _ ?pc') |- _ ] => assert (pc = pc') by (eapply SCRegs_find_pc; eassumption); subst; clear H
+           end.
+  
   Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n "exec"
     then match t with
@@ -524,68 +567,35 @@ Section SCTiming.
       | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
       end.
       opaque_subst.
-      simpl;
-      f_equal;
-        repeat match goal with
-               | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
-                 inversion Hbm;
-                   clear Hbm;
-                   match goal with
-                   | [ Hst : Step _ _ _ lbl |- _ ] =>
-                     inversion Hst;
-                       clear Hst
-                   end
-               end;
-        opaque_subst.
-(*      Lemma SCSubstepsLd :
-        forall rf pm pc (ss : Substeps rv32iProcInst (SCRegs rf pm pc)),
-          evalExpr (rv32iGetOptype type (pm (evalExpr (rv32iAlignPc type pc)))) = opLd
-          -> evalExpr (rv32iGetLdDst type (pm (evalExpr (rv32iAlignPc type pc)))) <> wzero _
-          -> substepsComb ss
-          -> (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
-              \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
-             /\ (foldSSUpds ss) = FMap.M.empty _)
-            \/ (exists a u cs,
-                  In ("execLd" :: a)%struct (getRules rv32iProcInst)
-                  /\ SemAction (SCRegs rf pm pc) (a type) u cs WO
-                  /\ (foldSSLabel ss) = {| annot := Some (Some "execLd"); defs := FMap.M.empty _; calls := cs |}
-                  /\ (foldSSUpds ss) = u).
-      Proof.
-        intros.
-        apply substepsComb_substepsInd in H1.
-        apply SCSubsteps in H1.
-        intuition idtac; shatter; intuition idtac.
-        right.
-        simpl in H1.
-        intuition idtac;
-          match goal with
-          | [ Heq : (_ :: _)%struct = (_ :: _)%struct |- _ ] => inversion Heq; clear Heq
-          end; exists x0, x1, x2; subst.
-        - intuition idtac.
-          simpl.
-          tauto.
-        - Opaque evalExpr.
-          kinv_action_dest.
-          Transparent evalExpr.
-          replace (FMap.M.find "pc" (SCRegs rf pm pc)) with (Some (existT (fullType type) (SyntaxKind (Bit rv32iAddrSize)) pc)) in H1 by eauto.
-          inversion H1.
-          inversion H11.
-          replace (FMap.M.find "pgm" (SCRegs rf pm pc)) with (Some (existT (fullType type) (SyntaxKind (Vector (MemTypes.Data rv32iDataBytes) rv32iIAddrSize)) pm)) in H4 by eauto.
-          repeat evbool_auto.
-          replace 
-          inversion H5.
-          exists x0, x1, x2.
-          subst.
-          intuition idtac.
-          + simpl.
-            tauto.
-        -
-      Qed.*)
-      + apply substepsComb_substepsInd in HSubsteps.
-        apply SCSubsteps in HSubsteps.
+      simpl.
+      repeat match goal with
+             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        end.
+      match goal with
+      | [ H : In _ _ |- _ ] => simpl in H
+      end.
+      Opaque evalExpr.
+      intuition idtac; kinv_action_dest.
+      Transparent evalExpr.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
-          | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
         | [ H : In _ _ |- _ ] => simpl in H
@@ -593,18 +603,8 @@ Section SCTiming.
         Opaque evalExpr.
         intuition idtac; kinv_action_dest.
         Transparent evalExpr.
-        * apply substepsComb_substepsInd in HSubsteps0.
-          apply SCSubsteps in HSubsteps0.
-          intuition idtac; shatter;
-          match goal with
-          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
-          end.
-          match goal with
-          | [ H : In _ _ |- _ ] => simpl in H
-          end.
-          Opaque evalExpr.
-          intuition idtac; kinv_action_dest.
-          Transparent evalExpr.
+        * SCRegs_find.
+          f_equal.
           -- do 2 match goal with
                   | [ |- context[@evalExpr ?t (STRUCT {"addr" ::= rv32iAlignAddr ?ty ?adr; "op" ::= ?o; "data" ::= ?d})%kami_expr] ] => replace (@evalExpr t (STRUCT {"addr" ::= rv32iAlignAddr ty adr; "op" ::= _; "data" ::= _})%kami_expr) with (@evalExpr t (STRUCT {"addr" ::= #(evalExpr (rv32iAlignAddr ty adr)); "op" ::= o; "data" ::= d})%kami_expr) by eauto
                   end.
@@ -615,32 +615,323 @@ Section SCTiming.
                  H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
                  |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
              end.
-             ++ eauto.
+             ++ clear; eauto.
              ++ match goal with
                 | [ H : labelToTraceEvent ?l = _,
                     x : forall _ : Fin.t 1, _
                     |- evalExpr ?adr = _ ] =>
                   replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
                 end.
+                Opaque evalExpr.
                 match goal with
+                | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                end.
+                Transparent evalExpr.
+                match goal with
+                | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                end.
+                reflexivity.
+          -- match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1; try eassumption
+                end.
+                unfold rv32iNextPc.
+                unfold rv32iGetOptype in H1.
+                evexg.
+                evex H1.
+                repeat match goal with
+                       | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                       | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                       end;
+                  unfold evalConstT in *;
+                  try reflexivity;
+                  try match goal with
+                      | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                      end;
+                  discriminate H1.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto; inversion H
+                     end
+                   end.
+                   reflexivity.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 | idtac ]
+                end.
+                ** clear; eauto.
+                ** evexg.
+                   unfold rv32iNextPc.
+                   unfold rv32iGetOptype in H1.
+                   evexg.
+                   evex H1.
+                   repeat match goal with
+                          | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                          | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                          end;
+                     unfold evalConstT in *;
+                     try reflexivity;
+                     try match goal with
+                         | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                         end;
+                     discriminate H1.
+                ** unfold rset.
+                   fold dstIdx.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val0),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val0) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H
+                     end
+                   end.
+                   --- Opaque evalExpr.
+                       inversion H18.
+                       Transparent evalExpr.
+                       reflexivity.
+                   --- eauto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+    - match goal with
+      | [ Hct : censorTrace (Rd _ _ _ :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
+      end.
+      opaque_subst.
+      simpl.
+      repeat match goal with
+             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        end.
+      match goal with
+      | [ H : In _ _ |- _ ] => simpl in H
+      end.
+      Opaque evalExpr.
+      intuition idtac; kinv_action_dest.
+      Transparent evalExpr.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * SCRegs_find.
+          f_equal.
+          -- do 2 match goal with
+                  | [ |- context[@evalExpr ?t (STRUCT {"addr" ::= rv32iAlignAddr ?ty ?adr; "op" ::= ?o; "data" ::= ?d})%kami_expr] ] => replace (@evalExpr t (STRUCT {"addr" ::= rv32iAlignAddr ty adr; "op" ::= _; "data" ::= _})%kami_expr) with (@evalExpr t (STRUCT {"addr" ::= #(evalExpr (rv32iAlignAddr ty adr)); "op" ::= o; "data" ::= d})%kami_expr) by eauto
+                  end.
+             unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
+             f_equal.
+             match goal with
+             | [ H1 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr1; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _,
+                 H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
+                 |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
+             end.
+             ++ clear; eauto.
+             ++ match goal with
                 | [ H : labelToTraceEvent ?l = _,
                     x : forall _ : Fin.t 1, _
-                    |- _ = evalExpr ?adr ] =>
+                    |- evalExpr ?adr = _ ] =>
                   replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
-             end.
+                end.
                 Opaque evalExpr.
-                repeat match goal with
-                       | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
-                       end.
-                congruence.
+                match goal with
+                | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                end.
                 Transparent evalExpr.
-          -- evbool_auto.
-          -- evbool_auto.
-          -- evbool_auto.
-          -- evbool_auto.
-          -- evbool_auto.
-          -- evbool_auto.
-          -- evbool_auto.
+                match goal with
+                | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                end.
+                reflexivity.
+          -- match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1; try eassumption
+                end.
+                unfold rv32iNextPc.
+                unfold rv32iGetOptype in H1.
+                evexg.
+                evex H1.
+                repeat match goal with
+                       | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                       | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                       end;
+                  unfold evalConstT in *;
+                  try reflexivity;
+                  try match goal with
+                      | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                      end;
+                  discriminate H1.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto; inversion H
+                     end
+                   end.
+                   reflexivity.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 | idtac ]
+                end.
+                ** clear; eauto.
+                ** evexg.
+                   unfold rv32iNextPc.
+                   unfold rv32iGetOptype in H1.
+                   evexg.
+                   evex H1.
+                   repeat match goal with
+                          | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                          | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                          end;
+                     unfold evalConstT in *;
+                     try reflexivity;
+                     try match goal with
+                         | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                         end;
+                     discriminate H1.
+                ** unfold rset.
+                   fold dstIdx.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val0),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val0) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H
+                     end
+                   end.
+                   --- Opaque evalExpr.
+                       inversion H18.
+                       Transparent evalExpr.
+                       reflexivity.
+                   --- eauto.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
@@ -648,38 +939,13 @@ Section SCTiming.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
-      + match goal with
-        | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
-        end;
-        try match goal with
-            | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
-              replace r2 with r1; try eassumption
-            | [ |- censorTrace _ = censorTrace _ ] => eassumption
-            | [ |- relatedTrace _ _ ] => eassumption
-            end.
-        * match goal with
-          | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
-          end.
-          subst.
-          match goal with
-          | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1; try eassumption
-          end.
-          unfold rv32iNextPc.
-          unfold rv32iGetOptype in H1.
-          evexg.
-          evex H1.
-          repeat match goal with
-                 | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
-                 | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
-                 end;
-            unfold evalConstT in *;
-            try reflexivity;
-            try match goal with
-                | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
-                end;
-            discriminate H1.
-        * 
-        * admit.*)
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
   Admitted.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
