@@ -1016,71 +1016,19 @@ Section SCTiming.
              ++ match goal with
                 | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
-                match goal with
-                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
-                end.
-                ** clear; eauto.
-                ** unfold rset.
-                   destruct (weq dstIdx (wzero _)); try tauto.
-                   evexg.
-                   apply functional_extensionality.
-                   intros.
-                   unfold dstIdx.
-                   match goal with
-                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
-                   end.
-                   simpl.
-                   match goal with
-                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val),
-                           x : forall _ : Fin.t 1, _
-                                              |- _ ] =>
-                     match goal with
-                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val) |- _ ] =>
-                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto; inversion H
-                     end
-                   end.
-                   reflexivity.
+                unfold SCRegs; clear; eauto.
              ++ match goal with
                 | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 match goal with
-                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 by congruence | idtac ]
+                | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
                 end.
                 ** clear; eauto.
-                ** unfold rset.
-                   fold dstIdx.
-                   destruct (weq dstIdx (wzero _)); try tauto.
-                   evexg.
-                   apply functional_extensionality.
-                   intros.
-                   unfold dstIdx.
-                   match goal with
-                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
-                   end.
-                   simpl.
-                   match goal with
-                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val0),
-                           x : forall _ : Fin.t 1, _
-                                              |- _ ] =>
-                     match goal with
-                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val0) |- _ ] =>
-                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H
-                     end
-                   end.
-                   --- Opaque evalExpr.
-                       inversion H18.
-                       Transparent evalExpr.
-                       reflexivity.
-                   --- eauto.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
-        * evbool_auto.
-        * evbool_auto.
-      + evbool_auto.
-      + evbool_auto.
       + evbool_auto.
       + evbool_auto.
       + evbool_auto.
