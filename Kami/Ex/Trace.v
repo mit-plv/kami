@@ -517,6 +517,11 @@ Section SCTiming.
     | [ H : _ = true |- _ ] => evex H; boolex
     end.
 
+  Ltac evbool_auto_rep :=
+    repeat match goal with
+           | [ H : _ = true |- _ ] => evex H; boolex; clear H
+           end.
+
   Ltac simplify_match :=
     repeat match goal with
            | [ |- context[match ?x with _ => _ end] ] =>
@@ -651,7 +656,7 @@ Section SCTiming.
                              | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
                              end;
                       unfold evalConstT in *;
-                      try reflexivity;
+                      try congruence;
                       try match goal with
                           | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
                           end;
@@ -822,7 +827,7 @@ Section SCTiming.
                              | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
                              end;
                       unfold evalConstT in *;
-                      try reflexivity;
+                      try congruence;
                       try match goal with
                           | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
                           end;
@@ -990,7 +995,7 @@ Section SCTiming.
                              | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
                              end;
                       unfold evalConstT in *;
-                      try reflexivity;
+                      try congruence;
                       try match goal with
                           | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
                           end;
@@ -1093,91 +1098,16 @@ Section SCTiming.
         * evbool_auto.
         * SCRegs_find.
           f_equal.
-          -- clear.
-             eauto.
-             unfold MemTypes.Data, rv32iDataBytes.
-             replace (Bit (4 * 8)) with (Bit 32)
-             eauto.
-(*             
-            Lemma word_0_uniq : forall n (x : word n),
-              n = 0 -> x = (wzero n).
-             Proof.
-               induction x.
-               - reflexivity.
-               - discriminate.
-             Qed.
-             repeat match goal with
-                    | [ x : word 0 |- _ ] => pose (word_0_uniq _ x eq_refl); subst
+          -- repeat match goal with
+                    | [ x : word 0 |- _ ] => shatter_word x; clear x
                     end.
-             match goal with
-             | [ |- censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (?x1, _)) _ |}) = censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (?x2, _)) _ |}) ] => remember x1 as blah; remember x2 as blah'; clear
-             end.
-             unfold censorSCMeth.
-             simpl.
-             unfold FMap.M.mapi.
-             simpl.
-             unfold FMap.M.Raw.mapi_sorted, FMap.M.Raw.add_sorted, FMap.M.Raw.empty_sorted.
-             simpl.
-             f_equal.
-             f_equal.
-             eauto.
-             unfold FMap.M.Map.M.Raw.mapi_sorted.
-             FMap.findeq.
-             
-             unfold censorSCMeth.
-             simpl.
-             eauto.
-             match goal with
-             | [ 
-             match goal with
-             | [ |- ?blah = _ ] => replace blah with
-                   {|
-                     annot := Some (Some "execToHost");
-                     defs := FMap.M.empty {x : SignatureT & SignT x};
-                     calls := FMap.M.add "toHost"
-                                         (existT SignT
-                                                 {|
-                                                   arg := MemTypes.Data rv32iDataBytes;
-                                                   ret := Bit 0 |}
-                                                 (wzero _, wzero 0)) (FMap.M.empty _)|}
-             end.
-             ++ admit.
-             ++              unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
-                             f_equal.
-                             ** eauto.
-                             ** 
-
-                     x7)) (FMap.M.empty {x : SignatureT & SignT x}) |})
-
-             unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
-             eauto.
-            Lemma word_0_uniq : forall n (x : word n),
-              n = 0 -> x = (wzero n).
-             Proof.
-               induction x.
-               - reflexivity.
-               - discriminate.
-             Qed.
              repeat match goal with
-                    | [ x : word 0 |- _ ] => pose (word_0_uniq _ x eq_refl); subst
+                    | [ |- context[hide ?l] ] => change (hide l) with l 
                     end.
-             match goal with
-             | [ |- censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (?x1, _)) _ |}) = censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (?x2, _)) _ |}) ] => replace x1 with x2; [ reflexivity | idtac ]
-             end.
-             repeat match goal with
-                    | [ H : labelToTraceEvent ?l = _ |- context[?x] ] =>
-                      replace (labelToTraceEvent l) with (Some (ToHost $ (0) x)) in H by eauto
-                    end.
-             inversion H8.
-             Opaque evalExpr.
-             repeat match goal with
-                    | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
-                    end.
-             Transparent evalExpr.
-             match goal with
-             | [ H : ?x = _ |- ?x = _ ] => rewrite H
-             end.
-                reflexivity.*)
+             unfold censorLabel; f_equal.
+             FMap.M.ext k.
+             do 2 rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
+             FMap.mred.
           -- match goal with
              | [ rf : word rv32iRfIdx -> word 32,
                  rf' : word rv32iRfIdx -> word 32,
@@ -1198,7 +1128,414 @@ Section SCTiming.
                              | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
                              end;
                       unfold evalConstT in *;
-                      try reflexivity;
+                      try congruence;
+                      try match goal with
+                          | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                          end;
+                      discriminate H
+                    end)
+             end.
+             match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
+                end.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                clear; unfold SCRegs; eauto.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
+                end.
+                clear; eauto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+    - match goal with
+      | [ Hct : censorTrace (FromHost _ _ :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
+      end.
+      opaque_subst.
+      simpl.
+      repeat match goal with
+             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        end.
+      match goal with
+      | [ H : In _ _ |- _ ] => simpl in H
+      end.
+      Opaque evalExpr.
+      intuition idtac; kinv_action_dest.
+      Transparent evalExpr.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * SCRegs_find.
+          f_equal.
+          -- repeat match goal with
+                    | [ |- context[hide ?l] ] => change (hide l) with l 
+                    end.
+             unfold censorLabel; f_equal.
+             FMap.M.ext k.
+             do 2 rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
+             FMap.mred.
+          -- match goal with
+             | [ rf : word rv32iRfIdx -> word 32,
+                 rf' : word rv32iRfIdx -> word 32,
+                 pm : word rv32iIAddrSize -> word 32,
+                 pc : word rv32iAddrSize |- _ ] =>
+               assert (evalExpr
+                         (rv32iNextPc type rf pc (pm (evalExpr (rv32iAlignPc type pc)))) =
+                       evalExpr
+                         (rv32iNextPc type rf' pc (pm (evalExpr (rv32iAlignPc type pc))))) by
+                   (unfold rv32iNextPc;
+                    evexg;
+                    match goal with
+                    | [ H : context[rv32iGetOptype] |- _ ] =>
+                      unfold rv32iGetOptype in H;
+                      evex H;
+                      repeat match goal with
+                             | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                             | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                             end;
+                      unfold evalConstT in *;
+                      try congruence;
+                      try match goal with
+                          | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                          end;
+                      discriminate H
+                    end)
+             end.
+             match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
+                end.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   match goal with
+                   | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
+                   end.
+                   destruct (weq dst (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dst.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (FromHost $ (0) ?val),
+                           x : word 32
+                       |- _ = ?val ] =>
+                     replace (labelToTraceEvent l) with (Some (FromHost $ (0) x)) by eauto; inversion H
+                   end.
+                   reflexivity.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 by congruence | idtac ]
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   match goal with
+                   | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
+                   end.
+                   match goal with
+                   | [ |- (if ?b then _ else _) = _ ] => destruct b; try tauto
+                   end.
+                   evexg.
+                   match goal with
+                   | [ |- (fun _ => if _ then ?v else _) = (fun _ => if _ then ?v' else _) ] => replace v with v'; try reflexivity
+                   end.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (FromHost $ (0) ?v) |- ?v' = ?v ] =>
+                     replace (labelToTraceEvent l) with (Some (FromHost $ (0) v')) in H by eauto; inversion H
+                   end.
+                   reflexivity.
+        * SCRegs_find.
+          evbool_auto_rep.
+          tauto.
+        * evbool_auto.
+        * evbool_auto.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * SCRegs_find.
+          evbool_auto_rep.
+          tauto.
+        * SCRegs_find.
+          f_equal.
+          -- repeat match goal with
+                    | [ |- context[hide ?l] ] => change (hide l) with l 
+                    end.
+             unfold censorLabel; f_equal.
+             FMap.M.ext k.
+             do 2 rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
+             FMap.mred.
+          -- match goal with
+             | [ rf : word rv32iRfIdx -> word 32,
+                 rf' : word rv32iRfIdx -> word 32,
+                 pm : word rv32iIAddrSize -> word 32,
+                 pc : word rv32iAddrSize |- _ ] =>
+               assert (evalExpr
+                         (rv32iNextPc type rf pc (pm (evalExpr (rv32iAlignPc type pc)))) =
+                       evalExpr
+                         (rv32iNextPc type rf' pc (pm (evalExpr (rv32iAlignPc type pc))))) by
+                   (unfold rv32iNextPc;
+                    evexg;
+                    match goal with
+                    | [ H : context[rv32iGetOptype] |- _ ] =>
+                      unfold rv32iGetOptype in H;
+                      evex H;
+                      repeat match goal with
+                             | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                             | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                             end;
+                      unfold evalConstT in *;
+                      try congruence;
+                      try match goal with
+                          | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                          end;
+                      discriminate H
+                    end)
+             end.
+             match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
+                end.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   match goal with
+                   | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
+                   end.
+                   destruct (weq dst (wzero _)); try tauto.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1; [ replace p1 with p2 by congruence | idtac ]
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   match goal with
+                   | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
+                   end.
+                   match goal with
+                   | [ |- _ = (if ?b then _ else _) ] => destruct b; tauto
+                   end.
+        * evbool_auto.
+        * evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+    - match goal with
+      | [ Hct : censorTrace (Rd _ _ _ :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
+      end.
+      opaque_subst.
+      simpl.
+      repeat match goal with
+             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        end.
+      match goal with
+      | [ H : In _ _ |- _ ] => simpl in H
+      end.
+      Opaque evalExpr.
+      intuition idtac; kinv_action_dest.
+      Transparent evalExpr.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * SCRegs_find.
+          f_equal.
+          -- do 2 match goal with
+                  | [ |- context[@evalExpr ?t (STRUCT {"addr" ::= rv32iAlignAddr ?ty ?adr; "op" ::= ?o; "data" ::= ?d})%kami_expr] ] => replace (@evalExpr t (STRUCT {"addr" ::= rv32iAlignAddr ty adr; "op" ::= _; "data" ::= _})%kami_expr) with (@evalExpr t (STRUCT {"addr" ::= #(evalExpr (rv32iAlignAddr ty adr)); "op" ::= o; "data" ::= d})%kami_expr) by eauto
+                  end.
+             unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
+             f_equal.
+             match goal with
+             | [ H1 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr1; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _,
+                 H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
+                 |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
+             end.
+             ++ clear; eauto.
+             ++ match goal with
+                | [ H : labelToTraceEvent ?l = _,
+                    x : forall _ : Fin.t 1, _
+                    |- evalExpr ?adr = _ ] =>
+                  replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
+                end.
+                Opaque evalExpr.
+                match goal with
+                | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                end.
+                Transparent evalExpr.
+                match goal with
+                | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                end.
+                reflexivity.
+          -- match goal with
+             | [ rf : word rv32iRfIdx -> word 32,
+                 rf' : word rv32iRfIdx -> word 32,
+                 pm : word rv32iIAddrSize -> word 32,
+                 pc : word rv32iAddrSize |- _ ] =>
+               assert (evalExpr
+                         (rv32iNextPc type rf pc (pm (evalExpr (rv32iAlignPc type pc)))) =
+                       evalExpr
+                         (rv32iNextPc type rf' pc (pm (evalExpr (rv32iAlignPc type pc))))) by
+                   (unfold rv32iNextPc;
+                    evexg;
+                    match goal with
+                    | [ H : context[rv32iGetOptype] |- _ ] =>
+                      unfold rv32iGetOptype in H;
+                      evex H;
+                      repeat match goal with
+                             | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                             | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                             end;
+                      unfold evalConstT in *;
+                      try congruence;
                       try match goal with
                           | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
                           end;
@@ -1294,6 +1631,202 @@ Section SCTiming.
       + evbool_auto.
       + evbool_auto.
       + evbool_auto.
+    - match goal with
+      | [ Hct : censorTrace (Rd _ _ _ :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
+      end.
+      opaque_subst.
+      simpl.
+      repeat match goal with
+             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCSubsteps in HSubsteps.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        end.
+      match goal with
+      | [ H : In _ _ |- _ ] => simpl in H
+      end.
+      Opaque evalExpr.
+      intuition idtac; kinv_action_dest.
+      Transparent evalExpr.
+      + apply substepsComb_substepsInd in HSubsteps0.
+        apply SCSubsteps in HSubsteps0.
+        intuition idtac; shatter;
+          match goal with
+          | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+          end.
+        match goal with
+        | [ H : In _ _ |- _ ] => simpl in H
+        end.
+        Opaque evalExpr.
+        intuition idtac; kinv_action_dest.
+        Transparent evalExpr.
+        * SCRegs_find.
+          f_equal.
+          -- do 2 match goal with
+                  | [ |- context[@evalExpr ?t (STRUCT {"addr" ::= rv32iAlignAddr ?ty ?adr; "op" ::= ?o; "data" ::= ?d})%kami_expr] ] => replace (@evalExpr t (STRUCT {"addr" ::= rv32iAlignAddr ty adr; "op" ::= _; "data" ::= _})%kami_expr) with (@evalExpr t (STRUCT {"addr" ::= #(evalExpr (rv32iAlignAddr ty adr)); "op" ::= o; "data" ::= d})%kami_expr) by eauto
+                  end.
+             unfold censorLabel, censorSCMeth, hide, annot, calls, defs.
+             f_equal.
+             match goal with
+             | [ H1 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr1; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _,
+                 H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
+                 |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
+             end.
+             ++ clear; eauto.
+             ++ match goal with
+                | [ H : labelToTraceEvent ?l = _,
+                    x : forall _ : Fin.t 1, _
+                    |- evalExpr ?adr = _ ] =>
+                  replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto
+                end.
+                Opaque evalExpr.
+                match goal with
+                | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                end.
+                Transparent evalExpr.
+                match goal with
+                | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                end.
+                reflexivity.
+          -- match goal with
+             | [ rf : word rv32iRfIdx -> word 32,
+                 rf' : word rv32iRfIdx -> word 32,
+                 pm : word rv32iIAddrSize -> word 32,
+                 pc : word rv32iAddrSize |- _ ] =>
+               assert (evalExpr
+                         (rv32iNextPc type rf pc (pm (evalExpr (rv32iAlignPc type pc)))) =
+                       evalExpr
+                         (rv32iNextPc type rf' pc (pm (evalExpr (rv32iAlignPc type pc))))) by
+                   (unfold rv32iNextPc;
+                    evexg;
+                    match goal with
+                    | [ H : context[rv32iGetOptype] |- _ ] =>
+                      unfold rv32iGetOptype in H;
+                      evex H;
+                      repeat match goal with
+                             | [ H : context[isEq _ _ (evalConstT ?o)] |- _ ] => destruct (isEq _ _ (evalConstT o))
+                             | [ |- context[isEq _ _ (evalConstT ?o) ] ] => destruct (isEq _ _ (evalConstT o))
+                             end;
+                      unfold evalConstT in *;
+                      try congruence;
+                      try match goal with
+                          | [ H1 : evalExpr (getOpcodeE _) = ?o1, H2 : evalExpr (getOpcodeE _) = ?o2 |- _ ] => rewrite H1 in H2; discriminate H2
+                          end;
+                      discriminate H
+                    end)
+             end.
+             match goal with
+             | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
+             end;
+               try match goal with
+                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                     replace r2 with r1; try eassumption
+                   | [ |- censorTrace _ = censorTrace _ ] => eassumption
+                   | [ |- relatedTrace _ _ ] => eassumption
+                   end.
+             ++ match goal with
+                | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+                end.
+                subst.
+                match goal with
+                | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
+                end.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H by eauto; inversion H
+                     end
+                   end.
+                   reflexivity.
+             ++ match goal with
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                end.
+                match goal with
+                | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 by congruence | idtac ]
+                end.
+                ** clear; eauto.
+                ** unfold rset.
+                   fold dstIdx.
+                   destruct (weq dstIdx (wzero _)); try tauto.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   unfold dstIdx.
+                   match goal with
+                   | [ |- (if _ then ?x else _) = (if _ then ?y else _) ] => replace x with y; [ reflexivity | idtac ]
+                   end.
+                   simpl.
+                   match goal with
+                   | [ H : labelToTraceEvent ?l = Some (Rd $ (0) laddr_aligned val0),
+                           x : forall _ : Fin.t 1, _
+                                              |- _ ] =>
+                     match goal with
+                     | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ val0) |- _ ] =>
+                       replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!(RsToProc rv32iDataBytes)@."data")%kami_expr))) in H
+                     end
+                   end.
+                   --- Opaque evalExpr.
+                       inversion H18.
+                       Transparent evalExpr.
+                       reflexivity.
+                   --- eauto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+        * evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+      + evbool_auto.
+
   Admitted.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
