@@ -243,6 +243,10 @@ Section ProcThreeStage.
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
 
+      with Method "sbSearch1_Fh" (sidx: Bit rfIdx) : Bool :=
+        Read flags <- "sbFlags";
+        Ret #flags@[#sidx]
+
       with Method "sbSearch1_Nm" (sidx: Bit rfIdx) : Bool :=
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
@@ -271,6 +275,7 @@ Section ProcThreeStage.
     Definition sbSearch1_St := MethodSig "sbSearch1_St"(Bit rfIdx) : Bool.
     Definition sbSearch2_St := MethodSig "sbSearch2_St"(Bit rfIdx) : Bool.
     Definition sbSearch1_Th := MethodSig "sbSearch1_Th"(Bit rfIdx) : Bool.
+    Definition sbSearch1_Fh := MethodSig "sbSearch1_Fh"(Bit rfIdx) : Bool.
     Definition sbSearch1_Nm := MethodSig "sbSearch1_Nm"(Bit rfIdx) : Bool.
     Definition sbSearch2_Nm := MethodSig "sbSearch2_Nm"(Bit rfIdx) : Bool.
     Definition sbSearch3_Nm := MethodSig "sbSearch3_Nm"(Bit rfIdx) : Bool.
@@ -379,6 +384,29 @@ Section ProcThreeStage.
                             #rawInst #ppc #npc #epoch);
         Retv
 
+      with Rule "instFetchFh" :=
+        Call w2dFull <- w2dFull();
+        Assert !#w2dFull;
+        Read ppc : Bit addrSize <- "pc";
+        Read pgm <- "pgm";
+        LET rawInst <- #pgm@[alignPc _ ppc];
+        Call rf <- getRf1();
+
+        LET npc <- predictNextPc _ ppc;
+        Read epoch <- "fEpoch";
+        Write "pc" <- #npc;
+
+        LET opType <- getOptype _ rawInst;
+        Assert (#opType == $$opFh);
+
+        LET dst <- getDst _ rawInst;
+        Call stall1 <- sbSearch1_Fh(#dst);
+        Assert !#stall1;
+
+        Call d2eEnq(d2ePack #opType #dst $$Default $$Default $$Default
+                            #rawInst #ppc #npc #epoch);
+        Retv
+
       with Rule "instFetchNm" :=
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
@@ -441,6 +469,7 @@ Section ProcThreeStage.
 
   Section WriteBack.
     Definition toHost := MethodSig "toHost"(Data dataBytes) : Void.
+    Definition fromHost := MethodSig "fromHost"(Void) : (Data dataBytes).
     
     Definition checkNextPc {ty} ppc npcp st rawInst :=
       (LET npc <- getNextPc ty st ppc rawInst;
@@ -467,7 +496,7 @@ Section ProcThreeStage.
         Call eEpoch <- getEpoch();
         Assert (#fEpoch != #eEpoch);
 
-        If (d2eOpType _ d2e == $$opLd || d2eOpType _ d2e == $$opNm)
+        If (d2eOpType _ d2e == $$opLd || d2eOpType _ d2e == $$opNm || d2eOpType _ d2e == $$opFh)
         then
           LET dst <- d2eDst _ d2e;
           Call sbRemove(#dst);
@@ -582,6 +611,49 @@ Section ProcThreeStage.
         LET rawInst <- d2eRawInst _ d2e;
         checkNextPc ppc npcp rf rawInst
 
+      with Rule "execFromHost" :=
+        Read stall <- "stall";
+        Assert !#stall;
+        Call rf <- getRf2();
+        Call e2w <- e2wDeq();
+        LET d2e <- e2wDecInst _ e2w;
+
+        LET fEpoch <- d2eEpoch _ d2e;
+        Call eEpoch <- getEpoch();
+        Assert (#fEpoch == #eEpoch);
+
+        Assert d2eOpType _ d2e == $$opFh;
+        LET dst <- d2eDst _ d2e;
+        Assert (#dst != $0);
+        Call val <- fromHost($0);
+        Call setRf(#rf@[#dst <- #val]);
+        Call sbRemove(#dst);
+        LET ppc <- d2eCurPc _ d2e;
+        LET npcp <- d2eNextPc _ d2e;
+        LET rawInst <- d2eRawInst _ d2e;
+        checkNextPc ppc npcp rf rawInst
+
+      with Rule "execFromHostZ" :=
+        Read stall <- "stall";
+        Assert !#stall;
+        Call rf <- getRf2();
+        Call e2w <- e2wDeq();
+        LET d2e <- e2wDecInst _ e2w;
+
+        LET fEpoch <- d2eEpoch _ d2e;
+        Call eEpoch <- getEpoch();
+        Assert (#fEpoch == #eEpoch);
+
+        Assert d2eOpType _ d2e == $$opFh;
+        LET dst <- d2eDst _ d2e;
+        Assert (#dst == $0);
+        Call fromHost($0);
+        Call sbRemove(#dst);
+        LET ppc <- d2eCurPc _ d2e;
+        LET npcp <- d2eNextPc _ d2e;
+        LET rawInst <- d2eRawInst _ d2e;
+        checkNextPc ppc npcp rf rawInst
+
       with Rule "wbNm" :=
         Read stall <- "stall";
         Assert !#stall;
@@ -647,7 +719,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep
      getRf1 getRf2 setRf getEpoch toggleEpoch
      e2wFifoName e2wEnq e2wDeq
      sbSearch1_Ld sbSearch2_Ld sbSearch1_St sbSearch2_St
-     sbSearch1_Th
+     sbSearch1_Th sbSearch1_Fh
      sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm
      sbInsert sbRemove
      toHost checkNextPc : MethDefs.
