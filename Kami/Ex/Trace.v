@@ -1,9 +1,9 @@
 Require Import List.
 Require Import Notations.
 Require Import Coq.Numbers.BinNums.
-Require Import Lib.Word.
+Require Import Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
-Require Import Ex.SC Ex.IsaRv32.
+Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
 Require Import Logic.FunctionalExtensionality.
@@ -276,6 +276,143 @@ Section KamiTrace.
           censorLabelSeq censorMeth labels = censorLabelSeq censorMeth  labels' /\
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
+
+Section ThreeStageTiming.
+
+  Definition censorThreeStageMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
+    if String.string_dec n ("rqFromProc" -- "enq")
+    then match t with
+         | existT _
+                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                            "op" :: Bool;
+                                            "data" :: Bit 32});
+                     ret := Bit 0 |}
+                  (argV, _) =>
+           existT _
+                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                            "op" :: Bool;
+                                            "data" :: Bit 32});
+                     ret := Bit 0 |}
+                  (evalExpr (STRUCT { "addr" ::= #argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."addr";
+                                      "op" ::= #argV!(RqFromProc rv32iAddrSize rv32iDataBytes)@."op";
+                                      "data" ::= $0 })%kami_expr,
+                   $0)
+         | _ => t
+         end
+    else if String.string_dec n ("rsToProc" -- "deq")
+    then match t with
+         | existT _
+                  {| arg := Bit 0;
+                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                  (argV, retV) =>
+           existT _
+                  {| arg := Bit 0;
+                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                  ($0,
+                   evalExpr (STRUCT { "data" ::= $0 })%kami_expr)
+         | _ => t
+         end
+    else if String.string_dec n "toHost"
+    then match t with
+         | existT _
+                  {| arg := Bit 32;
+                     ret := Bit 0 |}
+                  (argV, retV) =>
+           existT _
+                  {| arg := Bit 32;
+                     ret := Bit 0 |}
+                  ($0, retV)
+         | _ => t
+         end
+    else if String.string_dec n "fromHost"
+    then match t with
+         | existT _
+                  {| arg := Bit 0;
+                     ret := Bit 32 |}
+                  (argV, retV) =>
+           existT _
+                  {| arg := Bit 0;
+                     ret := Bit 32 |}
+                  (argV, $0)
+         | _ => t
+         end
+    else t.
+
+  Definition extractFhThreeStage (cs : MethsT) : list (word 32) :=
+    match FMap.M.find "fromHost" cs with
+    | Some (existT _
+                   {| arg := Bit 0;
+                      ret := Bit 32 |}
+                   (argV, retV)) =>
+      [retV]
+    | _ => nil
+    end.
+
+  Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
+    (#ppc + $4)%kami_expr.
+
+  Definition rv32iP3 :=
+    p3st rv32iGetOptype
+             rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+             rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+             rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
+             rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
+             predictNextPc
+             (d2ePackI (addrSize := rv32iAddrSize) (dataBytes := rv32iDataBytes) (rfIdx := rv32iRfIdx))
+             (d2eOpTypeI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eDstI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eAddrI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eVal1I rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eVal2I rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eRawInstI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eCurPcI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eNextPcI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (d2eEpochI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
+             (e2wPackI (addrSize := rv32iAddrSize) (dataBytes := rv32iDataBytes) (rfIdx := rv32iRfIdx))
+             (procInitDefault  _ _ _ _).
+
+  Theorem abstractToThreeStageHiding :
+    forall rf pm pc maxsp,
+      abstractHiding rf pm pc maxsp ->
+      kamiHiding censorThreeStageMeth extractFhThreeStage
+                 p3st
+                 maxsp
+                 (SCRegs rf pm pc).
+  Proof.
+    unfold abstractHiding, kamiHiding.
+    intros.
+    match goal with
+    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
+    end.
+    shatter.
+    match goal with
+    | [ Hrel : relatedTrace ?t ?ls,
+               Hextract : extractFhLabelSeq extractFhSC ?ls = _,
+                          Htrace : hasTrace _ _ _ _ _,
+                                   Habs : forall _ _, hasTrace _ _ _ _ _ -> extractFhTrace _ = _ -> forall _, length _ = length _ -> _,
+          Hlen : length _ = length _
+          |- context[extractFhLabelSeq _ _ = ?fhTrace] ] =>
+      rewrite <- (relatedFhTrace _ _ Hrel) in Hextract; specialize (Habs _ _ Htrace Hextract fhTrace Hlen)
+    end.
+    shatter.
+    match goal with
+    | [ Htrace : hasTrace _ _ _ _ ?t,
+                 Hextract : extractFhTrace ?t = ?fhTrace
+        |- context[?fhTrace] ] => pose (abstractToSCRelated _ _ _ _ _ Htrace)
+    end.
+    shatter.
+    match goal with
+    | [ H : BoundedForwardActiveMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
+    end.
+    repeat split;
+      match goal with
+      | [ |- BoundedForwardActiveMultistep _ _ _ _ _ ] => assumption
+      | [ Htrace1 : hasTrace _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
+      | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
+      end.
+  Qed.
+
+End ThreeStageTiming.
 
 Section SCTiming.
 
