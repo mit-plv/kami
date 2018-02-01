@@ -3,14 +3,12 @@ Require Import Notations.
 Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
-Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage.
+Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage Ex.OneEltFifo.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
 Require Import Logic.FunctionalExtensionality.
 
 Open Scope string_scope.
-
-Definition spReg := gprToRaw x2.
 
 Section AbstractTrace.
   Definition address := type (Bit rv32iAddrSize).
@@ -28,6 +26,9 @@ Section AbstractTrace.
     else evalExpr (UpdateVector #rf #r #v)%kami_expr.
 
   Definition progMem := iaddress -> data.
+
+  Definition memory := type (Vector (MemTypes.Data rv32iDataBytes) rv32iAddrSize).
+
   Inductive TraceEvent : Type :=
   | Nm (pc : address)
   | Rd (pc : address) (addr : address) (val : data)
@@ -37,11 +38,10 @@ Section AbstractTrace.
   | ToHost (pc : address) (val : data)
   | FromHost (pc : address) (val : data).
 
-  Inductive hasTrace : regfile -> progMem -> address -> data -> list TraceEvent -> Prop :=
-  | htNil : forall rf pm pc maxsp,
-      hasTrace rf pm pc maxsp nil
-  | htLd : forall inst val rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+  Inductive hasTrace : regfile -> progMem -> address -> memory -> list TraceEvent -> Prop :=
+  | htNil : forall rf pm pc mem,
+      hasTrace rf pm pc mem nil
+  | htLd : forall inst val rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opLd ->
       let addr := evalExpr (rv32iGetLdAddr type inst) in
@@ -51,10 +51,10 @@ Section AbstractTrace.
       let srcVal := rf srcIdx in
       let laddr := evalExpr (rv32iCalcLdAddr type addr srcVal) in
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
-      hasTrace (rset rf dstIdx val) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (Rd pc laddr_aligned val :: trace')
-  | htLdZ : forall inst rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      val = mem laddr_aligned ->
+      hasTrace (rset rf dstIdx val) pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (Rd pc laddr_aligned val :: trace')
+  | htLdZ : forall inst rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opLd ->
       evalExpr (rv32iGetLdDst type inst) = wzero _ ->
@@ -63,10 +63,9 @@ Section AbstractTrace.
       let srcVal := rf srcIdx in
       let laddr := evalExpr (rv32iCalcLdAddr type addr srcVal) in
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
-      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (RdZ pc laddr_aligned :: trace')
-  | htSt : forall inst rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (RdZ pc laddr_aligned :: trace')
+  | htSt : forall inst rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opSt ->
       let addr := evalExpr (rv32iGetStAddr type inst) in
@@ -76,32 +75,28 @@ Section AbstractTrace.
       let stVal := rf vsrcIdx in
       let saddr := evalExpr (rv32iCalcStAddr type addr srcVal) in
       let saddr_aligned := evalExpr (rv32iAlignAddr type saddr) in
-      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (Wr pc saddr_aligned stVal :: trace')
-  | htTh : forall inst rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) (fun a => if weq a saddr_aligned then stVal else mem a) trace' ->
+      hasTrace rf pm pc mem (Wr pc saddr_aligned stVal :: trace')
+  | htTh : forall inst rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opTh ->
       let srcIdx := evalExpr (rv32iGetSrc1 type inst) in
       let srcVal := rf srcIdx in
-      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (ToHost pc srcVal :: trace')
-  | htFh : forall inst rf val pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (ToHost pc srcVal :: trace')
+  | htFh : forall inst rf val pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opFh ->
       let dst := evalExpr (rv32iGetDst type inst) in
-      hasTrace (rset rf dst val) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (FromHost pc val :: trace')
-  | htNmBranch : forall inst rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      hasTrace (rset rf dst val) pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (FromHost pc val :: trace')
+  | htNmBranch : forall inst rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr = rv32iOpBRANCH ->
-      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (Branch pc (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
-  | htNm : forall inst rf pm pc maxsp trace',
-      rf spReg <= maxsp ->
+      hasTrace rf pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (Branch pc (evalExpr (rv32iBranchTaken type rf inst)) :: trace')
+  | htNm : forall inst rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opNm ->
       evalExpr (getOpcodeE #inst)%kami_expr <> rv32iOpBRANCH ->
@@ -111,8 +106,8 @@ Section AbstractTrace.
       let val2 := rf src2 in
       let dst := evalExpr (rv32iGetDst type inst) in
       let execVal := evalExpr (rv32iExec type val1 val2 pc inst) in
-      hasTrace (rset rf dst execVal) pm (evalExpr (rv32iNextPc type rf pc inst)) maxsp trace' ->
-      hasTrace rf pm pc maxsp (Nm pc :: trace').
+      hasTrace (rset rf dst execVal) pm (evalExpr (rv32iNextPc type rf pc inst)) mem trace' ->
+      hasTrace rf pm pc mem (Nm pc :: trace').
 
 
   Definition censorTrace : list TraceEvent -> list TraceEvent :=
@@ -127,9 +122,9 @@ Section AbstractTrace.
                 end).
 
   Lemma censorEq_same_pc :
-    forall rf1 rf2 pm1 pm2 pc1 pc2 maxsp1 maxsp2 tr1 tr2,
-      hasTrace rf1 pm1 pc1 maxsp1 tr1
-      -> hasTrace rf2 pm2 pc2 maxsp2 tr2
+    forall rf1 rf2 pm1 pm2 pc1 pc2 mem1 mem2 tr1 tr2,
+      hasTrace rf1 pm1 pc1 mem1 tr1
+      -> hasTrace rf2 pm2 pc2 mem2 tr2
       -> censorTrace tr1 = censorTrace tr2
       -> (tr1 = nil /\ tr2 = nil)
         \/ pc1 = pc2.
@@ -173,18 +168,42 @@ Section AbstractTrace.
                 | _ => nil
                 end).
 
-  Definition abstractHiding rf pm pc maxsp : Prop :=
+  Definition abstractHiding rf pm pc mem maxsp : Prop :=
     forall trace fhTrace,
-      hasTrace rf pm pc maxsp trace ->
+      hasTrace rf pm pc mem maxsp trace ->
       extractFhTrace trace = fhTrace ->
       forall fhTrace',
         length fhTrace = length fhTrace' ->
         exists trace',
-          hasTrace rf pm pc maxsp trace' /\
+          hasTrace rf pm pc mem maxsp trace' /\
           censorTrace trace = censorTrace trace' /\
           extractFhTrace trace' = fhTrace'.
 
 End AbstractTrace.
+
+Section MemShim.
+
+  Definition rv32iRq := RqFromProc rv32iAddrSize rv32iDataBytes.
+  Definition rv32iRs := RsToProc rv32iDataBytes.
+
+  Definition realMemReq := MethodSig ("rqFromProc" -- "enq")(Struct rv32iRq) : Void.
+  Definition reportReq := MethodSig ("report" -- "rqFromProc" -- "enq")(Struct rv32iRq) : Void.
+  Definition realMemRep := MethodSig ("rsToProc" -- "deq")() : (Struct rv32iRs).
+  Definition reportRep := MethodSig ("report" -- "rsToProc" -- "deq")(Struct rv32iRs) : Void.
+
+  Definition memShim := MODULE {
+    Method ("shim" -- "rqFromProc" -- "enq")(a : Struct rv32iRq) : Void :=
+      Call realMemReq(#a);
+      Call reportReq(#a);
+      Retv
+
+    with Method ("shim" -- "rsToProc" -- "deq")() : (Struct rv32iRs) :=
+      Call rep <- realMemRep();
+      Call reportRep(#rep);
+      Ret #rep
+  }.
+
+End MemShim.
 
 Section KamiTrace.
   Definition censorLabel censorMeth (l : LabelT) : LabelT :=
@@ -200,17 +219,25 @@ Section KamiTrace.
   Definition censorLabelSeq censorMeth : LabelSeqT -> LabelSeqT :=
     map (censorLabel censorMeth).
 
-  Definition extractFhLabel extractFh (l : LabelT) : list (word 32) :=
+  Definition extractFhLabel (l : LabelT) : list (word 32) :=
     match l with
     | {| annot := _;
          defs := _;
-         calls := c; |} => extractFh c
+         calls := c; |} => 
+      match FMap.M.find "fromHost" c with
+      | Some (existT _
+                     {| arg := Bit 0;
+                        ret := Bit 32 |}
+                     (argV, retV)) =>
+        [retV]
+      | _ => nil
+      end
     end.
 
-  Definition extractFhLabelSeq extractFh : LabelSeqT -> list (word 32) :=
-    flat_map (extractFhLabel extractFh).
+  Definition extractFhLabelSeq : LabelSeqT -> list (word 32) :=
+    flat_map extractFhLabel.
 
-
+  
   Definition inBounds (maxsp : word 32) (regs : RegsT) : Prop :=
     match FMap.M.find "rf" regs with
     | Some (existT _
@@ -219,6 +246,13 @@ Section KamiTrace.
     | _ => True
     end.
 
+  Inductive ProcMemStep (m : Modules) (o : RegsT) : UpdatesT -> LabelT -> Prop :=
+    ProcMemStepIntro : forall ss : Substeps m o,
+      substepsComb ss ->
+      wellHidden m (hide (foldSSLabel ss)) ->
+      ProcMemStep m o (foldSSUpds ss) (hide (foldSSLabel ss)).
+
+  Compute 
   Inductive BoundedForwardActiveMultistep (m : Modules) (maxsp : word 32) : RegsT -> RegsT -> list LabelT -> Prop :=
     NilBFMultistep : forall o1 o2 : RegsT,
       o1 = o2 -> BoundedForwardActiveMultistep m maxsp o1 o2 nil
@@ -277,9 +311,63 @@ Section KamiTrace.
           extractFhLabelSeq extractFh labels' = fhs'.
 End KamiTrace.
 
+Ltac shatter := repeat match goal with
+                       | [ H : exists _, _ |- _ ] => destruct H
+                       | [ H : _ /\ _ |- _ ] => destruct H
+                       end.
+
 Section ThreeStageTiming.
 
-  Definition censorThreeStageMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
+  Definition S3Regs rf pm pc : RegsT :=
+    FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
+               (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
+                           (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
+                                                   (FMap.M.empty _))).
+
+  Lemma S3Regs_find_rf : forall rf pm pc rf',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "rf"
+                                   (S3Regs rf pm pc) =
+                       Some
+                         (existT (fullType type) (SyntaxKind (Vector (Bit 32) 5)) rf') -> rf = rf'.
+  Proof.
+    intros.
+    unfold S3Regs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Lemma S3Regs_find_pm : forall rf pm pc pm',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "pgm"
+                  (S3Regs rf pm pc) =
+      Some
+        (existT (fullType type) (SyntaxKind (Vector (Bit 32) 8)) pm') -> pm = pm'.
+  Proof.
+    intros.
+    unfold S3Regs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Lemma S3Regs_find_pc : forall rf pm pc pc',
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "pc"
+                  (S3Regs rf pm pc) =
+      Some
+        (existT (fullType type) (SyntaxKind (Bit 16)) pc') -> pc = pc'.
+  Proof.
+    intros.
+    unfold S3Regs in *.
+    FMap.findeq.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
+  Ltac S3Regs_find :=
+    repeat match goal with
+           | [ H : FMap.M.find "rf" (S3Regs ?rf _ _) = Some (existT _ _ ?rf') |- _ ] => assert (rf = rf') by (eapply S3Regs_find_rf; eassumption); subst; clear H
+           | [ H : FMap.M.find "pgm" (S3Regs _ ?pm _) = Some (existT _ _ ?pm') |- _ ] => assert (pm = pm') by (eapply S3Regs_find_pm; eassumption); subst; clear H
+           | [ H : FMap.M.find "pc" (S3Regs _ _ ?pc) = Some (existT _ _ ?pc') |- _ ] => assert (pc = pc') by (eapply S3Regs_find_pc; eassumption); subst; clear H
+           end.
+
+  Definition censorS3Meth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n ("rqFromProc" -- "enq")
     then match t with
          | existT _
@@ -338,7 +426,7 @@ Section ThreeStageTiming.
          end
     else t.
 
-  Definition extractFhThreeStage (cs : MethsT) : list (word 32) :=
+  Definition extractFhS3 (cs : MethsT) : list (word 32) :=
     match FMap.M.find "fromHost" cs with
     | Some (existT _
                    {| arg := Bit 0;
@@ -351,36 +439,166 @@ Section ThreeStageTiming.
   Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
     (#ppc + $4)%kami_expr.
 
-  Definition rv32iP3 :=
+  Definition rv32iS3 :=
     p3st rv32iGetOptype
              rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
              rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
              rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst
              rv32iExec rv32iNextPc rv32iAlignPc rv32iAlignAddr
              predictNextPc
-             (d2ePackI (addrSize := rv32iAddrSize) (dataBytes := rv32iDataBytes) (rfIdx := rv32iRfIdx))
-             (d2eOpTypeI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eDstI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eAddrI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eVal1I rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eVal2I rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eRawInstI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eCurPcI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eNextPcI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (d2eEpochI rv32iAddrSize rv32iDataBytes rv32iRfIdx)
-             (e2wPackI (addrSize := rv32iAddrSize) (dataBytes := rv32iDataBytes) (rfIdx := rv32iRfIdx))
+             (d2ePackI (rfIdx := _))
+             (d2eOpTypeI _ _ _) (d2eDstI _ _ _) (d2eAddrI _ _ _)
+             (d2eVal1I _ _ _) (d2eVal2I _ _ _) (d2eRawInstI _ _ _)
+             (d2eCurPcI _ _ _) (d2eNextPcI _ _ _) (d2eEpochI _ _ _)
+             (e2wPackI (rfIdx := _))
+             (e2wDecInstI _ _ _) (e2wValI _ _ _)
              (procInitDefault  _ _ _ _).
 
-  Theorem abstractToThreeStageHiding :
+  Definition rv32iFetchDecode :=
+    fetchDecode rv32iGetOptype
+                rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
+                rv32iGetStAddr rv32iGetStSrc rv32iCalcStAddr rv32iGetStVSrc
+                rv32iGetSrc1 rv32iGetSrc2 rv32iGetDst rv32iAlignPc
+                (d2ePackI (rfIdx := _))
+                predictNextPc
+                Default Default.
+
+  Definition rv32iExecuter :=
+    executer rv32iAddrSize rv32iExec
+             (d2eOpTypeI _ _ _)
+             (d2eVal1I _ _ _) (d2eVal2I _ _ _) (d2eRawInstI _ _ _)
+             (d2eCurPcI _ _ _)
+             (e2wPackI (rfIdx := rv32iRfIdx)).
+
+  Definition rv32iWB :=
+    wb "rqFromProc" "rsToProc"
+       rv32iNextPc rv32iAlignAddr
+       (d2eOpTypeI _ _ _) (d2eDstI _ _ _) (d2eAddrI _ _ _)
+       (d2eVal1I _ _ _) (d2eRawInstI _ _ _)
+       (d2eCurPcI _ _ _) (d2eNextPcI _ _ _) (d2eEpochI _ _ _)
+       (e2wDecInstI _ _ _) (e2wValI _ _ _).
+
+  Lemma S3Step :
+    forall o u l, Step rv32iS3 o u l ->
+             exists k a u' cs,
+               In (k :: a)%struct (getRules rv32iS3)
+               /\ SemAction o (a type) u' cs WO.
+    idtac.
+(*wellHidden Step Substep StepInd
+  Lemma S3Substeps :
+    forall o (ss : Substeps rv32iS3 o),
+      SubstepsInd rv32iS3 o (foldSSUpds ss) (foldSSLabel ss) ->
+(*      ((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
+       /\ (foldSSUpds ss) = FMap.M.empty _)
+      \/*) (exists b1 b2 b3 k1 k2 k3 a1 a2 a3 u1 u2 u3 cs1 cs2 cs3 annot,
+            ((b1 = true
+              /\ In (k1 :: a1)%struct (getRules rv32iFetchDecode)
+              /\ SemAction o (a1 type) u1 cs1 WO)
+             \/ (b1 = false /\ u1 = FMap.M.empty _ /\ cs1 = FMap.M.empty _))
+           /\ ((b2 = true
+               /\ In (k2 :: a2)%struct (getRules rv32iExecuter)
+              /\ SemAction o (a2 type) u2 cs2 WO)
+             \/ (b2 = false /\ u2 = FMap.M.empty _ /\ cs2 = FMap.M.empty _))
+           /\ ((b3 = true
+              /\ In (k3 :: a3)%struct (getRules rv32iWB)
+              /\ SemAction o (a3 type) u3 cs3 WO)
+              \/ (b3 = false /\ u3 = FMap.M.empty _ /\ cs3 = FMap.M.empty _))
+(*           /\ ((b1 = true /\ k = Some k1) \/ (b2 = true /\ k = Some k2) \/ (b3 = true /\ k = Some k3) \/ (b1 = false /\ b2 = false /\ b3 = false /\ k = None))*)
+           /\ (foldSSLabel ss) = {| annot := annot; defs := FMap.M.empty _; calls := FMap.M.union cs1 (FMap.M.union cs2 cs3) |}
+           /\ (foldSSUpds ss) = FMap.M.union u1 (FMap.M.union u2 u3)).
+  Proof.
+    intros.
+    match goal with
+    | [ H : SubstepsInd _ _ _ _ |- _ ] => induction H
+    end.
+    - exists false, false, false.
+      repeat eexists; (tauto || reflexivity).
+    - shatter.
+      intuition idtac; subst.
+      + exists true, true, true, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13.
+        match goal with
+        | [ H : Substep _ _ _ _ _ |- _ ] => destruct H
+        end; simpl.
+        * exists (Some None).
+          destruct x14; intuition idtac; FMap.findeq.
+        * exists x14.
+          intuition idtac; FMap.findeq.
+        * exfalso.
+          unfold rv32iS3, p3st, procThreeStage in HInRules.
+          unfold getRules in HInRules; fold getRules in HInRules.
+          repeat (apply in_app_or in HInRules; destruct HInRules as [HInRules|HInRules]); simpl in HInRules.
+          -- clear H10 H13 H12 H15.
+             simpl in H9.
+             intuition idtac;
+               repeat match goal with
+                      | [ H : _ = (_ :: _)%struct |- _ ] => inversion H; clear H
+                      end;
+               subst.
+             ++ kinv_action_dest.
+                clear - H1.
+                unfold CanCombineUUL in H1.
+                simpl in H1.
+                intuition idtac.
+                apply FMap.M.Disj_add_2 in H1.
+                FMap.findeq.
+             ++ Opaque evalExpr.
+                kinv_action_dest.
+                Transparent evalExpr.
+                
+      + 
+        simpl;
+        shatter;
+        intuition idtac;
+        subst.
+    - intuition idtac;
+        simpl;
+        shatter;
+        intuition idtac;
+        subst;
+        match goal with
+        | [ H : Substep _ _ _ _ _ |- _ ] => destruct H
+        end;
+        try tauto;
+        match goal with
+        | [ HCCU : CanCombineUUL _ {| annot := Some _; defs := FMap.M.empty _; calls := _ |} _ _ (Rle _) |- _ ] =>
+          unfold CanCombineUUL in HCCU;
+            simpl in HCCU;
+            tauto
+        | [ HIn : In _ (getDefsBodies rv32iProcInst) |- _ ] =>
+          simpl in HIn;
+            tauto
+        | [ HIR : In (?k :: ?a)%struct _, HA : SemAction _ _ ?u ?cs _ |- _ ] =>
+          right;
+            exists k, a, u, cs;
+            simpl in HIR;
+            intuition idtac;
+            simpl;
+            FMap.findeq
+        end.
+  Qed.*)
+
+  Theorem abstractToS3Hiding :
     forall rf pm pc maxsp,
       abstractHiding rf pm pc maxsp ->
-      kamiHiding censorThreeStageMeth extractFhThreeStage
-                 p3st
+      kamiHiding censorS3Meth extractFhS3
+                 rv32iS3
                  maxsp
-                 (SCRegs rf pm pc).
+                 (S3Regs rf pm pc).
   Proof.
     unfold abstractHiding, kamiHiding.
     intros.
+    generalize fhs, fhs', H1, H2.
+    clear fhs fhs' H1 H2.
+    induction H0.
+    - exists nil.
+      eexists.
+      simpl in *.
+      subst.
+      simpl in *.
+      destruct fhs'; simpl in *; try discriminate.
+      repeat econstructor.
+    - intros.
+      simpl in H5.
     match goal with
     | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
     end.
@@ -626,11 +844,6 @@ Section SCTiming.
     repeat match goal with
            | [ Heq : ?x = ?y |- _ ] => ((tryif unfold x then fail else subst x) || (tryif unfold y then fail else subst y))
            end.
-
-  Ltac shatter := repeat match goal with
-                         | [ H : exists _, _ |- _ ] => destruct H
-                         | [ H : _ /\ _ |- _ ] => destruct H
-                         end.
 
   Lemma SCSubsteps :
     forall o (ss : Substeps rv32iProcInst o),
