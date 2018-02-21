@@ -235,19 +235,12 @@ Qed.
 
 Require Import Lib.Nomega NArith.
 
-Theorem roundTrip_0' : forall sz, wordToN (natToWord sz 0) = 0%N.
-  induction sz; simpl; subst; intuition.
-  rewrite IHsz.
-  auto.
-Qed.
-
-
 Lemma wzero_le:
   forall n (w: word n), wzero n <= w.
 Proof.
   unfold wzero, not; intros.
   pre_nomega.
-  rewrite roundTrip_0' in H.
+  rewrite wordToN_wzero in H.
   nomega.
 Qed.
   

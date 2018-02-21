@@ -1,5 +1,5 @@
 Require Import Arith.Peano_dec Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Struct Lib.StringEq.
+Require Import Lib.CommonTactics Lib.ilist Lib.NatLib Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
 Require Import Kami.Notations Kami.Tactics Kami.Decomposition.

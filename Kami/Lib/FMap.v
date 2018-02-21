@@ -2678,7 +2678,7 @@ Ltac findeq_more := findeq_custom idtac.
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 
-Hint Extern 1 (_ = _: M.t _) => try (meq; fail).
+Hint Extern 1 (_ = _) => try (meq; fail).
 Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
 
 Lemma elements_cons:

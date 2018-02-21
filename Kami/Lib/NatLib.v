@@ -1,4 +1,7 @@
-Require Import Div2 Omega.
+Require Import Div2 Omega NArith ZArith.
+Require Export Nomega.
+
+Set Implicit Arguments.
 
 Fixpoint mod2 (n : nat) : bool :=
   match n with
@@ -34,6 +37,12 @@ Fixpoint pow2 (n : nat) : nat :=
     | S n' => 2 * pow2 n'
   end.
 
+Fixpoint Npow2 (n : nat) : N :=
+  match n with
+    | O => 1
+    | S n' => 2 * Npow2 n'
+  end%N.
+
 Theorem untimes2 : forall n, n + (n + 0) = 2 * n.
   auto.
 Qed.
@@ -56,12 +65,11 @@ End strong.
 Theorem div2_odd : forall n,
   mod2 n = true
   -> n = S (2 * div2 n).
-Proof.
-  induction n using strong; simpl; intuition.
+  induction n as [n] using strong; simpl; intuition.
 
-  destruct n; simpl in *; intuition.
+  destruct n as [|n]; simpl in *; intuition.
     discriminate.
-  destruct n; simpl in *; intuition.
+  destruct n as [|n]; simpl in *; intuition.
   do 2 f_equal.
   replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
 Qed.
@@ -69,11 +77,10 @@ Qed.
 Theorem div2_even : forall n,
   mod2 n = false
   -> n = 2 * div2 n.
-Proof.
-  induction n using strong; simpl; intuition.
+  induction n as [n] using strong; simpl; intuition.
 
-  destruct n; simpl in *; intuition.
-  destruct n; simpl in *; intuition.
+  destruct n as [|n]; simpl in *; intuition.
+  destruct n as [|n]; simpl in *; intuition.
     discriminate.
   f_equal.
   replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
@@ -82,8 +89,7 @@ Qed.
 Theorem drop_mod2 : forall n k,
   2 * k <= n
   -> mod2 (n - 2 * k) = mod2 n.
-Proof.
-  induction n using strong; intros.
+  induction n as [n] using strong; intros.
 
   do 2 (destruct n; simpl in *; repeat rewrite untimes2 in *; intuition).
 
@@ -99,8 +105,7 @@ Qed.
 Theorem div2_minus_2 : forall n k,
   2 * k <= n
   -> div2 (n - 2 * k) = div2 n - k.
-Proof.
-  induction n using strong; intros.
+  induction n as [n] using strong; intros.
 
   do 2 (destruct n; simpl in *; intuition; repeat rewrite untimes2 in *).
   destruct k; simpl in *; intuition.
@@ -109,12 +114,11 @@ Proof.
   rewrite <- plus_n_Sm.
   apply H; omega.
 Qed.
-        
+
 Theorem div2_bound : forall k n,
   2 * k <= n
   -> k <= div2 n.
-Proof.
-  intros; case_eq (mod2 n); intro Heq.
+  intros ? n H; case_eq (mod2 n); intro Heq.
 
   rewrite (div2_odd _ Heq) in H.
   omega.
@@ -122,6 +126,31 @@ Proof.
   rewrite (div2_even _ Heq) in H.
   omega.
 Qed.
+
+Lemma two_times_div2_bound: forall n, 2 * Nat.div2 n <= n.
+Proof.
+  eapply strong. intros n IH.
+  destruct n.
+  - constructor.
+  - destruct n.
+    + simpl. constructor. constructor. 
+    + simpl (Nat.div2 (S (S n))).
+      specialize (IH n). omega.
+Qed.
+
+Lemma div2_compat_lt_l: forall a b, b < 2 * a -> Nat.div2 b < a.
+Proof.
+  induction a; intros.
+  - omega.
+  - destruct b.
+    + simpl. omega.
+    + destruct b.
+      * simpl. omega.
+      * simpl. apply lt_n_S. apply IHa. omega.
+Qed.
+
+(* otherwise b is made implicit, while a isn't, which is weird *)
+Arguments div2_compat_lt_l {_} {_} _.
 
 Lemma pow2_add_mul: forall a b,
   pow2 (a + b) = (pow2 a) * (pow2 b).
@@ -186,6 +215,11 @@ Proof.
   omega.
 Qed.
 
+Lemma one_le_pow2 : forall sz, 1 <= pow2 sz.
+Proof.
+  intros. pose proof (zero_lt_pow2 sz). omega.
+Qed.
+
 Lemma mul2_add : forall n, n * 2 = n + n.
 Proof.
   induction n; firstorder.
@@ -211,7 +245,6 @@ Proof.
   pose proof (zero_lt_pow2 (b - a)).
   omega.
 Qed.
-
 
 Lemma pow2_inc : forall n m,
   0 < n -> n < m ->
@@ -272,6 +305,34 @@ Proof.
   apply mod2_S_eq; auto.
 Qed.
 
+Lemma mod2sub: forall a b,
+  b <= a ->
+  mod2 (a - b) = xorb (mod2 a) (mod2 b).
+Proof.
+  intros. remember (a - b) as c. revert dependent b. revert a. revert c.
+  change (forall c,
+    (fun c => forall a b, b <= a -> c = a - b -> mod2 c = xorb (mod2 a) (mod2 b)) c).
+  apply strong.
+  intros c IH a b AB N.
+  destruct c.
+  - assert (a=b) by omega. subst. rewrite Bool.xorb_nilpotent. reflexivity.
+  - destruct c.
+    + assert (a = S b) by omega. subst a. simpl (mod2 1). rewrite mod2_S_not.
+      destruct (mod2 b); reflexivity.
+    + destruct a; [omega|].
+      destruct a; [omega|].
+      simpl.
+      apply IH; omega.
+Qed.
+
+Theorem mod2_pow2_twice: forall n,
+  mod2 (pow2 n + (pow2 n + 0)) = false.
+Proof.
+  intros.
+  replace (pow2 n + (pow2 n + 0)) with (2 * pow2 n) by omega.
+  apply mod2_double.
+Qed.
+
 Theorem div2_plus_2 : forall n k,
   div2 (n + 2 * k) = div2 n + k.
 Proof.
@@ -294,5 +355,96 @@ Proof.
     omega.
     apply Even.odd_plus_l; auto.
     apply Even.even_mult_l; repeat constructor.
+Qed.
+
+Lemma pred_add:
+  forall n, n <> 0 -> pred n + 1 = n.
+Proof.
+  intros; rewrite pred_of_minus; omega.
+Qed.
+
+Lemma pow2_zero: forall sz, (pow2 sz > 0)%nat.
+Proof.
+  induction sz; simpl; auto; omega.
+Qed.
+
+Theorem Npow2_nat : forall n, nat_of_N (Npow2 n) = pow2 n.
+  induction n as [|n IHn]; simpl; intuition.
+  rewrite <- IHn; clear IHn.
+  case_eq (Npow2 n); intuition.
+  rewrite untimes2.
+  match goal with
+  | [ |- context[Npos ?p~0] ]
+    => replace (Npos p~0) with (Ndouble (Npos p)) by reflexivity
+  end.
+  apply nat_of_Ndouble.
+Qed.
+
+Theorem pow2_N : forall n, Npow2 n = N.of_nat (pow2 n).
+Proof.
+  intro n. apply nat_of_N_eq. rewrite Nat2N.id. apply Npow2_nat.
+Qed.
+
+Lemma pow2_S_z:
+  forall n, Z.of_nat (pow2 (S n)) = (2 * Z.of_nat (pow2 n))%Z.
+Proof.
+  intros.
+  replace (2 * Z.of_nat (pow2 n))%Z with
+      (Z.of_nat (pow2 n) + Z.of_nat (pow2 n))%Z by omega.
+  simpl.
+  repeat rewrite Nat2Z.inj_add.
+  ring.
+Qed.
+
+Lemma pow2_le:
+  forall n m, (n <= m)%nat -> (pow2 n <= pow2 m)%nat.
+Proof.
+  intros.
+  assert (exists s, n + s = m) by (exists (m - n); omega).
+  destruct H0; subst.
+  rewrite pow2_add_mul.
+  pose proof (pow2_zero x).
+  replace (pow2 n) with (pow2 n * 1) at 1 by omega.
+  apply mult_le_compat_l.
+  omega.
+Qed.
+
+Lemma Zabs_of_nat:
+  forall n, Z.abs (Z.of_nat n) = Z.of_nat n.
+Proof.
+  unfold Z.of_nat; intros.
+  destruct n; auto.
+Qed.
+
+Lemma Npow2_not_zero:
+  forall n, Npow2 n <> 0%N.
+Proof.
+  induction n; simpl; intros; [discriminate|].
+  destruct (Npow2 n); auto.
+  discriminate.
+Qed.
+
+Lemma Npow2_S:
+  forall n, Npow2 (S n) = (Npow2 n + Npow2 n)%N.
+Proof.
+  simpl; intros.
+  destruct (Npow2 n); auto.
+  rewrite <-Pos.add_diag.
+  reflexivity.
+Qed.
+
+Lemma minus_minus: forall a b c,
+  c <= b <= a ->
+  a - (b - c) = a - b + c.
+Proof. intros. omega. Qed.
+
+Lemma even_odd_destruct: forall n,
+  (exists a, n = 2 * a) \/ (exists a, n = 2 * a + 1).
+Proof.
+  induction n.
+  - left. exists 0. reflexivity.
+  - destruct IHn as [[a E] | [a E]].
+    + right. exists a. omega.
+    + left. exists (S a). omega.
 Qed.
 
