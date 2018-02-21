@@ -1148,10 +1148,11 @@ Section SCTiming.
              ++ clear; eauto.
              ++ match goal with
                 | [ H : labelToTraceEvent ?l = _,
-                    x : forall _ : Fin.t 1, _
-                    |- _ = evalExpr ?adr ] =>
+                    x : forall _ : Fin.t 1, _,
+                    Hignore : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr'; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
+                    |- evalExpr ?adr' = evalExpr ?adr ] =>
                   match goal with
-                  | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= _; "op" ::= _; "data" ::= ?dat}%kami_expr, _)) _ |}) = _ |- _ ] =>
+                  | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= adr; "op" ::= _; "data" ::= ?dat}%kami_expr, _)) _ |}) = _ |- _ ] =>
                     replace (labelToTraceEvent l) with (Some (Wr $ (0) (evalExpr adr) (evalExpr dat))) in H by eauto
                   end
                 end.
@@ -1163,6 +1164,7 @@ Section SCTiming.
                 match goal with
                 | [ H : ?x = _ |- _ = ?x ] => rewrite H
                 end.
+                unfold saddr_aligned, saddr, addr, srcVal, srcIdx.
                 reflexivity.
           -- match goal with
              | [ rf : word rv32iRfIdx -> word 32,
@@ -1195,7 +1197,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1208,16 +1210,73 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 unfold SCRegs; clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent (_ :: ?l) _ |- SCProcMemConsistent ?l _ ] => inversion H; clear H
+                end.
+                subst.
+                simpl in *.
+                Transparent evalExpr.
+                match goal with
+                | [ H : if ?x then _ else _ |- _ ] =>
+                  replace x with true in H by reflexivity
+                end.
+                subst.
+                match goal with
+                | [ H : SCProcMemConsistent ?l ?mem |- SCProcMemConsistent ?l ?mem' ] => replace mem' with mem; [assumption|]
+                end.
+                match goal with
+                | [ |- (fun a => if weq a ?x then ?y else _) = (fun a => if weq a ?x' then ?y' else _) ] => replace x with x' by reflexivity; replace y with y' by reflexivity; reflexivity
+                end.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
                 end.
                 ** clear; eauto.
+             ++ Opaque evalExpr labelToTraceEvent.
+                match goal with
+                | [ H : SCProcMemConsistent (_ :: ?l) _ |- SCProcMemConsistent ?l _ ] => inversion H; clear H
+                end.
+                subst.
+                simpl in *.
+                Transparent evalExpr labelToTraceEvent.
+                match goal with
+                | [ H : if ?x then _ else _ |- _ ] =>
+                  replace x with true in H by reflexivity
+                end.
+                subst.
+                match goal with
+                | [ H : SCProcMemConsistent ?l ?mem |- SCProcMemConsistent ?l ?mem' ] => replace mem' with mem; [assumption|]
+                end.
+                match goal with
+                | [ |- context[if _ then ?ex else _] ] =>
+                  match goal with
+                  | [ |- context[if _ then (evalExpr (ReadField _ # (evalExpr STRUCT {"addr" ::= _; "op" ::= _; "data" ::= # (?d)})%kami_expr)) else _] ] => replace ex with d by reflexivity
+                  end
+                end.
+                match goal with
+                | [ |- context[weq _ ?ex] ] =>
+                  match goal with
+                  | [ |- context[weq _ (evalExpr (ReadField _ # (evalExpr STRUCT {"addr" ::= ?a; "op" ::= _; "data" ::= _})%kami_expr))] ] => replace ex with (evalExpr a) by reflexivity
+                  end
+                end.
+                match goal with
+                | [ H : labelToTraceEvent ?l = Some (Wr _ _ val) |- _ ] =>
+                  match goal with
+                  | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= # (?d)}%kami_expr, _)) _|}) = Some (Wr _ _ val) |- _ ] => replace (labelToTraceEvent l) with (Some (Wr $ (0) (evalExpr adr) d)) in H by reflexivity
+                  end
+                end.
+                Opaque evalExpr.
+                match goal with
+                | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                end.
+                Transparent evalExpr.
+                reflexivity.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
