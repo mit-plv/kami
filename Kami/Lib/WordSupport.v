@@ -105,6 +105,12 @@ Proof.
   tauto.
 Qed.
 
+Lemma wordNotNot: forall sz (a b: word sz), (a <> b -> False) -> a = b.
+Proof.
+  intros.
+  destruct (weq a b); subst; tauto.
+Qed.
+
 Ltac pre_word_omega :=
   unfold wzero, wone in *;
   repeat match goal with
@@ -190,8 +196,27 @@ Ltac pre_word_omega :=
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
              end
+           | H: (@eq ?T ?a ?b -> False) -> False |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordNotNot sz a b) in H
+             end
+           | H: (not (@eq ?T ?a ?b)) -> False |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordNotNot sz a b) in H
+             end
+           | H: not (@eq ?T ?a ?b -> False) |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordNotNot sz a b) in H
+             end
+           | H: not (not (@eq ?T ?a ?b)) |- _ =>
+             match T with
+               | word ?sz =>
+                 apply (@wordNotNot sz a b) in H
+             end
          end.
-
 
 Ltac word_omega := pre_word_omega; omega.
 
