@@ -1304,7 +1304,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1387,7 +1387,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1400,16 +1400,32 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 clear; unfold SCRegs; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
                 end.
                 clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
         * evbool_auto.
         * evbool_auto.
         * evbool_auto.
@@ -1435,7 +1451,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1517,7 +1533,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1530,7 +1546,7 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
@@ -1555,8 +1571,16 @@ Section SCTiming.
                      replace (labelToTraceEvent l) with (Some (FromHost $ (0) x)) by eauto; inversion H
                    end.
                    reflexivity.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 by congruence | idtac ]
@@ -1578,6 +1602,14 @@ Section SCTiming.
                      replace (labelToTraceEvent l) with (Some (FromHost $ (0) v')) in H by eauto; inversion H
                    end.
                    reflexivity.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
         * SCRegs_find.
           evbool_auto_rep.
           tauto.
@@ -1642,7 +1674,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1655,7 +1687,7 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1
@@ -1666,8 +1698,16 @@ Section SCTiming.
                    | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
                    end.
                    destruct (weq dst (wzero _)); try tauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1; [ replace p1 with p2 by congruence | idtac ]
@@ -1680,6 +1720,14 @@ Section SCTiming.
                    match goal with
                    | [ |- _ = (if ?b then _ else _) ] => destruct b; tauto
                    end.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
         * evbool_auto.
         * evbool_auto.
       + evbool_auto.
@@ -1702,7 +1750,7 @@ Section SCTiming.
         opaque_subst.
         simpl.
         repeat match goal with
-               | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
                  inversion Hbm;
                    clear Hbm;
                    match goal with
@@ -1787,7 +1835,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1796,16 +1844,32 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 unfold SCRegs; clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
                 end.
                 clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
       + match goal with
         | [ Hct : censorTrace (Branch _ _ :: _) = censorTrace ?tr |- _ ] =>
           let t := fresh in
@@ -1823,7 +1887,7 @@ Section SCTiming.
         opaque_subst.
         simpl.
         repeat match goal with
-               | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+               | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
                  inversion Hbm;
                    clear Hbm;
                    match goal with
@@ -1908,7 +1972,7 @@ Section SCTiming.
              | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
              end;
                try match goal with
-                   | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                   | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                      replace r2 with r1; try eassumption
                    | [ |- censorTrace _ = censorTrace _ ] => eassumption
                    | [ |- relatedTrace _ _ ] => eassumption
@@ -1917,16 +1981,32 @@ Section SCTiming.
                 | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
                 end.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
                 end.
                 unfold SCRegs; clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
                 end.
                 match goal with
                 | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) _ = SCRegs _ _ ?p2 ] => unfold SCRegs; replace p1 with p2 by congruence
                 end.
                 clear; eauto.
+             ++ Opaque evalExpr.
+                match goal with
+                | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+                end.
+                simpl in *.
+                Transparent evalExpr.
+                subst.
+                assumption.
     - match goal with
       | [ Hct : censorTrace (Nm _ :: _) = censorTrace ?tr |- _ ] =>
         let t := fresh in
@@ -1944,7 +2024,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : BoundedForwardActiveMultistep _ _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -2017,7 +2097,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -2026,7 +2106,7 @@ Section SCTiming.
              | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
              end.
           -- match goal with
-             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+             | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
              end.
              match goal with
              | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2
@@ -2037,8 +2117,16 @@ Section SCTiming.
                    | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
                    end.
                    destruct (weq dst (wzero _)); tauto.
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+             end.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             assumption.
           -- match goal with
-             | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
              end.
              match goal with
              | [ |- FMap.M.union (FMap.M.add "rf" (existT _ _ ?r1) (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _))) _ = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r1 with r2; [ replace p1 with p2 by congruence | idtac ]
@@ -2049,6 +2137,14 @@ Section SCTiming.
                    | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
                    end.
                    destruct (weq dst0 (wzero _)); try tauto.
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+             end.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             assumption.
         * SCRegs_find.
           evbool_auto_rep.
           tauto.
@@ -2096,7 +2192,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : BoundedForwardActiveMultistep _ _ ?r1 _ ?l |- BoundedForwardActiveMultistep _ _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -2105,7 +2201,7 @@ Section SCTiming.
              | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
              end.
           -- match goal with
-             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+             | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
              end.
              match goal with
              | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1
@@ -2116,8 +2212,16 @@ Section SCTiming.
                    | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
                    end.
                    destruct (weq dst (wzero _)); tauto.
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+             end.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             assumption.
           -- match goal with
-             | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
+             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
              end.
              match goal with
              | [ |- FMap.M.union (FMap.M.add "pc" (existT _ _ ?p1) (FMap.M.empty _)) (SCRegs ?r1 _ _) = SCRegs ?r2 _ ?p2 ] => unfold SCRegs; replace r2 with r1; [ replace p1 with p2 by congruence | idtac ]
@@ -2128,8 +2232,15 @@ Section SCTiming.
                    | [ H : context[WO~0~0~0~0~0] |- _] => evex H; boolex
                    end.
                    destruct (weq dst0 (wzero _)); try tauto.
-  Qed.*)
-  Admitted.
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => clear - H; inversion H
+             end.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             assumption.
+  Qed.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
     simpl.
@@ -2190,7 +2301,7 @@ Section SCTiming.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
-          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
@@ -2249,7 +2360,7 @@ Section SCTiming.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
-          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
@@ -2284,7 +2395,7 @@ Section SCTiming.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
-          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs.
           eauto.
@@ -2346,7 +2457,7 @@ Section SCTiming.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
-          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs.
           eauto.
@@ -2404,7 +2515,7 @@ Section SCTiming.
           -- simpl. congruence.
           -- simpl. congruence.
           -- match goal with
-             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2452,7 +2563,7 @@ Section SCTiming.
           -- simpl. congruence.
           -- simpl. congruence.
           -- match goal with
-             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2487,7 +2598,7 @@ Section SCTiming.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
-          | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
@@ -2528,7 +2639,7 @@ Section SCTiming.
           -- simpl. congruence.
           -- simpl. congruence.
           -- match goal with
-             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2567,7 +2678,7 @@ Section SCTiming.
           -- simpl. congruence.
           -- simpl. congruence.
           -- match goal with
-             | [ IH : BoundedForwardActiveMultistep _ _ ?r _ _ |- BoundedForwardActiveMultistep _ _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2619,7 +2730,7 @@ Section SCTiming.
       replace pc with (getpc regs) by (subst; FMap.findeq);
       clear rf pm pc Heq.
     match goal with
-    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] =>
+    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] =>
       induction H
     end.
     - eexists; repeat econstructor.
@@ -3375,7 +3486,7 @@ Section ThreeStageTiming.
     - intros.
       simpl in H5.
     match goal with
-    | [ H : BoundedForwardActiveMultistep _ _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
+    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
     end.
     shatter.
     match goal with
@@ -3395,11 +3506,11 @@ Section ThreeStageTiming.
     end.
     shatter.
     match goal with
-    | [ H : BoundedForwardActiveMultistep _ _ _ ?regs ?ls |- _ ] => exists ls, regs
+    | [ H : ForwardActiveMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
     end.
     repeat split;
       match goal with
-      | [ |- BoundedForwardActiveMultistep _ _ _ _ _ ] => assumption
+      | [ |- ForwardActiveMultistep _ _ _ _ ] => assumption
       | [ Htrace1 : hasTrace _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
       | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
