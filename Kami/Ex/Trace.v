@@ -879,7 +879,6 @@ Section SCTiming.
                        end.
                        match goal with
                        | [ H : SCProcMemConsistent _ ?m |- _ = ?m _ ] =>
-(*                         clear - H;*)
                            inversion H;
                            clear H
                        end.
@@ -2257,12 +2256,11 @@ Section SCTiming.
         SCProcMemConsistent ls mem /\
         relatedTrace trace ls.
   Proof.
-(*    induction 1.
+    induction 1.
     - repeat eexists; repeat econstructor.
     - shatter.
       repeat eexists.
       + eapply FMulti.
-        * tauto.
         * apply SemFacts.substepZero_imp_step.
           -- reflexivity.
           -- eapply SingleRule.
@@ -2275,10 +2273,8 @@ Section SCTiming.
                        end; try FMap.findeq.
                 ** match goal with
                    | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                     let Heq := fresh in
-                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                       rewrite Heq;
-                       rewrite H0;
+                     replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       subst;
                        rewrite eval_const;
                        tauto
                    end.
@@ -2289,8 +2285,7 @@ Section SCTiming.
                    match goal with
                    | |- (if ?b then _ else _) = _ => destruct b
                    end.
-                   --- rewrite H0 in e.
-                       tauto.
+                   --- subst. tauto.
                    --- reflexivity.
                 ** eapply SemMCall.
                    --- instantiate (1 := FMap.M.empty _).
@@ -2305,13 +2300,20 @@ Section SCTiming.
           end.
           unfold SCRegs, rset.
           eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        split; try reflexivity.
+        match goal with
+        | [ |- mem ?a = ?v ] => replace v with val by reflexivity;
+                                replace a with laddr_aligned
+        end; try congruence.
+        unfold laddr_aligned, laddr, addr, srcVal, srcIdx.
+        subst.
+        reflexivity.
       + constructor; try assumption.
         unfold labelToTraceEvent, getLabel.
         unfold callsToTraceEvent.
-        repeat (match goal with
-                | [ |- context[match ?x with _ => _ end] ] =>
-                  let x' := eval hnf in x in change x with x'
-                end; cbv beta iota).
+        simplify_match.
         unfold evalExpr.
         match goal with
         | [ |- Some (Rd $ (0) ?x1 ?y1) = Some (Rd $ (0) ?x2 ?y2) ] => replace x1 with x2; [ reflexivity | idtac ]
@@ -2330,8 +2332,7 @@ Section SCTiming.
         reflexivity.
     - shatter.
       repeat eexists.
-      + eapply BFMulti.
-        * tauto.
+      + eapply FMulti.
         * apply SemFacts.substepZero_imp_step.
           -- reflexivity.
           -- eapply SingleRule.
@@ -2341,10 +2342,8 @@ Section SCTiming.
              ++ repeat econstructor; try FMap.findeq.
                 ** match goal with
                    | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                     let Heq := fresh in
-                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                       rewrite Heq;
-                       rewrite H0;
+                     replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       subst;
                        rewrite eval_const;
                        tauto
                    end.
@@ -2355,8 +2354,7 @@ Section SCTiming.
                    | |- (if ?b then _ else _) = _ => destruct b
                    end.
                    --- reflexivity.
-                   --- rewrite H0 in n.
-                       tauto.
+                   --- subst. tauto.
         * simpl. congruence.
         * simpl. congruence.
         * match goal with
@@ -2364,31 +2362,28 @@ Section SCTiming.
           end.
           unfold SCRegs, rset.
           eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        reflexivity.
       + constructor; try assumption.
         unfold labelToTraceEvent, getLabel.
         unfold callsToTraceEvent.
-        repeat (match goal with
-                | [ |- context[match ?x with _ => _ end] ] =>
-                  let x' := eval hnf in x in change x with x'
-                end; cbv beta iota).
+        simplify_match.
         reflexivity.
     - shatter.
       repeat eexists.
-      + eapply BFMulti.
-        * tauto.
+      + eapply FMulti.
         * apply SemFacts.substepZero_imp_step.
           -- reflexivity.
           -- eapply SingleRule.
              ++ instantiate (2 := "execSt").
                 simpl.
                 tauto.
-             ++ repeat econstructor; try FMap.findeq.
+             ++ repeat econstructor; try FMap.findeq. 
                 ** match goal with
                    | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                     let Heq := fresh in
-                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                       rewrite Heq;
-                       rewrite H0;
+                     replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       subst;
                        rewrite eval_const;
                        tauto
                    end.
@@ -2399,13 +2394,22 @@ Section SCTiming.
           end.
           unfold SCRegs.
           eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        intuition idtac.
+        match goal with
+        | [ |- (fun _ => if weq _ ?a then ?v else _) = (fun _ => if weq _ ?a' then ?v' else _) ] => replace a' with a; [replace v' with v; [reflexivity|]|]
+        end.
+        * unfold stVal, vsrcIdx.
+          subst.
+          reflexivity.
+        * unfold saddr_aligned, saddr, addr, srcVal, srcIdx.
+          subst.
+          reflexivity.
       + constructor; try assumption.
         unfold labelToTraceEvent, getLabel.
         unfold callsToTraceEvent.
-        repeat (match goal with
-                | [ |- context[match ?x with _ => _ end] ] =>
-                  let x' := eval hnf in x in change x with x'
-                end; cbv beta iota).
+        simplify_match.
         unfold evalExpr.
         match goal with
         | [ |- Some (Wr $ (0) ?x1 ?y1) = Some (Wr $ (0) ?x2 ?y2) ] => replace x1 with x2; [ replace y1 with y2; [ reflexivity | idtac ] | idtac ]
@@ -2436,8 +2440,7 @@ Section SCTiming.
           reflexivity.
     - shatter.
       repeat eexists.
-      + eapply BFMulti.
-        * tauto.
+      + eapply FMulti.
         * apply SemFacts.substepZero_imp_step.
           -- reflexivity.
           -- eapply SingleRule.
@@ -2447,10 +2450,8 @@ Section SCTiming.
              ++ repeat econstructor; try FMap.findeq.
                 ** match goal with
                    | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                     let Heq := fresh in
-                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                       rewrite Heq;
-                       rewrite H0;
+                     replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       subst;
                        rewrite eval_const;
                        tauto
                    end.
@@ -2461,13 +2462,13 @@ Section SCTiming.
           end.
           unfold SCRegs.
           eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        reflexivity.
       + constructor; try assumption.
         unfold labelToTraceEvent, getLabel.
         unfold callsToTraceEvent.
-        repeat (match goal with
-                | [ |- context[match ?x with _ => _ end] ] =>
-                  let x' := eval hnf in x in change x with x'
-                end; cbv beta iota).
+        simplify_match.
         unfold evalExpr; fold evalExpr.
         match goal with
         | [ |- Some (ToHost $ (0) ?x1) = Some (ToHost $ (0) ?x2) ] => replace x1 with x2; [ reflexivity | idtac ]
@@ -2485,8 +2486,7 @@ Section SCTiming.
                      dst
                      (wzero _)).
       + repeat eexists.
-        * eapply BFMulti.
-          -- tauto.
+        * eapply FMulti.
           -- apply SemFacts.substepZero_imp_step.
              ++ reflexivity.
              ++ eapply SingleRule.
@@ -2496,10 +2496,8 @@ Section SCTiming.
                 ** repeat econstructor; try FMap.findeq.
                    --- match goal with
                        | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                         let Heq := fresh in
-                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                           rewrite Heq;
-                           rewrite H0;
+                         replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           subst;
                            rewrite eval_const;
                            tauto
                        end.
@@ -2510,7 +2508,7 @@ Section SCTiming.
                        end.
                        +++ reflexivity.
                        +++ unfold dst in e.
-                           rewrite <- H0 in e.
+                           subst.
                            tauto.
           -- simpl. congruence.
           -- simpl. congruence.
@@ -2519,11 +2517,13 @@ Section SCTiming.
              end.
              unfold SCRegs, rset.
              eauto.
+        * econstructor; try eassumption.
+          simplify_match.
+          reflexivity.
         * constructor; try assumption.
           reflexivity.
       + repeat eexists.
-        * eapply BFMulti.
-          -- tauto.
+        * eapply FMulti.
           -- apply SemFacts.substepZero_imp_step.
              ++ reflexivity.
              ++ eapply SingleRule.
@@ -2536,10 +2536,8 @@ Section SCTiming.
                           end; try FMap.findeq.
                    --- match goal with
                        | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                         let Heq := fresh in
-                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                           rewrite Heq;
-                           rewrite H0;
+                         replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           subst;
                            rewrite eval_const;
                            tauto
                        end.
@@ -2551,7 +2549,7 @@ Section SCTiming.
                        | |- (if ?b then _ else _) = _ => destruct b
                        end.
                        +++ unfold dst in n.
-                           rewrite <- H0 in n.
+                           subst.
                            tauto.
                        +++ reflexivity.
                    --- eapply SemMCall.
@@ -2567,12 +2565,14 @@ Section SCTiming.
              end.
              unfold SCRegs, rset.
              eauto.
+        * econstructor; try eassumption.
+          simplify_match.
+          reflexivity.
         * constructor; try assumption.
           reflexivity.
     - shatter.
       repeat eexists.
-      + eapply BFMulti.
-        * tauto.
+      + eapply FMulti.
         * apply SemFacts.substepZero_imp_step.
           -- reflexivity.
           -- eapply SingleRule.
@@ -2583,16 +2583,17 @@ Section SCTiming.
                 ** match goal with
                    | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
                      let Heq := fresh in
-                     assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                       rewrite Heq;
-                       rewrite H0;
+                     replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                       subst;
                        rewrite eval_const;
                        tauto
                    end.
                 ** unfold rv32iGetDst.
                    unfold evalExpr; fold evalExpr.
-                   rewrite H0.
-                   rewrite H2.
+                   subst.
+                   match goal with
+                   | [ H : evalExpr (getOpcodeE _) = _ |- context[evalExpr (getOpcodeE _)] ] => rewrite H
+                   end.
                    simpl.
                    reflexivity.
         * simpl. congruence.
@@ -2602,6 +2603,9 @@ Section SCTiming.
           end.
           unfold SCRegs, rset.
           eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        reflexivity.
       + constructor; try assumption.
         reflexivity.
     - shatter.
@@ -2609,8 +2613,7 @@ Section SCTiming.
                      dst
                      (wzero _)).
       + repeat eexists.
-        * eapply BFMulti.
-          -- tauto.
+        * eapply FMulti.
           -- apply SemFacts.substepZero_imp_step.
              ++ reflexivity.
              ++ eapply SingleRule.
@@ -2620,10 +2623,8 @@ Section SCTiming.
                 ** repeat econstructor; try FMap.findeq.
                    --- match goal with
                        | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                         let Heq := fresh in
-                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                           rewrite Heq;
-                           rewrite H0;
+                         replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           subst;
                            rewrite eval_const;
                            tauto
                        end.
@@ -2634,7 +2635,7 @@ Section SCTiming.
                        end.
                        +++ reflexivity.
                        +++ unfold dst in e.
-                           rewrite <- H0 in e.
+                           subst.
                            tauto.
           -- simpl. congruence.
           -- simpl. congruence.
@@ -2643,11 +2644,13 @@ Section SCTiming.
              end.
              unfold SCRegs, rset.
              eauto.
+        * econstructor; try eassumption.
+          simplify_match.
+          reflexivity.
         * constructor; try assumption.
           reflexivity.
       + repeat eexists.
-        * eapply BFMulti.
-          -- tauto.
+        * eapply FMulti.
           -- apply SemFacts.substepZero_imp_step.
              ++ reflexivity.
              ++ eapply SingleRule.
@@ -2657,10 +2660,8 @@ Section SCTiming.
                 ** repeat econstructor; try FMap.findeq.
                    --- match goal with
                        | |- evalExpr (( _ _ ?x ) == _)%kami_expr = true =>
-                         let Heq := fresh in
-                         assert (Heq : x = pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
-                           rewrite Heq;
-                           rewrite H0;
+                         replace x with (pm (evalExpr (rv32iAlignPc type pc))) by reflexivity;
+                           subst;
                            rewrite eval_const;
                            tauto
                        end.
@@ -2672,7 +2673,7 @@ Section SCTiming.
                        | |- (if ?b then _ else _) = _ => destruct b
                        end.
                        +++ unfold dst in n.
-                           rewrite <- H0 in n.
+                           subst.
                            tauto.
                        +++ reflexivity.
           -- simpl. congruence.
@@ -2682,13 +2683,15 @@ Section SCTiming.
              end.
              unfold SCRegs, rset.
              eauto.
+        * econstructor; try eassumption.
+          simplify_match.
+          reflexivity.
         * constructor; try assumption.
           reflexivity.
           Unshelve.
           -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
           -- exact (wzero _).
-  Qed.*)
-  Admitted.
+  Qed.
 
   Definition getrf (regs : RegsT) : regfile :=
     match FMap.M.find "rf" regs with
