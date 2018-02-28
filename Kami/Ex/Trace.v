@@ -2725,20 +2725,21 @@ Section SCTiming.
         hasTrace rf pm pc mem trace /\
         relatedTrace trace ls.
   Proof.
-(*    intros.
+    intros rf pm pc mem newRegs ls Hfm Hmem.
     let Heq := fresh in
     remember (SCRegs rf pm pc) as regs eqn:Heq; unfold SCRegs in Heq;
       replace rf with (getrf regs) by (subst; FMap.findeq);
       replace pm with (getpm regs) by (subst; FMap.findeq);
       replace pc with (getpc regs) by (subst; FMap.findeq);
       clear rf pm pc Heq.
-    match goal with
-    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] =>
-      induction H
-    end.
+    generalize mem Hmem.
+    clear mem Hmem.
+    induction Hfm.
     - eexists; repeat econstructor.
-    - shatter.
-      destruct H0.
+    - intros.
+      match goal with
+      | [ H : Step _ _ _ _ |- _ ] => destruct H
+      end.
       apply substepsComb_substepsInd in HSubsteps.
       apply SCSubsteps in HSubsteps.
       intuition idtac; shatter;
@@ -2764,16 +2765,28 @@ Section SCTiming.
               replace (getpm o) with pm by (unfold getpm; FMap.findeq)
           end.
       Transparent evalExpr.
-      + eexists.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        match goal with
+        | [ H : if ?x then _ else _ |- _ ] =>
+          replace x with false in H by reflexivity
+        end.
+        shatter.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * apply htLd.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2787,6 +2800,7 @@ Section SCTiming.
              end.
              boolex.
              assumption.
+          -- reflexivity.
           -- match goal with
              | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
                let Heq := fresh in
@@ -2813,33 +2827,56 @@ Section SCTiming.
                 unfold getrf.
                 FMap.findeq.
                 simplify_match.
-                evexg.
+                match goal with
+                | [ H : mem _ = ?x' |- evalExpr ?v @[ ?i <- ?x ]%kami_expr = _ ] => replace (evalExpr v @[ i <- x]%kami_expr) with (evalExpr v @[ i <- #(x')]%kami_expr) by reflexivity; rewrite <- H
+                end.
+                match goal with
+                | [ |- evalExpr (# (x0)) @[ #(?i) <- #(?v)]%kami_expr = rset x0 ?i' ?v' ] => replace i with i' by reflexivity; replace v with v' by reflexivity
+                end.
                 apply functional_extensionality.
                 intros.
                 unfold rset.
-                evex H11.
+                match goal  with
+                | [ H : context[(#(evalExpr (rv32iGetLdDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                end.
                 boolex.
                 match goal with
                 | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
                 end.
-             ++ rewrite H14.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
                 unfold getpm.
                 FMap.findeq.
-             ++ rewrite H14.
+             ++ match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
                 unfold getpc.
                 FMap.findeq.
         * constructor; try assumption.
-          FMap.findeq.
-      + eexists.
+          unfold labelToTraceEvent, callsToTraceEvent.
+          simplify_match.
+          match goal with
+          | [ H : mem _ = ?x |- Some (Rd _ ?a ?v) = Some (Rd _ ?a' ?v') ] => replace v with x by reflexivity; rewrite <- H
+          end.
+          reflexivity.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * eapply htLdZ.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2863,16 +2900,27 @@ Section SCTiming.
              end.
         * constructor; try assumption.
           FMap.findeq.
-      + eexists.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        match goal with
+        | [ H : if ?x then _ else _ |- _ ] =>
+          replace x with true in H by reflexivity
+        end.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * eapply htSt.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2890,16 +2938,23 @@ Section SCTiming.
              end.
         * constructor; try assumption.
           FMap.findeq.
-      + eexists.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * eapply htTh.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2917,16 +2972,23 @@ Section SCTiming.
              end.
         * constructor; try assumption.
           FMap.findeq.
-      + eexists.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * eapply htFh.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2952,23 +3014,32 @@ Section SCTiming.
              apply functional_extensionality.
              intros.
              unfold rset.
-             evex H11.
+             match goal with
+             | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+             end.
              boolex.
              match goal with
              | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
              end.
         * constructor; try assumption.
           FMap.findeq.
-      + eexists.
+      + Opaque evalExpr.
+        match goal with
+        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        end.
+        subst.
+        simpl in *.
+        Transparent evalExpr.
+        subst.
+        match goal with
+        | [ H : SCProcMemConsistent ?a ?m,
+                IH : forall _, SCProcMemConsistent ?a _ -> _
+                          |- _ ] => specialize (IH m H)
+        end.
+        shatter.
+        eexists.
         split.
         * eapply htFh.
-          -- match goal with
-             | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-             end.
-             match goal with
-             | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-             end.
-             assumption.
           -- reflexivity.
           -- match goal with
              | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2994,26 +3065,40 @@ Section SCTiming.
              evexg.
              apply functional_extensionality.
              intros.
-             evex H11.
+             match goal with
+             | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+             end.
              boolex.
              match goal with
              | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
              end.
         * constructor; try assumption.
           FMap.findeq.
-      + destruct (weq
-                    (evalExpr (getOpcodeE # (x2 (evalExpr (rv32iAlignPc type x0)))%kami_expr))
-                    rv32iOpBRANCH).
-        * eexists.
+      + match goal with
+        | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
+                  Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
+            |- _ ] =>
+          destruct (weq
+                      (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
+                      rv32iOpBRANCH)
+        end.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
           split.
           -- eapply htNmBranch.
-             ++ match goal with
-                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-                end.
-                match goal with
-                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-                end.
-                assumption.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -3039,24 +3124,38 @@ Section SCTiming.
                 evexg.
                 apply functional_extensionality.
                 intros.
-                evex H11.
+                match goal with
+                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                end.
                 boolex.
-                unfold rv32iGetDst in n0.
-                evex n0.
-                rewrite e in n0.
+                match goal with
+                | [ Hdst : evalExpr (rv32iGetDst _ _) <> _,
+                           Hopc : evalExpr (getOpcodeE _) = _
+                    |- _ ] =>
+                  unfold rv32iGetDst in Hdst;
+                    evex Hdst;
+                    rewrite Hopc in Hdst
+                end.
                 tauto.
           -- constructor; try assumption.
              FMap.findeq.
-        * eexists.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
           split.
           -- eapply htNm.
-             ++ match goal with
-                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-                end.
-                match goal with
-                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-                end.
-                assumption.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -3083,26 +3182,40 @@ Section SCTiming.
                 evexg.
                 apply functional_extensionality.
                 intros.
-                evex H11.
+                match goal with
+                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                end.
                 boolex.
                 match goal with
                 | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
                 end.
           -- constructor; try assumption.
              FMap.findeq.
-      + destruct (weq
-                    (evalExpr (getOpcodeE # (x2 (evalExpr (rv32iAlignPc type x0)))%kami_expr))
-                    rv32iOpBRANCH).
-        * eexists.
+      + match goal with
+        | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
+                  Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
+            |- _ ] =>
+          destruct (weq
+                      (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
+                      rv32iOpBRANCH)
+        end.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
           split.
           -- eapply htNmBranch.
-             ++ match goal with
-                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-                end.
-                match goal with
-                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-                end.
-                assumption.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -3121,16 +3234,23 @@ Section SCTiming.
                 end.
           -- constructor; try assumption.
              FMap.findeq.
-        * eexists.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
           split.
           -- eapply htNm.
-             ++ match goal with
-                | [ H : inBounds _ _ |- _ ] => unfold inBounds in H
-                end.
-                match goal with
-                | [ H : FMap.M.find "rf" _ = _ |- _ ] => rewrite H in *
-                end.
-                assumption.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -3155,15 +3275,16 @@ Section SCTiming.
                 simplify_match.
                 unfold rset.
                 evexg.
-                evex H11.
+                match goal with
+                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                end.
                 boolex.
                 match goal with
                 | [ |- (if ?eq then _ else _) = _ ] => destruct eq; tauto
                 end.
           -- constructor; try assumption.
              FMap.findeq.
-  Qed.*)
-  Admitted.
+  Qed.
 
   Theorem abstractToSCProcHiding :
     forall rf pm pc mem,
