@@ -31,6 +31,7 @@ Section AbstractTrace.
   Definition memory := type (Vector (MemTypes.Data rv32iDataBytes) rv32iAddrSize).
 
   Inductive TraceEvent : Type :=
+  | Nop
   | Nm (pc : address)
   | Rd (pc : address) (addr : address) (val : data)
   | RdZ (pc : address) (addr : address)
@@ -42,6 +43,9 @@ Section AbstractTrace.
   Inductive hasTrace : regfile -> progMem -> address -> memory -> list TraceEvent -> Prop :=
   | htNil : forall rf pm pc mem,
       hasTrace rf pm pc mem nil
+  | htNop : forall rf pm pc mem trace',
+      hasTrace rf pm pc mem trace' ->
+      hasTrace rf pm pc mem (Nop :: trace')
   | htLd : forall inst val rf pm pc mem trace',
       pm (evalExpr (rv32iAlignPc _ pc)) = inst ->
       evalExpr (rv32iGetOptype type inst) = opLd ->
@@ -113,6 +117,7 @@ Section AbstractTrace.
 
   Definition censorTrace : list TraceEvent -> list TraceEvent :=
     map (fun te => match te with
+                | Nop => Nop
                 | Nm _ => te
                 | Branch _ _ => te
                 | RdZ _ _ => te
@@ -183,18 +188,17 @@ Section AbstractTrace.
 End AbstractTrace.
 
 Section KamiTrace.
-  Inductive ForwardActiveMultistep (m : Modules) : RegsT -> RegsT -> list LabelT -> Prop :=
+  Inductive ForwardMultistep (m : Modules) : RegsT -> RegsT -> list LabelT -> Prop :=
     NilFMultistep : forall o1 o2 : RegsT,
-      o1 = o2 -> ForwardActiveMultistep m o1 o2 nil
+      o1 = o2 -> ForwardMultistep m o1 o2 nil
   | FMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT) (u : UpdatesT) (l : LabelT),
       Step m o u l ->
       annot l <> None ->
-      annot l <> Some None ->
-      ForwardActiveMultistep m (FMap.M.union u o) n a ->
-      ForwardActiveMultistep m o n (l :: a).
+      ForwardMultistep m (FMap.M.union u o) n a ->
+      ForwardMultistep m o n (l :: a).
 
   Lemma FMulti_Multi : forall m o n a,
-      ForwardActiveMultistep m o n a ->
+      ForwardMultistep m o n a ->
       Multistep m o n (List.rev a).
   Proof.
     intros m o n a.
@@ -203,14 +207,14 @@ Section KamiTrace.
     clear - a.
     induction a; intros;
     match goal with
-    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] => inversion H; clear H
+    | [ H : ForwardMultistep _ _ _ _ |- _ ] => inversion H; clear H
     end.
     - constructor.
       assumption.
     - simpl.
       subst.
       match goal with
-      | [ H : ForwardActiveMultistep _ _ _ _, IH : forall _ _ _, ForwardActiveMultistep _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ H)
+      | [ H : ForwardMultistep _ _ _ _, IH : forall _ _ _, ForwardMultistep _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ H)
       end.
       match goal with
       | [ HM : Multistep ?m (FMap.M.union ?u ?o) ?n (List.rev ?a), HS : Step ?m ?o ?u ?l |- _ ] =>
@@ -293,12 +297,12 @@ Section KamiTrace.
    module, where the only external method calls are toHost/fromHost *)
   Definition kamiHiding m regs : Prop :=
     forall labels newRegs fhs,
-      ForwardActiveMultistep m regs newRegs labels ->
+      ForwardMultistep m regs newRegs labels ->
       extractFhLabelSeq labels = fhs ->
       forall fhs',
         length fhs = length fhs' ->
         exists labels' newRegs',
-          ForwardActiveMultistep m regs newRegs' labels' /\
+          ForwardMultistep m regs newRegs' labels' /\
           censorLabelSeq censorHostMeth labels = censorLabelSeq censorHostMeth  labels' /\
           extractFhLabelSeq labels' = fhs'.
 
@@ -480,6 +484,11 @@ Section SCTiming.
 
   Inductive relatedTrace : list TraceEvent -> LabelSeqT -> Prop :=
   | RtNil : relatedTrace nil nil
+  | RtNop : forall lbl trace' ls',
+      annot lbl = None \/ annot lbl = Some None ->
+      calls lbl = FMap.M.empty _ ->
+      relatedTrace trace' ls' ->
+      relatedTrace (Nop :: trace') (lbl :: ls')
   | RtRd : forall pc addr val lbl trace' ls',
       labelToTraceEvent lbl = Some (Rd $0 addr val) ->
       relatedTrace trace' ls' ->
@@ -497,17 +506,23 @@ Section SCTiming.
       relatedTrace trace' ls' ->
       relatedTrace (FromHost pc val :: trace') (lbl :: ls')
   | RtBranch : forall pc taken lbl trace' ls',
+      annot lbl <> None ->
+      annot lbl <> Some None ->
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
       relatedTrace (Branch pc taken :: trace') (lbl :: ls')
   | RtNm : forall pc lbl trace' ls',
+      annot lbl <> None ->
+      annot lbl <> Some None ->
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
       relatedTrace (Nm pc :: trace') (lbl :: ls')
   | RtRdZ : forall pc addr lbl trace' ls',
+      annot lbl <> None ->
+      annot lbl <> Some None ->
       labelToTraceEvent lbl = None ->
       relatedTrace trace' ls' ->
-      relatedTrace (RdZ pc addr :: trace') (lbl :: ls'). 
+      relatedTrace (RdZ pc addr :: trace') (lbl :: ls').
 
   Lemma relatedFhTrace :
     forall trace ls,
@@ -530,10 +545,13 @@ Section SCTiming.
               | [ s : {_ : _ & _} |- _ ] => destruct s
               | [ x : SignatureT |- _ ] => destruct x
               end; try congruence; try discriminate).
-    match goal with
-    | [ H : Some _ = Some _ |- _ ] => inversion H
-    end.
-    reflexivity.
+    - match goal with
+      | [ H : Some _ = Some _ |- _ ] => inversion H
+      end.
+      reflexivity.
+    - simpl in *.
+      subst.
+      FMap.findeq.
   Qed. *) Admitted.
 
   Inductive SCProcMemConsistent : LabelSeqT -> memory -> Prop :=
@@ -559,13 +577,13 @@ Section SCTiming.
 
   Definition SCProcHiding m regs mem : Prop := 
     forall labels newRegs fhs,
-      ForwardActiveMultistep m regs newRegs labels ->
+      ForwardMultistep m regs newRegs labels ->
       SCProcMemConsistent labels mem ->
       extractFhLabelSeq labels = fhs ->
       forall fhs',
         length fhs = length fhs' ->
         exists labels' newRegs',
-          ForwardActiveMultistep m regs newRegs' labels' /\
+          ForwardMultistep m regs newRegs' labels' /\
           SCProcMemConsistent labels' mem /\
           censorLabelSeq censorSCMeth labels = censorLabelSeq censorSCMeth  labels' /\
           extractFhLabelSeq labels' = fhs'.
@@ -682,15 +700,15 @@ Section SCTiming.
     forall rf1 rf2 pm pc mem1 mem2 trace1 trace2 newRegs1 newRegs2 ls1 ls2,
       hasTrace rf1 pm pc mem1 trace1 ->
       hasTrace rf2 pm pc mem2 trace2 ->
-      ForwardActiveMultistep rv32iProcInst (SCRegs rf1 pm pc) newRegs1 ls1 ->
+      ForwardMultistep rv32iProcInst (SCRegs rf1 pm pc) newRegs1 ls1 ->
       SCProcMemConsistent ls1 mem1 ->
-      ForwardActiveMultistep rv32iProcInst (SCRegs rf2 pm pc) newRegs2 ls2 ->
+      ForwardMultistep rv32iProcInst (SCRegs rf2 pm pc) newRegs2 ls2 ->
       SCProcMemConsistent ls2 mem2 ->
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
       censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
-  Proof. (*
+  Proof.
     intros rf1 rf2 pm pc mem1 mem2 trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
     move Hht1 at top.
     generalize rf2 mem2 trace2 newRegs1 newRegs2 ls1 ls2.
@@ -703,6 +721,52 @@ Section SCTiming.
       | [ H1 : relatedTrace nil _, H2 : relatedTrace nil _ |- _ ] => inversion H1; inversion H2
       end.
       reflexivity.
+    - match goal with
+      | [ Hct : censorTrace (Nop :: _) = censorTrace ?tr |- _ ] =>
+        let t := fresh in
+        destruct tr as [|t tr];
+          simpl in Hct;
+          try destruct t;
+          try congruence;
+          inversion Hct;
+          clear Hct;
+          opaque_subst
+      end.
+      match goal with
+      | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
+      end.
+      opaque_subst.
+      simpl.
+      repeat match goal with
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
+               inversion Hbm;
+                 clear Hbm;
+                 match goal with
+                 | [ Hst : Step _ _ _ lbl |- _ ] =>
+                   inversion Hst;
+                     clear Hst
+                 end
+             end.
+      opaque_subst.
+      apply substepsComb_substepsInd in HSubsteps.
+      apply SCProcSubsteps in HSubsteps.
+      apply substepsComb_substepsInd in HSubsteps0.
+      apply SCProcSubsteps in HSubsteps0.
+      intuition idtac; shatter;
+        match goal with
+        | [ H : foldSSLabel ss = _, H0 : foldSSLabel ss0 = _ |- _ ] => rewrite H in *; rewrite H0 in *; simpl
+        end; try discriminate.
+      f_equal.
+      match goal with
+      | [ H : foldSSUpds ss = _, H0 : foldSSUpds ss0 = _ |- _ ] => rewrite H in *; rewrite H0 in *; simpl
+      end.
+      match goal with
+      | [ H : hasTrace _ _ _ _ (Nop :: _) |- _ ] => inversion H
+      end; subst.
+      eapply IHHht1; try eassumption;
+        match goal with
+        | [ H : SCProcMemConsistent _ ?m |- SCProcMemConsistent _ ?m ] => inversion H; simpl in *; subst; assumption
+        end.
     - match goal with
       | [ Hct : censorTrace (Rd _ _ _ :: _) = censorTrace ?tr |- _ ] =>
         let t := fresh in
@@ -720,7 +784,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -734,7 +798,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
-        | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         end.
       match goal with
       | [ H : In _ _ |- _ ] => simpl in H
@@ -746,7 +810,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps0.
       intuition idtac; shatter;
         match goal with
-        | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
+        | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         end.
       match goal with
       | [ H : In _ _ |- _ ] => simpl in H
@@ -819,7 +883,7 @@ Section SCTiming.
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
           try match goal with
-              | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+              | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                 replace r2 with r1; try eassumption
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
@@ -960,7 +1024,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -974,6 +1038,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -986,6 +1051,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1031,7 +1097,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -1091,7 +1157,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1105,6 +1171,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1117,6 +1184,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps0.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1193,7 +1261,7 @@ Section SCTiming.
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
           try match goal with
-              | [ HFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+              | [ HFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                 replace r2 with r1; try eassumption
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
@@ -1290,7 +1358,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1304,6 +1372,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1316,6 +1385,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps0.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1371,7 +1441,7 @@ Section SCTiming.
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
           try match goal with
-              | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+              | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                 replace r2 with r1; try eassumption
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
@@ -1427,7 +1497,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1441,6 +1511,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1453,6 +1524,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1505,7 +1577,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -1580,6 +1652,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1632,7 +1705,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -1698,7 +1771,7 @@ Section SCTiming.
         opaque_subst.
         simpl.
         repeat match goal with
-               | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+               | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                  inversion Hbm;
                    clear Hbm;
                    match goal with
@@ -1712,6 +1785,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1732,6 +1806,7 @@ Section SCTiming.
           apply SCProcSubsteps in HSubsteps0.
           intuition idtac; shatter;
             match goal with
+            | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
             | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
             end.
           match goal with
@@ -1763,7 +1838,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -1815,7 +1890,7 @@ Section SCTiming.
         opaque_subst.
         simpl.
         repeat match goal with
-               | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+               | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                  inversion Hbm;
                    clear Hbm;
                    match goal with
@@ -1829,6 +1904,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1849,6 +1925,7 @@ Section SCTiming.
           apply SCProcSubsteps in HSubsteps0.
           intuition idtac; shatter;
             match goal with
+            | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
             | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
             end.
           match goal with
@@ -1880,7 +1957,7 @@ Section SCTiming.
           | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
           end;
             try match goal with
-                | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+                | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                   replace r2 with r1; try eassumption
                 | [ |- censorTrace _ = censorTrace _ ] => eassumption
                 | [ |- relatedTrace _ _ ] => eassumption
@@ -1932,7 +2009,7 @@ Section SCTiming.
       opaque_subst.
       simpl.
       repeat match goal with
-             | [ Hbm : ForwardActiveMultistep _ _ _ (?lbl :: _) |- _ ] =>
+             | [ Hbm : ForwardMultistep _ _ _ (?lbl :: _) |- _ ] =>
                inversion Hbm;
                  clear Hbm;
                  match goal with
@@ -1946,6 +2023,7 @@ Section SCTiming.
       apply SCProcSubsteps in HSubsteps.
       intuition idtac; shatter;
         match goal with
+        | [ H : foldSSLabel ss = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
         | [ H : foldSSLabel ss = _, H1 : annot (hide (foldSSLabel ss)) = None -> False, H2 : annot (hide (foldSSLabel ss)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
         end.
       match goal with
@@ -1962,6 +2040,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -1993,7 +2072,7 @@ Section SCTiming.
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
           try match goal with
-              | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+              | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                 replace r2 with r1; try eassumption
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
@@ -2039,6 +2118,7 @@ Section SCTiming.
         apply SCProcSubsteps in HSubsteps0.
         intuition idtac; shatter;
           match goal with
+          | [ H : foldSSLabel ss0 = _, Hltt : labelToTraceEvent (hide (foldSSLabel ss0)) = Some _ |- _ ] => rewrite H in *; try solve [simpl in Hltt; discriminate]
           | [ H : foldSSLabel ss0 = _, H1 : annot (hide (foldSSLabel ss0)) = None -> False, H2 : annot (hide (foldSSLabel ss0)) = Some None -> False |- _ ] => rewrite H in *; simpl in H1; simpl in H2; try tauto
           end.
         match goal with
@@ -2070,7 +2150,7 @@ Section SCTiming.
         | [ IH : context[censorLabelSeq _ _ = censorLabelSeq _ _] |- _ ] => eapply IH
         end;
           try match goal with
-              | [ HBFM : ForwardActiveMultistep _ ?r1 _ ?l |- ForwardActiveMultistep _ ?r2 _ ?l ] =>
+              | [ HBFM : ForwardMultistep _ ?r1 _ ?l |- ForwardMultistep _ ?r2 _ ?l ] =>
                 replace r2 with r1; try eassumption
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
@@ -2112,7 +2192,7 @@ Section SCTiming.
           Transparent evalExpr.
           subst.
           assumption.
-  Qed. *) Admitted.
+  Qed.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
     simpl.
@@ -2125,12 +2205,27 @@ Section SCTiming.
     forall rf pm pc mem trace,
       hasTrace rf pm pc mem trace ->
       exists newRegs ls,
-        ForwardActiveMultistep rv32iProcInst (SCRegs rf pm pc) newRegs ls /\
+        ForwardMultistep rv32iProcInst (SCRegs rf pm pc) newRegs ls /\
         SCProcMemConsistent ls mem /\
         relatedTrace trace ls.
-  Proof. (* 
+  Proof.
     induction 1.
     - repeat eexists; repeat econstructor.
+    - shatter.
+      repeat eexists.
+      + eapply FMulti.
+        * apply SemFacts.substepZero_imp_step.
+          -- reflexivity.
+          -- eapply EmptyRule.
+        * simpl. congruence.
+        * match goal with
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          end.
+          eauto.
+      + econstructor; try eassumption.
+        simplify_match.
+        reflexivity.
+      + constructor; eauto.
     - shatter.
       repeat eexists.
       + eapply FMulti.
@@ -2167,9 +2262,8 @@ Section SCTiming.
                        reflexivity.
                    --- repeat econstructor; try FMap.findeq.
         * simpl. congruence.
-        * simpl. congruence.
         * match goal with
-          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
@@ -2229,20 +2323,15 @@ Section SCTiming.
                    --- reflexivity.
                    --- subst. tauto.
         * simpl. congruence.
-        * simpl. congruence.
         * match goal with
-          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
       + econstructor; try eassumption.
         simplify_match.
         reflexivity.
-      + constructor; try assumption.
-        unfold labelToTraceEvent, getLabel.
-        unfold callsToTraceEvent.
-        simplify_match.
-        reflexivity.
+      + constructor; (eauto || discriminate).
     - shatter.
       repeat eexists.
       + eapply FMulti.
@@ -2261,9 +2350,8 @@ Section SCTiming.
                        tauto
                    end.
         * simpl. congruence.
-        * simpl. congruence.
         * match goal with
-          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs.
           eauto.
@@ -2329,9 +2417,8 @@ Section SCTiming.
                        tauto
                    end.
         * simpl. congruence.
-        * simpl. congruence.
         * match goal with
-          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs.
           eauto.
@@ -2384,9 +2471,8 @@ Section SCTiming.
                            subst.
                            tauto.
           -- simpl. congruence.
-          -- simpl. congruence.
           -- match goal with
-             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2432,9 +2518,8 @@ Section SCTiming.
                            reflexivity.
                        +++ repeat econstructor; FMap.findeq.
           -- simpl. congruence.
-          -- simpl. congruence.
           -- match goal with
-             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
@@ -2470,17 +2555,15 @@ Section SCTiming.
                    simpl.
                    reflexivity.
         * simpl. congruence.
-        * simpl. congruence.
         * match goal with
-          | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+          | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
           end.
           unfold SCRegs, rset.
           eauto.
       + econstructor; try eassumption.
         simplify_match.
         reflexivity.
-      + constructor; try assumption.
-        reflexivity.
+      + constructor; (eauto || discriminate).
     - shatter.
       destruct (isEq (Bit rv32iRfIdx)
                      dst
@@ -2511,17 +2594,15 @@ Section SCTiming.
                            subst.
                            tauto.
           -- simpl. congruence.
-          -- simpl. congruence.
           -- match goal with
-             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
         * econstructor; try eassumption.
           simplify_match.
           reflexivity.
-        * constructor; try assumption.
-          reflexivity.
+        * constructor; (eauto || discriminate).
       + repeat eexists.
         * eapply FMulti.
           -- apply SemFacts.substepZero_imp_step.
@@ -2550,21 +2631,19 @@ Section SCTiming.
                            tauto.
                        +++ reflexivity.
           -- simpl. congruence.
-          -- simpl. congruence.
           -- match goal with
-             | [ IH : ForwardActiveMultistep _ ?r _ _ |- ForwardActiveMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
+             | [ IH : ForwardMultistep _ ?r _ _ |- ForwardMultistep _ ?r' _ _ ] => replace r' with r; try eassumption
              end.
              unfold SCRegs, rset.
              eauto.
         * econstructor; try eassumption.
           simplify_match.
           reflexivity.
-        * constructor; try assumption.
-          reflexivity.
+        * constructor; (eauto || discriminate).
           Unshelve.
           -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
           -- exact (wzero _).
-  Qed. *) Admitted.
+  Qed.
 
   Definition getrf (regs : RegsT) : regfile :=
     match FMap.M.find "rf" regs with
@@ -2592,12 +2671,12 @@ Section SCTiming.
 
   Lemma SCToAbstractRelated :
     forall rf pm pc mem newRegs ls,
-      ForwardActiveMultistep rv32iProcInst (SCRegs rf pm pc) newRegs ls ->
+      ForwardMultistep rv32iProcInst (SCRegs rf pm pc) newRegs ls ->
       SCProcMemConsistent ls mem ->
       exists trace,
         hasTrace rf pm pc mem trace /\
         relatedTrace trace ls.
-  Proof. (*
+  Proof.
     intros rf pm pc mem newRegs ls Hfm Hmem.
     let Heq := fresh in
     remember (SCRegs rf pm pc) as regs eqn:Heq; unfold SCRegs in Heq;
@@ -2619,37 +2698,10 @@ Section SCTiming.
         match goal with
         | [ Hle : foldSSLabel ss = _, Hue : foldSSUpds ss = _ |- _ ] => rewrite Hle in *; rewrite Hue in *
         end; try tauto.
-      Opaque evalExpr.
-      match goal with
-      | [ HIn : In (_ :: _)%struct (getRules _) |- _ ] => simpl in HIn; intuition idtac
-      end;
-        match goal with
-        | [ Heq : _ = (_ :: _)%struct |- _ ] =>
-          inversion Heq; clear Heq
-        end; subst;
-          kinv_action_dest;
-          match goal with
-          | [ Hpc : FMap.M.find "pc" o = Some (existT _ _ ?pc),
-                    Hrf : FMap.M.find "rf" o = Some (existT _ _ ?rf),
-                          Hpm : FMap.M.find "pgm" o = Some (existT _ _ ?pm)
-              |- _ ] =>
-            replace (getpc o) with pc by (unfold getpc; FMap.findeq);
-              replace (getrf o) with rf by (unfold getrf; FMap.findeq);
-              replace (getpm o) with pm by (unfold getpm; FMap.findeq)
-          end.
-      Transparent evalExpr.
-      + Opaque evalExpr.
-        match goal with
+      + match goal with
         | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
         end.
-        subst.
         simpl in *.
-        Transparent evalExpr.
-        match goal with
-        | [ H : if ?x then _ else _ |- _ ] =>
-          replace x with false in H by reflexivity
-        end.
-        shatter.
         subst.
         match goal with
         | [ H : SCProcMemConsistent ?a ?m,
@@ -2657,304 +2709,129 @@ Section SCTiming.
                           |- _ ] => specialize (IH m H)
         end.
         shatter.
-        eexists.
+        match goal with
+        | [ H : relatedTrace ?t ?ls |- exists _, _ /\ relatedTrace _ (_ :: ?ls) ] => exists (Nop :: t)
+        end.
         split.
-        * apply htLd.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ H : context[rv32iGetLdDst] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- reflexivity.
-          -- match goal with
-             | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
-               let Heq := fresh in
-               assert (x1 = y1) as Heq;
-                 [ idtac |
-                   rewrite Heq in Hht;
-                   clear Heq;
-                   assert (x2 = y2) as Heq;
-                   [ idtac |
-                     rewrite Heq in Hht;
-                     clear Heq;
-                     assert (x3 = y3) as Heq;
-                     [ idtac |
-                       rewrite Heq in Hht;
-                       clear Heq;
-                       eassumption
-                     ]
-                   ]
-                 ]
-             end.
+        * constructor.
+          match goal with
+          | [ H : hasTrace ?r ?m ?p _ _ |- hasTrace ?r' ?m' ?p' _ _ ] => replace r' with r by reflexivity; replace m' with m by reflexivity; replace p' with p by reflexivity; assumption
+          end.
+        * constructor; eauto.
+      + Opaque evalExpr.
+        match goal with
+        | [ HIn : In (_ :: _)%struct (getRules _) |- _ ] => simpl in HIn; intuition idtac
+        end;
+          match goal with
+          | [ Heq : _ = (_ :: _)%struct |- _ ] =>
+            inversion Heq; clear Heq
+          end; subst;
+            kinv_action_dest;
+            match goal with
+            | [ Hpc : FMap.M.find "pc" o = Some (existT _ _ ?pc),
+                      Hrf : FMap.M.find "rf" o = Some (existT _ _ ?rf),
+                            Hpm : FMap.M.find "pgm" o = Some (existT _ _ ?pm)
+                |- _ ] =>
+              replace (getpc o) with pc by (unfold getpc; FMap.findeq);
+                replace (getrf o) with rf by (unfold getrf; FMap.findeq);
+                replace (getpm o) with pm by (unfold getpm; FMap.findeq)
+            end.
+        Transparent evalExpr.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          match goal with
+          | [ H : if ?x then _ else _ |- _ ] =>
+            replace x with false in H by reflexivity
+          end.
+          shatter.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
+          split.
+          -- apply htLd.
+             ++ reflexivity.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
-                end.
-                unfold getrf.
-                FMap.findeq.
-                simplify_match.
-                match goal with
-                | [ H : mem _ = ?x' |- evalExpr ?v @[ ?i <- ?x ]%kami_expr = _ ] => replace (evalExpr v @[ i <- x]%kami_expr) with (evalExpr v @[ i <- #(x')]%kami_expr) by reflexivity; rewrite <- H
-                end.
-                match goal with
-                | [ |- evalExpr (# (x0)) @[ #(?i) <- #(?v)]%kami_expr = rset x0 ?i' ?v' ] => replace i with i' by reflexivity; replace v with v' by reflexivity
-                end.
-                apply functional_extensionality.
-                intros.
-                unfold rset.
-                match goal  with
-                | [ H : context[(#(evalExpr (rv32iGetLdDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
                 end.
                 boolex.
-                match goal with
-                | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
-                end.
+                assumption.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ H : context[rv32iGetLdDst] |- _ ] =>
+                  evex H
                 end.
-                unfold getpm.
-                FMap.findeq.
+                boolex.
+                assumption.
+             ++ reflexivity.
              ++ match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                | [ Hht : hasTrace ?x1 ?x2 ?x3 _ _ |- hasTrace ?y1 ?y2 ?y3 _ _ ] =>
+                  let Heq := fresh in
+                  assert (x1 = y1) as Heq;
+                    [ idtac |
+                      rewrite Heq in Hht;
+                      clear Heq;
+                      assert (x2 = y2) as Heq;
+                      [ idtac |
+                        rewrite Heq in Hht;
+                        clear Heq;
+                        assert (x3 = y3) as Heq;
+                        [ idtac |
+                          rewrite Heq in Hht;
+                          clear Heq;
+                          eassumption
+                        ]
+                      ]
+                    ]
                 end.
-                unfold getpc.
-                FMap.findeq.
-        * constructor; try assumption.
-          unfold labelToTraceEvent, callsToTraceEvent.
-          simplify_match.
-          match goal with
-          | [ H : mem _ = ?x |- Some (Rd _ ?a ?v) = Some (Rd _ ?a' ?v') ] => replace v with x by reflexivity; rewrite <- H
-          end.
-          reflexivity.
-      + Opaque evalExpr.
-        match goal with
-        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-        end.
-        subst.
-        simpl in *.
-        Transparent evalExpr.
-        subst.
-        match goal with
-        | [ H : SCProcMemConsistent ?a ?m,
-                IH : forall _, SCProcMemConsistent ?a _ -> _
-                          |- _ ] => specialize (IH m H)
-        end.
-        shatter.
-        eexists.
-        split.
-        * eapply htLdZ.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ H : context[rv32iGetLdDst] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ Hfu : foldSSUpds ss = _,
-                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
-                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                 eassumption
-             end.
-        * constructor; try assumption.
-          FMap.findeq.
-      + Opaque evalExpr.
-        match goal with
-        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-        end.
-        subst.
-        simpl in *.
-        Transparent evalExpr.
-        match goal with
-        | [ H : if ?x then _ else _ |- _ ] =>
-          replace x with true in H by reflexivity
-        end.
-        subst.
-        match goal with
-        | [ H : SCProcMemConsistent ?a ?m,
-                IH : forall _, SCProcMemConsistent ?a _ -> _
-                          |- _ ] => specialize (IH m H)
-        end.
-        shatter.
-        eexists.
-        split.
-        * eapply htSt.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ Hfu : foldSSUpds ss = _,
-                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
-                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                 eassumption
-             end.
-        * constructor; try assumption.
-          FMap.findeq.
-      + Opaque evalExpr.
-        match goal with
-        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-        end.
-        subst.
-        simpl in *.
-        Transparent evalExpr.
-        subst.
-        match goal with
-        | [ H : SCProcMemConsistent ?a ?m,
-                IH : forall _, SCProcMemConsistent ?a _ -> _
-                          |- _ ] => specialize (IH m H)
-        end.
-        shatter.
-        eexists.
-        split.
-        * eapply htTh.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ Hfu : foldSSUpds ss = _,
-                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-               replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
-                 replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                 eassumption
-             end.
-        * constructor; try assumption.
-          FMap.findeq.
-      + Opaque evalExpr.
-        match goal with
-        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-        end.
-        subst.
-        simpl in *.
-        Transparent evalExpr.
-        subst.
-        match goal with
-        | [ H : SCProcMemConsistent ?a ?m,
-                IH : forall _, SCProcMemConsistent ?a _ -> _
-                          |- _ ] => specialize (IH m H)
-        end.
-        shatter.
-        eexists.
-        split.
-        * eapply htFh.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ Hfu : foldSSUpds ss = _,
-                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-               replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                 replace (getrf o') with x1 in Hht;
-                 try eassumption
-             end.
-             match goal with
-             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
-             end.
-             unfold getrf.
-             FMap.findeq.
+                ** match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getrf.
+                   FMap.findeq.
+                   simplify_match.
+                   match goal with
+                   | [ H : mem _ = ?x' |- evalExpr ?v @[ ?i <- ?x ]%kami_expr = _ ] => replace (evalExpr v @[ i <- x]%kami_expr) with (evalExpr v @[ i <- #(x')]%kami_expr) by reflexivity; rewrite <- H
+                   end.
+                   match goal with
+                   | [ |- evalExpr (# (x0)) @[ #(?i) <- #(?v)]%kami_expr = rset x0 ?i' ?v' ] => replace i with i' by reflexivity; replace v with v' by reflexivity
+                   end.
+                   apply functional_extensionality.
+                   intros.
+                   unfold rset.
+                   match goal  with
+                   | [ H : context[(#(evalExpr (rv32iGetLdDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                   end.
+                   boolex.
+                   match goal with
+                   | [ |- _ = (if ?eq then _ else _) _ ] => destruct eq; tauto
+                   end.
+                ** match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getpm.
+                   FMap.findeq.
+                ** match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getpc.
+                   FMap.findeq.
+          -- constructor; try assumption.
+             unfold labelToTraceEvent, callsToTraceEvent.
              simplify_match.
-             evexg.
-             apply functional_extensionality.
-             intros.
-             unfold rset.
              match goal with
-             | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+             | [ H : mem _ = ?x |- Some (Rd _ ?a ?v) = Some (Rd _ ?a' ?v') ] => replace v with x by reflexivity; rewrite <- H
              end.
-             boolex.
-             match goal with
-             | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
-             end.
-        * constructor; try assumption.
-          FMap.findeq.
-      + Opaque evalExpr.
-        match goal with
-        | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-        end.
-        subst.
-        simpl in *.
-        Transparent evalExpr.
-        subst.
-        match goal with
-        | [ H : SCProcMemConsistent ?a ?m,
-                IH : forall _, SCProcMemConsistent ?a _ -> _
-                          |- _ ] => specialize (IH m H)
-        end.
-        shatter.
-        eexists.
-        split.
-        * eapply htFh.
-          -- reflexivity.
-          -- match goal with
-             | [ H : context[rv32iGetOptype] |- _ ] =>
-               evex H
-             end.
-             boolex.
-             assumption.
-          -- match goal with
-             | [ Hfu : foldSSUpds ss = _,
-                       Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-               replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                 replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                 replace (getrf o') with x1 in Hht;
-                 try eassumption
-             end.
-             match goal with
-             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
-             end.
-             unfold getrf.
-             FMap.findeq.
-             simplify_match.
-             unfold rset.
-             evexg.
-             apply functional_extensionality.
-             intros.
-             match goal with
-             | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
-             end.
-             boolex.
-             match goal with
-             | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
-             end.
-        * constructor; try assumption.
-          FMap.findeq.
-      + match goal with
-        | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
-                  Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
-            |- _ ] =>
-          destruct (weq
-                      (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
-                      rv32iOpBRANCH)
-        end.
+             reflexivity.
         * Opaque evalExpr.
           match goal with
           | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
@@ -2971,7 +2848,7 @@ Section SCTiming.
           shatter.
           eexists.
           split.
-          -- eapply htNmBranch.
+          -- eapply htLdZ.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -2979,37 +2856,57 @@ Section SCTiming.
                 end.
                 boolex.
                 assumption.
-             ++ assumption.
+             ++ match goal with
+                | [ H : context[rv32iGetLdDst] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
              ++ match goal with
                 | [ Hfu : foldSSUpds ss = _,
                           Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                  replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                    replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
                     replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                    replace (getrf o') with x1 in Hht;
-                    try eassumption
+                    eassumption
                 end.
-                match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
-                end.
-                unfold getrf.
-                FMap.findeq.
-                simplify_match.
-                evexg.
-                apply functional_extensionality.
-                intros.
-                match goal with
-                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+          -- constructor; (eauto || discriminate).
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          match goal with
+          | [ H : if ?x then _ else _ |- _ ] =>
+            replace x with true in H by reflexivity
+          end.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
+          split.
+          -- eapply htSt.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
                 end.
                 boolex.
-                match goal with
-                | [ Hdst : evalExpr (rv32iGetDst _ _) <> _,
-                           Hopc : evalExpr (getOpcodeE _) = _
-                    |- _ ] =>
-                  unfold rv32iGetDst in Hdst;
-                    evex Hdst;
-                    rewrite Hopc in Hdst
+                assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                    replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    eassumption
                 end.
-                tauto.
           -- constructor; try assumption.
              FMap.findeq.
         * Opaque evalExpr.
@@ -3028,7 +2925,7 @@ Section SCTiming.
           shatter.
           eexists.
           split.
-          -- eapply htNm.
+          -- eapply htTh.
              ++ reflexivity.
              ++ match goal with
                 | [ H : context[rv32iGetOptype] |- _ ] =>
@@ -3036,7 +2933,91 @@ Section SCTiming.
                 end.
                 boolex.
                 assumption.
-             ++ assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                    replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    eassumption
+                end.
+          -- constructor; try assumption.
+             FMap.findeq.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
+          split.
+          -- eapply htFh.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
+             ++ match goal with
+                | [ Hfu : foldSSUpds ss = _,
+                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                    replace (getrf o') with x1 in Hht;
+                    try eassumption
+                end.
+                match goal with
+                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                end.
+                unfold getrf.
+                FMap.findeq.
+                simplify_match.
+                evexg.
+                apply functional_extensionality.
+                intros.
+                unfold rset.
+                match goal with
+                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                end.
+                boolex.
+                match goal with
+                | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
+                end.
+          -- constructor; try assumption.
+             FMap.findeq.
+        * Opaque evalExpr.
+          match goal with
+          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+          end.
+          subst.
+          simpl in *.
+          Transparent evalExpr.
+          subst.
+          match goal with
+          | [ H : SCProcMemConsistent ?a ?m,
+                  IH : forall _, SCProcMemConsistent ?a _ -> _
+                            |- _ ] => specialize (IH m H)
+          end.
+          shatter.
+          eexists.
+          split.
+          -- eapply htFh.
+             ++ reflexivity.
+             ++ match goal with
+                | [ H : context[rv32iGetOptype] |- _ ] =>
+                  evex H
+                end.
+                boolex.
+                assumption.
              ++ match goal with
                 | [ Hfu : foldSSUpds ss = _,
                           Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
@@ -3064,100 +3045,213 @@ Section SCTiming.
                 end.
           -- constructor; try assumption.
              FMap.findeq.
-      + match goal with
-        | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
-                  Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
-            |- _ ] =>
-          destruct (weq
-                      (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
-                      rv32iOpBRANCH)
-        end.
-        * Opaque evalExpr.
-          match goal with
-          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+        * match goal with
+          | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
+                    Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
+              |- _ ] =>
+            destruct (weq
+                        (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
+                        rv32iOpBRANCH)
           end.
-          subst.
-          simpl in *.
-          Transparent evalExpr.
-          subst.
-          match goal with
-          | [ H : SCProcMemConsistent ?a ?m,
-                  IH : forall _, SCProcMemConsistent ?a _ -> _
-                            |- _ ] => specialize (IH m H)
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+             end.
+             subst.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             match goal with
+             | [ H : SCProcMemConsistent ?a ?m,
+                     IH : forall _, SCProcMemConsistent ?a _ -> _
+                               |- _ ] => specialize (IH m H)
+             end.
+             shatter.
+             eexists.
+             split.
+             ++ eapply htNmBranch.
+                ** reflexivity.
+                ** match goal with
+                   | [ H : context[rv32iGetOptype] |- _ ] =>
+                     evex H
+                   end.
+                   boolex.
+                   assumption.
+                ** assumption.
+                ** match goal with
+                   | [ Hfu : foldSSUpds ss = _,
+                             Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                     replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                       replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                       replace (getrf o') with x1 in Hht;
+                       try eassumption
+                   end.
+                   match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getrf.
+                   FMap.findeq.
+                   simplify_match.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   match goal with
+                   | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                   end.
+                   boolex.
+                   match goal with
+                   | [ Hdst : evalExpr (rv32iGetDst _ _) <> _,
+                              Hopc : evalExpr (getOpcodeE _) = _
+                       |- _ ] =>
+                     unfold rv32iGetDst in Hdst;
+                       evex Hdst;
+                       rewrite Hopc in Hdst
+                   end.
+                   tauto.
+             ++ constructor; (eauto || discriminate).
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+             end.
+             subst.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             match goal with
+             | [ H : SCProcMemConsistent ?a ?m,
+                     IH : forall _, SCProcMemConsistent ?a _ -> _
+                               |- _ ] => specialize (IH m H)
+             end.
+             shatter.
+             eexists.
+             split.
+             ++ eapply htNm.
+                ** reflexivity.
+                ** match goal with
+                   | [ H : context[rv32iGetOptype] |- _ ] =>
+                     evex H
+                   end.
+                   boolex.
+                   assumption.
+                ** assumption.
+                ** match goal with
+                   | [ Hfu : foldSSUpds ss = _,
+                             Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                     replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                       replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                       replace (getrf o') with x1 in Hht;
+                       try eassumption
+                   end.
+                   match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getrf.
+                   FMap.findeq.
+                   simplify_match.
+                   unfold rset.
+                   evexg.
+                   apply functional_extensionality.
+                   intros.
+                   match goal with
+                   | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                   end.
+                   boolex.
+                   match goal with
+                   | [ |- (if ?eq then _ else _) _ = _ ] => destruct eq; tauto
+                   end.
+             ++ constructor; (eauto || discriminate).
+        * match goal with
+          | [ Hpm : FMap.M.find "pgm" _ = Some (existT _ _ ?pm),
+                    Hpc : FMap.M.find "pc" _ = Some (existT _ _ ?pc)
+              |- _ ] =>
+            destruct (weq
+                        (evalExpr (getOpcodeE # (pm (evalExpr (rv32iAlignPc type pc)))%kami_expr))
+                        rv32iOpBRANCH)
           end.
-          shatter.
-          eexists.
-          split.
-          -- eapply htNmBranch.
-             ++ reflexivity.
-             ++ match goal with
-                | [ H : context[rv32iGetOptype] |- _ ] =>
-                  evex H
-                end.
-                boolex.
-                assumption.
-             ++ assumption.
-             ++ match goal with
-                | [ Hfu : foldSSUpds ss = _,
-                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                    replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
-                    eassumption
-                end.
-          -- constructor; try assumption.
-             FMap.findeq.
-        * Opaque evalExpr.
-          match goal with
-          | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
-          end.
-          subst.
-          simpl in *.
-          Transparent evalExpr.
-          subst.
-          match goal with
-          | [ H : SCProcMemConsistent ?a ?m,
-                  IH : forall _, SCProcMemConsistent ?a _ -> _
-                            |- _ ] => specialize (IH m H)
-          end.
-          shatter.
-          eexists.
-          split.
-          -- eapply htNm.
-             ++ reflexivity.
-             ++ match goal with
-                | [ H : context[rv32iGetOptype] |- _ ] =>
-                  evex H
-                end.
-                boolex.
-                assumption.
-             ++ assumption.
-             ++ match goal with
-                | [ Hfu : foldSSUpds ss = _,
-                          Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
-                  replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
-                    replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
-                    replace (getrf o') with x1 in Hht;
-                    try eassumption
-                end.
-                match goal with
-                | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
-                end.
-                unfold getrf.
-                FMap.findeq.
-                simplify_match.
-                unfold rset.
-                evexg.
-                match goal with
-                | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
-                end.
-                boolex.
-                match goal with
-                | [ |- (if ?eq then _ else _) = _ ] => destruct eq; tauto
-                end.
-          -- constructor; try assumption.
-             FMap.findeq.
-  Qed. *) Admitted.
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+             end.
+             subst.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             match goal with
+             | [ H : SCProcMemConsistent ?a ?m,
+                     IH : forall _, SCProcMemConsistent ?a _ -> _
+                               |- _ ] => specialize (IH m H)
+             end.
+             shatter.
+             eexists.
+             split.
+             ++ eapply htNmBranch.
+                ** reflexivity.
+                ** match goal with
+                   | [ H : context[rv32iGetOptype] |- _ ] =>
+                     evex H
+                   end.
+                   boolex.
+                   assumption.
+                ** assumption.
+                ** match goal with
+                   | [ Hfu : foldSSUpds ss = _,
+                             Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                     replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                       replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                       replace (getrf o') with x1 in Hht by (rewrite Hfu; unfold getrf; FMap.findeq);
+                       eassumption
+                   end.
+             ++ constructor; (eauto || discriminate).
+          -- Opaque evalExpr.
+             match goal with
+             | [ H : SCProcMemConsistent (_ :: _) _ |- _ ] => inversion H
+             end.
+             subst.
+             simpl in *.
+             Transparent evalExpr.
+             subst.
+             match goal with
+             | [ H : SCProcMemConsistent ?a ?m,
+                     IH : forall _, SCProcMemConsistent ?a _ -> _
+                               |- _ ] => specialize (IH m H)
+             end.
+             shatter.
+             eexists.
+             split.
+             ++ eapply htNm.
+                ** reflexivity.
+                ** match goal with
+                   | [ H : context[rv32iGetOptype] |- _ ] =>
+                     evex H
+                   end.
+                   boolex.
+                   assumption.
+                ** assumption.
+                ** match goal with
+                   | [ Hfu : foldSSUpds ss = _,
+                             Hht : hasTrace (getrf ?o') (getpm ?o') (getpc ?o') _ _ |- hasTrace ?x1 ?x2 ?x3 _ _ ] =>
+                     replace (getpm o') with x2 in Hht by (rewrite Hfu; unfold getpm; FMap.findeq);
+                       replace (getpc o') with x3 in Hht by (rewrite Hfu; unfold getpc; FMap.findeq);
+                       replace (getrf o') with x1 in Hht;
+                       try eassumption
+                   end.
+                   match goal with
+                   | [ H : foldSSUpds ss = _ |- _ ] => rewrite H
+                   end.
+                   unfold getrf.
+                   FMap.findeq.
+                   simplify_match.
+                   unfold rset.
+                   evexg.
+                   match goal with
+                   | [ H : context[(#(evalExpr (rv32iGetDst _ _)) == _)%kami_expr] |- _ ] => evex H
+                   end.
+                   boolex.
+                   match goal with
+                   | [ |- (if ?eq then _ else _) = _ ] => destruct eq; tauto
+                   end.
+             ++ constructor; (eauto || discriminate).
+  Qed.
 
   Theorem abstractToSCProcHiding :
     forall rf pm pc mem,
@@ -3167,7 +3261,7 @@ Section SCTiming.
     unfold abstractHiding, SCProcHiding.
     intros.
     match goal with
-    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'; try eassumption
+    | [ H : ForwardMultistep _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'; try eassumption
     end.
     shatter.
     match goal with
@@ -3187,7 +3281,7 @@ Section SCTiming.
     end.
     shatter.
     match goal with
-    | [ H : ForwardActiveMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
+    | [ H : ForwardMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
     end.
     intuition idtac; try assumption;
       match goal with
@@ -3222,9 +3316,10 @@ Section SCTiming.
       (((foldSSLabel ss) = {| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |}
         \/ (foldSSLabel ss) = {| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |})
        /\ (foldSSUpds ss) = FMap.M.empty _)
-      \/ (exists argV retV u,
-            SemAction o (rv32iMemInstExec argV) u (FMap.M.empty _) retV
-            /\ (foldSSLabel ss) = {| annot := None; defs := FMap.M.add "exec" (existT _
+      \/ (exists a argV retV u,
+            (a = None \/ a = Some None)
+            /\ SemAction o (rv32iMemInstExec argV) u (FMap.M.empty _) retV
+            /\ (foldSSLabel ss) = {| annot := a; defs := FMap.M.add "exec" (existT _
                        {| arg := Struct (STRUCT {"addr" :: Bit 16;
                                                  "op" :: Bool;
                                                  "data" :: Bit 32});
@@ -3255,7 +3350,16 @@ Section SCTiming.
         intuition idtac.
         subst.
         simpl in *.
-        exists argV, retV, u.
+        exists None, argV, retV, u.
+        replace cs with (FMap.M.empty {x : SignatureT & SignT x}) in *.
+        * intuition idtac.
+        * kinv_action_dest; FMap.findeq.
+      + right.
+        simpl in HIn.
+        intuition idtac.
+        subst.
+        simpl in *.
+        exists (Some None), argV, retV, u.
         replace cs with (FMap.M.empty {x : SignatureT & SignT x}) in *.
         * intuition idtac.
         * kinv_action_dest; FMap.findeq.
@@ -3566,7 +3670,7 @@ Section ThreeStageTiming.
     - intros.
       simpl in H5.
     match goal with
-    | [ H : ForwardActiveMultistep _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
+    | [ H : ForwardMultistep _ _ _ _ |- _ ] => let H' := fresh in assert (H' := H); eapply SCToAbstractRelated in H'
     end.
     shatter.
     match goal with
@@ -3586,11 +3690,11 @@ Section ThreeStageTiming.
     end.
     shatter.
     match goal with
-    | [ H : ForwardActiveMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
+    | [ H : ForwardMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
     end.
     repeat split;
       match goal with
-      | [ |- ForwardActiveMultistep _ _ _ _ ] => assumption
+      | [ |- ForwardMultistep _ _ _ _ ] => assumption
       | [ Htrace1 : hasTrace _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] => eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
       | [ |- extractFhLabelSeq _ _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
