@@ -125,9 +125,9 @@ Section Compile.
       | Displ ls cont => convertActionToRtl_noGuard cont enable startList retList
       | Return x => (name, retList, existT _ k (convertExprToRtl x)) :: nil
       | IfElse pred ktf t f cont =>
-        convertActionToRtl_noGuard t (RtlBinBool And enable (convertExprToRtl pred)) (0 :: startList) (startList) ++
+        convertActionToRtl_noGuard t (RtlBinBool AndB enable (convertExprToRtl pred)) (0 :: startList) (startList) ++
         convertActionToRtl_noGuard t
-          (RtlBinBool And enable (RtlUniBool Neg (convertExprToRtl pred))) (0 :: inc startList) (inc startList) ++
+          (RtlBinBool AndB enable (RtlUniBool NegB (convertExprToRtl pred))) (0 :: inc startList) (inc startList) ++
         (name, inc (inc startList),
          existT _ ktf (RtlITE (convertExprToRtl pred) (RtlReadWire ktf (name, startList)) (RtlReadWire ktf (name, inc startList)))) ::
         convertActionToRtl_noGuard (cont (inc (inc startList))) enable (inc (inc (inc startList))) retList
@@ -136,7 +136,7 @@ Section Compile.
   Fixpoint convertActionToRtl_guard k (a: ActionT (fun _ => list nat) k) startList: RtlExpr Bool :=
     match a in ActionT _ _ with
       | MCall meth k argExpr cont =>
-        RtlBinBool And (RtlReadWire Bool (getActionGuard meth)) (convertActionToRtl_guard (cont startList) (inc startList))
+        RtlBinBool AndB (RtlReadWire Bool (getActionGuard meth)) (convertActionToRtl_guard (cont startList) (inc startList))
       | Let_ k' expr cont =>
         convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
       | ReadNondet k' cont =>
@@ -145,12 +145,12 @@ Section Compile.
         convertActionToRtl_guard (cont (cast k' startList)) (inc startList)
       | WriteReg r k' expr cont =>
         convertActionToRtl_guard cont startList
-      | Assert_ pred cont => RtlBinBool And (convertExprToRtl pred)
+      | Assert_ pred cont => RtlBinBool AndB (convertExprToRtl pred)
                                         (convertActionToRtl_guard cont startList)
       | Displ ls cont => convertActionToRtl_guard cont (inc startList)
       | Return x => RtlConst (ConstBool true)
       | IfElse pred ktf t f cont =>
-        RtlBinBool And
+        RtlBinBool AndB
                    (RtlITE (convertExprToRtl pred) (convertActionToRtl_guard t (0 :: startList))
                            (convertActionToRtl_guard t (0 :: inc startList)))
                    (convertActionToRtl_guard (cont (inc (inc startList))) (inc (inc (inc startList))))
@@ -402,7 +402,7 @@ Section UsefulFunctions.
     Definition computeRuleEn :=
       (getActionEn rule,
        existT RtlExpr Bool
-              (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool And e (RtlUniBool Neg (RtlReadWire Bool (getActionEn r))))
+              (fold_left (fun (e: RtlExpr Bool) r => RtlBinBool AndB e (RtlUniBool NegB (RtlReadWire Bool (getActionEn r))))
                          disables (RtlReadWire Bool (getActionGuard rule)))).
 
     Definition getRulePos := find_pos string_dec rule totalOrder.
@@ -519,8 +519,8 @@ Section UsefulFunctions.
     Definition computeMethEn :=
       (getActionEn meth,
        existT RtlExpr Bool
-              (fold_left (fun expr r => RtlBinBool Or
-                                                   (RtlBinBool And (RtlReadWire Bool (getActionEn r))
+              (fold_left (fun expr r => RtlBinBool OrB
+                                                   (RtlBinBool AndB (RtlReadWire Bool (getActionEn r))
                                                                (RtlReadWire Bool (getMethCallActionEn r meth)))
                                                    expr) (getCallers meth)
                          (RtlConst false))).

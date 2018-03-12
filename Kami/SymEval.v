@@ -32,9 +32,9 @@ Fixpoint semExpr k (p: Expr type k): (k = SyntaxKind Bool) -> Prop.
            | Const k' v => fun ise =>
                              (eq_rect (SyntaxKind k') (fullType type) (evalConstT v)
                                       (SyntaxKind Bool) ise) = true
-           | UniBool Neg x => fun ise => semExpr _ x ise -> False
-           | BinBool And x y => fun ise => semExpr _ x ise /\ semExpr _ y ise
-           | BinBool Or x y => fun ise => or_wrap (semExpr _ x ise) (semExpr _ y ise)
+           | UniBool NegB x => fun ise => semExpr _ x ise -> False
+           | BinBool AndB x y => fun ise => semExpr _ x ise /\ semExpr _ y ise
+           | BinBool OrB x y => fun ise => or_wrap (semExpr _ x ise) (semExpr _ y ise)
            | UniBit _ _ _ _ => fun ise => _
            | BinBit _ _ _ _ _ _ => fun ise => _
            | BinBitBool n1 n2 op e1 e2 =>

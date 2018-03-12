@@ -309,14 +309,15 @@ Proof.
 Qed.
 
 Inductive UniBoolOp: Set :=
-| Neg: UniBoolOp.
+| NegB: UniBoolOp.
 
 Inductive BinBoolOp: Set :=
-| And: BinBoolOp
-| Or: BinBoolOp.
+| AndB: BinBoolOp
+| OrB: BinBoolOp.
 
 Inductive UniBitOp: nat -> nat -> Set :=
 | Inv n: UniBitOp n n
+| Neg n: UniBitOp n n
 | ConstExtract n1 n2 n3: UniBitOp (n1 + n2 + n3) n2 (* LSB : n1, MSB : n3 *)
 | ConstExtractPf
     win wout lsb msb:

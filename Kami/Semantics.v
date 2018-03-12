@@ -127,8 +127,6 @@ Section FinFunc.
   Qed.
 End FinFunc.
 
-Print Assumptions finVecDec.
-
 Fixpoint isEq k: forall (e1: type k) (e2: type k),
                    {e1 = e2} + {e1 <> e2}.
 Proof.
@@ -168,13 +166,13 @@ Defined.
 
 Definition evalUniBool (op: UniBoolOp) : bool -> bool :=
   match op with
-    | Neg => negb
+    | NegB => negb
   end.
 
 Definition evalBinBool (op: BinBoolOp) : bool -> bool -> bool :=
   match op with
-    | And => andb
-    | Or => orb
+    | AndB => andb
+    | OrB => orb
   end.
 
 (* the head of a word, or false if the word has 0 bits *)
@@ -186,6 +184,7 @@ Definition whd' sz (w: word sz) :=
 
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
+  - exact (@wnot n).
   - exact (@wneg n).
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - assert (sth: win = msb + 1 + (win - msb - 1)) by (abstract Omega.omega).

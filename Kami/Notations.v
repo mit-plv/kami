@@ -29,9 +29,9 @@ Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope
 
 Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_expr_scope.
 (* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_expr_scope. *)
-Notation "!" := (UniBool Neg) : kami_expr_scope.
-Infix "&&" := (BinBool And) : kami_expr_scope.
-Infix "||" := (BinBool Or) : kami_expr_scope.
+Notation "!" := (UniBool NegB) : kami_expr_scope.
+Infix "&&" := (BinBool AndB) : kami_expr_scope.
+Infix "||" := (BinBool OrB) : kami_expr_scope.
 Infix "+" := (BinBit (Add _)) : kami_expr_scope.
 Infix "-" := (BinBit (Sub _)) : kami_expr_scope.
 Infix "*" := (BinBit (Mul _ SignUU)) : kami_expr_scope.
@@ -48,10 +48,10 @@ Infix ">>" := (BinBit (Srl _ _)) (at level 0) : kami_expr_scope.
 Infix "~>>" := (BinBit (Sra _ _)) (at level 0) : kami_expr_scope.
 Infix "<" := (BinBitBool (Lt _)) : kami_expr_scope.
 Notation "x > y" := (BinBitBool (Lt _) y x) : kami_expr_scope.
-Notation "x >= y" := (UniBool Neg (BinBitBool (Lt _) x y)) : kami_expr_scope.
-Notation "x <= y" := (UniBool Neg (BinBitBool (Lt _) y x)) : kami_expr_scope.
+Notation "x >= y" := (UniBool NegB (BinBitBool (Lt _) x y)) : kami_expr_scope.
+Notation "x <= y" := (UniBool NegB (BinBitBool (Lt _) y x)) : kami_expr_scope.
 Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
-Infix "!=" := (fun e1 e2 => UniBool Neg (Eq e1 e2))
+Infix "!=" := (fun e1 e2 => UniBool NegB (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 
