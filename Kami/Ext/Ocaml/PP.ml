@@ -64,10 +64,11 @@ let pi = print_int
 
 let ppDelim = " "
 let ppHexa = "'h"
-let ppNeg = "!"
+let ppNegB = "!"
+let ppAndB = "&&"
+let ppOrB = "||"
 let ppInv = "~"
-let ppAnd = "&&"
-let ppOr = "||"
+let ppNeg = "-"
 let ppZeroExtend = "zeroExtend"
 let ppSignExtend = "signExtend"
 let ppTruncate = "truncate"
@@ -425,14 +426,15 @@ let rec ppBExpr (e: bExpr) =
   | BVar v -> ps (string_of_de_brujin_index v)
   | BConst (k, c) -> ps ppRBracketL; ps (ppKind k); ps ppRBracketR; ps ppTypeCast;
                      ps ppRBracketL; ps (ppConst c); ps ppRBracketR
-  | BUniBool (Neg, se) -> ps ppNeg; print_space (); ps ppRBracketL; ppBExpr se; ps ppRBracketR
-  | BBinBool (And, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
-                                ps ppAnd; print_space ();
+  | BUniBool (NegB, se) -> ps ppNegB; print_space (); ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BBinBool (AndB, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+                                ps ppAndB; print_space ();
                                 ps ppRBracketL; ppBExpr se2; ps ppRBracketR
-  | BBinBool (Or, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
-                               ps ppOr; print_space ();
+  | BBinBool (OrB, se1, se2) -> ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
+                               ps ppOrB; print_space ();
                                ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BUniBit (_, _, Inv _, se) -> ps ppInv; ps ppRBracketL; ppBExpr se; ps ppRBracketR
+  | BUniBit (_, _, Neg _, se) -> ps ppNeg; ps ppRBracketL; ppBExpr se; ps ppRBracketR
   | BUniBit (_, _, ConstExtract (n1, n2, _), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
