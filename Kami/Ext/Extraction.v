@@ -20,18 +20,29 @@ Unset Extraction AutoInline.
 
 (** Parameter instantiation *)
 
-(* idxBits: the number of bits for the cache index
- * tagBits: the number of bits for the cache tag
+(* idxBits: #bits for the cache index
+ * tagBits: #bits for the cache tag
  * lgNumDatas: the log number of data in a cache line
- *
- * Note that [idxBits + tagBits + lgNumDatas] should be equal to
- * [rv32iAddrSize] in examples/IsaRv32.v (= 16)
  *)
-Definition idxBits := 8.
-Definition tagBits := 4.
-Definition lgNumDatas := 4.
+Definition idxBits := 6.
+Definition tagBits := 3.
+Definition lgNumDatas := 2.
 
-(* lgNumChildren: the log number of cores (e.g., 2 cores for [lgNumChildren = 1])
+(* NOTE: Some problems occur when synthesizing the processor on FPGA 
+ * with large [rv32iAddrSize]. We checked the synthesis works when 
+ * the address is "11", but failed to check with larger values.
+ * 
+ * Just for the Bluespec simulation, it works with the address size of "16",
+ * probably also with larger values.
+ *)
+
+(* [idxBits + tagBits + lgNumDatas] should be equal to
+ * [rv32iAddrSize] in examples/IsaRv32.v
+ *)
+Definition valid_rv32i_addr_size:
+  idxBits + tagBits + lgNumDatas = rv32iAddrSize := eq_refl.
+
+(* lgNumChildren: the log number of cores, e.g., 2 cores for [lgNumChildren = 1].
  * fifoSize: the log number of elements for FIFOs used in the memory subsystem
  *)
 Definition lgNumChildren := 2.

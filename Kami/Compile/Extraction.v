@@ -38,9 +38,9 @@ Require Import Ex.MemTypes Ex.MemAtomic Ex.MemCorrect Ex.ProcMemCorrect.
 (** Some numbers *)
 
 (* (idxBits + tagBits + lgNumDatas) should be equal to rv32iAddrSize (= 16) *)
-Definition idxBits := 8.
-Definition tagBits := 4.
-Definition lgNumDatas := 4.
+Definition idxBits := 6.
+Definition tagBits := 3.
+Definition lgNumDatas := 2.
 Definition lgNumChildren := 2. (* 2^2 = 4 cores *)
 Definition fifoSize := 2.
 Definition idK := Bit 1.
