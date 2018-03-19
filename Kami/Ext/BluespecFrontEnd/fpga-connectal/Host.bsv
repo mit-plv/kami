@@ -1,6 +1,7 @@
 import Vector::*;
 import BuildVector::*;
 import RWire::*;
+import FIFO::*;
 
 import Proc::*;
 
@@ -59,34 +60,38 @@ endmodule
 // The closed proc module for giving its synthesis boundary
 
 interface Proc;
-    method Bit#(32) read_toHost_aaaa;
-    method Bit#(32) read_toHost_aaa;
-    method Bit#(32) read_toHost_aa;
-    method Bit#(32) read_toHost_a;
+    method ActionValue#(Bit#(32)) read_toHost_aaaa;
+    method ActionValue#(Bit#(32)) read_toHost_aaa;
+    method ActionValue#(Bit#(32)) read_toHost_aa;
+    method ActionValue#(Bit#(32)) read_toHost_a;
 endinterface
 
 (* synthesize *)
 module mkProc (Proc);
-    Wire#(Bit#(32)) val1 <- mkWire();
-    Wire#(Bit#(32)) val2 <- mkWire();
-    Wire#(Bit#(32)) val3 <- mkWire();
-    Wire#(Bit#(32)) val4 <- mkWire();
-    Empty procTop <- mkTop (val4._write, val3._write, val2._write, val1._write);
+    FIFO#(Bit#(32)) val1 <- mkSizedFIFO(2);
+    FIFO#(Bit#(32)) val2 <- mkSizedFIFO(2);
+    FIFO#(Bit#(32)) val3 <- mkSizedFIFO(2);
+    FIFO#(Bit#(32)) val4 <- mkSizedFIFO(2);
+    Empty procTop <- mkTop (val4.enq, val3.enq, val2.enq, val1.enq);
 
-    method Bit#(32) read_toHost_aaaa;
-        return val4;
+    method ActionValue#(Bit#(32)) read_toHost_aaaa;
+        val4.deq();
+        return val4.first;
     endmethod
 
-    method Bit#(32) read_toHost_aaa;
-        return val3;
+    method ActionValue#(Bit#(32)) read_toHost_aaa;
+	val3.deq();
+        return val3.first;
     endmethod
 
-    method Bit#(32) read_toHost_aa;
-        return val2;
+    method ActionValue#(Bit#(32)) read_toHost_aa;
+	val2.deq();
+        return val2.first;
     endmethod
 
-    method Bit#(32) read_toHost_a;
-        return val1;
+    method ActionValue#(Bit#(32)) read_toHost_a;
+	val1.deq();
+        return val1.first;
     endmethod
 
 endmodule
@@ -103,25 +108,25 @@ module mkHost#(HostIndication indication) (Host);
 
     (* fire_when_enabled *)
     rule to_frontend_aaaa;
-        let val = proc.read_toHost_aaaa ();
+        let val <- proc.read_toHost_aaaa ();
 	frontEnd.toHost_aaaa(val);
     endrule
 
     (* fire_when_enabled *)
     rule to_frontend_aaa;
-        let val = proc.read_toHost_aaa ();
+        let val <- proc.read_toHost_aaa ();
 	frontEnd.toHost_aaa(val);
     endrule
 
     (* fire_when_enabled *)
     rule to_frontend_aa;
-        let val = proc.read_toHost_aa ();
+        let val <- proc.read_toHost_aa ();
 	frontEnd.toHost_aa(val);
     endrule
 
     (* fire_when_enabled *)
     rule to_frontend_a;
-        let val = proc.read_toHost_a ();
+        let val <- proc.read_toHost_a ();
 	frontEnd.toHost_a(val);
     endrule
 
