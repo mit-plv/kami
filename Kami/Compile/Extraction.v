@@ -75,16 +75,16 @@ Require Import Ex.IsaRv32PgmExt.
 Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataBytes rv32iRfIdx) :=
   {| pcInit := Default;
      rfInit := rfWithSpInit (ConstBit (natToWord _ 64));
-     pgmInit := IsaRv32.Matmul_init.pgmExt |}
+     pgmInit := IsaRv32.PgmMatMulInit.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 128));
-          pgmInit := IsaRv32.Matmul_normal1.pgmExt |}
+          pgmInit := IsaRv32.PgmMatMulNormal1.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 192));
-          pgmInit := IsaRv32.Matmul_normal2.pgmExt |}
+          pgmInit := IsaRv32.PgmMatMulNormal2.pgmExt |}
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ 256));
-          pgmInit := IsaRv32.Matmul_report.pgmExt |}
+          pgmInit := IsaRv32.PgmMatMulReport.pgmExt |}
     :: nil.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=

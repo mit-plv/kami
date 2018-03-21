@@ -52,21 +52,22 @@ Definition fifoSize := 2.
 Definition rfWithSpInit (sp: ConstT (Data rv32iDataBytes))
   : ConstT (Vector (Data rv32iDataBytes) rv32iRfIdx).
   refine
-    (ConstVector (VecNext
-                    (VecNext
-                       (VecNext
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 sp) (Vec0 _)))
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-                       (VecNext
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))
-                    (VecNext
-                       (VecNext
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
-                       (VecNext
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
-                          (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))));
+    (ConstVector
+       (VecNext
+          (VecNext
+             (VecNext
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 sp) (Vec0 _)))
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+             (VecNext
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))
+          (VecNext
+             (VecNext
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _))))
+             (VecNext
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))
+                (VecNext (VecNext (Vec0 _) (Vec0 _)) (VecNext (Vec0 _) (Vec0 _)))))));
     exact $0.
 Defined.
 
@@ -80,19 +81,15 @@ Definition procInits : list (ProcInit rv32iAddrSize rv32iIAddrSize rv32iDataByte
   {| pcInit := Default;
      rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + stackSize)));
      pgmInit := IsaRv32.PgmMatMulInit.pgmExt |}
-     (* pgmInit := IsaRv32.Matmul_init.pgmExt |} *)
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 2 * stackSize)));
           pgmInit := IsaRv32.PgmMatMulNormal1.pgmExt |}
-          (* pgmInit := IsaRv32.Matmul_normal1.pgmExt |} *)
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 3 * stackSize)));
           pgmInit := IsaRv32.PgmMatMulNormal2.pgmExt |}
-          (* pgmInit := IsaRv32.Matmul_normal1.pgmExt |} *)
     :: {| pcInit := Default;
           rfInit := rfWithSpInit (ConstBit (natToWord _ (pgmSize + 4 * stackSize)));
           pgmInit := IsaRv32.PgmMatMulReport.pgmExt |}
-          (* pgmInit := IsaRv32.Matmul_report.pgmExt |} *)
     :: nil.
 
 Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32iAddrSize))) :=
