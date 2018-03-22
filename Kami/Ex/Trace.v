@@ -2,7 +2,7 @@ Require Import List.
 Require Import Notations.
 Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word Lib.Indexer.
-Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics.
+Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics Kami.ModularFacts.
 Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage Ex.OneEltFifo.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
@@ -193,7 +193,6 @@ Section KamiTrace.
       o1 = o2 -> ForwardMultistep m o1 o2 nil
   | FMulti : forall (o : RegsT) (a : list LabelT) (n : RegsT) (u : UpdatesT) (l : LabelT),
       Step m o u l ->
-      annot l <> None ->
       ForwardMultistep m (FMap.M.union u o) n a ->
       ForwardMultistep m o n (l :: a).
 
@@ -232,6 +231,40 @@ Section KamiTrace.
       eapply IHlist; eassumption.
   Qed.
       
+  Lemma Multi_FMulti : forall m o n a,
+      Multistep m o n a ->
+      ForwardMultistep m o n (List.rev a).
+  Proof.
+    intros m o n a.
+    move a at top.
+    generalize m o n.
+    clear - a.
+    induction a; intros;
+    match goal with
+    | [ H : Multistep _ _ _ _ |- _ ] => inversion H; clear H
+    end.
+    - constructor.
+      assumption.
+    - simpl.
+      subst.
+      match goal with
+      | [ H : Multistep _ _ _ _, IH : forall _ _ _, Multistep _ _ _ _ -> _ |- _ ] => specialize (IH _ _ _ H)
+      end.
+      match goal with
+      | [ HM : ForwardMultistep ?m ?o ?n (List.rev ?a), HS : Step ?m ?n ?u ?l |- _ ] =>
+        let a' := fresh in
+        remember (List.rev a) as a'; clear - HM HS; move a' at top; generalize m u o n l HM HS; clear - a'; induction a'
+      end;
+        simpl;
+        intros;
+        match goal with
+        | [ HM : ForwardMultistep _ _ _ _ |- _ ] => inversion HM
+        end;
+        subst;
+        repeat econstructor;
+        try eassumption.
+      eapply IHlist; eassumption.
+  Qed.
 
   Definition censorLabel censorMeth (l : LabelT) : LabelT :=
     match l with
@@ -3698,6 +3731,11 @@ Section SCTiming.
   Proof.
     unfold kamiHiding.
     intros.
+    match goal with
+    | [ H : ForwardMultistep (p ++ m)%kami _ _ _ |- _ ] =>
+      apply FMulti_Multi in H
+    end.
+    apply multistep_split in H1.
   Admitted.
 
 End SCTiming.
