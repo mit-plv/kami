@@ -1901,73 +1901,72 @@ Section NoRules.
     destruct l0 as [a d c]; simpl in *; auto.
   Qed.
 
-  Lemma substepsInd_rule_annot_1:
-    forall o u ds cs,
-      SubstepsInd m o u {| annot := None; defs := ds; calls := cs |} ->
-      SubstepsInd m o u {| annot := Some None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    econstructor.
-    - eassumption.
-    - apply EmptyRule.
-    - repeat split; auto.
-    - auto.
-    - reflexivity.
-  Qed.
-
-  Lemma substepsInd_rule_annot_2:
-    forall o u l,
-      SubstepsInd m o u l ->
-      forall ds cs,
-        l = {| annot := Some None; defs := ds; calls := cs |} ->
-        SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
-  Proof.
-    induction 1; simpl; intros; [inv H|].
-    subst; inv H0.
-    - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
-      destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      destruct ann; intuition idtac.
-    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      mred; auto.
-    - rewrite Hrules in HInRules; inv HInRules.
-    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
-      econstructor.
-      + apply IHSubstepsInd; auto.
-      + eapply SingleMeth; eauto.
-      + repeat split; auto.
-      + auto.
-      + reflexivity.
-  Qed.
-
-  Lemma step_rule_annot_1:
-    forall o u ds cs,
-      Step m o u {| annot := None; defs := ds; calls := cs |} ->
-      Step m o u {| annot := Some None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    apply step_consistent; apply step_consistent in H.
-    inv H.
-    destruct l as [a d c]; simpl in *; subst.
-    change {| annot := _; defs := _; calls := _ |}
-    with (hide {| annot := Some None; defs := d; calls := c |}).
-    constructor; auto.
-    apply substepsInd_rule_annot_1; auto.
-  Qed.
-
-  Lemma step_rule_annot_2:
-    forall o u ds cs,
-      Step m o u {| annot := Some None; defs := ds; calls := cs |} ->
-      Step m o u {| annot := None; defs := ds; calls := cs |}.
-  Proof.
-    intros.
-    apply step_consistent; apply step_consistent in H.
-    inv H.
-    destruct l as [a d c]; simpl in *; subst.
-    change {| annot := _; defs := _; calls := _ |}
-    with (hide {| annot := None; defs := d; calls := c |}).
-    constructor; auto.
-    eapply substepsInd_rule_annot_2; eauto.
-  Qed.
-
 End NoRules.
 
+Lemma substepsInd_rule_annot_1:
+  forall m o u ds cs,
+    SubstepsInd m o u {| annot := None; defs := ds; calls := cs |} ->
+    SubstepsInd m o u {| annot := Some None; defs := ds; calls := cs |}.
+Proof.
+  intros.
+  econstructor.
+  - eassumption.
+  - apply EmptyRule.
+  - repeat split; auto.
+  - auto.
+  - reflexivity.
+Qed.
+
+Lemma substepsInd_rule_annot_2:
+  forall m o u l,
+    SubstepsInd m o u l ->
+    forall ds cs,
+      l = {| annot := Some None; defs := ds; calls := cs |} ->
+      SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
+Proof.
+  induction 1; simpl; intros; [inv H|].
+  subst; inv H0.
+  - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
+    destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+    destruct ann; intuition idtac.
+  - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+    mred; auto.
+  - simpl in H4; destruct l; destruct annot; discriminate.
+  - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+    econstructor.
+    + apply IHSubstepsInd; auto.
+    + eapply SingleMeth; eauto.
+    + repeat split; auto.
+    + auto.
+    + reflexivity.
+Qed.
+
+Lemma step_rule_annot_1:
+  forall m o u ds cs,
+    Step m o u {| annot := None; defs := ds; calls := cs |} ->
+    Step m o u {| annot := Some None; defs := ds; calls := cs |}.
+Proof.
+  intros.
+  apply step_consistent; apply step_consistent in H.
+  inv H.
+  destruct l as [a d c]; simpl in *; subst.
+  change {| annot := _; defs := _; calls := _ |}
+    with (hide {| annot := Some None; defs := d; calls := c |}).
+  constructor; auto.
+  apply substepsInd_rule_annot_1; auto.
+Qed.
+
+Lemma step_rule_annot_2:
+  forall m o u ds cs,
+    Step m o u {| annot := Some None; defs := ds; calls := cs |} ->
+    Step m o u {| annot := None; defs := ds; calls := cs |}.
+Proof.
+  intros.
+  apply step_consistent; apply step_consistent in H.
+  inv H.
+  destruct l as [a d c]; simpl in *; subst.
+  change {| annot := _; defs := _; calls := _ |}
+    with (hide {| annot := None; defs := d; calls := c |}).
+  constructor; auto.
+  eapply substepsInd_rule_annot_2; eauto.
+Qed.
