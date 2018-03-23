@@ -2,7 +2,7 @@ Require Import List.
 Require Import Notations.
 Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word Lib.Indexer.
-Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics Kami.ModularFacts.
+Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics Kami.ModularFacts Kami.SemFacts.
 Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage Ex.OneEltFifo.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
@@ -671,6 +671,70 @@ Section SCTiming.
         end.
   Qed. *) Admitted.
 
+  Definition canonicalizeLabel (l : LabelT) : LabelT :=
+    match l with
+    | {| annot := None;
+        defs := d;
+        calls := c |} => {| annot := Some None; defs := d; calls := c |}
+    | _ => l
+    end.
+
+  Definition canonicalize := map canonicalizeLabel.
+
+  Lemma decanon : forall m o n mem f l0 l1,
+      ForwardMultistep m o n l1 ->
+      SCProcMemConsistent l1 mem ->
+      censorLabelSeq censorSCMeth (canonicalize l0) = censorLabelSeq censorSCMeth (canonicalize l1) ->
+      extractFhLabelSeq l1 = f ->
+      exists l1',
+        ForwardMultistep m o n l1' /\
+        SCProcMemConsistent l1' mem /\
+        censorLabelSeq censorSCMeth l0 = censorLabelSeq censorSCMeth l1' /\
+        extractFhLabelSeq l1' = f.
+  Proof.
+    intros m o n mem f l0 l1 Hfm.
+    move Hfm at top.
+    generalize mem, f, l0.
+    clear mem f l0.
+    induction Hfm; intros; simpl in *; subst.
+    - exists nil; intuition idtac.
+      + constructor; congruence.
+      + destruct l0; simpl in *; try congruence.
+    - destruct l0; simpl in *; try congruence.
+      match goal with
+      | [ H : _ :: _ = _ :: _ |- _ ] => inv H
+      end.
+      match goal with
+      | [ H : SCProcMemConsistent _ _ |- _ ] => inv H
+      end.
+      match goal with
+      | [ Hc : censorLabelSeq censorSCMeth _ = censorLabelSeq censorSCMeth _,
+               Hm : SCProcMemConsistent _ _,
+                    IHHfm : forall _ _ _, SCProcMemConsistent _ _ -> _ = _ -> _ |- _ ] =>
+        specialize (IHHfm _ _ _ Hm Hc eq_refl)
+      end.
+      shatter.
+      match goal with
+      | [ H : censorLabel censorSCMeth (canonicalizeLabel ?label) = censorLabel censorSCMeth (canonicalizeLabel ?label') |- _ ] =>
+        destruct label as [[[|]|] ? ?];
+          destruct label' as [[[|]|] ? ?];
+          simpl in H;
+          inversion H;
+          subst
+      end;
+        match goal with
+        | [ |- exists _, _ /\ _ /\ _ {| annot := ?a; defs := _; calls := _ |} :: _ = _ /\ _ = _ {| annot := _; defs := ?d; calls := ?c |} ++ _ ] =>
+          exists ({| annot := a; defs := d; calls := c |} :: x);
+            intuition idtac;
+            try solve [ simpl; f_equal; congruence ];
+            econstructor;
+            try eassumption;
+            (apply step_rule_annot_1 || eapply step_rule_annot_2);
+            assumption
+        end.
+  Qed.
+
+
   Ltac evex H := unfold evalExpr in H; fold evalExpr in H.
   Ltac evexg := unfold evalExpr; fold evalExpr.
 
@@ -740,7 +804,7 @@ Section SCTiming.
       relatedTrace trace1 ls1 ->
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
-      censorLabelSeq censorSCMeth ls1 = censorLabelSeq censorSCMeth ls2.
+      censorLabelSeq censorSCMeth (canonicalize ls1) = censorLabelSeq censorSCMeth (canonicalize ls2).
   Proof. (*
     intros rf1 rf2 pm pc mem1 mem2 trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
     move Hht1 at top.
@@ -3313,15 +3377,20 @@ Section SCTiming.
         |- context[?fhTrace] ] => pose (abstractToSCRelated _ _ _ _ _ Htrace)
     end.
     shatter.
+    assert (censorLabelSeq censorSCMeth (canonicalize labels) = censorLabelSeq censorSCMeth (canonicalize x2)).
+    - eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ _ H4 H(* H0 H1 H8 H9 H5*)); eassumption.
+    - pose (decanon _ 
     match goal with
     | [ H : ForwardMultistep _ _ ?regs ?ls |- _ ] => exists ls, regs
     end.
     intuition idtac; try assumption;
       match goal with
       | [ Htrace1 : hasTrace _ _ _ _ _, Htrace2 : hasTrace _ _ _ _ _ |- censorLabelSeq _ _ = censorLabelSeq _ _ ] =>
-        eapply (relatedCensor _ _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2); eassumption
+(*        pose (relatedCensor _ _ _ _ _ _ _ _ _ _ _ _ Htrace1 Htrace2)(*; eassumption*)*) idtac
       | [ |- extractFhLabelSeq _ = _ ] => erewrite <- relatedFhTrace; eassumption
       end.
+    pose (relatedCensor _ _ _ _ _ _ _ _ _ _ _ _ H4 H H0 H1 H8 H9).
+    pose (relatedCensor 
   Qed.
 
   Definition rv32iMemInstExec {ty} : ty (Struct rv32iRq) -> ActionT ty (Struct rv32iRs) :=
