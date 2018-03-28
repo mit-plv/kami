@@ -134,7 +134,7 @@ Section AbstractTrace.
       -> censorTrace tr1 = censorTrace tr2
       -> (tr1 = nil /\ tr2 = nil)
         \/ pc1 = pc2.
-  Proof.
+  Proof. (*
     intros ? ? ? ? ? ? ? ? ? ? Hht1 Hht2 Hct.
     inversion Hht1; inversion Hht2;
       intros; subst; try tauto; right;
@@ -166,7 +166,7 @@ Section AbstractTrace.
                          remember x as x' eqn:Heq; clear - Hct
                        end
             end; inversion Hct; congruence.
-    Qed.
+    Qed. *) Admitted.
 
   Definition extractFhTrace : list TraceEvent -> list data :=
     flat_map (fun te => match te with
@@ -560,7 +560,7 @@ Section SCTiming.
   Lemma relatedFhTrace :
     forall trace ls,
       relatedTrace trace ls -> extractFhTrace trace = extractFhLabelSeq ls.
-  Proof.
+  Proof. (*
     induction 1; try eauto;
       simpl;
       match goal with
@@ -585,7 +585,7 @@ Section SCTiming.
       | [ H : Some _ = Some _ |- _ ] => inversion H
       end.
       reflexivity.
-  Qed.
+  Qed. *) Admitted.
 
   Inductive SCProcMemConsistent : LabelSeqT -> memory -> Prop :=
   | SPMCnil : forall mem, SCProcMemConsistent nil mem
@@ -805,7 +805,7 @@ Section SCTiming.
       relatedTrace trace2 ls2 ->
       censorTrace trace1 = censorTrace trace2 ->
       censorLabelSeq censorSCMeth (canonicalize ls1) = censorLabelSeq censorSCMeth (canonicalize ls2).
-  Proof.
+  Proof. (*
     intros rf1 rf2 pm pc mem1 mem2 trace1 trace2 newRegs1 newRegs2 ls1 ls2 Hht1.
     move Hht1 at top.
     generalize rf2 mem2 trace2 newRegs1 newRegs2 ls1 ls2.
@@ -2292,7 +2292,7 @@ Section SCTiming.
           Transparent evalExpr.
           subst.
           assumption.
-  Qed.
+  Qed. *) Admitted.
 
   Lemma eval_const : forall n (t : Expr type (SyntaxKind (Bit n))) c, evalExpr t = c -> evalExpr (t == (Const _ (ConstBit c)))%kami_expr = true.
     simpl.
@@ -2308,7 +2308,7 @@ Section SCTiming.
         ForwardMultistep rv32iProcInst (SCRegs rf pm pc) newRegs ls /\
         SCProcMemConsistent ls mem /\
         relatedTrace trace ls.
-  Proof.
+  Proof. (*
     induction 1.
     - repeat eexists; repeat econstructor.
     - shatter.
@@ -2733,7 +2733,7 @@ Section SCTiming.
           Unshelve.
           -- exact (evalExpr (STRUCT { "data" ::= $0 }))%kami_expr.
           -- exact (wzero _).
-  Qed.
+  Qed. *) Admitted.
 
   Definition getrf (regs : RegsT) : regfile :=
     match FMap.M.find "rf" regs with
@@ -2766,7 +2766,7 @@ Section SCTiming.
       exists trace,
         hasTrace rf pm pc mem trace /\
         relatedTrace trace ls.
-  Proof.
+  Proof. (*
     intros rf pm pc mem newRegs ls Hfm Hmem.
     let Heq := fresh in
     remember (SCRegs rf pm pc) as regs eqn:Heq; unfold SCRegs in Heq;
@@ -3361,7 +3361,7 @@ Section SCTiming.
                    | [ |- (if ?eq then _ else _) = _ ] => destruct eq; tauto
                    end.
              ++ constructor; (eauto || discriminate).
-  Qed.
+  Qed. *) Admitted.
 
   Theorem abstractToSCProcHiding :
     forall rf pm pc mem,
@@ -3551,8 +3551,30 @@ Section SCTiming.
     FMap.M.add "mem" (existT _ (SyntaxKind (Vector (Bit 32) 16)) mem)
                (FMap.M.empty _).
 
+  Inductive SCMemMemConsistent : LabelSeqT -> memory -> Prop :=
+  | SMMCnil : forall mem, SCMemMemConsistent nil mem
+  | SMMCcons : forall mem l mem' ls,
+      match FMap.M.find "exec" (defs l) with
+      | Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (argV, retV)) =>
+        let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
+        let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
+        let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
+        if evalExpr (#argV!rv32iRq@."op")%kami_expr
+        then mem' = (fun a => if weq a addr then argval else mem a)
+        else mem addr = retval /\ mem' = mem
+      | _ => mem' = mem
+      end ->
+      SCMemMemConsistent ls mem' ->
+      SCMemMemConsistent (l :: ls) mem.
+
   Definition SCMemHiding m : Prop :=
     forall mem labels newRegs,
+      SCMemMemConsistent labels mem ->
       ForwardMultistep m (SCMemRegs mem) newRegs labels ->
       forall wrs,
         extractWrValSeq labels = wrs ->
@@ -3560,6 +3582,7 @@ Section SCTiming.
           length wrs = length wrs' ->
           exists labels' newRegs',
             ForwardMultistep m (SCMemRegs mem') newRegs' labels' /\
+            SCMemMemConsistent labels' mem' /\
             censorLabelSeq censorSCMemDefs labels = censorLabelSeq censorSCMemDefs labels' /\
             extractWrValSeq labels' = wrs'.
 
@@ -3595,6 +3618,7 @@ Section SCTiming.
       eexists.
       intuition idtac.
       + constructor; reflexivity.
+      + constructor.
       + simpl in *.
         subst.
         simpl in *.
@@ -3602,8 +3626,12 @@ Section SCTiming.
         rewrite <- length_zero_iff_nil.
         congruence.
     - match goal with
+      | [ H : ForwardMultistep _ _ _ _ |- _ ] => inversion H
+      end.
+      match goal with
       | [ H : Step _ _ _ _ |- _ ] => inversion H
       end.
+      subst.
       match goal with
       | [ H : substepsComb _ |- _ ] =>
         apply substepsComb_substepsInd in H;
@@ -3616,17 +3644,21 @@ Section SCTiming.
         try match goal with
             | [ H : foldSSUpds ss = _ |- _ ] => rewrite H in *
             end;
+        simpl in *;
+        subst;
+        FMap.mred;
         try tauto.
       + match goal with
-        | [ H : length _ = length _ |- _ ] =>
-          specialize (IHForwardMultistep _ eq_refl mem' wrs' H)
+        | [ Hl : length _ = length _,
+            Hfm : ForwardMultistep _ _ _ _ |- _ ] =>
+          specialize (IHSCMemMemConsistent Hfm _ eq_refl mem'0 wrs' Hl)
         end.
         shatter.
         exists ({| annot := None; defs := FMap.M.empty _; calls := FMap.M.empty _ |} :: x), x0.
         intuition idtac.
         * econstructor; eauto.
           -- match goal with
-             | [ |- Step _ _ _ ?l ] => replace l with (hide (foldSSLabel [{| upd := FMap.M.empty _; unitAnnot := Meth None; cms := FMap.M.empty _; substep := EmptyMeth rv32iMemInstSingle (SCMemRegs mem') |}])) by reflexivity
+             | [ |- Step _ _ _ ?l ] => replace l with (hide (foldSSLabel [{| upd := FMap.M.empty _; unitAnnot := Meth None; cms := FMap.M.empty _; substep := EmptyMeth rv32iMemInstSingle (SCMemRegs mem'0) |}])) by reflexivity
              end.
              constructor; eauto.
              constructor; try solve [ constructor ].
@@ -3635,19 +3667,23 @@ Section SCTiming.
              | [ H : In _ nil |- _ ] => inversion H
              end.
           -- eauto.
+        * econstructor.
+          -- simpl. reflexivity.
+          -- assumption.
         * simpl.
           f_equal.
           assumption.
       + match goal with
-        | [ H : length _ = length _ |- _ ] =>
-          specialize (IHForwardMultistep _ eq_refl mem' wrs' H)
+        | [ Hl : length _ = length _,
+            Hfm : ForwardMultistep _ _ _ _ |- _ ] =>
+          specialize (IHSCMemMemConsistent Hfm _ eq_refl mem'0 wrs' Hl)
         end.
         shatter.
         exists ({| annot := Some None; defs := FMap.M.empty _; calls := FMap.M.empty _ |} :: x), x0.
         intuition idtac.
         * econstructor; eauto.
           -- match goal with
-             | [ |- Step _ _ _ ?l ] => replace l with (hide (foldSSLabel [{| upd := FMap.M.empty _; unitAnnot := Rle None; cms := FMap.M.empty _; substep := EmptyRule rv32iMemInstSingle (SCMemRegs mem') |}])) by reflexivity
+             | [ |- Step _ _ _ ?l ] => replace l with (hide (foldSSLabel [{| upd := FMap.M.empty _; unitAnnot := Rle None; cms := FMap.M.empty _; substep := EmptyRule rv32iMemInstSingle (SCMemRegs mem'0) |}])) by reflexivity
              end.
              constructor; eauto.
              constructor; try solve [ constructor ].
@@ -3656,6 +3692,9 @@ Section SCTiming.
              | [ H : In _ nil |- _ ] => inversion H
              end.
           -- eauto.
+        * econstructor.
+          -- simpl. reflexivity.
+          -- assumption.
         * simpl.
           f_equal.
           assumption.
@@ -3666,9 +3705,20 @@ Section SCTiming.
         simpl in adr, op, dat, val.
         subst.
         destruct op;
-        match goal with
-        | [ H : length _ = length _ |- _ ] => simpl in H
-        end.
+          kinv_action_dest;
+          match goal with
+          | [ H : foldSSUpds _ = _ |- _ ] => rewrite H in *
+          end;
+          simpl in *;
+          subst;
+          try match goal with
+              | [ H : ForwardMultistep _ (FMap.M.union _ _) _ _ |- _ ] =>
+                unfold SCMemRegs in H;
+                  FMap.mred;
+                  rewrite FMap.M.union_add in H;
+                  FMap.mred;
+                  rewrite FMap.M.add_idempotent in H
+              end.
         * destruct wrs'; try discriminate.
           match goal with
           | [ H : S (length _) = length _ |- _ ] => simpl in H; inversion H
