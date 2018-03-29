@@ -3551,6 +3551,21 @@ Section SCTiming.
     FMap.M.add "mem" (existT _ (SyntaxKind (Vector (Bit 32) 16)) mem)
                (FMap.M.empty _).
 
+  Lemma SCMemRegs_find_mem : forall (mem mem' : memory),
+      FMap.M.find (elt:={x : FullKind & fullType type x}) "mem"
+                                   (SCMemRegs mem) =
+                       Some
+                         (existT (fullType type) (SyntaxKind (Vector (Bit 32) 16)) mem') -> mem = mem'.
+  Proof.
+    intros.
+    unfold SCMemRegs in *.
+    rewrite FMap.M.find_add_1 in H.
+    match goal with
+    | [ H : Some ?x = Some ?y |- _ ] => remember x as x'; remember y as y'; inv H
+    end.
+    exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
+  Qed.
+
   Inductive SCMemMemConsistent : LabelSeqT -> memory -> Prop :=
   | SMMCnil : forall mem, SCMemMemConsistent nil mem
   | SMMCcons : forall mem l mem' ls,
@@ -3724,10 +3739,14 @@ Section SCTiming.
           | [ H : S (length _) = length _ |- _ ] => simpl in H; inversion H
           end.
           match goal with
-          | [ H : length _ = length _ |- _ ] =>
-          specialize (IHForwardMultistep _ eq_refl
-                                         (fun a => if weq a adr then w else mem' a)
-                                         _ H)
+          | [ H : _ |- _ ] => apply SCMemRegs_find_mem in H; subst
+          end.
+          match goal with
+          | [ Hl : length _ = length _,
+              Hfm : ForwardMultistep _ _ _ _ |- _ ] =>
+            specialize (IHSCMemMemConsistent Hfm _ eq_refl
+                                           (fun a => if weq a adr then w else mem'0 a)
+                                           _ Hl)
           end.
           shatter.
           match goal with
@@ -3794,6 +3813,9 @@ Section SCTiming.
                 FMap.mred.
                 rewrite FMap.M.add_idempotent.
                 reflexivity.
+          -- econstructor.
+             ++ FMap.findeq.
+             ++ assumption.
           -- subst.
              simpl.
              f_equal; try assumption.
@@ -3858,6 +3880,9 @@ Section SCTiming.
                 FMap.mred.
                 rewrite FMap.M.add_idempotent.
                 reflexivity.
+          -- econstructor.
+             ++ FMap.findeq.
+             ++ assumption.
           -- subst.
              simpl.
              f_equal; try assumption.
@@ -3867,9 +3892,14 @@ Section SCTiming.
              FMap.mred.
           -- simpl.
              congruence.
-        * match goal with
-          | [ H : length _ = length _ |- _ ] =>
-            specialize (IHForwardMultistep _ eq_refl mem' _ H)
+        * shatter; subst.
+          match goal with
+          | [ H : _ |- _ ] => apply SCMemRegs_find_mem in H; subst
+          end.
+          match goal with
+          | [ Hl : length _ = length _,
+              Hfm : ForwardMultistep _ _ _ _ |- _ ] =>
+            specialize (IHSCMemMemConsistent Hfm _ eq_refl mem'0 _ Hl)
           end.
           shatter.
           match goal with
@@ -3880,7 +3910,7 @@ Section SCTiming.
                                              (evalExpr (STRUCT { "addr" ::= Var _ (SyntaxKind (Bit 16)) adr;
                                                                  "op" ::= $$(false);
                                                                  "data" ::= $0 })%kami_expr,
-                                              evalExpr (STRUCT { "data" ::= Var _ (SyntaxKind (Bit 32)) (mem' adr) })%kami_expr)) (FMap.M.empty _); calls := FMap.M.empty _|} :: ls), r
+                                              evalExpr (STRUCT { "data" ::= Var _ (SyntaxKind (Bit 32)) (mem'0 adr) })%kami_expr)) (FMap.M.empty _); calls := FMap.M.empty _|} :: ls), r
           end.
           intuition idtac; subst.
           -- econstructor; try discriminate.
@@ -3929,9 +3959,13 @@ Section SCTiming.
              ++ match goal with
                 | [ H : ForwardMultistep ?m ?o ?n ?l |- ForwardMultistep ?m ?o' ?n ?l ] => replace o' with o; [ assumption | idtac ]
                 end.
+                match goal with
+                | [ H : foldSSUpds _ = _ |- _ ] => rewrite H in *
+                end.
                 unfold foldSSUpds, upd.
                 unfold SCMemRegs.
                 FMap.mred.
+          -- econstructor; simpl; tauto.
           -- subst.
              simpl.
              f_equal; try assumption.
@@ -3987,9 +4021,13 @@ Section SCTiming.
              ++ match goal with
                 | [ H : ForwardMultistep ?m ?o ?n ?l |- ForwardMultistep ?m ?o' ?n ?l ] => replace o' with o; [ assumption | idtac ]
                 end.
+                match goal with
+                | [ H : foldSSUpds _ = _ |- _ ] => rewrite H in *
+                end.
                 unfold foldSSUpds, upd.
                 unfold SCMemRegs.
                 FMap.mred.
+          -- econstructor; simpl; tauto.
           -- subst.
              simpl.
              f_equal; try assumption.
