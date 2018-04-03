@@ -266,6 +266,158 @@ Section KamiTrace.
       eapply IHlist; eassumption.
   Qed.
 
+  Section TwoModules.
+    Variables (ma mb: Modules).
+
+    Hypotheses (HmaEquiv: Wf.ModEquiv type typeUT ma)
+               (HmbEquiv: Wf.ModEquiv type typeUT mb).
+
+    Hypotheses (Hinit: FMap.DisjList (Struct.namesOf (getRegInits ma)) (Struct.namesOf (getRegInits mb)))
+               (Hdefs: FMap.DisjList (getDefs ma) (getDefs mb))
+               (Hcalls: FMap.DisjList (getCalls ma) (getCalls mb))
+               (Hvr: Wf.ValidRegsModules type (ConcatMod ma mb)).
+
+    Definition regsA (r: RegsT) := FMap.M.restrict r (Struct.namesOf (getRegInits ma)).
+    Definition regsB (r: RegsT) := FMap.M.restrict r (Struct.namesOf (getRegInits mb)).
+
+    Lemma union_restrict : forall A (m : FMap.M.t A) d1 d2,
+        FMap.M.union (FMap.M.restrict m d1) (FMap.M.restrict m d2) = FMap.M.restrict m (d1 ++ d2).
+    Proof.
+      intros.
+      FMap.M.ext k.
+      FMap.findeq.
+      repeat rewrite FMap.M.restrict_find.
+      repeat match goal with
+             | [ |- context[if ?b then _ else _] ] => destruct b
+             end;
+        rewrite in_app_iff in *;
+        destruct (FMap.M.find k m);
+        intuition idtac.
+    Qed.
+
+    Lemma validRegsModules_forward_multistep_newregs_subset:
+      forall m,
+        Wf.ValidRegsModules type m ->
+        forall or u ll,
+          ForwardMultistep m or u ll ->
+          FMap.M.KeysSubset or (Struct.namesOf (getRegInits m)) ->
+          FMap.M.KeysSubset u (Struct.namesOf (getRegInits m)).
+    Proof.
+      induction 2; simpl; intros.
+      - subst; assumption.
+      - apply IHForwardMultistep.
+        apply FMap.M.KeysSubset_union; auto.
+        apply step_consistent in H0.
+        eapply Wf.validRegsModules_stepInd_newregs_subset; eauto.
+    Qed.
+
+    Lemma forward_multistep_split:
+      forall s ls ir,
+        ForwardMultistep (ConcatMod ma mb) ir s ls ->
+        ir = FMap.M.union (regsA ir) (regsB ir) ->
+        exists sa lsa sb lsb,
+          ForwardMultistep ma (regsA ir) sa lsa /\
+          ForwardMultistep mb (regsB ir) sb lsb /\
+          FMap.M.Disj sa sb /\ s = FMap.M.union sa sb /\ 
+          CanCombineLabelSeq lsa lsb /\ WellHiddenConcatSeq ma mb lsa lsb /\
+          ls = composeLabels lsa lsb.
+    Proof.
+      induction 1; simpl; intros; subst.
+      - do 2 (eexists; exists nil); repeat split; try (econstructor; eauto; fail).
+        + unfold regsA, regsB;
+            eapply FMap.M.DisjList_KeysSubset_Disj with (d1:= Struct.namesOf (getRegInits ma));
+            try apply FMap.M.KeysSubset_restrict;
+            eauto.
+        + assumption.
+
+      - intros; subst.
+        match goal with
+        | [ H : ?x = ?y -> _ |- _ ] =>
+          let Heq := fresh in
+          assert (x = y) as Heq;
+            [| specialize (H Heq)]
+        end.
+        + unfold regsA, regsB.
+          rewrite union_restrict.
+          rewrite FMap.M.restrict_KeysSubset; try reflexivity.
+          apply FMap.M.KeysSubset_union.
+          * match goal with
+            | [ H : Step (_ ++ _)%kami _ _ _ |- _ ] =>
+              let Hsubset := fresh in
+              pose (Wf.validRegsModules_step_newregs_subset Hvr H) as Hsubset;
+                simpl in Hsubset;
+                unfold Struct.namesOf in *;
+                rewrite map_app in Hsubset
+            end.
+            assumption.
+          * match goal with
+            | [ H : ?r = _ |- FMap.M.KeysSubset ?r _ ] =>
+              rewrite H
+            end.
+            unfold regsA, regsB.
+            apply FMap.M.KeysSubset_union;
+            eapply FMap.M.KeysSubset_SubList;
+            try apply FMap.M.KeysSubset_restrict.
+            -- eapply FMap.SubList_app_1.
+               apply FMap.SubList_refl.
+            -- eapply FMap.SubList_app_2.
+               apply FMap.SubList_refl.
+        + destruct IHForwardMultistep as [sa [lsa [sb [lsb ?]]]]; dest; subst.
+
+          match goal with
+          | [ H : Step (_ ++ _)%kami _ _ _ |- _ ] =>
+            apply step_split in H
+          end; try assumption.
+          destruct H as [sua [sub [sla [slb ?]]]]; dest; subst.
+
+          inv Hvr.
+          unfold regsA, regsB, ModularFacts.regsA, ModularFacts.regsB in *.
+          match goal with
+          | [ Hvra : Wf.ValidRegsModules _ ma,
+                     Hfma : ForwardMultistep ma _ _ _,
+                            Hsa : Step ma _ _ _ |- _ ] =>
+            pose proof (validRegsModules_forward_multistep_newregs_subset _ Hvra _ _ _ Hfma (FMap.M.KeysSubset_restrict (A := _) (m := _) (d := _)));
+              pose proof (Wf.validRegsModules_step_newregs_subset Hvra Hsa)
+          end.
+          match goal with
+          | [ Hvrb : Wf.ValidRegsModules _ mb,
+                     Hfmb : ForwardMultistep mb _ _ _,
+                            Hsb : Step mb _ _ _ |- _ ] =>
+            pose proof (validRegsModules_forward_multistep_newregs_subset _ Hvrb _ _ _ Hfmb (FMap.M.KeysSubset_restrict (A := _) (m := _) (d := _)));
+              pose proof (Wf.validRegsModules_step_newregs_subset Hvrb Hsb)
+          end.
+
+          match goal with
+          | [ H : CanCombineLabel _ _ |- _ ] => inv H; dest
+          end.
+          exists sa, (sla :: lsa).
+          exists sb, (slb :: lsb).
+          repeat split; auto;
+
+            try match goal with
+                | [ H : ForwardMultistep ?m _ _ _,
+                        Hwf : Wf.ValidRegsModules _ ?m,
+                              Hwf' : Wf.ValidRegsModules _ ?m'
+                    |- ForwardMultistep ?m _ _ _ ] =>
+                  econstructor; eauto;
+                    p_equal H;
+                    repeat rewrite FMap.M.restrict_union;
+                    repeat (
+                        (rewrite FMap.M.restrict_KeysSubset;
+                         [|assumption])
+                        ||
+                        (rewrite FMap.M.restrict_DisjList with (d1:= Struct.namesOf (getRegInits m'));
+                         [
+                         | assumption
+                         | try assumption;
+                           apply FMap.DisjList_comm;
+                           assumption]));
+                    auto
+                end.
+          constructor; assumption.
+    Qed.
+
+  End TwoModules.
   Definition censorLabel censorMeth (l : LabelT) : LabelT :=
     match l with
     | {| annot := a;
@@ -4057,6 +4209,7 @@ Section SCTiming.
         apply multistep_split in H;
         try assumption
     end.
+    shatter.
     
     apply multistep_split in H1.
   Admitted.
