@@ -11,6 +11,11 @@ Require Import Renaming.
 
 Open Scope string_scope.
 
+Ltac shatter := repeat match goal with
+                       | [ H : exists _, _ |- _ ] => destruct H
+                       | [ H : _ /\ _ |- _ ] => destruct H
+                       end.
+
 Section AbstractTrace.
   Definition address := type (Bit rv32iAddrSize).
   Definition iaddress := type (Bit rv32iIAddrSize).
@@ -417,6 +422,77 @@ Section KamiTrace.
           constructor; assumption.
     Qed.
 
+    Lemma forward_multistep_modular:
+      forall lsa oa sa,
+        ForwardMultistep ma oa sa lsa ->
+        FMap.M.KeysSubset oa (Struct.namesOf (getRegInits ma)) ->
+        forall ob sb lsb,
+          ForwardMultistep mb ob sb lsb ->
+          FMap.M.KeysSubset ob (Struct.namesOf (getRegInits mb)) ->
+          CanCombineLabelSeq lsa lsb ->
+          WellHiddenModularSeq ma mb lsa lsb ->
+          ForwardMultistep (ConcatMod ma mb) (FMap.M.union oa ob)
+                    (FMap.M.union sa sb) (composeLabels lsa lsb).
+    Proof.
+      induction lsa; simpl; intros; subst.
+
+      - destruct lsb; [|intuition idtac].
+        match goal with
+        | [ Ha : ForwardMultistep ma _ _ nil,
+                 Hb : ForwardMultistep mb _ _ nil |- _ ] =>
+          inv Ha; inv Hb
+        end; constructor; reflexivity.
+
+      - destruct lsb as [|]; [intuition idtac|].
+        shatter.
+        match goal with
+        | [ H : WellHiddenModularSeq _ _ _ _ |- _ ] => inv H
+        end.
+        pose proof Hvr as Hvr'.
+        inv Hvr'.
+        match goal with
+        | [ Hvra : Wf.ValidRegsModules _ ma,
+                   Hfma : ForwardMultistep ma _ _ _,
+                          Hksa : FMap.M.KeysSubset oa _ |- _ ] =>
+          pose proof (validRegsModules_forward_multistep_newregs_subset _ Hvra _ _ _ Hfma Hksa)
+        end.
+        match goal with
+        | [ Hvrb : Wf.ValidRegsModules _ mb,
+                   Hfmb : ForwardMultistep mb _ _ _,
+                          Hksb : FMap.M.KeysSubset ob _ |- _ ] =>
+          pose proof (validRegsModules_forward_multistep_newregs_subset _ Hvrb _ _ _ Hfmb Hksb)
+        end.
+        match goal with
+        | [ Ha : ForwardMultistep ma _ _ _,
+                 Hb : ForwardMultistep mb _ _ _ |- _ ] =>
+          inv Ha; inv Hb
+        end.
+        match goal with
+        | [ Hvra : Wf.ValidRegsModules _ ma,
+                   Hsa : Step ma _ _ _ |- _ ] =>
+          pose proof (Wf.validRegsModules_step_newregs_subset Hvra Hsa)
+        end.
+        match goal with
+        | [ Hvrb : Wf.ValidRegsModules _ mb,
+                   Hsb : Step mb _ _ _ |- _ ] =>
+          pose proof (Wf.validRegsModules_step_newregs_subset Hvrb Hsb)
+        end.
+
+        econstructor; eauto.
+        + apply step_modular; eauto.
+          * eapply FMap.M.DisjList_KeysSubset_Disj; [|eassumption|eassumption]; assumption.
+          * split; auto.
+            eapply FMap.M.DisjList_KeysSubset_Disj; [|eassumption|eassumption]; assumption.
+        + replace (FMap.M.union (FMap.M.union u u0) (FMap.M.union oa ob))
+            with (FMap.M.union (FMap.M.union u oa) (FMap.M.union u0 ob))
+            by (assert (FMap.M.Disj oa u0);
+                [eapply FMap.M.DisjList_KeysSubset_Disj;
+                 [|eassumption|eassumption]; assumption
+                |FMap.meq]).
+          * apply IHlsa; auto.
+            -- 
+    Qed.
+
   End TwoModules.
   Definition censorLabel censorMeth (l : LabelT) : LabelT :=
     match l with
@@ -511,11 +587,6 @@ Section RtlTrace.
           flat_map extractFhMeths rt' = fhs'.
 
 End RtlTrace.
-
-Ltac shatter := repeat match goal with
-                       | [ H : exists _, _ |- _ ] => destruct H
-                       | [ H : _ /\ _ |- _ ] => destruct H
-                       end.
 
 Section SCTiming.
 
