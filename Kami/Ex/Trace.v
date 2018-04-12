@@ -489,11 +489,11 @@ Section KamiTrace.
                 [eapply FMap.M.DisjList_KeysSubset_Disj;
                  [|eassumption|eassumption]; assumption
                 |FMap.meq]).
-          * apply IHlsa; auto.
-            -- 
+          * apply IHlsa; auto; apply FMap.M.KeysSubset_union; auto.
     Qed.
 
   End TwoModules.
+
   Definition censorLabel censorMeth (l : LabelT) : LabelT :=
     match l with
     | {| annot := a;
@@ -3849,7 +3849,7 @@ Section SCTiming.
   Qed.
 
   Lemma MemInstHiding : SCMemHiding rv32iMemInstSingle.
-  Proof.
+  Proof. (*
     unfold SCMemHiding.
     induction 1; intros.
     - exists nil.
@@ -4258,6 +4258,156 @@ Section SCTiming.
              FMap.M.ext k.
              do 2 rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
              FMap.mred.
+  Qed. *) Admitted.
+
+  Definition SCConsistent m : Prop :=
+    forall oldRegs newRegs labels,
+      ForwardMultistep m oldRegs newRegs labels ->
+      forall mem,
+        oldRegs = SCMemRegs mem ->
+        SCMemMemConsistent labels mem.
+
+  Lemma MemInstConsistent : SCConsistent rv32iMemInstSingle.
+  Proof.
+    unfold SCConsistent; induction 1; intros.
+    - constructor.
+    - match goal with
+      | [ H : Step _ _ _ _ |- _ ] => inv H
+      end.
+      match goal with
+      | [ H : substepsComb _ |- _ ] =>
+        apply substepsComb_substepsInd in H;
+          apply SCMemSubsteps in H
+      end.
+      intuition idtac; shatter; subst;
+        try match goal with
+            | [ H : foldSSLabel ss = _ |- _ ] => rewrite H in *
+            end;
+        try match goal with
+            | [ H : foldSSUpds ss = _ |- _ ] => rewrite H in *
+            end;
+        unfold hide in *;
+        simpl in *;
+        subst.
+      + econstructor; FMap.findeq; apply IHForwardMultistep; reflexivity.
+      + econstructor; FMap.findeq; apply IHForwardMultistep; reflexivity.
+      + pose (Hrq := inv_rq x0).
+        destruct Hrq as [adr [op [dat Heqq]]].
+        simpl in adr, op, dat.
+        subst.
+        destruct op;
+          kinv_action_dest;
+          match goal with
+          | [ H : _ |- _ ] => apply SCMemRegs_find_mem in H; subst
+          end;
+          match goal with
+          | [ H : foldSSUpds _ = _ |- _ ] => rewrite H in *
+          end;
+          simpl in *;
+          subst;
+          econstructor;
+          simpl;
+          try split;
+          try reflexivity;
+          apply IHForwardMultistep;
+          eauto.
+  Qed.
+
+
+  Lemma ConcatMemoryConsistent :
+    forall p m,
+      Wf.ModEquiv type typeUT m ->
+      FMap.DisjList (getDefs p) (getDefs m) ->
+      FMap.DisjList (getCalls p) (getCalls m) ->
+      In "exec" (getDefs m) ->
+      In "exec" (getCalls p) ->
+      forall lsm mem,
+        SCMemMemConsistent lsm mem ->
+        forall om nm,
+          ForwardMultistep m om nm lsm ->
+          forall lsp op np,
+            ForwardMultistep p op np lsp ->
+            WellHiddenConcatSeq p m lsp lsm ->
+            SCProcMemConsistent lsp mem.
+  Proof.
+    induction 6; intros;
+      match goal with
+      | [ H : WellHiddenConcatSeq _ _ _ _ |- _ ] => inv H
+      end.
+    - constructor.
+    - unfold WellHiddenConcat, wellHidden in *.
+      shatter.
+      destruct l. destruct la.
+      unfold mergeLabel, hide, Semantics.defs, Semantics.calls in *.
+      repeat match goal with
+             | [ H : FMap.M.KeysDisj _ ?x |- _ ] =>
+               let Hin := fresh in
+               unfold FMap.M.KeysDisj in H;
+                 assert (In "exec" x) as Hin by ((apply getCalls_in_1; assumption) || (apply getDefs_in_2; assumption));
+                 specialize (H "exec" Hin);
+                 clear Hin;
+                 pose proof (fun v => FMap.M.subtractKV_not_In_find (v := v) H)
+             end.
+      replace (FMap.M.find "exec" (FMap.M.union defs0 defs)) with (FMap.M.find "exec" defs) in *;
+        [replace (FMap.M.find "exec" (FMap.M.union calls0 calls)) with (FMap.M.find "exec" calls0) in *|].
+      + case_eq (FMap.M.find "exec" defs);
+          case_eq (FMap.M.find "exec" calls0);
+          intros;
+          match goal with
+          | [ Hd : FMap.M.find "exec" defs = _,
+                   Hc : FMap.M.find "exec" calls0 = _ |- _ ] =>
+            rewrite Hd in *; rewrite Hc in *
+          end;
+          repeat match goal with
+                 | [ H : forall _, _ = _ -> _ |- _ ] => specialize (H _ eq_refl); inv H
+                 end;
+          econstructor;
+          unfold Semantics.calls;
+          match goal with
+          | [ H : ?x = _ |- match ?x with | _ => _ end ] =>
+            rewrite H; eassumption
+          | [ |- SCProcMemConsistent _ _ ] =>
+            repeat match goal with
+                   | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
+                   end;
+              eapply IHSCMemMemConsistent;
+              eauto
+          end.
+      + rewrite FMap.M.find_union.
+        replace (FMap.M.find "exec" calls) with (None (A:={x : SignatureT & SignT x})).
+        * destruct (FMap.M.find "exec" calls0); reflexivity.
+        * apply eq_sym.
+          rewrite <- FMap.M.F.P.F.not_find_in_iff.
+          assert (FMap.M.KeysDisj calls (getCalls p)); auto.
+          eapply RefinementFacts.DisjList_KeysSubset_KeysDisj.
+          -- apply FMap.DisjList_comm.
+             eassumption.
+          -- match goal with
+             | [ H : ForwardMultistep _ _ _ ({| annot := _; defs := _; calls := calls |} :: _) |- _ ] => inv H
+             end.
+             match goal with
+             | [ H : Step _ _ _ {| annot := _; defs := _; calls := calls |}, Hwf : Wf.ModEquiv type typeUT m |- _ ] =>
+               let Hsci := fresh in
+               pose (step_calls_in Hwf H) as Hsci;
+                 simpl in Hsci
+             end.
+             assumption.
+      + rewrite FMap.M.find_union.
+        replace (FMap.M.find "exec" defs0) with (None (A:={x : SignatureT & SignT x})); auto.
+        apply eq_sym.
+        rewrite <- FMap.M.F.P.F.not_find_in_iff.
+        assert (FMap.M.KeysDisj defs0 (getDefs m)); auto.
+        eapply RefinementFacts.DisjList_KeysSubset_KeysDisj; eauto.
+        match goal with
+        | [ H : ForwardMultistep _ _ _ ({| annot := _; defs := defs0; calls := _ |} :: _) |- _ ] => inv H
+        end.
+        match goal with
+        | [ H : Step _ _ _ {| annot := _; defs := defs0; calls := _ |} |- _ ] =>
+          let Hsdi := fresh in
+          pose (step_defs_in H) as Hsdi;
+            simpl in Hsdi
+        end.
+        assumption.
   Qed.
 
   Lemma SCHiding : forall p m regs mem,
@@ -4270,19 +4420,24 @@ Section SCTiming.
       Wf.ValidRegsModules type (p ++ m)%kami ->
       SCProcHiding p regs mem ->
       SCMemHiding m ->
+      SCConsistent m ->
       kamiHiding (p ++ m)%kami (FMap.M.union (SCMemRegs mem) regs).
   Proof.
     unfold kamiHiding.
     intros.
     match goal with
     | [ H : ForwardMultistep (p ++ m)%kami _ _ _ |- _ ] =>
-      apply FMulti_Multi in H;
-        apply multistep_split in H;
+      apply forward_multistep_split in H;
         try assumption
     end.
-    shatter.
-    
-    apply multistep_split in H1.
+    - shatter.
+      replace (regsA p (FMap.M.union (SCMemRegs mem) regs)) with regs in *.
+      + unfold SCProcHiding in H5.
+        specialize (H5 _ _ fhs H7).
+    (* things we need:
+       DONE - add as assumption and prove: any trace on the memory is memory-consistent
+       DONE - if a processor trace combines with a memory-consistent memory trace, the processor trace is memory-consistent
+       - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *)
   Admitted.
 
 End SCTiming.
