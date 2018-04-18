@@ -621,14 +621,22 @@ Module Type SCInterface.
   Parameter thMeth : String.string.
   Parameter execMeth : String.string.
 
-  Axiom mexec : In execMeth (getDefs m).
-  Axiom pexec : In execMeth (getCalls p).
-  Axiom pfh : In fhMeth (getCalls p).
+  Axiom mdexec : In execMeth (getDefs m).
+  Axiom pcexec : In execMeth (getCalls p).
+  Axiom pcfh : In fhMeth (getCalls p).
+  Axiom pndfh : ~ In fhMeth (getDefs p).
+  Axiom mndfh : ~ In fhMeth (getDefs m).
 End SCInterface.
 
 
 Module SCDefs (SC : SCInterface).
   Import SC.
+
+  Lemma mncfh : ~ In fhMeth (getCalls m).
+    pose (callsDisj fhMeth).
+    pose pcfh.
+    tauto.
+  Qed.
 
   Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n execMeth
@@ -839,7 +847,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
              | [ H : FMap.M.KeysDisj _ ?x |- _ ] =>
                let Hin := fresh in
                unfold FMap.M.KeysDisj in H;
-                 assert (In execMeth x) as Hin by ((apply getCalls_in_1; apply pexec) || (apply getDefs_in_2; apply mexec));
+                 assert (In execMeth x) as Hin by ((apply getCalls_in_1; apply pcexec) || (apply getDefs_in_2; apply mdexec));
                  specialize (H execMeth Hin);
                  clear Hin;
                  pose proof (fun v => FMap.M.subtractKV_not_In_find (v := v) H)
@@ -874,7 +882,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
         * destruct (FMap.M.find execMeth calls0); reflexivity.
         * apply eq_sym.
           rewrite <- FMap.M.F.P.F.not_find_in_iff.
-          assert (FMap.M.KeysDisj calls (getCalls p)); [|pose proof pexec; auto].
+          assert (FMap.M.KeysDisj calls (getCalls p)); [|pose proof pcexec; auto].
           eapply RefinementFacts.DisjList_KeysSubset_KeysDisj.
           -- apply FMap.DisjList_comm.
              apply callsDisj.
@@ -892,7 +900,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
         replace (FMap.M.find execMeth defs0) with (None (A:={x : SignatureT & SignT x})); auto.
         apply eq_sym.
         rewrite <- FMap.M.F.P.F.not_find_in_iff.
-        assert (FMap.M.KeysDisj defs0 (getDefs m)); [|pose proof mexec; auto].
+        assert (FMap.M.KeysDisj defs0 (getDefs m)); [|pose proof mdexec; auto].
         eapply RefinementFacts.DisjList_KeysSubset_KeysDisj; try apply defsDisj.
         match goal with
         | [ H : ForwardMultistep _ _ _ ({| annot := _; defs := defs0; calls := _ |} :: _) |- _ ] => inv H
@@ -906,10 +914,54 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
         assumption.
   Qed.
 
-  Lemma abstractToSCHiding : forall rf pm pc mem,
+  Lemma fhCombine : forall rm um lsm,
+      ForwardMultistep m rm um lsm ->
+      forall rp up lsp lspm,
+        ForwardMultistep p rp up lsp ->
+        CanCombineLabelSeq lsp lsm ->
+        lspm = composeLabels lsp lsm ->
+        extractFhLabelSeq fhMeth lspm = extractFhLabelSeq fhMeth lsp.
+  Proof.
+    induction 1; intros; destruct lsp; subst; intuition.
+    simpl.
+    match goal with
+    | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
+    end.
+    f_equal.
+    - destruct l0.
+      destruct l.
+      unfold extractFhLabel, extractFhMeths.
+      match goal with
+      | [ |- match ?x with | _ => _ end = match ?y with | _ => _ end ] => replace x with y; auto
+      end.
+      unfold Semantics.calls, Semantics.defs, mergeLabel.
+      rewrite FMap.M.subtractKV_find.
+      repeat rewrite FMap.M.find_union.
+      match goal with
+      | [ H : Step p _ _ _ |- _ ] => pose (step_defs_in H); pose (step_calls_in pequiv H)
+      end.
+      match goal with
+      | [ H : Step m _ _ _ |- _ ] => pose (step_defs_in H); pose (step_calls_in mequiv H)
+      end.
+      pose pndfh.
+      pose mndfh.
+      pose mncfh.
+      unfold Semantics.calls, Semantics.defs in *.
+      repeat multimatch goal with
+             | [ |- context[FMap.M.find fhMeth ?mths] ] =>
+               replace (FMap.M.find fhMeth mths) with (None (A := {x : SignatureT & SignT x})) by (apply eq_sym; eapply FMap.M.find_KeysSubset; eassumption)
+             end.
+      destruct (FMap.M.find fhMeth calls); reflexivity.
+    - match goal with
+      | [ H : CanCombineLabelSeq (_ :: _) (_ :: _) |- _ ] => destruct H
+      end.
+      eapply IHForwardMultistep; eauto.
+  Qed.
+
+  Theorem abstractToSCHiding : forall rf pm pc mem,
       abstractHiding rf pm pc mem ->
       kamiHiding fhMeth thMeth (p ++ m)%kami (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)).
-  Proof. (*
+  Proof.
     unfold kamiHiding.
     intros.
     match goal with
@@ -924,7 +976,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
           (* things we need:
        DONE - add as assumption and prove: any trace on the memory is memory-consistent
        DONE - if a processor trace combines with a memory-consistent memory trace, the processor trace is memory-consistent
-       - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *) *)
+       - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *)
   Admitted.
 
 End SCHiding.
@@ -1002,12 +1054,12 @@ Module SCSingle <: SCInterface.
   Definition thMeth := "toHost".
   Definition execMeth := "exec".
 
-  Theorem mexec : In execMeth (getDefs m).
+  Theorem mdexec : In execMeth (getDefs m).
   Proof.
     simpl; auto.
   Qed.
 
-  Theorem pexec : In execMeth (getCalls p).
+  Theorem pcexec : In execMeth (getCalls p).
   Proof.
     simpl; auto.
   Qed.
