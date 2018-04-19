@@ -626,6 +626,9 @@ Module Type SCInterface.
   Axiom pcfh : In fhMeth (getCalls p).
   Axiom pndfh : ~ In fhMeth (getDefs p).
   Axiom mndfh : ~ In fhMeth (getDefs m).
+
+  Axiom pRegs : forall rf pm pc, FMap.M.KeysSubset (SCProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
+  Axiom mRegs : forall mem, FMap.M.KeysSubset (SCMemRegs mem) (Struct.namesOf (getRegInits m)).
 End SCInterface.
 
 
@@ -826,13 +829,13 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
 
   Lemma ConcatMemoryConsistent :
     forall lsm mem,
-      SCMemMemConsistent lsm mem ->
+      Defs.SCMemMemConsistent lsm mem ->
       forall om nm,
         ForwardMultistep m om nm lsm ->
         forall lsp op np,
           ForwardMultistep p op np lsp ->
           WellHiddenConcatSeq p m lsp lsm ->
-          SCProcMemConsistent lsp mem.
+          Defs.SCProcMemConsistent lsp mem.
   Proof.
     induction 1; intros;
       match goal with
@@ -870,7 +873,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
           match goal with
           | [ H : ?x = _ |- match ?x with | _ => _ end ] =>
             rewrite H; eassumption
-          | [ |- SCProcMemConsistent _ _ ] =>
+          | [ |- Defs.SCProcMemConsistent _ _ ] =>
             repeat match goal with
                    | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
                    end;
@@ -964,19 +967,46 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
   Proof.
     unfold kamiHiding.
     intros.
+    assert (regsA p (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCProcRegs rf pm pc) as Hra by
+        (unfold regsA;
+         rewrite FMap.M.restrict_union;
+         rewrite FMap.M.restrict_KeysSubset; [|apply pRegs];
+         erewrite FMap.M.restrict_DisjList; [FMap.findeq|apply mRegs|];
+         apply FMap.DisjList_comm;
+         apply reginits).
+    assert (regsB m (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCMemRegs mem) as Hrb by
+        (unfold regsB;
+         rewrite FMap.M.restrict_union;
+         erewrite FMap.M.restrict_DisjList; [|apply pRegs|apply reginits];
+         rewrite FMap.M.restrict_KeysSubset; [FMap.findeq|apply mRegs]).
     match goal with
     | [ H : ForwardMultistep (p ++ m)%kami _ _ _ |- _ ] =>
-      apply forward_multistep_split in H;
-        try assumption
+      apply (forward_multistep_split p m pequiv mequiv reginits defsDisj callsDisj validRegs) in H;
+        try congruence;
+        destruct H as [sa [lsa [sb [lsb [Hfmp [Hfmm [Hdisj [Hnr [Hcomb [Hconc Hcomp]]]]]]]]]]
     end.
-    - shatter.
-      replace (regsA p (FMap.M.union (SCMemRegs mem) regs)) with regs in *.
-      + unfold SCProcHiding in H5.
+    rewrite Hra, Hrb in *.
+    assert (Defs.SCProcMemConsistent lsa mem) as Hpmc by (eapply ConcatMemoryConsistent; eauto; eapply MemSpec; eauto).
+    assert (extractFhLabelSeq fhMeth lsa = fhs) as Hfh by (erewrite <- fhCombine; eauto).
+    match goal with
+    | [ Hah : abstractHiding _ _ _ _,
+              Hlen : length _ = length _ |- _ ] =>
+      let Hph := fresh in
+      pose (abstractToProcHiding _ _ _ _ H) as Hph;
+        unfold Defs.SCProcHiding in Hph;
+        specialize (Hph _ _ fhs Hfmp Hpmc Hfh _ Hlen);
+        destruct Hph as [lsa' [sa' [Hfmp' [Hpmc' [Hcensor Hfh']]]]]
+    end.
+      pose (MemSpec).
+      unfold Defs.SCMemSpec in s.
+      apply s.
+        apply MemSpec.
+        unfold SCProcHiding in H5.
         specialize (H5 _ _ fhs H7).
           (* things we need:
        DONE - add as assumption and prove: any trace on the memory is memory-consistent
        DONE - if a processor trace combines with a memory-consistent memory trace, the processor trace is memory-consistent
-       - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *)
+       DONE - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *)
   Admitted.
 
 End SCHiding.
