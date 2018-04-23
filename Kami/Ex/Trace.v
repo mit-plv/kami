@@ -635,12 +635,6 @@ End SCInterface.
 Module SCDefs (SC : SCInterface).
   Import SC.
 
-  Lemma mncfh : ~ In fhMeth (getCalls m).
-    pose (callsDisj fhMeth).
-    pose pcfh.
-    tauto.
-  Qed.
-
   Definition censorSCMeth (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
     if String.string_dec n execMeth
     then match t with
@@ -743,27 +737,25 @@ Module SCDefs (SC : SCInterface).
          end
     else t.
 
-  Definition extractWrVals (l : LabelT) : list (word 32) :=
-    match l with
-    | {| annot := _;
-         defs := ds;
-         calls := _; |} => 
-      match FMap.M.find execMeth ds with
-      | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                     (argV, retV)) =>
-        if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then [evalExpr (#argV!rv32iRq@."data")%kami_expr]
-        else nil
-      | _ => nil
-      end
+  Definition extractMethsWrVals (ms : MethsT) : list (word 32) :=
+    match FMap.M.find execMeth ms with
+    | Some (existT _
+                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                             "op" :: Bool;
+                                             "data" :: Bit 32});
+                      ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                   (argV, retV)) =>
+      if evalExpr (#argV!rv32iRq@."op")%kami_expr
+      then [evalExpr (#argV!rv32iRq@."data")%kami_expr]
+      else nil
+    | _ => nil
     end.
+
+  Definition extractProcWrValSeq : LabelSeqT -> list (word 32) :=
+    flat_map (fun l => extractMethsWrVals (calls l)).
   
-  Definition extractWrValSeq : LabelSeqT -> list (word 32) :=
-    flat_map extractWrVals.
+  Definition extractMemWrValSeq : LabelSeqT -> list (word 32) :=
+    flat_map (fun l => extractMethsWrVals (defs l)).
   
   Inductive SCMemMemConsistent : LabelSeqT -> memory -> Prop :=
   | SMMCnil : forall mem, SCMemMemConsistent nil mem
@@ -791,14 +783,14 @@ Module SCDefs (SC : SCInterface).
       SCMemMemConsistent labels mem ->
       ForwardMultistep m (SCMemRegs mem) newRegs labels ->
       forall wrs,
-        extractWrValSeq labels = wrs ->
+        extractMemWrValSeq labels = wrs ->
         forall mem' wrs',
           length wrs = length wrs' ->
           exists labels' newRegs',
             ForwardMultistep m (SCMemRegs mem') newRegs' labels' /\
             SCMemMemConsistent labels' mem' /\
             censorLabelSeq censorSCMemDefs labels = censorLabelSeq censorSCMemDefs labels' /\
-            extractWrValSeq labels' = wrs'.
+            extractMemWrValSeq labels' = wrs'.
 
   Definition SCMemSpec m : Prop :=
     forall oldRegs newRegs labels,
@@ -806,7 +798,6 @@ Module SCDefs (SC : SCInterface).
       forall mem,
         oldRegs = SCMemRegs mem ->
         SCMemMemConsistent labels mem.
-
 End SCDefs.
 
 Module Type SCModularHiding (SC : SCInterface).
@@ -826,6 +817,12 @@ End SCModularHiding.
 Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
   Module Defs := SCDefs SC.
   Import SC Defs Hiding.
+
+  Lemma mncfh : ~ In fhMeth (getCalls m).
+    pose (callsDisj fhMeth).
+    pose pcfh.
+    tauto.
+  Qed.
 
   Lemma ConcatMemoryConsistent :
     forall lsm mem,
@@ -961,20 +958,78 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
       eapply IHForwardMultistep; eauto.
   Qed.
 
+  Lemma concatWrLen : forall lsp lsm,
+      WellHiddenConcatSeq p m lsp lsm ->
+      length (Defs.extractProcWrValSeq lsp) = length (Defs.extractMemWrValSeq lsm).
+  Proof.
+    induction 1; auto.
+    simpl.
+    repeat rewrite app_length.
+    match goal with
+    | [ |- ?x + _ = ?y + _ ] => replace x with y; auto
+    end.
+    destruct la.
+    destruct lb.
+    match goal with
+    | [ H : WellHiddenConcat _ _ _ _ |- _ ] => unfold WellHiddenConcat, wellHidden, hide, mergeLabel in H
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    unfold Defs.extractMethsWrVals.
+    match goal with
+    | [ |- length match ?x with | _ => _ end = length match ?y with | _ => _ end ] => replace x with y; auto
+    end.
+    intuition idtac.
+    assert (In execMeth (getCalls (p ++ m)%kami)) as Hin by (apply getCalls_in_1; apply pcexec).
+    specialize (H1 execMeth Hin).
+    
+  Admitted.
+
+  Lemma censorWrLen : forall lsp lsp',
+      censorLabelSeq Defs.censorSCMeth lsp =
+      censorLabelSeq Defs.censorSCMeth lsp' ->
+      length (Defs.extractProcWrValSeq lsp) = length (Defs.extractProcWrValSeq lsp').
+  Proof.
+  Admitted.
+
+  Lemma combineCensor : forall lsp lsm lsp' lsm',
+      CanCombineLabelSeq lsp lsm ->
+      censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
+      censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
+      CanCombineLabelSeq lsp' lsm'.
+  Proof.
+  Admitted.
+
+  Lemma concatCensor : forall lsp lsm lsp' lsm',
+      WellHiddenConcatSeq p m lsp lsm ->
+      censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
+      censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
+      Defs.extractProcWrValSeq lsp' = Defs.extractMemWrValSeq lsm' ->
+      WellHiddenConcatSeq p m lsp' lsm'.
+  Proof.
+  Admitted.
+
+  Lemma composeCensor : forall lsp lsm lsp' lsm',
+      censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
+      censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
+      censorLabelSeq (censorHostMeth fhMeth thMeth) (composeLabels lsp lsm) =
+      censorLabelSeq (censorHostMeth fhMeth thMeth) (composeLabels lsp' lsm').
+  Proof.
+  Admitted.
+
   Theorem abstractToSCHiding : forall rf pm pc mem,
       abstractHiding rf pm pc mem ->
       kamiHiding fhMeth thMeth (p ++ m)%kami (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)).
   Proof.
     unfold kamiHiding.
     intros.
-    assert (regsA p (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCProcRegs rf pm pc) as Hra by
+    assert (regsA p (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCProcRegs rf pm pc) as Hrp by
         (unfold regsA;
          rewrite FMap.M.restrict_union;
          rewrite FMap.M.restrict_KeysSubset; [|apply pRegs];
          erewrite FMap.M.restrict_DisjList; [FMap.findeq|apply mRegs|];
          apply FMap.DisjList_comm;
          apply reginits).
-    assert (regsB m (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCMemRegs mem) as Hrb by
+    assert (regsB m (FMap.M.union (SCProcRegs rf pm pc) (SCMemRegs mem)) = SCMemRegs mem) as Hrm by
         (unfold regsB;
          rewrite FMap.M.restrict_union;
          erewrite FMap.M.restrict_DisjList; [|apply pRegs|apply reginits];
@@ -983,31 +1038,36 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     | [ H : ForwardMultistep (p ++ m)%kami _ _ _ |- _ ] =>
       apply (forward_multistep_split p m pequiv mequiv reginits defsDisj callsDisj validRegs) in H;
         try congruence;
-        destruct H as [sa [lsa [sb [lsb [Hfmp [Hfmm [Hdisj [Hnr [Hcomb [Hconc Hcomp]]]]]]]]]]
+        destruct H as [sp [lsp [sm [lsm [Hfmp [Hfmm [Hdisj [Hnr [Hcomb [Hconc Hcomp]]]]]]]]]]
     end.
-    rewrite Hra, Hrb in *.
-    assert (Defs.SCProcMemConsistent lsa mem) as Hpmc by (eapply ConcatMemoryConsistent; eauto; eapply MemSpec; eauto).
-    assert (extractFhLabelSeq fhMeth lsa = fhs) as Hfh by (erewrite <- fhCombine; eauto).
+    rewrite Hrp, Hrm in *.
+    assert (Defs.SCProcMemConsistent lsp mem) as Hpmc by (eapply ConcatMemoryConsistent; eauto; eapply MemSpec; eauto).
+    assert (extractFhLabelSeq fhMeth lsp = fhs) as Hfh by (erewrite <- fhCombine; eauto).
     match goal with
     | [ Hah : abstractHiding _ _ _ _,
               Hlen : length _ = length _ |- _ ] =>
       let Hph := fresh in
-      pose (abstractToProcHiding _ _ _ _ H) as Hph;
+      pose (abstractToProcHiding _ _ _ _ Hah) as Hph;
         unfold Defs.SCProcHiding in Hph;
         specialize (Hph _ _ fhs Hfmp Hpmc Hfh _ Hlen);
-        destruct Hph as [lsa' [sa' [Hfmp' [Hpmc' [Hcensor Hfh']]]]]
+        destruct Hph as [lsp' [sp' [Hfmp' [Hpmc' [Hpcensor Hfh']]]]]
     end.
-      pose (MemSpec).
-      unfold Defs.SCMemSpec in s.
-      apply s.
-        apply MemSpec.
-        unfold SCProcHiding in H5.
-        specialize (H5 _ _ fhs H7).
-          (* things we need:
-       DONE - add as assumption and prove: any trace on the memory is memory-consistent
-       DONE - if a processor trace combines with a memory-consistent memory trace, the processor trace is memory-consistent
-       DONE - the fromhost sequence of a combined processor+memory label seq is just the fromhost sequence of the processor label seq *)
-  Admitted.
+    assert (length (Defs.extractMemWrValSeq lsm) = length (Defs.extractProcWrValSeq lsp')) as Hlen by (erewrite <- censorWrLen by eassumption; apply eq_sym; apply concatWrLen; assumption).
+    pose (MemHiding _ _ _ (MemSpec _ _ _ Hfmm _ eq_refl) Hfmm _ eq_refl mem (Defs.extractProcWrValSeq lsp') Hlen) as Hmh.
+    destruct Hmh as [lsm' [sm' [Hfmm' [Hmmc' [Hmcensor Hwrval]]]]].
+    exists (composeLabels lsp' lsm'), (FMap.M.union sp' sm').
+    intuition idtac.
+    - apply (forward_multistep_modular p m pequiv mequiv reginits defsDisj callsDisj validRegs); auto.
+      + apply pRegs.
+      + apply mRegs.
+      + eapply combineCensor; eauto.
+      + apply wellHidden_concat_modular_seq.
+        eapply concatCensor; eauto.
+    - subst.
+      apply composeCensor; auto.
+    - erewrite fhCombine; eauto.
+      eapply combineCensor; eauto.
+  Qed.
 
 End SCHiding.
 
@@ -1098,6 +1158,44 @@ Module SCSingle <: SCInterface.
   Proof.
     simpl; auto.
   Qed.
+
+  Theorem pcfh : In fhMeth (getCalls p).
+  Proof.
+    simpl; auto.
+  Qed.
+
+  Theorem pndfh : ~ In fhMeth (getDefs p).
+  Proof.
+    tauto.
+  Qed.
+
+  Theorem mndfh : ~ In fhMeth (getDefs m).
+  Proof.
+    simpl.
+    intuition idtac.
+    discriminate.
+  Qed.
+
+  Theorem pRegs : forall rf pm pc, FMap.M.KeysSubset (SCProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
+  Proof.
+    intros; simpl.
+    unfold SCProcRegs, FMap.M.KeysSubset.
+    intro.
+    repeat rewrite FMap.M.F.P.F.add_in_iff.
+    rewrite FMap.M.F.P.F.empty_in_iff.
+    intuition idtac; subst; simpl; tauto.
+  Qed.
+    
+  Theorem mRegs : forall mem, FMap.M.KeysSubset (SCMemRegs mem) (Struct.namesOf (getRegInits m)).
+  Proof.
+    intros; simpl.
+    unfold SCMemRegs, FMap.M.KeysSubset.
+    intro.
+    repeat rewrite FMap.M.F.P.F.add_in_iff.
+    rewrite FMap.M.F.P.F.empty_in_iff.
+    intuition idtac; subst; simpl; tauto.
+  Qed.
+
 End SCSingle.
 
 Module SCSingleModularHiding <: (SCModularHiding SCSingle).
@@ -4288,7 +4386,7 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
           end.
           shatter.
           match goal with
-          | [ H : extractWrValSeq ?ls = wrs', Hfm : ForwardMultistep _ _ ?r ?ls |- _ ] =>
+          | [ H : extractMemWrValSeq ?ls = wrs', Hfm : ForwardMultistep _ _ ?r ?ls |- _ ] =>
             exists ({| annot := x;
                   defs := FMap.M.add "exec"
                                      (existT SignT {| arg := Struct STRUCT {"addr" :: Bit 16; "op" :: Bool; "data" :: Bit 32}; ret := Struct STRUCT {"data" :: Bit 32} |}
@@ -4441,7 +4539,7 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
           end.
           shatter.
           match goal with
-          | [ H : extractWrValSeq ?ls = wrs', Hfm : ForwardMultistep _ _ ?r ?ls |- _ ] =>
+          | [ H : extractMemWrValSeq ?ls = wrs', Hfm : ForwardMultistep _ _ ?r ?ls |- _ ] =>
             exists ({| annot := x;
                   defs := FMap.M.add "exec"
                                      (existT SignT {| arg := Struct STRUCT {"addr" :: Bit 16; "op" :: Bool; "data" :: Bit 32}; ret := Struct STRUCT {"data" :: Bit 32} |}
