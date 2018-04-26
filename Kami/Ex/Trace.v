@@ -824,6 +824,66 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     tauto.
   Qed.
 
+  Lemma whc : forall lp lm rp up rm um,
+      WellHiddenConcat p m lp lm ->
+      Step p rp up lp ->
+      Step m rm um lm ->
+      FMap.M.find execMeth (Semantics.calls lp) = FMap.M.find execMeth (Semantics.defs lm).
+  Proof.
+    intros.
+    unfold WellHiddenConcat, wellHidden in *.
+    shatter.
+    destruct lp as [ap dp cp]. destruct lm as [am dm cm].
+    unfold mergeLabel, hide, Semantics.defs, Semantics.calls in *.
+    repeat match goal with
+           | [ H : FMap.M.KeysDisj _ ?x |- _ ] =>
+             let Hin := fresh in
+             unfold FMap.M.KeysDisj in H;
+               assert (In execMeth x) as Hin by ((apply getCalls_in_1; apply pcexec) || (apply getDefs_in_2; apply mdexec));
+               specialize (H execMeth Hin);
+               clear Hin;
+               pose proof (fun v => FMap.M.subtractKV_not_In_find (v := v) H)
+           end.
+    replace (FMap.M.find execMeth (FMap.M.union dp dm)) with (FMap.M.find execMeth dm) in *;
+      [replace (FMap.M.find execMeth (FMap.M.union cp cm)) with (FMap.M.find execMeth cp) in *|].
+    - match goal with
+      | [ |- ?x = ?y ] => case_eq x; case_eq y; intros
+      end;
+        repeat match goal with
+               | [ H : forall _, ?x = _ -> _, H' : ?x = _ |- _ ] => specialize (H _ H')
+               end;
+        congruence.
+    - rewrite FMap.M.find_union.
+      replace (FMap.M.find execMeth cm) with (None (A:={x : SignatureT & SignT x})).
+      + destruct (FMap.M.find execMeth cp); reflexivity.
+      + apply eq_sym.
+        rewrite <- FMap.M.F.P.F.not_find_in_iff.
+        assert (FMap.M.KeysDisj cm (getCalls p)); [|pose proof pcexec; auto].
+        eapply RefinementFacts.DisjList_KeysSubset_KeysDisj.
+        * apply FMap.DisjList_comm.
+          apply callsDisj.
+        * match goal with
+          | [ H : Step m _ _ _ |- _ ] =>
+            let Hsci := fresh in
+            pose (step_calls_in mequiv H) as Hsci;
+              simpl in Hsci
+          end.
+          assumption.
+    - rewrite FMap.M.find_union.
+      replace (FMap.M.find execMeth dp) with (None (A:={x : SignatureT & SignT x})); auto.
+      apply eq_sym.
+      rewrite <- FMap.M.F.P.F.not_find_in_iff.
+      assert (FMap.M.KeysDisj dp (getDefs m)); [|pose proof mdexec; auto].
+      eapply RefinementFacts.DisjList_KeysSubset_KeysDisj; try apply defsDisj.
+      match goal with
+      | [ H : Step p _ _ _ |- _ ] =>
+        let Hsdi := fresh in
+        pose (step_defs_in H) as Hsdi;
+          simpl in Hsdi
+      end.
+      assumption.
+  Qed.
+
   Lemma ConcatMemoryConsistent :
     forall lsm mem,
       Defs.SCMemMemConsistent lsm mem ->
@@ -839,79 +899,15 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
       | [ H : WellHiddenConcatSeq _ _ _ _ |- _ ] => inv H
       end.
     - constructor.
-    - unfold WellHiddenConcat, wellHidden in *.
-      shatter.
-      destruct l. destruct la.
-      unfold mergeLabel, hide, Semantics.defs, Semantics.calls in *.
-      repeat match goal with
-             | [ H : FMap.M.KeysDisj _ ?x |- _ ] =>
-               let Hin := fresh in
-               unfold FMap.M.KeysDisj in H;
-                 assert (In execMeth x) as Hin by ((apply getCalls_in_1; apply pcexec) || (apply getDefs_in_2; apply mdexec));
-                 specialize (H execMeth Hin);
-                 clear Hin;
-                 pose proof (fun v => FMap.M.subtractKV_not_In_find (v := v) H)
+    - repeat match goal with
+             | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
              end.
-      replace (FMap.M.find execMeth (FMap.M.union defs0 defs)) with (FMap.M.find execMeth defs) in *;
-        [replace (FMap.M.find execMeth (FMap.M.union calls0 calls)) with (FMap.M.find execMeth calls0) in *|].
-      + case_eq (FMap.M.find execMeth defs);
-          case_eq (FMap.M.find execMeth calls0);
-          intros;
-          match goal with
-          | [ Hd : FMap.M.find execMeth defs = _,
-                   Hc : FMap.M.find execMeth calls0 = _ |- _ ] =>
-            rewrite Hd in *; rewrite Hc in *
-          end;
-          repeat match goal with
-                 | [ H : forall _, _ = _ -> _ |- _ ] => specialize (H _ eq_refl); inv H
-                 end;
-          econstructor;
-          unfold Semantics.calls;
-          match goal with
-          | [ H : ?x = _ |- match ?x with | _ => _ end ] =>
-            rewrite H; eassumption
-          | [ |- Defs.SCProcMemConsistent _ _ ] =>
-            repeat match goal with
-                   | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
-                   end;
-              eapply IHSCMemMemConsistent;
-              eauto
-          end.
-      + rewrite FMap.M.find_union.
-        replace (FMap.M.find execMeth calls) with (None (A:={x : SignatureT & SignT x})).
-        * destruct (FMap.M.find execMeth calls0); reflexivity.
-        * apply eq_sym.
-          rewrite <- FMap.M.F.P.F.not_find_in_iff.
-          assert (FMap.M.KeysDisj calls (getCalls p)); [|pose proof pcexec; auto].
-          eapply RefinementFacts.DisjList_KeysSubset_KeysDisj.
-          -- apply FMap.DisjList_comm.
-             apply callsDisj.
-          -- match goal with
-             | [ H : ForwardMultistep _ _ _ ({| annot := _; defs := _; calls := calls |} :: _) |- _ ] => inv H
-             end.
-             match goal with
-             | [ H : Step _ _ _ {| annot := _; defs := _; calls := calls |} |- _ ] =>
-               let Hsci := fresh in
-               pose (step_calls_in mequiv H) as Hsci;
-                 simpl in Hsci
-             end.
-             assumption.
-      + rewrite FMap.M.find_union.
-        replace (FMap.M.find execMeth defs0) with (None (A:={x : SignatureT & SignT x})); auto.
-        apply eq_sym.
-        rewrite <- FMap.M.F.P.F.not_find_in_iff.
-        assert (FMap.M.KeysDisj defs0 (getDefs m)); [|pose proof mdexec; auto].
-        eapply RefinementFacts.DisjList_KeysSubset_KeysDisj; try apply defsDisj.
-        match goal with
-        | [ H : ForwardMultistep _ _ _ ({| annot := _; defs := defs0; calls := _ |} :: _) |- _ ] => inv H
-        end.
-        match goal with
-        | [ H : Step _ _ _ {| annot := _; defs := defs0; calls := _ |} |- _ ] =>
-          let Hsdi := fresh in
-          pose (step_defs_in H) as Hsdi;
-            simpl in Hsdi
-        end.
-        assumption.
+      econstructor; try (eapply IHSCMemMemConsistent; eauto).
+      match goal with
+      | [ H : match ?x with | _ => _ end |- match ?y with | _ => _ end ] => replace y with x; try eassumption
+      end.
+      apply eq_sym.
+      eapply whc; eauto.
   Qed.
 
   Lemma fhCombine : forall rm um lsm,
@@ -960,29 +956,29 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
 
   Lemma concatWrLen : forall lsp lsm,
       WellHiddenConcatSeq p m lsp lsm ->
-      length (Defs.extractProcWrValSeq lsp) = length (Defs.extractMemWrValSeq lsm).
+      forall rp rp' rm rm',
+        ForwardMultistep p rp rp' lsp ->
+        ForwardMultistep m rm rm' lsm ->
+        length (Defs.extractProcWrValSeq lsp) = length (Defs.extractMemWrValSeq lsm).
   Proof.
-    induction 1; auto.
+    induction 1; auto; intros.
     simpl.
+    repeat match goal with
+           | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
+           end.
+    match goal with
+    | [ IH : forall _ _ _ _, ForwardMultistep p _ _ _ -> ForwardMultistep m _ _ _ -> _, Hp : ForwardMultistep p _ _ _, Hm : ForwardMultistep m _ _ _ |- _ ] => specialize (IHWellHiddenConcatSeq _ _ _ _ Hp Hm)
+    end.
     repeat rewrite app_length.
     match goal with
     | [ |- ?x + _ = ?y + _ ] => replace x with y; auto
     end.
-    destruct la.
-    destruct lb.
-    match goal with
-    | [ H : WellHiddenConcat _ _ _ _ |- _ ] => unfold WellHiddenConcat, wellHidden, hide, mergeLabel in H
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
     unfold Defs.extractMethsWrVals.
     match goal with
     | [ |- length match ?x with | _ => _ end = length match ?y with | _ => _ end ] => replace x with y; auto
     end.
-    intuition idtac.
-    assert (In execMeth (getCalls (p ++ m)%kami)) as Hin by (apply getCalls_in_1; apply pcexec).
-    specialize (H1 execMeth Hin).
-    
-  Admitted.
+    eapply whc; eauto.
+  Qed.
 
   Lemma censorWrLen : forall lsp lsp',
       censorLabelSeq Defs.censorSCMeth lsp =
