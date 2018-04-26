@@ -1115,16 +1115,5 @@ Notation ConcatVerbose e1 e2 n :=
           end
         end).
 
-Definition test1 w1 w2 ty (pf1: (w1 > 0)%nat) (pf2: (w2 > 0)%nat)
-           (e: (Bit (w1 + w2 + 2)) @ ty) :=
-  (ExtractBitsVerbose e w1 (w1 + w2 - 1) w2).
-
-Definition test2 w lsb msb (pf1: (lsb < w)%nat) (pf2: (msb < w)%nat) (pf3: (lsb < msb)%nat) ty
-           (e: (Bit w) @ ty) := ExtractBits e lsb msb.
-
-(* Definition test3 n1 n2 ty (e1: (Bit n1) @ ty) (e2: (Bit n2) @ ty) := *)
-(*   ConcatVerbose (Const ltac:(assumption) (WO~0~1))%kami_expr *)
-(*                 (ConcatVerbose e1 e2 (n1 + n2)) (1 + n1 + 1 + n2 - n2 + n2). *)
-
 Notation lg i:= (S (Nat.log2 i)).
 

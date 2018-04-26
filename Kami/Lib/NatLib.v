@@ -375,7 +375,7 @@ Theorem Npow2_nat : forall n, nat_of_N (Npow2 n) = pow2 n.
   rewrite untimes2.
   match goal with
   | [ |- context[Npos ?p~0] ]
-    => replace (Npos p~0) with (Ndouble (Npos p)) by reflexivity
+    => replace (Npos p~0) with (N.double (Npos p)) by reflexivity
   end.
   apply nat_of_Ndouble.
 Qed.

@@ -1,6 +1,10 @@
 Require Import Kami.
 (* begin hide *)
 Require Import Lib.Indexer.
+Require Import Kami.Synthesize Kami.ModuleBoundEx.
+Require Import Ex.Fifo Ex.NativeFifo Ex.SimpleFifoCorrect.
+Require Import Ext.BSyntax.
+Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
 (* end hide *)
 
 Set Implicit Arguments.
@@ -183,8 +187,6 @@ Hint Unfold stage3 : ModuleDefs.
 
 (*! Fifos: the most fundamental hardware component for asynchronicity !*)
 
-Require Import Fifo.
-
 Definition fifo1 := simpleFifo "fifo1" 8 (Bit dataSize).
 Definition fifo2 := simpleFifo "fifo2" 8 (Bit dataSize).
 Hint Unfold fifo1 fifo2 : ModuleDefs.
@@ -247,10 +249,6 @@ Hint Resolve impl_RegsWf.
 
 (*+ Correctness proof +*)
 
-(* begin hide *)
-Require Import Kami.ModuleBoundEx.
-(* end hide *)
-
 Theorem impl_ok: impl <<== spec.
 Abort.
 
@@ -285,8 +283,6 @@ Ltac kmodularn :=
 (** Why? The fifo implementation is not simple to deal with. *)
 Check simpleFifo.
 
-Require Import NativeFifo SimpleFifoCorrect.
-           
 Definition nfifo1 :=
   @nativeSimpleFifo "fifo1" (Bit dataSize) Default.
 Definition nfifo2 :=
@@ -719,9 +715,7 @@ End DataSizeAbs.
 
 (*+ Extraction +*)
 
-Require Import Kami.Synthesize Ext.BSyntax.
-Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
-Extraction Language Ocaml.
+Extraction Language OCaml.
 
 Set Extraction Optimize.
 Set Extraction KeepSingleton.

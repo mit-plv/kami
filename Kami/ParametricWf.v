@@ -278,10 +278,9 @@ Section ValidRegs.
     Qed.
   End Regs2.
 
-  Fixpoint ValidRegsMetaModule (mm: MetaModule): Prop :=
+  Definition ValidRegsMetaModule (mm: MetaModule): Prop :=
     ValidRegsMetaRules (metaRegs mm) (metaRules mm) /\
     ValidRegsMetaMeths (metaRegs mm) (metaMeths mm).
-
 
   Fixpoint ValidRegsMetaModules (mm: MetaModules): Prop :=
     match mm with
@@ -486,14 +485,13 @@ Section Facts.
       ValidRegsModules ty (modFromMeta mm).
   Proof.
     destruct mm as [regs rules dms]; simpl; intros; dest; split.
-    - clear -H; induction rules; [constructor|]; inv H.
+    - destruct H; clear -H; induction rules; [constructor|]; inv H.
       simpl; apply validRegsRules_app; auto.
       apply validRegsMetaRule_validRegsRules; auto.
-    - clear -H0; induction dms; [constructor|]; inv H0.
+    - destruct H; clear -H0; induction dms; [constructor|]; inv H0.
       simpl; apply validRegsDms_app; auto.
       apply validRegsMetaMeth_validRegsDms; auto.
   Qed.
-
 
   Lemma validRegsMetaModules_validRegsModules:
     forall ty mm,
@@ -602,12 +600,14 @@ Section Facts.
   Proof.
     destruct mm1 as [regs1 rules1 dms1], mm2 as [regs2 rules2 dms2].
     simpl; intros; dest; split.
-    - apply validRegsMetaRules_app.
+    - destruct H, H0.
+      apply validRegsMetaRules_app.
       + eapply validRegsMetaRules_regs_weakening; eauto.
         apply SubList_app_1, SubList_refl.
       + eapply validRegsMetaRules_regs_weakening; eauto.
         apply SubList_app_2, SubList_refl.
-    - apply validRegsMetaMeths_app.
+    - destruct H, H0.
+      apply validRegsMetaMeths_app.
       + eapply validRegsMetaMeths_regs_weakening; eauto.
         apply SubList_app_1, SubList_refl.
       + eapply validRegsMetaMeths_regs_weakening; eauto.

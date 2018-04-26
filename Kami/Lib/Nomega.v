@@ -30,28 +30,28 @@ Qed.
 
 Theorem Nlt_out : forall n m, n < m
   -> (nat_of_N n < nat_of_N m)%nat.
-  unfold Nlt; intros ?? H.
+  unfold N.lt; intros ?? H.
   rewrite nat_of_Ncompare in H.
   apply nat_compare_Lt_lt; assumption.
 Qed.
 
 Theorem Nlt_in : forall n m, (nat_of_N n < nat_of_N m)%nat
   -> n < m.
-  unfold Nlt; intros.
+  unfold N.lt; intros.
   rewrite nat_of_Ncompare.
   apply (proj1 (nat_compare_lt _ _)); assumption.
 Qed.
 
 Theorem Nge_out : forall n m, n >= m
   -> (nat_of_N n >= nat_of_N m)%nat.
-  unfold Nge; intros ?? H.
+  unfold N.ge; intros ?? H.
   rewrite nat_of_Ncompare in H.
   apply nat_compare_ge; assumption.
 Qed.
 
 Theorem Nge_in : forall n m, (nat_of_N n >= nat_of_N m)%nat
   -> n >= m.
-  unfold Nge; intros.
+  unfold N.ge; intros.
   rewrite nat_of_Ncompare.
   apply nat_compare_ge; assumption.
 Qed.
