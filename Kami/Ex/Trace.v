@@ -598,6 +598,30 @@ End Specification.
 Section SCSimpleDefs.
   Definition rv32iRq := RqFromProc rv32iAddrSize rv32iDataBytes.
   Definition rv32iRs := RsToProc rv32iDataBytes.
+
+  Lemma inv_rq :
+    forall r : type (Struct rv32iRq),
+    exists a o d,
+      r = evalExpr (STRUCT { "addr" ::= #a;
+                             "op" ::= #o;
+                             "data" ::= #d })%kami_expr.
+  Proof.
+    intros.
+    exists (r Fin.F1), (r (Fin.FS Fin.F1)), (r (Fin.FS (Fin.FS Fin.F1))).
+    simpl.
+    fin_func_tac; reflexivity.
+  Qed.
+
+  Lemma inv_rs :
+    forall r : type (Struct rv32iRs),
+    exists d,
+      r = evalExpr (STRUCT { "data" ::= #d })%kami_expr.
+  Proof.
+    intros.
+    exists (r Fin.F1).
+    simpl.
+    fin_func_tac; reflexivity.
+  Qed.
 End SCSimpleDefs.
 
 Module Type SCInterface.
@@ -621,6 +645,7 @@ Module Type SCInterface.
   Parameter thMeth : String.string.
   Parameter execMeth : String.string.
 
+  Axiom methsDistinct : fhMeth <> thMeth /\ thMeth <> execMeth /\ execMeth <> fhMeth.
   Axiom mdexec : In execMeth (getDefs m).
   Axiom pcexec : In execMeth (getCalls p).
   Axiom pcfh : In fhMeth (getCalls p).
@@ -824,6 +849,12 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     tauto.
   Qed.
 
+  Lemma pndex : ~ In execMeth (getDefs p).
+    pose (defsDisj execMeth).
+    pose mdexec.
+    tauto.
+  Qed.
+
   Lemma whc : forall lp lm rp up rm um,
       WellHiddenConcat p m lp lm ->
       Step p rp up lp ->
@@ -980,12 +1011,278 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     eapply whc; eauto.
   Qed.
 
+  Lemma inv_label : forall a a' c c' d d',
+      {| annot := a; calls := c; defs := d |} = {| annot := a'; calls := c'; defs := d' |} -> a = a' /\ c = c' /\ d = d'.
+  Proof.
+    intros.
+    match goal with
+    | [ H : _ = _ |- _ ] => inv H
+    end.
+    tauto.
+  Qed.
+
+  Ltac inv_label :=
+    match goal with
+    | [ H : {| annot := _; calls := _; defs := _ |} = {| annot := _; calls := _; defs := _ |} |- _ ] =>
+      apply inv_label in H; destruct H as [? [? ?]]
+    end.
+
+  Lemma inv_some : forall A (x y : A), Some x = Some y -> x = y.
+  Proof.
+    intros; congruence.
+  Qed.
+
+  Ltac inv_some :=
+    match goal with
+    | [ H : Some _ = Some _ |- _ ] => apply inv_some in H
+    end.
+
+  Lemma inv_pair : forall A B (x1 x2 : A) (y1 y2 : B), (x1, y1) = (x2, y2) -> x1 = x2 /\ y1 = y2.
+  Proof.
+    intros.
+    inv H.
+    tauto.
+  Qed.
+
+  Lemma inv_censor_exec_calls : forall l l',
+      censorLabel Defs.censorSCMeth l = l' ->
+      FMap.M.find execMeth (calls l) = FMap.M.find execMeth (calls l') \/
+      exists adr op arg arg' val val',
+        FMap.M.find execMeth (calls l) = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #val })%kami_expr)) /\
+        FMap.M.find execMeth (calls l') = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg' })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)).
+  Proof.
+    intros l l' H.
+    destruct l. destruct l'.
+    pose methsDistinct. shatter.
+    unfold censorLabel, Defs.censorSCMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find execMeth (FMap.M.mapi f calls) = FMap.M.find execMeth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find execMeth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try solve [ congruence ].
+    repeat match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct s
+    end.
+    unfold arg, ret in *.
+    right.
+    subst.
+    pose (Hrq := inv_rq t).
+    pose (Hrs := inv_rs t0).
+    destruct Hrq as [adr [op [dat Heqq]]].
+    destruct Hrs as [val Heqs].
+    exists adr, op, dat, $0, val, $0.
+    subst.
+    tauto.
+  Qed.
+
+  Lemma inv_censor_exec_memdefs : forall l l',
+      censorLabel Defs.censorSCMemDefs l = l' ->
+      FMap.M.find execMeth (defs l) = FMap.M.find execMeth (defs l') \/
+      exists adr op arg arg' val val',
+        FMap.M.find execMeth (defs l) = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #val })%kami_expr)) /\
+        FMap.M.find execMeth (defs l') = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg' })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)).
+  Proof.
+    intros l l' H.
+    destruct l. destruct l'.
+    pose methsDistinct. shatter.
+    unfold censorLabel, Defs.censorSCMemDefs in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find execMeth (FMap.M.mapi f defs) = FMap.M.find execMeth defs0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find execMeth defs0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try solve [ congruence ].
+    repeat match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct s
+    end.
+    unfold arg, ret in *.
+    right.
+    subst.
+    pose (Hrq := inv_rq t).
+    pose (Hrs := inv_rs t0).
+    destruct Hrq as [adr [op [dat Heqq]]].
+    destruct Hrs as [val Heqs].
+    exists adr, op, dat, $0, val, $0.
+    subst.
+    tauto.
+  Qed.
+
+  Lemma censor_length_extract : forall la lb,
+      censorLabel Defs.censorSCMeth la = censorLabel Defs.censorSCMeth lb ->
+      length (Defs.extractMethsWrVals (calls la)) = length (Defs.extractMethsWrVals (calls lb)).
+  Proof.
+    intros la lb H.
+    unfold Defs.extractMethsWrVals.
+    destruct (inv_censor_exec_calls la _ eq_refl) as [Haeq | [? [? [? [? [? [? [Ha Hac]]]]]]]];
+      destruct (inv_censor_exec_calls lb _ eq_refl) as [Hbeq | [? [? [? [? [? [? [Hb Hbc]]]]]]]].
+    - rewrite Haeq.
+      rewrite Hbeq.
+      rewrite H.
+      reflexivity.
+    - rewrite H in Haeq.
+      rewrite Hbc in Haeq.
+      rewrite Hb.
+      rewrite Haeq.
+      simpl.
+      destruct x0; reflexivity.
+    - rewrite <- H in Hbeq.
+      rewrite Hac in Hbeq.
+      rewrite Ha.
+      rewrite Hbeq.
+      simpl.
+      destruct x0; reflexivity.
+    - rewrite Ha.
+      rewrite Hb.
+      simpl.
+      rewrite H in Hac.
+      rewrite Hbc in Hac.
+      inv_some.
+      apply Semantics.sigT_eq in Hac.
+      match goal with
+      | [ H : (?x1, _) = (?x2, _) |- _ ] =>
+        let Heq := fresh in
+        let Heq' := fresh in
+        assert (evalExpr (#(x1)!rv32iRq@."op")%kami_expr = evalExpr (#(x2)!rv32iRq@."op")%kami_expr) as Heq by (apply inv_pair in H; destruct H as [Heq' _]; rewrite Heq'; reflexivity);
+          simpl in Heq
+      end; subst.
+      destruct x0; reflexivity.
+  Qed.
+
+  Lemma censor_mem_length_extract : forall la lb,
+      censorLabel Defs.censorSCMemDefs la = censorLabel Defs.censorSCMemDefs lb ->
+      length (Defs.extractMethsWrVals (defs la)) = length (Defs.extractMethsWrVals (defs lb)).
+  Proof.
+    intros la lb H.
+    unfold Defs.extractMethsWrVals.
+    destruct (inv_censor_exec_memdefs la _ eq_refl) as [Haeq | [? [? [? [? [? [? [Ha Hac]]]]]]]];
+      destruct (inv_censor_exec_memdefs lb _ eq_refl) as [Hbeq | [? [? [? [? [? [? [Hb Hbc]]]]]]]].
+    - rewrite Haeq.
+      rewrite Hbeq.
+      rewrite H.
+      reflexivity.
+    - rewrite H in Haeq.
+      rewrite Hbc in Haeq.
+      rewrite Hb.
+      rewrite Haeq.
+      simpl.
+      destruct x0; reflexivity.
+    - rewrite <- H in Hbeq.
+      rewrite Hac in Hbeq.
+      rewrite Ha.
+      rewrite Hbeq.
+      simpl.
+      destruct x0; reflexivity.
+    - rewrite Ha.
+      rewrite Hb.
+      simpl.
+      rewrite H in Hac.
+      rewrite Hbc in Hac.
+      inv_some.
+      apply Semantics.sigT_eq in Hac.
+      match goal with
+      | [ H : (?x1, _) = (?x2, _) |- _ ] =>
+        let Heq := fresh in
+        let Heq' := fresh in
+        assert (evalExpr (#(x1)!rv32iRq@."op")%kami_expr = evalExpr (#(x2)!rv32iRq@."op")%kami_expr) as Heq by (apply inv_pair in H; destruct H as [Heq' _]; rewrite Heq'; reflexivity);
+          simpl in Heq
+      end; subst.
+      destruct x0; reflexivity.
+  Qed.
+
   Lemma censorWrLen : forall lsp lsp',
       censorLabelSeq Defs.censorSCMeth lsp =
       censorLabelSeq Defs.censorSCMeth lsp' ->
       length (Defs.extractProcWrValSeq lsp) = length (Defs.extractProcWrValSeq lsp').
   Proof.
-  Admitted.
+    induction lsp; intros; destruct lsp'; simpl in *; try congruence.
+    match goal with
+    | [ H : _ :: _ = _ :: _ |- _ ] => inv H
+    end.
+    repeat rewrite app_length.
+    match goal with
+    | [ |- ?x + _ = ?y + _ ] => replace x with y; eauto
+    end.
+    apply censor_length_extract; auto.
+  Qed.
 
   Lemma combineCensor : forall lsp lsm lsp' lsm',
       CanCombineLabelSeq lsp lsm ->
@@ -993,15 +1290,197 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
       censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
       CanCombineLabelSeq lsp' lsm'.
   Proof.
-  Admitted.
+    induction lsp; intros;
+      destruct lsm; destruct lsp'; destruct lsm';
+        simpl in *; try tauto; try congruence.
+    repeat match goal with
+           | [ H : _ :: _ = _ :: _ |- _ ] => inv H
+           end.
+    intuition idtac.
+    - repeat match goal with
+             | [ H : context[censorLabelSeq] |- _ ] => clear H
+             | [ H : context[CanCombineLabelSeq] |- _ ] => clear H
+             | [ x : list _ |- _ ] => clear x
+             | [ x : LabelT |- _ ] => destruct x
+             end.
+      unfold CanCombineLabel, censorLabel, Semantics.annot, Semantics.calls, Semantics.defs in *.
+      repeat inv_label.
+      subst.
+      intuition idtac;
+        match goal with
+        | [ Hx : _ = FMap.M.mapi _ ?x, Hy : _ = FMap.M.mapi _ ?y |- FMap.M.Disj ?x ?y ] =>
+          unfold FMap.M.Disj in *;
+            intros;
+            erewrite <- (FMap.M.F.P.F.mapi_in_iff x);
+            erewrite <- (FMap.M.F.P.F.mapi_in_iff y);
+            rewrite <- Hx;
+            rewrite <- Hy;
+            repeat rewrite FMap.M.F.P.F.mapi_in_iff;
+            auto
+        end.
+    - eapply IHlsp; eauto.
+  Qed.
 
-  Lemma concatCensor : forall lsp lsm lsp' lsm',
-      WellHiddenConcatSeq p m lsp lsm ->
-      censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
-      censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
-      Defs.extractProcWrValSeq lsp' = Defs.extractMemWrValSeq lsm' ->
-      WellHiddenConcatSeq p m lsp' lsm'.
+  Lemma app_inv : forall A (lh1 lt1 lh2 lt2 : list A),
+      lh1 ++ lt1 = lh2 ++ lt2 ->
+      length lh1 = length lh2 ->
+      lh1 = lh2 /\ lt1 = lt2.
   Proof.
+    induction lh1; intros; destruct lh2; simpl in *; try congruence; auto.
+    inv H.
+    inv H0.
+    split.
+    - f_equal.
+      eapply proj1; apply IHlh1; eauto.
+    - eapply proj2; apply IHlh1; eauto.
+  Qed.
+
+  Lemma In_subtractKV : forall A k (m1 m2 : FMap.M.t A) dec,
+      FMap.M.In k (FMap.M.subtractKV dec m1 m2) <-> (FMap.M.In k m1 /\ (~ FMap.M.In k m2 \/ FMap.M.find k m1 <> FMap.M.find k m2)).
+  Proof.
+    intros.
+    intuition idtac;
+      rewrite FMap.M.F.P.F.in_find_iff in *;
+      match goal with
+      | [ H : context[FMap.M.subtractKV] |- _ ] => rewrite FMap.M.subtractKV_find in H
+      | [ |- context[FMap.M.subtractKV] ] => rewrite FMap.M.subtractKV_find
+      end;
+      destruct (FMap.M.Map.find k m1);
+      destruct (FMap.M.Map.find k m2);
+      try congruence;
+      try tauto.
+    - destruct (dec a a0); try congruence.
+      right.
+      congruence.
+    - exfalso; apply H; congruence.
+    - destruct (dec a a0); congruence.
+  Qed.
+
+  Lemma In_union : forall A k (m1 m2 : FMap.M.t A),
+      FMap.M.In k (FMap.M.union m1 m2) <-> (FMap.M.In k m1 \/ FMap.M.In k m2).
+  Proof.
+    intros; 
+      intuition idtac;
+      repeat rewrite FMap.M.F.P.F.in_find_iff in *;
+      match goal with
+      | [ H : context[FMap.M.union] |- _ ] => rewrite FMap.M.find_union in H
+      | [ |- context[FMap.M.union] ] => rewrite FMap.M.find_union
+      end;
+      destruct (FMap.M.find k m1);
+      destruct (FMap.M.find k m2);
+      try congruence;
+      tauto.
+  Qed.
+
+  Lemma concatCensor : forall lsp lsm,
+      WellHiddenConcatSeq p m lsp lsm ->
+      forall rp up rm um lsp' lsm',
+        ForwardMultistep p rp up lsp ->
+        ForwardMultistep m rm um lsm ->
+        censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
+        censorLabelSeq Defs.censorSCMemDefs lsm = censorLabelSeq Defs.censorSCMemDefs lsm' ->
+        Defs.extractProcWrValSeq lsp' = Defs.extractMemWrValSeq lsm' ->
+        WellHiddenConcatSeq p m lsp' lsm'.
+  Proof.
+    induction 1;
+      intros;
+      destruct lsp';
+      destruct lsm';
+      simpl in *;
+      try congruence;
+      try solve [ constructor ].
+    repeat match goal with
+           | [ H : _ :: _ = _ :: _ |- _ ] => inv H
+           | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
+           end.
+    match goal with
+    | [ H : WellHiddenConcat _ _ _ _ |- _ ] =>
+      let H' := fresh in
+      let H'' := fresh in
+      remember H as H' eqn:H'';
+        clear H'';
+        eapply whc in H;
+        eauto
+    end.
+    match goal with
+    | [ H : ?x ++ ?xs = ?y ++ ?ys |- _ ] => apply app_inv in H; intuition idtac
+    end.
+    - constructor; eauto.
+      unfold WellHiddenConcat, wellHidden in *.
+      shatter.
+      split; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la. destruct lb. destruct l. destruct l0.
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+          end;
+          match goal with
+          | [ Hin : FMap.M.In k ?d, Hcen : _ = censorLabel _ {| annot := _; defs := ?d; calls := _ |} |- _ ] =>
+            unfold censorLabel in Hcen;
+              inv_label;
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+              match goal with
+              | [ Heq : _ |- _ ] => rewrite <- Heq in Hin
+              end;
+              rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+              tauto
+          end.
+        * intuition idtac.
+          -- left; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H
+               end.
+             match goal with
+             | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+             end;
+               match goal with
+               | [ Hin : FMap.M.In k ?c, Hcen : censorLabel _ {| annot := _; defs := _; calls := ?c |} = _ |- _ ] =>
+                 unfold censorLabel in Hcen;
+                   inv_label;
+                   erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                   match goal with
+                   | [ Heq : _ |- _ ] => rewrite -> Heq in Hin
+                   end;
+                   rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                   tauto
+               end.
+          -- right; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H; clear H
+               end.
+             destruct (String.string_dec k execMeth).
+             ++ subst.
+                repeat rewrite FMap.M.find_union.
+                replace (FMap.M.find execMeth defs1) with (None (A := {x : SignatureT & SignT x}));
+                  [replace (FMap.M.find execMeth calls2) with (None (A := {x : SignatureT & SignT x}));
+                   [replace (FMap.M.find execMeth calls1) with (FMap.M.find execMeth defs2); [destruct (FMap.M.find execMeth defs2); auto|]|]|].
+                ** clear - H2 H7 H6 H12 H11 H0.
+                repeat rewrite FMap.M.find_union in H10.
+                pose (FMap.M.find_KeysSubset _ (step_defs_in H11) pndex) as Hnfind.
+                unfold Semantics.defs in *.
+                rewrite Hnfind in H10.
+                
+          -- clear - H6 H5.
+             unfold censorLabel in H6.
+             inv_label.
+             erewrite <- FMap.M.F.P.F.mapi_in_iff in H5.
+             rewrite <- H1 in H5.
+             rewrite FMap.M.F.P.F.mapi_in_iff in H5.
+             tauto.
+          -- clear - H7 H5.
+             unfold censorLabel in H5.
+             inv_label
+        
+            
+    - replace (length (Defs.extractMethsWrVals (calls l))) with (length (Defs.extractMethsWrVals (calls la))) by (apply censor_length_extract; auto).
+      replace (length (Defs.extractMethsWrVals (defs l0))) with (length (Defs.extractMethsWrVals (defs lb))) by (apply censor_mem_length_extract; auto).
+      match goal with
+      | [ H : FMap.M.find _ _ = FMap.M.find _ _ |- _ ] =>
+        unfold Defs.extractMethsWrVals; rewrite H; reflexivity
+      end.
   Admitted.
 
   Lemma composeCensor : forall lsp lsm lsp' lsm',
@@ -4231,30 +4710,6 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
     | [ H : Some ?x = Some ?y |- _ ] => remember x as x'; remember y as y'; inv H
     end.
     exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
-  Qed.
-
-  Lemma inv_rq :
-    forall r : type (Struct rv32iRq),
-    exists a o d,
-      r = evalExpr (STRUCT { "addr" ::= #a;
-                             "op" ::= #o;
-                             "data" ::= #d })%kami_expr.
-  Proof.
-    intros.
-    exists (r Fin.F1), (r (Fin.FS Fin.F1)), (r (Fin.FS (Fin.FS Fin.F1))).
-    simpl.
-    fin_func_tac; reflexivity.
-  Qed.
-
-  Lemma inv_rs :
-    forall r : type (Struct rv32iRs),
-    exists d,
-      r = evalExpr (STRUCT { "data" ::= #d })%kami_expr.
-  Proof.
-    intros.
-    exists (r Fin.F1).
-    simpl.
-    fin_func_tac; reflexivity.
   Qed.
 
   Theorem MemHiding : SCMemHiding m.
