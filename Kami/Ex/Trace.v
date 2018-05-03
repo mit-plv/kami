@@ -651,6 +651,8 @@ Module Type SCInterface.
   Axiom pcfh : In fhMeth (getCalls p).
   Axiom pndfh : ~ In fhMeth (getDefs p).
   Axiom mndfh : ~ In fhMeth (getDefs m).
+  Axiom pndth : ~ In thMeth (getDefs p).
+  Axiom mndth : ~ In thMeth (getDefs m).
 
   Axiom pRegs : forall rf pm pc, FMap.M.KeysSubset (SCProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
   Axiom mRegs : forall mem, FMap.M.KeysSubset (SCMemRegs mem) (Struct.namesOf (getRegInits m)).
@@ -1189,6 +1191,28 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     destruct op; tauto.
   Qed.
 
+  Ltac inv_meth_eq :=
+    match goal with
+    | [ H : Some (existT _ _ (?q1, ?s1)) = Some (existT _ _ (?q2, ?s2)) |- _ ] =>
+      apply inv_some in H;
+      apply Semantics.sigT_eq in H;
+      let Heqa := fresh in
+      let Heqo := fresh in
+      let Heqd := fresh in
+      let Heqv := fresh in
+      let Hdiscard := fresh in
+      assert (evalExpr (#(q1)!rv32iRq@."addr")%kami_expr = evalExpr (#(q2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
+      assert (evalExpr (#(q1)!rv32iRq@."op")%kami_expr = evalExpr (#(q2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
+      assert (evalExpr (#(q1)!rv32iRq@."data")%kami_expr = evalExpr (#(q2)!rv32iRq@."data")%kami_expr) as Heqd by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
+      assert (evalExpr (#(s1)!rv32iRs@."data")%kami_expr = evalExpr (#(s2)!rv32iRs@."data")%kami_expr) as Heqv by (apply inv_pair in H; destruct H as [_ Hdiscard]; rewrite Hdiscard; reflexivity);
+      simpl in Heqa;
+      simpl in Heqo;
+      simpl in Heqd;
+      simpl in Heqv;
+      subst;
+      clear H
+    end.
+
   Lemma inv_censoreq_exec_calls : forall la lb,
       censorLabel Defs.censorSCMeth la = censorLabel Defs.censorSCMeth lb ->
       FMap.M.find execMeth (calls la) = FMap.M.find execMeth (calls lb) \/
@@ -1215,34 +1239,38 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                       evalExpr (STRUCT { "data" ::= #val' })%kami_expr)) /\ if op then val = val' else arg = arg'.
   Proof.
     intros la lb H.
-    destruct (inv_censor_exec_calls la _ eq_refl) as [Haeq | [? [? [? [? [? [? [Ha Hac]]]]]]]];
-      destruct (inv_censor_exec_calls lb _ eq_refl) as [Hbeq | [? [? [? [? [? [? [Hb Hbc]]]]]]]].
+    destruct (inv_censor_exec_calls la _ eq_refl) as [Haeq | [adra [opa [arga [vala [Ha Hac]]]]]];
+      destruct (inv_censor_exec_calls lb _ eq_refl) as [Hbeq | [adrb [opb [argb [valb [Hb Hbc]]]]]].
     - left.
       congruence.
     - right.
       rewrite H in Haeq.
       rewrite Hbc in Haeq.
-      repeat eexists; eauto.
+      exists adrb, opb.
+      destruct opb.
+      + exists $0, argb, valb, valb.
+        eauto.
+      + exists argb, argb, $0, valb.
+        eauto.
     - right.
       rewrite <- H in Hbeq.
       rewrite Hac in Hbeq.
-      repeat eexists; eauto.
+      exists adra, opa.
+      destruct opa.
+      + exists arga, $0, vala, vala. eauto.
+      + exists arga, arga, vala, $0. eauto.
     - right.
       rewrite H in Hac.
       rewrite Hbc in Hac.
-      inv_some.
-      apply Semantics.sigT_eq in Hac.
-      match goal with
-      | [ H : (?x1, _) = (?x2, _) |- _ ] =>
-        let Heqa := fresh in
-        let Heqo := fresh in
-        let Hdiscard := fresh in
-        assert (evalExpr (#(x1)!rv32iRq@."addr")%kami_expr = evalExpr (#(x2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-          assert (evalExpr (#(x1)!rv32iRq@."op")%kami_expr = evalExpr (#(x2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-          simpl in Heqa;
-          simpl in Heqo
-      end; subst.
-      repeat eexists; eauto.
+      inv_meth_eq.
+      exists adra, opa.
+      destruct opa;
+      repeat match goal with
+             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
+             end;
+      subst;
+      repeat eexists;
+      eauto.
   Qed.
 
   Lemma censor_length_extract : forall la lb,
@@ -1251,7 +1279,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
   Proof.
     intros la lb H.
     unfold Defs.extractMethsWrVals.
-    destruct (inv_censoreq_exec_calls _ _ H) as [Heq | [? [? [? [? [? [? [Ha Hb]]]]]]]].
+    destruct (inv_censoreq_exec_calls _ _ H) as [Heq | [? [? [? [? [? [? [Ha [Hb Hopeq]]]]]]]]].
     - rewrite Heq; reflexivity.
     - rewrite Ha; rewrite Hb; simpl.
       destruct x0; reflexivity.
@@ -1280,37 +1308,41 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                      (evalExpr (STRUCT { "addr" ::= #adr;
                                          "op" ::= #op;
                                          "data" ::= #arg' })%kami_expr,
-                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)).
+                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)) /\ if op then val = val' else arg = arg'.
   Proof.
     intros la lb H.
-    destruct (inv_censor_exec_memdefs la _ eq_refl) as [Haeq | [? [? [? [? [? [? [Ha Hac]]]]]]]];
-      destruct (inv_censor_exec_memdefs lb _ eq_refl) as [Hbeq | [? [? [? [? [? [? [Hb Hbc]]]]]]]].
+    destruct (inv_censor_exec_memdefs la _ eq_refl) as [Haeq | [adra [opa [arga [vala [Ha Hac]]]]]];
+      destruct (inv_censor_exec_memdefs lb _ eq_refl) as [Hbeq | [adrb [opb [argb [valb [Hb Hbc]]]]]].
     - left.
       congruence.
     - right.
       rewrite H in Haeq.
       rewrite Hbc in Haeq.
-      repeat eexists; eauto.
+      exists adrb, opb.
+      destruct opb.
+      + exists $0, argb, valb, valb.
+        eauto.
+      + exists argb, argb, $0, valb.
+        eauto.
     - right.
       rewrite <- H in Hbeq.
       rewrite Hac in Hbeq.
-      repeat eexists; eauto.
+      exists adra, opa.
+      destruct opa.
+      + exists arga, $0, vala, vala. eauto.
+      + exists arga, arga, vala, $0. eauto.
     - right.
       rewrite H in Hac.
       rewrite Hbc in Hac.
-      inv_some.
-      apply Semantics.sigT_eq in Hac.
-      match goal with
-      | [ H : (?x1, _) = (?x2, _) |- _ ] =>
-        let Heqa := fresh in
-        let Heqo := fresh in
-        let Hdiscard := fresh in
-        assert (evalExpr (#(x1)!rv32iRq@."addr")%kami_expr = evalExpr (#(x2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-          assert (evalExpr (#(x1)!rv32iRq@."op")%kami_expr = evalExpr (#(x2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-          simpl in Heqa;
-          simpl in Heqo
-      end; subst.
-      repeat eexists; eauto.
+      inv_meth_eq.
+      exists adra, opa.
+      destruct opa;
+      repeat match goal with
+             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
+             end;
+      subst;
+      repeat eexists;
+      eauto.
   Qed.
 
   Lemma censor_mem_length_extract : forall la lb,
@@ -1319,7 +1351,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
   Proof.
     intros la lb H.
     unfold Defs.extractMethsWrVals.
-    destruct (inv_censoreq_exec_memdefs _ _ H) as [Heq | [? [? [? [? [? [? [Ha Hb]]]]]]]].
+    destruct (inv_censoreq_exec_memdefs _ _ H) as [Heq | [? [? [? [? [? [? [Ha [Hb _]]]]]]]]].
     - rewrite Heq; reflexivity.
     - rewrite Ha; rewrite Hb; simpl.
       destruct x0; reflexivity.
@@ -1447,7 +1479,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
       | _ => mem' = mem
       end ->
       (FMap.M.find execMeth (calls l) = FMap.M.find execMeth (calls l') /\ mem' = mem) \/
-      exists adr op arg arg' val val',
+      exists adr op arg val,
         FMap.M.find execMeth (calls l) = 
         Some (existT _
                      {| arg := Struct (STRUCT {"addr" :: Bit 16;
@@ -1466,8 +1498,8 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                         ret := Struct (STRUCT {"data" :: Bit 32}) |}
                      (evalExpr (STRUCT { "addr" ::= #adr;
                                          "op" ::= #op;
-                                         "data" ::= #arg' })%kami_expr,
-                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)).
+                                         "data" ::= if op then $0 else #arg })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= if op then #val else $0 })%kami_expr)).
   Proof.
     intros l l' mem mem' H Hmem.
     destruct l. destruct l'.
@@ -1510,9 +1542,9 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     pose (Hrs := inv_rs t0).
     destruct Hrq as [adr [op [dat Heqq]]].
     destruct Hrs as [val Heqs].
-    exists adr, op, dat, $0, val, $0.
+    exists adr, op, dat, val.
     subst.
-    tauto.
+    destruct op; tauto.
   Qed.
 
   Lemma inv_censor_exec_memdefs_with_mem : forall l l' mem mem',
@@ -1533,7 +1565,7 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
       | _ => mem' = mem
       end ->
       (FMap.M.find execMeth (defs l) = FMap.M.find execMeth (defs l') /\ mem' = mem) \/
-      exists adr op arg arg' val val',
+      exists adr op arg val,
         FMap.M.find execMeth (defs l) = 
         Some (existT _
                      {| arg := Struct (STRUCT {"addr" :: Bit 16;
@@ -1552,8 +1584,8 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                         ret := Struct (STRUCT {"data" :: Bit 32}) |}
                      (evalExpr (STRUCT { "addr" ::= #adr;
                                          "op" ::= #op;
-                                         "data" ::= #arg' })%kami_expr,
-                      evalExpr (STRUCT { "data" ::= #val' })%kami_expr)).
+                                         "data" ::= if op then $0 else #arg })%kami_expr,
+                      evalExpr (STRUCT { "data" ::= if op then #val else $0 })%kami_expr)).
   Proof.
     intros l l' mem mem' H Hmem.
     destruct l. destruct l'.
@@ -1596,9 +1628,9 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
     pose (Hrs := inv_rs t0).
     destruct Hrq as [adr [op [dat Heqq]]].
     destruct Hrs as [val Heqs].
-    exists adr, op, dat, $0, val, $0.
+    exists adr, op, dat, val.
     subst.
-    tauto.
+    destruct op; tauto.
   Qed.
 
   Ltac conceal x :=
@@ -1621,48 +1653,146 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
              clear H
            end.
 
-  Ltac inv_meth_eq :=
+  Ltac meth_equal :=
     match goal with
-    | [ H : Some (existT _ _ (?q1, ?s1)) = Some (existT _ _ (?q2, ?s2)) |- _ ] =>
-      apply inv_some in H;
-      apply Semantics.sigT_eq in H;
-      let Heqa := fresh in
-      let Heqo := fresh in
-      let Heqd := fresh in
-      let Heqv := fresh in
-      let Hdiscard := fresh in
-      assert (evalExpr (#(q1)!rv32iRq@."addr")%kami_expr = evalExpr (#(q2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-      assert (evalExpr (#(q1)!rv32iRq@."op")%kami_expr = evalExpr (#(q2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-      assert (evalExpr (#(q1)!rv32iRq@."data")%kami_expr = evalExpr (#(q2)!rv32iRq@."data")%kami_expr) as Heqd by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-      assert (evalExpr (#(s1)!rv32iRs@."data")%kami_expr = evalExpr (#(s2)!rv32iRs@."data")%kami_expr) as Heqv by (apply inv_pair in H; destruct H as [_ Hdiscard]; rewrite Hdiscard; reflexivity);
-      simpl in Heqa;
-      simpl in Heqo;
-      simpl in Heqd;
-      simpl in Heqv;
-      subst;
-      clear H
+    | [ |- Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a); "op" ::= #(?o); "data" ::= #(?d)}%kami_expr, evalExpr STRUCT {"data" ::= #(?v)}%kami_expr)) = Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a'); "op" ::= #(?o'); "data" ::= #(?d')}%kami_expr, evalExpr STRUCT {"data" ::= #(?v')}%kami_expr)) ] => replace a with a'; [replace o with o'; [replace d with d'; [replace v with v'; [reflexivity|]|]|]|]
+    end; try reflexivity.
+
+  Lemma inv_censor_other_calls : forall l l' meth,
+      censorLabel Defs.censorSCMeth l = l' ->
+      meth <> execMeth ->
+      meth <> fhMeth ->
+      meth <> thMeth ->
+      FMap.M.find meth (calls l) = FMap.M.find meth (calls l').
+  Proof.
+    intros l l' meth H He Hf Ht.
+    destruct l. destruct l'.
+    unfold censorLabel, Defs.censorSCMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find meth (FMap.M.mapi f calls) = FMap.M.find meth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind He Hf Ht
     end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find meth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try assumption.
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+            end; try tauto).
+    subst.
+    reflexivity.
+  Qed.
 
-  Inductive SCProcMemCanonical : LabelSeqT -> memory -> Prop :=
-  | SPMCnil : forall mem, SCProcMemCanonical nil mem
-  | SPMCcons : forall mem l mem' ls,
-      match FMap.M.find execMeth (calls l) with
-      | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                     (argV, retV)) =>
-        let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-        let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-        let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
-        if op then retval = $0 else argval = $0
-      | _ => mem' = mem
-      end ->
-      SCProcMemCanonical ls mem' ->
-      SCProcMemCanonical (l :: ls) mem.
+  Lemma inv_censor_other_defs : forall l l' meth,
+      censorLabel Defs.censorSCMeth l = l' ->
+      meth <> execMeth ->
+      meth <> fhMeth ->
+      meth <> thMeth ->
+      FMap.M.find meth (defs l) = FMap.M.find meth (defs l').
+  Proof.
+    intros l l' meth H He Hf Ht.
+    destruct l. destruct l'.
+    unfold censorLabel, Defs.censorSCMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find meth (FMap.M.mapi f defs) = FMap.M.find meth defs0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind He Hf Ht
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find meth defs0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try assumption.
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+            end; try tauto).
+    subst.
+    reflexivity.
+  Qed.
 
+  Lemma inv_censor_other_mem_calls : forall l l' meth,
+      censorLabel Defs.censorSCMemDefs l = l' ->
+      meth <> execMeth ->
+      FMap.M.find meth (calls l) = FMap.M.find meth (calls l').
+  Proof.
+    intros l l' meth H He.
+    destruct l. destruct l'.
+    unfold censorLabel, Defs.censorSCMemDefs in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find meth (FMap.M.mapi f calls) = FMap.M.find meth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind He
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find meth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try assumption.
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try tauto.
+    subst.
+    reflexivity.
+  Qed.
 
+  Lemma inv_censor_other_mem_defs : forall l l' meth,
+      censorLabel Defs.censorSCMemDefs l = l' ->
+      meth <> execMeth ->
+      FMap.M.find meth (defs l) = FMap.M.find meth (defs l').
+  Proof.
+    intros l l' meth H He.
+    destruct l. destruct l'.
+    unfold censorLabel, Defs.censorSCMemDefs in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find meth (FMap.M.mapi f defs) = FMap.M.find meth defs0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind He
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find meth defs0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try assumption.
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+            end; try tauto).
+    subst.
+    reflexivity.
+  Qed.
 
   Lemma concatCensor : forall lsp lsm,
       WellHiddenConcatSeq p m lsp lsm ->
@@ -1717,15 +1847,17 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
           | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
           end;
           shatter;
-          try congruence.
-(*        match goal with
-        | [ H : _ |- _ ] => destruct (inv_censoreq_exec_calls _ _ H) as [Hceq | [? [? [? [? [? [? [Hca Hcb]]]]]]]]
-        end;
-          match goal with
-          | [ H : _ |- _ ] => destruct (inv_censoreq_exec_memdefs _ _ H) as [Hdeq | [? [? [? [? [? [? [Hda Hdb]]]]]]]]
-          end.
-        * *)
-        
+          try congruence;
+          try (match goal with
+               | [ H : ?x = _ |- _ = ?x ] => rewrite H
+               | [ H : ?x = _ |- ?x = _ ] => rewrite H
+               end;
+               apply functional_extensionality;
+               intros;
+               match goal with
+               | [ |- context[if ?b then _ else _] ] => destruct b
+               end;
+               reflexivity).
       + unfold WellHiddenConcat, wellHidden in *.
         shatter.
         split; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
@@ -1777,21 +1909,14 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                    replace (FMap.M.find execMeth defs1) with (None (A := {x : SignatureT & SignT x}));
                      [replace (FMap.M.find execMeth calls2) with (None (A := {x : SignatureT & SignT x}));
                       [replace (FMap.M.find execMeth calls1) with (FMap.M.find execMeth defs2); [destruct (FMap.M.find execMeth defs2); auto|]|]|].
-                           Ltac meth_equal :=
-                             match goal with
-                             | [ |- Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a); "op" ::= #(?o); "data" ::= #(?d)}%kami_expr, evalExpr STRUCT {"data" ::= #(?v)}%kami_expr)) = Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a'); "op" ::= #(?o'); "data" ::= #(?d')}%kami_expr, evalExpr STRUCT {"data" ::= #(?v')}%kami_expr)) ] => replace a with a'; [replace o with o'; [replace d with d'; [replace v with v'; [reflexivity|]|]|]|]
-                             end; try reflexivity.
                    --- unfold Defs.extractMethsWrVals in *;
-                         destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca Hcb]]]]]]]];
-                         destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda Hdb]]]]]]]];
+                         destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
+                         destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
                          unfold Semantics.calls, Semantics.defs in *;
                          shatter;
                          exhibit_finds;
                          subst_finds;
-                         try meth_equal.
-                       +++ congruence.
-                       +++ simpl in *.
-
+                         try meth_equal;
                          repeat inv_meth_eq;
                          simpl in *;
                          try match goal with
@@ -1799,48 +1924,269 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
                              end;
                          shatter;
                          try congruence.
-                       +++ 
-                       +++ congruence.
-                       +++ rewrite Hceq in H0.
-                           rewrite Hda in H0.
-                           unfold Defs.extractMethsWrVals in H2.
-                           rewrite Hdb in H2.
-                           rewrite H0 in H2.
-                           simpl in H2.
-                           destruct x0; subst.
-(*                       clear - H
-                     unfold Defs.extract
-                     rewrite Hdb
+                   --- match goal with
+                       | [ H : Step m _ _ _ |- _ ] =>
+                         let Hsci := fresh in
+                         pose (step_calls_in mequiv H) as Hsci;
+                           unfold Semantics.calls in Hsci;
+                           specialize (Hsci execMeth)
+                       end.
+                       erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                       unfold censorLabel in H7.
+                       inv_label.
+                       rewrite H20 in H19.
+                       rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                       rewrite FMap.M.F.P.F.in_find_iff in H19.
+                       destruct (FMap.M.find execMeth calls2); try reflexivity.
+                       assert (In execMeth (getCalls m)) by (apply H19; congruence).
+                       pose (callsDisj execMeth).
+                       pose pcexec.
+                       tauto.
+                   --- match goal with
+                       | [ H : Step p _ _ _ |- _ ] =>
+                         let Hsdi := fresh in
+                         pose (step_defs_in H) as Hsdi;
+                           unfold Semantics.defs in Hsdi;
+                           specialize (Hsdi execMeth)
+                       end.
+                       erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                       unfold censorLabel in H6.
+                       inv_label.
+                       rewrite H21 in H19.
+                       rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                       rewrite FMap.M.F.P.F.in_find_iff in H19.
+                       destruct (FMap.M.find execMeth defs1); try reflexivity.
+                       assert (In execMeth (getDefs p)) by (apply H19; congruence).
+                       exfalso.
+                       apply pndex.
+                       assumption.
+                ** assert (k <> fhMeth /\ k <> thMeth).
+                   --- apply FMap.M.union_In in H5.
+                       destruct H5.
+                       +++ match goal with
+                           | [ H : Step p _ _ _ |- _ ] =>
+                             let Hsdi := fresh in
+                             pose (step_defs_in H) as Hsdi;
+                               unfold Semantics.defs in Hsdi;
+                               specialize (Hsdi k)
+                           end.
+                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                           unfold censorLabel in H6.
+                           inv_label.
+                           rewrite H21 in H19.
+                           rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                           specialize (H19 H5).
+                           pose pndfh.
+                           pose pndth.
+                           destruct (String.string_dec k fhMeth); subst; auto.
+                           destruct (String.string_dec k thMeth); subst; auto.
+                       +++ match goal with
+                           | [ H : Step m _ _ _ |- _ ] =>
+                             let Hsdi := fresh in
+                             pose (step_defs_in H) as Hsdi;
+                               unfold Semantics.defs in Hsdi;
+                               specialize (Hsdi k)
+                           end.
+                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                           unfold censorLabel in H7.
+                           inv_label.
+                           rewrite H21 in H19.
+                           rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                           specialize (H19 H5).
+                           pose mndfh.
+                           pose mndth.
+                           destruct (String.string_dec k fhMeth); subst; auto.
+                           destruct (String.string_dec k thMeth); subst; auto.
+                   --- shatter.
+                       repeat match goal with
+                              | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                                assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
+                                  assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
+                                  clear H
+                              end.
+                       repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H21 by assumption.
+                       repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H22 by assumption.
+                       repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
+                       repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H23 by assumption.
+                       unfold Semantics.calls, Semantics.defs in *.
+                       repeat rewrite FMap.M.find_union.
+                       repeat rewrite FMap.M.find_union in H14.
+                       rewrite <- H21.
+                       rewrite <- H22.
+                       rewrite <- H6.
+                       rewrite <- H23.
+                       assumption.
+        * unfold FMap.M.DomainSubset.
+          intros.
+          destruct la. destruct lb. destruct l. destruct l0.
+          unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+          rewrite In_subtractKV in *; shatter; split.
+          -- match goal with
+             | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+             end;
+               match goal with
+               | [ Hin : FMap.M.In k ?c, Hcen : _ = censorLabel _ {| annot := _; defs := _; calls := ?c |} |- _ ] =>
+                 unfold censorLabel in Hcen;
+                   inv_label;
+                   erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
                    match goal with
-                   | [ H : censorLabel Defs.censorSCMeth 
-                   destruct (inv_censor_exec_calls {| annot : _ eq_refl) as [Haeq | [? [? [? [? [? [? [Ha Hac]]]]]]]];
-      destruct (inv_censor_exec_calls lb _ eq_refl) as [Hbeq | [? [? [? [? [? [? [Hb Hbc]]]]]]]].
-
-                   
-                repeat rewrite FMap.M.find_union in H10.
-                pose (FMap.M.find_KeysSubset _ (step_defs_in H11) pndex) as Hnfind.
-                unfold Semantics.defs in *.
-                rewrite Hnfind in H10.
-                
-          -- clear - H6 H5.
-             unfold censorLabel in H6.
-             inv_label.
-             erewrite <- FMap.M.F.P.F.mapi_in_iff in H5.
-             rewrite <- H1 in H5.
-             rewrite FMap.M.F.P.F.mapi_in_iff in H5.
-             tauto.
-          -- clear - H7 H5.
-             unfold censorLabel in H5.
-             inv_label
-        
-            
-    - replace (length (Defs.extractMethsWrVals (calls l))) with (length (Defs.extractMethsWrVals (calls la))) by (apply censor_length_extract; auto).
-      replace (length (Defs.extractMethsWrVals (defs l0))) with (length (Defs.extractMethsWrVals (defs lb))) by (apply censor_mem_length_extract; auto).
-      match goal with
-      | [ H : FMap.M.find _ _ = FMap.M.find _ _ |- _ ] =>
-        unfold Defs.extractMethsWrVals; rewrite H; reflexivity
-      end.*)
-  Admitted.
+                   | [ Heq : _ |- _ ] => rewrite <- Heq in Hin
+                   end;
+                   rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                   tauto
+               end.
+          -- intuition idtac.
+             ++ left; intros;
+                  match goal with
+                  | [ H : _ -> False |- _ ] => apply H
+                  end.
+                match goal with
+                | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+                end;
+                  match goal with
+                  | [ Hin : FMap.M.In k ?d, Hcen : censorLabel _ {| annot := _; defs := ?d; calls := _ |} = _ |- _ ] =>
+                    unfold censorLabel in Hcen;
+                      inv_label;
+                      erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                      match goal with
+                      | [ Heq : _ |- _ ] => rewrite -> Heq in Hin
+                      end;
+                      rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                      tauto
+                  end.
+             ++ destruct (String.string_dec k fhMeth);
+                  [left|destruct (String.string_dec k thMeth); [left|right]];
+                  subst;
+                  intros.
+                ** apply FMap.M.union_In in H14.
+                   destruct H14.
+                   --- match goal with
+                       | [ H : Step p _ _ _ |- _ ] =>
+                         let Hin := fresh in
+                         pose (step_defs_in H) as Hin;
+                           unfold Semantics.defs in Hin;
+                           specialize (Hin fhMeth)
+                       end.
+                       specialize (H20 H14).
+                       pose pndfh.
+                       auto.
+                   --- match goal with
+                       | [ H : Step m _ _ _ |- _ ] =>
+                         let Hin := fresh in
+                         pose (step_defs_in H) as Hin;
+                           unfold Semantics.defs in Hin;
+                           specialize (Hin fhMeth)
+                       end.
+                       specialize (H20 H14).
+                       pose mndfh.
+                       auto.
+                ** apply FMap.M.union_In in H14.
+                   destruct H14.
+                   --- match goal with
+                       | [ H : Step p _ _ _ |- _ ] =>
+                         let Hin := fresh in
+                         pose (step_defs_in H) as Hin;
+                           unfold Semantics.defs in Hin;
+                           specialize (Hin thMeth)
+                       end.
+                       specialize (H20 H14).
+                       pose pndth.
+                       auto.
+                   --- match goal with
+                       | [ H : Step m _ _ _ |- _ ] =>
+                         let Hin := fresh in
+                         pose (step_defs_in H) as Hin;
+                           unfold Semantics.defs in Hin;
+                           specialize (Hin thMeth)
+                       end.
+                       specialize (H20 H14).
+                       pose mndth.
+                       auto.
+                ** match goal with
+                   | [ H : _ -> False |- _ ] => apply H; clear H
+                   end.
+                   destruct (String.string_dec k execMeth).
+                   --- subst.
+                       repeat rewrite FMap.M.find_union.
+                       replace (FMap.M.find execMeth defs1) with (None (A := {x : SignatureT & SignT x}));
+                         [replace (FMap.M.find execMeth calls2) with (None (A := {x : SignatureT & SignT x}));
+                          [replace (FMap.M.find execMeth calls1) with (FMap.M.find execMeth defs2); [destruct (FMap.M.find execMeth defs2); auto|]|]|].
+                       +++ unfold Defs.extractMethsWrVals in *;
+                             destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
+                             destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
+                             unfold Semantics.calls, Semantics.defs in *;
+                             shatter;
+                             exhibit_finds;
+                             subst_finds;
+                             try meth_equal;
+                             repeat inv_meth_eq;
+                             simpl in *;
+                             try match goal with
+                                 | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
+                                 end;
+                             shatter;
+                             try congruence.
+                       +++ match goal with
+                           | [ H : Step m _ _ _ |- _ ] =>
+                             let Hsci := fresh in
+                             pose (step_calls_in mequiv H) as Hsci;
+                               unfold Semantics.calls in Hsci;
+                               specialize (Hsci execMeth)
+                           end.
+                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                           unfold censorLabel in H7.
+                           inv_label.
+                           rewrite H20 in H19.
+                           rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                           rewrite FMap.M.F.P.F.in_find_iff in H19.
+                           destruct (FMap.M.find execMeth calls2); try reflexivity.
+                           assert (In execMeth (getCalls m)) by (apply H19; congruence).
+                           pose (callsDisj execMeth).
+                           pose pcexec.
+                           tauto.
+                       +++ match goal with
+                           | [ H : Step p _ _ _ |- _ ] =>
+                             let Hsdi := fresh in
+                             pose (step_defs_in H) as Hsdi;
+                               unfold Semantics.defs in Hsdi;
+                               specialize (Hsdi execMeth)
+                           end.
+                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H19.
+                           unfold censorLabel in H6.
+                           inv_label.
+                           rewrite H21 in H19.
+                           rewrite FMap.M.F.P.F.mapi_in_iff in H19.
+                           rewrite FMap.M.F.P.F.in_find_iff in H19.
+                           destruct (FMap.M.find execMeth defs1); try reflexivity.
+                           assert (In execMeth (getDefs p)) by (apply H19; congruence).
+                           exfalso.
+                           apply pndex.
+                           assumption.
+                   --- repeat match goal with
+                              | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                                assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
+                                  assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
+                                  clear H
+                              end.
+                       repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H19 by assumption.
+                       repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H20 by assumption.
+                       repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
+                       repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H21 by assumption.
+                       unfold Semantics.calls, Semantics.defs in *.
+                       repeat rewrite FMap.M.find_union.
+                       repeat rewrite FMap.M.find_union in H14.
+                       rewrite <- H19.
+                       rewrite <- H20.
+                       rewrite <- H6.
+                       rewrite <- H21.
+                       assumption.
+    - erewrite <- censor_length_extract by eassumption.
+      erewrite <- censor_mem_length_extract by eassumption.
+      pose (concatWrLen [la] [lb]).
+      unfold Defs.extractProcWrValSeq, Defs.extractMemWrValSeq, flat_map  in e.
+      repeat rewrite app_nil_r in e.
+      eapply e; repeat (econstructor; eauto).
+  Qed.
 
   Lemma composeCensor : forall lsp lsm lsp' lsm',
       censorLabelSeq Defs.censorSCMeth lsp = censorLabelSeq Defs.censorSCMeth lsp' ->
