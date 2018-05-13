@@ -724,8 +724,8 @@ Module SCDefs (SC : SCInterface).
         let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
         let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
         if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem addr = retval /\ mem' = mem
+        then mem' = (fun a => if weq a addr then argval else mem a) /\ retval = $0
+        else mem addr = retval /\ mem' = mem /\ argval = $0
       | _ => mem' = mem
       end ->
       SCProcMemConsistent ls mem' ->
@@ -801,8 +801,8 @@ Module SCDefs (SC : SCInterface).
         let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
         let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
         if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem addr = retval /\ mem' = mem
+        then mem' = (fun a => if weq a addr then argval else mem a) /\ retval = $0
+        else mem addr = retval /\ mem' = mem /\ argval = $0
       | _ => mem' = mem
       end ->
       SCMemMemConsistent ls mem' ->
@@ -1481,8 +1481,8 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
         let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
         let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
         if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem addr = retval /\ mem' = mem
+        then mem' = (fun a => if weq a addr then argval else mem a) /\ retval = $0
+        else mem addr = retval /\ mem' = mem /\ argval = $0
       | _ => mem' = mem
       end ->
       (FMap.M.find execMeth (calls l) = FMap.M.find execMeth (calls l') /\ mem' = mem) \/
@@ -1567,8 +1567,8 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
         let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
         let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
         if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem addr = retval /\ mem' = mem
+        then mem' = (fun a => if weq a addr then argval else mem a) /\ retval = $0
+        else mem addr = retval /\ mem' = mem /\ argval = $0
       | _ => mem' = mem
       end ->
       (FMap.M.find execMeth (defs l) = FMap.M.find execMeth (defs l') /\ mem' = mem) \/
@@ -1854,7 +1854,9 @@ Module SCHiding (SC : SCInterface) (Hiding : SCModularHiding SC).
           | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
           end;
           shatter;
+          subst;
           try congruence;
+          try reflexivity;
           try (match goal with
                | [ H : ?x = _ |- _ = ?x ] => rewrite H
                | [ H : ?x = _ |- ?x = _ ] => rewrite H
@@ -2868,6 +2870,11 @@ Module SCSingle <: SCInterface.
   Definition thMeth := "toHost".
   Definition execMeth := "exec".
 
+  Theorem methsDistinct : fhMeth <> thMeth /\ thMeth <> execMeth /\ execMeth <> fhMeth.
+  Proof.
+    intuition idtac; discriminate.
+  Qed.
+
   Theorem mdexec : In execMeth (getDefs m).
   Proof.
     simpl; auto.
@@ -2878,12 +2885,12 @@ Module SCSingle <: SCInterface.
     simpl; auto.
   Qed.
 
-  Theorem pfh : In fhMeth (getCalls p).
+  Theorem pcfh : In fhMeth (getCalls p).
   Proof.
     simpl; auto.
   Qed.
 
-  Theorem pcfh : In fhMeth (getCalls p).
+  Theorem pcth : In thMeth (getCalls p).
   Proof.
     simpl; auto.
   Qed.
@@ -2894,6 +2901,18 @@ Module SCSingle <: SCInterface.
   Qed.
 
   Theorem mndfh : ~ In fhMeth (getDefs m).
+  Proof.
+    simpl.
+    intuition idtac.
+    discriminate.
+  Qed.
+
+  Theorem pndth : ~ In thMeth (getDefs p).
+  Proof.
+    tauto.
+  Qed.
+
+  Theorem mndth : ~ In thMeth (getDefs m).
   Proof.
     simpl.
     intuition idtac.
@@ -3546,7 +3565,7 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                 end.
                 intuition idtac; subst.
                 match goal with
-                | [ H : ?m ?a = ?v |- ?x = ?y ] => replace (m a) with y in H; [replace v with x in H|]
+                | [ H : ?m ?a = ?v |- ?x = ?m ?y ] => replace (m a) with (m y) in H; [replace v with x in H|]
                 end.
                 ** congruence.
                 ** reflexivity.
@@ -3771,7 +3790,33 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                  H2 : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?addr2; "op" ::= _; "data" ::= _}%kami_expr, _)) _ |}) = _
             |- _ ] => replace (evalExpr addr1) with (evalExpr addr2)
         end.
-        * clear; eauto.
+        * repeat rewrite FMap.M.subtractKV_empty_2.
+          match goal with
+          | [ |- FMap.M.mapi _ (FMap.M.add _ (existT _ _ (_, ?rt)) _) = FMap.M.mapi _ (FMap.M.add _ (existT _ _ (_, ?rt')) _) ] => replace rt' with rt
+          end.
+          -- unfold execMeth in *. clear; eauto.
+          -- match goal with
+             | [ Hmc1 : SCProcMemConsistent _ _, Hmc2 : SCProcMemConsistent _ _ |- _ ] => clear - Hmc1 Hmc2
+             end.
+             repeat match goal with
+                    | [ H : context[(existT _ _ (@evalExpr ?k (STRUCT {"addr" ::= ?a; "op" ::= _; "data" ::= ?d})%kami_expr, _))] |- _ ] =>
+                      let a' := fresh in
+                      let d' := fresh in
+                      let Heq := fresh in
+                      remember a as a' eqn:Heq; clear Heq;
+                        remember d as d' eqn:Heq; clear Heq;
+                          inv H
+                    end.
+             unfold execMeth in *.
+             simpl in *.
+             shatter.
+             destruct (inv_rs x3).
+             destruct (inv_rs x7).
+             subst.
+             replace x1 with x; try reflexivity.
+             simpl in *.
+             subst.
+             reflexivity.
         * match goal with
           | [ H : labelToTraceEvent ?l = _,
                   x : forall _ : Fin.t 1, _,
