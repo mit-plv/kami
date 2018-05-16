@@ -406,120 +406,6 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
 
   Definition canonicalize := map canonicalizeLabel.
 
-  Lemma zeroRet_apply : forall adr (opb : bool) dat ret,
-      FMap.M.mapi zeroRet
-                  (FMap.M.add "exec"
-                              (existT SignT
-                                      {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                         ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                      (evalExpr
-                                         STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                       evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _)) =
-      FMap.M.add "exec"
-                 (existT SignT
-                         {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                            ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                         (if opb then
-                            (evalExpr
-                               STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                             evalExpr STRUCT {"data" ::= $0}%kami_expr)
-                          else
-                            (evalExpr
-                               STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                             evalExpr STRUCT {"data" ::= ret}%kami_expr)
-                         ))
-                 (FMap.M.empty _).
-  Proof.
-    intros.
-    FMap.M.ext k.
-    rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
-    FMap.mred.
-    unfold option_map.
-    f_equal.
-    destruct opb;
-    unfold zeroRet;
-    simpl;
-    f_equal;
-    f_equal;
-    fin_func_tac;
-    reflexivity.
-  Qed.
-
-  Ltac zeroRet_apply_normalized :=
-    match goal with
-    | [ |- context[FMap.M.mapi zeroRet (FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= $$(?opb); "data" ::= ?dat}%kami_expr, evalExpr STRUCT {"data" ::= ?ret}%kami_expr)) (FMap.M.empty _))] ] =>
-      match goal with
-      | [ |- context[FMap.M.mapi zeroRet ?mp] ] =>
-        replace (FMap.M.mapi zeroRet mp) with 
-            (FMap.M.mapi zeroRet
-                         (FMap.M.add "exec"
-                                     (existT SignT
-                                             {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                                ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                             (evalExpr
-                                                STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                              evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _))) by reflexivity
-      end
-    end;
-    rewrite zeroRet_apply.
-
-  Lemma censorSCMeth_apply : forall adr (opb : bool) dat ret,
-      FMap.M.mapi censorSCMeth
-                  (FMap.M.add "exec"
-                              (existT SignT
-                                      {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                         ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                      (evalExpr
-                                         STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                       evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _)) =
-      FMap.M.add "exec"
-                 (existT SignT
-                         {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                            ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                         (if opb then
-                            (evalExpr
-                               STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= $0}%kami_expr,
-                             evalExpr STRUCT {"data" ::= ret}%kami_expr)
-                          else
-                            (evalExpr
-                               STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                             evalExpr STRUCT {"data" ::= $0}%kami_expr)
-                         ))
-                 (FMap.M.empty _).
-  Proof.
-    intros.
-    FMap.M.ext k.
-    rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
-    FMap.mred.
-    unfold option_map.
-    f_equal.
-    destruct opb;
-    unfold censorSCMeth;
-    simpl;
-    f_equal;
-    f_equal;
-    fin_func_tac;
-    reflexivity.
-  Qed.
-
-  Ltac censorSCMeth_apply_normalized :=
-    match goal with
-    | [ |- context[FMap.M.mapi censorSCMeth (FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= $$(?opb); "data" ::= ?dat}%kami_expr, evalExpr STRUCT {"data" ::= ?ret}%kami_expr)) (FMap.M.empty _))] ] =>
-      match goal with
-      | [ |- context[FMap.M.mapi censorSCMeth ?mp] ] =>
-        replace (FMap.M.mapi censorSCMeth mp) with 
-            (FMap.M.mapi censorSCMeth
-                         (FMap.M.add "exec"
-                                     (existT SignT
-                                             {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                                ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                             (evalExpr
-                                                STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                              evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _))) by reflexivity
-      end
-    end;
-    rewrite censorSCMeth_apply.
-
   Lemma inv_label : forall a a' c c' d d',
       {| annot := a; calls := c; defs := d |} = {| annot := a'; calls := c'; defs := d' |} -> a = a' /\ c = c' /\ d = d'.
   Proof.
@@ -529,6 +415,34 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
     end.
     tauto.
   Qed.
+
+  Ltac zr_noop := 
+    repeat match goal with
+           | [ |- context[FMap.M.mapi zeroRet ?mp] ] =>
+             let Heq := fresh in
+             let k := fresh in
+             assert (FMap.M.mapi zeroRet mp = mp) as Heq
+                 by (clear;
+                     FMap.M.ext k;
+                     rewrite FMap.M.F.P.F.mapi_o
+                       by (intros; subst; reflexivity);
+                     FMap.mred);
+             repeat rewrite Heq;
+             repeat rewrite Heq in *;
+             clear Heq
+           | [ H : context[FMap.M.mapi zeroRet ?mp] |- _ ] =>
+             let Heq := fresh in
+             let k := fresh in
+             assert (FMap.M.mapi zeroRet mp = mp) as Heq
+                 by (clear;
+                     FMap.M.ext k;
+                     rewrite FMap.M.F.P.F.mapi_o
+                       by (intros; subst; reflexivity);
+                     FMap.mred);
+             repeat rewrite Heq;
+             repeat rewrite Heq in *;
+             clear Heq
+           end.
 
   Lemma decanon : forall o o' n n' mem f l0 l1,
       ForwardMultistep p o n l1 ->
@@ -618,217 +532,177 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
           exists ({| annot := Some (Some mn); defs := FMap.M.empty _; calls := mths |} :: x)
         end;
         kinv_action_dest.
-      + destruct (inv_rs x8); subst.
-        intuition idtac; try zeroRet_apply_normalized.
-        * econstructor; eauto.
-        * econstructor; eauto.
-        * destruct (inv_rs x4); subst.
-          simpl; f_equal; eauto.
-          repeat rewrite FMap.M.subtractKV_empty_1;
-            repeat rewrite FMap.M.subtractKV_empty_2;
-            f_equal.
-          match goal with
-          | [ |- context[FMap.M.mapi censorSCMeth (FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= $$(ConstBool ?opb); "data" ::= ?dat}%kami_expr, evalExpr STRUCT {"data" ::= ?ret}%kami_expr)) (FMap.M.empty _))] ] =>
-            pose (censorSCMeth_apply adr opb dat ret)
-          end.
-          match goal with
-          | [ H : ?x = FMap.M.add "exec" _ _ |- context[?y] ] => replace y with x by reflexivity; rewrite H
-          end.
-          match goal with
-          | [ |- context[FMap.M.mapi censorSCMeth (FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= $$(ConstBool ?opb); "data" ::= ?dat}%kami_expr, evalExpr STRUCT {"data" ::= ?ret}%kami_expr)) (FMap.M.empty _))] ] =>
-            pose (censorSCMeth_apply adr opb dat ret)
-          end.
-          match goal with
-          | [ H : ?x = FMap.M.add "exec" _ _ |- _ = ?y ] => replace y with x by reflexivity; rewrite H
-          end.
-          FMap.M.ext k.
-(*          FMap.mred.
-
-          FMap.findeq.
-          eauto.
-            match goal with
-            | [ |- context[FMap.M.mapi censorSCMeth ?mp] ] =>
-              replace (FMap.M.mapi censorSCMeth mp) with 
-                  (FMap.M.mapi censorSCMeth
-                               (FMap.M.add "exec"
-                                           (existT SignT
-                                                   {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                                      ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                                   (evalExpr
-                                                      STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                                    evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _))) by reflexivity
-            end
-          end;
-            rewrite censorSCMeth_apply.
-
-          censorSCMeth_apply_normalized.
-        * match goal with
-          | [ |- context[FMap.M.mapi zeroRet (FMap.M.add "exec" (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= $$(?opb); "data" ::= ?dat}%kami_expr, evalExpr STRUCT {"data" ::= ?ret}%kami_expr)) (FMap.M.empty _))] ] =>
-              match goal with
-              | [ |- context[FMap.M.mapi zeroRet ?mp] ] =>
-                replace (FMap.M.mapi zeroRet mp) with 
-                    (FMap.M.mapi zeroRet
-                                 (FMap.M.add "exec"
-                                             (existT SignT
-                                                     {| arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
-                                                        ret := Struct (SC.RsToProc rv32iDataBytes) |}
-                                                     (evalExpr
-                                                        STRUCT {"addr" ::= adr; "op" ::= $$(opb); "data" ::= dat}%kami_expr,
-                                                      evalExpr STRUCT {"data" ::= ret}%kami_expr)) (FMap.M.empty _))) by reflexivity
-              end
-          end.
-          rewrite zeroRet_apply.
-          econstructor; eauto.
-          match goal with
-          | [ |- context[@FMap.M.mapi (@sigT SignatureT (fun x : SignatureT => SignT x)) (@sigT SignatureT (fun x : SignatureT => SignT x)) ?f ?mp] ] => replace (@FMap.M.mapi (@sigT SignatureT (fun x : SignatureT => SignT x)) (@sigT SignatureT (fun x : SignatureT => SignT x)) f mp) with (@FMap.M.mapi (@sigT SignatureT SignT) (@sigT SignatureT SignT) f mp) by reflexivity
-          end.
-        * unfold zeroRet.
-          simpl.
-        * match goal with
-          | [ |- context[FMap.M.mapi zeroRet ?mp] ] => 
-            replace (FMap.M.mapi zeroRet mp) with mp
-          end.
-          -- econstructor; eauto.
-          -- FMap.M.ext k.
-             rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
-             FMap.mred.
-        * econstructor; eauto.
-        * simpl; f_equal; eauto.
-          f_equal.
-          FMap.M.ext k.
-          repeat rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
-          time FMap.mred.
-          FMap.M.ext 
-          
-
-      
-      kinv_action_dest.
-      match goal with
-      | [ H : _ = {| annot := _; defs := _; calls := FMap.M.mapi censorSCMeth (FMap.M.add _ (existT _ ?typ (?argV, _)) _) |}
-          |- context[censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (_, ?retV)) _ |})] ] =>
-        exists ({| annot := Some (Some "execSt"); defs := FMap.M.empty _; calls := FMap.M.add "exec" (existT _ typ (argV, retV)) (FMap.M.empty _) |} :: x)
-      end.
-      intuition idtac.
-      + econstructor; eauto.
-        match goal with
-        | [ |- Step ?m ?o _ {| annot := _; defs := _; calls := ?cs (*FMap.M.add _ (existT _ _ (?av, ?rv)) _*) |} ] =>
-          let ss := fresh in
-          simple refine (let ss := (_ : Substeps m o) in _);
-            [ apply cons; [ idtac | apply nil ];
-              eapply Build_SubstepRec;
-              eapply (SingleRule p "execSt");
-              try (simpl; tauto);
-              instantiate (1 := cs);
-              try match goal with
-                  | [ |- SemAction _ _ _ _ _ ] => repeat econstructor
-                  end;
-              eauto
-            | match goal with
-              | [ |- Step ?m ?o ?u ?l ] => replace l with (hide (foldSSLabel ss)) by reflexivity; replace u with (foldSSUpds ss) by reflexivity
-              end
-            ]
-        end.
-        apply StepIntro; repeat (apply AddSubstep || apply NilSubsteps);
-          match goal with
-          | [ |- forall _, In _ _ -> _ ] =>
-            let Hin := fresh in
-            intros ? Hin;
-              simpl in Hin;
-              intuition idtac;
-              subst;
-              unfold canCombine;
-              simpl;
-              intuition idtac;
-              eauto;
-              discriminate
-          | [ |- wellHidden _ _ ] =>
-            unfold wellHidden, m, getCalls, getDefs, FMap.M.KeysDisj;
-              simpl;
-              FMap.mred;
-              rewrite FMap.M.subtractKV_empty_1;
-              intuition idtac;
-              rewrite FMap.M.F.P.F.empty_in_iff in *;
-              tauto
-          end.
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
       + match goal with
-        | [ |- context[evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= ?dat}%kami_expr] ] =>
-          let adr' := fresh in
-          let dat' := fresh in
-          let Hdiscard := fresh in
-          remember adr as adr' eqn:Hdiscard;
-            clear Hdiscard;
-            remember dat as dat' eqn:Hdiscard;
-            clear Hdiscard
+        | [ H : Step p o _ (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ ?typ (?argV, _)) _ |})
+          |- context[censorLabel censorSCMeth (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (_, ?retV)) _ |})] ] =>
+          exists ({| annot := Some (Some "execSt"); defs := FMap.M.empty _; calls := FMap.M.add "exec" (existT _ typ (argV, retV)) (FMap.M.empty _) |} :: x)
         end.
-        Transparent evalExpr.
-        econstructor; eauto.
-        simpl.
-        simpl in H3.
-        assumption.
-      + repeat match goal with
-               | [ |- context[evalExpr STRUCT {"addr" ::= @rv32iAlignAddr ?ty ?adr; "op" ::= _; "data" ::= ?dat}%kami_expr] ] =>
-                 let adr' := fresh in
-                 let dat' := fresh in
-                 let Hdiscard := fresh in
-                 remember (@rv32iAlignAddr ty adr) as adr' eqn:Hdiscard;
-                   clear Hdiscard;
-                   remember dat as dat' eqn:Hdiscard;
-                   clear Hdiscard
-               end.
-        match goal with
-        | [ |- context[censorLabelSeq censorSCMeth (?hd :: ?tl)] ] =>
-          replace (censorLabelSeq censorSCMeth (hd :: tl)) with (censorLabel censorSCMeth hd :: censorLabelSeq censorSCMeth tl) by reflexivity
-        end.
-        f_equal; auto.
-        destruct (inv_rs x4).
-        destruct (inv_rs x8).
-        subst.
-        unfold hide, calls, defs, annot in *.
-        repeat rewrite FMap.M.subtractKV_empty_1.
-        repeat rewrite FMap.M.subtractKV_empty_2.
-        repeat match goal with
-               | [ H : context[FMap.M.subtractKV _ _ _] |- _ ] => try rewrite FMap.M.subtractKV_empty_1 in H; try rewrite FMap.M.subtractKV_empty_2 in H
-               end.
-        unfold censorLabel.
-        f_equal.
-        clear - H4.
-        apply inv_label in H4.
-        shatter.
-        replace x9 with x7 in H0; auto.
-        repeat match goal with
-               | [ H : ?x = ?x |- _ ] => clear H
-               end.
-        match goal with
-        | [ H : ?x = ?y |- _ ] =>
-          let H' := fresh in
-          assert (FMap.M.find "exec" x = FMap.M.find "exec" y) as H' by (rewrite H; reflexivity);
-            clear H;
-            do 2 rewrite FMap.M.F.P.F.mapi_o in H' by (intros; subst; reflexivity)
-        end.
-        FMap.mred.
-        unfold option_map in *.
-        match goal with
-        | [ H : Some ?x = Some ?y |- _ ] => assert (x = y) by congruence; clear H
-        end.
-        pose (censorSCMeth_apply H28 H29 #(x7)%kami_expr).
-        match goal with
-        | [ H : ?x = _, H' : ?x' = _ |- _ ] => replace x with x' in H by reflexivity; rewrite H' in H; clear H'
-        end.
-        pose (censorSCMeth_apply H30 H31 #(x9)%kami_expr).
-        match goal with
-        | [ H : _ = ?x, H' : ?x' = _ |- _ ] => replace x with x' in H by reflexivity; rewrite H' in H; clear H'
-        end.
-        apply Semantics.sigT_eq in H0.
-        match goal with
-        | [ H : (_, ?x) = (_, ?y) |- _ ] => assert (x = y) by congruence
-        end.
-        clear - H.
-        match goal with
-        | [ H : ?x = ?y |- _ ] => assert (x Fin.F1 = y Fin.F1) by congruence
-        end.
-        simpl in H0.
-        assumption.
-  Qed. *) Admitted. Transparent evalExpr.
+        intuition idtac.
+        * econstructor; eauto.
+          match goal with
+          | [ |- Step ?m ?o _ {| annot := _; defs := _; calls := ?cs (*FMap.M.add _ (existT _ _ (?av, ?rv)) _*) |} ] =>
+            let ss := fresh in
+            simple refine (let ss := (_ : Substeps m o) in _);
+              [ apply cons; [ idtac | apply nil ];
+                eapply Build_SubstepRec;
+                eapply (SingleRule p "execSt");
+                try (simpl; tauto);
+                instantiate (1 := cs);
+                try match goal with
+                    | [ |- SemAction _ _ _ _ _ ] => repeat econstructor
+                    end;
+                eauto
+              | match goal with
+                | [ |- Step ?m ?o ?u ?l ] => replace l with (hide (foldSSLabel ss)) by reflexivity; replace u with (foldSSUpds ss) by reflexivity
+                end
+              ]
+          end.
+          apply StepIntro; repeat (apply AddSubstep || apply NilSubsteps);
+            match goal with
+            | [ |- forall _, In _ _ -> _ ] =>
+              let Hin := fresh in
+              intros ? Hin;
+                simpl in Hin;
+                intuition idtac;
+                subst;
+                unfold canCombine;
+                simpl;
+                intuition idtac;
+                eauto;
+                discriminate
+            | [ |- wellHidden _ _ ] =>
+              unfold wellHidden, m, getCalls, getDefs, FMap.M.KeysDisj;
+                simpl;
+                FMap.mred;
+                rewrite FMap.M.subtractKV_empty_1;
+                intuition idtac;
+                rewrite FMap.M.F.P.F.empty_in_iff in *;
+                tauto
+            end.
+        * match goal with
+          | [ |- context[evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= ?dat}%kami_expr] ] =>
+            let adr' := fresh in
+            let dat' := fresh in
+            let Hdiscard := fresh in
+            remember adr as adr' eqn:Hdiscard;
+              clear Hdiscard;
+              remember dat as dat' eqn:Hdiscard;
+              clear Hdiscard
+          end.
+          Transparent evalExpr.
+          econstructor; eauto.
+          simpl.
+          simpl in H3.
+          assumption.
+        * repeat match goal with
+                 | [ |- context[evalExpr STRUCT {"addr" ::= @rv32iAlignAddr ?ty ?adr; "op" ::= _; "data" ::= ?dat}%kami_expr] ] =>
+                   let adr' := fresh in
+                   let dat' := fresh in
+                   let Hdiscard := fresh in
+                   remember (@rv32iAlignAddr ty adr) as adr' eqn:Hdiscard;
+                     clear Hdiscard;
+                     remember dat as dat' eqn:Hdiscard;
+                     clear Hdiscard
+                 end.
+          match goal with
+          | [ |- context[censorLabelSeq censorSCMeth (?hd :: ?tl)] ] =>
+            replace (censorLabelSeq censorSCMeth (hd :: tl)) with (censorLabel censorSCMeth hd :: censorLabelSeq censorSCMeth tl) by reflexivity
+          end.
+          f_equal; auto.
+          destruct (inv_rs x4).
+          destruct (inv_rs x8).
+          subst.
+          unfold hide, calls, defs, annot in *.
+          repeat rewrite FMap.M.subtractKV_empty_1.
+          repeat rewrite FMap.M.subtractKV_empty_2.
+          unfold censorLabel.
+          f_equal.
+          match goal with
+          | [ |- FMap.M.mapi _ (FMap.M.add _ (existT _ _ (?argV, _)) _) = FMap.M.mapi _ (FMap.M.add _ (existT _ _ (?argV', _)) _) ] =>
+            replace argV with (evalExpr STRUCT {"addr" ::= #(evalExpr H28); "op" ::= $$(true); "data" ::= H29}%kami_expr) by eauto;
+              replace argV' with (evalExpr STRUCT {"addr" ::= #(evalExpr H30); "op" ::= $$(true); "data" ::= H31}%kami_expr) by eauto
+          end.
+          replace (evalExpr H28) with (evalExpr H30).
+          -- FMap.M.ext k.
+             repeat rewrite FMap.M.F.P.F.mapi_o by (intros; subst; reflexivity).
+             FMap.mred.
+          -- clear - H4.
+             apply inv_label in H4.
+             shatter.
+             repeat match goal with
+                    | [ H : ?x = ?x |- _ ] => clear H
+                    end.
+             match goal with
+             | [ H : ?x = ?y |- _ ] =>
+               let H' := fresh in
+               assert (FMap.M.find "exec" x = FMap.M.find "exec" y) as H' by (rewrite H; reflexivity);
+                 clear H;
+                 repeat rewrite FMap.M.F.P.F.mapi_o in H' by (intros; subst; reflexivity)
+             end.
+             FMap.mred.
+             unfold option_map in *.
+             match goal with
+             | [ H : Some ?x = Some ?y |- _ ] => assert (x = y) by congruence; clear H
+             end.
+             match goal with
+             | [ H : ?x = ?y |- _ ] =>
+               replace x with
+                   (existT SignT
+                           {|
+                             arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
+                             ret := Struct (SC.RsToProc rv32iDataBytes) |}
+                           (evalExpr
+                              STRUCT {"addr" ::= H28; "op" ::= $$ (true);
+                                      "data" ::= $0}%kami_expr,
+                            evalExpr STRUCT {"data" ::= $0}%kami_expr)) in H by eauto;
+                 replace y with
+                     (existT SignT
+                             {|
+                               arg := Struct (SC.RqFromProc rv32iAddrSize rv32iDataBytes);
+                               ret := Struct (SC.RsToProc rv32iDataBytes) |}
+                             (evalExpr
+                                STRUCT {"addr" ::= H30; "op" ::= $$ (true);
+                                        "data" ::= $0}%kami_expr,
+                              evalExpr STRUCT {"data" ::= $0}%kami_expr)) in H by eauto
+             end.
+             apply Semantics.sigT_eq in H0.
+             match goal with
+             | [ H : (?x, _) = (?y, _) |- _ ] => assert (x = y) by congruence; clear H
+             end.
+             match goal with
+             | [ H : ?x = ?y |- _ ] => assert (x Fin.F1 = y Fin.F1) by congruence; clear H
+             end.
+             simpl in H0.
+             congruence.
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+      + Transparent evalExpr.
+        zr_noop.
+        Opaque evalExpr.
+        intuition idtac; try solve [ econstructor; eauto | simpl; f_equal; eauto ].
+  Qed. Transparent evalExpr.
 
   Ltac evex H := unfold evalExpr in H; fold evalExpr in H.
   Ltac evexg := unfold evalExpr; fold evalExpr.
