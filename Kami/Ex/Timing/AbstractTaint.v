@@ -7,9 +7,15 @@ Require Import Ex.IsaRv32 Ex.SC.
 Require Import Lib.CommonTactics.
 Require Import Logic.FunctionalExtensionality.
 
-Inductive pseudoData : Type :=
-| Clean : data -> pseudoData
-| Tainted : pseudoData.
+(** This file provides Gallina functions that perform simulated
+    executions of RISC-V code with taint tracking.  Code that
+    satisfies these taint checks provably satisfies the abstract-level
+    hiding property in Specification.v.  Data within the taint-checker
+    is represented as an option type, with None indicating tainted
+    data that must not be used in ways that affect timing via memory
+    access patterns or control flow. *)
+
+Definition pseudoData := option data.
 
 Definition pseudoRegfile := register -> pseudoData.
 
@@ -24,7 +30,7 @@ Definition taintBranchTaken (rf : pseudoRegfile) (inst : data) : option bool :=
   let r1 := evalExpr (getRs1E #inst)%kami_expr in
   let r2 := evalExpr (getRs2E #inst)%kami_expr in
   match rf r1, rf r2 with
-  | Clean v1, Clean v2 => 
+  | Some v1, Some v2 => 
     let funct := evalExpr (getFunct3E #inst)%kami_expr in
     Some (if weqb funct rv32iF3BEQ
           then weqb v1 v2
@@ -48,8 +54,8 @@ Definition taintNextPc (rf : pseudoRegfile) (pc : address) (inst : data) : optio
   then Some (pc ^+ (split1 16 4 (wlshift (evalExpr (getOffsetUJE #inst)%kami_expr) 1)))
   else if weqb opcode rv32iOpJALR
        then match rf (evalExpr (getRs1E #inst)%kami_expr) with
-            | Clean v1 => Some ((split1 16 16 v1) ^+ (sext (evalExpr (getOffsetIE #inst)%kami_expr) 4))
-            | Tainted => None
+            | Some v1 => Some ((split1 16 16 v1) ^+ (sext (evalExpr (getOffsetIE #inst)%kami_expr) 4))
+            | None => None
             end
        else if weqb opcode rv32iOpBRANCH
             then match taintBranchTaken rf inst with
@@ -70,8 +76,8 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
     let srcIdx := evalExpr (rv32iGetLdSrc type inst) in
     let srcVal := rf srcIdx in
     match srcVal with
-    | Tainted => None
-    | Clean sv =>
+    | None => None
+    | Some sv =>
       let laddr := evalExpr (rv32iCalcLdAddr type addr sv) in
       let laddr_aligned := evalExpr (rv32iAlignAddr type laddr) in
       let val := mem laddr_aligned in
@@ -82,8 +88,8 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
     let srcIdx := evalExpr (rv32iGetStSrc type inst) in
     let srcVal := rf srcIdx in
     match srcVal with
-    | Tainted => None
-    | Clean sv =>
+    | None => None
+    | Some sv =>
       let vsrcIdx := evalExpr (rv32iGetStVSrc type inst) in
       let stVal := rf vsrcIdx in
       let saddr := evalExpr (rv32iCalcStAddr type addr sv) in
@@ -93,7 +99,7 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
   | WO~0~1~0 (* opTh *) => Some (rf, pc ^+ $4, mem)
   | WO~1~0~0 (* opFh *) =>
     let dst := evalExpr (rv32iGetDst type inst) in
-    Some (prset rf dst Tainted, pc ^+ $4, mem)
+    Some (prset rf dst None, pc ^+ $4, mem)
   | WO~0~1~1 (* opNm *) =>
     match taintNextPc rf pc inst with
     | None => None
@@ -102,8 +108,8 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
       let src2 := evalExpr (rv32iGetSrc2 type inst) in
       let dst := evalExpr (rv32iGetDst type inst) in
       let execVal := match rf src1, rf src2 with
-                     | Clean val1, Clean val2 => Clean (evalExpr (rv32iExec type val1 val2 pc inst))
-                     | _, _ => Tainted
+                     | Some val1, Some val2 => Some (evalExpr (rv32iExec type val1 val2 pc inst))
+                     | _, _ => None
                      end in
       Some (prset rf dst execVal, nextPc, mem)
     end
@@ -112,8 +118,8 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
 
 Definition transformable (pd1 pd2 : pseudoData) : bool :=
   match pd1, pd2 with
-  | Tainted, Clean _ => false
-  | Clean val1, Clean val2 => weqb val1 val2
+  | None, Some _ => false
+  | Some val1, Some val2 => weqb val1 val2
   | _, _ => true
   end.
 
@@ -144,8 +150,8 @@ Fixpoint safeUntil (fuel : nat) (rf : pseudoRegfile) (pm : progMem) (pc : addres
 
 Definition mask {sz} (ptbl : word sz -> pseudoData) (tbl : word sz -> data) : word sz -> data :=
   fun a => match ptbl a with
-           | Clean d => d
-           | Tainted => tbl a
+           | Some d => d
+           | None => tbl a
            end.
 
 Theorem at_equiv : forall sz pt1 pt2,
