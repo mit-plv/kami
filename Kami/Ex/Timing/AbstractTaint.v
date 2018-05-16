@@ -20,8 +20,6 @@ Definition prset (rf : pseudoRegfile) (r : register) (v : pseudoData) : pseudoRe
 
 Definition pseudoMemory := address -> pseudoData.
 
-Check (sext (wlshift (evalExpr (getOffsetSBE #(wzero 32))%kami_expr) 1) 4).
-
 Definition taintBranchTaken (rf : pseudoRegfile) (inst : data) : option bool :=
   let r1 := evalExpr (getRs1E #inst)%kami_expr in
   let r2 := evalExpr (getRs2E #inst)%kami_expr in
