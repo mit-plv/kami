@@ -368,42 +368,6 @@ Proof.
     end.
 Qed.
 
-Lemma stepSafeHiding : forall rf pm pc mem rf' pc' mem',
-    taintStep rf pm pc mem = Some (rf', pc', mem') ->
-    abstractHiding_tainted rf' pm pc' mem' ->
-    abstractHiding_tainted rf pm pc mem.
-Proof.
-Admitted.
-
-Theorem segmentSafeHiding : forall fuel rf pm pc mem goalrf goalpc goalmem,
-    safeUntil fuel rf pm pc mem goalrf goalpc goalmem = true ->
-    abstractHiding_tainted goalrf pm goalpc goalmem ->
-    abstractHiding_tainted rf pm pc mem.
-Proof.
-  induction fuel; intros; try discriminate.
-  simpl in H.
-  case_eq (taintStep rf pm pc mem);
-    intros;
-    match goal with
-    | [ H : taintStep _ _ _ _ = _ |- _ ] => rewrite H in *
-    end;
-    try discriminate.
-  destruct p as [[? ?] ?].
-  match goal with
-  | [ H : (if ?b then _ else _) = _ |- _ ] =>
-    case_eq b;
-      intros;
-      match goal with
-      | [ H : b = _ |- _ ] => rewrite H in *
-      end
-  end; eapply stepSafeHiding; eauto.
-  repeat rewrite Bool.andb_true_iff in *.
-  intuition idtac.
-  rewrite weqb_true_iff in *.
-  subst.
-  eapply transformableHiding; eauto.
-Qed.
-
 Ltac nextpc :=
   try match goal with
       | [ |- context[rv32iNextPc _ ?rf _ _] ] => subst rf
@@ -549,6 +513,549 @@ Proof.
                    | [ H : weqb x y = _ |- _ ] => rewrite H
                    end
            end; auto.
+Qed.
+
+Lemma stepSafeHiding : forall rf pm pc mem rf' pc' mem',
+    taintStep rf pm pc mem = Some (rf', pc', mem') ->
+    abstractHiding_tainted rf' pm pc' mem' ->
+    abstractHiding_tainted rf pm pc mem.
+Proof.
+  unfold abstractHiding_tainted.
+  intros rf pm pc mem rf' pc' mem' Hts Hah trace fhTrace rmask mmask Hht.
+  remember (mask rf rmask) as mrf.
+  remember (mask mem mmask) as mmem.
+  move Hht at top.
+  generalize rf mem rf' pc' mem' Hts Hah fhTrace rmask mmask Heqmrf Heqmmem.
+  clear rf mem rf' pc' mem' Hts Hah fhTrace rmask mmask Heqmrf Heqmmem.
+  induction Hht; intros.
+  - exists nil; intuition idtac; auto.
+    + constructor.
+    + destruct fhTrace; try discriminate.
+      destruct fhTrace'; try discriminate.
+      reflexivity.
+  - simpl in H.
+    specialize (IHHht _ _ _ _ _ Hts Hah _ _ _ Heqmrf Heqmmem H _ rmask' mmask' H0).
+    destruct IHHht as [trace'' [Hht' [Hct' Hex']]].
+    exists (Nop pc :: trace'').
+    intuition idtac.
+    + constructor; auto.
+    + simpl; f_equal; auto.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opLd |- _ ] => rewrite H in Hts
+    end.
+    unfold opLd in *.
+    fold srcIdx in Hts.
+    assert (srcVal = (mask rf0 rmask) srcIdx) as HsrcVal by (unfold srcVal; congruence).
+    unfold mask in HsrcVal.
+    case_eq (rf0 srcIdx); intros;
+      match goal with
+      | [ H : rf0 srcIdx = _ |- _ ] => rewrite H in Hts; rewrite H in HsrcVal
+      end; try discriminate.
+    fold addr in Hts.
+    rewrite <- HsrcVal in Hts.
+    replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hts by (unfold laddr; congruence).
+    fold laddr_aligned in Hts.
+    fold dstIdx in Hts.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    case_eq (mem0 laddr_aligned); intros.
+    + specialize (Hah rmask mmask).
+      subst mem.
+      match goal with
+      | [ H : hasTrace ?r _ ?c _ ?t, H' : hasTrace ?r' _ ?c' _ ?t -> _ |- _ ] => replace r' with r in H'; [replace c' with c in H' by nextpc; specialize (H' H)|]
+      end.
+      * simpl in H3.
+        specialize (Hah H3 _ rmask' mmask' H4).
+        destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+        exists (Rd pc laddr_aligned val :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        pose (htLd inst val (mask rf0 rmask') pm pc (mask mem0 mmask') trace'0 H H0) as Hld.
+        Opaque evalExpr.
+        simpl in Hld.
+        Transparent evalExpr.
+        fold srcIdx in Hld.
+        fold dstIdx in Hld.
+        fold addr in Hld.
+        replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H5; auto).
+        replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
+        fold laddr_aligned in Hld.
+        apply Hld; auto.
+        -- subst.
+           unfold mask.
+           rewrite H6.
+           auto.
+        -- match goal with
+           | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace r' with r; [replace c' with c by nextpc; auto|]
+           end.
+           subst val.
+           extensionality a.
+           unfold mask, prset, rset.
+           unfold evalExpr; fold evalExpr.
+           rewrite H6.
+           repeat deq.
+      * extensionality a.
+        subst rf val.
+        unfold rset, mask, prset.
+        unfold evalExpr; fold evalExpr.
+        rewrite H6.
+        repeat deq.
+    + specialize (Hah (rset rmask dstIdx val) mmask).
+      subst mem.
+      match goal with
+      | [ H : hasTrace ?r _ ?c _ ?t, H' : hasTrace ?r' _ ?c' _ ?t -> _ |- _ ] => replace r' with r in H'; [replace c' with c in H' by nextpc; specialize (H' H)|]
+      end.
+      * simpl in H3.
+        specialize (Hah H3 _ (rset rmask' dstIdx (mmask' laddr_aligned)) mmask' H4).
+        destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+        exists (Rd pc laddr_aligned (mmask' laddr_aligned) :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        pose (htLd inst (mmask' laddr_aligned) (mask rf0 rmask') pm pc (mask mem0 mmask') trace'0 H H0) as Hld.
+        Opaque evalExpr.
+        simpl in Hld.
+        Transparent evalExpr.
+        fold srcIdx in Hld.
+        fold dstIdx in Hld.
+        fold addr in Hld.
+        replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H5; auto).
+        replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
+        fold laddr_aligned in Hld.
+        apply Hld; auto.
+        -- unfold mask.
+           rewrite H6.
+           auto.
+        -- match goal with
+           | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace r' with r; [replace c' with c by nextpc; auto|]
+           end.
+           extensionality a.
+           unfold mask, prset, rset.
+           unfold evalExpr; fold evalExpr.
+           rewrite H6.
+           repeat deq.
+      * extensionality a.
+        subst rf val.
+        unfold rset, mask, prset.
+        unfold evalExpr; fold evalExpr.
+        rewrite H6.
+        repeat deq.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opLd |- _ ] => rewrite H in Hts
+    end.
+    unfold opLd in *.
+    fold srcIdx in Hts.
+    assert (srcVal = (mask rf0 rmask) srcIdx) as HsrcVal by (unfold srcVal; congruence).
+    unfold mask in HsrcVal.
+    case_eq (rf0 srcIdx); intros;
+      match goal with
+      | [ H : rf0 srcIdx = _ |- _ ] => rewrite H in Hts; rewrite H in HsrcVal
+      end; try discriminate.
+    rewrite H1 in Hts.
+    unfold prset in Hts.
+    replace (weqb (wzero rv32iRfIdx) (wzero rv32iRfIdx)) with true in Hts by reflexivity.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    specialize (Hah rmask mmask).
+    subst rf mem.
+    match goal with
+    | [ H : hasTrace _ _ ?c _ ?t, H' : hasTrace _ _ ?c' _ ?t -> _ |- _ ] => replace c' with c in H' by nextpc; specialize (H' H)
+    end.
+    simpl in H2.
+    specialize (Hah H2 _ rmask' mmask' H3).
+    destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+    exists (RdZ pc laddr_aligned :: trace'0).
+    intuition idtac; try solve [simpl; f_equal; auto].
+    pose (htLdZ inst (mask rf0 rmask') pm pc (mask mem0 mmask') trace'0 H H0) as HldZ.
+    Opaque evalExpr.
+    simpl in HldZ.
+    Transparent evalExpr.
+    fold srcIdx in HldZ.
+    fold addr in HldZ.
+    replace (mask rf0 rmask' srcIdx) with srcVal in HldZ by (unfold mask; rewrite H4; auto).
+    replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in HldZ by (unfold laddr; congruence).
+    fold laddr_aligned in HldZ.
+    apply HldZ; auto.
+    match goal with
+    | [ H : hasTrace _ _ ?c _ ?t |- hasTrace _ _ ?c' _ ?t ] => replace c' with c by nextpc; auto
+    end.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opSt |- _ ] => rewrite H in Hts
+    end.
+    unfold opSt in *.
+    fold srcIdx in Hts.
+    assert (srcVal = (mask rf0 rmask) srcIdx) as HsrcVal by (unfold srcVal; congruence).
+    unfold mask in HsrcVal.
+    case_eq (rf0 srcIdx); intros;
+      match goal with
+      | [ H : rf0 srcIdx = _ |- _ ] => rewrite H in Hts; rewrite H in HsrcVal
+      end; try discriminate.
+    fold addr in Hts.
+    rewrite <- HsrcVal in Hts.
+    replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hts by (unfold saddr; congruence).
+    fold saddr_aligned in Hts.
+    fold vsrcIdx in Hts.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    case_eq (rf0 vsrcIdx); intros.
+    + specialize (Hah rmask mmask).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace _ _ ?c ?m ?t, H' : hasTrace _ _ ?c' ?m' ?t -> _ |- _ ] => replace m' with m in H'; [replace c' with c in H' by nextpc; specialize (H' H)|]
+      end.
+      * simpl in H1.
+        specialize (Hah H1 _ rmask' mmask' H2).
+        destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+        exists (Wr pc saddr_aligned stVal :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        pose (htSt inst (mask rf0 rmask') pm pc (mask mem0 mmask') trace'0 H H0) as Hst.
+        Opaque evalExpr.
+        simpl in Hst.
+        Transparent evalExpr.
+        fold vsrcIdx in Hst.
+        fold srcIdx in Hst.
+        replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H3; auto).
+        fold addr in Hst.
+        replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
+        fold saddr_aligned in Hst.
+        replace (mask rf0 rmask' vsrcIdx) with stVal in Hst by (unfold stVal; unfold mask; rewrite H4; auto).
+        apply Hst; auto.
+        match goal with
+        | [ H : hasTrace _ _ ?c ?m ?t |- hasTrace _ _ ?c' ?m' ?t ] => replace m' with m; [replace c' with c by nextpc; auto|]
+        end.
+        subst stVal.
+        extensionality a.
+        unfold mask.
+        rewrite H4.
+        deq.
+      * extensionality a.
+        subst stVal.
+        unfold mask.
+        rewrite H4.
+        deq.
+    + specialize (Hah rmask (fun a => if weq a saddr_aligned then stVal else mmask a)).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace _ _ ?c ?m ?t, H' : hasTrace _ _ ?c' ?m' ?t -> _ |- _ ] => replace m' with m in H'; [replace c' with c in H' by nextpc; specialize (H' H)|]
+      end.
+      * simpl in H1.
+        specialize (Hah H1 _ rmask' (fun a => if weq a saddr_aligned then rmask' vsrcIdx else mmask' a) H2).
+        destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+        exists (Wr pc saddr_aligned (rmask' vsrcIdx) :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        pose (htSt inst (mask rf0 rmask') pm pc (mask mem0 mmask') trace'0 H H0) as Hst.
+        Opaque evalExpr.
+        simpl in Hst.
+        Transparent evalExpr.
+        fold vsrcIdx in Hst.
+        fold srcIdx in Hst.
+        replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H3; auto).
+        fold addr in Hst.
+        replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
+        fold saddr_aligned in Hst.
+        replace (mask rf0 rmask' vsrcIdx) with (rmask' vsrcIdx) in Hst by (unfold mask; rewrite H4; auto).
+        apply Hst; auto.
+        match goal with
+        | [ H : hasTrace _ _ ?c ?m ?t |- hasTrace _ _ ?c' ?m' ?t ] => replace m' with m; [replace c' with c by nextpc; auto|]
+        end.
+        extensionality a.
+        unfold mask.
+        rewrite H4.
+        deq.
+      * extensionality a.
+        subst stVal.
+        unfold mask.
+        rewrite H4.
+        deq.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opTh |- _ ] => rewrite H in Hts
+    end.
+    unfold opTh in *.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    specialize (Hah rmask mmask).
+    subst rf mem.
+    match goal with
+    | [ H : hasTrace _ _ ?c _ ?t, H' : hasTrace _ _ ?c' _ ?t -> _ |- _ ] => replace c' with c in H' by nextpc; specialize (H' H)
+    end.
+    simpl in H1.
+    specialize (Hah H1 _ rmask' mmask' H2).
+    destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+    exists (ToHost pc (mask rf0 rmask' srcIdx) :: trace'0).
+    intuition idtac; try solve [simpl; f_equal; auto].
+    econstructor; eauto.
+    match goal with
+    | [ H : hasTrace _ _ ?c _ ?t |- hasTrace _ _ ?c' _ ?t ] => replace c' with c by nextpc; auto
+    end.
+  - destruct fhTrace; try solve [ discriminate ].
+    destruct fhTrace'; try solve [ discriminate ].
+    specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opFh |- _ ] => rewrite H in Hts
+    end.
+    unfold opFh in *.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    specialize (Hah (rset rmask dst val) mmask).
+    subst rf mem.
+    match goal with
+    | [ H : hasTrace ?r _ ?c _ ?t, H' : hasTrace ?r' _ ?c' _ ?t -> _ |- _ ] => replace r' with r in H'; [replace c' with c in H' by nextpc; specialize (H' H)|]
+    end.
+    + inv H1.
+      inv H2.
+      specialize (Hah eq_refl _ (rset rmask' dst d0) mmask' H1).
+      destruct Hah as [trace'0 [Hht' [Hct' Hfh']]].
+      exists (FromHost pc d0 :: trace'0).
+      intuition idtac; try solve [simpl; f_equal; auto].
+      econstructor; eauto.
+      match goal with
+      | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c by nextpc; replace r' with r; auto
+      end.
+      extensionality a.
+      fold dst.
+      unfold prset, rset, mask.
+      unfold evalExpr; fold evalExpr.
+      repeat deq.
+    + extensionality a.
+      fold dst.
+      unfold prset, rset, mask.
+      unfold evalExpr; fold evalExpr.
+      repeat deq.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opNm |- _ ] => rewrite H in Hts
+    end.
+    unfold opNm in *.
+    destruct (taintNextPc_correct rf0 rmask pc inst); rewrite H4 in Hts; try discriminate.
+    unfold rv32iGetDst in Hts.
+    unfold evalExpr in Hts; fold evalExpr in Hts.
+    rewrite H1 in Hts.
+    unfold evalConstT in Hts.
+    destruct (isEq (Bit 7) rv32iOpBRANCH rv32iOpBRANCH); try congruence.
+    unfold prset in Hts.
+    replace (weqb $0 (wzero rv32iRfIdx)) with true in Hts by reflexivity.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    specialize (Hah rmask mmask).
+    subst rf mem.
+    specialize (Hah Hht).
+    simpl in H2.
+    specialize (Hah H2 _ rmask' mmask' H3).
+    destruct Hah as [trace'0 [Hht' [Hct' Het']]].
+    exists (Branch pc (evalExpr (rv32iBranchTaken type (mask rf0 rmask') inst)) :: trace'0).
+    destruct (taintBranchTaken_correct rf0 rmask inst H1);
+    destruct (taintBranchTaken_correct rf0 rmask' inst H1);
+      try match goal with
+          | [ Hbt : taintBranchTaken rf0 inst = None,
+                    Hnp : taintNextPc rf0 pc inst = Some _,
+                          Hob : evalExpr (getOpcodeE _) = _ |- _ ] => unfold taintNextPc in Hnp; rewrite Hbt in Hnp; rewrite Hob in Hnp; discriminate
+          end.
+    intuition idtac.
+    + econstructor; eauto.
+      match goal with
+      | [ H : hasTrace _ _ ?c _ ?t |- hasTrace _ _ ?c' _ ?t ] => replace c' with c; auto
+      end.
+      destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
+    + Opaque evalExpr.
+      simpl; f_equal; auto.
+      congruence.
+      Transparent evalExpr.
+  - specialize (Hah trace' fhTrace).
+    clear IHHht.
+    unfold taintStep in Hts.
+    match goal with
+    | [ H : _ = inst |- _ ] => rewrite H in Hts
+    end.
+    match goal with
+    | [ H : _ = opNm |- _ ] => rewrite H in Hts
+    end.
+    unfold opNm in *.
+    destruct (taintNextPc_correct rf0 rmask pc inst); rewrite H4 in Hts; try discriminate.
+    fold dst src1 src2 in Hts.
+    match goal with
+    | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
+    end.
+    match goal with
+    | [ H : extractFhTrace (_ :: _) = _ |- _ ] => simpl in H
+    end.
+    case_eq (rf0 src1); case_eq (rf0 src2); intros;
+      match goal with
+      | [ H1 : rf0 src1 = _, H2 : rf0 src2 = _ |- _ ] => rewrite H1 in *; try rewrite H2 in *
+      end.
+    + specialize (Hah rmask mmask).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
+      end.
+      * specialize (Hah Hht H2 _ rmask' mmask' H3).
+        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
+        exists (Nm pc :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        econstructor; eauto.
+        match goal with
+        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
+        end.
+        -- fold src1 src2 dst.
+           extensionality a.
+           unfold rset, prset, mask.
+           unfold evalExpr; fold evalExpr.
+           rewrite H5.
+           rewrite H6.
+           repeat deq.
+        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
+      * extensionality a.
+        unfold execVal, val1, val2, rset, prset, mask.
+        unfold evalExpr; fold evalExpr.
+        rewrite H5.
+        rewrite H6.
+        repeat deq.
+    + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type d val2 pc inst))) mmask).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
+      end.
+      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type d (rmask' src2) pc inst))) mmask' H3).
+        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
+        exists (Nm pc :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        econstructor; eauto.
+        match goal with
+        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
+        end.
+        -- fold src1 src2 dst.
+           extensionality a.
+           unfold rset, prset, mask.
+           unfold evalExpr; fold evalExpr.
+           rewrite H5.
+           rewrite H6.
+           repeat deq.
+        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
+      * extensionality a.
+        unfold execVal, val1, val2, rset, prset, mask.
+        unfold evalExpr; fold evalExpr.
+        rewrite H5.
+        rewrite H6.
+        repeat deq.
+    + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type val1 d pc inst))) mmask).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
+      end.
+      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) d pc inst))) mmask' H3).
+        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
+        exists (Nm pc :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        econstructor; eauto.
+        match goal with
+        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
+        end.
+        -- fold src1 src2 dst.
+           extensionality a.
+           unfold rset, prset, mask.
+           unfold evalExpr; fold evalExpr.
+           rewrite H5.
+           rewrite H6.
+           repeat deq.
+        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
+      * extensionality a.
+        unfold execVal, val1, val2, rset, prset, mask.
+        unfold evalExpr; fold evalExpr.
+        rewrite H5.
+        rewrite H6.
+        repeat deq.
+    + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type val1 val2 pc inst))) mmask).
+      subst rf mem.
+      match goal with
+      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
+      end.
+      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) (rmask' src2) pc inst))) mmask' H3).
+        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
+        exists (Nm pc :: trace'0).
+        intuition idtac; try solve [simpl; f_equal; auto].
+        econstructor; eauto.
+        match goal with
+        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
+        end.
+        -- fold src1 src2 dst.
+           extensionality a.
+           unfold rset, prset, mask.
+           unfold evalExpr; fold evalExpr.
+           rewrite H5.
+           rewrite H6.
+           repeat deq.
+        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
+      * extensionality a.
+        unfold execVal, val1, val2, rset, prset, mask.
+        unfold evalExpr; fold evalExpr.
+        rewrite H5.
+        rewrite H6.
+        repeat deq.
+Qed.
+
+Theorem segmentSafeHiding : forall fuel rf pm pc mem goalrf goalpc goalmem,
+    safeUntil fuel rf pm pc mem goalrf goalpc goalmem = true ->
+    abstractHiding_tainted goalrf pm goalpc goalmem ->
+    abstractHiding_tainted rf pm pc mem.
+Proof.
+  induction fuel; intros; try discriminate.
+  simpl in H.
+  case_eq (taintStep rf pm pc mem);
+    intros;
+    match goal with
+    | [ H : taintStep _ _ _ _ = _ |- _ ] => rewrite H in *
+    end;
+    try discriminate.
+  destruct p as [[? ?] ?].
+  match goal with
+  | [ H : (if ?b then _ else _) = _ |- _ ] =>
+    case_eq b;
+      intros;
+      match goal with
+      | [ H : b = _ |- _ ] => rewrite H in *
+      end
+  end; eapply stepSafeHiding; eauto.
+  repeat rewrite Bool.andb_true_iff in *.
+  intuition idtac.
+  rewrite weqb_true_iff in *.
+  subst.
+  eapply transformableHiding; eauto.
 Qed.
 
 Theorem loopSafeHiding : forall fuel rf pm pc mem,
