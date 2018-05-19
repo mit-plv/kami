@@ -499,12 +499,6 @@ Proof.
     unfold evalExpr; fold evalExpr.
     unfold evalUniBit, evalBinBit.
     destruct (evalExpr (rv32iBranchTaken type (mask rf rmask) inst)); auto.
-    match goal with
-    | [ |- context[match ?x with _ => _ end] ] =>
-      let x' := eval hnf in x in change x with x'; cbv beta iota
-    end.
-    eq_rect_simpl.
-    reflexivity.
   - repeat match goal with
            | [ H : ?x <> ?y |- context[weqb ?x ?y] ] =>
              case_eq (weqb x y); intros;
@@ -560,7 +554,7 @@ Proof.
     fold addr in Hts.
     rewrite <- HsrcVal in Hts.
     replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hts by (unfold laddr; congruence).
-    fold laddr_aligned in Hts.
+    replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hts by (unfold laddr_aligned; congruence).
     fold dstIdx in Hts.
     match goal with
     | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
@@ -585,7 +579,7 @@ Proof.
         fold addr in Hld.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H5; auto).
         replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
-        fold laddr_aligned in Hld.
+        replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hld by (unfold laddr_aligned; congruence).
         apply Hld; auto.
         -- subst.
            unfold mask.
@@ -625,7 +619,7 @@ Proof.
         fold addr in Hld.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H5; auto).
         replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
-        fold laddr_aligned in Hld.
+        replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hld by (unfold laddr_aligned; congruence).
         apply Hld; auto.
         -- unfold mask.
            rewrite H6.
@@ -685,7 +679,7 @@ Proof.
     fold addr in HldZ.
     replace (mask rf0 rmask' srcIdx) with srcVal in HldZ by (unfold mask; rewrite H4; auto).
     replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in HldZ by (unfold laddr; congruence).
-    fold laddr_aligned in HldZ.
+    replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in HldZ by (unfold laddr_aligned; congruence).
     apply HldZ; auto.
     match goal with
     | [ H : hasTrace _ _ ?c _ ?t |- hasTrace _ _ ?c' _ ?t ] => replace c' with c by nextpc; auto
@@ -710,7 +704,7 @@ Proof.
     fold addr in Hts.
     rewrite <- HsrcVal in Hts.
     replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hts by (unfold saddr; congruence).
-    fold saddr_aligned in Hts.
+    replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hts by (unfold saddr_aligned; congruence).
     fold vsrcIdx in Hts.
     match goal with
     | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
@@ -735,7 +729,7 @@ Proof.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H3; auto).
         fold addr in Hst.
         replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
-        fold saddr_aligned in Hst.
+        replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hst by (unfold saddr_aligned; congruence).
         replace (mask rf0 rmask' vsrcIdx) with stVal in Hst by (unfold stVal; unfold mask; rewrite H4; auto).
         apply Hst; auto.
         match goal with
@@ -770,7 +764,7 @@ Proof.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H3; auto).
         fold addr in Hst.
         replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
-        fold saddr_aligned in Hst.
+        replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hst by (unfold saddr_aligned; congruence).
         replace (mask rf0 rmask' vsrcIdx) with (rmask' vsrcIdx) in Hst by (unfold mask; rewrite H4; auto).
         apply Hst; auto.
         match goal with
@@ -1111,7 +1105,7 @@ Proof.
     fold addr in Hts.
     rewrite <- HsrcVal in Hts.
     replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hts by (unfold laddr; congruence).
-    fold laddr_aligned in Hts.
+    replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hts by (unfold laddr_aligned; congruence).
     fold dstIdx in Hts.
     match goal with
     | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
@@ -1151,7 +1145,7 @@ Proof.
         fold addr in Hld.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H6; auto).
         replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
-        fold laddr_aligned in Hld.
+        replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hld by (unfold laddr_aligned; congruence).
         apply Hld; auto.
         -- subst.
            unfold mask.
@@ -1191,7 +1185,7 @@ Proof.
         fold addr in Hld.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hld by (unfold mask; rewrite H6; auto).
         replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in Hld by (unfold laddr; congruence).
-        fold laddr_aligned in Hld.
+        replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in Hld by (unfold laddr_aligned; congruence).
         apply Hld; auto.
         -- subst.
            unfold mask.
@@ -1256,7 +1250,7 @@ Proof.
     fold addr in HldZ.
     replace (mask rf0 rmask' srcIdx) with srcVal in HldZ by (subst rf; unfold srcVal; unfold mask; rewrite H5; auto).
     replace (evalExpr (rv32iCalcLdAddr type addr srcVal)) with laddr in HldZ by (unfold laddr; congruence).
-    fold laddr_aligned in HldZ.
+    replace (evalExpr (rv32iAlignAddr type laddr)) with laddr_aligned in HldZ by (unfold laddr_aligned; congruence).
     apply HldZ; auto.
     match goal with
     | [ H : hasTrace _ _ ?c _ ?t |- hasTrace _ _ ?c' _ ?t ] => replace c' with c by nextpc; auto
@@ -1286,7 +1280,7 @@ Proof.
     fold addr in Hts.
     rewrite <- HsrcVal in Hts.
     replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hts by (unfold saddr; congruence).
-    fold saddr_aligned in Hts.
+    replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hts by (unfold saddr_aligned; congruence).
     fold vsrcIdx in Hts.
     match goal with
     | [ H : Some (?x, ?y, ?z) = Some (?x', ?y', ?z') |- _ ] => assert (x = x') by congruence; assert (y = y') by congruence; assert (z = z') by congruence; clear H; subst x' y' z'
@@ -1328,7 +1322,7 @@ Proof.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H4; auto).
         fold addr in Hst.
         replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
-        fold saddr_aligned in Hst.
+        replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hst by (unfold saddr_aligned; congruence).
         replace (mask rf0 rmask' vsrcIdx) with stVal in Hst by (unfold stVal; subst rf; unfold mask; rewrite H5; auto).
         apply Hst; auto.
         match goal with
@@ -1368,7 +1362,7 @@ Proof.
         replace (mask rf0 rmask' srcIdx) with srcVal in Hst by (unfold mask; rewrite H4; auto).
         fold addr in Hst.
         replace (evalExpr (rv32iCalcStAddr type addr srcVal)) with saddr in Hst by (unfold saddr; congruence).
-        fold saddr_aligned in Hst.
+        replace (evalExpr (rv32iAlignAddr type saddr)) with saddr_aligned in Hst by (unfold saddr_aligned; congruence).
         replace (mask rf0 rmask' vsrcIdx) with (rmask' vsrcIdx) in Hst by (unfold mask; rewrite H5; auto).
         apply Hst; auto.
         match goal with
