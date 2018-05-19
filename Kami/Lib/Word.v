@@ -855,21 +855,42 @@ Proof.
   intros; omega.
 Qed.
 
+Definition transparent_plus_comm : forall n m, n + m = m + n.
+  induction n;
+    induction m.
+  - exact eq_refl.
+  - unfold Init.Nat.add in *.
+    fold Init.Nat.add in *.
+    rewrite <- IHm.
+    exact eq_refl.
+  - unfold Init.Nat.add.
+    fold Init.Nat.add.
+    rewrite IHn.
+    exact eq_refl.
+  - unfold Init.Nat.add in *.
+    fold Init.Nat.add in *.
+    rewrite IHn.
+    unfold Init.Nat.add; fold Init.Nat.add.
+    rewrite <- IHn.
+    rewrite IHm.
+    exact eq_refl.
+Defined.
+
 Definition wlshift (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split1 sz n _).
-  rewrite plus_comm.
+  rewrite transparent_plus_comm.
   exact (combine (wzero n) w).
 Defined.
 
 Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split2 n sz _).
-  rewrite plus_comm.
+  rewrite transparent_plus_comm.
   exact (combine w (wzero n)).
 Defined.
 
 Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split2 n sz _).
-  rewrite plus_comm.
+  rewrite transparent_plus_comm.
   exact (sext w _).
 Defined.
 

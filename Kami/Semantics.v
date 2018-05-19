@@ -184,6 +184,55 @@ Definition whd' sz (w: word sz) :=
     | S n => fun w => whd w
   end w.
 
+Definition lt_minus : forall n1 n2, (n1 < n2)%nat -> n1 + (n2 - n1) = n2.
+  induction n1; intros.
+  - destruct n2; unfold Init.Nat.sub, Init.Nat.add; exact eq_refl.
+  - destruct n2.
+    + inversion H.
+    + unfold Init.Nat.sub, Init.Nat.add.
+      fold Init.Nat.sub Init.Nat.add.
+      rewrite IHn1; try exact eq_refl.
+      clear IHn1.
+      unfold lt in *.
+      inversion H; clear H.
+      * constructor.
+      * subst.
+        induction H1.
+        -- repeat constructor.
+        -- constructor.
+           assumption.
+Defined.
+
+Definition nlt_minus : forall n1 n2, ~ (n1 < n2)%nat -> n2 + (n1 - n2) = n1.
+  unfold lt.
+  intros n1 n2; generalize n1; clear n1.
+  induction n2; intros.
+  - destruct n1; unfold Init.Nat.sub, Init.Nat.add; exact eq_refl.
+  - destruct n1.
+    + assert (1 <= S n2)%nat.
+      * clear.
+        induction n2.
+        -- constructor.
+        -- constructor.
+           assumption.
+      * destruct (H H0).
+    + unfold Init.Nat.sub, Init.Nat.add.
+      fold Init.Nat.sub Init.Nat.add.
+      rewrite IHn2; try exact eq_refl.
+      clear IHn2.
+      unfold not in *.
+      intros.
+      apply H.
+      clear H.
+      inversion H0; clear H0.
+      * constructor.
+      * clear H1.
+        induction H.
+        -- repeat constructor.
+        -- constructor.
+           assumption.
+Defined.
+
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wneg n).
@@ -196,18 +245,22 @@ Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
                 | left isLt => _
                 | right isGe => _
               end).
-    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
+    + apply lt_minus in isLt.
+      rewrite <- isLt.
       exact (zext w _).
-    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+    + apply nlt_minus in isGe.
+      rewrite <- isGe in w.
       exact (split1 _ _ w).
   - refine (fun w =>
               match Compare_dec.lt_dec n1 n2 with
                 | left isLt => _
                 | right isGe => _
               end).
-    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
+    + apply lt_minus in isLt.
+      rewrite <- isLt.
       exact (sext w _).
-    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+    + apply nlt_minus in isGe.
+      rewrite <- isGe in w.
       exact (split1 _ _ w).
   - exact (fun w => split2 n1 n2 w).
   - rewrite <- e; exact (fun w => split2 n1 n2 w).
