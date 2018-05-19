@@ -136,6 +136,26 @@ Section Specification.
                   | FromHost pc val => FromHost pc $0
                   end).
 
+    Lemma pc_from_trace : forall rf pm pc mem tr,
+        hasTrace rf pm pc mem tr ->
+        match tr with
+        | nil => True
+        | te :: _ => pc = match te with
+                          | Nop pc' => pc'
+                          | Nm pc' => pc'
+                          | Branch pc' _ => pc'
+                          | RdZ pc' _ => pc'
+                          | Rd pc' _ _ => pc'
+                          | Wr pc' _ _ => pc'
+                          | ToHost pc' _ => pc'
+                          | FromHost pc' _ => pc'
+                          end
+        end.
+    Proof.
+      intros.
+      destruct H; tauto.
+    Qed.
+
     Lemma censorEq_same_pc :
       forall rf1 rf2 pm1 pm2 pc1 pc2 mem1 mem2 tr1 tr2,
         hasTrace rf1 pm1 pc1 mem1 tr1
@@ -145,36 +165,11 @@ Section Specification.
            \/ pc1 = pc2.
     Proof.
       intros ? ? ? ? ? ? ? ? ? ? Hht1 Hht2 Hct.
-      inversion Hht1; inversion Hht2;
-        intros; subst; try tauto; right;
-          unfold censorTrace in Hct;
-          unfold map in Hct;
-          try match goal with
-              | [ H : _ :: ?x1 = _ :: ?x2 |- _ ] =>
-                let v1 := fresh in
-                let v2 := fresh in
-                let Heq1 := fresh in
-                let Heq2 := fresh in
-                remember x1 as v1 eqn:Heq1;
-                  remember x2 as v2 eqn:Heq2;
-                  clear - Hct;
-                  match goal with
-                  | [ H : Branch _ ?b1 :: _ = Branch _ ?b2 :: _ |- _ ] =>
-                    let b1' := fresh in
-                    let Heq1 := fresh in
-                    let b2' := fresh in
-                    let Heq2 := fresh in
-                    remember b1 as b1' eqn:Heq1;
-                      remember b2 as b2' eqn:Heq2;
-                      clear - Hct
-                  end;
-                  repeat match goal with
-                         | [ x := _ : _ |- _ ] =>
-                           let x' := fresh in
-                           let Heq := fresh in
-                           remember x as x' eqn:Heq; clear - Hct
-                         end
-              end; inversion Hct; congruence.
+      destruct tr1; destruct tr2; try solve [tauto | simpl in Hct; discriminate].
+      right.
+      rewrite (pc_from_trace _ _ _ _ _ Hht1).
+      rewrite (pc_from_trace _ _ _ _ _ Hht2).
+      destruct t; destruct t0; simpl in Hct; congruence.
     Qed.
 
     Definition extractFhTrace : list TraceEvent -> list data :=
