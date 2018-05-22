@@ -141,8 +141,10 @@ Fixpoint safeUntil (fuel : nat) (rf : pseudoRegfile) (pm : progMem) (pc : addres
     match taintStep rf pm pc mem with
     | None => false
     | Some (rf', pc', mem') =>
-      if (weqb pc' goalpc && rfTransformable rf' goalrf && memTransformable mem' goalmem)%bool
-      then true
+      if weqb pc' goalpc
+      then if (rfTransformable rf' goalrf && memTransformable mem' goalmem)%bool
+           then true
+           else safeUntil fuel' rf' pm pc' mem' goalrf goalpc goalmem
       else safeUntil fuel' rf' pm pc' mem' goalrf goalpc goalmem
     end
   | 0 => false
@@ -336,19 +338,19 @@ Lemma safeShift :
 Proof.
   induction fuel; intros; simpl in *; try discriminate.
   rewrite H0 in H.
-  match goal with
-  | [ H : (if ?b then _ else _) = _ |- _ ] =>
-    case_eq b;
-      intros;
-      match goal with
-      | [ H' : ?b = _ |- _ ] => rewrite H' in H
-      end
-  end.
+  repeat match goal with
+         | [ H : (if ?b then _ else _) = _ |- _ ] =>
+           case_eq b;
+             intros;
+             match goal with
+             | [ H' : ?b = _ |- _ ] => rewrite H' in H
+             end
+         end.
   - repeat rewrite Bool.andb_true_iff in *.
     intuition idtac.
     rewrite weqb_true_iff in *.
     subst.
-    destruct (transformableStep _ _ _ _ _ _ _ _ _ _ H5 eq_refl H4 H1) as [rf' [pc' [mem' [Hts [Hrf [Hpc Hmem]]]]]].
+    destruct (transformableStep _ _ _ _ _ _ _ _ _ _ H4 eq_refl H5 H1) as [rf' [pc' [mem' [Hts [Hrf [Hpc Hmem]]]]]].
     subst.
     rewrite Hts.
     rewrite (proj2 (weqb_true_iff _ _)) by reflexivity.
@@ -361,11 +363,22 @@ Proof.
     | [ H : match ?x with | _ => _ end = _ |- _ ] => case_eq x; intros; match goal with | [ H' : x = _ |- _ ] => rewrite H' in H end; simpl in H; try discriminate
     end.
     destruct p as [[? ?] ?].
+    specialize (IHfuel _ _ _ _ _ _ _ _ _ _ _ _ _ H H4 H1).
+    rewrite IHfuel.
+    repeat match goal with
+           | [ |- (if ?b then _ else _) = _ ] => destruct b; auto
+           end.
+  - remember H as H' eqn:Heq; clear Heq.
+    destruct fuel; simpl in H'; try discriminate.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => case_eq x; intros; match goal with | [ H' : x = _ |- _ ] => rewrite H' in H end; simpl in H; try discriminate
+    end.
+    destruct p as [[? ?] ?].
     specialize (IHfuel _ _ _ _ _ _ _ _ _ _ _ _ _ H H3 H1).
     rewrite IHfuel.
-    match goal with
-    | [ |- (if ?b then _ else _) = _ ] => destruct b; auto
-    end.
+    repeat match goal with
+           | [ |- (if ?b then _ else _) = _ ] => destruct b; auto
+           end.
 Qed.
 
 Ltac nextpc :=
@@ -1037,14 +1050,14 @@ Proof.
     end;
     try discriminate.
   destruct p as [[? ?] ?].
-  match goal with
-  | [ H : (if ?b then _ else _) = _ |- _ ] =>
-    case_eq b;
-      intros;
-      match goal with
-      | [ H : b = _ |- _ ] => rewrite H in *
-      end
-  end; eapply stepSafeHiding; eauto.
+  repeat match goal with
+         | [ H : (if ?b then _ else _) = _ |- _ ] =>
+           case_eq b;
+             intros;
+             match goal with
+             | [ H : b = _ |- _ ] => rewrite H in *
+             end
+         end; eapply stepSafeHiding; eauto.
   repeat rewrite Bool.andb_true_iff in *.
   intuition idtac.
   rewrite weqb_true_iff in *.
