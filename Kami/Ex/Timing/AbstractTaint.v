@@ -67,6 +67,72 @@ Definition taintNextPc (rf : pseudoRegfile) (pc : address) (inst : data) : optio
                  end
             else Some (pc ^+ $4).
 
+Definition taintExec (v1 v2 : pseudoData) (pc : address) (inst : data) : pseudoData :=
+  let op := evalExpr (getOpcodeE #inst)%kami_expr in
+  let f7 := evalExpr (getFunct7E #inst)%kami_expr in
+  let f3 := evalExpr (getFunct3E #inst)%kami_expr in
+  if weqb op rv32iOpJAL
+  then Some (zext (pc ^+ $4) 16)
+  else if weqb op rv32iOpJALR
+       then Some (zext (pc ^+ $4) 16)
+       else if weqb op rv32iOpOP
+            then match v1, v2 with
+                 | Some val1, Some val2 =>
+                   if weqb f7 $0
+                   then if weqb f3 rv32iF3ADD
+                        then Some (val1 ^+ val2)
+                        else if weqb f3 rv32iF3SLL
+                             then Some (wlshift val1 (wordToNat (split1 5 _ val2)))
+                             else if weqb f3 rv32iF3SRL
+                                  then Some (wrshift val1 (wordToNat (split1 5 _ val2)))
+                                  else if weqb f3 rv32iF3OR
+                                       then Some (val1 ^| val2)
+                                       else if weqb f3 rv32iF3AND
+                                            then Some (val1 ^& val2)
+                                            else if weqb f3 rv32iF3XOR
+                                                 then Some (wxor val1 val2)
+                                                 else if weqb f3 rv32iF3SLT
+                                                      then if weqb (split2 31 _ (val1 ^- val2)) $1
+                                                           then Some $1
+                                                           else Some $0
+                                                      else if weqb f3 rv32iF3SLTU
+                                                           then if wlt_dec val1 val2
+                                                                then Some $1
+                                                                else Some$0
+                                                           else None
+                   else if weqb f7 $1
+                        then if weqb f3 rv32mF3MUL
+                             then Some (wmult val1 val2)
+                             else None
+                        else if weqb f3 rv32iF3SUB
+                             then Some (val1 ^- val2)
+                             else None
+                 | _, _ => None
+                 end
+            else if weqb op rv32iOpOPIMM
+                 then match v1 with
+                      | Some val1 =>
+                        if weqb f3 rv32iF3ADDI
+                        then Some (val1 ^+ sext (evalExpr (getOffsetIE #inst)%kami_expr) 20)
+                        else if weqb f3 rv32iF3SLLI
+                             then Some (wlshift val1 (wordToNat (evalExpr (getOffsetShamtE #inst)%kami_expr)))
+                             else if weqb f3 rv32iF3SLTI
+                                  then if wlt_dec val1 (sext (evalExpr (getOffsetIE #inst)%kami_expr) 20)
+                                       then Some $1
+                                       else Some $0
+                                  else if weqb f3 rv32iF3SLTIU
+                                       then if wlt_dec val1 (zext (evalExpr (getOffsetIE #inst)%kami_expr) 20)
+                                            then Some $1
+                                            else Some $0
+                                       else if weqb f3 rv32iF3ANDI
+                                            then Some (val1 ^& (sext (evalExpr (getOffsetIE #inst)%kami_expr) 20))
+                                            else None
+                      | _ => None
+                      end
+                 else if weqb op rv32iOpLUI
+                      then Some (combine (wzero 12) (evalExpr (getOffsetUE #inst)%kami_expr))
+                      else None.
+
 Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : pseudoMemory) : option (pseudoRegfile * address * pseudoMemory) :=
   let inst := pm (evalExpr (rv32iAlignPc type pc)) in
   match (evalExpr (rv32iGetOptype type inst)) with
@@ -107,10 +173,7 @@ Definition taintStep (rf : pseudoRegfile) (pm : progMem) (pc : address) (mem : p
       let src1 := evalExpr (rv32iGetSrc1 type inst) in
       let src2 := evalExpr (rv32iGetSrc2 type inst) in
       let dst := evalExpr (rv32iGetDst type inst) in
-      let execVal := match rf src1, rf src2 with
-                     | Some val1, Some val2 => Some (evalExpr (rv32iExec type val1 val2 pc inst))
-                     | _, _ => None
-                     end in
+      let execVal := taintExec (rf src1) (rf src2) pc inst in
       Some (prset rf dst execVal, nextPc, mem)
     end
   | _ => None
@@ -268,8 +331,18 @@ Proof.
       end; auto.
       repeat match goal with
              | [ |- context[rf1 ?r] ] => assert (transformable (rf1 r) (rf1' r) = true) by auto; destruct (rf1 r); destruct (rf1' r)
-             end; auto; unfold transformable in *; repeat rewrite weqb_true_iff in *; subst; auto.
-      discriminate.
+             end; unfold transformable in *; try rewrite weqb_true_iff in *; try discriminate; subst;
+        unfold taintExec;
+        repeat (match goal with
+                | [ |- context[@weqb 7 ?x ?y] ] => destruct (@weqb 7 x y)
+                end; try rewrite weqb_true_iff in *; auto);
+        repeat (match goal with
+                | [ |- context[@weqb 3 ?x ?y] ] => destruct (@weqb 3 x y)
+                end; try rewrite weqb_true_iff in *; auto);
+        repeat (match goal with
+                | [ |- context[@weqb 1 ?x ?y] ] => destruct (@weqb 1 x y)
+                | [ |- context[wlt_dec ?x ?y] ] => destruct (wlt_dec x y)
+                end; try rewrite weqb_true_iff in *; auto).
     + unfold taintNextPc in *.
       repeat match goal with
              | [ |- context[weqb (evalExpr (getOpcodeE ?i)) ?o] ] => destruct (weqb (evalExpr (getOpcodeE i)) o); auto
@@ -520,6 +593,244 @@ Proof.
                    | [ H : weqb x y = _ |- _ ] => rewrite H
                    end
            end; auto.
+Qed.
+
+Definition default {A} (o : option A) (d : A) :=
+  match o with
+  | Some v => v
+  | _ => d
+  end.
+
+Lemma taintExec_correct : forall v1 v2 v1m v2m pc inst,
+    taintExec v1 v2 pc inst = None
+    \/ taintExec v1 v2 pc inst = Some (evalExpr (rv32iExec type (default v1 v1m) (default v2 v2m) pc inst)).
+Proof.
+  intros.
+  case_eq (taintExec v1 v2 pc inst); intuition idtac.
+  right.
+  rewrite <- H.
+  unfold taintExec in *.
+  unfold rv32iExec.
+  unfold evalExpr; fold evalExpr.
+  repeat match goal with
+         | [ |- context[isEq (Bit 7) ?x ?y] ] => destruct (isEq (Bit 7) x y)
+         end;
+    unfold evalConstT in *;
+    try congruence;
+    try match goal with
+        | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+        end;
+    repeat match goal with
+           | [ |- context[weqb ?x ?y] ] =>
+             try replace (weqb x y) with true in * by reflexivity;
+               try replace (weqb x y) with false in * by reflexivity
+           end.
+  - unfold evalBinBit, evalUniBit.
+    unfold rv32iAddrSize.
+    match goal with
+    | [ |- context[match ?x with _ => _ end] ] =>
+      let x' := eval hnf in x in change x with x'; cbv beta iota
+    end.
+    eq_rect_simpl.
+    reflexivity.
+  - unfold evalBinBit, evalUniBit.
+    unfold rv32iAddrSize.
+    match goal with
+    | [ |- context[match ?x with _ => _ end] ] =>
+      let x' := eval hnf in x in change x with x'; cbv beta iota
+    end.
+    eq_rect_simpl.
+    reflexivity.
+  - destruct v1; destruct v2; try discriminate.
+    repeat match goal with
+           | [ |- context[isEq (Bit 7) ?x ?y] ] => destruct (isEq (Bit 7) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end.
+    repeat match goal with
+           | [ |- context[isEq (Bit 3) ?x ?y] ] => destruct (isEq (Bit 3) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end; try discriminate;
+      unfold evalUniBit, evalBinBit, default;
+      auto.
+    + deq.
+    + unfold evalBinBitBool.
+      destruct (wlt_dec d0 d1); auto.
+    + repeat match goal with
+             | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+               case_eq (weqb x y); intros;
+                 try (rewrite weqb_true_iff in *; tauto);
+                 clear H
+             end.
+      repeat match goal with
+             | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+             end.
+      discriminate.
+  - destruct v1; destruct v2; try discriminate.
+    repeat match goal with
+           | [ |- context[isEq (Bit 7) ?x ?y] ] => destruct (isEq (Bit 7) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end.
+    repeat match goal with
+           | [ |- context[isEq (Bit 3) ?x ?y] ] => destruct (isEq (Bit 3) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end; try discriminate;
+        unfold evalUniBit, evalBinBit, default;
+        auto.
+    repeat match goal with
+           | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+             case_eq (weqb x y); intros;
+               try (rewrite weqb_true_iff in *; tauto);
+               clear H
+           end.
+    repeat match goal with
+           | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+           end.
+    discriminate.
+  - destruct v1; destruct v2; try discriminate.
+    repeat match goal with
+           | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+             case_eq (weqb x y); intros;
+               try (rewrite weqb_true_iff in *; tauto);
+               clear H
+           end.
+    replace (natToWord 7 0) with (WO~0~0~0~0~0~0~0) in * by reflexivity.
+    replace (natToWord 7 1) with (WO~0~0~0~0~0~0~1) in * by reflexivity.
+    repeat match goal with
+           | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+           end.
+    repeat match goal with
+           | [ |- context[isEq (Bit 3) ?x ?y] ] => destruct (isEq (Bit 3) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end; try discriminate;
+        unfold evalUniBit, evalBinBit, default;
+        auto.
+    repeat match goal with
+           | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+             case_eq (weqb x y); intros;
+               try (rewrite weqb_true_iff in *; tauto);
+               clear H
+           end.
+    repeat match goal with
+           | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+           end.
+    discriminate.
+  - destruct v1; try discriminate.
+    repeat match goal with
+           | [ |- context[isEq (Bit 3) ?x ?y] ] => destruct (isEq (Bit 3) x y)
+           end;
+      unfold evalConstT in *;
+      try congruence;
+      try match goal with
+          | [ H : ?x = ?y |- context[weqb ?x ?y] ] => repeat rewrite H in *
+          end;
+      repeat match goal with
+             | [ |- context[weqb ?x ?y] ] =>
+               try replace (weqb x y) with true in * by reflexivity;
+                 try replace (weqb x y) with false in * by reflexivity
+             end; try discriminate;
+        unfold evalUniBit, evalBinBit, default;
+        auto.
+    + unfold evalBinBitBool.
+      unfold rv32iDataBytes.
+      Opaque evalExpr.
+      Opaque wlt_dec.
+      match goal with
+      | [ |- context[wlt_dec _ match ?x with _ => _ end] ] =>
+        let x' := eval hnf in x in change x with x'; cbv beta iota
+      end.
+      eq_rect_simpl.
+      simpl.
+      match goal with
+      | [ |- context[@wlt_dec ?sz ?x ?y] ] => destruct (@wlt_dec sz x y)
+      end; auto.
+    + repeat match goal with
+             | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+               case_eq (weqb x y); intros;
+                 try (rewrite weqb_true_iff in *; tauto);
+                 clear H
+             end.
+      repeat match goal with
+             | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+             end.
+      unfold evalBinBitBool.
+      unfold rv32iDataBytes.
+      match goal with
+      | [ |- context[wlt_dec _ match ?x with _ => _ end] ] =>
+        let x' := eval hnf in x in change x with x'; cbv beta iota
+      end.
+      eq_rect_simpl.
+      simpl.
+      match goal with
+      | [ |- context[@wlt_dec ?sz ?x ?y] ] => destruct (@wlt_dec sz x y)
+      end; auto.
+    + repeat match goal with
+             | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+               case_eq (weqb x y); intros;
+                 try (rewrite weqb_true_iff in *; tauto);
+                 clear H
+             end.
+      repeat match goal with
+             | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+             end.
+      discriminate.
+  - reflexivity.
+  - repeat match goal with
+           | [ H : ?x <> ?y, H' : context[weqb ?x ?y] |- _ ] =>
+             case_eq (weqb x y); intros;
+               try (rewrite weqb_true_iff in *; tauto);
+               clear H
+           end.
+    repeat match goal with
+           | [ H : weqb _ _ = false |- _ ] => rewrite H in *; clear H
+           end.
+    discriminate.
+    Transparent evalExpr.
+    Transparent wlt_dec.
 Qed.
 
 Lemma stepSafeHiding : forall rf pm pc mem rf' pc' mem',
@@ -922,9 +1233,9 @@ Proof.
     match goal with
     | [ H : extractFhTrace (_ :: _) = _ |- _ ] => simpl in H
     end.
-    case_eq (rf0 src1); case_eq (rf0 src2); intros;
+    case_eq (taintExec (rf0 src1) (rf0 src2) pc inst); intros;
       match goal with
-      | [ H1 : rf0 src1 = _, H2 : rf0 src2 = _ |- _ ] => rewrite H1 in *; try rewrite H2 in *
+      | [ H : taintExec _ _ _ _ = _ |- _ ] => rewrite H in *
       end.
     + specialize (Hah rmask mmask).
       subst rf mem.
@@ -943,76 +1254,30 @@ Proof.
            extensionality a.
            unfold rset, prset, mask.
            unfold evalExpr; fold evalExpr.
-           rewrite H5.
-           rewrite H6.
            repeat deq.
+           destruct (taintExec_correct (rf0 src1) (rf0 src2) (rmask' src1) (rmask' src2) pc inst); try congruence.
+           replace d with (evalExpr
+                             (rv32iExec type (default (rf0 src1) (rmask' src1))
+                                        (default (rf0 src2) (rmask' src2)) pc inst)) by congruence.
+           unfold default.
+           reflexivity.
         -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
       * extensionality a.
         unfold execVal, val1, val2, rset, prset, mask.
         unfold evalExpr; fold evalExpr.
-        rewrite H5.
-        rewrite H6.
         repeat deq.
-    + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type d val2 pc inst))) mmask).
-      subst rf mem.
-      match goal with
-      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
-      end.
-      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type d (rmask' src2) pc inst))) mmask' H3).
-        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
-        exists (Nm pc :: trace'0).
-        intuition idtac; try solve [simpl; f_equal; auto].
-        econstructor; eauto.
-        match goal with
-        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
-        end.
-        -- fold src1 src2 dst.
-           extensionality a.
-           unfold rset, prset, mask.
-           unfold evalExpr; fold evalExpr.
-           rewrite H5.
-           rewrite H6.
-           repeat deq.
-        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
-      * extensionality a.
-        unfold execVal, val1, val2, rset, prset, mask.
-        unfold evalExpr; fold evalExpr.
-        rewrite H5.
-        rewrite H6.
-        repeat deq.
-    + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type val1 d pc inst))) mmask).
-      subst rf mem.
-      match goal with
-      | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
-      end.
-      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) d pc inst))) mmask' H3).
-        destruct Hah as [trace'0 [Hht' [Hct' Het']]].
-        exists (Nm pc :: trace'0).
-        intuition idtac; try solve [simpl; f_equal; auto].
-        econstructor; eauto.
-        match goal with
-        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
-        end.
-        -- fold src1 src2 dst.
-           extensionality a.
-           unfold rset, prset, mask.
-           unfold evalExpr; fold evalExpr.
-           rewrite H5.
-           rewrite H6.
-           repeat deq.
-        -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
-      * extensionality a.
-        unfold execVal, val1, val2, rset, prset, mask.
-        unfold evalExpr; fold evalExpr.
-        rewrite H5.
-        rewrite H6.
-        repeat deq.
+           destruct (taintExec_correct (rf0 src1) (rf0 src2) (rmask src1) (rmask src2) pc inst); try congruence.
+           replace d with (evalExpr
+                             (rv32iExec type (default (rf0 src1) (rmask src1))
+                                        (default (rf0 src2) (rmask src2)) pc inst)) by congruence.
+           unfold default.
+           reflexivity.
     + specialize (Hah (rset rmask dst (evalExpr (rv32iExec type val1 val2 pc inst))) mmask).
       subst rf mem.
       match goal with
       | [ H : hasTrace ?r _ _ _ ?t, H' : hasTrace ?r' _ _ _ ?t -> _ |- _ ] => replace r' with r in H'
       end.
-      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) (rmask' src2) pc inst))) mmask' H3).
+      * specialize (Hah Hht H2 _ (rset rmask' dst (evalExpr (rv32iExec type (mask rf0 rmask' src1) (mask rf0 rmask' src2) pc inst))) mmask' H3).
         destruct Hah as [trace'0 [Hht' [Hct' Het']]].
         exists (Nm pc :: trace'0).
         intuition idtac; try solve [simpl; f_equal; auto].
@@ -1024,15 +1289,11 @@ Proof.
            extensionality a.
            unfold rset, prset, mask.
            unfold evalExpr; fold evalExpr.
-           rewrite H5.
-           rewrite H6.
            repeat deq.
         -- destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
       * extensionality a.
         unfold execVal, val1, val2, rset, prset, mask.
         unfold evalExpr; fold evalExpr.
-        rewrite H5.
-        rewrite H6.
         repeat deq.
 Qed.
 
@@ -1552,9 +1813,9 @@ Proof.
     match goal with
     | [ H : extractFhTrace (_ :: _) = _ |- _ ] => simpl in H
     end.
-    case_eq (rf0 src1); case_eq (rf0 src2); intros;
+    case_eq (taintExec (rf0 src1) (rf0 src2) pc inst); intros;
       match goal with
-      | [ H1 : rf0 src1 = _, H2 : rf0 src2 = _ |- _ ] => rewrite H1 in Hsafenew; try rewrite H2 in Hsafenew
+      | [ H : taintExec _ _ _ _ = _ |- _ ] => rewrite H in Hsafenew
       end.
     + assert (rset rf dst execVal = mask (prset rf0 dst (Some execVal)) rmask).
       * subst rf.
@@ -1562,9 +1823,9 @@ Proof.
         unfold rset, prset, mask.
         unfold evalExpr; fold evalExpr.
         repeat deq.
-      * replace (evalExpr (rv32iExec type d0 d pc inst)) with execVal in Hsafenew.
+      * replace d with execVal in Hsafenew.
         -- subst rf.
-           specialize (IHHht (prset rf0 dst (Some execVal)) _ rmask _ H8 Heqmmem _ Hsafenew _ H2 _ rmask' mmask' H3).
+           specialize (IHHht (prset rf0 dst (Some execVal)) _ rmask _ H7 Heqmmem _ Hsafenew _ H2 _ rmask' mmask' H3).
            destruct IHHht as [trace'0 [Hht' [Hct' Het']]].
            exists (Nm pc :: trace'0).
            intuition idtac; try solve [simpl; f_equal; auto].
@@ -1575,17 +1836,18 @@ Proof.
            ++ extensionality a.
               fold src1 src2 dst.
               unfold execVal, val1, val2, rset, prset, mask.
-              repeat rewrite H6.
-              repeat rewrite H7.
               unfold evalExpr; fold evalExpr.
               repeat deq.
+              destruct (taintExec_correct (rf0 src1) (rf0 src2) (rmask' src1) (rmask' src2) pc inst); try congruence.
+              destruct (taintExec_correct (rf0 src1) (rf0 src2) (rmask src1) (rmask src2) pc inst); try congruence.
+              rewrite H10 in H11.
+              unfold default in *.
+              congruence.
            ++ destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
         -- unfold execVal, val1, val2.
            subst rf.
            unfold mask.
-           rewrite H6.
-           rewrite H7.
-           reflexivity.
+           destruct (taintExec_correct (rf0 src1) (rf0 src2) (rmask src1) (rmask src2) pc inst); unfold default in *; try congruence.
     + assert (rset rf dst execVal = mask (prset rf0 dst None) (rset rmask dst execVal)).
       * subst rf.
         extensionality a.
@@ -1593,7 +1855,7 @@ Proof.
         unfold evalExpr; fold evalExpr.
         repeat deq.
       * subst rf.
-        specialize (IHHht _ _ _ _ H8 Heqmmem _ Hsafenew _ H2 _ (rset rmask' dst (evalExpr (rv32iExec type d (rmask' src2) pc inst))) mmask' H3).
+        specialize (IHHht _ _ _ _ H7 Heqmmem _ Hsafenew _ H2 _ (rset rmask' dst (evalExpr (rv32iExec type (mask rf0 rmask' src1) (mask rf0 rmask' src2) pc inst))) mmask' H3).
         destruct IHHht as [trace'0 [Hht' [Hct' Het']]].
         exists (Nm pc :: trace'0).
         intuition idtac; try solve [simpl; f_equal; auto].
@@ -1604,54 +1866,6 @@ Proof.
         ++ extensionality a.
            fold src1 src2 dst.
            unfold val2, rset, prset, mask.
-           repeat rewrite H6.
-           repeat rewrite H7.
-           unfold evalExpr; fold evalExpr.
-           repeat deq.
-        ++ destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
-    + assert (rset rf dst execVal = mask (prset rf0 dst None) (rset rmask dst execVal)).
-      * subst rf.
-        extensionality a.
-        unfold rset, prset, mask.
-        unfold evalExpr; fold evalExpr.
-        repeat deq.
-      * subst rf.
-        specialize (IHHht _ _ _ _ H8 Heqmmem _ Hsafenew _ H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) d pc inst))) mmask' H3).
-        destruct IHHht as [trace'0 [Hht' [Hct' Het']]].
-        exists (Nm pc :: trace'0).
-        intuition idtac; try solve [simpl; f_equal; auto].
-        econstructor; eauto.
-        match goal with
-        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
-        end.
-        ++ extensionality a.
-           fold src1 src2 dst.
-           unfold val1, rset, prset, mask.
-           repeat rewrite H6.
-           repeat rewrite H7.
-           unfold evalExpr; fold evalExpr.
-           repeat deq.
-        ++ destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
-    + assert (rset rf dst execVal = mask (prset rf0 dst None) (rset rmask dst execVal)).
-      * subst rf.
-        extensionality a.
-        unfold rset, prset, mask.
-        unfold evalExpr; fold evalExpr.
-        repeat deq.
-      * subst rf.
-        specialize (IHHht _ _ _ _ H8 Heqmmem _ Hsafenew _ H2 _ (rset rmask' dst (evalExpr (rv32iExec type (rmask' src1) (rmask' src2) pc inst))) mmask' H3).
-        destruct IHHht as [trace'0 [Hht' [Hct' Het']]].
-        exists (Nm pc :: trace'0).
-        intuition idtac; try solve [simpl; f_equal; auto].
-        econstructor; eauto.
-        match goal with
-        | [ H : hasTrace ?r _ ?c _ ?t |- hasTrace ?r' _ ?c' _ ?t ] => replace c' with c; [replace r' with r; auto|]
-        end.
-        ++ extensionality a.
-           fold src1 src2 dst.
-           unfold rset, prset, mask.
-           repeat rewrite H6.
-           repeat rewrite H7.
            unfold evalExpr; fold evalExpr.
            repeat deq.
         ++ destruct (taintNextPc_correct rf0 rmask' pc inst); congruence.
