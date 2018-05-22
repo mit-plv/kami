@@ -406,6 +406,8 @@ Section RV32IStruct.
   | ANDI (rs1 rd: Gpr) (ofs: word 12): Rv32i
   | AND (rs1 rs2 rd: Gpr): Rv32i
   | XOR (rs1 rs2 rd: Gpr): Rv32i
+  | SLT (rs1 rs2 rd: Gpr): Rv32i
+  | SLTU (rs1 rs2 rd: Gpr): Rv32i
   (* pseudo-instructions *)
   | LI (rd: Gpr) (ofs: word 20): Rv32i
   | MV (rs1 rd: Gpr): Rv32i
@@ -472,6 +474,8 @@ Section RV32IStruct.
     | ANDI rs1 rd ofs => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ANDI ofs
     | AND rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7AND rv32iF3AND
     | XOR rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7XOR rv32iF3XOR
+    | SLTU rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLTU rv32iF3SLTU
+    | SLT rs1 rs2 rd => RtypeToRaw rv32iOpOP rs1 rs2 rd rv32iF7SLT rv32iF3SLT
     (* pseudo-instructions *)
     | LI rd ofs => ItypeToRaw rv32iOpOPIMM x0 rd rv32iF3ADDI (split1 12 8 ofs)
     | MV rs1 rd => ItypeToRaw rv32iOpOPIMM rs1 rd rv32iF3ADDI (natToWord _ 0)
