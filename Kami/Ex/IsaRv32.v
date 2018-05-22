@@ -54,9 +54,7 @@ Section RV32I.
 
     Definition getRs2E {ty}
                (inst : Expr ty (SyntaxKind (Data rv32iDataBytes))) : Expr ty (SyntaxKind (Bit 5)) :=
-      (IF getOpcodeE inst == $$ rv32iOpOPIMM
-       then $0
-       else (UniBit (ConstExtract 20 5 _) inst))%kami_expr.
+      (UniBit (ConstExtract 20 5 _) inst)%kami_expr.
 
     Definition getRs2ValueE {ty}
                (s : StateT rv32iDataBytes rv32iRfIdx ty)
@@ -530,7 +528,7 @@ Section UnitTests.
   Definition ItypeToRaw_getRs2E_correct:
     evalExpr (getRs2E
                 (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
-    gprToRaw x0 := eq_refl.
+    gprToRaw x5 := eq_refl.
   Definition ItypeToRaw_getRdE_correct:
     evalExpr (getRdE
                 (Const _ (ConstBit (ItypeToRaw rv32iOpOPIMM x1 x2 rv32iF3SRLI (natToWord _ 5))))) =
@@ -600,4 +598,3 @@ Section UnitTests.
     natToWord _ 5 := eq_refl.
   
 End UnitTests.
-
