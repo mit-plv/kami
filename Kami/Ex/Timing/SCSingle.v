@@ -762,6 +762,8 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
            | [ H : evalExpr (!%kami_expr (_ == $$ (_))%kami_expr) = true |- _ ] => apply expr_bool_unequality in H
            end.
 
+  Opaque rv32iAlignAddr.
+  Opaque evalUniBit.
   Lemma relatedCensor :
     forall rf1 rf2 pm pc mem1 mem2 trace1 trace2 newRegs1 newRegs2 ls1 ls2,
       hasTrace rf1 pm pc mem1 trace1 ->
@@ -846,11 +848,16 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
         destruct tr as [|t tr];
           simpl in Hct;
           try destruct t;
-          try congruence;
-          inversion Hct;
-          clear Hct;
-          opaque_subst
+          try congruence
       end.
+      match goal with
+      | [ H : Rd ?p ?a _ :: ?ct = Rd ?p' ?a' _ :: ?ct' |- _ ] =>
+        assert (p = p') by congruence;
+          assert (a = a') by congruence;
+          assert (ct = ct') by congruence;
+          clear H
+      end.
+      opaque_subst.
       match goal with
       | [ Hrt1 : relatedTrace (_ :: _) ?l1, Hrt2 : relatedTrace (_ :: _) ?l2 |- _ ] => destruct l1; destruct l2; inversion Hrt1; inversion Hrt2; clear Hrt1; clear Hrt2
       end.
@@ -914,11 +921,9 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                                      |- _ = evalExpr ?adr ] =>
             replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!rv32iRs@."data")%kami_expr))) in H by eauto
           end.
-          Opaque evalExpr.
           match goal with
-          | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+          | [ H : Some (Rd _ ?x _) = Some (Rd _ ?y _) |- _ ] => assert (x = y) by congruence; clear H
           end.
-          Transparent evalExpr.
           match goal with
           | [ H : ?x = _ |- _ = ?x ] => rewrite H
           end.
@@ -961,13 +966,14 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
               end.
-        * match goal with
-          | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
-          end.
-          subst.
+        * rewrite H.
+          repeat match goal with
+                 | [ H : hasTrace _ _ _ _ (_ :: _), H' : _ |- _ ] => clear H'
+                 end.
+          remember (Rd x2 laddr_aligned val0) as rd.
           match goal with
-          | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
-          end.
+          | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+          end; subst; try discriminate; eassumption.
         * match goal with
           | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
           end.
@@ -991,9 +997,13 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                                         |- _ ] =>
                match goal with
                | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= _}%kami_expr, x)) _|}) = Some (Rd $ (0) _ (mem laddr_aligned)) |- _ ] =>
-                 replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!rv32iRs@."data")%kami_expr))) in H by eauto; inversion H
+                 replace (labelToTraceEvent l) with (Some (Rd $ (0) (evalExpr adr) (evalExpr (#x!rv32iRs@."data")%kami_expr))) in H by eauto
                end
              end.
+             match goal with
+             | [ H : Some (Rd _ _ ?x) = Some (Rd _ _ ?y) |- _ ] => assert (x = y) by congruence
+             end.
+             rewrite <- H2.
              reflexivity.
         * Opaque evalExpr.
           match goal with
@@ -1038,11 +1048,10 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
              end.
              ++ Opaque evalExpr.
                 match goal with
-                | [ H : Some _ = Some _ |- _ ] => inversion H
+                | [ H : Some (Rd _ _ ?x) = Some (Rd _ _ ?y) |- _ ] => assert (x = y) by congruence
                 end.
-                match goal with
-                | [ H : ?x = _ |- _ = _ ?x ] => rewrite H
-                end.
+                replace (evalExpr (#x3)!rv32iRs@.("data"))%kami_expr with (x3 Fin.F1) in H2 by reflexivity.
+                rewrite H2.
                 match goal with
                 | [ H : SCProcMemConsistent _ ?m |- _ = ?m _ ] =>
                   inversion H;
@@ -1062,8 +1071,9 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                 ** congruence.
                 ** reflexivity.
                 ** match goal with
-                   | [ |- context[(evalExpr STRUCT {"addr" ::= ?a; "op" ::= _; "data" ::= _ })%kami_expr] ] => replace laddr_aligned with (evalExpr a)
+                   | [ |- context[(evalExpr STRUCT {"addr" ::= ?a; "op" ::= _; "data" ::= _ })%kami_expr] ] => replace laddr_aligned with (evalExpr a) by congruence
                    end.
+                   Transparent rv32iAlignAddr.
                    reflexivity.
              ++ eauto.
         * Opaque evalExpr.
@@ -1086,9 +1096,14 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
         destruct tr as [|t tr];
           simpl in Hct;
           try destruct t;
-          try congruence;
-          inversion Hct;
-          clear Hct;
+          try congruence
+      end.
+      match goal with
+      | [ H : RdZ ?p ?a :: ?ct = RdZ ?p' ?a' :: ?ct' |- _ ] =>
+        assert (p = p') by congruence;
+          assert (a = a') by congruence;
+          assert (ct = ct') by congruence;
+          clear H;
           opaque_subst
       end.
       match goal with
@@ -1176,9 +1191,8 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                 | [ |- relatedTrace _ _ ] => eassumption
                 end.
           -- match goal with
-             | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
+             | [ Hht : hasTrace _ _ _ _ (?e :: ?t) |- hasTrace _ _ _ _ ?t ] => remember e as e'; inversion Hht; subst; try discriminate
              end.
-             subst.
              match goal with
              | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; try eassumption
              end.
@@ -1219,9 +1233,14 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
         destruct tr as [|t tr];
           simpl in Hct;
           try destruct t;
-          try congruence;
-          inversion Hct;
-          clear Hct;
+          try congruence
+      end.
+      match goal with
+      | [ H : Wr ?p ?a _ :: ?ct = Wr ?p' ?a' _ :: ?ct' |- _ ] =>
+        assert (p = p') by congruence;
+          assert (a = a') by congruence;
+          assert (ct = ct') by congruence;
+          clear H;
           opaque_subst
       end.
       match goal with
@@ -1307,17 +1326,16 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
               replace (labelToTraceEvent l) with (Some (Wr $ (0) (evalExpr adr) (evalExpr dat))) in H by eauto
             end
           end.
-          Opaque evalExpr.
           match goal with
-          | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+          | [ H : Some (Wr _ ?x _) = Some (Wr _ ?y _) |- _ ] => assert (x = y) by congruence; clear H
           end.
-          Transparent evalExpr.
           match goal with
           | [ H : ?x = _ |- _ = ?x ] => rewrite H
           end.
           unfold saddr_aligned, saddr, addr, srcVal, srcIdx.
           reflexivity.
-      + match goal with
+      + Transparent evalExpr.
+        match goal with
         | [ rf : word rv32iRfIdx -> word 32,
                  rf' : word rv32iRfIdx -> word 32,
                        pm : word rv32iIAddrSize -> word 32,
@@ -1353,13 +1371,20 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
               | [ |- censorTrace _ = censorTrace _ ] => eassumption
               | [ |- relatedTrace _ _ ] => eassumption
               end.
-        * match goal with
-          | [ Hht : hasTrace _ _ _ _ (_ :: ?t) |- hasTrace _ _ _ _ ?t ] => inversion Hht
-          end.
+        * rewrite H.
+          Opaque evalExpr.
+          match goal with
+          | [ Hht : hasTrace _ _ _ _ (?e :: ?t) |- hasTrace _ _ _ _ ?t ] => remember e as e'; inversion Hht; subst e'
+          end;
+            match goal with
+            | [ H : Wr _ _ _ = Wr _ _ _ |- _ ] => idtac
+            | _ => discriminate
+            end.
           subst.
           match goal with
           | [ Hht : hasTrace _ _ ?pc1 _ ?t |- hasTrace _ _ ?pc2 _ ?t ] => replace pc2 with pc1 by congruence; eassumption
           end.
+          Transparent evalExpr.
         * match goal with
           | [ H : foldSSUpds ss0 = _ |- _ ] => rewrite H
           end.
@@ -1424,11 +1449,12 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
             | [ H : labelToTraceEvent (hide {| annot := _; defs := _; calls := FMap.M.add _ (existT _ _ (evalExpr STRUCT {"addr" ::= ?adr; "op" ::= _; "data" ::= # (?d)}%kami_expr, _)) _|}) = Some (Wr _ _ val) |- _ ] => replace (labelToTraceEvent l) with (Some (Wr $ (0) (evalExpr adr) d)) in H by reflexivity
             end
           end.
-          Opaque evalExpr.
           match goal with
-          | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+          | [ H : Some (Wr _ ?x1 ?x2) = Some (Wr _ ?y1 ?y2) |- _ ] =>
+            assert (x1 = y1) by congruence;
+              assert (x2 = y2) by congruence;
+              clear H
           end.
-          Transparent evalExpr.
           reflexivity.
     - match goal with
       | [ Hct : censorTrace (ToHost _ _ :: _) = censorTrace ?tr |- _ ] =>
@@ -3350,6 +3376,7 @@ Module SCSingleModularHiding <: (SCModularHiding SCSingle).
                    end.
              ++ constructor; (eauto || discriminate).
   Qed.
+  Transparent rv32iAlignAddr.
 
   Theorem abstractToProcHiding :
     forall rf pm pc mem,
