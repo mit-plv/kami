@@ -285,7 +285,7 @@ Theorem salsaAbstractHiding : abstractHiding concreterf (pm salsa) initpc concre
 Qed.
 
 Theorem salsaKamiHiding :
-  kamiHiding SCSingle.fhMeth SCSingle.thMeth (SCSingle.p ++ SCSingle.m)%kami (FMap.M.union (SCProcRegs initrf (pm salsa) initpc) (SCMemRegs initmem)).
+  kamiHiding SCSingle.fhMeth SCSingle.thMeth (SCSingle.p ++ SCSingle.m)%kami (FMap.M.union (SCSingle.SCProcRegs concreterf (pm salsa) initpc) (SCSingle.SCMemRegs concretemem)).
 Proof.
   apply SCSingleHiding.abstractToSCHiding.
   apply salsaAbstractHiding.
