@@ -855,42 +855,24 @@ Proof.
   intros; omega.
 Qed.
 
-Definition transparent_plus_comm : forall n m, n + m = m + n.
-  induction n;
-    induction m.
-  - exact eq_refl.
-  - unfold Init.Nat.add in *.
-    fold Init.Nat.add in *.
-    rewrite <- IHm.
-    exact eq_refl.
-  - unfold Init.Nat.add.
-    fold Init.Nat.add.
-    rewrite IHn.
-    exact eq_refl.
-  - unfold Init.Nat.add in *.
-    fold Init.Nat.add in *.
-    rewrite IHn.
-    unfold Init.Nat.add; fold Init.Nat.add.
-    rewrite <- IHn.
-    rewrite IHm.
-    exact eq_refl.
-Defined.
-
 Definition wlshift (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split1 sz n _).
-  rewrite transparent_plus_comm.
+  unshelve erewrite (_ : sz + n = n + sz);
+    [destruct (Nat.eq_dec (sz + n) (n + sz)); [assumption|abstract omega] |].
   exact (combine (wzero n) w).
 Defined.
 
 Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split2 n sz _).
-  rewrite transparent_plus_comm.
+  unshelve erewrite (_ : n + sz = sz + n);
+    [destruct (Nat.eq_dec (n + sz) (sz + n)); [assumption|abstract omega] |].
   exact (combine w (wzero n)).
 Defined.
 
 Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz.
   refine (split2 n sz _).
-  rewrite transparent_plus_comm.
+  unshelve erewrite (_ : n + sz = sz + n);
+    [destruct (Nat.eq_dec (n + sz) (sz + n)); [assumption|abstract omega] |].
   exact (sext w _).
 Defined.
 
