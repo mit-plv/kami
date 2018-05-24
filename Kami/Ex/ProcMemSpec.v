@@ -91,7 +91,7 @@ Section Spec.
         pgmInit : ConstT (Vector instK pgmSize)
       }.
     
-    Variables (procInit: ProcInit).
+    Variable (procInit: ProcInit).
 
     Definition procSpec :=
       MODULE {
