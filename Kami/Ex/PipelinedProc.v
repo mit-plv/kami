@@ -1,6 +1,8 @@
 Require Import Kami.
 Require Import Lib.Indexer.
-Require Import Ex.Fifo Ex.ProcMemSpec.
+Require Import Ex.OneEltFifo Ex.ProcMemSpec.
+
+Set Implicit Arguments.
 
 Section PipelinedProc.
   Variables (instK dataK: Kind)
@@ -21,11 +23,11 @@ Section PipelinedProc.
     Definition regFile := MODULE {
       Register "rf" : Vector dataK rfSize <- rfInit
 
-      with Method "rfRead1" (idx: Bit rfSize): Vector dataK rfSize :=
+      with Method "rfRead1" (idx: Bit rfSize): dataK :=
         Read rf <- "rf";
         Ret #rf@[#idx]
 
-      with Method "rfRead2" (idx: Bit rfSize): Vector dataK rfSize :=
+      with Method "rfRead2" (idx: Bit rfSize): dataK :=
         Read rf <- "rf";
         Ret #rf@[#idx]
 
@@ -50,20 +52,21 @@ Section PipelinedProc.
              "addr" :: Bit addrSize
            }.
 
+  Definition d2e := oneEltFifo "d2e" (Struct D2E).
   Definition d2eEnq := MethodSig ("d2e" -- "enq")(Struct D2E): Void.
   Definition d2eDeq := MethodSig ("d2e" -- "deq")(Void): Struct D2E.
 
   Section Decoder.
-    Variables (pcInit : ConstT (Bit addrSize))
+    Variables (pcInit : ConstT (Bit pgmSize))
               (pgmInit : ConstT (Vector instK pgmSize)).
     
     Definition decoder :=
       MODULE {
-        Register "pc" : Bit addrSize <- pcInit
+        Register "pc" : Bit pgmSize <- pcInit
         with Register "pgm" : Vector instK pgmSize <- pgmInit
 
         with Rule "decode" :=
-          Read pc: Bit addrSize <- "pc";
+          Read pc: Bit pgmSize <- "pc";
           Read pgm <- "pgm";
           LET inst <- #pgm@[#pc];
           LET decoded <- STRUCT { "op" ::= getOp dec inst;
@@ -112,6 +115,7 @@ Section PipelinedProc.
   Definition sbInsert := MethodSig "sbInsert"(Bit rfSize) : Void.
   Definition sbRemove := MethodSig "sbRemove"(Bit rfSize) : Void.
 
+  Definition e2w := oneEltFifo "e2w" (Struct RfWrite).
   Definition e2wEnq := MethodSig ("e2w" -- "enq")(Struct RfWrite): Void.
   Definition e2wDeq := MethodSig ("e2w" -- "deq")(Void): Struct RfWrite.
 
@@ -188,25 +192,35 @@ Section PipelinedProc.
           Call val1 <- rfRead1(#src1);
           Call toHost(#val1);
           Retv
-            
       }.
 
   End Executer.
 
   Definition writeback :=
-      MODULE {
-        Rule "writeback" :=
-          Call e2w <- e2wDeq();
-          Call rfWrite(#e2w);
-          Retv
-      }.
+    MODULE {
+      Rule "writeback" :=
+        Call e2w <- e2wDeq();
+        Call rfWrite(#e2w);
+        Retv
+    }.
 
-  Definition pipelinedProc (init: ProcInit instK dataK addrSize rfSize pgmSize) :=
+  Definition procImpl (init: ProcInit instK dataK rfSize pgmSize) :=
     ((regFile (rfInit init))
        ++ (decoder (pcInit init) (pgmInit init))
+       ++ d2e
        ++ executer
+       ++ e2w
        ++ scoreboard
        ++ writeback)%kami.
-  
+
+  Definition procMemImpl (init: ProcInit instK dataK rfSize pgmSize) :=
+    (procImpl init ++ memory dataK addrSize)%kami.
+
 End PipelinedProc.
+
+Hint Unfold regFile d2e decoder scoreboard e2w executer writeback
+     procImpl procMemImpl: ModuleDefs.
+Hint Unfold RfWrite rfRead1 rfRead2 rfWrite D2E d2eEnq d2eDeq
+     sbSearch1 sbSearch2 sbSearch3 sbInsert sbRemove
+     e2wEnq e2wDeq doMem toHost: MethDefs.
 

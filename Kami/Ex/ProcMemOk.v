@@ -1,0 +1,50 @@
+Require Import Kami.
+Require Import Lib.Indexer.
+Require Import Ex.Fifo Ex.PipelinedProc Ex.DecExec.
+
+Require Import Kami.Tactics.
+
+(* Lemma procMemImpl_ModEquiv: *)
+(*   forall (instK dataK: Kind) (addrSize rfSize pgmSize fifoSize: nat) *)
+(*          (dec: Decoder instK addrSize rfSize) *)
+(*          (exec: Executer dataK) *)
+(*          (init: ProcInit instK dataK addrSize rfSize pgmSize), *)
+(*     ModEquiv type typeUT (procMemImpl fifoSize dec exec init). *)
+(* Proof. *)
+(*   kequiv. *)
+(* Qed. *)
+(* Hint Resolve procMemImpl_ModEquiv. *)
+
+(* Definition procMemInl *)
+(*            (instK dataK: Kind) (addrSize rfSize pgmSize fifoSize: nat) *)
+(*            (dec: Decoder instK addrSize rfSize) *)
+(*            (exec: Executer dataK) *)
+(*            (init: ProcInit instK dataK addrSize rfSize pgmSize) *)
+(*   : sigT (fun m: Modules => (procMemImpl fifoSize dec exec init) <<== m). *)
+(* Proof. *)
+(*   pose proof (inlineF_refines *)
+(*                 (procMemImpl_ModEquiv fifoSize dec exec init) *)
+(*                 (Reflection.noDupStr_NoDup *)
+(*                    (Struct.namesOf *)
+(*                       (getDefsBodies *)
+(*                          (procMemImpl fifoSize dec exec init))) *)
+(*                    eq_refl)) as Him. *)
+(*   unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him. *)
+(*   match goal with *)
+(*   | [H: context[inlineF ?m] |- _] => set m as origm in H at 2 *)
+(*   end. *)
+(*   kinline_compute_in Him. *)
+(*   unfold origm in *. *)
+(*   specialize (Him eq_refl). *)
+(*   exact (existT _ _ Him). *)
+(* Defined. *)
+
+(* Theorem procMemImpl_ok: *)
+(*   forall (instK dataK: Kind) (addrSize rfSize pgmSize fifoSize: nat) *)
+(*          (dec: Decoder instK addrSize rfSize) *)
+(*          (exec: Executer dataK) *)
+(*          (init: ProcInit instK dataK addrSize rfSize pgmSize), *)
+(*     procMemImpl fifoSize dec exec init <<== procMemSpec dec exec init. *)
+(* Proof. *)
+(* Admitted. *)
+

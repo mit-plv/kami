@@ -49,7 +49,7 @@ Section Spec.
 
   End AbstractISA.
 
-  Section MemorySpec.
+  Section Memory.
 
     Definition MemRq :=
       STRUCT { "isLoad" :: Bool;
@@ -58,7 +58,7 @@ Section Spec.
              }.
     Definition MemRs := dataK.
 
-    Definition memorySpec :=
+    Definition memory :=
       MODULE {
         Register "mem" : Vector dataK addrSize <- Default
 
@@ -76,7 +76,7 @@ Section Spec.
 
     Definition doMem := MethodSig "doMem"(Struct MemRq): MemRs.
   
-  End MemorySpec.
+  End Memory.
 
   Section ProcSpec.
     Variables (pgmSize: nat)
@@ -86,7 +86,7 @@ Section Spec.
     Definition toHost := MethodSig "toHost"(dataK): Void.
 
     Record ProcInit :=
-      { pcInit : ConstT (Bit addrSize);
+      { pcInit : ConstT (Bit pgmSize);
         rfInit : ConstT (Vector dataK rfSize);
         pgmInit : ConstT (Vector instK pgmSize)
       }.
@@ -95,12 +95,12 @@ Section Spec.
 
     Definition procSpec :=
       MODULE {
-        Register "pc" : Bit addrSize <- (pcInit procInit)
+        Register "pc" : Bit pgmSize <- (pcInit procInit)
         with Register "rf" : Vector dataK rfSize <- (rfInit procInit)
         with Register "pgm" : Vector instK pgmSize <- (pgmInit procInit)
 
         with Rule "doArith" :=
-          Read pc: Bit addrSize <- "pc";
+          Read pc: Bit pgmSize <- "pc";
           Read rf <- "rf";
           Read pgm <- "pgm";
 
@@ -119,7 +119,7 @@ Section Spec.
           Retv
             
         with Rule "doLoad" :=
-          Read pc: Bit addrSize <- "pc";
+          Read pc: Bit pgmSize <- "pc";
           Read rf <- "rf";
           Read pgm <- "pgm";
 
@@ -136,7 +136,7 @@ Section Spec.
           Retv
 
         with Rule "doStore" :=
-          Read pc: Bit addrSize <- "pc";
+          Read pc: Bit pgmSize <- "pc";
           Read rf <- "rf";
           Read pgm <- "pgm";
 
@@ -154,7 +154,7 @@ Section Spec.
           Retv
 
         with Rule "doToHost" :=
-          Read pc: Bit addrSize <- "pc";
+          Read pc: Bit pgmSize <- "pc";
           Read rf <- "rf";
           Read pgm <- "pgm";
           
@@ -171,5 +171,14 @@ Section Spec.
     
   End ProcSpec.
 
+  Definition procMemSpec (dec: Decoder) (exec: Executer)
+             (pgmSize: nat) (procInit: ProcInit pgmSize) :=
+    (procSpec dec exec procInit ++ memory)%kami.
+
 End Spec.
+
+Hint Unfold memory procSpec procMemSpec: ModuleDefs.
+Hint Unfold opArith opLd opSt opTh opK
+     opArithAdd opArithSub opArithMul opArithDiv opArithK
+     MemRq MemRs doMem toHost: MethDefs.
 
