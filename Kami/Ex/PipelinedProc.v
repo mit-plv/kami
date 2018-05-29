@@ -49,7 +49,8 @@ Section PipelinedProc.
              "src1" :: Bit rfSize;
              "src2" :: Bit rfSize;
              "dst" :: Bit rfSize;
-             "addr" :: Bit addrSize
+             "addr" :: Bit addrSize;
+             "pc" :: Bit pgmSize
            }.
 
   Definition d2e := oneEltFifo "d2e" (Struct D2E).
@@ -74,7 +75,8 @@ Section PipelinedProc.
                                   "src1" ::= getSrc1 dec inst;
                                   "src2" ::= getSrc2 dec inst;
                                   "dst" ::= getDst dec inst;
-                                  "addr" ::= getAddr dec inst };
+                                  "addr" ::= getAddr dec inst;
+                                  "pc" ::= #pc };
           Call d2eEnq(#decoded);
           Write "pc" <- #pc + $1;
           Retv

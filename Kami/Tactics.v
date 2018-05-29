@@ -536,8 +536,8 @@ Ltac kdecompose_nodefs t r :=
   |reflexivity (* "getDefsBodies _ = nil" conditions *)
   |].
  
-Ltac kdecomposeR_nodefs t :=
-  apply decompositionZeroRBad with (thetaR:= t); intros; subst;
+Ltac kdecomposeR_nodefs t r :=
+  apply decompositionZeroR with (thetaR:= t) (ruleMap:= r); intros; subst;
   try reflexivity; (* "getDefsBodies _ = nil" conditions *)
   [try kdecompose_regrel_init|]. (* should have only two subgoals at this time *)
 
@@ -747,6 +747,7 @@ Ltac kinv_constr :=
   repeat
     (kinv_red;
      repeat match goal with
+            | [ |- _ /\ _ ] => split
             | [ |- exists _, _ /\ _ ] => eexists; split
             | [ |- Substep _ _ _ _ _ ] => econstructor
             | [ |- In _ _ ] => simpl; tauto

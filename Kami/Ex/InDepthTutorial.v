@@ -502,24 +502,28 @@ Definition impl12_regMap (ir sr: RegsT): Prop.
 Defined.
 Hint Unfold impl12_regMap: MethDefs.
 
+Definition impl12_ruleMap (o: RegsT): string -> option string :=
+  "doDouble" |-> "produceDouble"; ||.
+Hint Unfold impl12_ruleMap: MethDefs.
+
 Lemma impl12_ok: impl12 <<== spec12.
 Proof.
   kinline_left inlined.
 
-  kdecomposeR_nodefs impl12_regMap.
+  kdecomposeR_nodefs impl12_regMap impl12_ruleMap.
   kinv_add impl12_inv_ok.
   kinv_add_end.
   
   kinvert.
   + kinv_action_dest.
     kinv_regmap_red.
-    eexists; exists None; split; kinv_constr.
+    eexists; split; kinv_constr.
     kinv_eq.
     destruct x0; auto.
   + kinv_action_dest.
     destruct Hr; dest.
     kinv_regmap_red.
-    eexists; exists (Some "produceDouble"); split; kinv_constr.
+    eexists; split; kinv_constr.
     * kinv_eq.
       destruct x; [inv H2|reflexivity].
     * destruct x as [|hd tl]; [inv H2|].
@@ -658,24 +662,28 @@ Definition impl123_regMap (ir sr: RegsT): Prop.
 Defined.
 Hint Unfold impl123_regMap: MethDefs.
 
+Definition impl123_ruleMap (o: RegsT): string -> option string :=
+  "consume" |-> "accDoubles"; ||.
+Hint Unfold impl123_ruleMap: MethDefs.
+
 Lemma impl123_ok: impl123 <<== spec.
 Proof.
   kinline_left inlined.
 
-  kdecomposeR_nodefs impl123_regMap.
+  kdecomposeR_nodefs impl123_regMap impl123_ruleMap.
   kinv_add impl123_inv_ok.
   kinv_add_end.
   
   kinvert.
   + kinv_action_dest.
     kinv_regmap_red.
-    eexists; exists None; split; kinv_constr.
+    eexists; split; kinv_constr.
     kinv_eq.
     destruct x0; auto.
   + kinv_action_dest.
     destruct Hr; dest.
     kinv_regmap_red.
-    eexists; exists (Some "accDoubles"); split; kinv_constr.
+    eexists; split; kinv_constr.
     * simpl; destruct x; [inv H2|].
       simpl in *; subst.
       reflexivity.
