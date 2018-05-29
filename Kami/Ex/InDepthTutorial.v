@@ -235,9 +235,9 @@ Hint Resolve impl_PhoasWf.
 (** Well-formedness for valid register uses *)
 Lemma stage1_RegsWf: ModRegsWf stage1.
 Proof. kvr. Qed.
-Lemma stage2_RegsWf: ModPhoasWf stage2.
+Lemma stage2_RegsWf: ModRegsWf stage2.
 Proof. kvr. Qed.
-Lemma stage3_RegsWf: ModPhoasWf stage3.
+Lemma stage3_RegsWf: ModRegsWf stage3.
 Proof. kvr. Qed.
 Hint Resolve stage1_RegsWf stage2_RegsWf stage3_RegsWf.
 

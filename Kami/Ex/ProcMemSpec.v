@@ -73,9 +73,13 @@ Section Spec.
           as rs;
           Ret #rs
       }.
+    Lemma memory_PhoasWf: ModPhoasWf memory.
+    Proof. kequiv. Qed.
+    Lemma memory_RegsWf: ModRegsWf memory.
+    Proof. kvr. Qed.
 
     Definition doMem := MethodSig "doMem"(Struct MemRq): MemRs.
-  
+
   End Memory.
 
   Section ProcSpec.
@@ -168,6 +172,10 @@ Section Spec.
           Write "pc" <- #pc + $1;
           Retv
       }.
+    Lemma procSpec_PhoasWf: ModPhoasWf procSpec.
+    Proof. kequiv. Qed.
+    Lemma procSpec_RegsWf: ModRegsWf procSpec.
+    Proof. kvr. Qed.
     
   End ProcSpec.
 
@@ -176,6 +184,9 @@ Section Spec.
     (procSpec dec exec procInit ++ memory)%kami.
 
 End Spec.
+
+Hint Resolve memory_PhoasWf memory_RegsWf.
+Hint Resolve procSpec_PhoasWf procSpec_RegsWf.
 
 Hint Unfold memory procSpec procMemSpec: ModuleDefs.
 Hint Unfold opArith opLd opSt opTh opK

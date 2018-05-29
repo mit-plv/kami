@@ -4,7 +4,7 @@ Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.StepDet Kami.Wf.
 Require Import Kami.RefinementFacts Kami.Notations.
 Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.Substitute.
-Require Import Kami.Decomposition Kami.ModuleBound.
+Require Import Kami.Decomposition Kami.ModuleBound Kami.ModuleBoundEx.
 Require Import Kami.ParametricSyntax Kami.ParametricEquiv Kami.ParametricWf.
 
 Require Import FunctionalExtensionality Program.Equality.
@@ -369,51 +369,51 @@ Ltac kmodular :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-   | | |kinteracting| |].
+   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
+   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
+   |kdisj_edms_cms_ex 0|kdisj_ecms_dms_ex 0|kinteracting| |].
 
 Tactic Notation "kmodular" "with" constr(p) :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
-   | | | | |].
+   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
+   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
+   |kdisj_edms_cms_ex 0|kdisj_ecms_dms_ex 0|kinteracting| |].
 
 Ltac kmodularn :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting;
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
+   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
    |knoninteracting|knoninteracting| |].
 
 Tactic Notation "kmodularn" "with" constr(p) :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
+   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
    |knoninteracting|knoninteracting| |].
 
 Ltac kmodularnp :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting_p;
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs|kdisj_regs|kvr|kvr
-   |kdisj_dms|kdisj_cms|kdisj_dms|kdisj_cms
+   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
+   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
    | |knoninteracting|knoninteracting| |].
 
 Ltac kmodular_sim_l :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1;
   [knodup_regs|knodup_regs|knodup_regs
-   |kdisj_regs|kdisj_regs| | |].
+   |kdisj_regs_ex 0|kdisj_regs_ex 0| | |].
 
 Ltac kmodular_sim_r :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2;
   [knodup_regs|knodup_regs|knodup_regs
-   |kdisj_regs|kdisj_regs| | |].
+   |kdisj_regs_ex 0|kdisj_regs_ex 0| | |].
 
 Ltac ksimilar :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure;
@@ -434,8 +434,8 @@ Ltac ksubst fm tm om :=
   repeat rewrite getCalls_flattened;
   [kequiv|kequiv|kequiv|
    knodup_regs|knodup_regs|knodup_regs|
-   kdisj_regs|kdisj_regs|
-   kdisj_dms|kdisj_dms|kdisj_cms|kdisj_cms| | |
+   kdisj_regs_ex 0|kdisj_regs_ex 0|
+   kdisj_dms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_cms_ex 0| | |
    kvr|kvr|kvr| | | |].
       
 Ltac kinline_compute :=
