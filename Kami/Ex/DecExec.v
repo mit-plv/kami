@@ -90,7 +90,7 @@ Section DecExec.
         Call val <- rfRead1(#src1);
         Call doMem(STRUCT { "isLoad" ::= $$false;
                             "addr" ::= #addr;
-                            "data" ::= $$Default });
+                            "data" ::= #val });
         Write "pc" <- #pc + $1;
         Retv
 
@@ -191,11 +191,13 @@ Section DecExec.
     }.
   Hint Unfold decexec_inv_body : InvDefs.
 
-  Ltac decexec_inv_tac :=
+  Ltac decexec_inv_dest_tac :=
     try match goal with
     | [H: decexec_inv _ |- _] => destruct H
     end;
-    kinv_red;
+    kinv_red.
+
+  Ltac decexec_inv_constr_tac :=
     econstructor; (* let's prove that the invariant holds for the next state *)
     try (findReify; (reflexivity || eassumption); fail);
     kinv_red; (* unfolding invariant definitions *)
@@ -205,6 +207,9 @@ Section DecExec.
        end);
     try eassumption; intros; try reflexivity;
     intuition kinv_simpl; intuition idtac.
+
+  Ltac decexec_inv_tac :=
+    decexec_inv_dest_tac; decexec_inv_constr_tac.
 
   Lemma decexec_inv_ok':
     forall init n ll,
@@ -249,35 +254,25 @@ Section DecExec.
     (* kinv_add_end. *)
     (* kinvert. *)
     (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_tac. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr. *)
+    (*   kinv_custom decexec_inv_dest_tac. *)
+    (*   kinv_regmap_red. *)
+    (*   kinv_constr. *)
     (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_tac. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq; kinv_finish. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq. *)
+    (*   kinv_custom decexec_inv_dest_tac. *)
+    (*   kinv_regmap_red. *)
+    (*   kinv_constr; kinv_eq; kinv_finish. *)
     (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_tac. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq; kinv_finish. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq. *)
+    (*   kinv_custom decexec_inv_dest_tac. *)
+    (*   kinv_regmap_red. *)
+    (*   kinv_constr; kinv_eq; kinv_finish. *)
     (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_tac. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq; kinv_finish. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq. *)
+    (*   kinv_custom decexec_inv_dest_tac. *)
+    (*   kinv_regmap_red. *)
+    (*   kinv_constr; kinv_eq; kinv_finish. *)
     (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_tac. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq; kinv_finish. *)
-    (*   + kinv_regmap_red. *)
-    (*     kinv_constr; kinv_eq. *)
+    (*   kinv_custom decexec_inv_dest_tac. *)
+    (*   kinv_regmap_red. *)
+    (*   kinv_constr; kinv_eq; kinv_finish. *)
   Admitted.
   
 End DecExec.

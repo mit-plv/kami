@@ -195,7 +195,7 @@ Section PipelinedProc.
           Call val <- rfRead1(#src1);
           Call doMem(STRUCT { "isLoad" ::= $$false;
                               "addr" ::= #addr;
-                              "data" ::= $$Default });
+                              "data" ::= #val });
           Retv
 
         with Rule "executeTh" :=
