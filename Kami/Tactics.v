@@ -14,61 +14,54 @@ Set Asymmetric Patterns.
 
 (**
 - Kami Tactics
-  + krefl : prove (a <<== a)
-  + ktrans : for given "b", convert (a <<== c) into two subgoals (a <<== b) and (b <<== c)
-    * ktrans_l : convert (a <<=[p] c) into two subgoals (a <<=[p] b) and (b <<== c)
-    * ktrans_r : convert (a <<=[p] c) into two subgoals (a <<== b) and (b <<=[p] c)
-  + ketrans : generate an evar for "b" convert into two subgoals (a <<== ?) and (? <<== c)
-    * ketrans_l : convert (a <<=[p] c) into two subgoals (a <<=[p] ?) and (? <<== c)
-    * ketrans_r : convert (a <<=[p] c) into two subgoals (a <<== ?) and (? <<=[p] c)
-  + krewrite assoc left : convert (a + (b + c) <<== m) to ((a + b) + c <<== m)
-  + krewrite <- assoc left : convert ((a + b) + c <<== m) to (a + (b + c) <<== m)
-  + krewrite assoc right : convert (m <<== a + (b + c)) to (m <<== (a + b) + c)
-  + krewrite <- assoc right : convert (m <<== (a + b) + c) to (m <<== a + (b + c))
-  + kequiv : prove any PHOAS equivalences
-  + kvr : prove any ValidRegsModules well-formedness conditions
-  + kdisj_regs : prove DisjList conditions of regs
-  + kdisj_dms : prove DisjList conditions of dms
-  + kdisj_cms : prove DisjList conditions of cms
-  + kdisj_dms_cms : prove DisjList conditions of dms and cms
-  + kdisj_cms_dms : prove DisjList conditions of cms and dms
-  + knodup_regs : prove (NoDup regs), where _regs_ are names of registers
-  + kinteracting : prove the Interacting predicate
-  + knoninteracting : prove the NonInteracting predicate
-  + kdef_call_sub : prove the DefCallSub predicate
-  + kmodular : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
-    * kmodular with constr(p) : when the refinement is by "<=[p]"
-  + kmodularn : convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
-    * kmodularn with constr(p) : when the refinement is by "<=[p]"
-  + kmodularnp : convert (a + b <<=[compLabelMaps p q] c + d) to (a <<=[p] c) /\ (b <<=[q] d)
-  + kmodular_sim_l : convert (a + c) <<== (b + c) to (a <<== b)
-  + kmodular_sim_r : convert (c + a) <<== (c + b) to (a <<== b)
-  + ksimilar : prove (a <<== b) when a and b have the same set of regs, rules, and methods
-  + ksubst : prove (context[a] <<== context[b])
-  + kinline_compute : compute terms with _inlineF_
-  + kinline_compute_in _term_ : compute terms with _inlineF_ in _term_
-  + kinline_left : convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
-  + kdecompose_nodefs : apply the decompositionZero theorem, for modules with no defined methods.
-  + kdecomposeR_nodefs : apply the decompositionZeroR theorem, for modules with no defined methods.
-  + kinv_magic : try to solve invariant proofs (slow)
-    * kinv_magic_with _tactic_ : also try to apply _tactic_ alternately
-  + kinv_magic_light : a lightweight version of "kinv_magic"
-    * kinv_magic_light_with _tactic_ : also try to apply _tactic_ alternately
-  + kduplicated : convert (duplicate a <<== duplicate b) to (a <<== b)
-  + krewrite dup_dist left : convert (dup (m1 + m2) n <<== m) to (dup m1 n + dup m2 n <<== m)
-  + krewrite <- dup_dist left : convert (dup m1 n + dup m2 n <<== m) to (dup (m1 + m2) n <<== m)
-  + krewrite dup_dist right : convert (m <<== dup (m1 + m2) n) to (m <<== dup m1 n + dup m2 n)
-  + krewrite <- dup_dist right : convert (m <<== dup m1 n + dup m2 n) to (m <<== dup (m1 + m2) n)
-  + kgetv/kexistv/kexistnv : used to construct register or label mappings
+  + krefl: prove (a <<== a)
+  + ktrans: for given "b", convert (a <<== c) into two subgoals (a <<== b) and (b <<== c)
+    * ktrans_l: convert (a <<=[p] c) into two subgoals (a <<=[p] b) and (b <<== c)
+    * ktrans_r: convert (a <<=[p] c) into two subgoals (a <<== b) and (b <<=[p] c)
+  + ketrans: generate an evar for "b" convert into two subgoals (a <<== ?) and (? <<== c)
+    * ketrans_l: convert (a <<=[p] c) into two subgoals (a <<=[p] ?) and (? <<== c)
+    * ketrans_r: convert (a <<=[p] c) into two subgoals (a <<== ?) and (? <<=[p] c)
+  + krewrite assoc left: convert (a + (b + c) <<== m) to ((a + b) + c <<== m)
+  + krewrite <- assoc left: convert ((a + b) + c <<== m) to (a + (b + c) <<== m)
+  + krewrite assoc right: convert (m <<== a + (b + c)) to (m <<== (a + b) + c)
+  + krewrite <- assoc right: convert (m <<== (a + b) + c) to (m <<== a + (b + c))
+  + kequiv: prove any PHOAS equivalences
+  + kvr: prove any ValidRegsModules well-formedness conditions
+  + kinteracting: prove any [Interacting] predicates
+  + knoninteracting: prove any [NonInteracting] predicates
+  + kdef_call_sub: prove any [DefCallSub] predicates
+  + kmodular: convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (interacting case)
+    * kmodular with constr(p): when the refinement is by "<=[p]"
+  + kmodularn: convert (a + b <<== c + d) to (a <<== c) /\ (b <<== d) (non-interacting case)
+    * kmodularn with constr(p): when the refinement is by "<=[p]"
+  + kmodularnp: convert (a + b <<=[compLabelMaps p q] c + d) to (a <<=[p] c) /\ (b <<=[q] d)
+  + kmodular_sim_l: convert (a + c) <<== (b + c) to (a <<== b)
+  + kmodular_sim_r: convert (c + a) <<== (c + b) to (a <<== b)
+  + ksimilar: prove (a <<== b) when a and b have the same set of regs, rules, and methods
+  + ksubst: prove (context[a] <<== context[b])
+  + kinline_compute: compute terms with _inlineF_
+  + kinline_compute_in _term_: compute terms with _inlineF_ in _term_
+  + kinline_left: convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
+  + kdecompose_nodefs: apply the decompositionZero theorem, for modules with no defined methods.
+  + kdecomposeR_nodefs: apply the decompositionZeroR theorem, for modules with no defined methods.
+  + kinv_magic: try to solve invariant proofs (slow)
+    * kinv_magic_with _tactic_: also try to apply _tactic_ alternately
+  + kinv_magic_light: a lightweight version of "kinv_magic"
+    * kinv_magic_light_with _tactic_: also try to apply _tactic_ alternately
+  + kduplicated: convert (duplicate a <<== duplicate b) to (a <<== b)
+  + krewrite dup_dist left: convert (dup (m1 + m2) n <<== m) to (dup m1 n + dup m2 n <<== m)
+  + krewrite <- dup_dist left: convert (dup m1 n + dup m2 n <<== m) to (dup (m1 + m2) n <<== m)
+  + krewrite dup_dist right: convert (m <<== dup (m1 + m2) n) to (m <<== dup m1 n + dup m2 n)
+  + krewrite <- dup_dist right: convert (m <<== dup m1 n + dup m2 n) to (m <<== dup (m1 + m2) n)
+  + kgetv/kexistv/kexistnv: used to construct register or label mappings
+  + kami_ok: the highest level tactic to prove [traceRefines];
+             it tries to perform inlining, decomposition, and simulation by applying high-level
+             tactics described above.
 
 - Kami Hints
   + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
   + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
  *)
-
-Ltac kstring_simpl :=
-  repeat autounfold with NameDefs in *;
-  cbv [withPrefix prefixSymbol append] in *.
 
 Ltac krefl :=
   try rewrite idElementwiseId; apply traceRefines_refl.
@@ -115,11 +108,9 @@ Ltac kequiv_red :=
   | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv; intros
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
   | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
-(*  | [ |- ModEquiv _ _ _ ] => apply metaModulesEquiv_modEquiv *)
   | [ |- MetaModEquiv _ _ _ ] => apply metaModEquiv_modular
   | [ |- ModEquiv _ _ ?m ] => unfold_head m
   | [ |- MetaModEquiv _ _ ?m ] => unfold_head m
-(*  | [ |- MetaModulesEquiv _ _ ?m ] => unfold_head m *)
   end.
  
 Ltac kequiv_unit :=
@@ -146,7 +137,6 @@ Ltac kequiv_unit :=
 
 Ltac kequiv :=
   intros;
-  (* repeat autounfold with MethDefs; *)
   repeat kequiv_red;
   repeat kequiv_unit.
 
@@ -183,7 +173,6 @@ Ltac kvr_unit :=
 
 Ltac kvr :=
   intros;
-  (* repeat autounfold with MethDefs; *)
   repeat kvr_red;
   repeat kvr_unit.
 
@@ -307,19 +296,19 @@ Ltac cms_bound_tac :=
       || apply getCmsBound_bounded).
 
 Ltac kdisj_regs :=
-  red_to_regs_bound; (* always reduces to three subgoals *)
+  red_to_regs_bound;
   [apply disjPrefixes_DisjPrefixes; reflexivity
   |regs_bound_tac
   |regs_bound_tac].
 
 Ltac kdisj_dms :=
-  red_to_dms_bound; (* always reduces to three subgoals *)
+  red_to_dms_bound;
   [apply disjPrefixes_DisjPrefixes; reflexivity
   |dms_bound_tac
   |dms_bound_tac].
 
 Ltac kdisj_cms :=
-  red_to_cms_bound; (* always reduces to three subgoals *)
+  red_to_cms_bound;
   [apply disjPrefixes_DisjPrefixes; reflexivity
   |cms_bound_tac
   |cms_bound_tac].
@@ -337,7 +326,7 @@ Ltac kdisj_cms_dms :=
   |dms_bound_tac].
 
 Ltac knodup_regs :=
-  repeat (* Separating NoDup proofs by small modules *)
+  repeat (* to separate [NoDup] into small modules *)
     match goal with
     | [ |- NoDup (namesOf (_ ++ _)) ] => unfold RegInitT; rewrite namesOf_app
     | [ |- NoDup (_ ++ _) ] => apply NoDup_DisjList; [| |kdisj_regs]
@@ -437,7 +426,10 @@ Ltac ksubst fm tm om :=
    kdisj_regs_ex 0|kdisj_regs_ex 0|
    kdisj_dms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_cms_ex 0| | |
    kvr|kvr|kvr| | | |].
-      
+
+Ltac kstring_simpl :=
+  cbv [withPrefix prefixSymbol append] in *.
+
 Ltac kinline_compute :=
   repeat autounfold with ModuleDefs;
   repeat autounfold with MethDefs;
@@ -532,14 +524,14 @@ Ltac kdecompose_regrel_init :=
 Ltac kdecompose_nodefs t r :=
   apply decompositionZero with (theta:= t) (ruleMap:= r); intros; subst;
   [try reflexivity; try kdecompose_regmap_init
-  |reflexivity (* "getDefsBodies _ = nil" conditions *)
-  |reflexivity (* "getDefsBodies _ = nil" conditions *)
+  |reflexivity
+  |reflexivity
   |].
  
 Ltac kdecomposeR_nodefs t r :=
   apply decompositionZeroR with (thetaR:= t) (ruleMap:= r); intros; subst;
-  try reflexivity; (* "getDefsBodies _ = nil" conditions *)
-  [try kdecompose_regrel_init|]. (* should have only two subgoals at this time *)
+  try reflexivity;
+  [try kdecompose_regrel_init|].
 
 Ltac kinv_add inv :=
   match goal with
@@ -595,7 +587,7 @@ Ltac kinv_simpl :=
   kstring_simpl;
   repeat
     (try match goal with
-         (* about bool *)
+         (* simplification for [bool] *)
          | [H: ?t = ?t |- _] => clear H
          | [H: ?t = ?t -> False |- _] => elim H; reflexivity
          | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
@@ -640,7 +632,7 @@ Ltac kinv_simpl :=
                         else if ?b then false else true] ] =>
            rewrite eqb_unfolded_refl in *
 
-         (* others *)
+         (* for the others *)
          | [ |- context [weq ?w ?w] ] =>
            let n := fresh "n" in destruct (weq w w) as [|n]; [|elim n; reflexivity]
          | [H: context [weq ?w ?w] |- _] =>
@@ -680,7 +672,8 @@ Ltac kinv_finish :=
          | [H: _ = ?t |- _] => is_not_const_bool t; is_not_const_word t; rewrite <- H in *
          end);
       try assumption; try reflexivity; try discriminate;
-      (* rewrites end *)
+
+      (* heavy case analyses for branches *)
       repeat
         (kinv_simpl;
          try assumption; try discriminate;
@@ -704,7 +697,8 @@ Ltac kinv_finish_with tac :=
          | [H: _ = ?t |- _] => is_not_const_bool t; is_not_const_word t; rewrite <- H in *
          end);
       try assumption; try reflexivity; try discriminate;
-      (* rewrites end *)
+
+      (* heavy case analyses for branches *)
       repeat
         (repeat
            (kinv_simpl;
@@ -718,26 +712,26 @@ Ltac kinv_finish_with tac :=
     ).
 
 Ltac invertActionRep ::=
-     repeat
-     match goal with
-     | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
-     | [H: SemAction _ _ _ _ _ |- _] => invertAction H
-     | [H: if ?c
-           then
-             SemAction _ _ _ _ _ /\ _ /\ _ /\ _
-           else
-             SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-       repeat autounfold with MethDefs; simpl in *;
-       match goal with
-       | [H: if ?c
-             then
-               SemAction _ _ _ _ _ /\ _ /\ _ /\ _
-             else
-               SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
-         let ic := fresh "ic" in
-         (remember c as ic; destruct ic; dest; subst)
-       end
-     end.
+  repeat
+    match goal with
+    | [H: (_ :: _)%struct = (_ :: _)%struct |- _] => inv H
+    | [H: SemAction _ _ _ _ _ |- _] => invertAction H
+    | [H: if ?c
+          then
+            SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+          else
+            SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+      repeat autounfold with MethDefs; simpl in *;
+      match goal with
+      | [H: if ?c
+            then
+              SemAction _ _ _ _ _ /\ _ /\ _ /\ _
+            else
+              SemAction _ _ _ _ _ /\ _ /\ _ /\ _ |- _] =>
+        let ic := fresh "ic" in
+        (remember c as ic; destruct ic; dest; subst)
+      end
+    end.
 
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
@@ -854,10 +848,10 @@ Ltac kinv_constr_det_false := repeat kinv_constr_det_false_unit.
 
 Ltac kduplicated :=
   apply duplicate_traceRefines; intros;
-  [auto|auto (* Specializable *)
+  [auto|auto
    |kequiv|kequiv
    |kvr|kvr
-   |auto (* SubList (getExtMeth _) (getExtMeth _) *)
+   |auto
    |].
 
 Tactic Notation "krewrite" "dup_dist" "left" :=
@@ -887,7 +881,7 @@ Ltac kexistnv k vn m t :=
 Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
 Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 
-(** Final Kami proof configuration *)
+(** Kami proof configuration for [kami_ok] *)
 
 Inductive InliningType :=
 | ITManual: InliningType
@@ -915,9 +909,9 @@ Ltac kinv_add_rep' invs :=
 Ltac kinv_add_rep invs :=
   kinv_add_rep' invs; kinv_add_end.
 
-Record ProofConfig := { inlining : InliningType;
-                        decomposition : DecompositionType;
-                        invariants : Invariants
+Record ProofConfig := { inlining: InliningType;
+                        decomposition: DecompositionType;
+                        invariants: Invariants
                       }.
 
 Ltac kami_ok cfg dtac itac :=
@@ -960,19 +954,6 @@ Notation "'mlet' vn : t <- r '|>' kn ; cont" :=
      | _ => fun _ => M.empty _
      end v
    | _ => M.empty _
-   end) (at level 0, vn at level 0) : mapping_scope.
+   end) (at level 0, vn at level 0): mapping_scope.
 Delimit Scope mapping_scope with mapping.
-
-(** Invariant-related definitions *)
-Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
-Tactic Notation "or3_fst" := left.
-Tactic Notation "or3_snd" := right; left.
-Tactic Notation "or3_thd" := right; right.
-
-Ltac kinv_or3 :=
-  repeat
-    (match goal with
-     | [H: _ \/ _ |- _] => destruct H
-     | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
-     end; dest).
 
