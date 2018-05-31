@@ -164,30 +164,11 @@ Section PipelinedProc.
     kinv_add procImpl2_inv_ok.
     kinv_add_end.
     kinvert.
-    - kinv_action_dest.
-      kinv_custom procImpl2_inv_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq; kinv_finish.
-    - kinv_action_dest.
-      kinv_custom procImpl2_inv_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq; kinv_finish.
-    - kinv_action_dest.
-      kinv_custom procImpl2_inv_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq.
-      + kinv_finish.
-      + destruct e2wfullv; kinv_finish.
-    - kinv_action_dest.
-      kinv_custom procImpl2_inv_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq.
-      + kinv_finish.
-      + destruct e2wfullv; kinv_finish.
-    - kinv_action_dest.
-      kinv_custom procImpl2_inv_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq; kinv_finish.
+    - kinv_magic_with procImpl2_inv_tac idtac.
+    - kinv_magic_with procImpl2_inv_tac idtac.
+    - kinv_magic_with procImpl2_inv_tac idtac.
+    - kinv_magic_with procImpl2_inv_tac idtac.
+    - kinv_magic_with procImpl2_inv_tac idtac.
   Qed.
 
   Theorem procImpl_ok:

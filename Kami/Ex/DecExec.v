@@ -160,7 +160,7 @@ Section DecExec.
     exact (existT _ _ Him).
   Defined.
 
-  Definition decexec_inv_body
+  Definition decexec_d2e_inv
              (pgmv: fullType type (SyntaxKind (Vector instK pgmSize)))
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2eeltv: fullType type (SyntaxKind (Struct D2E))) :=
@@ -185,9 +185,9 @@ Section DecExec.
       Hd2eeltv: M.find "elt.d2e"%string o = Some (existT _ _ d2eeltv);
 
       Hpcinv: d2efullv = true -> pcv = d2eeltv F7 ^+ $1;
-      Hdeinv: decexec_inv_body pgmv d2efullv d2eeltv
+      Hdeinv: decexec_d2e_inv pgmv d2efullv d2eeltv
     }.
-  Hint Unfold decexec_inv_body : InvDefs.
+  Hint Unfold decexec_d2e_inv : InvDefs.
 
   Ltac decexec_inv_dest_tac :=
     try match goal with
@@ -215,18 +215,18 @@ Section DecExec.
       Multistep (projT1 decexecSepInl) init n ll ->
       decexec_inv n.
   Proof.
-    (* induction 2. *)
-    (* - unfold getRegInits, decexecSepInl, projT1. *)
-    (*   decexec_inv_tac; simpl in *; kinv_simpl. *)
-    (* - kinvert. *)
-    (*   + mred. *)
-    (*   + mred. *)
-    (*   + kinv_dest_custom decexec_inv_tac. *)
-    (*   + kinv_dest_custom decexec_inv_tac. *)
-    (*   + kinv_dest_custom decexec_inv_tac. *)
-    (*   + kinv_dest_custom decexec_inv_tac. *)
-    (*   + kinv_dest_custom decexec_inv_tac. *)
-  Admitted.
+    induction 2.
+    - unfold getRegInits, decexecSepInl, projT1.
+      decexec_inv_tac; simpl in *; kinv_simpl.
+    - kinvert.
+      + mred.
+      + mred.
+      + kinv_dest_custom decexec_inv_tac.
+      + kinv_dest_custom decexec_inv_tac.
+      + kinv_dest_custom decexec_inv_tac.
+      + kinv_dest_custom decexec_inv_tac.
+      + kinv_dest_custom decexec_inv_tac.
+  Qed.
 
   Lemma decexec_inv_ok:
     forall o,
@@ -239,39 +239,24 @@ Section DecExec.
   
   Theorem decexec_ok: decexecSep <<== decexec.
   Proof.
-    (* intros. *)
+    intros.
 
-    (* (* 1) inlining *) *)
-    (* ketrans; [exact (projT2 decexecSepInl)|]. *)
+    (* 1) inlining *)
+    ketrans; [exact (projT2 decexecSepInl)|].
 
-    (* (* 2) decomposition *) *)
-    (* kdecompose_nodefs decexec_regMap decexec_ruleMap. *)
+    (* 2) decomposition *)
+    kdecompose_nodefs decexec_regMap decexec_ruleMap.
 
-    (* (* 3) simulation *) *)
-    (* kinv_add decexec_inv_ok. *)
-    (* kinv_add_end. *)
-    (* kinvert. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom decexec_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-  Admitted.
+    (* 3) simulation *)
+    kinv_add decexec_inv_ok.
+    kinv_add_end.
+    kinvert.
+    - kinv_magic_with decexec_inv_dest_tac idtac.
+    - kinv_magic_with decexec_inv_dest_tac idtac.
+    - kinv_magic_with decexec_inv_dest_tac idtac.
+    - kinv_magic_with decexec_inv_dest_tac idtac.
+    - kinv_magic_with decexec_inv_dest_tac idtac.
+  Qed.
   
 End DecExec.
 
@@ -279,3 +264,4 @@ Hint Resolve decexec_PhoasWf decexec_RegsWf.
 Hint Resolve decexecSep_PhoasWf decexecSep_RegsWf.
 
 Hint Unfold decexec decexecSep: ModuleDefs.
+
