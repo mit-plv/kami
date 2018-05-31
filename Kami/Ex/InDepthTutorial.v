@@ -252,30 +252,6 @@ Hint Resolve impl_RegsWf.
 Theorem impl_ok: impl <<== spec.
 Abort.
 
-(* begin hide *)
-Ltac kmodular :=
-  try (unfold MethsT; rewrite <-SemFacts.idElementwiseId);
-  apply traceRefines_modular_interacting with
-  (vp := idElementwise (A:=_));
-  [ kequiv | kequiv | kequiv | kequiv
-   | kdisj_regs_ex O | kdisj_regs_ex O | kvr | kvr
-   | kdisj_dms_ex O | kdisj_cms_ex O | kdisj_dms_ex O | kdisj_cms_ex O
-   | kdisj_edms_cms_ex O | kdisj_ecms_dms_ex O
-   | kinteracting | | ].
-
-Ltac knoninteracting :=
-  split; [ kdisj_dms_cms_ex O | kdisj_cms_dms_ex O ].
-
-Ltac kmodularn :=
-  try (unfold MethsT; rewrite <- SemFacts.idElementwiseId);
-  apply traceRefines_modular_noninteracting;
-   [ kequiv | kequiv | kequiv | kequiv
-     | kdisj_regs_ex O | kdisj_regs_ex O | kvr | kvr
-     | kdisj_dms_ex O | kdisj_cms_ex O | kdisj_dms_ex O | kdisj_cms_ex O
-     | knoninteracting | knoninteracting
-     | | ].
-(* end hide *)
-
 (******************************************************************************)
 
 (*+ Substituting fifos to native-fifos +*)
@@ -444,18 +420,19 @@ Record impl12_inv (o: RegsT) : Prop :=
 Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
-Ltac impl12_inv_old :=
+Ltac impl12_inv_dest_tac :=
   try match goal with
       | [H: impl12_inv _ |- _] => destruct H
       end;
   kinv_red.
 
-Ltac impl12_inv_new :=
+Ltac impl12_inv_constr_tac :=
   econstructor;
   try (findReify; (reflexivity || eassumption); fail);
   kregmap_clear.
 
-Ltac impl12_inv_tac := impl12_inv_old; impl12_inv_new.
+Ltac impl12_inv_tac :=
+  impl12_inv_dest_tac; impl12_inv_constr_tac.
 (* end hide *)
 
 Lemma impl12_inv_ok':
@@ -497,8 +474,7 @@ Qed.
 Definition impl12_regMap (ir sr: RegsT): Prop.
   kexistv "data" datav ir (Bit dataSize).
   kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
-  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
-  refine (hd datav eltv).
+  refine (sr = (["data" <- existT _ _ (hd datav eltv)]%fmap)).
 Defined.
 Hint Unfold impl12_regMap: MethDefs.
 
@@ -515,21 +491,14 @@ Proof.
   kinv_add_end.
   
   kinvert.
-  + kinv_action_dest.
-    kinv_regmap_red.
-    eexists; split; kinv_constr.
-    kinv_eq.
+  + kinv_magic_with impl12_inv_dest_tac idtac.
     destruct x0; auto.
-  + kinv_action_dest.
-    destruct Hr; dest.
-    kinv_regmap_red.
-    eexists; split; kinv_constr.
-    * kinv_eq.
-      destruct x; [inv H2|reflexivity].
+  + kinv_magic_with impl12_inv_dest_tac idtac.
+    * destruct x; [inv H2|reflexivity].
     * destruct x as [|hd tl]; [inv H2|].
-      kinv_eq.
       simpl in Hinv.
-      destruct tl; dest; subst; simpl in *; dest; subst; auto.
+      destruct tl; dest;
+        subst; simpl in *; dest; subst; auto.
 Qed.
 
 (******************************************************************************)
@@ -602,18 +571,19 @@ Record impl123_inv (o: RegsT) : Prop :=
 Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
-Ltac impl123_inv_old :=
+Ltac impl123_inv_dest_tac :=
   try match goal with
       | [H: impl123_inv _ |- _] => destruct H
       end;
   kinv_red.
 
-Ltac impl123_inv_new :=
+Ltac impl123_inv_constr_tac :=
   econstructor;
   try (findReify; (reflexivity || eassumption); fail);
   kregmap_clear.
 
-Ltac impl123_inv_tac := impl123_inv_old; impl123_inv_new.
+Ltac impl123_inv_tac :=
+  impl123_inv_dest_tac; impl123_inv_constr_tac.
 (* end hide *)
 
 Lemma impl123_inv_ok':
@@ -675,20 +645,13 @@ Proof.
   kinv_add_end.
   
   kinvert.
-  + kinv_action_dest.
-    kinv_regmap_red.
-    eexists; split; kinv_constr.
-    kinv_eq.
+  + kinv_magic_with impl123_inv_dest_tac idtac.
     destruct x0; auto.
-  + kinv_action_dest.
-    destruct Hr; dest.
-    kinv_regmap_red.
-    eexists; split; kinv_constr.
+  + kinv_magic_with impl123_inv_dest_tac idtac.
     * simpl; destruct x; [inv H2|].
       simpl in *; subst.
       reflexivity.
-    * kinv_eq.
-      destruct x; [inv H2|].
+    * destruct x; [inv H2|].
       simpl in *; subst.
       reflexivity.
     * destruct x as [|hd tl]; [inv H2|].

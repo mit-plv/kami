@@ -196,15 +196,9 @@ Section DecExec.
     kinv_red.
 
   Ltac decexec_inv_constr_tac :=
-    econstructor; (* let's prove that the invariant holds for the next state *)
-    try (findReify; (reflexivity || eassumption); fail);
-    kinv_red; (* unfolding invariant definitions *)
-    repeat (* cheaper than "intuition" *)
-      (match goal with
-       | [ |- _ /\ _ ] => split
-       end);
-    try eassumption; intros; try reflexivity;
-    intuition kinv_simpl; intuition idtac.
+    econstructor;
+    repeat (intros; try findReify;
+            kinv_eq; kinv_red; eauto).
 
   Ltac decexec_inv_tac :=
     decexec_inv_dest_tac; decexec_inv_constr_tac.

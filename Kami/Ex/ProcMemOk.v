@@ -109,15 +109,9 @@ Section PipelinedProc.
     kinv_red.
 
   Ltac procImpl2_inv_constr_tac :=
-    econstructor; (* let's prove that the invariant holds for the next state *)
-    try (findReify; (reflexivity || eassumption); fail);
-    kinv_red; (* unfolding invariant definitions *)
-    repeat (* cheaper than "intuition" *)
-      (match goal with
-       | [ |- _ /\ _ ] => split
-       end);
-    try eassumption; intros; try reflexivity;
-    intuition kinv_simpl; intuition idtac.
+    econstructor;
+    repeat (intros; try findReify;
+            kinv_eq; kinv_red; eauto).
 
   Ltac procImpl2_inv_tac :=
     procImpl2_inv_dest_tac; procImpl2_inv_constr_tac.
