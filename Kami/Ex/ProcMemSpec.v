@@ -8,8 +8,6 @@ Section Spec.
   
   Section AbstractISA.
 
-    (* opcode *)
-
     Definition opArith := WO~0~0.
     Definition opLd := WO~0~1.
     Definition opSt := WO~1~0.
@@ -44,7 +42,6 @@ Section Spec.
     Global Arguments getSrc2 _ [ty].
     Global Arguments getDst _ [ty].
     Global Arguments getAddr _ [ty].
-
     Global Arguments execArith _ [ty].
 
   End AbstractISA.
