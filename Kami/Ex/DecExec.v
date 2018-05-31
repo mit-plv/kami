@@ -19,7 +19,6 @@ Section DecExec.
   Local Notation D2E := (D2E addrSize rfSize pgmSize).
   Local Notation sbSearch1 := (sbSearch1 rfSize).
   Local Notation sbSearch2 := (sbSearch2 rfSize).
-  Local Notation sbSearch3 := (sbSearch3 rfSize).
   Local Notation sbInsert := (sbInsert rfSize).
   Local Notation rfRead1 := (rfRead1 dataK rfSize).
   Local Notation rfRead2 := (rfRead2 dataK rfSize).
@@ -42,8 +41,7 @@ Section DecExec.
         LET dst <- getDst dec inst;
         Call srcOk1 <- sbSearch1(#src1);
         Call srcOk2 <- sbSearch2(#src2);
-        Call dstOk <- sbSearch3(#dst);
-        Assert (#srcOk1 && #srcOk2 && #dstOk);
+        Assert (!#srcOk1 && !#srcOk2);
 
         LET arithOp <- getArithOp dec inst;
         Call val1 <- rfRead1(#src1);
@@ -67,8 +65,8 @@ Section DecExec.
         Call val <- doMem(STRUCT { "isLoad" ::= $$true;
                                    "addr" ::= #addr;
                                    "data" ::= $$Default });
-        Call dstOk <- sbSearch3(#dst);
-        Assert #dstOk;
+        Call dstOk <- sbSearch1(#dst);
+        Assert !#dstOk;
 
         Call sbInsert(#dst);
         Call e2wEnq (STRUCT { "idx" ::= #dst; "val" ::= #val });
@@ -85,7 +83,7 @@ Section DecExec.
         LET addr <- getAddr dec inst;
         LET src1 <- getSrc1 dec inst;
         Call srcOk1 <- sbSearch1(#src1);
-        Assert #srcOk1;
+        Assert !#srcOk1;
           
         Call val <- rfRead1(#src1);
         Call doMem(STRUCT { "isLoad" ::= $$false;
@@ -103,7 +101,7 @@ Section DecExec.
 
         LET src1 <- getSrc1 dec inst;
         Call srcOk1 <- sbSearch1(#src1);
-        Assert #srcOk1;
+        Assert !#srcOk1;
 
         Call val1 <- rfRead1(#src1);
         Call toHost(#val1);

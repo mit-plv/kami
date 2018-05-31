@@ -93,7 +93,7 @@ Section PipelinedProc.
   End Decoder.
 
   Hint Resolve decoder_PhoasWf decoder_RegsWf.
-  
+
   Definition scoreboard :=
     MODULE {
       Register "sbFlags" : Vector Bool rfSize <- Default
@@ -106,10 +106,6 @@ Section PipelinedProc.
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
 
-      with Method "sbSearch3" (sidx: Bit rfSize) : Bool :=
-        Read flags <- "sbFlags";
-        Ret #flags@[#sidx]
-            
       with Method "sbInsert" (nidx: Bit rfSize) : Void :=
         Read flags <- "sbFlags";
         Write "sbFlags" <- #flags@[#nidx <- $$true];
@@ -129,7 +125,6 @@ Section PipelinedProc.
   
   Definition sbSearch1 := MethodSig "sbSearch1"(Bit rfSize) : Bool.
   Definition sbSearch2 := MethodSig "sbSearch2"(Bit rfSize) : Bool.
-  Definition sbSearch3 := MethodSig "sbSearch3"(Bit rfSize) : Bool.
   Definition sbInsert := MethodSig "sbInsert"(Bit rfSize) : Void.
   Definition sbRemove := MethodSig "sbRemove"(Bit rfSize) : Void.
 
@@ -154,8 +149,7 @@ Section PipelinedProc.
           LET dst <- #d2e!D2E@."dst";
           Call srcOk1 <- sbSearch1(#src1);
           Call srcOk2 <- sbSearch2(#src2);
-          Call dstOk <- sbSearch3(#dst);
-          Assert (#srcOk1 && #srcOk2 && #dstOk);
+          Assert (!#srcOk1 && !#srcOk2);
 
           LET arithOp <- #d2e!D2E@."arithOp";
           Call val1 <- rfRead1(#src1);
@@ -175,8 +169,8 @@ Section PipelinedProc.
           Call val <- doMem(STRUCT { "isLoad" ::= $$true;
                                      "addr" ::= #addr;
                                      "data" ::= $$Default });
-          Call dstOk <- sbSearch3(#dst);
-          Assert #dstOk;
+          Call dstOk <- sbSearch1(#dst);
+          Assert !#dstOk;
 
           Call sbInsert(#dst);
           Call e2wEnq (STRUCT { "idx" ::= #dst; "val" ::= #val });
@@ -190,7 +184,7 @@ Section PipelinedProc.
           LET addr <- #d2e!D2E@."addr";
           LET src1 <- #d2e!D2E@."src1";
           Call srcOk1 <- sbSearch1(#src1);
-          Assert #srcOk1;
+          Assert !#srcOk1;
           
           Call val <- rfRead1(#src1);
           Call doMem(STRUCT { "isLoad" ::= $$false;
@@ -205,7 +199,7 @@ Section PipelinedProc.
 
           LET src1 <- #d2e!D2E@."src1";
           Call srcOk1 <- sbSearch1(#src1);
-          Assert #srcOk1;
+          Assert !#srcOk1;
           
           Call val1 <- rfRead1(#src1);
           Call toHost(#val1);
@@ -270,6 +264,6 @@ Hint Resolve procMemImpl_PhoasWf procMemImpl_RegsWf.
 Hint Unfold regFile d2e decoder scoreboard e2w executer writeback
      procImpl procMemImpl: ModuleDefs.
 Hint Unfold RfWrite rfRead1 rfRead2 rfWrite D2E d2eEnq d2eDeq
-     sbSearch1 sbSearch2 sbSearch3 sbInsert sbRemove
+     sbSearch1 sbSearch2 sbInsert sbRemove
      e2wEnq e2wDeq doMem toHost: MethDefs.
 

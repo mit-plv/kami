@@ -78,6 +78,12 @@ Section PipelinedProc.
     exact (existT _ _ Him).
   Defined.
 
+  Definition procImpl2_scoreboard_inv
+             (sbFlagsv: fullType type (SyntaxKind (Vector Bool rfSize)))
+             (e2wfullv: fullType type (SyntaxKind Bool))
+             (e2weltv: fullType type (SyntaxKind (Struct RfWrite))) :=
+    e2wfullv = true -> sbFlagsv (e2weltv F1) = true.
+
   Record procImpl2_inv (o: RegsT): Prop :=
     { pcv: fullType type (SyntaxKind (Bit pgmSize));
       Hpcv: M.find "pc"%string o = Some (existT _ _ pcv);
@@ -90,9 +96,11 @@ Section PipelinedProc.
       e2weltv: fullType type (SyntaxKind (Struct RfWrite));
       He2weltv: M.find "elt.e2w"%string o = Some (existT _ _ e2weltv);
       sbFlagsv: fullType type (SyntaxKind (Vector Bool rfSize));
-      HsbFlagsv: M.find "sbFlags"%string o = Some (existT _ _ sbFlagsv)
+      HsbFlagsv: M.find "sbFlags"%string o = Some (existT _ _ sbFlagsv);
+
+      HsbInv: procImpl2_scoreboard_inv sbFlagsv e2wfullv e2weltv;
     }.
-  (* Hint Unfold procImpl2_inv_body : InvDefs. *)
+  Hint Unfold procImpl2_scoreboard_inv : InvDefs.
 
   Ltac procImpl2_inv_dest_tac :=
     try match goal with
@@ -144,41 +152,43 @@ Section PipelinedProc.
 
   Theorem procImpl_ok_2: procImpl2 <<== procSpec dec exec init.
   Proof.
-    (* intros. *)
+    intros.
 
-    (* (* 1) inlining *) *)
-    (* ketrans; [exact (projT2 procImpl2Inl)|]. *)
+    (* 1) inlining *)
+    ketrans; [exact (projT2 procImpl2Inl)|].
 
-    (* (* 2) decomposition *) *)
-    (* kdecompose_nodefs procImpl2_regMap procImpl2_ruleMap. *)
+    (* 2) decomposition *)
+    kdecompose_nodefs procImpl2_regMap procImpl2_ruleMap.
 
-    (* (* (* 3) simulation *) *) *)
-    (* kinv_add procImpl2_inv_ok. *)
-    (* kinv_add_end. *)
-    (* kinvert. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom procImpl2_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom procImpl2_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom procImpl2_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (*   admit. (* about rf and scoreboard *) *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom procImpl2_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-    (*   admit. (* about rf and scoreboard *) *)
-    (* - kinv_action_dest. *)
-    (*   kinv_custom procImpl2_inv_dest_tac. *)
-    (*   kinv_regmap_red. *)
-    (*   kinv_constr; kinv_eq; kinv_finish. *)
-  Admitted.
+    (* (* 3) simulation *) *)
+    kinv_add procImpl2_inv_ok.
+    kinv_add_end.
+    kinvert.
+    - kinv_action_dest.
+      kinv_custom procImpl2_inv_dest_tac.
+      kinv_regmap_red.
+      kinv_constr; kinv_eq; kinv_finish.
+    - kinv_action_dest.
+      kinv_custom procImpl2_inv_dest_tac.
+      kinv_regmap_red.
+      kinv_constr; kinv_eq; kinv_finish.
+    - kinv_action_dest.
+      kinv_custom procImpl2_inv_dest_tac.
+      kinv_regmap_red.
+      kinv_constr; kinv_eq.
+      + kinv_finish.
+      + destruct e2wfullv; kinv_finish.
+    - kinv_action_dest.
+      kinv_custom procImpl2_inv_dest_tac.
+      kinv_regmap_red.
+      kinv_constr; kinv_eq.
+      + kinv_finish.
+      + destruct e2wfullv; kinv_finish.
+    - kinv_action_dest.
+      kinv_custom procImpl2_inv_dest_tac.
+      kinv_regmap_red.
+      kinv_constr; kinv_eq; kinv_finish.
+  Qed.
 
   Theorem procImpl_ok:
     procImpl dec exec init <<== procSpec dec exec init.
