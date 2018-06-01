@@ -32,7 +32,7 @@ Section Spec.
       }.
 
     Record Executer :=
-      { execArith: forall ty, ty opK -> ty dataK -> ty dataK ->
+      { execArith: forall ty, ty opArithK -> ty dataK -> ty dataK ->
                               Expr ty (SyntaxKind dataK);
       }.
 
