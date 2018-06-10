@@ -25,7 +25,7 @@ Open Scope string.
 
 (*+ Language Syntax +*)
 
-(** Kami has its own syntax, which is very similar to Bluespec. It uses shallow embedding with respect to variable binding, and has fancy notations built with "Notation" in Coq. *)
+(** Kami has its own syntax, which is very similar to Bluespec's. It uses shallow embedding with respect to variable binding and has fancy notations built with "Notation" in Coq. *)
 
 (** A module consists of registers, rules, and methods. *)
 Print Mod.
@@ -63,12 +63,12 @@ Print evalExpr.
 Print SemAction.
 
 (**
- * A global rule scheduler tries to execute rules as many as possible with following conditions:
- * 1) Any two rules should not conflict in terms of register writes and method calls
- * 2) A target rule should satisfy assertions (guards)
+ * A global rule scheduler tries to execute as many simultaneous rules as possible with the following conditions:
+ * 1) Any two rules should not conflict in terms of register writes and method calls.
+ * 2) A scheduled rule should satisfy assertions (guards).
  * 3) [One-rule-at-a-time semantics] In order to execute {r1, r2, ..., rn} simultaneously,
  *    there should exist a permutation of {ri} s.t. 
- *    (r1 | r2 | ... | rn)(s) = (r_i1 (r_i2 (... (r_in(s)) ...))).
+ *    (r1 | r2 | ... | rn)(s) = (r1 (r2 (... (rn(s)) ...))).
  *)
 
 (** Label *)
@@ -94,7 +94,7 @@ Print Behavior.
 (*+ Trace Refinement +*)
 
 Print traceRefines.
-(** Let's just ignore p-mapping for now *)
+(** Let's just ignore p-mapping for now. *)
 
 (** Reflexivity and transitivity *)
 Check traceRefines_refl.
@@ -254,7 +254,7 @@ Abort.
 
 (******************************************************************************)
 
-(*+ Substituting fifos to native-fifos +*)
+(*+ Substituting fifos with native-fifos +*)
 
 (** Why? The fifo implementation is not simple to deal with. *)
 Check simpleFifo.
@@ -282,7 +282,7 @@ Theorem impl_intSpec1: impl <<== intSpec1.
 Proof.
   ktrans ((stage1 ++ fifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
 
-  - ksimilar; vm_compute; intuition idtac.
+  - ksimilar; vm_compute; tauto.
   - kmodular.
     + kmodular.
       * krefl.
@@ -347,7 +347,7 @@ End PipelineInv.
 
 (******************************************************************************)
 
-(*+ Mergine the first two stages +*)
+(*+ Merging the first two stages +*)
 
 Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
 
@@ -390,6 +390,9 @@ Abort.
 
 (*+ Inlining +*)
 
+(* TODO: put tactic for the sequence below in library? *)
+(* TODO: and why the [bool]?  It seems later we only use the first projection. *)
+
 Definition impl12Inl: Modules * bool.
 Proof.
   remember (inlineF impl12) as inlined.
@@ -399,6 +402,8 @@ Proof.
     exact m
   end.
 Defined.
+
+Eval simpl in fst impl12Inl.
 
 (******************************************************************************)
 
@@ -446,15 +451,16 @@ Proof.
   - mred.
   - mred.
   - kinv_dest_custom impl12_inv_tac.
-    change (x ^+ $1) with (next12 x).
     fold (pipeline_inv next12 f12) in *.
+    fold (@app (word dataSize)) in *.
+    change (x ^+ $1) with (next12 x).
     change x with (f12 x) in Hinv.
     change x with (f12 x) at 1.
     change (next12 x) with (f12 (next12 x)).
     apply pipeline_inv_enq; auto.
   - kinv_dest_custom impl12_inv_tac.
-    destruct x; [inv H3|]; subst.
     fold (pipeline_inv next12 f12) in *.
+    destruct x; [discriminate|]; subst.
     eapply pipeline_inv_deq; eauto.
 Qed.
 
@@ -463,7 +469,9 @@ Lemma impl12_inv_ok:
     reachable o (fst impl12Inl) ->
     impl12_inv o.
 Proof.
-  intros; inv H; inv H0.
+  intros.
+  inv H.
+  inv H0.
   eapply impl12_inv_ok'; eauto.
 Qed.
 
@@ -494,8 +502,8 @@ Proof.
   + kinv_magic_with impl12_inv_dest_tac idtac.
     destruct x0; auto.
   + kinv_magic_with impl12_inv_dest_tac idtac.
-    * destruct x; [inv H2|reflexivity].
-    * destruct x as [|hd tl]; [inv H2|].
+    * destruct x; [discriminate|reflexivity].
+    * destruct x as [|hd tl]; [discriminate|].
       simpl in Hinv.
       destruct tl; dest;
         subst; simpl in *; dest; subst; auto.
@@ -598,15 +606,16 @@ Proof.
   - mred.
   - mred.
   - kinv_dest_custom impl123_inv_tac.
-    change (x ^+ $1) with (next123 x).
     fold (pipeline_inv next123 f123) in *.
+    fold (@app (word dataSize)) in *.
+    change (x ^+ $1) with (next123 x).
     change ($2 ^* x) with (f123 x) in Hinv.
     change ($2 ^* x) with (f123 x).
     change ($2 ^* next123 x) with (f123 (next123 x)).
     apply pipeline_inv_enq; auto.
   - kinv_dest_custom impl123_inv_tac.
-    destruct x; [inv H3|]; subst.
     fold (pipeline_inv next123 f123) in *.
+    destruct x; [discriminate|]; subst.
     eapply pipeline_inv_deq; eauto.
 Qed.
 
@@ -615,7 +624,9 @@ Lemma impl123_inv_ok:
     reachable o (fst impl123Inl) ->
     impl123_inv o.
 Proof.
-  intros; inv H; inv H0.
+  intros.
+  inv H.
+  inv H0.
   eapply impl123_inv_ok'; eauto.
 Qed.
 
@@ -648,13 +659,13 @@ Proof.
   + kinv_magic_with impl123_inv_dest_tac idtac.
     destruct x0; auto.
   + kinv_magic_with impl123_inv_dest_tac idtac.
-    * simpl; destruct x; [inv H2|].
+    * simpl; destruct x; [discriminate|].
       simpl in *; subst.
       reflexivity.
-    * destruct x; [inv H2|].
+    * destruct x; [discriminate|].
       simpl in *; subst.
       reflexivity.
-    * destruct x as [|hd tl]; [inv H2|].
+    * destruct x as [|hd tl]; [discriminate|].
       change ($2 ^* (x5 ^+ $ (1))) with (f123 (next123 x5)).
       simpl in Hinv.
       destruct tl; simpl in *; dest; subst; auto.
@@ -686,7 +697,9 @@ End DataSizeAbs.
 
 (*+ Extraction +*)
 
-Extraction Language OCaml.
+(* TODO: did the capitalize change between some recent versions?
+*        I had to switch "OCaml" to "Ocaml". *)
+Extraction Language Ocaml.
 
 Set Extraction Optimize.
 Set Extraction KeepSingleton.
