@@ -126,6 +126,6 @@ Section DecExec.
     - kinv_magic_with decexec_inv_dest_tac idtac.
     - kinv_magic_with decexec_inv_dest_tac idtac.
   Qed.
-  
+
 End DecExec.
 
