@@ -14,8 +14,8 @@ Section DecExec.
             (pcInit : ConstT (Bit pgmSize))
             (pgmInit : ConstT (Vector instK pgmSize)).
 
-  Local Notation D2E := (D2E addrSize rfSize pgmSize).
-  Local Notation decexecSepInl := (decexecSepInl dec exec pcInit pgmInit).
+  Local Definition D2E := D2E addrSize rfSize pgmSize.
+  Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgmInit.
 
   Definition decexec_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Bit pgmSize) <- r |> "pc";
@@ -111,7 +111,7 @@ Section DecExec.
     intros.
 
     (* 1) inlining *)
-    ketrans; [exact (projT2 decexecSepInl)|].
+    kinline_refine_left decexecSepInl.
 
     (* 2) decomposition *)
     kdecompose_nodefs decexec_regMap decexec_ruleMap.

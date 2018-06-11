@@ -12,9 +12,8 @@ Unset Extraction AutoInline.
 
 (** Parameter instantiation *)
 
-(** * TODO: instantiate parameters *)
 Definition rfSize := 5. (* 2^5 = 32 *)
-Definition addrSize := 32.
+Definition addrSize := 4. (* 2^4 = 16 cells *)
 Definition InstStr :=
   STRUCT { "op" :: opK;
            "arithOp" :: opArithK;
@@ -42,19 +41,19 @@ Definition executerIns: Executer dataK :=
           else IF (#op == $$opArithMul) then (#src1 * #src2)
           else (#src1 / #src2))%kami_expr |}.
 
-Definition pgmSize := 4.
+Definition pgmSize := 4. (* 2^4 = 16 lines *)
 Definition init: ProcInit (Struct InstStr) dataK rfSize pgmSize :=
   {| pcInit := getDefaultConst _;
      rfInit := getDefaultConst _;
      pgmInit := getDefaultConst _
   |}.
 
-Definition procImpl := procImpl decoderIns executerIns init.
+Definition procMemImpl := procMemImpl decoderIns executerIns init.
 
 (** * DON'T REMOVE OR MODIFY BELOW LINES *)
 
 (* targetM should be your target module *)
-Definition targetProcM := procImpl.
+Definition targetProcM := procMemImpl.
 Definition targetProcS := getModuleS targetProcM.
 Definition targetProcB := ModulesSToBModules targetProcS.
 

@@ -17,8 +17,8 @@ Section PipelinedProc.
 
   Variable (init: ProcInit instK dataK rfSize pgmSize).
 
-  Local Notation procIntermInl := (procIntermInl dec exec init).
-  Local Notation RfWrite := (RfWrite dataK rfSize).
+  Local Definition procIntermInl := procIntermInl dec exec init.
+  Local Definition RfWrite := RfWrite dataK rfSize.
 
   Definition procInterm_scoreboard_inv
              (sbFlagsv: fullType type (SyntaxKind (Vector Bool rfSize)))
@@ -115,7 +115,7 @@ Section PipelinedProc.
     intros.
 
     (* 1) inlining *)
-    ketrans; [exact (projT2 procIntermInl)|].
+    kinline_refine_left procIntermInl.
 
     (* 2) decomposition *)
     kdecompose_nodefs procInterm_regMap procInterm_ruleMap.

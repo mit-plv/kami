@@ -390,20 +390,12 @@ Abort.
 
 (*+ Inlining +*)
 
-(* TODO: put tactic for the sequence below in library? *)
-(* TODO: and why the [bool]?  It seems later we only use the first projection. *)
-
-Definition impl12Inl: Modules * bool.
+Definition impl12Inl: {m: Modules & impl12 <<== m}.
 Proof.
-  remember (inlineF impl12) as inlined.
-  kinline_compute_in Heqinlined.
-  match goal with
-  | [H: inlined = ?m |- _] =>
-    exact m
-  end.
+  kinline_refine impl12.
 Defined.
 
-Eval simpl in fst impl12Inl.
+Eval simpl in projT1 impl12Inl.
 
 (******************************************************************************)
 
@@ -442,8 +434,8 @@ Ltac impl12_inv_tac :=
 
 Lemma impl12_inv_ok':
   forall init n ll,
-    init = initRegs (getRegInits (fst impl12Inl)) ->
-    Multistep (fst impl12Inl) init n ll ->
+    init = initRegs (getRegInits (projT1 impl12Inl)) ->
+    Multistep (projT1 impl12Inl) init n ll ->
     impl12_inv n.
 Proof.
   induction 2; [kinv_dest_custom impl12_inv_tac; simpl; auto|].
@@ -466,7 +458,7 @@ Qed.
 
 Lemma impl12_inv_ok:
   forall o,
-    reachable o (fst impl12Inl) ->
+    reachable o (projT1 impl12Inl) ->
     impl12_inv o.
 Proof.
   intros.
@@ -492,7 +484,7 @@ Hint Unfold impl12_ruleMap: MethDefs.
 
 Lemma impl12_ok: impl12 <<== spec12.
 Proof.
-  kinline_left inlined.
+  kinline_refine_left impl12Inl.
 
   kdecomposeR_nodefs impl12_regMap impl12_ruleMap.
   kinv_add impl12_inv_ok.
@@ -539,14 +531,9 @@ Proof. kvr. Qed.
 Hint Resolve impl123_RegsWf.
 (* end hide *)
 
-Definition impl123Inl: Modules * bool.
+Definition impl123Inl: {m: Modules & impl123 <<== m}.
 Proof.
-  remember (inlineF impl123) as inlined.
-  kinline_compute_in Heqinlined.
-  match goal with
-  | [H: inlined = ?m |- _] =>
-    exact m
-  end.
+  kinline_refine impl123.
 Defined.
 
 Definition next123 := fun w : word dataSize => w ^+ $1.
@@ -596,8 +583,8 @@ Ltac impl123_inv_tac :=
 
 Lemma impl123_inv_ok':
   forall init n ll,
-    init = initRegs (getRegInits (fst impl123Inl)) ->
-    Multistep (fst impl123Inl) init n ll ->
+    init = initRegs (getRegInits (projT1 impl123Inl)) ->
+    Multistep (projT1 impl123Inl) init n ll ->
     impl123_inv n.
 Proof.
   induction 2; [kinv_dest_custom impl123_inv_tac; simpl; auto|].
@@ -621,7 +608,7 @@ Qed.
 
 Lemma impl123_inv_ok:
   forall o,
-    reachable o (fst impl123Inl) ->
+    reachable o (projT1 impl123Inl) ->
     impl123_inv o.
 Proof.
   intros.
@@ -649,7 +636,7 @@ Hint Unfold impl123_ruleMap: MethDefs.
 
 Lemma impl123_ok: impl123 <<== spec.
 Proof.
-  kinline_left inlined.
+  kinline_refine_left impl123Inl.
 
   kdecomposeR_nodefs impl123_regMap impl123_ruleMap.
   kinv_add impl123_inv_ok.

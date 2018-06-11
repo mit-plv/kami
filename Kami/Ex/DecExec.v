@@ -14,15 +14,15 @@ Section DecExec.
             (pcInit : ConstT (Bit pgmSize))
             (pgmInit : ConstT (Vector instK pgmSize)).
 
-  Local Notation doMem := (doMem dataK addrSize).
-  Local Notation toHost := (toHost dataK).
-  Local Notation D2E := (D2E addrSize rfSize pgmSize).
-  Local Notation sbSearch1 := (sbSearch1 rfSize).
-  Local Notation sbSearch2 := (sbSearch2 rfSize).
-  Local Notation sbInsert := (sbInsert rfSize).
-  Local Notation rfRead1 := (rfRead1 dataK rfSize).
-  Local Notation rfRead2 := (rfRead2 dataK rfSize).
-  Local Notation e2wEnq := (e2wEnq dataK rfSize).
+  Local Definition doMem := doMem dataK addrSize.
+  Local Definition toHost := toHost dataK.
+  Local Definition D2E := D2E addrSize rfSize pgmSize.
+  Local Definition sbSearch1 := sbSearch1 rfSize.
+  Local Definition sbSearch2 := sbSearch2 rfSize.
+  Local Definition sbInsert := sbInsert rfSize.
+  Local Definition rfRead1 := rfRead1 dataK rfSize.
+  Local Definition rfRead2 := rfRead2 dataK rfSize.
+  Local Definition e2wEnq := e2wEnq dataK rfSize.
   
   Definition decexec :=
     MODULE {
@@ -125,21 +125,9 @@ Section DecExec.
 
   Hint Unfold decexecSep: ModuleDefs.
 
-  Definition decexecSepInl: sigT (fun m: Modules => decexecSep <<== m).
+  Definition decexecSepInl: {m: Modules & decexecSep <<== m}.
   Proof.
-    pose proof (inlineF_refines
-                  (decexecSep_PhoasWf type typeUT)
-                  (Reflection.noDupStr_NoDup
-                     (namesOf (getDefsBodies decexecSep))
-                     eq_refl)) as Him.
-    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
-    match goal with
-    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
-    end.
-    kinline_compute_in Him.
-    unfold origm in *.
-    specialize (Him eq_refl).
-    exact (existT _ _ Him).
+    kinline_refine decexecSep.
   Defined.
   
 End DecExec.
@@ -147,4 +135,6 @@ End DecExec.
 Hint Resolve decexec_PhoasWf decexec_RegsWf.
 Hint Resolve decexecSep_PhoasWf decexecSep_RegsWf.
 Hint Unfold decexec decexecSep: ModuleDefs.
+Hint Unfold doMem toHost D2E sbSearch1 sbSearch2 sbInsert
+     rfRead1 rfRead2 e2wEnq: MethDefs.
 

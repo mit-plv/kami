@@ -39,21 +39,9 @@ Section PipelinedProc.
     - krefl.
   Qed.
 
-  Definition procIntermInl: sigT (fun m: Modules => procInterm <<== m).
+  Definition procIntermInl: {m: Modules & procInterm <<== m}.
   Proof.
-    pose proof (inlineF_refines
-                  (procInterm_PhoasWf type typeUT)
-                  (Reflection.noDupStr_NoDup
-                     (namesOf (getDefsBodies procInterm))
-                     eq_refl)) as Him.
-    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
-    match goal with
-    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
-    end.
-    kinline_compute_in Him.
-    unfold origm in *.
-    specialize (Him eq_refl).
-    exact (existT _ _ Him).
+    kinline_refine procInterm.
   Defined.
 
 End PipelinedProc.

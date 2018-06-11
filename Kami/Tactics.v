@@ -39,9 +39,10 @@ Set Asymmetric Patterns.
   + kmodular_sim_r: convert (c + a) <<== (c + b) to (a <<== b)
   + ksimilar: prove (a <<== b) when a and b have the same set of regs, rules, and methods
   + ksubst: prove (context[a] <<== context[b])
-  + kinline_compute: compute terms with _inlineF_
-  + kinline_compute_in _term_: compute terms with _inlineF_ in _term_
+  + kinline_compute: compute [inlineF] terms
+  + kinline_compute_in: compute [inlineF] terms in a hypothesis
   + kinline_left: convert (a <<== b) to (inlineF a <<== b), where (inlineF a) is computed
+  + kinline_refine: define and prove (a <<== inlineF a), where (inlineF a) is computed
   + kdecompose_nodefs: apply the decompositionZero theorem, for modules with no defined methods.
   + kdecomposeR_nodefs: apply the decompositionZeroR theorem, for modules with no defined methods.
   + kinv_magic: try to solve invariant proofs (slow)
@@ -489,6 +490,27 @@ Ltac kinline_left im :=
     kinline_compute_in Heq;
     split; [|subst; reflexivity]
   end.
+
+Ltac kinline_refine m :=
+  (* 1) Bring the PHOAS equivalences proof (or prove it if not proven yet). *)
+  let Hequiv := fresh "Hequiv" in
+  assert (ModEquiv type typeUT m) as Hequiv by kequiv;
+  (* 2) Inline the target module. *)
+  let Hin := fresh "Hin" in
+  pose proof (inlineF_refines
+                Hequiv (Reflection.noDupStr_NoDup (namesOf (getDefsBodies m)) eq_refl))
+    as Hin;
+  unfold MethsT in Hin; rewrite <-SemFacts.idElementwiseId in Hin;
+  (* 3) Evaluate the inlined module. *)
+  let origm := fresh "origm" in
+  set m as origm in Hin at 2;
+  kinline_compute_in Hin;
+  subst origm;
+  specialize (Hin eq_refl);
+  exact (existT _ _ Hin).
+
+Ltac kinline_refine_left rm :=
+  ketrans; [exact (projT2 rm)|].
 
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
