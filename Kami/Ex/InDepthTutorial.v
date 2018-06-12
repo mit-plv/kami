@@ -1,7 +1,6 @@
 Require Import Kami.
 (* begin hide *)
-Require Import Lib.Indexer.
-Require Import Kami.Synthesize Kami.ModuleBoundEx.
+Require Import Kami.Synthesize.
 Require Import Ex.Fifo Ex.NativeFifo Ex.SimpleFifoCorrect.
 Require Import Ext.BSyntax.
 Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.

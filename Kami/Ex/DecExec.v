@@ -1,9 +1,29 @@
 Require Import Kami.
-Require Import Lib.FinNotations Lib.Struct Lib.Indexer.
 Require Import Ex.ProcMemSpec Ex.PipelinedProc.
 
 Set Implicit Arguments.
 
+(*! Specifying, implementing, and verifying a very simple processor !*)
+
+(** You may want to take a look at the code in the following order:
+ * - ProcMemSpec.v: the spec of processors and memory systems
+ * - PipelinedProc.v: a 3-stage pipelined processor implementation
+ * - DecExec.v (you are here!): a pipeline stage that merges the first two 
+ *   stages, [decoder] and [executer].
+ * - DecExecOk.v: correctness of [decexec] in DecExec.v
+ * - ProcMemInterm.v: an intermediate 2-stage pipelined processor 
+ * - ProcMemOk.v: a complete refinement proof
+ *)
+
+(* How can we verify a pipelined processor? One of intuitive and efficient ways
+ * is called "stage merging." As the name says, we prove a refinement, where
+ * specification is also possibly staged but has less stages since some stages
+ * are merged into one in the spec. We will eventually have a refinement where
+ * the spec has a single stage by applying stage merging repeatedly.
+ *
+ * Here we first provide [decexec], a merged stage between [decoder] and
+ * [executer] in PipelinedProc.v
+ *)
 Section DecExec.
   Variables (instK dataK: Kind)
             (addrSize rfSize: nat)
@@ -113,6 +133,11 @@ Section DecExec.
   Lemma decexec_RegsWf: ModRegsWf decexec.
   Proof. kvr. Qed.
 
+  (* [decexecSep] is a combined module that contains [decoder] and [executer]
+   * separately. We will prove the refinement between [decexec] and [decexecSep]
+   * soon, but before that we need to inline [decexecSep] first, following a
+   * typical Kami verification flow. See DecExecOk.v to see how this inlined
+   * module is used for a correctness proof. *)
   Definition decexecSep :=
     ((decoder dec pcInit pgmInit)
        ++ (d2e addrSize rfSize pgmSize)

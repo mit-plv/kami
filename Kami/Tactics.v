@@ -514,7 +514,6 @@ Ltac kinline_refine_left rm :=
 
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
-  repeat autounfold with MapDefs in *;
   kstring_simpl; dest;
   repeat match goal with
          | [H: M.find _ _ = None |- _] => clear H
@@ -799,6 +798,7 @@ Ltac kinv_eq :=
   repeat
     (first [ reflexivity
            | meqReify
+           | findReify
            | fin_func_eq
            | apply existT_eq
            | apply pair_eq

@@ -1,9 +1,34 @@
 Require Import Kami.
-Require Import Lib.Indexer.
 Require Import Ex.OneEltFifo Ex.ProcMemSpec.
 
 Set Implicit Arguments.
 
+(*! Specifying, implementing, and verifying a very simple processor !*)
+
+(** You may want to take a look at the code in the following order:
+ * - ProcMemSpec.v: the spec of processors and memory systems
+ * - PipelinedProc.v (you are here!): a 3-stage pipelined processor 
+ *   implementation
+ * - DecExec.v: a pipeline stage that merges the first two stages,
+ *   [decoder] and [executer].
+ * - DecExecOk.v: correctness of [decexec] in DecExec.v
+ * - ProcMemInterm.v: an intermediate 2-stage pipelined processor 
+ * - ProcMemOk.v: a complete refinement proof
+ *)
+
+(* Here we implement a 3-stage pipelined processor. If you are not familiar with 
+ * the term "instruction pipelining," you may want to read this article first:
+ * https://en.wikipedia.org/wiki/Instruction_pipelining
+ *
+ * The processor has three stages -- Decode, Execute, and Write-back -- where 
+ * each of them is drawn from common processor-implementation stratagies. The
+ * processor abstracts over ISA details ([Decoder] and [Executer] interfaces)
+ * which are also used by the spec.
+ *
+ * The processor contains a scoreboard in order to avoid RAW (Read-After-Write)
+ * and WAW (Write-after-Write) hazards. You may also want to read a related
+ * article here:
+ * https://en.wikipedia.org/wiki/Scoreboarding *)
 Section PipelinedProc.
   Variables (instK dataK: Kind)
             (addrSize rfSize: nat)
@@ -11,7 +36,9 @@ Section PipelinedProc.
 
   Variables (dec: Decoder instK addrSize rfSize)
             (exec: Executer dataK).
-  
+
+  (* [regFile] encapsulates a register file for modular hardware design.
+   * It has two read ports and a single write ports. *)
   Section RegFile.
     Variable rfInit: ConstT (Vector dataK rfSize).
 
@@ -19,7 +46,7 @@ Section PipelinedProc.
       STRUCT { "idx" :: Bit rfSize;
                "val" :: dataK
              }.
-    
+
     Definition regFile :=
       MODULE {
         Register "rf" : Vector dataK rfSize <- rfInit
@@ -47,6 +74,7 @@ Section PipelinedProc.
 
   Hint Resolve regFile_PhoasWf regFile_RegsWf.
 
+  (* [D2E] is a struct to pass decoded information to the next stage. *)
   Definition D2E :=
     STRUCT { "op" :: opK;
              "arithOp" :: opArithK;
@@ -61,6 +89,9 @@ Section PipelinedProc.
   Definition d2eEnq := MethodSig ("d2e" -- "enq")(Struct D2E): Void.
   Definition d2eDeq := MethodSig ("d2e" -- "deq")(Void): Struct D2E.
 
+  (* [decoder] is the first stage of the implementation; it fetches an
+   * instruction with the current [pc], and decodes it using the decoder 
+   * interface. *)
   Section Decoder.
     Variables (pcInit : ConstT (Bit pgmSize))
               (pgmInit : ConstT (Vector instK pgmSize)).
@@ -94,6 +125,12 @@ Section PipelinedProc.
 
   Hint Resolve decoder_PhoasWf decoder_RegsWf.
 
+  (* Scoreboarding is the simplest way to avoid RAW and WAW hazards in a
+   * pipelined processor. [scoreboard] keeps track of the information whether a
+   * register has the up-to-date value so it is okay to read/write it. Here we
+   * provide the most simplest version that is not optimized a lot, but it is
+   * still nontrivial to prove the correctness of it. Refer to [ProcMemOk.v]
+   * for detailed invariants and the correctness proof. *)
   Definition scoreboard :=
     MODULE {
       Register "sbFlags" : Vector Bool rfSize <- Default
@@ -132,6 +169,11 @@ Section PipelinedProc.
   Definition e2wEnq := MethodSig ("e2w" -- "enq")(Struct RfWrite): Void.
   Definition e2wDeq := MethodSig ("e2w" -- "deq")(Void): Struct RfWrite.
 
+  (* [executer] is the second stage of the implementation. From the given
+   * decoded information ([D2E]), it either executes an arithmetic operation, 
+   * performs a memory load/store, or calls [toHost] with a proper value. Note 
+   * that it does not perform register writes, instead it sends information to 
+   * the last stage [writeback] to perform writes. *)
   Section Executer.
 
     Local Definition doMem := doMem dataK addrSize.
@@ -142,6 +184,9 @@ Section PipelinedProc.
         Rule "executeArith" :=
           Call d2e <- d2eDeq();
           LET op <- #d2e!D2E@."op";
+
+          (* Below assertion ensures that this rule only handles
+           * arithmetic operations. *)
           Assert (#op == $$opArith);
 
           LET src1 <- #d2e!D2E@."src1";
@@ -149,6 +194,9 @@ Section PipelinedProc.
           LET dst <- #d2e!D2E@."dst";
           Call srcOk1 <- sbSearch1(#src1);
           Call srcOk2 <- sbSearch2(#src2);
+
+          (* Below assertion ensures that the register values to use
+           * are up-to-date. *)
           Assert (!#srcOk1 && !#srcOk2);
 
           LET arithOp <- #d2e!D2E@."arithOp";
@@ -214,6 +262,8 @@ Section PipelinedProc.
 
   Hint Resolve executer_PhoasWf executer_RegsWf.
   
+  (* [writeback] is our last stage; it simply performs a register write and
+   * tell the scoreboard that the register value is up-to-date. *)
   Definition writeback :=
     MODULE {
       Rule "writeback" :=
@@ -229,7 +279,9 @@ Section PipelinedProc.
   Hint Resolve writeback_PhoasWf writeback_RegsWf.
 
   Variable (init: ProcInit instK dataK rfSize pgmSize).
-  
+
+  (* The processor implementation consists of three stages -- [decoder], 
+   * [executer], and [writeback] -- and some helper modules. *)
   Definition procImpl :=
     (((decoder (pcInit init) (pgmInit init))
         ++ d2e
