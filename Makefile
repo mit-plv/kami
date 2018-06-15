@@ -9,8 +9,14 @@ EXVS:=$(filter-out $(EXSVS) $(IGNORE:%=%.v),$(EXVS))
 EXTVS:=$(wildcard Kami/Ext/*.v)
 EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 
+RTLVS:=$(wildcard Kami/Compile/*.v)
+RTLVS:=$(filter-out $(IGNORE:%=%.v),$(RTLVS))
+
+TIMINGVS:=$(wildcard Kami/Ex/Timing/*.v)
+TIMINGVS:=$(filter-out $(IGNORE:%=%.v),$(TIMINGVS))
+
 VS:=$(wildcard Kami/*.v)
-VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(RTLVS) $(IGNORE:%=%.v),$(VS))
+VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(RTLVS) $(TIMINGVS) $(IGNORE:%=%.v),$(VS))
 
 .PHONY: coq clean
 
@@ -19,8 +25,8 @@ ARGS := -R Kami Kami
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-Makefile.coq: Makefile $(LIBVS) $(VS) $(EXVS) $(EXTVS)
-	$(COQBIN)coq_makefile $(ARGS) $(LIBVS) $(VS) $(EXVS) $(EXTVS) -o Makefile.coq
+Makefile.coq: Makefile $(LIBVS) $(VS) $(EXVS) $(EXTVS) $(RTLVS) $(TIMINGVS)
+	$(COQBIN)coq_makefile $(ARGS) $(LIBVS) $(VS) $(EXVS) $(EXTVS) $(RTLVS) $(TIMINGVS) -o Makefile.coq
 
 clean:: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
