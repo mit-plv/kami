@@ -4,7 +4,7 @@ Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word Lib.Indexer Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics Kami.ModularFacts Kami.SemFacts.
 Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage Ex.OneEltFifo.
-Require Import Ex.Timing.Specification.
+Require Import Ex.Timing.Specification Ex.Timing.Inversion.
 Require Import Lib.CommonTactics.
 Require Import Compile.Rtl Compile.CompileToRtlTryOpt.
 Require Import Logic.FunctionalExtensionality.
@@ -17,166 +17,12 @@ Ltac shatter := repeat match goal with
                        | [ H : _ /\ _ |- _ ] => destruct H
                        end.
 
-Section ThreeStageSimpleDefs.
-  Definition rv32iRq := RqFromProc rv32iAddrSize rv32iDataBytes.
-  Definition rv32iRs := RsToProc rv32iDataBytes.
-
-  Lemma inv_rq :
-    forall r : type (Struct rv32iRq),
-    exists a o d,
-      r = evalExpr (STRUCT { "addr" ::= #a;
-                             "op" ::= #o;
-                             "data" ::= #d })%kami_expr.
-  Proof.
-    intros.
-    exists (r Fin.F1), (r (Fin.FS Fin.F1)), (r (Fin.FS (Fin.FS Fin.F1))).
-    simpl.
-    fin_func_tac; reflexivity.
-  Qed.
-
-  Lemma inv_rs :
-    forall r : type (Struct rv32iRs),
-    exists d,
-      r = evalExpr (STRUCT { "data" ::= #d })%kami_expr.
-  Proof.
-    intros.
-    exists (r Fin.F1).
-    simpl.
-    fin_func_tac; reflexivity.
-  Qed.
-
-  Lemma inv_none :
-    forall r : type (Bit 0),
-      r = evalExpr ($$WO)%kami_expr.
-  Proof.
-    intros.
-    simpl in *.
-    apply word0.
-  Qed.
-  
-End ThreeStageSimpleDefs.
-
-Module Type ThreeStageInterface.
-  Parameter p : Modules.
-  Parameter m : Modules.
-
-  Axiom pequiv : Wf.ModEquiv type typeUT p.
-  Axiom mequiv : Wf.ModEquiv type typeUT m.
-  Axiom reginits : FMap.DisjList (Struct.namesOf (getRegInits p))
-                                 (Struct.namesOf (getRegInits m)).
-
-  Axiom validRegs : Wf.ValidRegsModules type (p ++ m)%kami.
-
-  Axiom defsDisj : FMap.DisjList (getDefs p) (getDefs m).
-  Axiom callsDisj : FMap.DisjList (getCalls p) (getCalls m).
-
-  Parameter ThreeStageProcRegs : regfile -> progMem -> address -> RegsT.
-  Parameter ThreeStageMemRegs : memory -> RegsT.
-
-  Parameter fhMeth : String.string.
-  Parameter thMeth : String.string.
-  Parameter rqMeth : String.string.
-  Parameter rsMeth : String.string.
-
-  Axiom methsDistinct : fhMeth <> thMeth /\ thMeth <> rqMeth /\ rqMeth <> fhMeth /\ rqMeth <> rsMeth /\ thMeth <> rsMeth /\ rsMeth <> fhMeth.
-  Axiom mdrq : In rqMeth (getDefs m).
-  Axiom mdrs : In rsMeth (getDefs m).
-  Axiom pcrq : In rqMeth (getCalls p).
-  Axiom pcrs : In rsMeth (getCalls p).
-  Axiom pcfh : In fhMeth (getCalls p).
-  Axiom pcth : In thMeth (getCalls p).
-  Axiom pndfh : ~ In fhMeth (getDefs p).
-  Axiom mndfh : ~ In fhMeth (getDefs m).
-  Axiom pndth : ~ In thMeth (getDefs p).
-  Axiom mndth : ~ In thMeth (getDefs m).
-
-  Axiom pRegs : forall rf pm pc, FMap.M.KeysSubset (ThreeStageProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
-  Axiom mRegs : forall mem, FMap.M.KeysSubset (ThreeStageMemRegs mem) (Struct.namesOf (getRegInits m)).
-
-  Axiom pRqRs : forall rf u l,
-      Step p rf u l ->
-      (FMap.M.find rqMeth (calls l) = None \/
-       FMap.M.find rsMeth (calls l) = None).
-
-  Axiom mRqRs : forall rf u l,
-      Step m rf u l ->
-      (FMap.M.find rqMeth (defs l) = None \/
-       FMap.M.find rsMeth (defs l) = None).
-
-End ThreeStageInterface.
-
-
 Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   Import ThreeStage.
-
-  Definition censorThreeStageMeth (lastRqOp : option bool) (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
-    if String.string_dec n rqMeth
-    then match t with
-         | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (argV, retV) =>
-           let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-           existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (evalExpr (STRUCT {"addr" ::= #argV!rv32iRq@."addr";
-                                       "op" ::=  #argV!rv32iRq@."op";
-                                     "data" ::= if op
-                                                then $0
-                                                else #argV!rv32iRq@."data"})%kami_expr,
-                   evalExpr ($$WO)%kami_expr)
-         | _ => t
-         end
-    else if String.string_dec n rsMeth
-         then match t with
-         | existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (argV, retV) =>
-           existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (evalExpr ($$WO)%kami_expr,
-                   evalExpr (STRUCT {"data" ::= match lastRqOp with
-                                                | Some op => if op
-                                                           then #retV!rv32iRs@."data"
-                                                           else $0
-                                                | None => #retV!rv32iRs@."data"
-                                                end})%kami_expr)
-         | _ => t
-              end 
-         else if String.string_dec n thMeth
-              then match t with
-                   | existT _
-                            {| arg := Bit 32;
-                               ret := Bit 0 |}
-                            (argV, retV) =>
-                     existT _
-                       {| arg := Bit 32;
-                          ret := Bit 0 |}
-                       ($0, retV)
-                   | _ => t
-                   end
-              else if String.string_dec n fhMeth
-                   then match t with
-                        | existT _
-                                 {| arg := Bit 0;
-                                    ret := Bit 32 |}
-                                 (argV, retV) =>
-                          existT _
-                                 {| arg := Bit 0;
-                                    ret := Bit 32 |}
-                                 (argV, $0)
-                        | _ => t
-                        end
-                   else t.
-
-  Definition getRqCall (l : LabelT) : option bool:=
+  Module Invs := Inversions ThreeStage.
+  Import Invs.
+  
+  Definition getRqCall (lastRq : option bool) (l : LabelT) : option bool:=
     match FMap.M.find rqMeth (calls l) with
     | Some (existT _
                      {| arg := Struct (STRUCT {"addr" :: Bit 16;
@@ -185,10 +31,13 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
                         ret := Bit 0 |}
                      (argV, retV)) =>
       Some (evalExpr (#argV!rv32iRq@."op")%kami_expr)
-    | _ => None
+    | _ => match FMap.M.find rsMeth (calls l) with
+          | Some _ => None
+          | None => lastRq  (* nothing memory-relevant happened this cycle *)
+          end
     end.
 
-  Definition getRqDef (l : LabelT) : option bool :=
+  Definition getRqDef (lastRq : option bool) (l : LabelT) : option bool :=
     match FMap.M.find rqMeth (defs l) with
     | Some (existT _
                      {| arg := Struct (STRUCT {"addr" :: Bit 16;
@@ -197,19 +46,19 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
                         ret := Bit 0 |}
                      (argV, retV)) =>
       Some (evalExpr (#argV!rv32iRq@."op")%kami_expr)
-    | _ => None
+    | _ => match FMap.M.find rsMeth (defs l) with
+          | Some _ => None
+          | None => lastRq
+          end
     end.
 
 
-  Fixpoint censorThreeStageLabelSeq (lastRqOp: option bool) getRqMeth censorMeth (ls : LabelSeqT) {struct ls} : LabelSeqT :=
+  Fixpoint censorThreeStageLabelSeq (lastRq: option bool) getRqMeth censorMeth (ls : LabelSeqT) {struct ls} : LabelSeqT :=
     match ls with
     | nil => nil
     | l :: ls' => 
-      (censorLabel (censorMeth lastRqOp) l) :: censorThreeStageLabelSeq (getRqMeth l) getRqMeth censorMeth ls'
+      (censorLabel (censorMeth lastRq) l) :: censorThreeStageLabelSeq (getRqMeth lastRq l) getRqMeth censorMeth ls'
     end.
-
-  Definition censorThreeStageLabel (lastRqOp : option bool) censorMeth (l : LabelT) := censorLabel (censorMeth lastRqOp) l.
-  (* Same as censoring the sequence [l].*)
       
   Inductive ThreeStageProcMemConsistent : LabelSeqT -> option (bool * address) -> memory -> Prop := (* unclear what this becomes if calls aren't well-balanced, or whether that matters *)
   | S3PMCnil : forall lastRq mem, ThreeStageProcMemConsistent nil lastRq mem
@@ -284,48 +133,6 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   
   Definition ThreeStageProcLabelSeqAirtight : LabelSeqT -> Prop := Forall ThreeStageProcLabelAirtight.
 
-  Definition censorThreeStageMemDefs (lastRqOp : option bool) (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
-    if String.string_dec n rqMeth
-    then match t with
-         | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (argV, retV) =>
-           let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-           existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (evalExpr (STRUCT {"addr" ::= #argV!rv32iRq@."addr";
-                                     "op" ::=  #argV!rv32iRq@."op";
-                                     "data" ::= if op
-                                                then $0
-                                                else #argV!rv32iRq@."data"})%kami_expr,
-                   evalExpr ($$WO)%kami_expr)
-         | _ => t
-         end
-    else if String.string_dec n rsMeth
-         then match t with
-         | existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (argV, retV) =>
-           existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (evalExpr ($$WO)%kami_expr,
-                   evalExpr (STRUCT {"data" ::= match lastRqOp with
-                                                | Some op => if op
-                                                            then #retV!rv32iRs@."data"
-                                                            else $0
-                                                | None => #retV!rv32iRs@."data"
-                                                end})%kami_expr)
-         | _ => t
-              end
-         else t.
 
   Definition extractMethsWrVals (ms : MethsT) : list (word 32) :=
     match FMap.M.find rqMeth ms with
@@ -341,12 +148,41 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
     | _ => nil
     end.
 
+  Definition extractMethsRdVals (lastRq : option bool) (ms : MethsT) : list (word 32) :=
+    match FMap.M.find rsMeth ms with
+    | Some (existT _
+                   {| arg := Bit 0;
+                      ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                   (argV, retV)) =>
+      match lastRq with
+      | Some op => 
+        if op
+        then nil
+        else [evalExpr (#retV!rv32iRs@."data")%kami_expr]
+      | _ => nil
+      end
+    | _ => nil
+    end.
+  
   Definition extractProcWrValSeq : LabelSeqT -> list (word 32) :=
     flat_map (fun l => extractMethsWrVals (calls l)).
   
   Definition extractMemWrValSeq : LabelSeqT -> list (word 32) :=
     flat_map (fun l => extractMethsWrVals (defs l)).
-   
+
+  Fixpoint extractProcRdValSeq (lastRq : option bool) (ls :  LabelSeqT) : list (word 32) :=
+    match ls with
+    | nil => nil
+    | l :: ls' => (extractMethsRdVals lastRq (calls l)) ++ extractProcRdValSeq (getRqCall lastRq l) ls' 
+    end.
+
+
+  Fixpoint extractMemRdValSeq (lastRq : option bool) (ls :  LabelSeqT) : list (word 32) :=
+    match ls with
+    | nil => nil
+    | l :: ls' => (extractMethsRdVals lastRq (defs l)) ++ extractMemRdValSeq (getRqDef lastRq l) ls' 
+    end.
+  
   Inductive ThreeStageMemMemConsistent : LabelSeqT -> option (bool * address) -> memory -> Prop := 
   | S3MMCnil : forall lastRq mem, ThreeStageMemMemConsistent nil lastRq mem
   | S3MMCrq : forall (lastRq:option(bool*address)) mem l last' mem' ls argV retV,
@@ -445,7 +281,8 @@ End ThreeStageDefs.
 
 Module Type ThreeStageModularHiding (ThreeStage : ThreeStageInterface).
   Module Defs := ThreeStageDefs ThreeStage.
-  Import ThreeStage Defs.
+  Module Invs := Inversions ThreeStage.
+  Import ThreeStage Defs Invs.
 
   Axiom abstractToProcHiding :
     forall rf pm pc mem,
@@ -469,7 +306,8 @@ End ThreeStageModularHiding.
 
 Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageModularHiding ThreeStage).
   Module Defs := ThreeStageDefs ThreeStage.
-  Import ThreeStage Defs Hiding.
+  Module Invs := Inversions ThreeStage.
+  Import ThreeStage Defs Invs Hiding.
 
   Lemma mncfh : ~ In fhMeth (getCalls m).
     pose (callsDisj fhMeth).
@@ -480,6 +318,12 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
   Lemma mncth : ~ In thMeth (getCalls m).
     pose (callsDisj thMeth).
     pose pcth.
+    tauto.
+  Qed.
+
+  Lemma pndrq : ~ In rqMeth (getDefs p).
+    pose (defsDisj rqMeth).
+    pose mdrq.
     tauto.
   Qed.
 
@@ -705,182 +549,52 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     eapply whc_rq; eauto.
   Qed.
 
-  Lemma inv_label : forall a a' c c' d d',
-      {| annot := a; calls := c; defs := d |} = {| annot := a'; calls := c'; defs := d' |} -> a = a' /\ c = c' /\ d = d'.
+  Lemma concatRdLen : forall lsp lsm,
+      WellHiddenConcatSeq p m lsp lsm ->
+      forall lastRq rp rp' rm rm',
+        ForwardMultistep p rp rp' lsp ->
+        ForwardMultistep m rm rm' lsm ->
+        length (Defs.extractProcRdValSeq lastRq lsp) = length (Defs.extractMemRdValSeq lastRq lsm).
   Proof.
-    intros.
-    match goal with
-    | [ H : _ = _ |- _ ] => inv H
-    end.
-    tauto.
-  Qed.
-
-  Ltac inv_label :=
-    match goal with
-    | [ H : {| annot := _; calls := _; defs := _ |} = {| annot := _; calls := _; defs := _ |} |- _ ] =>
-      apply inv_label in H; destruct H as [? [? ?]]
-    end.
-
-  Lemma inv_some : forall A (x y : A), Some x = Some y -> x = y.
-  Proof.
-    intros; congruence.
-  Qed.
-
-  Ltac inv_some :=
-    match goal with
-    | [ H : Some _ = Some _ |- _ ] => apply inv_some in H
-    end.
-
-  Lemma inv_pair : forall A B (x1 x2 : A) (y1 y2 : B), (x1, y1) = (x2, y2) -> x1 = x2 /\ y1 = y2.
-  Proof.
-    intros.
-    inv H.
-    tauto.
-  Qed.
-
-  Lemma inv_censor_rq_calls : forall lastRq l l',
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l = l' ->
-      FMap.M.find rqMeth (calls l) = FMap.M.find rqMeth (calls l') \/
-      exists adr op arg,
-        FMap.M.find rqMeth (calls l) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (calls l') = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= if op then $0 else #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)).
-  Proof.
-    intros lastRq l l' H.
-    destruct l. destruct l'.
-    pose methsDistinct. shatter.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMeth in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find rqMeth (FMap.M.mapi f calls) = FMap.M.find rqMeth calls0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find rqMeth calls0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try solve [ left; assumption ].
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    match goal with
-    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-    end; try solve [ congruence ].
+    induction 1; auto; intros.
+    simpl.
     repeat match goal with
-    | [ s : {_ : _ & _} |- _ ] => destruct s
-    end.
-    repeat (match goal with
-            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
-            end; try solve [ left; f_equal; assumption ]).
+           | [ H : ForwardMultistep _ _ _ (_ :: _) |- _ ] => inv H
+           end.
     match goal with
-    | [ x : SignT _ |- _ ] => destruct s
+    | [   IH : forall _ _ _ _ _, ForwardMultistep p _ _ _ -> ForwardMultistep m _ _ _ -> _,
+          Hp : ForwardMultistep p _ _ _,
+          Hm : ForwardMultistep m _ _ _ |- _ ] =>
+      specialize (IH (Defs.getRqCall lastRq la) _ _ _ _ Hp Hm)
+    end.    
+    repeat rewrite app_length.
+    match goal with
+    | [ |- ?x + _ = ?y + _ ] => replace x with y; [apply f_equal|]
     end.
-    unfold arg, ret in *.
-    right.
-    subst.
-    pose (Hrq := inv_rq t).
-    pose (Hrs := inv_none t0).
-    destruct Hrq as [adr [op [dat Heqq]]].
-    exists adr, op, dat.
-    subst.
-    destruct op; tauto.
+    match goal with
+    | [ H : length (_ ?x lsa) = length (_ ?x lsb) |- length (_ ?x lsa) = length (_ ?y lsb) ] =>
+      replace y with x; [apply H|]
+    end.
+    eassert _ as rq_agree by (eapply whc_rq; eassumption).
+    eassert _ as rs_agree by (eapply whc_rs; eassumption).
+    unfold Defs.getRqCall, Defs.getRqDef. repeat rewrite rq_agree, rs_agree.
+    reflexivity.
+    unfold Defs.extractMethsRdVals.
+    match goal with
+    | [ |- length match ?x with | _ => _ end = length match ?y with | _ => _ end ] => replace x with y; auto
+    end. 
+    eapply whc_rs; eauto.
   Qed.
 
-  Lemma inv_censor_rq_memdefs : forall lastRq l l',
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l = l' ->
-      FMap.M.find rqMeth (defs l) = FMap.M.find rqMeth (defs l') \/
-      exists adr op arg,
-        FMap.M.find rqMeth (defs l) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (defs l') = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= if op then $0 else #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)).
-  Proof.
-    intros lastRq l l' H.
-    destruct l. destruct l'.
-    pose methsDistinct. shatter.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMemDefs in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find rqMeth (FMap.M.mapi f defs) = FMap.M.find rqMeth defs0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find rqMeth defs0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try solve [ left; assumption ].
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    match goal with
-    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-    end; try solve [ congruence ].
-    repeat match goal with
-    | [ s : {_ : _ & _} |- _ ] => destruct s
-    end.
-    repeat (match goal with
-            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
-            end; try solve [ left; f_equal; assumption ]).
-    match goal with
-    | [ x : SignT _ |- _ ] => destruct s
-    end.
-    unfold arg, ret in *.
-    right.
-    subst.
-    pose (Hrq := inv_rq t).
-    pose (Hrs := inv_none t0).
-    destruct Hrq as [adr [op [dat Heqq]]].
-    exists adr, op, dat.
-    subst.
-    destruct op; tauto.
-  Qed.
-
-  (* TODO?? Same for rs *)
-
+  Ltac normalize := repeat match goal with
+                           | [ H : context[@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) ?k ?mp] |- _ ] => replace (@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) k mp) with (@FMap.M.find (@sigT SignatureT SignT) k mp) in H by reflexivity
+                           end.
   
+  Ltac normalize_goal := repeat match goal with
+                           | [ |- context[@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) ?k ?mp] ] => replace (@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) k mp) with (@FMap.M.find (@sigT SignatureT SignT) k mp) by reflexivity
+                           end.
+    
+
   Ltac inv_meth_eq :=
     match goal with
     | [ H : Some (existT _ _ (?q1, ?s1)) = Some (existT _ _ (?q2, ?s2)) |- _ ] =>
@@ -903,87 +617,8 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       clear H
     end.
 
-  Lemma inv_censoreq_rq_calls : forall lastRq la lb,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth la = censorThreeStageLabel lastRq Defs.censorThreeStageMeth lb ->
-      FMap.M.find rqMeth (calls la) = FMap.M.find rqMeth (calls lb) \/
-      exists adr op arg arg',
-        FMap.M.find rqMeth (calls la) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (calls lb) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg' })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\ if op then (*val = val'*) True else arg = arg'. 
-  Proof.
-    intros lastRq la lb H.
-    destruct (inv_censor_rq_calls lastRq la _ eq_refl) as [Haeq | [adra [opa [arga [Ha Hac]]]]];
-      destruct (inv_censor_rq_calls lastRq lb _ eq_refl) as [Hbeq | [adrb [opb [argb [Hb Hbc]]]]].
-    - left.
-      congruence.
-    - right.
-      rewrite H in Haeq.
-      rewrite Hbc in Haeq.
-      exists adrb, opb.
-      destruct opb.
-      + exists $0, argb.
-        eauto.
-      + exists argb, argb.
-        eauto.
-    - right.
-      rewrite <- H in Hbeq.
-      rewrite Hac in Hbeq.
-      exists adra, opa.
-      destruct opa.
-      + exists arga, $0. eauto.
-      + exists arga, arga. eauto.
-    - right.
-      rewrite H in Hac.
-      rewrite Hbc in Hac.
-      (* modified inv_meth_eq for different method sigs *)
-      match goal with
-      | [ H : Some (existT _ _ (?q1, ?s1)) = Some (existT _ _ (?q2, ?s2)) |- _ ] =>
-        idtac;
-        apply inv_some in H;
-          apply Semantics.sigT_eq in H;
-          let Heqa := fresh in
-          let Heqo := fresh in
-          let Heqd := fresh in
-          let Hdiscard := fresh in
-          assert (evalExpr (#(q1)!rv32iRq@."addr")%kami_expr = evalExpr (#(q2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-            assert (evalExpr (#(q1)!rv32iRq@."op")%kami_expr = evalExpr (#(q2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-            assert (evalExpr (#(q1)!rv32iRq@."data")%kami_expr = evalExpr (#(q2)!rv32iRq@."data")%kami_expr) as Heqd by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-      simpl in Heqa;
-      simpl in Heqo;
-      simpl in Heqd;
-      subst;
-      clear H
-      end.
-      
-      exists adra, opa.
-      destruct opa;
-      repeat match goal with
-             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
-             end;
-      subst;
-      repeat eexists;
-      eauto.
-  Qed.
-
-  Lemma censor_length_extract : forall lastRq la lb,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth la = censorThreeStageLabel lastRq Defs.censorThreeStageMeth lb ->
+  Lemma censor_length_extract_wr : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMeth la = censorThreeStageLabel lastRq censorThreeStageMeth lb ->
       length (Defs.extractMethsWrVals (calls la)) = length (Defs.extractMethsWrVals (calls lb)).
   Proof.
     intros lastRq la lb H.
@@ -993,85 +628,22 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     - rewrite Ha; rewrite Hb; simpl.
       destruct x0; reflexivity.
   Qed.
-
-  Lemma inv_censoreq_rq_memdefs : forall lastRq la lb,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs la = censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs lb ->
-      FMap.M.find rqMeth (defs la) = FMap.M.find rqMeth (defs lb) \/
-      exists adr op arg arg',
-        FMap.M.find rqMeth (defs la) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (defs lb) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg' })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\ if op then True else arg = arg'.
+  
+  Lemma censor_length_extract_rd : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMeth la = censorThreeStageLabel lastRq censorThreeStageMeth lb ->
+      length (Defs.extractMethsRdVals lastRq (calls la)) = length (Defs.extractMethsRdVals lastRq (calls lb)).
   Proof.
     intros lastRq la lb H.
-    destruct (inv_censor_rq_memdefs lastRq la _ eq_refl) as [Haeq | [adra [opa [arga [Ha Hac]]]]];
-      destruct (inv_censor_rq_memdefs lastRq lb _ eq_refl) as [Hbeq | [adrb [opb [argb [Hb Hbc]]]]].
-    - left.
-      congruence.
-    - right.
-      rewrite H in Haeq.
-      rewrite Hbc in Haeq.
-      exists adrb, opb.
-      destruct opb.
-      + exists $0, argb.
-        eauto.
-      + exists argb, argb.
-        eauto.
-    - right.
-      rewrite <- H in Hbeq.
-      rewrite Hac in Hbeq.
-      exists adra, opa.
-      destruct opa.
-      + exists arga, $0. eauto.
-      + exists arga, arga. eauto.
-    - right.
-      rewrite H in Hac.
-      rewrite Hbc in Hac.
-      match goal with
-      | [ H : Some (existT _ _ (?q1, ?s1)) = Some (existT _ _ (?q2, ?s2)) |- _ ] =>
-        apply inv_some in H;
-          apply Semantics.sigT_eq in H;
-          let Heqa := fresh in
-          let Heqo := fresh in
-          let Heqd := fresh in
-          let Hdiscard := fresh in
-          assert (evalExpr (#(q1)!rv32iRq@."addr")%kami_expr = evalExpr (#(q2)!rv32iRq@."addr")%kami_expr) as Heqa by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-            assert (evalExpr (#(q1)!rv32iRq@."op")%kami_expr = evalExpr (#(q2)!rv32iRq@."op")%kami_expr) as Heqo by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-            assert (evalExpr (#(q1)!rv32iRq@."data")%kami_expr = evalExpr (#(q2)!rv32iRq@."data")%kami_expr) as Heqd by (apply inv_pair in H; destruct H as [Hdiscard _]; rewrite Hdiscard; reflexivity);
-            simpl in Heqa;
-            simpl in Heqo;
-            simpl in Heqd;
-            subst;
-            clear H
-      end.
-      exists adra, opa.
-      destruct opa;
-      repeat match goal with
-             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
-             end;
-      subst;
-      repeat eexists;
-      eauto.
+    unfold Defs.extractMethsRdVals.
+    destruct (inv_censoreq_rs_calls lastRq _ _ H) as [Heq | [? [? [Ha [Hb Hopeq]]]]].
+    - rewrite Heq; reflexivity.
+    - rewrite Ha; rewrite Hb; simpl.
+      destruct lastRq; [destruct b|]; reflexivity.
   Qed.
-
-  Lemma censor_mem_length_extract : forall lastRq la lb,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs la = censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs lb ->
+  
+  
+  Lemma censor_mem_length_extract_wr : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs la = censorThreeStageLabel lastRq censorThreeStageMemDefs lb ->
       length (Defs.extractMethsWrVals (defs la)) = length (Defs.extractMethsWrVals (defs lb)).
   Proof.
     intros lastRq la lb H.
@@ -1082,31 +654,64 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       destruct x0; reflexivity.
   Qed.
 
-  Lemma censor_p_same_getRq_same : forall lastRq a b,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth a =
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth b ->
-      (getRqCall a) = (getRqCall b).
+
+  Lemma censor_mem_length_extract_rd : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs la = censorThreeStageLabel lastRq censorThreeStageMemDefs lb ->
+      length (Defs.extractMethsRdVals lastRq (defs la)) = length (Defs.extractMethsRdVals lastRq (defs lb)).
   Proof.
-    intros.
-    destruct (inv_censoreq_rq_calls lastRq a b H) as [Haeq | [adra [opa [arga [argb Hac]]]]].
-    - unfold getRqCall; rewrite Haeq; reflexivity.
-    - shatter. unfold getRqCall; rewrite H0, H1; reflexivity.
+    intros lastRq la lb H.
+    unfold Defs.extractMethsRdVals.
+    destruct (inv_censoreq_rs_memdefs lastRq _ _ H) as [Heq | [? [? [Ha [Hb _]]]]].
+    - rewrite Heq; reflexivity.
+    - rewrite Ha; rewrite Hb; simpl.
+      destruct lastRq; [destruct b|]; reflexivity.
   Qed.
 
-  Lemma censor_m_same_getRq_same : forall lastRq a b,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs a =
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs b ->
-      (getRqDef a) = (getRqDef b).
+  
+  Lemma rqCall_from_censor : forall lastRq a b,
+      censorThreeStageLabel lastRq censorThreeStageMeth a =
+      censorThreeStageLabel lastRq censorThreeStageMeth b ->
+      (getRqCall lastRq a) = (getRqCall lastRq b).
   Proof.
     intros.
-    destruct (inv_censoreq_rq_memdefs lastRq a b H) as [Haeq | [adra [opa [arga [argb Hac]]]]].
-    - unfold getRqDef; rewrite Haeq; reflexivity.
-    - shatter. unfold getRqDef; rewrite H0, H1; reflexivity.
+    destruct (inv_censoreq_rq_calls lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
+    destruct (inv_censoreq_rs_calls lastRq a b H) as [Rseq | [arga' [argb' ?]]].
+    - unfold getRqCall; repeat rewrite Rqeq, Rseq; reflexivity.
+    - shatter. unfold getRqCall; repeat rewrite Rqeq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqCall; repeat rewrite Rseq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqCall;
+      repeat match goal with
+             | [H : (_ === calls _ .[ _ ])%fmap |- _ ] => rewrite H
+             end.
+      reflexivity.
   Qed.
-  
+
+  Lemma rqDef_from_censor : forall lastRq a b,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs a =
+      censorThreeStageLabel lastRq censorThreeStageMemDefs b ->
+      (getRqDef lastRq a) = (getRqDef lastRq b).
+  Proof.
+    intros.
+    destruct (inv_censoreq_rq_memdefs lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
+    destruct (inv_censoreq_rs_memdefs lastRq a b H) as [Rseq | [arga' [argb' ?]]].
+    - unfold getRqDef; repeat rewrite Rqeq, Rseq; reflexivity.
+    - shatter. unfold getRqDef; repeat rewrite Rqeq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqDef; repeat rewrite Rseq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqDef;
+      repeat match goal with
+             | [H : (_ === defs _ .[ _ ])%fmap |- _ ] => rewrite H
+             end.
+      reflexivity.
+  Qed.
+
+       
   Lemma censorWrLen : forall lastRq lsp lsp',
-      censorThreeStageLabelSeq lastRq getRqCall Defs.censorThreeStageMeth lsp =
-      censorThreeStageLabelSeq lastRq getRqCall Defs.censorThreeStageMeth lsp' ->
+      censorThreeStageLabelSeq lastRq getRqCall censorThreeStageMeth lsp =
+      censorThreeStageLabelSeq lastRq getRqCall censorThreeStageMeth lsp' ->
       length (Defs.extractProcWrValSeq lsp) = length (Defs.extractProcWrValSeq lsp').
   Proof.
     intros lastRq lsp; generalize lastRq; clear lastRq.
@@ -1121,8 +726,8 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
           match goal with
           | [ |- _ + ?x = _ + ?y ] => replace y with x
           end|]; try reflexivity.
-    - eapply IHlsp; replace (getRqCall a) with (getRqCall l) in H2. eapply H2.
-      eapply censor_p_same_getRq_same; symmetry; eapply H1.
+    - eapply IHlsp; replace (getRqCall lastRq a) with (getRqCall lastRq l) in H2. eapply H2.
+      eapply rqCall_from_censor; symmetry; eapply H1.
     -  destruct (inv_censoreq_rq_calls lastRq a l H1) as [Haeq | [adra [opa [arga [argl Hac]]]]].
        + unfold Defs.extractMethsWrVals;
            replace ((calls a) @[ rqMeth]%fmap) with ((calls l) @[ rqMeth]%fmap);
@@ -1134,10 +739,10 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
 
   Lemma combineCensor : forall lastRqp lastRqm lsp lsm lsp' lsm',
       CanCombineLabelSeq lsp lsm ->
-      censorThreeStageLabelSeq lastRqp getRqCall Defs.censorThreeStageMeth lsp =
-      censorThreeStageLabelSeq lastRqp getRqCall Defs.censorThreeStageMeth lsp' ->
-      censorThreeStageLabelSeq lastRqm getRqDef Defs.censorThreeStageMemDefs lsm =
-      censorThreeStageLabelSeq lastRqm getRqDef Defs.censorThreeStageMemDefs lsm' ->
+      censorThreeStageLabelSeq lastRqp getRqCall censorThreeStageMeth lsp =
+      censorThreeStageLabelSeq lastRqp getRqCall censorThreeStageMeth lsp' ->
+      censorThreeStageLabelSeq lastRqm getRqDef censorThreeStageMemDefs lsm =
+      censorThreeStageLabelSeq lastRqm getRqDef censorThreeStageMemDefs lsm' ->
       CanCombineLabelSeq lsp' lsm'.
   Proof.
     intros lastRqp lastRqm lsp; generalize lastRqp lastRqm; clear lastRqp lastRqm.
@@ -1170,13 +775,13 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
             auto
         end.
     - eapply IHlsp; eauto.
-      + replace (getRqCall l0) with (getRqCall a) in H5.
+      + replace (getRqCall _ l0) with (getRqCall lastRqp a) in H5.
         eapply H5.
-        eapply censor_p_same_getRq_same.
+        eapply rqCall_from_censor.
         apply H2.
-      + replace (getRqDef l1) with (getRqDef l) in H4.
+      + replace (getRqDef _ l1) with (getRqDef lastRqm l) in H4.
         eapply H4.
-        eapply censor_m_same_getRq_same.
+        eapply rqDef_from_censor.
         eapply H3.
   Qed.
 
@@ -1230,175 +835,8 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       try congruence;
       tauto.
   Qed.
-  
-  Lemma inv_censor_rq_calls_with_mem : forall lastRq l l' mem mem',
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l = l' ->
-      match FMap.M.find rqMeth (calls l) with
-      | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (argV, retV)) =>
-        let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
-        let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-        if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem' = mem
-      | _ => mem' = mem
-      end ->
-      (FMap.M.find rqMeth (calls l) = FMap.M.find rqMeth (calls l') /\ mem' = mem) \/
-      exists adr op arg,
-        FMap.M.find rqMeth (calls l) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (calls l') = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= if op then $0 else #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)).
-  Proof.
-    intros lastRq l l' mem mem' H Hmem.
-    destruct l. destruct l'.
-    pose methsDistinct. shatter.
-    unfold Defs.censorThreeStageMeth, censorThreeStageLabel, censorLabel in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find rqMeth (FMap.M.mapi f calls) = FMap.M.find rqMeth calls0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind Hmem
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find rqMeth calls0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try solve [ left; auto ].
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    match goal with
-    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-    end; try solve [ congruence ].
-    repeat match goal with
-    | [ s : {_ : _ & _} |- _ ] => destruct s
-           end.
-    repeat (match goal with
-            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
-            end; try solve [ left; split; try f_equal; assumption ]).
-    match goal with
-    | [ x : SignT _ |- _ ] => destruct s
-    end.
-    unfold arg, ret in *.
-    right.
-    subst.
-    pose (Hrq := inv_rq t).
-    pose (Hrs := inv_none t0).
-    destruct Hrq as [adr [op [dat Heqq]]].
-    exists adr, op, dat.
-    subst.
-    destruct op; tauto.
-  Qed.
 
-  Lemma inv_censor_rq_memdefs_with_mem : forall lastRq l l' mem mem',
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l = l' ->
-      match FMap.M.find rqMeth (defs l) with
-      | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (argV, retV)) =>
-        let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
-        let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-        if evalExpr (#argV!rv32iRq@."op")%kami_expr
-        then mem' = (fun a => if weq a addr then argval else mem a)
-        else mem' = mem
-      | _ => mem' = mem
-      end ->
-      (FMap.M.find rqMeth (defs l) = FMap.M.find rqMeth (defs l') /\ mem' = mem) \/
-      exists adr op arg,
-        FMap.M.find rqMeth (defs l) = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)) /\
-        FMap.M.find rqMeth (defs l') = 
-        Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (evalExpr (STRUCT { "addr" ::= #adr;
-                                         "op" ::= #op;
-                                         "data" ::= if op then $0 else #arg })%kami_expr,
-                      evalExpr ($$WO)%kami_expr)).
-  Proof.
-    intros lastRq l l' mem mem' H Hmem.
-    destruct l. destruct l'.
-    pose methsDistinct. shatter.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMemDefs in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find rqMeth (FMap.M.mapi f defs) = FMap.M.find rqMeth defs0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind Hmem
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find rqMeth defs0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try solve [ left; auto ].
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    match goal with
-    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-    end; try solve [ congruence ].
-    repeat match goal with
-    | [ s : {_ : _ & _} |- _ ] => destruct s
-    end.
-    repeat (match goal with
-            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
-            end; try solve [ left; split; try f_equal; assumption ]).
-    match goal with
-    | [ x : SignT _ |- _ ] => destruct s
-    end.
-    unfold arg, ret in *.
-    right.
-    subst.
-    pose (Hrq := inv_rq t).
-    pose (Hrs := inv_none t0).
-    destruct Hrq as [adr [op [dat Heqq]]].
-    exists adr, op, dat.
-    subst.
-    destruct op; tauto.
-  Qed.
-
+ 
   Ltac conceal x :=
     let x' := fresh in
     let H := fresh in
@@ -1424,268 +862,127 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     | [ |- Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a); "op" ::= #(?o); "data" ::= #(?d)}%kami_expr, evalExpr STRUCT {"data" ::= #(?v)}%kami_expr)) = Some (existT _ _ (evalExpr STRUCT {"addr" ::= #(?a'); "op" ::= #(?o'); "data" ::= #(?d')}%kami_expr, evalExpr STRUCT {"data" ::= #(?v')}%kami_expr)) ] => replace a with a'; [replace o with o'; [replace d with d'; [replace v with v'; [reflexivity|]|]|]|]
     end; try reflexivity.
 
-  Lemma inv_censor_other_calls : forall lastRq l l' meth,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l = l' ->
-      meth <> rqMeth ->
-      meth <> rsMeth ->
-      meth <> fhMeth ->
-      meth <> thMeth ->
-      FMap.M.find meth (calls l) = FMap.M.find meth (calls l').
+  Lemma rq_consistent_censor:
+    forall (lp lm lp' lm' : LabelT) (lRqp lRqm : option bool),
+      Defs.extractMethsWrVals (calls lp') =
+      Defs.extractMethsWrVals (defs lm') ->
+      censorLabel
+        (censorThreeStageMemDefs lRqm) lm =
+      censorLabel
+        (censorThreeStageMemDefs lRqm) lm' ->
+      censorLabel
+        (censorThreeStageMeth lRqp) lp =
+      censorLabel
+        (censorThreeStageMeth lRqp) lp' ->
+      (calls lp) @[ rqMeth]%fmap =
+      (defs lm) @[ rqMeth]%fmap ->
+      (calls lp') @[ rqMeth]%fmap =
+      (defs lm') @[ rqMeth]%fmap.
   Proof.
-    intros lastRq l l' meth H He Hs Hf Ht.
-    destruct l. destruct l'.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMeth in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find meth (FMap.M.mapi f calls) = FMap.M.find meth calls0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind He Hs Hf Ht
-    end. 
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find meth calls0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try assumption.
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    repeat (match goal with
-            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-            end; try tauto).
-    subst.
-    reflexivity.
-  Qed.
-
-  Lemma inv_censor_other_defs : forall lastRq l l' meth,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l = l' ->
-      meth <> rqMeth ->
-      meth <> rsMeth ->
-      meth <> fhMeth ->
-      meth <> thMeth ->
-      FMap.M.find meth (defs l) = FMap.M.find meth (defs l').
-  Proof.
-    intros lastRq l l' meth H He Hs Hf Ht.
-    destruct l. destruct l'.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMeth in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find meth (FMap.M.mapi f defs) = FMap.M.find meth defs0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind He Hs Hf Ht
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find meth defs0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try assumption.
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    repeat (match goal with
-            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-            end; try tauto).
-    subst.
-    reflexivity.
-  Qed.
-
-  Lemma inv_censor_other_mem_calls : forall lastRq l l' meth,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l = l' ->
-      meth <> rqMeth ->
-      meth <> rsMeth ->
-      FMap.M.find meth (calls l) = FMap.M.find meth (calls l').
-  Proof.
-    intros lastRq l l' meth H He Hs.
-    destruct l. destruct l'.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMemDefs in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find meth (FMap.M.mapi f calls) = FMap.M.find meth calls0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind He Hs
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find meth calls0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try assumption.
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    repeat match goal with
-    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-    end; try tauto.
-    subst.
-    reflexivity.
-  Qed.
-
-  Lemma inv_censor_other_mem_defs : forall lastRq l l' meth,
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l = l' ->
-      meth <> rqMeth ->
-      meth <> rsMeth ->
-      FMap.M.find meth (defs l) = FMap.M.find meth (defs l').
-  Proof.
-    intros lastRq l l' meth H He Hs.
-    destruct l. destruct l'.
-    unfold censorThreeStageLabel, censorLabel, Defs.censorThreeStageMemDefs in H.
-    inv_label.
-    match goal with
-    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
-      let Hfind := fresh in
-      assert (FMap.M.find meth (FMap.M.mapi f defs) = FMap.M.find meth defs0) as Hfind by (f_equal; assumption);
-        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
-        unfold option_map in Hfind;
-        clear - Hfind He Hs
-    end.
-    unfold Semantics.calls, Semantics.defs in *.
-    remember (FMap.M.find meth defs0) as e' eqn:He'.
-    clear He'.
-    match goal with
-    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
-    end; try assumption.
-    match goal with
-    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
-    end.
-    repeat (match goal with
-            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
-            end; try tauto).
-    subst.
-    reflexivity.
-  Qed.
-     
-  (* line of fixedness *)
-
-  Lemma rqCall_from_censor : forall lastRq l l', 
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l =
-      censorThreeStageLabel lastRq Defs.censorThreeStageMeth l' ->
-      getRqCall l = getRqCall l'.
-  Proof.
-    intros.
-    apply inv_censoreq_rq_calls in H.
-    destruct H.
-    - unfold getRqCall; rewrite H; reflexivity.
-    - shatter. unfold getRqCall; rewrite H, H0. reflexivity.
+    intros lp lm lp' lm' lRqp lRqm H' Hm Hp H.
+      destruct (inv_censoreq_rq_calls _ _ _ (eq_sym Hp)) as
+          [Heqp | [adrp [opp [argp [arg'p [Hpeq' [Hpeq Hargsp]]]]]]];
+      destruct (inv_censoreq_rq_memdefs _ _ _ (eq_sym Hm)) as
+          [Heqm | [adrm [opm [argm [arg'm [Hmeq' [Hmeq Hargsm]]]]]]].
+      -  congruence.
+      - rewrite Heqp, H. rewrite Hmeq', Hmeq.
+        replace arg'm with argm.  reflexivity.
+        destruct opm.
+        + unfold Defs.extractMethsWrVals in H'.
+          rewrite Heqp, H in H'. rewrite Hmeq', Hmeq in H'. simpl in H'.
+          inv H'. congruence.
+        + assumption.
+      - rewrite Heqm, <- H. rewrite Hpeq', Hpeq.
+        replace arg'p with argp. reflexivity.
+        destruct opp.
+        + unfold Defs.extractMethsWrVals in H'.
+          rewrite Heqm, <- H in H'. rewrite Hpeq', Hpeq in H'. simpl in H'.
+          inv H'. congruence.
+        + assumption.
+      - eassert (_ = _). etransitivity. apply (eq_sym Hmeq).
+        etransitivity. apply (eq_sym H). apply Hpeq.
+        inv_rq_eq.
+        rewrite Hpeq', Hmeq'.
+        unfold Defs.extractMethsWrVals in H'.
+        rewrite Hpeq', Hmeq' in H'. simpl in H'.
+        shatter; subst. destruct opp.
+        + inv H'. reflexivity.
+        + subst; reflexivity.
   Qed.
 
   
-  Lemma rqDef_from_censor : forall lastRq l l', 
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l =
-      censorThreeStageLabel lastRq Defs.censorThreeStageMemDefs l' ->
-      getRqDef l = getRqDef l'.
+  Lemma rs_consistent_censor:
+    forall (lp lm lp' lm' : LabelT) (lRqp lRqm : option bool),
+      Defs.extractMethsRdVals lRqp (calls lp') =
+      Defs.extractMethsRdVals lRqm (defs lm') ->
+      censorLabel
+        (censorThreeStageMemDefs lRqm) lm =
+      censorLabel
+        (censorThreeStageMemDefs lRqm) lm' ->
+      censorLabel
+        (censorThreeStageMeth lRqp) lp =
+      censorLabel
+        (censorThreeStageMeth lRqp) lp' ->
+      (calls lp) @[ rsMeth]%fmap =
+      (defs lm) @[ rsMeth]%fmap ->
+      (calls lp') @[ rsMeth]%fmap =
+      (defs lm') @[ rsMeth]%fmap.
   Proof.
-    intros.
-    apply inv_censoreq_rq_memdefs in H.
-    destruct H.
-    - unfold getRqDef; rewrite H; reflexivity.
-    - shatter. unfold getRqDef; rewrite H, H0. reflexivity.
+    intros lp lm lp' lm' lRqp lRqm H' Hm Hp H.
+      destruct (inv_censoreq_rs_calls _ _ _ (eq_sym Hp)) as
+          [Heqp | [argp [arg'p [Hpeq' [Hpeq Hargsp]]]]];
+      destruct (inv_censoreq_rs_memdefs _ _ _ (eq_sym Hm)) as
+          [Heqm | [argm [arg'm [Hmeq' [Hmeq Hargsm]]]]].
+      - congruence.
+      - rewrite Heqp, H. rewrite Hmeq', Hmeq.
+        replace arg'm with argm.  reflexivity.
+        repeat match goal with
+               | [ H : option bool |- _ ] => destruct H
+               | [ H : bool |- _ ] => destruct H
+               | [ H : True |- _ ] => clear H
+               end; try congruence;
+          unfold Defs.extractMethsRdVals in H';
+          rewrite Heqp, H in H'; rewrite Hmeq', Hmeq in H';
+            inv H'; try congruence.
+      - rewrite Heqm, <- H. rewrite Hpeq', Hpeq.
+        replace arg'p with argp. reflexivity.
+        repeat match goal with
+               | [ H : option bool |- _ ] => destruct H
+               | [ H : bool |- _ ] => destruct H
+               | [ H : True |- _ ] => clear H
+               end; try congruence;
+          unfold Defs.extractMethsRdVals in H';
+          rewrite Heqm, <- H in H'; rewrite Hpeq', Hpeq in H';
+            inv H'; try congruence.
+      - eassert (_ = _). etransitivity. apply (eq_sym Hmeq).
+        etransitivity. apply (eq_sym H). apply Hpeq.
+        inv_rs_eq.
+        rewrite Hpeq', Hmeq'.
+        unfold Defs.extractMethsRdVals in H'.
+        rewrite Hpeq', Hmeq' in H'. simpl in H'.
+        shatter; subst.
+        repeat match goal with
+               | [ H : option bool |- _ ] => destruct H
+               | [ H : bool |- _ ] => destruct H
+               | [ H : True |- _ ] => clear H
+               end; subst; try inv H'; congruence.
   Qed.
-
-(*
-  Lemma consistent_rqCall : forall (lastRq :option(bool*address)) mem l last' mem' rf u,
-      Step p rf u l ->
-      (exists argV retV, FMap.M.find rqMeth (calls l) = Some (existT _
-                                                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                                                             "op" :: Bool;
-                                                                             "data" :: Bit 32});
-                                                      ret := Bit 0 |}
-                                                   (argV, retV)) /\
-                    let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
-                    let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-                    let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-                    last' = Some (op, addr) /\
-                    if op
-                    then mem' = (fun a => if weq a addr then argval else mem a) (* ST *)
-                    else mem' = mem (* LD *))
-      \/ 
-      (exists argV retV, FMap.M.find rsMeth (calls l) = Some (existT _
-                                                                {| arg := Bit 0;
-                                                                   ret := Struct (STRUCT {"data" :: Bit 32})|}
-                                                                (argV, retV)) /\
-                    last' = None /\ 
-                    match lastRq with
-                    | Some (op, addr) =>
-                      if op
-                      then (* previous request was a ST *)
-                        mem' = mem (* we already did the update immediately upon getting the request *)
-                      else (* previous request was "LD addr" *)
-                        let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
-                        mem' = mem /\ mem addr = retval
-                    | _ => (* this is the non-well-balanced case, not sure what goes here *)
-                      mem' = mem 
-                    end)
-      \/
-      (FMap.M.find rqMeth (calls l) = None
-       /\ FMap.M.find rsMeth (calls l) = None
-       /\ mem' = mem /\ last' = lastRq)
-      -> (option_map fst last') = (getRqCall l).
-  Proof.
-    intros. intuition idtac.
-    - shatter. subst. 
-      unfold getRqCall; rewrite H0. reflexivity.
-    - shatter. subst. 
-      unfold getRqCall. replace ((calls l) @[ rqMeth]%fmap) with (None (A:={x : SignatureT & SignT x})). reflexivity.
-      pose (pRqRs _ _ _ H) as o; destruct o.
-      symmetry; assumption.
-      rewrite H0 in H1; discriminate.
-    - subst. 
-  Admitted.
- *)
-
-  (* Lemma op_and_addr_from_censor : forall adr op dat retV l adr0 op0 dat0 retV0 l0 lastRq, *)
-      
-  (*     (FMap.M.find rqMeth (calls l) =  *)
-  (*      Some (existT _ *)
-  (*                   {| arg := Struct (STRUCT {"addr" :: Bit 16; *)
-  (*                                             "op" :: Bool; *)
-  (*                                             "data" :: Bit 32}); *)
-  (*                      ret := Bit 0 |} *)
-  (*                   (evalExpr *)
-  (*                      STRUCT {"addr" ::= # (adr);  *)
-  (*                              "op" ::= # (op); "data" ::= # (dat)}%kami_expr, *)
-  (*                    retV))) -> *)
-  (*     (FMap.M.find rqMeth (calls l0) =  *)
-  (*      Some (existT _ *)
-  (*                   {| arg := Struct (STRUCT {"addr" :: Bit 16; *)
-  (*                                             "op" :: Bool; *)
-  (*                                             "data" :: Bit 32}); *)
-  (*                      ret := Bit 0 |} *)
-  (*                   (evalExpr *)
-  (*                      STRUCT {"addr" ::= # (adr0);  *)
-  (*                              "op" ::= # (op0); "data" ::= # (dat0)}%kami_expr, *)
-  (*                    retV0))) -> *)
-  (*     censorLabel (Defs.censorThreeStageMeth lastRq) l = *)
-  (*     censorLabel (Defs.censorThreeStageMeth lastRq) l0 -> *)
-  (*     adr = adr0 /\ op = op0. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   unfold censorLabel, Defs.censorThreeStageMeth in H1. *)
-  (*   destruct l, l0. inv_label. *)
+ 
       
   Lemma concatCensor : forall lsp lsm,
       WellHiddenConcatSeq p m lsp lsm ->
-      forall lastRqp lastRqm rp up rm um lsp' lsm' mem,
+      forall lastRq rp up rm um lsp' lsm' mem,
         ForwardMultistep p rp up lsp ->
         ForwardMultistep m rm um lsm ->
-        let lRqp := (option_map fst lastRqp) in
-        let lRqm := (option_map fst lastRqm) in
-        censorThreeStageLabelSeq lRqp getRqCall Defs.censorThreeStageMeth lsp =
-        censorThreeStageLabelSeq lRqp getRqCall Defs.censorThreeStageMeth lsp' ->
-        censorThreeStageLabelSeq lRqm getRqDef Defs.censorThreeStageMemDefs lsm =
-        censorThreeStageLabelSeq lRqm getRqDef Defs.censorThreeStageMemDefs lsm' ->
+        let lRq := (option_map fst lastRq) in
+        censorThreeStageLabelSeq lRq getRqCall censorThreeStageMeth lsp =
+        censorThreeStageLabelSeq lRq getRqCall censorThreeStageMeth lsp' ->
+        censorThreeStageLabelSeq lRq getRqDef censorThreeStageMemDefs lsm =
+        censorThreeStageLabelSeq lRq getRqDef censorThreeStageMemDefs lsm' ->
         Defs.extractProcWrValSeq lsp' = Defs.extractMemWrValSeq lsm' ->
-        Defs.ThreeStageProcMemConsistent lsp' lastRqp mem ->
-        Defs.ThreeStageMemMemConsistent lsm' lastRqm mem ->
+        Defs.extractProcRdValSeq lRq lsp' = Defs.extractMemRdValSeq lRq lsm' ->
+        Defs.ThreeStageProcMemConsistent lsp' lastRq mem ->
+        Defs.ThreeStageMemMemConsistent lsm' lastRq mem ->
         WellHiddenConcatSeq p m lsp' lsm'.
   Proof.
     induction 1;
@@ -1719,108 +1016,358 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
         clear H'';
         eapply whc_rq in H';
         eauto
-    end. (* or do we need whc_rs too ? *) 
+    end.
     match goal with
-    | [ H : ?x ++ ?xs = ?y ++ ?ys |- _ ] => apply app_inv in H
-    end; shatter.
+    | [ H : WellHiddenConcat _ _ _ _ |- _ ] =>
+      let H' := fresh in
+      let H'' := fresh in
+      remember H as H' eqn:H'';
+        clear H'';
+        eapply whc_rs in H';
+        eauto
+    end. 
+    repeat match goal with
+           | [ H : ?x ++ ?xs = ?y ++ ?ys |- WellHiddenConcatSeq _ _ _ _ ] => apply app_inv in H
+           end; shatter; [|erewrite <- censor_length_extract_wr by eassumption;
+                               erewrite <- censor_mem_length_extract_wr by eassumption;
+                               pose (concatWrLen [la] [lb]) as e;
+                               unfold Defs.extractProcWrValSeq, Defs.extractMemWrValSeq, flat_map  in e;
+                               repeat rewrite app_nil_r in e;
+                               eapply e; repeat (econstructor; eauto)
+                          |erewrite <- censor_length_extract_rd by eassumption;
+                           erewrite <- censor_mem_length_extract_rd by eassumption;
+                           eassert _ as e by (eapply (concatRdLen [la] [lb]); repeat (econstructor; eauto));
+                           unfold Defs.extractProcRdValSeq, Defs.extractMemRdValSeq, flat_map in e;
+                           repeat rewrite app_nil_r in e;
+                           eapply e].
+ 
+    pose proof (rq_consistent_censor _ _ _ _ _ _ H5 H2 H4 H1) as rq_consistent.
+    pose proof (rs_consistent_censor _ _ _ _ _ _ H6 H2 H4 H3) as rs_consistent.
     repeat match goal with
            | [ H : context[_ :: lsp'] |- _ ] => inv H
            | [ H : context[_ :: lsm'] |- _ ] => inv H
-           end; shatter; constructor;
-      pose (inv_censor_rq_calls_with_mem lRqp l _ mem mem' eq_refl) as invL;
-      pose (inv_censor_rq_memdefs_with_mem lRqm l0 _ mem mem'0 eq_refl) as invL0;
+           end; shatter; constructor;(*
+      pose proof (inv_censor_rq_calls_with_mem lRq l _ mem mem' eq_refl) as invL;
+      pose proof (inv_censor_rq_memdefs_with_mem lRq l0 _ mem mem'0 eq_refl) as invL0;
       try match goal with
       | [ H : ( _ === (calls l) .[ rqMeth])%fmap |- _ ]  => rewrite H in invL
           end;
       try match goal with
           | [ H : (_ === (defs l0) .[ rqMeth])%fmap |- _ ] => rewrite H in invL0
-          end;
+          end;*)
+      try (eassert (_ = _) as args_same by 
+          (shatter; etransitivity; [
+             match goal with
+             | [ H : (_ === calls l .[ rqMeth ])%fmap |- _ ] =>
+               apply (eq_sym H)
+             end | etransitivity; [
+                     apply rq_consistent | eassumption]]);
+           inv_rq_eq);
       try match goal with
-      | [ |- WellHiddenConcatSeq _ _ _ _ ] =>
-        eapply IHWellHiddenConcatSeq; try eassumption;
-          try match goal with
-            | [ |- Defs.ThreeStageMemMemConsistent _ _ _ ] =>
-              replace mem' with mem'0; try eassumption
-            end
+          | [ |- WellHiddenConcatSeq _ _ _ _ ] =>
+            eapply IHWellHiddenConcatSeq; try eassumption
           end; clear IHWellHiddenConcatSeq;
-    cbv zeta in *;
-    intuition idtac;
-    unfold censorThreeStageLabel in *;
-    try (
-        replace ( (@option_map (prod bool address) bool (@fst bool address) last')) with (getRqCall l); 
-        [replace (getRqCall l) with (getRqCall la) at 1;
-         [assumption|
-          eapply rqCall_from_censor; eassumption] |
-         unfold getRqCall;
-         match goal with
-         | [ H : (_ === calls l .[ rqMeth])%fmap |- _ ] =>
-           rewrite H
-         end; subst last'; auto]);
-    try (
-        replace ( (@option_map (prod bool address) bool (@fst bool address) last'0)) with (getRqDef l0); 
-        [replace (getRqDef l0) with (getRqDef lb) at 1;
-         [assumption|
-          eapply rqDef_from_censor; eassumption] |
-         unfold getRqDef;
-         match goal with
-         | [ H : (_ === defs l0 .[ rqMeth])%fmap |- _ ] =>
-           rewrite H
-         end; subst last'0; auto]);
-    try congruence.
-
-    shatter.
-    inv H23.
-    (* line of _something_ *)
-
-    replace ( (@option_map (prod bool address) bool (@fst bool address) last'0)) with (getRqDef l0).
-    replace (getRqDef l0) with (getRqDef lb) at 1.
-    assumption.
-    eapply rqDef_from_censor; eassumption.
-    unfold getRqDef;
-      match goal with
-      | [ H : (_ === defs l0 .[ rqMeth ])%fmap |- _ ] =>
-        rewrite H
-      end; subst last'0; auto.
-    
-    + pose (inv_rq argV0); shatter; subst argV0.
-      match goal with
-      | [ H : context [last'0 = _ ] |- _ ] => simpl in H
-      end; shatter. subst last'0; simpl.
-      replace (@Some bool x0) with (getRqDef l0).
-      replace (getRqDef l0) with (getRqDef lb) at 1.
-      assumption.
-      eapply rqDef_from_censor; eassumption.
-      unfold getRqDef;
+        intuition idtac;
+        cbv zeta in *;
         match goal with
-        | [ H : (_ === defs l0 .[ rqMeth])%fmap |- _ ] =>
-          rewrite H
-        end; reflexivity.
-    + destruct (inv_rq argV) as [adr [op [dat HargV]]]; subst argV.
-      destruct (inv_rq argV0) as [adr0 [op0 [dat0 HargV0]]]; subst argV0.
-      repeat match goal with
-             | [ H : context[mem'0 = _] |- _ ] => simpl in H
-             end.
-      repeat match goal with
-             | [ H : context[mem' = _] |- _ ] => simpl in H
-             end.
-      shatter.
-      
-      assert (x0 = x3).
-      clear - H12 H6 H3.
-      unfold Defs.extractMethsWrVals in H3;
-        rewrite H6, H12 in H3;
-        simpl in H3.
-      destruct x0; destruct x3;
-        try (inv H3); reflexivity.
-        subst x0.
-        destruct x3; etransitivity.
-        eapply H18.
-        replace x2 with x; replace x4 with x1; symmetry. assumption.
-        
-        
-      pose (inv_rq x).
-      shatter. subst. simpl in H3. shatter. subst. simpl.
-      unfold getRqCall at 3 in H15. rewrite H2 in H15. simpl in H15.
+        | [ H : Defs.ThreeStageMemMemConsistent ?ls ?lst ?mem |-
+            Defs.ThreeStageMemMemConsistent ?ls ?lst' ?mem' ] =>
+          replace lst' with lst; [replace mem' with mem; [apply H|]|]
+        | _ => idtac
+        end;
+        match goal with
+        | [ H : censorThreeStageLabelSeq ?lRq ?get ?meth ?x =
+                censorThreeStageLabelSeq ?lRq' ?get ?meth ?y |-
+            censorThreeStageLabelSeq ?lRq0 ?get ?meth ?x =
+            censorThreeStageLabelSeq ?lRq0' ?get ?meth ?y ] =>
+          replace lRq0 with lRq at 1; [replace lRq0' with lRq'; [apply H|]|]
+        | _ => idtac
+        end;
+        match goal with
+        | [ H : Defs.extractProcRdValSeq ?x lsp' = Defs.extractMemRdValSeq ?y lsm' |-
+            Defs.extractProcRdValSeq ?x' lsp' = Defs.extractMemRdValSeq ?y' lsm' ] =>
+          replace x' with x at 1; [replace y' with y; [apply H|]|]
+        | _ => idtac
+        end;
+        change Defs.getRqDef with getRqDef in *;
+        change Defs.getRqCall with getRqCall in *;
+        intuition idtac;
+        match goal with
+        | [ |- getRqCall _ _ = option_map fst ?lst ] =>
+          try erewrite rqCall_from_censor by eassumption;
+            repeat match goal with
+                     [ H : (M.find _ (defs l0)) = _ |- _ ] => try rewrite <- rq_consistent in H; try rewrite <- rs_consistent in H
+                   end;
+            try match goal with
+                | [ _ : (_ === calls l .[rsMeth])%fmap, _ : ((M.find rqMeth (calls l)) = Some _) |- _ ] => fail 1
+                | [ _ : (_ === calls l .[rsMeth])%fmap, _ : ((M.find rqMeth (calls l)) = None) |- _ ] => fail 1
+                | [ H : (_ === calls l .[rsMeth])%fmap |- _] =>
+                  assert (_=== calls l .[ rqMeth ])%fmap 
+                    by (eassert _ as e by (eapply mRqRs; eassumption); destruct e;
+                        eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs; try eassumption);
+                        destruct inv_rq_eq;
+                        eassert _ as inv_rs_eq by (apply inv_censoreq_rs_memdefs; eassumption);
+                        destruct inv_rs_eq;
+                        shatter;
+                        try congruence;
+                        try match goal with
+                            |  [ Hs : ?x = Some _ , Hn : ?x = None |- _ ] => exfalso; rewrite Hn in Hs; discriminate
+                            end)
+                end;
+            match goal with
+            | [ H : (_ === calls l .[rqMeth])%fmap |- _ ] => unfold getRqCall; rewrite H; subst lst; auto
+            | [ H : (_=== calls l .[rqMeth])%fmap, H' : ((M.find rsMeth (calls l)) = _)  |- _ ] => unfold getRqCall; rewrite H, H'; subst lst; auto
+            end
+        | _ => idtac
+        end;
+        match goal with
+        | [ |- getRqDef _ _ = option_map fst ?lst ] =>
+          try erewrite rqDef_from_censor by eassumption;
+            repeat match goal with
+                   | [ H : (M.find _ (calls l)) = Some _ |- _ ] => try rewrite rq_consistent in H; try rewrite rs_consistent in H
+                   | [ H : (M.find _ (calls l)) = None |- _ ] => try rewrite rq_consistent in H; try  rewrite rs_consistent in H
+                   end;
+            try match goal with
+                | [ _ : (_ === defs l0 .[rsMeth])%fmap, _ : ((M.find rqMeth (defs l0)) = Some _) |- _ ] => fail 1
+                | [ _ : (_ === defs l0 .[rsMeth])%fmap, _ : ((M.find rqMeth (defs l0)) = None) |- _ ] => fail 1
+                | [ H : (_ === defs l0 .[rsMeth])%fmap |- _] =>
+                  assert (_=== defs l0 .[ rqMeth ])%fmap 
+                    by (eassert _ as e by (eapply pRqRs; eassumption); destruct e;
+                        eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs; try eassumption);
+                        destruct inv_rq_eq;
+                        eassert _ as inv_rs_eq by (apply inv_censoreq_rs_memdefs; eassumption);
+                        destruct inv_rs_eq;
+                        shatter;
+                        try congruence;
+                        try match goal with
+                            |  [ Hs : ?x = Some _ , Hn : ?x = None |- _ ] => exfalso; rewrite Hn in Hs; discriminate
+                            end)
+                end;
+            match goal with
+            | [ H : (_ === defs l0 .[rqMeth])%fmap |- _ ] => unfold getRqDef; rewrite H; subst lst; auto; simpl
+            | [ H : (_=== defs l0 .[rqMeth])%fmap, H' : ((M.find rsMeth (defs l0)) = _)  |- _ ] => unfold getRqDef; rewrite H, H'; subst lst; auto; simpl
+            end
+        | _ => idtac 
+        end;
+        try (simpl; congruence);
+        match goal with
+        | [ |- @eq ?T _ _ ] => try change T with memory
+        | _ => idtac
+        end;
+        match goal with
+        | [ _ : (_ === _ .[ rsMeth ])%fmap, _ : (_ === _ .[ rqMeth ])%fmap |- _ ] =>
+          exfalso; repeat rewrite rq_consistent in *; repeat rewrite rs_consistent in *;
+            eassert _ as e by (eapply mRqRs; eassumption); destruct e;
+              eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs; try eassumption);
+              destruct inv_rq_eq;
+              eassert _ as inv_rs_eq by (apply inv_censoreq_rs_memdefs; eassumption);
+              destruct inv_rs_eq;
+              shatter;
+              congruence
+        | _ => idtac
+        end;
+        match goal with 
+        | [ |- @eq memory _ _ ] =>
+          repeat match goal with
+                 | [ H : if (evalExpr _) then _ else _ |- _ ] => simpl in H
+                 end;
+            repeat match goal with
+                   | [ H : if ?x then _ else _, K : ?x = _ |- _ ] => rewrite K in H
+                   end;
+            match goal with
+            | [ H : if ?x then _ else _ |- _ ] => destruct x
+            end;
+            subst;
+            repeat match goal with
+                     [ K : _ = _ |- _ ] => rewrite K
+                   end
+        | _ => idtac
+        end;
+        try (reflexivity +
+             (destruct lastRq as [[b adr]|]; [destruct b|]; intuition congruence) +
+             (subst; simpl; congruence)).
+
+    idtac.
+    (* 3 goals for if l/l0 contain (a) a request, (b) a response, (c) neither. *)
+
+    + (* Rq *)
+    
+    unfold WellHiddenConcat, wellHidden in *.
+    simpl in *. intuition subst; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
+    (* 2 goals, for defs/calls and calls/defs *)
+    * unfold FMap.M.DomainSubset.
+      intros.
+      destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+      unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        let H := fresh in 
+        pose proof H2 as H; simpl in H.
+        let H := fresh in 
+        pose proof H4 as H; simpl in H.
+        repeat inv_label.
+      rewrite In_subtractKV in *; shatter; split.
+      -- match goal with
+         | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+         end;
+           match goal with
+           | [ Hin : FMap.M.In k ?d |- _ ] => 
+               erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+               match goal with
+               | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
+               end;
+               rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+               tauto
+           end. 
+      -- intuition idtac.
+         ++ left; intros;
+              match goal with
+              | [ H : _ -> False |- _ ] => apply H
+              end.
+            match goal with
+            | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+            end;
+              match goal with
+              | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                  match goal with
+                  | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
+                  end;
+                  rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                  tauto
+              end.
+      ++ right; intros;
+                  match goal with
+                  | [ H : _ -> False |- _ ] => apply H; clear H
+                  end.
+         destruct (String.string_dec k rqMeth); [subst | destruct (String.string_dec k rsMeth); [subst |]].
+         ** repeat rewrite FMap.M.find_union.
+            replace (FMap.M.find rqMeth defs) with (None (A := {x : SignatureT & SignT x})); [rewrite H19|].
+            rewrite H7. repeat apply f_equal. apply pair_eq. fin_func_eq; congruence. pose (inv_none retV); pose (inv_none retV0); congruence.
+            (* step_defs_in *)
+
+            eassert _ as inv_rq_eq. eapply inv_censoreq_rq_calls_as_defs. eassumption.
+            unfold Semantics.defs in inv_rq_eq.
+            
+
+            
+            let H := fresh in 
+            pose proof (step_defs_in H14) as H; simpl in H; unfold M.KeysSubset in H; specialize (H rqMeth).
+            
+
+                        
+            --- match goal with
+                | [ H : Step m _ _ _ |- _ ] =>
+                  let Hsci := fresh in
+                  pose (step_calls_in mequiv H) as Hsci;
+                    unfold Semantics.calls in Hsci;
+                    specialize (Hsci rqMeth)
+                end.
+                repeat match goal with
+                | [ H : censorLabel _ _ = censorLabel _ _ |- _ ] =>
+                  unfold censorLabel in H; inv_label
+                end.
+                match goal with
+                | [ Himpl : (M.Map.In _ _) -> (In _ _),
+                            Hmapi : (M.mapi _ calls0 = M.mapi _ calls2) |- _ ] =>
+                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Himpl;
+                    rewrite Hmapi in Himpl;
+                    rewrite FMap.M.F.P.F.mapi_in_iff in Himpl;
+                    rewrite FMap.M.F.P.F.in_find_iff in Himpl;
+                    destruct (FMap.M.find rqMeth calls2); try reflexivity;
+                      assert (In rqMeth (getCalls m)) by (apply Himpl; congruence);
+                      pose (callsDisj rqMeth);
+                      pose pcrq;
+                      tauto
+                end.
+            --- match goal with
+                | [ H : Step p _ _ _ |- _ ] =>
+                  let Hsdi := fresh in
+                  pose (step_defs_in H) as Hsdi;
+                    unfold Semantics.defs in Hsdi;
+                    specialize (Hsdi rqMeth)
+                end.
+                repeat match goal with
+                | [ H : censorLabel _ _ = censorLabel _ _ |- _ ] =>
+                  unfold censorLabel in H; inv_label
+                       end.
+                match goal with
+                | [ Himpl : (M.Map.In _ _) -> (In _ _),
+                            Hmapi : (M.mapi _ defs = M.mapi _ defs1) |- _ ] =>
+                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Himpl;
+                    rewrite Hmapi in Himpl;
+                    rewrite FMap.M.F.P.F.mapi_in_iff in Himpl;
+                    rewrite FMap.M.F.P.F.in_find_iff in Himpl;
+                    destruct (FMap.M.find rqMeth defs1); try reflexivity;
+                      assert (In rqMeth (getDefs p)) by (apply Himpl; congruence);
+                      exfalso;
+                      apply pndrq;           
+                      assumption
+                end.
+         ** subst.
+            repeat rewrite FMap.M.find_union.
+            replace (FMap.M.find rsMeth defs1) with (None (A := {x : SignatureT & SignT x}));
+              [replace (FMap.M.find rsMeth calls2) with (None (A := {x : SignatureT & SignT x}));
+               [replace (FMap.M.find rsMeth calls1) with (FMap.M.find rsMeth defs2); [destruct (FMap.M.find rsMeth defs2); auto|]|]|].
+            --- 
+              ***  assert (k <> fhMeth /\ k <> thMeth). 
+            --- apply FMap.M.union_In in H18.
+                destruct H18.
+                +++ match goal with
+                    | [ H : Step p _ _ _ |- _ ] =>
+                      let Hsdi := fresh in
+                      pose (step_defs_in H) as Hsdi;
+                        unfold Semantics.defs in Hsdi;
+                        specialize (Hsdi k)
+                    end.
+                    erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
+                    unfold censorLabel in H6.
+                    inv_label.
+                    rewrite H25 in H23.
+                    rewrite FMap.M.F.P.F.mapi_in_iff in H23.
+                    specialize (H23 H5).
+                    pose pndfh.
+                    pose pndth.
+                    destruct (String.string_dec k fhMeth); subst; auto.
+                    destruct (String.string_dec k thMeth); subst; auto.
+                +++ match goal with
+                    | [ H : Step m _ _ _ |- _ ] =>
+                      let Hsdi := fresh in
+                      pose (step_defs_in H) as Hsdi;
+                        unfold Semantics.defs in Hsdi;
+                        specialize (Hsdi k)
+                    end.
+                    erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
+                    unfold censorLabel in H7.
+                    inv_label.
+                    rewrite H25 in H23.
+                    rewrite FMap.M.F.P.F.mapi_in_iff in H23.
+                    specialize (H23 H5).
+                    pose mndfh.
+                    pose mndth.
+                    destruct (String.string_dec k fhMeth); subst; auto.
+                    destruct (String.string_dec k thMeth); subst; auto.
+            --- shatter.
+                repeat match goal with
+                       | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                         assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
+                           assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
+                           clear H
+                       end.
+                repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H25 by assumption.
+                repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H26 by assumption.
+                repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
+                repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H27 by assumption.
+                unfold Semantics.calls, Semantics.defs in *.
+                       repeat rewrite FMap.M.find_union.
+                       repeat rewrite FMap.M.find_union in H18.
+                       simpl in *.
+                       rewrite <- H25.
+                       rewrite <- H26.
+                       rewrite <- H6.
+                       rewrite <- H27.
+                       assumption.
+                       
+                       
+    (* line of _something_ *)
 
         match goal with
         | [ H : Defs.SCMemMemConsistent lsm' ?mem |- Defs.SCMemMemConsistent lsm' ?mem' ] => replace mem' with mem; auto
@@ -1897,12 +1444,12 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                   match goal with
                   | [ H : _ -> False |- _ ] => apply H; clear H
                   end.
-                destruct (String.string_dec k execMeth).
+                destruct (String.string_dec k rqMeth).
                 ** subst.
                    repeat rewrite FMap.M.find_union.
-                   replace (FMap.M.find execMeth defs1) with (None (A := {x : SignatureT & SignT x}));
-                     [replace (FMap.M.find execMeth calls2) with (None (A := {x : SignatureT & SignT x}));
-                      [replace (FMap.M.find execMeth calls1) with (FMap.M.find execMeth defs2); [destruct (FMap.M.find execMeth defs2); auto|]|]|].
+                   replace (FMap.M.find rqMeth defs1) with (None (A := {x : SignatureT & SignT x}));
+                     [replace (FMap.M.find rqMeth calls2) with (None (A := {x : SignatureT & SignT x}));
+                      [replace (FMap.M.find rqMeth calls1) with (FMap.M.find rqMeth defs2); [destruct (FMap.M.find rqMeth defs2); auto|]|]|].
                    --- unfold Defs.extractMethsWrVals in *;
                          destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
                          destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
@@ -1923,7 +1470,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                          let Hsci := fresh in
                          pose (step_calls_in mequiv H) as Hsci;
                            unfold Semantics.calls in Hsci;
-                           specialize (Hsci execMeth)
+                           specialize (Hsci rqMeth)
                        end.
                        erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
                        unfold censorLabel in H7.
@@ -1931,9 +1478,9 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                        rewrite H24 in H23.
                        rewrite FMap.M.F.P.F.mapi_in_iff in H23.
                        rewrite FMap.M.F.P.F.in_find_iff in H23.
-                       destruct (FMap.M.find execMeth calls2); try reflexivity.
-                       assert (In execMeth (getCalls m)) by (apply H23; congruence).
-                       pose (callsDisj execMeth).
+                       destruct (FMap.M.find rqMeth calls2); try reflexivity.
+                       assert (In rqMeth (getCalls m)) by (apply H23; congruence).
+                       pose (callsDisj rqMeth).
                        pose pcexec.
                        tauto.
                    --- match goal with
@@ -1941,7 +1488,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                          let Hsdi := fresh in
                          pose (step_defs_in H) as Hsdi;
                            unfold Semantics.defs in Hsdi;
-                           specialize (Hsdi execMeth)
+                           specialize (Hsdi rqMeth)
                        end.
                        erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
                        unfold censorLabel in H6.
@@ -1949,8 +1496,8 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                        rewrite H25 in H23.
                        rewrite FMap.M.F.P.F.mapi_in_iff in H23.
                        rewrite FMap.M.F.P.F.in_find_iff in H23.
-                       destruct (FMap.M.find execMeth defs1); try reflexivity.
-                       assert (In execMeth (getDefs p)) by (apply H23; congruence).
+                       destruct (FMap.M.find rqMeth defs1); try reflexivity.
+                       assert (In rqMeth (getDefs p)) by (apply H23; congruence).
                        exfalso.
                        apply pndex.
                        assumption.
@@ -2100,12 +1647,12 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                 ** match goal with
                    | [ H : _ -> False |- _ ] => apply H; clear H
                    end.
-                   destruct (String.string_dec k execMeth).
+                   destruct (String.string_dec k rqMeth).
                    --- subst.
                        repeat rewrite FMap.M.find_union.
-                       replace (FMap.M.find execMeth defs1) with (None (A := {x : SignatureT & SignT x}));
-                         [replace (FMap.M.find execMeth calls2) with (None (A := {x : SignatureT & SignT x}));
-                          [replace (FMap.M.find execMeth calls1) with (FMap.M.find execMeth defs2); [destruct (FMap.M.find execMeth defs2); auto|]|]|].
+                       replace (FMap.M.find rqMeth defs1) with (None (A := {x : SignatureT & SignT x}));
+                         [replace (FMap.M.find rqMeth calls2) with (None (A := {x : SignatureT & SignT x}));
+                          [replace (FMap.M.find rqMeth calls1) with (FMap.M.find rqMeth defs2); [destruct (FMap.M.find rqMeth defs2); auto|]|]|].
                        +++ unfold Defs.extractMethsWrVals in *;
                              destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
                              destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
@@ -2126,7 +1673,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                              let Hsci := fresh in
                              pose (step_calls_in mequiv H) as Hsci;
                                unfold Semantics.calls in Hsci;
-                               specialize (Hsci execMeth)
+                               specialize (Hsci rqMeth)
                            end.
                            erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
                            unfold censorLabel in H7.
@@ -2134,9 +1681,9 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                            rewrite H24 in H23.
                            rewrite FMap.M.F.P.F.mapi_in_iff in H23.
                            rewrite FMap.M.F.P.F.in_find_iff in H23.
-                           destruct (FMap.M.find execMeth calls2); try reflexivity.
-                           assert (In execMeth (getCalls m)) by (apply H23; congruence).
-                           pose (callsDisj execMeth).
+                           destruct (FMap.M.find rqMeth calls2); try reflexivity.
+                           assert (In rqMeth (getCalls m)) by (apply H23; congruence).
+                           pose (callsDisj rqMeth).
                            pose pcexec.
                            tauto.
                        +++ match goal with
@@ -2144,7 +1691,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                              let Hsdi := fresh in
                              pose (step_defs_in H) as Hsdi;
                                unfold Semantics.defs in Hsdi;
-                               specialize (Hsdi execMeth)
+                               specialize (Hsdi rqMeth)
                            end.
                            erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
                            unfold censorLabel in H6.
@@ -2152,8 +1699,8 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                            rewrite H25 in H23.
                            rewrite FMap.M.F.P.F.mapi_in_iff in H23.
                            rewrite FMap.M.F.P.F.in_find_iff in H23.
-                           destruct (FMap.M.find execMeth defs1); try reflexivity.
-                           assert (In execMeth (getDefs p)) by (apply H23; congruence).
+                           destruct (FMap.M.find rqMeth defs1); try reflexivity.
+                           assert (In rqMeth (getDefs p)) by (apply H23; congruence).
                            exfalso.
                            apply pndex.
                            assumption.
@@ -2384,9 +1931,6 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     eexists; eauto.
   Qed.
 
-  Ltac normalize := repeat match goal with
-                           | [ H : context[@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) ?k ?mp] |- _ ] => replace (@FMap.M.find (@sigT SignatureT (fun x : SignatureT => SignT x)) k mp) with (@FMap.M.find (@sigT SignatureT SignT) k mp) in H by reflexivity
-                           end.
 
   Lemma composeCensor : forall lsp lsm,
       CanCombineLabelSeq lsp lsm ->
@@ -2432,17 +1976,17 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       reflexivity.
     - FMap.M.ext k.
       repeat rewrite FMap.M.F.P.F.mapi_o by (intros ? ? ? Heq; rewrite Heq; reflexivity).
-      destruct (String.string_dec k execMeth);
+      destruct (String.string_dec k rqMeth);
         [|destruct (String.string_dec k fhMeth);
           [|destruct (String.string_dec k thMeth)]];
         subst.
       + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
         shatter.
-        specialize (H execMeth).
-        specialize (H3 execMeth).
+        specialize (H rqMeth).
+        specialize (H3 rqMeth).
         rewrite FMap.M.F.P.F.not_find_in_iff in H.
         rewrite FMap.M.F.P.F.not_find_in_iff in H3.
-        assert (In execMeth (getCalls (p ++ m)%kami));
+        assert (In rqMeth (getCalls (p ++ m)%kami));
           [|rewrite H by assumption; rewrite H3 by assumption; reflexivity].
         apply getCalls_in_1.
         apply pcexec.
@@ -2543,17 +2087,17 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
         rewrite H; rewrite H2; rewrite H3; rewrite H5; reflexivity.
     - FMap.M.ext k.
       repeat rewrite FMap.M.F.P.F.mapi_o by (intros ? ? ? Heq; rewrite Heq; reflexivity).
-      destruct (String.string_dec k execMeth);
+      destruct (String.string_dec k rqMeth);
         [|destruct (String.string_dec k fhMeth);
           [|destruct (String.string_dec k thMeth)]];
         subst.
       + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
         shatter.
-        specialize (H2 execMeth).
-        specialize (H10 execMeth).
+        specialize (H2 rqMeth).
+        specialize (H10 rqMeth).
         rewrite FMap.M.F.P.F.not_find_in_iff in H2.
         rewrite FMap.M.F.P.F.not_find_in_iff in H10.
-        assert (In execMeth (getDefs (p ++ m)%kami));
+        assert (In rqMeth (getDefs (p ++ m)%kami));
           [|rewrite H2 by assumption; rewrite H10 by assumption; reflexivity].
         apply getDefs_in_2.
         apply mdexec.
