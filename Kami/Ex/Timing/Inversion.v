@@ -1627,4 +1627,204 @@ Module Inversions (ThreeStage : ThreeStageInterface).
   Qed.
 
   
+  Lemma inv_censor_fh_calls : forall lastRq l l',
+      censorThreeStageLabel lastRq censorThreeStageMeth l = l' ->
+      FMap.M.find fhMeth (calls l) = FMap.M.find fhMeth (calls l') \/
+      exists val,
+        FMap.M.find fhMeth (calls l) = 
+        Some (existT _
+                       {| arg := Bit 0;
+                          ret := Bit 32 |}
+                       ($0, val)) /\
+        FMap.M.find fhMeth (calls l') = 
+        Some (existT _
+                       {| arg := Bit 0;
+                          ret := Bit 32 |}
+                       ($0, $0)).
+  Proof.
+    intros lastRq l l' H.
+    destruct l. destruct l'.
+    unfold censorThreeStageLabel, censorLabel, censorThreeStageMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find fhMeth (FMap.M.mapi f calls) = FMap.M.find fhMeth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    pose proof methsDistinct; shatter.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find fhMeth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+            end; try solve [ congruence ]).
+    match goal with
+           | [ s : sigT _ |- _ ] => destruct s
+           end. 
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct s
+    end. subst.
+    unfold arg, ret in *.
+    right.
+    match goal with
+    | [ x : type (Bit 0) |- _ ] => pose proof (inv_none x)
+    end.
+    subst. 
+    exists t0.
+    tauto.
+  Qed.
+
+  Lemma inv_censor_th_calls : forall lastRq l l',
+      censorThreeStageLabel lastRq censorThreeStageMeth l = l' ->
+      FMap.M.find thMeth (calls l) = FMap.M.find thMeth (calls l') \/
+      exists val,
+        FMap.M.find thMeth (calls l) = 
+        Some (existT _
+                       {| arg := Bit 32;
+                          ret := Bit 0 |}
+                       (val, $0)) /\
+        FMap.M.find thMeth (calls l') = 
+        Some (existT _
+                       {| arg := Bit 32;
+                          ret := Bit 0 |}
+                       ($0, $0)).
+  Proof.
+    intros lastRq l l' H.
+    destruct l. destruct l'.
+    unfold censorThreeStageLabel, censorLabel, censorThreeStageMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find thMeth (FMap.M.mapi f calls) = FMap.M.find thMeth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    pose proof methsDistinct; shatter.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find thMeth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+            | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+            end; try solve [ congruence ]).
+    match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct s
+    end.
+    unfold arg, ret in *.
+    right.
+    match goal with
+    | [ x : type (Bit 0) |- _ ] => pose proof (inv_none x)
+    end.
+    subst.
+    exists t.
+    tauto.
+  Qed.
+
+  Ltac forgetful_subst x :=
+    let Hold := fresh in
+    let Hnew := fresh in
+    let Hdiscard := fresh in
+    pose x as Hold;
+    remember Hold as Hnew eqn:Hdiscard;
+    clear Hold Hdiscard;
+    subst.
+
+  Lemma inv_censor_host_fh : forall lastRq s s',
+      censorHostMeth fhMeth thMeth fhMeth s = s' ->
+      (s = s' /\ censorThreeStageMeth lastRq fhMeth s = s) \/
+      exists val,
+        s = existT _
+                   {| arg := Bit 0;
+                      ret := Bit 32 |}
+                   ($0, val) /\
+        s' = existT _
+                    {| arg := Bit 0;
+                       ret := Bit 32 |}
+                    ($0, $0).
+  Proof.
+    intros lastRq s s' H.
+    pose methsDistinct; shatter.
+    unfold censorHostMeth in H.
+    unfold censorThreeStageMeth.
+    repeat match goal with
+           | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+           | [ |- context[String.string_dec ?x ?y] ] => destruct (String.string_dec x y)
+           end; try solve [ congruence ].
+    repeat match goal with
+           | [ s : {_ : _ & _} |- _ ] => destruct s
+           end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; split; auto ]).
+    right.
+    destruct s.
+    forgetful_subst (EqdepFacts.eq_sigT_fst H).
+    forgetful_subst (Semantics.sigT_eq H).
+    simpl in t.
+    shatter_word t.
+    eexists; eauto.
+  Qed.
+
+  Lemma inv_censor_host_th : forall lastRq s s',
+      censorHostMeth fhMeth thMeth thMeth s = s' ->
+      (s = s' /\ censorThreeStageMeth lastRq thMeth s = s) \/
+      exists val,
+        s = existT _
+                   {| arg := Bit 32;
+                      ret := Bit 0 |}
+                   (val, $0) /\
+        s' = existT _
+                    {| arg := Bit 32;
+                       ret := Bit 0 |}
+                    ($0, $0).
+  Proof.
+    intros lastRq s s' H.
+    pose methsDistinct. shatter.
+    unfold censorHostMeth in H.
+    unfold censorThreeStageMeth.
+    repeat match goal with
+           | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+           | [ |- context[String.string_dec ?x ?y] ] => destruct (String.string_dec x y)
+           end; try solve [ congruence ].
+    repeat match goal with
+           | [ s : {_ : _ & _} |- _ ] => destruct s
+           end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; split; auto ]).
+    right.
+    destruct s.
+    forgetful_subst (EqdepFacts.eq_sigT_fst H).
+    forgetful_subst (Semantics.sigT_eq H).
+    simpl in t0.
+    shatter_word t0.
+    eexists; eauto.
+  Qed.
+
+  
 End Inversions.
