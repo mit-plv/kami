@@ -405,6 +405,80 @@ Module Inversions (ThreeStage : ThreeStageInterface).
     destruct b; reflexivity.
   Qed.
 
+  
+
+  Lemma inv_censor_rs_calls_as_defs : forall lastRq l l',
+      censorThreeStageLabel lastRq censorThreeStageMeth l = l' ->
+      FMap.M.find rsMeth (defs l) = FMap.M.find rsMeth (defs l') \/
+      exists arg,
+        FMap.M.find rsMeth (defs l) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #arg })%kami_expr)) /\
+        FMap.M.find rsMeth (defs l') = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT {"data" ::=
+                                          match lastRq with
+                                          | Some op => if op then #arg else $0
+                                          | None => #arg
+                                          end})%kami_expr)).
+  Proof.
+    intros lastRq l l' H.
+    destruct l. destruct l'.
+    pose methsDistinct. shatter.
+    unfold censorThreeStageLabel, censorLabel, censorThreeStageMeth in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f defs = defs0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find rsMeth (FMap.M.mapi f defs) = FMap.M.find rsMeth defs0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find rsMeth defs0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try solve [ pose methsDistinct; intuition congruence ]).
+    repeat match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct s
+    end.
+    unfold arg, ret in *.
+    right.
+    subst.
+    pose (Hrq := inv_none t).
+    pose (Hrs := inv_rs t0).
+    destruct Hrs as [dat Heqq].
+    exists dat.
+    subst.
+    split; [reflexivity|
+            destruct lastRq; [|reflexivity]].    
+    match goal with
+    | [ |- context[(@existT SignatureT (fun x : SignatureT => SignT x))] ] => replace ((@existT SignatureT (fun x : SignatureT => SignT x))) with ((@existT SignatureT SignT)) by reflexivity
+    end.
+    destruct b; reflexivity.
+  Qed.
+
+
 
   
   Definition censorThreeStageMemDefs (lastRqOp : option bool) (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
@@ -555,6 +629,145 @@ Module Inversions (ThreeStage : ThreeStageInterface).
     end.
     unfold Semantics.calls, Semantics.defs in *.
     remember (FMap.M.find rsMeth defs0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    repeat (match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try solve [ pose methsDistinct; intuition congruence ]).
+    repeat match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct x
+    end.
+    unfold arg, ret in *.
+    right.
+    subst.
+    pose (Hrq := inv_none t).
+    pose (Hrs := inv_rs t0).
+    destruct Hrs as [dat Heqq].
+    exists dat.
+    subst.
+        split; [reflexivity|
+            destruct lastRq; [|reflexivity]].    
+    match goal with
+    | [ |- context[(@existT SignatureT (fun x : SignatureT => SignT x))] ] => replace ((@existT SignatureT (fun x : SignatureT => SignT x))) with ((@existT SignatureT SignT)) by reflexivity
+    end.
+    destruct b; reflexivity.
+  Qed.
+
+  Lemma inv_censor_rq_memdefs_as_calls : forall lastRq l l',
+      censorThreeStageLabel lastRq censorThreeStageMemDefs l = l' ->
+      FMap.M.find rqMeth (calls l) = FMap.M.find rqMeth (calls l') \/
+      exists adr op arg,
+        FMap.M.find rqMeth (calls l) = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Bit 0 |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg })%kami_expr,
+                      evalExpr ($$WO)%kami_expr)) /\
+        FMap.M.find rqMeth (calls l') = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Bit 0 |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= if op then $0 else #arg })%kami_expr,
+                      evalExpr ($$WO)%kami_expr)).
+  Proof.
+    intros lastRq l l' H.
+    destruct l. destruct l'.
+    pose methsDistinct. shatter.
+    unfold censorThreeStageLabel, censorLabel, censorThreeStageMemDefs in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find rqMeth (FMap.M.mapi f calls) = FMap.M.find rqMeth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find rqMeth calls0) as e' eqn:He'.
+    clear He'.
+    match goal with
+    | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
+    end; try solve [ left; assumption ].
+    match goal with
+    | [ H : Some _ = ?e |- _ ] => destruct e; [inv_some | discriminate]
+    end.
+    match goal with
+    | [ H : (if ?x then _ else _) = _ |- _ ] => destruct x
+    end; try solve [ congruence ].
+    repeat match goal with
+    | [ s : {_ : _ & _} |- _ ] => destruct s
+    end.
+    repeat (match goal with
+            | [ H : match ?x with | _ => _ end _ = _ |- _ ] => destruct x
+            end; try solve [ left; f_equal; assumption ]).
+    match goal with
+    | [ x : SignT _ |- _ ] => destruct x
+    end.
+    unfold arg, ret in *.
+    right.
+    subst.
+    pose (Hrq := inv_rq t).
+    pose (Hrs := inv_none t0).
+    destruct Hrq as [adr [op [dat Heqq]]].
+    exists adr, op, dat.
+    subst.
+    destruct op; tauto.
+  Qed.
+  
+  Lemma inv_censor_rs_memdefs_as_calls : forall lastRq l l',
+      censorThreeStageLabel lastRq censorThreeStageMemDefs l = l' ->
+      FMap.M.find rsMeth (calls l) = FMap.M.find rsMeth (calls l') \/
+      exists arg,
+        FMap.M.find rsMeth (calls l) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #arg })%kami_expr)) /\
+        FMap.M.find rsMeth (calls l') = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}                   (evalExpr ($$WO)%kami_expr,
+                                                                                        evalExpr (STRUCT {"data" ::= match lastRq with
+                                                                                                                     | Some op => if op then #arg else $0
+                                                                                                                     | None => #arg
+                                                                                                                     end})%kami_expr)).
+  Proof.
+    intros lastRq l l' H.
+    destruct l. destruct l'.
+    pose methsDistinct. shatter.
+    unfold censorThreeStageLabel, censorLabel, censorThreeStageMemDefs in H.
+    inv_label.
+    match goal with
+    | [ H : FMap.M.mapi ?f calls = calls0 |- _ ] =>
+      let Hfind := fresh in
+      assert (FMap.M.find rsMeth (FMap.M.mapi f calls) = FMap.M.find rsMeth calls0) as Hfind by (f_equal; assumption);
+        rewrite FMap.M.F.P.F.mapi_o in Hfind by (intros; subst; reflexivity);
+        unfold option_map in Hfind;
+        clear - Hfind
+    end.
+    unfold Semantics.calls, Semantics.defs in *.
+    remember (FMap.M.find rsMeth calls0) as e' eqn:He'.
     clear He'.
     match goal with
     | [ H : match ?x with | _ => _ end = _ |- _ ] => destruct x
@@ -752,7 +965,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
   Qed.
 
   
-    Lemma inv_censoreq_rs_calls : forall lastRq la lb,
+  Lemma inv_censoreq_rs_calls : forall lastRq la lb,
       censorThreeStageLabel lastRq censorThreeStageMeth la = censorThreeStageLabel lastRq censorThreeStageMeth lb ->
       FMap.M.find rsMeth (calls la) = FMap.M.find rsMeth (calls lb) \/
       exists arg arg',
@@ -809,6 +1022,65 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       repeat eexists;
       eauto.
   Qed.
+
+  Lemma inv_censoreq_rs_calls_as_defs : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMeth la = censorThreeStageLabel lastRq censorThreeStageMeth lb ->
+      FMap.M.find rsMeth (defs la) = FMap.M.find rsMeth (defs lb) \/
+      exists arg arg',
+        FMap.M.find rsMeth (defs la) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT {"data" ::= #arg })%kami_expr)) /\
+        FMap.M.find rsMeth (defs lb) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT { "data" :: Bit 32}) |}
+                     ((evalExpr ($$WO)%kami_expr),
+                      evalExpr (STRUCT { "data" ::= #arg' })%kami_expr)) /\
+              match lastRq with
+                  | Some op => if op then arg = arg' else True
+                  | None => arg = arg'
+              end. 
+  Proof.
+    intros lastRq la lb H.
+    destruct (inv_censor_rs_calls_as_defs lastRq la _ eq_refl) as [Haeq | [arga [Ha Hac]]];
+      destruct (inv_censor_rs_calls_as_defs lastRq lb _ eq_refl) as [Hbeq | [argb [Hb Hbc]]].
+    - left.
+      congruence.
+    - right.
+      rewrite H in Haeq.
+      rewrite Hbc in Haeq.
+      destruct lastRq; [destruct b|].
+      + exists argb, argb.
+        eauto.
+      + exists $0, argb.
+        eauto.
+      + exists argb, argb.
+        eauto.
+    - right.
+      rewrite <- H in Hbeq.
+      rewrite Hac in Hbeq.
+      destruct lastRq; [destruct b|].
+      + exists arga, arga. eauto.
+      + exists arga, $0. eauto.
+      + exists arga, arga. eauto.
+    - right.
+      rewrite H in Hac.
+      rewrite Hbc in Hac.
+      inv_rs_eq.    
+      destruct lastRq; try match goal with
+                           | [ b : bool |- _ ] => destruct b
+                           end;
+      repeat match goal with
+             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
+             end;
+      subst;
+      repeat eexists;
+      eauto.
+  Qed.
+
 
   Lemma inv_censoreq_rq_memdefs : forall lastRq la lb,
       censorThreeStageLabel lastRq censorThreeStageMemDefs la = censorThreeStageLabel lastRq censorThreeStageMemDefs lb ->
@@ -926,6 +1198,125 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       repeat eexists;
       eauto.
   Qed.
+
+  
+  Lemma inv_censoreq_rq_memdefs_as_calls : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs la = censorThreeStageLabel lastRq censorThreeStageMemDefs lb ->
+      FMap.M.find rqMeth (calls la) = FMap.M.find rqMeth (calls lb) \/
+      exists adr op arg arg',
+        FMap.M.find rqMeth (calls la) = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Bit 0 |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg })%kami_expr,
+                      evalExpr ($$WO)%kami_expr)) /\
+        FMap.M.find rqMeth (calls lb) = 
+        Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Bit 0 |}
+                     (evalExpr (STRUCT { "addr" ::= #adr;
+                                         "op" ::= #op;
+                                         "data" ::= #arg' })%kami_expr,
+                      evalExpr ($$WO)%kami_expr)) /\ if op then True else arg = arg'.
+  Proof.
+    intros lastRq la lb H.
+    destruct (inv_censor_rq_memdefs_as_calls lastRq la _ eq_refl) as [Haeq | [adra [opa [arga [Ha Hac]]]]];
+      destruct (inv_censor_rq_memdefs_as_calls lastRq lb _ eq_refl) as [Hbeq | [adrb [opb [argb [Hb Hbc]]]]].
+    - left.
+      congruence.
+    - right.
+      rewrite H in Haeq.
+      rewrite Hbc in Haeq.
+      exists adrb, opb.
+      destruct opb.
+      + exists $0, argb.
+        eauto.
+      + exists argb, argb.
+        eauto.
+    - right.
+      rewrite <- H in Hbeq.
+      rewrite Hac in Hbeq.
+      exists adra, opa.
+      destruct opa.
+      + exists arga, $0. eauto.
+      + exists arga, arga. eauto.
+    - right.
+      rewrite H in Hac.
+      rewrite Hbc in Hac.
+      inv_rq_eq.
+      exists adra, opa.
+      destruct opa;
+      repeat match goal with
+             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
+             end;
+      subst;
+      repeat eexists;
+      eauto.
+  Qed.
+  
+  
+  Lemma inv_censoreq_rs_memdefs_as_calls : forall lastRq la lb,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs la = censorThreeStageLabel lastRq censorThreeStageMemDefs lb ->
+      FMap.M.find rsMeth (calls la) = FMap.M.find rsMeth (calls lb) \/
+      exists arg arg',
+        FMap.M.find rsMeth (calls la) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT {"data" ::= #arg })%kami_expr)) /\
+        FMap.M.find rsMeth (calls lb) = 
+        Some (existT _
+                     {| arg := Bit 0;
+                        ret := Struct (STRUCT {"data" :: Bit 32}) |}
+                     (evalExpr ($$WO)%kami_expr,
+                      evalExpr (STRUCT { "data" ::= #arg' })%kami_expr)) /\
+        match lastRq with
+        | Some op => if op then arg = arg' else True
+        | None => arg = arg'
+        end.
+  Proof.
+    intros lastRq la lb H.
+    destruct (inv_censor_rs_memdefs_as_calls lastRq la _ eq_refl) as [Haeq | [arga [Ha Hac]]];
+      destruct (inv_censor_rs_memdefs_as_calls lastRq lb _ eq_refl) as [Hbeq | [argb [Hb Hbc]]].
+    - left.
+      congruence.
+    - right.
+      rewrite H in Haeq.
+      rewrite Hbc in Haeq.      
+      destruct lastRq; [destruct b|].
+      + exists argb, argb.
+        eauto.
+      + exists $0, argb.
+        eauto.
+      + exists argb, argb.
+        eauto.
+    - right.
+      rewrite <- H in Hbeq.
+      rewrite Hac in Hbeq.
+      destruct lastRq; [destruct b|].
+      + exists arga, arga. eauto.
+      + exists arga, $0. eauto.
+      + exists arga, arga. eauto.
+    - right.
+      rewrite H in Hac.
+      rewrite Hbc in Hac.
+      inv_rs_eq.
+      destruct lastRq; [destruct b|];
+      repeat match goal with
+             | [ H : evalExpr _ = evalExpr _ |- _ ] => simpl in H
+             end;
+      subst;
+      repeat eexists;
+      eauto.
+  Qed.
+
   
   Lemma inv_censor_rq_calls_with_mem : forall lastRq l l' mem mem',
       censorThreeStageLabel lastRq censorThreeStageMeth l = l' ->

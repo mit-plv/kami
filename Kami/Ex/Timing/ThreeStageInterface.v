@@ -321,11 +321,33 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     tauto.
   Qed.
 
+  
+  Lemma mncrq : ~ In rqMeth (getCalls m).
+    pose (callsDisj rqMeth).
+    pose pcrq.
+    tauto.
+  Qed.
+
+  Lemma mncrs : ~ In rsMeth (getCalls m).
+    pose (callsDisj rsMeth).
+    pose pcrs.
+    tauto.
+  Qed.
+
+
   Lemma pndrq : ~ In rqMeth (getDefs p).
     pose (defsDisj rqMeth).
     pose mdrq.
     tauto.
   Qed.
+
+  
+  Lemma pndrs : ~ In rsMeth (getDefs p).
+    pose (defsDisj rsMeth).
+    pose mdrs.
+    tauto.
+  Qed.
+
 
   Lemma whc_rq : forall lp lm rp up rm um,
       WellHiddenConcat p m lp lm ->
@@ -967,7 +989,70 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
                | [ H : True |- _ ] => clear H
                end; subst; try inv H'; congruence.
   Qed.
- 
+
+  Lemma proc_no_def_rq : forall r u l,
+      Step p r u l ->
+      (_=== (defs l) .[ rqMeth ])%fmap.
+  Proof.
+    intros.
+    pose proof (step_defs_in H) as step_defs; simpl in step_defs;
+      unfold M.KeysSubset in step_defs; specialize (step_defs rqMeth);
+        pose proof pndrq as not_def;
+        match goal with
+        | [ Hn : ~ ?x, Hi : ?y -> ?x |- _ ] => 
+          assert (~ y) as not_in by auto; clear Hn; clear Hi
+        end;
+        rewrite FMap.M.F.P.F.not_find_in_iff in not_in;
+        assumption.
+  Qed.
+
+    Lemma proc_no_def_rs : forall r u l,
+      Step p r u l ->
+      (_=== (defs l) .[ rsMeth ])%fmap.
+  Proof.
+    intros.
+    pose proof (step_defs_in H) as step_defs; simpl in step_defs;
+      unfold M.KeysSubset in step_defs; specialize (step_defs rsMeth);
+        pose proof pndrs as not_def;
+        match goal with
+        | [ Hn : ~ ?x, Hi : ?y -> ?x |- _ ] => 
+          assert (~ y) as not_in by auto; clear Hn; clear Hi
+        end;
+        rewrite FMap.M.F.P.F.not_find_in_iff in not_in;
+        assumption.
+  Qed.
+
+  Lemma mem_no_call_rq : forall r u l,
+      Step m r u l ->
+      (_=== (calls l) .[ rqMeth ])%fmap.
+  Proof.
+    intros.
+    pose proof (step_calls_in mequiv H) as step_calls; simpl in step_calls;
+      unfold M.KeysSubset in step_calls; specialize (step_calls rqMeth);
+        pose proof mncrq as not_def.
+        match goal with
+        | [ Hn : ~ ?x, Hi : ?y -> ?x |- _ ] => 
+          assert (~ y) as not_in by auto; clear Hn; clear Hi
+        end;
+        rewrite FMap.M.F.P.F.not_find_in_iff in not_in;
+        assumption.
+  Qed.
+
+  Lemma mem_no_call_rs : forall r u l,
+      Step m r u l ->
+      (_=== (calls l) .[ rsMeth ])%fmap.
+  Proof.
+    intros.
+    pose proof (step_calls_in mequiv H) as step_calls; simpl in step_calls;
+      unfold M.KeysSubset in step_calls; specialize (step_calls rsMeth);
+        pose proof mncrs as not_def.
+        match goal with
+        | [ Hn : ~ ?x, Hi : ?y -> ?x |- _ ] => 
+          assert (~ y) as not_in by auto; clear Hn; clear Hi
+        end;
+        rewrite FMap.M.F.P.F.not_find_in_iff in not_in;
+        assumption.
+  Qed.
       
   Lemma concatCensor : forall lsp lsm,
       WellHiddenConcatSeq p m lsp lsm ->
@@ -1029,39 +1114,48 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     repeat match goal with
            | [ H : ?x ++ ?xs = ?y ++ ?ys |- WellHiddenConcatSeq _ _ _ _ ] => apply app_inv in H
            end; shatter; [|erewrite <- censor_length_extract_wr by eassumption;
-                               erewrite <- censor_mem_length_extract_wr by eassumption;
-                               pose (concatWrLen [la] [lb]) as e;
-                               unfold Defs.extractProcWrValSeq, Defs.extractMemWrValSeq, flat_map  in e;
-                               repeat rewrite app_nil_r in e;
-                               eapply e; repeat (econstructor; eauto)
+                           erewrite <- censor_mem_length_extract_wr by eassumption;
+                           pose (concatWrLen [la] [lb]) as e;
+                           unfold Defs.extractProcWrValSeq, Defs.extractMemWrValSeq, flat_map  in e;
+                           repeat rewrite app_nil_r in e;
+                           eapply e; repeat (econstructor; eauto)
                           |erewrite <- censor_length_extract_rd by eassumption;
                            erewrite <- censor_mem_length_extract_rd by eassumption;
                            eassert _ as e by (eapply (concatRdLen [la] [lb]); repeat (econstructor; eauto));
                            unfold Defs.extractProcRdValSeq, Defs.extractMemRdValSeq, flat_map in e;
                            repeat rewrite app_nil_r in e;
                            eapply e].
- 
-    pose proof (rq_consistent_censor _ _ _ _ _ _ H5 H2 H4 H1) as rq_consistent.
-    pose proof (rs_consistent_censor _ _ _ _ _ _ H6 H2 H4 H3) as rs_consistent.
+    
+    eassert _ as rq_consistent by (eapply rq_consistent_censor; eassumption).
+    eassert _ as rs_consistent by (eapply rs_consistent_censor; eassumption).
+    eassert _ as proc_no_rq by (eapply proc_no_def_rq; eassumption).
+    eassert _ as proc_no_rs by (eapply proc_no_def_rs; eassumption).
+    eassert _ as mem_no_rq by (eapply mem_no_call_rq; eassumption).
+    eassert _ as mem_no_rs by (eapply mem_no_call_rs; eassumption).
+    assert ((_=== defs l .[ rqMeth])%fmap /\ (_=== defs l .[ rsMeth])%fmap /\ (_=== calls l0 .[ rqMeth])%fmap /\ (_=== calls l0 .[ rsMeth])%fmap) by
+        (eassert _ as e by (eapply mRqRs; eassumption); destruct e;
+         eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs_as_calls; try eassumption);
+         destruct inv_rq_eq;
+         eassert _ as inv_rs_eq by (apply inv_censoreq_rs_memdefs_as_calls; eassumption);
+         destruct inv_rs_eq;
+         eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_calls_as_defs; try eassumption);
+         destruct inv_rq_eq;
+         eassert _ as inv_rs_eq by (apply inv_censoreq_rs_calls_as_defs; eassumption);
+         destruct inv_rs_eq;
+         shatter;
+         repeat split; congruence). 
+    
     repeat match goal with
            | [ H : context[_ :: lsp'] |- _ ] => inv H
            | [ H : context[_ :: lsm'] |- _ ] => inv H
-           end; shatter; constructor;(*
-      pose proof (inv_censor_rq_calls_with_mem lRq l _ mem mem' eq_refl) as invL;
-      pose proof (inv_censor_rq_memdefs_with_mem lRq l0 _ mem mem'0 eq_refl) as invL0;
-      try match goal with
-      | [ H : ( _ === (calls l) .[ rqMeth])%fmap |- _ ]  => rewrite H in invL
-          end;
-      try match goal with
-          | [ H : (_ === (defs l0) .[ rqMeth])%fmap |- _ ] => rewrite H in invL0
-          end;*)
+           end; shatter; constructor;
       try (eassert (_ = _) as args_same by 
-          (shatter; etransitivity; [
-             match goal with
-             | [ H : (_ === calls l .[ rqMeth ])%fmap |- _ ] =>
-               apply (eq_sym H)
-             end | etransitivity; [
-                     apply rq_consistent | eassumption]]);
+                (shatter; etransitivity; [
+                   match goal with
+                   | [ H : (_ === calls l .[ rqMeth ])%fmap |- _ ] =>
+                     apply (eq_sym H)
+                   end | etransitivity; [
+                           apply rq_consistent | eassumption]]);
            inv_rq_eq);
       try match goal with
           | [ |- WellHiddenConcatSeq _ _ _ _ ] =>
@@ -1187,547 +1281,617 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
              (destruct lastRq as [[b adr]|]; [destruct b|]; intuition congruence) +
              (subst; simpl; congruence)).
 
-    idtac.
-    (* 3 goals for if l/l0 contain (a) a request, (b) a response, (c) neither. *)
-
-    + (* Rq *)
     
-    unfold WellHiddenConcat, wellHidden in *.
-    simpl in *. intuition subst; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
-    (* 2 goals, for defs/calls and calls/defs *)
-    * unfold FMap.M.DomainSubset.
-      intros.
-      destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
-      unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
-        let H := fresh in 
-        pose proof H2 as H; simpl in H.
-        let H := fresh in 
-        pose proof H4 as H; simpl in H.
+    (* 3 goals for if l/l0 contain (a) a request, (b) a response, (c) neither. *)
+    
+    - (* Rq *)
+      assert ((_=== defs lb .[ rsMeth])%fmap /\ (_=== defs l0 .[ rsMeth])%fmap)
+        by (
+            eassert _ as e by (eapply mRqRs; eassumption); destruct e;
+            eassert _ as inv_rs_eq by (eapply inv_censoreq_rs_memdefs; try eassumption);
+            destruct inv_rs_eq;
+            eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs; try eassumption);
+            destruct inv_rq_eq; shatter; split; try (exfalso; congruence); congruence).      
+      unfold WellHiddenConcat, wellHidden in *.
+      simpl in *. intuition subst; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
+      (* 2 goals, for defs/calls and calls/defs *) 
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+        | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+          match goal with
+          | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+          | _ => idtac
+          end;
+            let H' := fresh in (pose proof H as H'; simpl in H')
+        end.
         repeat inv_label.
-      rewrite In_subtractKV in *; shatter; split.
-      -- match goal with
-         | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
-         end;
-           match goal with
-           | [ Hin : FMap.M.In k ?d |- _ ] => 
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+           | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+           end;
+             match goal with
+             | [ Hin : FMap.M.In k ?d |- _ ] => 
                erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
-               match goal with
+                 match goal with
                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
-               end;
-               rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
-               tauto
-           end. 
-      -- intuition idtac.
-         ++ left; intros;
-              match goal with
-              | [ H : _ -> False |- _ ] => apply H
-              end.
-            match goal with
-            | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
-            end;
-              match goal with
-              | [ Hin : FMap.M.In k ?c  |- _ ] =>
-                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
-                  match goal with
-                  | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
-                  end;
-                  rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
-                  tauto
-              end.
-      ++ right; intros;
-                  match goal with
-                  | [ H : _ -> False |- _ ] => apply H; clear H
-                  end.
-         destruct (String.string_dec k rqMeth); [subst | destruct (String.string_dec k rsMeth); [subst |]].
-         ** repeat rewrite FMap.M.find_union.
-            replace (FMap.M.find rqMeth defs) with (None (A := {x : SignatureT & SignT x})); [rewrite H19|].
-            rewrite H7. repeat apply f_equal. apply pair_eq. fin_func_eq; congruence. pose (inv_none retV); pose (inv_none retV0); congruence.
-            (* step_defs_in *)
-
-            eassert _ as inv_rq_eq. eapply inv_censoreq_rq_calls_as_defs. eassumption.
-            unfold Semantics.defs in inv_rq_eq.
-            
-
-            
-            let H := fresh in 
-            pose proof (step_defs_in H14) as H; simpl in H; unfold M.KeysSubset in H; specialize (H rqMeth).
-            
-
-                        
-            --- match goal with
-                | [ H : Step m _ _ _ |- _ ] =>
-                  let Hsci := fresh in
-                  pose (step_calls_in mequiv H) as Hsci;
-                    unfold Semantics.calls in Hsci;
-                    specialize (Hsci rqMeth)
-                end.
-                repeat match goal with
-                | [ H : censorLabel _ _ = censorLabel _ _ |- _ ] =>
-                  unfold censorLabel in H; inv_label
-                end.
+                 end;
+                 rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                 tauto
+             end. 
+        * intuition idtac.
+           -- left; intros;
                 match goal with
-                | [ Himpl : (M.Map.In _ _) -> (In _ _),
-                            Hmapi : (M.mapi _ calls0 = M.mapi _ calls2) |- _ ] =>
-                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Himpl;
-                    rewrite Hmapi in Himpl;
-                    rewrite FMap.M.F.P.F.mapi_in_iff in Himpl;
-                    rewrite FMap.M.F.P.F.in_find_iff in Himpl;
-                    destruct (FMap.M.find rqMeth calls2); try reflexivity;
-                      assert (In rqMeth (getCalls m)) by (apply Himpl; congruence);
-                      pose (callsDisj rqMeth);
-                      pose pcrq;
-                      tauto
+                | [ H : _ -> False |- _ ] => apply H
                 end.
-            --- match goal with
-                | [ H : Step p _ _ _ |- _ ] =>
-                  let Hsdi := fresh in
-                  pose (step_defs_in H) as Hsdi;
-                    unfold Semantics.defs in Hsdi;
-                    specialize (Hsdi rqMeth)
+              match goal with
+              | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+              end;
+                match goal with
+                | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                    match goal with
+                    | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
+                    end;
+                    rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                    tauto
                 end.
+           -- right; intros;
+                match goal with
+                | [ H : _ -> False |- _ ] => apply H; clear H
+                end.
+              destruct (String.string_dec k rqMeth); [subst | destruct (String.string_dec k rsMeth); [subst |]].
+              ++ repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end;
+                   match goal with
+                   | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                   end; repeat apply f_equal;
+                     apply pair_eq; [fin_func_eq | pose proof (inv_none retV); pose proof (inv_none retV0)]; congruence.
+              ++ repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end.
+                 match goal with
+                 | [ H : ?x = _ |- _ = ?x ] => rewrite H
+                 end. reflexivity.
+              ++ assert (k <> fhMeth /\ k <> thMeth). {
+                   match goal with [ H : FMap.M.In _ (FMap.M.union _ _) |- _ ] => apply M.union_In in H end;
+                     intuition subst.
+                   1: apply pndfh. 2: apply pndth. 3: apply mndfh. 4: apply mndth.
+                   all: eapply step_defs_in; [eassumption|]; unfold Semantics.defs;
+                     erewrite <- (FMap.M.F.P.F.mapi_in_iff _);
+                     match goal with
+                     | [ H : M.mapi _ ?x = M.mapi _ _ |- M.Map.In _ (M.Map.mapi _ ?x) ] => rewrite H
+                     end; rewrite (FMap.M.F.P.F.mapi_in_iff _); assumption.
+                 }
+                 shatter.
+                 repeat match goal with
+                        | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                          assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            clear H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                          change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorThreeStageLabel] |- _ ] => 
+                          repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                        end.
+                 unfold Semantics.calls, Semantics.defs in *.
+                 repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                 repeat rewrite M.find_union.
                 repeat match goal with
-                | [ H : censorLabel _ _ = censorLabel _ _ |- _ ] =>
-                  unfold censorLabel in H; inv_label
+                       | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                       end; reflexivity.
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+               | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+                 match goal with
+                 | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+                 | _ => idtac
+                 end;
+                   let H' := fresh in (pose proof H as H'; simpl in H')
+               end.
+        repeat inv_label.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+          end;
+            match goal with
+            | [ Hin : FMap.M.In k ?d |- _ ] => 
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                match goal with
+                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
+                end;
+                rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                tauto
+            end. 
+        * intuition idtac.
+          -- left; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H
+               end.
+             match goal with
+             | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+             end;
+               match goal with
+               | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                 erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                   match goal with
+                   | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
+                   end;
+                   rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                   tauto
+               end.
+          --  destruct (String.string_dec k rqMeth);
+                [subst | destruct (String.string_dec k rsMeth);
+                         [subst | destruct (String.string_dec k fhMeth);
+                                  [subst | destruct (String.string_dec k thMeth); [subst|]]]].
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end.
+                 match goal with
+                 | [ H : ?x = _ |- _ = ?x ] => rewrite H
+                 end. repeat apply f_equal; apply pair_eq;
+                        [fin_func_eq | pose proof (inv_none retV); pose proof (inv_none retV0)]; congruence.
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end.
+                 match goal with
+                 | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                 end. reflexivity.
+              ++ left; intro.
+                 match goal with [ H : FMap.M.In _ (FMap.M.union defsa defsb) |- _ ] => rewrite In_union in H; destruct H end.
+                 1: apply pndfh. 2: apply mndfh.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ left; intro.
+                 match goal with [ H : FMap.M.In _ (FMap.M.union defsa defsb) |- _ ] => rewrite In_union in H; destruct H end.
+                 1: apply pndth. 2: apply mndth.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ right; intro. match goal with [ H : _ -> False |- False ] => apply H end.
+                 repeat match goal with
+                        | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                          assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            clear H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                          change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorThreeStageLabel] |- _ ] => 
+                          repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                        end.
+                 unfold Semantics.calls, Semantics.defs in *.
+                 repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                 repeat rewrite M.find_union.
+                 repeat match goal with
+                        | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                        end; reflexivity.
+
+    - (* Rs *)
+      eassert (_ = _)
+        by (etransitivity; [
+              match goal with
+              | [ H : (_ === calls l .[ rsMeth ])%fmap |- _ ] =>
+                apply (eq_sym H)
+              end | etransitivity; [
+                      apply rs_consistent | eassumption]]).
+      inv_rs_eq.      
+      assert ((_=== defs lb .[ rqMeth])%fmap /\ (_=== defs l0 .[ rqMeth])%fmap) by (
+      eassert _ as e by (eapply mRqRs; eassumption); destruct e;
+        eassert _ as inv_rs_eq by (eapply inv_censoreq_rs_memdefs; try eassumption);
+        destruct inv_rs_eq;
+        eassert _ as inv_rq_eq by (eapply inv_censoreq_rq_memdefs; try eassumption);
+        destruct inv_rq_eq; shatter; split; try (exfalso; congruence); congruence).
+      unfold WellHiddenConcat, wellHidden in *.
+      simpl in *. intuition subst; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
+      (* 2 goals, for defs/calls and calls/defs *) 
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+               | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+                 match goal with
+                 | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+                 | _ => idtac
+                 end;
+                   let H' := fresh in (pose proof H as H'; simpl in H')
+               end.
+        repeat inv_label.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+          end;
+            match goal with
+            | [ Hin : FMap.M.In k ?d |- _ ] => 
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                match goal with
+                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
+                end;
+                rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                tauto
+            end. 
+        * intuition idtac.
+          -- left; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H
+               end.
+             match goal with
+             | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+             end;
+               match goal with
+               | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                 erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                   match goal with
+                   | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
+                   end;
+                   rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                   tauto
+               end.
+          -- right; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H; clear H
+               end. 
+             destruct (String.string_dec k rsMeth); [subst | destruct (String.string_dec k rqMeth); [subst |]].
+             ++ repeat rewrite FMap.M.find_union.
+                repeat match goal with
+                       | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                       end;
+                  match goal with
+                  | [ H : ?x = _ |- ?x = _ ] => rewrite H
+                  end. repeat apply f_equal; apply pair_eq; [
+                         pose proof (inv_none argV); pose proof (inv_none argV0); congruence |
+                         fin_func_eq; congruence]. 
+             ++ repeat rewrite FMap.M.find_union.
+                repeat match goal with
+                       | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
                        end.
                 match goal with
-                | [ Himpl : (M.Map.In _ _) -> (In _ _),
-                            Hmapi : (M.mapi _ defs = M.mapi _ defs1) |- _ ] =>
-                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Himpl;
-                    rewrite Hmapi in Himpl;
-                    rewrite FMap.M.F.P.F.mapi_in_iff in Himpl;
-                    rewrite FMap.M.F.P.F.in_find_iff in Himpl;
-                    destruct (FMap.M.find rqMeth defs1); try reflexivity;
-                      assert (In rqMeth (getDefs p)) by (apply Himpl; congruence);
-                      exfalso;
-                      apply pndrq;           
-                      assumption
-                end.
-         ** subst.
-            repeat rewrite FMap.M.find_union.
-            replace (FMap.M.find rsMeth defs1) with (None (A := {x : SignatureT & SignT x}));
-              [replace (FMap.M.find rsMeth calls2) with (None (A := {x : SignatureT & SignT x}));
-               [replace (FMap.M.find rsMeth calls1) with (FMap.M.find rsMeth defs2); [destruct (FMap.M.find rsMeth defs2); auto|]|]|].
-            --- 
-              ***  assert (k <> fhMeth /\ k <> thMeth). 
-            --- apply FMap.M.union_In in H18.
-                destruct H18.
-                +++ match goal with
-                    | [ H : Step p _ _ _ |- _ ] =>
-                      let Hsdi := fresh in
-                      pose (step_defs_in H) as Hsdi;
-                        unfold Semantics.defs in Hsdi;
-                        specialize (Hsdi k)
-                    end.
-                    erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                    unfold censorLabel in H6.
-                    inv_label.
-                    rewrite H25 in H23.
-                    rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                    specialize (H23 H5).
-                    pose pndfh.
-                    pose pndth.
-                    destruct (String.string_dec k fhMeth); subst; auto.
-                    destruct (String.string_dec k thMeth); subst; auto.
-                +++ match goal with
-                    | [ H : Step m _ _ _ |- _ ] =>
-                      let Hsdi := fresh in
-                      pose (step_defs_in H) as Hsdi;
-                        unfold Semantics.defs in Hsdi;
-                        specialize (Hsdi k)
-                    end.
-                    erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                    unfold censorLabel in H7.
-                    inv_label.
-                    rewrite H25 in H23.
-                    rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                    specialize (H23 H5).
-                    pose mndfh.
-                    pose mndth.
-                    destruct (String.string_dec k fhMeth); subst; auto.
-                    destruct (String.string_dec k thMeth); subst; auto.
-            --- shatter.
+                | [ H : ?x = _ |- _ = ?x ] => rewrite H
+                end. reflexivity.
+             ++ assert (k <> fhMeth /\ k <> thMeth). {
+                  match goal with [ H : FMap.M.In _ (FMap.M.union _ _) |- _ ] => apply M.union_In in H end;
+                    intuition subst.
+                  1: apply pndfh. 2: apply pndth. 3: apply mndfh. 4: apply mndth.
+                  all: eapply step_defs_in; [eassumption|]; unfold Semantics.defs;
+                    erewrite <- (FMap.M.F.P.F.mapi_in_iff _);
+                    match goal with
+                    | [ H : M.mapi _ ?x = M.mapi _ _ |- M.Map.In _ (M.Map.mapi _ ?x) ] => rewrite H
+                    end; rewrite (FMap.M.F.P.F.mapi_in_iff _); assumption.
+                }
+                shatter.
                 repeat match goal with
                        | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
-                         assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
-                           assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
+                         assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                           by (rewrite H; reflexivity);
+                           assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                           by (rewrite H; reflexivity);
                            clear H
                        end.
-                repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H25 by assumption.
-                repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H26 by assumption.
-                repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
-                repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H27 by assumption.
+                repeat match goal with
+                       | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                         change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                       end.
+                repeat match goal with
+                       | [ H : context[censorThreeStageLabel] |- _ ] => 
+                         repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                       end.
                 unfold Semantics.calls, Semantics.defs in *.
-                       repeat rewrite FMap.M.find_union.
-                       repeat rewrite FMap.M.find_union in H18.
-                       simpl in *.
-                       rewrite <- H25.
-                       rewrite <- H26.
-                       rewrite <- H6.
-                       rewrite <- H27.
-                       assumption.
-                       
-                       
-    (* line of _something_ *)
-
-        match goal with
-        | [ H : Defs.SCMemMemConsistent lsm' ?mem |- Defs.SCMemMemConsistent lsm' ?mem' ] => replace mem' with mem; auto
-        end.
-        exhibit_finds;
-          unfold Defs.extractMethsWrVals in *;
-          destruct (inv_censor_exec_calls_with_mem _ _ _ _ eq_refl H9);
-          destruct (inv_censor_exec_memdefs_with_mem _ _ _ _ eq_refl H14);
-          destruct (inv_censor_exec_calls la _ eq_refl);
-          destruct (inv_censor_exec_memdefs lb _ eq_refl);
-          shatter;
-          subst_finds;
-          repeat inv_meth_eq;
-          simpl in *;
-          try match goal with
-          | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
+                repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                repeat rewrite M.find_union.
+                repeat match goal with
+                       | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                       end; reflexivity.
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+               | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+                 match goal with
+                 | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+                 | _ => idtac
+                 end;
+                   let H' := fresh in (pose proof H as H'; simpl in H')
+               end.
+        repeat inv_label.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
           end;
-          shatter;
-          subst;
-          try congruence;
-          try reflexivity;
-          try (match goal with
-               | [ H : ?x = _ |- _ = ?x ] => rewrite H
-               | [ H : ?x = _ |- ?x = _ ] => rewrite H
-               end;
-               apply functional_extensionality;
-               intros;
+            match goal with
+            | [ Hin : FMap.M.In k ?d |- _ ] => 
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                match goal with
+                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
+                end;
+                rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                tauto
+            end. 
+        * intuition idtac.
+          -- left; intros;
                match goal with
-               | [ |- context[if ?b then _ else _] ] => destruct b
-               end;
-               reflexivity).
-      + unfold WellHiddenConcat, wellHidden in *.
-        shatter.
-        split; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
-        * unfold FMap.M.DomainSubset.
-          intros.
-          destruct la. destruct lb. destruct l. destruct l0.
-          unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
-          rewrite In_subtractKV in *; shatter; split.
-          -- match goal with
+               | [ H : _ -> False |- _ ] => apply H
+               end.
+             match goal with
              | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
              end;
                match goal with
-               | [ Hin : FMap.M.In k ?d, Hcen : _ = censorLabel _ {| annot := _; defs := ?d; calls := _ |} |- _ ] =>
-                 unfold censorLabel in Hcen;
-                   inv_label;
-                   erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+               | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                 erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
                    match goal with
-                   | [ Heq : _ |- _ ] => rewrite <- Heq in Hin
+                   | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
                    end;
                    rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
                    tauto
                end.
-          -- intuition idtac.
-             ++ left; intros;
-                  match goal with
-                  | [ H : _ -> False |- _ ] => apply H
-                  end.
+          --  destruct (String.string_dec k rqMeth);
+                [subst | destruct (String.string_dec k rsMeth);
+                         [subst | destruct (String.string_dec k fhMeth);
+                                  [subst | destruct (String.string_dec k thMeth); [subst|]]]].
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end. assumption.
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[match ?x with | _ => _ end] ] => rewrite H
+                        end.
+                 match goal with
+                 | [ H : ?x = _ |- _ = ?x ] => rewrite H
+                 end.
+                 repeat apply f_equal; apply pair_eq; [pose proof (inv_none argV); pose proof (inv_none argV0) | fin_func_eq]; congruence.
+              ++ left; intro. rewrite In_union in H32. destruct H32.
+                 1: apply pndfh. 2: apply mndfh.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ left; intro. rewrite In_union in H32. destruct H32.
+                 1: apply pndth. 2: apply mndth.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ right; intro. match goal with [ H : _ -> False |- False ] => apply H end.
+                 repeat match goal with
+                        | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                          assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            clear H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                          change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorThreeStageLabel] |- _ ] => 
+                          repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                        end.
+                 unfold Semantics.calls, Semantics.defs in *.
+                 repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                 repeat rewrite M.find_union.
+                 repeat match goal with
+                       | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                        end; reflexivity.
+
+    - (* Neither *)    
+      unfold WellHiddenConcat, wellHidden in *.
+      simpl in *. intuition subst; eapply RefinementFacts.DomainSubset_KeysDisj; eauto.
+      (* 2 goals, for defs/calls and calls/defs *) 
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+               | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+                 match goal with
+                 | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+                 | _ => idtac
+                 end;
+                   let H' := fresh in (pose proof H as H'; simpl in H')
+               end.
+        repeat inv_label.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+          end;
+            match goal with
+            | [ Hin : FMap.M.In k ?d |- _ ] => 
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
                 match goal with
-                | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
                 end;
-                  match goal with
-                  | [ Hin : FMap.M.In k ?c, Hcen : censorLabel _ {| annot := _; defs := _; calls := ?c |} = _ |- _ ] =>
-                    unfold censorLabel in Hcen;
-                      inv_label;
-                      erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
-                      match goal with
-                      | [ Heq : _ |- _ ] => rewrite -> Heq in Hin
-                      end;
-                      rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
-                      tauto
-                  end.
-             ++ right; intros;
-                  match goal with
-                  | [ H : _ -> False |- _ ] => apply H; clear H
-                  end.
-                destruct (String.string_dec k rqMeth).
-                ** subst.
-                   repeat rewrite FMap.M.find_union.
-                   replace (FMap.M.find rqMeth defs1) with (None (A := {x : SignatureT & SignT x}));
-                     [replace (FMap.M.find rqMeth calls2) with (None (A := {x : SignatureT & SignT x}));
-                      [replace (FMap.M.find rqMeth calls1) with (FMap.M.find rqMeth defs2); [destruct (FMap.M.find rqMeth defs2); auto|]|]|].
-                   --- unfold Defs.extractMethsWrVals in *;
-                         destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
-                         destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
-                         unfold Semantics.calls, Semantics.defs in *;
-                         shatter;
-                         exhibit_finds;
-                         subst_finds;
-                         try meth_equal;
-                         repeat inv_meth_eq;
-                         simpl in *;
-                         try match goal with
-                             | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
-                             end;
-                         shatter;
-                         try congruence.
-                   --- match goal with
-                       | [ H : Step m _ _ _ |- _ ] =>
-                         let Hsci := fresh in
-                         pose (step_calls_in mequiv H) as Hsci;
-                           unfold Semantics.calls in Hsci;
-                           specialize (Hsci rqMeth)
-                       end.
-                       erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                       unfold censorLabel in H7.
-                       inv_label.
-                       rewrite H24 in H23.
-                       rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                       rewrite FMap.M.F.P.F.in_find_iff in H23.
-                       destruct (FMap.M.find rqMeth calls2); try reflexivity.
-                       assert (In rqMeth (getCalls m)) by (apply H23; congruence).
-                       pose (callsDisj rqMeth).
-                       pose pcexec.
-                       tauto.
-                   --- match goal with
-                       | [ H : Step p _ _ _ |- _ ] =>
-                         let Hsdi := fresh in
-                         pose (step_defs_in H) as Hsdi;
-                           unfold Semantics.defs in Hsdi;
-                           specialize (Hsdi rqMeth)
-                       end.
-                       erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                       unfold censorLabel in H6.
-                       inv_label.
-                       rewrite H25 in H23.
-                       rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                       rewrite FMap.M.F.P.F.in_find_iff in H23.
-                       destruct (FMap.M.find rqMeth defs1); try reflexivity.
-                       assert (In rqMeth (getDefs p)) by (apply H23; congruence).
-                       exfalso.
-                       apply pndex.
-                       assumption.
-                ** assert (k <> fhMeth /\ k <> thMeth).
-                   --- apply FMap.M.union_In in H5.
-                       destruct H5.
-                       +++ match goal with
-                           | [ H : Step p _ _ _ |- _ ] =>
-                             let Hsdi := fresh in
-                             pose (step_defs_in H) as Hsdi;
-                               unfold Semantics.defs in Hsdi;
-                               specialize (Hsdi k)
-                           end.
-                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                           unfold censorLabel in H6.
-                           inv_label.
-                           rewrite H25 in H23.
-                           rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                           specialize (H23 H5).
-                           pose pndfh.
-                           pose pndth.
-                           destruct (String.string_dec k fhMeth); subst; auto.
-                           destruct (String.string_dec k thMeth); subst; auto.
-                       +++ match goal with
-                           | [ H : Step m _ _ _ |- _ ] =>
-                             let Hsdi := fresh in
-                             pose (step_defs_in H) as Hsdi;
-                               unfold Semantics.defs in Hsdi;
-                               specialize (Hsdi k)
-                           end.
-                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                           unfold censorLabel in H7.
-                           inv_label.
-                           rewrite H25 in H23.
-                           rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                           specialize (H23 H5).
-                           pose mndfh.
-                           pose mndth.
-                           destruct (String.string_dec k fhMeth); subst; auto.
-                           destruct (String.string_dec k thMeth); subst; auto.
-                   --- shatter.
-                       repeat match goal with
-                              | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
-                                assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
-                                  assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
-                                  clear H
-                              end.
-                       repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H25 by assumption.
-                       repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H26 by assumption.
-                       repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
-                       repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H27 by assumption.
-                       unfold Semantics.calls, Semantics.defs in *.
-                       repeat rewrite FMap.M.find_union.
-                       repeat rewrite FMap.M.find_union in H18.
-                       simpl in *.
-                       rewrite <- H25.
-                       rewrite <- H26.
-                       rewrite <- H6.
-                       rewrite <- H27.
-                       assumption.
-        * unfold FMap.M.DomainSubset.
-          intros.
-          destruct la. destruct lb. destruct l. destruct l0.
-          unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
-          rewrite In_subtractKV in *; shatter; split.
-          -- match goal with
+                rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                tauto
+            end. 
+        * intuition idtac.
+          -- left; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H
+               end.
+             match goal with
              | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
              end;
                match goal with
-               | [ Hin : FMap.M.In k ?c, Hcen : _ = censorLabel _ {| annot := _; defs := _; calls := ?c |} |- _ ] =>
-                 unfold censorLabel in Hcen;
-                   inv_label;
-                   erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+               | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                 erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
                    match goal with
-                   | [ Heq : _ |- _ ] => rewrite <- Heq in Hin
+                   | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
                    end;
                    rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
                    tauto
                end.
-          -- intuition idtac.
-             ++ left; intros;
-                  match goal with
-                  | [ H : _ -> False |- _ ] => apply H
-                  end.
+          -- right; intros;
+               match goal with
+               | [ H : _ -> False |- _ ] => apply H; clear H
+               end.
+             destruct (String.string_dec k rqMeth); [subst | destruct (String.string_dec k rsMeth); [subst |]].
+             ++ repeat rewrite FMap.M.find_union.
+                repeat match goal with
+                       | [ H : ?x = _ |- context[?x] ] => rewrite H
+                       end; reflexivity.
+             ++ repeat rewrite FMap.M.find_union.
+                repeat match goal with
+                       | [ H : ?x = _ |- context[?x] ] => rewrite H
+                       end; reflexivity.
+             ++ assert (k <> fhMeth /\ k <> thMeth). {
+                  match goal with [ H : FMap.M.In _ (FMap.M.union _ _) |- _ ] => apply M.union_In in H end;
+                    intuition subst.
+                  1: apply pndfh. 2: apply pndth. 3: apply mndfh. 4: apply mndth.
+                  all: eapply step_defs_in; [eassumption|]; unfold Semantics.defs;
+                    erewrite <- (FMap.M.F.P.F.mapi_in_iff _);
+                    match goal with
+                    | [ H : M.mapi _ ?x = M.mapi _ _ |- M.Map.In _ (M.Map.mapi _ ?x) ] => rewrite H
+                    end; rewrite (FMap.M.F.P.F.mapi_in_iff _); assumption.
+                }
+                shatter.
+                repeat match goal with
+                       | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                         assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                           by (rewrite H; reflexivity);
+                           assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                           by (rewrite H; reflexivity);
+                           clear H
+                       end.
+                repeat match goal with
+                       | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                         change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                       end.
+                repeat match goal with
+                       | [ H : context[censorThreeStageLabel] |- _ ] => 
+                         repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                           repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                       end.
+                unfold Semantics.calls, Semantics.defs in *.
+                repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                repeat rewrite M.find_union.
+                repeat match goal with
+                       | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                       end; reflexivity.
+      + unfold FMap.M.DomainSubset.
+        intros.
+        destruct la as [annota defsa callsa]. destruct lb as [annotb defsb callsb]. destruct l as [annot defs calls]. destruct l0 as [annot0 defs0 calls0].
+        unfold hide, mergeLabel, Semantics.calls, Semantics.defs in *.
+        repeat match goal with
+               | [ H : censorLabel _ {| annot := ?a; defs := _; calls := _ |} = censorLabel _ _ |- _ ] =>
+                 match goal with
+                 | [ H' : {| annot := a; defs := _; calls := _ |} = _ |- _ ] => fail 1
+                 | _ => idtac
+                 end;
+                   let H' := fresh in (pose proof H as H'; simpl in H')
+               end.
+        repeat inv_label.
+        rewrite In_subtractKV in *; shatter; split.
+        * match goal with
+          | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+          end;
+            match goal with
+            | [ Hin : FMap.M.In k ?d |- _ ] => 
+              erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
                 match goal with
-                | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+                | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite <- Heq in Hin
                 end;
-                  match goal with
-                  | [ Hin : FMap.M.In k ?d, Hcen : censorLabel _ {| annot := _; defs := ?d; calls := _ |} = _ |- _ ] =>
-                    unfold censorLabel in Hcen;
-                      inv_label;
-                      erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
-                      match goal with
-                      | [ Heq : _ |- _ ] => rewrite -> Heq in Hin
-                      end;
-                      rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
-                      tauto
-                  end.
-             ++ destruct (String.string_dec k fhMeth);
-                  [left|destruct (String.string_dec k thMeth); [left|right]];
-                  subst;
-                  intros.
-                ** apply FMap.M.union_In in H18.
-                   destruct H18.
-                   --- match goal with
-                       | [ H : Step p _ _ _ |- _ ] =>
-                         let Hin := fresh in
-                         pose (step_defs_in H) as Hin;
-                           unfold Semantics.defs in Hin;
-                           specialize (Hin fhMeth)
-                       end.
-                       specialize (H24 H18).
-                       pose pndfh.
-                       auto.
-                   --- match goal with
-                       | [ H : Step m _ _ _ |- _ ] =>
-                         let Hin := fresh in
-                         pose (step_defs_in H) as Hin;
-                           unfold Semantics.defs in Hin;
-                           specialize (Hin fhMeth)
-                       end.
-                       specialize (H24 H18).
-                       pose mndfh.
-                       auto.
-                ** apply FMap.M.union_In in H18.
-                   destruct H18.
-                   --- match goal with
-                       | [ H : Step p _ _ _ |- _ ] =>
-                         let Hin := fresh in
-                         pose (step_defs_in H) as Hin;
-                           unfold Semantics.defs in Hin;
-                           specialize (Hin thMeth)
-                       end.
-                       specialize (H24 H18).
-                       pose pndth.
-                       auto.
-                   --- match goal with
-                       | [ H : Step m _ _ _ |- _ ] =>
-                         let Hin := fresh in
-                         pose (step_defs_in H) as Hin;
-                           unfold Semantics.defs in Hin;
-                           specialize (Hin thMeth)
-                       end.
-                       specialize (H24 H18).
-                       pose mndth.
-                       auto.
-                ** match goal with
-                   | [ H : _ -> False |- _ ] => apply H; clear H
-                   end.
-                   destruct (String.string_dec k rqMeth).
-                   --- subst.
-                       repeat rewrite FMap.M.find_union.
-                       replace (FMap.M.find rqMeth defs1) with (None (A := {x : SignatureT & SignT x}));
-                         [replace (FMap.M.find rqMeth calls2) with (None (A := {x : SignatureT & SignT x}));
-                          [replace (FMap.M.find rqMeth calls1) with (FMap.M.find rqMeth defs2); [destruct (FMap.M.find rqMeth defs2); auto|]|]|].
-                       +++ unfold Defs.extractMethsWrVals in *;
-                             destruct (inv_censoreq_exec_calls _ _ H6) as [Hceq | [? [? [? [? [? [? [Hca [Hcb Hceq]]]]]]]]];
-                             destruct (inv_censoreq_exec_memdefs _ _ H7) as [Hdeq | [? [? [? [? [? [? [Hda [Hdb Hdeq]]]]]]]]];
-                             unfold Semantics.calls, Semantics.defs in *;
-                             shatter;
-                             exhibit_finds;
-                             subst_finds;
-                             try meth_equal;
-                             repeat inv_meth_eq;
-                             simpl in *;
-                             try match goal with
-                                 | [ H : (if ?x then _ else _) = (if ?x then _ else _) |- _ ] => destruct x; try inv H; subst
-                                 end;
-                             shatter;
-                             try congruence.
-                       +++ match goal with
-                           | [ H : Step m _ _ _ |- _ ] =>
-                             let Hsci := fresh in
-                             pose (step_calls_in mequiv H) as Hsci;
-                               unfold Semantics.calls in Hsci;
-                               specialize (Hsci rqMeth)
-                           end.
-                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                           unfold censorLabel in H7.
-                           inv_label.
-                           rewrite H24 in H23.
-                           rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                           rewrite FMap.M.F.P.F.in_find_iff in H23.
-                           destruct (FMap.M.find rqMeth calls2); try reflexivity.
-                           assert (In rqMeth (getCalls m)) by (apply H23; congruence).
-                           pose (callsDisj rqMeth).
-                           pose pcexec.
-                           tauto.
-                       +++ match goal with
-                           | [ H : Step p _ _ _ |- _ ] =>
-                             let Hsdi := fresh in
-                             pose (step_defs_in H) as Hsdi;
-                               unfold Semantics.defs in Hsdi;
-                               specialize (Hsdi rqMeth)
-                           end.
-                           erewrite <- FMap.M.F.P.F.mapi_in_iff in H23.
-                           unfold censorLabel in H6.
-                           inv_label.
-                           rewrite H25 in H23.
-                           rewrite FMap.M.F.P.F.mapi_in_iff in H23.
-                           rewrite FMap.M.F.P.F.in_find_iff in H23.
-                           destruct (FMap.M.find rqMeth defs1); try reflexivity.
-                           assert (In rqMeth (getDefs p)) by (apply H23; congruence).
-                           exfalso.
-                           apply pndex.
-                           assumption.
-                   --- repeat match goal with
-                              | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
-                                assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
-                                  assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l'))) by (rewrite H; reflexivity);
-                                  clear H
-                              end.
-                       repeat rewrite <- (inv_censor_other_calls _ _ _ eq_refl) in H23 by assumption.
-                       repeat rewrite <- (inv_censor_other_defs _ _ _ eq_refl) in H24 by assumption.
-                       repeat rewrite <- (inv_censor_other_mem_calls _ _ _ eq_refl) in H6 by assumption.
-                       repeat rewrite <- (inv_censor_other_mem_defs _ _ _ eq_refl) in H25 by assumption.
-                       unfold Semantics.calls, Semantics.defs in *.
-                       repeat rewrite FMap.M.find_union.
-                       repeat rewrite FMap.M.find_union in H18.
-                       rewrite <- H23.
-                       rewrite <- H24.
-                       rewrite <- H6.
-                       rewrite <- H25.
-                       assumption.
-    - erewrite <- censor_length_extract by eassumption.
-      erewrite <- censor_mem_length_extract by eassumption.
-      pose (concatWrLen [la] [lb]).
-      unfold Defs.extractProcWrValSeq, Defs.extractMemWrValSeq, flat_map  in e.
-      repeat rewrite app_nil_r in e.
-      eapply e; repeat (econstructor; eauto).
+                rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                tauto
+            end. 
+        * intuition idtac.
+           -- left; intros;
+                match goal with
+                | [ H : _ -> False |- _ ] => apply H
+                end.
+              match goal with
+              | [ H : FMap.M.In k (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H
+              end;
+                match goal with
+                | [ Hin : FMap.M.In k ?c  |- _ ] =>
+                  erewrite <- FMap.M.F.P.F.mapi_in_iff in Hin;
+                    match goal with
+                    | [ Heq : M.mapi _ _ = M.mapi _ _ |- _ ] => rewrite -> Heq in Hin
+                    end;
+                    rewrite FMap.M.F.P.F.mapi_in_iff in Hin;
+                    tauto
+                end.
+           -- destruct (String.string_dec k rqMeth);
+                [subst | destruct (String.string_dec k rsMeth);
+                         [subst | destruct (String.string_dec k fhMeth);
+                                  [subst | destruct (String.string_dec k thMeth); [subst|]]]].
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[?x] ] => rewrite H
+                        end; reflexivity.
+              ++ right; intro; match goal with | [ H : _ -> False |- _ ] => apply H end.
+                 repeat rewrite FMap.M.find_union.
+                 repeat match goal with
+                        | [ H : ?x = _ |- context[?x] ] => rewrite H
+                        end; reflexivity.
+              ++ left; intro.
+                 match goal with [ H : FMap.M.In _ (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H end.
+                 1: apply pndfh. 2: apply mndfh.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ left; intro.
+                 match goal with [ H : FMap.M.In _ (FMap.M.union _ _) |- _ ] => rewrite In_union in *; destruct H end.
+                 1: apply pndth. 2: apply mndth.
+                 all: eapply step_defs_in; [eassumption|]; unfold Semantics.calls, Semantics.defs; assumption.
+              ++ right; intro. match goal with [ H : _ -> False |- False ] => apply H end.
+                 repeat match goal with
+                        | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
+                          assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            assert (FMap.M.find k (Semantics.defs (censorLabel c l)) = FMap.M.find k (Semantics.defs (censorLabel c l')))
+                            by (rewrite H; reflexivity);
+                            clear H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
+                          change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
+                        end.
+                 repeat match goal with
+                        | [ H : context[censorThreeStageLabel] |- _ ] => 
+                          repeat rewrite <- (inv_censor_other_calls lRq _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                            repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+                        end.
+                 unfold Semantics.calls, Semantics.defs in *.
+                 repeat match goal with [ H : context[FMap.M.find _ (FMap.M.union _ _)] |- _ ] => rewrite M.find_union in H end.
+                 repeat rewrite M.find_union.
+                 repeat match goal with
+                       | [ H : _ = ?x |- context[?x] ] => rewrite <- H
+                       end; reflexivity.
   Qed.
 
   Lemma inv_censor_fh_calls : forall l l',
