@@ -8,79 +8,8 @@ Require Import Lib.CommonTactics.
 
 
 Module Inversions (ThreeStage : ThreeStageInterface).
-  Import ThreeStage.
-  Definition rv32iRq := RqFromProc rv32iAddrSize rv32iDataBytes.
-  Definition rv32iRs := RsToProc rv32iDataBytes.
-
-  Definition censorThreeStageLabel (lastRq : option bool) censorMeth (l : LabelT) := censorLabel (censorMeth lastRq) l.
-
-
-  Definition censorThreeStageMeth (lastRqOp : option bool) (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
-    if String.string_dec n rqMeth
-    then match t with
-         | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (argV, retV) =>
-           let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-           existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (evalExpr (STRUCT {"addr" ::= #argV!rv32iRq@."addr";
-                                       "op" ::=  #argV!rv32iRq@."op";
-                                     "data" ::= if op
-                                                then $0
-                                                else #argV!rv32iRq@."data"})%kami_expr,
-                   evalExpr ($$WO)%kami_expr)
-         | _ => t
-         end
-    else if String.string_dec n rsMeth
-         then match t with
-         | existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (argV, retV) =>
-           existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (evalExpr ($$WO)%kami_expr,
-                   evalExpr (STRUCT {"data" ::= match lastRqOp with
-                                                | Some op => if op
-                                                           then #retV!rv32iRs@."data"
-                                                           else $0
-                                                | None => #retV!rv32iRs@."data"
-                                                end})%kami_expr)
-         | _ => t
-              end 
-         else if String.string_dec n thMeth
-              then match t with
-                   | existT _
-                            {| arg := Bit 32;
-                               ret := Bit 0 |}
-                            (argV, retV) =>
-                     existT _
-                       {| arg := Bit 32;
-                          ret := Bit 0 |}
-                       ($0, retV)
-                   | _ => t
-                   end
-              else if String.string_dec n fhMeth
-                   then match t with
-                        | existT _
-                                 {| arg := Bit 0;
-                                    ret := Bit 32 |}
-                                 (argV, retV) =>
-                          existT _
-                                 {| arg := Bit 0;
-                                    ret := Bit 32 |}
-                                 (argV, $0)
-                        | _ => t
-                        end
-                   else t.
+  Module Defs := (ThreeStageDefs ThreeStage).
+  Import ThreeStage Defs.
 
   Lemma inv_label : forall a a' c c' d d',
       {| annot := a; calls := c; defs := d |} = {| annot := a'; calls := c'; defs := d' |} -> a = a' /\ c = c' /\ d = d'.
@@ -427,52 +356,6 @@ Module Inversions (ThreeStage : ThreeStageInterface).
     end.
     destruct b; reflexivity.
   Qed.
-
-
-
-  
-  Definition censorThreeStageMemDefs (lastRqOp : option bool) (n : String.string) (t : {x : SignatureT & SignT x}) : {x : SignatureT & SignT x} :=
-    if String.string_dec n rqMeth
-    then match t with
-         | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (argV, retV) =>
-           let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-           existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                            "op" :: Bool;
-                                            "data" :: Bit 32});
-                     ret := Bit 0 |}
-                  (evalExpr (STRUCT {"addr" ::= #argV!rv32iRq@."addr";
-                                     "op" ::=  #argV!rv32iRq@."op";
-                                     "data" ::= if op
-                                                then $0
-                                                else #argV!rv32iRq@."data"})%kami_expr,
-                   evalExpr ($$WO)%kami_expr)
-         | _ => t
-         end
-    else if String.string_dec n rsMeth
-         then match t with
-         | existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (argV, retV) =>
-           existT _
-                  {| arg := Bit 0;
-                     ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                  (evalExpr ($$WO)%kami_expr,
-                   evalExpr (STRUCT {"data" ::= match lastRqOp with
-                                                | Some op => if op
-                                                            then #retV!rv32iRs@."data"
-                                                            else $0
-                                                | None => #retV!rv32iRs@."data"
-                                                end})%kami_expr)
-         | _ => t
-              end
-         else t.
 
   
   Lemma inv_censor_rq_memdefs : forall lastRq l l',

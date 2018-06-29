@@ -2,7 +2,7 @@ Require Import List.
 Require Import Notations.
 Require Import Coq.Numbers.BinNums.
 Require Import Lib.Word Lib.Indexer.
-Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.Tactics Kami.ModularFacts Kami.SemFacts.
+Require Import Kami.Syntax Kami.Semantics Kami.SymEvalTac Kami.ModuleBoundEx Kami.Tactics Kami.ModularFacts Kami.SemFacts.
 Require Import Ex.SC Ex.IsaRv32 Ex.ProcThreeStage Ex.OneEltFifo.
 Require Import Ex.Timing.Specification Ex.Timing.ThreeStageInterface.
 Require Import Lib.CommonTactics.
@@ -17,9 +17,9 @@ Ltac shatter := repeat match goal with
                        | [ H : _ /\ _ |- _ ] => destruct H
                        end.
 
-Variable predictNextPc : forall ty : Kind -> Type, fullType ty (SyntaxKind (Bit rv32iAddrSize)) -> (Bit rv32iAddrSize) @ (ty).
-Variable d2eElt : Kind.
-Variable d2ePack : (forall ty : Kind -> Type,
+Parameter predictNextPc : forall ty : Kind -> Type, fullType ty (SyntaxKind (Bit rv32iAddrSize)) -> (Bit rv32iAddrSize) @ (ty).
+Parameter d2eElt : Kind.
+Parameter d2ePack : (forall ty : Kind -> Type,
                          (Bit optypeBits) @ (ty) ->
                          (Bit rv32iRfIdx) @ (ty) ->
                          (Bit rv32iAddrSize) @ (ty) ->
@@ -27,7 +27,7 @@ Variable d2ePack : (forall ty : Kind -> Type,
                          (MemTypes.Data rv32iDataBytes) @ (ty) ->
                          (MemTypes.Data rv32iDataBytes) @ (ty) -> (Bit rv32iAddrSize) @ (ty) -> (Bit rv32iAddrSize) @ (ty) -> (Bool) @ (ty) -> (d2eElt) @ (ty)).
 
-Variables
+Parameters
     (d2eOpType : (forall ty : Kind -> Type, fullType ty (SyntaxKind d2eElt) -> (Bit optypeBits) @ (ty)))
     (d2eDst : (forall ty : Kind -> Type, fullType ty (SyntaxKind d2eElt) -> (Bit rv32iRfIdx) @ (ty)))
     (d2eAddr :  (forall ty : Kind -> Type, fullType ty (SyntaxKind d2eElt) -> (Bit rv32iAddrSize) @ (ty)) )
@@ -37,16 +37,16 @@ Variables
     (d2eNextPc : (forall ty : Kind -> Type, fullType ty (SyntaxKind d2eElt) -> (Bit rv32iAddrSize) @ (ty)))
     (d2eEpoch : (forall ty : Kind -> Type, fullType ty (SyntaxKind d2eElt) -> (Bool) @ (ty))).
 
-Variable e2wElt : Kind.
+Parameter e2wElt : Kind.
 
-Variable e2wPack : (forall ty : Kind -> Type, (d2eElt) @ (ty) -> (MemTypes.Data rv32iDataBytes) @ (ty) -> (e2wElt) @ (ty)).
+Parameter e2wPack : (forall ty : Kind -> Type, (d2eElt) @ (ty) -> (MemTypes.Data rv32iDataBytes) @ (ty) -> (e2wElt) @ (ty)).
 
-Variables 
+Parameters 
   (e2wDecInst : (forall ty : Kind -> Type, fullType ty (SyntaxKind e2wElt) -> (d2eElt) @ (ty)))
   (e2wVal : forall ty : Kind -> Type, fullType ty (SyntaxKind e2wElt) -> (MemTypes.Data rv32iDataBytes) @ (ty)).
 
 Module ThreeStageSingle <: ThreeStageInterface.
-  
+
   Definition p :=
     p3st rv32iGetOptype
              rv32iGetLdDst rv32iGetLdAddr rv32iGetLdSrc rv32iCalcLdAddr
@@ -56,24 +56,34 @@ Module ThreeStageSingle <: ThreeStageInterface.
              predictNextPc d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2 d2eRawInst d2eCurPc d2eNextPc d2eEpoch
              e2wPack e2wDecInst e2wVal (procInitDefault _ _ _ _).
 
-
-  Definition rv32iMemInstExec {ty} : ty (Struct rv32iRq) -> ActionT ty (Struct rv32iRs) :=
+  (* Eval compute in (getCalls p). (* demonstrates that some methods occur twice *) *)
+ 
+  Definition rv32iMemInstRs {ty} : ty (Bit 0) -> ActionT ty (Struct rv32iRs) :=
+    fun a =>
+      (Read response : MemTypes.Data rv32iDataBytes <- "nextRs";
+         Write "nextRs" <- $$Default :: MemTypes.Data rv32iDataBytes;
+            (Ret (STRUCT { "data" ::= #response } : Expr ty (SyntaxKind (Struct rv32iRs)))))%kami_action.
+  
+  Definition rv32iMemInstRq {ty} : ty (Struct rv32iRq) -> ActionT ty (Bit 0) :=
     fun (a: ty (Struct rv32iRq)) =>
-      (If !#a!rv32iRq@."op" then (* load *)
+      (If !#a!rv32iRq@."op" then (* load, because op is negated *)
          Read memv <- "mem";
-         LET ldval <- #memv@[#a!rv32iRq@."addr"];
-         Ret (STRUCT { "data" ::= #ldval } :: Struct rv32iRs)
+           LET ldval <- #memv@[#a!rv32iRq@."addr"];
+           Ret (#ldval :: MemTypes.Data rv32iDataBytes)
        else (* store *)
          Read memv <- "mem";
          Write "mem" <- #memv@[ #a!rv32iRq@."addr" <- #a!rv32iRq@."data" ];
-         Ret (STRUCT { "data" ::= $$Default } :: Struct rv32iRs)
+         Ret ($$Default :: MemTypes.Data rv32iDataBytes)
        as na;
-       Ret #na)%kami_action.
+         Write "nextRs" <- #na;
+         Ret $0)%kami_action.
 
-  Definition m := MODULE {
-    Register "mem" : Vector (MemTypes.Data rv32iDataBytes) rv32iAddrSize <- Default
-
-    with Method "exec" (a : Struct rv32iRq) : Struct rv32iRs := (rv32iMemInstExec a)
+    Definition m :=
+      MODULE {
+          Register "mem" : Vector (MemTypes.Data rv32iDataBytes) rv32iAddrSize <- Default
+            with Register "nextRs" : MemTypes.Data rv32iDataBytes <- Default                                            
+            with Method "rqFromProc" -- "enq" (a : Struct rv32iRq) : Bit 0 := (rv32iMemInstRq a)
+            with Method "rsToProc" -- "deq" (a : Bit 0) : Struct rv32iRs := (rv32iMemInstRs a)
   }.
 
   Theorem pequiv : Wf.ModEquiv type typeUT p.
@@ -89,11 +99,8 @@ Module ThreeStageSingle <: ThreeStageInterface.
   Theorem reginits : FMap.DisjList (Struct.namesOf (getRegInits p))
                                    (Struct.namesOf (getRegInits m)).
   Proof.
-    simpl. (* Definitely true. *)
-    admit.
-    (*red_to_regs_bound.
-    kdisj_regs.*)
-  Admitted.    
+    kdisj_regs_ex 0.
+  Qed.
 
   Theorem validRegs : Wf.ValidRegsModules type (p ++ m)%kami.
   Proof.
@@ -102,43 +109,41 @@ Module ThreeStageSingle <: ThreeStageInterface.
 
   Theorem defsDisj : FMap.DisjList (getDefs p) (getDefs m).
   Proof.
-    unfold getDefs; simpl. (* Definitely true. *)
-    admit.
-    (* kdisj_dms. *)
-  Admitted.
-
+    kdisj_dms_ex 0.
+  Qed.
+  
   Theorem callsDisj : FMap.DisjList (getCalls p) (getCalls m).
   Proof.
-    unfold getCalls; simpl.
-    unfold FMap.DisjList; intros; right. auto.
-    (*kdisj_cms.*)
+    kdisj_cms_ex 0.
   Qed.
-
-  Definition SCProcRegs rf pm pc : RegsT :=
+  
+  Definition ThreeStageProcRegs rf pm pc : RegsT :=
     FMap.M.add "rf" (existT _ (SyntaxKind (Vector (Bit 32) 5)) rf)
                (FMap.M.add "pgm" (existT _ (SyntaxKind (Vector (Bit 32) 8)) pm)
                            (FMap.M.add "pc" (existT _ (SyntaxKind (Bit 16)) pc)
                                                    (FMap.M.empty _))).
-
-  Definition SCMemRegs mem : RegsT :=
+  
+  Definition ThreeStageMemRegs mem nextRs : RegsT :=
     FMap.M.add "mem" (existT _ (SyntaxKind (Vector (Bit 32) 16)) mem)
-               (FMap.M.empty _).
+               (FMap.M.add "nextRs" (existT _ (SyntaxKind (Bit 32)) nextRs)
+                           (FMap.M.empty _)).
 
   Definition fhMeth := "fromHost".
   Definition thMeth := "toHost".
-  Definition execMeth := "exec".
+  Definition rqMeth := "rqFromProc" -- "enq".
+  Definition rsMeth := "rsToProc" -- "deq".
 
-  Theorem methsDistinct : fhMeth <> thMeth /\ thMeth <> execMeth /\ execMeth <> fhMeth.
+  Theorem methsDistinct : fhMeth <> thMeth /\ thMeth <> rqMeth /\ rqMeth <> fhMeth /\ rqMeth <> rsMeth /\ thMeth <> rsMeth /\ rsMeth <> fhMeth.
   Proof.
     intuition idtac; discriminate.
   Qed.
-
-  Theorem mdexec : In execMeth (getDefs m).
+  
+  Theorem mdrq : In rqMeth (getDefs m).
   Proof.
     simpl; auto.
   Qed.
 
-  Theorem pcexec : In execMeth (getCalls p).
+  Theorem pcrq : In rqMeth (getCalls p).
   Proof.
     simpl; auto.
     repeat (try (left; reflexivity); right).
@@ -146,105 +151,136 @@ Module ThreeStageSingle <: ThreeStageInterface.
 
   Theorem pcfh : In fhMeth (getCalls p).
   Proof.
-    simpl; auto.
+    simpl; repeat (try (left; reflexivity); right).
   Qed.
 
   Theorem pcth : In thMeth (getCalls p).
   Proof.
-    simpl; auto.
+    simpl; repeat (try (left; reflexivity); right).
+  Qed.
+
+  Theorem pcrs : In rsMeth (getCalls p).
+  Proof.
+    simpl; repeat (try (left; reflexivity); right).
   Qed.
 
   Theorem pndfh : ~ In fhMeth (getDefs p).
   Proof.
-    tauto.
+    intuition. unfold p, getDefs in H; simpl in H.
+    intuition discriminate.
   Qed.
 
   Theorem mndfh : ~ In fhMeth (getDefs m).
   Proof.
     simpl.
-    intuition idtac.
+    intuition idtac;
     discriminate.
   Qed.
 
   Theorem pndth : ~ In thMeth (getDefs p).
   Proof.
-    tauto.
+    intuition simpl. unfold p, getDefs in H; simpl in H; intuition discriminate.
   Qed.
 
   Theorem mndth : ~ In thMeth (getDefs m).
   Proof.
     simpl.
-    intuition idtac.
+    intuition idtac;
     discriminate.
   Qed.
 
-  Theorem pRegs : forall rf pm pc, FMap.M.KeysSubset (SCProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
+  Theorem mdrs : In rsMeth (getDefs m).
+  Proof.
+    simpl. intuition reflexivity.
+  Qed.
+
+  Theorem pRegs : forall rf pm pc, FMap.M.KeysSubset (ThreeStageProcRegs rf pm pc) (Struct.namesOf (getRegInits p)).
   Proof.
     intros; simpl.
-    unfold SCProcRegs, FMap.M.KeysSubset.
+    unfold ThreeStageProcRegs, FMap.M.KeysSubset.
     intro.
     repeat rewrite FMap.M.F.P.F.add_in_iff.
     rewrite FMap.M.F.P.F.empty_in_iff.
     intuition idtac; subst; simpl; tauto.
   Qed.
     
-  Theorem mRegs : forall mem, FMap.M.KeysSubset (SCMemRegs mem) (Struct.namesOf (getRegInits m)).
+  Theorem mRegs : forall mem nextRs, FMap.M.KeysSubset (ThreeStageMemRegs mem nextRs) (Struct.namesOf (getRegInits m)).
   Proof.
     intros; simpl.
-    unfold SCMemRegs, FMap.M.KeysSubset.
+    unfold ThreeStageMemRegs, FMap.M.KeysSubset.
     intro.
     repeat rewrite FMap.M.F.P.F.add_in_iff.
     rewrite FMap.M.F.P.F.empty_in_iff.
     intuition idtac; subst; simpl; tauto.
   Qed.
 
-End SCSingle.
+  Theorem pRqRs : forall rf u l,
+      Step p rf u l ->
+      (FMap.M.find rqMeth (calls l) = None \/
+       FMap.M.find rsMeth (calls l) = None).
+  Proof.
+    intros. (* rule exec = Prule; method exec = Pmethod; combining two w/Prule, Pmethod => PRule |- any exec, Prule *)
+    inv H. induction HSubsteps. tauto.
+    (* substepsInd_rule_split? *)
+  Admitted.
+  
+  Theorem mRqRs : forall rp rm up um lp lm,
+      Step p rp up lp ->
+      Step m rm um lm ->
+      WellHiddenConcat p m lp lm -> 
+      (FMap.M.find rqMeth (defs lm) = None \/
+       FMap.M.find rsMeth (defs lm) = None).
+  Proof.
+    
+  Admitted.
+   
+  End ThreeStageSingle.
 
-Module SCSingleModularHiding <: (SCModularHiding SCSingle).
-  Module Defs := SCDefs SCSingle.
-  Import SCSingle Defs.
+Module ThreeStageSingleModularHiding <: (ThreeStageModularHiding ThreeStageSingle).
+  Module Defs := ThreeStageDefs ThreeStageSingle.
+  Import ThreeStageSingle Defs.
 
-  Lemma SCProcRegs_find_rf : forall rf pm pc rf',
+  Lemma ThreeStageProcRegs_find_rf : forall rf pm pc rf',
       FMap.M.find (elt:={x : FullKind & fullType type x}) "rf"
-                  (SCProcRegs rf pm pc) =
+                  (ThreeStageProcRegs rf pm pc) =
       Some
         (existT (fullType type) (SyntaxKind (Vector (Bit 32) 5)) rf') -> rf = rf'.
   Proof.
     intros.
-    unfold SCProcRegs in *.
+    unfold ThreeStageProcRegs in *.
     FMap.findeq.
     exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
   Qed.
 
-  Lemma SCProcRegs_find_pm : forall rf pm pc pm',
+  Lemma ThreeStageProcRegs_find_pm : forall rf pm pc pm',
       FMap.M.find (elt:={x : FullKind & fullType type x}) "pgm"
-                  (SCProcRegs rf pm pc) =
+                  (ThreeStageProcRegs rf pm pc) =
       Some
         (existT (fullType type) (SyntaxKind (Vector (Bit 32) 8)) pm') -> pm = pm'.
   Proof.
     intros.
-    unfold SCProcRegs in *.
+    unfold ThreeStageProcRegs in *.
     FMap.findeq.
     exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
   Qed.
 
-  Lemma SCProcRegs_find_pc : forall rf pm pc pc',
+  Lemma ThreeStageProcRegs_find_pc : forall rf pm pc pc',
       FMap.M.find (elt:={x : FullKind & fullType type x}) "pc"
-                  (SCProcRegs rf pm pc) =
+                  (ThreeStageProcRegs rf pm pc) =
       Some
         (existT (fullType type) (SyntaxKind (Bit 16)) pc') -> pc = pc'.
   Proof.
     intros.
-    unfold SCProcRegs in *.
+    unfold ThreeStageProcRegs in *.
     FMap.findeq.
     exact (Eqdep.EqdepTheory.inj_pair2 _ _ _ _ _ H1).
   Qed.
 
-  Ltac SCProcRegs_find :=
+  Ltac ThreeStageProcRegs_find :=
     repeat match goal with
-           | [ H : FMap.M.find "rf" (SCProcRegs ?rf _ _) = Some (existT _ _ ?rf') |- _ ] => assert (rf = rf') by (eapply SCProcRegs_find_rf; eassumption); subst; clear H
-           | [ H : FMap.M.find "pgm" (SCProcRegs _ ?pm _) = Some (existT _ _ ?pm') |- _ ] => assert (pm = pm') by (eapply SCProcRegs_find_pm; eassumption); subst; clear H
-           | [ H : FMap.M.find "pc" (SCProcRegs _ _ ?pc) = Some (existT _ _ ?pc') |- _ ] => assert (pc = pc') by (eapply SCProcRegs_find_pc; eassumption); subst; clear H
+           | [ H : FMap.M.find "rf" (ThreeStageProcRegs ?rf _ _) = Some (existT _ _ ?rf') |- _ ] => assert (rf = rf') by (eapply ThreeStageProcRegs_find_rf; eassumption); subst; clear H
+           | [ H : FMap.M.find "pgm" (ThreeStageProcRegs _ ?pm _) = Some (existT _ _ ?pm') |- _ ] => assert (pm = pm') by (eapply ThreeStageProcRegs_find_pm; eassumption); subst; clear H
+           | [ H : FMap.M.find "pc" (ThreeStageProcRegs _ _ ?pc) = Some (existT _ _ ?pc') |- _ ] => assert (pc = pc') by (eapply ThreeStageProcRegs_find_pc; eassumption); subst; clear H
            end.
 
   Definition callsToTraceEvent (c : MethsT) : option TraceEvent :=

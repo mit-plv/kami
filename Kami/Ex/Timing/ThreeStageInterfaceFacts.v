@@ -17,292 +17,6 @@ Ltac shatter := repeat match goal with
                        | [ H : _ /\ _ |- _ ] => destruct H
                        end.
 
-Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
-  Import ThreeStage.
-  Module Invs := Inversions ThreeStage.
-  Import Invs.
-  
-  Definition getRqCall (lastRq : option bool) (l : LabelT) : option bool:=
-    match FMap.M.find rqMeth (calls l) with
-    | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (argV, retV)) =>
-      Some (evalExpr (#argV!rv32iRq@."op")%kami_expr)
-    | _ => match FMap.M.find rsMeth (calls l) with
-          | Some _ => None
-          | None => lastRq  (* nothing memory-relevant happened this cycle *)
-          end
-    end.
-
-  Definition getRqDef (lastRq : option bool) (l : LabelT) : option bool :=
-    match FMap.M.find rqMeth (defs l) with
-    | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (argV, retV)) =>
-      Some (evalExpr (#argV!rv32iRq@."op")%kami_expr)
-    | _ => match FMap.M.find rsMeth (defs l) with
-          | Some _ => None
-          | None => lastRq
-          end
-    end.
-
-
-  Fixpoint censorThreeStageLabelSeq (lastRq: option bool) getRqMeth censorMeth (ls : LabelSeqT) {struct ls} : LabelSeqT :=
-    match ls with
-    | nil => nil
-    | l :: ls' => 
-      (censorLabel (censorMeth lastRq) l) :: censorThreeStageLabelSeq (getRqMeth lastRq l) getRqMeth censorMeth ls'
-    end.
-      
-  Inductive ThreeStageProcMemConsistent : LabelSeqT -> option (bool * address) -> memory -> Prop := (* unclear what this becomes if calls aren't well-balanced, or whether that matters *)
-  | S3PMCnil : forall lastRq mem, ThreeStageProcMemConsistent nil lastRq mem
-  | S3PMCrq : forall (lastRq :option(bool*address)) mem l last' mem' ls argV retV,
-      (FMap.M.find rqMeth (calls l) = Some (existT _
-                                                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                                                             "op" :: Bool;
-                                                                             "data" :: Bit 32});
-                                                      ret := Bit 0 |}
-                                                   (argV, retV)) /\
-       let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
-       let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-       let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-       last' = Some (op, addr) /\
-       if op
-       then mem' = (fun a => if weq a addr then argval else mem a) (* ST *)
-       else mem' = mem (* LD *)) ->
-      ThreeStageProcMemConsistent ls last' mem' ->
-      ThreeStageProcMemConsistent (l :: ls) lastRq mem
-  | S3PMCrs : forall (lastRq :option(bool*address)) mem l last' mem' ls argV retV,
-      (FMap.M.find rsMeth (calls l) = Some (existT _
-                                                   {| arg := Bit 0;
-                                                      ret := Struct (STRUCT {"data" :: Bit 32})|}
-                                                   (argV, retV)) /\
-       last' = None /\ 
-       match lastRq with
-       | Some (op, addr) =>
-         if op
-         then (* previous request was a ST *)
-           mem' = mem (* we already did the update immediately upon getting the request *)
-         else (* previous request was "LD addr" *)
-           let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
-           mem' = mem /\ mem addr = retval
-       | _ => (* this is the non-well-balanced case, not sure what goes here *)
-         mem' = mem 
-       end) ->
-      ThreeStageProcMemConsistent ls last' mem' ->
-      ThreeStageProcMemConsistent (l :: ls) lastRq mem
-  | S3PMCcons : forall (lastRq :option(bool*address)) mem l last' mem' ls, 
-      (FMap.M.find rqMeth (calls l) = None
-       /\ FMap.M.find rsMeth (calls l) = None
-       /\ mem' = mem /\ last' = lastRq) -> 
-      ThreeStageProcMemConsistent ls last' mem' ->
-      ThreeStageProcMemConsistent (l :: ls) lastRq mem.
-  
-  Definition ThreeStageProcHiding m (lastRq : option (bool * address)) regs mem : Prop := 
-    forall labels newRegs fhs,
-      ForwardMultistep m regs newRegs labels ->
-      ThreeStageProcMemConsistent labels lastRq mem ->
-      extractFhLabelSeq fhMeth labels = fhs ->
-      forall fhs',
-        length fhs = length fhs' ->
-        exists labels' newRegs',
-          ForwardMultistep m regs newRegs' labels' /\
-          ThreeStageProcMemConsistent labels' lastRq mem /\
-          censorThreeStageLabelSeq (option_map fst lastRq) getRqCall censorThreeStageMeth labels = censorThreeStageLabelSeq (option_map fst lastRq) getRqCall censorThreeStageMeth labels' /\
-          extractFhLabelSeq fhMeth labels' = fhs'.
-
-  Definition ThreeStageProcLabelAirtight (l : LabelT) : Prop :=
-    match FMap.M.find rqMeth (calls l) with
-    | Some (existT _
-                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                             "op" :: Bool; 
-                                             "data" :: Bit 32});
-                      ret := Bit 0 |}
-                   (argV, _)) =>
-      if evalExpr (#argV!rv32iRq@."op")%kami_expr
-      then True (* ST *)
-      else evalExpr (#argV!rv32iRq@."data")%kami_expr = $0 (* LD *)
-    | _ => True
-    end. (* Guarantees the _processor_ doesn't leak over the unused fields. *)
-  
-  Definition ThreeStageProcLabelSeqAirtight : LabelSeqT -> Prop := Forall ThreeStageProcLabelAirtight.
-
-
-  Definition extractMethsWrVals (ms : MethsT) : list (word 32) :=
-    match FMap.M.find rqMeth ms with
-    | Some (existT _
-                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                             "op" :: Bool;
-                                             "data" :: Bit 32});
-                      ret := Bit 0 |}
-                   (argV, retV)) =>
-      if evalExpr (#argV!rv32iRq@."op")%kami_expr
-      then [evalExpr (#argV!rv32iRq@."data")%kami_expr]
-      else nil
-    | _ => nil
-    end.
-
-  Definition extractMethsRdVals (lastRq : option bool) (ms : MethsT) : list (word 32) :=
-    match FMap.M.find rsMeth ms with
-    | Some (existT _
-                   {| arg := Bit 0;
-                      ret := Struct (STRUCT {"data" :: Bit 32}) |}
-                   (argV, retV)) =>
-      match lastRq with
-      | Some op => 
-        if op
-        then nil
-        else [evalExpr (#retV!rv32iRs@."data")%kami_expr]
-      | _ => nil
-      end
-    | _ => nil
-    end.
-  
-  Definition extractProcWrValSeq : LabelSeqT -> list (word 32) :=
-    flat_map (fun l => extractMethsWrVals (calls l)).
-  
-  Definition extractMemWrValSeq : LabelSeqT -> list (word 32) :=
-    flat_map (fun l => extractMethsWrVals (defs l)).
-
-  Fixpoint extractProcRdValSeq (lastRq : option bool) (ls :  LabelSeqT) : list (word 32) :=
-    match ls with
-    | nil => nil
-    | l :: ls' => (extractMethsRdVals lastRq (calls l)) ++ extractProcRdValSeq (getRqCall lastRq l) ls' 
-    end.
-
-
-  Fixpoint extractMemRdValSeq (lastRq : option bool) (ls :  LabelSeqT) : list (word 32) :=
-    match ls with
-    | nil => nil
-    | l :: ls' => (extractMethsRdVals lastRq (defs l)) ++ extractMemRdValSeq (getRqDef lastRq l) ls' 
-    end.
-  
-  Inductive ThreeStageMemMemConsistent : LabelSeqT -> option (bool * address) -> memory -> Prop := 
-  | S3MMCnil : forall lastRq mem, ThreeStageMemMemConsistent nil lastRq mem
-  | S3MMCrq : forall (lastRq:option(bool*address)) mem l last' mem' ls argV retV,
-      (FMap.M.find rqMeth (defs l) = Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                               "op" :: Bool;
-                                               "data" :: Bit 32});
-                        ret := Bit 0 |}
-                     (argV, retV)) /\
-                    let addr := evalExpr (#argV!rv32iRq@."addr")%kami_expr in
-                    let argval := evalExpr (#argV!rv32iRq@."data")%kami_expr in
-                    let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-                    last' = Some (op, addr) /\
-                    if op
-                    then mem' = (fun a => if weq a addr then argval else mem a) (* ST *)
-                    else mem' = mem (* LD *)
-      ) ->
-      ThreeStageMemMemConsistent ls last' mem' ->
-      ThreeStageMemMemConsistent (l :: ls) lastRq mem
-  | S3MMCrs : forall (lastRq:option(bool*address)) mem l last' mem' ls argV retV,
-      (FMap.M.find rsMeth (defs l) = Some (existT _
-                                                  {| arg := Bit 0;
-                                                     ret := Struct (STRUCT {"data" :: Bit 32})|}
-                                                  (argV, retV)) /\
-       last' = None /\ match lastRq with
-                      | Some (op, addr) =>
-                        if op
-                        then (* previous request was a ST *)
-                          mem' = mem (* we already did the update immediately upon getting the request *)
-                        else (* previous request was "LD addr" *)
-                          let retval := evalExpr (#retV!rv32iRs@."data")%kami_expr in
-                          mem' = mem /\ mem addr = retval
-                      | _ => (* this is the non-well-balanced case, not sure what goes here *)
-                        mem' = mem 
-                      end)      ->
-      ThreeStageMemMemConsistent ls last' mem' ->
-      ThreeStageMemMemConsistent (l :: ls) lastRq mem
-  | S3MMCcons : forall (lastRq :option(bool*address)) mem l last' mem' ls,
-      (FMap.M.find rqMeth (defs l) = None /\ FMap.M.find rsMeth (defs l) = None /\
-       mem' = mem /\ last' = lastRq)
-      ->
-      ThreeStageMemMemConsistent ls last' mem' ->
-      ThreeStageMemMemConsistent (l :: ls) lastRq mem.
-
-  Definition ThreeStageMemHiding m lastRq : Prop :=
-    forall mem labels newRegs,
-      ThreeStageMemMemConsistent labels lastRq mem ->
-      ForwardMultistep m (ThreeStageMemRegs mem) newRegs labels ->
-      forall wrs,
-        extractMemWrValSeq labels = wrs ->
-        forall mem' wrs',
-          length wrs = length wrs' ->
-          exists labels' newRegs',
-            ForwardMultistep m (ThreeStageMemRegs mem') newRegs' labels' /\
-            ThreeStageMemMemConsistent labels' lastRq mem' /\
-            censorThreeStageLabelSeq (option_map fst lastRq) getRqDef censorThreeStageMemDefs labels = censorThreeStageLabelSeq  (option_map fst lastRq) getRqDef censorThreeStageMemDefs labels' /\
-            extractMemWrValSeq labels' = wrs'.
-
-  Definition ThreeStageMemSpec m : Prop :=
-    forall oldRegs newRegs labels,
-      ForwardMultistep m oldRegs newRegs labels ->
-      forall mem,
-        oldRegs = ThreeStageMemRegs mem ->
-        exists lastRq, 
-        ThreeStageMemMemConsistent labels lastRq mem.
-
-  Inductive ThreeStageMemLabelSeqAirtight : LabelSeqT -> option bool -> Prop :=
-  | S3MLSAnil : forall lastRq, ThreeStageMemLabelSeqAirtight nil lastRq
-  | S3MLSAcons : forall l ls (lastRq :option bool) last', (
-      (exists argV retV, FMap.M.find rqMeth (defs l) = Some (existT _
-                                                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
-                                                                            "op" :: Bool;
-                                                                            "data" :: Bit 32});
-                                                     ret := Bit 0 |}
-                                                  (argV, retV))
-                    /\ let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
-                      last' = Some op
-      ) \/ (
-        exists argV retV, FMap.M.find rsMeth (defs l) = Some (existT _
-                                                                {| arg := Bit 0;
-                                                                   ret := Struct (STRUCT {"data" :: Bit 32})|}
-                                                                (argV, retV))
-                     /\ last' = None /\
-                     match lastRq with
-                     | Some op =>
-                       if op then evalExpr (#retV!rv32iRs@."data")%kami_expr = $0 else True
-                     | _ => evalExpr (#retV!rv32iRs@."data")%kami_expr = $0  (* being cautious *)
-                     end
-      ) \/ (
-        FMap.M.find rqMeth (defs l) = None /\ FMap.M.find rsMeth (defs l) = None /\ last' = lastRq
-      )) -> 
-      ThreeStageMemLabelSeqAirtight ls last' ->
-      ThreeStageMemLabelSeqAirtight (l :: ls) lastRq.
-  
-End ThreeStageDefs.
-
-Module Type ThreeStageModularHiding (ThreeStage : ThreeStageInterface).
-  Module Defs := ThreeStageDefs ThreeStage.
-  Module Invs := Inversions ThreeStage.
-  Import ThreeStage Defs Invs.
-
-  Axiom abstractToProcHiding :
-    forall lastRq rf pm pc mem,
-      abstractHiding rf pm pc mem ->
-      ThreeStageProcHiding p lastRq (ThreeStageProcRegs rf pm pc) mem.
-
-  
-  Axiom ProcAirtight : forall oldregs newregs labels,
-      ForwardMultistep p oldregs newregs labels ->
-      ThreeStageProcLabelSeqAirtight labels.
-  
-  Axiom MemHiding : forall lastRq, ThreeStageMemHiding m lastRq.
-
-  Axiom MemSpec : ThreeStageMemSpec m.
-
-  Axiom MemAirtight : forall oldregs newregs labels,
-      ForwardMultistep m oldregs newregs labels ->
-      ThreeStageMemLabelSeqAirtight labels None.
-
-End ThreeStageModularHiding.
 
 Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageModularHiding ThreeStage).
   Module Defs := ThreeStageDefs ThreeStage.
@@ -2384,9 +2098,9 @@ Qed.
           pose methsDistinct.
           destruct (inv_censor_host_fh lastRq s _ eq_refl);
             destruct (inv_censor_host_fh lastRq s0 _ eq_refl);
-            shatter; subst; try congruence.
+            shatter; subst; change (Invs.Defs.censorThreeStageMeth) with (censorThreeStageMeth) in *; try congruence.
           -- rewrite H23 in H17.
-             inv H17.
+            inv H17. 
              unfold censorThreeStageMeth, censorHostMeth.
              repeat match goal with
                     | [ |- context[String.string_dec ?x ?y] ] => destruct (String.string_dec x y); try congruence
@@ -2461,7 +2175,7 @@ Qed.
           pose methsDistinct.
           destruct (inv_censor_host_th lastRq s _ eq_refl);
             destruct (inv_censor_host_th lastRq s0 _ eq_refl);
-            shatter; subst; try congruence.
+            shatter; subst; change (Invs.Defs.censorThreeStageMeth) with (censorThreeStageMeth) in *; try congruence.
           -- rewrite H23 in H17.
              inv H17.
              unfold censorThreeStageMeth, censorHostMeth.
@@ -2497,24 +2211,21 @@ Qed.
         repeat rewrite FMap.M.find_union.
         rewrite H; rewrite H2; rewrite H3; rewrite H5; reflexivity.
   Qed.
-
-
-
   
-  Theorem abstractToThreeStageHiding : forall rf pm pc mem,
+  Theorem abstractToThreeStageHiding : forall rf pm pc mem nextRs,
       abstractHiding rf pm pc mem ->
-      kamiHiding fhMeth thMeth (p ++ m)%kami (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem)).
+      kamiHiding fhMeth thMeth (p ++ m)%kami (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem nextRs)).
   Proof.
     unfold kamiHiding.
     intros.
-    assert (regsA p (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem)) = ThreeStageProcRegs rf pm pc) as Hrp by
+    assert (regsA p (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem nextRs)) = ThreeStageProcRegs rf pm pc) as Hrp by
         (unfold regsA;
          rewrite FMap.M.restrict_union;
          rewrite FMap.M.restrict_KeysSubset; [|apply pRegs];
          erewrite FMap.M.restrict_DisjList; [FMap.findeq|apply mRegs|];
          apply FMap.DisjList_comm;
          apply reginits).
-    assert (regsB m (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem)) = ThreeStageMemRegs mem) as Hrm by
+    assert (regsB m (FMap.M.union (ThreeStageProcRegs rf pm pc) (ThreeStageMemRegs mem nextRs)) = ThreeStageMemRegs mem nextRs) as Hrm by
         (unfold regsB;
          rewrite FMap.M.restrict_union;
          erewrite FMap.M.restrict_DisjList; [|apply pRegs|apply reginits];
@@ -2540,7 +2251,7 @@ Qed.
         destruct Hph as [lsp' [sp' [Hfmp' [Hpmc' [Hpcensor Hfh']]]]]
     end.    
     assert (length (Defs.extractMemWrValSeq lsm) = length (Defs.extractProcWrValSeq lsp')) as Hlen by (erewrite <- censorWrLen by eassumption; apply eq_sym; eapply concatWrLen; eassumption).
-    pose (MemHiding lastRq _ _ _ MMcons Hfmm _ eq_refl mem (Defs.extractProcWrValSeq lsp') Hlen) as Hmh.
+    pose (MemHiding _ lastRq _ _ _ MMcons Hfmm _ eq_refl mem nextRs (Defs.extractProcWrValSeq lsp') Hlen) as Hmh.
     destruct Hmh as [lsm' [sm' [Hfmm' [Hmmc' [Hmcensor Hwrval]]]]].
     exists (composeLabels lsp' lsm'), (FMap.M.union sp' sm').
     intuition idtac.
