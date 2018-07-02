@@ -407,4 +407,137 @@ Module Phoas.
     MbAdd' (Const (wzero 1)) [Var a1; Var a2; Var a3] [Var b1; Var b2; Var b3].
   Set Printing Depth 100.
   Compute add3.
+
+
+  (** ** A simple example of a traversal of expression syntax *)
+
+  Fixpoint numLets {n} (e : expr (fun _ => unit) n) : nat :=
+    match e with
+    | Const _ => 0
+    | Combine e1 e2 => numLets e1 + numLets e2
+    | Split1 e1 => numLets e1
+    | Split2 e1 => numLets e1
+    | Add e1 e2 => numLets e1 + numLets e2
+    | Var _ => 0
+    | LetIn e1 e2 => 1 + numLets e1 + numLets (e2 tt)
+    end.
+
+  Definition add2_lets := numLets (add2 tt tt tt tt).
+  Compute add2_lets.
+
+  Definition add3_lets := numLets (add3 tt tt tt tt tt tt).
+  Compute add3_lets.
+
+
+  (** ** A simple optimization, constant folding *)
+
+  Fixpoint cfold {var len} (e : expr (expr var) len) : expr var len :=
+    match e in expr _ len return expr var len with
+    | Const k => Const k
+    | Combine e1 e2 =>
+      match cfold e1, cfold e2 with
+      | Const k1, Const k2 => Const (combine k1 k2)
+      | e1', e2' => Combine e1' e2'
+      end
+    | @Split1 _ n1 n2 e1 =>
+      match cfold e1 in expr _ len' return (word len' -> expr _ _) -> expr _ _ with
+      | Const k => fun f => f k
+      | e1' => fun _ => Split1 e1'
+      end (fun k => Const (split1 n1 n2 k))
+    | @Split2 _ n1 n2 e1 =>
+      match cfold e1 in expr _ len' return (word len' -> expr _ _) -> expr _ _ with
+      | Const k => fun f => f k
+      | e1' => fun _ => Split2 e1'
+      end (fun k => Const (split2 n1 n2 k))
+    | Add e1 e2 =>
+      match cfold e1 in expr _ len' return expr _ len' -> expr _ len' with
+      | Const k1 => fun cfold_e2 =>
+        if weq k1 (wzero _) then cfold_e2
+        else match cfold_e2 in expr _ len' return word len' -> expr _ len' with
+             | Const k2 => fun k1 => Const (k1 ^+ k2)
+             | e2' => fun k1 => Add (Const k1) e2'
+             end k1
+      | e1' => fun cfold_e2 => Add e1' cfold_e2
+      end (cfold e2)
+    | Var x => x
+    | LetIn e1 e2 =>
+      match cfold e1 in expr _ len' return (expr _ len' -> expr _ _) -> expr _ _ with
+      | Const k => fun f => f (Const k)
+      | e1' => fun f => LetIn e1' (fun x => f (Var x))
+      end (fun x => cfold (e2 x))
+    end.
+
+  Definition add2' {var : nat -> Type} (a1 a2 b1 b2 : var 8) :=
+    cfold (MbAdd' (Const (wzero 1))
+                  [Var (Var a1); Var (Var a2)]
+                  [Var (Var b1); Var (Var b2)]).
+  Compute add2'.
+
+  Definition add3' {var : nat -> Type} (a1 a2 a3 b1 b2 b3 : var 8) :=
+    cfold (MbAdd' (Const (wzero 1))
+                  [Var (Var a1); Var (Var a2); Var (Var a3)]
+                  [Var (Var b1); Var (Var b2); Var (Var b3)]).
+  Compute add3'.
 End Phoas.
+
+
+(** * Now let's redo that code using Kami proper. *)
+
+Section var.
+  Context {var : Kind -> Type}.
+
+  Definition Multibyte' := Vector.t (Expr var (SyntaxKind (Bit 8))).
+
+  Lemma len_eq : forall len', len' * 8 + 8 + 8 = S len' * 8 + 8.
+  Proof.
+    induction len'; simpl.
+
+    reflexivity.
+
+    rewrite IHlen'.
+    reflexivity.
+  Defined.
+
+  Fixpoint MbAdd' {res len} (carry : Expr var (SyntaxKind (Bit 1)))
+    : Multibyte' len -> Multibyte' len
+      -> (Expr var (SyntaxKind (Bit (len * 8 + 8))) -> ActionT var res)
+      -> ActionT var res :=
+    match len with
+    | 0 => fun _ _ f => f (BinBit (Concat _ _) carry (Const var (ConstBit (wzero 7))))
+    | S len' => fun mb1 mb2 f =>
+      Let_ (BinBit (Concat _ _) carry (Const var (ConstBit (wzero 8)))) (fun carry_9 =>
+      Let_ (BinBit (Concat _ _) (Vector.hd mb1) (Const var (ConstBit (wzero 1)))) (fun b1_9 =>
+      Let_ (BinBit (Concat _ _) (Vector.hd mb2) (Const var (ConstBit (wzero 1)))) (fun b2_9 =>
+      Let_ (BinBit (Add _) (BinBit (Add _) (Var _ _ carry_9) (Var _ _ b1_9)) (Var _ _ b2_9)) (fun sum_9 =>
+      Let_ (UniBit (Trunc 8 1) (Var _ _ sum_9)) (fun sum_8 =>
+      Let_ (BinBit (Srl 9 8) (Var _ _ sum_9) (Const var (ConstBit (natToWord 8 8)))) (fun carry'' =>
+      Let_ (UniBit (Trunc 1 8) (Var _ _ carry'')) (fun carry' =>
+        MbAdd' (Var _ _ carry') (Vector.tl mb1) (Vector.tl mb2)
+               (fun e => f (match len_eq _ in _ = N return Expr _ (SyntaxKind (Bit N)) with
+                            | eq_refl => BinBit (Concat _ _) (Var _ _ sum_8) e
+                            end)))))))))
+    end.
+End var.
+
+Definition AddInputs :=
+  STRUCT { "a1" :: Bit 8;
+           "a2" :: Bit 8;
+           "a3" :: Bit 8;
+           "b1" :: Bit 8;
+           "b2" :: Bit 8;
+           "b3" :: Bit 8 }.
+
+Definition kamiModule :=
+  MODULE {
+    Register "data" : Bit 8 <- Default
+
+    with Method "add3" (arg: Struct AddInputs) : Bit 32 :=
+      (MbAdd'
+        $1
+        [#arg!AddInputs@."a1"; #arg!AddInputs@."a2"; #arg!AddInputs@."a3"]
+        [#arg!AddInputs@."b1"; #arg!AddInputs@."b2"; #arg!AddInputs@."b3"]
+        (fun e => Return e))%kami_expr
+  }.
+
+Transparent arg.
+Compute kamiModule.
