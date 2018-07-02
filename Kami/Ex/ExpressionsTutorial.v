@@ -299,13 +299,13 @@ Module Phoas.
       match len with
       | 0 => fun _ _ => Combine carry (Const (wzero 7))
       | S len' => fun mb1 mb2 =>
-        let carry_9 := Combine carry (Const (wzero 8)) in
-        let b1_9 := Combine (Vector.hd mb1) (Const (wzero 1)) in
-        let b2_9 := Combine (Vector.hd mb2) (Const (wzero 1)) in
-        let sum_9 := Add (Add carry_9 b1_9) b2_9 in
-        let sum_8 := Split1 (n1 := 8) (n2 := 1) sum_9 in
-        let carry' := Split2 (n1 := 8) (n2 := 1) sum_9 in
-        Combine sum_8 (MbAdd' carry' (Vector.tl mb1) (Vector.tl mb2))
+        LetIn (Combine carry (Const (wzero 8))) (fun carry_9 =>
+        LetIn (Combine (Vector.hd mb1) (Const (wzero 1))) (fun b1_9 =>
+        LetIn (Combine (Vector.hd mb2) (Const (wzero 1))) (fun b2_9 =>
+        LetIn (Add (Add (Var carry_9) (Var b1_9)) (Var b2_9)) (fun sum_9 =>
+        LetIn (Split1 (n1 := 8) (n2 := 1) (Var sum_9)) (fun sum_8 =>
+        LetIn (Split2 (n1 := 8) (n2 := 1) (Var sum_9)) (fun carry' =>
+        Combine (Var sum_8) (MbAdd' (Var carry') (Vector.tl mb1) (Vector.tl mb2))))))))
       end.
   End var'.
 
@@ -405,5 +405,6 @@ Module Phoas.
 
   Definition add3 {var : nat -> Type} (a1 a2 a3 b1 b2 b3 : var 8) :=
     MbAdd' (Const (wzero 1)) [Var a1; Var a2; Var a3] [Var b1; Var b2; Var b3].
+  Set Printing Depth 100.
   Compute add3.
 End Phoas.
