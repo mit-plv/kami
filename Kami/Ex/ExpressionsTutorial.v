@@ -15,10 +15,7 @@ Fixpoint mbToNat (mb : multibyte) : nat :=
 
 Fixpoint applyCarry (carry : word 1) (mb : multibyte) : multibyte :=
   match mb with
-  | nil =>
-    if whd carry
-    then natToWord 8 1 :: nil
-    else nil
+  | nil => combine carry (wzero 7) :: nil
   | b :: mb' =>
     let carry_9 := combine carry (wzero 8) in
     let b_9 := combine b (wzero 1) in
@@ -262,4 +259,103 @@ Proof.
   intros; unfold mbAdd.
   rewrite mbAdd'_ok.
   reflexivity.
+Qed.
+
+
+(** * Introducing a deeply embedded language *)
+
+Inductive expr : nat -> Type :=
+| Const : forall {n}, word n -> expr n
+| Combine : forall {n1 n2}, expr n1 -> expr n2 -> expr (n1 + n2)
+| Split1 : forall {n1 n2}, expr (n1 + n2) -> expr n1
+| Split2 : forall {n1 n2}, expr (n1 + n2) -> expr n2
+| Add : forall {n}, expr n -> expr n -> expr n.
+
+Definition Multibyte := list (expr 8).
+
+Fixpoint ApplyCarry (carry : expr 1) (mb : Multibyte) : Multibyte :=
+  match mb with
+  | nil =>
+    Combine carry (Const (wzero 7)) :: nil
+  | b :: mb' =>
+    let carry_9 := Combine carry (Const (wzero 8)) in
+    let b_9 := Combine b (Const (wzero 1)) in
+    let sum_9 := Add carry_9 b_9 in
+    let sum_8 := Split1 (n1 := 8) (n2 := 1) sum_9 in
+    let carry' := Split2 (n1 := 8) (n2 := 1) sum_9 in
+    sum_8 :: ApplyCarry carry' mb'
+  end.
+
+Fixpoint MbAdd' (carry : expr 1) (mb1 mb2 : Multibyte) : Multibyte :=
+  match mb1, mb2 with
+  | nil, _ => ApplyCarry carry mb2
+  | _, nil => ApplyCarry carry mb1
+  | b1 :: mb1', b2 :: mb2' =>
+    let carry_9 := Combine carry (Const (wzero 8)) in
+    let b1_9 := Combine b1 (Const (wzero 1)) in
+    let b2_9 := Combine b2 (Const (wzero 1)) in
+    let sum_9 := Add (Add carry_9 b1_9) b2_9 in
+    let sum_8 := Split1 (n1 := 8) (n2 := 1) sum_9 in
+    let carry' := Split2 (n1 := 8) (n2 := 1) sum_9 in
+    sum_8 :: MbAdd' carry' mb1' mb2'
+  end.
+
+Definition MbAdd := MbAdd' (Const (wzero 1)).
+
+(** ** Semantics *)
+
+Fixpoint interp {n} (e : expr n) : word n :=
+  match e with
+  | Const k => k
+  | Combine e1 e2 => combine (interp e1) (interp e2)
+  | Split1 e1 => split1 _ _ (interp e1)
+  | Split2 e2 => split2 _ _ (interp e2)
+  | Add e1 e2 => interp e1 ^+ interp e2
+  end.
+
+Lemma ApplyCarry_encoded_properly : forall mb carry,
+    map interp (ApplyCarry carry mb) = applyCarry (interp carry) (map interp mb).
+Proof.
+  induction mb; simpl; intuition.
+
+  rewrite IHmb.
+  reflexivity.
+Qed.
+
+Lemma MbAdd'_encoded_properly : forall mb1 mb2 carry,
+    map interp (MbAdd' carry mb1 mb2) = mbAdd' (interp carry) (map interp mb1) (map interp mb2).
+Proof.
+  induction mb1; destruct mb2; simpl; intuition.
+
+  {
+    rewrite ApplyCarry_encoded_properly.
+    reflexivity.
+  }
+
+  {
+    rewrite ApplyCarry_encoded_properly.
+    reflexivity.
+  }
+
+  {
+    rewrite IHmb1.
+    reflexivity.
+  }
+Qed.
+
+Lemma MbAdd_encoded_properly : forall mb1 mb2,
+    map interp (MbAdd mb1 mb2) = mbAdd (map interp mb1) (map interp mb2).
+Proof.
+  unfold MbAdd, mbAdd; intros.
+  rewrite MbAdd'_encoded_properly.
+  reflexivity.
+Qed.
+
+Theorem MbAdd_ok : forall mb1 mb2,
+    mbToNat (map interp (MbAdd mb1 mb2))
+    = mbToNat (map interp mb1) + mbToNat (map interp mb2).
+Proof.
+  intros.
+  rewrite MbAdd_encoded_properly.
+  apply mbAdd_ok.
 Qed.
