@@ -271,6 +271,12 @@ End DeeplyEmbedded.
 
 (** * Parametric Higher-Order Abstract Syntax *)
 
+Fixpoint flatten {len} : multibyte (S len) -> word (len * 8 + 8) :=
+  match len with
+  | O => fun w => Vector.hd w
+  | S len' => fun w => combine (Vector.hd w) (flatten (Vector.tl w))
+  end.
+
 Module Phoas.
   Section var.
     Context {var : nat -> Type}.
@@ -330,12 +336,6 @@ Module Phoas.
     end.
 
   Definition Interp {n} (E : Expr n) : word n := interp (E word).
-
-  Fixpoint flatten {len} : multibyte (S len) -> word (len * 8 + 8) :=
-    match len with
-    | O => fun w => Vector.hd w
-    | S len' => fun w => combine (Vector.hd w) (flatten (Vector.tl w))
-    end.
 
   Lemma MbAdd'_encoded_properly : forall len (mb1 mb2 : Multibyte' word len) carry,
       interp (MbAdd' carry mb1 mb2)
@@ -503,11 +503,11 @@ Section var.
       -> (Expr var (SyntaxKind (Bit (len * 8 + 8))) -> ActionT var res)
       -> ActionT var res :=
     match len with
-    | 0 => fun _ _ f => f (BinBit (Concat _ _) carry (Const var (ConstBit (wzero 7))))
+    | 0 => fun _ _ f => f (BinBit (Concat _ _) (Const var (ConstBit (wzero 7))) carry)
     | S len' => fun mb1 mb2 f =>
-      Let_ (BinBit (Concat _ _) carry (Const var (ConstBit (wzero 8)))) (fun carry_9 =>
-      Let_ (BinBit (Concat _ _) (Vector.hd mb1) (Const var (ConstBit (wzero 1)))) (fun b1_9 =>
-      Let_ (BinBit (Concat _ _) (Vector.hd mb2) (Const var (ConstBit (wzero 1)))) (fun b2_9 =>
+      Let_ (BinBit (Concat _ _) (Const var (ConstBit (wzero 8))) carry) (fun carry_9 =>
+      Let_ (BinBit (Concat _ _) (Const var (ConstBit (wzero 1))) (Vector.hd mb1)) (fun b1_9 =>
+      Let_ (BinBit (Concat _ _) (Const var (ConstBit (wzero 1))) (Vector.hd mb2)) (fun b2_9 =>
       Let_ (BinBit (Add _) (BinBit (Add _) (Var _ _ carry_9) (Var _ _ b1_9)) (Var _ _ b2_9)) (fun sum_9 =>
       Let_ (UniBit (Trunc 8 1) (Var _ _ sum_9)) (fun sum_8 =>
       Let_ (BinBit (Srl 9 8) (Var _ _ sum_9) (Const var (ConstBit (natToWord 8 8)))) (fun carry'' =>
@@ -519,6 +519,78 @@ Section var.
     end.
 End var.
 
+Theorem MbAdd'_ok : forall r res len carry (mb1 mb2 : Multibyte' len)
+                           (f : Expr type (SyntaxKind (Bit (len * 8 + 8)))
+                                -> ActionT type res)
+                           (f_gives : word (len * 8 + 8) -> type res),
+    (forall e, SemAction r (f e) (M.empty _) (M.empty _) (f_gives (evalExpr e)))
+    -> SemAction r (MbAdd' carry mb1 mb2 f) (M.empty _) (M.empty _)
+                 (f_gives (flatten (mbAdd' (evalExpr carry)
+                                           (Vector.map (@evalExpr _) mb1)
+                                           (Vector.map (@evalExpr _) mb2)))).
+Proof.
+  induction len; simpl; intuition.
+
+  apply H.
+
+  repeat apply SemLet.
+  match goal with
+  | [ |- context[MbAdd' ?carry ?mb1 ?mb2 ?f] ] => specialize (IHlen carry mb1 mb2 f)
+  end.
+  simpl in IHlen.
+  repeat rewrite hd_map, tl_map.
+  specialize (IHlen (fun ans => f_gives (combine
+          (split1 8 1
+             (combine (evalExpr carry) (wzero 8)
+              ^+ combine (evalExpr (Vector.hd mb1)) (wzero 1)
+              ^+ combine (evalExpr (Vector.hd mb2)) (wzero 1))) ans))).
+  simpl in IHlen.
+
+  match goal with
+  | [ |- context[mbAdd' ?carry' _ _] ] =>
+    replace carry'
+      with (split1 1 8
+                   (wrshift
+                      (combine (evalExpr carry) (wzero 8)
+                               ^+ combine (evalExpr (Vector.hd mb1)) (wzero 1)
+                               ^+ combine (evalExpr (Vector.hd mb2)) (wzero 1)) 8))
+      by admit
+  end.
+  apply IHlen.
+  intros.
+  match goal with
+  | [ |- SemAction _ (f ?x) _ _ _ ] => specialize (H x)
+  end.
+  generalize dependent H; clear; intro.
+  match goal with
+  | [ |- context[f_gives (combine ?x _)] ] => generalize dependent x; clear; intros
+  end.
+  match goal with
+    [ _ : SemAction _ _ _ _ ?x |- SemAction _ _ _ _ ?y ] => replace y with x; auto
+  end.
+  f_equal; clear.
+  change w with (evalExpr (Const _ (ConstBit w))) at 2.
+
+  Lemma cast_concat : forall a b c (Heq : a + b = c)
+                             (e1 : Expr type (SyntaxKind (Bit a)))
+                             (e2 : Expr type (SyntaxKind (Bit b))),
+      evalExpr (match Heq in _ = N return Expr type (SyntaxKind (Bit N)) with
+                | eq_refl => BinBit (Concat _ _) e2 e1
+                end)
+      = match Heq in _ = N return word N with
+        | eq_refl => combine (evalExpr e1) (evalExpr e2)
+        end.
+  Proof.
+    intros.
+    subst.
+    reflexivity.
+  Qed.
+
+  rewrite cast_concat.
+  simpl.
+  admit.
+Admitted.
+  
 Definition AddInputs :=
   STRUCT { "a1" :: Bit 8;
            "a2" :: Bit 8;
