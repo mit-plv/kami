@@ -541,3 +541,14 @@ Definition kamiModule :=
 
 Transparent arg.
 Compute kamiModule.
+
+Require Import Kami.Synthesize Ext.BSyntax.
+Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
+
+Set Extraction Optimize.
+Set Extraction KeepSingleton.
+Unset Extraction AutoInline.
+
+Definition targetProcB := ModulesSToBModules (getModuleS kamiModule).
+
+Extraction "../Ext/Ocaml/Target.ml" targetProcB.
