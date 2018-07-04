@@ -478,6 +478,103 @@ Module Phoas.
                   [Var (Var a1); Var (Var a2); Var (Var a3)]
                   [Var (Var b1); Var (Var b2); Var (Var b3)]).
   Compute add3'.
+
+
+  (** ** How would we prove that optimization? *)
+  Section equiv.
+    Context {var1 var2 : nat -> Type}.
+    Record bound := {
+      width : nat;
+      val1 : var1 width;
+      val2 : var2 width
+    }.
+
+    Inductive equiv (b : list bound) : forall {n}, expr var1 n -> expr var2 n -> Prop :=
+    | EquivConst : forall n (w : word n),
+        equiv b (Const w) (Const w)
+    | EquivCombine : forall n1 n2 (a1 : expr var1 n1) (a2 : expr var1 n2)
+                            (b1 : expr var2 n1) (b2 : expr var2 n2),
+        equiv b a1 b1
+        -> equiv b a2 b2
+        -> equiv b (Combine a1 a2) (Combine b1 b2)
+    | EquivSplit1 : forall n1 n2 (a1 : expr var1 (n1 + n2)) (b1 : expr var2 (n1 + n2)),
+        equiv b a1 b1
+        -> equiv b (Split1 a1) (Split1 b1)
+    | EquivSplit2 : forall n1 n2 (a1 : expr var1 (n1 + n2)) (b1 : expr var2 (n1 + n2)),
+        equiv b a1 b1
+        -> equiv b (Split2 a1) (Split2 b1)
+    | EquivAdd : forall n (a1 a2 : expr var1 n) (b1 b2 : expr var2 n),
+        equiv b a1 b1
+        -> equiv b a2 b2
+        -> equiv b (Add a1 a2) (Add b1 b2)
+
+    | EquivVar : forall width (val1 : var1 width) (val2 : var2 width),
+        In {| val1 := val1; val2 := val2 |} b
+        -> equiv b (Var val1) (Var val2)
+    | EquivLet : forall n1 n2 (a1 : expr var1 n1) (a2 : var1 n1 -> expr var1 n2)
+                        (b1 : expr var2 n1) (b2 : var2 n1 -> expr var2 n2),
+        equiv b a1 b1
+        -> (forall val1 val2, equiv ({| val1 := val1; val2 := val2 |} :: b) (a2 val1) (b2 val2))
+        -> equiv b (LetIn a1 a2) (LetIn b1 b2).
+
+    Hint Constructors equiv.
+
+    Lemma equiv_weaken : forall n (e1 : expr _ n) e2 b1,
+        equiv b1 e1 e2
+        -> forall b2, (forall x, In x b1 -> In x b2)
+        -> equiv b2 e1 e2.
+    Proof.
+      induction 1; intuition eauto.
+      constructor; intuition.
+      apply H1.
+      simpl; intuition.
+    Qed.
+  End equiv.
+
+  Ltac equiv1 :=
+    match goal with
+    | [ |- equiv ?b (Combine (n1 := ?A) (n2 := ?B) _ _) _ ] => apply (EquivCombine b A B)
+    | _ => constructor; intros;
+           match goal with
+           | [ |- In _ _ ] => simpl; tauto
+           | [ |- equiv _ _ _ ] => idtac
+           end
+    | [ |- equiv _ _ _ ] => eapply equiv_weaken; [ eassumption | simpl; solve [ intuition ] ]
+    | _ => auto
+    end.
+  Ltac equiv := repeat equiv1.
+
+  Definition Wf {n} (E : Expr n) := forall var1 var2, equiv nil (E var1) (E var2).
+  Definition MultibyteWf {n} (mb : Multibyte n) :=
+    forall var1 var2, Vector.Forall2 (equiv nil) (mb var1) (mb var2).
+
+  Require Import Eqdep.
+
+  Lemma MbAdd'_Wf : forall var1 var2 len
+                           b (mb11 : Multibyte' var1 len) (mb21 : Multibyte' var2 len),
+      Vector.Forall2 (equiv b) mb11 mb21
+      -> forall mb12 mb22, Vector.Forall2 (equiv b) mb12 mb22
+      -> forall b', (forall x, In x b -> In x b')
+      -> forall carry1 carry2, equiv b' carry1 carry2
+      -> equiv b' (MbAdd' carry1 mb11 mb12) (MbAdd' carry2 mb21 mb22).
+  Proof.
+    induction 1; inversion 1; simpl; intros;
+      repeat match goal with
+             | [ H : existT _ _ _ = existT _ _ _ |- _ ] => apply inj_pair2 in H; subst
+             end; equiv; simpl.
+    eapply IHForall2; eauto.
+    simpl; intuition.
+    constructor; simpl; tauto.
+  Qed.
+
+  Theorem MbAdd_Wf : forall len (mb1 mb2 : Multibyte len),
+      MultibyteWf mb1
+      -> MultibyteWf mb2
+      -> Wf (MbAdd mb1 mb2).
+  Proof.
+    unfold MultibyteWf, Wf, MbAdd; intros.
+    apply MbAdd'_Wf with (b := nil); equiv.
+  Qed.
 End Phoas.
 
 
