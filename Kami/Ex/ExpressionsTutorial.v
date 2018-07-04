@@ -431,6 +431,12 @@ Module Phoas.
 
   (** ** A simple optimization, constant folding *)
 
+  Definition getConst {var len} (e : expr var len) : option (word len) :=
+    match e with
+    | Const k => Some k
+    | _ => None
+    end.
+
   Fixpoint cfold {var len} (e : expr (expr var) len) : expr var len :=
     match e in expr _ len return expr var len with
     | Const k => Const k
@@ -440,15 +446,17 @@ Module Phoas.
       | e1', e2' => Combine e1' e2'
       end
     | @Split1 _ n1 n2 e1 =>
-      match cfold e1 in expr _ len' return (word len' -> expr _ _) -> expr _ _ with
-      | Const k => fun f => f k
-      | e1' => fun _ => Split1 e1'
-      end (fun k => Const (split1 n1 n2 k))
+      let e1' := cfold e1 in
+      match getConst e1' with
+      | Some k => Const (split1 _ _  k)
+      | _ => Split1 e1'
+      end
     | @Split2 _ n1 n2 e1 =>
-      match cfold e1 in expr _ len' return (word len' -> expr _ _) -> expr _ _ with
-      | Const k => fun f => f k
-      | e1' => fun _ => Split2 e1'
-      end (fun k => Const (split2 n1 n2 k))
+      let e1' := cfold e1 in
+      match getConst e1' with
+      | Some k => Const (split2 _ _  k)
+      | _ => Split2 e1'
+      end
     | Add e1 e2 =>
       match cfold e1 in expr _ len' return expr _ len' -> expr _ len' with
       | Const k1 => fun cfold_e2 =>
@@ -467,6 +475,9 @@ Module Phoas.
       end (fun x => cfold (e2 x))
     end.
 
+  Definition Cfold {len} (E : Expr len) : Expr len :=
+    fun var => cfold (E (expr var)).
+
   Definition add2' {var : nat -> Type} (a1 a2 b1 b2 : var 8) :=
     cfold (MbAdd' (Const (wzero 1))
                   [Var (Var a1); Var (Var a2)]
@@ -480,7 +491,8 @@ Module Phoas.
   Compute add3'.
 
 
-  (** ** How would we prove that optimization? *)
+  (** ** How would we prove that optimization?  First, a detour: *)
+
   Section equiv.
     Context {var1 var2 : nat -> Type}.
     Record bound := {
@@ -574,6 +586,62 @@ Module Phoas.
   Proof.
     unfold MultibyteWf, Wf, MbAdd; intros.
     apply MbAdd'_Wf with (b := nil); equiv.
+  Qed.
+
+
+  (** ** Now we can state the theorem. *)
+
+  Hint Rewrite wplus_wzero_2.
+
+  Hint Extern 1 (interp _ = _) =>
+    match goal with
+    | [ H : Forall _ _ |- _ ] => eapply Forall_forall in H; [ | eassumption ]; assumption
+    end.
+
+  Require Import Program.
+  Ltac dep_destruct E :=
+    let x := fresh "x" in
+    generalize dependent E; intro x; intros;
+    dependent destruction x.
+
+  Lemma getConst_ok : forall var len (e : expr var len) w,
+      getConst e = Some w
+      -> e = Const w.
+  Proof.
+    destruct e; simpl; intuition congruence.
+  Qed.
+
+  Lemma cfold_ok : forall len (e1 : expr (expr word) len) (e2 : expr word len) b,
+      equiv b e1 e2
+      -> List.Forall (fun x1_x2 => interp (val1 x1_x2) = val2 x1_x2) b
+      -> interp (cfold e1) = interp e2.
+  Proof.
+    induction 1; simpl; intuition idtac;
+      repeat match goal with
+             | [ |- context[match ?E with _ => _ end] ] =>
+               match E with
+               | getConst _ => fail 1
+               | _ => destruct E; simpl in *; subst
+               end
+             | [ H : _ = _ |- _ ] => rewrite H
+             end; autorewrite with core; auto;
+        match goal with
+        | [ |- context[getConst ?E] ] =>
+          case_eq (getConst E); intros;
+            try match goal with
+                | [ H : getConst _ = Some _ |- _ ] => apply getConst_ok in H; rewrite H in *
+                end; simpl in *; congruence
+        end.
+  Qed.
+
+  Theorem Cfold_ok : forall len (E : Expr len),
+      Wf E
+      -> Interp (Cfold E) = Interp E.
+  Proof.
+    intros.
+    eapply cfold_ok.
+    apply H.
+    auto.
   Qed.
 End Phoas.
 
