@@ -277,6 +277,35 @@ Fixpoint flatten {len} : multibyte (S len) -> word (len * 8 + 8) :=
   | S len' => fun w => combine (Vector.hd w) (flatten (Vector.tl w))
   end.
 
+Opaque wordToNat split1 split2 combine pow2.
+
+Lemma flatten_ok : forall len (mb : multibyte (S len)),
+    wordToNat (flatten mb) = mbToNat mb.
+Proof.
+  induction len; simpl; intuition.
+
+  {
+    pose proof (shatter_vector mb); simpl in *.
+    destruct H as [a [mb']]; subst.
+    simpl.
+    pose proof (shatter_vector mb'); simpl in *; subst.
+    simpl.
+    omega.
+  }
+
+  {
+    pose proof (wordToNat_combine (Vector.hd mb) (flatten (Vector.tl mb))).
+    simpl in *.
+    rewrite H.
+    pose proof (shatter_vector mb); simpl in *.      
+    destruct H0 as [a [mb']]; subst.
+    simpl.
+    rewrite IHlen.
+    change (pow2 8) with 256.
+    omega.
+  }
+Qed.
+
 Module Phoas.
   Section var.
     Context {var : nat -> Type}.
@@ -356,35 +385,6 @@ Module Phoas.
     unfold MbAdd, mbAdd, Interp; intros.
     rewrite MbAdd'_encoded_properly.
     reflexivity.
-  Qed.
-
-  Opaque wordToNat split1 split2 combine pow2.
-
-  Lemma flatten_ok : forall len (mb : multibyte (S len)),
-      wordToNat (flatten mb) = mbToNat mb.
-  Proof.
-    induction len; simpl; intuition.
-
-    {
-      pose proof (shatter_vector mb); simpl in *.
-      destruct H as [a [mb']]; subst.
-      simpl.
-      pose proof (shatter_vector mb'); simpl in *; subst.
-      simpl.
-      omega.
-    }
-
-    {
-      pose proof (wordToNat_combine (Vector.hd mb) (flatten (Vector.tl mb))).
-      simpl in *.
-      rewrite H.
-      pose proof (shatter_vector mb); simpl in *.      
-      destruct H0 as [a [mb']]; subst.
-      simpl.
-      rewrite IHlen.
-      change (pow2 8) with 256.
-      omega.
-    }
   Qed.
 
   Theorem MbAdd_ok : forall len (mb1 mb2 : Multibyte len),
@@ -488,16 +488,6 @@ Section var.
 
   Definition Multibyte' := Vector.t (Expr var (SyntaxKind (Bit 8))).
 
-  Lemma len_eq : forall len', len' * 8 + 8 + 8 = S len' * 8 + 8.
-  Proof.
-    induction len'; simpl.
-
-    reflexivity.
-
-    rewrite IHlen'.
-    reflexivity.
-  Defined.
-
   Fixpoint MbAdd' {res len} (carry : Expr var (SyntaxKind (Bit 1)))
     : Multibyte' len -> Multibyte' len
       -> (Expr var (SyntaxKind (Bit (len * 8 + 8))) -> ActionT var res)
@@ -513,16 +503,35 @@ Section var.
       Let_ (BinBit (Srl 9 8) (Var _ _ sum_9) (Const var (ConstBit (natToWord 8 8)))) (fun carry'' =>
       Let_ (UniBit (Trunc 1 8) (Var _ _ carry'')) (fun carry' =>
         MbAdd' (Var _ _ carry') (Vector.tl mb1) (Vector.tl mb2)
-               (fun e => f (match len_eq _ in _ = N return Expr _ (SyntaxKind (Bit N)) with
-                            | eq_refl => BinBit (Concat _ _) (Var _ _ sum_8) e
-                            end)))))))))
+               (fun e => f (BinBit (Concat _ _) e (Var _ _ sum_8))))))))))
     end.
+
+  Definition MbAdd {res len} := MbAdd' (res := res) (len := len) (Const var (ConstBit (wzero _))).
 End var.
 
-Theorem MbAdd'_ok : forall r res len carry (mb1 mb2 : Multibyte' len)
-                           (f : Expr type (SyntaxKind (Bit (len * 8 + 8)))
-                                -> ActionT type res)
-                           (f_gives : word (len * 8 + 8) -> type res),
+Lemma msb_by_shifting : forall (w : word 9),
+    split1 1 8 (wrshift w 8) = split2 8 1 w.
+Proof.
+  intros.
+  repeat match goal with
+         | [ w : word _ |- _ ] =>
+           let H := fresh "H" in
+           specialize (shatter_word w) as H; simpl in H; rewrite H; clear H;
+             try (generalize (whd w); generalize (wtl w)); clear w; intros
+         end.
+
+  vm_compute.
+  Require Import Eqdep.
+  match goal with
+  | [ |- context[match ?PF with eq_refl => _ end] ] => rewrite (UIP_refl _ _ PF)
+  end.
+  reflexivity.
+Qed.
+
+Lemma MbAdd'_ok : forall r res len carry (mb1 mb2 : Multibyte' len)
+                         (f : Expr type (SyntaxKind (Bit (len * 8 + 8)))
+                              -> ActionT type res)
+                         (f_gives : word (len * 8 + 8) -> type res),
     (forall e, SemAction r (f e) (M.empty _) (M.empty _) (f_gives (evalExpr e)))
     -> SemAction r (MbAdd' carry mb1 mb2 f) (M.empty _) (M.empty _)
                  (f_gives (flatten (mbAdd' (evalExpr carry)
@@ -544,7 +553,7 @@ Proof.
              (combine (evalExpr carry) (wzero 8)
               ^+ combine (evalExpr (Vector.hd mb1)) (wzero 1)
               ^+ combine (evalExpr (Vector.hd mb2)) (wzero 1))) ans))).
-  simpl in IHlen.
+  simpl in *.
 
   match goal with
   | [ |- context[mbAdd' ?carry' _ _] ] =>
@@ -554,43 +563,67 @@ Proof.
                       (combine (evalExpr carry) (wzero 8)
                                ^+ combine (evalExpr (Vector.hd mb1)) (wzero 1)
                                ^+ combine (evalExpr (Vector.hd mb2)) (wzero 1)) 8))
-      by admit
   end.
   apply IHlen.
   intros.
-  match goal with
-  | [ |- SemAction _ (f ?x) _ _ _ ] => specialize (H x)
-  end.
-  generalize dependent H; clear; intro.
-  match goal with
-  | [ |- context[f_gives (combine ?x _)] ] => generalize dependent x; clear; intros
-  end.
-  match goal with
-    [ _ : SemAction _ _ _ _ ?x |- SemAction _ _ _ _ ?y ] => replace y with x; auto
-  end.
-  f_equal; clear.
-  change w with (evalExpr (Const _ (ConstBit w))) at 2.
+  apply H.
+  apply msb_by_shifting.
+Qed.
 
-  Lemma cast_concat : forall a b c (Heq : a + b = c)
-                             (e1 : Expr type (SyntaxKind (Bit a)))
-                             (e2 : Expr type (SyntaxKind (Bit b))),
-      evalExpr (match Heq in _ = N return Expr type (SyntaxKind (Bit N)) with
-                | eq_refl => BinBit (Concat _ _) e2 e1
-                end)
-      = match Heq in _ = N return word N with
-        | eq_refl => combine (evalExpr e1) (evalExpr e2)
-        end.
-  Proof.
-    intros.
-    subst.
-    reflexivity.
-  Qed.
+Lemma mbToNat_bound : forall {len} (mb : multibyte len),
+    (mbToNat mb < pow2 (len * 8))%nat.
+Proof.
+  induction mb; simpl.
 
-  rewrite cast_concat.
-  simpl.
-  admit.
-Admitted.
-  
+  change (pow2 0) with 1.
+  omega.
+
+  pose proof (wordToNat_bound h).
+  replace (pow2 (S (S (S (S (S (S (S (S (n * 8))))))))))
+    with (256 * pow2 (n * 8)).
+  change (pow2 8) with 256 in *.
+  omega.
+
+  change (pow2 (S (S (S (S (S (S (S (S (n * 8))))))))))
+    with (2 * (2 * (2 * (2 * (2 * (2 * (2 * (2 * pow2 (n * 8))))))))).
+  clear.
+  generalize (pow2 (n * 8 + 8)).
+  intros.
+  omega.
+Qed.
+
+Theorem MbAdd_ok : forall r len (mb1 mb2 : Multibyte' len),
+    SemAction r (MbAdd mb1 mb2 (fun e => Return e)) (M.empty _) (M.empty _)
+              (natToWord _ (mbToNat (Vector.map (@evalExpr _) mb1)
+                            + mbToNat (Vector.map (@evalExpr _) mb2))).
+Proof.
+  unfold MbAdd; intros.
+  match goal with
+  | [ |- context[MbAdd' ?carry ?mb1 ?mb2 ?f] ] => pose proof (MbAdd'_ok r _ _ carry mb1 mb2 f (fun x => x))
+  end.
+  simpl in H.
+  match type of H with
+  | ?P -> _ => assert P; intuition
+  end.
+  constructor; reflexivity.
+  match goal with
+  | [ _ : SemAction _ _ _ _ ?X |- SemAction _ _ _ _ ?Y ] => replace Y with X; auto
+  end.
+  apply wordToNat_inj.
+  rewrite flatten_ok.
+  rewrite mbAdd'_ok.
+  change (# (wzero 1)) with 0; simpl.
+  symmetry; apply wordToNat_natToWord_idempotent'.
+  match goal with
+  | [ |- (mbToNat ?X + mbToNat ?Y < _)%nat ] =>
+    pose proof (mbToNat_bound X);
+      pose proof (mbToNat_bound Y)
+  end.
+  rewrite pow2_add_mul.
+  change (pow2 8) with 256.
+  omega.
+Qed.
+
 Definition AddInputs :=
   STRUCT { "a1" :: Bit 8;
            "a2" :: Bit 8;
@@ -604,8 +637,7 @@ Definition kamiModule :=
     Register "data" : Bit 8 <- Default
 
     with Method "add3" (arg: Struct AddInputs) : Bit 32 :=
-      (MbAdd'
-        $1
+      (MbAdd
         [#arg!AddInputs@."a1"; #arg!AddInputs@."a2"; #arg!AddInputs@."a3"]
         [#arg!AddInputs@."b1"; #arg!AddInputs@."b2"; #arg!AddInputs@."b3"]
         (fun e => Return e))%kami_expr
