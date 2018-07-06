@@ -1,13 +1,25 @@
+Require Import Arith.
+
+
+(** Syntax and semantics of processes *)
+
 Inductive proc :=
 | Done
 | Send (ch v : nat) (p : proc)
 | Recv (ch : nat) (p : nat -> proc)
 | Dup (p : proc)
-| Par (p1 p2 : proc).
+| Par (p1 p2 : proc)
+| HideChannel (ch : nat) (p : proc).
 
 Inductive action := Out | In.
 
 Definition label : Type := option (action * nat * nat).
+
+Definition channelOf (l : label) :=
+  match l with
+  | None => None
+  | Some (_, ch, _) => Some ch
+  end.
 
 Inductive step : proc -> label -> proc -> Prop :=
 | StepSend : forall ch v p,
@@ -29,7 +41,11 @@ Inductive step : proc -> label -> proc -> Prop :=
     -> step (Par p1 p2) l (Par p1' p2)
 | StepPar2 : forall p1 p2 l p2',
     step p2 l p2'
-    -> step (Par p1 p2) l (Par p1 p2').
+    -> step (Par p1 p2) l (Par p1 p2')
+| StepHide : forall ch p l p',
+    step p l p'
+    -> channelOf l <> Some ch
+    -> step (HideChannel ch p) l (HideChannel ch p').
 
 Hint Constructors step.
 
@@ -38,9 +54,11 @@ Definition good_simulation (R : proc -> proc -> Prop) :=
     R p1 p2
     -> forall l p1',
       step p1 l p1'
-      -> exists p2',
-        step p2 l p2'
-        /\ R p1' p2'.
+      -> (l = None
+          /\ R p1' p2)
+         \/ (exists p2',
+                step p2 l p2'
+                /\ R p1' p2').
                    
 Definition refines (p1 p2 : proc) :=
   exists R, good_simulation R
@@ -64,4 +82,69 @@ Proof.
   refines (fun x y => exists z, R1 x z /\ R2 z y).
   eapply H in H4; eauto; firstorder.
   eapply H0 in H4; eauto; firstorder.
+Qed.
+
+Ltac invert H := inversion H; clear H; subst; simpl in *.
+
+Ltac inv :=
+  match goal with
+  | [ H : step _ _ _ |- _ ] => invert H
+  end.
+
+
+(** * Example: adding three *)
+
+Definition addThree :=
+  Recv 0 (fun n => Send 1 (n + 3) Done).
+
+Definition addOne :=
+  Recv 0 (fun n => Send 2 (n + 1) Done).
+
+Definition addTwo :=
+  Recv 2 (fun n => Send 1 (n + 2) Done).
+
+Definition addOneThenTwo :=
+  HideChannel 2 (Par addOne addTwo).
+
+Inductive Radder : proc -> proc -> Prop :=
+| Ra0 : Radder addOneThenTwo addThree
+| Ra1 : forall n, Radder (HideChannel 2 (Par (Send 2 (n + 1) Done) addTwo)) (Send 1 (n + 3) Done)
+| Ra2 : forall n, Radder (HideChannel 2 (Par Done (Send 1 (n + 1 + 2) Done))) (Send 1 (n + 3) Done)
+| Ra3 : Radder (HideChannel 2 (Par Done Done)) Done.
+
+Hint Constructors Radder.
+
+Theorem addOneTheTwo_addThree :
+  refines addOneThenTwo addThree.
+Proof.
+  refines Radder.
+  invert H; repeat inv; intuition (try congruence); unfold addThree; eauto.
+  rewrite <- plus_assoc; eauto.
+Qed.
+
+
+(** * The crucial composition theorem *)
+
+Inductive Rpar (R1 R2 : proc -> proc -> Prop) : proc -> proc -> Prop :=
+| Rp : forall p1 p1' p2 p2',
+    R1 p1 p1'
+    -> R2 p2 p2'
+    -> Rpar R1 R2 (Par p1 p2) (Par p1' p2').
+
+Hint Constructors Rpar.
+
+Theorem refines_Par : forall p1 p2 p1' p2',
+    refines p1 p1'
+    -> refines p2 p2'
+    -> refines (Par p1 p2) (Par p1' p2').
+Proof.
+  destruct 1 as [R1]; destruct 1 as [R2].
+  refines (Rpar R1 R2).
+
+  invert H3.
+  inv;
+    repeat match goal with
+           | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
+             eapply H1 in H2; eauto
+           end; firstorder (try discriminate); eauto 6.
 Qed.
