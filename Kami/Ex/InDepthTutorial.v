@@ -13,7 +13,7 @@ Open Scope string.
 
 (*+ Kami: A Platform for High-Level Parametric Hardware Specification and its Modular Verification +*)
 
-(*! Welcome to the Kami in-depth tutorial! This tutorial consists of following sections:
+(*! Welcome to the Kami in-depth tutorial! This tutorial consists of the following sections:
  * 1) Kami language: syntax and semantics
  * 2) Refinement between Kami modules
  * 3) A case study: proving the correctness of a 3-stage pipelined system
@@ -35,6 +35,10 @@ Print Mod.
 Print ActionT.
 Print Expr.
 
+(** Here is, essentially, a "prototype" for a named callable method. *)
+Definition enq1_8bit :=
+  MethodSig ("fifo1" -- "enq") (Bit 8): Void.
+
 (** Here is a simple Kami module. *)
 Definition kamiModule :=
   MODULE {
@@ -42,7 +46,7 @@ Definition kamiModule :=
 
     with Rule "produce" :=
       Read data <- "data";
-      Call (MethodSig ("fifo1" -- "enq") (Bit 8): Void)(#data);
+      Call enq1_8bit(#data);
       Write "data" <- #data + $1;
       Retv
 
@@ -683,8 +687,6 @@ End DataSizeAbs.
 
 (*+ Extraction +*)
 
-(* TODO: did the capitalize change between some recent versions?
-*        I had to switch "OCaml" to "Ocaml". *)
 Extraction Language Ocaml.
 
 Set Extraction Optimize.
@@ -695,5 +697,4 @@ Print impl.
 
 Definition targetProcB := ModulesSToBModules (getModuleS (impl 32)).
 
-(* Extraction "../Ext/Ocaml/Target.ml" targetProcB. *)
-
+Extraction "../Ext/Ocaml/Target.ml" targetProcB.
