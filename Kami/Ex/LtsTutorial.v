@@ -121,7 +121,7 @@ Inductive Radder : proc -> proc -> Prop :=
 
 Hint Constructors Radder.
 
-Theorem addOneTheTwo_addThree :
+Theorem addOneThenTwo_ok :
   refines addOneThenTwo addThree.
 Proof.
   refines Radder.
@@ -150,6 +150,62 @@ Proof.
 
   invert H3.
   invertomatic.
+Qed.
+
+(** * Refinement and hiding *)
+
+Inductive Rhide ch (R : proc -> proc -> Prop) : proc -> proc -> Prop :=
+| Rh : forall p p',
+    R p p'
+    -> Rhide ch R (HideChannel ch p) (HideChannel ch p').
+
+Hint Constructors Rhide.
+
+Theorem refines_HideChannel : forall ch p p',
+    refines p p'
+    -> refines (HideChannel ch p) (HideChannel ch p').
+Proof.
+  destruct 1 as [R].
+  refines (Rhide ch R).
+
+  invert H1.
+  invertomatic.
+Qed.
+
+(** ** ...applied to a simple concrete example *)
+
+Definition addSeven :=
+  Recv 1 (fun n => Send 3 (n + 7) Done).
+Definition addTen :=
+  Recv 0 (fun n => Send 3 (n + 10) Done).
+Definition addThreeThenSeven :=
+  HideChannel 1 (Par addThree addSeven).
+
+Inductive Radder' : proc -> proc -> Prop :=
+| Ra'0 : Radder' (HideChannel 1 (Par addThree addSeven)) addTen
+| Ra'1 : forall n, Radder' (HideChannel 1 (Par (Send 1 (n + 3) Done) addSeven)) (Send 3 (n + 10) Done)
+| Ra'2 : forall n, Radder' (HideChannel 1 (Par Done (Send 3 (n + 3 + 7) Done))) (Send 3 (n + 10) Done)
+| Ra'3 : Radder' (HideChannel 1 (Par Done Done)) Done.
+
+Hint Constructors Radder'.
+
+Lemma addThreeThenSeven_ok' :
+  refines addThreeThenSeven addTen.
+Proof.
+  refines Radder'.
+  invert H; repeat inv; intuition (try congruence); unfold addTen; eauto.
+  rewrite <- plus_assoc; eauto.
+Qed.
+
+Theorem addThreeThenSeven_ok :
+  refines (HideChannel 1 (Par addOneThenTwo addSeven)) addTen.
+Proof.
+  eapply refines_trans.
+  apply refines_HideChannel.
+  apply refines_Par.
+  apply addOneThenTwo_ok.
+  apply refines_refl.
+  apply addThreeThenSeven_ok'.
 Qed.
 
 
@@ -187,4 +243,13 @@ Proof.
   destruct 1 as [R].
   refines (Rdup R).
   eauto using refines_Dup'.
+Qed.
+
+(** ** ...applied to the earlier concrete example *)
+
+Theorem many_addThreeThenSeven_ok :
+  refines (Dup (HideChannel 1 (Par addOneThenTwo addSeven))) (Dup addTen).
+Proof.
+  apply refines_Dup.
+  apply addThreeThenSeven_ok.
 Qed.
