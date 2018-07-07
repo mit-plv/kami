@@ -32,8 +32,8 @@ Section DecExec.
   Local Definition decexecSepInl := decexecSepInl dec exec pcInit pgmInit.
 
   (* What would be good invariants to prove the correctness of stage merging?
-   * For given two stages, we usually need to provide relations among states in
-   * the two stages and elements in the fifo between two.
+   * For two given stages, we usually need to provide relations among states in
+   * the two stages and elements in the fifo between them.
    *
    * Here we describe two invariants: the first one [decexec_pc_inv] states a
    * relation between the [pc] value and the fifo element, and the second one
@@ -73,14 +73,14 @@ Section DecExec.
       Hdeinv: decexec_d2e_inv pgmv d2efullv d2eeltv
     }.
 
-  (* Make sure to register all invariant-related definitions to the [InvDefs]
-   * hint database, in order for Kami invariant-solving tactics to automatically
-   * unfold them. *)
+  (* Make sure to register all invariant-related definitions in the [InvDefs]
+   * hint database, in order for Kami invariant-solving tactics to unfold them
+   * automatically. *)
   Hint Unfold decexec_pc_inv decexec_d2e_inv: InvDefs.
 
   (* In order to prove invariants, we need to provide two customized tactics:
    * one is for destructing invariants for the current state
-   * ([decexec_inv_dest_tac]) and the other is for constructing invariants for
+   * ([decexec_inv_dest_tac]), and the other is for constructing invariants for
    * the next state ([decexec_inv_constr_tac]). *)
   Ltac decexec_inv_dest_tac :=
     unfold getRegInits, decexecSepInl, projT1;
@@ -103,13 +103,13 @@ Section DecExec.
       Multistep (projT1 decexecSepInl) init n ll ->
       decexec_inv n.
   Proof.
-    (* Certainly the invariant proof is done by induction on [Multistep] *)
+    (* Induction on [Multistep] is the natural choice. *)
     induction 2.
     - (* Our custom destruction-construction tactic is used 
        * for the initial case as well. *)
       decexec_inv_tac; cbn in *; kinv_red.
     - (* [kinvert] is for inverting Kami steps. 
-       * It may generate multiple subgoals along with possible steps 
+       * It may generate multiple subgoals corresponding to possible steps 
        * by a rule or a method. *)
       kinvert.
       + (* [kinv_dest_custom] is a tactic for proving invariants, and it takes
@@ -165,9 +165,9 @@ Section DecExec.
     kinline_refine_left decexecSepInl.
 
     (* 2) Decomposition: [kdecompose_nodefs] is mostly used for decomposition;
-     *    it requires the target module without any methods. Indeed the module
+     *    it requires a target module without any methods. Indeed the module
      *    has no methods, since it is inlined. The tactic takes register and
-     *    rule mapping as arguments. *)
+     *    rule mappings as arguments. *)
     kdecompose_nodefs decexec_regMap decexec_ruleMap.
 
     (* 3) Simulation: we can add invariants using [kinv_add] and [kinv_add_end]
@@ -188,4 +188,3 @@ Section DecExec.
   Qed.
 
 End DecExec.
-

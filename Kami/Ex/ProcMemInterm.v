@@ -18,9 +18,9 @@ Set Implicit Arguments.
  * - ProcMemOk.v: a complete refinement proof
  *)
 
-(* After successfully merging the first two stages, now we have 2-stage
+(* After successfully merging the first two stages, now we have a 2-stage
  * pipelined processor as an intermediate implementation. Thanks to Kami's
- * modular refinement theorem and related high-level tactics, it is quite
+ * modular-refinement theorem and related high-level tactics, it is quite
  * easy to prove a refinement from the 3-stage processor to the 2-stage one. *)
 Section PipelinedProc.
   Variables (instK dataK: Kind)
@@ -51,11 +51,11 @@ Section PipelinedProc.
   Theorem procImpl_ok_1:
     procImpl dec exec init <<== procInterm.
   Proof.
-    (* [kmodular] is used to apply modular refinement theorem.
+    (* [kmodular] is used to apply the modular-refinement theorem.
      * Try [unfold procImpl, procInterm] to check how submodules are composed
      * for each module. *)
     kmodular.
-    - (* We already proved the stage merging 
+    - (* We already proved the stage-merging 
        * between [decoder] and [executer]. *)
       apply decexec_ok.
     - krefl.
@@ -69,4 +69,3 @@ Section PipelinedProc.
   Defined.
 
 End PipelinedProc.
-

@@ -17,13 +17,13 @@ Set Implicit Arguments.
  * - ProcMemOk.v (you are here!): a complete refinement proof
  *)
 
-(* For the given 2-stage pipelined processor [procInterm], one more stage 
- * merging is required to prove the final refinement. This stage merging is
- * quite different from the one we did in DecExecOk.v -- it is the case where
+(* For the given 2-stage pipelined processor [procInterm], one more
+ * stage-merging is required to prove the final refinement. This stage-merging is
+ * quite different from the one we did in DecExecOk.v -- now
  * the pipelined system has a feedback mechanism. Between [decexec] and 
- * [writeback] we have a [scoreboard] to check whether a certain register value 
+ * [writeback], we have a [scoreboard] to check whether a certain register value 
  * is up-to-date or not. Therefore, in order to merge the two stages, some 
- * invariants about [scoreboard] are additionally required.
+ * additional invariants about [scoreboard] are required.
  *)
 Section PipelinedProc.
   Variables (instK dataK: Kind)
@@ -41,7 +41,7 @@ Section PipelinedProc.
   (* Here is an invariant of [scoreboard]; it simply says that whenever 
    * [decexec] sends data to [writeback], [scoreboard] always says the
    * corresponding register value is not up-to-date. This very simple
-   * invariant is enough to prove the stage merging.
+   * invariant is enough to prove the stage-merging.
    * Can you guess why it is so simple?
    *)
   Definition procInterm_scoreboard_inv
@@ -178,4 +178,3 @@ Section PipelinedProc.
   Qed.
 
 End PipelinedProc.
-

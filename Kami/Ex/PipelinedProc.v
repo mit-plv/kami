@@ -38,7 +38,7 @@ Section PipelinedProc.
             (exec: Executer dataK).
 
   (* [regFile] encapsulates a register file for modular hardware design.
-   * It has two read ports and a single write ports. *)
+   * It has two read ports and a single write port. *)
   Section RegFile.
     Variable rfInit: ConstT (Vector dataK rfSize).
 
@@ -90,7 +90,7 @@ Section PipelinedProc.
   Definition d2eDeq := MethodSig ("d2e" -- "deq")(Void): Struct D2E.
 
   (* [decoder] is the first stage of the implementation; it fetches an
-   * instruction with the current [pc], and decodes it using the decoder 
+   * instruction with the current [pc] and decodes it using the decoder 
    * interface. *)
   Section Decoder.
     Variables (pcInit : ConstT (Bit pgmSize))
@@ -126,10 +126,10 @@ Section PipelinedProc.
   Hint Resolve decoder_PhoasWf decoder_RegsWf.
 
   (* Scoreboarding is the simplest way to avoid RAW and WAW hazards in a
-   * pipelined processor. [scoreboard] keeps track of the information whether a
-   * register has the up-to-date value so it is okay to read/write it. Here we
-   * provide the most simplest version that is not optimized a lot, but it is
-   * still nontrivial to prove the correctness of it. Refer to [ProcMemOk.v]
+   * pipelined processor. [scoreboard] keeps track of whether a
+   * register has an up-to-date value, making it okay to read/write. Here we
+   * provide the simplest version, light on optimizations, but it is
+   * still nontrivial to prove correctness. Refer to [ProcMemOk.v]
    * for detailed invariants and the correctness proof. *)
   Definition scoreboard :=
     MODULE {
@@ -172,7 +172,7 @@ Section PipelinedProc.
   (* [executer] is the second stage of the implementation. From the given
    * decoded information ([D2E]), it either executes an arithmetic operation, 
    * performs a memory load/store, or calls [toHost] with a proper value. Note 
-   * that it does not perform register writes, instead it sends information to 
+   * that it does not perform register writes. Instead, it sends information to 
    * the last stage [writeback] to perform writes. *)
   Section Executer.
 
@@ -185,19 +185,19 @@ Section PipelinedProc.
           Call d2e <- d2eDeq();
           LET op <- #d2e!D2E@."op";
 
-          (* Below assertion ensures that this rule only handles
+          (* This assertion ensures that this rule only handles
            * arithmetic operations. *)
           Assert (#op == $$opArith);
 
           LET src1 <- #d2e!D2E@."src1";
           LET src2 <- #d2e!D2E@."src2";
           LET dst <- #d2e!D2E@."dst";
-          Call srcOk1 <- sbSearch1(#src1);
-          Call srcOk2 <- sbSearch2(#src2);
+          Call srcSb1 <- sbSearch1(#src1);
+          Call srcSb2 <- sbSearch2(#src2);
 
-          (* Below assertion ensures that the register values to use
+          (* This assertion ensures that the register values to use
            * are up-to-date. *)
-          Assert (!#srcOk1 && !#srcOk2);
+          Assert (!#srcSb1 && !#srcSb2);
 
           LET arithOp <- #d2e!D2E@."arithOp";
           Call val1 <- rfRead1(#src1);
@@ -217,8 +217,8 @@ Section PipelinedProc.
           Call val <- doMem(STRUCT { "isLoad" ::= $$true;
                                      "addr" ::= #addr;
                                      "data" ::= $$Default });
-          Call dstOk <- sbSearch1(#dst);
-          Assert !#dstOk;
+          Call dstSb <- sbSearch1(#dst);
+          Assert !#dstSb;
 
           Call sbInsert(#dst);
           Call e2wEnq (STRUCT { "idx" ::= #dst; "val" ::= #val });
@@ -231,8 +231,8 @@ Section PipelinedProc.
 
           LET addr <- #d2e!D2E@."addr";
           LET src1 <- #d2e!D2E@."src1";
-          Call srcOk1 <- sbSearch1(#src1);
-          Assert !#srcOk1;
+          Call srcSb1 <- sbSearch1(#src1);
+          Assert !#srcSb1;
           
           Call val <- rfRead1(#src1);
           Call doMem(STRUCT { "isLoad" ::= $$false;
@@ -246,8 +246,8 @@ Section PipelinedProc.
           Assert (#op == $$opTh);
 
           LET src1 <- #d2e!D2E@."src1";
-          Call srcOk1 <- sbSearch1(#src1);
-          Assert !#srcOk1;
+          Call srcSb1 <- sbSearch1(#src1);
+          Assert !#srcSb1;
           
           Call val1 <- rfRead1(#src1);
           Call toHost(#val1);
@@ -263,7 +263,7 @@ Section PipelinedProc.
   Hint Resolve executer_PhoasWf executer_RegsWf.
   
   (* [writeback] is our last stage; it simply performs a register write and
-   * tell the scoreboard that the register value is up-to-date. *)
+   * tells the scoreboard that the register value is up-to-date. *)
   Definition writeback :=
     MODULE {
       Rule "writeback" :=
@@ -278,7 +278,7 @@ Section PipelinedProc.
   Proof. kvr. Qed.
   Hint Resolve writeback_PhoasWf writeback_RegsWf.
 
-  Variable (init: ProcInit instK dataK rfSize pgmSize).
+  Variable init: ProcInit instK dataK rfSize pgmSize.
 
   (* The processor implementation consists of three stages -- [decoder], 
    * [executer], and [writeback] -- and some helper modules. *)
@@ -318,4 +318,3 @@ Hint Unfold regFile d2e decoder scoreboard e2w executer writeback
 Hint Unfold RfWrite rfRead1 rfRead2 rfWrite D2E d2eEnq d2eDeq
      sbSearch1 sbSearch2 sbInsert sbRemove
      e2wEnq e2wDeq doMem toHost: MethDefs.
-

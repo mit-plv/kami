@@ -820,4 +820,4 @@ Unset Extraction AutoInline.
 
 Definition targetProcB := ModulesSToBModules (getModuleS kamiModule).
 
-Extraction "../Ext/Ocaml/Target.ml" targetProcB.
+(* Extraction "../Ext/Ocaml/Target.ml" targetProcB. *)

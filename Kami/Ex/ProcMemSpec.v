@@ -4,8 +4,8 @@ Set Implicit Arguments.
 
 (*! Specifying, implementing, and verifying a very simple processor !*)
 
-(** Processors and memory systems are one of typical hardware that involves
- * nontrivial optimizations so it is worth verifying them. In this case study,
+(** Processors and memory systems are a hardware duo that involves
+ * nontrivial optimizations, so they are worth verifying. In this case study,
  * we will 1) define a spec processor and a memory system with a very simple
  * ISA, 2) implement an optimized processor using pipelining and scoreboarding,
  * and 3) prove the refinement between the implementation and the spec.
@@ -21,7 +21,7 @@ Set Implicit Arguments.
  *)
 
 Section Spec.
-  (* Specification is parametrized by several variables. *)
+  (* The specification is parameterized on several variables. *)
   Variables (instK dataK: Kind)
             (addrSize rfSize: nat).
   
@@ -44,6 +44,10 @@ Section Spec.
 
     Definition opArithK := Bit 2.
 
+    (* Remember our adventures with PHOAS:
+     * the [ty] business below is about choosing the representation for variables!
+     * Thus, each function here taking a [ty] as input stands for the body of a
+     * Kami function, with a free variable for the function argument. *)
     Record Decoder :=
       { getOp: forall ty, ty instK -> Expr ty (SyntaxKind opK);
         getArithOp: forall ty, ty instK -> Expr ty (SyntaxKind opArithK);
@@ -57,6 +61,9 @@ Section Spec.
       { execArith: forall ty, ty opArithK -> ty dataK -> ty dataK ->
                               Expr ty (SyntaxKind dataK);
       }.
+
+    (* So what made all this "abstract"?  We will avoid committing to a concrete
+     * instruction encoding, always parameterizing on these records instead. *)
 
     (* We don't want to provide an implicit argument (as an underscore) for the
      * PHOAS type instantiation function every time we use one of decoder or
@@ -74,7 +81,7 @@ Section Spec.
   (* A memory specification that instantaneously responds to any requests *)
   Section Memory.
 
-    (* When "isLoad" is [true], we don't care the "data" value. *)
+    (* When "isLoad" is [true], we don't care about the "data" value. *)
     Definition MemRq :=
       STRUCT { "isLoad" :: Bool;
                "addr" :: Bit addrSize;
@@ -82,7 +89,7 @@ Section Spec.
              }.
 
     (* If the response is for a store operation, 
-     * the response value has no meanings. *)
+     * the response value has no meaning. *)
     Definition MemRs := dataK.
 
     (* The memory spec has only one method ("doMem"), which takes a request and
@@ -104,9 +111,10 @@ Section Spec.
       }.
 
     (* Whenever we define a Kami module, we should prove well-formedness
-     * conditions about the module. One is about the PHOAS equivalence, and the
-     * other is about valid register uses. These lemmas are always proven
-     * by a single-line tactic [kequiv] or [kvr], respectively. *)
+     * conditions about the module. One is the PHOAS well-formedness we
+     * studied before, and the other is about valid register uses.
+     * These lemmas are always proven by a single-line tactic
+     * [kequiv] or [kvr], respectively. *)
     Lemma memory_PhoasWf: ModPhoasWf memory.
     Proof. kequiv. Qed.
     Lemma memory_RegsWf: ModRegsWf memory.
@@ -130,10 +138,13 @@ Section Spec.
     (* Initial values of a processor are parametrized. *)
     Record ProcInit :=
       { pcInit : ConstT (Bit pgmSize);
+        (* Starting program counter *)
         rfInit : ConstT (Vector dataK rfSize);
+        (* Starting register file *)
         pgmInit : ConstT (Vector instK pgmSize)
+        (* Machine code of software program *)
       }.
-    Variable (procInit: ProcInit).
+    Variable procInit: ProcInit.
 
     (* The processor spec has several rules, where each rule handles a single
      * instruction at a time. *)
@@ -151,7 +162,7 @@ Section Spec.
 
           LET inst <- #pgm@[#pc];
 
-          (* Below assertion ensures that this rule only handles 
+          (* This assertion ensures that this rule only handles 
            * arithmetic operations. *)
           Assert (getOp dec inst == $$opArith);
 
@@ -236,7 +247,7 @@ Section Spec.
 
 End Spec.
 
-(* It is recommended to register well-formedness proofs to the Coq's core hint
+(* It is recommended to register well-formedness proofs in the Coq's core hint
  * database. [kequiv] and [kvr] take advantage of them to provide faster proofs.
  *)
 Hint Resolve memory_PhoasWf memory_RegsWf.
@@ -245,9 +256,8 @@ Hint Resolve procSpec_PhoasWf procSpec_RegsWf.
 (* It is highly recommended (almost mandatory) to register all module 
  * definitions and method-related definitions to specific hint databases.
  * This is only for the purpose of inlining. Inlining may fail when some
- * definitions are not registered to a proper database. *)
+ * definitions are not registered in a proper database. *)
 Hint Unfold memory procSpec procMemSpec: ModuleDefs.
 Hint Unfold opArith opLd opSt opTh opK
      opArithAdd opArithSub opArithMul opArithDiv opArithK
      MemRq MemRs doMem toHost: MethDefs.
-

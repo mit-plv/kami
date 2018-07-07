@@ -15,14 +15,15 @@ Set Implicit Arguments.
  * - ProcMemOk.v: a complete refinement proof
  *)
 
-(* How can we verify a pipelined processor? One of intuitive and efficient ways
+(* How can we verify a pipelined processor? One intuitive and efficient way
  * is called "stage merging." As the name says, we prove a refinement, where
- * specification is also possibly staged but has less stages since some stages
- * are merged into one in the spec. We will eventually have a refinement where
- * the spec has a single stage by applying stage merging repeatedly.
+ * the specification is also possibly pipelined but has fewer stages since
+ * some stages are merged into one in the spec. We will eventually have a
+ * refinement where the spec has a single stage by applying stage merging
+ * repeatedly.
  *
  * Here we first provide [decexec], a merged stage between [decoder] and
- * [executer] in PipelinedProc.v
+ * [executer] in PipelinedProc.v.
  *)
 Section DecExec.
   Variables (instK dataK: Kind)
@@ -59,9 +60,9 @@ Section DecExec.
         LET src1 <- getSrc1 dec inst;
         LET src2 <- getSrc2 dec inst;
         LET dst <- getDst dec inst;
-        Call srcOk1 <- sbSearch1(#src1);
-        Call srcOk2 <- sbSearch2(#src2);
-        Assert (!#srcOk1 && !#srcOk2);
+        Call srcSb1 <- sbSearch1(#src1);
+        Call srcSb2 <- sbSearch2(#src2);
+        Assert (!#srcSb1 && !#srcSb2);
 
         LET arithOp <- getArithOp dec inst;
         Call val1 <- rfRead1(#src1);
@@ -85,8 +86,8 @@ Section DecExec.
         Call val <- doMem(STRUCT { "isLoad" ::= $$true;
                                    "addr" ::= #addr;
                                    "data" ::= $$Default });
-        Call dstOk <- sbSearch1(#dst);
-        Assert !#dstOk;
+        Call dstSb <- sbSearch1(#dst);
+        Assert !#dstSb;
 
         Call sbInsert(#dst);
         Call e2wEnq (STRUCT { "idx" ::= #dst; "val" ::= #val });
@@ -102,8 +103,8 @@ Section DecExec.
 
         LET addr <- getAddr dec inst;
         LET src1 <- getSrc1 dec inst;
-        Call srcOk1 <- sbSearch1(#src1);
-        Assert !#srcOk1;
+        Call srcSb1 <- sbSearch1(#src1);
+        Assert !#srcSb1;
           
         Call val <- rfRead1(#src1);
         Call doMem(STRUCT { "isLoad" ::= $$false;
@@ -120,8 +121,8 @@ Section DecExec.
         Assert (#op == $$opTh);
 
         LET src1 <- getSrc1 dec inst;
-        Call srcOk1 <- sbSearch1(#src1);
-        Assert !#srcOk1;
+        Call srcSb1 <- sbSearch1(#src1);
+        Assert !#srcSb1;
 
         Call val1 <- rfRead1(#src1);
         Call toHost(#val1);
@@ -162,4 +163,3 @@ Hint Resolve decexecSep_PhoasWf decexecSep_RegsWf.
 Hint Unfold decexec decexecSep: ModuleDefs.
 Hint Unfold doMem toHost D2E sbSearch1 sbSearch2 sbInsert
      rfRead1 rfRead2 e2wEnq: MethDefs.
-
