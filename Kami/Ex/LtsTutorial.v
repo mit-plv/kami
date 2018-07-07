@@ -91,6 +91,13 @@ Ltac inv :=
   | [ H : step _ _ _ |- _ ] => invert H
   end.
 
+Ltac invertomatic :=
+  inv;
+    repeat match goal with
+           | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
+             eapply H1 in H2; eauto
+           end; firstorder (try discriminate); eauto 6.
+
 
 (** * Example: adding three *)
 
@@ -142,9 +149,42 @@ Proof.
   refines (Rpar R1 R2).
 
   invert H3.
-  inv;
-    repeat match goal with
-           | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
-             eapply H1 in H2; eauto
-           end; firstorder (try discriminate); eauto 6.
+  invertomatic.
+Qed.
+
+
+(** * Refinement and duplication *)
+
+Inductive Rdup (R : proc -> proc -> Prop) : proc -> proc -> Prop :=
+| RdNil : forall p p',
+    R p p'
+    -> Rdup R (Dup p) (Dup p')
+| RdCons : forall p1 p1' p2 p2',
+    R p1 p1'
+    -> Rdup R p2 p2'
+    -> Rdup R (Par p1 p2) (Par p1' p2').
+
+Hint Constructors Rdup.
+
+Lemma refines_Dup' : forall R : proc -> proc -> Prop,
+  (forall p1 p2,
+      R p1 p2
+        -> forall l p1',
+        step p1 l p1'
+        -> (l = None /\ R p1' p2) \/ (exists p2', step p2 l p2' /\ R p1' p2'))
+  -> forall p1 p2, Rdup R p1 p2
+  -> forall l p1', step p1 l p1'
+                   -> (l = None /\ Rdup R p1' p2)
+                      \/ (exists p2', step p2 l p2' /\ Rdup R p1' p2').
+Proof.
+  induction 2; intros; invertomatic.
+Qed.
+
+Theorem refines_Dup : forall p p',
+    refines p p'
+    -> refines (Dup p) (Dup p').
+Proof.
+  destruct 1 as [R].
+  refines (Rdup R).
+  eauto using refines_Dup'.
 Qed.
