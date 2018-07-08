@@ -355,61 +355,77 @@ Ltac kdef_call_sub :=
     | [ |- DefCallSub _ _ ] => vm_compute; split; intros; intuition idtac
     end.
 
-Ltac kmodular :=
+Ltac kmodulari i :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
-   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
-   |kdisj_edms_cms_ex 0|kdisj_ecms_dms_ex 0|kinteracting| |].
+   |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
+   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_edms_cms_ex i|kdisj_ecms_dms_ex i|kinteracting| |].
 
-Tactic Notation "kmodular" "with" constr(p) :=
+Ltac kmodular := kmodulari 0.
+
+Tactic Notation "kmodulari" "with" constr(p) constr(i) :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_interacting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
-   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
-   |kdisj_edms_cms_ex 0|kdisj_ecms_dms_ex 0|kinteracting| |].
+   |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
+   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_edms_cms_ex i|kdisj_ecms_dms_ex i|kinteracting| |].
 
-Ltac kmodularn :=
+Tactic Notation "kmodular" "with" constr(p) :=
+  kmodulari with p 0.
+
+Ltac kmodularin i :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting;
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
-   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
+   |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
+   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
    |knoninteracting|knoninteracting| |].
 
-Tactic Notation "kmodularn" "with" constr(p) :=
+Ltac kmodularn := kmodularin 0.
+
+Tactic Notation "kmodularin" "with" constr(p) constr(i) :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
-   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
+   |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
+   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
    |knoninteracting|knoninteracting| |].
 
-Ltac kmodularnp :=
+Tactic Notation "kmodularn" "with" constr(p) :=
+  kmodularin with p 0.
+
+Ltac kmodularinp i :=
   try (unfold MethsT; rewrite <-idElementwiseId);
   apply traceRefines_modular_noninteracting_p;
   [kequiv|kequiv|kequiv|kequiv
-   |kdisj_regs_ex 0|kdisj_regs_ex 0|kvr|kvr
-   |kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0
+   |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
+   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
    | |knoninteracting|knoninteracting| |].
 
-Ltac kmodular_sim_l :=
+Ltac kmodularnp := kmodularinp 0.
+
+Ltac kmodulari_sim_l i :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_1;
   [knodup_regs|knodup_regs|knodup_regs
-   |kdisj_regs_ex 0|kdisj_regs_ex 0| | |].
+   |kdisj_regs_ex i|kdisj_regs_ex i| | |].
 
-Ltac kmodular_sim_r :=
+Ltac kmodular_sim_l := kmodulari_sim_l 0.
+
+Ltac kmodulari_sim_r i :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure_modular_2;
   [knodup_regs|knodup_regs|knodup_regs
-   |kdisj_regs_ex 0|kdisj_regs_ex 0| | |].
+   |kdisj_regs_ex i|kdisj_regs_ex i| | |].
+
+Ltac kmodular_sim_r := kmodulari_sim_r 0.
 
 Ltac ksimilar :=
   try rewrite idElementwiseId; apply traceRefines_same_module_structure;
   [knodup_regs|knodup_regs| | |].
 
-Ltac ksubst fm tm om :=
+Ltac ksubsti i fm tm om :=
   apply substitute_flattened_refines_interacting
   with (regs := getRegInits fm)
          (rules := getRules fm)
@@ -424,11 +440,14 @@ Ltac ksubst fm tm om :=
   repeat rewrite getCalls_flattened;
   [kequiv|kequiv|kequiv|
    knodup_regs|knodup_regs|knodup_regs|
-   kdisj_regs_ex 0|kdisj_regs_ex 0|
-   kdisj_dms_ex 0|kdisj_dms_ex 0|kdisj_cms_ex 0|kdisj_cms_ex 0| | |
+   kdisj_regs_ex i|kdisj_regs_ex i|
+   kdisj_dms_ex i|kdisj_dms_ex i|kdisj_cms_ex i|kdisj_cms_ex i| | |
    kvr|kvr|kvr| | | |].
 
+Ltac ksubst fm tm om := ksubsti 0 fm tm om.
+
 Ltac kstring_simpl :=
+  repeat autounfold with NameDefs in *;
   cbv [withPrefix prefixSymbol append] in *.
 
 Ltac kinline_compute :=
@@ -514,6 +533,7 @@ Ltac kinline_refine_left rm :=
 
 Ltac kregmap_red :=
   repeat autounfold with MethDefs in *;
+  repeat autounfold with MapDefs in *;
   kstring_simpl; dest;
   repeat match goal with
          | [H: M.find _ _ = None |- _] => clear H
