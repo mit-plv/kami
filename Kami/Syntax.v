@@ -353,10 +353,13 @@ Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n
 | Slt n: BinBitBoolOp n n.
 
-Fixpoint natToFin sz (n: nat): Fin.t (S sz) :=
-  match n with
+Fixpoint natToFin n (i: nat): Fin.t (S n) :=
+  match i with
   | 0 => Fin.F1
-  | S m => natToFin sz m
+  | S i' => match n with
+            | 0 => Fin.F1
+            | S n' => Fin.FS (natToFin n' i')
+            end
   end.
 
 Section Phoas.
