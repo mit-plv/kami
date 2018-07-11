@@ -720,7 +720,7 @@ Ltac kinv_finish :=
          try assumption; try discriminate;
          try match goal with
              | [H: _ <> _ |- _] => elim H; reflexivity
-             | [ |- context [if ?c then _ else _] ] => destruct c
+             | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
              end;
          simpl in *; auto)
     ).
@@ -746,7 +746,7 @@ Ltac kinv_finish_with tac :=
             try assumption; try discriminate;
             try match goal with
                 | [H: _ <> _ |- _] => elim H; reflexivity
-                | [ |- context [if ?c then _ else _] ] => destruct c
+                | [ |- context [if weq ?w1 ?w2 then _ else _] ] => destruct (weq w1 w2)
                 end;
             simpl in *; auto);
          try tac)
@@ -818,7 +818,6 @@ Ltac kinv_eq :=
   repeat
     (first [ reflexivity
            | meqReify
-           | findReify
            | fin_func_eq
            | apply existT_eq
            | apply pair_eq
