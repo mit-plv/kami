@@ -818,6 +818,7 @@ Ltac kinv_eq :=
   repeat
     (first [ reflexivity
            | meqReify
+           | findReify
            | fin_func_eq
            | apply existT_eq
            | apply pair_eq
