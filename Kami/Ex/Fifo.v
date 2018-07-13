@@ -3,7 +3,6 @@ Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.ParametricEquiv Kami.ParametricWf Kami.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
-Require Import Ex.Names.
 
 Set Implicit Arguments.
   
@@ -15,58 +14,58 @@ Section Fifo.
   Local Notation "^ s" := (fifoName -- s) (at level 0).
 
   Definition enq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
-    (Read isFull <- ^full;
+    (Read isFull <- ^"full";
      Assert !#isFull;
-     Read eltT <- ^elt;
-     Read enqPT <- ^enqP;
-     Read deqPT <- ^deqP;
-     Write ^elt <- #eltT@[#enqPT <- #d];
-     Write ^empty <- $$false;
+     Read eltT <- ^"elt";
+     Read enqPT <- ^"enqP";
+     Read deqPT <- ^"deqP";
+     Write ^"elt" <- #eltT@[#enqPT <- #d];
+     Write ^"empty" <- $$false;
      LET next_enqP <- (#enqPT + $1) :: Bit sz;
-     Write ^full <- (#deqPT == #next_enqP);
-     Write ^enqP <- #next_enqP;
+     Write ^"full" <- (#deqPT == #next_enqP);
+     Write ^"enqP" <- #next_enqP;
      Retv)%kami_action.
 
   Definition deq {ty} : ActionT ty dType :=
-    (Read isEmpty <- ^empty;
+    (Read isEmpty <- ^"empty";
      Assert !#isEmpty;
-     Read eltT <- ^elt;
-     Read enqPT <- ^enqP;
-     Read deqPT <- ^deqP;
-     Write ^full <- $$false;
+     Read eltT <- ^"elt";
+     Read enqPT <- ^"enqP";
+     Read deqPT <- ^"deqP";
+     Write ^"full" <- $$false;
      LET next_deqP <- (#deqPT + $1) :: Bit sz;
-     Write ^empty <- (#enqPT == #next_deqP);
-     Write ^deqP <- #next_deqP;
+     Write ^"empty" <- (#enqPT == #next_deqP);
+     Write ^"deqP" <- #next_deqP;
      Ret #eltT@[#deqPT])%kami_action.
 
   Definition firstElt {ty} : ActionT ty dType :=
-    (Read isEmpty <- ^empty;
+    (Read isEmpty <- ^"empty";
      Assert !#isEmpty;
-     Read eltT : Vector dType sz <- ^elt;
-     Read deqPT <- ^deqP;
+     Read eltT : Vector dType sz <- ^"elt";
+     Read deqPT <- ^"deqP";
      Ret #eltT@[#deqPT])%kami_action.
   
   Definition fifo := MODULE {
-    Register ^elt : Vector dType sz <- Default
-    with Register ^enqP : Bit sz <- Default
-    with Register ^deqP : Bit sz <- Default
-    with Register ^empty : Bool <- true
-    with Register ^full : Bool <- Default
+    Register ^"elt" : Vector dType sz <- Default
+    with Register ^"enqP" : Bit sz <- Default
+    with Register ^"deqP" : Bit sz <- Default
+    with Register ^"empty" : Bool <- true
+    with Register ^"full" : Bool <- Default
 
-    with Method ^enqName(d : dType) : Void := (enq d)
-    with Method ^deqName() : dType := deq
-    with Method ^firstEltName() : dType := firstElt
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
+    with Method ^"firstElt"() : dType := firstElt
   }.
 
   Definition simpleFifo := MODULE {
-    Register ^elt : Vector dType sz <- Default
-    with Register ^enqP : Bit sz <- Default
-    with Register ^deqP : Bit sz <- Default
-    with Register ^empty : Bool <- true
-    with Register ^full : Bool <- Default
+    Register ^"elt" : Vector dType sz <- Default
+    with Register ^"enqP" : Bit sz <- Default
+    with Register ^"deqP" : Bit sz <- Default
+    with Register ^"empty" : Bool <- true
+    with Register ^"full" : Bool <- Default
 
-    with Method ^enqName(d : dType) : Void := (enq d)
-    with Method ^deqName() : dType := deq
+    with Method ^"enq"(d : dType) : Void := (enq d)
+    with Method ^"deq"() : dType := deq
   }.
 
   (** SinAction version *)
@@ -84,81 +83,81 @@ Section Fifo.
   Qed.
 
   Definition enqS {ty} : forall (d: ty dType), SinActionT ty Void := fun d =>
-    (Read isFull <- { ^full | fgn full eq_refl };
+    (Read isFull <- { ^"full" | fgn "full" eq_refl };
      Assert !#isFull;
-     Read eltT <- { ^elt | fgn elt eq_refl };
-     Read enqPT <- { ^enqP | fgn enqP eq_refl };
-     Read deqPT <- { ^deqP | fgn deqP eq_refl };
-     Write { ^elt | fgn elt eq_refl } <- #eltT@[#enqPT <- #d];
-     Write { ^empty | fgn empty eq_refl } <- $$false;
+     Read eltT <- { ^"elt" | fgn "elt" eq_refl };
+     Read enqPT <- { ^"enqP" | fgn "enqP" eq_refl };
+     Read deqPT <- { ^"deqP" | fgn "deqP" eq_refl };
+     Write { ^"elt" | fgn "elt" eq_refl } <- #eltT@[#enqPT <- #d];
+     Write { ^"empty" | fgn "empty" eq_refl } <- $$false;
      LET next_enqP <- (#enqPT + $1) :: Bit sz;
-     Write { ^full | fgn full eq_refl } <- (#deqPT == #next_enqP);
-     Write { ^enqP | fgn enqP eq_refl } <- #next_enqP;
+     Write { ^"full" | fgn "full" eq_refl } <- (#deqPT == #next_enqP);
+     Write { ^"enqP" | fgn "enqP" eq_refl } <- #next_enqP;
      Retv)%kami_sin.
 
   Definition deqS {ty} : SinActionT ty dType :=
-    (Read isEmpty <- { ^empty | fgn empty eq_refl };
+    (Read isEmpty <- { ^"empty" | fgn "empty" eq_refl };
      Assert !#isEmpty;
-     Read eltT <- { ^elt | fgn elt eq_refl };
-     Read enqPT <- { ^enqP | fgn enqP eq_refl };
-     Read deqPT <- { ^deqP | fgn deqP eq_refl };
-     Write { ^full | fgn full eq_refl } <- $$false;
+     Read eltT <- { ^"elt" | fgn "elt" eq_refl };
+     Read enqPT <- { ^"enqP" | fgn "enqP" eq_refl };
+     Read deqPT <- { ^"deqP" | fgn "deqP" eq_refl };
+     Write { ^"full" | fgn "full" eq_refl } <- $$false;
      LET next_deqP <- (#deqPT + $1) :: Bit sz;
-     Write { ^empty | fgn empty eq_refl } <- (#enqPT == #next_deqP);
-     Write { ^deqP | fgn deqP eq_refl } <- #next_deqP;
+     Write { ^"empty" | fgn "empty" eq_refl } <- (#enqPT == #next_deqP);
+     Write { ^"deqP" | fgn "deqP" eq_refl } <- #next_deqP;
      Ret #eltT@[#deqPT])%kami_sin.
 
   Definition firstEltS {ty} : SinActionT ty dType :=
-    (Read isEmpty <- { ^empty | fgn empty eq_refl };
+    (Read isEmpty <- { ^"empty" | fgn "empty" eq_refl };
      Assert !#isEmpty;
-     Read eltT : Vector dType sz <- { ^elt | fgn elt eq_refl };
-     Read deqPT <- { ^deqP | fgn deqP eq_refl };
+     Read eltT : Vector dType sz <- { ^"elt" | fgn "elt" eq_refl };
+     Read deqPT <- { ^"deqP" | fgn "deqP" eq_refl };
      Ret #eltT@[#deqPT])%kami_sin.
   
   Definition fifoS := SIN {
-    Register { ^elt | fgn elt eq_refl } : Vector dType sz <- Default
-    with Register { ^enqP | fgn enqP eq_refl } : Bit sz <- Default
-    with Register { ^deqP | fgn deqP eq_refl } : Bit sz <- Default
-    with Register { ^empty | fgn empty eq_refl } : Bool <- true
-    with Register { ^full | fgn full eq_refl } : Bool <- Default
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
 
-    with Method { ^enqName | fgn enqName eq_refl }(d : dType) : Void := (enqS d)
-    with Method { ^deqName | fgn deqName eq_refl }() : dType := deqS
-    with Method { ^firstEltName | fgn firstEltName eq_refl }() : dType := firstEltS
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
+    with Method { ^"firstElt" | fgn "firstElt" eq_refl }() : dType := firstEltS
   }.
 
   Definition fifoM := META {
-    Register { ^elt | fgn elt eq_refl } : Vector dType sz <- Default
-    with Register { ^enqP | fgn enqP eq_refl } : Bit sz <- Default
-    with Register { ^deqP | fgn deqP eq_refl } : Bit sz <- Default
-    with Register { ^empty | fgn empty eq_refl } : Bool <- true
-    with Register { ^full | fgn full eq_refl } : Bool <- Default
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
 
-    with Method { ^enqName | fgn enqName eq_refl }(d : dType) : Void := (enqS d)
-    with Method { ^deqName | fgn deqName eq_refl }() : dType := deqS
-    with Method { ^firstEltName | fgn firstEltName eq_refl }() : dType := firstEltS
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
+    with Method { ^"firstElt" | fgn "firstElt" eq_refl }() : dType := firstEltS
   }.
 
   Definition simpleFifoS := SIN {
-    Register { ^elt | fgn elt eq_refl } : Vector dType sz <- Default
-    with Register { ^enqP | fgn enqP eq_refl } : Bit sz <- Default
-    with Register { ^deqP | fgn deqP eq_refl } : Bit sz <- Default
-    with Register { ^empty | fgn empty eq_refl } : Bool <- true
-    with Register { ^full | fgn full eq_refl } : Bool <- Default
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
 
-    with Method { ^enqName | fgn enqName eq_refl }(d : dType) : Void := (enqS d)
-    with Method { ^deqName | fgn deqName eq_refl }() : dType := deqS
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
   }.
 
   Definition simpleFifoM := META {
-    Register { ^elt | fgn elt eq_refl } : Vector dType sz <- Default
-    with Register { ^enqP | fgn enqP eq_refl } : Bit sz <- Default
-    with Register { ^deqP | fgn deqP eq_refl } : Bit sz <- Default
-    with Register { ^empty | fgn empty eq_refl } : Bool <- true
-    with Register { ^full | fgn full eq_refl } : Bool <- Default
+    Register { ^"elt" | fgn "elt" eq_refl } : Vector dType sz <- Default
+    with Register { ^"enqP" | fgn "enqP" eq_refl } : Bit sz <- Default
+    with Register { ^"deqP" | fgn "deqP" eq_refl } : Bit sz <- Default
+    with Register { ^"empty" | fgn "empty" eq_refl } : Bool <- true
+    with Register { ^"full" | fgn "full" eq_refl } : Bool <- Default
 
-    with Method { ^enqName | fgn enqName eq_refl }(d : dType) : Void := (enqS d)
-    with Method { ^deqName | fgn deqName eq_refl }() : dType := deqS
+    with Method { ^"enq" | fgn "enq" eq_refl }(d : dType) : Void := (enqS d)
+    with Method { ^"deq" | fgn "deq" eq_refl }() : dType := deqS
   }.
 
 End Fifo.

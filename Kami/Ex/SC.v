@@ -21,14 +21,12 @@ Section DecExec.
   Definition OpcodeE (ty: Kind -> Type) := Expr ty OpcodeK.
   Definition OpcodeT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> OpcodeE ty.
 
-  Definition optypeBits := 3.
-  Definition opLd := WO~0~0~0.
-  Definition opSt := WO~0~0~1.
-  Definition opTh := WO~0~1~0.
-  Definition opNm := WO~0~1~1.
-  Definition opFh := WO~1~0~0.
+  Definition opLd := WO~0~0.
+  Definition opSt := WO~0~1.
+  Definition opTh := WO~1~0.
+  Definition opNm := WO~1~1.
   
-  Definition OptypeK := SyntaxKind (Bit optypeBits).
+  Definition OptypeK := SyntaxKind (Bit 2).
   Definition OptypeE (ty: Kind -> Type) := Expr ty OptypeK.
   Definition OptypeT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> OptypeE ty.
   
@@ -171,7 +169,6 @@ Section ProcInst.
 
   Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize dataBytes)) : Struct (RsToProc dataBytes).
   Definition toHostCm := MethodSig "toHost"(Data dataBytes) : Bit 0.
-  Definition fromHostCm := MethodSig "fromHost"(Bit 0) : (Data dataBytes).
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -246,29 +243,6 @@ Section ProcInst.
       Call toHostCm(#val);
       nextPc ppc rf rawInst
 
-    with Rule "execFromHost" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pgm <- "pgm";
-      LET rawInst <- #pgm@[alignPc _ ppc];
-      Assert (getOptype _ rawInst == $$opFh);
-      LET dst <- getDst _ rawInst;
-      Assert (#dst != $0);
-      Call val <- fromHostCm($0);
-      Write "rf" <- #rf@[#dst <- #val];
-      nextPc ppc rf rawInst
-
-    with Rule "execFromHostZ" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pgm <- "pgm";
-      LET rawInst <- #pgm@[alignPc _ ppc];
-      Assert (getOptype _ rawInst == $$opFh);
-      LET dst <- getDst _ rawInst;
-      Assert (#dst == $0);
-      Call fromHostCm($0);
-      nextPc ppc rf rawInst
-
     with Rule "execNm" :=
       Read ppc <- "pc";
       Read rf <- "rf";
@@ -298,7 +272,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold execCm toHostCm fromHostCm nextPc procInitDefault : MethDefs.
+Hint Unfold execCm toHostCm nextPc procInitDefault : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.

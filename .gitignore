@@ -1,4 +1,7 @@
 Makefile.coq.conf
+Makefile.coq.all
+Makefile.coq.all.conf
+Makefile.coq.src.conf
 *.vo
 *.v.d
 *.glob
