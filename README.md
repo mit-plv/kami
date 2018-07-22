@@ -3,6 +3,22 @@ Kami: A Coq Framework to Support Implementing and Verifying Bluespec-style Hardw
 
 This repository (the "coq-8.8" branch) contains the source code of Kami.
 
+DeepSpec Summer School 2018 lecture roadmap
+-------------------------------------------
+
+We won't get nearly through all the content of this library.
+However, there are source files associated with each lecture.
+They are created jointly by Joonwon Choi and Adam Chlipala, and each appears in the subdirectory `Kami/Ex`.
+
+- Day 1: brief intro to the hardware state of mind; embedding a programming language inside of Coq
+  + `ExpressionsTutorial.v`: different ways to implement an adder, leading up to generating combinational circuits in Kami
+  + *Homework*: `PhoasExercise.v`, a verified static analysis that bounds how large of a value a circuit might compute
+- Day 2: modular proofs of interacting components
+  + `LtsTutorial.v`: introducing labeled transition systems
+  + `InDepthTutorial.v`: a producer-consumer example in Kami, introducing stateful circuits
+- Day 3: verifying computer processors
+  + `ProcMemSpec.v`: the first of several files of code, specifications, and proofs for a pipelined processor; see the comment near the start for the roadmap within this case study
+
 Directory content
 -----------------
 
