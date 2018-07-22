@@ -1259,3 +1259,442 @@ Section DecompositionInv.
       
 End DecompositionInv.
 
+
+Hint Rewrite @M.union_empty_L @M.union_empty_R
+     @M.subtractKV_empty_1 @M.subtractKV_empty_2 @SemFacts.liftToMap1_empty : maps.
+
+Hint Resolve SemFacts.step_empty M.KeysDisj_empty M.KeysDisj_nil.
+
+Lemma HimpNocalls'' : forall k o atype u cs v, SemAction o atype u cs v
+  -> forall autype,
+      ActionEquiv atype autype
+      -> getCallsA (k := k) autype = nil
+      -> cs = []%fmap.
+Proof.
+  induction 1; inversion 1; subst;
+    repeat match goal with
+           | [ H : existT _ _ _ = existT _ _ _ |- _ ] => apply inj_pair2 in H; subst
+           end; simpl; intros; try discriminate; eauto.
+
+  - erewrite IHSemAction1.
+    erewrite IHSemAction2.
+    autorewrite with maps; reflexivity.
+    eauto.
+    destruct (getCallsA ta2), (getCallsA fa2); simpl in *; eauto; discriminate.
+    eauto.
+    destruct (getCallsA ta2); simpl in *; eauto; discriminate.
+  - erewrite IHSemAction1.
+    erewrite IHSemAction2.
+    autorewrite with maps; reflexivity.
+    eauto.
+    destruct (getCallsA ta2), (getCallsA fa2); simpl in *; eauto; discriminate.
+    eauto.
+    destruct (getCallsA ta2), (getCallsA fa2); simpl in *; eauto; discriminate.
+Qed.
+
+Section decompositionOneMethod.
+  Variables imp spec : Modules.
+  Variable theta : RegsT -> RegsT.
+
+  Hypothesis Hinit : theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
+  Hypothesis HimpAnarchy : getRules imp = nil.
+  Hypothesis HspecAnarchy : getRules spec = nil.
+  
+  Variable methName : string.
+  Variable methSig : SignatureT.
+
+  Variable impBody : MethodT methSig.
+  Hypothesis HimpBody: getDefsBodies imp = [Struct.Build_Attribute methName (existT _ _ impBody)].
+  Hypothesis HimpNocalls : getCallsA (impBody typeUT tt) = nil.
+  Hypothesis HimpWf : ModPhoasWf imp.
+
+  Theorem HimpNocalls' : forall o argV u cs v, SemAction o (impBody type argV) u cs v
+                                               -> cs = []%fmap.
+  Proof.
+    intros.
+    eapply HimpNocalls''; eauto.
+    specialize (HimpWf type typeUT).
+    destruct HimpWf.
+    rewrite HimpBody in H1.
+    inversion H1; subst.
+    apply H4.
+  Qed.
+
+  Variable specBody : MethodT methSig.
+  Hypothesis HspecBody : getDefsBodies spec = [Struct.Build_Attribute methName (existT _ _ specBody)].
+  Hypothesis HspecNocalls : getCallsA (specBody typeUT tt) = nil.
+
+  Hypothesis Hsim : forall (oImp : RegsT) (uImp : UpdatesT) meth (csImp : MethsT),
+      reachable oImp imp ->
+      Substep imp oImp uImp (Meth (Some meth)) csImp ->
+        exists uSpec : UpdatesT,
+          Substep spec (theta oImp) uSpec (Meth (Some meth)) csImp /\
+          M.union uSpec (theta oImp) = theta (M.union uImp oImp).
+
+  Lemma canCombine_EmptyRule : forall imp o,
+      canCombine {| substep := EmptyRule imp o |}
+                 {| substep := EmptyRule imp o |}
+      -> False.
+  Proof.
+    destruct 1; intuition; simpl in *.
+    destruct H0; intuition discriminate.
+  Qed.
+
+  Hint Resolve canCombine_EmptyRule.
+
+  Lemma Substeps_imp_nocalls : forall o (ss : Substeps imp o),
+      calls (foldSSLabel ss) = []%fmap.
+  Proof.
+    induction ss; simpl; intuition.
+    destruct a.
+    destruct substep; simpl in *.
+    destruct (foldSSLabel ss); simpl in *; subst.
+    autorewrite with maps; auto.
+    destruct (foldSSLabel ss); simpl in *; subst.
+    autorewrite with maps; auto.
+    exfalso; rewrite HimpAnarchy in HInRules; simpl in *; tauto.
+    destruct (foldSSLabel ss); simpl in *; subst.
+    rewrite HimpBody in HIn; simpl in *; intuition subst; simpl in *.
+    apply HimpNocalls' in HAction.
+    subst; autorewrite with maps; auto.
+  Qed.
+
+  Definition filler1 {imp o} (b : bool) : SubstepRec imp o :=
+    if b then
+      {| substep := EmptyRule _ _ |}
+    else
+      {| substep := EmptyMeth _ _ |}.
+  Definition filler {imp o} := map (@filler1 imp o).
+
+  Compute (fun m o => foldSSLabel [{| substep := EmptyMeth m o |}; {| substep := EmptyMeth m o |}]).
+  
+  Lemma whichSubsteps : forall o (ss : Substeps imp o),
+      substepsComb ss
+      -> (exists bs, ss = filler bs)
+         \/ (exists bs1 bs2
+                    (HIn : In (Struct.Build_Attribute methName (existT _ _ impBody)) _)
+                    u argV retV
+                    (Hsem : SemAction o (impBody type argV) u []%fmap retV),
+                ss = filler bs1
+                            ++ {| substep := SingleMeth _ _ HIn Hsem eq_refl |}
+                            :: filler bs2)%list.
+  Proof.
+    induction 1; simpl in *; intuition eauto.
+
+    - left; exists nil; auto.
+    
+    - destruct s; simpl in *.
+      destruct H1; subst.
+      destruct substep; simpl in *; intuition idtac.
+      * left; exists (true :: x); auto.
+      * left; exists (false :: x); auto.
+      * exfalso; clear H0; rewrite HimpAnarchy in HInRules; destruct HInRules.
+      * assert (f = (methName :: existT MethodT methSig impBody)%struct).
+        clear H0; rewrite HimpBody in HIn.
+        simpl in HIn.
+        intuition subst; simpl in *.
+        auto.
+        subst; simpl in *.
+        right.
+        specialize (HimpNocalls' HAction); intro HimpNoCalls'; subst.
+        exists nil, x, HIn, _, _, _, HAction.
+        auto.
+
+    - destruct H1 as [ ? [ ? [? [? [ ? [ ? [ ] ] ] ] ] ] ]; subst; simpl in *.
+      destruct s; simpl in *.
+      destruct substep; simpl in *; intuition idtac.
+      * right.
+        eexists (true :: x), x0, x1, _, _, _, x5.
+        simpl.
+        eauto.
+      * right.
+        eexists (false :: x), x0, x1, _, _, _, x5.
+        simpl.
+        eauto.
+      * exfalso; clear H0; rewrite HimpAnarchy in HInRules; destruct HInRules.
+      * exfalso.
+        assert (f = (methName :: existT MethodT methSig impBody)%struct).
+        clear H0; rewrite HimpBody in HIn.
+        simpl in HIn.
+        intuition subst; simpl in *.
+        auto.
+        subst; simpl in *.
+        assert (Hin : In {|
+          upd := x2;
+          unitAnnot := Meth (Some (methName :: existT SignT methSig (x3, x4))%struct);
+          cms := []%fmap;
+          substep := SingleMeth imp (methName :: existT MethodT methSig impBody)%struct x1 x5
+                                eq_refl |}
+                   (filler x ++
+          {|
+          upd := x2;
+          unitAnnot := Meth (Some (methName :: existT SignT methSig (x3, x4))%struct);
+          cms := []%fmap;
+          substep := SingleMeth imp (methName :: existT MethodT methSig impBody)%struct x1 x5
+                                eq_refl |} :: filler x0)).
+        eapply in_or_app; simpl; eauto.
+        specialize (H0 _ Hin); clear Hin.
+        red in H0; simpl in H0; intuition.
+        exfalso; eauto.
+  Qed.
+
+  Lemma foldSSUpds_filler : forall m o bs,
+      foldSSUpds (m := m) (o := o) (filler bs) = []%fmap.
+  Proof.
+    induction bs; simpl; auto.
+    rewrite IHbs.
+    autorewrite with maps.
+    destruct a; simpl; auto.
+  Qed.
+
+  Lemma foldSSUpds_app : forall m o (a b : Substeps m o),
+      foldSSUpds (a ++ b)%list = M.union (foldSSUpds b) (foldSSUpds a).
+  Proof.
+    clear.
+    induction a; simpl; intuition.
+    rewrite IHa.
+    rewrite M.union_assoc.
+    auto.
+  Qed.
+
+  Hint Rewrite foldSSUpds_filler foldSSUpds_app : maps.
+
+  Lemma foldSSLabel_filler_or : forall m o bs,
+      foldSSLabel (m := m) (o := o) (filler bs)
+      = {| annot := Some None; calls := []%fmap; defs := []%fmap |}
+      \/ foldSSLabel (m := m) (o := o) (filler bs)
+         = {| annot := None; calls := []%fmap; defs := []%fmap |}.
+  Proof.
+    induction bs; simpl; intuition; try discriminate.
+    destruct a; simpl in *; intuition.
+    rewrite H; auto.
+    rewrite H; auto.
+    rewrite H.
+    destruct a; unfold addLabelLeft; simpl; auto.
+  Qed.
+  
+  Lemma foldSSLabel_filler_rule : forall m o bs,
+      existsb id bs = true
+      -> foldSSLabel (m := m) (o := o) (filler bs)
+         = {| annot := Some None; calls := []%fmap; defs := []%fmap |}.
+  Proof.
+    induction bs; simpl; intuition; try discriminate.
+    destruct a; simpl in *.
+    edestruct foldSSLabel_filler_or.
+    rewrite H0; reflexivity.
+    rewrite H0; reflexivity.
+    intuition.
+    rewrite H0.
+    reflexivity.
+  Qed.
+
+  Lemma foldSSLabel_filler_norule : forall m o bs,
+      existsb id bs = false
+      -> foldSSLabel (m := m) (o := o) (filler bs)
+         = {| annot := None; calls := []%fmap; defs := []%fmap |}.
+  Proof.
+    induction bs; simpl; intuition; try discriminate.
+    destruct a; simpl in *; try discriminate; intuition.
+    rewrite H0; reflexivity.
+  Qed.
+
+  Lemma foldSSLabel_app : forall m o (ss2 ss1 : Substeps m o),
+      foldSSLabel (ss1 ++ ss2)%list = mergeLabel (foldSSLabel ss1) (foldSSLabel ss2).
+  Proof.
+    clear; induction ss1; simpl.
+
+    - destruct (foldSSLabel ss2).
+      autorewrite with maps.
+      reflexivity.
+
+    - rewrite IHss1.
+      destruct (foldSSLabel ss1), (foldSSLabel ss2), a; simpl.
+      destruct annot, annot0, unitAnnot; unfold addLabelLeft; simpl; autorewrite with maps;
+        repeat rewrite M.union_assoc; reflexivity.
+  Qed.
+  
+  Lemma stepMapZero' : forall o (ss : Substeps imp o),
+      substepsComb ss
+      -> reachable o imp
+      -> exists ss' : Substeps spec (theta o),
+          substepsComb ss'
+          /\ M.union (foldSSUpds ss') (theta o) = theta (M.union (foldSSUpds ss) o)
+          /\ foldSSLabel ss' = foldSSLabel ss
+          /\ wellHidden spec (hide (foldSSLabel ss')).
+  Proof.
+    intros.
+    apply whichSubsteps in H; intuition.
+        
+    - destruct H1; subst.
+      case_eq (existsb id x); intro Hex.
+      * exists [{| substep := EmptyRule _ _ |}].
+        simpl; autorewrite with maps; intuition.
+        constructor.
+        constructor.
+        simpl; tauto.
+        rewrite foldSSLabel_filler_rule by assumption.
+        reflexivity.
+        unfold addLabelLeft, hide; simpl; autorewrite with maps.
+        hnf; simpl; intuition.
+      * exists nil.
+        simpl; autorewrite with maps; intuition.
+        constructor.
+        symmetry; apply foldSSLabel_filler_norule; assumption.
+        split; simpl; autorewrite with maps; auto.
+
+    - destruct H1 as [? [? [? [? [? [? [? ]]]]]]]; subst; simpl in *.
+      edestruct Hsim.
+      eauto.
+      econstructor.
+      eauto.
+      simpl.
+      eauto.
+      eauto.
+      simpl in *.
+      intuition.
+      case_eq (existsb id x); intro Hex.
+      * exists [{| substep := EmptyRule _ _ |}; {| substep := H1 |}].
+        simpl; autorewrite with maps; intuition.
+        constructor.
+        constructor.
+        constructor.
+        simpl; tauto.
+        simpl; intuition subst.
+        hnf; simpl; intuition; try discriminate; eauto.
+        simpl; autorewrite with maps; assumption.
+        unfold addLabelLeft; simpl; autorewrite with maps.
+        rewrite foldSSLabel_app; simpl.
+        rewrite foldSSLabel_filler_rule by assumption.
+        case_eq (existsb id x0); intro Hex0.
+        -- rewrite foldSSLabel_filler_rule by assumption.
+           simpl; autorewrite with maps; reflexivity.
+        -- rewrite foldSSLabel_filler_norule by assumption.
+           simpl; autorewrite with maps; reflexivity.
+        -- unfold addLabelLeft, hide; simpl; autorewrite with maps.
+           hnf; simpl; intuition.
+           unfold getCalls.
+           rewrite HspecAnarchy, HspecBody; simpl.
+           rewrite HspecNocalls; simpl.
+           eauto.
+      * case_eq (existsb id x0); intro Hex0.
+        -- exists [{| substep := EmptyRule _ _ |}; {| substep := H1 |}].
+           simpl; autorewrite with maps; intuition.
+           constructor.
+           constructor.
+           constructor.
+           simpl; tauto.
+           simpl; intuition subst.
+           hnf; simpl; intuition; try discriminate; eauto.
+           simpl; autorewrite with maps; assumption.
+           unfold addLabelLeft; simpl; autorewrite with maps.
+           rewrite foldSSLabel_app; simpl.
+           rewrite foldSSLabel_filler_norule by assumption.
+           rewrite foldSSLabel_filler_rule by assumption.
+           simpl; autorewrite with maps; reflexivity.
+           unfold addLabelLeft, hide; simpl; autorewrite with maps.
+           hnf; simpl; intuition.
+           unfold getCalls.
+           rewrite HspecAnarchy, HspecBody; simpl.
+           rewrite HspecNocalls; simpl.
+           eauto.
+        -- exists [{| substep := H1 |}].
+           simpl; autorewrite with maps; intuition.
+           constructor.
+           constructor.
+           simpl; tauto.
+           simpl; autorewrite with maps; assumption.
+           unfold addLabelLeft; simpl; autorewrite with maps.
+           rewrite foldSSLabel_app; simpl.
+           repeat rewrite foldSSLabel_filler_norule by assumption.
+           simpl; autorewrite with maps; reflexivity.
+           unfold addLabelLeft, hide; simpl; autorewrite with maps.
+           hnf; simpl; intuition.
+           unfold getCalls.
+           rewrite HspecAnarchy, HspecBody; simpl.
+           rewrite HspecNocalls; simpl.
+           eauto.
+  Qed.
+           
+  Lemma stepMapZero1 o u l (s: Step imp o u l):
+    reachable o imp
+    -> exists uSpec,
+      Step spec (theta o) uSpec l /\
+      M.union uSpec (theta o) = theta (M.union u o).
+  Proof.
+    inv s; intros.
+
+    destruct (stepMapZero' HSubsteps); intuition.
+    do 2 esplit.
+    2: eassumption.
+    rewrite <- H2.
+    constructor.
+    auto.
+    auto.
+  Qed.
+
+  Lemma decompositionOneMethod'':
+        forall o n a, Multistep imp o n a
+                      -> o = initRegs (getRegInits imp)
+                      -> Behavior spec (theta n) a.
+  Proof.
+    induction 1.
+    - intros; subst; repeat constructor; congruence.
+    - intuition.
+      inversion H1; subst.
+      apply stepMapZero1 in HStep.
+      destruct HStep; intuition.
+      rewrite <- H3.
+      econstructor.
+      econstructor.
+      assumption.
+      assumption.
+      do 2 econstructor.
+      eauto.
+  Qed.
+  
+  Lemma decompositionOneMethod':
+    forall s sig, Behavior imp s sig ->
+                  Behavior spec (theta s) sig.
+  Proof.
+    induction 1.
+    eauto using decompositionOneMethod''.
+  Qed.
+  
+  Theorem decompositionOneMethod : imp <<== spec.
+  Proof.
+    unfold traceRefines; intros.
+    eapply decompositionOneMethod' in H.
+    destruct H; intuition eauto.
+    do 3 esplit.
+    econstructor.
+    eauto.
+
+    clear.
+    induction a; constructor; auto.
+    hnf; unfold liftToMap1; simpl.
+    unfold rmModify, idElementwise.
+    match goal with
+    | [ |- context[M.fold ?f _ _] ] =>
+      change f with (@M.add {x : SignatureT & SignT x})
+    end.
+    intuition.
+    apply M.Map.leibniz; apply M.Facts.P.fold_identity.
+    apply M.Map.leibniz; apply M.Facts.P.fold_identity.
+    destruct (annot a); auto.
+  Qed.
+
+  Lemma stepOneMethod o u l (s: Step imp o u l):
+    u = []%fmap
+    \/ exists argV retV, SemAction o (impBody type argV) u []%fmap retV.
+  Proof.
+    inv s; intros.
+    edestruct whichSubsteps; eauto.
+    - destruct H; subst.
+      autorewrite with maps; auto.
+    - destruct H as [? [? [? [? [? [? [? ]]]]]]]; subst; simpl in *.
+      right.
+      autorewrite with maps; simpl.
+      autorewrite with maps.
+      eauto.
+  Qed.
+End decompositionOneMethod.

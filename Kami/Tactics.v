@@ -45,10 +45,13 @@ Set Asymmetric Patterns.
   + kinline_refine: define and prove (a <<== inlineF a), where (inlineF a) is computed
   + kdecompose_nodefs: apply the decompositionZero theorem, for modules with no defined methods.
   + kdecomposeR_nodefs: apply the decompositionZeroR theorem, for modules with no defined methods.
+  + kdecompose_oneMethod: apply the decompositionZero theorem, for modules with just single methods.
+  * kdecompose_oneMethod_invert: invert hypotheses about evaluation, for modules with just single methods.
   + kinv_magic: try to solve invariant proofs (slow)
     * kinv_magic_with _tactic_: also try to apply _tactic_ alternately
   + kinv_magic_light: a lightweight version of "kinv_magic"
     * kinv_magic_light_with _tactic_: also try to apply _tactic_ alternately
+  + kinv_one_method: like the above, but for modules with single methods.
   + kduplicated: convert (duplicate a <<== duplicate b) to (a <<== b)
   + krewrite dup_dist left: convert (dup (m1 + m2) n <<== m) to (dup m1 n + dup m2 n <<== m)
   + krewrite <- dup_dist left: convert (dup m1 n + dup m2 n <<== m) to (dup (m1 + m2) n <<== m)
@@ -990,3 +993,47 @@ Notation "'mlet' vn : t <- r '|>' kn ; cont" :=
    end) (at level 0, vn at level 0): mapping_scope.
 Delimit Scope mapping_scope with mapping.
 
+Ltac pick_out_method :=
+  match goal with
+  | [ |- ?E = _ ] =>
+    let E' := eval hnf in E in change E with E'
+  end;
+  match goal with
+  | [ |- [(_ :: existT _ ?sig1 _)%struct] = [(_ :: existT _ ?sig2 _)%struct] ] =>
+    unify sig1 sig2
+  end; reflexivity.
+
+Ltac kinvert_step_one_method :=
+  match goal with
+  | [ H : Step _ _ _ _ |- _ ] =>
+    eapply stepOneMethod in H; [ | kdecompose_regrel_init | pick_out_method | kdecompose_regrel_init | auto ]
+  end.
+
+Ltac kinv_one_method dtac ctac tac :=
+  induction 2; [kinv_dest_custom tac; simpl; auto|];
+  [ tac
+  | intuition; kinvert_step_one_method; intuition subst;
+    kinv_magic_with dtac ctac ].
+
+Ltac kdecompose_oneMethod regm :=
+  eapply decompositionOneMethod with (theta := regm); [
+    kdecompose_regrel_init
+  | kdecompose_regrel_init
+  | kdecompose_regrel_init
+  | pick_out_method
+  | kdecompose_regrel_init
+  | auto
+  | pick_out_method
+  | kdecompose_regrel_init
+  | intros ].
+
+Ltac kdecompose_oneMethod_invert :=
+  match goal with
+  | [ H : Substep _ _ _ _ _ |- _ ] =>
+    inversion_clear H; subst;
+    match goal with
+    | [ H : In _ ?E |- _ ] =>
+      let E' := eval hnf in E in change E with E' in H;
+        destruct H; [ subst | simpl in *; tauto ]
+    end
+  end.
