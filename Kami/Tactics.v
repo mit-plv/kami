@@ -1011,9 +1011,9 @@ Ltac kinvert_step_one_method :=
 
 Ltac kinv_one_method dtac ctac tac :=
   induction 2; [kinv_dest_custom tac; simpl; auto|];
-  [ tac
-  | intuition; kinvert_step_one_method; intuition subst;
-    kinv_magic_with dtac ctac ].
+  try solve [ tac ];
+  intuition; kinvert_step_one_method; intuition subst;
+  kinv_magic_with dtac ctac.
 
 Ltac kdecompose_oneMethod regm :=
   eapply decompositionOneMethod with (theta := regm); [
