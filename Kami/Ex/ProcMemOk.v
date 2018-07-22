@@ -77,7 +77,7 @@ Section PipelinedProc.
         end.
 
   Ltac procInterm_inv_constr_tac :=
-    econstructor; intros;
+    try econstructor; intros;
     repeat (kinv_eq; kinv_red; eauto).
 
   Ltac procInterm_inv_tac :=

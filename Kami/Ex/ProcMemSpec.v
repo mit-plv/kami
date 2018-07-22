@@ -100,7 +100,7 @@ Section Spec.
 
         with Method "doMem" (rq: Struct MemRq): MemRs :=
           Read memv <- "mem";
-          If !#rq!MemRq@."isLoad" then
+          If #rq!MemRq@."isLoad" then
             LET ldval <- #memv@[#rq!MemRq@."addr"];
             Ret #ldval
           else

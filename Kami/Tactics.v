@@ -727,6 +727,7 @@ Ltac kinv_finish_with tac :=
             try match goal with
                 | [H: _ <> _ |- _] => elim H; reflexivity
                 | [ |- context [if ?c then _ else _] ] => destruct c
+                | [ _ : context [if ?c then _ else _] |- _ ] => destruct c
                 end;
             simpl in *; auto);
          try tac)
@@ -757,7 +758,7 @@ Ltac invertActionRep ::=
 Ltac kinv_action_dest := kinv_red; invertActionRep.
 Ltac kinv_custom tac := kinv_red; try tac; kinv_red.
 Ltac kinv_dest_custom tac := kinv_action_dest; kinv_custom tac.
-Ltac kinv_regmap_red := kinv_red; kregmap_red; kregmap_clear.
+Ltac kinv_regmap_red := kinv_red; kregmap_red(*; kregmap_clear*).
 Ltac kinv_constr :=
   repeat
     (kinv_red;
@@ -766,7 +767,16 @@ Ltac kinv_constr :=
             | [ |- exists _, _ /\ _ ] => eexists; split
             | [ |- Substep _ _ _ _ _ ] => econstructor
             | [ |- In _ _ ] => simpl; tauto
-            | [ |- SemAction _ _ _ _ _ ] => econstructor
+            | [ |- SemAction _ ?E _ _ _ ] =>
+              match E with
+              | IfElse _ _ _ _ =>
+                (eapply SemIfElseFalse;
+                 [ | | solve [ kinv_finish_with idtac ] | | | | ])
+                || (eapply SemIfElseTrue;
+                    [ | | solve [ kinv_finish_with idtac ] | | | | ])
+                || fail 2
+              | _ => econstructor
+              end
             | [ |- _ = _ ] => reflexivity
             end
     ).
@@ -810,6 +820,7 @@ Ltac kinv_magic_with dtac itac :=
   kinv_regmap_red;
   kinv_constr;
   kinv_eq;
+  dtac;
   kinv_finish_with itac.
 
 Ltac kinv_magic := kinv_magic_with idtac idtac.

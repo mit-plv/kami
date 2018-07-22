@@ -497,10 +497,11 @@ Proof.
   + kinv_magic_with impl12_inv_dest_tac idtac.
     destruct x0; auto.
   + kinv_magic_with impl12_inv_dest_tac idtac.
-    * destruct x; [discriminate|reflexivity].
-    * destruct x as [|hd tl]; [discriminate|].
-      simpl in Hinv.
-      destruct tl; dest;
+    destruct x; simpl in Hinv; impl12_inv_dest_tac.
+    * auto.
+    * destruct x as [|hd tl]; simpl in H2; impl12_inv_dest_tac.
+      - auto.
+      - destruct tl; dest;
         subst; simpl in *; dest; subst; auto.
 Qed.
 
@@ -649,17 +650,20 @@ Proof.
   + kinv_magic_with impl123_inv_dest_tac idtac.
     destruct x0; auto.
   + kinv_magic_with impl123_inv_dest_tac idtac.
-    * simpl; destruct x; [discriminate|].
-      simpl in *; subst.
-      reflexivity.
-    * destruct x; [discriminate|].
-      simpl in *; subst.
-      reflexivity.
-    * destruct x as [|hd tl]; [discriminate|].
-      change ($2 ^* (x5 ^+ $ (1))) with (f123 (next123 x5)).
-      simpl in Hinv.
-      destruct tl; simpl in *; dest; subst; auto.
-      rewrite H1; auto.
+    simpl; destruct x; simpl in Hinv; dest; auto; subst; simpl.
+    * change (f123 x) with ($2 ^* x) in *.
+      change (f123 (next123 x)) with ($2 ^* (x ^+ $1)) in *.
+      rewrite H3.
+      repeat rewrite (wmult_comm ($2)).
+      repeat rewrite wmult_plus_distr.
+      repeat rewrite <- (wmult_comm ($2)).
+      congruence.
+    * change (f123 x0) with ($2 ^* x0) in *.
+      change (f123 (next123 x0)) with ($2 ^* (x0 ^+ $1)) in *.
+      repeat rewrite (wmult_comm ($2)).
+      repeat rewrite wmult_plus_distr.
+      repeat rewrite <- (wmult_comm ($2)).
+      congruence.
 Qed.
 
 (******************************************************************************)
