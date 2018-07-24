@@ -67,6 +67,22 @@ Definition refines (p1 p2 : proc) :=
 Ltac refines R :=
   intros; exists R; unfold good_simulation in *; firstorder subst; eauto.
 
+Ltac invert H := inversion H; clear H; subst; simpl in *.
+
+Ltac inv :=
+  match goal with
+  | [ H : step _ _ _ |- _ ] => invert H
+  end.
+
+Ltac user :=
+  repeat (try tauto;
+          match goal with
+          | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
+            eapply H1 in H2; clear H1; eauto
+          end; firstorder (try discriminate); eauto 6); eauto 6.
+  
+Ltac invertomatic := inv; user.
+
 Theorem refines_refl : forall p,
     refines p p.
 Proof.
@@ -80,23 +96,8 @@ Theorem refines_trans : forall p1 p2 p3,
 Proof.
   destruct 1 as [R1], 1 as [R2].
   refines (fun x y => exists z, R1 x z /\ R2 z y).
-  eapply H in H4; eauto; firstorder.
-  eapply H0 in H4; eauto; firstorder.
+  user.
 Qed.
-
-Ltac invert H := inversion H; clear H; subst; simpl in *.
-
-Ltac inv :=
-  match goal with
-  | [ H : step _ _ _ |- _ ] => invert H
-  end.
-
-Ltac invertomatic :=
-  inv;
-    repeat match goal with
-           | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
-             eapply H1 in H2; eauto
-           end; firstorder (try discriminate); eauto 6.
 
 
 (** * Example: adding three *)
@@ -125,8 +126,9 @@ Theorem addOneThenTwo_ok :
   refines addOneThenTwo addThree.
 Proof.
   refines Radder.
-  invert H; repeat inv; intuition (try congruence); unfold addThree; eauto.
-  rewrite <- plus_assoc; eauto.
+  invert H; unfold addThree; repeat invertomatic.
+  rewrite <- plus_assoc.
+  eauto.
 Qed.
 
 
@@ -193,7 +195,7 @@ Lemma addThreeThenSeven_ok' :
   refines addThreeThenSeven addTen.
 Proof.
   refines Radder'.
-  invert H; repeat inv; intuition (try congruence); unfold addTen; eauto.
+  invert H; unfold addTen; repeat invertomatic.
   rewrite <- plus_assoc; eauto.
 Qed.
 
@@ -234,6 +236,8 @@ Lemma refines_Dup' : forall R : proc -> proc -> Prop,
                       \/ (exists p2', step p2 l p2' /\ Rdup R p1' p2').
 Proof.
   induction 2; intros; invertomatic.
+  apply IHRdup in H7; firstorder.
+  eauto 7.
 Qed.
 
 Theorem refines_Dup : forall p p',
