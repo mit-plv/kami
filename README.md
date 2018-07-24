@@ -16,6 +16,7 @@ They are created jointly by Joonwon Choi and Adam Chlipala, and each appears in 
 - Day 2: modular proofs of interacting components
   + `LtsTutorial.v`: introducing labeled transition systems
   + `InDepthTutorial.v`: a producer-consumer example in Kami, introducing stateful circuits
+  + *Homework*: `LtsExercise.v`, proving some more refinement facts for the language from `LtsTutorial`
 - Day 3: verifying computer processors
   + `ProcMemSpec.v`: the first of several files of code, specifications, and proofs for a pipelined processor; see the comment near the start for the roadmap within this case study
 

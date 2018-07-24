@@ -598,12 +598,6 @@ Module Phoas.
     | [ H : Forall _ _ |- _ ] => eapply Forall_forall in H; [ | eassumption ]; assumption
     end.
 
-  Require Import Program.
-  Ltac dep_destruct E :=
-    let x := fresh "x" in
-    generalize dependent E; intro x; intros;
-    dependent destruction x.
-
   Lemma getConst_ok : forall var len (e : expr var len) w,
       getConst e = Some w
       -> e = Const w.
