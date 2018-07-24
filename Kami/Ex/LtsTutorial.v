@@ -77,9 +77,11 @@ Ltac inv :=
 Ltac user :=
   repeat (try tauto;
           match goal with
-          | [ H1 : forall p1 p2, ?R p1 p2 -> _, _ : ?R ?a _, H2 : step ?a _ _ |- _ ] =>
-            eapply H1 in H2; clear H1; eauto
-          end; firstorder (try discriminate); eauto 6); eauto 6.
+          | [ H1 : forall p1 p2, ?R p1 p2 -> forall l p', step _ l p' -> _, _ : ?R _ _, H2 : step  ?a _ _ |- _ ] =>
+            eapply H1 in H2; clear H1; [ | eassumption ]; eauto
+          | [ H1 : forall p1 p2, ?R p1 p2 -> _, H2 : ?R ?a _ |- _ ] =>
+            apply H1 in H2; clear H1; eauto
+          end; firstorder (try discriminate; subst); eauto 6); eauto 6.
   
 Ltac invertomatic := inv; user.
 
@@ -236,8 +238,6 @@ Lemma refines_Dup' : forall R : proc -> proc -> Prop,
                       \/ (exists p2', step p2 l p2' /\ Rdup R p1' p2').
 Proof.
   induction 2; intros; invertomatic.
-  apply IHRdup in H7; firstorder.
-  eauto 7.
 Qed.
 
 Theorem refines_Dup : forall p p',
