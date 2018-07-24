@@ -19,6 +19,7 @@ They are created jointly by Joonwon Choi and Adam Chlipala, and each appears in 
   + *Homework*: `LtsExercise.v`, proving some more refinement facts for the language from `LtsTutorial`
 - Day 3: verifying computer processors
   + `ProcMemSpec.v`: the first of several files of code, specifications, and proofs for a pipelined processor; see the comment near the start for the roadmap within this case study
+  + *Homework*: `CacheExercise.v`, proving correctness of memory systems with single-address caches
 
 Directory content
 -----------------
