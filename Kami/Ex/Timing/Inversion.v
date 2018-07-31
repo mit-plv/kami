@@ -77,7 +77,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (calls l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -87,7 +87,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (calls l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -148,7 +148,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (defs l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -158,7 +158,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (defs l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -364,7 +364,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (defs l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -374,7 +374,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (defs l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -503,7 +503,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (calls l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -513,7 +513,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (calls l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -682,7 +682,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg arg',
         FMap.M.find rqMeth (calls la) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -692,7 +692,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (calls lb) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -743,7 +743,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg arg',
         FMap.M.find rqMeth (defs la) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -753,7 +753,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (defs lb) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -921,7 +921,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg arg',
         FMap.M.find rqMeth (defs la) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -931,7 +931,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (defs lb) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1039,7 +1039,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg arg',
         FMap.M.find rqMeth (calls la) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1049,7 +1049,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (calls lb) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1155,7 +1155,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       censorThreeStageLabel lastRq censorThreeStageMeth l = l' ->
       match FMap.M.find rqMeth (calls l) with
       | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1171,7 +1171,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (calls l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1181,7 +1181,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (calls l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1239,7 +1239,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       censorThreeStageLabel lastRq censorThreeStageMemDefs l = l' ->
       match FMap.M.find rqMeth (defs l) with
       | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1255,7 +1255,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
       exists adr op arg,
         FMap.M.find rqMeth (defs l) = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1265,7 +1265,7 @@ Module Inversions (ThreeStage : ThreeStageInterface).
                       evalExpr ($$WO)%kami_expr)) /\
         FMap.M.find rqMeth (defs l') = 
         Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -1659,5 +1659,46 @@ Module Inversions (ThreeStage : ThreeStageInterface).
     eexists; eauto.
   Qed.
 
+
   
+  Lemma rqCall_from_censor : forall lastRq a b,
+      censorThreeStageLabel lastRq censorThreeStageMeth a =
+      censorThreeStageLabel lastRq censorThreeStageMeth b ->
+      (getRqCall lastRq a) = (getRqCall lastRq b).
+  Proof.
+    intros.
+    destruct (inv_censoreq_rq_calls lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
+    destruct (inv_censoreq_rs_calls lastRq a b H) as [Rseq | [arga' [argb' ?]]].
+    - unfold getRqCall; repeat rewrite Rqeq, Rseq; reflexivity.
+    - shatter. unfold getRqCall; repeat rewrite Rqeq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqCall; repeat rewrite Rseq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqCall;
+      repeat match goal with
+             | [H : (_ === calls _ .[ _ ])%fmap |- _ ] => rewrite H
+             end.
+      reflexivity.
+  Qed.
+
+  Lemma rqDef_from_censor : forall lastRq a b,
+      censorThreeStageLabel lastRq censorThreeStageMemDefs a =
+      censorThreeStageLabel lastRq censorThreeStageMemDefs b ->
+      (getRqDef lastRq a) = (getRqDef lastRq b).
+  Proof.
+    intros.
+    destruct (inv_censoreq_rq_memdefs lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
+    destruct (inv_censoreq_rs_memdefs lastRq a b H) as [Rseq | [arga' [argb' ?]]].
+    - unfold getRqDef; repeat rewrite Rqeq, Rseq; reflexivity.
+    - shatter. unfold getRqDef; repeat rewrite Rqeq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqDef; repeat rewrite Rseq, H0, H1;
+                 reflexivity.
+    - shatter. unfold getRqDef;
+      repeat match goal with
+             | [H : (_ === defs _ .[ _ ])%fmap |- _ ] => rewrite H
+             end.
+      reflexivity.
+  Qed.
+
 End Inversions.

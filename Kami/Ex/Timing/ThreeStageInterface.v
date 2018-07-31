@@ -54,14 +54,6 @@ Module Type ThreeStageInterface.
       (FMap.M.find rqMeth (calls l) = None \/
        FMap.M.find rsMeth (calls l) = None).
 
-  Axiom mRqRs : forall rp rm up um lp lm,
-      Step p rp up lp ->
-      Step m rm um lm ->
-      WellHiddenConcat p m lp lm -> 
-      (FMap.M.find rqMeth (defs lm) = None \/
-       FMap.M.find rsMeth (defs lm) = None).
-
-
   
 End ThreeStageInterface.
 
@@ -74,14 +66,14 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
     if String.string_dec n rqMeth
     then match t with
          | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                  {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                             "op" :: Bool;
                                             "data" :: Bit 32});
                      ret := Bit 0 |}
                   (argV, retV) =>
            let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
            existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                  {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                             "op" :: Bool;
                                             "data" :: Bit 32});
                      ret := Bit 0 |}
@@ -141,14 +133,14 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
     if String.string_dec n rqMeth
     then match t with
          | existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                  {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                             "op" :: Bool;
                                             "data" :: Bit 32});
                      ret := Bit 0 |}
                   (argV, retV) =>
            let op := evalExpr (#argV!rv32iRq@."op")%kami_expr in
            existT _
-                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                  {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                             "op" :: Bool;
                                             "data" :: Bit 32});
                      ret := Bit 0 |}
@@ -184,7 +176,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   Definition getRqCall (lastRq : option bool) (l : LabelT) : option bool:=
     match FMap.M.find rqMeth (calls l) with
     | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -199,7 +191,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   Definition getRqDef (lastRq : option bool) (l : LabelT) : option bool :=
     match FMap.M.find rqMeth (defs l) with
     | Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -210,6 +202,22 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
           | None => lastRq
           end
     end.
+
+    Definition getRqCall_with_addr (lastRq : option (bool * address)) (l : LabelT) : option (bool * address):=
+    match FMap.M.find rqMeth (calls l) with
+    | Some (existT _
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
+                                               "op" :: Bool;
+                                               "data" :: Bit 32});
+                        ret := Bit 0 |}
+                     (argV, retV)) =>
+      Some (evalExpr (#argV!rv32iRq@."op")%kami_expr, evalExpr (#argV!rv32iRq@."addr")%kami_expr)
+    | _ => match FMap.M.find rsMeth (calls l) with
+          | Some _ => None
+          | None => lastRq  (* nothing memory-relevant happened this cycle *)
+          end
+    end.
+
 
 
   Fixpoint censorThreeStageLabelSeq (lastRq: option bool) getRqMeth censorMeth (ls : LabelSeqT) {struct ls} : LabelSeqT :=
@@ -223,7 +231,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   | S3PMCnil : forall lastRq mem, ThreeStageProcMemConsistent nil lastRq mem
   | S3PMCrq : forall (lastRq :option(bool*address)) mem l last' mem' ls argV retV,
       (FMap.M.find rqMeth (calls l) = Some (existT _
-                                                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                                   {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                                              "op" :: Bool;
                                                                              "data" :: Bit 32});
                                                       ret := Bit 0 |}
@@ -279,7 +287,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   Definition ThreeStageProcLabelAirtight (l : LabelT) : Prop :=
     match FMap.M.find rqMeth (calls l) with
     | Some (existT _
-                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                   {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                              "op" :: Bool; 
                                              "data" :: Bit 32});
                       ret := Bit 0 |}
@@ -296,7 +304,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   Definition extractMethsWrVals (ms : MethsT) : list (word 32) :=
     match FMap.M.find rqMeth ms with
     | Some (existT _
-                   {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                   {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                              "op" :: Bool;
                                              "data" :: Bit 32});
                       ret := Bit 0 |}
@@ -346,7 +354,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   | S3MMCnil : forall lastRq mem, ThreeStageMemMemConsistent nil lastRq mem
   | S3MMCrq : forall (lastRq:option(bool*address)) mem l last' mem' ls argV retV,
       (FMap.M.find rqMeth (defs l) = Some (existT _
-                     {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                     {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                "op" :: Bool;
                                                "data" :: Bit 32});
                         ret := Bit 0 |}
@@ -414,7 +422,7 @@ Module ThreeStageDefs (ThreeStage : ThreeStageInterface).
   | S3MLSAnil : forall lastRq, ThreeStageMemLabelSeqAirtight nil lastRq
   | S3MLSAcons : forall l ls (lastRq :option bool) last', (
       (exists argV retV, FMap.M.find rqMeth (defs l) = Some (existT _
-                                                  {| arg := Struct (STRUCT {"addr" :: Bit 16;
+                                                  {| arg := Struct (STRUCT {"addr" :: Bit 11;
                                                                             "op" :: Bool;
                                                                             "data" :: Bit 32});
                                                      ret := Bit 0 |}

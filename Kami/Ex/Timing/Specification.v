@@ -49,6 +49,34 @@ Section Specification.
     | ToHost (pc : address) (val : data)
     | FromHost (pc : address) (val : data).
 
+  Ltac register_op_funct3 inst op expr :=
+    refine (IF (getFunct3E #inst == $$op) then expr else _)%kami_expr.
+(* probably this should be elsewhere *)
+  Definition rv32iBranchTaken:
+    forall ty : Kind -> Type,
+      StateT rv32iDataBytes rv32iRfIdx ty ->
+      fullType ty (SyntaxKind (MemTypes.Data rv32iDataBytes)) ->
+      (Bool) @ (ty).
+    intros ty st inst.
+    refine (IF (getOpcodeE #inst == $$rv32iOpBRANCH) then _ else Const ty (ConstBool false))%kami_expr.
+    register_op_funct3 inst rv32iF3BEQ
+                       (getRs1ValueE st #inst == getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BNE
+                       (getRs1ValueE st #inst != getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BLT
+                       ((UniBit (TruncLsb 31 1)
+                                (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $1)%kami_expr.
+    register_op_funct3 inst rv32iF3BGE
+                       ((UniBit (TruncLsb 31 1)
+                                (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $0)%kami_expr.
+    register_op_funct3 inst rv32iF3BLTU
+                       (getRs1ValueE st #inst < getRs2ValueE st #inst)%kami_expr.
+    register_op_funct3 inst rv32iF3BGEU
+                       (getRs1ValueE st #inst >= getRs2ValueE st #inst)%kami_expr.
+    exact (Const ty (ConstBool false)).
+  Defined.
+
+    
     Inductive hasTrace : regfile -> progMem -> address -> memory -> list TraceEvent -> Prop :=
     | htNil : forall rf pm pc mem,
         hasTrace rf pm pc mem nil

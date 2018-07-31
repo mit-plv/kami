@@ -37,7 +37,7 @@ Section ProcFDE.
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit optypeBits)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
@@ -49,7 +49,7 @@ Section ProcFDE.
                 Expr ty (SyntaxKind d2eElt)).
   Variables
     (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
+                           Expr ty (SyntaxKind (Bit optypeBits)))
     (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->

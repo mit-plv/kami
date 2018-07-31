@@ -183,6 +183,18 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       assumption.
   Qed.
 
+  Lemma mRqRs : forall rp up lp rm um lm,
+      Step p rp up lp ->
+      Step m rm um lm ->
+      WellHiddenConcat p m lp lm ->
+      (FMap.M.find rqMeth (defs lm) = None) \/ (FMap.M.find rsMeth (defs lm) = None).
+  Proof.
+    intros.
+    eassert _ by (eapply pRqRs; eassumption).
+    eassert _ by (eapply whc_rq; eassumption).
+    eassert _ by (eapply whc_rs; eassumption).
+    rewrite <- X0, <- X1. assumption.
+  Qed.
   
   
   Lemma ConcatMemoryConsistent :
@@ -402,48 +414,6 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     - rewrite Ha; rewrite Hb; simpl.
       destruct lastRq; [destruct b|]; reflexivity.
   Qed.
-
-  
-  Lemma rqCall_from_censor : forall lastRq a b,
-      censorThreeStageLabel lastRq censorThreeStageMeth a =
-      censorThreeStageLabel lastRq censorThreeStageMeth b ->
-      (getRqCall lastRq a) = (getRqCall lastRq b).
-  Proof.
-    intros.
-    destruct (inv_censoreq_rq_calls lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
-    destruct (inv_censoreq_rs_calls lastRq a b H) as [Rseq | [arga' [argb' ?]]].
-    - unfold getRqCall; repeat rewrite Rqeq, Rseq; reflexivity.
-    - shatter. unfold getRqCall; repeat rewrite Rqeq, H0, H1;
-                 reflexivity.
-    - shatter. unfold getRqCall; repeat rewrite Rseq, H0, H1;
-                 reflexivity.
-    - shatter. unfold getRqCall;
-      repeat match goal with
-             | [H : (_ === calls _ .[ _ ])%fmap |- _ ] => rewrite H
-             end.
-      reflexivity.
-  Qed.
-
-  Lemma rqDef_from_censor : forall lastRq a b,
-      censorThreeStageLabel lastRq censorThreeStageMemDefs a =
-      censorThreeStageLabel lastRq censorThreeStageMemDefs b ->
-      (getRqDef lastRq a) = (getRqDef lastRq b).
-  Proof.
-    intros.
-    destruct (inv_censoreq_rq_memdefs lastRq a b H) as [Rqeq | [adra [opa [arga [argb ?]]]]];
-    destruct (inv_censoreq_rs_memdefs lastRq a b H) as [Rseq | [arga' [argb' ?]]].
-    - unfold getRqDef; repeat rewrite Rqeq, Rseq; reflexivity.
-    - shatter. unfold getRqDef; repeat rewrite Rqeq, H0, H1;
-                 reflexivity.
-    - shatter. unfold getRqDef; repeat rewrite Rseq, H0, H1;
-                 reflexivity.
-    - shatter. unfold getRqDef;
-      repeat match goal with
-             | [H : (_ === defs _ .[ _ ])%fmap |- _ ] => rewrite H
-             end.
-      reflexivity.
-  Qed.
-
        
   Lemma censorWrLen : forall lastRq lsp lsp',
       censorThreeStageLabelSeq lastRq getRqCall censorThreeStageMeth lsp =
@@ -510,15 +480,16 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
             repeat rewrite FMap.M.F.P.F.mapi_in_iff;
             auto
         end.
-    - eapply IHlsp; eauto.
-      + replace (getRqCall _ l0) with (getRqCall lastRqp a) in H5.
-        eapply H5.
-        eapply rqCall_from_censor.
-        apply H2.
-      + replace (getRqDef _ l1) with (getRqDef lastRqm l) in H4.
-        eapply H4.
-        eapply rqDef_from_censor.
-        eapply H3.
+    - eapply IHlsp; eauto;
+        match goal with
+        | [ H : censorThreeStageLabelSeq ?lRq ?meth ?meth' ?ls =
+                censorThreeStageLabelSeq ?lRq' ?meth ?meth' ?ls' |-
+            censorThreeStageLabelSeq _ ?meth ?meth' ?ls  =
+            censorThreeStageLabelSeq _ ?meth ?meth' ?ls' ] =>
+          replace lRq' with lRq in H; try eapply H;
+            try eapply rqCall_from_censor; try eapply rqDef_from_censor;
+              eassumption                  
+        end. 
   Qed.
 
   Lemma app_inv : forall A (lh1 lt1 lh2 lt2 : list A),
@@ -890,6 +861,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
     
     - erewrite -> rqCall_from_censor in * by eassumption.
       erewrite -> rqDef_from_censor in * by eassumption.
+      change (Invs.Defs.getRqCall) with getRqCall in *. change (Invs.Defs.getRqDef) with getRqDef in *.
       change (Defs.getRqCall) with getRqCall in *. change (Defs.getRqDef) with getRqDef in *.
       eassert (getRqCall lRq l = _) as getCall by (unfold getRqCall;
                                                    repeat match goal with [ H : ?x = _ |- context[?x] ] => rewrite H end;
@@ -940,6 +912,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       erewrite -> rqCall_from_censor in * by eassumption.
       erewrite -> rqDef_from_censor in * by eassumption. 
       change (Defs.getRqCall) with getRqCall in *. change (Defs.getRqDef) with getRqDef in *.
+      change (Invs.Defs.getRqCall) with getRqCall in *. change (Invs.Defs.getRqDef) with getRqDef in *.
       eassert (getRqCall lRq l = _) as getCall by (unfold getRqCall;
                                                    repeat match goal with [ H : ?x = _ |- context[?x] ] => rewrite H end;
                                                    reflexivity).
@@ -958,6 +931,7 @@ Module ThreeStageHiding (ThreeStage : ThreeStageInterface) (Hiding : ThreeStageM
       
     - erewrite -> rqCall_from_censor in * by eassumption.
       erewrite -> rqDef_from_censor in * by eassumption.
+      change (Invs.Defs.getRqCall) with getRqCall in *. change (Invs.Defs.getRqDef) with getRqDef in *.
       change (Defs.getRqCall) with getRqCall in *. change (Defs.getRqDef) with getRqDef in *.
       eassert (getRqCall lRq l = _) as getCall by (unfold getRqCall;
                                                    repeat match goal with [ H : ?x = _ |- context[?x] ] => rewrite H end;
@@ -1109,6 +1083,9 @@ Qed.
         match goal with
         | [ |- getRqCall _ _ = option_map fst ?lst ] =>
           try erewrite rqCall_from_censor by eassumption;
+            change Invs.Defs.censorThreeStageLabel with censorThreeStageLabel in *;
+            change Invs.Defs.censorThreeStageMeth with censorThreeStageMeth in *;
+            change Invs.Defs.getRqCall with getRqCall in *;
             repeat match goal with
                      [ H : (M.find _ (defs l0)) = _ |- _ ] => try rewrite <- rq_consistent in H; try rewrite <- rs_consistent in H
                    end;
@@ -1137,6 +1114,9 @@ Qed.
         match goal with
         | [ |- getRqDef _ _ = option_map fst ?lst ] =>
           try erewrite rqDef_from_censor by eassumption;
+            change Invs.Defs.censorThreeStageLabel with censorThreeStageLabel in *;
+            change Invs.Defs.censorThreeStageMemDefs with censorThreeStageMemDefs in *;
+            change Invs.Defs.getRqDef with getRqDef in *;
             repeat match goal with
                    | [ H : (M.find _ (calls l)) = Some _ |- _ ] => try rewrite rq_consistent in H; try rewrite rs_consistent in H
                    | [ H : (M.find _ (calls l)) = None |- _ ] => try rewrite rq_consistent in H; try  rewrite rs_consistent in H
@@ -1827,7 +1807,7 @@ Qed.
            | [ H : ?x = _ |- context[?x] ] => rewrite H
            end; reflexivity.
   Qed.
-
+ 
   Lemma composeCensor : forall lsp lsm,
       CanCombineLabelSeq lsp lsm ->
       forall lastRq rp up rm um lsp' lsm',
@@ -1891,22 +1871,18 @@ Qed.
           [|destruct (String.string_dec k fhMeth);
             [|destruct (String.string_dec k thMeth)]]];
         subst.
-      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
+      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in *.
         shatter.
-        specialize (H rqMeth).
-        specialize (H3 rqMeth).
-        rewrite FMap.M.F.P.F.not_find_in_iff in H.
-        rewrite FMap.M.F.P.F.not_find_in_iff in H3.
+        repeat match goal with [ H : context[getCalls (p++m)%kami] |- _ ] =>
+                        specialize (H rqMeth); rewrite FMap.M.F.P.F.not_find_in_iff in H end.
         assert (In rqMeth (getCalls (p ++ m)%kami));
           [|rewrite H by assumption; rewrite H3 by assumption; reflexivity].
         apply getCalls_in_1.
         apply pcrq.
-      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
+      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in *.
         shatter.
-        specialize (H rsMeth).
-        specialize (H3 rsMeth).
-        rewrite FMap.M.F.P.F.not_find_in_iff in H.
-        rewrite FMap.M.F.P.F.not_find_in_iff in H3.
+        repeat match goal with [ H : context[getCalls (p++m)%kami] |- _ ] =>
+                        specialize (H rsMeth); rewrite FMap.M.F.P.F.not_find_in_iff in H end.
         assert (In rsMeth (getCalls (p ++ m)%kami));
           [|rewrite H by assumption; rewrite H3 by assumption; reflexivity].
         apply getCalls_in_1.
@@ -1939,18 +1915,18 @@ Qed.
           assert (In fhMeth (getDefs m)) by (apply H2; congruence).
           apply mndfh in H3.
           tauto.
-        * rewrite H.
-          rewrite H2.
+        * repeat match goal with [ H : (_=== _ .[ _ ])%fmap |- _ ] => rewrite H in * end.
           unfold censorLabel in *; repeat inv_label.
           repeat match goal with
                  | [ H : FMap.M.mapi ?f ?mp = FMap.M.mapi ?f ?mp' |- _ ] => assert (FMap.M.find fhMeth (FMap.M.mapi f mp) = FMap.M.find fhMeth (FMap.M.mapi f mp')) by (f_equal; assumption); clear H
                  end.
           repeat rewrite FMap.M.F.P.F.mapi_o in * by (intros ? ? ? Heq; rewrite Heq; reflexivity).
           normalize.
-          rewrite H in H19.
-          destruct (FMap.M.find fhMeth dp'); try solve [simpl in H19; congruence].
-          rewrite H2 in H5.
-          destruct (FMap.M.find fhMeth dm'); try solve [simpl in H5; congruence].
+          repeat match goal with [ H : (_=== _ .[ _ ])%fmap |- _ ] => rewrite H in * end.
+          repeat match goal with
+                 | [ H' : context[?x] |- context[match ?x with | _ => _ end] ] =>
+                   destruct x; try solve [simpl in H'; congruence]
+                 end.
       + repeat rewrite FMap.M.subtractKV_find.
         repeat rewrite FMap.M.find_union.
         assert (FMap.M.find thMeth dp = (None (A := {x : SignatureT & SignT x})));
@@ -1988,10 +1964,11 @@ Qed.
                  end.
           repeat rewrite FMap.M.F.P.F.mapi_o in * by (intros ? ? ? Heq; rewrite Heq; reflexivity).
           normalize.
-          rewrite H in H19.
-          destruct (FMap.M.find thMeth dp'); try solve [simpl in H19; congruence].
-          rewrite H2 in H5.
-          destruct (FMap.M.find thMeth dm'); try solve [simpl in H5; congruence].
+          repeat match goal with [ H : (_=== _ .[ _ ])%fmap |- _ ] => rewrite H in * end.
+          repeat match goal with
+                 | [ H' : context[?x] |- context[match ?x with | _ => _ end] ] =>
+                   destruct x; try solve [simpl in H'; congruence]
+                 end.
       + repeat match goal with
                | [ H : censorLabel ?c ?l = censorLabel ?c ?l' |- _ ] =>
                  assert (FMap.M.find k (Semantics.calls (censorLabel c l)) = FMap.M.find k (Semantics.calls (censorLabel c l'))) by (rewrite H; reflexivity);
@@ -2002,14 +1979,17 @@ Qed.
                | [ H : context[censorLabel (?censorMeth ?lrq) ?l] |- _ ] =>
                  change (censorLabel (censorMeth lrq) l) with (censorThreeStageLabel lrq censorMeth l) in H
                end.
-        repeat rewrite <- (inv_censor_other_calls _ _ _ _ eq_refl) in H by assumption.
-        repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H2 by assumption.
-        repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H3 by assumption.
-        repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H5 by assumption.
+        repeat match goal with
+               | [ H : context[censorThreeStageLabel] |- _ ] => 
+                 repeat rewrite <- (inv_censor_other_calls _ _ _ _ eq_refl) in H by assumption;
+                   repeat rewrite <- (inv_censor_other_defs _ _ _ _ eq_refl) in H by assumption;
+                   repeat rewrite <- (inv_censor_other_mem_calls _ _ _ _ eq_refl) in H by assumption;
+                   repeat rewrite <- (inv_censor_other_mem_defs _ _ _ _ eq_refl) in H by assumption
+               end.
         unfold calls, defs in *.
         repeat rewrite FMap.M.subtractKV_find.
         repeat rewrite FMap.M.find_union.
-        rewrite H; rewrite H2; rewrite H3; rewrite H5; reflexivity.
+        repeat match goal with [ H : _ |- _ ] => rewrite H end; reflexivity.
     - FMap.M.ext k.
       repeat rewrite FMap.M.F.P.F.mapi_o by (intros ? ? ? Heq; rewrite Heq; reflexivity).
       destruct (String.string_dec k rqMeth);
@@ -2017,22 +1997,18 @@ Qed.
           [|destruct (String.string_dec k fhMeth);
             [|destruct (String.string_dec k thMeth)]]];
         subst.
-      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
+      + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in *.
         shatter.
-        specialize (H2 rqMeth).
-        specialize (H10 rqMeth).
-        rewrite FMap.M.F.P.F.not_find_in_iff in H2.
-        rewrite FMap.M.F.P.F.not_find_in_iff in H10.
+        repeat match goal with [ H : context[getDefs (p++m)%kami] |- _ ] =>
+                        specialize (H rqMeth); rewrite FMap.M.F.P.F.not_find_in_iff in H end.
         assert (In rqMeth (getDefs (p ++ m)%kami));
           [|rewrite H2 by assumption; rewrite H10 by assumption; reflexivity].
         apply getDefs_in_2.
         apply mdrq.
       + unfold WellHiddenConcat, wellHidden, mergeLabel, hide, calls, defs in H16, H11.
         shatter.
-        specialize (H2 rsMeth).
-        specialize (H10 rsMeth).
-        rewrite FMap.M.F.P.F.not_find_in_iff in H2.
-        rewrite FMap.M.F.P.F.not_find_in_iff in H10.
+        repeat match goal with [ H : context[getDefs (p++m)%kami] |- _ ] =>
+                               specialize (H rsMeth); rewrite FMap.M.F.P.F.not_find_in_iff in H end.
         assert (In rsMeth (getDefs (p ++ m)%kami));
           [|rewrite H2 by assumption; rewrite H10 by assumption; reflexivity].
         apply getDefs_in_2.
@@ -2078,9 +2054,7 @@ Qed.
           assert (In fhMeth (getCalls m)) by (apply H3; congruence).
           apply mncfh in H10.
           tauto.
-        * rewrite H.
-          rewrite H2.
-          rewrite H3.
+        * repeat match goal with [ H : _ |- _ ] => rewrite H end.
           unfold censorLabel in *; repeat inv_label.
           repeat match goal with
                  | [ H : FMap.M.mapi ?f ?mp = FMap.M.mapi ?f ?mp' |- _ ] => assert (FMap.M.find fhMeth (FMap.M.mapi f mp) = FMap.M.find fhMeth (FMap.M.mapi f mp')) by (f_equal; assumption); clear H
