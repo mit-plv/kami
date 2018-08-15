@@ -1924,13 +1924,14 @@ Section NoRules.
         SubstepsInd m o u {| annot := None; defs := ds; calls := cs |}.
   Proof.
     induction 1; simpl; intros; [inv H|].
-    subst; inv H0.
+    subst; inv H0. 
     - mred; replace {| annot := None; defs := ds; calls := cs |} with l; auto.
       destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
       destruct ann; intuition idtac.
     - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
       mred; auto.
-    - rewrite Hrules in HInRules; inv HInRules.
+    - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
+      exfalso. destruct ann;  discriminate.
     - destruct l as [ann d c]; inv H1; simpl in *; dest; inv H4.
       econstructor.
       + apply IHSubstepsInd; auto.
@@ -1965,7 +1966,7 @@ Section NoRules.
     inv H.
     destruct l as [a d c]; simpl in *; subst.
     change {| annot := _; defs := _; calls := _ |}
-    with (hide {| annot := None; defs := d; calls := c |}).
+      with (hide {| annot := None; defs := d; calls := c |}).
     constructor; auto.
     eapply substepsInd_rule_annot_2; eauto.
   Qed.
