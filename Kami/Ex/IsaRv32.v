@@ -9,8 +9,9 @@ Require Import Ex.MemTypes Ex.SC.
  * - Arithmetic : LUI, ADD, ADDI, SUB, SLL, SLLI, SRL, OR, AND, XOR, ANDI, SLT, SLTU, SLTI, SLTIU
  * Some pseudo instructions of RV32I (9):
  * - LI, MV, BEQZ, BNEZ, BLEZ, BGEZ, BLTZ, BGTZ, J, NOP
- * Custom instructions (1):
+ * Custom instructions (2):
  * - TOHOST
+ * - FROMHOST
  * Just one RV32M instruction: MUL
  *)
 Section RV32I.
@@ -107,6 +108,8 @@ Section RV32I.
     Definition rv32iOpOP      := WO~0~1~1~0~0~1~1. (* R-type, register-register *)
 
     Definition rv32iOpTOHOST  := WO~0~0~0~1~0~0~0. (* custom-0 opcode *)
+    Definition rv32iOpFROMHOST  := WO~0~0~0~0~1~0~0. (* custom-0 opcode *)
+    
 
   End Opcodes.
 
@@ -120,7 +123,8 @@ Section RV32I.
       unfold OptypeT; intros ty inst.
       refine (IF (getOpcodeE #inst == $$ rv32iOpLOAD) then $$opLd else _)%kami_expr.
       refine (IF (getOpcodeE #inst == $$ rv32iOpSTORE) then $$opSt else _)%kami_expr.
-      refine (IF (getOpcodeE #inst == $$ rv32iOpTOHOST) then $$opTh else $$opNm)%kami_expr.
+      refine (IF (getOpcodeE #inst == $$ rv32iOpTOHOST) then $$opTh else _)%kami_expr.
+      refine (IF (getOpcodeE #inst == $$ rv32iOpFROMHOST) then $$opFh else $$opNm)%kami_expr.
     Defined.
 
     Definition rv32iGetLdDst: LdDstT rv32iDataBytes rv32iRfIdx.
@@ -418,6 +422,7 @@ Section RV32IStruct.
   | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | J (ofs: word 20): Rv32i
   | NOP: Rv32i
+  | FROMHOST (rd: Gpr) : Rv32i
   | TOHOST (rs1: Gpr): Rv32i.
 
   Local Infix "~~" := combine (at level 0).
@@ -482,6 +487,7 @@ Section RV32IStruct.
     | J ofs => UJtypeToRaw rv32iOpJAL x0 ofs
     | NOP => ItypeToRaw rv32iOpOPIMM x0 x0 rv32iF3ADDI (wzero _)
     (* custom instructions *)
+    | FROMHOST rd => RtypeToRaw rv32iOpFROMHOST x0 x0 rd rv32iF7ADD rv32iF3ADD
     | TOHOST rs1 => RtypeToRaw rv32iOpTOHOST rs1 x0 x0 rv32iF7ADD rv32iF3ADD
     end.
 

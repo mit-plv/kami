@@ -55,20 +55,19 @@ Module Conclusions (A : Assumptions).
     apply Prume. apply Prule_empty. assumption.
   Qed.
   
-  Fixpoint combineAll {o} (ss : Substeps m o) : MethsT :=
+  Fixpoint union_all_calls {o} (ss : Substeps m o) : MethsT :=
     match ss with
     | nil => []%fmap
-    | s :: ss' => M.union (cms s) (combineAll ss')
+    | s :: ss' => M.union (cms s) (union_all_calls ss')
     end.
   
   Definition PSubstepRec {o} (s : SubstepRec m o) : Prop :=
     match (unitAnnot s) with
     | Rle _ => Prule (cms s)
     | Meth _  => Pmeth (cms s)
-    end.
+    end.  
   
-  
-  Lemma basic : forall {o}, forall s : SubstepRec m o, PSubstepRec s.
+  Lemma base_cases : forall {o}, forall s : SubstepRec m o, PSubstepRec s.
   Proof.
     intros o s. destruct s. inversion substep; subst; unfold PSubstepRec; simpl.
     - apply Prule_empty.
@@ -77,24 +76,24 @@ Module Conclusions (A : Assumptions).
     - eapply Pmeths; try eassumption.
   Qed.
   
-  Lemma PSubsteps : forall {o} (ss : Substeps m o), substepsComb ss -> (Prule (combineAll ss) /\ exists s k, In s ss /\ (unitAnnot s) = Rle k) \/ Pmeth (combineAll ss).
+  Lemma PSubsteps : forall {o} (ss : Substeps m o), substepsComb ss -> (Prule (union_all_calls ss) /\ exists s k, In s ss /\ (unitAnnot s) = Rle k) \/ Pmeth (union_all_calls ss).
   Proof. induction 1; simpl.
          right. apply Pmeth_empty.           
          destruct IHsubstepsComb.
          - left. shatter. specialize (H0 _ H2). inv H0. shatter.
            destruct H5.
-           + pose proof (basic s) as X.  unfold PSubstepRec in X; rewrite H5 in X.
+           + pose proof (base_cases s) as X.  unfold PSubstepRec in X; rewrite H5 in X.
              split. apply Pmeru; assumption.
              eauto.
            + congruence.
-         - pose proof (basic s) as X. unfold PSubstepRec in X. destruct (unitAnnot s) eqn:Hua.
+         - pose proof (base_cases s) as X. unfold PSubstepRec in X. destruct (unitAnnot s) eqn:Hua.
            + left. split. apply Prume; assumption. eauto.
            + right. apply Pmeme; assumption.
   Qed.
 
     
   Lemma combine_compat:
-    forall {o}, forall ss : Substeps m o, combineAll ss = calls (foldSSLabel ss).
+    forall {o}, forall ss : Substeps m o, union_all_calls ss = calls (foldSSLabel ss).
   Proof.
     induction ss; auto. 
     simpl. 
@@ -104,7 +103,7 @@ Module Conclusions (A : Assumptions).
          
   Theorem Prule_Step :  forall o u l, Step m o u l -> Prule (calls l).
     induction 1.
-    pose (PSubsteps ss HSubsteps) as H.
+    pose proof (PSubsteps ss HSubsteps) as H.
     unfold hide; simpl. destruct H; shatter;
                           eapply Prsub; try apply M.subtractKV_sub.
     rewrite <- combine_compat; assumption.
