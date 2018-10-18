@@ -1,6 +1,6 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
-Require Import Kami.Syntax Kami.Notations Kami.Semantics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Wf Kami.Tactics.
 
 (* A fifo containing only one element.
  * Implementation is much simpler than the general fifo, implemented in Fifo.v
@@ -65,7 +65,26 @@ Section OneEltFifo.
     with Method ^"flush"() : Void := flush
   }.
 
+  Lemma oneEltFifo_PhoasWf: ModPhoasWf oneEltFifo.
+  Proof. kequiv. Qed.
+  Lemma oneEltFifo_RegsWf: ModRegsWf oneEltFifo.
+  Proof. kvr. Qed.
+
+  Lemma oneEltFifoEx1_PhoasWf: ModPhoasWf oneEltFifoEx1.
+  Proof. kequiv. Qed.
+  Lemma oneEltFifoEx1_RegsWf: ModRegsWf oneEltFifoEx1.
+  Proof. kvr. Qed.
+
+  Lemma oneEltFifoEx2_PhoasWf: ModPhoasWf oneEltFifoEx2.
+  Proof. kequiv. Qed.
+  Lemma oneEltFifoEx2_RegsWf: ModRegsWf oneEltFifo.
+  Proof. kvr. Qed.
+  
 End OneEltFifo.
+
+Hint Resolve oneEltFifo_PhoasWf oneEltFifo_RegsWf.
+Hint Resolve oneEltFifoEx1_PhoasWf oneEltFifoEx1_RegsWf.
+Hint Resolve oneEltFifoEx2_PhoasWf oneEltFifoEx2_RegsWf.
 
 Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
 Hint Unfold enq deq firstElt isFull flush : MethDefs.

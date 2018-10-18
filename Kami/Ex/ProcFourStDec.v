@@ -143,8 +143,6 @@ Section ProcFDE.
   Lemma p4st_refines_p3st: p4st <<== p3st.
   Proof. (* SKIP_PROOF_ON
     kmodular.
-    - kdisj_edms_cms_ex O.
-    - kdisj_ecms_dms_ex O.
     - apply fetchDecode_refines_fetchNDecode; auto.
     - krefl.
       END_SKIP_PROOF_ON *) apply cheat.

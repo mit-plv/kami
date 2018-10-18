@@ -276,3 +276,16 @@ Axiom cheat: forall t, t.
 Hint Extern 1 (_ /\ _) => repeat split.
 Hint Extern 1 (NoDup _) => (repeat constructor; simpl; intro; intuition auto; discriminate).
 
+(** Invariant-related definitions *)
+Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.
+Tactic Notation "or3_fst" := left.
+Tactic Notation "or3_snd" := right; left.
+Tactic Notation "or3_thd" := right; right.
+
+Ltac kinv_or3 :=
+  repeat
+    (match goal with
+     | [H: _ \/ _ |- _] => destruct H
+     | [H: or3 _ _ _ |- _] => destruct H as [|[|]]
+     end; dest).
+

@@ -49,7 +49,7 @@ Fixpoint wordToN sz (w : word sz) : N :=
   match w with
     | WO => 0
     | WS false w' => 2 * wordToN w'
-    | WS true w' => Nsucc (2 * wordToN w')
+    | WS true w' => N.succ (2 * wordToN w')
   end%N.
 
 Definition wzero sz := natToWord sz 0.
@@ -217,7 +217,7 @@ Definition wordBin (f : N -> N -> N) sz (x y : word sz) : word sz :=
 
 Definition wplus := wordBin Nplus.
 Definition wmult := wordBin Nmult.
-Definition wdiv := wordBin Ndiv.
+Definition wdiv := wordBin N.div.
 Definition wmod := wordBin Nmod.
 Definition wmult' sz (x y : word sz) : word sz := 
   split2 sz sz (NToWord (sz + sz) (Nmult (wordToN x) (wordToN y))).
@@ -313,9 +313,9 @@ Definition wremZsu sz (x y : word sz) :=
 (** * Comparison predicates and deciders *)
 
 Definition wlt sz (l r : word sz) : Prop :=
-  Nlt (wordToN l) (wordToN r).
+  N.lt (wordToN l) (wordToN r).
 Definition wslt sz (l r : word sz) : Prop :=
-  Zlt (wordToZ l) (wordToZ r).
+  Z.lt (wordToZ l) (wordToZ r).
 
 Notation "w1 > w2" := (@wlt _ w2%word w1%word) : word_scope.
 Notation "w1 >= w2" := (~(@wlt _ w1%word w2%word)) : word_scope.
@@ -329,7 +329,7 @@ Notation "w1 '<s=' w2" := (~(@wslt _ w2%word w1%word)) (at level 70, w2 at next 
 
 Definition wlt_dec : forall sz (l r : word sz), {l < r} + {l >= r}.
   refine (fun sz l r =>
-    match Ncompare (wordToN l) (wordToN r) as k return Ncompare (wordToN l) (wordToN r) = k -> _ with
+    match N.compare (wordToN l) (wordToN r) as k return N.compare (wordToN l) (wordToN r) = k -> _ with
       | Lt => fun pf => left _ _
       | _ => fun pf => right _ _
     end (refl_equal _));
@@ -338,7 +338,7 @@ Defined.
 
 Definition wslt_dec : forall sz (l r : word sz), {l <s r} + {l >s= r}.
   refine (fun sz l r =>
-    match Zcompare (wordToZ l) (wordToZ r) as c return Zcompare (wordToZ l) (wordToZ r) = c -> _ with
+    match Z.compare (wordToZ l) (wordToZ r) as c return Z.compare (wordToZ l) (wordToZ r) = c -> _ with
       | Lt => fun pf => left _ _
       | _ => fun pf => right _ _
     end (refl_equal _));
@@ -1752,13 +1752,20 @@ Qed.
 Lemma lt_le : forall sz (a b : word sz),
   a < b -> a <= b.
 Proof.
-  unfold wlt, Nlt. intros sz a b H H0. rewrite <- Ncompare_antisym in H0. rewrite H in H0. simpl in *. congruence.
+  unfold wlt, N.lt.
+  intros sz a b H H0.
+  rewrite N.compare_antisym in H0.
+  rewrite H in H0.
+  simpl in *.
+  congruence.
 Qed.
 
 Lemma eq_le : forall sz (a b : word sz),
   a = b -> a <= b.
 Proof.
-  intros; subst. unfold wlt, Nlt. rewrite Ncompare_refl. congruence.
+  intros; subst. unfold wlt, N.lt.
+  rewrite N.compare_refl.
+  congruence.
 Qed.
 
 Lemma wordToN_inj : forall sz (a b : word sz),
@@ -1767,7 +1774,7 @@ Proof.
   induction a; intro b0; rewrite (shatter_word b0); intuition.
   simpl in H.
   destruct b; destruct (whd b0); intros.
-  f_equal. eapply IHa. eapply Nsucc_inj in H.
+  f_equal. eapply IHa. eapply N.succ_inj in H.
   destruct (wordToN a); destruct (wordToN (wtl b0)); try congruence.
   destruct (wordToN (wtl b0)); destruct (wordToN a); inversion H.
   destruct (wordToN (wtl b0)); destruct (wordToN a); inversion H.
@@ -1815,7 +1822,7 @@ Lemma le_neq_lt : forall sz (a b : word sz),
   b <= a -> a <> b -> b < a.
 Proof.
   intros sz a b H H0; destruct (wlt_dec b a) as [?|n]; auto.
-  elimtype False. apply H0. unfold wlt, Nlt in *.
+  elimtype False. apply H0. unfold wlt, N.lt in *.
   eapply wordToN_inj. eapply Ncompare_eq_correct.
   case_eq ((wordToN a ?= wordToN b)%N); auto; try congruence.
   intros H1. rewrite <- Ncompare_antisym in n. rewrite H1 in n. simpl in *. congruence.

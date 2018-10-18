@@ -2,7 +2,6 @@ Require Import Arith.Peano_dec Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
 Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
-Require Import Ex.Names.
 
 Set Implicit Arguments.
 
@@ -16,7 +15,7 @@ Section NativeFifo.
 
   Definition listEltT ty := list (ty dType).
   Definition listEltK ty := @NativeKind (listEltT ty) nil.
-  Definition listElt ty := (^elt :: (@NativeConst (listEltT ty) nil nil))%struct.
+  Definition listElt ty := (^"elt" :: (@NativeConst (listEltT ty) nil nil))%struct.
 
   Definition listIsEmpty {ty} (l: fullType ty (listEltK ty)) :=
     match l with
@@ -38,36 +37,36 @@ Section NativeFifo.
 
   (* defined methods *)
   Definition nativeEnq {ty} : forall (d: ty dType), ActionT ty Void := fun d =>
-    (ReadN eltT : listEltK ty <- ^elt;
-     Write ^elt <- (Var _ (listEltK ty) (listEnq d eltT));
+    (ReadN eltT : listEltK ty <- ^"elt";
+     Write ^"elt" <- (Var _ (listEltK ty) (listEnq d eltT));
      Retv)%kami_action.
 
   Definition nativeDeq {ty} : ActionT ty dType :=
-    (ReadN eltT : listEltK ty <- ^elt;
+    (ReadN eltT : listEltK ty <- ^"elt";
      Assert !$$(listIsEmpty eltT);
-     Write ^elt <- (Var _ (listEltK ty) (listDeq eltT));
+     Write ^"elt" <- (Var _ (listEltK ty) (listDeq eltT));
      Ret (listFirstElt eltT))%kami_action.
 
   Definition nativeFirstElt {ty} : ActionT ty dType :=
-    (ReadN elt : listEltK ty <- ^elt;
+    (ReadN elt : listEltK ty <- ^"elt";
      Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami_action.
 
   Set Printing Universes.
 
   Definition nativeFifo := MODULE {
-    RegisterN ^elt : listEltK type <- (NativeConst nil nil)
+    RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)
 
-    with Method ^enqName(d : dType) : Void := (nativeEnq d)
-    with Method ^deqName() : dType := nativeDeq
-    with Method ^firstEltName() : dType := nativeFirstElt
+    with Method ^"enq"(d : dType) : Void := (nativeEnq d)
+    with Method ^"deq"() : dType := nativeDeq
+    with Method ^"firstElt"() : dType := nativeFirstElt
   }.
 
   Definition nativeSimpleFifo := MODULE {
-    RegisterN ^elt : listEltK type <- (NativeConst nil nil)
+    RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)
 
-    with Method ^enqName(d : dType) : Void := (nativeEnq d)
-    with Method ^deqName() : dType := nativeDeq
+    with Method ^"enq"(d : dType) : Void := (nativeEnq d)
+    with Method ^"deq"() : dType := nativeDeq
   }.
 
   (** SinAction version *)
@@ -85,49 +84,49 @@ Section NativeFifo.
   Qed.
 
   Definition nativeEnqS {ty} : forall (d: ty dType), SinActionT ty Void := fun d =>
-    (ReadN eltT : listEltK ty <- { ^elt | ngn elt eq_refl };
-     Write { ^elt | ngn elt eq_refl } <- (Var _ (listEltK ty) (listEnq d eltT));
+    (ReadN eltT : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
+     Write { ^"elt" | ngn "elt" eq_refl } <- (Var _ (listEltK ty) (listEnq d eltT));
      Retv)%kami_sin.
 
   Definition nativeDeqS {ty} : SinActionT ty dType :=
-    (ReadN eltT : listEltK ty <- { ^elt | ngn elt eq_refl };
+    (ReadN eltT : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
      Assert !$$(listIsEmpty eltT);
-     Write { ^elt | ngn elt eq_refl } <- (Var _ (listEltK ty) (listDeq eltT));
+     Write { ^"elt" | ngn "elt" eq_refl } <- (Var _ (listEltK ty) (listDeq eltT));
      Ret (listFirstElt eltT))%kami_sin.
 
   Definition nativeFirstEltS {ty} : SinActionT ty dType :=
-    (ReadN elt : listEltK ty <- { ^elt | ngn elt eq_refl };
+    (ReadN elt : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
      Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami_sin.
   
   Definition nativeFifoS := SIN {
-    RegisterN { ^elt | ngn elt eq_refl } : listEltK type <- (NativeConst nil nil)
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
-    with Method { ^enqName | ngn enqName eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^deqName | ngn deqName eq_refl } () : dType := nativeDeqS
-    with Method { ^firstEltName | ngn firstEltName eq_refl } () : dType := nativeFirstEltS
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
+    with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
   }.
 
   Definition nativeSimpleFifoS := SIN {
-    RegisterN { ^elt | ngn elt eq_refl } : listEltK type <- (NativeConst nil nil)
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
-    with Method { ^enqName | ngn enqName eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^deqName | ngn deqName eq_refl } () : dType := nativeDeqS
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
   }.
 
   Definition nativeFifoM := META {
-    RegisterN { ^elt | ngn elt eq_refl } : listEltK type <- (NativeConst nil nil)
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
-    with Method { ^enqName | ngn enqName eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^deqName | ngn deqName eq_refl } () : dType := nativeDeqS
-    with Method { ^firstEltName | ngn firstEltName eq_refl } () : dType := nativeFirstEltS
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
+    with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
   }.
 
   Definition nativeSimpleFifoM := META {
-    RegisterN { ^elt | ngn elt eq_refl } : listEltK type <- (NativeConst nil nil)
+    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
 
-    with Method { ^enqName | ngn enqName eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^deqName | ngn deqName eq_refl } () : dType := nativeDeqS
+    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
+    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
   }.
   
 End NativeFifo.

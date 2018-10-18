@@ -47,9 +47,7 @@ Section ProcDecSCN.
   Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
   Proof. (* SKIP_PROOF_ON
     krewrite assoc left.
-    kmodular.
-    - kdisj_edms_cms_ex n.
-    - kdisj_ecms_dms_ex n.
+    kmodulari n.
     - krewrite <- dup_dist left.
       kduplicated.
       apply pdec_refines_pinst; auto.

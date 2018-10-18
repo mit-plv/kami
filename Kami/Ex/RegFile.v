@@ -1,6 +1,6 @@
 Require Import String Lib.CommonTactics Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
-Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics Ex.Names.
+Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
 
 Set Implicit Arguments.
 
@@ -12,25 +12,26 @@ Section RegFile.
   Definition DataArray := Vector Data IdxBits.
   Definition Addr := Bit IdxBits.
 
-  Definition WritePort := STRUCT {
-                              addr :: Addr;
-                              data :: Data
-                            }.
+  Definition WritePort :=
+    STRUCT {
+        "addr" :: Addr;
+        "data" :: Data
+      }.
   Notation "^ s" := (name -- s) (at level 0).
 
   Variable init: ConstT DataArray.
 
   Definition regFile :=
     MODULE {
-        Register ^dataArray: DataArray <- init
+        Register ^"dataArray": DataArray <- init
                                        
-        with Method ^read (a: Addr): Data :=
-          Read full: DataArray <- ^dataArray;
+        with Method ^"read" (a: Addr): Data :=
+          Read full: DataArray <- ^"dataArray";
         Ret (#full@[#a])
             
-        with Method ^write (w: Struct WritePort): Void :=
-          Read full: DataArray <- ^dataArray;
-        Write ^dataArray <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
+        with Method ^"write" (w: Struct WritePort): Void :=
+          Read full: DataArray <- ^"dataArray";
+        Write ^"dataArray" <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
         Retv
       }.
   
@@ -50,29 +51,29 @@ Section RegFile.
 
   Definition regFileS :=
     SIN {
-        Register { ^dataArray | rfgn dataArray eq_refl } : DataArray <- init
+        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
 
-        with Method { ^read | rfgn read eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
+        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^write | rfgn write eq_refl } (w: Struct WritePort): Void :=
-          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
-          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
+        with Method { ^"write" | rfgn "write" eq_refl } (w: Struct WritePort): Void :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
           Retv
       }.
 
   Definition regFileM :=
     META {
-        Register { ^dataArray | rfgn dataArray eq_refl } : DataArray <- init
+        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
 
-        with Method { ^read | rfgn read eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
+        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
           Ret (#full@[#a])
             
-        with Method { ^write | rfgn write eq_refl } (w: Struct WritePort): Void :=
-          Read full: DataArray <- { ^dataArray | rfgn dataArray eq_refl };
-          Write { ^dataArray | rfgn dataArray eq_refl } <- #full@[ #w!WritePort@.addr <- #w!WritePort@.data ];
+        with Method { ^"write" | rfgn "write" eq_refl } (w: Struct WritePort): Void :=
+          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
+          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
           Retv
       }.
 

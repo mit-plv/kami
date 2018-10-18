@@ -1,6 +1,9 @@
 Require Import Kami.
 (* begin hide *)
-Require Import Lib.Indexer.
+Require Import Kami.Synthesize.
+Require Import Ex.Fifo Ex.NativeFifo Ex.SimpleFifoCorrect.
+Require Import Ext.BSyntax.
+Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
 (* end hide *)
 
 Set Implicit Arguments.
@@ -21,7 +24,7 @@ Open Scope string.
 
 (*+ Language Syntax +*)
 
-(** Kami has its own syntax, which is very similar to Bluespec. It uses shallow embedding with respect to variable binding, and has fancy notations built with "Notation" in Coq. *)
+(** Kami has its own syntax, which is very similar to Bluespec's. It uses shallow embedding with respect to variable binding and has fancy notations built with "Notation" in Coq. *)
 
 (** A module consists of registers, rules, and methods. *)
 Print Mod.
@@ -59,12 +62,12 @@ Print evalExpr.
 Print SemAction.
 
 (**
- * A global rule scheduler tries to execute rules as many as possible with following conditions:
- * 1) Any two rules should not conflict in terms of register writes and method calls
- * 2) A target rule should satisfy assertions (guards)
+ * A global rule scheduler tries to execute as many simultaneous rules as possible with the following conditions:
+ * 1) Any two rules should not conflict in terms of register writes and method calls.
+ * 2) A scheduled rule should satisfy assertions (guards).
  * 3) [One-rule-at-a-time semantics] In order to execute {r1, r2, ..., rn} simultaneously,
  *    there should exist a permutation of {ri} s.t. 
- *    (r1 | r2 | ... | rn)(s) = (r_i1 (r_i2 (... (r_in(s)) ...))).
+ *    (r1 | r2 | ... | rn)(s) = (r1 (r2 (... (rn(s)) ...))).
  *)
 
 (** Label *)
@@ -90,7 +93,7 @@ Print Behavior.
 (*+ Trace Refinement +*)
 
 Print traceRefines.
-(** Let's just ignore p-mapping for now *)
+(** Let's just ignore p-mapping for now. *)
 
 (** Reflexivity and transitivity *)
 Check traceRefines_refl.
@@ -183,8 +186,6 @@ Hint Unfold stage3 : ModuleDefs.
 
 (*! Fifos: the most fundamental hardware component for asynchronicity !*)
 
-Require Import Fifo.
-
 Definition fifo1 := simpleFifo "fifo1" 8 (Bit dataSize).
 Definition fifo2 := simpleFifo "fifo2" 8 (Bit dataSize).
 Hint Unfold fifo1 fifo2 : ModuleDefs.
@@ -233,9 +234,9 @@ Hint Resolve impl_PhoasWf.
 (** Well-formedness for valid register uses *)
 Lemma stage1_RegsWf: ModRegsWf stage1.
 Proof. kvr. Qed.
-Lemma stage2_RegsWf: ModPhoasWf stage2.
+Lemma stage2_RegsWf: ModRegsWf stage2.
 Proof. kvr. Qed.
-Lemma stage3_RegsWf: ModPhoasWf stage3.
+Lemma stage3_RegsWf: ModRegsWf stage3.
 Proof. kvr. Qed.
 Hint Resolve stage1_RegsWf stage2_RegsWf stage3_RegsWf.
 
@@ -247,46 +248,16 @@ Hint Resolve impl_RegsWf.
 
 (*+ Correctness proof +*)
 
-(* begin hide *)
-Require Import Kami.ModuleBoundEx.
-(* end hide *)
-
 Theorem impl_ok: impl <<== spec.
 Abort.
 
-(* begin hide *)
-Ltac kmodular :=
-  try (unfold MethsT; rewrite <-SemFacts.idElementwiseId);
-  apply traceRefines_modular_interacting with
-  (vp := idElementwise (A:=_));
-  [ kequiv | kequiv | kequiv | kequiv
-   | kdisj_regs_ex O | kdisj_regs_ex O | kvr | kvr
-   | kdisj_dms_ex O | kdisj_cms_ex O | kdisj_dms_ex O | kdisj_cms_ex O
-   | kdisj_edms_cms_ex O | kdisj_ecms_dms_ex O
-   | kinteracting | | ].
-
-Ltac knoninteracting :=
-  split; [ kdisj_dms_cms_ex O | kdisj_cms_dms_ex O ].
-
-Ltac kmodularn :=
-  try (unfold MethsT; rewrite <- SemFacts.idElementwiseId);
-  apply traceRefines_modular_noninteracting;
-   [ kequiv | kequiv | kequiv | kequiv
-     | kdisj_regs_ex O | kdisj_regs_ex O | kvr | kvr
-     | kdisj_dms_ex O | kdisj_cms_ex O | kdisj_dms_ex O | kdisj_cms_ex O
-     | knoninteracting | knoninteracting
-     | | ].
-(* end hide *)
-
 (******************************************************************************)
 
-(*+ Substituting fifos to native-fifos +*)
+(*+ Substituting fifos with native-fifos +*)
 
 (** Why? The fifo implementation is not simple to deal with. *)
 Check simpleFifo.
 
-Require Import NativeFifo SimpleFifoCorrect.
-           
 Definition nfifo1 :=
   @nativeSimpleFifo "fifo1" (Bit dataSize) Default.
 Definition nfifo2 :=
@@ -310,7 +281,7 @@ Theorem impl_intSpec1: impl <<== intSpec1.
 Proof.
   ktrans ((stage1 ++ fifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
 
-  - ksimilar; vm_compute; intuition idtac.
+  - ksimilar; vm_compute; tauto.
   - kmodular.
     + kmodular.
       * krefl.
@@ -375,7 +346,7 @@ End PipelineInv.
 
 (******************************************************************************)
 
-(*+ Mergine the first two stages +*)
+(*+ Merging the first two stages +*)
 
 Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
 
@@ -418,15 +389,12 @@ Abort.
 
 (*+ Inlining +*)
 
-Definition impl12Inl: Modules * bool.
+Definition impl12Inl: {m: Modules & impl12 <<== m}.
 Proof.
-  remember (inlineF impl12) as inlined.
-  kinline_compute_in Heqinlined.
-  match goal with
-  | [H: inlined = ?m |- _] =>
-    exact m
-  end.
+  kinline_refine impl12.
 Defined.
+
+Eval simpl in projT1 impl12Inl.
 
 (******************************************************************************)
 
@@ -448,24 +416,25 @@ Record impl12_inv (o: RegsT) : Prop :=
 Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
-Ltac impl12_inv_old :=
+Ltac impl12_inv_dest_tac :=
   try match goal with
       | [H: impl12_inv _ |- _] => destruct H
       end;
   kinv_red.
 
-Ltac impl12_inv_new :=
+Ltac impl12_inv_constr_tac :=
   econstructor;
   try (findReify; (reflexivity || eassumption); fail);
   kregmap_clear.
 
-Ltac impl12_inv_tac := impl12_inv_old; impl12_inv_new.
+Ltac impl12_inv_tac :=
+  impl12_inv_dest_tac; impl12_inv_constr_tac.
 (* end hide *)
 
 Lemma impl12_inv_ok':
   forall init n ll,
-    init = initRegs (getRegInits (fst impl12Inl)) ->
-    Multistep (fst impl12Inl) init n ll ->
+    init = initRegs (getRegInits (projT1 impl12Inl)) ->
+    Multistep (projT1 impl12Inl) init n ll ->
     impl12_inv n.
 Proof.
   induction 2; [kinv_dest_custom impl12_inv_tac; simpl; auto|].
@@ -473,24 +442,27 @@ Proof.
   - mred.
   - mred.
   - kinv_dest_custom impl12_inv_tac.
-    change (x ^+ $1) with (next12 x).
     fold (pipeline_inv next12 f12) in *.
+    fold (@app (word dataSize)) in *.
+    change (x ^+ $1) with (next12 x).
     change x with (f12 x) in Hinv.
     change x with (f12 x) at 1.
     change (next12 x) with (f12 (next12 x)).
     apply pipeline_inv_enq; auto.
   - kinv_dest_custom impl12_inv_tac.
-    destruct x; [inv H3|]; subst.
     fold (pipeline_inv next12 f12) in *.
+    destruct x; [discriminate|]; subst.
     eapply pipeline_inv_deq; eauto.
 Qed.
 
 Lemma impl12_inv_ok:
   forall o,
-    reachable o (fst impl12Inl) ->
+    reachable o (projT1 impl12Inl) ->
     impl12_inv o.
 Proof.
-  intros; inv H; inv H0.
+  intros.
+  inv H.
+  inv H0.
   eapply impl12_inv_ok'; eauto.
 Qed.
 
@@ -501,35 +473,31 @@ Qed.
 Definition impl12_regMap (ir sr: RegsT): Prop.
   kexistv "data" datav ir (Bit dataSize).
   kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
-  refine (sr = (["data" <- existT _ (SyntaxKind (Bit dataSize)) _]%fmap)).
-  refine (hd datav eltv).
+  refine (sr = (["data" <- existT _ _ (hd datav eltv)]%fmap)).
 Defined.
 Hint Unfold impl12_regMap: MethDefs.
 
+Definition impl12_ruleMap (o: RegsT): string -> option string :=
+  "doDouble" |-> "produceDouble"; ||.
+Hint Unfold impl12_ruleMap: MethDefs.
+
 Lemma impl12_ok: impl12 <<== spec12.
 Proof.
-  kinline_left inlined.
+  kinline_refine_left impl12Inl.
 
-  kdecomposeR_nodefs impl12_regMap.
+  kdecomposeR_nodefs impl12_regMap impl12_ruleMap.
   kinv_add impl12_inv_ok.
   kinv_add_end.
   
   kinvert.
-  + kinv_action_dest.
-    kinv_regmap_red.
-    eexists; exists None; split; kinv_constr.
-    kinv_eq.
+  + kinv_magic_with impl12_inv_dest_tac idtac.
     destruct x0; auto.
-  + kinv_action_dest.
-    destruct Hr; dest.
-    kinv_regmap_red.
-    eexists; exists (Some "produceDouble"); split; kinv_constr.
-    * kinv_eq.
-      destruct x; [inv H2|reflexivity].
-    * destruct x as [|hd tl]; [inv H2|].
-      kinv_eq.
+  + kinv_magic_with impl12_inv_dest_tac idtac.
+    * destruct x; [discriminate|reflexivity].
+    * destruct x as [|hd tl]; [discriminate|].
       simpl in Hinv.
-      destruct tl; dest; subst; simpl in *; dest; subst; auto.
+      destruct tl; dest;
+        subst; simpl in *; dest; subst; auto.
 Qed.
 
 (******************************************************************************)
@@ -562,14 +530,9 @@ Proof. kvr. Qed.
 Hint Resolve impl123_RegsWf.
 (* end hide *)
 
-Definition impl123Inl: Modules * bool.
+Definition impl123Inl: {m: Modules & impl123 <<== m}.
 Proof.
-  remember (inlineF impl123) as inlined.
-  kinline_compute_in Heqinlined.
-  match goal with
-  | [H: inlined = ?m |- _] =>
-    exact m
-  end.
+  kinline_refine impl123.
 Defined.
 
 Definition next123 := fun w : word dataSize => w ^+ $1.
@@ -602,24 +565,25 @@ Record impl123_inv (o: RegsT) : Prop :=
 Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
-Ltac impl123_inv_old :=
+Ltac impl123_inv_dest_tac :=
   try match goal with
       | [H: impl123_inv _ |- _] => destruct H
       end;
   kinv_red.
 
-Ltac impl123_inv_new :=
+Ltac impl123_inv_constr_tac :=
   econstructor;
   try (findReify; (reflexivity || eassumption); fail);
   kregmap_clear.
 
-Ltac impl123_inv_tac := impl123_inv_old; impl123_inv_new.
+Ltac impl123_inv_tac :=
+  impl123_inv_dest_tac; impl123_inv_constr_tac.
 (* end hide *)
 
 Lemma impl123_inv_ok':
   forall init n ll,
-    init = initRegs (getRegInits (fst impl123Inl)) ->
-    Multistep (fst impl123Inl) init n ll ->
+    init = initRegs (getRegInits (projT1 impl123Inl)) ->
+    Multistep (projT1 impl123Inl) init n ll ->
     impl123_inv n.
 Proof.
   induction 2; [kinv_dest_custom impl123_inv_tac; simpl; auto|].
@@ -628,24 +592,27 @@ Proof.
   - mred.
   - mred.
   - kinv_dest_custom impl123_inv_tac.
-    change (x ^+ $1) with (next123 x).
     fold (pipeline_inv next123 f123) in *.
+    fold (@app (word dataSize)) in *.
+    change (x ^+ $1) with (next123 x).
     change ($2 ^* x) with (f123 x) in Hinv.
     change ($2 ^* x) with (f123 x).
     change ($2 ^* next123 x) with (f123 (next123 x)).
     apply pipeline_inv_enq; auto.
   - kinv_dest_custom impl123_inv_tac.
-    destruct x; [inv H3|]; subst.
     fold (pipeline_inv next123 f123) in *.
+    destruct x; [discriminate|]; subst.
     eapply pipeline_inv_deq; eauto.
 Qed.
 
 Lemma impl123_inv_ok:
   forall o,
-    reachable o (fst impl123Inl) ->
+    reachable o (projT1 impl123Inl) ->
     impl123_inv o.
 Proof.
-  intros; inv H; inv H0.
+  intros.
+  inv H.
+  inv H0.
   eapply impl123_inv_ok'; eauto.
 Qed.
 
@@ -662,32 +629,29 @@ Definition impl123_regMap (ir sr: RegsT): Prop.
 Defined.
 Hint Unfold impl123_regMap: MethDefs.
 
+Definition impl123_ruleMap (o: RegsT): string -> option string :=
+  "consume" |-> "accDoubles"; ||.
+Hint Unfold impl123_ruleMap: MethDefs.
+
 Lemma impl123_ok: impl123 <<== spec.
 Proof.
-  kinline_left inlined.
+  kinline_refine_left impl123Inl.
 
-  kdecomposeR_nodefs impl123_regMap.
+  kdecomposeR_nodefs impl123_regMap impl123_ruleMap.
   kinv_add impl123_inv_ok.
   kinv_add_end.
   
   kinvert.
-  + kinv_action_dest.
-    kinv_regmap_red.
-    eexists; exists None; split; kinv_constr.
-    kinv_eq.
+  + kinv_magic_with impl123_inv_dest_tac idtac.
     destruct x0; auto.
-  + kinv_action_dest.
-    destruct Hr; dest.
-    kinv_regmap_red.
-    eexists; exists (Some "accDoubles"); split; kinv_constr.
-    * simpl; destruct x; [inv H2|].
+  + kinv_magic_with impl123_inv_dest_tac idtac.
+    * simpl; destruct x; [discriminate|].
       simpl in *; subst.
       reflexivity.
-    * kinv_eq.
-      destruct x; [inv H2|].
+    * destruct x; [discriminate|].
       simpl in *; subst.
       reflexivity.
-    * destruct x as [|hd tl]; [inv H2|].
+    * destruct x as [|hd tl]; [discriminate|].
       change ($2 ^* (x5 ^+ $ (1))) with (f123 (next123 x5)).
       simpl in Hinv.
       destruct tl; simpl in *; dest; subst; auto.
@@ -719,8 +683,8 @@ End DataSizeAbs.
 
 (*+ Extraction +*)
 
-Require Import Kami.Synthesize Ext.BSyntax.
-Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
+(* TODO: did the capitalize change between some recent versions?
+*        I had to switch "OCaml" to "Ocaml". *)
 Extraction Language Ocaml.
 
 Set Extraction Optimize.

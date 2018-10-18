@@ -2834,8 +2834,9 @@ Ltac mapReify m :=
 Ltac findReify :=
   match goal with
   | [ |- context[M.find ?k ?m] ] =>
-    let rfd := mapReify m in
-    rewrite <-findMR_find with (mr:= rfd)
+    tryif is_evar m then idtac
+    else (let rfd := mapReify m in
+          rewrite <-findMR_find with (mr:= rfd))
   end; unfold findMR;
   repeat
     match goal with

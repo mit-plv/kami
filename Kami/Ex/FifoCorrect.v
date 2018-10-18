@@ -112,11 +112,11 @@ Section ToNative.
 
   Definition fifo_nfifo_eta (r: RegsT): option (sigT (fullType type)).
   Proof.
-    kgetv ^Names.elt eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
-    kgetv ^Names.empty emptyv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^Names.full fullv r Bool (None (A:= sigT (fullType type))).
-    kgetv ^Names.enqP enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
-    kgetv ^Names.deqP deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^"elt" eltv r (Vector dType rsz) (None (A:= sigT (fullType type))).
+    kgetv ^"empty" emptyv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^"full" fullv r Bool (None (A:= sigT (fullType type))).
+    kgetv ^"enqP" enqPv r (Bit rsz) (None (A:= sigT (fullType type))).
+    kgetv ^"deqP" deqPv r (Bit rsz) (None (A:= sigT (fullType type))).
 
     refine (Some (existT _ (listEltK dType type) _)).
     destruct (weq enqPv deqPv).
@@ -129,7 +129,7 @@ Section ToNative.
 
   Definition fifo_nfifo_theta (r: RegsT): RegsT :=
     match fifo_nfifo_eta r with
-    | Some er => M.add ^Names.elt er (M.empty _)
+    | Some er => M.add ^"elt" er (M.empty _)
     | None => M.empty _
     end.
   Hint Unfold fifo_nfifo_theta: MethDefs.
@@ -145,7 +145,7 @@ Section ToNative.
       CanCombineUL u1 u2 (getLabel ul1 cs1) (getLabel ul2 cs2) ->
       u1 = M.empty (sigT (fullType type)) \/
       u2 = M.empty (sigT (fullType type)).
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     intros.
     inv H; inv H0; auto; try inv HInRules.
     CommonTactics.dest_in; simpl in *; invertActionRep.
@@ -166,23 +166,22 @@ Section ToNative.
     - right; reflexivity.
     - right; reflexivity.
     - left; reflexivity.
-      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition fifo_inv_0 (o: RegsT): Prop.
   Proof.
-    kexistv ^Names.elt eltv o (Vector dType rsz).
-    kexistv ^Names.empty emptyv o Bool.
-    kexistv ^Names.full fullv o Bool.
-    kexistv ^Names.enqP enqPv o (Bit rsz).
-    kexistv ^Names.deqP deqPv o (Bit rsz).
+    kexistv ^"elt" eltv o (Vector dType rsz).
+    kexistv ^"empty" emptyv o Bool.
+    kexistv ^"full" fullv o Bool.
+    kexistv ^"enqP" enqPv o (Bit rsz).
+    kexistv ^"deqP" deqPv o (Bit rsz).
     exact True.
   Defined.
   Hint Unfold fifo_inv_0: InvDefs.
 
   Lemma fifo_inv_0_ok:
     forall o, reachable o fifo -> fifo_inv_0 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     apply decompositionInv.
     - simpl; kinv_action_dest.
       unfold initRegs, rawInitRegs, getRegInits; simpl.
@@ -193,15 +192,14 @@ Section ToNative.
       + kinv_magic_light.
       + kinv_magic_light.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Definition fifo_inv_1 (o: RegsT): Prop.
   Proof.
-    kexistv ^Names.empty emptyv o Bool.
-    kexistv ^Names.full fullv o Bool.
-    kexistv ^Names.enqP enqPv o (Bit rsz).
-    kexistv ^Names.deqP deqPv o (Bit rsz).
+    kexistv ^"empty" emptyv o Bool.
+    kexistv ^"full" fullv o Bool.
+    kexistv ^"enqP" enqPv o (Bit rsz).
+    kexistv ^"deqP" deqPv o (Bit rsz).
     refine (or3 _ _ _).
     - exact (emptyv = true /\ fullv = false /\ (if weq enqPv deqPv then true else false) = true).
     - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
@@ -213,7 +211,7 @@ Section ToNative.
     forall o,
       reachable o fifo ->
       fifo_inv_1 o.
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     apply decompositionInv.
     - simpl; kinv_action_dest.
       unfold initRegs, rawInitRegs, getRegInits; simpl.
@@ -253,14 +251,13 @@ Section ToNative.
         * or3_thd; repeat split; auto.
           destruct (weq _ _); auto; elim n; auto.
     - apply fifo_substeps_updates.
-      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma fifo_refines_nativefifo: fifo <<== nfifo.
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     apply decompositionOne with (eta:= fifo_nfifo_eta)
                                   (ruleMap:= fifo_nfifo_ruleMap)
-                                  (specRegName:= ^Names.elt).
+                                  (specRegName:= ^"elt").
 
     - kequiv.
     - unfold theta; kdecompose_regmap_init; kinv_finish.
@@ -607,12 +604,11 @@ Section ToNative.
         * clear HAction HAction0 Hsig Hsig0.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToNative.
 
-Definition dropFirstElt fifoName := dropP (fifoName -- Names.firstEltName).
+Definition dropFirstElt fifoName := dropP (fifoName -- "firstElt").
 
 Lemma substepsInd_getRules_nil_annot:
   forall m o u l,
@@ -639,7 +635,7 @@ Section ToSimple.
   Lemma fifo_refines_sfifo:
     (Fifo.fifo fifoName fifoSize dType)
       <<=[dropFirstElt fifoName] (Fifo.simpleFifo fifoName fifoSize dType).
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     apply stepRefinement with (ruleMap:= fifo_sfifo_ruleMap) (theta:= id); auto.
     intros o u l _ Hstep; exists u; split; auto; unfold id.
 
@@ -750,7 +746,6 @@ Section ToSimple.
             findeq_custom liftToMap1_find_tac;
               try (unfold dropFirstElt, dropP; rewrite string_eq_true; auto).
           }
-          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToSimple.
@@ -764,16 +759,16 @@ Section ToSimpleN.
 
   Definition nfifo_nsfifo_etaR (s: RegsT) (sv: option (sigT (fullType type))): Prop.
   Proof.
-    kexistnv ^Names.elt eltv s (listEltK dType type).
+    kexistnv ^"elt" eltv s (listEltK dType type).
     exact (sv = Some (existT _ _ eltv)).
   Defined.
 
   Lemma nfifo_refines_nsfifo:
     (nativeFifo fifoName default)
       <<=[dropFirstElt fifoName] (nativeSimpleFifo fifoName default).
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     apply decompositionOneR with
-    (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^Names.elt); auto.
+    (etaR:= nfifo_nsfifo_etaR) (ruleMap:= fun _ r => Some r) (specRegName:= ^"elt"); auto.
 
     - unfold thetaR; eexists; split.
       + unfold nfifo_nsfifo_etaR; eexists; split.
@@ -878,7 +873,6 @@ Section ToSimpleN.
           inv H4; inv H5; clear HAction HAction0 Hsig.
           invertActionRep; repeat split; simpl; auto.
         * exfalso; inv H2; inv H1; dest; simpl in *; findeq.
-          END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ToSimpleN.

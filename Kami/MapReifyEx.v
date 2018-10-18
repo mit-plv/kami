@@ -1,6 +1,8 @@
-Require Import Lib.Struct Lib.FMap List Lib.Word Lib.Nomega Arith Kami.ParametricSyntax String
-        Lib.Indexer Kami.Syntax Kami.Semantics Program.Equality Lib.CommonTactics
-        Kami.Tactics Kami.SymEvalTac Kami.SymEval Omega.
+Require Import List Arith String Omega.
+Require Import Lib.CommonTactics Lib.Struct Lib.FMap Lib.StringEq Lib.Word Lib.Nomega Lib.Indexer.
+Require Import Kami.Syntax Kami.Semantics Kami.Tactics Kami.SymEvalTac Kami.SymEval.
+Require Import Kami.ParametricSyntax.
+Require Import Program.Equality.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -30,7 +32,6 @@ Section ConvMakeMap.
 End ConvMakeMap.
 
 Section MapVar.
-  Require Import Lib.StringEq.
   Variable n: nat.
   Variable A: Type.
   Variable f1 f2: A -> Type.

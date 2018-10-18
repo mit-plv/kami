@@ -497,7 +497,11 @@ Section SinModuleDup.
             apply in_or_app; right.
             apply in_or_app; left.
             simpl; auto.
-          * unfold getMethFromGen; simpl; f_equal.
+          * unfold getMethFromGen; simpl.
+            match goal with
+            | [ |- existT _ _ ?l = existT _ _ ?r ] =>
+              replace r with l; [reflexivity|]
+            end.
             extensionality ty; extensionality v.
             change (getSinAction (projT2 arg ty v)) with (projT2 (getMethFromSin arg) ty v).
             change (@projT1 SignatureT SinMethodT arg) with
@@ -543,7 +547,11 @@ Section SinModuleDup.
         + rewrite specializer_dom; auto.
           * f_equal; simpl.
             unfold getMethFromGen; simpl.
-            f_equal; extensionality ty; extensionality v.
+            match goal with
+            | [ |- existT _ _ ?l = existT _ _ ?r ] =>
+              replace r with l; [reflexivity|]
+            end.
+            extensionality ty; extensionality v.
             change (getSinAction (projT2 arg ty v)) with (projT2 (getMethFromSin arg) ty v).
             change (@projT1 SignatureT SinMethodT arg) with
             (@projT1 SignatureT MethodT (getMethFromSin arg)).
