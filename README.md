@@ -1,7 +1,7 @@
 Kami: A Coq Framework to Support Implementing and Verifying Bluespec-style Hardware Components
 ==============================================================================================
 
-This repository (the "master" branch) contains the source code of Kami.
+This repository (the "coq-8.8" branch) contains the source code of Kami.
 
 Directory content
 -----------------
