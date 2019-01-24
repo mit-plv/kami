@@ -22,7 +22,7 @@ Requirements
 ------------
 
 ### To Verify Kami modules
-- Coq 8.8.x (x=[0|1|2], with $PATH containing the standard Coq binaries)
+- Coq 8.9.0 or 8.8.x (x=[0|1|2]), with $PATH containing the standard Coq binaries)
 
 ### To Generate Bluespec programs
 - OCaml 4.0.4 (with $PATH containing the standard OCaml binaries)
