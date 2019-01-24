@@ -467,7 +467,7 @@ Ltac kinline_compute :=
                getCalls getCallsR getCallsM getCallsA
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
-               eqb existsb andb orb negb];
+               Bool.eqb existsb andb orb negb];
   kstring_simpl;
   repeat
     match goal with
@@ -492,7 +492,7 @@ Ltac kinline_compute_in H :=
                getCalls getCallsR getCallsM getCallsA
                ret arg fst snd projT1 projT2
                string_in string_eq ascii_eq
-               eqb existsb andb orb negb] in H;
+               Bool.eqb existsb andb orb negb] in H;
   kstring_simpl;
   repeat
     match type of H with
