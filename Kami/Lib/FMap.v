@@ -2842,7 +2842,7 @@ Ltac findReify :=
     match goal with
     | [ |- context[string_eq ?s ?s] ] =>
       rewrite string_eq_true
-    end; cbv [string_eq ascii_eq eqb andb].
+    end; cbv [string_eq ascii_eq Bool.eqb andb].
 
 (* NOTE: using f_equal instead of below destructs values also, which may generate
  * subgoals that cannot be proven. In that case, use this reflection. 

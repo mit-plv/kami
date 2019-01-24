@@ -152,16 +152,16 @@ Section ProcThreeStDec.
                (if w2dfv then w2deltv
                 else if stallv then evalExpr (d2eCurPc _ stalledv)
                      else if e2wfv then
-                            (if eqb eev (evalExpr (d2eEpoch _ (evalExpr (e2wDecInst _ e2weltv))))
+                            (if Bool.eqb eev (evalExpr (d2eEpoch _ (evalExpr (e2wDecInst _ e2weltv))))
                              then evalExpr (d2eCurPc _ (evalExpr (e2wDecInst _ e2weltv)))
                              else
                                (if d2efv then
-                                 (if eqb eev (evalExpr (d2eEpoch _ d2eeltv))
+                                 (if Bool.eqb eev (evalExpr (d2eEpoch _ d2eeltv))
                                   then evalExpr (d2eCurPc _ d2eeltv)
                                   else pcv)
                                 else pcv))
                           else if d2efv then
-                                 (if eqb eev (evalExpr (d2eEpoch _ d2eeltv))
+                                 (if Bool.eqb eev (evalExpr (d2eEpoch _ d2eeltv))
                                   then evalExpr (d2eCurPc _ d2eeltv)
                                   else pcv)
                                else pcv)])%fmap)%mapping.

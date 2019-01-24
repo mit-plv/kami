@@ -7,8 +7,9 @@ Definition ascii_eq (a1 a2: Ascii.ascii): bool :=
   match a1, a2 with
   | Ascii.Ascii b1 b2 b3 b4 b5 b6 b7 b8,
     Ascii.Ascii c1 c2 c3 c4 c5 c6 c7 c8 =>
-    (eqb b1 c1) && (eqb b2 c2) && (eqb b3 c3) && (eqb b4 c4) &&
-                (eqb b5 c5) && (eqb b6 c6) && (eqb b7 c7) && (eqb b8 c8)
+    (Bool.eqb b1 c1)
+      && (Bool.eqb b2 c2) && (Bool.eqb b3 c3) && (Bool.eqb b4 c4)
+      && (Bool.eqb b5 c5) && (Bool.eqb b6 c6) && (Bool.eqb b7 c7) && (Bool.eqb b8 c8)
   end.
 
 Fixpoint string_eq (s1 s2: string): bool :=
@@ -30,7 +31,7 @@ Proof.
   repeat
     match goal with
     | [H: _ && _ = true |- _] => apply andb_true_iff in H; destruct H
-    | [H: eqb _ _ = true |- _] => apply eqb_prop in H; subst
+    | [H: Bool.eqb _ _ = true |- _] => apply eqb_prop in H; subst
     end.
   reflexivity.
 Qed.

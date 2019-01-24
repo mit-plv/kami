@@ -309,7 +309,7 @@ Section Rep.
     match a with
     | GMCall name sig _ cont =>
       ((negb (string_eq (nameVal (nameRec name)) (nameVal (nameRec dmn)) &&
-                        eqb (isRep name) (isRep dmn)))
+                        Bool.eqb (isRep name) (isRep dmn)))
        || (if SignatureT_dec sig dsig then false else true))
         && (noCallDmSigGenA (cont tt) dmn dsig)
     | GIndex c => noCallDmSigGenA (c tt) dmn dsig
@@ -434,7 +434,7 @@ Section Rep.
     induction a; simpl in *; intros; auto; f_equal; try extensionality v; auto.
     unfold getGenGenBody, getBody, strFromName; simpl in *.
     destruct meth; destruct nameRec0; simpl in *; subst.
-    unfold andb, eqb; subst; simpl in *; simpl.
+    unfold andb, Bool.eqb; subst; simpl in *; simpl.
     destruct isRep0; simpl in *; subst.
     - case_eq (string_eq nameVal0 dn); intros; subst; simpl in *.
       + apply eq_sym in H0; apply string_eq_dec_eq in H0; subst; simpl in *.
@@ -832,7 +832,7 @@ Section Sin.
     induction a; simpl in *; intros; auto; f_equal; try extensionality v; auto.
     unfold getGenSinBody, getBody, strFromName; simpl in *.
     destruct meth; destruct nameRec0; simpl in *; subst.
-    unfold andb, eqb; subst; simpl in *; simpl.
+    unfold andb, Bool.eqb; subst; simpl in *; simpl.
     destruct isRep0; simpl in *; subst.
     - case_eq (string_eq nameVal0 dn); intros; subst; simpl in *.
       + apply eq_sym in H0; apply string_eq_dec_eq in H0; subst; simpl in *.
