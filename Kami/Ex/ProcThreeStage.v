@@ -283,15 +283,53 @@ Section ProcThreeStage.
                                      Expr ty (SyntaxKind (Bit addrSize)).
 
   Section FetchDecode.
-    Variables (pcInit : ConstT (Bit addrSize))
-              (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
+    Variable (pcInit : ConstT (Bit addrSize)).
+
+    Definition pgmLdRs := pgmLdRs dataBytes.
+    Definition PgmLdRs := PgmLdRs dataBytes.
     
     Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- pcInit
-      with Register "pgm" : Vector (Data dataBytes) iaddrSize <- pgmInit
+      with Register "pinit" : Bool <- Default
+      with Register "pinitOfs" : Bit iaddrSize <- Default
+      with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
       with Register "fEpoch" : Bool <- false
-                                    
+
+      (** Phase 1: initialize the program [pinit == false] *)
+
+      with Rule "rqInit" :=
+        Read pinit <- "pinit";
+        Assert !#pinit;
+        Call pgmLdRq ();
+        Retv
+
+      with Rule "rsInitCont" :=
+        Read pinit <- "pinit";
+        Assert !#pinit;
+        Call irs <- pgmLdRs ();
+        Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+        Read pgm <- "pgm";
+        Assert !#irs!PgmLdRs@."isEnd";
+        Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+        Write "pinitOfs" <- #pinitOfs + $1;
+        Retv
+
+      with Rule "rsInitEnd" :=
+        Read pinit <- "pinit";
+        Assert !#pinit;
+        Call irs <- pgmLdRs ();
+        Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+        Read pgm <- "pgm";
+        Assert #irs!PgmLdRs@."isEnd";
+        Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+        Write "pinit" <- !#pinit;
+        Retv
+
+      (** Phase 2: fetch/decode the program [pinit == true] *)
+          
       with Rule "modifyPc" :=
+        Read pinit <- "pinit";
+        Assert #pinit;
         Call correctPc <- w2dDeq();
         Write "pc" <- #correctPc;
         Read pEpoch <- "fEpoch";
@@ -299,10 +337,12 @@ Section ProcThreeStage.
         Retv
           
       with Rule "instFetchLd" :=
+        Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
+        Assert #pinit;
         LET rawInst <- #pgm@[alignPc _ ppc];
         Call rf <- getRf1();
 
@@ -327,10 +367,12 @@ Section ProcThreeStage.
         Retv
 
       with Rule "instFetchSt" :=
+        Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
+        Assert #pinit;
         LET rawInst <- #pgm@[alignPc _ ppc];
         Call rf <- getRf1();
 
@@ -355,35 +397,13 @@ Section ProcThreeStage.
                             #rawInst #ppc #npc #epoch);
         Retv
 
-      with Rule "instFetchTh" :=
-        Call w2dFull <- w2dFull();
-        Assert !#w2dFull;
-        Read ppc : Bit addrSize <- "pc";
-        Read pgm <- "pgm";
-        LET rawInst <- #pgm@[alignPc _ ppc];
-        Call rf <- getRf1();
-
-        LET npc <- predictNextPc _ ppc;
-        Read epoch <- "fEpoch";
-        Write "pc" <- #npc;
-
-        LET opType <- getOptype _ rawInst;
-        Assert (#opType == $$opTh);
-
-        LET srcIdx <- getSrc1 _ rawInst;
-        Call stall1 <- sbSearch1_Th(#srcIdx);
-        Assert !#stall1;
-
-        LET srcVal <- #rf@[#srcIdx];
-        Call d2eEnq(d2ePack #opType $$Default $$Default #srcVal $$Default
-                            #rawInst #ppc #npc #epoch);
-        Retv
-
       with Rule "instFetchNm" :=
+        Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
         Read ppc : Bit addrSize <- "pc";
         Read pgm <- "pgm";
+        Assert #pinit;
         LET rawInst <- #pgm@[alignPc _ ppc];
         Call rf <- getRf1();
 
@@ -564,24 +584,6 @@ Section ProcThreeStage.
         LET rawInst <- d2eRawInst _ stalled;
         checkNextPc ppc npcp rf rawInst
                                 
-      with Rule "execToHost" :=
-        Read stall <- "stall";
-        Assert !#stall;
-        Call rf <- getRf2();
-        Call e2w <- e2wDeq();
-        LET d2e <- e2wDecInst _ e2w;
-
-        LET fEpoch <- d2eEpoch _ d2e;
-        Call eEpoch <- getEpoch();
-        Assert (#fEpoch == #eEpoch);
-
-        Assert d2eOpType _ d2e == $$opTh;
-        Call toHost(d2eVal1 _ d2e);
-        LET ppc <- d2eCurPc _ d2e;
-        LET npcp <- d2eNextPc _ d2e;
-        LET rawInst <- d2eRawInst _ d2e;
-        checkNextPc ppc npcp rf rawInst
-
       with Rule "wbNm" :=
         Read stall <- "stall";
         Assert !#stall;
@@ -627,8 +629,8 @@ Section ProcThreeStage.
     
   End WriteBack.
 
-  Definition procThreeStage (init: ProcInit addrSize iaddrSize dataBytes rfIdx) :=
-    ((fetchDecode (pcInit init) (pgmInit init))
+  Definition procThreeStage (init: ProcInit addrSize dataBytes rfIdx) :=
+    ((fetchDecode (pcInit init))
        ++ regFile (rfInit init)
        ++ scoreBoard
        ++ oneEltFifo d2eFifoName d2eElt
@@ -641,7 +643,7 @@ Section ProcThreeStage.
 End ProcThreeStage.
 
 Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep
+Hint Unfold RqFromProc RsToProc pgmLdRs PgmLdRs memReq memRep
      d2eFifoName d2eEnq d2eDeq
      w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
@@ -826,10 +828,10 @@ Section Facts.
   Hint Resolve oneEltFifoEx2_ModEquiv.
 
   Lemma fetchDecode_ModEquiv:
-    forall pcInit pgmInit,
+    forall pcInit,
       ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                              alignPc d2ePack predictNextPc pcInit pgmInit).
+                              alignPc d2ePack predictNextPc pcInit).
   Proof.
     kequiv.
   Qed.

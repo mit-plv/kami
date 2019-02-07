@@ -76,15 +76,14 @@ Section Invariants.
                  evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                  evalExpr epoch).
 
-  Variables (pcInit : ConstT (Bit addrSize))
-            (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
+  Variables (pcInit : ConstT (Bit addrSize)).
   
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
                                          getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
                                          getSrc1 getSrc2 getDst alignPc predictNextPc
                                          d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                                         pcInit pgmInit).
+                                         pcInit).
 
   Definition fetchDecode_inv_body
              (pcv: fullType type (SyntaxKind (Bit addrSize)))

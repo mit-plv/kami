@@ -70,7 +70,7 @@ Section Inlined.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data dataBytes))).
 
-  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition p3st := p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc

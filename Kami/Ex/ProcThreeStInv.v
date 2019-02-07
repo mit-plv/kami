@@ -101,7 +101,7 @@ Section Invariants.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
-  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
@@ -185,8 +185,6 @@ Section Invariants.
        evalExpr (d2eDst _ nexteltv) <> evalExpr (getStVSrc _ (evalExpr (d2eRawInst _ preveltv))))) /\
      (evalExpr (d2eOpType _ preveltv) = opLd ->
       evalExpr (d2eDst _ nexteltv) <> evalExpr (getLdSrc _ (evalExpr (d2eRawInst _ preveltv)))) /\
-     (evalExpr (d2eOpType _ preveltv) = opTh ->
-      evalExpr (d2eDst _ nexteltv) <> evalExpr (getSrc1 _ (evalExpr (d2eRawInst _ preveltv)))) /\
      (evalExpr (d2eOpType _ preveltv) = opNm ->
       (evalExpr (d2eDst _ nexteltv) <> evalExpr (getSrc1 _ (evalExpr (d2eRawInst _ preveltv))) /\
        evalExpr (d2eDst _ nexteltv) <> evalExpr (getSrc2 _ (evalExpr (d2eRawInst _ preveltv)))))).
@@ -232,8 +230,6 @@ Section Invariants.
       evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
                            (rfv (evalExpr (getStSrc _ rawInst)))) /\
       evalExpr (d2eVal1 _ d2eeltv) = rfv (evalExpr (getStVSrc _ rawInst)))) /\
-    (evalExpr (d2eOpType _ d2eeltv) = opTh ->
-     evalExpr (d2eVal1 _ d2eeltv) = rfv (evalExpr (getSrc1 _ rawInst))) /\
     (evalExpr (d2eOpType _ d2eeltv) = opNm ->
      (evalExpr (d2eDst _ d2eeltv) = evalExpr (getDst _ rawInst) /\
       evalExpr (d2eVal1 _ d2eeltv) = rfv (evalExpr (getSrc1 _ rawInst)) /\

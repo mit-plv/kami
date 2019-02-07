@@ -110,14 +110,14 @@ Section ProcFDE.
     (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                         Expr ty (SyntaxKind (Data dataBytes))).
 
-  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition fetchDecode := ProcFetchDecode.fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
                               getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                              (pcInit init) (pgmInit init).
+                              (pcInit init).
 
   Definition p4st := (fetchDecode
                         ++ regFile (rfInit init)

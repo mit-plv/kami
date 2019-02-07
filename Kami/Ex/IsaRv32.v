@@ -90,16 +90,13 @@ Section RV32IM.
   Definition rv32iAddrSize := 11. (* 2^11 memory cells *)
   Definition rv32iIAddrSize := 8. (* 2^8 = 256 program size *)
 
-  Definition opcode_TOHOST: Opcode := 8%Z. (* custom-0 opcode *)
-
   (** * FIXME: Make distinctions among LW/LH/LB or SW/SH/SB. *)
   Section Decode.
 
     Definition rv32iGetOptype: OptypeT rv32iDataBytes.
       unfold OptypeT; intros ty inst.
       refine (IF (getOpcodeE #inst == $opcode_LOAD) then $$opLd else _)%kami_expr.
-      refine (IF (getOpcodeE #inst == $opcode_STORE) then $$opSt else _)%kami_expr.
-      refine (IF (getOpcodeE #inst == $opcode_TOHOST) then $$opTh else $$opNm)%kami_expr.
+      refine (IF (getOpcodeE #inst == $opcode_STORE) then $$opSt else $$opNm)%kami_expr.
     Defined.
 
     Definition rv32iGetLdDst: LdDstT rv32iDataBytes rv32iRfIdx.
@@ -341,8 +338,7 @@ Section RV32IStruct.
   | BLTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | BGTZ (rs1: Gpr) (ofs: word 12): Rv32i
   | J (ofs: word 20): Rv32i
-  | NOP: Rv32i
-  | TOHOST (rs1: Gpr): Rv32i.
+  | NOP: Rv32i.
 
   Local Infix "~~" := combine (at level 0).
 
@@ -407,8 +403,6 @@ Section RV32IStruct.
     | BGTZ rs1 ofs => SBtypeToRaw opcode_BRANCH x0 rs1 funct3_BLT ofs
     | J ofs => UJtypeToRaw opcode_JAL x0 ofs
     | NOP => ItypeToRaw opcode_OP_IMM_32 x0 x0 funct3_ADDI (wzero _)
-    (* custom instructions *)
-    | TOHOST rs1 => RtypeToRaw opcode_TOHOST rs1 x0 x0 funct7_ADD funct3_ADD
     end.
 
 End RV32IStruct.

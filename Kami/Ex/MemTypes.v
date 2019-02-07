@@ -25,7 +25,8 @@ Section MsgTypes.
   Variables DataBytes LgNumDatas LgNumChildren: nat.
   Variable Addr Id: Kind.
   Definition Child := Bit LgNumChildren.
-  Definition Data := Bit (DataBytes * 8).
+  Definition BitsPerByte := 8.
+  Definition Data := Bit (DataBytes * BitsPerByte).
   Definition Line := Vector Data LgNumDatas.
 
   Definition RqFromProc := STRUCT {

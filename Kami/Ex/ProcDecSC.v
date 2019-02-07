@@ -34,7 +34,7 @@ Section ProcDecSC.
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc

@@ -32,7 +32,7 @@ Section ProcDecSCN.
             (alignAddr: AlignAddrT addrSize).
 
   Variable n: nat.
-  Variable (inits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
+  Variable (inits: list (ProcInit addrSize dataBytes rfIdx)).
   
   Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc

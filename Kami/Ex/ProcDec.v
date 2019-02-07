@@ -6,10 +6,9 @@ Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAtomic.
 
 Set Implicit Arguments.
 
-(* A decoupled processor Pdec, where data memory is detached
+(* A memory-decoupled, in-order processor Pdec, where data memory is detached
  * so load/store requests may not be responded in a cycle.
- * This processor does NOT use a ROB, which implies that it just stalls
- * until getting a memory operation response.
+ * It just stalls until it gets a memory operation response.
  *)
 Section ProcDec.
   Variable inName outName: string.
@@ -39,26 +38,63 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
-  Definition toHost := MethodSig "toHost"(Data dataBytes) : Void.
+  Definition pgmLdRs := pgmLdRs dataBytes.
+  Definition PgmLdRs := PgmLdRs dataBytes.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
-  Variable (procInit: ProcInit addrSize iaddrSize dataBytes rfIdx).
-  
+  Variable (procInit: ProcInit addrSize dataBytes rfIdx).
+
   Definition procDec := MODULE {
     Register "pc" : Bit addrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- (pgmInit procInit)
+    with Register "pinit" : Bool <- Default
+    with Register "pinitOfs" : Bit iaddrSize <- Default
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
     with Register "stall" : Bool <- false
-                                 
+
+    (** Phase 1: initialize the program [pinit == false] *)
+
+    with Rule "rqInit" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call pgmLdRq ();
+      Retv
+
+    with Rule "rsInitCont" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert !#irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinitOfs" <- #pinitOfs + $1;
+      Retv
+
+    with Rule "rsInitEnd" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert #irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinit" <- !#pinit;
+      Retv
+
+    (** Phase 2: execute the program [pinit == true] *)
+
     with Rule "reqLd" :=
       Read stall <- "stall";
       Assert !#stall;
       Read ppc : Bit addrSize <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
@@ -78,7 +114,9 @@ Section ProcDec.
       Assert !#stall;
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
@@ -90,7 +128,9 @@ Section ProcDec.
       Assert !#stall;
       Read ppc : Bit addrSize <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm @[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
@@ -109,7 +149,9 @@ Section ProcDec.
       Call val <- memRep();
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm @[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
@@ -121,31 +163,22 @@ Section ProcDec.
       Call val <- memRep();
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm @[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       Write "stall" <- $$false;
       nextPc ppc rf rawInst
                       
-    with Rule "execToHost" :=
-      Read stall <- "stall";
-      Assert !#stall;
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pgm <- "pgm";
-      LET rawInst <- #pgm @[alignPc _ ppc];
-      Assert (getOptype _ rawInst == $$opTh);
-      LET valIdx <- getSrc1 _ rawInst;
-      LET val <- #rf@[#valIdx];
-      Call toHost(#val);
-      nextPc ppc rf rawInst
-
     with Rule "execNm" :=
       Read stall <- "stall";
       Assert !#stall;
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm @[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
@@ -163,7 +196,9 @@ Section ProcDec.
       Assert !#stall;
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm @[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
@@ -174,7 +209,7 @@ Section ProcDec.
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep toHost nextPc : MethDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep pgmLdRs PgmLdRs nextPc : MethDefs.
 
 Section ProcDecM.
   Variables addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
@@ -203,15 +238,15 @@ Section ProcDecM.
             getStAddr getStSrc calcStAddr getStVSrc
             getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
 
-  Variables (procInits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
+  Variables (procInits: list (ProcInit addrSize dataBytes rfIdx)).
 
   Definition pdecs (i: nat) :=
-    duplicate (fun iv => pdec (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+    duplicate (fun iv => pdec (nth_default (procInitDefault addrSize dataBytes rfIdx)
                                            procInits iv)) i.
 
   Definition pdecf init := (pdec init ++ iom addrSize fifoSize dataBytes)%kami.
   Definition pdecfs (i: nat) :=
-    duplicate (fun iv => pdecf (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+    duplicate (fun iv => pdecf (nth_default (procInitDefault addrSize dataBytes rfIdx)
                                             procInits iv)) i.
   Definition procDecM (n: nat) := (pdecfs n ++ minst addrSize dataBytes n)%kami.
 

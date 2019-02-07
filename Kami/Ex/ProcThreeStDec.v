@@ -102,7 +102,7 @@ Section ProcThreeStDec.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
-  Variable (init: ProcInit addrSize iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition p3st := ProcThreeStage.p3st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr

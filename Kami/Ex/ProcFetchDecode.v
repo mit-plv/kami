@@ -111,15 +111,53 @@ Section FetchAndDecode.
   Definition sbSearch3_Nm := sbSearch3_Nm rfIdx.
   Definition sbInsert := sbInsert rfIdx.
 
-  Variables (pcInit : ConstT (Bit addrSize))
-            (pgmInit : ConstT (Vector (Data dataBytes) iaddrSize)).
+  Definition pgmLdRs := pgmLdRs dataBytes.
+  Definition PgmLdRs := PgmLdRs dataBytes.
+
+  Variables (pcInit : ConstT (Bit addrSize)).
   
   Definition fetcher := MODULE {
     Register "pc" : Bit addrSize <- pcInit
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- pgmInit
+    with Register "pinit" : Bool <- Default
+    with Register "pinitOfs" : Bit iaddrSize <- Default
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
     with Register "fEpoch" : Bool <- false
 
+    (** Phase 1: initialize the program [pinit == false] *)
+
+    with Rule "rqInit" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call pgmLdRq ();
+      Retv
+
+    with Rule "rsInitCont" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert !#irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinitOfs" <- #pinitOfs + $1;
+      Retv
+
+    with Rule "rsInitEnd" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert #irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinit" <- !#pinit;
+      Retv
+
+    (** Phase 2: execute the program [pinit == true] *)
+                                  
     with Rule "modifyPc" :=
+      Read pinit <- "pinit";
+      Assert #pinit;
       Call correctPc <- w2dDeq();
       Write "pc" <- #correctPc;
       Read pEpoch <- "fEpoch";
@@ -128,6 +166,8 @@ Section FetchAndDecode.
       Retv
 
     with Rule "instFetch" :=
+      Read pinit <- "pinit";
+      Assert #pinit;
       Read pc <- "pc";
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
@@ -194,29 +234,6 @@ Section FetchAndDecode.
                           #rawInst #curPc #nextPc #epoch);
       Retv
 
-    with Rule "decodeTh" :=
-      Call w2dFull <- w2dFull();
-      Assert !#w2dFull;
-      Call f2d <- f2dDeq();
-      Call rf <- getRf1();
-
-      LET rawInst <- f2dRawInst _ f2d;
-
-      LET opType <- getOptype _ rawInst;
-      Assert (#opType == $$opTh);
-
-      LET srcIdx <- getSrc1 _ rawInst;
-      Call stall1 <- sbSearch1_Th(#srcIdx);
-      Assert !#stall1;
-
-      LET srcVal <- #rf@[#srcIdx];
-      LET curPc <- f2dCurPc _ f2d;
-      LET nextPc <- f2dNextPc _ f2d;
-      LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType $$Default $$Default #srcVal $$Default
-                          #rawInst #curPc #nextPc #epoch);
-      Retv
-
     with Rule "decodeNm" :=
       Call w2dFull <- w2dFull();
       Assert !#w2dFull;
@@ -258,7 +275,8 @@ Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Th
-     sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm sbInsert : MethDefs.
+     sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm sbInsert
+     pgmLdRs PgmLdRs : MethDefs.
   
 Section Facts.
   Variables addrSize iaddrSize dataBytes rfIdx: nat.
@@ -315,7 +333,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit pgmInit, ModPhoasWf (fetcher alignPc predictNextPc f2dPack pcInit pgmInit).
+    forall pcInit, ModPhoasWf (fetcher alignPc predictNextPc f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -329,11 +347,11 @@ Section Facts.
   Hint Resolve decoder_ModEquiv.
 
   Lemma fetchDecode_ModEquiv:
-    forall pcInit pgmInit,
+    forall pcInit,
       ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
                               getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit pgmInit).
+                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit).
   Proof.
     kequiv.
   Qed.

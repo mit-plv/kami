@@ -23,7 +23,6 @@ Section DecExec.
 
   Definition opLd := WO~0~0.
   Definition opSt := WO~0~1.
-  Definition opTh := WO~1~0.
   Definition opNm := WO~1~1.
   
   Definition OptypeK := SyntaxKind (Bit 2).
@@ -103,7 +102,7 @@ Section DecExec.
   
 End DecExec.
 
-Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opTh opNm
+Hint Unfold OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
@@ -134,11 +133,13 @@ Section MemInst.
   Definition memInstM := META {
     Register "mem" : Vector (Data dataBytes) addrSize <- Default
 
-    with Repeat Method till n by "exec" (a : Struct RqFromProc) : Struct RsToProc :=
+    with Repeat Method till n by "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
       (memInstExec a)
   }.
     
   Definition memInst := modFromMeta memInstM.
+
+  Definition memOp := MethodSig "memOp"(Struct RqFromProc) : Struct RsToProc.
   
 End MemInst.
 
@@ -167,30 +168,76 @@ Section ProcInst.
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
-  Definition execCm := MethodSig "exec"(Struct (RqFromProc addrSize dataBytes)) : Struct (RsToProc dataBytes).
-  Definition toHostCm := MethodSig "toHost"(Data dataBytes) : Bit 0.
-
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
   Record ProcInit := { pcInit : ConstT (Bit addrSize);
-                       rfInit : ConstT (Vector (Data dataBytes) rfIdx);
-                       pgmInit : ConstT (Vector (Data dataBytes) iaddrSize) }.
+                       rfInit : ConstT (Vector (Data dataBytes) rfIdx)
+                     }.
   Definition procInitDefault :=
-    {| pcInit := Default; rfInit := Default; pgmInit := Default |}.
-    
+    {| pcInit := Default; rfInit := Default |}.
+
+  Local Notation memOp := (memOp addrSize dataBytes).
+
+  Definition pgmLdRq :=
+    MethodSig "pgmLdRq"(Void) : Void.
+
+  Definition PgmLdRs :=
+    STRUCT { "data" :: Data dataBytes;
+             "isEnd" :: Bool
+           }.
+  Definition pgmLdRs :=
+    MethodSig "pgmLdRs"(): Struct PgmLdRs.
+  
   Variables (procInit: ProcInit).
 
   Definition procInst := MODULE {
     Register "pc" : Bit addrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- (pgmInit procInit)
 
+    with Register "pinit" : Bool <- Default
+    with Register "pinitOfs" : Bit iaddrSize <- Default
+    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+
+    (** Phase 1: initialize the program [pinit == false] *)
+
+    with Rule "rqInit" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call pgmLdRq ();
+      Retv
+
+    with Rule "rsInitCont" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert !#irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinitOfs" <- #pinitOfs + $1;
+      Retv
+
+    with Rule "rsInitEnd" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Call irs <- pgmLdRs ();
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm <- "pgm";
+      Assert #irs!PgmLdRs@."isEnd";
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pinit" <- !#pinit;
+      Retv
+
+    (** Phase 2: execute the program [pinit == true] *)
+        
     with Rule "execLd" :=
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
@@ -199,16 +246,18 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- execCm(STRUCT { "addr" ::= alignAddr _ laddr;
-                                    "op" ::= $$false;
-                                    "data" ::= $$Default });
+      Call ldRep <- memOp(STRUCT { "addr" ::= alignAddr _ laddr;
+                                   "op" ::= $$false;
+                                   "data" ::= $$Default });
       Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
@@ -218,7 +267,9 @@ Section ProcInst.
     with Rule "execSt" :=
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
@@ -227,26 +278,17 @@ Section ProcInst.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call execCm(STRUCT { "addr" ::= alignAddr _ saddr;
-                           "op" ::= $$true;
-                           "data" ::= #stVal });
-      nextPc ppc rf rawInst
-
-    with Rule "execToHost" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pgm <- "pgm";
-      LET rawInst <- #pgm@[alignPc _ ppc];
-      Assert (getOptype _ rawInst == $$opTh);
-      LET valIdx <- getSrc1 _ rawInst;
-      LET val <- #rf@[#valIdx];
-      Call toHostCm(#val);
+      Call memOp(STRUCT { "addr" ::= alignAddr _ saddr;
+                          "op" ::= $$true;
+                          "data" ::= #stVal });
       nextPc ppc rf rawInst
 
     with Rule "execNm" :=
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
@@ -262,7 +304,9 @@ Section ProcInst.
     with Rule "execNmZ" :=
       Read ppc <- "pc";
       Read rf <- "rf";
+      Read pinit <- "pinit";
       Read pgm <- "pgm";
+      Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
@@ -272,7 +316,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold execCm toHostCm nextPc procInitDefault : MethDefs.
+Hint Unfold memOp nextPc procInitDefault pgmLdRq pgmLdRs PgmLdRs : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -302,9 +346,9 @@ Section SC.
                                getStAddr getStSrc calcStAddr getStVSrc
                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
 
-  Variables (procInits: list (ProcInit addrSize iaddrSize dataBytes rfIdx)).
+  Variables (procInits: list (ProcInit addrSize dataBytes rfIdx)).
   Definition pinsts (i: nat): Modules :=
-    duplicate (fun iv => pinst (nth_default (procInitDefault addrSize iaddrSize dataBytes rfIdx)
+    duplicate (fun iv => pinst (nth_default (procInitDefault addrSize dataBytes rfIdx)
                                             procInits iv)) i.
   Definition minst := memInst n addrSize dataBytes.
 
