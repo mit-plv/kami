@@ -143,8 +143,52 @@ Section MemInst.
   
 End MemInst.
 
-Hint Unfold RqFromProc RsToProc memInstExec : MethDefs.
-Hint Unfold memInstM memInst : ModuleDefs.
+Section MMIO.
+  Variable addrSize: nat.
+  Variable dataBytes: nat.
+
+  Definition IsMMIOE (ty: Kind -> Type) := Expr ty (SyntaxKind Bool).
+  Definition IsMMIOT :=
+    forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> IsMMIOE ty.
+
+  Variable (isMMIO: IsMMIOT).
+
+  Local Notation RqFromProc := (RqFromProc addrSize dataBytes).
+  Local Notation RsToProc := (RsToProc dataBytes).
+
+  Definition mmioExec :=
+    MethodSig "mmioExec"(Struct RqFromProc): Struct RsToProc.
+
+  Definition mm := MODULE {
+    Register "mem" : Vector (Data dataBytes) addrSize <- Default
+
+    with Method "mmOp" (a : Struct RqFromProc): Struct RsToProc :=
+      LET addr <- #a!RqFromProc@."addr";
+
+      If (isMMIO _ addr) then (** mmio *)
+        Call rs <- mmioExec(#a);
+        Ret #rs
+      else
+        If !#a!RqFromProc@."op" then (** load *)
+          Read memv <- "mem";
+          LET ldval <- #memv@[#a!RqFromProc@."addr"];
+          Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
+        else (** store *)
+          Read memv <- "mem";
+          Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
+          Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
+        as na;
+        Ret #na
+      as na;
+      Ret #na
+  }.
+    
+  Definition mmOp := MethodSig "mmOp"(Struct RqFromProc) : Struct RsToProc.
+
+End MMIO.
+
+Hint Unfold RqFromProc RsToProc memInstExec mmioExec : MethDefs.
+Hint Unfold memInstM memInst mm : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
@@ -338,7 +382,8 @@ Section SC.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
-            (alignAddr: AlignAddrT addrSize).
+            (alignAddr: AlignAddrT addrSize)
+            (isMMIO: IsMMIOT addrSize).
 
   Variable n: nat.
 
@@ -346,17 +391,14 @@ Section SC.
                                getStAddr getStSrc calcStAddr getStVSrc
                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr.
 
-  Variables (procInits: list (ProcInit addrSize dataBytes rfIdx)).
-  Definition pinsts (i: nat): Modules :=
-    duplicate (fun iv => pinst (nth_default (procInitDefault addrSize dataBytes rfIdx)
-                                            procInits iv)) i.
-  Definition minst := memInst n addrSize dataBytes.
+  Variables (procInit: ProcInit addrSize dataBytes rfIdx).
 
-  Definition sc := ConcatMod (pinsts n) minst.
+  (** Just for singlecore (for now) *)
+  Definition sc0 := ConcatMod (pinst procInit) (mm addrSize isMMIO).
 
 End SC.
 
-Hint Unfold pinst pinsts minst sc : ModuleDefs.
+Hint Unfold pinst sc0 : ModuleDefs.
 
 Section Facts.
   Variables addrSize iaddrSize dataBytes rfIdx : nat.
@@ -391,16 +433,6 @@ Section Facts.
 
   Variable n: nat.
   
-  Lemma pinsts_ModEquiv:
-    forall inits,
-      ModPhoasWf (pinsts getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                         getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n).
-  Proof.
-    kequiv.
-  Qed.
-  Hint Resolve pinsts_ModEquiv.
-
   Lemma memInstM_ModEquiv:
     MetaModPhoasWf (memInstM n addrSize dataBytes).
   Proof.
@@ -408,16 +440,24 @@ Section Facts.
   Qed.
   Hint Resolve memInstM_ModEquiv.
 
+  Variable (isMMIO: IsMMIOT addrSize).
+
+  Lemma mm_ModEquiv: ModPhoasWf (mm addrSize isMMIO).
+  Proof.
+    kequiv.
+  Qed.
+  
   Lemma sc_ModEquiv:
     forall inits,
-      ModPhoasWf (sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                     getStAddr getStSrc calcStAddr getStVSrc
-                     getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n inits).
+      ModPhoasWf (sc0 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                      getStAddr getStSrc calcStAddr getStVSrc
+                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                      isMMIO inits).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve pinst_ModEquiv pinsts_ModEquiv memInstM_ModEquiv sc_ModEquiv.
+Hint Resolve pinst_ModEquiv memInstM_ModEquiv mm_ModEquiv sc_ModEquiv.
 

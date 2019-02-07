@@ -29,22 +29,26 @@ Section ProcDecSCN.
             (exec: ExecT addrSize dataBytes)
             (getNextPc: NextPcT addrSize dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
-            (alignAddr: AlignAddrT addrSize).
+            (alignAddr: AlignAddrT addrSize)
+            (isMMIO: IsMMIOT addrSize).
 
-  Variable n: nat.
-  Variable (inits: list (ProcInit addrSize dataBytes rfIdx)).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
   
-  Definition scN := sc getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr n inits.
+  Definition sc0 := sc0 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                        getStAddr getStSrc calcStAddr getStVSrc
+                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                        isMMIO init.
 
-  Definition procDecN := pdecs getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                               getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr inits n.
-  Definition memAtomic := memAtomic addrSize fifoSize dataBytes n.
-  Definition pdecAN := (procDecN ++ memAtomic)%kami.
+  Definition procDec0 := pdec fifoSize getOptype
+                              getLdDst getLdAddr getLdSrc calcLdAddr
+                              getStAddr getStSrc calcStAddr getStVSrc
+                              getSrc1 getSrc2 getDst exec
+                              getNextPc alignPc alignAddr init.
+  
+  Definition memAtomic0 := memAtomic addrSize fifoSize dataBytes 0.
+  Definition pdec0 := (procDec0 ++ memAtomic0)%kami.
 
-  Lemma pdecN_memAtomic_refines_scN: pdecAN <<== scN.
+  Lemma pdec0_memAtomic_refines_sc0: pdec0 <<== sc0.
   Proof. (* SKIP_PROOF_ON
     krewrite assoc left.
     kmodulari n.
