@@ -394,11 +394,11 @@ Section SC.
   Variables (procInit: ProcInit addrSize dataBytes rfIdx).
 
   (** Just for singlecore (for now) *)
-  Definition sc0 := ConcatMod (pinst procInit) (mm addrSize isMMIO).
+  Definition scmm := ConcatMod (pinst procInit) (mm addrSize isMMIO).
 
 End SC.
 
-Hint Unfold pinst sc0 : ModuleDefs.
+Hint Unfold pinst scmm : ModuleDefs.
 
 Section Facts.
   Variables addrSize iaddrSize dataBytes rfIdx : nat.
@@ -447,17 +447,17 @@ Section Facts.
     kequiv.
   Qed.
   
-  Lemma sc_ModEquiv:
+  Lemma scmm_ModEquiv:
     forall inits,
-      ModPhoasWf (sc0 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                      getStAddr getStSrc calcStAddr getStVSrc
-                      getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
-                      isMMIO inits).
+      ModPhoasWf (scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                       getStAddr getStSrc calcStAddr getStVSrc
+                       getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                       isMMIO inits).
   Proof.
     kequiv.
   Qed.
-
+  
 End Facts.
 
-Hint Resolve pinst_ModEquiv memInstM_ModEquiv mm_ModEquiv sc_ModEquiv.
+Hint Resolve pinst_ModEquiv memInstM_ModEquiv mm_ModEquiv scmm_ModEquiv.
 

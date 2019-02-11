@@ -34,10 +34,10 @@ Section ProcDecSCN.
 
   Variable (init: ProcInit addrSize dataBytes rfIdx).
   
-  Definition sc0 := sc0 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
-                        isMMIO init.
+  Definition scmm := scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                          getStAddr getStSrc calcStAddr getStVSrc
+                          getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                          isMMIO init.
 
   Definition procDec0 := pdec fifoSize getOptype
                               getLdDst getLdAddr getLdSrc calcLdAddr
@@ -48,7 +48,7 @@ Section ProcDecSCN.
   Definition memAtomic0 := memAtomic addrSize fifoSize dataBytes 0.
   Definition pdec0 := (procDec0 ++ memAtomic0)%kami.
 
-  Lemma pdec0_memAtomic_refines_sc0: pdec0 <<== sc0.
+  Lemma pdec0_memAtomic_refines_scmm: pdec0 <<== scmm.
   Proof. (* SKIP_PROOF_ON
     krewrite assoc left.
     kmodulari n.
