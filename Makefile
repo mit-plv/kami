@@ -15,12 +15,12 @@ EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 VS:=$(wildcard Kami/*.v)
 VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(IGNORE:%=%.v),$(VS))
 
-DEPS_DIR ?= ../
+DEPS_DIR ?= ..
 
 default_target: coq
 .PHONY: coq clean
 
-ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)bbv/theories bbv\n-Q $(DEPS_DIR)riscv-coq/src riscv\n
+ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/bbv/theories bbv\n-Q $(DEPS_DIR)/riscv-coq/src riscv\n
 ARGS=$(subst \n, ,$(ARGS_NL))
 
 _CoqProject:
