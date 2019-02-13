@@ -997,5 +997,23 @@ Notation "'mlet' vn : t <- r '|>' kn ; cont" :=
      end v
    | _ => M.empty _
    end) (at level 0, vn at level 0): mapping_scope.
+
+Notation "'mlet' vn : t <- r '|>' kn '<|' default ; cont" :=
+  (match M.find kn%string r with
+   | Some (existT k v) =>
+     match k with
+     | SyntaxKind kind =>
+       fun vname =>
+         match decKind kind t with
+         | left Heq => 
+           eq_rect_r (fun kind => fullType type (SyntaxKind kind) -> _)
+                     (fun vn : fullType type (SyntaxKind t) => cont) Heq vname
+         | right _ => default
+         end
+     | _ => fun _ => default
+     end v
+   | _ => default
+   end) (at level 0, vn at level 0): mapping_scope.
+
 Delimit Scope mapping_scope with mapping.
 
