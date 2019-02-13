@@ -20,7 +20,7 @@ DEPS_DIR ?= ..
 default_target: coq
 .PHONY: coq clean
 
-ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/bbv/theories bbv\n-Q $(DEPS_DIR)/riscv-coq/src riscv\n-Q $(DEPS_DIR)/coqutil/src coqutil\n
+ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/riscv-coq/src riscv\n-Q $(DEPS_DIR)/coqutil/src coqutil\n
 ARGS=$(subst \n, ,$(ARGS_NL))
 
 _CoqProject:
