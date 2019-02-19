@@ -4,9 +4,12 @@ Require Import Kami.Syntax.
 Require Import Ex.MemTypes.
 Require Import Ex.IsaRv32.
 
-Local Ltac line i c := exact (ConstBit (rv32iToRaw c)).
-Local Ltac nop := exact (ConstBit (rv32iToRaw NOP)).
-Notation "'Rv32Program'" := (ConstT (Vector (Data rv32iDataBytes) rv32iIAddrSize)).
+Definition rv32AddrSize := 11.
+Definition rv32IAddrSize := 8.
+
+Local Ltac line i c := exact (ConstBit (rv32ToRaw c)).
+Local Ltac nop := exact (ConstBit (rv32ToRaw NOP)).
+Notation "'Rv32Program'" := (ConstT (Vector (Data rv32DataBytes) rv32IAddrSize)).
 
 Ltac init_pgm :=
   refine (ConstVector _);
@@ -141,7 +144,7 @@ Ltac init_pgm :=
 
 Fixpoint nop_n (n: nat) :=
   match n with
-  | O => Vec0 (ConstBit (rv32iToRaw NOP))
+  | O => Vec0 (ConstBit (rv32ToRaw NOP))
   | S n' => VecNext (nop_n n') (nop_n n')
   end.
 
@@ -185,6 +188,6 @@ Ltac init_pgm_64 :=
        (nop_n 7)).
 
 (* The final address should be obtained by multiplying two by processor, 
- * according to RV32I specification. *)
+ * according to RV32 specification. *)
 Definition branchTarget {sz} (ofs: nat) := natToWord sz (ofs * 2).
 
