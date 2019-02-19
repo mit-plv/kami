@@ -143,6 +143,9 @@ Section MemInst.
   
 End MemInst.
 
+Hint Unfold RqFromProc RsToProc memInstExec memOp : MethDefs.
+Hint Unfold memInstM memInst : ModuleDefs.
+
 Section MMIO.
   Variable addrSize: nat.
   Variable dataBytes: nat.
@@ -187,8 +190,8 @@ Section MMIO.
 
 End MMIO.
 
-Hint Unfold RqFromProc RsToProc memInstExec mmioExec : MethDefs.
-Hint Unfold memInstM memInst mm : ModuleDefs.
+Hint Unfold IsMMIOE IsMMIOT mmioExec mmOp : MethDefs.
+Hint Unfold mm : ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
@@ -222,7 +225,7 @@ Section ProcInst.
   Definition procInitDefault :=
     {| pcInit := Default; rfInit := Default |}.
 
-  Local Notation memOp := (memOp addrSize dataBytes).
+  Local Notation mmOp := (mmOp addrSize dataBytes).
 
   Definition pgmLdRq :=
     MethodSig "pgmLdRq"(Void) : Void.
@@ -290,9 +293,9 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- memOp(STRUCT { "addr" ::= alignAddr _ laddr;
-                                   "op" ::= $$false;
-                                   "data" ::= $$Default });
+      Call ldRep <- mmOp(STRUCT { "addr" ::= alignAddr _ laddr;
+                                  "op" ::= $$false;
+                                  "data" ::= $$Default });
       Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
       nextPc ppc rf rawInst
              
@@ -322,9 +325,9 @@ Section ProcInst.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call memOp(STRUCT { "addr" ::= alignAddr _ saddr;
-                          "op" ::= $$true;
-                          "data" ::= #stVal });
+      Call mmOp(STRUCT { "addr" ::= alignAddr _ saddr;
+                         "op" ::= $$true;
+                         "data" ::= #stVal });
       nextPc ppc rf rawInst
 
     with Rule "execNm" :=
@@ -360,7 +363,7 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold memOp nextPc procInitDefault pgmLdRq pgmLdRs PgmLdRs : MethDefs.
+Hint Unfold nextPc procInitDefault pgmLdRq pgmLdRs PgmLdRs : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
@@ -394,7 +397,7 @@ Section SC.
   Variables (procInit: ProcInit addrSize dataBytes rfIdx).
 
   (** Just for singlecore (for now) *)
-  Definition scmm := ConcatMod (pinst procInit) (mm addrSize isMMIO).
+  Definition scmm := ConcatMod (pinst procInit) (mm dataBytes isMMIO).
 
 End SC.
 
