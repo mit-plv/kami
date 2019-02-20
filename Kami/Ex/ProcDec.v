@@ -12,23 +12,23 @@ Set Implicit Arguments.
  *)
 Section ProcDec.
   Variable inName outName: string.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
@@ -38,8 +38,8 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
-  Definition pgmLdRs := pgmLdRs dataBytes.
-  Definition PgmLdRs := PgmLdRs dataBytes.
+  Definition pgmLdRs := pgmLdRs instBytes.
+  Definition PgmLdRs := PgmLdRs instBytes.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -52,7 +52,7 @@ Section ProcDec.
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
     with Register "pinit" : Bool <- Default
     with Register "pinitOfs" : Bit iaddrSize <- Default
-    with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+    with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
     with Register "stall" : Bool <- false
 
     (** Phase 1: initialize the program [pinit == false] *)
@@ -212,23 +212,23 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep pgmLdRs PgmLdRs nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
@@ -255,23 +255,23 @@ End ProcDecM.
 Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
+  Variables opIdx addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 

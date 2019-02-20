@@ -7,7 +7,7 @@ Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAtomic.
 Set Implicit Arguments.
 
 Section D2eInst.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Definition d2eEltI :=
     STRUCT { "opType" :: Bit 2;
@@ -15,7 +15,7 @@ Section D2eInst.
              "addr" :: Bit addrSize;
              "val1" :: Data dataBytes;
              "val2" :: Data dataBytes;
-             "rawInst" :: Data dataBytes;
+             "rawInst" :: Data instBytes;
              "curPc" :: Bit addrSize;
              "nextPc" :: Bit addrSize;
              "epoch" :: Bool }.
@@ -25,7 +25,7 @@ Section D2eInst.
              (dst: Expr ty (SyntaxKind (Bit rfIdx)))
              (addr: Expr ty (SyntaxKind (Bit addrSize)))
              (val1 val2: Expr ty (SyntaxKind (Data dataBytes)))
-             (rawInst: Expr ty (SyntaxKind (Data dataBytes)))
+             (rawInst: Expr ty (SyntaxKind (Data instBytes)))
              (curPc: Expr ty (SyntaxKind (Bit addrSize)))
              (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
              (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind (Struct d2eEltI)) :=
@@ -50,7 +50,7 @@ Section D2eInst.
   Definition d2eVal2I ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind (Data dataBytes)) := (#d2e!d2eEltI@."val2")%kami_expr.
   Definition d2eRawInstI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
-    : Expr ty (SyntaxKind (Data dataBytes)) := (#d2e!d2eEltI@."rawInst")%kami_expr.
+    : Expr ty (SyntaxKind (Data instBytes)) := (#d2e!d2eEltI@."rawInst")%kami_expr.
   Definition d2eCurPcI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e!d2eEltI@."curPc")%kami_expr.
   Definition d2eNextPcI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
@@ -61,20 +61,21 @@ Section D2eInst.
 End D2eInst.
 
 Section E2wInst.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Definition e2wEltI :=
-    STRUCT { "decInst" :: Struct (d2eEltI addrSize dataBytes rfIdx);
+    STRUCT { "decInst" :: Struct (d2eEltI addrSize instBytes dataBytes rfIdx);
              "val" :: Data dataBytes }.
 
   Definition e2wPackI ty
-             (decInst: Expr ty (SyntaxKind (Struct (d2eEltI addrSize dataBytes rfIdx))))
+             (decInst: Expr ty (SyntaxKind (Struct (d2eEltI addrSize instBytes dataBytes rfIdx))))
              (val: Expr ty (SyntaxKind (Data dataBytes))) : Expr ty (SyntaxKind (Struct e2wEltI))
     := STRUCT { "decInst" ::= decInst;
                 "val" ::= val }%kami_expr.
 
   Definition e2wDecInstI ty (e2w: fullType ty (SyntaxKind (Struct e2wEltI)))
-    : Expr ty (SyntaxKind (Struct (d2eEltI addrSize dataBytes rfIdx))) := (#e2w!e2wEltI@."decInst")%kami_expr.
+    : Expr ty (SyntaxKind (Struct (d2eEltI addrSize instBytes dataBytes rfIdx))) :=
+    (#e2w!e2wEltI@."decInst")%kami_expr.
   Definition e2wValI ty (e2w: fullType ty (SyntaxKind (Struct e2wEltI)))
     : Expr ty (SyntaxKind (Data dataBytes)) := (#e2w!e2wEltI@."val")%kami_expr.
 
@@ -87,23 +88,23 @@ End E2wInst.
  *)
 Section ProcThreeStage.
   Variable inName outName: string.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
@@ -122,7 +123,7 @@ Section ProcThreeStage.
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -137,7 +138,7 @@ Section ProcThreeStage.
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data dataBytes)))
+                            Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind (Bit addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -285,14 +286,14 @@ Section ProcThreeStage.
   Section FetchDecode.
     Variable (pcInit : ConstT (Bit addrSize)).
 
-    Definition pgmLdRs := pgmLdRs dataBytes.
-    Definition PgmLdRs := PgmLdRs dataBytes.
+    Definition pgmLdRs := pgmLdRs instBytes.
+    Definition PgmLdRs := PgmLdRs instBytes.
     
     Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- pcInit
       with Register "pinit" : Bool <- Default
       with Register "pinitOfs" : Bit iaddrSize <- Default
-      with Register "pgm" : Vector (Data dataBytes) iaddrSize <- Default
+      with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
       with Register "fEpoch" : Bool <- false
 
       (** Phase 1: initialize the program [pinit == false] *)
@@ -460,7 +461,6 @@ Section ProcThreeStage.
   End Execute.
 
   Section WriteBack.
-    Definition toHost := MethodSig "toHost"(Data dataBytes) : Void.
     
     Definition checkNextPc {ty} ppc npcp st rawInst :=
       (LET npc <- getNextPc ty st ppc rawInst;
@@ -652,26 +652,26 @@ Hint Unfold RqFromProc RsToProc pgmLdRs PgmLdRs memReq memRep
      sbSearch1_Th
      sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm
      sbInsert sbRemove
-     toHost checkNextPc : MethDefs.
+     checkNextPc : MethDefs.
 
 Section ProcThreeStageM.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
@@ -685,7 +685,7 @@ Section ProcThreeStageM.
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -700,7 +700,7 @@ Section ProcThreeStageM.
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data dataBytes)))
+                            Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind (Bit addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -735,23 +735,23 @@ End ProcThreeStageM.
 Hint Unfold p3st : ModuleDefs.
 
 Section Facts.
-  Variables addrSize iaddrSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
@@ -765,7 +765,7 @@ Section Facts.
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data dataBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
@@ -780,7 +780,7 @@ Section Facts.
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data dataBytes)))
+                            Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind (Bit addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->

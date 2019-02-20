@@ -10,23 +10,23 @@ Require Import Eqdep ProofIrrelevance.
 Set Implicit Arguments.
 
 Section Invariants.
-  Variables addrSize iaddrSize fifoSize dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT dataBytes)
-            (getLdDst: LdDstT dataBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize dataBytes)
-            (getLdSrc: LdSrcT dataBytes rfIdx)
+  Variables (getOptype: OptypeT instBytes)
+            (getLdDst: LdDstT instBytes rfIdx)
+            (getLdAddr: LdAddrT addrSize instBytes)
+            (getLdSrc: LdSrcT instBytes rfIdx)
             (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize dataBytes)
-            (getStSrc: StSrcT dataBytes rfIdx)
+            (getStAddr: StAddrT addrSize instBytes)
+            (getStSrc: StSrcT instBytes rfIdx)
             (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT dataBytes rfIdx)
-            (getSrc1: Src1T dataBytes rfIdx)
-            (getSrc2: Src2T dataBytes rfIdx)
-            (getDst: DstT dataBytes rfIdx)
-            (exec: ExecT addrSize dataBytes)
-            (getNextPc: NextPcT addrSize dataBytes rfIdx)
+            (getStVSrc: StVSrcT instBytes rfIdx)
+            (getSrc1: Src1T instBytes rfIdx)
+            (getSrc2: Src2T instBytes rfIdx)
+            (getDst: DstT instBytes rfIdx)
+            (exec: ExecT addrSize instBytes dataBytes)
+            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
             (alignPc: AlignPcT addrSize iaddrSize)
             (alignAddr: AlignAddrT addrSize).
 
@@ -46,7 +46,7 @@ Section Invariants.
     fifoEmpty = false /\ fifoEnqP = fifoDeqP ^+ $1.
 
   Definition mem_request_inv
-             (rawInst: fullType type (SyntaxKind (Data dataBytes)))
+             (rawInst: fullType type (SyntaxKind (Data instBytes)))
              (rf: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
              (insEmpty: bool) (insElt: type (Vector (Struct RqFromProc) fifoSize))
              (insDeqP: type (Bit fifoSize)): Prop.
@@ -84,7 +84,7 @@ Section Invariants.
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
-      pgmv : fullType type (SyntaxKind (Vector (Data dataBytes) iaddrSize));
+      pgmv : fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
 
       stallv : fullType type (SyntaxKind Bool);
