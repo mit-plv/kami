@@ -286,8 +286,7 @@ Section ProcThreeStage.
   Section FetchDecode.
     Variable (pcInit : ConstT (Bit addrSize)).
 
-    Definition pgmLdRs := pgmLdRs instBytes.
-    Definition PgmLdRs := PgmLdRs instBytes.
+    Definition pgmInit := pgmInit iaddrSize instBytes.
     
     Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- pcInit
@@ -298,31 +297,25 @@ Section ProcThreeStage.
 
       (** Phase 1: initialize the program [pinit == false] *)
 
-      with Rule "rqInit" :=
+      with Rule "pgmInit" :=
         Read pinit <- "pinit";
         Assert !#pinit;
-        Call pgmLdRq ();
-        Retv
-
-      with Rule "rsInitCont" :=
-        Read pinit <- "pinit";
-        Assert !#pinit;
-        Call irs <- pgmLdRs ();
         Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+        Assert ((UniBit (Inv _) #pinitOfs) != $0);
+        Call irs <- pgmInit (#pinitOfs);
         Read pgm <- "pgm";
-        Assert !#irs!PgmLdRs@."isEnd";
-        Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+        Write "pgm" <- #pgm@[#pinitOfs <- #irs];
         Write "pinitOfs" <- #pinitOfs + $1;
         Retv
 
-      with Rule "rsInitEnd" :=
+      with Rule "pgmInitEnd" :=
         Read pinit <- "pinit";
         Assert !#pinit;
-        Call irs <- pgmLdRs ();
         Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+        Assert ((UniBit (Inv _) #pinitOfs) == $0);
+        Call irs <- pgmInit (#pinitOfs);
         Read pgm <- "pgm";
-        Assert #irs!PgmLdRs@."isEnd";
-        Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+        Write "pgm" <- #pgm@[#pinitOfs <- #irs];
         Write "pinit" <- !#pinit;
         Retv
 
@@ -643,7 +636,7 @@ Section ProcThreeStage.
 End ProcThreeStage.
 
 Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
-Hint Unfold RqFromProc RsToProc pgmLdRs PgmLdRs memReq memRep
+Hint Unfold RqFromProc RsToProc pgmInit memReq memRep
      d2eFifoName d2eEnq d2eDeq
      w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch

@@ -38,8 +38,7 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
-  Definition pgmLdRs := pgmLdRs instBytes.
-  Definition PgmLdRs := PgmLdRs instBytes.
+  Definition pgmInit := pgmInit iaddrSize instBytes.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -57,31 +56,25 @@ Section ProcDec.
 
     (** Phase 1: initialize the program [pinit == false] *)
 
-    with Rule "rqInit" :=
+    with Rule "pgmInit" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Call pgmLdRq ();
-      Retv
-
-    with Rule "rsInitCont" :=
-      Read pinit <- "pinit";
-      Assert !#pinit;
-      Call irs <- pgmLdRs ();
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Assert ((UniBit (Inv _) #pinitOfs) != $0);
+      Call irs <- pgmInit (#pinitOfs);
       Read pgm <- "pgm";
-      Assert !#irs!PgmLdRs@."isEnd";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinitOfs" <- #pinitOfs + $1;
       Retv
 
-    with Rule "rsInitEnd" :=
+    with Rule "pgmInitEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Call irs <- pgmLdRs ();
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Assert ((UniBit (Inv _) #pinitOfs) == $0);
+      Call irs <- pgmInit (#pinitOfs);
       Read pgm <- "pgm";
-      Assert #irs!PgmLdRs@."isEnd";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinit" <- !#pinit;
       Retv
 
@@ -209,7 +202,7 @@ Section ProcDec.
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep pgmLdRs PgmLdRs nextPc : MethDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep pgmInit nextPc : MethDefs.
 
 Section ProcDecM.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.

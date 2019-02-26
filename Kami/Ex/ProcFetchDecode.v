@@ -112,8 +112,7 @@ Section FetchAndDecode.
   Definition sbSearch3_Nm := sbSearch3_Nm rfIdx.
   Definition sbInsert := sbInsert rfIdx.
 
-  Definition pgmLdRs := pgmLdRs instBytes.
-  Definition PgmLdRs := PgmLdRs instBytes.
+  Definition pgmInit := pgmInit iaddrSize instBytes.
 
   Variables (pcInit : ConstT (Bit addrSize)).
   
@@ -126,31 +125,25 @@ Section FetchAndDecode.
 
     (** Phase 1: initialize the program [pinit == false] *)
 
-    with Rule "rqInit" :=
+    with Rule "pgmInit" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Call pgmLdRq ();
-      Retv
-
-    with Rule "rsInitCont" :=
-      Read pinit <- "pinit";
-      Assert !#pinit;
-      Call irs <- pgmLdRs ();
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Assert ((UniBit (Inv _) #pinitOfs) != $0);
+      Call irs <- pgmInit (#pinitOfs);
       Read pgm <- "pgm";
-      Assert !#irs!PgmLdRs@."isEnd";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinitOfs" <- #pinitOfs + $1;
       Retv
 
-    with Rule "rsInitEnd" :=
+    with Rule "pgmInitEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Call irs <- pgmLdRs ();
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Assert ((UniBit (Inv _) #pinitOfs) == $0);
+      Call irs <- pgmInit (#pinitOfs);
       Read pgm <- "pgm";
-      Assert #irs!PgmLdRs@."isEnd";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs!PgmLdRs@."data"];
+      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinit" <- !#pinit;
       Retv
 
@@ -277,7 +270,7 @@ Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Th
      sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm sbInsert
-     pgmLdRs PgmLdRs : MethDefs.
+     pgmInit : MethDefs.
   
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
