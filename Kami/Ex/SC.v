@@ -243,23 +243,27 @@ Section ProcInst.
     (** Phase 1: initialize the program [pinit == false] *)
 
     with Rule "pgmInit" :=
-      Read pinit <- "pinit";
-      Assert !#pinit;
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
+      Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) != $0);
       Call irs <- pgmInit (#pinitOfs);
-      Read pgm <- "pgm";
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinitOfs" <- #pinitOfs + $1;
       Retv
 
     with Rule "pgmInitEnd" :=
-      Read pinit <- "pinit";
-      Assert !#pinit;
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
+      Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
       Call irs <- pgmInit (#pinitOfs);
-      Read pgm <- "pgm";
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinit" <- !#pinit;
       Retv
@@ -267,10 +271,11 @@ Section ProcInst.
     (** Phase 2: execute the program [pinit == true] *)
         
     with Rule "execLd" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
@@ -287,10 +292,11 @@ Section ProcInst.
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
@@ -299,10 +305,11 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execSt" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
@@ -318,10 +325,11 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execNm" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
@@ -336,10 +344,11 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execNmZ" :=
-      Read ppc <- "pc";
-      Read rf <- "rf";
-      Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read ppc : Bit addrSize <- "pc";
+      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
+      Read pinit : Bool <- "pinit";
+      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
