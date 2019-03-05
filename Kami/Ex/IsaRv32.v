@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-Require Import riscv.Decode.
+Require Import riscv.Spec.Decode.
 
 Definition rv32InstBytes := 4.
 Definition rv32DataBytes := 4.
