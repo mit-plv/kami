@@ -51,13 +51,14 @@ let bstring_of_charlist (s: char list) =
     | c :: s -> (Char.escaped (if c = '.' || c = '$' then '_' else if c = '@' then '.' else c)) ^ (string_of_charlist s)
   in
   let str = string_of_charlist s in
-  let bstr = String.uncapitalize str in
+  let bstr = String.uncapitalize_ascii str in
   if List.mem bstr bsv_keywords then bstr ^ "_" else bstr
 
 let string_of_de_brujin_index (i: int) =
   "x_" ^ string_of_int i
 
 exception Should_not_happen of string
+exception Not_implemented_yet of string
 
 let ps = print_string
 let pi = print_int
@@ -376,6 +377,7 @@ let rec ppKind (k: kind) =
                       ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
   | Struct (_, sv) -> let sl = vectorToList sv in addGlbStruct sl
+  | Array _ -> raise (Not_implemented_yet "ppKind.Array")
 
 let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
@@ -408,6 +410,7 @@ let rec ppConst (c: constT) =
   | ConstStruct (_, kv, st) ->
      let kl = vectorToList kv in
      addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppConstStruct st ^ ppCBracketR
+  | ConstArray _ -> raise (Not_implemented_yet "ppConst.ConstArray")
 and ppConstVec (v: constT vec) =
   match v with
   | Vec0 c -> ppConst c ^ ppComma ^ ppDelim
@@ -541,6 +544,9 @@ let rec ppBExpr (e: bExpr) =
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
   | BReadReg r -> ps (bstring_of_charlist r)
+  | BReadArrayIndex _ -> raise (Not_implemented_yet "ppBExpr.BReadArrayIndex")
+  | BBuildArray _ -> raise (Not_implemented_yet "ppBExpr.BBuildArray")
+  | BUpdateArray _ -> raise (Not_implemented_yet "ppBExpr.BUpdateArray")
 and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
@@ -688,7 +694,7 @@ let ppBInterface (d: bMethod) =
 let rec ppBInterfaces (dl: bMethod list) =
   match dl with
   | [] -> ()
-  | d :: dl' -> ppBInterface d; print_cut(); ppBInterfaces dl'
+  | d :: dl' -> ppBInterface d; force_newline (); ppBInterfaces dl'
 
 let ppRegInit (r: regInitT) =
   match r with

@@ -10,7 +10,7 @@ let () =
     (let output_file = Sys.argv.(argnum - 1) in
      let oc = open_out output_file in
      set_formatter_out_channel oc;
-     (match targetProcB with
+     (match targetB with
       | Some bml -> ppBModulesFullDbg bml (argnum > 2)
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
