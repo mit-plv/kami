@@ -33,6 +33,6 @@ endmodule
 (* synthesize *)
 module mkHost (Empty);
     FrontEnd frontEnd <- mkFrontEnd ();
-    Empty proc <- mkTop (frontEnd.toHost_aaaa, frontEnd.toHost_aaa, frontEnd.toHost_aa, frontEnd.toHost_a);
+    Empty proc <- mkProc (frontEnd.toHost_aaaa, frontEnd.toHost_aaa, frontEnd.toHost_aa, frontEnd.toHost_a);
 endmodule
 

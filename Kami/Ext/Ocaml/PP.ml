@@ -940,7 +940,7 @@ let ppTopModule (bmdcl: bRegModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
   open_hovbox 2;
   ps ppModule; print_space ();
-  ps "mkTop"; ppBModuleCallArgs extCallsAll; print_space ();
+  ps "mkProc"; ppBModuleCallArgs extCallsAll; print_space ();
   ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
   close_box ();
   print_break 0 4; open_hovbox 0;

@@ -67,12 +67,12 @@ interface Proc;
 endinterface
 
 (* synthesize *)
-module mkProc (Proc);
+module mkProcWrapper (Proc);
     FIFO#(Bit#(32)) val1 <- mkSizedFIFO(2);
     FIFO#(Bit#(32)) val2 <- mkSizedFIFO(2);
     FIFO#(Bit#(32)) val3 <- mkSizedFIFO(2);
     FIFO#(Bit#(32)) val4 <- mkSizedFIFO(2);
-    Empty procTop <- mkTop (val4.enq, val3.enq, val2.enq, val1.enq);
+    Empty proc <- mkProc (val4.enq, val3.enq, val2.enq, val1.enq);
 
     method ActionValue#(Bit#(32)) read_toHost_aaaa;
         val4.deq();
@@ -104,7 +104,7 @@ endinterface
 
 module mkHost#(HostIndication indication) (Host);
     FrontEnd frontEnd <- mkFrontEnd (indication);
-    Proc proc <- mkProc ();
+    Proc proc <- mkProcWrapper ();
 
     (* fire_when_enabled *)
     rule to_frontend_aaaa;
