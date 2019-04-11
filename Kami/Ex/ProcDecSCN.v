@@ -5,7 +5,7 @@ Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
 Require Import Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate.
 Require Import Kami.ModuleBound Kami.ModuleBoundEx.
-Require Import Ex.SC Ex.Fifo Ex.MemAtomic.
+Require Import Ex.SC Ex.Fifo Ex.MemAsync.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 
 Set Implicit Arguments.
@@ -45,8 +45,8 @@ Section ProcDecSCN.
                               getSrc1 getSrc2 getDst exec
                               getNextPc alignPc alignAddr init.
   
-  Definition memAtomic0 := memAtomic addrSize fifoSize dataBytes 0.
-  Definition pdec0 := (procDec0 ++ memAtomic0)%kami.
+  Definition memAsync0 := memAsync addrSize fifoSize dataBytes 0.
+  Definition pdec0 := (procDec0 ++ memAsync0)%kami.
 
   Lemma pdec0_memAtomic_refines_scmm: pdec0 <<== scmm.
   Proof. (* SKIP_PROOF_ON

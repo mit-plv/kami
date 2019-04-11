@@ -4,7 +4,7 @@ Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.NativeFifo Ex.MemAtomic.
+Require Import Ex.MemTypes Ex.SC Ex.NativeFifo Ex.MemAsync.
 Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv.
 Require Import Eqdep.
 
