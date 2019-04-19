@@ -14,7 +14,7 @@ Unset Extraction AutoInline.
 (** Parameter instantiation *)
 
 Definition rv32AddrSize := 32.
-Definition rv32IAddrSize := 5.
+Definition rv32IAddrSize := 10.
 
 Definition pinit: ProcInit rv32AddrSize rv32DataBytes rv32RfIdx :=
   {| pcInit := Default; rfInit := Default |}.

@@ -38,7 +38,7 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
-  Definition pgmInit := pgmInit iaddrSize instBytes.
+  Definition pgmInit := pgmInit instBytes.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -61,7 +61,7 @@ Section ProcDec.
       Assert !#pinit;
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Assert ((UniBit (Inv _) #pinitOfs) != $0);
-      Call irs <- pgmInit (#pinitOfs);
+      Call irs <- pgmInit ();
       Read pgm <- "pgm";
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinitOfs" <- #pinitOfs + $1;
@@ -72,7 +72,7 @@ Section ProcDec.
       Assert !#pinit;
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call irs <- pgmInit (#pinitOfs);
+      Call irs <- pgmInit ();
       Read pgm <- "pgm";
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinit" <- !#pinit;

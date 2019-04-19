@@ -228,7 +228,7 @@ Section ProcInst.
   Local Notation mmOp := (mmOp addrSize dataBytes).
 
   Definition pgmInit :=
-    MethodSig "pgmInit"(Bit iaddrSize): Data instBytes.
+    MethodSig "pgmInit"(): Data instBytes.
   
   Variables (procInit: ProcInit).
 
@@ -243,27 +243,23 @@ Section ProcInst.
     (** Phase 1: initialize the program [pinit == false] *)
 
     with Rule "pgmInit" :=
-      Read ppc : Bit addrSize <- "pc";
-      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) != $0);
-      Call irs <- pgmInit (#pinitOfs);
+      Call irs <- pgmInit ();
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinitOfs" <- #pinitOfs + $1;
       Retv
 
     with Rule "pgmInitEnd" :=
-      Read ppc : Bit addrSize <- "pc";
-      Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call irs <- pgmInit (#pinitOfs);
+      Call irs <- pgmInit ();
       Write "pgm" <- #pgm@[#pinitOfs <- #irs];
       Write "pinit" <- !#pinit;
       Retv
@@ -274,7 +270,6 @@ Section ProcInst.
       Read ppc : Bit addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
@@ -295,7 +290,6 @@ Section ProcInst.
       Read ppc : Bit addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
@@ -308,7 +302,6 @@ Section ProcInst.
       Read ppc : Bit addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
@@ -328,7 +321,6 @@ Section ProcInst.
       Read ppc : Bit addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];
@@ -347,7 +339,6 @@ Section ProcInst.
       Read ppc : Bit addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
       LET rawInst <- #pgm@[alignPc _ ppc];

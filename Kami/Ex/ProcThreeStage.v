@@ -286,7 +286,7 @@ Section ProcThreeStage.
   Section FetchDecode.
     Variable (pcInit : ConstT (Bit addrSize)).
 
-    Definition pgmInit := pgmInit iaddrSize instBytes.
+    Definition pgmInit := pgmInit instBytes.
     
     Definition fetchDecode := MODULE {
       Register "pc" : Bit addrSize <- pcInit
@@ -302,7 +302,7 @@ Section ProcThreeStage.
         Assert !#pinit;
         Read pinitOfs : Bit iaddrSize <- "pinitOfs";
         Assert ((UniBit (Inv _) #pinitOfs) != $0);
-        Call irs <- pgmInit (#pinitOfs);
+        Call irs <- pgmInit ();
         Read pgm <- "pgm";
         Write "pgm" <- #pgm@[#pinitOfs <- #irs];
         Write "pinitOfs" <- #pinitOfs + $1;
@@ -313,7 +313,7 @@ Section ProcThreeStage.
         Assert !#pinit;
         Read pinitOfs : Bit iaddrSize <- "pinitOfs";
         Assert ((UniBit (Inv _) #pinitOfs) == $0);
-        Call irs <- pgmInit (#pinitOfs);
+        Call irs <- pgmInit ();
         Read pgm <- "pgm";
         Write "pgm" <- #pgm@[#pinitOfs <- #irs];
         Write "pinit" <- !#pinit;

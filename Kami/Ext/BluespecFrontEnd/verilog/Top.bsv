@@ -19,12 +19,30 @@ endinterface
 
 (* synthesize *)
 module mkTop (ForDRAM);
-
+    Reg#(Bool) pgmInitOn <- mkReg(True);
+    Reg#(Bit#(32)) pgmInitBase <- mkReg(unpack(0));
+    Reg#(Bit#(10)) pgmInitOfs <- mkReg(unpack(0));
+   
     FIFO#(MemRq) rqs <- mkFIFO();
     FIFO#(MemRs) rss <- mkFIFO();
 
-    function ActionValue#(Bit#(32)) procPgmInit (Bit#(5) addr);
-        return (actionvalue return 0; endactionvalue);
+    rule pgmInitRq;
+        when (pgmInitOn, noAction);
+        let rq = MemRq { addr: pgmInitBase + zeroExtend (pgmInitOfs << 2),
+	                 op: False,
+			 data: 0 };
+        rqs.enq(rq);
+	pgmInitOfs <= pgmInitOfs + 1;
+	if (~pgmInitOfs == 0) begin
+            pgmInitOn <= False;
+	end
+    endrule
+    
+    function ActionValue#(Bit#(32)) procPgmInit ();
+        return (actionvalue 
+                    rss.deq;
+                    return rss.first.data;
+                endactionvalue);
     endfunction
 
     function Action procRq (MemRq rq);
@@ -35,7 +53,7 @@ module mkTop (ForDRAM);
         return (actionvalue
 	            rss.deq;
 		    return rss.first;
-		endactionvalue);
+	        endactionvalue);
     endfunction
 
     Empty proc <- mkProc (procPgmInit, procRs, procRq);
