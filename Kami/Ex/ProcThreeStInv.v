@@ -25,12 +25,11 @@ Section Invariants.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit addrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -41,8 +40,8 @@ Section Invariants.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -57,9 +56,9 @@ Section Invariants.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Bit addrSize)))
+                          Expr ty (SyntaxKind (Bit iaddrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit addrSize)))
+                           Expr ty (SyntaxKind (Bit iaddrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -101,12 +100,12 @@ Section Invariants.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
                                         getSrc1 getSrc2 getDst exec getNextPc
-                                        alignPc alignAddr predictNextPc
+                                        alignAddr predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                         e2wPack e2wDecInst e2wVal init).
@@ -218,7 +217,7 @@ Section Invariants.
              (d2efullv: fullType type (SyntaxKind Bool)) :=
     d2efullv = true ->
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
-    (rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ d2eeltv)))) /\
+    (rawInst = pgmv (evalExpr (d2eCurPc _ d2eeltv)) /\
      evalExpr (d2eOpType _ d2eeltv) = evalExpr (getOptype _ rawInst) /\
      (evalExpr (d2eOpType _ d2eeltv) = opLd ->
       (evalExpr (d2eDst _ d2eeltv) = evalExpr (getLdDst _ rawInst) /\
@@ -265,7 +264,7 @@ Section Invariants.
     stallv = true ->
     let rawInst := evalExpr (d2eRawInst _ stalledv) in
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
-    rawInst = pgmv (evalExpr (alignPc _ (evalExpr (d2eCurPc _ stalledv)))) /\
+    rawInst = pgmv (evalExpr (d2eCurPc _ stalledv)) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
      evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst)).
 
@@ -284,7 +283,7 @@ Section Invariants.
       Hinv3 : p3st_stalled_inv_body pgmv3 rfv3 stallv3 stalledv3 }.
 
   Definition p3st_exec_inv_body
-             (pcv: fullType type (SyntaxKind (Bit addrSize)))
+             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
              (e2wfullv: fullType type (SyntaxKind Bool))
              (e2weltv: fullType type (SyntaxKind e2wElt)) :=
@@ -297,7 +296,7 @@ Section Invariants.
                    (evalExpr (d2eCurPc _ d2eeltv)) rawInst).
 
   Record p3st_exec_inv (o: RegsT) : Prop :=
-    { pcv4 : fullType type (SyntaxKind (Bit addrSize));
+    { pcv4 : fullType type (SyntaxKind (Bit iaddrSize));
       Hpcv4 : M.find "pc"%string o = Some (existT _ _ pcv4);
       rfv4 : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv4 : M.find "rf"%string o = Some (existT _ _ rfv4);
@@ -311,7 +310,7 @@ Section Invariants.
 
   Definition p3st_epochs_inv_body
              (fepochv eepochv d2efullv e2wfullv w2dfullv stallv: fullType type (SyntaxKind Bool))
-             (pcv: fullType type (SyntaxKind (Bit addrSize)))
+             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (e2weltv: fullType type (SyntaxKind e2wElt))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
@@ -338,7 +337,7 @@ Section Invariants.
      w2dfullv = false).
 
   Record p3st_epochs_inv (o: RegsT) : Prop :=
-    { pcv5 : fullType type (SyntaxKind (Bit addrSize));
+    { pcv5 : fullType type (SyntaxKind (Bit iaddrSize));
       Hpcv5 : M.find "pc"%string o = Some (existT _ _ pcv5);
       fepochv5 : fullType type (SyntaxKind Bool);
       Hfepochv5 : M.find "fEpoch"%string o = Some (existT _ _ fepochv5);
@@ -349,7 +348,7 @@ Section Invariants.
       Hd2efullv5 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv5);
 
       (* NOTE: Don't remove w2dElt even if it's not used in the invariant body. *)
-      w2deltv5 : fullType type (SyntaxKind (w2dElt addrSize));
+      w2deltv5 : fullType type (SyntaxKind (w2dElt iaddrSize));
       Hw2deltv5 : M.find "w2d"--"elt"%string o = Some (existT _ _ w2deltv5);
       w2dfullv5 : fullType type (SyntaxKind Bool);
       Hw2dfullv5 : M.find "w2d"--"full"%string o = Some (existT _ _ w2dfullv5);
@@ -372,7 +371,7 @@ Section Invariants.
 
   Definition p3st_pc_inv_body
              (fepochv eepochv d2efullv e2wfullv w2dfullv stallv: fullType type (SyntaxKind Bool))
-             (pcv: fullType type (SyntaxKind (Bit addrSize)))
+             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (e2weltv: fullType type (SyntaxKind e2wElt))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
@@ -396,7 +395,7 @@ Section Invariants.
       (e2wfullv = false -> d2efullv = false -> evalExpr (d2eNextPc _ stalledv) = pcv))).
 
   Record p3st_pc_inv (o: RegsT) : Prop :=
-    { pcv6 : fullType type (SyntaxKind (Bit addrSize));
+    { pcv6 : fullType type (SyntaxKind (Bit iaddrSize));
       Hpcv6 : M.find "pc"%string o = Some (existT _ _ pcv6);
       fepochv6 : fullType type (SyntaxKind Bool);
       Hfepochv6 : M.find "fEpoch"%string o = Some (existT _ _ fepochv6);

@@ -264,13 +264,8 @@ Section RV32IM.
 
   Defined.
 
-  Definition rv32AlignPc: AlignPcT rv32AddrSize rv32IAddrSize.
-    unfold AlignPcT; intros ty pc.
-    exact (_zeroExtend_ (#pc >> $$(natToWord 2 2)))%kami_expr.
-  Defined.
-
   Definition rv32AlignAddr: AlignAddrT rv32AddrSize.
-    unfold AlignPcT; intros ty addr.
+    unfold AlignAddrT; intros ty addr.
     exact (#addr)%kami_expr.
   Defined.
 

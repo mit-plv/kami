@@ -26,22 +26,21 @@ Section ProcDecSC.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
+                           getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
   Definition pinst := pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                             getStAddr getStSrc calcStAddr getStVSrc
-                            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
+                            getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
@@ -56,7 +55,7 @@ Section ProcDecSC.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit addrSize) <- r |> "pc";
+    (mlet pcv : (Bit iaddrSize) <- r |> "pc";
        mlet rfv : (Vector (Data dataBytes) rfIdx) <- r |> "rf";
        mlet pgmv : (Vector (Data instBytes) iaddrSize) <- r |> "pgm";
        mlet oev : Bool <- r |> "rsToProc"--"empty";
@@ -67,7 +66,7 @@ Section ProcDecSC.
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
-         let rawInst := pgmv (evalExpr (alignPc _ pcv)) in
+         let rawInst := pgmv pcv in
          (["pgm" <- (existT _ _ pgmv)]
           +["rf" <- (let opc := evalExpr (getOptype _ rawInst) in
                      if weq opc opLd

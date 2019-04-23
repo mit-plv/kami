@@ -20,16 +20,15 @@ Section Inlined.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize).
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
+                           getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: Modules * bool.

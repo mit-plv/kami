@@ -25,19 +25,18 @@ Section Invariants.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                 getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr init.
+                                getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.
@@ -80,7 +79,7 @@ Section Invariants.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
   Record procDec_inv (o: RegsT) : Prop :=
-    { pcv : fullType type (SyntaxKind (Bit addrSize));
+    { pcv : fullType type (SyntaxKind (Bit iaddrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
@@ -117,7 +116,7 @@ Section Invariants.
                ((stallv = true /\
                  fifo_not_empty_inv iev ienqpv ideqpv /\
                  fifo_empty_inv oev oenqpv odeqpv) /\
-                (mem_request_inv (pgmv (evalExpr (alignPc type pcv))) rfv iev ieltv ideqpv))
+                (mem_request_inv (pgmv pcv) rfv iev ieltv ideqpv))
                (stallv = true /\
                 fifo_empty_inv iev ienqpv ideqpv /\
                 fifo_not_empty_inv oev oenqpv odeqpv)

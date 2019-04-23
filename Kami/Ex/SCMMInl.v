@@ -24,17 +24,16 @@ Section Inlined.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
             (isMMIO: IsMMIOT addrSize).
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
   
   Definition scmm := scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr
+                          getSrc1 getSrc2 getDst exec getNextPc alignAddr
                           isMMIO init.
   Hint Unfold scmm: ModuleDefs. (* for kinline_compute *)
 
@@ -44,7 +43,7 @@ Section Inlined.
                   (scmm_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                  getStAddr getStSrc calcStAddr getStVSrc
                                  getSrc1 getSrc2 getDst exec
-                                 getNextPc alignPc alignAddr
+                                 getNextPc alignAddr
                                  isMMIO init type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies scmm)) eq_refl))
       as Him.

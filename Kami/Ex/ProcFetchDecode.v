@@ -11,14 +11,14 @@ Section F2dInst.
 
   Definition f2dEltI :=
     STRUCT { "rawInst" :: Data instBytes;
-             "curPc" :: Bit addrSize;
-             "nextPc" :: Bit addrSize;
+             "curPc" :: Bit iaddrSize;
+             "nextPc" :: Bit iaddrSize;
              "epoch" :: Bool }.
 
   Definition f2dPackI ty 
              (rawInst: Expr ty (SyntaxKind (Data instBytes)))
-             (curPc: Expr ty (SyntaxKind (Bit addrSize)))
-             (nextPc: Expr ty (SyntaxKind (Bit addrSize)))
+             (curPc: Expr ty (SyntaxKind (Bit iaddrSize)))
+             (nextPc: Expr ty (SyntaxKind (Bit iaddrSize)))
              (epoch: Expr ty (SyntaxKind Bool)): Expr ty (SyntaxKind (Struct f2dEltI)) :=
     STRUCT { "rawInst" ::= rawInst;
              "curPc" ::= curPc;
@@ -28,9 +28,9 @@ Section F2dInst.
   Definition f2dRawInstI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
     : Expr ty (SyntaxKind (Data instBytes)) := (#f2d!f2dEltI@."rawInst")%kami_expr.
   Definition f2dCurPcI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d!f2dEltI@."curPc")%kami_expr.
+    : Expr ty (SyntaxKind (Bit iaddrSize)) := (#f2d!f2dEltI@."curPc")%kami_expr.
   Definition f2dNextPcI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
-    : Expr ty (SyntaxKind (Bit addrSize)) := (#f2d!f2dEltI@."nextPc")%kami_expr.
+    : Expr ty (SyntaxKind (Bit iaddrSize)) := (#f2d!f2dEltI@."nextPc")%kami_expr.
   Definition f2dEpochI ty (f2d: fullType ty (SyntaxKind (Struct f2dEltI)))
     : Expr ty (SyntaxKind Bool) := (#f2d!f2dEltI@."epoch")%kami_expr.
 
@@ -55,12 +55,11 @@ Section FetchAndDecode.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit addrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -71,8 +70,8 @@ Section FetchAndDecode.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
 
@@ -80,17 +79,17 @@ Section FetchAndDecode.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Bit addrSize)))
+                          Expr ty (SyntaxKind (Bit iaddrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Bit addrSize)))
+                           Expr ty (SyntaxKind (Bit iaddrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -101,7 +100,7 @@ Section FetchAndDecode.
 
   Definition getRf1 := getRf1 dataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
-  Definition w2dDeq := w2dDeq addrSize.
+  Definition w2dDeq := w2dDeq iaddrSize.
   Definition sbSearch1_Ld := sbSearch1_Ld rfIdx.
   Definition sbSearch2_Ld := sbSearch2_Ld rfIdx.
   Definition sbSearch1_St := sbSearch1_St rfIdx.
@@ -114,10 +113,10 @@ Section FetchAndDecode.
 
   Definition pgmInit := pgmInit instBytes.
 
-  Variables (pcInit : ConstT (Bit addrSize)).
+  Variables (pcInit : ConstT (Bit iaddrSize)).
   
   Definition fetcher := MODULE {
-    Register "pc" : Bit addrSize <- pcInit
+    Register "pc" : Bit iaddrSize <- pcInit
     with Register "pinit" : Bool <- Default
     with Register "pinitOfs" : Bit iaddrSize <- Default
     with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
@@ -166,8 +165,7 @@ Section FetchAndDecode.
       Read pgm <- "pgm";
       Read epoch <- "fEpoch";
       LET npc <- predictNextPc _ pc;
-      LET apc <- alignPc _ pc;
-      Call f2dEnq(f2dPack #pgm@[#apc] #pc #npc #epoch);
+      Call f2dEnq(f2dPack #pgm@[#pc] #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
   }.
@@ -288,12 +286,11 @@ Section Facts.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit addrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Bit iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -304,8 +301,8 @@ Section Facts.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
 
@@ -313,22 +310,22 @@ Section Facts.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Bit addrSize)))
+                          Expr ty (SyntaxKind (Bit iaddrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Bit addrSize)))
+                           Expr ty (SyntaxKind (Bit iaddrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher alignPc predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher predictNextPc f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -345,7 +342,7 @@ Section Facts.
     forall pcInit,
       ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst alignPc predictNextPc d2ePack
+                              getSrc1 getSrc2 getDst predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit).
   Proof.
     kequiv.

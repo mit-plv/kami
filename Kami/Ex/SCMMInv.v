@@ -27,22 +27,21 @@ Section Invariants.
             (getSrc1: Src1T instBytes rfIdx)
             (getSrc2: Src2T instBytes rfIdx)
             (getDst: DstT instBytes rfIdx)
-            (exec: ExecT addrSize instBytes dataBytes)
-            (getNextPc: NextPcT addrSize instBytes dataBytes rfIdx)
-            (alignPc: AlignPcT addrSize iaddrSize)
+            (exec: ExecT iaddrSize instBytes dataBytes)
+            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
             (isMMIO: IsMMIOT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit addrSize dataBytes rfIdx).
+  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
   Hypothesis (HinitRf: evalConstT init.(rfInit) $0 = $0).
 
   Definition scmmInl :=
     scmmInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
             getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc alignPc alignAddr isMMIO
+            getSrc1 getSrc2 getDst exec getNextPc alignAddr isMMIO
             init.
 
   Definition scmm_inv_rf_zero
@@ -53,7 +52,7 @@ Section Invariants.
   Inductive scmm_inv (o: RegsT) : Prop :=
   | ProcInv:
       forall
-        (pcv: fullType type (SyntaxKind (Bit addrSize)))
+        (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
         (Hpcv: o@["pc"] = Some (existT _ _ pcv))
         (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
         (Hrfv: o@["rf"] = Some (existT _ _ rfv))
