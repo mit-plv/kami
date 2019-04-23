@@ -29,8 +29,8 @@ Section ProcThreeStDec.
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit iaddrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Pc iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -41,8 +41,8 @@ Section ProcThreeStDec.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -57,9 +57,9 @@ Section ProcThreeStDec.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Bit iaddrSize)))
+                          Expr ty (SyntaxKind (Pc iaddrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit iaddrSize)))
+                           Expr ty (SyntaxKind (Pc iaddrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -131,14 +131,14 @@ Section ProcThreeStDec.
   Hint Unfold p3st_pdec_ruleMap: MethDefs.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit iaddrSize) <- r |> "pc";
+    (mlet pcv : (Pc iaddrSize) <- r |> "pc";
        mlet pgmv : (Vector (Data instBytes) iaddrSize) <- r |> "pgm";
        mlet rfv : (Vector (Data dataBytes) rfIdx) <- r |> "rf";
        mlet d2eeltv : d2eElt <- r |> "d2e"--"elt";
        mlet d2efv : Bool <- r |> "d2e"--"full";
        mlet e2weltv : e2wElt <- r |> "e2w"--"elt";
        mlet e2wfv : Bool <- r |> "e2w"--"full";
-       mlet w2deltv : Bit iaddrSize <- r |> "w2d"--"elt";
+       mlet w2deltv : Pc iaddrSize <- r |> "w2d"--"elt";
        mlet w2dfv : Bool <- r |> "w2d"--"full";
        mlet eev : Bool <- r |> "eEpoch";
        mlet stallv : Bool <- r |> "stall";
@@ -147,7 +147,7 @@ Section ProcThreeStDec.
        (["stall" <- existT _ _ stallv]
         +["pgm" <- existT _ _ pgmv]
         +["rf" <- existT _ _ rfv]
-        +["pc" <- existT _ (SyntaxKind (Bit iaddrSize))
+        +["pc" <- existT _ (SyntaxKind (Pc iaddrSize))
                (if w2dfv then w2deltv
                 else if stallv then evalExpr (d2eCurPc _ stalledv)
                      else if e2wfv then

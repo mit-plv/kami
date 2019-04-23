@@ -79,7 +79,7 @@ Section Invariants.
   Hint Unfold fifo_empty_inv fifo_not_empty_inv mem_request_inv: InvDefs.
 
   Record procDec_inv (o: RegsT) : Prop :=
-    { pcv : fullType type (SyntaxKind (Bit iaddrSize));
+    { pcv : fullType type (SyntaxKind (Pc iaddrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
@@ -116,7 +116,7 @@ Section Invariants.
                ((stallv = true /\
                  fifo_not_empty_inv iev ienqpv ideqpv /\
                  fifo_empty_inv oev oenqpv odeqpv) /\
-                (mem_request_inv (pgmv pcv) rfv iev ieltv ideqpv))
+                (mem_request_inv (pgmv (split2 _ _ pcv)) rfv iev ieltv ideqpv))
                (stallv = true /\
                 fifo_empty_inv iev ienqpv ideqpv /\
                 fifo_not_empty_inv oev oenqpv odeqpv)

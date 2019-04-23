@@ -188,7 +188,7 @@ Section RV32IM.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
 
-  Definition rv32Exec: ExecT rv32AddrSize rv32InstBytes rv32DataBytes.
+  Definition rv32Exec: ExecT rv32IAddrSize rv32InstBytes rv32DataBytes.
     unfold ExecT; intros ty val1 val2 pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_LUI)
@@ -269,7 +269,7 @@ Section RV32IM.
     exact (#addr)%kami_expr.
   Defined.
 
-  Definition rv32NextPc: NextPcT rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx.
+  Definition rv32NextPc: NextPcT rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx.
     unfold NextPcT; intros ty st pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_JAL)

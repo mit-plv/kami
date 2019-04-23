@@ -28,8 +28,8 @@ Section Invariants.
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit iaddrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Pc iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -40,8 +40,8 @@ Section Invariants.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -56,9 +56,9 @@ Section Invariants.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Bit iaddrSize)))
+                          Expr ty (SyntaxKind (Pc iaddrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit iaddrSize)))
+                           Expr ty (SyntaxKind (Pc iaddrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -217,7 +217,7 @@ Section Invariants.
              (d2efullv: fullType type (SyntaxKind Bool)) :=
     d2efullv = true ->
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
-    (rawInst = pgmv (evalExpr (d2eCurPc _ d2eeltv)) /\
+    (rawInst = pgmv (split2 _ _ (evalExpr (d2eCurPc _ d2eeltv))) /\
      evalExpr (d2eOpType _ d2eeltv) = evalExpr (getOptype _ rawInst) /\
      (evalExpr (d2eOpType _ d2eeltv) = opLd ->
       (evalExpr (d2eDst _ d2eeltv) = evalExpr (getLdDst _ rawInst) /\
@@ -264,7 +264,7 @@ Section Invariants.
     stallv = true ->
     let rawInst := evalExpr (d2eRawInst _ stalledv) in
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
-    rawInst = pgmv (evalExpr (d2eCurPc _ stalledv)) /\
+    rawInst = pgmv (split2 _ _ (evalExpr (d2eCurPc _ stalledv))) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
      evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst)).
 
@@ -283,7 +283,6 @@ Section Invariants.
       Hinv3 : p3st_stalled_inv_body pgmv3 rfv3 stallv3 stalledv3 }.
 
   Definition p3st_exec_inv_body
-             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
              (e2wfullv: fullType type (SyntaxKind Bool))
              (e2weltv: fullType type (SyntaxKind e2wElt)) :=
@@ -296,9 +295,7 @@ Section Invariants.
                    (evalExpr (d2eCurPc _ d2eeltv)) rawInst).
 
   Record p3st_exec_inv (o: RegsT) : Prop :=
-    { pcv4 : fullType type (SyntaxKind (Bit iaddrSize));
-      Hpcv4 : M.find "pc"%string o = Some (existT _ _ pcv4);
-      rfv4 : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
+    { rfv4 : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv4 : M.find "rf"%string o = Some (existT _ _ rfv4);
 
       e2weltv4 : fullType type (SyntaxKind e2wElt);
@@ -306,11 +303,10 @@ Section Invariants.
       e2wfullv4 : fullType type (SyntaxKind Bool);
       He2wfullv4 : M.find "e2w"--"full"%string o = Some (existT _ _ e2wfullv4);
 
-      Hinv4 : p3st_exec_inv_body pcv4 rfv4 e2wfullv4 e2weltv4 }.
+      Hinv4 : p3st_exec_inv_body rfv4 e2wfullv4 e2weltv4 }.
 
   Definition p3st_epochs_inv_body
              (fepochv eepochv d2efullv e2wfullv w2dfullv stallv: fullType type (SyntaxKind Bool))
-             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (e2weltv: fullType type (SyntaxKind e2wElt))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
@@ -337,9 +333,7 @@ Section Invariants.
      w2dfullv = false).
 
   Record p3st_epochs_inv (o: RegsT) : Prop :=
-    { pcv5 : fullType type (SyntaxKind (Bit iaddrSize));
-      Hpcv5 : M.find "pc"%string o = Some (existT _ _ pcv5);
-      fepochv5 : fullType type (SyntaxKind Bool);
+    { fepochv5 : fullType type (SyntaxKind Bool);
       Hfepochv5 : M.find "fEpoch"%string o = Some (existT _ _ fepochv5);
 
       d2eeltv5 : fullType type (SyntaxKind d2eElt);
@@ -367,11 +361,11 @@ Section Invariants.
       Heepochv5 : M.find "eEpoch"%string o = Some (existT _ _ eepochv5);
       
       Hinv5 : p3st_epochs_inv_body fepochv5 eepochv5 d2efullv5 e2wfullv5 w2dfullv5 stallv5
-                                   pcv5 d2eeltv5 e2weltv5 stalledv5 }.
+                                   d2eeltv5 e2weltv5 stalledv5 }.
 
   Definition p3st_pc_inv_body
              (fepochv eepochv d2efullv e2wfullv w2dfullv stallv: fullType type (SyntaxKind Bool))
-             (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
+             (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (e2weltv: fullType type (SyntaxKind e2wElt))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
@@ -395,7 +389,7 @@ Section Invariants.
       (e2wfullv = false -> d2efullv = false -> evalExpr (d2eNextPc _ stalledv) = pcv))).
 
   Record p3st_pc_inv (o: RegsT) : Prop :=
-    { pcv6 : fullType type (SyntaxKind (Bit iaddrSize));
+    { pcv6 : fullType type (SyntaxKind (Pc iaddrSize));
       Hpcv6 : M.find "pc"%string o = Some (existT _ _ pcv6);
       fepochv6 : fullType type (SyntaxKind Bool);
       Hfepochv6 : M.find "fEpoch"%string o = Some (existT _ _ fepochv6);

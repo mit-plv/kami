@@ -46,7 +46,7 @@ Section ProcDec.
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition procDec := MODULE {
-    Register "pc" : Bit iaddrSize <- (pcInit procInit)
+    Register "pc" : Pc iaddrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
     with Register "pinit" : Bool <- Default
     with Register "pinitOfs" : Bit iaddrSize <- Default
@@ -82,12 +82,12 @@ Section ProcDec.
     with Rule "reqLd" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Bit addrSize <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
@@ -104,12 +104,12 @@ Section ProcDec.
     with Rule "reqLdZ" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[#ppc];
+      LET rawInst <- #pgm@[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
       Assert (#regIdx == $0);
@@ -118,12 +118,12 @@ Section ProcDec.
     with Rule "reqSt" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Bit addrSize <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[#ppc];
+      LET rawInst <- #pgm @[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
       LET srcIdx <- getStSrc _ rawInst;
@@ -139,12 +139,12 @@ Section ProcDec.
                       
     with Rule "repLd" :=
       Call val <- memRep();
-      Read ppc <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[#ppc];
+      LET rawInst <- #pgm @[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Write "rf" <- #rf@[#dstIdx <- #val!RsToProc@."data"];
@@ -153,12 +153,12 @@ Section ProcDec.
                       
     with Rule "repSt" :=
       Call val <- memRep();
-      Read ppc <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[#ppc];
+      LET rawInst <- #pgm @[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opSt);
       Write "stall" <- $$false;
       nextPc ppc rf rawInst
@@ -166,12 +166,12 @@ Section ProcDec.
     with Rule "execNm" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[#ppc];
+      LET rawInst <- #pgm @[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
       LET val1 <- #rf@[#src1];
@@ -186,12 +186,12 @@ Section ProcDec.
     with Rule "execNmZ" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc <- "pc";
+      Read ppc : Pc iaddrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
-      Read pgm <- "pgm";
+      Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[#ppc];
+      LET rawInst <- #pgm @[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
       Assert (#dst == $0);

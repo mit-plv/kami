@@ -19,7 +19,7 @@ Definition rv32IAddrSize := 10.
 Definition pinit: ProcInit rv32IAddrSize rv32DataBytes rv32RfIdx :=
   {| pcInit := Default; rfInit := Default |}.
 
-Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Bit rv32IAddrSize))) :=
+Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Pc rv32IAddrSize))) :=
   (#ppc + $4)%kami_expr.
 
 Definition p4st: Modules :=

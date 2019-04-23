@@ -67,6 +67,8 @@ Notation "'_zeroExtend_' x" :=
   (UniBit (ZeroExtendTrunc _ _) x) (at level 0) : kami_expr_scope.
 Notation "'_signExtend_' x" :=
   (UniBit (SignExtendTrunc _ _) x) (at level 0) : kami_expr_scope.
+Notation "'_truncLsb_' x" :=
+  (UniBit (TruncLsb _ _) x) (at level 0) : kami_expr_scope.
 Notation "{ a , b }" := (BinBit (Concat _ _) a b) (at level 0, a at level 99) : kami_expr_scope.
 Notation "{ a ::( al ) , b }" := (BinBit (Concat al _) a b) (at level 0, a at level 99) : kami_expr_scope.
 Notation "{ a , b ::( bl ) }" := (BinBit (Concat _ bl) a b) (at level 0, a at level 99) : kami_expr_scope.

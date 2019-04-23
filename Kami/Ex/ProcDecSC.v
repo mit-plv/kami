@@ -55,7 +55,7 @@ Section ProcDecSC.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 
   Definition pdec_pinst_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit iaddrSize) <- r |> "pc";
+    (mlet pcv : (Pc iaddrSize) <- r |> "pc";
        mlet rfv : (Vector (Data dataBytes) rfIdx) <- r |> "rf";
        mlet pgmv : (Vector (Data instBytes) iaddrSize) <- r |> "pgm";
        mlet oev : Bool <- r |> "rsToProc"--"empty";
@@ -66,7 +66,7 @@ Section ProcDecSC.
              +["rf" <- (existT _ _ rfv)]
              +["pc" <- (existT _ _ pcv)])%fmap
        else
-         let rawInst := pgmv pcv in
+         let rawInst := pgmv (split2 _ _ pcv) in
          (["pgm" <- (existT _ _ pgmv)]
           +["rf" <- (let opc := evalExpr (getOptype _ rawInst) in
                      if weq opc opLd

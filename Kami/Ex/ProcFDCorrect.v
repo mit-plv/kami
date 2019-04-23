@@ -29,8 +29,8 @@ Section FetchDecode.
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
             (alignAddr: AlignAddrT addrSize)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Bit iaddrSize))).
+            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                       Expr ty (SyntaxKind (Pc iaddrSize))).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -41,8 +41,8 @@ Section FetchDecode.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
 
@@ -50,17 +50,17 @@ Section FetchDecode.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Bit iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Bit iaddrSize)))
+                          Expr ty (SyntaxKind (Pc iaddrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Bit iaddrSize)))
+                           Expr ty (SyntaxKind (Pc iaddrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -77,7 +77,7 @@ Section FetchDecode.
                  evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                  evalExpr epoch).
 
-  Variables (pcInit : ConstT (Bit iaddrSize)).
+  Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchDecode := fetchDecode
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
@@ -104,7 +104,7 @@ Section FetchDecode.
   Hint Unfold fetchDecode_ruleMap: MethDefs.
 
   Definition fetchDecode_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Bit iaddrSize) <- r |> "pc";
+    (mlet pcv : (Pc iaddrSize) <- r |> "pc";
        mlet pgmv : (Vector (Data instBytes) iaddrSize) <- r |> "pgm";
        mlet fev : Bool <- r |> "fEpoch";
        mlet f2dfullv : Bool <- r |> "f2d"--"full";
@@ -112,7 +112,7 @@ Section FetchDecode.
 
        (["fEpoch" <- existT _ _ fev]
         +["pgm" <- existT _ _ pgmv]
-        +["pc" <- existT _ (SyntaxKind (Bit iaddrSize))
+        +["pc" <- existT _ (SyntaxKind (Pc iaddrSize))
                (if f2dfullv then evalExpr (f2dCurPc _ f2deltv)
                 else pcv)])%fmap)%mapping.
   Hint Unfold fetchDecode_regMap: MapDefs.

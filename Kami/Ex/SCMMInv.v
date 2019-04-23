@@ -52,7 +52,7 @@ Section Invariants.
   Inductive scmm_inv (o: RegsT) : Prop :=
   | ProcInv:
       forall
-        (pcv: fullType type (SyntaxKind (Bit iaddrSize)))
+        (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
         (Hpcv: o@["pc"] = Some (existT _ _ pcv))
         (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
         (Hrfv: o@["rf"] = Some (existT _ _ rfv))
