@@ -20,7 +20,9 @@ DEPS_DIR ?= ..
 default_target: coq
 .PHONY: coq clean
 
-ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/riscv-coq/src riscv\n-Q $(DEPS_DIR)/coqutil/src coqutil\n
+SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
+
+ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/riscv-coq/src riscv\n-Q $(DEPS_DIR)/coqutil/src coqutil\n$(SUPPRESS_WARN)\n
 ARGS=$(subst \n, ,$(ARGS_NL))
 
 _CoqProject:
