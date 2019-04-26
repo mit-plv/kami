@@ -21,7 +21,7 @@ endinterface
 module mkTop (ForDRAM);
     Reg#(Bool) pgmInitOn <- mkReg(True);
     Reg#(Bit#(32)) pgmInitBase <- mkReg(unpack(0));
-    Reg#(Bit#(10)) pgmInitOfs <- mkReg(unpack(0));
+    Reg#(Bit#(5)) pgmInitOfs <- mkReg(unpack(0));
    
     FIFO#(MemRq) rqs <- mkFIFO();
     FIFO#(MemRs) rss <- mkFIFO();

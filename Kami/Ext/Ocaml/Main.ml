@@ -2,6 +2,8 @@ open Format
 open Target
 open PP
 
+let iAddrSize: int = 5
+   
 let () =
   let argnum = Array.length Sys.argv in
   if argnum < 2 then
@@ -10,7 +12,7 @@ let () =
     (let output_file = Sys.argv.(argnum - 1) in
      let oc = open_out output_file in
      set_formatter_out_channel oc;
-     (match targetB with
+     (match targetB iAddrSize with
       | Some bml -> ppBModulesFullDbg bml (argnum > 2)
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
