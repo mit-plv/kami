@@ -28,7 +28,7 @@ module mkTop (ForDRAM);
 
     rule pgmInitRq;
         when (pgmInitOn, noAction);
-        let rq = MemRq { addr: pgmInitBase + zeroExtend (pgmInitOfs << 2),
+        let rq = MemRq { addr: pgmInitBase + (zeroExtend(pgmInitOfs) << 2),
 	                 op: False,
 			 data: 0 };
         rqs.enq(rq);
