@@ -1,5 +1,15 @@
-all: Top.bsv Proc.bsv
+verilog: Top.bsv Proc.bsv
 	bsc -verilog +RTS -K100M -RTS -g mkTop -steps 2000000000 -u Top.bsv
 
+sim: Top.bsv Proc.bsv
+	bsc -sim -u -steps 2000000000 Top.bsv
+	bsc -sim -e mkTop -steps 2000000000 -o mkTop *.ba
+
+sim_with_fram: Top.bsv Proc.bsv FRAM.bsv
+	bsc -sim -u -steps 2000000000 Top.bsv
+	bsc -sim -e mkTopM -steps 2000000000 -o mkTopM *.ba
+
 clean:
-	rm -rf *.bo *.ba *.v
+	rm -rf *.bo *.ba *.cxx *.h *.o
+	rm -rf mkTop mkTop.so mkTopM mkTopM.so
+	rm -rf mkTop.v mkTopM.v

@@ -105,7 +105,7 @@ Section RV32Struct.
     | BGEU rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BGEU ofs
     | LW rs1 rd ofs => ItypeToRaw opcode_LOAD rs1 rd funct3_LW ofs
     | SW rs1 rs2 ofs => StypeToRaw opcode_STORE rs1 rs2 funct3_SW ofs
-    | ADDI rs1 rd ofs => ItypeToRaw opcode_OP_IMM_32 rs1 rd funct3_ADDI ofs
+    | ADDI rs1 rd ofs => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI ofs
     | ADD rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_ADD funct3_ADD
     | SUB rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SUB funct3_SUB
     | MUL rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_MUL funct3_MUL
@@ -115,8 +115,8 @@ Section RV32Struct.
     | AND rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_AND funct3_AND
     | XOR rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_XOR funct3_XOR
     (* pseudo-instructions *)
-    | LI rd ofs => ItypeToRaw opcode_OP_IMM_32 x0 rd funct3_ADDI (split1 12 8 ofs)
-    | MV rs1 rd => ItypeToRaw opcode_OP_IMM_32 rs1 rd funct3_ADDI (natToWord _ 0)
+    | LI rd ofs => ItypeToRaw opcode_OP_IMM x0 rd funct3_ADDI (split1 12 8 ofs)
+    | MV rs1 rd => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI (natToWord _ 0)
     | BEQZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BEQ ofs
     | BNEZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BNE ofs 
     | BLEZ rs1 ofs => SBtypeToRaw opcode_BRANCH x0 rs1 funct3_BGE ofs
@@ -124,7 +124,7 @@ Section RV32Struct.
     | BLTZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BLT ofs
     | BGTZ rs1 ofs => SBtypeToRaw opcode_BRANCH x0 rs1 funct3_BLT ofs
     | J ofs => UJtypeToRaw opcode_JAL x0 ofs
-    | NOP => ItypeToRaw opcode_OP_IMM_32 x0 x0 funct3_ADDI (wzero _)
+    | NOP => ItypeToRaw opcode_OP_IMM x0 x0 funct3_ADDI (wzero _)
     end.
 
 End RV32Struct.
@@ -158,23 +158,23 @@ Section UnitTests.
 
   Definition ItypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
-                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SRLI (natToWord _ 5))))) =
-    ZToWord _ opcode_OP_IMM_32 := eq_refl.
+                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
+    ZToWord _ opcode_OP_IMM := eq_refl.
   Definition ItypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
-                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SRLI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
     gprToRaw x1 := eq_refl.
   Definition ItypeToRaw_getRdE_correct:
     evalExpr (getRdE
-                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SRLI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
     gprToRaw x2 := eq_refl.
   Definition ItypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
-                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SRLI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
     ZToWord _ funct3_SRLI := eq_refl.
   Definition ItypeToRaw_getOffsetIE_correct:
     evalExpr (getOffsetIE
-                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SRLI (natToWord _ 5))))) =
+                (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
     natToWord _ 5 := eq_refl.
 
   Definition StypeToRaw_getOpcodeE_correct:
@@ -183,19 +183,19 @@ Section UnitTests.
     ZToWord _ opcode_STORE := eq_refl.
   Definition StypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
-                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SW (natToWord _ 5))))) =
+                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
     gprToRaw x1 := eq_refl.
   Definition StypeToRaw_getRs2E_correct:
     evalExpr (getRs2E
-                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SW (natToWord _ 5))))) =
+                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
     gprToRaw x2 := eq_refl.
   Definition StypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
-                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SW (natToWord _ 5))))) =
+                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
     ZToWord _ funct3_SW := eq_refl.
   Definition StypeToRaw_getOffsetSE_correct:
     evalExpr (getOffsetSE
-                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM_32 x1 x2 funct3_SW (natToWord _ 5))))) =
+                (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
     natToWord _ 5 := eq_refl.
 
   Definition SBtypeToRaw_getOpcodeE_correct:
@@ -204,19 +204,19 @@ Section UnitTests.
     ZToWord _ opcode_BRANCH := eq_refl.
   Definition SBtypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
-                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM_32 x1 x2 funct3_BGE (natToWord _ 5))))) =
+                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
     gprToRaw x1 := eq_refl.
   Definition SBtypeToRaw_getRs2E_correct:
     evalExpr (getRs2E
-                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM_32 x1 x2 funct3_BGE (natToWord _ 5))))) =
+                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
     gprToRaw x2 := eq_refl.
   Definition SBtypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
-                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM_32 x1 x2 funct3_BGE (natToWord _ 5))))) =
+                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
     ZToWord _ funct3_BGE := eq_refl.
   Definition SBtypeToRaw_getOffsetSE_correct:
     evalExpr (getOffsetSBE
-                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM_32 x1 x2 funct3_BGE (natToWord _ 5))))) =
+                (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
     natToWord _ 5 := eq_refl.
 
   Definition UJtypeToRaw_getOpcodeE_correct:

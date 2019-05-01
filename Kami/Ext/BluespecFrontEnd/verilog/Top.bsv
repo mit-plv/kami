@@ -4,6 +4,7 @@ import FIFO::*;
 import GetPut::*;
 
 import Proc::*;
+import FRAM::*;
 
 typedef Struct4 MemRq;
 typedef Struct5 MemRs;
@@ -41,7 +42,8 @@ module mkTop (ForDRAM);
     function ActionValue#(Bit#(32)) procPgmInit ();
         return (actionvalue 
                     rss.deq;
-                    return rss.first.data;
+		    let ld = rss.first.data;
+		    return {ld[7:0], ld[15:8], ld[23:16], ld[31:24]};
                 endactionvalue);
     endfunction
 
@@ -72,4 +74,24 @@ module mkTop (ForDRAM);
     endinterface);
 
 endmodule: mkTop
+
+(* synthesize *)
+module mkTopM ();
+    ForDRAM top <- mkTop ();
+    FRAM fram <- mkFRAM ();
+
+    rule doMem;
+        let rq <- top.obtain_rq.get();
+	if (rq.op) begin
+	    $display ("Handling a store: addr: %d, data: %d", rq.addr, rq.data);
+	    fram.store((rq.addr) >> 2, rq.data);
+            top.send_rs.put(MemRs {data: 0});
+        end else begin
+	    $display ("Handling a load: addr: %d", rq.addr);
+	    let rs <- fram.load((rq.addr) >> 2);
+	    top.send_rs.put(MemRs {data: rs});
+	end
+    endrule
+
+endmodule: mkTopM
 

@@ -96,7 +96,7 @@ Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 0) : kami_expr_scope.
  *   + opcode_BRANCH(6): beq, bne, blt, bge, bltu, bgeu
  *   + opcode_LOAD(1): lw
  *   + opcode_STORE(1): sw
- *   + opcode_OP_IMM_32(9): addi, slti, sltiu, xori, ori, andi, slli, srli, srai
+ *   + opcode_OP_IMM(9): addi, slti, sltiu, xori, ori, andi, slli, srli, srai
  *   + opcode_OP(10): add, sub, sll, slt, sltu, xor, srl, sra, or, and
  * - Not supported yet(6)
  *   + opcode_LOAD(4): lb, lh, lbu, lhu
@@ -204,7 +204,7 @@ Section RV32IM.
             then (_zeroExtend_ (#pc + $4))
             else _)%kami_expr.
 
-    refine (IF (getOpcodeE #inst == $opcode_OP_IMM_32) then _ else _)%kami_expr.
+    refine (IF (getOpcodeE #inst == $opcode_OP_IMM) then _ else _)%kami_expr.
     1: {
       register_op_funct3 inst funct3_ADDI
                          (#val1 + (_signExtend_ (getOffsetIE #inst)))%kami_expr.
