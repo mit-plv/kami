@@ -43,7 +43,8 @@ module mkTop (ForDRAM);
         return (actionvalue 
                     rss.deq;
 		    let ld = rss.first.data;
-		    return {ld[7:0], ld[15:8], ld[23:16], ld[31:24]};
+		    // return {ld[7:0], ld[15:8], ld[23:16], ld[31:24]};
+		    return ld;
                 endactionvalue);
     endfunction
 
