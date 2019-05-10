@@ -15,7 +15,7 @@ Section Middleman.
 
   Definition getReq := MethodSig (inName -- "deq")() : Struct RqFromProc.
   Definition setRep := MethodSig (outName -- "enq")(Struct RsToProc) : Void.
-  Definition exec := MethodSig "exec"(Struct RqFromProc) : Struct RsToProc.
+  Definition memOp := MethodSig "memOp"(Struct RqFromProc) : Struct RsToProc.
 
   Definition mid :=
     MODULE {
@@ -34,7 +34,7 @@ Section Middleman.
         Read memRqFull <- "memRqFull";
         Read memRq <- "memRq";
         Assert #memRqFull;
-        Call rep <- exec(#memRq);
+        Call rep <- memOp(#memRq);
         Call setRep(#rep);
         Retv
     }.
@@ -42,7 +42,7 @@ Section Middleman.
 End Middleman.
 
 Hint Unfold mid : ModuleDefs.
-Hint Unfold RqFromProc RsToProc getReq setRep exec : MethDefs.
+Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
 
 Section MemAsync.
   Variables (addrSize fifoSize dataBytes: nat).

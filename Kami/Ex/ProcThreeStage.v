@@ -239,10 +239,6 @@ Section ProcThreeStage.
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
 
-      with Method "sbSearch1_Th" (sidx: Bit rfIdx) : Bool :=
-        Read flags <- "sbFlags";
-        Ret #flags@[#sidx]
-
       with Method "sbSearch1_Nm" (sidx: Bit rfIdx) : Bool :=
         Read flags <- "sbFlags";
         Ret #flags@[#sidx]
@@ -270,7 +266,6 @@ Section ProcThreeStage.
     Definition sbSearch2_Ld := MethodSig "sbSearch2_Ld"(Bit rfIdx) : Bool.
     Definition sbSearch1_St := MethodSig "sbSearch1_St"(Bit rfIdx) : Bool.
     Definition sbSearch2_St := MethodSig "sbSearch2_St"(Bit rfIdx) : Bool.
-    Definition sbSearch1_Th := MethodSig "sbSearch1_Th"(Bit rfIdx) : Bool.
     Definition sbSearch1_Nm := MethodSig "sbSearch1_Nm"(Bit rfIdx) : Bool.
     Definition sbSearch2_Nm := MethodSig "sbSearch2_Nm"(Bit rfIdx) : Bool.
     Definition sbSearch3_Nm := MethodSig "sbSearch3_Nm"(Bit rfIdx) : Bool.
@@ -641,7 +636,6 @@ Hint Unfold RqFromProc RsToProc pgmInit memReq memRep
      getRf1 getRf2 setRf getEpoch toggleEpoch
      e2wFifoName e2wEnq e2wDeq
      sbSearch1_Ld sbSearch2_Ld sbSearch1_St sbSearch2_St
-     sbSearch1_Th
      sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm
      sbInsert sbRemove
      checkNextPc : MethDefs.

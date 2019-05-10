@@ -117,7 +117,7 @@ Section MemInst.
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
 
-  Definition memInstExec {ty} : ty (Struct RqFromProc) -> GenActionT Void ty (Struct RsToProc) :=
+  Definition memInstOp {ty} : ty (Struct RqFromProc) -> GenActionT Void ty (Struct RsToProc) :=
     fun (a: ty (Struct RqFromProc)) =>
       (If !#a!RqFromProc@."op" then (* load *)
          Read memv <- "mem";
@@ -134,7 +134,7 @@ Section MemInst.
     Register "mem" : Vector (Data dataBytes) addrSize <- Default
 
     with Repeat Method till n by "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
-      (memInstExec a)
+      (memInstOp a)
   }.
     
   Definition memInst := modFromMeta memInstM.
@@ -143,7 +143,7 @@ Section MemInst.
   
 End MemInst.
 
-Hint Unfold RqFromProc RsToProc memInstExec memOp : MethDefs.
+Hint Unfold RqFromProc RsToProc memInstOp memOp : MethDefs.
 Hint Unfold memInstM memInst : ModuleDefs.
 
 Section MMIO.
@@ -159,13 +159,14 @@ Section MMIO.
   Local Notation RqFromProc := (RqFromProc addrSize dataBytes).
   Local Notation RsToProc := (RsToProc dataBytes).
 
+  (** * TODO. naming conflict with mmioExec and mmOp!!! *)
   Definition mmioExec :=
     MethodSig "mmioExec"(Struct RqFromProc): Struct RsToProc.
 
   Definition mm := MODULE {
     Register "mem" : Vector (Data dataBytes) addrSize <- Default
 
-    with Method "mmOp" (a : Struct RqFromProc): Struct RsToProc :=
+    with Method "memOp" (a : Struct RqFromProc): Struct RsToProc :=
       LET addr <- #a!RqFromProc@."addr";
 
       If (isMMIO _ addr) then (** mmio *)
@@ -186,11 +187,9 @@ Section MMIO.
       Ret #na
   }.
     
-  Definition mmOp := MethodSig "mmOp"(Struct RqFromProc) : Struct RsToProc.
-
 End MMIO.
 
-Hint Unfold IsMMIOE IsMMIOT mmioExec mmOp : MethDefs.
+Hint Unfold IsMMIOE IsMMIOT mmioExec : MethDefs.
 Hint Unfold mm : ModuleDefs.
 
 (* The module definition for Pinst *)
@@ -224,7 +223,7 @@ Section ProcInst.
   Definition procInitDefault :=
     {| pcInit := Default; rfInit := Default |}.
 
-  Local Notation mmOp := (mmOp addrSize dataBytes).
+  Local Notation memOp := (memOp addrSize dataBytes).
 
   Definition pgmInit :=
     MethodSig "pgmInit"(): Data instBytes.
@@ -279,9 +278,9 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- mmOp(STRUCT { "addr" ::= alignAddr _ laddr;
-                                  "op" ::= $$false;
-                                  "data" ::= $$Default });
+      Call ldRep <- memOp(STRUCT { "addr" ::= alignAddr _ laddr;
+                                   "op" ::= $$false;
+                                   "data" ::= $$Default });
       Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
       nextPc ppc rf rawInst
              
@@ -311,9 +310,9 @@ Section ProcInst.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call mmOp(STRUCT { "addr" ::= alignAddr _ saddr;
-                         "op" ::= $$true;
-                         "data" ::= #stVal });
+      Call memOp(STRUCT { "addr" ::= alignAddr _ saddr;
+                          "op" ::= $$true;
+                          "data" ::= #stVal });
       nextPc ppc rf rawInst
 
     with Rule "execNm" :=

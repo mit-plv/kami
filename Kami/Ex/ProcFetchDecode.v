@@ -105,7 +105,6 @@ Section FetchAndDecode.
   Definition sbSearch2_Ld := sbSearch2_Ld rfIdx.
   Definition sbSearch1_St := sbSearch1_St rfIdx.
   Definition sbSearch2_St := sbSearch2_St rfIdx.
-  Definition sbSearch1_Th := sbSearch1_Th rfIdx.
   Definition sbSearch1_Nm := sbSearch1_Nm rfIdx.
   Definition sbSearch2_Nm := sbSearch2_Nm rfIdx.
   Definition sbSearch3_Nm := sbSearch3_Nm rfIdx.
@@ -266,8 +265,8 @@ End FetchAndDecode.
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
-     sbSearch1_St sbSearch2_St sbSearch1_Th
-     sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm sbInsert
+     sbSearch1_St sbSearch2_St sbSearch1_Nm
+     sbSearch2_Nm sbSearch3_Nm sbInsert
      pgmInit : MethDefs.
   
 Section Facts.
