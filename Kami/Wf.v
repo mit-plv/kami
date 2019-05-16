@@ -312,9 +312,9 @@ Section ValidRegs.
 
   Fixpoint ValidRegsModules (m: Modules): Prop :=
     match m with
-      | RegFile dataArray read write IdxBits Data init =>
-        ValidRegsRules (namesOf (getRegInits m)) (getRules m) /\
-        ValidRegsDms (namesOf (getRegInits m)) (getDefsBodies m)
+    | PrimMod _ =>
+      ValidRegsRules (namesOf (getRegInits m)) (getRules m) /\
+      ValidRegsDms (namesOf (getRegInits m)) (getDefsBodies m)
     | Mod regs rules dms =>
       ValidRegsRules (namesOf regs) rules /\
       ValidRegsDms (namesOf regs) dms

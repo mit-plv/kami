@@ -1,10 +1,8 @@
-Require Import Bool List String.
+Require Import Bool Vector List String.
 Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist Lib.Struct Lib.Indexer.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)
 Require Import Eqdep. (* for signature_eq *)
-
-Require Vector.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -683,71 +681,39 @@ Definition filterDms (dms: list DefMethT) (filt: list string) :=
   filter (fun dm => if string_in (attrName dm) filt then false else true) dms.
 
 Definition Void := Bit 0.
+
+Record PrimitiveModule :=
+  { pm_name: string;
+    pm_regInits: list RegInitT;
+    pm_rules: list (Attribute (Action Void));
+    pm_methods: list DefMethT }.
+
 Inductive Modules: Type :=
-| RegFile (dataArray: string) (read: list string) (write: string) (IdxBits: nat) (Data: Kind)
-          (init: ConstT (Vector Data IdxBits)): Modules
+| PrimMod (prim: PrimitiveModule): Modules
 | Mod (regs: list RegInitT)
       (rules: list (Attribute (Action Void)))
-      (dms: list DefMethT):
-    Modules
-| ConcatMod (m1 m2: Modules):
-    Modules.
+      (dms: list DefMethT): Modules
+| ConcatMod (m1 m2: Modules): Modules.
 
 Fixpoint getRules m := 
   match m with
-    | RegFile _ _ _ _ _ _ => nil
-    | Mod _ rules _ => rules
-    | ConcatMod m1 m2 => getRules m1 ++ getRules m2
+  | PrimMod prim => prim.(pm_rules)
+  | Mod _ rules _ => rules
+  | ConcatMod m1 m2 => getRules m1 ++ getRules m2
   end.
 
 Fixpoint getRegInits m :=
   match m with
-    | RegFile dataArray read write IdxBits Data init =>
-      {| attrName := dataArray;
-         attrType := RegInitCustom (existT ConstFullT (SyntaxKind (Vector Data IdxBits)) (SyntaxConst init)) |}
-        :: nil
-    | Mod regs _ _ => regs
-    | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
+  | PrimMod prim => prim.(pm_regInits)
+  | Mod regs _ _ => regs
+  | ConcatMod m1 m2 => getRegInits m1 ++ getRegInits m2
   end.
 
 Fixpoint getDefsBodies (m: Modules): list DefMethT :=
   match m with
-    | RegFile dataArray reads write IdxBits Data init =>
-      {| attrName := write%string;
-         attrType :=
-           existT MethodT {| arg := Struct
-                                      (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
-                                                   (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)));
-                             ret := Void |}
-                  (fun ty (ar: ty (Struct
-                                     (Vector.cons _ {| attrName := "addr"%string; attrType := Bit IdxBits |} _
-                                                  (Vector.cons _ {| attrName := "data"%string; attrType := Data |} _ (Vector.nil _)))))
-                   =>
-                     (ReadReg dataArray%string
-                              (SyntaxKind (Vector Data IdxBits))
-                              (fun x: ty (Vector Data IdxBits) =>
-                                 WriteReg dataArray%string
-                                          (UpdateVector (Var ty (SyntaxKind (Vector Data IdxBits)) x)
-                                                        (ReadField Fin.F1 (Var ty (SyntaxKind _) ar))
-                                                        (ReadField (Fin.FS Fin.F1) (Var ty (SyntaxKind _) ar)))
-                                          (Return (Const _ (k := Void) WO)))))
-      |} ::
-         map (fun read =>
-                {| attrName := read;
-                   attrType :=
-                     existT MethodT {| arg := Bit IdxBits; ret := Data |}
-                            (fun ty (ar: ty (Bit IdxBits)) =>
-                               (ReadReg dataArray%string
-                                        (SyntaxKind (Vector Data IdxBits))
-                                        (fun x: ty (Vector Data IdxBits) =>
-                                           Return
-                                             (ReadIndex
-                                                (Var ty (SyntaxKind (Bit IdxBits)) ar)
-                                                (Var ty (SyntaxKind (Vector Data IdxBits)) x)))))
-                |}) reads
-
-    | Mod _ _ meths => meths
-    | ConcatMod m1 m2 => (getDefsBodies m1) ++ (getDefsBodies m2)
+  | PrimMod prim => prim.(pm_methods)
+  | Mod _ _ meths => meths
+  | ConcatMod m1 m2 => (getDefsBodies m1) ++ (getDefsBodies m2)
   end.
 
 Definition getDefs m: list string := namesOf (getDefsBodies m).
@@ -1297,7 +1263,8 @@ Proof.
     + right; apply in_or_app; auto.
 Qed.
 
-Hint Unfold getRules getRegInits getDefs getCalls getDefsBodies
+Hint Unfold pm_rules pm_regInits pm_methods
+     getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths.
 
 (** Notations *)

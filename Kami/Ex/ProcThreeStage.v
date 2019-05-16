@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
-Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
+Require Import Kami.Wf Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync.
 
 Set Implicit Arguments.

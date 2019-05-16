@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.Reflection Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
-Require Import Kami.SemFacts Kami.Wf Kami.ParametricSyntax Kami.ParametricEquiv Kami.Tactics.
+Require Import Kami.SemFacts Kami.Wf Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo.
 
 Set Implicit Arguments.
@@ -47,28 +47,21 @@ Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
 Section MemAsync.
   Variables (addrSize fifoSize dataBytes: nat).
 
-  Variable n: nat.
-
-  Definition minst := memInst n addrSize dataBytes.
+  Definition minst := memInst addrSize dataBytes.
 
   Definition inQ := @simpleFifo "rqFromProc" fifoSize (Struct (RqFromProc addrSize dataBytes)).
   Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc dataBytes)).
   Definition ioQ := ConcatMod inQ outQ.
-
-  Definition ios (i: nat) := duplicate (fun _ => ioQ) i.
-
   Definition midQ := mid "rqFromProc" "rsToProc" addrSize dataBytes.
-  Definition mids (i: nat) := duplicate (fun _ => midQ) i.
   
   Definition iom := ConcatMod ioQ midQ.
-  Definition ioms (i: nat) := duplicate (fun _ => iom) i.
 
-  Definition memAsyncWoQ := ConcatMod (mids n) minst.
-  Definition memAsync := ConcatMod (ioms n) minst.
+  Definition memAsyncWoQ := ConcatMod midQ minst.
+  Definition memAsync := ConcatMod iom minst.
 
 End MemAsync.
 
-Hint Unfold minst inQ outQ ioQ midQ mids iom ioms
+Hint Unfold minst inQ outQ ioQ midQ iom
      memAsyncWoQ memAsync : ModuleDefs.
 
 Section Facts.
@@ -88,36 +81,20 @@ Section Facts.
   Qed.
   Hint Resolve iom_ModEquiv.
 
-  Variable n: nat.
-
-  Lemma mids_ModEquiv:
-    ModPhoasWf (mids addrSize dataBytes n).
-  Proof.
-    kequiv.
-  Qed.
-  Hint Resolve mids_ModEquiv.
-
-  Lemma ioms_ModEquiv:
-    ModPhoasWf (ioms addrSize fifoSize dataBytes n).
-  Proof.
-    kequiv.
-  Qed.
-  Hint Resolve ioms_ModEquiv.
-
   Lemma memAsyncWoQ_ModEquiv:
-    ModPhoasWf (memAsyncWoQ addrSize dataBytes n).
+    ModPhoasWf (memAsyncWoQ addrSize dataBytes).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAsync_ModEquiv:
-    ModPhoasWf (memAsync addrSize fifoSize dataBytes n).
+    ModPhoasWf (memAsync addrSize fifoSize dataBytes).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Immediate midQ_ModEquiv iom_ModEquiv mids_ModEquiv ioms_ModEquiv
+Hint Immediate midQ_ModEquiv iom_ModEquiv
      memAsyncWoQ_ModEquiv memAsync_ModEquiv.
 

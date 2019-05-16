@@ -107,9 +107,14 @@ Section Rename.
 
   Fixpoint renameModules (m: Modules) :=
     match m with
-      | RegFile dataArray read write IdxBits Data init => RegFile (rename dataArray) (map rename read) (rename write) init
-      | Mod regs rules dms => Mod (renameListAttr regs) (renameRules rules) (renameMeths dms)
-      | ConcatMod m1 m2 => ConcatMod (renameModules m1) (renameModules m2)
+    | PrimMod prim =>
+      PrimMod {| pm_name := prim.(pm_name);
+                 pm_regInits := renameListAttr prim.(pm_regInits);
+                 pm_rules := renameRules prim.(pm_rules);
+                 pm_methods := renameMeths prim.(pm_methods)
+              |}
+    | Mod regs rules dms => Mod (renameListAttr regs) (renameRules rules) (renameMeths dms)
+    | ConcatMod m1 m2 => ConcatMod (renameModules m1) (renameModules m2)
     end.
 
   Lemma renameListAttr_namesOf:
@@ -268,9 +273,6 @@ Section Rename.
       rewrite <- renameMapFind in H3.
       intuition.
   Qed.
-
-
-
   
   Lemma renameMapIn A (m: M.t A):
     forall i, M.In i m <-> M.In (rename i) (renameMap m).
@@ -823,7 +825,7 @@ Section Rename.
     getCallsR (getRules (renameModules m)) = map rename (getCallsR (getRules m)).
   Proof.
     induction m; simpl.
-    - reflexivity.
+    - apply renameGetCallsR.
     - apply renameGetCallsR.
     - repeat rewrite getCallsR_app.
       rewrite List.map_app.
@@ -847,7 +849,7 @@ Section Rename.
     getCallsM (getDefsBodies (renameModules m)) = map rename (getCallsM (getDefsBodies m)).
   Proof.
     induction m; simpl.
-    - induction read; simpl; auto.
+    - apply renameGetCallsM.
     - apply renameGetCallsM.
     - repeat rewrite getCallsM_app.
       rewrite List.map_app.

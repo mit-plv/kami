@@ -2,8 +2,8 @@ Require Import Ascii Bool String List.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
-Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
-Require Import Ex.MemTypes Kami.ParametricSyntax.
+Require Import Kami.Wf Kami.Tactics.
+Require Import Ex.MemTypes.
 
 Set Implicit Arguments.
 
@@ -117,34 +117,29 @@ Section MemInst.
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
 
-  Definition memInstOp {ty} : ty (Struct RqFromProc) -> GenActionT Void ty (Struct RsToProc) :=
-    fun (a: ty (Struct RqFromProc)) =>
-      (If !#a!RqFromProc@."op" then (* load *)
-         Read memv <- "mem";
-         LET ldval <- #memv@[#a!RqFromProc@."addr"];
-         Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
-       else (* store *)
-         Read memv <- "mem";
-         Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
-         Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
-       as na;
-       Ret #na)%kami_gen.
+  Definition memInst :=
+    MODULE {
+      Register "mem" : Vector (Data dataBytes) addrSize <- Default
 
-  Definition memInstM := META {
-    Register "mem" : Vector (Data dataBytes) addrSize <- Default
-
-    with Repeat Method till n by "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
-      (memInstOp a)
-  }.
+      with Method "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
+        If !#a!RqFromProc@."op" then (* load *)
+          Read memv <- "mem";
+          LET ldval <- #memv@[#a!RqFromProc@."addr"];
+          Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
+        else (* store *)
+          Read memv <- "mem";
+          Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
+          Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
+        as na;
+        Ret #na
+    }.
     
-  Definition memInst := modFromMeta memInstM.
-
   Definition memOp := MethodSig "memOp"(Struct RqFromProc) : Struct RsToProc.
   
 End MemInst.
 
-Hint Unfold RqFromProc RsToProc memInstOp memOp : MethDefs.
-Hint Unfold memInstM memInst : ModuleDefs.
+Hint Unfold RqFromProc RsToProc memOp : MethDefs.
+Hint Unfold memInst : ModuleDefs.
 
 Section MMIO.
   Variable addrSize: nat.
@@ -159,7 +154,6 @@ Section MMIO.
   Local Notation RqFromProc := (RqFromProc addrSize dataBytes).
   Local Notation RsToProc := (RsToProc dataBytes).
 
-  (** * TODO. naming conflict with mmioExec and mmOp!!! *)
   Definition mmioExec :=
     MethodSig "mmioExec"(Struct RqFromProc): Struct RsToProc.
 
@@ -418,19 +412,18 @@ Section Facts.
   Qed.
   Hint Resolve pinst_ModEquiv.
 
-  Variable n: nat.
-  
-  Lemma memInstM_ModEquiv:
-    MetaModPhoasWf (memInstM n addrSize dataBytes).
+  Lemma memInst_ModEquiv:
+    ModPhoasWf (memInst addrSize dataBytes).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve memInstM_ModEquiv.
+  Hint Resolve memInst_ModEquiv.
 
   Lemma mm_ModEquiv: ModPhoasWf (mm addrSize isMMIO).
   Proof.
     kequiv.
   Qed.
+  Hint Resolve mm_ModEquiv.
   
   Lemma scmm_ModEquiv:
     forall inits,
@@ -444,5 +437,5 @@ Section Facts.
   
 End Facts.
 
-Hint Resolve pinst_ModEquiv memInstM_ModEquiv mm_ModEquiv scmm_ModEquiv.
+Hint Resolve pinst_ModEquiv memInst_ModEquiv mm_ModEquiv scmm_ModEquiv.
 

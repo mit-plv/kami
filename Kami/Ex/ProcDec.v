@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
-Require Import Kami.Wf Kami.ParametricEquiv Kami.Tactics.
+Require Import Kami.Wf Kami.Tactics.
 Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.MemAsync.
 
 Set Implicit Arguments.
@@ -231,19 +231,12 @@ Section ProcDecM.
 
   Variables (procInits: list (ProcInit iaddrSize dataBytes rfIdx)).
 
-  Definition pdecs (i: nat) :=
-    duplicate (fun iv => pdec (nth_default (procInitDefault iaddrSize dataBytes rfIdx)
-                                           procInits iv)) i.
-
   Definition pdecf init := (pdec init ++ iom addrSize fifoSize dataBytes)%kami.
-  Definition pdecfs (i: nat) :=
-    duplicate (fun iv => pdecf (nth_default (procInitDefault iaddrSize dataBytes rfIdx)
-                                            procInits iv)) i.
-  Definition procDecM (n: nat) := (pdecfs n ++ minst addrSize dataBytes n)%kami.
+  Definition procDecM init := (pdecf init ++ minst addrSize dataBytes)%kami.
 
 End ProcDecM.
 
-Hint Unfold pdec pdecf pdecfs procDecM : ModuleDefs.
+Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
   Variables opIdx addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
@@ -285,28 +278,16 @@ Section Facts.
   Qed.
   Hint Resolve pdecf_ModEquiv.
 
-  Variable n: nat.
-
-  Lemma pdecfs_ModEquiv:
-    forall inits,
-      ModPhoasWf (pdecfs fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                         getStAddr getStSrc calcStAddr getStVSrc
-                         getSrc1 getSrc2 getDst exec getNextPc alignAddr inits n).
-  Proof.
-    kequiv.
-  Qed.
-  Hint Resolve pdecfs_ModEquiv.
-
   Lemma procDecM_ModEquiv:
     forall inits,
       ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignAddr inits n).
+                           getSrc1 getSrc2 getDst exec getNextPc alignAddr inits).
   Proof.
     kequiv.
   Qed.
 
 End Facts.
 
-Hint Resolve pdec_ModEquiv pdecf_ModEquiv pdecfs_ModEquiv procDecM_ModEquiv.
+Hint Resolve pdec_ModEquiv pdecf_ModEquiv procDecM_ModEquiv.
 

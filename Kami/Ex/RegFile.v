@@ -1,6 +1,6 @@
 Require Import String Lib.CommonTactics Lib.Indexer Lib.StringAsList.
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
-Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics.
+Require Import Kami.Wf Kami.Tactics.
 
 Set Implicit Arguments.
 
@@ -34,53 +34,11 @@ Section RegFile.
         Write ^"dataArray" <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
         Retv
       }.
-  
-  (** SinAction version *)
-  Hypothesis Hname: index 0 indexSymbol name = None.
-  Lemma rfgn:
-    forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
-  Proof.
-    unfold withPrefix; intros.
-    apply index_not_in; apply index_not_in in H; apply index_not_in in Hname.
-    intro Hx; elim H; clear H.
-    apply S_in_app_or in Hx; destruct Hx; auto.
-    apply S_in_app_or in H; destruct H.
-    - inv H; inv H0.
-    - elim Hname; auto.
-  Qed.
-
-  Definition regFileS :=
-    SIN {
-        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
-
-        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Ret (#full@[#a])
-            
-        with Method { ^"write" | rfgn "write" eq_refl } (w: Struct WritePort): Void :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
-          Retv
-      }.
-
-  Definition regFileM :=
-    META {
-        Register { ^"dataArray" | rfgn "dataArray" eq_refl } : DataArray <- init
-
-        with Method { ^"read" | rfgn "read" eq_refl } (a: Addr): Data :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Ret (#full@[#a])
-            
-        with Method { ^"write" | rfgn "write" eq_refl } (w: Struct WritePort): Void :=
-          Read full: DataArray <- { ^"dataArray" | rfgn "dataArray" eq_refl };
-          Write { ^"dataArray" | rfgn "dataArray" eq_refl } <- #full@[ #w!WritePort@."addr" <- #w!WritePort@."data" ];
-          Retv
-      }.
 
 End RegFile.
 
 Hint Unfold DataArray Addr WritePort : MethDefs.
-Hint Unfold regFile regFileM regFileS : ModuleDefs.
+Hint Unfold regFile : ModuleDefs.
 
 Section Facts.
   Variable name: string.
@@ -100,35 +58,8 @@ Section Facts.
     kvr.
   Qed.
 
-  Variable n: nat.
-  Hypothesis (Hgood: index 0 indexSymbol name = None).
-  
-  Lemma regFileS_ModEquiv:
-    MetaModPhoasWf (getMetaFromSinNat n (regFileS name init Hgood)).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma regFileM_ModEquiv:
-    MetaModPhoasWf (regFileM name init Hgood).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma regFileS_ValidRegs:
-    MetaModRegsWf (getMetaFromSinNat n (regFileS name init Hgood)).
-  Proof.
-    kvr.
-  Qed.
-
-  Lemma regFileM_ValidRegs:
-    MetaModRegsWf (regFileM name init Hgood).
-  Proof.
-    kvr.
-  Qed.
-
 End Facts.
 
-Hint Resolve regFile_ModEquiv regFileS_ModEquiv regFileM_ModEquiv.
-Hint Resolve regFile_ValidRegs regFileS_ValidRegs regFileM_ValidRegs.
+Hint Resolve regFile_ModEquiv.
+Hint Resolve regFile_ValidRegs.
 

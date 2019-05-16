@@ -363,36 +363,8 @@ Section SpecializeFacts.
     induction m; simpl; intros.
     - inv H; simpl in *.
       constructor; simpl.
-      + auto.
-      + inv H1.
-        constructor.
-        (* inv H4. *)
-        * clear - H3.
-          repeat match goal with
-                   | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
-                 end.
-          simpl in *.
-          apply (f_equal (renameMeth f)) in Heqa.
-          (* apply (f_equal (renameMeth f)) in Heqa0. *)
-          simpl in *.
-          unfold MethodT in *.
-          rewrite <- Heqa.
-          (* rewrite <- Heqa0. *)
-          repeat constructor; try apply renameAction_MethEquiv; auto.
-        * clear - H4.
-          induction read; simpl; auto.
-          simpl in H4.
-          inv H4.
-          specialize (IHread H2).
-          repeat match goal with
-                   | H: MethEquiv _ _ (?n :: ?a)%struct |- _ => remember (n :: a)%struct
-                 end.
-          simpl in *.
-          apply (f_equal (renameMeth f)) in Heqa0.
-          simpl in *.
-          unfold MethodT in *.
-          rewrite <- Heqa0.
-          repeat constructor; try apply renameAction_MethEquiv; auto.
+      + apply renameRules_RulesEquiv; auto.
+      + apply renameMeths_MethsEquiv; auto.
     - inv H; simpl in *.
       constructor; simpl.
       + apply renameRules_RulesEquiv; auto.
@@ -463,23 +435,9 @@ Section SpecializeFacts.
         ValidRegsModules type (renameModules (specializer m2 i) m1).
   Proof.
     induction m1; simpl; intros.
-    - repeat constructor; auto.
-      inv H.
-      inv H3.
-      simpl in *.
-      clear H0 H2.
-      apply SubList_cons_inv in H1.
-      destruct H1 as [_ stuff].
-      induction read; simpl; auto.
-      constructor; auto.
-      simpl in stuff.
-      apply SubList_cons_inv in stuff.
-      destruct stuff as [use stuff].
-      specialize (IHread stuff).
-      clear stuff.
-      repeat constructor; auto.
-      inv H5.
-      apply IHread; auto.
+    - dest; split.
+      + apply specializer_validRegsRules; auto.
+      + apply specializer_validRegsDms; auto.
     - dest; split.
       + apply specializer_validRegsRules; auto.
       + apply specializer_validRegsDms; auto.
@@ -566,31 +524,88 @@ Section SpecializeFacts.
       renameModules f m = renameModules g m.
   Proof.
     induction m; simpl; intros.
-    - clear - H.
-      f_equal.
-      + assert (forall s, In s (namesOf (getRegInits (RegFile dataArray read write init))) -> f s = g s)
+    - do 2 f_equal.
+      + assert (forall s, In s (namesOf (pm_regInits prim)) -> f s = g s)
           by (intros; apply H; apply spDom_regs; auto).
-        simpl in *.
-        specialize (H0 dataArray).
-        apply H0; left; auto.
-      + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
+        clear -H0; induction (pm_regInits prim); simpl; auto.
+        f_equal.
+        * unfold renameAttr; f_equal.
+          apply H0; simpl; tauto.
+        * apply IHl; intros; apply H0; simpl; auto.
+      + assert (forall s, In s (namesOf (pm_rules prim)) -> f s = g s)
+          by (intros; apply H; apply spDom_rules; auto).
+        assert (forall s, In s (namesOf (pm_regInits prim) ++ getCallsR (pm_rules prim)) ->
+                          f s = g s).
+        { intros; apply H.
+          apply in_app_or in H1; destruct H1.
+          { apply spDom_regs; auto. }
+          { apply spDom_calls; apply in_or_app; auto. }
+        }
+        assert (forall ty, RulesEquiv ty typeUT (pm_rules prim))
+          by (intros; specialize (Hequiv ty); inv Hequiv; auto).
+        assert (forall ty, ValidRegsRules ty (namesOf (pm_regInits prim)) (pm_rules prim))
+          by (intros; specialize (Hvr ty); dest; auto).
+        clear -H0 H1 H2 H3; induction (pm_rules prim); simpl; auto.
+        f_equal.
+        * destruct a as [an ab]; f_equal.
+          { apply H0; simpl; tauto. }
+          { extensionality ty.
+            specialize (H3 ty); inv H3.
+            apply renameAction_spDom_weakening with
+            (au:= ab typeUT) (regs:= namesOf (pm_regInits prim)).
+            { auto. }
+            { specialize (H2 ty); inv H2; auto. }
+            { intros; apply H1.
+              simpl; rewrite app_assoc; apply in_or_app; auto.
+            }
+          }
+        * apply IHl; intros.
+          { apply H0; simpl; auto. }
+          { apply H1; simpl.
+            apply in_app_or in H; destruct H.
+            { apply in_or_app; auto. }
+            { apply in_or_app; right; apply in_or_app; auto. }
+          }
+          { specialize (H2 ty); inv H2; auto. }
+          { specialize (H3 ty); inv H3; auto. }
+      + assert (forall s, In s (namesOf (pm_methods prim)) -> f s = g s)
           by (intros; apply H; apply spDom_defs; auto).
-        simpl in *.
-        unfold namesOf in *; rewrite ?map_map in *; simpl in *.
-        rewrite map_id in H0.
-        assert (forall s, In s read -> f s = g s) by (firstorder; fail).
-        clear - H1.
-        induction read; simpl in *; auto.
-        assert (forall s, In s read -> f s = g s) by (firstorder; fail).
-        specialize (IHread H).
-        f_equal; auto.
-      + assert (forall s, In s (namesOf (getDefsBodies (RegFile dataArray read write init))) -> f s = g s)
-          by (intros; apply H; apply spDom_defs; auto).
-        simpl in *.
-        simpl in *.
-        unfold namesOf in *; rewrite ?map_map in *; simpl in *.
-        rewrite map_id in H0.
-        specialize (H0 write); apply H0; left; auto.
+        assert (forall s, In s (namesOf (pm_regInits prim) ++ getCallsM (pm_methods prim)) ->
+                          f s = g s).
+        { intros; apply H.
+          apply in_app_or in H1; destruct H1.
+          { apply spDom_regs; auto. }
+          { apply spDom_calls; apply in_or_app; auto. }
+        }
+        assert (forall ty, MethsEquiv ty typeUT (pm_methods prim))
+          by (intros; specialize (Hequiv ty); inv Hequiv; auto).
+        assert (forall ty, ValidRegsDms ty (namesOf (pm_regInits prim)) (pm_methods prim))
+          by (intros; specialize (Hvr ty); dest; auto).
+        clear -H0 H1 H2 H3; induction (pm_methods prim); simpl; auto.
+        f_equal.
+        * unfold renameMeth; destruct a as [an ab]; f_equal.
+          { apply H0; simpl; tauto. }
+          { f_equal.
+            extensionality ty; extensionality v.
+            specialize (H2 ty); inv H2.
+            specialize (H3 ty); inv H3.
+            simpl; eapply renameAction_spDom_weakening.
+            { eapply H7. }
+            { eapply H5. }
+            { simpl in H1; intros; apply H1.
+              rewrite app_assoc; apply in_or_app; eauto.
+            }
+          }
+        * apply IHl; intros.
+          { apply H0; simpl; auto. }
+          { apply H1; simpl.
+            apply in_app_or in H; destruct H.
+            { apply in_or_app; auto. }
+            { apply in_or_app; right; apply in_or_app; auto. }
+          }
+          { specialize (H2 ty); inv H2; auto. }
+          { specialize (H3 ty); inv H3; auto. }
+
     - f_equal.
       + assert (forall s, In s (namesOf regs) -> f s = g s)
           by (intros; apply H; apply spDom_regs; auto).
@@ -670,6 +685,7 @@ Section SpecializeFacts.
           }
           { specialize (H2 ty); inv H2; auto. }
           { specialize (H3 ty); inv H3; auto. }
+
     - f_equal.
       + apply IHm1; intros.
         { specialize (Hvr ty); dest; auto. }

@@ -1,6 +1,6 @@
 Require Import String List.
 Require Import Lib.ilist Lib.Struct Lib.Indexer.
-Require Import Kami.Syntax Kami.Synthesize Kami.ParametricSyntax.
+Require Import Kami.Syntax Kami.Synthesize.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
@@ -45,16 +45,13 @@ Section BluespecSubset.
   Definition BRule := Attribute (list BAction).
   Definition BMethod := Attribute (SignatureT * list BAction).
 
-  Record BModule := { bregs : list RegInitT;
-                      brules : list BRule;
-                      bdms : list BMethod }.
+  Inductive BModule :=
+  | BModulePrim (primModName: string) (ifc: list (Attribute SignatureT)): BModule
+  | BModuleB (bregs: list RegInitT)
+             (brules: list BRule)
+             (bdms: list BMethod): BModule.
 
-  Inductive BRegModule :=
-  | RegFileB (dataArray: string) (read: list string) (write: string)
-             (IdxBits: nat) (Data: Kind) (init: ConstT (Vector Data IdxBits)): BRegModule
-  | BModuleB (b: BModule): BRegModule.
-
-  Definition BModules := list BRegModule.
+  Definition BModules := list BModule.
 
   (** Conversion from Kami modules to BModules *)
 
@@ -213,15 +210,14 @@ Section BluespecSubset.
                  >>= (fun bmb => Some ({| attrName := mn; attrType := (sig, bmb) |} :: bms)))
     end.
 
-  Fixpoint ModulesSToBModules (m: ModulesS) :=
+  Fixpoint ModulesSToBModules (m: ModulesS): option (list BModule) :=
     match m with
-      | RegFileS dataArray read write _ _ init =>
-        Some (RegFileB dataArray read write init :: nil)
+    | PrimModS pname ifc => Some (BModulePrim pname ifc :: nil)
     | ModS regs rules dms =>
       (rulesToBRules rules)
         >>= (fun brules =>
                (methsToBMethods dms)
-                 >>= (fun bdms => Some (BModuleB (Build_BModule regs brules bdms) :: nil)))
+                 >>= (fun bdms => Some (BModuleB regs brules bdms :: nil)))
     | ConcatModsS m1 m2 =>
       (ModulesSToBModules m1)
         >>= (fun bm1 =>

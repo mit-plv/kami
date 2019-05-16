@@ -1,20 +1,10 @@
 Require Import Bool String List Arith.Peano_dec.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Concat Lib.Indexer Lib.StringEq.
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts.
 Require Import Kami.Specialize Kami.Duplicate.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
-
-Lemma prefix_getListFromRep:
-  forall s {A} (strA: A -> string) {B} (bgen: A -> B) nameVal ls,
-    In s (namesOf (getListFromRep strA bgen nameVal ls)) ->
-    prefix nameVal s = true.
-Proof.
-  induction ls; simpl; intros; [inv H|].
-  destruct H; auto.
-  subst; apply prefix_append.
-Qed.
 
 Section ModuleBound.
   Variable m: Modules.
@@ -236,33 +226,6 @@ Section Bounds.
   Definition getDmsBound (m: Modules) := getDefs m.
   Definition getCmsBound (m: Modules) := getCalls m.
 
-  Fixpoint getMetaRegsBound (rs: list MetaReg) :=
-    match rs with
-    | nil => nil
-    | OneReg _ {| nameVal := n |} :: rs' =>
-      n :: (getMetaRegsBound rs')
-    | RepReg _ _ _ _ _ {| nameVal := n |} _ _ :: rs' =>
-      n :: (getMetaRegsBound rs')
-    end.
-
-  Definition getRegsBoundM (mm: MetaModule) := getMetaRegsBound (metaRegs mm).
-
-  Fixpoint getMetaDmsBound (ms: list MetaMeth) :=
-    match ms with
-    | nil => nil
-    | OneMeth _ {| nameVal := n |} :: ms' =>
-      n :: (getMetaDmsBound ms')
-    | RepMeth _ _ _ _ _ _ _ {| nameVal := n |} _ _ :: ms' =>
-      n :: (getMetaDmsBound ms')
-    end.
-
-  Definition getDmsBoundM (mm: MetaModule) := getMetaDmsBound (metaMeths mm).
-
-  Definition getCmsBoundM (mm: MetaModule) :=
-    map (fun n => nameVal (nameRec n))
-        ((concat (map getCallsMetaRule (metaRules mm)))
-           ++ (concat (map getCallsMetaMeth (metaMeths mm)))).
-
   Lemma getRegsBound_bounded:
     forall m, RegsBound m (getRegsBound m).
   Proof. intros; apply abstracted_refl. Qed.
@@ -383,142 +346,6 @@ Section Bounds.
     rewrite H0 with (j:= (S n)).
     apply getCmsBound_specialize; auto.
   Qed.
-
-  Lemma abstracted_metaRegs:
-    forall mregs,
-      Abstracted (getMetaRegsBound mregs)
-                 (namesOf (concat (map getListFromMetaReg mregs))).
-  Proof.
-    induction mregs; simpl; [apply abstracted_refl|].
-    destruct a.
-    - destruct s; simpl.
-      unfold Abstracted in *; intros; inv H.
-      + exists s; split.
-        * left; auto.
-        * apply prefix_refl.
-      + specialize (IHmregs _ H0).
-        destruct IHmregs as [abss ?]; dest.
-        exists abss; split; auto.
-        right; auto.
-    - destruct s; simpl.
-      unfold Abstracted in *; intros.
-      rewrite namesOf_app in H.
-      apply in_app_or in H; inv H.
-      + exists nameVal; split; [left; auto|].
-        eapply prefix_getListFromRep; eauto.
-      + specialize (IHmregs _ H0).
-        destruct IHmregs as [abss ?]; dest.
-        exists abss; split; auto.
-        right; auto.
-  Qed.
-
-  Lemma abstracted_metaMeths:
-    forall mdms,
-      Abstracted (getMetaDmsBound mdms)
-                 (namesOf (concat (map getListFromMetaMeth mdms))).
-  Proof.
-    induction mdms; simpl; [apply abstracted_refl|].
-    destruct a.
-    - destruct s; simpl.
-      unfold Abstracted in *; intros; inv H.
-      + exists s; split.
-        * left; auto.
-        * apply prefix_refl.
-      + specialize (IHmdms _ H0).
-        destruct IHmdms as [abss ?]; dest.
-        exists abss; split; auto.
-        right; auto.
-    - destruct s; simpl.
-      unfold Abstracted in *; intros.
-      rewrite namesOf_app in H.
-      apply in_app_or in H; inv H.
-      + exists nameVal; split; [left; auto|].
-        unfold repMeth in H0.
-        eapply prefix_getListFromRep; eauto.
-      + specialize (IHmdms _ H0).
-        destruct IHmdms as [abss ?]; dest.
-        exists abss; split; auto.
-        right; auto.
-  Qed.
-
-  Lemma abstracted_metaCms:
-    forall mregs mrules mdms,
-      CmsBound
-        (modFromMeta
-           {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |})
-        (getCmsBoundM
-           {| metaRegs := mregs; metaRules := mrules; metaMeths := mdms |}).
-  Proof.
-    unfold CmsBound, modFromMeta, getCmsBoundM, getCalls; simpl; intros.
-    rewrite map_app.
-    apply abstracted_app_1.
-    - clear; induction mrules; [apply abstracted_refl|].
-      simpl; rewrite map_app; rewrite getCallsR_app.
-      apply abstracted_app_1; auto.
-      destruct a.
-      + simpl.
-        match goal with
-        | [ |- Abstracted ?abs _ ] =>
-          replace abs with (map nameVal (getCallsSinA (b typeUT)))
-            by (clear; induction (getCallsSinA (b typeUT)); simpl; [auto|f_equal; auto])
-        end.
-        rewrite app_nil_r, <-getCallsSinA_matches.
-        apply abstracted_refl.
-      + simpl; induction ls; [apply abstracted_nil|].
-        simpl; apply abstracted_app_3; [|inv noDup; auto].
-        unfold getActionFromGen.
-        rewrite getCallsGenA_matches.
-        clear; induction (getCallsGenA (bgen typeUT)); simpl; [apply abstracted_refl|].
-        unfold Abstracted in *; intros.
-        inv H.
-        * exists (nameVal (nameRec a0)); split; [left; auto|].
-          destruct a0 as [[|] [? ?]]; unfold strFromName; simpl.
-          { apply prefix_append. }
-          { apply prefix_refl. }
-        * specialize (IHl _ H0); destruct IHl as [abss ?]; dest.
-          exists abss; split; auto.
-          right; auto.
-    - clear; induction mdms; [apply abstracted_refl|].
-      simpl; rewrite map_app; rewrite getCallsM_app.
-      apply abstracted_app_1; auto.
-      destruct a.
-      + simpl.
-        match goal with
-        | [ |- Abstracted ?abs _ ] =>
-          replace abs with (map nameVal (getCallsSinA (projT2 b typeUT tt)))
-            by (clear; induction (getCallsSinA (projT2 b typeUT tt));
-                simpl; [auto|f_equal; auto])
-        end.
-        rewrite app_nil_r, <-getCallsSinA_matches.
-        apply abstracted_refl.
-      + simpl; induction ls; [apply abstracted_nil|].
-        simpl; apply abstracted_app_3; [|inv noDup; auto].
-        unfold getActionFromGen.
-        rewrite getCallsGenA_matches.
-        clear; induction (getCallsGenA (projT2 bgen typeUT tt)); simpl;
-          [apply abstracted_refl|].
-        unfold Abstracted in *; intros.
-        inv H.
-        * exists (nameVal (nameRec a0)); split; [left; auto|].
-          destruct a0 as [[|] [? ?]]; unfold strFromName; simpl.
-          { apply prefix_append. }
-          { apply prefix_refl. }
-        * specialize (IHl _ H0); destruct IHl as [abss ?]; dest.
-          exists abss; split; auto.
-          right; auto.
-  Qed.
-
-  Lemma getRegsBoundM_bounded:
-    forall mm, RegsBound (modFromMeta mm) (getRegsBoundM mm).
-  Proof. intros; apply abstracted_metaRegs. Qed.
-    
-  Lemma getDmsBoundM_bounded:
-    forall mm, DmsBound (modFromMeta mm) (getDmsBoundM mm).
-  Proof. intros; apply abstracted_metaMeths. Qed.
-
-  Lemma getCmsBoundM_bounded:
-    forall mm, CmsBound (modFromMeta mm) (getCmsBoundM mm).
-  Proof. intros; apply abstracted_metaCms. Qed.
 
 End Bounds.
 

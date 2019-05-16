@@ -1,7 +1,7 @@
 Require Import Arith.Peano_dec Bool String List.
-Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList.
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Notations Kami.Semantics.
-Require Import Kami.ParametricEquiv Kami.Wf Kami.ParametricWf Kami.Tactics.
+Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList Lib.StringEq.
+Require Import Kami.Syntax Kami.Notations Kami.Semantics.
+Require Import Kami.Wf Kami.Tactics.
 
 Set Implicit Arguments.
 
@@ -52,8 +52,6 @@ Section NativeFifo.
      Assert !$$(listIsEmpty elt);
      Ret (listFirstElt elt))%kami_action.
 
-  Set Printing Universes.
-
   Definition nativeFifo := MODULE {
     RegisterN ^"elt" : listEltK type <- (NativeConst nil nil)
 
@@ -69,66 +67,6 @@ Section NativeFifo.
     with Method ^"deq"() : dType := nativeDeq
   }.
 
-  (** SinAction version *)
-  Hypothesis HfifoName: index 0 indexSymbol fifoName = None.
-  Lemma ngn:
-    forall s, index 0 indexSymbol s = None -> index 0 indexSymbol (^s) = None.
-  Proof.
-    unfold withPrefix; intros.
-    apply index_not_in; apply index_not_in in H; apply index_not_in in HfifoName.
-    intro Hx; elim H; clear H.
-    apply S_in_app_or in Hx; destruct Hx; auto.
-    apply S_in_app_or in H; destruct H.
-    - inv H; inv H0.
-    - elim HfifoName; auto.
-  Qed.
-
-  Definition nativeEnqS {ty} : forall (d: ty dType), SinActionT ty Void := fun d =>
-    (ReadN eltT : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
-     Write { ^"elt" | ngn "elt" eq_refl } <- (Var _ (listEltK ty) (listEnq d eltT));
-     Retv)%kami_sin.
-
-  Definition nativeDeqS {ty} : SinActionT ty dType :=
-    (ReadN eltT : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
-     Assert !$$(listIsEmpty eltT);
-     Write { ^"elt" | ngn "elt" eq_refl } <- (Var _ (listEltK ty) (listDeq eltT));
-     Ret (listFirstElt eltT))%kami_sin.
-
-  Definition nativeFirstEltS {ty} : SinActionT ty dType :=
-    (ReadN elt : listEltK ty <- { ^"elt" | ngn "elt" eq_refl };
-     Assert !$$(listIsEmpty elt);
-     Ret (listFirstElt elt))%kami_sin.
-  
-  Definition nativeFifoS := SIN {
-    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
-
-    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
-    with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
-  }.
-
-  Definition nativeSimpleFifoS := SIN {
-    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
-
-    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
-  }.
-
-  Definition nativeFifoM := META {
-    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
-
-    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
-    with Method { ^"firstElt" | ngn "firstElt" eq_refl } () : dType := nativeFirstEltS
-  }.
-
-  Definition nativeSimpleFifoM := META {
-    RegisterN { ^"elt" | ngn "elt" eq_refl } : listEltK type <- (NativeConst nil nil)
-
-    with Method { ^"enq" | ngn "enq" eq_refl } (d : dType) : Void := (nativeEnqS d)
-    with Method { ^"deq" | ngn "deq" eq_refl } () : dType := nativeDeqS
-  }.
-  
 End NativeFifo.
 
 Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
@@ -136,35 +74,12 @@ Hint Unfold listEltT listEltK listElt
      listIsEmpty listEnq listDeq listFirstElt
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
-Hint Unfold nativeFifoS nativeSimpleFifoS nativeFifoM nativeSimpleFifoM : ModuleDefs.
-Hint Unfold nativeEnqS nativeDeqS nativeFirstEltS: MethDefs.
-
-Require Import Lib.StringEq.
-
 Section Facts.
   Variable fifoName: string.
   Variable dType: Kind.
   Variable default: ConstT dType.
 
   Hypothesis (Hgood: index 0 indexSymbol fifoName = None).
-
-  Lemma nativeFifo_nativeFifoM:
-    nativeFifo fifoName default = modFromMeta (nativeFifoM fifoName default Hgood).
-  Proof. reflexivity. Qed.
-
-  Lemma nativeFifo_nativeFifoS:
-    nativeFifo fifoName default = getModFromSin (nativeFifoS fifoName default Hgood).
-  Proof. reflexivity. Qed.
-
-  Lemma nativeSimpleFifo_nativeSimpleFifoM:
-    nativeSimpleFifo fifoName default =
-    modFromMeta (nativeSimpleFifoM fifoName default Hgood).
-  Proof. reflexivity. Qed.
-
-  Lemma nativeSimpleFifo_nativeSimpleFifoS:
-    nativeSimpleFifo fifoName default =
-    getModFromSin (nativeSimpleFifoS fifoName default Hgood).
-  Proof. reflexivity. Qed.
 
   Lemma nativeFifo_ModEquiv:
     ModPhoasWf (nativeFifo fifoName default).
@@ -194,87 +109,8 @@ Section Facts.
   Qed.
   Hint Resolve nativeSimpleFifo_ValidRegs.
 
-  Variable n: nat.
-
-  Lemma nativeFifoS_ModEquiv:
-    MetaModPhoasWf (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma nativeFifoSS_ModEquiv:
-    ModPhoasWf (getModFromSin (nativeFifoS fifoName default Hgood)).
-  Proof.
-    rewrite <-nativeFifo_nativeFifoS; kequiv.
-  Qed.
-
-  Lemma nativeFifoM_ModEquiv:
-    MetaModPhoasWf (nativeFifoM fifoName default Hgood).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma nativeSimpleFifoS_ModEquiv:
-    MetaModPhoasWf (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma nativeSimpleFifoSS_ModEquiv:
-    ModPhoasWf (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
-  Proof.
-    rewrite <-nativeSimpleFifo_nativeSimpleFifoS; kequiv.
-  Qed.
-
-  Lemma nativeSimpleFifoM_ModEquiv:
-    MetaModPhoasWf (nativeSimpleFifoM fifoName default Hgood).
-  Proof.
-    kequiv.
-  Qed.
-
-  Lemma nativeFifoS_ValidRegs:
-    MetaModRegsWf (getMetaFromSinNat n (nativeFifoS fifoName default Hgood)).
-  Proof.
-    kvr.
-  Qed.
-
-  Lemma nativeFifoSS_ValidRegs:
-    ModRegsWf (getModFromSin (nativeFifoS fifoName default Hgood)).
-  Proof.
-    rewrite <-nativeFifo_nativeFifoS; kvr.
-  Qed.
-
-  Lemma nativeFifoM_ValidRegs:
-    MetaModRegsWf (nativeFifoM fifoName default Hgood).
-  Proof.
-    kvr.
-  Qed.
-
-  Lemma nativeSimpleFifoS_ValidRegs:
-    MetaModRegsWf (getMetaFromSinNat n (nativeSimpleFifoS fifoName default Hgood)).
-  Proof.
-    kvr.
-  Qed.
-
-  Lemma nativeSimpleFifoSS_ValidRegs:
-    ModRegsWf (getModFromSin (nativeSimpleFifoS fifoName default Hgood)).
-  Proof.
-    rewrite <-nativeSimpleFifo_nativeSimpleFifoS; kvr.
-  Qed.
-
-  Lemma nativeSimpleFifoM_ValidRegs:
-    MetaModRegsWf (nativeSimpleFifoM fifoName default Hgood).
-  Proof.
-    kvr.
-  Qed.
-
 End Facts.
 
-Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv
-     nativeFifoS_ModEquiv nativeFifoSS_ModEquiv nativeFifoM_ModEquiv
-     nativeSimpleFifoS_ModEquiv nativeSimpleFifoSS_ModEquiv nativeSimpleFifoM_ModEquiv.
-
-Hint Resolve nativeFifo_ValidRegs nativeSimpleFifo_ValidRegs
-     nativeFifoS_ValidRegs nativeFifoSS_ValidRegs nativeFifoM_ValidRegs
-     nativeSimpleFifoS_ValidRegs nativeSimpleFifoSS_ValidRegs nativeSimpleFifoM_ValidRegs.
+Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
+Hint Resolve nativeFifo_ValidRegs nativeSimpleFifo_ValidRegs.
 

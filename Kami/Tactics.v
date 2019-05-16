@@ -5,7 +5,6 @@ Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.StepDet Kami.Wf.
 Require Import Kami.RefinementFacts Kami.Notations.
 Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.Substitute.
 Require Import Kami.Decomposition Kami.ModuleBound Kami.ModuleBoundEx.
-Require Import Kami.ParametricSyntax Kami.ParametricEquiv Kami.ParametricWf.
 
 Require Import FunctionalExtensionality Program.Equality.
 
@@ -108,31 +107,17 @@ Ltac kequiv_red :=
   match goal with
   | [ |- ModEquiv _ _ _ ] => apply duplicate_ModEquiv; intros
   | [ |- ModEquiv _ _ _ ] => apply ModEquiv_modular
-  | [ |- ModEquiv _ _ _ ] => apply metaModEquiv_modEquiv
-  | [ |- MetaModEquiv _ _ _ ] => apply metaModEquiv_modular
   | [ |- ModEquiv _ _ ?m ] => unfold_head m
-  | [ |- MetaModEquiv _ _ ?m ] => unfold_head m
   end.
  
 Ltac kequiv_unit :=
   match goal with
-  (* for normal modules *)
   | [ |- ModEquiv _ _ _ ] => constructor; intros
   | [ |- RuleEquiv _ _ _ ] => unfold RuleEquiv; intros
   | [ |- MethEquiv _ _ _ ] => unfold MethEquiv; intros
-  | [ |- RulesEquiv _ _ _ ] => apply MetaRulesEquiv_RulesEquiv
   | [ |- RulesEquiv _ _ _ ] => constructor; intros
-  | [ |- MethsEquiv _ _ _ ] => apply MetaMethsEquiv_MethsEquiv
   | [ |- MethsEquiv _ _ _ ] => constructor; intros
   | [ |- ActionEquiv _ _ ] => constructor; intros
-  (* for meta modules *)
-  | [ |- MetaModEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaRulesEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaRuleEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaMethsEquiv _ _ _ ] => constructor; intros
-  | [ |- MetaMethEquiv _ _ _ ] => constructor; intros
-  | [ |- SinActionEquiv _ _ _ _ ] => constructor; intros
-  | [ |- GenActionEquiv _ _ _ _ _ ] => constructor; intros
   | [ |- In _ _] => simpl; tauto
   end.
 
@@ -148,27 +133,15 @@ Ltac kvr_red :=
   | [ |- ValidRegsModules _ (Mod (getRegInits ?m) (getRules ?m) (getDefsBodies ?m)) ] =>
     apply validRegsModules_flatten
   | [ |- ValidRegsModules _ (duplicate _ _) ] => apply duplicate_validRegsModules; intros
-  | [ |- ValidRegsModules _ (modFromMeta _) ] => apply validRegsMetaModule_validRegsModules
-  | [ |- ValidRegsMetaModule _ (_ +++ _) ] => apply validRegsMetaModule_modular
   | [ |- ValidRegsModules _ ?m ] => unfold_head m
-  | [ |- ValidRegsMetaModule _ ?mm ] => unfold_head mm
   end.
 
 Ltac kvr_unit :=
   match goal with
-  (* for normal modules *)
   | [ |- ValidRegsModules _ _ ] => constructor; intros
   | [ |- ValidRegsRules _ _ _ ] => constructor; intros
   | [ |- ValidRegsDms _ _ _ ] => constructor; intros
   | [ |- ValidRegsAction _ _ ] => constructor; intros
-  (* for meta modules *)
-  | [ |- ValidRegsMetaModule _ _ ] => constructor; intros
-  | [ |- ValidRegsMetaRules _ _ _ ] => constructor; intros
-  | [ |- ValidRegsMetaRule _ _ _ ] => econstructor; intros
-  | [ |- ValidRegsMetaMeths _ _ _ ] => constructor; intros
-  | [ |- ValidRegsMetaMeth _ _ _ ] => econstructor; intros
-  | [ |- ValidRegsSinAction _ _ ] => econstructor; intros
-  | [ |- ValidRegsGenAction _ _ _ _ ] => econstructor; intros
   | [ |- In _ _] => simpl; tauto
   end.
 
@@ -180,12 +153,12 @@ Ltac kvr :=
 Ltac get_minimal_regs_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getRegsBound (sm 0))
-  | modFromMeta ?mm => constr:(getRegsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_regs_bound m1 in
     let mb2 := get_minimal_regs_bound m2 in
     constr:(mb1 ++ mb2)
   | makeModule _ => constr:(getRegsBound m)
+  | PrimMod _ => constr:(getRegsBound m)
   | Mod _ _ _ => constr:(getRegsBound m)
   | _ =>
     let m' := unfold_head_ret m in
@@ -195,12 +168,12 @@ Ltac get_minimal_regs_bound m :=
 Ltac get_minimal_dms_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getDmsBound (sm 0))
-  | modFromMeta ?mm => constr:(getDmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_dms_bound m1 in
     let mb2 := get_minimal_dms_bound m2 in
     constr:(mb1 ++ mb2)
   | makeModule _ => constr:(getDmsBound m)
+  | PrimMod _ => constr:(getDmsBound m)
   | Mod _ _ _ => constr:(getDmsBound m)
   | _ =>
     let m' := unfold_head_ret m in
@@ -210,12 +183,12 @@ Ltac get_minimal_dms_bound m :=
 Ltac get_minimal_cms_bound m :=
   lazymatch m with
   | duplicate ?sm _ => constr:(getCmsBound (sm 0))
-  | modFromMeta ?mm => constr:(getCmsBoundM mm)
   | ConcatMod ?m1 ?m2 =>
     let mb1 := get_minimal_cms_bound m1 in
     let mb2 := get_minimal_cms_bound m2 in
     constr:(mb1 ++ mb2)
   | makeModule _ => constr:(getCmsBound m)
+  | PrimMod _ => constr:(getCmsBound m)
   | Mod _ _ _ => constr:(getCmsBound m)
   | _ =>
     let m' := unfold_head_ret m in
@@ -274,24 +247,21 @@ Ltac red_to_cd_bound :=
 
 Ltac regs_bound_tac :=
   repeat (
-      apply getRegsBoundM_bounded
-      || apply getRegsBound_modular
+      apply getRegsBound_modular
       || apply concatMod_regsBound_1
       || (apply getRegsBound_duplicate; auto)
       || apply getRegsBound_bounded).
 
 Ltac dms_bound_tac :=
   repeat (
-      apply getDmsBoundM_bounded
-      || apply getDmsBound_modular
+      apply getDmsBound_modular
       || apply concatMod_dmsBound_1
       || (apply getDmsBound_duplicate; auto)
       || apply getDmsBound_bounded).
 
 Ltac cms_bound_tac :=
   repeat (
-      apply getCmsBoundM_bounded
-      || apply getCmsBound_modular
+      apply getCmsBound_modular
       || apply concatMod_cmsBound_1
       || (apply getCmsBound_duplicate; auto)
       || apply getCmsBound_bounded).
@@ -336,11 +306,7 @@ Ltac knodup_regs :=
     | [ |- NoDup (namesOf (getRegInits _)) ] =>
       progress (unfold getRegInits; fold getRegInits)
     end;
-  repeat
-    match goal with
-    | _ => apply noDup_metaRegs
-    | _ => noDup_tac
-    end.
+  repeat noDup_tac.
 
 Ltac kinteracting := repeat split.
 

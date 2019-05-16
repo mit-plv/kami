@@ -1,7 +1,7 @@
 Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.FMap Lib.StringEq.
-Require Import Kami.Syntax Kami.ParametricSyntax Kami.Semantics Kami.SemFacts.
+Require Import Kami.Syntax Kami.Semantics Kami.SemFacts.
 Require Import Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Specialize Kami.Tactics Kami.Duplicate.
 Require Import Kami.ModuleBound Kami.ModuleBoundEx.
@@ -38,16 +38,16 @@ Section ProcDecSCN.
                           getSrc1 getSrc2 getDst exec getNextPc alignAddr
                           isMMIO init.
 
-  Definition procDec0 := pdec fifoSize getOptype
-                              getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst exec
-                              getNextPc alignAddr init.
+  Definition pdec := pdec fifoSize getOptype
+                          getLdDst getLdAddr getLdSrc calcLdAddr
+                          getStAddr getStSrc calcStAddr getStVSrc
+                          getSrc1 getSrc2 getDst exec
+                          getNextPc alignAddr init.
   
-  Definition memAsync0 := memAsync addrSize fifoSize dataBytes 0.
-  Definition pdec0 := (procDec0 ++ memAsync0)%kami.
+  Definition memAsync := memAsync addrSize fifoSize dataBytes.
+  Definition pdecM := (pdec ++ memAsync)%kami.
 
-  Lemma pdec0_memAtomic_refines_scmm: pdec0 <<== scmm.
+  Lemma pdecM_refines_scmm: pdecM <<== scmm.
   Proof. (* SKIP_PROOF_ON
     krewrite assoc left.
     kmodulari n.
