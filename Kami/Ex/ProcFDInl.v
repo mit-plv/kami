@@ -1,3 +1,4 @@
+Require Import Bool String List.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Ex.SC Ex.MemTypes Ex.ProcFetchDecode.
@@ -22,7 +23,7 @@ Section Inlined.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -60,9 +61,10 @@ Section Inlined.
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
-  Definition fetchDecode := fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+  Definition fetchDecode := fetchDecode "rqFromProc"%string "rsToProc"%string
+                                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst predictNextPc
+                                        getSrc1 getSrc2 getDst alignInst predictNextPc
                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         pcInit.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
@@ -70,9 +72,10 @@ Section Inlined.
   Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
   Proof.
     pose proof (inlineF_refines
-                  (fetchDecode_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+                  (fetchDecode_ModEquiv "rqFromProc"%string "rsToProc"%string
+                                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                         getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst predictNextPc d2ePack
+                                        getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
                                         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         pcInit type typeUT)
                   (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))

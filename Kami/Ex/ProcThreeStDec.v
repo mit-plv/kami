@@ -28,7 +28,7 @@ Section ProcThreeStDec.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -106,14 +106,14 @@ Section ProcThreeStDec.
   Definition p3st := ProcThreeStage.p3st
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignAddr predictNextPc
+                       getSrc1 getSrc2 getDst exec getNextPc alignInst predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init.
   Definition pdec := ProcDec.pdec
                        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
+                       getSrc1 getSrc2 getDst exec getNextPc alignInst init.
   
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
@@ -219,7 +219,7 @@ Section ProcThreeStDec.
   Definition p3stInl := ProcThreeStInl.p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                                getStAddr getStSrc calcStAddr getStVSrc
                                                getSrc1 getSrc2 getDst exec
-                                               getNextPc alignAddr predictNextPc
+                                               getNextPc alignInst predictNextPc
                                                d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                                d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                                e2wPack e2wDecInst e2wVal init.

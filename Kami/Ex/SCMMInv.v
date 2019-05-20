@@ -29,7 +29,7 @@ Section Invariants.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (isMMIO: IsMMIOT addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
@@ -41,7 +41,7 @@ Section Invariants.
   Definition scmmInl :=
     scmmInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
             getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc alignAddr isMMIO
+            getSrc1 getSrc2 getDst exec getNextPc alignInst isMMIO
             init.
 
   Definition scmm_inv_rf_zero

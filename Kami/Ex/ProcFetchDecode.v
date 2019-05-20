@@ -40,6 +40,7 @@ End F2dInst.
  * in three-staged processor (P3st).
  *)
 Section FetchAndDecode.
+  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
@@ -57,7 +58,7 @@ Section FetchAndDecode.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -110,38 +111,71 @@ Section FetchAndDecode.
   Definition sbSearch3_Nm := sbSearch3_Nm rfIdx.
   Definition sbInsert := sbInsert rfIdx.
 
-  Definition pgmInit := pgmInit instBytes.
+  Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
+  Definition RsToProc := MemTypes.RsToProc dataBytes.
+
+  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
+  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
-  
+
   Definition fetcher := MODULE {
     Register "pc" : Pc iaddrSize <- pcInit
     with Register "pinit" : Bool <- Default
-    with Register "pinitOfs" : Bit iaddrSize <- Default
+    with Register "pinitRqOfs" : Bit iaddrSize <- Default
+    with Register "pinitRsOfs" : Bit iaddrSize <- Default
     with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
     with Register "fEpoch" : Bool <- false
 
     (** Phase 1: initialize the program [pinit == false] *)
 
-    with Rule "pgmInit" :=
+    with Rule "pgmInitRq" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-      Assert ((UniBit (Inv _) #pinitOfs) != $0);
-      Call irs <- pgmInit ();
-      Read pgm <- "pgm";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
-      Write "pinitOfs" <- #pinitOfs + $1;
+      Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+      Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
+
+      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Write "pinitRqOfs" <- #pinitRqOfs + $1;
       Retv
 
-    with Rule "pgmInitEnd" :=
+    with Rule "pgmInitRqEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-      Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call irs <- pgmInit ();
+      Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+      Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
+      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Retv
+        
+    with Rule "pgmInitRs" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) != $0);
+
+      Call ldData <- memRep();
+      LET ldVal <- #ldData!RsToProc@."data";
+      LET inst <- alignInst _ ldVal;
       Read pgm <- "pgm";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
+      Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
+      Write "pinitRsOfs" <- #pinitRsOfs + $1;
+      Retv
+
+    with Rule "pgmInitRsEnd" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) == $0);
+
+      Call ldData <- memRep();
+      LET ldVal <- #ldData!RsToProc@."data";
+      LET inst <- alignInst _ ldVal;
+      Read pgm <- "pgm";
+      Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
       Write "pinit" <- !#pinit;
       Retv
 
@@ -266,10 +300,10 @@ Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Nm
-     sbSearch2_Nm sbSearch3_Nm sbInsert
-     pgmInit : MethDefs.
+     sbSearch2_Nm sbSearch3_Nm sbInsert : MethDefs.
   
 Section Facts.
+  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
@@ -287,7 +321,7 @@ Section Facts.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -324,7 +358,8 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher inName outName addrSize
+                                       alignInst predictNextPc f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -339,9 +374,10 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+      ModPhoasWf (fetchDecode inName outName
+                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst predictNextPc d2ePack
+                              getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit).
   Proof.
     kequiv.

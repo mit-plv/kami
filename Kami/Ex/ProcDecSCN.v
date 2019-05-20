@@ -28,21 +28,21 @@ Section ProcDecSCN.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (isMMIO: IsMMIOT addrSize).
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
   
   Definition scmm := scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 getDst exec getNextPc alignAddr
+                          getSrc1 getSrc2 getDst exec getNextPc alignInst
                           isMMIO init.
 
   Definition pdec := pdec fifoSize getOptype
                           getLdDst getLdAddr getLdSrc calcLdAddr
                           getStAddr getStSrc calcStAddr getStVSrc
                           getSrc1 getSrc2 getDst exec
-                          getNextPc alignAddr init.
+                          getNextPc alignInst init.
   
   Definition memAsync := memAsync addrSize fifoSize dataBytes.
   Definition pdecM := (pdec ++ memAsync)%kami.

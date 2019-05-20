@@ -27,7 +27,7 @@ Section Invariants.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -81,7 +81,7 @@ Section Invariants.
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
                                          getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 getSrc2 getDst predictNextPc
+                                         getSrc1 getSrc2 getDst alignInst predictNextPc
                                          d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                          pcInit).
 

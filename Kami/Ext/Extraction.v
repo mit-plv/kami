@@ -32,8 +32,7 @@ Section PerInstMemSize.
       (rv32GetStAddr rv32AddrSize) rv32GetStSrc (rv32CalcStAddr rv32AddrSize)
       rv32GetStVSrc rv32GetSrc1 rv32GetSrc2 rv32GetDst
       (rv32Exec rv32IAddrSize) (rv32NextPc rv32IAddrSize)
-      (rv32AlignAddr rv32AddrSize)
-      predictNextPc
+      rv32AlignInst predictNextPc
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)

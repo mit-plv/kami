@@ -28,7 +28,7 @@ Section ProcFDE.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -112,9 +112,10 @@ Section ProcFDE.
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition fetchDecode := ProcFetchDecode.fetchDecode
+                              "rqFromProc"%string "rsToProc"%string
                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst predictNextPc d2ePack
+                              getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                               (pcInit init).
 
@@ -128,13 +129,13 @@ Section ProcFDE.
                         ++ epoch
                         ++ oneEltFifo e2wFifoName e2wElt
                         ++ (wb "rqFromProc"%string "rsToProc"%string
-                               getNextPc alignAddr d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
+                               getNextPc d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
   Definition p3st := ProcThreeStage.p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                                          getStAddr getStSrc calcStAddr getStVSrc
                                          getSrc1 getSrc2 getDst exec getNextPc
-                                         alignAddr predictNextPc
+                                         alignInst predictNextPc
                                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                          e2wPack e2wDecInst e2wVal init.

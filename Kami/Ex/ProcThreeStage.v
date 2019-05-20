@@ -105,7 +105,7 @@ Section ProcThreeStage.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize).
+            (alignInst: AlignInstT instBytes dataBytes).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -280,36 +280,63 @@ Section ProcThreeStage.
   Section FetchDecode.
     Variable (pcInit : ConstT (Pc iaddrSize)).
 
-    Definition pgmInit := pgmInit instBytes.
-    
     Definition fetchDecode := MODULE {
       Register "pc" : Pc iaddrSize <- pcInit
       with Register "pinit" : Bool <- Default
-      with Register "pinitOfs" : Bit iaddrSize <- Default
+      with Register "pinitRqOfs" : Bit iaddrSize <- Default
+      with Register "pinitRsOfs" : Bit iaddrSize <- Default
       with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
       with Register "fEpoch" : Bool <- false
 
       (** Phase 1: initialize the program [pinit == false] *)
 
-      with Rule "pgmInit" :=
+      with Rule "pgmInitRq" :=
         Read pinit <- "pinit";
         Assert !#pinit;
-        Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-        Assert ((UniBit (Inv _) #pinitOfs) != $0);
-        Call irs <- pgmInit ();
-        Read pgm <- "pgm";
-        Write "pgm" <- #pgm@[#pinitOfs <- #irs];
-        Write "pinitOfs" <- #pinitOfs + $1;
+        Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+        Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
+
+        Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                             "op" ::= $$false;
+                             "data" ::= $$Default });
+        Write "pinitRqOfs" <- #pinitRqOfs + $1;
         Retv
 
-      with Rule "pgmInitEnd" :=
+      with Rule "pgmInitRqEnd" :=
         Read pinit <- "pinit";
         Assert !#pinit;
-        Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-        Assert ((UniBit (Inv _) #pinitOfs) == $0);
-        Call irs <- pgmInit ();
+        Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+        Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
+        Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                             "op" ::= $$false;
+                             "data" ::= $$Default });
+        Retv
+        
+      with Rule "pgmInitRs" :=
+        Read pinit <- "pinit";
+        Assert !#pinit;
+        Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+        Assert ((UniBit (Inv _) #pinitRsOfs) != $0);
+
+        Call ldData <- memRep();
+        LET ldVal <- #ldData!RsToProc@."data";
+        LET inst <- alignInst _ ldVal;
         Read pgm <- "pgm";
-        Write "pgm" <- #pgm@[#pinitOfs <- #irs];
+        Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
+        Write "pinitRsOfs" <- #pinitRsOfs + $1;
+        Retv
+
+      with Rule "pgmInitRsEnd" :=
+        Read pinit <- "pinit";
+        Assert !#pinit;
+        Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+        Assert ((UniBit (Inv _) #pinitRsOfs) == $0);
+
+        Call ldData <- memRep();
+        LET ldVal <- #ldData!RsToProc@."data";
+        LET inst <- alignInst _ ldVal;
+        Read pgm <- "pgm";
+        Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
         Write "pinit" <- !#pinit;
         Retv
 
@@ -498,7 +525,7 @@ Section ProcThreeStage.
         LET dst <- d2eDst _ d2e;
         Assert #dst != $0;
         LET laddr <- d2eAddr _ d2e;
-        Call memReq(STRUCT { "addr" ::= alignAddr _ laddr;
+        Call memReq(STRUCT { "addr" ::= #laddr;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
@@ -535,7 +562,7 @@ Section ProcThreeStage.
 
         Assert d2eOpType _ d2e == $$opSt;
         LET saddr <- d2eAddr _ d2e;
-        Call memReq(STRUCT { "addr" ::= alignAddr _ saddr;
+        Call memReq(STRUCT { "addr" ::= #saddr;
                              "op" ::= $$true;
                              "data" ::= d2eVal1 _ d2e });
         Write "stall" <- $$true;
@@ -630,7 +657,7 @@ Section ProcThreeStage.
 End ProcThreeStage.
 
 Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
-Hint Unfold RqFromProc RsToProc pgmInit memReq memRep
+Hint Unfold RqFromProc RsToProc memReq memRep
      d2eFifoName d2eEnq d2eDeq
      w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
@@ -658,7 +685,7 @@ Section ProcThreeStageM.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -709,7 +736,7 @@ Section ProcThreeStageM.
     procThreeStage "rqFromProc"%string "rsToProc"%string
                    getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                    getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 getSrc2 getDst exec getNextPc alignAddr
+                   getSrc1 getSrc2 getDst exec getNextPc alignInst
                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wPack e2wDecInst e2wVal
@@ -720,6 +747,7 @@ End ProcThreeStageM.
 Hint Unfold p3st : ModuleDefs.
 
 Section Facts.
+  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   (* External abstract ISA: decoding and execution *)
@@ -737,7 +765,7 @@ Section Facts.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize))).
 
@@ -813,9 +841,10 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode getOptype getLdDst getLdAddr getLdSrc calcLdAddr
+      ModPhoasWf (fetchDecode inName outName
+                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                               getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                              d2ePack predictNextPc pcInit).
+                              alignInst d2ePack predictNextPc pcInit).
   Proof.
     kequiv.
   Qed.
@@ -836,7 +865,7 @@ Section Facts.
   
   Lemma wb_ModEquiv:
     forall inName outName,
-      ModPhoasWf (wb inName outName getNextPc alignAddr
+      ModPhoasWf (wb inName outName getNextPc
                      d2eOpType d2eDst d2eAddr d2eVal1
                      d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                      e2wDecInst e2wVal).
@@ -849,7 +878,7 @@ Section Facts.
     forall init,
       ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignAddr predictNextPc
+                       getSrc1 getSrc2 getDst exec getNextPc alignInst predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init).

@@ -264,9 +264,9 @@ Section RV32IM.
 
   Defined.
 
-  Definition rv32AlignAddr: AlignAddrT rv32AddrSize.
-    unfold AlignAddrT; intros ty addr.
-    exact (#addr)%kami_expr.
+  Definition rv32AlignInst: AlignInstT rv32InstBytes rv32DataBytes.
+    unfold AlignInstT; intros ty data.
+    exact (#data)%kami_expr.
   Defined.
 
   Definition rv32NextPc: NextPcT rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx.

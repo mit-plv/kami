@@ -29,7 +29,7 @@ Section ProcDec.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize).
+            (alignInst: AlignInstT instBytes dataBytes).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -37,7 +37,6 @@ Section ProcDec.
   (* Called method signatures *)
   Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
   Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
-  Definition pgmInit := pgmInit instBytes.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -49,31 +48,60 @@ Section ProcDec.
     Register "pc" : Pc iaddrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
     with Register "pinit" : Bool <- Default
-    with Register "pinitOfs" : Bit iaddrSize <- Default
+    with Register "pinitRqOfs" : Bit iaddrSize <- Default
+    with Register "pinitRsOfs" : Bit iaddrSize <- Default
     with Register "pgm" : Vector (Data instBytes) iaddrSize <- Default
     with Register "stall" : Bool <- false
 
     (** Phase 1: initialize the program [pinit == false] *)
 
-    with Rule "pgmInit" :=
+    with Rule "pgmInitRq" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-      Assert ((UniBit (Inv _) #pinitOfs) != $0);
-      Call irs <- pgmInit ();
-      Read pgm <- "pgm";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
-      Write "pinitOfs" <- #pinitOfs + $1;
+      Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+      Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
+
+      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Write "pinitRqOfs" <- #pinitRqOfs + $1;
       Retv
 
-    with Rule "pgmInitEnd" :=
+    with Rule "pgmInitRqEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Read pinitOfs : Bit iaddrSize <- "pinitOfs";
-      Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call irs <- pgmInit ();
+      Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
+      Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
+      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+                           "op" ::= $$false;
+                           "data" ::= $$Default });
+      Retv
+        
+    with Rule "pgmInitRs" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) != $0);
+
+      Call ldData <- memRep();
+      LET ldVal <- #ldData!RsToProc@."data";
+      LET inst <- alignInst _ ldVal;
       Read pgm <- "pgm";
-      Write "pgm" <- #pgm@[#pinitOfs <- #irs];
+      Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
+      Write "pinitRsOfs" <- #pinitRsOfs + $1;
+      Retv
+
+    with Rule "pgmInitRsEnd" :=
+      Read pinit <- "pinit";
+      Assert !#pinit;
+      Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) == $0);
+
+      Call ldData <- memRep();
+      LET ldVal <- #ldData!RsToProc@."data";
+      LET inst <- alignInst _ ldVal;
+      Read pgm <- "pgm";
+      Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
       Write "pinit" <- !#pinit;
       Retv
 
@@ -95,7 +123,7 @@ Section ProcDec.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call memReq(STRUCT { "addr" ::= alignAddr _ laddr;
+      Call memReq(STRUCT { "addr" ::= #laddr;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
@@ -131,7 +159,7 @@ Section ProcDec.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
-      Call memReq(STRUCT { "addr" ::= alignAddr _ saddr;
+      Call memReq(STRUCT { "addr" ::= #saddr;
                            "op" ::= $$true;
                            "data" ::= #stVal });
       Write "stall" <- $$true;
@@ -201,7 +229,7 @@ Section ProcDec.
 End ProcDec.
 
 Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep pgmInit nextPc : MethDefs.
+Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 
 Section ProcDecM.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
@@ -221,13 +249,13 @@ Section ProcDecM.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize).
+            (alignInst: AlignInstT instBytes dataBytes).
 
   Definition pdec init :=
     procDec "rqFromProc"%string "rsToProc"%string
             getOptype getLdDst getLdAddr getLdSrc calcLdAddr
             getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc alignAddr init.
+            getSrc1 getSrc2 getDst exec getNextPc alignInst init.
 
   Variables (procInits: list (ProcInit iaddrSize dataBytes rfIdx)).
 
@@ -256,13 +284,13 @@ Section Facts.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize).
+            (alignInst: AlignInstT instBytes dataBytes).
 
   Lemma pdec_ModEquiv:
     forall init,
       ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                        getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignAddr init).
+                       getSrc1 getSrc2 getDst exec getNextPc alignInst init).
   Proof.
     kequiv.
   Qed.
@@ -272,7 +300,7 @@ Section Facts.
     forall init,
       ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                         getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1 getSrc2 getDst exec getNextPc alignAddr init).
+                        getSrc1 getSrc2 getDst exec getNextPc alignInst init).
   Proof.
     kequiv.
   Qed.
@@ -282,7 +310,7 @@ Section Facts.
     forall inits,
       ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
                            getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignAddr inits).
+                           getSrc1 getSrc2 getDst exec getNextPc alignInst inits).
   Proof.
     kequiv.
   Qed.

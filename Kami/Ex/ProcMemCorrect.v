@@ -30,7 +30,7 @@ Section ProcFour.
             (getDst: DstT instBytes rfIdx)
             (exec: ExecT iaddrSize instBytes dataBytes)
             (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignAddr: AlignAddrT addrSize)
+            (alignInst: AlignInstT instBytes dataBytes)
             (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                        Expr ty (SyntaxKind (Pc iaddrSize)))
             (isMMIO: IsMMIOT addrSize).
@@ -121,7 +121,7 @@ Section ProcFour.
         getOptype getLdDst getLdAddr getLdSrc calcLdAddr
         getStAddr getStSrc calcStAddr getStVSrc
         getSrc1 getSrc2 getDst exec getNextPc
-        alignAddr predictNextPc
+        alignInst predictNextPc
         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
@@ -138,7 +138,7 @@ Section ProcFour.
         getOptype getLdDst getLdAddr getLdSrc calcLdAddr
         getStAddr getStSrc calcStAddr getStVSrc
         getSrc1 getSrc2 getDst exec getNextPc
-        alignAddr init.
+        alignInst init.
 
     Definition mm: Modules :=
       SC.mm dataBytes isMMIO.
@@ -151,7 +151,7 @@ Section ProcFour.
         getOptype getLdDst getLdAddr getLdSrc calcLdAddr
         getStAddr getStSrc calcStAddr getStVSrc
         getSrc1 getSrc2 getDst exec getNextPc
-        alignAddr isMMIO init.
+        alignInst isMMIO init.
     
     Lemma p4stf_refines_pinst: p4stf <<== pinst.
     Proof.
