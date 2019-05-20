@@ -12,31 +12,16 @@ Set Implicit Arguments.
 Section Invariants.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
-  Definition pdecInl := pdecInl fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                getStAddr getStSrc calcStAddr getStVSrc
-                                getSrc1 getSrc2 getDst exec getNextPc alignInst init.
+  Definition pdecInl := pdecInl fifoSize fetch dec exec init.
 
   Definition fifo_empty_inv (fifoEmpty: bool) (fifoEnqP fifoDeqP: type (Bit fifoSize)): Prop :=
     fifoEmpty = true /\ fifoEnqP = fifoDeqP.

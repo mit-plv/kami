@@ -15,25 +15,13 @@ Section ProcFour.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
   Variable fifoSize: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize)))
-            (isMMIO: IsMMIOT addrSize).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
@@ -118,10 +106,7 @@ Section ProcFour.
 
     Definition p4st: Modules :=
       ProcFourStDec.p4st
-        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-        getStAddr getStSrc calcStAddr getStVSrc
-        getSrc1 getSrc2 getDst exec getNextPc
-        alignInst predictNextPc
+        fetch dec exec predictNextPc
         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
@@ -134,24 +119,16 @@ Section ProcFour.
       (p4st ++ iom)%kami.
 
     Definition pinst: Modules :=
-      SC.pinst
-        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-        getStAddr getStSrc calcStAddr getStVSrc
-        getSrc1 getSrc2 getDst exec getNextPc
-        alignInst init.
+      SC.pinst fetch dec exec init.
 
     Definition mm: Modules :=
-      SC.mm dataBytes isMMIO.
+      SC.mm dataBytes ammio.
 
     Definition p4mma: Modules :=
       (p4stf ++ mm)%kami.
 
     Definition scmm: Modules :=
-      SC.scmm
-        getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-        getStAddr getStSrc calcStAddr getStVSrc
-        getSrc1 getSrc2 getDst exec getNextPc
-        alignInst isMMIO init.
+      SC.scmm fetch dec exec ammio init.
     
     Lemma p4stf_refines_pinst: p4stf <<== pinst.
     Proof.

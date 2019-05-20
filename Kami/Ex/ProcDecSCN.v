@@ -13,38 +13,17 @@ Set Implicit Arguments.
 Section ProcDecSCN.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (isMMIO: IsMMIOT addrSize).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
   
-  Definition scmm := scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                          getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 getDst exec getNextPc alignInst
-                          isMMIO init.
-
-  Definition pdec := pdec fifoSize getOptype
-                          getLdDst getLdAddr getLdSrc calcLdAddr
-                          getStAddr getStSrc calcStAddr getStVSrc
-                          getSrc1 getSrc2 getDst exec
-                          getNextPc alignInst init.
+  Definition scmm := scmm fetch dec exec ammio init.
+  Definition pdec := pdec fifoSize fetch dec exec init.
   
-  Definition memAsync := memAsync addrSize fifoSize dataBytes.
+  Definition memAsync := memAsync fifoSize dataBytes ammio.
   Definition pdecM := (pdec ++ memAsync)%kami.
 
   Lemma pdecM_refines_scmm: pdecM <<== scmm.

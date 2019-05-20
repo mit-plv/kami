@@ -17,22 +17,37 @@ Definition rv32AddrSize := 32.
 
 Section PerInstMemSize.
   Variable rv32IAddrSize: nat.
-  (* Definition rv32IAddrSize := 10. *)
 
-  Definition pinit: ProcInit rv32IAddrSize rv32DataBytes rv32RfIdx :=
-    {| pcInit := Default; rfInit := Default |}.
+  Instance rv32Fetch: AbsFetch rv32InstBytes rv32DataBytes :=
+    {| alignInst := rv32AlignInst |}.
+
+  Instance rv32Dec: AbsDec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    {| getOptype := rv32GetOptype;
+       getLdDst := rv32GetLdDst;
+       getLdAddr := rv32GetLdAddr _;
+       getLdSrc := rv32GetLdSrc;
+       calcLdAddr := rv32CalcLdAddr _;
+       getStAddr := rv32GetStAddr _;
+       getStSrc := rv32GetStSrc;
+       calcStAddr := rv32CalcStAddr _;
+       getStVSrc := rv32GetStVSrc;
+       getSrc1 := rv32GetSrc1;
+       getSrc2 := rv32GetSrc2;
+       getDst := rv32GetDst |}.
+
+  Instance rv32Exec: AbsExec rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    {| doExec := rv32Exec _;
+       getNextPc := rv32NextPc _ |}.
 
   Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Pc rv32IAddrSize))) :=
     (#ppc + $4)%kami_expr.
 
+  Definition pinit: ProcInit rv32IAddrSize rv32DataBytes rv32RfIdx :=
+    {| pcInit := Default; rfInit := Default |}.
+
   Definition p4st: Modules :=
     ProcFourStDec.p4st
-      rv32GetOptype
-      rv32GetLdDst (rv32GetLdAddr rv32AddrSize) rv32GetLdSrc (rv32CalcLdAddr rv32AddrSize)
-      (rv32GetStAddr rv32AddrSize) rv32GetStSrc (rv32CalcStAddr rv32AddrSize)
-      rv32GetStVSrc rv32GetSrc1 rv32GetSrc2 rv32GetDst
-      (rv32Exec rv32IAddrSize) (rv32NextPc rv32IAddrSize)
-      rv32AlignInst predictNextPc
+      rv32Fetch rv32Dec rv32Exec predictNextPc
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)

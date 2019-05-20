@@ -99,6 +99,35 @@ Section DecExec.
                                    Expr ty (SyntaxKind Pc). (* next pc *)
   Definition AlignInstT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> (* loaded word *)
                                       Expr ty (SyntaxKind (Data instBytes)). (* aligned inst. *)
+
+  Class AbsFetch :=
+    { alignInst: AlignInstT }.
+  
+  Class AbsDec :=
+    { getOptype: OptypeT;
+      getLdDst: LdDstT;
+      getLdAddr: LdAddrT;
+      getLdSrc: LdSrcT;
+      calcLdAddr: LdAddrCalcT;
+      getStAddr: StAddrT;
+      getStSrc: StSrcT;
+      calcStAddr: StAddrCalcT;
+      getStVSrc: StVSrcT;
+      getSrc1: Src1T;
+      getSrc2: Src2T;
+      getDst: DstT
+    }.
+
+  Class AbsExec :=
+    { doExec: ExecT;
+      getNextPc: NextPcT
+    }.
+
+  Class AbsIsa :=
+    { fetch: AbsFetch;
+      dec: AbsDec;
+      exec: AbsExec
+    }.
   
 End DecExec.
 
@@ -149,7 +178,10 @@ Section MMIO.
   Definition IsMMIOT :=
     forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> IsMMIOE ty.
 
-  Variable (isMMIO: IsMMIOT).
+  Class AbsMMIO :=
+    { isMMIO: IsMMIOT }.
+
+  Variable (ammio: AbsMMIO).
 
   Local Notation RqFromProc := (RqFromProc addrSize dataBytes).
   Local Notation RsToProc := (RsToProc dataBytes).
@@ -190,22 +222,9 @@ Hint Unfold mm : ModuleDefs.
 Section ProcInst.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -329,7 +348,7 @@ Section ProcInst.
       LET val2 <- #rf@[#src2];
       LET dst <- getDst _ rawInst;
       Assert (#dst != $0);
-      LET execVal <- exec _ val1 val2 ppc rawInst;
+      LET execVal <- doExec _ val1 val2 ppc rawInst;
       Write "rf" <- #rf@[#dst <- #execVal];
       nextPc ppc rf rawInst
 
@@ -354,34 +373,18 @@ Hint Unfold procInst : ModuleDefs.
 Section SC.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (isMMIO: IsMMIOT addrSize).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Variable n: nat.
 
-  Definition pinst := procInst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                               getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst exec getNextPc alignInst.
-
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx).
 
-  (** Just for singlecore (for now) *)
-  Definition scmm := ConcatMod (pinst procInit) (mm dataBytes isMMIO).
+  Definition pinst := procInst fetch dec exec procInit.
+
+  Definition scmm := ConcatMod pinst (mm dataBytes ammio).
 
 End SC.
 
@@ -390,29 +393,14 @@ Hint Unfold pinst scmm : ModuleDefs.
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (isMMIO: IsMMIOT addrSize).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Lemma pinst_ModEquiv:
     forall init,
-      ModPhoasWf (pinst getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1 getSrc2 getDst exec getNextPc alignInst init).
+      ModPhoasWf (pinst fetch dec exec init).
   Proof.
     kequiv.
   Qed.
@@ -425,18 +413,15 @@ Section Facts.
   Qed.
   Hint Resolve memInst_ModEquiv.
 
-  Lemma mm_ModEquiv: ModPhoasWf (mm addrSize isMMIO).
+  Lemma mm_ModEquiv: ModPhoasWf (mm dataBytes ammio).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mm_ModEquiv.
   
   Lemma scmm_ModEquiv:
-    forall inits,
-      ModPhoasWf (scmm getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignInst
-                       isMMIO inits).
+    forall init,
+      ModPhoasWf (scmm fetch dec exec ammio init).
   Proof.
     kequiv.
   Qed.

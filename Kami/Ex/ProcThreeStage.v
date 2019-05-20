@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync.
+Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync Ex.ProcDec.
 
 Set Implicit Arguments.
 
@@ -87,31 +87,17 @@ End E2wInst.
  * stalled until getting the response.
  *)
 Section ProcThreeStage.
-  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
-  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
+  Definition memReq := memReq addrSize dataBytes.
+  Definition memRep := memRep dataBytes.
 
   (* Abstract d2eElt *)
   Variable (d2eElt: Kind).
@@ -460,7 +446,7 @@ Section ProcThreeStage.
         LET rawInst <- d2eRawInst _ d2e;
         LET val1 <- d2eVal1 _ d2e;
         LET val2 <- d2eVal2 _ d2e;
-        LET execVal <- exec _ val1 val2 ppc rawInst;
+        LET execVal <- doExec _ val1 val2 ppc rawInst;
         Call e2wEnq (e2wPack #d2e #execVal);
         Retv
 
@@ -670,24 +656,12 @@ Hint Unfold RqFromProc RsToProc memReq memRep
 Section ProcThreeStageM.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -733,10 +707,7 @@ Section ProcThreeStageM.
                         Expr ty (SyntaxKind (Data dataBytes))).
 
   Definition p3st init :=
-    procThreeStage "rqFromProc"%string "rsToProc"%string
-                   getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                   getStAddr getStSrc calcStAddr getStVSrc
-                   getSrc1 getSrc2 getDst exec getNextPc alignInst
+    procThreeStage fetch dec exec
                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wPack e2wDecInst e2wVal
@@ -750,24 +721,12 @@ Section Facts.
   Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -841,18 +800,14 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode inName outName
-                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                              alignInst d2ePack predictNextPc pcInit).
+      ModPhoasWf (fetchDecode fetch dec d2ePack predictNextPc pcInit).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fetchDecode_ModEquiv.
 
   Lemma executer_ModEquiv:
-    ModPhoasWf (executer rfIdx exec d2eOpType d2eVal1 d2eVal2
-                         d2eRawInst d2eCurPc e2wPack).
+    ModPhoasWf (executer exec d2eOpType d2eVal1 d2eVal2 d2eRawInst d2eCurPc e2wPack).
   Proof.
     kequiv.
   Qed.
@@ -864,11 +819,10 @@ Section Facts.
   Hint Resolve epoch_ModEquiv.
   
   Lemma wb_ModEquiv:
-    forall inName outName,
-      ModPhoasWf (wb inName outName getNextPc
-                     d2eOpType d2eDst d2eAddr d2eVal1
-                     d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                     e2wDecInst e2wVal).
+    ModPhoasWf (wb exec
+                   d2eOpType d2eDst d2eAddr d2eVal1
+                   d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                   e2wDecInst e2wVal).
   Proof.
     kequiv.
   Qed.
@@ -876,9 +830,7 @@ Section Facts.
   
   Lemma procThreeStage_ModEquiv:
     forall init,
-      ModPhoasWf (p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignInst predictNextPc
+      ModPhoasWf (p3st fetch dec exec predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init).

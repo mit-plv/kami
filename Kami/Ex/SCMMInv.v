@@ -11,26 +11,12 @@ Set Implicit Arguments.
 Local Open Scope fmap.
 
 Section Invariants.
-
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (isMMIO: IsMMIOT addrSize).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -39,10 +25,7 @@ Section Invariants.
   Hypothesis (HinitRf: evalConstT init.(rfInit) $0 = $0).
 
   Definition scmmInl :=
-    scmmInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-            getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc alignInst isMMIO
-            init.
+    scmmInl fetch dec exec ammio init.
 
   Definition scmm_inv_rf_zero
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx))) :=

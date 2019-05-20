@@ -13,24 +13,12 @@ Set Implicit Arguments.
 Section ProcFDE.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   (* Abstract d2eElt *)
   Variable (d2eElt: Kind).
@@ -112,10 +100,7 @@ Section ProcFDE.
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition fetchDecode := ProcFetchDecode.fetchDecode
-                              "rqFromProc"%string "rsToProc"%string
-                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
+                              fetch dec predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                               (pcInit init).
 
@@ -124,21 +109,18 @@ Section ProcFDE.
                         ++ scoreBoard rfIdx
                         ++ oneEltFifo d2eFifoName d2eElt
                         ++ oneEltFifoEx1 w2dFifoName (Pc iaddrSize)
-                        ++ (executer rfIdx exec d2eOpType d2eVal1 d2eVal2
+                        ++ (executer exec d2eOpType d2eVal1 d2eVal2
                                      d2eRawInst d2eCurPc e2wPack)
                         ++ epoch
                         ++ oneEltFifo e2wFifoName e2wElt
-                        ++ (wb "rqFromProc"%string "rsToProc"%string
-                               getNextPc d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
+                        ++ (wb exec d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
-  Definition p3st := ProcThreeStage.p3st getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                         getStAddr getStSrc calcStAddr getStVSrc
-                                         getSrc1 getSrc2 getDst exec getNextPc
-                                         alignInst predictNextPc
-                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                         e2wPack e2wDecInst e2wVal init.
+  Definition p3st := ProcThreeStage.p3st
+                       fetch dec exec predictNextPc
+                       d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                       d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                       e2wPack e2wDecInst e2wVal init.
 
   Lemma p4st_refines_p3st: p4st <<== p3st.
   Proof. (* SKIP_PROOF_ON

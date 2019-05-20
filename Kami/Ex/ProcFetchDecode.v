@@ -40,27 +40,13 @@ End F2dInst.
  * in three-staged processor (P3st).
  *)
 Section FetchAndDecode.
-  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -114,8 +100,8 @@ Section FetchAndDecode.
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
-  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
+  Definition memReq := memReq addrSize dataBytes.
+  Definition memRep := memRep dataBytes.
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
@@ -303,27 +289,13 @@ Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      sbSearch2_Nm sbSearch3_Nm sbInsert : MethDefs.
   
 Section Facts.
-  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -358,15 +330,12 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher inName outName addrSize
-                                       alignInst predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher addrSize fetch predictNextPc f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
   Lemma decoder_ModEquiv:
-    ModPhoasWf (decoder getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc getSrc1 getSrc2 getDst
-                        d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
+    ModPhoasWf (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof.
     kequiv.
   Qed.
@@ -374,11 +343,9 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode inName outName
-                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch pcInit).
+      ModPhoasWf (fetchDecode fetch dec predictNextPc
+                              d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                              pcInit).
   Proof.
     kequiv.
   Qed.

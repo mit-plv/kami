@@ -13,24 +13,12 @@ Set Implicit Arguments.
 Section ProcThreeStDec.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -104,16 +92,11 @@ Section ProcThreeStDec.
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition p3st := ProcThreeStage.p3st
-                       getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignInst predictNextPc
+                       fetch dec exec predictNextPc
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init.
-  Definition pdec := ProcDec.pdec
-                       getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignInst init.
+  Definition pdec := ProcDec.pdec fetch dec exec init.
   
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
@@ -216,13 +199,11 @@ Section ProcThreeStDec.
            end;
     kinv_red.
 
-  Definition p3stInl := ProcThreeStInl.p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                               getStAddr getStSrc calcStAddr getStVSrc
-                                               getSrc1 getSrc2 getDst exec
-                                               getNextPc alignInst predictNextPc
-                                               d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                               d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                               e2wPack e2wDecInst e2wVal init.
+  Definition p3stInl := ProcThreeStInl.p3stInl
+                          fetch dec exec predictNextPc
+                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                          d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                          e2wPack e2wDecInst e2wVal init.
 
   Definition p3stConfig :=
     {| inlining := ITProvided p3stInl;

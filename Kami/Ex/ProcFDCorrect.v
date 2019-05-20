@@ -13,24 +13,11 @@ Set Implicit Arguments.
 Section FetchDecode.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -80,17 +67,11 @@ Section FetchDecode.
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchDecode := fetchDecode
-                              getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                              getStAddr getStSrc calcStAddr getStVSrc
-                              getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
+                              fetch dec predictNextPc d2ePack
                               f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                               pcInit.
   Definition fetchNDecode := ProcThreeStage.fetchDecode
-                               "rqFromProc"%string "rsToProc"%string
-                               getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                               getStAddr getStSrc calcStAddr getStVSrc
-                               getSrc1 getSrc2 getDst alignInst d2ePack predictNextPc
-                               pcInit.
+                               fetch dec d2ePack predictNextPc pcInit.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -119,10 +100,8 @@ Section FetchDecode.
   Hint Unfold fetchDecode_regMap: MapDefs.
 
   Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl
-                                 getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                 getStAddr getStSrc calcStAddr getStVSrc
-                                 getSrc1 getSrc2 getDst alignInst predictNextPc d2ePack
-                                 f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                                 fetch dec predictNextPc
+                                 d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                  pcInit.
 
   Ltac f2d_abs_tac :=

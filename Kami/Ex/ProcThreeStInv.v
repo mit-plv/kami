@@ -12,24 +12,12 @@ Set Implicit Arguments.
 Section Invariants.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes)
-            (predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                       Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+
+  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
+                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -102,10 +90,7 @@ Section Invariants.
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
-  Definition p3stInl := projT1 (p3stInl getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                        getStAddr getStSrc calcStAddr getStVSrc
-                                        getSrc1 getSrc2 getDst exec getNextPc
-                                        alignInst predictNextPc
+  Definition p3stInl := projT1 (p3stInl fetch dec exec predictNextPc
                                         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                                         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                                         e2wPack e2wDecInst e2wVal init).
@@ -291,8 +276,8 @@ Section Invariants.
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
     evalExpr (d2eOpType _ d2eeltv) = opNm ->
     evalExpr (e2wVal _ e2weltv) =
-    evalExpr (exec _ (rfv (evalExpr (getSrc1 _ rawInst))) (rfv (evalExpr (getSrc2 _ rawInst)))
-                   (evalExpr (d2eCurPc _ d2eeltv)) rawInst).
+    evalExpr (doExec _ (rfv (evalExpr (getSrc1 _ rawInst))) (rfv (evalExpr (getSrc2 _ rawInst)))
+                     (evalExpr (d2eCurPc _ d2eeltv)) rawInst).
 
   Record p3st_exec_inv (o: RegsT) : Prop :=
     { rfv4 : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));

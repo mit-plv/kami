@@ -11,32 +11,18 @@ Set Implicit Arguments.
  * It just stalls until it gets a memory operation response.
  *)
 Section ProcDec.
-  Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   (* Called method signatures *)
-  Definition memReq := MethodSig (inName -- "enq")(Struct RqFromProc) : Void.
-  Definition memRep := MethodSig (outName -- "deq")() : Struct RsToProc.
+  Definition memReq := MethodSig ("rqFromProc" -- "enq")(Struct RqFromProc) : Void.
+  Definition memRep := MethodSig ("rsToProc" -- "deq")() : Struct RsToProc.
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -207,7 +193,7 @@ Section ProcDec.
       LET val2 <- #rf@[#src2];
       LET dst <- getDst _ rawInst;
       Assert (#dst != $0);
-      LET execVal <- exec _ val1 val2 ppc rawInst;
+      LET execVal <- doExec _ val1 val2 ppc rawInst;
       Write "rf" <- #rf@[#dst <- #execVal];
       nextPc ppc rf rawInst
 
@@ -234,83 +220,47 @@ Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 Section ProcDecM.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Definition pdec init :=
-    procDec "rqFromProc"%string "rsToProc"%string
-            getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-            getStAddr getStSrc calcStAddr getStVSrc
-            getSrc1 getSrc2 getDst exec getNextPc alignInst init.
+    procDec fetch dec exec init.
 
   Variables (procInits: list (ProcInit iaddrSize dataBytes rfIdx)).
 
   Definition pdecf init := (pdec init ++ iom addrSize fifoSize dataBytes)%kami.
-  Definition procDecM init := (pdecf init ++ minst addrSize dataBytes)%kami.
+  Definition procDecM init := (pdecf init ++ mm dataBytes ammio)%kami.
 
 End ProcDecM.
 
 Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
-  Variables opIdx addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  (* External abstract ISA: decoding and execution *)
-  Variables (getOptype: OptypeT instBytes)
-            (getLdDst: LdDstT instBytes rfIdx)
-            (getLdAddr: LdAddrT addrSize instBytes)
-            (getLdSrc: LdSrcT instBytes rfIdx)
-            (calcLdAddr: LdAddrCalcT addrSize dataBytes)
-            (getStAddr: StAddrT addrSize instBytes)
-            (getStSrc: StSrcT instBytes rfIdx)
-            (calcStAddr: StAddrCalcT addrSize dataBytes)
-            (getStVSrc: StVSrcT instBytes rfIdx)
-            (getSrc1: Src1T instBytes rfIdx)
-            (getSrc2: Src2T instBytes rfIdx)
-            (getDst: DstT instBytes rfIdx)
-            (exec: ExecT iaddrSize instBytes dataBytes)
-            (getNextPc: NextPcT iaddrSize instBytes dataBytes rfIdx)
-            (alignInst: AlignInstT instBytes dataBytes).
+  Variables (fetch: AbsFetch instBytes dataBytes)
+            (dec: AbsDec addrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (ammio: AbsMMIO addrSize).
 
   Lemma pdec_ModEquiv:
-    forall init,
-      ModPhoasWf (pdec getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                       getStAddr getStSrc calcStAddr getStVSrc
-                       getSrc1 getSrc2 getDst exec getNextPc alignInst init).
+    forall init, ModPhoasWf (pdec fetch dec exec init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall init,
-      ModPhoasWf (pdecf fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                        getStAddr getStSrc calcStAddr getStVSrc
-                        getSrc1 getSrc2 getDst exec getNextPc alignInst init).
+    forall init, ModPhoasWf (pdecf fifoSize fetch dec exec init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve pdecf_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall inits,
-      ModPhoasWf (procDecM fifoSize getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                           getStAddr getStSrc calcStAddr getStVSrc
-                           getSrc1 getSrc2 getDst exec getNextPc alignInst inits).
+    forall init, ModPhoasWf (procDecM fifoSize fetch dec exec ammio init).
   Proof.
     kequiv.
   Qed.
