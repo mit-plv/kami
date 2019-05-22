@@ -55,20 +55,7 @@ Section Inlined.
 
   Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
   Proof.
-    pose proof (inlineF_refines
-                  (fetchDecode_ModEquiv fetch dec predictNextPc
-                                        d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                                        pcInit type typeUT)
-                  (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies fetchDecode)) eq_refl))
-      as Him.
-    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
-    match goal with
-    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
-    end.
-    kinline_compute_in Him.
-    unfold origm in *.
-    specialize (Him eq_refl).
-    exact (existT _ _ Him).
+    kinline_refine fetchDecode.
   Defined.
 
 End Inlined.

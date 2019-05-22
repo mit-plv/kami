@@ -31,12 +31,14 @@ Section PrimBram.
   Definition bramPutRq: forall ty (rq: ty (Struct BramRq)), ActionT ty Void :=
     fun ty rq =>
       (Read bram <- ^"bram";
+       ReadN rss: bramRssK ty <- ^"rss";
+       Assert !$$(listIsFull outFIFODepth rss);
        If #rq!BramRq@."write" then
-         Write ^"bram" <- #bram@[#rq!BramRq@."addr" <- #rq!BramRq@."datain"];
+         LET writev <- #rq!BramRq@."datain";
+         Write ^"bram" <- #bram@[#rq!BramRq@."addr" <- #writev];
+         Write ^"rss" <- (Var _ (bramRssK ty) (listEnq writev rss));
          Retv
        else
-         ReadN rss: bramRssK ty <- ^"rss";
-         Assert !$$(listIsFull outFIFODepth rss);
          LET readv <- #bram@[#rq!BramRq@."addr"];
          Write ^"rss" <- (Var _ (bramRssK ty) (listEnq readv rss));
          Retv;

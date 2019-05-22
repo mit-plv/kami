@@ -428,6 +428,7 @@ Ltac kinline_compute :=
                getBody inlineArg
                appendAction getAttribute
                makeModule makeModule' max plus
+               pm_name pm_regInits pm_rules pm_methods
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA
@@ -453,6 +454,7 @@ Ltac kinline_compute_in H :=
                getBody inlineArg
                appendAction getAttribute
                makeModule makeModule' max plus
+               pm_name pm_regInits pm_rules pm_methods
                getRegInits getDefs getDefsBodies getRules namesOf
                map app attrName attrType
                getCalls getCallsR getCallsM getCallsA

@@ -4,8 +4,9 @@ Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
-Require Import Ex.MemTypes Ex.NativeFifo Ex.MemAsync.
-Require Import Ex.SC Ex.ProcDec Ex.ProcThreeStage Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv.
+Require Import Ex.MemTypes Ex.OneEltFifo Ex.NativeFifo Ex.MemAsync.
+Require Import Ex.SC Ex.ProcDec Ex.ProcThreeStage Ex.ProcFetch
+        Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv Ex.ProcFCorrect.
 Require Import Eqdep.
 
 Set Implicit Arguments.
@@ -66,12 +67,16 @@ Section FetchDecode.
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
-  Definition fetchDecode := fetchDecode
-                              fetch dec predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                              pcInit.
-  Definition fetchNDecode := ProcThreeStage.fetchDecode
-                               fetch dec d2ePack predictNextPc pcInit.
+  Definition fetchICacheDecode :=
+    ((fetchICache addrSize fetch predictNextPc f2dPack pcInit)
+       ++ (oneEltFifoEx2 f2dFifoName f2dElt)
+       ++ (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch))%kami.
+  Definition fetchDecode :=
+    fetchDecode fetch dec predictNextPc d2ePack
+                f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+                pcInit.
+  Definition fetchNDecode :=
+    ProcThreeStage.fetchDecode fetch dec d2ePack predictNextPc pcInit.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -127,6 +132,23 @@ Section FetchDecode.
   Proof. (* SKIP_PROOF_ON
     kami_ok fdConfig fetchDecode_dest_tac f2d_abs_tac.
     END_SKIP_PROOF_ON *) apply cheat.
+  Qed.
+
+  Theorem fetchICacheDecode_refines_fetchDecode:
+    fetchICacheDecode <<== fetchDecode.
+  Proof.
+    intros.
+    kmodular.
+    - eapply fetchICache_refines_fetcher; eauto.
+    - krefl.
+  Qed.
+
+  Theorem fetchICacheDecode_refines_fetchNDecode:
+    fetchICacheDecode <<== fetchNDecode.
+  Proof.
+    ketrans.
+    - exact fetchICacheDecode_refines_fetchDecode.
+    - exact fetchDecode_refines_fetchNDecode.
   Qed.
 
 End FetchDecode.

@@ -286,7 +286,8 @@ Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Nm
-     sbSearch2_Nm sbSearch3_Nm sbInsert : MethDefs.
+     sbSearch2_Nm sbSearch3_Nm sbInsert
+     RqFromProc RsToProc memReq memRep: MethDefs.
   
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.

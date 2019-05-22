@@ -99,10 +99,11 @@ Section ProcFDE.
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
-  Definition fetchDecode := ProcFetchDecode.fetchDecode
-                              fetch dec predictNextPc d2ePack
-                              f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-                              (pcInit init).
+  Definition fetchDecode: Modules :=
+    fetchICacheDecode
+      fetch dec predictNextPc d2ePack
+      f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+      (pcInit init).
 
   Definition p4st := (fetchDecode
                         ++ regFile (rfInit init)
