@@ -149,57 +149,8 @@ let ppFunction = "function"
 let ppNoRules = "// No rules in this module"
 let ppNoMeths = "// No methods in this module"
 
-(* For the RegFile primitive *)
-let regFileAddrName = 'a'::'d'::'d'::'r'::[]
-let regFileDataName = 'd'::'a'::'t'::'a'::[]
-
-let regFileSubName rfName = List.append rfName ('@'::'s'::'u'::'b'::[])
-let regFileUpdName rfName = List.append rfName ('@'::'u'::'p'::'d'::[])
-
-let regFileUpdVec ibits dk =
-  (Cons
-     ({ attrName = regFileAddrName;
-        attrType = Bit ibits },
-      1,
-      (Cons
-         ({ attrName = regFileDataName;
-            attrType = dk }, 0, Nil))))
-let regFileUpdStr ibits dk = Struct (2, regFileUpdVec ibits dk)
-
-let regFileUpdSig ibits dk =
-  { arg = regFileUpdStr ibits dk;
-    ret = Bit 0 }
-
-let regFileSubSig ibits dk = { arg = Bit ibits; ret = dk }
-
-let regFileUpdAction rfName aidx ibits dk =
-  (* Index 0 is for the argument, so assign 1 for the return *)
-  (BBCall (1, regFileUpdName rfName, true,
-           ((BReadField (regFileAddrName, (BVar aidx)))
-            :: (BReadField (regFileDataName, (BVar aidx))) :: []))) ::
-    (BReturn (BConst (Bit 0, ConstBit (0, WO)))) :: []
-
-let regFileSubAction rfName aidx ibits dk =
-  (* Index 0 is for the argument, so assign 1 for the return *)
-  (BBCall (1, regFileSubName rfName, false, (BVar aidx :: []))) ::
-    (BReturn (BVar 1)) :: []
-
-let regFileUpdMeth rfName writeName ibits dk =
-  (* Index 0 is for the argument *)
-  { attrName = writeName;
-    attrType = (regFileUpdSig ibits dk,
-                regFileUpdAction rfName 0 ibits dk) }
-
-let regFileSubMeth rfName readName ibits dk =
-  (* Index 0 is for the argument *)
-  { attrName = readName;
-    attrType = (regFileSubSig ibits dk,
-                regFileSubAction rfName 0 ibits dk) }
-
-let regFileRules = []
-let regFileMeths rfName readNames writeName ibits dk =
-    (regFileUpdMeth rfName writeName ibits dk) :: List.map (fun readName -> regFileSubMeth rfName readName ibits dk) readNames
-
+let primBramName = ['B'; 'R'; 'A'; 'M']
+let primFifoName = ['F'; 'I'; 'F'; 'O']
 
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
@@ -678,9 +629,9 @@ let rec ppBMethods (dl: bMethod list) =
   | [] -> ()
   | d :: dl' -> ppBMethod d; print_cut (); force_newline (); ppBMethods dl'
 
-let ppBInterface (d: bMethod) =
-  match d with
-  | { attrName = dn; attrType = ({ arg = asig; ret = rsig }, _) } ->
+let ppBInterface (ifc: signatureT attribute) =
+  match ifc with
+  | { attrName = dn; attrType = { arg = asig; ret = rsig }} ->
      open_hovbox 0;
      ps ppMethod; print_space ();
      (if rsig = Bit 0 then
@@ -697,11 +648,12 @@ let ppBInterface (d: bMethod) =
      ps ppRBracketR; ps ppSep;
      close_box ()
 
-let rec ppBInterfaces (dl: bMethod list) =
-  match dl with
+let rec ppBInterfaces (ifcs: signatureT attribute list) =
+  match ifcs with
   | [] -> ()
-  | d :: dl' -> ppBInterface d; force_newline (); ppBInterfaces dl'
-
+  | ifc :: ifcs' ->
+     ppBInterface ifc; force_newline (); ppBInterfaces ifcs'
+     
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = riv } ->
@@ -738,6 +690,8 @@ let ppImports (_: unit) =
   ps "import BuildVector::*;"; print_cut (); force_newline ();
   ps "import RegFile::*;"; print_cut (); force_newline ();
   ps "import RegFileZero::*;"; print_cut (); force_newline ();
+  ps "import FIFO::*;"; print_cut (); force_newline ();
+  ps "import BRAM::*;"; print_cut (); force_newline ();
   ps "import MulDiv::*;"; print_cut (); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
@@ -752,17 +706,18 @@ let ppGlbStructs (_: unit) =
   close_box ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
-  match m with
-  | BModulePrim (pname, pifc) ->
-     raise (Not_implemented_yet "ppBModuleInterface.BModulePrim")
-  | BModuleB (_, brl, bd) ->
-     ps ppInterface; print_space (); ps n; ps ppSep;
-     print_break 1 4; open_hovbox 0;
-     ppBInterfaces bd;
-     close_box (); print_break 0 (-4); force_newline ();
-     ps ppEndInterface;
-     print_cut (); force_newline ();
-     force_newline ()
+  ps ppInterface; print_space (); ps n; ps ppSep;
+  print_break 1 4; open_hovbox 0;
+  (match m with
+   | BModulePrim (pname, pifc) -> ppBInterfaces pifc
+   | BModuleB (_, brl, bd) ->
+      ppBInterfaces (List.map
+                       (fun bm -> { attrName = bm.attrName;
+                                    attrType = fst bm.attrType }) bd));
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndInterface;
+  print_cut (); force_newline ();
+  force_newline ()
 
 let ppCallArg (cn: string) (csig: signatureT) =
   open_hbox ();
@@ -790,11 +745,72 @@ let ppBModuleCallArgs (cargs: (string * signatureT) list) =
   match cargs with
   | [] -> ()
   | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
-                                         
+
+let ppBram (pifc: signatureT attribute list) =
+  let rqStr = (List.nth pifc 0).attrType.arg in
+  let keyK =
+    match rqStr with
+    | Struct (_, Cons (_, _, Cons (kk, _, _))) -> kk.attrType
+    | _ -> Bit 0
+  in
+  let valueK = (List.nth pifc 1).attrType.ret in
+  
+  (* BRAM configuration *)
+  ps "BRAM_Configure cfg = defaultValue;"; force_newline ();
+
+  (* BRAM declaration *)
+  ps "BRAM1Port#"; ps ppRBracketL;
+  ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
+  ps ppRBracketR; ps ppDelim;
+  ps "bram <- mkBRAM1Server(cfg);"; force_newline ();
+  force_newline ();
+
+  (* The "putRq" method *)
+  ppBInterface (List.nth pifc 0); force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "bram.portA.request.put(BRAMRequest {";
+  print_break 0 4; open_hovbox 0;
+  ps "write: x_0.write,"; force_newline ();
+  ps "responseOnWrite: True,"; force_newline ();
+  ps "address: x_0.addr,"; force_newline ();
+  ps "datain: x_0.datain";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps "});";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ();
+  force_newline ();
+  
+  (* The "getRs" method *)
+  ppBInterface (List.nth pifc 1); force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "let data <- bram.portA.response.get;"; force_newline ();
+  ps "return data;";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+         
+let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
+  if pname = primBramName then
+    ppBram pifc 
+  else if pname = primFifoName then
+    raise (Not_implemented_yet "ppBModulePrim.FIFO")
+  else
+    raise (Should_not_happen "Unknown primitive module name")
+         
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | BModulePrim (pname, pifc) ->
-     raise (Not_implemented_yet "ppBMobule.BModulePrim")
+     open_hovbox 2;
+     ps ppModule; print_space ();
+     ps ("mk" ^ ifcn); print_space ();
+     ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
+     close_box ();
+     print_break 0 4; open_hovbox 0;
+
+     ppBModulePrim pname pifc;
+
+     close_box(); print_break 0 (-4); force_newline ();
+     ps ppEndModule;
+     print_cut (); force_newline ()
   | BModuleB (br, brl, bd) ->
      open_hovbox 2;
      ps ppModule; print_space ();
@@ -921,13 +937,23 @@ let rec permute (ls: 'a list) (ps: int list) =
   | [] -> []
   | p :: ps' -> (List.nth ls p) :: (permute ls ps')
 
+let rec removeDup (ls: 'a list) =
+  match ls with
+  | [] -> []
+  | hd :: tl ->
+     if List.mem hd tl
+     then removeDup tl
+     else hd :: removeDup tl
+              
 (* NOTE: idxInit should be larger than 0 *)
 let ppBModulesFull (bml: bModule list) =
   let idxInit = 1 in
   let bmdcl = toBRegModuleDCL bml in
   let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
   let callsAll = List.concat (List.map (fun (_, _, c) -> c) bmdcl) in
-  let extCallsAll = List.filter (fun meth -> not (List.mem meth defsAll)) callsAll in
+  let extCallsAll =
+    List.filter (fun meth -> not (List.mem meth defsAll)) callsAll in
+  let extCallsNoDup = removeDup extCallsAll in
   let moduleOrder =
     makeModuleOrder (makeMids 0 (List.length bmdcl))
                     (makeModuleOrderPairs (makeDefMap bmdcl 0)
@@ -936,7 +962,7 @@ let ppBModulesFull (bml: bModule list) =
   preAnalyses bml;
   ppGlbStructs ();
   ppBModules (permute bml moduleOrder) idxInit;
-  ppTopModule (permute bmdcl moduleOrder) idxInit extCallsAll;
+  ppTopModule (permute bmdcl moduleOrder) idxInit extCallsNoDup;
   resetGlbStructs ();
   print_newline ()
 
