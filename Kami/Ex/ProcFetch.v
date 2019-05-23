@@ -58,6 +58,7 @@ Section FetchICache.
   Definition fetcher := MODULE {
     Register "pc" : Pc iaddrSize <- pcInit
     with Register "pinit" : Bool <- Default
+    with Register "pinitRq" : Bool <- Default
     with Register "pinitRqOfs" : Bit iaddrSize <- Default
     with Register "pinitRsOfs" : Bit iaddrSize <- Default
     with Register "pinstRsOfs" : Bit iaddrSize <- Default
@@ -69,6 +70,8 @@ Section FetchICache.
     with Rule "pgmInitRq" :=
       Read pinit <- "pinit";
       Assert !#pinit;
+      Read pinitRq <- "pinitRq";
+      Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
@@ -81,11 +84,14 @@ Section FetchICache.
     with Rule "pgmInitRqEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
+      Read pinitRq <- "pinitRq";
+      Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
       Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
                            "op" ::= $$false;
                            "data" ::= $$Default });
+      Write "pinitRq" <- $$true;
       Retv
         
     with Rule "pgmInitRs" :=
