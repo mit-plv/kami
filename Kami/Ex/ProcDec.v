@@ -234,10 +234,11 @@ Section ProcDecM.
   Definition pdec init :=
     procDec fetch dec exec init.
 
-  Variables (procInits: list (ProcInit iaddrSize dataBytes rfIdx)).
+  Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
+            (memInit: MemInit addrSize dataBytes).
 
-  Definition pdecf init := (pdec init ++ iom addrSize fifoSize dataBytes)%kami.
-  Definition procDecM init := (pdecf init ++ mm dataBytes ammio)%kami.
+  Definition pdecf := (pdec procInit ++ iom addrSize fifoSize dataBytes)%kami.
+  Definition procDecM := (pdecf ++ mm memInit ammio)%kami.
 
 End ProcDecM.
 
@@ -266,7 +267,8 @@ Section Facts.
   Hint Resolve pdecf_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall init, ModPhoasWf (procDecM fifoSize fetch dec exec ammio init).
+    forall procInit memInit,
+      ModPhoasWf (procDecM fifoSize fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
   Qed.

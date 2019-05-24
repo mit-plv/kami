@@ -23,7 +23,8 @@ Section ProcFour.
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Pc iaddrSize)).
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+           (memInit: MemInit addrSize dataBytes).
 
   Section AbsFIFO.
     
@@ -110,7 +111,7 @@ Section ProcFour.
         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
         f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
-        e2wPack e2wDecInst e2wVal init.
+        e2wPack e2wDecInst e2wVal procInit.
 
     Definition iom: Modules :=
       MemAsync.iom addrSize fifoSize dataBytes.
@@ -119,16 +120,16 @@ Section ProcFour.
       (p4st ++ iom)%kami.
 
     Definition pinst: Modules :=
-      SC.pinst fetch dec exec init.
+      SC.pinst fetch dec exec procInit.
 
     Definition mm: Modules :=
-      SC.mm dataBytes ammio.
+      SC.mm memInit ammio.
 
     Definition p4mma: Modules :=
       (p4stf ++ mm)%kami.
 
     Definition scmm: Modules :=
-      SC.scmm fetch dec exec ammio init.
+      SC.scmm fetch dec exec ammio procInit memInit.
     
     Lemma p4stf_refines_pinst: p4stf <<== pinst.
     Proof.

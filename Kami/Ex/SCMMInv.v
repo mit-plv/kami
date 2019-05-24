@@ -21,11 +21,12 @@ Section Invariants.
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
-  Hypothesis (HinitRf: evalConstT init.(rfInit) $0 = $0).
+  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+           (memInit: MemInit addrSize dataBytes).
+  Hypothesis (HinitRf: evalConstT procInit.(rfInit) $0 = $0).
 
   Definition scmmInl :=
-    scmmInl fetch dec exec ammio init.
+    scmmInl fetch dec exec ammio procInit memInit.
 
   Definition scmm_inv_rf_zero
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx))) :=

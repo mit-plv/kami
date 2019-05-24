@@ -146,9 +146,13 @@ Section MemInst.
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
 
+  Definition MemInit := ConstT (Vector (Data dataBytes) addrSize).
+  
+  Variable (memInit: MemInit).
+  
   Definition memInst :=
     MODULE {
-      Register "mem" : Vector (Data dataBytes) addrSize <- Default
+      Register "mem" : Vector (Data dataBytes) addrSize <- memInit
 
       with Method "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
         If !#a!RqFromProc@."op" then (* load *)
@@ -174,6 +178,8 @@ Section MMIO.
   Variable addrSize: nat.
   Variable dataBytes: nat.
 
+  Variable (memInit: MemInit addrSize dataBytes).
+
   Definition IsMMIOE (ty: Kind -> Type) := Expr ty (SyntaxKind Bool).
   Definition IsMMIOT :=
     forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> IsMMIOE ty.
@@ -190,7 +196,7 @@ Section MMIO.
     MethodSig "mmioExec"(Struct RqFromProc): Struct RsToProc.
 
   Definition mm := MODULE {
-    Register "mem" : Vector (Data dataBytes) addrSize <- Default
+    Register "mem" : Vector (Data dataBytes) addrSize <- memInit
 
     with Method "memOp" (a : Struct RqFromProc): Struct RsToProc :=
       LET addr <- #a!RqFromProc@."addr";
@@ -380,11 +386,12 @@ Section SC.
 
   Variable n: nat.
 
-  Variables (procInit: ProcInit iaddrSize dataBytes rfIdx).
+  Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
+            (memInit: MemInit addrSize dataBytes).
 
   Definition pinst := procInst fetch dec exec procInit.
 
-  Definition scmm := ConcatMod pinst (mm dataBytes ammio).
+  Definition scmm := ConcatMod pinst (mm memInit ammio).
 
 End SC.
 
@@ -407,21 +414,24 @@ Section Facts.
   Hint Resolve pinst_ModEquiv.
 
   Lemma memInst_ModEquiv:
-    ModPhoasWf (memInst addrSize dataBytes).
+    forall (init: MemInit addrSize dataBytes),
+      ModPhoasWf (memInst init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve memInst_ModEquiv.
 
-  Lemma mm_ModEquiv: ModPhoasWf (mm dataBytes ammio).
+  Lemma mm_ModEquiv:
+    forall (init: MemInit addrSize dataBytes),
+      ModPhoasWf (mm init ammio).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mm_ModEquiv.
   
   Lemma scmm_ModEquiv:
-    forall init,
-      ModPhoasWf (scmm fetch dec exec ammio init).
+    forall procInit memInit,
+      ModPhoasWf (scmm fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
   Qed.

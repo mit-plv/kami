@@ -18,12 +18,13 @@ Section ProcDecSCN.
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+           (memInit: MemInit addrSize dataBytes).
+
+  Definition scmm := scmm fetch dec exec ammio procInit memInit.
+  Definition pdec := pdec fifoSize fetch dec exec procInit.
   
-  Definition scmm := scmm fetch dec exec ammio init.
-  Definition pdec := pdec fifoSize fetch dec exec init.
-  
-  Definition memAsync := memAsync fifoSize dataBytes ammio.
+  Definition memAsync := memAsync fifoSize memInit ammio.
   Definition pdecM := (pdec ++ memAsync)%kami.
 
   Lemma pdecM_refines_scmm: pdecM <<== scmm.
