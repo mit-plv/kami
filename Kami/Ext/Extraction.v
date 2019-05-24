@@ -18,27 +18,6 @@ Definition rv32AddrSize := 32.
 Section PerInstMemSize.
   Variable rv32IAddrSize: nat.
 
-  Instance rv32Fetch: AbsFetch rv32InstBytes rv32DataBytes :=
-    {| alignInst := rv32AlignInst |}.
-
-  Instance rv32Dec: AbsDec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
-    {| getOptype := rv32GetOptype;
-       getLdDst := rv32GetLdDst;
-       getLdAddr := rv32GetLdAddr _;
-       getLdSrc := rv32GetLdSrc;
-       calcLdAddr := rv32CalcLdAddr _;
-       getStAddr := rv32GetStAddr _;
-       getStSrc := rv32GetStSrc;
-       calcStAddr := rv32CalcStAddr _;
-       getStVSrc := rv32GetStVSrc;
-       getSrc1 := rv32GetSrc1;
-       getSrc2 := rv32GetSrc2;
-       getDst := rv32GetDst |}.
-
-  Instance rv32Exec: AbsExec rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
-    {| doExec := rv32Exec _;
-       getNextPc := rv32NextPc _ |}.
-
   Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Pc rv32IAddrSize))) :=
     (#ppc + $4)%kami_expr.
 
@@ -47,7 +26,7 @@ Section PerInstMemSize.
 
   Definition p4st: Modules :=
     ProcFourStDec.p4st
-      rv32Fetch rv32Dec rv32Exec predictNextPc
+      rv32Fetch (rv32Dec rv32AddrSize) (rv32Exec rv32IAddrSize) predictNextPc
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)

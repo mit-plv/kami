@@ -188,7 +188,7 @@ Section RV32IM.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
 
-  Definition rv32Exec: ExecT rv32IAddrSize rv32InstBytes rv32DataBytes.
+  Definition rv32DoExec: ExecT rv32IAddrSize rv32InstBytes rv32DataBytes.
     unfold ExecT; intros ty val1 val2 pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_LUI)
@@ -309,6 +309,27 @@ Section RV32IM.
                         else #pc + $4)%kami_expr.
     exact (#pc + $4)%kami_expr.
   Defined.
+
+  Instance rv32Fetch: AbsFetch rv32InstBytes rv32DataBytes :=
+    {| alignInst := rv32AlignInst |}.
+
+  Instance rv32Dec: AbsDec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    {| getOptype := rv32GetOptype;
+       getLdDst := rv32GetLdDst;
+       getLdAddr := rv32GetLdAddr;
+       getLdSrc := rv32GetLdSrc;
+       calcLdAddr := rv32CalcLdAddr;
+       getStAddr := rv32GetStAddr;
+       getStSrc := rv32GetStSrc;
+       calcStAddr := rv32CalcStAddr;
+       getStVSrc := rv32GetStVSrc;
+       getSrc1 := rv32GetSrc1;
+       getSrc2 := rv32GetSrc2;
+       getDst := rv32GetDst |}.
+
+  Instance rv32Exec: AbsExec rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    {| doExec := rv32DoExec;
+       getNextPc := rv32NextPc |}.
 
 End RV32IM.
 
