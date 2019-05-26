@@ -32,27 +32,27 @@ Section RV32Struct.
 
   Inductive Rv32 :=
   | JAL (rd: Gpr) (ofs: word 20): Rv32
-  | JALR (rs1 rd: Gpr) (ofs: word 12): Rv32
+  | JALR (rd rs1: Gpr) (ofs: word 12): Rv32
   | BEQ (rs1 rs2: Gpr) (ofs: word 12): Rv32
   | BNE (rs1 rs2: Gpr) (ofs: word 12): Rv32
   | BLT (rs1 rs2: Gpr) (ofs: word 12): Rv32
   | BGE (rs1 rs2: Gpr) (ofs: word 12): Rv32
   | BLTU (rs1 rs2: Gpr) (ofs: word 12): Rv32
   | BGEU (rs1 rs2: Gpr) (ofs: word 12): Rv32
-  | LW (rs1 rd: Gpr) (ofs: word 12): Rv32
+  | LW (rd rs1: Gpr) (ofs: word 12): Rv32
   | SW (rs1 rs2: Gpr) (ofs: word 12): Rv32
-  | ADDI (rs1 rd: Gpr) (ofs: word 12): Rv32
-  | ADD (rs1 rs2 rd: Gpr): Rv32
-  | SUB (rs1 rs2 rd: Gpr): Rv32
-  | MUL (rs1 rs2 rd: Gpr): Rv32
-  | SLL (rs1 rs2 rd: Gpr): Rv32
-  | SRL (rs1 rs2 rd: Gpr): Rv32
-  | OR (rs1 rs2 rd: Gpr): Rv32
-  | AND (rs1 rs2 rd: Gpr): Rv32
-  | XOR (rs1 rs2 rd: Gpr): Rv32
+  | ADDI (rd rs1: Gpr) (ofs: word 12): Rv32
+  | ADD (rd rs1 rs2: Gpr): Rv32
+  | SUB (rd rs1 rs2: Gpr): Rv32
+  | MUL (rd rs1 rs2: Gpr): Rv32
+  | SLL (rd rs1 rs2: Gpr): Rv32
+  | SRL (rd rs1 rs2: Gpr): Rv32
+  | OR (rd rs1 rs2: Gpr): Rv32
+  | AND (rd rs1 rs2: Gpr): Rv32
+  | XOR (rd rs1 rs2: Gpr): Rv32
   (* pseudo-instructions *)
   | LI (rd: Gpr) (ofs: word 20): Rv32
-  | MV (rs1 rd: Gpr): Rv32
+  | MV (rd rs1: Gpr): Rv32
   | BEQZ (rs1: Gpr) (ofs: word 12): Rv32
   | BNEZ (rs1: Gpr) (ofs: word 12): Rv32
   | BLEZ (rs1: Gpr) (ofs: word 12): Rv32
@@ -96,27 +96,27 @@ Section RV32Struct.
   Fixpoint rv32ToRaw (inst: Rv32): word 32 :=
     match inst with
     | JAL rd ofs => UJtypeToRaw opcode_JAL rd ofs
-    | JALR rs1 rd ofs => ItypeToRaw opcode_JALR rs1 rd 0 ofs
+    | JALR rd rs1 ofs => ItypeToRaw opcode_JALR rs1 rd 0 ofs
     | BEQ rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BEQ ofs
     | BNE rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BNE ofs
     | BLT rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BLT ofs
     | BGE rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BGE ofs
     | BLTU rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BLTU ofs
     | BGEU rs1 rs2 ofs => SBtypeToRaw opcode_BRANCH rs1 rs2 funct3_BGEU ofs
-    | LW rs1 rd ofs => ItypeToRaw opcode_LOAD rs1 rd funct3_LW ofs
+    | LW rd rs1 ofs => ItypeToRaw opcode_LOAD rs1 rd funct3_LW ofs
     | SW rs1 rs2 ofs => StypeToRaw opcode_STORE rs1 rs2 funct3_SW ofs
-    | ADDI rs1 rd ofs => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI ofs
-    | ADD rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_ADD funct3_ADD
-    | SUB rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SUB funct3_SUB
-    | MUL rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_MUL funct3_MUL
-    | SLL rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SLL funct3_SLL
-    | SRL rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SRL funct3_SRL
-    | OR rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_OR funct3_OR
-    | AND rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_AND funct3_AND
-    | XOR rs1 rs2 rd => RtypeToRaw opcode_OP rs1 rs2 rd funct7_XOR funct3_XOR
+    | ADDI rd rs1 ofs => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI ofs
+    | ADD rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_ADD funct3_ADD
+    | SUB rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SUB funct3_SUB
+    | MUL rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_MUL funct3_MUL
+    | SLL rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SLL funct3_SLL
+    | SRL rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_SRL funct3_SRL
+    | OR rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_OR funct3_OR
+    | AND rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_AND funct3_AND
+    | XOR rd rs1 rs2 => RtypeToRaw opcode_OP rs1 rs2 rd funct7_XOR funct3_XOR
     (* pseudo-instructions *)
     | LI rd ofs => ItypeToRaw opcode_OP_IMM x0 rd funct3_ADDI (split1 12 8 ofs)
-    | MV rs1 rd => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI (natToWord _ 0)
+    | MV rd rs1 => ItypeToRaw opcode_OP_IMM rs1 rd funct3_ADDI (natToWord _ 0)
     | BEQZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BEQ ofs
     | BNEZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BNE ofs 
     | BLEZ rs1 ofs => SBtypeToRaw opcode_BRANCH x0 rs1 funct3_BGE ofs
