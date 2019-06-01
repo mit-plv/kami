@@ -282,7 +282,7 @@ Section ProcInst.
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call ldData <- memOp(STRUCT { "addr" ::= (_zeroExtend_ #pinitOfs) << $$(natToWord 2 2);
+      Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
       LET ldVal <- #ldData!(RsToProc dataBytes)@."data";
