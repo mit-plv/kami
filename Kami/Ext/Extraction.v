@@ -26,7 +26,8 @@ Section PerInstMemSize.
 
   Definition p4st: Modules :=
     ProcFourStDec.p4st
-      rv32Fetch (rv32Dec rv32AddrSize) (rv32Exec rv32IAddrSize) predictNextPc
+      (rv32Fetch rv32AddrSize rv32IAddrSize)
+      (rv32Dec rv32AddrSize) (rv32Exec rv32IAddrSize) predictNextPc
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)

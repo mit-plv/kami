@@ -15,7 +15,7 @@ Section ProcFour.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
   Variable fifoSize: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).

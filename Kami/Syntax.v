@@ -7,12 +7,6 @@ Require Import Eqdep. (* for signature_eq *)
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-Fixpoint getDefaultConstBit n: word n :=
-  match n with
-    | 0 => WO
-    | S m => WS false (getDefaultConstBit m)
-  end.
-
 Section Vec.
   Variable A: Type.
 
@@ -230,7 +224,7 @@ Fixpoint vector_repeat A n (a: A) :=
 Fixpoint getDefaultConst (k: Kind): ConstT k :=
   match k with
     | Bool => ConstBool false
-    | Bit n => ConstBit (getDefaultConstBit n)
+    | Bit n => ConstBit (wzero _)
     | Vector k n => ConstVector (replicate (getDefaultConst k) n)
     | Struct n ls =>
       ConstStruct ((fix help n (ls: Vector.t _ n) :=
@@ -268,7 +262,7 @@ Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrTy
 Fixpoint getDefaultConstNative (k: Kind): type k :=
   match k return type k with
   | Bool => false
-  | Bit n => getDefaultConstBit n
+  | Bit n => wzero _
   | Vector k n => fun _ => getDefaultConstNative k
   | Struct n attrs =>
     fun i =>

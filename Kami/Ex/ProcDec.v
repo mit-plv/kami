@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Section ProcDec.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
@@ -50,7 +50,7 @@ Section ProcDec.
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRqOfs" <- #pinitRqOfs + $1;
@@ -63,7 +63,7 @@ Section ProcDec.
       Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
@@ -226,7 +226,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 Section ProcDecM.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
@@ -247,7 +247,7 @@ Hint Unfold pdec pdecf procDecM : ModuleDefs.
 Section Facts.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).

@@ -89,7 +89,7 @@ End E2wInst.
 Section ProcThreeStage.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
@@ -285,7 +285,7 @@ Section ProcThreeStage.
         Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
         Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-        Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+        Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "pinitRqOfs" <- #pinitRqOfs + $1;
@@ -298,7 +298,7 @@ Section ProcThreeStage.
         Assert !#pinitRq;
         Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
         Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-        Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+        Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "pinitRq" <- $$true;
@@ -662,7 +662,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep
 Section ProcThreeStageM.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
@@ -727,7 +727,7 @@ Section Facts.
   Variable inName outName: string.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 

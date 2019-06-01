@@ -14,7 +14,7 @@ Set Implicit Arguments.
 Section Fetch.
   Variables addrSize iaddrSize instBytes dataBytes: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (predictNextPc:
                forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                           Expr ty (SyntaxKind (Pc iaddrSize))).
@@ -53,9 +53,9 @@ Section Fetch.
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchICache: Modules :=
-    fetchICache addrSize fetch predictNextPc f2dPack pcInit.
+    fetchICache fetch predictNextPc f2dPack pcInit.
   Definition fetcher: Modules :=
-    ProcFetchDecode.fetcher addrSize fetch predictNextPc f2dPack pcInit.
+    ProcFetchDecode.fetcher fetch predictNextPc f2dPack pcInit.
 
   Theorem fetchICache_refines_fetcher:
     fetchICache <<== fetcher.

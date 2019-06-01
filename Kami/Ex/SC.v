@@ -97,11 +97,15 @@ Section DecExec.
                                    fullType ty (SyntaxKind Pc) -> (* pc *)
                                    fullType ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
                                    Expr ty (SyntaxKind Pc). (* next pc *)
+  Definition AlignAddrT := forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                      Expr ty (SyntaxKind (Bit addrSize)).
   Definition AlignInstT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> (* loaded word *)
                                       Expr ty (SyntaxKind (Data instBytes)). (* aligned inst. *)
 
   Class AbsFetch :=
-    { alignInst: AlignInstT }.
+    { alignAddr: AlignAddrT;
+      alignInst: AlignInstT
+    }.
   
   Class AbsDec :=
     { getOptype: OptypeT;
@@ -135,7 +139,7 @@ Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
-     StateK StateE StateT ExecT NextPcT AlignInstT : MethDefs.
+     StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
@@ -228,7 +232,7 @@ Hint Unfold mm : ModuleDefs.
 Section ProcInst.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 
@@ -263,7 +267,7 @@ Section ProcInst.
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) != $0);
 
-      Call ldData <- memOp(STRUCT { "addr" ::= (_zeroExtend_ #pinitOfs) << $$(natToWord 2 2);
+      Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
                                     "op" ::= $$false;
                                     "data" ::= $$Default });
       LET ldVal <- #ldData!(RsToProc dataBytes)@."data";
@@ -379,7 +383,7 @@ Hint Unfold procInst : ModuleDefs.
 Section SC.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
@@ -400,7 +404,7 @@ Hint Unfold pinst scmm : ModuleDefs.
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).

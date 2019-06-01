@@ -2,7 +2,7 @@ open Format
 open Target
 open PP
 
-let iAddrSize: int = 10
+let iAddrSize: int = 7
    
 let () =
   let argnum = Array.length Sys.argv in

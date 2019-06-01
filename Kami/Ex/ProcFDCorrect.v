@@ -14,7 +14,7 @@ Set Implicit Arguments.
 Section FetchDecode.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
@@ -68,7 +68,7 @@ Section FetchDecode.
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchICacheDecode :=
-    ((fetchICache addrSize fetch predictNextPc f2dPack pcInit)
+    ((fetchICache fetch predictNextPc f2dPack pcInit)
        ++ (oneEltFifoEx2 f2dFifoName f2dElt)
        ++ (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch))%kami.
   Definition fetchDecode :=

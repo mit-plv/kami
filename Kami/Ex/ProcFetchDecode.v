@@ -42,7 +42,7 @@ End F2dInst.
 Section FetchAndDecode.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
@@ -124,7 +124,7 @@ Section FetchAndDecode.
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRqOfs" <- #pinitRqOfs + $1;
@@ -137,7 +137,7 @@ Section FetchAndDecode.
       Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-      Call memReq(STRUCT { "addr" ::= (_zeroExtend_ #pinitRqOfs) << $$(natToWord 2 2);
+      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
@@ -298,7 +298,7 @@ Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
@@ -337,7 +337,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher addrSize fetch predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher fetch predictNextPc f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 

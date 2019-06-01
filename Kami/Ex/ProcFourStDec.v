@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Section ProcFDE.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
 

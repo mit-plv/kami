@@ -1,4 +1,4 @@
-Require Import Ascii Bool String List.
+Require Import Ascii Bool String List Omega.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
@@ -13,17 +13,22 @@ Local Open Scope fmap.
 Section Invariants.
   Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch instBytes dataBytes)
+  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
+
+  Definition PgmInitNotMMIO :=
+    forall iaddr: word iaddrSize,
+      evalExpr (isMMIO _ (evalExpr (alignAddr _ iaddr))) = false.
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
            (memInit: MemInit addrSize dataBytes).
-  Hypothesis (HinitRf: evalConstT procInit.(rfInit) $0 = $0).
+  Hypotheses (HinitRf: evalConstT procInit.(rfInit) $0 = $0)
+             (HpgmInit: PgmInitNotMMIO).
 
   Definition scmmInl :=
     scmmInl fetch dec exec ammio procInit memInit.
@@ -33,20 +38,33 @@ Section Invariants.
     rfv $0 = $0.
   Hint Unfold scmm_inv_rf_zero: InvDefs.
 
+  Definition scmm_inv_pgm_init
+             (initv: fullType type (SyntaxKind Bool))
+             (ofsv: fullType type (SyntaxKind (Bit iaddrSize)))
+             (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
+             (memv: fullType type (SyntaxKind (Vector (Data dataBytes) addrSize))) :=
+    initv = false ->
+    forall iaddr,
+      iaddr < ofsv ->
+      pgmv iaddr = evalExpr (alignInst _ (memv (evalExpr (alignAddr _ iaddr)))).
+  Hint Unfold scmm_inv_pgm_init: InvDefs.
+        
   Inductive scmm_inv (o: RegsT) : Prop :=
   | ProcInv:
-      forall
-        (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
-        (Hpcv: o@["pc"] = Some (existT _ _ pcv))
-        (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
-        (Hrfv: o@["rf"] = Some (existT _ _ rfv))
-        (pinitv: fullType type (SyntaxKind Bool))
-        (Hpinitv: o@["pinit"] = Some (existT _ _ pinitv))
-        (pinitOfsv: fullType type (SyntaxKind (Bit iaddrSize)))
-        (HpinitOfsv: o@["pinitOfs"] = Some (existT _ _ pinitOfsv))
-        (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
-        (Hpgmv: o@["pgm"] = Some (existT _ _ pgmv)),
+      forall (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
+             (Hpcv: o@["pc"] = Some (existT _ _ pcv))
+             (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
+             (Hrfv: o@["rf"] = Some (existT _ _ rfv))
+             (pinitv: fullType type (SyntaxKind Bool))
+             (Hpinitv: o@["pinit"] = Some (existT _ _ pinitv))
+             (pinitOfsv: fullType type (SyntaxKind (Bit iaddrSize)))
+             (HpinitOfsv: o@["pinitOfs"] = Some (existT _ _ pinitOfsv))
+             (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
+             (Hpgmv: o@["pgm"] = Some (existT _ _ pgmv))
+             (memv: fullType type (SyntaxKind (Vector (Data dataBytes) addrSize)))
+             (Hmemv: o@["mem"] = Some (existT _ _ memv)),
         scmm_inv_rf_zero rfv ->
+        scmm_inv_pgm_init pinitv pinitOfsv pgmv memv ->
         scmm_inv o.
 
   Ltac scmm_inv_old :=
@@ -61,6 +79,34 @@ Section Invariants.
     kregmap_clear.
 
   Ltac scmm_inv_tac := scmm_inv_old; scmm_inv_new.
+
+  Lemma wlt_plus_1_back:
+    forall {sz} (w1 w2: word sz),
+      wnot w2 <> $0 ->
+      w1 < w2 ^+ $1 ->
+      w1 <> w2 ->
+      w1 < w2.
+  Proof.
+    intros.
+    assert (w2 < wones _).
+    { apply lt_wlt.
+      rewrite wones_pow2_minus_one.
+      pose proof (wordToNat_bound w2).
+      pose proof (NatLib.pow2_zero sz).
+      assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by omega.
+      destruct H4; [|assumption].
+      assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
+      rewrite natToWord_wordToNat, <-wones_natToWord in H5; subst.
+      rewrite wnot_ones in H.
+      exfalso; auto.
+    }
+    apply wlt_lt in H0.
+    erewrite wordToNat_plusone in H0 by eassumption.
+    apply lt_wlt.
+    assert (#w1 <> #w2)
+      by (intro Hx; elim H1; apply wordToNat_inj; assumption).
+    omega.
+  Qed.
   
   Lemma scmm_inv_ok':
     forall init n ll,
@@ -72,19 +118,44 @@ Section Invariants.
 
     - kinv_dest_custom scmm_inv_tac.
 
+      cbn; intros _ iaddr ?.
+      exfalso.
+      apply wlt_lt in H; rewrite wordToNat_wzero in H.
+      omega.
+
     - kinvert.
       + mred.
       + mred.
       + kinv_dest_custom scmm_inv_tac.
+        * exfalso.
+          clear -HpgmInit Heqic.
+          specialize (HpgmInit x0).
+          congruence.
+        * intros.
+          destruct (weq iaddr x0).
+          { subst; reflexivity. }
+          { apply H7.
+            apply wlt_plus_1_back; auto.
+          }
+
       + kinv_dest_custom scmm_inv_tac.
+        * intros; discriminate.
+        * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
         * destruct (weq _ _); [exfalso; auto|assumption].
+        * intros; discriminate.
         * destruct (weq _ _); [exfalso; auto|assumption].
+        * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
+        intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
+        * intros; discriminate.
+        * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
-        destruct (weq _ _); [exfalso; auto|assumption].
+        * destruct (weq _ _); [exfalso; auto|assumption].
+        * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
+        intros; discriminate.
   Qed.
 
   Lemma scmm_inv_ok:

@@ -1371,8 +1371,8 @@ Section Multiplier32.
       Transparent MultNumBits.
 
       eexists; split; kinv_constr.
-      apply boothStepInv_finish in H6; dest.
-      assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H5; cbn; cbn in H5; omega).
+      apply boothStepInv_finish in H7; dest.
+      assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H6; cbn; cbn in H6; omega).
       subst; destruct_existT.
       rewrite idElementwiseId; unfold id.
       repeat f_equal.

@@ -264,6 +264,11 @@ Section RV32IM.
 
   Defined.
 
+  Definition rv32AlignAddr: AlignAddrT rv32AddrSize rv32IAddrSize.
+    unfold AlignAddrT; intros ty iaddr.
+    exact ((_zeroExtend_ #iaddr) << $$(natToWord 2 2))%kami_expr.
+  Defined.
+
   Definition rv32AlignInst: AlignInstT rv32InstBytes rv32DataBytes.
     unfold AlignInstT; intros ty data.
     exact (#data)%kami_expr.
@@ -310,8 +315,9 @@ Section RV32IM.
     exact (#pc + $4)%kami_expr.
   Defined.
 
-  Instance rv32Fetch: AbsFetch rv32InstBytes rv32DataBytes :=
-    {| alignInst := rv32AlignInst |}.
+  Instance rv32Fetch: AbsFetch rv32AddrSize rv32IAddrSize rv32InstBytes rv32DataBytes :=
+    {| alignAddr := rv32AlignAddr;
+       alignInst := rv32AlignInst |}.
 
   Instance rv32Dec: AbsDec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
     {| getOptype := rv32GetOptype;
