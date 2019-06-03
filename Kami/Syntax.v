@@ -40,9 +40,9 @@ Section VecFunc.
                  end eq_refl
            end;
     clear evalVec.
-    abstract (intros; discriminate).
-    abstract (injection e; intros; subst; intuition).
-    abstract (injection e; intros; subst; intuition).
+    - abstract (intros; discriminate).
+    - injection e; intros; subst; exact x.
+    - injection e; intros; subst; exact x.
   Defined.
 
   Variable B: Type.

@@ -1868,6 +1868,25 @@ Proof.
   - inv H0; constructor; eauto.
 Qed.
 
+Lemma reachable_init:
+  forall m, reachable (initRegs (getRegInits m)) m.
+Proof.
+  intros; repeat econstructor.
+Qed.
+
+Lemma reachable_multistep:
+  forall m o n ll,
+    reachable o m ->
+    Multistep m o n ll ->
+    reachable n m.
+Proof.
+  intros.
+  inversion_clear H.
+  inversion_clear H1.
+  do 2 econstructor.
+  eapply multistep_app_inv; eassumption.
+Qed.
+
 Section NoRules.
   Variable m: Modules.
   Hypothesis (Hrules: getRules m = nil).
