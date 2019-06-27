@@ -147,7 +147,8 @@ Section Invariants.
         * destruct (weq _ _); [exfalso; auto|assumption].
         * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
-        intros; discriminate.
+        * intros; discriminate.
+        * intros; discriminate.
       + kinv_dest_custom scmm_inv_tac.
         * intros; discriminate.
         * intros; discriminate.

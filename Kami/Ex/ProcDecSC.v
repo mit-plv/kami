@@ -33,7 +33,6 @@ Section ProcDecSC.
       "execNm"     |-> "execNm";
       "execNmZ"    |-> "execNmZ";
       "processSt"  |-> "execSt";
-      "reqLdZ"     |-> "execLdZ";
       "processLd"  |-> "execLd"; ||.
   Hint Unfold pdec_pinst_ruleMap: MethDefs.
 

@@ -104,9 +104,9 @@ Section ProcThreeStDec.
 
   Definition p3st_pdec_ruleMap (o: RegsT): string -> option string :=
     "reqLd" |-> "reqLd";
-      "reqLdZ" |-> "reqLdZ";
       "reqSt" |-> "reqSt";
       "repLd" |-> "repLd";
+      "repLdZ" |-> "repLdZ";
       "repSt" |-> "repSt";
       "execToHost" |-> "execToHost";
       "wbNm" |-> "execNm";

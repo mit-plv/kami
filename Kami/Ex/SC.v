@@ -322,7 +322,16 @@ Section ProcInst.
       LET rawInst <- #pgm@[_truncLsb_ #ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
+      (* NOTE: no register update when the dst register is r0, 
+       * but the memory call should be made. *)
       Assert (#regIdx == $0);
+      LET addr <- getLdAddr _ rawInst;
+      LET srcIdx <- getLdSrc _ rawInst;
+      LET srcVal <- #rf@[#srcIdx];
+      LET laddr <- calcLdAddr _ addr srcVal;
+      Call ldRep <- memOp(STRUCT { "addr" ::= #laddr;
+                                   "op" ::= $$false;
+                                   "data" ::= $$Default });
       nextPc ppc rf rawInst
 
     with Rule "execSt" :=

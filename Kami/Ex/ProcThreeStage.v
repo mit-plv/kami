@@ -514,8 +514,6 @@ Section ProcThreeStage.
         Assert (#fEpoch == #eEpoch);
 
         Assert d2eOpType _ d2e == $$opLd;
-        LET dst <- d2eDst _ d2e;
-        Assert #dst != $0;
         LET laddr <- d2eAddr _ d2e;
         Call memReq(STRUCT { "addr" ::= #laddr;
                              "op" ::= $$false;
@@ -523,24 +521,6 @@ Section ProcThreeStage.
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
         Retv
-          
-      with Rule "reqLdZ" :=
-        Read stall <- "stall";
-        Assert !#stall;
-        Call rf <- getRf2();
-        Call e2w <- e2wDeq();
-        LET d2e <- e2wDecInst _ e2w;
-
-        LET fEpoch <- d2eEpoch _ d2e;
-        Call eEpoch <- getEpoch();
-        Assert (#fEpoch == #eEpoch);
-
-        Assert d2eOpType _ d2e == $$opLd;
-        Assert d2eDst _ d2e == $0;
-        LET ppc <- d2eCurPc _ d2e;
-        LET npcp <- d2eNextPc _ d2e;
-        LET rawInst <- d2eRawInst _ d2e;
-        checkNextPc ppc npcp rf rawInst
                         
       with Rule "reqSt" :=
         Read stall <- "stall";
@@ -569,7 +549,24 @@ Section ProcThreeStage.
         Read stalled : d2eElt <- "stalled";
         Assert d2eOpType _ stalled == $$opLd;
         LET dst <- d2eDst _ stalled;
+        Assert (#dst != $0);
         Call setRf (#rf@[#dst <- #val!RsToProc@."data"]);
+        Call sbRemove(#dst);
+        Write "stall" <- $$false;
+        LET ppc <- d2eCurPc _ stalled;
+        LET npcp <- d2eNextPc _ stalled;
+        LET rawInst <- d2eRawInst _ stalled;
+        checkNextPc ppc npcp rf rawInst
+
+      with Rule "repLdZ" :=
+        Read stall <- "stall";
+        Assert #stall;
+        Call val <- memRep();
+        Call rf <- getRf2();
+        Read stalled : d2eElt <- "stalled";
+        Assert d2eOpType _ stalled == $$opLd;
+        LET dst <- d2eDst _ stalled;
+        Assert (#dst == $0);
         Call sbRemove(#dst);
         Write "stall" <- $$false;
         LET ppc <- d2eCurPc _ stalled;
