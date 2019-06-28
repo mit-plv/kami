@@ -34,7 +34,7 @@ Section FetchICache.
                           Expr ty (SyntaxKind Bool)).
 
   Definition icache: Modules :=
-    bram1 "pgm" 1 iaddrSize (Data instBytes).
+    bram1 "pgm" iaddrSize (Data instBytes).
 
   Definition instRq :=
     MethodSig ("pgm" -- "putRq")
@@ -61,7 +61,6 @@ Section FetchICache.
     with Register "pinitRq" : Bool <- Default
     with Register "pinitRqOfs" : Bit iaddrSize <- Default
     with Register "pinitRsOfs" : Bit iaddrSize <- Default
-    with Register "pinstRsOfs" : Bit iaddrSize <- Default
     with Register "fEpoch" : Bool <- false
     with Register "fStall" : Bool <- false
 
@@ -98,6 +97,7 @@ Section FetchICache.
       Read pinit <- "pinit";
       Assert !#pinit;
       Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) != $0);
 
       Call ldData <- memRep();
       LET ldVal <- #ldData!RsToProc@."data";
@@ -108,24 +108,19 @@ Section FetchICache.
       Write "pinitRsOfs" <- #pinitRsOfs + $1;
       Retv
 
-    with Rule "pgmInitAck" :=
+    with Rule "pgmInitRsEnd" :=
       Read pinit <- "pinit";
       Assert !#pinit;
-      Read pinstRsOfs : Bit iaddrSize <- "pinstRsOfs";
-      Assert ((UniBit (Inv _) #pinstRsOfs) != $0);
+      Read pinitRsOfs : Bit iaddrSize <- "pinitRsOfs";
+      Assert ((UniBit (Inv _) #pinitRsOfs) == $0);
 
-      Call instRs();
-      Write "pinstRsOfs" <- #pinstRsOfs + $1;
-      Retv
-        
-    with Rule "pgmInitAckEnd" :=
-      Read pinit <- "pinit";
-      Assert !#pinit;
-      Read pinstRsOfs : Bit iaddrSize <- "pinstRsOfs";
-      Assert ((UniBit (Inv _) #pinstRsOfs) == $0);
-
-      Call instRs();
-      Write "pinit" <- !#pinit;
+      Call ldData <- memRep();
+      LET ldVal <- #ldData!RsToProc@."data";
+      LET inst <- alignInst _ ldVal;
+      Call instRq(STRUCT { "write" ::= $$true;
+                           "addr" ::= #pinitRsOfs;
+                           "datain" ::= #inst });
+      Write "pinit" <- $$true;
       Retv
 
     (** Phase 2: execute the program [pinit == true] *)
