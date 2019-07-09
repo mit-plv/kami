@@ -62,8 +62,8 @@ Section FetchICache.
     with Register "pinitRqOfs" : Bit iaddrSize <- Default
     with Register "pinitRsOfs" : Bit iaddrSize <- Default
     with Register "fEpoch" : Bool <- false
-    with Register "fStall" : Bool <- false
-
+    with Register "pcUpdated" : Bool <- false
+                             
     (** Phase 1: initialize the program [pinit == false] *)
 
     with Rule "pgmInitRq" :=
@@ -128,39 +128,45 @@ Section FetchICache.
     with Rule "modifyPc" :=
       Read pinit <- "pinit";
       Assert #pinit;
-      Read stall <- "fStall";
-      Assert !#stall;
       Call correctPc <- w2dDeq();
       Write "pc" <- #correctPc;
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
       Call f2dFlush();
+      Write "pcUpdated" <- $$true;
       Retv
 
     with Rule "instFetchRq" :=
       Read pinit <- "pinit";
       Assert #pinit;
-      Read stall <- "fStall";
-      Assert !#stall;
       Read pc : Pc iaddrSize <- "pc";
+      Read epoch : Bool <- "fEpoch";
       Call instRq(STRUCT { "write" ::= $$false;
                            "addr" ::= _truncLsb_ #pc;
                            "datain" ::= $$Default });
-      Write "fStall" <- $$true;
+      Write "pcUpdated" <- $$false;
       Retv
 
     with Rule "instFetchRs" :=
       Read pinit <- "pinit";
       Assert #pinit;
-      Read stall <- "fStall";
-      Assert #stall;
+      Read pcUpdated <- "pcUpdated";
+      Assert !#pcUpdated;
       Call inst <- instRs();
       Read pc : Pc iaddrSize <- "pc";
-      Read epoch <- "fEpoch";
       LET npc <- predictNextPc _ pc;
+      Read epoch <- "fEpoch";
       Call f2dEnq(f2dPack #inst #pc #npc #epoch);
       Write "pc" <- #npc;
-      Write "fStall" <- $$false;
+      Retv
+
+    with Rule "instFetchRsIgnore" :=
+      Read pinit <- "pinit";
+      Assert #pinit;
+      Read pcUpdated <- "pcUpdated";
+      Assert #pcUpdated;
+      Call instRs();
+      Write "pcUpdated" <- $$false;
       Retv
   }.
 
