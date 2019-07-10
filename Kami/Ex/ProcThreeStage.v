@@ -468,8 +468,9 @@ Section ProcThreeStage.
 
   Section WriteBack.
     
-    Definition checkNextPc {ty} ppc npcp st rawInst :=
-      (LET npc <- getNextPc ty st ppc rawInst;
+    Definition commitPc {ty} ppc npcp st rawInst :=
+      (Write "lastPc" <- #ppc;
+       LET npc <- getNextPc ty st ppc rawInst;
        If (#npc != #npcp)
        then
          Call toggleEpoch();
@@ -483,7 +484,8 @@ Section ProcThreeStage.
     Definition wb := MODULE {
       Register "stall" : Bool <- false
       with Register "stalled" : d2eElt <- Default
-
+      with Register "lastPc" : Pc iaddrSize <- Default
+                                       
       with Rule "wrongEpoch" :=
         Read stall <- "stall";
         Assert !#stall;
@@ -556,7 +558,7 @@ Section ProcThreeStage.
         LET ppc <- d2eCurPc _ stalled;
         LET npcp <- d2eNextPc _ stalled;
         LET rawInst <- d2eRawInst _ stalled;
-        checkNextPc ppc npcp rf rawInst
+        commitPc ppc npcp rf rawInst
 
       with Rule "repLdZ" :=
         Read stall <- "stall";
@@ -572,7 +574,7 @@ Section ProcThreeStage.
         LET ppc <- d2eCurPc _ stalled;
         LET npcp <- d2eNextPc _ stalled;
         LET rawInst <- d2eRawInst _ stalled;
-        checkNextPc ppc npcp rf rawInst
+        commitPc ppc npcp rf rawInst
 
       with Rule "repSt" :=
         Read stall <- "stall";
@@ -585,7 +587,7 @@ Section ProcThreeStage.
         LET ppc <- d2eCurPc _ stalled;
         LET npcp <- d2eNextPc _ stalled;
         LET rawInst <- d2eRawInst _ stalled;
-        checkNextPc ppc npcp rf rawInst
+        commitPc ppc npcp rf rawInst
                                 
       with Rule "wbNm" :=
         Read stall <- "stall";
@@ -607,7 +609,7 @@ Section ProcThreeStage.
         LET ppc <- d2eCurPc _ d2e;
         LET npcp <- d2eNextPc _ d2e;
         LET rawInst <- d2eRawInst _ d2e;
-        checkNextPc ppc npcp rf rawInst
+        commitPc ppc npcp rf rawInst
 
       with Rule "wbNmZ" :=
         Read stall <- "stall";
@@ -627,7 +629,7 @@ Section ProcThreeStage.
         LET ppc <- d2eCurPc _ d2e;
         LET npcp <- d2eNextPc _ d2e;
         LET rawInst <- d2eRawInst _ d2e;
-        checkNextPc ppc npcp rf rawInst
+        commitPc ppc npcp rf rawInst
     }.
     
   End WriteBack.
@@ -654,7 +656,7 @@ Hint Unfold RqFromProc RsToProc memReq memRep
      sbSearch1_Ld sbSearch2_Ld sbSearch1_St sbSearch2_St
      sbSearch1_Nm sbSearch2_Nm sbSearch3_Nm
      sbInsert sbRemove
-     checkNextPc : MethDefs.
+     commitPc : MethDefs.
 
 Section ProcThreeStageM.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
