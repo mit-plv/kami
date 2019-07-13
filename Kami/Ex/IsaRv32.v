@@ -70,8 +70,8 @@ Section Common.
                     (UniBit (ConstExtract 25 6 _) inst)
                     (UniBit (ConstExtract 8 4 _) inst)))%kami_expr.
 
-  Definition getOffsetUE {ty}
-             (inst: Expr ty (SyntaxKind (Data rv32DataBytes))) :=
+  Definition getOffsetUE {ty}3
+             (inst: Expr ty (SyntaxKind3 (Data rv32DataBytes))) :=
     (UniBit (TruncLsb 12 20) inst)%kami_expr.
 
   Definition getOffsetUJE {ty}
@@ -278,7 +278,7 @@ Section RV32IM.
     unfold NextPcT; intros ty st pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_JAL)
-            then #pc + (_signExtend_ ((getOffsetUJE #inst) << $$(natToWord 1 1)))
+            then #pc + (_signExtend_ {getOffsetUJE #inst, $$(WO~0)})
             else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $opcode_JALR)
             then (_signExtend_ (getRs1ValueE st #inst))
@@ -288,29 +288,29 @@ Section RV32IM.
     refine (IF (getOpcodeE #inst == $opcode_BRANCH) then _ else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BEQ
                        (IF (getRs1ValueE st #inst == getRs2ValueE st #inst)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BNE
                        (IF (getRs1ValueE st #inst != getRs2ValueE st #inst)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BLT
                        (IF ((UniBit (TruncLsb 31 1)
                                     (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $1)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BGE
                        (IF ((UniBit (TruncLsb 31 1)
                                     (getRs1ValueE st #inst - getRs2ValueE st #inst)) == $0)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BLTU
                        (IF (getRs1ValueE st #inst < getRs2ValueE st #inst)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     register_op_funct3 inst funct3_BGEU
                        (IF (getRs1ValueE st #inst >= getRs2ValueE st #inst)
-                        then #pc + (_signExtend_ ((getOffsetSBE #inst) << $$(natToWord 1 1)))
+                        then #pc + (_signExtend_ {getOffsetSBE #inst, $$(WO~0)})
                         else #pc + $4)%kami_expr.
     exact (#pc + $4)%kami_expr.
   Defined.
