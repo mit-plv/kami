@@ -91,7 +91,7 @@ Section ProcThreeStage.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -517,7 +517,8 @@ Section ProcThreeStage.
 
         Assert d2eOpType _ d2e == $$opLd;
         LET laddr <- d2eAddr _ d2e;
-        Call memReq(STRUCT { "addr" ::= #laddr;
+        LET laddra <- alignLdAddr _ laddr;
+        Call memReq(STRUCT { "addr" ::= #laddra;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
@@ -552,7 +553,14 @@ Section ProcThreeStage.
         Assert d2eOpType _ stalled == $$opLd;
         LET dst <- d2eDst _ stalled;
         Assert (#dst != $0);
-        Call setRf (#rf@[#dst <- #val!RsToProc@."data"]);
+
+        LET rawInst <- d2eRawInst _ stalled;
+        LET laddr <- d2eAddr _ stalled;
+        LET ldValWord <- #val!RsToProc@."data";
+        LET ldType <- getLdType _ rawInst;
+        LET ldVal <- calcLdVal _ laddr ldValWord ldType;
+        Call setRf (#rf@[#dst <- #ldVal]);
+        
         Call sbRemove(#dst);
         Write "stall" <- $$false;
         LET ppc <- d2eCurPc _ stalled;
@@ -663,7 +671,7 @@ Section ProcThreeStageM.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Pc iaddrSize)).
@@ -728,7 +736,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Pc iaddrSize)).
@@ -824,7 +832,7 @@ Section Facts.
   Hint Resolve epoch_ModEquiv.
   
   Lemma wb_ModEquiv:
-    ModPhoasWf (wb exec
+    ModPhoasWf (wb dec exec
                    d2eOpType d2eDst d2eAddr d2eVal1
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wDecInst e2wVal).

@@ -15,7 +15,7 @@ Section ProcDecSC.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.

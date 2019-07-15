@@ -15,7 +15,7 @@ Section ProcDec.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -113,7 +113,8 @@ Section ProcDec.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call memReq(STRUCT { "addr" ::= #laddr;
+      LET laddra <- alignLdAddr _ laddr;
+      Call memReq(STRUCT { "addr" ::= #laddra;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
@@ -152,7 +153,14 @@ Section ProcDec.
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
-      Write "rf" <- #rf@[#dstIdx <- #val!RsToProc@."data"];
+      LET addr <- getLdAddr _ rawInst;
+      LET srcIdx <- getStSrc _ rawInst;
+      LET srcVal <- #rf@[#srcIdx];
+      LET laddr <- calcLdAddr _ addr srcVal;
+      LET ldValWord <- #val!RsToProc@."data";
+      LET ldType <- getLdType _ rawInst;
+      LET ldVal <- calcLdVal _ laddr ldValWord ldType;
+      Write "rf" <- #rf@[#dstIdx <- #ldVal];
       Write "stall" <- $$false;
       nextPc ppc rf rawInst
 
@@ -227,7 +235,7 @@ Section ProcDecM.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Definition pdec init :=
@@ -248,7 +256,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Lemma pdec_ModEquiv:

@@ -70,8 +70,8 @@ Section Common.
                     (UniBit (ConstExtract 25 6 _) inst)
                     (UniBit (ConstExtract 8 4 _) inst)))%kami_expr.
 
-  Definition getOffsetUE {ty}3
-             (inst: Expr ty (SyntaxKind3 (Data rv32DataBytes))) :=
+  Definition getOffsetUE {ty}
+             (inst: Expr ty (SyntaxKind (Data rv32DataBytes))) :=
     (UniBit (TruncLsb 12 20) inst)%kami_expr.
 
   Definition getOffsetUJE {ty}
@@ -88,18 +88,17 @@ End Common.
 Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 0) : kami_expr_scope.
 
 (** RV32I instructions (#instructions=47, categorized by opcode_)):
- * - Supported(31)
+ * - Supported(35)
  *   + opcode_LUI(1): lui
  *   + opcode_AUIPC(1): auipc
  *   + opcode_JAL(1): jal
  *   + opcode_JALR(1): jalr
  *   + opcode_BRANCH(6): beq, bne, blt, bge, bltu, bgeu
- *   + opcode_LOAD(1): lw
+ *   + opcode_LOAD(5): lb, lh, lw, lbu, lhu
  *   + opcode_STORE(1): sw
  *   + opcode_OP_IMM(9): addi, slti, sltiu, xori, ori, andi, slli, srli, srai
  *   + opcode_OP(10): add, sub, sll, slt, sltu, xor, srl, sra, or, and
- * - Not supported yet(6)
- *   + opcode_LOAD(4): lb, lh, lbu, lhu
+ * - Not supported yet(2)
  *   + opcode_STORE(2): sb, sh
  * - No plan to support(10)
  *   + opcode_MISC_MEM(2): fence, fence.i
@@ -115,6 +114,8 @@ Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 0) : kami_expr_scope.
 Section RV32IM.
   Variables rv32AddrSize (* 2^(rv32AddrSize) memory cells *)
             rv32IAddrSize: nat. (* 2^(rv32IAddrSize) instructions *)
+  Hypotheses (Haddr1: rv32AddrSize = 2 + (rv32AddrSize - 2))
+             (Haddr2: rv32AddrSize = 1 + 1 + (rv32AddrSize - 2)).
 
   Section Decode.
 
@@ -141,7 +142,12 @@ Section RV32IM.
 
     Definition rv32CalcLdAddr: LdAddrCalcT rv32AddrSize rv32DataBytes.
       unfold LdAddrCalcT; intros ty ofs base.
-      exact ((_zeroExtend_ #base) + (_signExtend_ #ofs))%kami_expr.
+      exact ((_zeroExtend_ #base) + #ofs)%kami_expr.
+    Defined.
+
+    Definition rv32GetLdType: LdTypeT rv32InstBytes.
+      unfold LdTypeT; intros ty inst.
+      exact (getFunct3E #inst)%kami_expr.
     Defined.
 
     Definition rv32GetStAddr: StAddrT rv32AddrSize rv32InstBytes.
@@ -264,6 +270,58 @@ Section RV32IM.
 
   Defined.
 
+  Definition rv32AlignLdAddr: LdAlignAddrT rv32AddrSize.
+    unfold LdAlignAddrT; intros ty laddr.
+    rewrite Haddr1; rewrite Haddr1 in laddr.
+    exact ({UniBit (TruncLsb 2 _) #laddr, $$(WO~0~0)})%kami_expr.
+  Defined.
+
+  Definition rv32CalcLdVal: LdValCalcT rv32AddrSize rv32DataBytes.
+    unfold LdValCalcT; intros ty addr val ldty.
+    refine (IF (#ldty == $funct3_LB) then _ else _)%kami_expr.
+    1: {
+      rewrite Haddr1 in addr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~0))
+              then _signExtend_ (UniBit (Trunc BitsPerByte _) #val)
+              else _)%kami_expr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~1))
+              then _signExtend_ (UniBit (ConstExtract BitsPerByte BitsPerByte _) #val)
+              else _)%kami_expr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~1~0))
+              then _signExtend_ (UniBit (ConstExtract (2 * BitsPerByte) BitsPerByte _) #val)
+              else _signExtend_ (UniBit (TruncLsb (3 * BitsPerByte) _) #val))%kami_expr.
+    }
+    refine (IF (#ldty == $funct3_LH) then _ else _)%kami_expr.
+    1: {
+      rewrite Haddr2 in addr.
+      refine (IF (UniBit (ConstExtract 1 1 (rv32AddrSize - 2)) #addr == $$(WO~0))
+              then _signExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
+              else _signExtend_ (UniBit (TruncLsb (2 * BitsPerByte) _) #val)
+             )%kami_expr.
+    }
+    refine (IF (#ldty == $funct3_LBU) then _ else _)%kami_expr.
+    1: {
+      rewrite Haddr1 in addr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~0))
+              then _zeroExtend_ (UniBit (Trunc BitsPerByte _) #val)
+              else _)%kami_expr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~1))
+              then _zeroExtend_ (UniBit (ConstExtract BitsPerByte BitsPerByte _) #val)
+              else _)%kami_expr.
+      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~1~0))
+              then _zeroExtend_ (UniBit (ConstExtract (2 * BitsPerByte) BitsPerByte _) #val)
+              else _zeroExtend_ (UniBit (TruncLsb (3 * BitsPerByte) _) #val))%kami_expr.
+    }
+    refine (IF (#ldty == $funct3_LHU) then _ else #val)%kami_expr.
+    1: {
+      rewrite Haddr2 in addr.
+      refine (IF (UniBit (ConstExtract 1 1 (rv32AddrSize - 2)) #addr == $$(WO~0))
+              then _zeroExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
+              else _zeroExtend_ (UniBit (TruncLsb (2 * BitsPerByte) _) #val)
+             )%kami_expr.
+    }
+  Defined.
+
   Definition rv32AlignAddr: AlignAddrT rv32AddrSize rv32IAddrSize.
     unfold AlignAddrT; intros ty iaddr.
     exact ((_zeroExtend_ #iaddr) << $$(natToWord 2 2))%kami_expr.
@@ -325,6 +383,7 @@ Section RV32IM.
        getLdAddr := rv32GetLdAddr;
        getLdSrc := rv32GetLdSrc;
        calcLdAddr := rv32CalcLdAddr;
+       getLdType := rv32GetLdType;
        getStAddr := rv32GetStAddr;
        getStSrc := rv32GetStSrc;
        calcStAddr := rv32CalcStAddr;
@@ -333,8 +392,11 @@ Section RV32IM.
        getSrc2 := rv32GetSrc2;
        getDst := rv32GetDst |}.
 
-  Instance rv32Exec: AbsExec rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
-    {| doExec := rv32DoExec;
+  Instance rv32Exec:
+    AbsExec rv32AddrSize rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    {| alignLdAddr := rv32AlignLdAddr;
+       calcLdVal := rv32CalcLdVal;
+       doExec := rv32DoExec;
        getNextPc := rv32NextPc |}.
 
 End RV32IM.

@@ -9,7 +9,7 @@ Section Inlined.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Pc iaddrSize)).

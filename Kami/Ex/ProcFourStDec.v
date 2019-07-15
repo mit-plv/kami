@@ -15,7 +15,7 @@ Section ProcFDE.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
                                      Expr ty (SyntaxKind (Pc iaddrSize)).
@@ -114,7 +114,7 @@ Section ProcFDE.
                                      d2eRawInst d2eCurPc e2wPack)
                         ++ epoch
                         ++ oneEltFifo e2wFifoName e2wElt
-                        ++ (wb exec d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
+                        ++ (wb dec exec d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
   Definition p3st := ProcThreeStage.p3st

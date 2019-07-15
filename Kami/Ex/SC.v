@@ -44,12 +44,34 @@ Section DecExec.
   Definition LdSrcE (ty: Kind -> Type) := Expr ty LdSrcK.
   Definition LdSrcT := forall ty, fullType ty (SyntaxKind (Data instBytes)) -> LdSrcE ty.
 
+  Definition f3Lb := WO~0~0~0.
+  Definition f3Lh := WO~0~0~1.
+  Definition f3Lw := WO~0~1~0.
+  Definition f3Lbu := WO~1~0~0.
+  Definition f3Lhu := WO~1~0~1.
+
+  Definition LdTypeK := SyntaxKind (Bit 3).
+  Definition LdTypeE (ty: Kind -> Type) := Expr ty LdTypeK.
+  Definition LdTypeT := forall ty, fullType ty (SyntaxKind (Data instBytes)) -> LdTypeE ty.
+
   Definition LdAddrCalcT :=
     forall ty,
       fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
-      fullType ty (SyntaxKind (Data dataBytes)) -> (* dst value *)
+      fullType ty (SyntaxKind (Data dataBytes)) -> (* offset value *)
       Expr ty (SyntaxKind (Bit addrSize)).
-  
+
+  Definition LdAlignAddrT :=
+    forall ty,
+      fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
+      Expr ty (SyntaxKind (Bit addrSize)).
+
+  Definition LdValCalcT :=
+    forall ty,
+      fullType ty (SyntaxKind (Bit addrSize)) -> (* requested address *)
+      fullType ty (SyntaxKind (Data dataBytes)) (* loaded value *) ->
+      fullType ty LdTypeK -> (* load type: lb, lh, lw, lbu, or lhu *)
+      Expr ty (SyntaxKind (Data dataBytes)). (* calculated value *)
+
   (* store-related *)
   Definition StAddrK := SyntaxKind (Bit addrSize).
   Definition StAddrE (ty: Kind -> Type) := Expr ty StAddrK.
@@ -62,7 +84,7 @@ Section DecExec.
   Definition StAddrCalcT :=
     forall ty,
       fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
-      fullType ty (SyntaxKind (Data dataBytes)) -> (* dst value *)
+      fullType ty (SyntaxKind (Data dataBytes)) -> (* offset value *)
       Expr ty (SyntaxKind (Bit addrSize)).
 
   Definition StVSrcK := SyntaxKind (Bit rfIdx).
@@ -113,6 +135,7 @@ Section DecExec.
       getLdAddr: LdAddrT;
       getLdSrc: LdSrcT;
       calcLdAddr: LdAddrCalcT;
+      getLdType: LdTypeT;
       getStAddr: StAddrT;
       getStSrc: StSrcT;
       calcStAddr: StAddrCalcT;
@@ -123,7 +146,9 @@ Section DecExec.
     }.
 
   Class AbsExec :=
-    { doExec: ExecT;
+    { alignLdAddr: LdAlignAddrT;
+      calcLdVal: LdValCalcT;
+      doExec: ExecT;
       getNextPc: NextPcT
     }.
 
@@ -136,8 +161,9 @@ Section DecExec.
 End DecExec.
 
 Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
-     LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT
-     StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StVSrcK StVSrcE StVSrcT
+     LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT LdAddrCalcT
+     LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdAlignAddrT LdValCalcT
+     StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
      StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
 
@@ -234,7 +260,7 @@ Section ProcInst.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
@@ -307,10 +333,14 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- memOp(STRUCT { "addr" ::= #laddr;
+      LET laddra <- alignLdAddr _ laddr;
+      Call ldRep <- memOp(STRUCT { "addr" ::= #laddra;
                                    "op" ::= $$false;
                                    "data" ::= $$Default });
-      Write "rf" <- #rf@[#dstIdx <- #ldRep!(RsToProc dataBytes)@."data"];
+      LET ldValWord <- #ldRep!(RsToProc dataBytes)@."data";
+      LET ldType <- getLdType _ rawInst;
+      LET ldVal <- calcLdVal _ laddr ldValWord ldType;
+      Write "rf" <- #rf@[#dstIdx <- #ldVal];
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=
@@ -329,9 +359,9 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call ldRep <- memOp(STRUCT { "addr" ::= #laddr;
-                                   "op" ::= $$false;
-                                   "data" ::= $$Default });
+      Call memOp(STRUCT { "addr" ::= #laddr;
+                          "op" ::= $$false;
+                          "data" ::= $$Default });
       nextPc ppc rf rawInst
 
     with Rule "execSt" :=
@@ -394,7 +424,7 @@ Section SC.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Variable n: nat.
@@ -415,7 +445,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Lemma pinst_ModEquiv:
