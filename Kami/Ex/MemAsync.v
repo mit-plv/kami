@@ -19,21 +19,8 @@ Section Middleman.
 
   Definition mid :=
     MODULE {
-      Register "memRq" : Struct RqFromProc <- Default
-      with Register "memRqFull" : Bool <- Default
-                                
-      with Rule "pullMemRq" :=
-        Read memRqFull <- "memRqFull";
-        Assert !#memRqFull;
-        Call req <- getReq();
-        Write "memRq" <- #req;
-        Write "memRqFull" <- $$true;
-        Retv
-        
-      with Rule "processMemRq" :=
-        Read memRqFull <- "memRqFull";
-        Read memRq <- "memRq";
-        Assert #memRqFull;
+      Rule "processMem" :=
+        Call memRq <- getReq();
         Call rep <- memOp(#memRq);
         Call setRep(#rep);
         Retv
