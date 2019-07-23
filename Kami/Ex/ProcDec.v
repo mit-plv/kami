@@ -67,6 +67,7 @@ Section ProcDec.
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
+      Write "pinitRqOfs" : Bit iaddrSize <- $0;
       Retv
         
     with Rule "pgmInitRs" :=
@@ -95,6 +96,7 @@ Section ProcDec.
       Read pgm <- "pgm";
       Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
       Write "pinit" <- !#pinit;
+      Write "pinitRsOfs" : Bit iaddrSize <- $0;
       Retv
 
     (** Phase 2: execute the program [pinit == true] *)
@@ -154,7 +156,7 @@ Section ProcDec.
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
       LET addr <- getLdAddr _ rawInst;
-      LET srcIdx <- getStSrc _ rawInst;
+      LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
       LET ldValWord <- #val!RsToProc@."data";
@@ -231,7 +233,7 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -244,7 +246,7 @@ Section ProcDecM.
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
             (memInit: MemInit addrSize dataBytes).
 
-  Definition pdecf := (pdec procInit ++ iom addrSize fifoSize dataBytes)%kami.
+  Definition pdecf := (pdec procInit ++ iom addrSize dataBytes)%kami.
   Definition procDecM := (pdecf ++ mm memInit ammio)%kami.
 
 End ProcDecM.
@@ -252,7 +254,7 @@ End ProcDecM.
 Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
-  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -267,7 +269,7 @@ Section Facts.
   Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
-    forall init, ModPhoasWf (pdecf fifoSize fetch dec exec init).
+    forall init, ModPhoasWf (pdecf fetch dec exec init).
   Proof.
     kequiv.
   Qed.
@@ -275,7 +277,7 @@ Section Facts.
 
   Lemma procDecM_ModEquiv:
     forall procInit memInit,
-      ModPhoasWf (procDecM fifoSize fetch dec exec ammio procInit memInit).
+      ModPhoasWf (procDecM fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
   Qed.

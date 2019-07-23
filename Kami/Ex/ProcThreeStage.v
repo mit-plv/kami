@@ -302,6 +302,7 @@ Section ProcThreeStage.
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "pinitRq" <- $$true;
+        Write "pinitRqOfs" : Bit iaddrSize <- $0;
         Retv
         
       with Rule "pgmInitRs" :=
@@ -330,6 +331,7 @@ Section ProcThreeStage.
         Read pgm <- "pgm";
         Write "pgm" <- #pgm@[#pinitRsOfs <- #inst];
         Write "pinit" <- !#pinit;
+        Write "pinitRsOfs" : Bit iaddrSize <- $0;
         Retv
 
       (** Phase 2: fetch/decode the program [pinit == true] *)

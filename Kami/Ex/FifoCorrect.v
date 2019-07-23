@@ -8,6 +8,8 @@ Require Import Ex.Fifo Ex.NativeFifo Omega.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.
+
 Section ToNative.
   Variable fifoName: string.
   Variable sz: nat.

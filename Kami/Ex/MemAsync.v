@@ -2,7 +2,7 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.Reflection Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate Kami.RefinementFacts.
 Require Import Kami.SemFacts Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.Fifo.
+Require Import Ex.MemTypes Ex.SC Ex.Fifo Ex.NativeFifo.
 
 Set Implicit Arguments.
 
@@ -19,9 +19,17 @@ Section Middleman.
 
   Definition mid :=
     MODULE {
-      Rule "processMem" :=
-        Call memRq <- getReq();
-        Call rep <- memOp(#memRq);
+      Rule "processLd" :=
+        Call req <- getReq();
+        Assert !#req!RqFromProc@."op";
+        Call rep <- memOp(#req);
+        Call setRep(#rep);
+        Retv
+
+      with Rule "processSt" :=
+        Call req <- getReq();
+        Assert #req!RqFromProc@."op";
+        Call rep <- memOp(#req);
         Call setRep(#rep);
         Retv
     }.
@@ -38,8 +46,12 @@ Section MemAsync.
 
   Definition mm := mm memInit ammio.
 
-  Definition inQ := @simpleFifo "rqFromProc" fifoSize (Struct (RqFromProc addrSize dataBytes)).
-  Definition outQ := @simpleFifo "rsToProc" fifoSize (Struct (RsToProc dataBytes)).
+  Definition inQ :=
+    @nativeSimpleFifo "rqFromProc" (Struct (RqFromProc addrSize dataBytes)) Default.
+  
+  Definition outQ :=
+    @nativeSimpleFifo "rsToProc" (Struct (RsToProc dataBytes)) Default.
+  
   Definition ioQ := ConcatMod inQ outQ.
   Definition midQ := mid "rqFromProc" "rsToProc" addrSize dataBytes.
   
@@ -53,7 +65,7 @@ End MemAsync.
 Hint Unfold mm inQ outQ ioQ midQ iom memAsyncWoQ memAsync : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize fifoSize dataBytes: nat).
+  Variables (addrSize dataBytes: nat).
   Variables (memInit: MemInit addrSize dataBytes)
             (ammio: AbsMMIO addrSize).
 
@@ -65,7 +77,7 @@ Section Facts.
   Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
-    ModPhoasWf (iom addrSize fifoSize dataBytes).
+    ModPhoasWf (iom addrSize dataBytes).
   Proof.
     kequiv.
   Qed.
@@ -78,7 +90,7 @@ Section Facts.
   Qed.
 
   Lemma memAsync_ModEquiv:
-    ModPhoasWf (memAsync fifoSize memInit ammio).
+    ModPhoasWf (memAsync memInit ammio).
   Proof.
     kequiv.
   Qed.

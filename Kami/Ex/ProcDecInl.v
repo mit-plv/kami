@@ -5,7 +5,7 @@ Require Import Ex.SC Ex.ProcDec.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -13,17 +13,12 @@ Section Inlined.
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
-  Definition pdec := pdecf fifoSize fetch dec exec init.
+  Definition pdec := pdecf fetch dec exec init.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
-  Definition pdecInl: Modules * bool.
+  Definition pdecInl: sigT (fun m: Modules => pdec <<== m).
   Proof.
-    remember (inlineF pdec) as inlined.
-    kinline_compute_in Heqinlined.
-    match goal with
-    | [H: inlined = ?m |- _] =>
-      exact m
-    end.
+    kinline_refine pdec.
   Defined.
 
 End Inlined.

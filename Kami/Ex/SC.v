@@ -315,6 +315,7 @@ Section ProcInst.
       LET inst <- alignInst _ ldVal;
       Write "pgm" <- #pgm@[#pinitOfs <- #inst];
       Write "pinit" <- !#pinit;
+      Write "pinitOfs" : Bit iaddrSize <- $0;
       Retv
 
     (** Phase 2: execute the program [pinit == true] *)
@@ -359,7 +360,8 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      Call memOp(STRUCT { "addr" ::= #laddr;
+      LET laddra <- alignLdAddr _ laddr;
+      Call memOp(STRUCT { "addr" ::= #laddra;
                           "op" ::= $$false;
                           "data" ::= $$Default });
       nextPc ppc rf rawInst

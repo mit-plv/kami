@@ -181,6 +181,98 @@ Section GivenLabelMap.
 
     End ThetaFunc.
 
+    Section ThetaFuncNoRuleMap.
+      Variable theta: RegsT -> RegsT.
+      Variable thetaInit: theta (initRegs (getRegInits imp)) = initRegs (getRegInits spec).
+      Variable defsImpZero: getDefsBodies imp = nil.
+      Variable defsSpecZero: getDefsBodies spec = nil.
+
+      Variable substepRuleMap:
+        forall oImp uImp rule csImp (Hreach: reachable oImp imp),
+          Substep imp oImp uImp (Rle (Some rule)) csImp ->
+          exists srule uSpec,
+            Substep spec (theta oImp) uSpec (Rle srule) (liftToMap1 p csImp) /\
+            M.union uSpec (theta oImp) = theta (M.union uImp oImp).
+
+      Lemma stepMapZero_NoRuleMap:
+        forall o (reachO: reachable o imp) u l
+               (s: Step imp o u l),
+        exists sl uSpec,
+          Step spec (theta o) uSpec sl /\
+          equivalentLabel (liftToMap1 p) l sl /\
+          M.union uSpec (theta o) = theta (M.union u o).
+      Proof.
+        intros; apply step_zero in s; auto; dest.
+        destruct l as [ann ds cs]; simpl in *; subst.
+
+        destruct ann as [[r|]|].
+
+        - pose proof (substepRuleMap reachO H0).
+          destruct H as [srule [uSpec ?]]; dest.
+          exists {| annot := Some srule;
+                    defs := M.empty _;
+                    calls := liftToMap1 p cs |}.
+          exists uSpec; repeat split.
+          + apply substepZero_imp_step in H; auto.
+          + auto.
+
+        - inv H0; exists emptyRuleLabel, (M.empty _); repeat split.
+          match goal with
+          | [ |- Step _ _ _ ?l ] =>
+            change l with (getLabel (Rle None) (M.empty _))
+          end.
+          apply substepZero_imp_step; auto.
+          constructor.
+
+        - inv H0; exists emptyMethLabel, (M.empty _); repeat split.
+          match goal with
+          | [ |- Step _ _ _ ?l ] =>
+              change l with (getLabel (Meth None) (M.empty _))
+          end.
+          apply substepZero_imp_step; auto.
+          constructor.
+      Qed.
+
+      Lemma multistepMapZero_NoRuleMap:
+        forall o u l,
+          o = initRegs (getRegInits imp) ->
+          Multistep imp o u l ->
+          exists ll,
+            equivalentLabelSeq (liftToMap1 p) l ll /\
+            Multistep spec (initRegs (getRegInits spec)) (theta u) ll.
+      Proof.
+        induction 2; simpl; intros; repeat subst.
+
+        - eexists; repeat split.
+          + instantiate (1:= nil); constructor.
+          + constructor; auto.
+
+        - specialize (IHMultistep eq_refl).
+          destruct IHMultistep as [pll ?]; dest.
+          apply stepMapZero_NoRuleMap in HStep;
+            [|eexists; constructor; eauto].
+          destruct HStep as [sl [uSpec ?]]; dest.
+
+          exists (sl :: pll).
+          repeat split; auto.
+          + constructor; auto.
+          + rewrite <-H4; constructor; auto.
+      Qed.
+
+      Theorem decompositionZero_NoRuleMap:
+        traceRefines (liftToMap1 p) imp spec.
+      Proof.
+        unfold traceRefines; intros.
+        inv H.
+        apply multistepMapZero_NoRuleMap in HMultistepBeh; auto.
+        destruct HMultistepBeh as [ll ?]; dest.
+        exists (theta s1), ll.
+        split; auto.
+        constructor; auto.
+      Qed.
+
+    End ThetaFuncNoRuleMap.
+    
     Section ThetaRel.
       Variable thetaR: RegsT -> RegsT -> Prop.
       Variable ruleMap: RegsT -> string -> option string.
@@ -291,6 +383,104 @@ Section GivenLabelMap.
 
     End ThetaRel.
 
+    Section ThetaRelNoRuleMap.
+      Variable thetaR: RegsT -> RegsT -> Prop.
+      Variable thetaInit: thetaR (initRegs (getRegInits imp)) (initRegs (getRegInits spec)).
+      Variable defsImpZero: getDefsBodies imp = nil.
+      Variable defsSpecZero: getDefsBodies spec = nil.
+
+      Variable substepRuleMap:
+        forall oImp uImp rule csImp (Hreach: reachable oImp imp),
+          Substep imp oImp uImp (Rle (Some rule)) csImp ->
+          forall oSpec,
+            thetaR oImp oSpec ->
+            exists srule uSpec,
+              Substep spec oSpec uSpec (Rle srule) (liftToMap1 p csImp) /\
+              thetaR (M.union uImp oImp) (M.union uSpec oSpec).
+      
+      Lemma stepMapZeroR_NoRuleMap:
+        forall o (reachO: reachable o imp) u l (s: Step imp o u l) oSpec,
+          thetaR o oSpec ->
+          exists sl uSpec,
+            Step spec oSpec uSpec sl /\
+            equivalentLabel (liftToMap1 p) l sl /\
+            thetaR (M.union u o) (M.union uSpec oSpec).
+      Proof.
+        intros; apply step_zero in s; auto; dest.
+        destruct l as [ann ds cs]; simpl in *; subst.
+
+        destruct ann as [[r|]|].
+
+        - pose proof (substepRuleMap reachO H1 H).
+          destruct H0 as [srule [uSpec ?]]; dest.
+          exists {| annot := Some srule;
+                    defs := M.empty _;
+                    calls := liftToMap1 p cs |}.
+          exists uSpec; repeat split.
+          + apply substepZero_imp_step in H0; auto.
+          + auto.
+
+        - inv H1; exists emptyRuleLabel, (M.empty _); repeat split.
+          + match goal with
+            | [ |- Step _ _ _ ?l ] =>
+              change l with (getLabel (Rle None) (M.empty _))
+            end.
+            apply substepZero_imp_step; auto.
+            constructor.
+          + mred.
+
+        - inv H1; exists emptyMethLabel, (M.empty _); repeat split.
+          + match goal with
+            | [ |- Step _ _ _ ?l ] =>
+              change l with (getLabel (Meth None) (M.empty _))
+            end.
+            apply substepZero_imp_step; auto.
+            constructor.
+          + mred.
+      Qed.
+
+      Lemma multistepMapZeroR_NoRuleMap:
+        forall o u l,
+          o = initRegs (getRegInits imp) ->
+          Multistep imp o u l ->
+          exists uSpec ll,
+            thetaR u uSpec /\
+            equivalentLabelSeq (liftToMap1 p) l ll /\
+            Multistep spec (initRegs (getRegInits spec)) uSpec ll.
+      Proof.
+        induction 2; simpl; intros; repeat subst.
+
+        - do 2 eexists; repeat split.
+          + instantiate (1:= initRegs (getRegInits spec)); auto.
+          + instantiate (1:= nil); constructor.
+          + constructor; auto.
+
+        - specialize (IHMultistep eq_refl).
+          destruct IHMultistep as [puSpec [pll ?]]; dest.
+          apply stepMapZeroR_NoRuleMap with (oSpec:= puSpec) in HStep; auto;
+            [|eexists; constructor; eauto].
+          destruct HStep as [sl [uSpec ?]]; dest.
+
+          exists (M.union uSpec puSpec), (sl :: pll).
+          repeat split; auto.
+          + constructor; auto.
+          + constructor; auto.
+      Qed.
+
+      Theorem decompositionZeroR_NoRuleMap:
+        traceRefines (liftToMap1 p) imp spec.
+      Proof.
+        unfold traceRefines; intros.
+        inv H.
+        apply multistepMapZeroR_NoRuleMap in HMultistepBeh; auto.
+        destruct HMultistepBeh as [uSpec [ll ?]]; dest.
+        exists uSpec, ll.
+        split; auto.
+        constructor; auto.
+      Qed.
+
+    End ThetaRelNoRuleMap.
+    
   End DecompositionZero.
 
   Section DecompositionOne.

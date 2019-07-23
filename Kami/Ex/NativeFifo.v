@@ -71,7 +71,7 @@ End NativeFifo.
 
 Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
 Hint Unfold listEltT listEltK listElt
-     listIsEmpty listEnq listDeq listFirstElt
+     (* listIsEmpty listEnq listDeq listFirstElt *)
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
 Section Facts.
