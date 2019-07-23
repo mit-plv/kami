@@ -11,7 +11,7 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -22,20 +22,18 @@ Section ProcDecSCN.
            (memInit: MemInit addrSize dataBytes).
 
   Definition scmm := scmm fetch dec exec ammio procInit memInit.
-  Definition pdec := pdec fifoSize fetch dec exec procInit.
+  Definition pdec := ProcDec.pdec fetch dec exec procInit.
   
-  Definition memAsync := memAsync fifoSize memInit ammio.
+  Definition memAsync := memAsync memInit ammio.
   Definition pdecM := (pdec ++ memAsync)%kami.
 
   Lemma pdecM_refines_scmm: pdecM <<== scmm.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     krewrite assoc left.
-    kmodulari n.
-    - krewrite <- dup_dist left.
-      kduplicated.
-      apply pdec_refines_pinst; auto.
+    kmodular.
+    - apply pdec_refines_pinst.
     - krefl.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
   
 End ProcDecSCN.
