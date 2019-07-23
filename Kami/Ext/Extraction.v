@@ -3,7 +3,7 @@ Require Import Kami.Synthesize.
 Require Import Ext.BSyntax.
 
 Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
-Extraction Language OCaml.
+Extraction Language Ocaml.
 
 Set Extraction Optimize.
 Set Extraction KeepSingleton.
