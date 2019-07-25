@@ -87,6 +87,15 @@ Section Invariants.
   Record fetchDecode_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Pc iaddrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
+      pinitv : fullType type (SyntaxKind Bool);
+      Hpinitv : M.find "pinit"%string o = Some (existT _ _ pinitv);
+      pinitRqv : fullType type (SyntaxKind Bool);
+      HpinitRqv : M.find "pinitRq"%string o = Some (existT _ _ pinitRqv);
+      pinitRqOfsv : fullType type (SyntaxKind (Bit iaddrSize));
+      HpinitRqOfsv : M.find "pinitRqOfs"%string o = Some (existT _ _ pinitRqOfsv);
+      pinitRsOfsv : fullType type (SyntaxKind (Bit iaddrSize));
+      HpinitRsOfsv : M.find "pinitRsOfs"%string o = Some (existT _ _ pinitRsOfsv);
+      
       pgmv : fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize));
       Hpgmv : M.find "pgm"%string o = Some (existT _ _ pgmv);
       fepochv : fullType type (SyntaxKind Bool);
@@ -97,7 +106,8 @@ Section Invariants.
       f2deltv : fullType type (SyntaxKind f2dElt);
       Hf2deltv : M.find "elt.f2d"%string o = Some (existT _ _ f2deltv);
 
-      Hinv : fetchDecode_inv_body pcv pgmv fepochv f2dfullv f2deltv
+      Hinv0 : pinitv = false -> f2dfullv = false;
+      Hinv1 : fetchDecode_inv_body pcv pgmv fepochv f2dfullv f2deltv
     }.
 
   Hint Unfold fetchDecode_inv_body : InvDefs.
@@ -133,7 +143,7 @@ Section Invariants.
       init = initRegs (getRegInits fetchDecodeInl) ->
       Multistep fetchDecodeInl init n ll ->
       fetchDecode_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2.
 
     - fetchDecode_inv_old.
@@ -144,12 +154,15 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom fetchDecode_inv_tac.
+      + kinv_dest_custom fetchDecode_inv_tac.
+      + kinv_dest_custom fetchDecode_inv_tac.
+      + kinv_dest_custom fetchDecode_inv_tac.
+      + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac; kinv_eq.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
-      + kinv_dest_custom fetchDecode_inv_tac.
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma fetchDecode_inv_ok:

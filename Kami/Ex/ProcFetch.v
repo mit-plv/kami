@@ -91,6 +91,7 @@ Section FetchICache.
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
+      Write "pinitRqOfs" : Bit iaddrSize <- $0;
       Retv
         
     with Rule "pgmInitRs" :=
@@ -121,6 +122,7 @@ Section FetchICache.
                            "addr" ::= #pinitRsOfs;
                            "datain" ::= #inst });
       Write "pinit" <- $$true;
+      Write "pinitRsOfs" : Bit iaddrSize <- $0;
       Retv
 
     (** Phase 2: execute the program [pinit == true] *)

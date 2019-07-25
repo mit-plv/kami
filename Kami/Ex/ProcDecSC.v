@@ -28,32 +28,6 @@ Section ProcDecSC.
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
   Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
-  (* Eval compute in (namesOf (getRules pdec)). *)
-  (* = ["pgmInitRq"%string; "pgmInitRqEnd"%string; "pgmInitRs"%string; "pgmInitRsEnd"%string; *)
-  (*    "reqLd"%string; "reqSt"%string; "repLd"%string; "repLdZ"%string; "repSt"%string; *)
-  (*    "execNm"%string; "execNmZ"%string; "processMem"%string] *)
-
-  (* Eval compute in (namesOf (getRules pinst)). *)
-  (* = ["pgmInit"%string; "pgmInitEnd"%string; "execLd"%string; "execLdZ"%string; "execSt"%string; *)
-  (*    "execNm"%string; "execNmZ"%string] *)
-
-  (* Definition pdec_pinst_ruleMap (o: RegsT): string -> option string := *)
-  (*   "execNm"     |-> "execNm"; *)
-  (*     "execNmZ"    |-> "execNmZ"; *)
-  (*     "processSt"  |-> "execSt"; *)
-  (*     "processLd"  |-> "execLd"; ||. *)
-  (* Hint Unfold pdec_pinst_ruleMap: MethDefs. *)
-
-  (* Eval compute in (namesOf (getRegInits pdec)). *)
-  (* = ["pc"%string; "rf"%string; "pinit"%string; "pinitRq"%string; "pinitRqOfs"%string; *)
-  (*    "pinitRsOfs"%string; "pgm"%string; "stall"%string; "elt.rqFromProc"%string; *)
-  (*    "enqP.rqFromProc"%string; "deqP.rqFromProc"%string; "empty.rqFromProc"%string; *)
-  (*    "full.rqFromProc"%string; "elt.rsToProc"%string; "enqP.rsToProc"%string; *)
-  (*    "deqP.rsToProc"%string; "empty.rsToProc"%string; "full.rsToProc"%string] *)
-
-  (* Eval compute in (namesOf (getRegInits pinst)). *)
-  (* = ["pc"%string; "rf"%string; "pinit"%string; "pinitOfs"%string; "pgm"%string] *)
-
   Definition drainInst (elt: type (Struct RsToProc))
              (ofs: type (Bit iaddrSize))
              (pgmv: type (Vector (Data instBytes) iaddrSize))
