@@ -90,13 +90,81 @@ Section Invariants.
 
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
-  Definition p3stInl := projT1 (p3stInl fetch dec exec predictNextPc
-                                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                        e2wPack e2wDecInst e2wVal init).
+  Definition p3stInl :=
+    projT1 (p3stInl fetch dec exec predictNextPc
+                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
+                    e2wPack e2wDecInst e2wVal init).
 
   (** Now invariants are defined below *)
 
+  Definition p3st_pinit_inv_body
+             (pinitv: fullType type (SyntaxKind Bool))
+             (fepochv: fullType type (SyntaxKind Bool))
+             (sbflagsv: fullType type (SyntaxKind (Vector Bool rfIdx)))
+             (d2eeltv: fullType type (SyntaxKind d2eElt))
+             (d2efullv: fullType type (SyntaxKind Bool))
+             (w2dfullv: fullType type (SyntaxKind Bool))
+             (eepochv: fullType type (SyntaxKind Bool))
+             (e2weltv: fullType type (SyntaxKind e2wElt))
+             (e2wfullv: fullType type (SyntaxKind Bool))
+             (stallv: fullType type (SyntaxKind Bool))
+             (stalledv: fullType type (SyntaxKind d2eElt)) :=
+    pinitv = false ->
+    fepochv = evalExpr ($$Default)%kami_expr /\
+    sbflagsv = evalExpr ($$Default)%kami_expr /\
+    d2eeltv = evalExpr ($$Default)%kami_expr /\
+    d2efullv = evalExpr ($$Default)%kami_expr /\
+    w2dfullv = evalExpr ($$Default)%kami_expr /\
+    eepochv = evalExpr ($$Default)%kami_expr /\
+    e2weltv = evalExpr ($$Default)%kami_expr /\
+    e2wfullv = evalExpr ($$Default)%kami_expr /\
+    stallv = evalExpr ($$Default)%kami_expr /\
+    stalledv = evalExpr ($$Default)%kami_expr.
+
+  Record p3st_pinit_inv (o: RegsT) : Prop :=
+    { pinitv : fullType type (SyntaxKind Bool);
+      Hpinitv : M.find "pinit"%string o = Some (existT _ _ pinitv);
+      pinitRqv : fullType type (SyntaxKind Bool);
+      HpinitRqv : M.find "pinitRq"%string o = Some (existT _ _ pinitRqv);
+      pinitRqOfsv : fullType type (SyntaxKind (Bit iaddrSize));
+      HpinitRqOfsv : M.find "pinitRqOfs"%string o = Some (existT _ _ pinitRqOfsv);
+      pinitRsOfsv : fullType type (SyntaxKind (Bit iaddrSize));
+      HpinitRsOfsv : M.find "pinitRsOfs"%string o = Some (existT _ _ pinitRsOfsv);
+      
+      fepochv : fullType type (SyntaxKind Bool);
+      Hfepochv : M.find "fEpoch"%string o = Some (existT _ _ fepochv);
+      sbv : fullType type (SyntaxKind (Vector Bool rfIdx));
+      Hsbv : M.find "sbFlags"%string o = Some (existT _ _ sbv);
+
+      d2eeltv : fullType type (SyntaxKind d2eElt);
+      Hd2eeltv : M.find "d2e"--"elt"%string o = Some (existT _ _ d2eeltv);
+      d2efullv : fullType type (SyntaxKind Bool);
+      Hd2efullv : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv);
+      w2dfullv : fullType type (SyntaxKind Bool);
+      Hw2dfullv : M.find "w2d"--"full"%string o = Some (existT _ _ w2dfullv);
+
+      eepochv : fullType type (SyntaxKind Bool);
+      Heepochv : M.find "eEpoch"%string o = Some (existT _ _ eepochv);
+      e2weltv : fullType type (SyntaxKind e2wElt);
+      He2weltv : M.find "e2w"--"elt"%string o = Some (existT _ _ e2weltv);
+      e2wfullv : fullType type (SyntaxKind Bool);
+      He2wfullv : M.find "e2w"--"full"%string o = Some (existT _ _ e2wfullv);
+
+      stallv : fullType type (SyntaxKind Bool);
+      Hstallv : M.find "stall"%string o = Some (existT _ _ stallv);
+      stalledv : fullType type (SyntaxKind d2eElt);
+      Hstalledv : M.find "stalled"%string o = Some (existT _ _ stalledv);
+
+      Hinvf : p3st_pinit_inv_body
+                pinitv fepochv sbv
+                d2eeltv d2efullv w2dfullv eepochv e2weltv e2wfullv
+                stallv stalledv;
+      HinvtD : d2efullv = true -> pinitv = true;
+      HinvtW : e2wfullv = true -> pinitv = true;
+      HinvtS : stallv = true -> pinitv = true
+    }.
+      
   Definition p3st_scoreboard_waw_inv_body
              (d2efullv: fullType type (SyntaxKind Bool))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
@@ -251,7 +319,10 @@ Section Invariants.
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
     rawInst = pgmv (split2 _ _ (evalExpr (d2eCurPc _ stalledv))) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
-     evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst)).
+     evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst) /\
+     evalExpr (d2eAddr _ stalledv) =
+     evalExpr (calcLdAddr _ (evalExpr (getLdAddr _ rawInst))
+                          (rfv (evalExpr (getLdSrc _ rawInst))))).
 
   Record p3st_stalled_inv (o: RegsT) : Prop :=
     { pgmv3 : fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize));
@@ -403,13 +474,15 @@ Section Invariants.
       Hinv6 : p3st_pc_inv_body fepochv6 eepochv6 d2efullv6 e2wfullv6 w2dfullv6 stallv6
                                pcv6 d2eeltv6 e2weltv6 stalledv6 }.
 
-  Hint Unfold p3st_scoreboard_waw_inv_body p3st_raw_inv_body
+  Hint Unfold p3st_pinit_inv_body
+       p3st_scoreboard_waw_inv_body p3st_raw_inv_body
        p3st_decode_inv_body p3st_stalled_inv_body
        p3st_exec_inv_body p3st_epochs_inv_body
        p3st_pc_inv_body : InvDefs.
 
   Ltac p3st_inv_old :=
     repeat match goal with
+           | [H: p3st_pinit_inv _ |- _] => destruct H
            | [H: p3st_scoreboard_waw_inv _ |- _] => destruct H
            | [H: p3st_raw_inv _ |- _] => destruct H
            | [H: p3st_decode_inv _ |- _] => destruct H
@@ -447,13 +520,13 @@ Section Invariants.
     intuition idtac.
 
   Ltac p3st_inv_tac := p3st_inv_old; p3st_inv_new; d2e_abs_tac.
-  
-  Lemma p3st_epochs_inv_ok':
+
+  Lemma p3st_pinit_inv_ok':
     forall init n ll,
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
-      p3st_epochs_inv n.
-  Proof. (* SKIP_PROOF_ON
+      p3st_pinit_inv n.
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -463,9 +536,53 @@ Section Invariants.
     - kinvert.
       + mred.
       + mred.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        (* END_SKIP_PROOF_OFF *)
+  Qed.
+
+  Lemma p3st_epochs_inv_ok':
+    forall init n ll,
+      init = initRegs (getRegInits p3stInl) ->
+      Multistep p3stInl init n ll ->
+      p3st_epochs_inv n.
+  Proof. (* SKIP_PROOF_OFF *)
+    induction 2; intros.
+
+    - p3st_inv_old.
+      unfold getRegInits, fst, p3stInl, ProcThreeStInl.p3stInl, projT1.
+      p3st_inv_new; simpl in *; kinv_simpl.
+
+    - (* pose proof (p3st_pinit_inv_ok' H H0). *)
+      kinvert.
+      + mred.
+      + mred.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac;
           try (destruct x0, eepochv5; intuition idtac; fail).
-        rewrite H13 in H2; exfalso; eapply negb_eq_false; eauto.
+        rewrite H13 in H3; exfalso; eapply negb_eq_false; eauto.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -477,16 +594,8 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
         rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
         rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
-      + kinv_dest_custom p3st_inv_tac.
-        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
-      + kinv_dest_custom p3st_inv_tac.
-        rewrite H3 in H2; exfalso; eapply negb_eq_false; eauto.
-
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_pc_inv_ok':
@@ -494,7 +603,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_pc_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -514,17 +623,18 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        rewrite H10 in H7; intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
         rewrite H10 in H7; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-        rewrite H10 in H7; intuition idtac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_scoreboard_waw_inv_ok':
@@ -532,7 +642,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_scoreboard_waw_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2.
 
     - p3st_inv_old.
@@ -543,16 +653,18 @@ Section Invariants.
       + mred.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H12; inv H12; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
+          try (simpl in H7; rewrite H7 in H11; rewrite H11 in H12; discriminate);
+          try (simpl in H7; rewrite H7 in H11; rewrite H11 in H6; discriminate).
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H2; inv H2; fail);
           try (rewrite e in H8; inv H8; fail).
-      + kinv_dest_custom p3st_inv_tac; try (rewrite e in H2; inv H2; fail);
-          try (rewrite e in H7; inv H7; fail).
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H12; inv H12; fail);
-          try (simpl in H7; rewrite H7 in H10; rewrite H10 in H6; inv H6; fail).
+          try (simpl in H7; rewrite H7 in H11; rewrite H11 in H12; discriminate);
+          try (simpl in H7; rewrite H7 in H11; rewrite H11 in H6; discriminate).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac;
@@ -560,14 +672,12 @@ Section Invariants.
                try (kinv_simpl; find_if_inside; intuition idtac)).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
       + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
-
-        END_SKIP_PROOF_ON *) apply cheat.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
+      + kinv_dest_custom p3st_inv_tac; try (find_if_inside; intuition idtac; fail).
+        (* END_SKIP_PROOF_OFF *)
   Qed.
   
   Lemma p3st_raw_inv_ok':
@@ -575,7 +685,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_raw_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -583,46 +693,43 @@ Section Invariants.
       p3st_inv_new; simpl in *; kinv_simpl.
 
     - pose proof (p3st_scoreboard_waw_inv_ok' H H0).
-      kinvert.      
+      kinvert.
       + mred.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H7; inv H7; fail);
           try (rewrite e in H8; inv H8; fail);
           try (rewrite e in H9; inv H9; fail).
-        * simpl in H9; rewrite H9 in H3; unfold LdSrcK in *; rewrite H3 in H4; inv H4.
-        * simpl in H9; rewrite H9 in H3; unfold LdSrcK in *; rewrite H3 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold LdSrcK in *; rewrite H10 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold LdSrcK in *; rewrite H10 in H4; inv H4.
+        * simpl in H9; rewrite H9 in H3; unfold LdSrcK in *; rewrite H3 in H5; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold LdSrcK in *; rewrite H3 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold LdSrcK in *; rewrite H10 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold LdSrcK in *; rewrite H10 in H5; discriminate.
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H7; inv H7; fail);
           try (rewrite e in H8; inv H8; fail);
           try (rewrite e in H9; inv H9; fail).
-        * simpl in H9; rewrite H9 in H3; unfold StSrcK in *; rewrite H3 in H4; inv H4.
-        * simpl in H9; rewrite H9 in H3; unfold StVSrcK in *; rewrite H3 in H11; inv H11.
-        * simpl in H9; rewrite H9 in H3; unfold StSrcK in *; rewrite H3 in H4; inv H4.
-        * simpl in H9; rewrite H9 in H3; unfold StVSrcK in *; rewrite H3 in H11; inv H11.
-        * simpl in H12; rewrite H12 in H10; unfold StSrcK in *; rewrite H10 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold StVSrcK in *; rewrite H10 in H11; inv H11.
-        * simpl in H12; rewrite H12 in H10; unfold StSrcK in *; rewrite H10 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold StVSrcK in *; rewrite H10 in H11; inv H11.
-      + kinv_dest_custom p3st_inv_tac; try (rewrite e in H7; inv H7; fail);
-          try (rewrite e in H4; inv H4; fail);
-          try (rewrite e in H8; inv H8; fail).
-        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H13; inv H13.
-        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H13; inv H13.
-        * simpl in H10; rewrite H10 in H9; unfold Src1K in *; rewrite H9 in H13; inv H13.
-        * simpl in H10; rewrite H10 in H9; unfold Src1K in *; rewrite H9 in H13; inv H13.
+        * simpl in H9; rewrite H9 in H3; unfold StSrcK in *; rewrite H3 in H5; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold StVSrcK in *; rewrite H3 in H12; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold StSrcK in *; rewrite H3 in H5; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold StVSrcK in *; rewrite H3 in H12; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold StSrcK in *; rewrite H10 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold StVSrcK in *; rewrite H10 in H12; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold StSrcK in *; rewrite H10 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold StVSrcK in *; rewrite H10 in H12; discriminate.
       + kinv_dest_custom p3st_inv_tac; try (rewrite e in H7; inv H7; fail);
           try (rewrite e in H8; inv H8; fail);
           try (rewrite e in H9; inv H9; fail).
-        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H4; inv H4.
-        * simpl in H9; rewrite H9 in H3; unfold Src2K in *; rewrite H3 in H15; inv H15.
-        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H4; inv H4.
-        * simpl in H9; rewrite H9 in H3; unfold Src2K in *; rewrite H3 in H15; inv H15.
-        * simpl in H12; rewrite H12 in H10; unfold Src1K in *; rewrite H10 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold Src2K in *; rewrite H10 in H15; inv H15.
-        * simpl in H12; rewrite H12 in H10; unfold Src1K in *; rewrite H10 in H4; inv H4.
-        * simpl in H12; rewrite H12 in H10; unfold Src2K in *; rewrite H10 in H15; inv H15.
+        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H5; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold Src2K in *; rewrite H3 in H16; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold Src1K in *; rewrite H3 in H5; discriminate.
+        * simpl in H9; rewrite H9 in H3; unfold Src2K in *; rewrite H3 in H16; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold Src1K in *; rewrite H10 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold Src2K in *; rewrite H10 in H16; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold Src1K in *; rewrite H10 in H5; discriminate.
+        * simpl in H11; rewrite H11 in H10; unfold Src2K in *; rewrite H10 in H16; discriminate.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -633,9 +740,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_decode_inv_ok':
@@ -643,18 +748,23 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_decode_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
       unfold getRegInits, fst, p3stInl, ProcThreeStInl.p3stInl, projT1.
       p3st_inv_new; simpl in *; kinv_simpl.
 
-    - pose proof (p3st_raw_inv_ok' H H0).
+    - pose proof (p3st_pinit_inv_ok' H H0) as HpinitInv.
+      pose proof (p3st_raw_inv_ok' H H0).
       kinvert.
       + mred.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac; discriminate.
+      + kinv_dest_custom p3st_inv_tac; discriminate.
+      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac; try reflexivity; try (rewrite e in H1; inv H1; fail).
       + kinv_dest_custom p3st_inv_tac; try reflexivity; try (rewrite e in H1; inv H1; fail).
       + kinv_dest_custom p3st_inv_tac; try reflexivity; try (rewrite e in H1; inv H1; fail).
@@ -663,18 +773,14 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac; try (simpl; intuition idtac).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac;
           try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac;
           try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
-      + kinv_dest_custom p3st_inv_tac;
-          try (find_if_inside; [exfalso; intuition auto|intuition idtac]; fail).
-
-        END_SKIP_PROOF_ON *) apply cheat.
+      + kinv_dest_custom p3st_inv_tac.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
   
   Lemma p3st_stalled_inv_ok':
@@ -682,19 +788,22 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_stalled_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
       unfold getRegInits, fst, p3stInl, ProcThreeStInl.p3stInl, projT1.
       p3st_inv_new; simpl in *; kinv_simpl.
 
-    - pose proof (p3st_decode_inv_ok' H H0).
+    - pose proof (p3st_pinit_inv_ok' H H0).
+      pose proof (p3st_decode_inv_ok' H H0).
       kinvert.
       + mred.
       + mred.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac; discriminate.
+      + kinv_dest_custom p3st_inv_tac; discriminate.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
@@ -709,8 +818,7 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_exec_inv_ok':
@@ -718,7 +826,7 @@ Section Invariants.
       init = initRegs (getRegInits p3stInl) ->
       Multistep p3stInl init n ll ->
       p3st_exec_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2; intros.
 
     - p3st_inv_old.
@@ -735,38 +843,39 @@ Section Invariants.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac; simpl; rewrite <-H10, <-H12; reflexivity.
-      + kinv_dest_custom p3st_inv_tac; elim n0; assumption.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac;
-          try (find_if_inside; [elim H21; auto|];
-               find_if_inside; [elim H22; auto|];
-               intuition idtac; fail).
+        simpl; rewrite <-H11, <-H9; reflexivity.
       + kinv_dest_custom p3st_inv_tac.
       + kinv_dest_custom p3st_inv_tac.
-      + kinv_dest_custom p3st_inv_tac;
-          try (find_if_inside; [elim H21; auto|];
-               find_if_inside; [elim H22; auto|];
-               intuition idtac; fail).
-      + kinv_dest_custom p3st_inv_tac;
-          try (find_if_inside; [elim H21; auto|];
-               find_if_inside; [elim H22; auto|];
-               intuition idtac; fail).
-
-        END_SKIP_PROOF_ON *) apply cheat.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        * find_if_inside; [elim H20; auto|].
+          find_if_inside; [elim H21; auto|].
+          intuition idtac.
+        * find_if_inside; [elim H20; auto|].
+          find_if_inside; [elim H21; auto|].
+          intuition idtac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+      + kinv_dest_custom p3st_inv_tac.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma p3st_inv_ok:
     forall o,
       reachable o p3stInl ->
+      p3st_pinit_inv o /\
       p3st_scoreboard_waw_inv o /\ p3st_raw_inv o /\ p3st_decode_inv o /\
       p3st_stalled_inv o /\ p3st_exec_inv o /\ p3st_epochs_inv o /\ p3st_pc_inv o.
   Proof.
     intros; inv H; inv H0.
     repeat split.
+    - eapply p3st_pinit_inv_ok'; eauto.
     - eapply p3st_scoreboard_waw_inv_ok'; eauto.
     - eapply p3st_raw_inv_ok'; eauto.
     - eapply p3st_decode_inv_ok'; eauto.

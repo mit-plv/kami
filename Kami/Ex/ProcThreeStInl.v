@@ -66,27 +66,9 @@ Section Inlined.
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
 
   Definition p3stInl: sigT (fun m: Modules => p3st <<== m).
-  Proof. (* SKIP_PROOF_ON
-    pose proof (inlineF_refines
-                  (procThreeStage_ModEquiv getOptype getLdDst getLdAddr getLdSrc calcLdAddr
-                                           getStAddr getStSrc calcStAddr getStVSrc
-                                           getSrc1 getSrc2 getDst exec
-                                           getNextPc alignPc alignInst predictNextPc
-                                           d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
-                                           d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-                                           e2wPack e2wDecInst e2wVal init
-                                           type typeUT)
-                  (Reflection.noDupStr_NoDup (Struct.namesOf (getDefsBodies p3st)) eq_refl))
-      as Him.
-    unfold MethsT in Him; rewrite <-SemFacts.idElementwiseId in Him.
-    match goal with
-    | [H: context[inlineF ?m] |- _] => set m as origm in H at 2
-    end.
-    kinline_compute_in Him.
-    unfold origm in *.
-    specialize (Him eq_refl).
-    exact (existT _ _ Him).
-    END_SKIP_PROOF_ON *) apply cheat.
+  Proof. (* SKIP_PROOF_OFF *)
+    kinline_refine p3st.
+    (* END_SKIP_PROOF_OFF *)
   Defined.
 
 End Inlined.

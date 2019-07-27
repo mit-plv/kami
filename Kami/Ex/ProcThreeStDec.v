@@ -103,18 +103,25 @@ Section ProcThreeStDec.
   Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
 
   Definition p3st_pdec_ruleMap (o: RegsT): string -> option string :=
-    "reqLd" |-> "reqLd";
+    "pgmInitRq" |-> "pgmInitRq";
+      "pgmInitRqEnd" |-> "pgmInitRqEnd";
+      "pgmInitRs" |-> "pgmInitRs";
+      "pgmInitRsEnd" |-> "pgmInitRsEnd";
+      "reqLd" |-> "reqLd";
       "reqSt" |-> "reqSt";
       "repLd" |-> "repLd";
       "repLdZ" |-> "repLdZ";
       "repSt" |-> "repSt";
-      "execToHost" |-> "execToHost";
       "wbNm" |-> "execNm";
       "wbNmZ" |-> "execNmZ"; ||.
   Hint Unfold p3st_pdec_ruleMap: MethDefs.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Pc iaddrSize) <- r |> "pc";
+       mlet pinitv : Bool <- r |> "pinit";
+       mlet pinitRqv : Bool <- r |> "pinitRq";
+       mlet pinitRqOfsv : (Bit iaddrSize) <- r |> "pinitRqOfs";
+       mlet pinitRsOfsv : (Bit iaddrSize) <- r |> "pinitRsOfs";
        mlet pgmv : (Vector (Data instBytes) iaddrSize) <- r |> "pgm";
        mlet rfv : (Vector (Data dataBytes) rfIdx) <- r |> "rf";
        mlet d2eeltv : d2eElt <- r |> "d2e"--"elt";
@@ -129,18 +136,23 @@ Section ProcThreeStDec.
 
        (["stall" <- existT _ _ stallv]
         +["pgm" <- existT _ _ pgmv]
+        +["pinitRsOfs" <- existT _ _ pinitRsOfsv]
+        +["pinitRqOfs" <- existT _ _ pinitRqOfsv]
+        +["pinitRq" <- existT _ _ pinitRqv]
+        +["pinit" <- existT _ _ pinitv]
         +["rf" <- existT _ _ rfv]
         +["pc" <- existT _ (SyntaxKind (Pc iaddrSize))
                (if w2dfv then w2deltv
                 else if stallv then evalExpr (d2eCurPc _ stalledv)
                      else if e2wfv then
-                            (if Bool.eqb eev (evalExpr (d2eEpoch _ (evalExpr (e2wDecInst _ e2weltv))))
+                            (if Bool.eqb eev (evalExpr
+                                                (d2eEpoch _ (evalExpr (e2wDecInst _ e2weltv))))
                              then evalExpr (d2eCurPc _ (evalExpr (e2wDecInst _ e2weltv)))
                              else
                                (if d2efv then
-                                 (if Bool.eqb eev (evalExpr (d2eEpoch _ d2eeltv))
-                                  then evalExpr (d2eCurPc _ d2eeltv)
-                                  else pcv)
+                                  (if Bool.eqb eev (evalExpr (d2eEpoch _ d2eeltv))
+                                   then evalExpr (d2eCurPc _ d2eeltv)
+                                   else pcv)
                                 else pcv))
                           else if d2efv then
                                  (if Bool.eqb eev (evalExpr (d2eEpoch _ d2eeltv))
@@ -189,6 +201,7 @@ Section ProcThreeStDec.
 
   Ltac p3st_dest_tac :=
     repeat match goal with
+           | [H: context[p3st_pinit_inv] |- _] => destruct H
            | [H: context[p3st_epochs_inv] |- _] => destruct H
            | [H: context[p3st_pc_inv] |- _] => destruct H
            | [H: context[p3st_decode_inv] |- _] => destruct H
@@ -213,9 +226,37 @@ Section ProcThreeStDec.
 
   Theorem p3st_refines_pdec:
     p3st <<== pdec.
-  Proof. (* SKIP_PROOF_ON
-    kami_ok p3stConfig p3st_dest_tac p3st_inv_tac.
-    END_SKIP_PROOF_ON *) apply cheat.
+  Proof. (* SKIP_PROOF_OFF *)
+
+    (** inlining *)
+    ketrans; [exact (projT2 p3stInl)|].
+
+    (** decomposition *)
+    kdecompose_nodefs p3st_pdec_regMap p3st_pdec_ruleMap.
+    kinv_add p3st_inv_ok.
+    kinv_add_end.
+    kinvert.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    - kinv_magic_with p3st_dest_tac p3st_inv_tac.
+    
+      (* kami_ok p3stConfig p3st_dest_tac p3st_inv_tac. *)
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End ProcThreeStDec.
