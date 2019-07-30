@@ -26,39 +26,7 @@ Section ProcFour.
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
            (memInit: MemInit addrSize dataBytes).
 
-  Section AbsFIFO.
-    
-    (* Abstract d2eElt *)
-    Variable (d2eElt: Kind).
-    Variable (d2ePack:
-                forall ty,
-                  Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
-                  Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
-                  Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                  Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
-                  Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
-                  Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
-                  Expr ty (SyntaxKind Bool) -> (* epoch *)
-                  Expr ty (SyntaxKind d2eElt)).
-    Variables
-      (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                             Expr ty (SyntaxKind (Bit 2)))
-      (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Bit rfIdx)))
-      (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit addrSize)))
-      (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                                   Expr ty (SyntaxKind (Data dataBytes)))
-      (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                              Expr ty (SyntaxKind (Data instBytes)))
-      (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Pc iaddrSize)))
-      (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                             Expr ty (SyntaxKind (Pc iaddrSize)))
-      (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind Bool)).
+  Section AbsPipeline.
 
     (* Abstract f2dElt *)  
     Variable (f2dElt: Kind).
@@ -92,6 +60,68 @@ Section ProcFour.
                    evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                    evalExpr epoch).
 
+    Hypothesis
+      (Hf2dpackExt:
+         forall rawInst1 curPc1 nextPc1 epoch1 rawInst2 curPc2 nextPc2 epoch2,
+           evalExpr rawInst1 = evalExpr rawInst2 ->
+           evalExpr curPc1 = evalExpr curPc2 ->
+           evalExpr nextPc1 = evalExpr nextPc2 ->
+           evalExpr epoch1 = evalExpr epoch2 ->
+           evalExpr (f2dPack rawInst1 curPc1 nextPc1 epoch1) =
+           evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
+
+    (* Abstract d2eElt *)
+    Variable (d2eElt: Kind).
+    Variable (d2ePack:
+                forall ty,
+                  Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                  Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                  Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                  Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
+                  Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
+                  Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
+                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                  Expr ty (SyntaxKind Bool) -> (* epoch *)
+                  Expr ty (SyntaxKind d2eElt)).
+    Variables
+      (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                             Expr ty (SyntaxKind (Bit 2)))
+      (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                          Expr ty (SyntaxKind (Bit rfIdx)))
+      (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Bit addrSize)))
+      (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                   Expr ty (SyntaxKind (Data dataBytes)))
+      (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                              Expr ty (SyntaxKind (Data instBytes)))
+      (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                            Expr ty (SyntaxKind (Pc iaddrSize)))
+      (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                             Expr ty (SyntaxKind (Pc iaddrSize)))
+      (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                            Expr ty (SyntaxKind Bool)).
+
+    Hypotheses
+      (Hd2eOpType: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eOpType _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr opType)
+      (Hd2eDst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eDst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr dst)
+      (Hd2eAddr: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eAddr _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr addr)
+      (Hd2eVal1: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eVal1 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val1)
+      (Hd2eVal2: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eVal2 _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr val2)
+      (Hd2eRawInst: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eRawInst _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr rawInst)
+      (Hd2eCurPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eCurPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr curPc)
+      (Hd2eNextPc: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eNextPc _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr nextPc)
+      (Hd2eEpoch: forall opType dst addr val1 val2 rawInst curPc nextPc epoch,
+          evalExpr (d2eEpoch _ (evalExpr (d2ePack opType dst addr val1 val2 rawInst curPc nextPc epoch))) = evalExpr epoch).
+    
     (* Abstract e2wElt *)  
     Variable (e2wElt: Kind).
     Variable (e2wPack:
@@ -105,6 +135,12 @@ Section ProcFour.
       (e2wVal: forall ty, fullType ty (SyntaxKind e2wElt) ->
                           Expr ty (SyntaxKind (Data dataBytes))).
 
+    Hypotheses
+      (He2wDecInst: forall decInst val,
+          evalExpr (e2wDecInst _ (evalExpr (e2wPack decInst val))) = evalExpr decInst)
+      (He2wVal: forall decInst val,
+          evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
+
     Definition p4st: Modules :=
       ProcFourStDec.p4st
         fetch dec exec predictNextPc
@@ -114,7 +150,7 @@ Section ProcFour.
         e2wPack e2wDecInst e2wVal procInit.
 
     Definition iom: Modules :=
-      MemAsync.iom addrSize fifoSize dataBytes.
+      MemAsync.iom addrSize dataBytes.
 
     Definition p4stf: Modules :=
       (p4st ++ iom)%kami.
@@ -136,8 +172,8 @@ Section ProcFour.
       intros.
       ketrans; [|apply pdec_refines_pinst].
       kmodular.
-      - ketrans; [apply p4st_refines_p3st|].
-        apply p3st_refines_pdec.
+      - ketrans; [apply p4st_refines_p3st; auto|].
+        apply p3st_refines_pdec; auto.
       - krefl.
     Qed.
 
@@ -149,20 +185,22 @@ Section ProcFour.
       - krefl.
     Qed.
 
-  End AbsFIFO.
+  End AbsPipeline.
 
   Definition p4mm: Modules :=
     p4mma
+      (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
+      (@f2dNextPcI _ _) (@f2dEpochI _ _)
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)
-      (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
-      (@f2dNextPcI _ _) (@f2dEpochI _ _)
       (@e2wPackI _ _ _ _ _) (@e2wDecInstI _ _ _ _ _) (@e2wValI _ _ _ _ _).
 
   Theorem p4mm_correct: p4mm <<== scmm.
   Proof.
-    intros; apply p4mma_correct.
+    intros; apply p4mma_correct; auto.
+    intros; unfold f2dPackI.
+    simpl; rewrite H, H0, H1, H2; reflexivity.
   Qed.
 
 End ProcFour.

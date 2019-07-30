@@ -84,6 +84,16 @@ Section ProcFDE.
                  evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                  evalExpr epoch).
 
+  Hypothesis
+    (Hf2dpackExt:
+       forall rawInst1 curPc1 nextPc1 epoch1 rawInst2 curPc2 nextPc2 epoch2,
+         evalExpr rawInst1 = evalExpr rawInst2 ->
+         evalExpr curPc1 = evalExpr curPc2 ->
+         evalExpr nextPc1 = evalExpr nextPc2 ->
+         evalExpr epoch1 = evalExpr epoch2 ->
+         evalExpr (f2dPack rawInst1 curPc1 nextPc1 epoch1) =
+         evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
+
   (* Abstract e2wElt *)  
   Variable (e2wElt: Kind).
   Variable (e2wPack:
@@ -124,11 +134,11 @@ Section ProcFDE.
                        e2wPack e2wDecInst e2wVal init.
 
   Lemma p4st_refines_p3st: p4st <<== p3st.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     kmodular.
-    - apply fetchDecode_refines_fetchNDecode; auto.
+    - apply fetchICacheDecode_refines_fetchNDecode; auto.
     - krefl.
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End ProcFDE.

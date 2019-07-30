@@ -683,9 +683,7 @@ End DataSizeAbs.
 
 (*+ Extraction +*)
 
-(* TODO: did the capitalize change between some recent versions?
-*        I had to switch "OCaml" to "Ocaml". *)
-Extraction Language Ocaml.
+Extraction Language OCaml.
 
 Set Extraction Optimize.
 Set Extraction KeepSingleton.
