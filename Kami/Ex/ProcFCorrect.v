@@ -91,7 +91,7 @@ Section Fetch.
 
   Theorem fetchICache_refines_fetcher:
     fetchICache <<== fetcher.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
 
     (** inlining *)
     ketrans; [exact (projT2 fetchICacheInl)|].
@@ -145,7 +145,7 @@ Section Fetch.
       kinv_custom fetchICache_dest_tac.
       kinv_regmap_red.
       kinv_constr; kinv_eq.
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End Fetch.

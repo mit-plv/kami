@@ -28,12 +28,12 @@ Section ProcDecSCN.
   Definition pdecM := (pdec ++ memAsync)%kami.
 
   Lemma pdecM_refines_scmm: pdecM <<== scmm.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     krewrite assoc left.
     kmodular.
     - apply pdec_refines_pinst.
     - krefl.
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
   
 End ProcDecSCN.

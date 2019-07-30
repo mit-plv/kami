@@ -134,11 +134,11 @@ Section ProcFDE.
                        e2wPack e2wDecInst e2wVal init.
 
   Lemma p4st_refines_p3st: p4st <<== p3st.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     kmodular.
     - apply fetchICacheDecode_refines_fetchNDecode; auto.
     - krefl.
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcFDE.

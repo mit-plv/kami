@@ -89,7 +89,7 @@ Section Invariants.
       init = initRegs (getRegInits fetchICacheInl) ->
       Multistep fetchICacheInl init n ll ->
       fetchICache_inv n.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     induction 2.
 
     - fetchICache_inv_old.
@@ -107,7 +107,7 @@ Section Invariants.
       + kinv_dest_custom fetchICache_inv_tac.
       + kinv_dest_custom fetchICache_inv_tac.
       + kinv_dest_custom fetchICache_inv_tac.
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma fetchICache_inv_ok:

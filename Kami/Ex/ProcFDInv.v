@@ -143,7 +143,7 @@ Section Invariants.
       init = initRegs (getRegInits fetchDecodeInl) ->
       Multistep fetchDecodeInl init n ll ->
       fetchDecode_inv n.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     induction 2.
 
     - fetchDecode_inv_old.
@@ -162,7 +162,7 @@ Section Invariants.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
       + kinv_dest_custom fetchDecode_inv_tac.
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Lemma fetchDecode_inv_ok:

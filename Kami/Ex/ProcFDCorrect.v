@@ -153,7 +153,7 @@ Section FetchDecode.
 
   Theorem fetchDecode_refines_fetchNDecode:
     fetchDecode <<== fetchNDecode.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
 
     (** inlining *)
     ketrans; [exact (projT2 fetchDecodeInl)|].
@@ -174,7 +174,7 @@ Section FetchDecode.
     - kinv_magic_with fetchDecode_dest_tac f2d_abs_tac.
     
       (* kami_ok fdConfig fetchDecode_dest_tac f2d_abs_tac. *)
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem fetchICacheDecode_refines_fetchDecode:

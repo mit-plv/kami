@@ -136,7 +136,7 @@ Section ProcDecSC.
   Qed.
   
   Lemma pdec_refines_pinst: pdec <<== pinst.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
 
     (** inlining *)
     ketrans; [exact (projT2 pdecInl)|].
@@ -351,7 +351,7 @@ Section ProcDecSC.
         destruct x as [|rq ?]; [discriminate|].
         simpl in H; dest; subst.
         simpl in H4; discriminate.
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcDecSC.
