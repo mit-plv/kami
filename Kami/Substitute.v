@@ -63,7 +63,13 @@ Section Interacting.
       unfold MethsT; rewrite <-idElementwiseId.
       apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
         auto; try (constructor; auto; fail).
-      rewrite idElementwiseId; apply traceRefines_refl.
+      + eapply DisjList_comm, DisjList_SubList; [apply getIntCalls_getCalls|].
+        apply DisjList_comm; assumption.
+      + eapply DisjList_SubList; [apply getIntCalls_getCalls|assumption].
+      + eapply DisjList_comm, DisjList_SubList; [apply getIntCalls_getCalls|].
+        apply DisjList_comm; assumption.
+      + eapply DisjList_SubList; [apply getIntCalls_getCalls|assumption].
+      + rewrite idElementwiseId; apply traceRefines_refl.
   Qed.
 
 End Interacting.

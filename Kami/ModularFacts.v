@@ -20,7 +20,8 @@ Section TwoModules.
 
   Hypotheses (Hinit: DisjList (namesOf (getRegInits ma)) (namesOf (getRegInits mb)))
              (Hdefs: DisjList (getDefs ma) (getDefs mb))
-             (Hcalls: DisjList (getCalls ma) (getCalls mb))
+             (Hcalls1: DisjList (getCalls ma) (getIntCalls mb))
+             (Hcalls2: DisjList (getIntCalls ma) (getCalls mb))
              (Hvr: ValidRegsModules type (ConcatMod ma mb)).
 
   Definition regsA (r: RegsT) := M.restrict r (namesOf (getRegInits ma)).
@@ -377,6 +378,53 @@ Section TwoModules.
       apply wellHidden_concat_modular; auto.
   Qed.
 
+  Lemma validLabel_wellHidden_calls_disj:
+    forall la lb,
+      ValidLabel ma la -> wellHidden ma (hide la) ->
+      ValidLabel mb lb -> wellHidden mb (hide lb) ->
+      M.Disj (calls (hide la)) (calls (hide lb)) ->
+      M.Disj (calls la) (calls lb).
+  Proof.
+    unfold ValidLabel, wellHidden; intros; dest.
+    destruct la as [anna dsa csa], lb as [annb dsb csb].
+    simpl in *.
+    unfold M.Disj, M.KeysDisj, M.KeysSubset in *; intros.
+    specializeAll k.
+    repeat rewrite M.F.P.F.in_find_iff in *.
+    rewrite M.subtractKV_find in H0, H2, H3, H4, H6.
+    rewrite M.subtractKV_find in H3.
+    destruct (M.find k csa); [right|auto].
+    destruct (M.find k csb); [|auto].
+    exfalso.
+    specialize (H5 (opt_discr _)).
+    specialize (H7 (opt_discr _)).
+    destruct (M.find k dsa).
+    1: {
+      specialize (H (opt_discr _)).
+      specialize (Hcalls2 k); destruct Hcalls2.
+      { elim H8.
+        apply filter_In; split; [auto|].
+        apply existsb_exists; exists k.
+        split; [auto|apply StringEq.string_eq_true].
+      }
+      { elim H8; assumption. }
+    }
+
+    destruct (M.find k dsb).
+    1: {
+      specialize (H1 (opt_discr _)).
+      specialize (Hcalls1 k); destruct Hcalls1.
+      { elim H8; assumption. }
+      { elim H8.
+        apply filter_In; split; [auto|].
+        apply existsb_exists; exists k.
+        split; [auto|apply StringEq.string_eq_true].
+      }
+    }
+
+    destruct H3; elim H3; discriminate.
+  Qed.
+
   Lemma stepInd_modular:
     forall oa ua la,
       StepInd ma oa ua la ->
@@ -394,11 +442,11 @@ Section TwoModules.
     pose proof (substepsInd_defs_in HSubSteps0).
     pose proof (substepsInd_calls_in HmbEquiv HSubSteps0).
 
+    inv H1; inv H7; dest.
     assert (M.Disj (defs l) (defs l0))
       by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
     assert (M.Disj (calls l) (calls l0))
-      by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
-    inv H1; inv H9; dest.
+      by (apply validLabel_wellHidden_calls_disj; auto; try (split; assumption)).
 
     replace (hide (mergeLabel (hide l) (hide l0))) with (hide (mergeLabel l l0))
       by (apply hide_mergeLabel_idempotent; auto).

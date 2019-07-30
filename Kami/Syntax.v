@@ -1162,7 +1162,14 @@ Definition getExtDefs (m: Modules) :=
 Definition getExtCalls (m: Modules) :=
   filter (fun c => negb (string_in c (getDefs m))) (getCalls m).
 
+Definition getIntDefs (m: Modules) :=
+  filter (fun d => string_in d (getCalls m)) (getDefs m).
+
+Definition getIntCalls (m: Modules) :=
+  filter (fun c => string_in c (getDefs m)) (getCalls m).
+
 Definition getExtMeths (m: Modules) := getExtDefs m ++ getExtCalls m.
+Definition getIntMeths (m: Modules) := getIntDefs m ++ getIntCalls m.
 
 Lemma getExtDefs_getDefs:
   forall m, SubList (getExtDefs m) (getDefs m).
@@ -1184,6 +1191,46 @@ Proof.
   intros; apply SubList_app_3.
   - apply SubList_app_1, getExtDefs_getDefs.
   - apply SubList_app_2, getExtCalls_getCalls.
+Qed.
+
+Lemma getIntDefs_getDefs:
+  forall m, SubList (getIntDefs m) (getDefs m).
+Proof.
+  unfold SubList, getIntDefs; intros.
+  apply filter_In in H; dest; auto.
+Qed.
+
+Lemma getIntCalls_getCalls:
+  forall m, SubList (getIntCalls m) (getCalls m).
+Proof.
+  unfold SubList, getIntCalls; intros.
+  apply filter_In in H; dest; auto.
+Qed.
+
+Lemma getIntMeths_meths:
+  forall m, SubList (getIntMeths m) (getDefs m ++ getCalls m).
+Proof.
+  intros; apply SubList_app_3.
+  - apply SubList_app_1, getIntDefs_getDefs.
+  - apply SubList_app_2, getIntCalls_getCalls.
+Qed.
+
+Lemma getIntCalls_getExtCalls_disj:
+  forall m, DisjList (getIntCalls m) (getExtCalls m).
+Proof.
+  unfold getIntCalls, getExtCalls; intros.
+  apply DisjList_logic; intros.
+  apply filter_In in H; apply filter_In in H0; dest.
+  rewrite H2 in H1; discriminate.
+Qed.
+  
+Lemma getIntDefs_getExtDefs_disj:
+  forall m, DisjList (getIntDefs m) (getExtDefs m).
+Proof.
+  unfold getIntDefs, getExtDefs; intros.
+  apply DisjList_logic; intros.
+  apply filter_In in H; apply filter_In in H0; dest.
+  rewrite H2 in H1; discriminate.
 Qed.
 
 Lemma getCalls_flattened:
@@ -1259,7 +1306,8 @@ Qed.
 
 Hint Unfold pm_rules pm_regInits pm_methods
      getRules getRegInits getDefs getCalls getDefsBodies
-     getExtDefsBodies getExtDefs getExtCalls getExtMeths.
+     getExtDefsBodies getExtDefs getExtCalls getExtMeths
+     getIntDefs getIntCalls getIntMeths.
 
 (** Notations *)
 

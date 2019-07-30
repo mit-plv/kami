@@ -1226,9 +1226,11 @@ Section Modularity.
              (Hbdval: ValidRegsModules type (ConcatMod mb md)).
 
   Hypotheses (Hacdefs: DisjList (getDefs ma) (getDefs mc))
-             (Haccalls: DisjList (getCalls ma) (getCalls mc))
+             (Haccalls1: DisjList (getCalls ma) (getIntCalls mc))
+             (Haccalls2: DisjList (getIntCalls ma) (getCalls mc))
              (Hbddefs: DisjList (getDefs mb) (getDefs md))
-             (Hbdcalls: DisjList (getCalls mb) (getCalls md)).
+             (Hbdcalls1: DisjList (getCalls mb) (getIntCalls md))
+             (Hbdcalls2: DisjList (getIntCalls mb) (getCalls md)).
   
   Section NonInteracting.
     Variable (vp: M.key -> sigT SignT -> option (sigT SignT)).

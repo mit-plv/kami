@@ -288,7 +288,8 @@ Lemma wellHidden_split:
   forall ma mb la lb,
     wellHidden (ConcatMod ma mb) (hide (mergeLabel la lb)) ->
     DisjList (getDefs ma) (getDefs mb) ->
-    DisjList (getCalls ma) (getCalls mb) ->
+    DisjList (getCalls ma) (getIntCalls mb) ->
+    DisjList (getIntCalls ma) (getCalls mb) ->
     M.KeysSubset (calls la) (getCalls ma) ->
     M.KeysSubset (calls lb) (getCalls mb) ->
     M.KeysSubset (defs la) (getDefs ma) ->
@@ -299,33 +300,33 @@ Proof.
 
   assert (M.Disj (defs la) (defs lb))
     by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
-  assert (M.Disj (calls la) (calls lb))
-    by (eapply M.DisjList_KeysSubset_Disj with (d1:= getCalls ma); eauto).
   
   unfold wellHidden in *; dest.
   destruct la as [anna dsa csa], lb as [annb dsb csb].
   simpl in *; split; dest.
 
   - split.
-    + clear H8.
+    + clear H8; red in H1, H2.
       unfold M.KeysDisj, M.KeysSubset in *; intros.
       specializeAll k.
       specialize (H (getCalls_in_1 ma mb _ H8)).
       rewrite M.F.P.F.in_find_iff in *.
       intro Hx; elim H; clear H.
       findeq.
-      specialize (H1 k); destruct H1; auto.
-    + clear H.
+      apply H1.
+      apply filter_In; split; [assumption|].
+      unfold string_in; apply existsb_exists; exists k.
+      split; [assumption|apply string_eq_true].
+    + clear H; red in H0.
       unfold M.KeysDisj, M.KeysSubset in *; intros.
       specializeAll k.
       specialize (H8 (getDefs_in_1 ma mb _ H)).
       rewrite M.F.P.F.in_find_iff in *.
       intro Hx; elim H8; clear H8.
       findeq.
-      specialize (H0 k); destruct H0; auto.
-
+        
   - split.
-    + clear H8.
+    + clear H8; red in H1, H2.
       unfold M.KeysDisj, M.KeysSubset in *; intros.
       specializeAll k.
       specialize (H (getCalls_in_2 ma mb _ H8)).
@@ -334,8 +335,16 @@ Proof.
       findeq;
         try (remember (M.find k dsb) as v; destruct v;
              remember (M.find k csb) as v; destruct v; findeq).
-      specialize (H1 k); destruct H1; auto.
-    + clear H.
+      * apply H9.
+        apply filter_In; split; [assumption|].
+        unfold string_in; apply existsb_exists; exists k.
+        split; [assumption|apply string_eq_true].
+      * apply H9.
+        apply filter_In; split; [assumption|].
+        unfold string_in; apply existsb_exists; exists k.
+        split; [assumption|apply string_eq_true].
+
+    + clear H; red in H0.
       unfold M.KeysDisj, M.KeysSubset in *; intros.
       specializeAll k.
       specialize (H8 (getDefs_in_2 ma mb _ H)).
@@ -344,7 +353,14 @@ Proof.
       findeq;
         try (remember (M.find k csb) as v; destruct v;
              remember (M.find k dsb) as v; destruct v; findeq).
-      specialize (H0 k); destruct H0; auto.
+      * apply H9, H5; intros; discriminate.
+      * specialize (H1 k); destruct H1.
+        { elim H1; apply H3; intros; discriminate. }
+        { elim H1.
+          apply filter_In; split; [assumption|].
+          unfold string_in; apply existsb_exists; exists k.
+          split; [assumption|apply string_eq_true].
+        }
 Qed.
 
 Lemma hide_mergeLabel_disj:

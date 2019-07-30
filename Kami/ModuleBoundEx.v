@@ -25,6 +25,10 @@ Section ModuleBound.
   Notation "nb1 ++ nb2" := (appendNameBound nb1 nb2) : namebound_scope.
   Delimit Scope namebound_scope with nb.
 
+  Definition intersectNameBound (nb1 nb2: NameBound) :=
+    Build_NameBound (filter (fun o => string_in o (originals nb2)) (originals nb1))
+                    (filter (fun p => string_in p (prefixes nb2)) (prefixes nb1)).
+    
   Definition subtractNameBound (nb1 nb2: NameBound) :=
     Build_NameBound (filter (fun o => negb (string_in o (originals nb2))) (originals nb1))
                     (filter (fun p => negb (string_in p (prefixes nb2))) (prefixes nb1)).
@@ -81,6 +85,25 @@ Section ModuleBound.
   Lemma EquivList_filter:
     forall l1 l2 l3 l4,
       EquivList l1 l2 -> EquivList l3 l4 ->
+      EquivList (filter (fun d => string_in d l3) l1)
+                (filter (fun d => string_in d l4) l2).
+  Proof.
+    unfold EquivList, SubList; intros; dest; split; intros.
+    - specializeAll e.
+      apply filter_In; apply filter_In in H3; dest; split; auto.
+      apply eq_sym, string_in_dec_in in H4.
+      remember (string_in e l4) as ein; destruct ein; auto.
+      exfalso; apply string_in_dec_not_in in Heqein; auto.
+    - specializeAll e.
+      apply filter_In; apply filter_In in H3; dest; split; auto.
+      apply eq_sym, string_in_dec_in in H4.
+      remember (string_in e l3) as ein; destruct ein; auto.
+      exfalso; apply string_in_dec_not_in in Heqein; auto.
+  Qed.
+
+  Lemma EquivList_filter_neg:
+    forall l1 l2 l3 l4,
+      EquivList l1 l2 -> EquivList l3 l4 ->
       EquivList (filter (fun d => negb (string_in d l3)) l1)
                 (filter (fun d => negb (string_in d l4)) l2).
   Proof.
@@ -108,7 +131,62 @@ Section ModuleBound.
     simpl; f_equal; auto.
   Qed.
 
+  Lemma filter_Forall_true:
+    forall {A} (l: list A) f,
+      Forall (fun a => f a = true) l ->
+      filter f l = l.
+  Proof.
+    induction l; simpl; intros; [reflexivity|].
+    inv H; rewrite H2, IHl; auto.
+  Qed.
+
   Lemma filter_DisjList_app_1:
+    forall l1 l2 l3,
+      DisjList l1 l3 ->
+      filter (fun d => string_in d (l2 ++ l3)) l1 =
+      filter (fun d => string_in d l2) l1.
+  Proof.
+    induction l1; simpl; intros; auto.
+    remember (string_in a l2) as ain; destruct ain; simpl.
+    - apply string_in_dec_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + rewrite IHl1; [reflexivity|].
+        eapply DisjList_cons; eauto.
+      + exfalso; apply string_in_dec_not_in in Heqaain; elim Heqaain.
+        apply in_or_app; auto.
+    - apply string_in_dec_not_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + exfalso; apply string_in_dec_in in Heqaain.
+        apply in_app_or in Heqaain; destruct Heqaain; auto.
+        specialize (H a); destruct H; auto.
+        elim H; left; auto.
+      + apply IHl1; eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma filter_DisjList_app_2:
+    forall l1 l2 l3,
+      DisjList l1 l2 ->
+      filter (fun d => string_in d (l2 ++ l3)) l1 =
+      filter (fun d => string_in d l3) l1.
+  Proof.
+    induction l1; simpl; intros; auto.
+    remember (string_in a l3) as ain; destruct ain; simpl.
+    - apply string_in_dec_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + rewrite IHl1; [reflexivity|].
+        eapply DisjList_cons; eauto.
+      + exfalso; apply string_in_dec_not_in in Heqaain; elim Heqaain.
+        apply in_or_app; auto.
+    - apply string_in_dec_not_in in Heqain.
+      remember (string_in _ _) as aain; destruct aain; simpl.
+      + exfalso; apply string_in_dec_in in Heqaain.
+        apply in_app_or in Heqaain; destruct Heqaain; auto.
+        specialize (H a); destruct H; auto.
+        elim H; left; auto.
+      + apply IHl1; eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma filter_DisjList_app_neg_1:
     forall l1 l2 l3,
       DisjList l1 l3 ->
       filter (fun d => negb (string_in d (l2 ++ l3))) l1 =
@@ -130,7 +208,7 @@ Section ModuleBound.
       + f_equal; apply IHl1; eapply DisjList_cons; eauto.
   Qed.
 
-  Lemma filter_DisjList_app_2:
+  Lemma filter_DisjList_app_neg_2:
     forall l1 l2 l3,
       DisjList l1 l2 ->
       filter (fun d => negb (string_in d (l2 ++ l3))) l1 =
@@ -163,6 +241,25 @@ Section ModuleBound.
     - apply DisjList_comm; auto.
   Qed.
 
+  Lemma duplicateElt_in_filter:
+    forall p n l,
+      In p l ->
+      duplicateElt p n =
+      filter (fun d => string_in d (concat (map (fun p => duplicateElt p n) l)))
+             (duplicateElt p n).
+  Proof.
+    intros.
+    rewrite filter_Forall_true; [reflexivity|].
+    apply Forall_forall; intros pn ?.
+    destruct (string_in _ _) eqn:Hin; [reflexivity|].
+    exfalso.
+    apply eq_sym, string_in_dec_not_in in Hin; elim Hin; clear Hin.
+    induction l; simpl; intros; [dest_in|].
+    inv H.
+    - apply in_or_app; left; assumption.
+    - apply in_or_app; right; auto.
+  Qed.
+
   Lemma duplicateElt_concat_DisjList:
     forall n l1 l2,
       DisjList l1 l2 ->
@@ -178,6 +275,35 @@ Section ModuleBound.
   Qed.
 
   Lemma concat_filter_comm:
+    forall p1 p2 n,
+      concat
+        (map (fun p => duplicateElt p n)
+             (filter (fun p => string_in p p2) p1)) =
+      filter
+        (fun d => string_in d (concat (map (fun p => duplicateElt p n) p2)))
+        (concat (map (fun p => duplicateElt p n) p1)).
+  Proof.
+    induction p1; simpl; intros; auto.
+    remember (string_in a p2) as ain; destruct ain; simpl.
+    - rewrite IHp1.
+      generalize (concat (map (fun p : string => duplicateElt p n0) p1)); intros.
+      rewrite filter_app; f_equal.
+      apply string_in_dec_in in Heqain.
+      apply duplicateElt_in_filter; assumption.
+    - rewrite IHp1; clear -Heqain.
+      generalize (concat (map (fun p : string => duplicateElt p n0) p1)); intros.
+      rewrite filter_app.
+      replace (filter (fun d => string_in d (concat (map (fun p => duplicateElt p n0) p2)))
+                      (duplicateElt a n0)) with (@nil string); [reflexivity|].
+      apply eq_sym.
+      apply string_in_dec_not_in in Heqain.
+      rewrite <-app_nil_l with (l:= (concat (map (fun p : string => duplicateElt p n0) p2))).
+      rewrite filter_DisjList_app_1.
+      + induction (duplicateElt a n0); auto.
+      + apply duplicateElt_in_DisjList; auto.
+  Qed.
+
+  Lemma concat_filter_comm_neg:
     forall p1 p2 n,
       concat
         (map (fun p => duplicateElt p n)
@@ -223,7 +349,7 @@ Section ModuleBound.
       rewrite filter_app; f_equal.
       apply string_in_dec_not_in in Heqain.
       rewrite <-app_nil_l with (l:= (concat (map (fun p : string => duplicateElt p n0) p2))).
-      rewrite filter_DisjList_app_1.
+      rewrite filter_DisjList_app_neg_1.
       + induction (duplicateElt a n0); auto.
         simpl; f_equal; auto.
       + apply duplicateElt_in_DisjList; auto.
@@ -258,6 +384,33 @@ Section ModuleBound.
       Abstracted nb1 l1 -> Abstracted nb2 l2 ->
       Abstracted (subtractNameBound nb1 nb2) 
                  (filter (fun d => negb (string_in d l2)) l1).
+  Proof.
+    unfold Abstracted, unfoldNameBound; intros.
+    destruct nb1 as [o1 p1], nb2 as [o2 p2]; simpl in *.
+    eapply EquivList_trans; [|eapply EquivList_filter_neg; eauto].
+    rewrite filter_app; apply EquivList_app.
+    - rewrite filter_DisjList_app_neg_1; [apply EquivList_refl|].
+      clear -H; induction p2; [apply DisjList_nil_2|].
+      simpl; apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm.
+        apply hasNoIndex_duplicateElt_DisjList; auto.
+      + apply DisjList_comm; auto.
+    - rewrite filter_DisjList_app_neg_2.
+      + rewrite concat_filter_comm_neg; apply EquivList_refl.
+      + clear -H0; apply DisjList_comm.
+        induction p1; [apply DisjList_nil_2|].
+        simpl; apply DisjList_comm, DisjList_app_4.
+        * apply DisjList_comm, hasNoIndex_duplicateElt_DisjList; auto.
+        * apply DisjList_comm; auto.
+  Qed.
+
+  Lemma intersectNameBound_filter_abstracted:
+    forall nb1 nb2 l1 l2,
+      hasNoIndex (originals nb1) = true ->
+      hasNoIndex (originals nb2) = true ->
+      Abstracted nb1 l1 -> Abstracted nb2 l2 ->
+      Abstracted (intersectNameBound nb1 nb2) 
+                 (filter (fun d => string_in d l2) l1).
   Proof.
     unfold Abstracted, unfoldNameBound; intros.
     destruct nb1 as [o1 p1], nb2 as [o2 p2]; simpl in *.
@@ -665,6 +818,34 @@ Section Correctness.
     apply subtractNameBound_filter_abstracted; auto.
   Qed.
 
+  Lemma bound_disj_intCalls_calls:
+    forall dnb1 cnb1 cnb2,
+      hasNoIndex (originals dnb1) = true ->
+      hasNoIndex (originals cnb1) = true ->
+      DisjNameBound (intersectNameBound cnb1 dnb1) cnb2 ->
+      forall n m1 m2,
+        DmsBound m1 n dnb1 -> CmsBound m1 n cnb1 -> CmsBound m2 n cnb2 ->
+        DisjList (getIntCalls m1) (getCalls m2).
+  Proof.
+    intros.
+    eapply disjNameBound_DisjList; eauto.
+    apply intersectNameBound_filter_abstracted; auto.
+  Qed.
+
+  Lemma bound_disj_calls_intCalls:
+    forall cnb1 dnb2 cnb2,
+      hasNoIndex (originals dnb2) = true ->
+      hasNoIndex (originals cnb2) = true ->
+      DisjNameBound cnb1 (intersectNameBound cnb2 dnb2) ->
+      forall n m1 m2,
+        CmsBound m1 n cnb1 -> DmsBound m2 n dnb2 -> CmsBound m2 n cnb2 -> 
+        DisjList (getCalls m1) (getIntCalls m2).
+  Proof.
+    intros.
+    eapply disjNameBound_DisjList; eauto.
+    apply intersectNameBound_filter_abstracted; auto.
+  Qed.
+
 End Correctness.
 
 (** Tactics *)
@@ -776,6 +957,24 @@ Ltac red_to_ecd_bound_ex cn :=
     apply bound_disj_extCalls_defs with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (dnb2:= dnb2')
   end.
 
+Ltac red_to_icc_bound_ex cn :=
+  match goal with
+  | [ |- DisjList (getIntCalls ?m1) (getCalls ?m2) ] =>
+    let dnb1' := get_dms_bound_ex m1 in
+    let cnb1' := get_cms_bound_ex m1 in
+    let cnb2' := get_cms_bound_ex m2 in
+    apply bound_disj_intCalls_calls with (n:= cn) (dnb1:= dnb1') (cnb1:= cnb1') (cnb2:= cnb2')
+  end.
+
+Ltac red_to_cic_bound_ex cn :=
+  match goal with
+  | [ |- DisjList (getCalls ?m1) (getIntCalls ?m2) ] =>
+    let cnb1' := get_cms_bound_ex m1 in
+    let dnb2' := get_dms_bound_ex m2 in
+    let cnb2' := get_cms_bound_ex m2 in
+    apply bound_disj_calls_intCalls with (n:= cn) (cnb1:= cnb1') (dnb2:= dnb2') (cnb2:= cnb2')
+  end.
+
 Ltac regs_bound_tac_unit_ex :=
   match goal with
   | [ |- RegsBound (ConcatMod _ _) _ (appendNameBound _ _) ] =>
@@ -860,4 +1059,20 @@ Ltac kdisj_ecms_dms_ex n :=
    |dms_bound_tac_ex
    |cms_bound_tac_ex
    |dms_bound_tac_ex].
+
+Ltac kdisj_icms_cms_ex n :=
+  red_to_icc_bound_ex n;
+  [reflexivity|reflexivity
+   |apply disjNameBound_DisjNameBound; reflexivity
+   |dms_bound_tac_ex
+   |cms_bound_tac_ex
+   |cms_bound_tac_ex].
+
+Ltac kdisj_cms_icms_ex n :=
+  red_to_cic_bound_ex n;
+  [reflexivity|reflexivity
+   |apply disjNameBound_DisjNameBound; reflexivity
+   |cms_bound_tac_ex
+   |dms_bound_tac_ex
+   |cms_bound_tac_ex].
 

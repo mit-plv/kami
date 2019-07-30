@@ -386,9 +386,19 @@ Section DuplicateTwoModules1.
       + pose proof (duplicate_validRegsModules m1 (S n) Hvr1); auto.
       + pose proof (duplicate_validRegsModules m2 (S n) Hvr2); auto.
       + apply duplicate_specializeMod_disj_defs; auto.
-      + apply duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_comm, DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply DisjList_comm, duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply duplicate_specializeMod_disj_calls; auto.
       + apply duplicate_specializeMod_disj_defs; auto.
-      + apply duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_comm, DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply DisjList_comm, duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply duplicate_specializeMod_disj_calls; auto.
       + apply duplicate_noninteracting; auto.
       + apply duplicate_noninteracting; auto.
       + apply specialized_2 with (i:= S n); auto.
@@ -571,9 +581,19 @@ Section DuplicateTwoModules2.
       + pose proof (duplicate_validRegsModules m1 (S n) Hvr1); auto.
       + pose proof (duplicate_validRegsModules m2 (S n) Hvr2); auto.
       + apply duplicate_specializeMod_disj_defs; auto.
-      + apply duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_comm, DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply DisjList_comm, duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply duplicate_specializeMod_disj_calls; auto.
       + apply duplicate_specializeMod_disj_defs; auto.
-      + apply duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_comm, DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply DisjList_comm, duplicate_specializeMod_disj_calls; auto.
+      + eapply DisjList_SubList.
+        * apply getIntCalls_getCalls.
+        * apply duplicate_specializeMod_disj_calls; auto.
       + split.
         * apply equivalentLabelMapElem_dropI_dropN; auto; omega.
         * apply equivalentLabelMapElem_dropN_dropI; auto; omega.

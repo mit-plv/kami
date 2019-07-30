@@ -326,7 +326,8 @@ Ltac kmodulari i :=
   apply traceRefines_modular_interacting with (vp:= (@idElementwise _));
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
-   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
    |kdisj_edms_cms_ex i|kdisj_ecms_dms_ex i|kinteracting| |].
 
 Ltac kmodular := kmodulari 0.
@@ -336,7 +337,8 @@ Tactic Notation "kmodulari" "with" constr(p) constr(i) :=
   apply traceRefines_modular_interacting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
-   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
    |kdisj_edms_cms_ex i|kdisj_ecms_dms_ex i|kinteracting| |].
 
 Tactic Notation "kmodular" "with" constr(p) :=
@@ -347,7 +349,8 @@ Ltac kmodularin i :=
   apply traceRefines_modular_noninteracting;
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
-   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
    |knoninteracting|knoninteracting| |].
 
 Ltac kmodularn := kmodularin 0.
@@ -357,7 +360,8 @@ Tactic Notation "kmodularin" "with" constr(p) constr(i) :=
   apply traceRefines_modular_noninteracting with (vp:= p);
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
-   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
    |knoninteracting|knoninteracting| |].
 
 Tactic Notation "kmodularn" "with" constr(p) :=
@@ -368,7 +372,8 @@ Ltac kmodularinp i :=
   apply traceRefines_modular_noninteracting_p;
   [kequiv|kequiv|kequiv|kequiv
    |kdisj_regs_ex i|kdisj_regs_ex i|kvr|kvr
-   |kdisj_dms_ex i|kdisj_cms_ex i|kdisj_dms_ex i|kdisj_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
+   |kdisj_dms_ex i|kdisj_cms_icms_ex i|kdisj_icms_cms_ex i
    | |knoninteracting|knoninteracting| |].
 
 Ltac kmodularnp := kmodularinp 0.
