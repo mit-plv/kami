@@ -7,14 +7,14 @@ Require Import Eqdep. (* for signature_eq *)
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+(* `Vec n` is effectively a map from bit vectors of length
+   `n` to elements of `A` *)
+Inductive Vec (A : Type): nat -> Type :=
+| Vec0: A -> Vec A 0
+| VecNext n: Vec A n -> Vec A n -> Vec A (S n).
+
 Section Vec.
   Variable A: Type.
-
-  (* `Vec n` is effectively a map from bit vectors of length
-     `n` to elements of `A` *)
-  Inductive Vec: nat -> Type :=
-  | Vec0: A -> Vec 0
-  | VecNext n: Vec n -> Vec n -> Vec (S n).
 
   Fixpoint replicate (v: A) n :=
     match n with

@@ -4,10 +4,13 @@ Require Import Lib.CommonTactics Lib.StringEq.
 
 Set Implicit Arguments.
 
+Record Attribute (A : Type) := { attrName: string; attrType: A }.
+
 Section Attribute.
   Variable A: Type.
 
-  Record Attribute := { attrName: string; attrType: A }.
+  Implicit Types k : A.
+  Implicit Types a : Attribute A.
 
   Lemma attribute_inv:
     forall n1 n2 k1 k2, {| attrName := n1; attrType := k1 |} = {| attrName := n2; attrType := k2 |} ->
@@ -17,13 +20,13 @@ Section Attribute.
   Qed.
 
   Definition Attribute_dec (kdec: forall (k1 k2: A), {k1 = k2} + {k1 <> k2})
-  : forall (a1 a2: Attribute), {a1 = a2} + {a1 <> a2}.
+  : forall (a1 a2: Attribute A), {a1 = a2} + {a1 <> a2}.
   Proof.
     intros;
     repeat decide equality.
   Qed.
 
-  Fixpoint getAttribute (n: string) (attrs: list Attribute) :=
+  Fixpoint getAttribute (n: string) (attrs: list (Attribute A)) :=
     match attrs with
       | nil => None
       | attr :: attrs' =>
@@ -34,7 +37,7 @@ Section Attribute.
   
   Lemma in_NoDup_attr:
     forall a1 a2 attrs,
-      NoDup (map attrName attrs) ->
+      NoDup (map (@attrName _) attrs) ->
       attrName a1 = attrName a2 -> In a1 attrs -> In a2 attrs -> a1 = a2.
   Proof.
     induction attrs; intros; simpl in *; [destruct H1|].
@@ -52,7 +55,7 @@ Section Attribute.
       + inv H; apply IHattrs; auto.
   Qed.
   
-  Fixpoint getAttrType (n: string) (attrs: list Attribute) :=
+  Fixpoint getAttrType (n: string) (attrs: list (Attribute A)) :=
     match attrs with
       | nil => None
       | attr :: attrs' =>
@@ -71,10 +74,10 @@ Section Attribute.
     destruct (string_eq n (attrName a)); auto.
   Qed.
   
-  Definition namesOf (attrs: list Attribute) := map attrName attrs.
+  Definition namesOf (attrs: list (Attribute A)) := map (@attrName _) attrs.
 
   Lemma namesOf_app:
-    forall (l1 l2: list Attribute),
+    forall (l1 l2: list (Attribute A)),
       namesOf (l1 ++ l2) = namesOf l1 ++ namesOf l2.
   Proof.
     unfold namesOf; simpl; intros.
@@ -82,7 +85,7 @@ Section Attribute.
   Qed.
 
   Lemma getAttribute_app:
-    forall n (attrs1 attrs2: list Attribute) dm
+    forall n (attrs1 attrs2: list (Attribute A)) dm
            (Hdm: dm = getAttribute n (attrs1 ++ attrs2)),
       dm = getAttribute n attrs1 \/ dm = getAttribute n attrs2.
   Proof.
@@ -91,7 +94,7 @@ Section Attribute.
   Qed.
 
   Lemma getAttribute_Some_name:
-    forall n (attrs: list Attribute) dm
+    forall n (attrs: list (Attribute A)) dm
            (Hdm: Some dm = getAttribute n attrs),
       attrName dm = n.
   Proof.
@@ -103,7 +106,7 @@ Section Attribute.
   Qed.
 
   Lemma getAttribute_Some_body:
-    forall n (attrs: list Attribute) dm
+    forall n (attrs: list (Attribute A)) dm
            (Hdm: Some dm = getAttribute n attrs),
       In dm attrs.
   Proof.
@@ -114,9 +117,9 @@ Section Attribute.
   Qed.
 
   Lemma getAttribute_Some:
-    forall n (attrs: list Attribute) dm
+    forall n (attrs: list (Attribute A)) dm
            (Hdm: Some dm = getAttribute n attrs),
-      In n (map attrName attrs).
+      In n (map (@attrName _) attrs).
   Proof.
     induction attrs; intros; simpl; [inv Hdm|].
     simpl in Hdm.
@@ -126,9 +129,9 @@ Section Attribute.
   Qed.
 
   Lemma getAttribute_None:
-    forall n (attrs: list Attribute)
+    forall n (attrs: list (Attribute A))
            (Hdm: None = getAttribute n attrs),
-      ~ In n (map attrName attrs).
+      ~ In n (map (@attrName _) attrs).
   Proof.
     induction attrs; intros; intuition; inv H.
     - simpl in Hdm.
