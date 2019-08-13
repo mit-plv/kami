@@ -52,7 +52,7 @@ Section PrimFifo.
       {| pm_name := primFifoName;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
-              ^"full" :: (RegInitDefault (SyntaxKind dType))]%struct;
+              ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
          pm_rules := nil;
          pm_methods :=
            [^"enq" :: (existT _ _ fifoEnq);
@@ -64,7 +64,7 @@ Section PrimFifo.
       {| pm_name := primFifoName;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
-              ^"full" :: (RegInitDefault (SyntaxKind dType))]%struct;
+              ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
          pm_rules := nil;
          pm_methods :=
            [^"enq" :: (existT _ _ fifoEnq);
@@ -77,7 +77,7 @@ Section PrimFifo.
       {| pm_name := primFifoName;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
-              ^"full" :: (RegInitDefault (SyntaxKind dType))]%struct;
+              ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
          pm_rules := nil;
          pm_methods :=
            [^"enq" :: (existT _ _ fifoEnq);
