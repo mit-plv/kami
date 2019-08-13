@@ -5,10 +5,12 @@ Require Import Kami.Wf Kami.Tactics.
 
 Set Implicit Arguments.
 
-Definition primFifoName: string := "FIFO".
+Definition primNormalFifoName: string := "FIFO".
+Definition primPipelineFifoName: string := "PipelineFIFO".
+Definition primBypassFifoName: string := "BypassFIFO".
 
 Section PrimFifo.
-  Variables (fifoName: string)
+  Variables (primFifoName fifoName: string)
             (sz: nat)
             (dType: Kind).
 
@@ -88,50 +90,50 @@ Section PrimFifo.
 End PrimFifo.
 
 Hint Unfold fifo fifoF fifoC: ModuleDefs.
-Hint Unfold primFifoName
+Hint Unfold primPipelineFifoName primBypassFifoName
      fifoEnq fifoDeq fifoFirstElt fifoIsFull fifoClear: MethDefs.
 
 Section Facts.
-  Variables (fifoName: string)
+  Variables (primFifoName fifoName: string)
             (dType: Kind).
 
   Lemma fifo_ModEquiv:
-    ModPhoasWf (fifo fifoName dType).
+    ModPhoasWf (fifo primFifoName fifoName dType).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifo_ModEquiv.
 
   Lemma fifoF_ModEquiv:
-    ModPhoasWf (fifoF fifoName dType).
+    ModPhoasWf (fifoF primFifoName fifoName dType).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifoF_ModEquiv.
 
   Lemma fifoC_ModEquiv:
-    ModPhoasWf (fifoC fifoName dType).
+    ModPhoasWf (fifoC primFifoName fifoName dType).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifoC_ModEquiv.
 
   Lemma fifo_ValidRegs:
-    ModRegsWf (fifo fifoName dType).
+    ModRegsWf (fifo primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.
   Hint Resolve fifo_ValidRegs.
 
   Lemma fifoF_ValidRegs:
-    ModRegsWf (fifoF fifoName dType).
+    ModRegsWf (fifoF primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.
   Hint Resolve fifoF_ValidRegs.
 
   Lemma fifoC_ValidRegs:
-    ModRegsWf (fifoC fifoName dType).
+    ModRegsWf (fifoC primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.

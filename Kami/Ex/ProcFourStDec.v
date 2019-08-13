@@ -119,12 +119,12 @@ Section ProcFDE.
   Definition p4st := (fetchDecode
                         ++ regFile (rfInit init)
                         ++ scoreBoard rfIdx
-                        ++ PrimFifo.fifo d2eFifoName d2eElt
-                        ++ PrimFifo.fifoF w2dFifoName (Pc iaddrSize)
+                        ++ PrimFifo.fifo PrimFifo.primPipelineFifoName d2eFifoName d2eElt
+                        ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName (Pc iaddrSize)
                         ++ (executer exec d2eOpType d2eVal1 d2eVal2
                                      d2eRawInst d2eCurPc e2wPack)
                         ++ epoch
-                        ++ PrimFifo.fifo e2wFifoName e2wElt
+                        ++ PrimFifo.fifo PrimFifo.primPipelineFifoName e2wFifoName e2wElt
                         ++ (wb dec exec d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 

@@ -286,7 +286,7 @@ Section FetchAndDecode.
   }.
 
   Definition fetchDecode := (fetcher
-                               ++ PrimFifo.fifoC f2dFifoName f2dElt
+                               ++ PrimFifo.fifoC PrimFifo.primPipelineFifoName f2dFifoName f2dElt
                                ++ decoder)%kami.
 
 End FetchAndDecode.

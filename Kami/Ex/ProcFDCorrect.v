@@ -78,7 +78,7 @@ Section FetchDecode.
 
   Definition fetchICacheDecode :=
     ((fetchICache fetch predictNextPc f2dPack pcInit)
-       ++ (PrimFifo.fifoC f2dFifoName f2dElt)
+       ++ (PrimFifo.fifoC PrimFifo.primPipelineFifoName f2dFifoName f2dElt)
        ++ (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch))%kami.
   Definition fetchDecode :=
     fetchDecode fetch dec predictNextPc d2ePack

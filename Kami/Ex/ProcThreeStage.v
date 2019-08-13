@@ -649,11 +649,11 @@ Section ProcThreeStage.
     ((fetchDecode (pcInit init))
        ++ regFile (rfInit init)
        ++ scoreBoard
-       ++ PrimFifo.fifo d2eFifoName d2eElt
-       ++ PrimFifo.fifoF w2dFifoName (Pc iaddrSize)
+       ++ PrimFifo.fifo PrimFifo.primPipelineFifoName d2eFifoName d2eElt
+       ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName (Pc iaddrSize)
        ++ executer
        ++ epoch
-       ++ PrimFifo.fifo e2wFifoName e2wElt
+       ++ PrimFifo.fifo PrimFifo.primPipelineFifoName e2wFifoName e2wElt
        ++ wb)%kami.
 
 End ProcThreeStage.
