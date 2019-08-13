@@ -2,8 +2,8 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync Ex.ProcFetchDecode.
-Require Import Kami.PrimBram.
+Require Import Ex.MemTypes Ex.SC Ex.MemAsync Ex.ProcFetchDecode.
+Require Import Kami.PrimBram Kami.PrimFifo.
 
 Set Implicit Arguments.
 
@@ -134,7 +134,7 @@ Section FetchICache.
       Write "pc" <- #correctPc;
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
-      Call f2dFlush();
+      Call f2dClear();
       Write "pcUpdated" <- $$true;
       Retv
 

@@ -4,7 +4,8 @@ Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics.
-Require Import Ex.MemTypes Ex.OneEltFifo Ex.NativeFifo Ex.MemAsync.
+Require Import Kami.PrimFifo.
+Require Import Ex.MemTypes Ex.MemAsync.
 Require Import Ex.SC Ex.ProcDec Ex.ProcThreeStage Ex.ProcFetch
         Ex.ProcFetchDecode Ex.ProcFDInl Ex.ProcFDInv Ex.ProcFCorrect.
 Require Import Eqdep.
@@ -77,7 +78,7 @@ Section FetchDecode.
 
   Definition fetchICacheDecode :=
     ((fetchICache fetch predictNextPc f2dPack pcInit)
-       ++ (oneEltFifoEx2 f2dFifoName f2dElt)
+       ++ (PrimFifo.fifoC f2dFifoName f2dElt)
        ++ (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch))%kami.
   Definition fetchDecode :=
     fetchDecode fetch dec predictNextPc d2ePack

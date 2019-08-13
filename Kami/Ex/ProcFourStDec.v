@@ -4,7 +4,8 @@ Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Renaming Kami.Inline Kami.InlineFacts.
 Require Import Kami.Decomposition Kami.Notations Kami.Tactics Kami.ModuleBoundEx.
-Require Import Ex.MemTypes Ex.OneEltFifo Ex.NativeFifo Ex.MemAsync.
+Require Import Kami.PrimFifo.
+Require Import Ex.MemTypes Ex.MemAsync.
 Require Import Ex.SC Ex.ProcDec Ex.ProcThreeStage Ex.ProcThreeStDec Ex.ProcFDCorrect.
 Require Import Eqdep.
 
@@ -118,12 +119,12 @@ Section ProcFDE.
   Definition p4st := (fetchDecode
                         ++ regFile (rfInit init)
                         ++ scoreBoard rfIdx
-                        ++ oneEltFifo d2eFifoName d2eElt
-                        ++ oneEltFifoEx1 w2dFifoName (Pc iaddrSize)
+                        ++ PrimFifo.fifo d2eFifoName d2eElt
+                        ++ PrimFifo.fifoF w2dFifoName (Pc iaddrSize)
                         ++ (executer exec d2eOpType d2eVal1 d2eVal2
                                      d2eRawInst d2eCurPc e2wPack)
                         ++ epoch
-                        ++ oneEltFifo e2wFifoName e2wElt
+                        ++ PrimFifo.fifo e2wFifoName e2wElt
                         ++ (wb dec exec d2eOpType d2eDst d2eAddr d2eVal1 d2eRawInst
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 

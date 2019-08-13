@@ -2,7 +2,8 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync Ex.ProcThreeStage.
+Require Import Kami.PrimFifo.
+Require Import Ex.MemTypes Ex.SC Ex.MemAsync Ex.ProcThreeStage.
 
 Set Implicit Arguments.
 
@@ -83,7 +84,7 @@ Section FetchAndDecode.
   Definition f2dFifoName := "f2d"%string.
   Definition f2dEnq := MethodSig (f2dFifoName -- "enq")(f2dElt) : Void.
   Definition f2dDeq := MethodSig (f2dFifoName -- "deq")() : f2dElt.
-  Definition f2dFlush := MethodSig (f2dFifoName -- "flush")() : Void.
+  Definition f2dClear := MethodSig (f2dFifoName -- "clear")() : Void.
 
   Definition getRf1 := getRf1 dataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
@@ -182,7 +183,7 @@ Section FetchAndDecode.
       Write "pc" <- #correctPc;
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
-      Call f2dFlush();
+      Call f2dClear();
       Retv
 
     with Rule "instFetch" :=
@@ -285,13 +286,13 @@ Section FetchAndDecode.
   }.
 
   Definition fetchDecode := (fetcher
-                               ++ oneEltFifoEx2 f2dFifoName f2dElt
+                               ++ PrimFifo.fifoC f2dFifoName f2dElt
                                ++ decoder)%kami.
 
 End FetchAndDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
-Hint Unfold f2dFifoName f2dEnq f2dDeq f2dFlush
+Hint Unfold f2dFifoName f2dEnq f2dDeq f2dClear
      getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Nm
      sbSearch2_Nm sbSearch3_Nm sbInsert

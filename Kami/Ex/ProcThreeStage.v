@@ -2,7 +2,8 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.OneEltFifo Ex.Fifo Ex.MemAsync Ex.ProcDec.
+Require Import Kami.PrimFifo.
+Require Import Ex.MemTypes Ex.SC Ex.MemAsync Ex.ProcDec.
 
 Set Implicit Arguments.
 
@@ -648,11 +649,11 @@ Section ProcThreeStage.
     ((fetchDecode (pcInit init))
        ++ regFile (rfInit init)
        ++ scoreBoard
-       ++ oneEltFifo d2eFifoName d2eElt
-       ++ oneEltFifoEx1 w2dFifoName (Pc iaddrSize)
+       ++ PrimFifo.fifo d2eFifoName d2eElt
+       ++ PrimFifo.fifoF w2dFifoName (Pc iaddrSize)
        ++ executer
        ++ epoch
-       ++ oneEltFifo e2wFifoName e2wElt
+       ++ PrimFifo.fifo e2wFifoName e2wElt
        ++ wb)%kami.
 
 End ProcThreeStage.
@@ -798,21 +799,6 @@ Section Facts.
   Proof. kequiv. Qed.
   Hint Resolve scoreBoard_ModEquiv.
 
-  Lemma oneEltFifo_ModEquiv:
-    forall fifoName dType, ModPhoasWf (oneEltFifo fifoName dType).
-  Proof. kequiv. Qed.
-  Hint Resolve oneEltFifo_ModEquiv.
-  
-  Lemma oneEltFifoEx1_ModEquiv:
-    forall fifoName dType, ModPhoasWf (oneEltFifoEx1 fifoName dType).
-  Proof. kequiv. Qed.
-  Hint Resolve oneEltFifoEx1_ModEquiv.
-
-  Lemma oneEltFifoEx2_ModEquiv:
-    forall fifoName dType, ModPhoasWf (oneEltFifoEx1 fifoName dType).
-  Proof. kequiv. Qed.
-  Hint Resolve oneEltFifoEx2_ModEquiv.
-
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
       ModPhoasWf (fetchDecode fetch dec d2ePack predictNextPc pcInit).
@@ -857,9 +843,6 @@ End Facts.
 
 Hint Resolve regFile_ModEquiv
      scoreBoard_ModEquiv
-     oneEltFifo_ModEquiv
-     oneEltFifoEx1_ModEquiv
-     oneEltFifoEx2_ModEquiv
      fetchDecode_ModEquiv
      executer_ModEquiv
      epoch_ModEquiv
