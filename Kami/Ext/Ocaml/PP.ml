@@ -150,7 +150,9 @@ let ppNoRules = "// No rules in this module"
 let ppNoMeths = "// No methods in this module"
 
 let primBramName = ['B'; 'R'; 'A'; 'M']
-let primFifoName = ['F'; 'I'; 'F'; 'O']
+let primNormalFifoName = ['F'; 'I'; 'F'; 'O']
+let primPipelineFifoName = ['P'; 'i'; 'p'; 'e'; 'l'; 'i'; 'n'; 'e'; 'F'; 'I'; 'F'; 'O']
+let primBypassFifoName = ['B'; 'y'; 'p'; 'a'; 's'; 's'; 'F'; 'I'; 'F'; 'O']
 
 (* Global references for generating structs *)
 let structIdx : int ref = ref 0
@@ -692,7 +694,8 @@ let ppImports (_: unit) =
   ps "import RegFileZero::*;"; print_cut (); force_newline ();
   ps "import FIFO::*;"; print_cut (); force_newline ();
   ps "import BRAM::*;"; print_cut (); force_newline ();
-  ps "import MulDiv::*;"; print_cut (); force_newline ()
+  ps "import MulDiv::*;"; print_cut (); force_newline ();
+  ps "import SpecialFIFOs::*;"; print_cut (); force_newline ()
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -787,12 +790,72 @@ let ppBram (pifc: signatureT attribute list) =
   ps "return data;";
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ()
-         
+
+type fifoType = NormalFIFO | PipelineFIFO | BypassFIFO
+
+let ppFifoInstance (fty: fifoType) =
+  match fty with
+  | NormalFIFO -> ps "mkFIFO();"
+  | PipelineFIFO -> ps "mkPipelineFIFO();"
+  | BypassFIFO -> ps "mkBypassFIFO();"
+
+let ppFifoEnq (attr: signatureT attribute) =
+  ppBInterface attr; force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "pff.enq(x_0);";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+
+let ppFifoDeq (attr: signatureT attribute) =
+  ppBInterface attr; force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "pff.deq();"; force_newline ();
+  ps "return pff.first();";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+
+let ppFifoIsFull (attr: signatureT attribute) =
+  ppBInterface attr; force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "return !pff.notFull;";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+
+let ppFifoClear (attr: signatureT attribute) =
+  ppBInterface attr; force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "pff.clear();";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+
+let rec ppFifoMethods (pifc: signatureT attribute list) =
+  match pifc with
+  | [] -> ()
+  | attr :: pifc' ->
+     (if List.hd attr.attrName = 'e' (* enq *)
+      then ppFifoEnq attr
+      else if List.hd attr.attrName = 'd' (* deq *)
+      then ppFifoDeq attr
+      else if List.hd attr.attrName = 'i' (* isFull *)
+      then ppFifoIsFull attr
+      else if List.hd attr.attrName = 'c' (* clear *)
+      then ppFifoClear attr
+      else ()); force_newline (); ppFifoMethods pifc'
+
+let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
+  ps "FIFO#(Struct4) pff <- "; ppFifoInstance fty; force_newline();
+  force_newline ();
+  ppFifoMethods pifc
+                                          
 let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
   if pname = primBramName then
-    ppBram pifc 
-  else if pname = primFifoName then
-    raise (Not_implemented_yet "ppBModulePrim.FIFO")
+    ppBram pifc
+  else if pname = primNormalFifoName then
+    ppFifo NormalFIFO pifc
+  else if pname = primPipelineFifoName then
+    ppFifo PipelineFIFO pifc
+  else if pname = primBypassFifoName then
+    ppFifo BypassFIFO pifc
   else
     raise (Should_not_happen "Unknown primitive module name")
          
