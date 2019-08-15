@@ -693,7 +693,8 @@ let ppImports (_: unit) =
   ps "import RegFile::*;"; print_cut (); force_newline ();
   ps "import RegFileZero::*;"; print_cut (); force_newline ();
   ps "import FIFO::*;"; print_cut (); force_newline ();
-  ps "import BRAM::*;"; print_cut (); force_newline ();
+  ps "import FIFOF::*;"; print_cut (); force_newline ();
+  ps "import SimpleBRAM::*;"; print_cut (); force_newline ();
   ps "import MulDiv::*;"; print_cut (); force_newline ();
   ps "import SpecialFIFOs::*;"; print_cut (); force_newline ()
 
@@ -758,27 +759,28 @@ let ppBram (pifc: signatureT attribute list) =
   in
   let valueK = (List.nth pifc 1).attrType.ret in
   
-  (* BRAM configuration *)
-  ps "BRAM_Configure cfg = defaultValue;"; force_newline ();
-
   (* BRAM declaration *)
-  ps "BRAM1Port#"; ps ppRBracketL;
+  ps "Bram#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
   ps ppRBracketR; ps ppDelim;
-  ps "bram <- mkBRAM1Server(cfg);"; force_newline ();
+  ps "bram <- mkBramInst();"; force_newline ();
+  ps "Reg#(Bool) readRq <- mkReg(False);"; force_newline ();
   force_newline ();
 
   (* The "putRq" method *)
   ppBInterface (List.nth pifc 0); force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "bram.portA.request.put(BRAMRequest {";
+  ps "when (!readRq, noAction);"; force_newline ();
+  ps "if (x_0.write) begin"; force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "write: x_0.write,"; force_newline ();
-  ps "responseOnWrite: True,"; force_newline ();
-  ps "address: x_0.addr,"; force_newline ();
-  ps "datain: x_0.datain";
+  ps "bram.write(x_0.addr, x_0.datain);";
   close_box (); print_break 0 (-4); force_newline ();
-  ps "});";
+  ps "end else begin"; force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "bram.readRq(x_0.addr);"; force_newline ();
+  ps "readRq <= True;";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps "end";
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ();
   force_newline ();
@@ -786,7 +788,9 @@ let ppBram (pifc: signatureT attribute list) =
   (* The "getRs" method *)
   ppBInterface (List.nth pifc 1); force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "let data <- bram.portA.response.get;"; force_newline ();
+  ps "when (readRq, noAction);"; force_newline ();
+  ps "let data = bram.readRs ();"; force_newline ();
+  ps "readRq <= False;"; force_newline ();
   ps "return data;";
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ()
@@ -795,9 +799,9 @@ type fifoType = NormalFIFO | PipelineFIFO | BypassFIFO
 
 let ppFifoInstance (fty: fifoType) =
   match fty with
-  | NormalFIFO -> ps "mkFIFO();"
-  | PipelineFIFO -> ps "mkPipelineFIFO();"
-  | BypassFIFO -> ps "mkBypassFIFO();"
+  | NormalFIFO -> ps "mkFIFOF();"
+  | PipelineFIFO -> ps "mkPipelineFIFOF();"
+  | BypassFIFO -> ps "mkBypassFIFOF();"
 
 let ppFifoEnq (attr: signatureT attribute) =
   ppBInterface attr; force_newline ();
@@ -843,7 +847,8 @@ let rec ppFifoMethods (pifc: signatureT attribute list) =
       else ()); force_newline (); ppFifoMethods pifc'
 
 let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
-  ps "FIFO#(Struct4) pff <- "; ppFifoInstance fty; force_newline();
+  let eltK = (List.nth pifc 0).attrType.arg in
+  ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty; force_newline();
   force_newline ();
   ppFifoMethods pifc
                                           
