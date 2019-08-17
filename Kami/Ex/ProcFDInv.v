@@ -15,9 +15,6 @@ Section Invariants.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -66,7 +63,7 @@ Section Invariants.
   Variables (pcInit : ConstT (Pc iaddrSize)).
   
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
-                                         fetch dec predictNextPc
+                                         fetch dec
                                          d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                          pcInit).
 
@@ -79,8 +76,6 @@ Section Invariants.
     f2dfullv = true ->
     let rawInst := evalExpr (f2dRawInst _ f2deltv) in
     (rawInst = pgmv (split2 _ _ (evalExpr (f2dCurPc _ f2deltv))) /\
-     evalExpr (f2dNextPc _ f2deltv) =
-     evalExpr (predictNextPc type (evalExpr (f2dCurPc _ f2deltv))) /\
      evalExpr (f2dNextPc _ f2deltv) = pcv /\
      evalExpr (f2dEpoch _ f2deltv) = fepochv).
                                                       

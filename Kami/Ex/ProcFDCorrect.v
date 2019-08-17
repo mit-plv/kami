@@ -18,9 +18,6 @@ Section FetchDecode.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -74,18 +71,24 @@ Section FetchDecode.
                   evalExpr (f2dPack rawInst1 curPc1 nextPc1 epoch1) =
                   evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
 
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchICacheDecode :=
-    ((fetchICache fetch predictNextPc f2dPack pcInit)
+    ((fetchICache fetch f2dPack getIndex getTag pcInit)
        ++ (PrimFifo.fifoC PrimFifo.primPipelineFifoName f2dFifoName f2dElt)
        ++ (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch))%kami.
   Definition fetchDecode :=
-    fetchDecode fetch dec predictNextPc d2ePack
+    fetchDecode fetch dec d2ePack
                 f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                 pcInit.
   Definition fetchNDecode :=
-    ProcThreeStage.fetchDecode fetch dec d2ePack predictNextPc pcInit.
+    ProcThreeStage.fetchDecode fetch dec d2ePack pcInit.
 
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
   Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
@@ -125,7 +128,7 @@ Section FetchDecode.
   Hint Unfold fetchDecode_regMap: MapDefs.
 
   Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl
-                                 fetch dec predictNextPc
+                                 fetch dec
                                  d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                  pcInit.
 

@@ -20,8 +20,11 @@ Section ProcFour.
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
            (memInit: MemInit addrSize dataBytes).
@@ -143,10 +146,10 @@ Section ProcFour.
 
     Definition p4st: Modules :=
       ProcFourStDec.p4st
-        fetch dec exec predictNextPc
+        fetch dec exec getIndex getTag
+        f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
         d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
         d2eRawInst d2eCurPc d2eNextPc d2eEpoch
-        f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
         e2wPack e2wDecInst e2wVal procInit.
 
     Definition iom: Modules :=

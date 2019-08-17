@@ -11,9 +11,6 @@ Section Inlined.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -48,7 +45,7 @@ Section Inlined.
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
-  Definition fetchDecode := fetchDecode fetch dec predictNextPc
+  Definition fetchDecode := fetchDecode fetch dec
                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         pcInit.
   Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)

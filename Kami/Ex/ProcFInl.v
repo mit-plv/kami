@@ -8,10 +8,7 @@ Set Implicit Arguments.
 Section Inlined.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
-            (predictNextPc:
-               forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                          Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variable (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes).
 
   Variable (f2dElt: Kind).
   Variable (f2dPack:
@@ -31,10 +28,16 @@ Section Inlined.
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchICache :=
-    fetchICache fetch predictNextPc f2dPack pcInit.
+    fetchICache fetch f2dPack getIndex getTag pcInit.
   Hint Unfold fetchICache: ModuleDefs. (* for kinline_compute *)
 
   Definition fetchICacheInl: sigT (fun m: Modules => fetchICache <<== m).

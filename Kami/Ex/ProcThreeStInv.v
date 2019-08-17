@@ -16,9 +16,6 @@ Section Invariants.
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -91,7 +88,7 @@ Section Invariants.
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition p3stInl :=
-    projT1 (p3stInl fetch dec exec predictNextPc
+    projT1 (p3stInl fetch dec exec
                     d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                     d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                     e2wPack e2wDecInst e2wVal init).

@@ -18,40 +18,11 @@ Section ProcFDE.
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
-  (* Abstract d2eElt *)
-  Variable (d2eElt: Kind).
-  Variable (d2ePack:
-              forall ty,
-                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
-                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
-                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
-                Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
-                Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
-                Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
-                Expr ty (SyntaxKind Bool) -> (* epoch *)
-                Expr ty (SyntaxKind d2eElt)).
-  Variables
-    (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Bit 2)))
-    (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                        Expr ty (SyntaxKind (Bit rfIdx)))
-    (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                         Expr ty (SyntaxKind (Bit addrSize)))
-    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                                 Expr ty (SyntaxKind (Data dataBytes)))
-    (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Data instBytes)))
-    (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
-    (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
-    (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind Bool)).
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
 
   (* Abstract f2dElt *)  
   Variable (f2dElt: Kind).
@@ -95,6 +66,38 @@ Section ProcFDE.
          evalExpr (f2dPack rawInst1 curPc1 nextPc1 epoch1) =
          evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
 
+  (* Abstract d2eElt *)
+  Variable (d2eElt: Kind).
+  Variable (d2ePack:
+              forall ty,
+                Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
+                Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
+                Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
+                Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
+                Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind Bool) -> (* epoch *)
+                Expr ty (SyntaxKind d2eElt)).
+  Variables
+    (d2eOpType: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Bit 2)))
+    (d2eDst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                        Expr ty (SyntaxKind (Bit rfIdx)))
+    (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                         Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                                 Expr ty (SyntaxKind (Data dataBytes)))
+    (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                            Expr ty (SyntaxKind (Data instBytes)))
+    (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                          Expr ty (SyntaxKind (Pc iaddrSize)))
+    (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Pc iaddrSize)))
+    (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                          Expr ty (SyntaxKind Bool)).
+
   (* Abstract e2wElt *)  
   Variable (e2wElt: Kind).
   Variable (e2wPack:
@@ -112,15 +115,15 @@ Section ProcFDE.
 
   Definition fetchDecode: Modules :=
     fetchICacheDecode
-      fetch dec predictNextPc d2ePack
-      f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
+      fetch dec d2ePack
+      f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch getIndex getTag
       (pcInit init).
 
   Definition p4st := (fetchDecode
                         ++ regFile (rfInit init)
                         ++ scoreBoard rfIdx
                         ++ PrimFifo.fifo PrimFifo.primPipelineFifoName d2eFifoName d2eElt
-                        ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName (Pc iaddrSize)
+                        ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName (w2dElt iaddrSize)
                         ++ (executer exec d2eOpType d2eVal1 d2eVal2
                                      d2eRawInst d2eCurPc e2wPack)
                         ++ epoch
@@ -129,7 +132,7 @@ Section ProcFDE.
                                d2eCurPc d2eNextPc d2eEpoch e2wDecInst e2wVal))%kami.
 
   Definition p3st := ProcThreeStage.p3st
-                       fetch dec exec predictNextPc
+                       fetch dec exec
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init.

@@ -46,9 +46,6 @@ Section FetchAndDecode.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -192,7 +189,7 @@ Section FetchAndDecode.
       Read pc : Pc iaddrSize <- "pc";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Read epoch <- "fEpoch";
-      LET npc <- predictNextPc _ pc;
+      Nondet npc : SyntaxKind (Pc iaddrSize);
       Call f2dEnq(f2dPack #pgm@[_truncLsb_ #pc] #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
@@ -304,9 +301,6 @@ Section Facts.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (d2eElt: Kind).
   Variable (d2ePack:
               forall ty,
@@ -340,7 +334,7 @@ Section Facts.
                           Expr ty (SyntaxKind Bool)).
 
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher fetch predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher fetch f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
@@ -353,7 +347,7 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode fetch dec predictNextPc
+      ModPhoasWf (fetchDecode fetch dec
                               d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                               pcInit).
   Proof.

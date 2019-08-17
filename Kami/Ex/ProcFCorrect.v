@@ -14,10 +14,7 @@ Set Implicit Arguments.
 Section Fetch.
   Variables addrSize iaddrSize instBytes dataBytes: nat.
 
-  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
-            (predictNextPc:
-               forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                          Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variable (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes).
 
   Variable (f2dElt: Kind).
   Variable (f2dPack:
@@ -46,15 +43,21 @@ Section Fetch.
          evalExpr epoch1 = evalExpr epoch2 ->
          evalExpr (f2dPack rawInst1 curPc1 nextPc1 epoch1) =
          evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
-    
+
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+
   Variables (pcInit : ConstT (Pc iaddrSize)).
 
   Definition fetchICache: Modules :=
-    fetchICache fetch predictNextPc f2dPack pcInit.
+    fetchICache fetch f2dPack getIndex getTag pcInit.
   Definition fetchICacheInl :=
-    ProcFInl.fetchICacheInl fetch predictNextPc f2dPack pcInit.
+    ProcFInl.fetchICacheInl fetch f2dPack getIndex getTag pcInit.
   Definition fetcher: Modules :=
-    ProcFetchDecode.fetcher fetch predictNextPc f2dPack pcInit.
+    ProcFetchDecode.fetcher fetch f2dPack pcInit.
 
   Definition fetchICache_ruleMap (o: RegsT): string -> option string :=
     "pgmInitRq" |-> "pgmInitRq";

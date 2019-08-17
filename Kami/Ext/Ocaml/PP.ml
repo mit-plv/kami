@@ -558,12 +558,12 @@ let rec ppBAction (ife: int option) (a: bAction) =
         (ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
          ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
-     print_space (); ps ppBegin;
-     print_break 0 4; (* force_newline (); *) open_hovbox 0;
+     print_space (); ps ppBegin; force_newline ();
+     print_break 0 4; open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) ta;
      close_box (); print_break 0 (-4); force_newline ();
-     ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin;
-     print_break 0 4; (* force_newline (); *) open_hovbox 0;
+     ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin; force_newline ();
+     print_break 0 4; open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) fa;
      close_box (); print_break 0 (-4); force_newline ();
      ps ppEnd

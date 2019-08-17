@@ -149,8 +149,10 @@ Section ProcThreeStage.
   Definition d2eEnq := MethodSig (d2eFifoName -- "enq")(d2eElt) : Void.
   Definition d2eDeq := MethodSig (d2eFifoName -- "deq")() : d2eElt.
 
-  (* For correct pc redirection *)
-  Definition w2dElt := Pc iaddrSize. 
+  (** For redirecting a correct pc: a previous pc is sent as well to train
+   * the branch predictor. *)
+  Definition W2DStr := STRUCT { "prevPc" :: Pc iaddrSize; "nextPc" :: Pc iaddrSize }.
+  Definition w2dElt := Struct W2DStr.
   Definition w2dFifoName := "w2d"%string.
   Definition w2dEnq := MethodSig (w2dFifoName -- "enq")(w2dElt) : Void.
   Definition w2dDeq := MethodSig (w2dFifoName -- "deq")() : w2dElt.
@@ -261,9 +263,6 @@ Section ProcThreeStage.
     
   End ScoreBoard.
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Section FetchDecode.
     Variable (pcInit : ConstT (Pc iaddrSize)).
 
@@ -341,7 +340,7 @@ Section ProcThreeStage.
         Read pinit <- "pinit";
         Assert #pinit;
         Call correctPc <- w2dDeq();
-        Write "pc" <- #correctPc;
+        Write "pc" <- #correctPc!W2DStr@."nextPc";
         Read pEpoch <- "fEpoch";
         Write "fEpoch" <- !#pEpoch;
         Retv
@@ -356,7 +355,7 @@ Section ProcThreeStage.
         LET rawInst <- #pgm@[_truncLsb_ #ppc];
         Call rf <- getRf1();
 
-        LET npc <- predictNextPc _ ppc;
+        Nondet npc : SyntaxKind (Pc iaddrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -386,7 +385,7 @@ Section ProcThreeStage.
         LET rawInst <- #pgm@[_truncLsb_ #ppc];
         Call rf <- getRf1();
 
-        LET npc <- predictNextPc _ ppc;
+        Nondet npc: SyntaxKind (Pc iaddrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -417,7 +416,7 @@ Section ProcThreeStage.
         LET rawInst <- #pgm@[_truncLsb_ #ppc];
         Call rf <- getRf1();
 
-        LET npc <- predictNextPc _ ppc;
+        Nondet npc: SyntaxKind (Pc iaddrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -477,7 +476,8 @@ Section ProcThreeStage.
        If (#npc != #npcp)
        then
          Call toggleEpoch();
-         Call w2dEnq(#npc);
+         Call w2dEnq(STRUCT { "prevPc" ::= #ppc;
+                              "nextPc" ::= #npc });
          Retv
        else
          Retv
@@ -650,7 +650,7 @@ Section ProcThreeStage.
        ++ regFile (rfInit init)
        ++ scoreBoard
        ++ PrimFifo.fifo PrimFifo.primPipelineFifoName d2eFifoName d2eElt
-       ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName (Pc iaddrSize)
+       ++ PrimFifo.fifoF PrimFifo.primBypassFifoName w2dFifoName w2dElt
        ++ executer
        ++ epoch
        ++ PrimFifo.fifo PrimFifo.primPipelineFifoName e2wFifoName e2wElt
@@ -661,7 +661,7 @@ End ProcThreeStage.
 Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep
      d2eFifoName d2eEnq d2eDeq
-     w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
+     W2DStr w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
      e2wFifoName e2wEnq e2wDeq
      sbSearch1_Ld sbSearch2_Ld sbSearch1_St sbSearch2_St
@@ -675,9 +675,6 @@ Section ProcThreeStageM.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
-
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -727,7 +724,7 @@ Section ProcThreeStageM.
                    d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wPack e2wDecInst e2wVal
-                   predictNextPc init.
+                   init.
 
 End ProcThreeStageM.
 
@@ -740,9 +737,6 @@ Section Facts.
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
-
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -801,7 +795,7 @@ Section Facts.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchDecode fetch dec d2ePack predictNextPc pcInit).
+      ModPhoasWf (fetchDecode fetch dec d2ePack pcInit).
   Proof.
     kequiv.
   Qed.
@@ -831,7 +825,7 @@ Section Facts.
   
   Lemma procThreeStage_ModEquiv:
     forall init,
-      ModPhoasWf (p3st fetch dec exec predictNextPc
+      ModPhoasWf (p3st fetch dec exec
                        d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init).

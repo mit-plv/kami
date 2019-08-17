@@ -2,18 +2,15 @@ Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.Specialize Kami.Duplicate.
 Require Import Kami.Wf Kami.Tactics.
-Require Import Ex.MemTypes Ex.SC Ex.MemAsync Ex.ProcFetchDecode.
 Require Import Kami.PrimBram Kami.PrimFifo.
+
+Require Import Ex.Btb Ex.MemTypes Ex.SC Ex.MemAsync Ex.ProcFetchDecode.
 
 Set Implicit Arguments.
 
 Section FetchICache.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
-
-  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
-            (predictNextPc:
-               forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                          Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variable (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes).
 
   Variable (f2dElt: Kind).
   Variable (f2dPack:
@@ -36,15 +33,26 @@ Section FetchICache.
   Definition icache: Modules :=
     bram1 "pgm" iaddrSize (Data instBytes).
 
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Definition btb: Modules := btb getIndex getTag.
+
   Definition instRq :=
     MethodSig ("pgm" -- "putRq")
               (Struct (BramRq iaddrSize (Data instBytes))): Void.
   Definition instRs :=
     MethodSig ("pgm" -- "getRs")(): Data instBytes.
 
+  Definition predictPc := MethodSig "btbPredPc"(Bit iaddrSize): Bit iaddrSize.
+  Definition trainPc := MethodSig "btbUpdate"(Struct (BtbUpdateStr iaddrSize)): Void.
+
   Definition f2dEnq := f2dEnq f2dElt.
   Definition f2dDeq := f2dDeq f2dElt.
 
+  Definition W2DStr := ProcThreeStage.W2DStr iaddrSize.
   Definition w2dDeq := w2dDeq iaddrSize.
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
@@ -131,11 +139,15 @@ Section FetchICache.
       Read pinit <- "pinit";
       Assert #pinit;
       Call correctPc <- w2dDeq();
-      Write "pc" <- #correctPc;
+      LET prevPc <- #correctPc!W2DStr@."prevPc";
+      LET nextPc <- #correctPc!W2DStr@."nextPc";
+      Write "pc" <- #nextPc;
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
       Call f2dClear();
       Write "pcUpdated" <- $$true;
+      Call trainPc (STRUCT {"curPc" ::= _zeroExtend_ #prevPc;
+                            "nextPc" ::= _zeroExtend_ #nextPc });
       Retv
 
     with Rule "instFetchRq" :=
@@ -156,7 +168,9 @@ Section FetchICache.
       Assert !#pcUpdated;
       Call inst <- instRs();
       Read pc : Pc iaddrSize <- "pc";
-      LET npc <- predictNextPc _ pc;
+      (* Predict a next pc using BTB *)
+      Call predPc <- predictPc(_zeroExtend_ #pc);
+      LET npc <- {#predPc, $0};
       Read epoch <- "fEpoch";
       Call f2dEnq(f2dPack #inst #pc #npc #epoch);
       Write "pc" <- #npc;
@@ -172,22 +186,19 @@ Section FetchICache.
       Retv
   }.
 
-  Definition fetchICache := (fetcher ++ icache)%kami.
+  Definition fetchICache := (fetcher ++ icache ++ btb)%kami.
 
 End FetchICache.
 
-Hint Unfold fetcher icache fetchICache : ModuleDefs.
-Hint Unfold instRq instRs
+Hint Unfold fetcher icache btb fetchICache : ModuleDefs.
+Hint Unfold instRq instRs predictPc trainPc
      f2dEnq f2dDeq w2dDeq RqFromProc RsToProc
      memReq memRep: MethDefs.
 
 Section Facts.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
-            (predictNextPc:
-               forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                          Expr ty (SyntaxKind (Pc iaddrSize))).
+  Variable (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -221,14 +232,20 @@ Section Facts.
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+
   Lemma fetcher_ModEquiv:
-    forall pcInit, ModPhoasWf (fetcher fetch predictNextPc f2dPack pcInit).
+    forall pcInit, ModPhoasWf (fetcher fetch f2dPack pcInit).
   Proof. kequiv. Qed.
   Hint Resolve fetcher_ModEquiv.
 
   Lemma fetchICache_ModEquiv:
     forall pcInit,
-      ModPhoasWf (fetchICache fetch predictNextPc f2dPack pcInit).
+      ModPhoasWf (fetchICache fetch f2dPack getIndex getTag pcInit).
   Proof.
     kequiv.
   Qed.

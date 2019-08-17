@@ -14,9 +14,6 @@ Section Invariants.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes).
 
-  Variable predictNextPc: forall ty, fullType ty (SyntaxKind (Pc iaddrSize)) -> (* pc *)
-                                     Expr ty (SyntaxKind (Pc iaddrSize)).
-
   Variable (f2dElt: Kind).
   Variable (f2dPack:
               forall ty,
@@ -35,10 +32,16 @@ Section Invariants.
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
+  Context {indexSize tagSize: nat}.
+  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                    Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit tagSize))).
+
   Variables (pcInit : ConstT (Pc iaddrSize)).
   
   Definition fetchICacheInl :=
-    projT1 (fetchICacheInl fetch predictNextPc f2dPack pcInit).
+    projT1 (fetchICacheInl fetch f2dPack getIndex getTag pcInit).
 
   Record fetchICache_inv (o: RegsT) : Prop :=
     { pcv : fullType type (SyntaxKind (Pc iaddrSize));

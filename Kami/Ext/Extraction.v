@@ -17,10 +17,18 @@ Definition rv32AddrSize := 32.
 
 Section PerInstMemSize.
   Variable rv32IAddrSize: nat.
+  Hypothesis (Haddr: rv32IAddrSize = 3 + (rv32IAddrSize - 3)).
 
-  Definition predictNextPc ty (ppc: fullType ty (SyntaxKind (Pc rv32IAddrSize))) :=
-    (#ppc + $4)%kami_expr.
+  Definition getBTBIndex ty
+             (pc: fullType ty (SyntaxKind (Bit rv32IAddrSize))): (Bit 3) @ ty :=
+    let rpc := eq_rect _ (fun sz => fullType ty (SyntaxKind (Bit sz))) pc _ Haddr in
+    (UniBit (Trunc 3 _) #rpc)%kami_expr.
 
+  Definition getBTBTag ty
+             (pc: fullType ty (SyntaxKind (Bit rv32IAddrSize))): (Bit (rv32IAddrSize - 3)) @ ty :=
+    let rpc := eq_rect _ (fun sz => fullType ty (SyntaxKind (Bit sz))) pc _ Haddr in
+    (UniBit (TruncLsb 3 _) #rpc)%kami_expr.
+  
   Definition pinit: ProcInit rv32IAddrSize rv32DataBytes rv32RfIdx :=
     {| pcInit := Default; rfInit := Default |}.
 
@@ -29,12 +37,12 @@ Section PerInstMemSize.
       (rv32Fetch rv32AddrSize rv32IAddrSize)
       (rv32Dec rv32AddrSize)
       (rv32Exec rv32AddrSize rv32IAddrSize eq_refl eq_refl)
-      predictNextPc
+      getBTBIndex getBTBTag
+      (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
+      (@f2dNextPcI _ _) (@f2dEpochI _ _)
       (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)
-      (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
-      (@f2dNextPcI _ _) (@f2dEpochI _ _)
       (@e2wPackI _ _ _ _ _) (@e2wDecInstI _ _ _ _ _) (@e2wValI _ _ _ _ _)
       pinit.
 
