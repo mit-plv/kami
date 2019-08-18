@@ -125,7 +125,7 @@ Section ProcThreeStDec.
        mlet d2efv : Bool <- r |> "d2e"--"full";
        mlet e2weltv : e2wElt <- r |> "e2w"--"elt";
        mlet e2wfv : Bool <- r |> "e2w"--"full";
-       mlet w2deltv : Pc iaddrSize <- r |> "w2d"--"elt";
+       mlet w2deltv : w2dElt iaddrSize <- r |> "w2d"--"elt";
        mlet w2dfv : Bool <- r |> "w2d"--"full";
        mlet eev : Bool <- r |> "eEpoch";
        mlet stallv : Bool <- r |> "stall";
@@ -139,7 +139,7 @@ Section ProcThreeStDec.
         +["pinit" <- existT _ _ pinitv]
         +["rf" <- existT _ _ rfv]
         +["pc" <- existT _ (SyntaxKind (Pc iaddrSize))
-               (if w2dfv then w2deltv
+               (if w2dfv then w2deltv (Fin.FS Fin.F1)
                 else if stallv then evalExpr (d2eCurPc _ stalledv)
                      else if e2wfv then
                             (if Bool.eqb eev (evalExpr
