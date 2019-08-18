@@ -192,7 +192,7 @@ End FetchICache.
 
 Hint Unfold fetcher icache btb fetchICache : ModuleDefs.
 Hint Unfold instRq instRs predictPc trainPc
-     f2dEnq f2dDeq w2dDeq RqFromProc RsToProc
+     f2dEnq f2dDeq W2DStr w2dDeq RqFromProc RsToProc
      memReq memRep: MethDefs.
 
 Section Facts.

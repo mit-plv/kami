@@ -85,6 +85,7 @@ Section FetchAndDecode.
 
   Definition getRf1 := getRf1 dataBytes rfIdx.
   Definition d2eEnq := d2eEnq d2eElt.
+  Definition W2DStr := W2DStr iaddrSize.
   Definition w2dDeq := w2dDeq iaddrSize.
   Definition sbSearch1_Ld := sbSearch1_Ld rfIdx.
   Definition sbSearch2_Ld := sbSearch2_Ld rfIdx.
@@ -177,7 +178,7 @@ Section FetchAndDecode.
       Read pinit <- "pinit";
       Assert #pinit;
       Call correctPc <- w2dDeq();
-      Write "pc" <- #correctPc;
+      Write "pc" <- #correctPc!W2DStr@."nextPc";
       Read pEpoch <- "fEpoch";
       Write "fEpoch" <- !#pEpoch;
       Call f2dClear();
@@ -290,7 +291,7 @@ End FetchAndDecode.
 
 Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
 Hint Unfold f2dFifoName f2dEnq f2dDeq f2dClear
-     getRf1 d2eEnq w2dDeq sbSearch1_Ld sbSearch2_Ld
+     getRf1 d2eEnq W2DStr w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Nm
      sbSearch2_Nm sbSearch3_Nm sbInsert
      RqFromProc RsToProc memReq memRep: MethDefs.

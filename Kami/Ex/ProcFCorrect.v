@@ -126,9 +126,15 @@ Section Fetch.
       kinv_constr; kinv_eq; kinv_finish.
 
     - kinv_action_dest.
-      kinv_custom fetchICache_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq.
+      + kinv_custom fetchICache_dest_tac.
+        kinv_regmap_red.
+        kinv_constr; kinv_eq.
+      + kinv_custom fetchICache_dest_tac.
+        kinv_regmap_red.
+        kinv_constr; kinv_eq.
+      + kinv_custom fetchICache_dest_tac.
+        kinv_regmap_red.
+        kinv_constr; kinv_eq.
 
     - kinv_action_dest.
       kinv_custom fetchICache_dest_tac.
@@ -136,13 +142,20 @@ Section Fetch.
       kinv_constr; kinv_eq.
 
     - kinv_action_dest.
-      kinv_custom fetchICache_dest_tac.
-      kinv_regmap_red.
-      kinv_constr; kinv_eq.
-      apply Hf2dpackExt; try reflexivity.
-      simpl.
-      destruct x0; [subst|discriminate].
-      reflexivity.
+      + kinv_custom fetchICache_dest_tac.
+        kinv_regmap_red.
+        kinv_constr; kinv_eq.
+        apply Hf2dpackExt; try reflexivity.
+        simpl.
+        destruct x0; [subst|discriminate].
+        reflexivity.
+      + kinv_custom fetchICache_dest_tac.
+        kinv_regmap_red.
+        kinv_constr; kinv_eq.
+        apply Hf2dpackExt; try reflexivity.
+        simpl.
+        destruct x0; [subst|discriminate].
+        reflexivity.
 
     - kinv_action_dest.
       kinv_custom fetchICache_dest_tac.
