@@ -41,7 +41,7 @@ Section BTB.
         Read tags <- "btbTags";
         If (#valid@[#index] && (#tag == #tags@[#index]))
         then Ret #targets@[#index]
-        else Ret (#pc + $4)
+        else Ret (#pc + $1)
         as npc;
         Ret #npc
             
@@ -53,7 +53,7 @@ Section BTB.
         Read targets: Vector (Bit iaddrSize) indexSize <- "btbTargets";
         Read valid: Vector Bool indexSize <- "btbValid";
         Read tags: Vector (Bit tagSize) indexSize <- "btbTags";
-        If (#nextPc != (#curPc + $4))
+        If (#nextPc != (#curPc + $1))
         then
           Write "btbValid" <- #valid@[#index <- $$true];
           Write "btbTags" <- #tags@[#index <- #tag];

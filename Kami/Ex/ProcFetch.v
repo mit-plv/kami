@@ -146,8 +146,8 @@ Section FetchICache.
       Write "fEpoch" <- !#pEpoch;
       Call f2dClear();
       Write "pcUpdated" <- $$true;
-      Call trainPc (STRUCT {"curPc" ::= _zeroExtend_ #prevPc;
-                            "nextPc" ::= _zeroExtend_ #nextPc });
+      Call trainPc (STRUCT {"curPc" ::= _truncLsb_ #prevPc;
+                            "nextPc" ::= _truncLsb_ #nextPc });
       Retv
 
     with Rule "instFetchRq" :=
@@ -169,7 +169,7 @@ Section FetchICache.
       Call inst <- instRs();
       Read pc : Pc iaddrSize <- "pc";
       (* Predict a next pc using BTB *)
-      Call predPc <- predictPc(_zeroExtend_ #pc);
+      Call predPc <- predictPc(_truncLsb_ #pc);
       LET npc <- {#predPc, $0};
       Read epoch <- "fEpoch";
       Call f2dEnq(f2dPack #inst #pc #npc #epoch);
