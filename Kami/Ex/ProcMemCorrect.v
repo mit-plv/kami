@@ -21,10 +21,10 @@ Section ProcFour.
             (ammio: AbsMMIO addrSize).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
            (memInit: MemInit addrSize dataBytes).

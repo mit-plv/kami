@@ -72,10 +72,10 @@ Section FetchDecode.
                   evalExpr (f2dPack rawInst2 curPc2 nextPc2 epoch2)).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
 

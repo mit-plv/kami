@@ -16,10 +16,10 @@ Section BTB.
 
   (** Heads up: should satisfy [indexSize + tagSize = iaddrSize] *)
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   Definition BtbUpdateStr :=
     STRUCT { "curPc" :: Bit iaddrSize; "nextPc" :: Bit iaddrSize }.
@@ -74,10 +74,10 @@ Hint Unfold BtbUpdateStr btbPredPc btbUpdate : MethDefs.
 Section Wf.
   Variable iaddrSize: nat.
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   Lemma btb_ModEquiv:
     ModPhoasWf (btb getIndex getTag).

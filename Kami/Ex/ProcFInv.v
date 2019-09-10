@@ -33,10 +33,10 @@ Section Invariants.
                           Expr ty (SyntaxKind Bool)).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   Variables (pcInit : ConstT (Pc iaddrSize)).
   

@@ -19,10 +19,10 @@ Section ProcFDE.
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                    Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall {ty}, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                  Expr ty (SyntaxKind (Bit tagSize))).
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                  Expr ty (SyntaxKind (Bit indexSize)))
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                Expr ty (SyntaxKind (Bit tagSize))).
 
   (* Abstract f2dElt *)  
   Variable (f2dElt: Kind).
