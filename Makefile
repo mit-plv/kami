@@ -15,18 +15,27 @@ EXTVS:=$(filter-out $(IGNORE:%=%.v),$(EXTVS))
 VS:=$(wildcard Kami/*.v)
 VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(IGNORE:%=%.v),$(VS))
 
-DEPS_DIR ?= ..
+PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
+
+DEPS_DIR ?= $(PARENT_DIR)
 
 default_target: coq
 .PHONY: coq clean
 
 SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
 
-ARGS_NL=-R Kami Kami\n-Q $(DEPS_DIR)/riscv-coq/src/riscv riscv\n-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n$(SUPPRESS_WARN)\n
+ARGS_NL=-R Kami Kami\n$(SUPPRESS_WARN)\n
 ARGS=$(subst \n, ,$(ARGS_NL))
 
 _CoqProject:
 	printf -- '$(ARGS_NL)' > _CoqProject
+
+EXTERNAL_DEPENDENCIES?=
+
+ifneq ($(EXTERNAL_DEPENDENCIES),1)
+COQPATH?=$(DEPS_DIR)/coqutil/src:$(DEPS_DIR)/riscv-coq/src
+export COQPATH
+endif
 
 coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
