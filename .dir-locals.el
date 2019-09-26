@@ -1,8 +1,0 @@
-((coq-mode . ((eval . (let* ((project-root (locate-dominating-file buffer-file-name "_CoqProject"))
-                             (coqutil-folder (expand-file-name "../coqutil/src" project-root))
-                             (riscv-coq-folder (expand-file-name "../riscv-coq/src" project-root))
-                             (coq-path (lambda () (split-string (or (getenv "COQPATH") "") path-separator t))))
-                        (unless (member coqutil-folder (funcall coq-path))
-                          (setenv "COQPATH" (mapconcat #'identity (cons coqutil-folder (funcall coq-path)) path-separator)))
-                        (unless (member riscv-coq-folder (funcall coq-path))
-                          (setenv "COQPATH" (mapconcat #'identity (cons riscv-coq-folder (funcall coq-path)) path-separator))))))))

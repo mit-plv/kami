@@ -25,17 +25,21 @@ default_target: coq
 SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
 
 ARGS_NL=-R Kami Kami\n$(SUPPRESS_WARN)\n
-ARGS=$(subst \n, ,$(ARGS_NL))
-
-_CoqProject:
-	printf -- '$(ARGS_NL)' > _CoqProject
+DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n-Q $(DEPS_DIR)/riscv-coq/src/riscv riscv\n
 
 EXTERNAL_DEPENDENCIES?=
 
+# If we get our dependencies externally, then we should not bind the local versions of things
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
-COQPATH?=$(DEPS_DIR)/coqutil/src:$(DEPS_DIR)/riscv-coq/src
-export COQPATH
+ALLARGS_NL=$(DEPFLAGS_NL)$(ARGS_NL)
+else
+ALLARGS_NL=$(ARGS_NL)
 endif
+
+ALLARGS=$(subst \n, ,$(ALLARGS_NL))
+
+_CoqProject:
+	printf -- '$(ALLARGS_NL)' > _CoqProject
 
 coq: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all
