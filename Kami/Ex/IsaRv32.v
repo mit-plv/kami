@@ -114,8 +114,11 @@ Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 0) : kami_expr_scope.
 Section RV32IM.
   Variables rv32AddrSize (* 2^(rv32AddrSize) memory cells *)
             rv32IAddrSize: nat. (* 2^(rv32IAddrSize) instructions *)
+
   Hypotheses (Haddr1: rv32AddrSize = 2 + (rv32AddrSize - 2))
-             (Haddr2: rv32AddrSize = 1 + 1 + (rv32AddrSize - 2)).
+             (Haddr2: rv32AddrSize = 1 + 1 + (rv32AddrSize - 2))
+             (Haddr3: rv32AddrSize = 2 + rv32IAddrSize
+                                     + (rv32AddrSize - (2 + rv32IAddrSize))).
 
   Section Decode.
 
@@ -324,7 +327,8 @@ Section RV32IM.
 
   Definition rv32AlignAddr: AlignAddrT rv32AddrSize rv32IAddrSize.
     unfold AlignAddrT; intros ty iaddr.
-    exact ((_zeroExtend_ #iaddr) << $$(natToWord 2 2))%kami_expr.
+    rewrite Haddr3.
+    exact {$0, {#iaddr, $0}}%kami_expr.
   Defined.
 
   Definition rv32AlignInst: AlignInstT rv32InstBytes rv32DataBytes.
