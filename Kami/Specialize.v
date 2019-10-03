@@ -787,9 +787,10 @@ Section Specializable.
         apply in_map_iff in H0; dest; subst.
         unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
         apply eq_sym in Heqidx.
-        apply index_correct3 with (m:= String.length x) in Heqidx; auto.
+        apply index_correct3 with (m:= String.length x) in Heqidx.
         * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
+        * discriminate.
         * omega.
     - destruct H1; [subst|].
       + clear -H H0; induction l; simpl; intros; auto.
@@ -798,9 +799,10 @@ Section Specializable.
         inv H0; auto.
         unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
         apply eq_sym in Heqidx.
-        apply index_correct3 with (m:= String.length a) in Heqidx; auto.
+        apply index_correct3 with (m:= String.length a) in Heqidx.
         * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
+        * discriminate.
         * omega.
       + eauto.
   Qed.
