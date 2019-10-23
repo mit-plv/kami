@@ -115,11 +115,9 @@ Section Invariants.
               (rq (RqFromProc !! "op") = false /\
                rq (RqFromProc !! "addr") =
                evalExpr
-                 (alignLdAddr
-                    _ (evalExpr
-                         (calcLdAddr
-                            _ (evalExpr (getLdAddr _ rawInst))
-                            (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)))) /\
+                 (calcLdAddr
+                    _ (evalExpr (getLdAddr _ rawInst))
+                    (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
                rq (RqFromProc !! "data") =
                evalConstT (getDefaultConst (Data dataBytes))))).
     - exact ((rq (RqFromProc !! "op") = true ->

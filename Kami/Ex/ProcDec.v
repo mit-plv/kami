@@ -115,8 +115,7 @@ Section ProcDec.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      LET laddra <- alignLdAddr _ laddr;
-      Call memReq(STRUCT { "addr" ::= #laddra;
+      Call memReq(STRUCT { "addr" ::= #laddr;
                            "op" ::= $$false;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
@@ -244,10 +243,10 @@ Section ProcDecM.
     procDec fetch dec exec init.
 
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
-            (memInit: MemInit addrSize dataBytes).
+            (memInit: MemInit addrSize).
 
   Definition pdecf := (pdec procInit ++ iom addrSize dataBytes)%kami.
-  Definition procDecM := (pdecf ++ mm memInit ammio)%kami.
+  Definition procDecM := (pdecf ++ mm dataBytes memInit ammio)%kami.
 
 End ProcDecM.
 

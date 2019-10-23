@@ -273,12 +273,6 @@ Section RV32IM.
 
   Defined.
 
-  Definition rv32AlignLdAddr: LdAlignAddrT rv32AddrSize.
-    unfold LdAlignAddrT; intros ty laddr.
-    rewrite Haddr1; rewrite Haddr1 in laddr.
-    exact ({UniBit (TruncLsb 2 _) #laddr, $$(WO~0~0)})%kami_expr.
-  Defined.
-
   Definition rv32CalcLdVal: LdValCalcT rv32AddrSize rv32DataBytes.
     unfold LdValCalcT; intros ty addr val ldty.
     refine (IF (#ldty == $funct3_LB) then _ else _)%kami_expr.
@@ -398,8 +392,7 @@ Section RV32IM.
 
   Instance rv32Exec:
     AbsExec rv32AddrSize rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
-    {| alignLdAddr := rv32AlignLdAddr;
-       calcLdVal := rv32CalcLdVal;
+    {| calcLdVal := rv32CalcLdVal;
        doExec := rv32DoExec;
        getNextPc := rv32NextPc |}.
 

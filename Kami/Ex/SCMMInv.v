@@ -26,7 +26,7 @@ Section Invariants.
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize dataBytes).
+           (memInit: MemInit addrSize).
   Hypotheses (HinitRf: evalConstT procInit.(rfInit) $0 = $0)
              (HpgmInit: PgmInitNotMMIO).
 
@@ -42,11 +42,11 @@ Section Invariants.
              (initv: fullType type (SyntaxKind Bool))
              (ofsv: fullType type (SyntaxKind (Bit iaddrSize)))
              (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
-             (memv: fullType type (SyntaxKind (Vector (Data dataBytes) addrSize))) :=
+             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) addrSize))) :=
     initv = false ->
     forall iaddr,
       iaddr < ofsv ->
-      pgmv iaddr = evalExpr (alignInst _ (memv (evalExpr (alignAddr _ iaddr)))).
+      pgmv iaddr = evalExpr (alignInst _ (combineBytes dataBytes (evalExpr (alignAddr _ iaddr)) memv)).
   Hint Unfold scmm_inv_pgm_init: InvDefs.
         
   Inductive scmm_inv (o: RegsT) : Prop :=
@@ -61,7 +61,7 @@ Section Invariants.
              (HpinitOfsv: o@["pinitOfs"] = Some (existT _ _ pinitOfsv))
              (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
              (Hpgmv: o@["pgm"] = Some (existT _ _ pgmv))
-             (memv: fullType type (SyntaxKind (Vector (Data dataBytes) addrSize)))
+             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) addrSize)))
              (Hmemv: o@["mem"] = Some (existT _ _ memv)),
         scmm_inv_rf_zero rfv ->
         scmm_inv_pgm_init pinitv pinitOfsv pgmv memv ->
@@ -107,7 +107,7 @@ Section Invariants.
       by (intro Hx; elim H1; apply wordToNat_inj; assumption).
     omega.
   Qed.
-  
+
   Lemma scmm_inv_ok':
     forall init n ll,
       init = initRegs (getRegInits (projT1 scmmInl)) ->
@@ -133,7 +133,9 @@ Section Invariants.
           congruence.
         * intros.
           destruct (weq iaddr x0).
-          { subst; reflexivity. }
+          { rewrite memLoadBytes_combineBytes.
+            subst; reflexivity.
+          }
           { apply H7.
             apply wlt_plus_1_back; auto.
           }

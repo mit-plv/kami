@@ -520,8 +520,7 @@ Section ProcThreeStage.
 
         Assert d2eOpType _ d2e == $$opLd;
         LET laddr <- d2eAddr _ d2e;
-        LET laddra <- alignLdAddr _ laddr;
-        Call memReq(STRUCT { "addr" ::= #laddra;
+        Call memReq(STRUCT { "addr" ::= #laddr;
                              "op" ::= $$false;
                              "data" ::= $$Default });
         Write "stall" <- $$true;

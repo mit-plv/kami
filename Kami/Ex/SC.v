@@ -60,11 +60,6 @@ Section DecExec.
       fullType ty (SyntaxKind (Data dataBytes)) -> (* offset value *)
       Expr ty (SyntaxKind (Bit addrSize)).
 
-  Definition LdAlignAddrT :=
-    forall ty,
-      fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
-      Expr ty (SyntaxKind (Bit addrSize)).
-
   Definition LdValCalcT :=
     forall ty,
       fullType ty (SyntaxKind (Bit addrSize)) -> (* requested address *)
@@ -146,8 +141,7 @@ Section DecExec.
     }.
 
   Class AbsExec :=
-    { alignLdAddr: LdAlignAddrT;
-      calcLdVal: LdValCalcT;
+    { calcLdVal: LdValCalcT;
       doExec: ExecT;
       getNextPc: NextPcT
     }.
@@ -162,54 +156,80 @@ End DecExec.
 
 Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT LdAddrCalcT
-     LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdAlignAddrT LdValCalcT
+     LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdValCalcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StVSrcK StVSrcE StVSrcT
      Src1K Src1E Src1T Src2K Src2E Src2T
      StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
-  Variable n : nat.
   Variable addrSize : nat.
   Variable dataBytes : nat.
 
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
 
-  Definition MemInit := ConstT (Vector (Data dataBytes) addrSize).
+  Definition MemInit := ConstT (Vector (Bit BitsPerByte) addrSize).
   
   Variable (memInit: MemInit).
-  
+
+  Definition memOp := MethodSig "memOp"(Struct RqFromProc) : Struct RsToProc.
+
+  (* NOTE: it's little endian *)
+  Fixpoint memLoadBytes {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
+           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
+    Expr ty (SyntaxKind (Bit (n * BitsPerByte))) :=
+    (match n with
+     | 0 => $$WO
+     | S n' => {memLoadBytes n' (addr + $1) mem, mem@[addr]}
+     end)%kami_expr.
+
+  (* NOTE: it's little endian as well *)
+  Fixpoint memStoreBytes {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
+           (val: Expr ty (SyntaxKind (Bit (n * BitsPerByte))))
+           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
+    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize)) :=
+    (match n as n0 return
+           ((Bit (n0 * BitsPerByte))@ty ->
+            (Vector (Bit BitsPerByte) addrSize)@ty)
+     with
+     | 0 => fun _ => mem
+     | S n' =>
+       fun val0 =>
+         memStoreBytes
+           n' (addr + $1)
+           (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0)
+           (mem@[addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0])
+     end val)%kami_expr.
+
+  (* For semantic uses *)
+  Fixpoint combineBytes (n: nat) (addr: word addrSize)
+           (mem: word addrSize -> word BitsPerByte): word (n * BitsPerByte) :=
+    match n with
+    | 0 => WO
+    | S n' => combine (mem addr) (combineBytes n' (addr ^+ $1) mem)
+    end.
+
   Definition memInst :=
     MODULE {
-      Register "mem" : Vector (Data dataBytes) addrSize <- memInit
+      Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
 
       with Method "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
         If !#a!RqFromProc@."op" then (* load *)
           Read memv <- "mem";
-          LET ldval <- #memv@[#a!RqFromProc@."addr"];
+          LET addr <- #a!RqFromProc@."addr";
+          LET ldval <- memLoadBytes dataBytes #addr #memv;
           Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
         else (* store *)
           Read memv <- "mem";
-          Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
+          LET addr <- #a!RqFromProc@."addr";
+          LET val <- #a!RqFromProc@."data";
+          Write "mem" <- memStoreBytes dataBytes #addr #val #memv;
           Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
         as na;
         Ret #na
     }.
     
-  Definition memOp := MethodSig "memOp"(Struct RqFromProc) : Struct RsToProc.
-  
-End MemInst.
-
-Hint Unfold RqFromProc RsToProc memOp : MethDefs.
-Hint Unfold memInst : ModuleDefs.
-
-Section MMIO.
-  Variable addrSize: nat.
-  Variable dataBytes: nat.
-
-  Variable (memInit: MemInit addrSize dataBytes).
-
   Definition IsMMIOE (ty: Kind -> Type) := Expr ty (SyntaxKind Bool).
   Definition IsMMIOT :=
     forall ty, fullType ty (SyntaxKind (Bit addrSize)) -> IsMMIOE ty.
@@ -219,40 +239,41 @@ Section MMIO.
 
   Variable (ammio: AbsMMIO).
 
-  Local Notation RqFromProc := (RqFromProc addrSize dataBytes).
-  Local Notation RsToProc := (RsToProc dataBytes).
-
   Definition mmioExec :=
     MethodSig "mmioExec"(Struct RqFromProc): Struct RsToProc.
+  
+  Definition mm :=
+    MODULE {
+      Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
 
-  Definition mm := MODULE {
-    Register "mem" : Vector (Data dataBytes) addrSize <- memInit
+      with Method "memOp" (a : Struct RqFromProc): Struct RsToProc :=
+        LET addr <- #a!RqFromProc@."addr";
 
-    with Method "memOp" (a : Struct RqFromProc): Struct RsToProc :=
-      LET addr <- #a!RqFromProc@."addr";
-
-      If (isMMIO _ addr) then (** mmio *)
-        Call rs <- mmioExec(#a);
-        Ret #rs
-      else
-        If !#a!RqFromProc@."op" then (** load *)
-          Read memv <- "mem";
-          LET ldval <- #memv@[#a!RqFromProc@."addr"];
-          Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
-        else (** store *)
-          Read memv <- "mem";
-          Write "mem" <- #memv@[ #a!RqFromProc@."addr" <- #a!RqFromProc@."data" ];
-          Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
+        If (isMMIO _ addr) then (** mmio *)
+          Call rs <- mmioExec(#a);
+          Ret #rs
+        else
+          If !#a!RqFromProc@."op" then (* load *)
+            Read memv <- "mem";
+            LET addr <- #a!RqFromProc@."addr";
+            LET ldval <- memLoadBytes dataBytes #addr #memv;
+            Ret (STRUCT { "data" ::= #ldval } :: Struct RsToProc)
+          else (* store *)
+            Read memv <- "mem";
+            LET addr <- #a!RqFromProc@."addr";
+            LET val <- #a!RqFromProc@."data";
+            Write "mem" <- memStoreBytes dataBytes #addr #val #memv;
+            Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
+          as na;
+          Ret #na
         as na;
         Ret #na
-      as na;
-      Ret #na
-  }.
-    
-End MMIO.
+    }.
+  
+End MemInst.
 
-Hint Unfold IsMMIOE IsMMIOT mmioExec : MethDefs.
-Hint Unfold mm : ModuleDefs.
+Hint Unfold RqFromProc RsToProc memOp IsMMIOE IsMMIOT mmioExec: MethDefs.
+Hint Unfold memInst mm: ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
@@ -334,8 +355,7 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      LET laddra <- alignLdAddr _ laddr;
-      Call ldRep <- memOp(STRUCT { "addr" ::= #laddra;
+      Call ldRep <- memOp(STRUCT { "addr" ::= #laddr;
                                    "op" ::= $$false;
                                    "data" ::= $$Default });
       LET ldValWord <- #ldRep!(RsToProc dataBytes)@."data";
@@ -360,8 +380,7 @@ Section ProcInst.
       LET srcIdx <- getLdSrc _ rawInst;
       LET srcVal <- #rf@[#srcIdx];
       LET laddr <- calcLdAddr _ addr srcVal;
-      LET laddra <- alignLdAddr _ laddr;
-      Call memOp(STRUCT { "addr" ::= #laddra;
+      Call memOp(STRUCT { "addr" ::= #laddr;
                           "op" ::= $$false;
                           "data" ::= $$Default });
       nextPc ppc rf rawInst
@@ -432,11 +451,11 @@ Section SC.
   Variable n: nat.
 
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
-            (memInit: MemInit addrSize dataBytes).
+            (memInit: MemInit addrSize).
 
   Definition pinst := procInst fetch dec exec procInit.
 
-  Definition scmm := ConcatMod pinst (mm memInit ammio).
+  Definition scmm := ConcatMod pinst (mm dataBytes memInit ammio).
 
 End SC.
 
@@ -450,6 +469,18 @@ Section Facts.
             (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
+  Lemma memLoadBytes_combineBytes:
+    forall n (addr: (Bit addrSize)@type)
+           (mem: (Vector (Bit BitsPerByte) addrSize)@type),
+      evalExpr (memLoadBytes n addr mem) =
+      combineBytes n (evalExpr addr) (evalExpr mem).
+  Proof.
+    induction n.
+    - intros; reflexivity.
+    - intros; simpl.
+      rewrite IHn; reflexivity.
+  Qed.
+
   Lemma pinst_ModEquiv:
     forall init,
       ModPhoasWf (pinst fetch dec exec init).
@@ -459,21 +490,21 @@ Section Facts.
   Hint Resolve pinst_ModEquiv.
 
   Lemma memInst_ModEquiv:
-    forall (init: MemInit addrSize dataBytes),
-      ModPhoasWf (memInst init).
+    forall (init: MemInit addrSize),
+      ModPhoasWf (memInst dataBytes init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve memInst_ModEquiv.
 
   Lemma mm_ModEquiv:
-    forall (init: MemInit addrSize dataBytes),
-      ModPhoasWf (mm init ammio).
+    forall (init: MemInit addrSize),
+      ModPhoasWf (mm dataBytes init ammio).
   Proof.
     kequiv.
   Qed.
   Hint Resolve mm_ModEquiv.
-  
+
   Lemma scmm_ModEquiv:
     forall procInit memInit,
       ModPhoasWf (scmm fetch dec exec ammio procInit memInit).

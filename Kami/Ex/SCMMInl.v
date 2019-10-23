@@ -17,7 +17,7 @@ Section Inlined.
             (ammio: AbsMMIO addrSize).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize dataBytes).
+           (memInit: MemInit addrSize).
   
   Definition scmm: Modules := scmm fetch dec exec ammio procInit memInit.
   Hint Unfold scmm: ModuleDefs. (* for kinline_compute *)

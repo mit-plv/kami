@@ -41,10 +41,10 @@ Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
 
 Section MemAsync.
   Variables (addrSize fifoSize dataBytes: nat).
-  Variables (memInit: MemInit addrSize dataBytes)
+  Variables (memInit: MemInit addrSize)
             (ammio: AbsMMIO addrSize).
 
-  Definition mm := mm memInit ammio.
+  Definition mm := mm dataBytes memInit ammio.
 
   Definition inQ :=
     @nativeSimpleFifo "rqFromProc" (Struct (RqFromProc addrSize dataBytes)) Default.
@@ -66,7 +66,7 @@ Hint Unfold mm inQ outQ ioQ midQ iom memAsyncWoQ memAsync : ModuleDefs.
 
 Section Facts.
   Variables (addrSize dataBytes: nat).
-  Variables (memInit: MemInit addrSize dataBytes)
+  Variables (memInit: MemInit addrSize)
             (ammio: AbsMMIO addrSize).
 
   Lemma midQ_ModEquiv:
@@ -84,13 +84,13 @@ Section Facts.
   Hint Resolve iom_ModEquiv.
 
   Lemma memAsyncWoQ_ModEquiv:
-    ModPhoasWf (memAsyncWoQ memInit ammio).
+    ModPhoasWf (memAsyncWoQ dataBytes memInit ammio).
   Proof.
     kequiv.
   Qed.
 
   Lemma memAsync_ModEquiv:
-    ModPhoasWf (memAsync memInit ammio).
+    ModPhoasWf (memAsync dataBytes memInit ammio).
   Proof.
     kequiv.
   Qed.

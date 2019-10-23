@@ -27,7 +27,7 @@ Section ProcFour.
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize dataBytes).
+           (memInit: MemInit addrSize).
 
   Section AbsPipeline.
 
@@ -162,7 +162,7 @@ Section ProcFour.
       SC.pinst fetch dec exec procInit.
 
     Definition mm: Modules :=
-      SC.mm memInit ammio.
+      SC.mm dataBytes memInit ammio.
 
     Definition p4mma: Modules :=
       (p4stf ++ mm)%kami.
@@ -200,11 +200,8 @@ Section ProcFour.
       (@e2wPackI _ _ _ _ _) (@e2wDecInstI _ _ _ _ _) (@e2wValI _ _ _ _ _).
 
   Theorem p4mm_correct: p4mm <<== scmm.
-  Proof. (* SKIP_PROOF_ON
+  Proof.
     intros; apply p4mma_correct; auto.
-    intros; unfold f2dPackI.
-    simpl; rewrite H, H0, H1, H2; reflexivity.
-    END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
 End ProcFour.
