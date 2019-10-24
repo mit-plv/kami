@@ -38,7 +38,7 @@ Section PerInstMemSize.
     ProcFourStDec.p4st
       (rv32Fetch rv32AddrSize rv32IAddrSize Haddr2)
       (rv32Dec rv32AddrSize)
-      (rv32Exec rv32AddrSize rv32IAddrSize eq_refl eq_refl)
+      (rv32Exec rv32AddrSize rv32IAddrSize)
       getBTBIndex getBTBTag
       (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
       (@f2dNextPcI _ _) (@f2dEpochI _ _)
