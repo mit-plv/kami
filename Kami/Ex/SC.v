@@ -210,6 +210,22 @@ Section MemInst.
     | S n' => combine (mem addr) (combineBytes n' (addr ^+ $1) mem)
     end.
 
+  Fixpoint updateBytes (n: nat) (addr: word addrSize) (val: word (n * BitsPerByte))
+           (mem: word addrSize -> word BitsPerByte): word addrSize -> word BitsPerByte :=
+    (match n as n0 return
+           (word (n0 * BitsPerByte) -> (word addrSize -> word BitsPerByte))
+     with
+     | 0 => fun _ => mem
+     | S n' => fun val0 =>
+                 updateBytes
+                   n' (addr ^+ $1)
+                   (split2 BitsPerByte (n' * BitsPerByte) val0)
+                   (fun w =>
+                      if weq w addr
+                      then (split1 BitsPerByte (n' * BitsPerByte) val0)
+                      else mem w)
+     end) val.
+
   Definition memInst :=
     MODULE {
       Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
@@ -474,6 +490,19 @@ Section Facts.
            (mem: (Vector (Bit BitsPerByte) addrSize)@type),
       evalExpr (memLoadBytes n addr mem) =
       combineBytes n (evalExpr addr) (evalExpr mem).
+  Proof.
+    induction n.
+    - intros; reflexivity.
+    - intros; simpl.
+      rewrite IHn; reflexivity.
+  Qed.
+
+  Lemma memStoreBytes_updateBytes:
+    forall n (addr: (Bit addrSize)@type)
+           (val: (Bit (n * BitsPerByte))@type)
+           (mem: (Vector (Bit BitsPerByte) addrSize)@type),
+      evalExpr (memStoreBytes n addr val mem) =
+      updateBytes n (evalExpr addr) (evalExpr val) (evalExpr mem).
   Proof.
     induction n.
     - intros; reflexivity.
