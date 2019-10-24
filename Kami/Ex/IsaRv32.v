@@ -275,48 +275,18 @@ Section RV32IM.
 
   Definition rv32CalcLdVal: LdValCalcT rv32AddrSize rv32DataBytes.
     unfold LdValCalcT; intros ty addr val ldty.
-    refine (IF (#ldty == $funct3_LB) then _ else _)%kami_expr.
-    1: {
-      rewrite Haddr1 in addr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~0))
-              then _signExtend_ (UniBit (Trunc BitsPerByte _) #val)
-              else _)%kami_expr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~1))
-              then _signExtend_ (UniBit (ConstExtract BitsPerByte BitsPerByte _) #val)
-              else _)%kami_expr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~1~0))
-              then _signExtend_ (UniBit (ConstExtract (2 * BitsPerByte) BitsPerByte _) #val)
-              else _signExtend_ (UniBit (TruncLsb (3 * BitsPerByte) _) #val))%kami_expr.
-    }
-    refine (IF (#ldty == $funct3_LH) then _ else _)%kami_expr.
-    1: {
-      rewrite Haddr2 in addr.
-      refine (IF (UniBit (ConstExtract 1 1 (rv32AddrSize - 2)) #addr == $$(WO~0))
-              then _signExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
-              else _signExtend_ (UniBit (TruncLsb (2 * BitsPerByte) _) #val)
-             )%kami_expr.
-    }
-    refine (IF (#ldty == $funct3_LBU) then _ else _)%kami_expr.
-    1: {
-      rewrite Haddr1 in addr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~0))
-              then _zeroExtend_ (UniBit (Trunc BitsPerByte _) #val)
-              else _)%kami_expr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~0~1))
-              then _zeroExtend_ (UniBit (ConstExtract BitsPerByte BitsPerByte _) #val)
-              else _)%kami_expr.
-      refine (IF (UniBit (Trunc 2 (rv32AddrSize - 2)) #addr == $$(WO~1~0))
-              then _zeroExtend_ (UniBit (ConstExtract (2 * BitsPerByte) BitsPerByte _) #val)
-              else _zeroExtend_ (UniBit (TruncLsb (3 * BitsPerByte) _) #val))%kami_expr.
-    }
-    refine (IF (#ldty == $funct3_LHU) then _ else #val)%kami_expr.
-    1: {
-      rewrite Haddr2 in addr.
-      refine (IF (UniBit (ConstExtract 1 1 (rv32AddrSize - 2)) #addr == $$(WO~0))
-              then _zeroExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
-              else _zeroExtend_ (UniBit (TruncLsb (2 * BitsPerByte) _) #val)
-             )%kami_expr.
-    }
+    refine (IF (#ldty == $funct3_LB)
+            then _signExtend_ (UniBit (Trunc BitsPerByte _) #val)
+            else _)%kami_expr.
+    refine (IF (#ldty == $funct3_LH)
+            then _signExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
+            else _)%kami_expr.
+    refine (IF (#ldty == $funct3_LBU)
+            then _zeroExtend_ (UniBit (Trunc BitsPerByte _) #val)
+            else _)%kami_expr.
+    refine (IF (#ldty == $funct3_LHU)
+            then _zeroExtend_ (UniBit (Trunc (2 * BitsPerByte) _) #val)
+            else #val)%kami_expr.
   Defined.
 
   Definition rv32AlignAddr: AlignAddrT rv32AddrSize rv32IAddrSize.
