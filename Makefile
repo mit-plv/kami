@@ -61,3 +61,6 @@ clean:: Makefile.coq.all Makefile.coq.src
 	rm -f Makefile.coq.all
 	rm -f Makefile.coq.src
 	rm -f _CoqProject
+
+install:: Makefile.coq.all
+	$(MAKE) -f Makefile.coq.all install
