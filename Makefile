@@ -20,7 +20,7 @@ PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
 DEPS_DIR ?= $(PARENT_DIR)
 
 default_target: coq
-.PHONY: coq clean
+.PHONY: coq clean install
 
 SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
 
@@ -61,3 +61,6 @@ clean:: Makefile.coq.all Makefile.coq.src
 	rm -f Makefile.coq.all
 	rm -f Makefile.coq.src
 	rm -f _CoqProject
+
+install:: Makefile.coq.all
+	$(MAKE) -f Makefile.coq.all install
