@@ -24,7 +24,7 @@ Qed.
 Theorem Nneq_out : forall n m,
   n <> m
   -> nat_of_N n <> nat_of_N m.
-  intuition.
+  intuition idtac.
   match goal with H0 : _ |- _ => apply nat_of_N_eq in H0; tauto end.
 Qed.
 
