@@ -119,7 +119,7 @@ Section Invariants.
                     _ (evalExpr (getLdAddr _ rawInst))
                     (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
                rq (RqFromProc !! "data") =
-               evalConstT (getDefaultConst (Data dataBytes))))).
+               evalConstT (getDefaultConst (Data dataBytes)))))%kami_expr.
     - exact ((rq (RqFromProc !! "op") = true ->
               evalExpr (getOptype _ rawInst) = opSt) /\
              (evalExpr (getOptype _ rawInst) = opSt ->
@@ -127,9 +127,9 @@ Section Invariants.
                rq (RqFromProc !! "addr") =
                evalExpr (calcStAddr
                            _ (evalExpr (getStAddr _ rawInst))
-                           (evalExpr (#rf@[getStSrc _ rawInst])%kami_expr)) /\
+                           (evalExpr (#rf@[getStSrc _ rawInst]))) /\
                rq (RqFromProc !! "data") =
-               evalExpr (#rf@[getStVSrc _ rawInst ])%kami_expr))).
+               evalExpr (#rf@[getStVSrc _ rawInst ]))))%kami_expr.
   Defined.
   Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
        mem_request_inv: InvDefs.
@@ -216,6 +216,7 @@ Section Invariants.
       + simpl; kinv_eq.
         rewrite app_length; simpl.
         rewrite wnot_not_zero_wplusone by assumption.
+        unfold type, ilist_to_fun_m; simpl.
         do 3 f_equal; omega.
       + apply IHelts; auto.
   Qed.
@@ -242,6 +243,7 @@ Section Invariants.
         rewrite app_length; simpl.
         rewrite wnot_zero_wones with (w:= rqOfs) by assumption.
         rewrite wones_natToWord.
+        unfold type, ilist_to_fun_m; simpl.
         do 3 f_equal.
         pose proof (NatLib.pow2_zero iaddrSize).
         rewrite wordToNat_natToWord_2; omega.
@@ -300,6 +302,7 @@ Section Invariants.
         * kinv_regmap_red.
           rewrite app_length; simpl in *.
           rewrite wnot_not_zero_wplusone by assumption.
+          unfold type in *; simpl in *.
           omega.
 
       + kinv_dest_custom procDec_inv_tac; kinv_constr.
@@ -307,7 +310,9 @@ Section Invariants.
         * kinv_regmap_red.
           rewrite app_length; simpl in *.
           replace #x1 with (NatLib.pow2 iaddrSize - 1) in H2.
-          { pose proof (NatLib.pow2_zero iaddrSize); omega. }
+          { pose proof (NatLib.pow2_zero iaddrSize).
+            unfold type in *; simpl in *; omega.
+          }
           { replace x1 with (wones iaddrSize).
             { apply eq_sym, wones_pow2_minus_one. }
             { apply wnot_zero_wones in e; auto. }
@@ -357,6 +362,7 @@ Section Invariants.
         * rewrite H2.
           destruct x; [discriminate|].
           kinv_regmap_red.
+          unfold type in *; simpl in *.
           rewrite app_length; simpl; omega.
         * procDec_inv_old; procDec_inv_next 2.
           destruct x; [discriminate|].
@@ -366,6 +372,7 @@ Section Invariants.
         * rewrite H2.
           destruct x; [discriminate|].
           kinv_regmap_red.
+          unfold type in *; simpl in *.
           rewrite app_length; simpl; omega.
         * procDec_inv_old; procDec_inv_next 2.
           destruct x; [discriminate|].

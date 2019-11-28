@@ -348,10 +348,14 @@ Fixpoint natToFin n (i: nat): Fin.t (S n) :=
 Section Phoas.
   Variable ty: Kind -> Type.
   Definition fullType k := match k with
-                             | SyntaxKind k' => ty k'
-                             | NativeKind k' _ => k'
+                           | SyntaxKind k' => ty k'
+                           | NativeKind k' _ => k'
                            end.
-  
+
+  Definition FieldKind {n} (ls: Vector.t (Attribute Kind) n)
+             (i: Fin.t n) :=
+    Vector.nth (Vector.map (@attrType _) ls) i.
+    
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
   | Const k: ConstT k -> Expr (SyntaxKind k)
@@ -369,8 +373,7 @@ Section Phoas.
   | ReadIndex i k: Expr (SyntaxKind (Bit i)) ->
                    Expr (SyntaxKind (Vector k i)) -> Expr (SyntaxKind k)
   | ReadField n (ls: Vector.t _ n) (i: Fin.t n):
-      Expr (SyntaxKind (Struct ls)) ->
-      Expr (SyntaxKind (Vector.nth (Vector.map (@attrType _) ls) i))
+      Expr (SyntaxKind (Struct ls)) -> Expr (SyntaxKind (FieldKind ls i))
   | BuildVector n k: Vec (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Vector n k))
   | BuildStruct n (attrs: Vector.t _ n):
       ilist (fun a => Expr (SyntaxKind (attrType a))) attrs -> Expr (SyntaxKind (Struct attrs))

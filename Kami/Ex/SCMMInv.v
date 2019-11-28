@@ -130,6 +130,7 @@ Section Invariants.
         * exfalso.
           clear -HpgmInit Heqic.
           specialize (HpgmInit x0).
+          unfold ilist_to_fun_m in Heqic; simpl in Heqic.
           congruence.
         * intros.
           destruct (weq iaddr x0).

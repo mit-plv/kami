@@ -21,7 +21,7 @@ Section Middleman.
     MODULE {
       Rule "processLd" :=
         Call req <- getReq();
-        Assert !#req!RqFromProc@."op";
+        Assert !(#req!RqFromProc@."op");
         Call rep <- memOp(#req);
         Call setRep(#rep);
         Retv

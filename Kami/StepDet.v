@@ -308,7 +308,10 @@ Section OneDepth.
         destruct H5, pa; discriminate.
       - simpl in H4.
         exfalso; clear -H4.
-        assert (M.union ([]) #[ attrName f |-> (argV, retV)]%fmap ds <> M.empty _).
+        match goal with
+        | [H: {| defs := ?m |} = _ |- _] =>
+          assert (m <> M.empty _)
+        end.
         { intro Hx.
           apply M.union_empty in Hx; dest.
           eapply M.add_empty_neq; eauto.

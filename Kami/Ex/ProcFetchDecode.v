@@ -191,7 +191,7 @@ Section FetchAndDecode.
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Read epoch <- "fEpoch";
       Nondet npc : SyntaxKind (Pc iaddrSize);
-      Call f2dEnq(f2dPack #pgm@[_truncLsb_ #pc] #pc #npc #epoch);
+      Call f2dEnq(f2dPack (#pgm@[_truncLsb_ #pc]) #pc #npc #epoch);
       Write "pc" <- #npc;
       Retv
   }.

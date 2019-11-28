@@ -396,8 +396,6 @@ Section Multiplier64.
 
   (*! Correctness of the multiplier *)
 
-  Require Import ZArith.
-
   Section BoothEncoding.
 
     Inductive Booth := BZero | BPlus | BMinus.
@@ -1269,6 +1267,7 @@ Section Multiplier64.
         remember (8 * wordToNat x + 1) as psl.
         assert (psl >= 9)%nat.
         { subst; clear -n1.
+          unfold type in x.
           do 5 (dependent destruction x).
           destruct b, b0, b1, b2; cbn; try omega.
           elim n1; reflexivity.
@@ -1375,13 +1374,13 @@ Section Multiplier64.
       assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H6; cbn; cbn in H6; omega).
       subst; destruct_existT.
       rewrite idElementwiseId; unfold id.
-      repeat f_equal.
-      apply pair_eq; [|reflexivity].
+      do 3 f_equal.
       fin_func_eq.
 
       + Opaque split1 split2 wordToZ.
         simpl.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
+        unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
         rewrite wtl_combine.
         unfold wmultZ, wordBinZ.
@@ -1401,6 +1400,7 @@ Section Multiplier64.
       + Opaque split1 split2 wordToZ.
         simpl.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
+        unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
         rewrite wtl_combine.
         unfold wmultZ, wordBinZ.

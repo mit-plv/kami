@@ -20,31 +20,36 @@ Notation "'MethodSig' name ( argT ) : retT" :=
 
 (** Notations for Struct **) 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..).
+  (Vector.cons _ s1%struct _ .. (Vector.cons _ sN%struct _ (Vector.nil _)) ..)
+    (at level 80).
 
 (** Notations for expressions *)
 
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope.
+Notation "e :: t" :=  (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
 
-Notation "# v" := (Var _ (SyntaxKind _) v) (at level 0) : kami_expr_scope.
-(* Notation "## v : kind" := (Var _ kind v) (at level 0) : kami_expr_scope. *)
-Notation "!" := (UniBool NegB) : kami_expr_scope.
+Notation "# v" := (Var _ (SyntaxKind _) v) (at level 5, format "# v") : kami_expr_scope.
+Notation "!" := (UniBool NegB) (at level 15) : kami_expr_scope.
+
 Infix "&&" := (BinBool AndB) : kami_expr_scope.
 Infix "||" := (BinBool OrB) : kami_expr_scope.
+
 Infix "+" := (BinBit (Add _)) : kami_expr_scope.
 Infix "-" := (BinBit (Sub _)) : kami_expr_scope.
 Infix "*" := (BinBit (Mul _ SignUU)) : kami_expr_scope.
-Infix "*s" := (BinBit (Mul _ SignSS)) (at level 0) : kami_expr_scope.
-Infix "*su" := (BinBit (Mul _ SignSU)) (at level 0) : kami_expr_scope.
+Infix "*s" := (BinBit (Mul _ SignSS)) (at level 40) : kami_expr_scope.
+Infix "*su" := (BinBit (Mul _ SignSU)) (at level 40) : kami_expr_scope.
 Infix "/" := (BinBit (Div _ false)) : kami_expr_scope.
-Infix "/s" := (BinBit (Div _ true)) (at level 0) : kami_expr_scope.
-(* Infix "/su" := (BinBit (Div _ SignSU)) (at level 0) : kami_expr_scope. *)
-Infix "~&" := (BinBit (Band _)) (at level 0) : kami_expr_scope.
-Infix "~|" := (BinBit (Bor _)) (at level 0) : kami_expr_scope.
-Infix "~+" := (BinBit (Bxor _)) (at level 0) : kami_expr_scope.
-Infix "<<" := (BinBit (Sll _ _)) (at level 0) : kami_expr_scope.
-Infix ">>" := (BinBit (Srl _ _)) (at level 0) : kami_expr_scope.
-Infix "~>>" := (BinBit (Sra _ _)) (at level 0) : kami_expr_scope.
+Infix "/s" := (BinBit (Div _ true)) (at level 40) : kami_expr_scope.
+
+Infix "~&" := (BinBit (Band _)) (at level 40) : kami_expr_scope.
+Infix "~|" := (BinBit (Bor _)) (at level 50) : kami_expr_scope.
+Infix "~+" := (BinBit (Bxor _)) (at level 30) : kami_expr_scope.
+
+Infix "<<" := (BinBit (Sll _ _)) (at level 20) : kami_expr_scope.
+Infix ">>" := (BinBit (Srl _ _)) (at level 20) : kami_expr_scope.
+Infix "~>>" := (BinBit (Sra _ _)) (at level 20) : kami_expr_scope.
+
 Infix "<" := (BinBitBool (Lt _)) : kami_expr_scope.
 Notation "x > y" := (BinBitBool (Lt _) y x) : kami_expr_scope.
 Notation "x >= y" := (UniBool NegB (BinBitBool (Lt _) x y)) : kami_expr_scope.
@@ -52,40 +57,36 @@ Notation "x <= y" := (UniBool NegB (BinBitBool (Lt _) y x)) : kami_expr_scope.
 Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
 Infix "!=" := (fun e1 e2 => UniBool NegB (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
-Notation "v @[ idx ] " := (ReadIndex idx v) (at level 0) : kami_expr_scope.
 
-Notation "a $[ i : j ]@ w":=
-  (UniBit
-     (ConstExtract
-        j
-        (i + 1 - j)%nat
-        (w - 1 - i)%nat
-     ) a) (at level 100, i at level 99) : kami_expr_scope.
+Notation "v @[ idx ] " := (ReadIndex idx v) (at level 10) : kami_expr_scope.
 
 Notation "'_zeroExtend_' x" :=
-  (UniBit (ZeroExtendTrunc _ _) x) (at level 0) : kami_expr_scope.
+  (UniBit (ZeroExtendTrunc _ _) x) (at level 10) : kami_expr_scope.
 Notation "'_signExtend_' x" :=
-  (UniBit (SignExtendTrunc _ _) x) (at level 0) : kami_expr_scope.
+  (UniBit (SignExtendTrunc _ _) x) (at level 10) : kami_expr_scope.
 Notation "'_truncLsb_' x" :=
-  (UniBit (TruncLsb _ _) x) (at level 0) : kami_expr_scope.
-Notation "{ a , b }" := (BinBit (Concat _ _) a b) (at level 0, a at level 99) : kami_expr_scope.
-Notation "{ a ::( al ) , b }" := (BinBit (Concat al _) a b) (at level 0, a at level 99) : kami_expr_scope.
-Notation "{ a , b ::( bl ) }" := (BinBit (Concat _ bl) a b) (at level 0, a at level 99) : kami_expr_scope.
+  (UniBit (TruncLsb _ _) x) (at level 10) : kami_expr_scope.
+
+Notation "{ a , b }" := (BinBit (Concat _ _) a b) (a at level 99) : kami_expr_scope.
+Notation "{ a ::( al ) , b }" := (BinBit (Concat al _) a b) (a at level 99) : kami_expr_scope.
+Notation "{ a , b ::( bl ) }" := (BinBit (Concat _ bl) a b) (a at level 99) : kami_expr_scope.
 
 Delimit Scope kami_expr_scope with kami_expr.
 
-Definition getStructVector {n} {ls: Vector.t (Attribute Kind) n} {e: Kind} (isEq: e = Struct ls) := ls.
+Definition fieldAccessor {A} (fn: string) (x: Attribute A) :=
+  Lib.StringEq.string_eq fn (attrName x).
+Notation "s !! f" := (Lib.VectorFacts.Vector_find (fieldAccessor f%string) s) (at level 10).
+Notation "e ! s @. f" :=
+  (@ReadField
+     _ _ s
+     (Lib.VectorFacts.Vector_find (fieldAccessor f%string) s)
+     e%kami_expr) (at level 10): kami_expr_scope.
 
-Notation "s !! f" := (Lib.VectorFacts.Vector_find
-                        (fun x => Lib.StringEq.string_eq f%string (attrName x)) s)
-                       (at level 0).
-Notation "e ! s @. f" := (@ReadField _ _ s (s !! f) e%kami_expr) (at level 0): kami_expr_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
-Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 0) : kami_expr_scope.
-Notation "$ n" := (Const _ (natToWord _ n)) (at level 0) : kami_expr_scope.
-Notation "$$ e" := (Const _ e) (at level 0) : kami_expr_scope.
+Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10) : kami_expr_scope.
+Notation "$ n" := (Const _ (natToWord _ n)) (at level 5) : kami_expr_scope.
+Notation "$$ e" := (Const _ e) (at level 5) : kami_expr_scope.
 Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_expr_scope.
-Notation "$ n" := (natToWord _ n) (at level 0).
 
 Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
            {n} {attrs: Vector.t _ n}
@@ -94,21 +95,22 @@ Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType
   icons (projT1 na) (projT2 na) tl.
 
 Notation "name ::= value" :=
-  (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a)))
-          (Build_Attribute name _) value) (at level 50) : init_scope.
+  (* (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a))) *)
+  (existT (fun a : Attribute Kind => _)
+          (Build_Attribute name _) value) (at level 80) : init_scope.
 Delimit Scope init_scope with init.
 
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..)) : kami_expr_scope.
-Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
+  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
+    (at level 80): kami_expr_scope.
+(* Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope. *)
 
-Definition isValid := "isValid"%string.
-Definition value := "value"%string.
-
-Definition Maybe (t: Kind) := STRUCT {
-                                  isValid :: Bool;
-                                  value :: t
-                                }.
+(* Definition isValid := "isValid"%string. *)
+(* Definition value := "value"%string. *)
+(* Definition Maybe (t: Kind) := STRUCT { *)
+(*                                   isValid :: Bool; *)
+(*                                   value :: t *)
+(*                                 }. *)
 
 Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0).
 

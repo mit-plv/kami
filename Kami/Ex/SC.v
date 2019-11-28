@@ -231,7 +231,7 @@ Section MemInst.
       Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
 
       with Method "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
-        If !#a!RqFromProc@."op" then (* load *)
+        If !(#a!RqFromProc@."op") then (* load *)
           Read memv <- "mem";
           LET addr <- #a!RqFromProc@."addr";
           LET ldval <- memLoadBytes dataBytes #addr #memv;
@@ -269,7 +269,7 @@ Section MemInst.
           Call rs <- mmioExec(#a);
           Ret #rs
         else
-          If !#a!RqFromProc@."op" then (* load *)
+          If !(#a!RqFromProc@."op") then (* load *)
             Read memv <- "mem";
             LET addr <- #a!RqFromProc@."addr";
             LET ldval <- memLoadBytes dataBytes #addr #memv;

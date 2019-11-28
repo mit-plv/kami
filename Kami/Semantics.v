@@ -295,8 +295,6 @@ Definition SignT k := (type (arg k) * type (ret k))%type.
 Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
-  Definition mkStruct n (attrs: Vector.t _ n) (ils : ilist (fun a => type (attrType a)) attrs)
-  : type (Struct attrs) := ilist_to_fun _ ils.
 
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
     match e in Expr _ exprT return fullType type exprT with
@@ -474,6 +472,9 @@ Section Semantics.
   Qed.
 End Semantics.
 
+Global Arguments type: simpl never.
+Global Arguments ilist_to_fun_m: simpl never.
+
 Ltac invertAction H := apply inversionSemAction in H; simpl in H; dest; try subst.
 Ltac invertActionFirst :=
   match goal with
@@ -546,8 +547,6 @@ Section AppendAction.
   Qed.
 
 End AppendAction.
-
-Global Opaque mkStruct.
 
 Inductive UnitLabel :=
 | Rle: option string -> UnitLabel

@@ -85,7 +85,7 @@ Section Common.
                     (UniBit (ConstExtract 21 10 _) inst))).
 End Common.
 
-Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 0) : kami_expr_scope.
+Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 5) : kami_expr_scope.
 
 (** RV32I instructions (#instructions=47, categorized by opcode_)):
  * - Supported(35)

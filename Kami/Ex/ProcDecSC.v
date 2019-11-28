@@ -34,7 +34,7 @@ Section ProcDecSC.
     : fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)) :=
     fun w =>
       if weq w ofs
-      then evalExpr (alignInst _ (elt (RsToProc!!"data")))
+      then evalExpr (alignInst _ (elt (RsToProc!!"data")%kami_expr))
       else pgmv w.
 
   Fixpoint drainInsts (elts: listEltT (Struct RsToProc) type)
@@ -250,6 +250,7 @@ Section ProcDecSC.
       + specialize (H9 eq_refl); clear H8.
         kinv_custom procDec_inv_old.
         kinv_regmap_red.
+        unfold type, ilist_to_fun_m in *; simpl in *.
         destruct x; [discriminate|].
         destruct x; [|discriminate].
         destruct (weq (evalExpr (getLdDst _ (pgmv (split2 2 iaddrSize pcv)))) $0).
@@ -257,6 +258,7 @@ Section ProcDecSC.
         * exists (Some "execLd"%string); kinv_constr; kinv_eq; kinv_finish.
         
       + specialize (H8 eq_refl); clear H9; kinv_red.
+        unfold type, ilist_to_fun_m in *; simpl in *.
         destruct (eq_nat_dec (#pinitRsOfsv + Datatypes.length x3)
                              (NatLib.pow2 iaddrSize - 1)).
         * exists (Some "pgmInitEnd"%string); kinv_constr; kinv_eq.
@@ -277,6 +279,7 @@ Section ProcDecSC.
           { destruct x; [discriminate|].
             simpl; simpl in H; dest; subst.
             kinv_eq.
+            unfold type, ilist_to_fun_m in *; simpl in *.
             do 2 f_equal.
             rewrite H0; simpl.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) at 2.
@@ -318,6 +321,7 @@ Section ProcDecSC.
           { destruct x; [discriminate|].
             simpl; simpl in H; dest; subst.
             kinv_eq.
+            unfold type, ilist_to_fun_m in *; simpl in *.
             do 2 f_equal.
             rewrite H0; simpl.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) at 2.
@@ -339,6 +343,7 @@ Section ProcDecSC.
     - kinv_action_dest.
       kinv_custom procDec_inv_old.
       kinv_regmap_red; kinv_red.
+      unfold type, ilist_to_fun_m in *; simpl in *.
       destruct pinitv.
       + specialize (H9 eq_refl); clear H8.
         kinv_custom procDec_inv_old.

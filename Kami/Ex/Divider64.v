@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Open Scope string.
 
 Lemma evalExprRewrite K (e: Expr type (SyntaxKind K))
-  : evalExpr (#(evalExpr e)%kami_expr) = evalExpr e.
+  : evalExpr (#(evalExpr e))%kami_expr = evalExpr e.
 Proof.
   induction e; simpl in *; auto.
 Qed.
@@ -1301,8 +1301,7 @@ Section Divider64.
         destruct (weq _ _); [|reflexivity].
         subst; elim n0; reflexivity.
       + rewrite idElementwiseId; unfold id.
-        repeat f_equal.
-        apply pair_eq; [|reflexivity].
+        do 3 f_equal.
 
         assert (x = $0) by (cbn; cbn in H2; destruct (weq _ _); [auto|discriminate]).
         subst; clear x2 H2 H6.
