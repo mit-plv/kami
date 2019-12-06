@@ -3,7 +3,10 @@ Makefile.coq.conf
 Makefile.coq.all
 Makefile.coq.all.conf
 Makefile.coq.src.conf
+.Makefile.coq.*
 *.vo
+*.vos
+*.vok
 *.v.d
 *.glob
 Makefile.coq
