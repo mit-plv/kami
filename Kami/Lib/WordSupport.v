@@ -2,6 +2,7 @@ Require Import Arith Lib.Word Lib.Nomega Omega.
 
 Set Asymmetric Patterns.
 Set Implicit Arguments.
+Local Open Scope word_scope.
 
 Lemma wordToNat_eq1: forall sz (a b: word sz), a = b -> wordToNat a = wordToNat b.
 Proof.

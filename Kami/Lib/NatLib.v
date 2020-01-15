@@ -1,4 +1,8 @@
-Require Import Div2 Omega NArith ZArith.
+Require Import Coq.Arith.Div2.
+Require Import Coq.micromega.Lia.
+Require Import Coq.NArith.NArith.
+Require Import Coq.ZArith.ZArith.
+Require Import N_Z_nat_conversions.
 Require Export Nomega.
 
 Set Implicit Arguments.
@@ -31,11 +35,7 @@ Theorem div2_S_double : forall n, div2 (S (2 * n)) = n.
   induction n; simpl; intuition; f_equal; rethink.
 Qed.
 
-Fixpoint pow2 (n : nat) : nat :=
-  match n with
-    | O => 1
-    | S n' => 2 * pow2 n'
-  end.
+Notation pow2 := (Nat.pow 2).
 
 Fixpoint Npow2 (n : nat) : N :=
   match n with
@@ -107,7 +107,7 @@ Theorem div2_minus_2 : forall n k,
   -> div2 (n - 2 * k) = div2 n - k.
   induction n as [n] using strong; intros.
 
-  do 2 (destruct n; simpl in *; intuition; repeat rewrite untimes2 in *).
+  do 2 (destruct n; simpl in *; intuition; repeat rewrite untimes2 in * ).
   destruct k; simpl in *; intuition.
 
   destruct k; simpl in *; intuition.
@@ -133,7 +133,7 @@ Proof.
   destruct n.
   - constructor.
   - destruct n.
-    + simpl. constructor. constructor. 
+    + simpl. constructor. constructor.
     + simpl (Nat.div2 (S (S n))).
       specialize (IH n). omega.
 Qed.
@@ -220,6 +220,13 @@ Proof.
   intros. pose proof (zero_lt_pow2 sz). omega.
 Qed.
 
+Lemma pow2_ne_zero: forall n, pow2 n <> 0.
+Proof.
+  intros.
+  pose proof (zero_lt_pow2 n).
+  omega.
+Qed.
+
 Lemma mul2_add : forall n, n * 2 = n + n.
 Proof.
   induction n; firstorder.
@@ -265,6 +272,9 @@ Proof.
   apply Nat.lt_add_pos_r.
   apply zero_lt_pow2.
 Qed.
+
+Lemma pow2_S: forall x, pow2 (S x) = 2 * pow2 x.
+Proof. intros. reflexivity. Qed.
 
 Lemma mod2_S_S : forall n,
   mod2 (S (S n)) = mod2 n.
@@ -368,21 +378,30 @@ Proof.
   induction sz; simpl; auto; omega.
 Qed.
 
+Section omega_compat.
+
+Ltac omega ::= lia.
+
 Theorem Npow2_nat : forall n, nat_of_N (Npow2 n) = pow2 n.
   induction n as [|n IHn]; simpl; intuition.
   rewrite <- IHn; clear IHn.
-  case_eq (Npow2 n); intuition idtac.
-  rewrite untimes2.
-  match goal with
-  | [ |- context[Npos ?p~0] ]
-    => replace (Npos p~0) with (N.double (Npos p)) by reflexivity
-  end.
-  apply nat_of_Ndouble.
+  case_eq (Npow2 n); intuition.
 Qed.
+
+End omega_compat.
 
 Theorem pow2_N : forall n, Npow2 n = N.of_nat (pow2 n).
 Proof.
   intro n. apply nat_of_N_eq. rewrite Nat2N.id. apply Npow2_nat.
+Qed.
+
+Lemma Z_of_N_Npow2: forall n, Z.of_N (Npow2 n) = (2 ^ Z.of_nat n)%Z.
+Proof.
+  intros.
+  rewrite pow2_N.
+  rewrite nat_N_Z.
+  rewrite Nat2Z.inj_pow.
+  reflexivity.
 Qed.
 
 Lemma pow2_S_z:
@@ -433,6 +452,15 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma Npow2_pos: forall a,
+    (0 < Npow2 a)%N.
+Proof.
+  intros.
+  destruct (Npow2 a) eqn: E.
+  - exfalso. apply (Npow2_not_zero a). assumption.
+  - constructor.
+Qed.
+
 Lemma minus_minus: forall a b c,
   c <= b <= a ->
   a - (b - c) = a - b + c.
@@ -448,3 +476,92 @@ Proof.
     + left. exists (S a). omega.
 Qed.
 
+Lemma mul_div_undo: forall i c,
+    c <> 0 ->
+    c * i / c = i.
+Proof.
+  intros.
+  pose proof (Nat.div_mul_cancel_l i 1 c) as P.
+  rewrite Nat.div_1_r in P.
+  rewrite Nat.mul_1_r in P.
+  apply P; auto.
+Qed.
+
+Lemma mod_add_r: forall a b,
+    b <> 0 ->
+    (a + b) mod b = a mod b.
+Proof.
+  intros. rewrite <- Nat.add_mod_idemp_r by omega.
+  rewrite Nat.mod_same by omega.
+  rewrite Nat.add_0_r.
+  reflexivity.
+Qed.
+
+Lemma mod2_cases: forall (n: nat), n mod 2 = 0 \/ n mod 2 = 1.
+Proof.
+  intros.
+  assert (n mod 2 < 2). {
+    apply Nat.mod_upper_bound. congruence.
+  }
+  omega.
+Qed.
+
+Lemma div_mul_undo: forall a b,
+    b <> 0 ->
+    a mod b = 0 ->
+    a / b * b = a.
+Proof.
+  intros.
+  pose proof Nat.div_mul_cancel_l as A. specialize (A a 1 b).
+  replace (b * 1) with b in A by omega.
+  rewrite Nat.div_1_r in A.
+  rewrite mult_comm.
+  rewrite <- Nat.divide_div_mul_exact; try assumption.
+  - apply A; congruence.
+  - apply Nat.mod_divide; assumption.
+Qed.
+
+Lemma Smod2_1: forall k, S k mod 2 = 1 -> k mod 2 = 0.
+Proof.
+  intros k C.
+  change (S k) with (1 + k) in C.
+  rewrite Nat.add_mod in C by congruence.
+  pose proof (Nat.mod_upper_bound k 2).
+  assert (k mod 2 = 0 \/ k mod 2 = 1) as E by omega.
+  destruct E as [E | E]; [assumption|].
+  rewrite E in C. simpl in C. discriminate.
+Qed.
+
+Lemma mod_0_r: forall (m: nat),
+    m mod 0 = 0.
+Proof.
+  intros. reflexivity.
+Qed.
+
+Lemma sub_mod_0: forall (a b m: nat),
+    a mod m = 0 ->
+    b mod m = 0 ->
+    (a - b) mod m = 0.
+Proof.
+  intros. assert (m = 0 \/ m <> 0) as C by omega. destruct C as [C | C].
+  - subst. apply mod_0_r.
+  - assert (a - b = 0 \/ b < a) as D by omega. destruct D as [D | D].
+    + rewrite D. apply Nat.mod_0_l. assumption.
+    + apply Nat2Z.inj. simpl.
+      rewrite Zdiv.mod_Zmod by assumption.
+      rewrite Nat2Z.inj_sub by omega.
+      rewrite Zdiv.Zminus_mod.
+      rewrite <-! Zdiv.mod_Zmod by assumption.
+      rewrite H. rewrite H0.
+      apply Z.mod_0_l.
+      omega.
+Qed.
+
+Lemma mul_div_exact: forall (a b: nat),
+    b <> 0 ->
+    a mod b = 0 ->
+    b * (a / b) = a.
+Proof.
+  intros. edestruct Nat.div_exact as [_ P]; [eassumption|].
+  specialize (P H0). symmetry. exact P.
+Qed.
