@@ -520,7 +520,7 @@ Section Divider64.
       destruct (weq _ _).
       + destruct (weq _ _); [rewrite e in e0; discriminate|clear e n].
         destruct (weq _ _); subst.
-        * cbn; cbn in d, Hd; omega.
+        * change (#(split1 DivNumBits DivNumBits $0)) with 0; Lia.lia.
         * change (pred (2 * DivNumBits) + 1) with (DivNumBits + DivNumBits) in *.
           apply zext_size in H1; dest; subst.
           { unfold zext; rewrite split1_combine.
@@ -644,7 +644,8 @@ Section Divider64.
           rewrite <-Nat2Z.inj_mul in H.
           apply Nat2Z.inj in H.
           rewrite <-H.
-          cbn; omega.
+          change #(split1 DivNumBits DivNumBits $0) with 0.
+          omega.
         * assert (wmsb pq false = false).
           { apply wmsb_false_pos.
             destruct (Z_ge_lt_dec (wordToZ pq) 0%Z); auto.
@@ -1311,7 +1312,8 @@ Section Divider64.
           intro Hx; subst; elim n0; reflexivity.
         }
         specialize (HndiInv HndiDz); clear H5; dest; subst.
-        assert (x1 = 0) by (cbn in H0; omega); subst; clear H0.
+        progress change #($0) with 0 in *.
+        assert (x1 = 0) by (omega); subst; clear H0.
         assert (x3 = 64) by (apply eq_sigT_fst in H1; cbn in H1; omega); subst.
         cbn in x2, H1; destruct_existT.
 
