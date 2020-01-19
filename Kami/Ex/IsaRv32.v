@@ -3,8 +3,6 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-Require Import riscv.Spec.Decode.
-
 Definition rv32InstBytes := 4.
 Definition rv32DataBytes := 4.
 (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
@@ -85,8 +83,6 @@ Section Common.
                     (UniBit (ConstExtract 21 10 _) inst))).
 End Common.
 
-Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 5) : kami_expr_scope.
-
 (** RV32I instructions (#instructions=47, categorized by opcode_)):
  * - Supported(35)
  *   + opcode_LUI(1): lui
@@ -120,6 +116,158 @@ Section RV32IM.
              (Haddr3: rv32AddrSize = 2 + rv32IAddrSize
                                      + (rv32AddrSize - (2 + rv32IAddrSize))).
 
+  Section Constants.
+
+    (* Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 5) : kami_expr_scope. *)
+
+    (* Definition opcode_LOAD: nat := 3. *)
+    (* Definition opcode_STORE: nat := 35. *)
+    (* Definition opcode_BRANCH: nat := 99. *)
+
+    Definition opcode_AUIPC: nat := 23.
+    Definition opcode_BRANCH: nat := 99.
+    Definition opcode_LOAD: nat := 3.
+    Definition opcode_LUI: nat := 55.
+    Definition opcode_JAL: nat := 111.
+    Definition opcode_JALR: nat := 103.
+    Definition opcode_OP: nat := 51.
+    Definition opcode_OP_IMM: nat := 19.
+    Definition opcode_STORE: nat := 35.
+
+    Definition funct7_XOR: nat := 0.
+    Definition funct7_SUBW: nat := 32.
+    Definition funct7_SUB: nat := 32.
+    Definition funct7_SRLW: nat := 0.
+    Definition funct7_SRLIW: nat := 0.
+    Definition funct7_SRL: nat := 0.
+    Definition funct7_SRAW: nat := 32.
+    Definition funct7_SRAIW: nat := 32.
+    Definition funct7_SRA: nat := 32.
+    Definition funct7_SLTU: nat := 0.
+    Definition funct7_SLT: nat := 0.
+    Definition funct7_SLLW: nat := 0.
+    Definition funct7_SLLIW: nat := 0.
+    Definition funct7_SLL: nat := 0.
+    Definition funct7_SFENCE_VMA: nat := 9.
+    Definition funct7_REMW: nat := 1.
+    Definition funct7_REMUW: nat := 1.
+    Definition funct7_REMU: nat := 1.
+    Definition funct7_REM: nat := 1.
+    Definition funct7_OR: nat := 0.
+    Definition funct7_MULW: nat := 1.
+    Definition funct7_MULHU: nat := 1.
+    Definition funct7_MULHSU: nat := 1.
+    Definition funct7_MULH: nat := 1.
+    Definition funct7_MUL: nat := 1.
+    Definition funct7_FSUB_S := 4: nat.
+    Definition funct7_FSQRT_S := 44: nat.
+    Definition funct7_FSGNJ_S := 16: nat.
+    Definition funct7_FMV_X_W := 112: nat.
+    Definition funct7_FMV_W_X := 120: nat.
+    Definition funct7_FMUL_S := 8: nat.
+    Definition funct7_FMIN_S := 20: nat.
+    Definition funct7_FEQ_S := 80: nat.
+    Definition funct7_FDIV_S := 12: nat.
+    Definition funct7_FCVT_W_S := 96: nat.
+    Definition funct7_FCVT_S_W := 104: nat.
+    Definition funct7_FCLASS_S := 112: nat.
+    Definition funct7_FADD_S := 0: nat.
+    Definition funct7_DIVW: nat := 1.
+    Definition funct7_DIVUW: nat := 1.
+    Definition funct7_DIVU: nat := 1.
+    Definition funct7_DIV: nat := 1.
+    Definition funct7_AND: nat := 0.
+    Definition funct7_ADDW: nat := 0.
+    Definition funct7_ADD: nat := 0.
+
+    Definition funct3_XORI: nat := 4.
+    Definition funct3_XOR: nat := 4.
+    Definition funct3_SW: nat := 2.
+    Definition funct3_SUBW: nat := 0.
+    Definition funct3_SUB: nat := 0.
+    Definition funct3_SRLW: nat := 5.
+    Definition funct3_SRLIW: nat := 5.
+    Definition funct3_SRLI: nat := 5.
+    Definition funct3_SRL: nat := 5.
+    Definition funct3_SRAW: nat := 5.
+    Definition funct3_SRAIW: nat := 5.
+    Definition funct3_SRAI: nat := 5.
+    Definition funct3_SRA: nat := 5.
+    Definition funct3_SLTU: nat := 3.
+    Definition funct3_SLTIU: nat := 3.
+    Definition funct3_SLTI: nat := 2.
+    Definition funct3_SLT: nat := 2.
+    Definition funct3_SLLW: nat := 1.
+    Definition funct3_SLLIW: nat := 1.
+    Definition funct3_SLLI: nat := 1.
+    Definition funct3_SLL: nat := 1.
+    Definition funct3_SH: nat := 1.
+    Definition funct3_SD: nat := 3.
+    Definition funct3_SB: nat := 0.
+    Definition funct3_REMW: nat := 6.
+    Definition funct3_REMUW: nat := 7.
+    Definition funct3_REMU: nat := 7.
+    Definition funct3_REM: nat := 6.
+    Definition funct3_PRIV: nat := 0.
+    Definition funct3_ORI: nat := 6.
+    Definition funct3_OR: nat := 6.
+    Definition funct3_MULW: nat := 0.
+    Definition funct3_MULHU: nat := 3.
+    Definition funct3_MULHSU: nat := 2.
+    Definition funct3_MULH: nat := 1.
+    Definition funct3_MUL: nat := 0.
+    Definition funct3_LWU: nat := 6.
+    Definition funct3_LW: nat := 2.
+    Definition funct3_LHU: nat := 5.
+    Definition funct3_LH: nat := 1.
+    Definition funct3_LD: nat := 3.
+    Definition funct3_LBU: nat := 4.
+    Definition funct3_LB: nat := 0.
+    Definition funct3_FSW: nat := 2.
+    Definition funct3_FSGNJ_S: nat := 0.
+    Definition funct3_FSGNJX_S: nat := 2.
+    Definition funct3_FSGNJN_S: nat := 1.
+    Definition funct3_FMV_X_W: nat := 0.
+    Definition funct3_FMIN_S: nat := 0.
+    Definition funct3_FMAX_S: nat := 1.
+    Definition funct3_FLW: nat := 2.
+    Definition funct3_FLT_S: nat := 1.
+    Definition funct3_FLE_S: nat := 0.
+    Definition funct3_FEQ_S: nat := 2.
+    Definition funct3_FENCE_I: nat := 1.
+    Definition funct3_FENCE: nat := 0.
+    Definition funct3_FCLASS_S: nat := 1.
+    Definition funct3_DIVW: nat := 4.
+    Definition funct3_DIVUW: nat := 5.
+    Definition funct3_DIVU: nat := 5.
+    Definition funct3_DIV: nat := 4.
+    Definition funct3_CSRRWI: nat := 5.
+    Definition funct3_CSRRW: nat := 1.
+    Definition funct3_CSRRSI: nat := 6.
+    Definition funct3_CSRRS: nat := 2.
+    Definition funct3_CSRRCI: nat := 7.
+    Definition funct3_CSRRC: nat := 3.
+    Definition funct3_BNE: nat := 1.
+    Definition funct3_BLTU: nat := 6.
+    Definition funct3_BLT: nat := 4.
+    Definition funct3_BGEU: nat := 7.
+    Definition funct3_BGE: nat := 5.
+    Definition funct3_BEQ: nat := 0.
+    Definition funct3_ANDI: nat := 7.
+    Definition funct3_AND: nat := 7.
+    Definition funct3_AMOW: nat := 2.
+    Definition funct3_AMOD: nat := 3.
+    Definition funct3_ADDW: nat := 0.
+    Definition funct3_ADDIW: nat := 0.
+    Definition funct3_ADDI: nat := 0.
+    Definition funct3_ADD: nat := 0.
+
+    Definition funct6_SRLI: nat := 0.
+    Definition funct6_SRAI: nat := 16.
+    Definition funct6_SLLI: nat := 0.
+
+  End Constants.
+  
   Section Decode.
 
     Definition rv32GetOptype: OptypeT rv32InstBytes.

@@ -17,26 +17,11 @@ VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(IGNORE:%=%.v),$(VS))
 
 PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
 
-DEPS_DIR ?= $(PARENT_DIR)
-
 default_target: coq
 .PHONY: coq clean install
 
 SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
-
-ARGS_NL=-R Kami Kami\n$(SUPPRESS_WARN)\n
-DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n-Q $(DEPS_DIR)/riscv-coq/src/riscv riscv\n
-
-EXTERNAL_DEPENDENCIES?=
-
-# If we get our dependencies externally, then we should not bind the local versions of things
-ifneq ($(EXTERNAL_DEPENDENCIES),1)
-ALLARGS_NL=$(DEPFLAGS_NL)$(ARGS_NL)
-else
-ALLARGS_NL=$(ARGS_NL)
-endif
-
-ALLARGS=$(subst \n, ,$(ALLARGS_NL))
+ALLARGS_NL=-R Kami Kami\n$(SUPPRESS_WARN)\n
 
 _CoqProject:
 	printf -- '$(ALLARGS_NL)' > _CoqProject

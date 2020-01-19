@@ -1,10 +1,8 @@
-Require Import Bool String List ZArith.BinInt.
+Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes.
 Require Import Ex.IsaRv32.
-
-Require Import riscv.Spec.Decode.
 
 Definition rv32AddrSize := 11.
 Definition rv32IAddrSize := 8.
@@ -78,20 +76,20 @@ Section RV32Struct.
   Definition offsetSToRaw11_5 (ofs: word 12) := spl1 5 7 ofs.
   Definition offsetSToRaw4_0 (ofs: word 12) := spl2 5 7 ofs.
 
-  Definition RtypeToRaw (op: Z) (rs1 rs2 rd: Gpr) (f7: Z) (f3: Z) :=
-    (ZToWord 7 op)~~(gprToRaw rd)~~(ZToWord 3 f3)
-                  ~~(gprToRaw rs1)~~(gprToRaw rs2)~~(ZToWord 7 f7).
-  Definition ItypeToRaw (op: Z) (rs1 rd: Gpr) (f3: Z) (ofs: word 12) :=
-    (ZToWord 7 op)~~(gprToRaw rd)~~(ZToWord 3 f3)~~(gprToRaw rs1)~~ofs.
-  Definition StypeToRaw (op: Z) (rs1 rs2: Gpr) (f3: Z) (ofs: word 12) :=
-    (ZToWord 7 op)~~(offsetSToRaw4_0 ofs)~~(ZToWord 3 f3)
-                  ~~(gprToRaw rs1)~~(gprToRaw rs2)~~(offsetSToRaw11_5 ofs).
-  Definition SBtypeToRaw (op: Z) (rs1 rs2: Gpr) (f3: Z) (ofs: word 12) :=
-    (ZToWord 7 op)~~(offsetSBToRaw11 ofs)~~(offsetSBToRaw4_1 ofs)
-                  ~~(ZToWord 3 f3)~~(gprToRaw rs1)~~(gprToRaw rs2)
-                  ~~(offsetSBToRaw10_5 ofs)~~(offsetSBToRaw12 ofs).
-  Definition UJtypeToRaw (op: Z) (rd: Gpr) (ofs: word 20) :=
-    (ZToWord 7 op)~~(gprToRaw rd)~~(offsetUJToRaw ofs).
+  Definition RtypeToRaw (op: nat) (rs1 rs2 rd: Gpr) (f7: nat) (f3: nat) :=
+    (natToWord 7 op)~~(gprToRaw rd)~~(natToWord 3 f3)
+                    ~~(gprToRaw rs1)~~(gprToRaw rs2)~~(natToWord 7 f7).
+  Definition ItypeToRaw (op: nat) (rs1 rd: Gpr) (f3: nat) (ofs: word 12) :=
+    (natToWord 7 op)~~(gprToRaw rd)~~(natToWord 3 f3)~~(gprToRaw rs1)~~ofs.
+  Definition StypeToRaw (op: nat) (rs1 rs2: Gpr) (f3: nat) (ofs: word 12) :=
+    (natToWord 7 op)~~(offsetSToRaw4_0 ofs)~~(natToWord 3 f3)
+                    ~~(gprToRaw rs1)~~(gprToRaw rs2)~~(offsetSToRaw11_5 ofs).
+  Definition SBtypeToRaw (op: nat) (rs1 rs2: Gpr) (f3: nat) (ofs: word 12) :=
+    (natToWord 7 op)~~(offsetSBToRaw11 ofs)~~(offsetSBToRaw4_1 ofs)
+                    ~~(natToWord 3 f3)~~(gprToRaw rs1)~~(gprToRaw rs2)
+                    ~~(offsetSBToRaw10_5 ofs)~~(offsetSBToRaw12 ofs).
+  Definition UJtypeToRaw (op: nat) (rd: Gpr) (ofs: word 20) :=
+    (natToWord 7 op)~~(gprToRaw rd)~~(offsetUJToRaw ofs).
 
   Fixpoint rv32ToRaw (inst: Rv32): word 32 :=
     match inst with
@@ -134,7 +132,7 @@ Section UnitTests.
   Definition RtypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
                 (Const _ (ConstBit (RtypeToRaw opcode_OP x1 x2 x3 funct6_SRLI funct3_SRLI)))) =
-    ZToWord _ opcode_OP := eq_refl.
+    natToWord _ opcode_OP := eq_refl.
   Definition RtypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
                 (Const _ (ConstBit (RtypeToRaw opcode_OP x1 x2 x3 funct6_SRLI funct3_SRLI)))) =
@@ -150,16 +148,16 @@ Section UnitTests.
   Definition RtypeToRaw_getFunct7E_correct:
     evalExpr (getFunct7E
                 (Const _ (ConstBit (RtypeToRaw opcode_OP x1 x2 x3 funct6_SRLI funct3_SRLI)))) =
-    ZToWord _ funct6_SRLI := eq_refl.
+    natToWord _ funct6_SRLI := eq_refl.
   Definition RtypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
                 (Const _ (ConstBit (RtypeToRaw opcode_OP x1 x2 x3 funct6_SRLI funct3_SRLI)))) =
-    ZToWord _ funct3_SRLI := eq_refl.
+    natToWord _ funct3_SRLI := eq_refl.
 
   Definition ItypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
                 (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
-    ZToWord _ opcode_OP_IMM := eq_refl.
+    natToWord _ opcode_OP_IMM := eq_refl.
   Definition ItypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
                 (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
@@ -171,7 +169,7 @@ Section UnitTests.
   Definition ItypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
                 (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
-    ZToWord _ funct3_SRLI := eq_refl.
+    natToWord _ funct3_SRLI := eq_refl.
   Definition ItypeToRaw_getOffsetIE_correct:
     evalExpr (getOffsetIE
                 (Const _ (ConstBit (ItypeToRaw opcode_OP_IMM x1 x2 funct3_SRLI (natToWord _ 5))))) =
@@ -180,7 +178,7 @@ Section UnitTests.
   Definition StypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
                 (Const _ (ConstBit (StypeToRaw opcode_STORE x1 x2 funct3_SW (natToWord _ 5))))) =
-    ZToWord _ opcode_STORE := eq_refl.
+    natToWord _ opcode_STORE := eq_refl.
   Definition StypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
                 (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
@@ -192,7 +190,7 @@ Section UnitTests.
   Definition StypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
                 (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
-    ZToWord _ funct3_SW := eq_refl.
+    natToWord _ funct3_SW := eq_refl.
   Definition StypeToRaw_getOffsetSE_correct:
     evalExpr (getOffsetSE
                 (Const _ (ConstBit (StypeToRaw opcode_OP_IMM x1 x2 funct3_SW (natToWord _ 5))))) =
@@ -201,7 +199,7 @@ Section UnitTests.
   Definition SBtypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
                 (Const _ (ConstBit (SBtypeToRaw opcode_BRANCH x1 x2 funct3_BGE (natToWord _ 5))))) =
-    ZToWord _ opcode_BRANCH := eq_refl.
+    natToWord _ opcode_BRANCH := eq_refl.
   Definition SBtypeToRaw_getRs1E_correct:
     evalExpr (getRs1E
                 (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
@@ -213,7 +211,7 @@ Section UnitTests.
   Definition SBtypeToRaw_getFunct3E_correct:
     evalExpr (getFunct3E
                 (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
-    ZToWord _ funct3_BGE := eq_refl.
+    natToWord _ funct3_BGE := eq_refl.
   Definition SBtypeToRaw_getOffsetSE_correct:
     evalExpr (getOffsetSBE
                 (Const _ (ConstBit (SBtypeToRaw opcode_OP_IMM x1 x2 funct3_BGE (natToWord _ 5))))) =
@@ -222,7 +220,7 @@ Section UnitTests.
   Definition UJtypeToRaw_getOpcodeE_correct:
     evalExpr (getOpcodeE
                 (Const _ (ConstBit (UJtypeToRaw opcode_JAL x1 (natToWord _ 5))))) =
-    ZToWord _ opcode_JAL := eq_refl.
+    natToWord _ opcode_JAL := eq_refl.
   Definition UJtypeToRaw_getRdE_correct:
     evalExpr (getRdE
                 (Const _ (ConstBit (UJtypeToRaw opcode_JAL x1 (natToWord _ 5))))) =
