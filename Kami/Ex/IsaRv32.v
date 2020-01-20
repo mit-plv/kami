@@ -40,6 +40,10 @@ Section Common.
              (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
     (UniBit (TruncLsb 25 7) inst)%kami_expr.
 
+  Definition getFunct6E {ty}
+             (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
+    (UniBit (TruncLsb 26 6) inst)%kami_expr.
+
   Definition getFunct3E {ty}
              (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
     (UniBit (ConstExtract 12 3 _) inst)%kami_expr.
@@ -117,12 +121,6 @@ Section RV32IM.
                                      + (rv32AddrSize - (2 + rv32IAddrSize))).
 
   Section Constants.
-
-    (* Local Notation "$ z" := (Const _ (ZToWord _ z)) (at level 5) : kami_expr_scope. *)
-
-    (* Definition opcode_LOAD: nat := 3. *)
-    (* Definition opcode_STORE: nat := 35. *)
-    (* Definition opcode_BRANCH: nat := 99. *)
 
     Definition opcode_AUIPC: nat := 23.
     Definition opcode_BRANCH: nat := 99.
@@ -344,6 +342,11 @@ Section RV32IM.
     refine (IF (getFunct7E #inst == $op) then expr else _)%kami_expr.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
+  Ltac register_op_funct6_funct3 inst op6 op3 expr :=
+    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3) then expr else _)%kami_expr.
+
+  Ltac rv32_undefined :=
+    exact ($$Default)%kami_expr.
 
   Definition rv32DoExec: ExecT rv32IAddrSize rv32InstBytes rv32DataBytes.
     unfold ExecT; intros ty val1 val2 pc inst.
@@ -377,48 +380,52 @@ Section RV32IM.
                          (#val1 ~| (_signExtend_ (getOffsetIE #inst)))%kami_expr.
       register_op_funct3 inst funct3_ANDI
                          (#val1 ~& (_signExtend_ (getOffsetIE #inst)))%kami_expr.
-      register_op_funct3 inst funct3_SLLI
-                         (#val1 << (getOffsetShamtE #inst))%kami_expr.
-      register_op_funct3 inst funct3_SRLI
-                         (#val1 >> (getOffsetShamtE #inst))%kami_expr.
-      register_op_funct3 inst funct3_SRAI
-                         (#val1 ~>> (getOffsetShamtE #inst))%kami_expr.
-      exact ($$Default)%kami_expr. (* This should never happen. *)
+
+      register_op_funct6_funct3 inst funct6_SLLI funct3_SLLI
+                                (#val1 << (getOffsetShamtE #inst))%kami_expr.
+      register_op_funct6_funct3 inst funct6_SRLI funct3_SRLI
+                                (#val1 >> (getOffsetShamtE #inst))%kami_expr.
+      register_op_funct6_funct3 inst funct6_SRAI funct3_SRAI
+                                (#val1 ~>> (getOffsetShamtE #inst))%kami_expr.
+      rv32_undefined.
     }
 
-    refine (IF (getOpcodeE #inst == $opcode_OP) then _ else $$Default)%kami_expr.
-    refine (IF (getFunct7E #inst == $funct7_ADD) then _ else _)%kami_expr.
+    refine (IF (getOpcodeE #inst == $opcode_OP) then _ else _)%kami_expr.
     1: {
-      register_op_funct3 inst funct3_ADD (#val1 + #val2)%kami_expr.
-      register_op_funct3 inst funct3_SLL (#val1 << (UniBit (Trunc 5 _) #val2))%kami_expr.
-      register_op_funct3 inst funct3_SLT
-                         (IF ((UniBit (TruncLsb 31 1) (#val1 - #val2)) == $1)
-                          then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
-      register_op_funct3 inst funct3_SLTU
-                         (IF (#val1 < #val2)
-                          then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
-      register_op_funct3 inst funct3_XOR (#val1 ~+ #val2)%kami_expr.
-      register_op_funct3 inst funct3_SRL (#val1 >> (UniBit (Trunc 5 _) #val2))%kami_expr.
-      register_op_funct3 inst funct3_OR (#val1 ~| #val2)%kami_expr.
-      register_op_funct3 inst funct3_AND (#val1 ~& #val2)%kami_expr.
-      exact ($$Default)%kami_expr. (* This should never happen. *)
+      refine (IF (getFunct7E #inst == $$(WO~0~0~0~0~0~0~0)) then _ else _)%kami_expr.
+      1: {
+        register_op_funct3 inst funct3_ADD (#val1 + #val2)%kami_expr.
+        register_op_funct3 inst funct3_SLL (#val1 << (UniBit (Trunc 5 _) #val2))%kami_expr.
+        register_op_funct3 inst funct3_SLT
+                           (IF ((UniBit (TruncLsb 31 1) (#val1 - #val2)) == $1)
+                            then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
+        register_op_funct3 inst funct3_SLTU
+                           (IF (#val1 < #val2)
+                            then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
+        register_op_funct3 inst funct3_XOR (#val1 ~+ #val2)%kami_expr.
+        register_op_funct3 inst funct3_SRL (#val1 >> (UniBit (Trunc 5 _) #val2))%kami_expr.
+        register_op_funct3 inst funct3_OR (#val1 ~| #val2)%kami_expr.
+        register_op_funct3 inst funct3_AND (#val1 ~& #val2)%kami_expr.
+        rv32_undefined.
+      }
+
+      refine (IF (getFunct7E #inst == $$(WO~0~1~0~0~0~0~0)) then _ else _)%kami_expr.
+      1: {
+        register_op_funct3 inst funct3_SUB (#val1 - #val2)%kami_expr.
+        register_op_funct3 inst funct3_SRA (#val1 ~>> (UniBit (Trunc 5 _) #val2))%kami_expr.
+        rv32_undefined.
+      }
+      
+      refine (IF (getFunct7E #inst == $funct7_MUL) then _ else _)%kami_expr.
+      1: {
+        register_op_funct3 inst funct3_MUL (#val1 * #val2)%kami_expr.
+        rv32_undefined.
+      }
+
+      rv32_undefined.
     }
 
-    refine (IF (getFunct7E #inst == $funct7_SUB) then _ else _)%kami_expr.
-    1: {
-      register_op_funct3 inst funct3_SUB (#val1 - #val2)%kami_expr.
-      register_op_funct3 inst funct3_SRA (#val1 ~>> (UniBit (Trunc 5 _) #val2))%kami_expr.
-      exact ($$Default)%kami_expr. (* This should never happen. *)
-    }
-    
-    refine (IF (getFunct7E #inst == $funct7_MUL) then _ else _)%kami_expr.
-    1: {
-      register_op_funct3 inst funct3_MUL (#val1 * #val2)%kami_expr.
-      exact ($$Default)%kami_expr. (* undefined semantics so far *)
-    }
-
-    exact ($$Default)%kami_expr. (* undefined semantics so far *)
-
+    rv32_undefined.
   Defined.
 
   Definition rv32CalcLdVal: LdValCalcT rv32AddrSize rv32DataBytes.
