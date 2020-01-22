@@ -155,7 +155,7 @@ Arguments div2_compat_lt_l {_} {_} _.
 Lemma pow2_add_mul: forall a b,
   pow2 (a + b) = (pow2 a) * (pow2 b).
 Proof.
-  induction a; destruct b; firstorder; simpl.
+  induction a; destruct b; firstorder auto with arith; simpl.
   repeat rewrite Nat.add_0_r.
   rewrite Nat.mul_1_r; auto.
   repeat rewrite Nat.add_0_r.
@@ -229,7 +229,7 @@ Qed.
 
 Lemma mul2_add : forall n, n * 2 = n + n.
 Proof.
-  induction n; firstorder.
+  induction n; omega.
 Qed.
 
 Lemma pow2_le_S : forall sz, (pow2 sz) + 1 <= pow2 (sz + 1).
