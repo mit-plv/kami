@@ -89,8 +89,9 @@ let ppBor = "|"
 let ppBxor = "^"
 let ppSll = "<<"
 let ppSrl = ">>"
-let ppSra = ">>" (* TODO: distinguish *)
+let ppSra = "signedShiftRight"
 let ppLt = "<"
+let ppSlt = "signedLT"
 let ppVUpdate = "update"
 
 let ppDot = "."
@@ -471,8 +472,8 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppSrl; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Sra _, se1, se2) ->
-     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
-     ps ppSra; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+     ps ppSra; ps ppRBracketL;
+     ppBExpr se1; ps ppComma; print_space (); ppBExpr se2; ps ppRBracketR
   | BBinBit (_, _, _, Concat (_, _), se1, se2) ->
      ps ppCBracketL; ps ppRBracketL; ppBExpr se1; ps ppRBracketR;
      ps ppComma; ps ppRBracketL; ppBExpr se2; ps ppRBracketR; ps ppCBracketR
@@ -480,8 +481,8 @@ let rec ppBExpr (e: bExpr) =
      ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
      ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BBinBitBool (_, _, Slt _, se1, se2) ->
-     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space ();
-     ps ppLt; print_space (); ps ppRBracketL; ppBExpr se2; ps ppRBracketR
+     ps ppSlt; ps ppRBracketL;
+     ppBExpr se1; ps ppComma; print_space (); ppBExpr se2; ps ppRBracketR
   | BITE (ce, te, fe) ->
      ps ppRBracketL;
      ppBExpr ce; print_space (); ps ppQ; print_space ();

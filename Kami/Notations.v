@@ -54,6 +54,12 @@ Infix "<" := (BinBitBool (Lt _)) : kami_expr_scope.
 Notation "x > y" := (BinBitBool (Lt _) y x) : kami_expr_scope.
 Notation "x >= y" := (UniBool NegB (BinBitBool (Lt _) x y)) : kami_expr_scope.
 Notation "x <= y" := (UniBool NegB (BinBitBool (Lt _) y x)) : kami_expr_scope.
+
+Infix "<s" := (BinBitBool (Slt _)) : kami_expr_scope.
+Notation "x >s y" := (BinBitBool (Slt _) y x) : kami_expr_scope.
+Notation "x >s= y" := (UniBool NegB (BinBitBool (Slt _) x y)) : kami_expr_scope.
+Notation "x <s= y" := (UniBool NegB (BinBitBool (Slt _) y x)) : kami_expr_scope.
+
 Infix "==" := Eq (at level 30, no associativity) : kami_expr_scope.
 Infix "!=" := (fun e1 e2 => UniBool NegB (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
