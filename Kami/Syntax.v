@@ -63,85 +63,127 @@ Proof.
   intros; apply Vector.case0; reflexivity.
 Defined.
 
-Lemma existT_eq_inv:
-  forall n (l1 l2: Vector.t _ n),
-    existT (fun n : nat => t (Attribute Kind) n) n l1 =
-    existT (fun n : nat => t (Attribute Kind) n) n l2 ->
-    l1 = l2.
+Definition structHd (k: Kind): Attribute Kind :=
+  match k with
+  | Struct _ Vector.nil => Build_Attribute "FAIL" (Bit 0)
+  | Struct _ (Vector.cons attr _ _) => attr
+  | _ => Build_Attribute "FAIL" (Bit 0)
+  end.
+
+Definition structTl (k: Kind): Kind :=
+  match k with
+  | Struct _ Vector.nil => Bit 0
+  | Struct _ (Vector.cons _ _ tl) => Struct tl
+  | _ => Bit 0
+  end.
+
+Lemma structHd_ok: forall k1 k2, k1 = k2 -> structHd k1 = structHd k2.
 Proof.
-  induction l1; intros.
-  - rewrite <-vector_0_nil; reflexivity.
-  - rewrite (eta l2) in *.
-    inversion H.
-    apply IHl1 in H2.
-    subst h l1.
+  intros; destruct k1, k2; try (inversion H || simpl; reflexivity).
+Defined.
+
+Lemma struct_eq_hd:
+  forall n (t1 t2: Vector.t _ n),
+    Struct t1 = Struct t2 -> structHd (Struct t1) = structHd (Struct t2).
+Proof. intros; exact (structHd_ok H). Defined.
+
+Lemma structTl_ok: forall k1 k2, k1 = k2 -> structTl k1 = structTl k2.
+Proof.
+  intros; destruct k1, k2; try (inversion H || simpl; reflexivity).
+Defined.
+
+Lemma struct_eq_tl:
+  forall n (t1 t2: Vector.t _ n),
+    Struct t1 = Struct t2 -> structTl (Struct t1) = structTl (Struct t2).
+Proof. intros; exact (structTl_ok H). Defined.
+
+Lemma struct_eq_inv:
+  forall n (t t1: Vector.t _ n), Struct t1 = Struct t -> t1 = t.
+Proof.
+  induction t; intros.
+  - symmetry; apply vector_0_nil.
+  - rewrite (VectorSpec.eta t1) in *.
+    pose proof (struct_eq_hd H).
+    pose proof (struct_eq_tl H).
+    simpl in *.
+    apply IHt in H1; subst.
     reflexivity.
 Defined.
 
-Lemma Struct_eq_inv:
-  forall n (l1 l2: Vector.t _ n), Struct l1 = Struct l2 -> l1 = l2.
-Proof.
-  intros; inversion H.
-  apply existT_eq_inv; assumption.
-Defined.
+Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
+  refine match k1, k2 return {k1 = k2} + {k1 <> k2} with
+         | Bool, Bool => left eq_refl
+         | Bit n, Bit m =>
+           match PeanoNat.Nat.eq_dec n m with
+           | left l => left match l in _ = Y return Bit n = Bit Y with
+                            | eq_refl => eq_refl
+                            end
+           | right r => right _
+           end
+         | Vector k1 n1, Vector k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Vector k1 n1 = Vector kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
+         | Struct n1 l1, Struct n2 l2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l =>
+             match l in _ = Y return
+                   forall l2: Vector.t _ Y,
+                     {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+             | eq_refl =>
+               fun l2 =>
+                 (fix help n l1 :=
+                    match l1 in Vector.t _ n'
+                          return forall l2: Vector.t _ n',
+                        {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+                    | Vector.nil => fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
+                    | Vector.cons h n'' t =>
+                      fun l2 => _
+                    end) n1 l1 l2
+             end l2
+           | right r => right _
+           end
+         | Array k1 n1, Array k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Array k1 n1 = Array kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
+         | _, _ => right _
+         end;
+    try (clear decKind;
+         abstract (intro; try inversion H; try inversion H0; destruct_existT; congruence)).
 
-Fixpoint decKind (k1 k2: Kind): {k1 = k2} + {k1 <> k2}.
-Proof.
-  refine (match k1, k2 with
-          | Bool, Bool => left eq_refl
-          | Bit n, Bit m => _
-          | Vector k1 n1, Vector k2 n2 => _
-          | Struct n1 l1, Struct n2 l2 => _
-          | Array k1 n1, Array k2 n2 => _
-          | _, _ => right _
-          end); try abstract discriminate.
-
-  - destruct (eq_nat_dec n m).
-    + left; abstract congruence.
-    + right; abstract congruence.
-
-  - destruct (decKind k1 k2).
-    + destruct (eq_nat_dec n1 n2).
-      * left; abstract congruence.
-      * right; abstract congruence.
-    + right; abstract congruence.
-
-  - destruct (eq_nat_dec n1 n2); [|right; abstract congruence].
-    subst n1.
-    refine ((fix help n l1 :=
-               match l1 in Vector.t _ n
-                     return forall l2: Vector.t _ n,
-                   {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
-               | Vector.nil =>
-                 fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
-               | Vector.cons h n' t => fun l2 => _
-               end) n2 l1 l2).
-
-    generalize t (help _ t); clear help t.
-    apply (Vector.caseS
-             (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
-                forall t1, (forall t2: Vector.t (Attribute Kind) n,
-                               {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
-                           {Struct (Vector.cons _ h n t1) = Struct l2}
-                           + {Struct (Vector.cons _ h n t1) <> Struct l2})).
-    intros.
-    destruct h, h0.
-    destruct (decKind attrType attrType0).
-    + destruct (string_dec attrName attrName0).
-      * destruct (H t).
-        { apply Struct_eq_inv in e1; subst.
-          left; reflexivity.
-        }
-        { right; abstract (intro; inversion H0; destruct_existT; congruence). }
-      * right; abstract (intro; injection H0; intros; destruct_existT; congruence).
-    + right; abstract (intro; injection H0; intros; destruct_existT; congruence).
-
-  - destruct (decKind k1 k2).
-    + destruct (eq_nat_dec n1 n2).
-      * left; abstract congruence.
-      * right; abstract congruence.
-    + right; abstract congruence.
-
+  generalize t (help _ t); clear help t.
+  apply (Vector.caseS
+           (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
+              forall t1, (forall t2: Vector.t (Attribute Kind) n,
+                             {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
+                         {Struct (Vector.cons _ h n t1) = Struct l2}
+                         + {Struct (Vector.cons _ h n t1) <> Struct l2})).
+  intros.
+  destruct h, h0.
+  destruct (decKind attrType attrType0).
+  - destruct (string_dec attrName attrName0).
+    + destruct (H t).
+      * left; do 2 f_equal.
+        { congruence. }
+        { exact (struct_eq_inv e1). }
+      * clear decKind; right; abstract (intro; inversion H0; destruct_existT; congruence).
+    + clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
+  - clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
 Defined.
 
 Lemma kind_eq: forall k, decKind k k = left eq_refl.
