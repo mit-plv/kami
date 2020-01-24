@@ -6940,6 +6940,7 @@ Proof.
 Qed.
 
 Section ZScope.
+  Import Zdiv.
   Local Open Scope Z_scope.
   Lemma uwordToZ_ZToWord_full
     (sz : nat) (width_nonneg : (0 < sz)%nat) (z : Z)
@@ -6972,6 +6973,36 @@ Section ZScope.
   Qed.
 
   Lemma wordToZ_ZToWord_full sz (H: (0 < sz)%nat) (z:Z) :
+    wordToZ (ZToWord sz z) =
+    ( z
+      + 2 ^ (Z.of_nat sz - 1)
+    ) mod (2 ^ Z.of_nat sz)
+    - 2 ^ (Z.of_nat sz - 1).
+  Proof.
+    pose proof @wordToZ_size'' sz ltac:(trivial) (ZToWord _ z).
+    assert ( wordToZ (ZToWord sz z) =
+      (wordToZ (ZToWord sz z) +
+      2 ^ (Z.of_nat sz - 1))
+      mod (2*2 ^ (Z.of_nat sz - 1))
+      - 2 ^ (Z.of_nat sz - 1))
+    by (rewrite Z.mod_small; Lia.lia).
+    assert (2^Z.of_nat sz = 2 * 2 ^ (Z.of_nat sz - 1)) by
+      (rewrite pow2_times2; Lia.lia).
+    rewrite <-H2 in H1; rewrite H1.
+    f_equal.
+    case (wordToZ_ZToWord' sz z) as [y Hy]; rewrite Hy.
+    replace (z - y * Z.of_N (Npow2 sz) + 2 ^ (Z.of_nat sz - 1))
+    with ((z + 2 ^ (Z.of_nat sz - 1)) - y * Z.of_N (Npow2 sz)) by Lia.lia.
+    rewrite <-Zminus_mod_idemp_r.
+    enough (y * (Z.of_N (Npow2 sz)) mod 2 ^ Z.of_nat sz = 0) by
+      (f_equal; Lia.lia).
+      rewrite <-Zmult_mod_idemp_r.
+    enough ((Z.of_N (Npow2 sz)) mod 2 ^ Z.of_nat sz = 0) by
+      (rewrite H3, Z.mul_0_r, Zmod_0_l; trivial).
+    rewrite pow2_N, nat_N_Z, Nat2Z.inj_pow; apply Z_mod_same_full.
+  Qed.
+
+  Lemma wordToZ_ZToWord_full_post sz (H: (0 < sz)%nat) (z:Z) :
     wordToZ (ZToWord sz z) =
     ( wordToZ (ZToWord sz z)
       + 2 ^ (Z.of_nat sz - 1)
