@@ -14,6 +14,7 @@ Section D2eInst.
     STRUCT { "opType" :: Bit 2;
              "dst" :: Bit rfIdx;
              "addr" :: Bit addrSize;
+             "byteEn" :: Array Bool dataBytes;
              "val1" :: Data dataBytes;
              "val2" :: Data dataBytes;
              "rawInst" :: Data instBytes;
@@ -25,6 +26,7 @@ Section D2eInst.
              (opTy: Expr ty (SyntaxKind (Bit 2)))
              (dst: Expr ty (SyntaxKind (Bit rfIdx)))
              (addr: Expr ty (SyntaxKind (Bit addrSize)))
+             (byteEn: Expr ty (SyntaxKind (Array Bool dataBytes)))
              (val1 val2: Expr ty (SyntaxKind (Data dataBytes)))
              (rawInst: Expr ty (SyntaxKind (Data instBytes)))
              (curPc: Expr ty (SyntaxKind (Pc iaddrSize)))
@@ -33,6 +35,7 @@ Section D2eInst.
     STRUCT { "opType" ::= opTy;
              "dst" ::= dst;
              "addr" ::= addr;
+             "byteEn" ::= byteEn;
              "val1" ::= val1;
              "val2" ::= val2;
              "rawInst" ::= rawInst;
@@ -46,6 +49,8 @@ Section D2eInst.
     : Expr ty (SyntaxKind (Bit rfIdx)) := (#d2e!d2eEltI@."dst")%kami_expr.
   Definition d2eAddrI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind (Bit addrSize)) := (#d2e!d2eEltI@."addr")%kami_expr.
+  Definition d2eByteEnI ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
+    : Expr ty (SyntaxKind (Array Bool dataBytes)) := (#d2e!d2eEltI@."byteEn")%kami_expr.
   Definition d2eVal1I ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
     : Expr ty (SyntaxKind (Data dataBytes)) := (#d2e!d2eEltI@."val1")%kami_expr.
   Definition d2eVal2I ty (d2e: fullType ty (SyntaxKind (Struct d2eEltI)))
@@ -107,6 +112,7 @@ Section ProcThreeStage.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
@@ -121,6 +127,8 @@ Section ProcThreeStage.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eByteEn: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Array Bool dataBytes)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -287,6 +295,7 @@ Section ProcThreeStage.
 
         Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                              "op" ::= $$false;
+                             "byteEn" ::= $$Default;
                              "data" ::= $$Default });
         Write "pinitRqOfs" <- #pinitRqOfs + $1;
         Retv
@@ -300,6 +309,7 @@ Section ProcThreeStage.
         Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
         Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                              "op" ::= $$false;
+                             "byteEn" ::= $$Default;
                              "data" ::= $$Default });
         Write "pinitRq" <- $$true;
         Write "pinitRqOfs" : Bit iaddrSize <- $0;
@@ -370,7 +380,7 @@ Section ProcThreeStage.
         LET addr <- getLdAddr _ rawInst;
         LET srcVal <- #rf@[#srcIdx];
         LET laddr <- calcLdAddr _ addr srcVal;
-        Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default
+        Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default $$Default
                             #rawInst #ppc #npc #epoch);
         Call sbInsert(#dst);
         Retv
@@ -402,7 +412,8 @@ Section ProcThreeStage.
         LET srcVal <- #rf@[#srcIdx];
         LET stVal <- #rf@[#vsrcIdx];
         LET saddr <- calcStAddr _ addr srcVal;
-        Call d2eEnq(d2ePack #opType $$Default #saddr #stVal $$Default
+        LET byteEn <- calcStByteEn _ rawInst;
+        Call d2eEnq(d2ePack #opType $$Default #saddr #byteEn #stVal $$Default
                             #rawInst #ppc #npc #epoch);
         Retv
 
@@ -434,7 +445,7 @@ Section ProcThreeStage.
         LET val1 <- #rf@[#idx1];
         LET val2 <- #rf@[#idx2];
         
-        Call d2eEnq(d2ePack #opType #dst $$Default #val1 #val2
+        Call d2eEnq(d2ePack #opType #dst $$Default $$Default #val1 #val2
                             #rawInst #ppc #npc #epoch);
         Call sbInsert(#dst);
         Retv
@@ -522,6 +533,7 @@ Section ProcThreeStage.
         LET laddr <- d2eAddr _ d2e;
         Call memReq(STRUCT { "addr" ::= #laddr;
                              "op" ::= $$false;
+                             "byteEn" ::= $$Default;
                              "data" ::= $$Default });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
@@ -539,8 +551,10 @@ Section ProcThreeStage.
 
         Assert d2eOpType _ d2e == $$opSt;
         LET saddr <- d2eAddr _ d2e;
+        LET byteEn <- d2eByteEn _ d2e;
         Call memReq(STRUCT { "addr" ::= #saddr;
                              "op" ::= $$true;
+                             "byteEn" ::= #byteEn;
                              "data" ::= d2eVal1 _ d2e });
         Write "stall" <- $$true;
         Write "stalled" <- #d2e;
@@ -681,6 +695,7 @@ Section ProcThreeStageM.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
@@ -695,6 +710,8 @@ Section ProcThreeStageM.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eByteEn: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Array Bool dataBytes)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -720,7 +737,7 @@ Section ProcThreeStageM.
 
   Definition p3st init :=
     procThreeStage fetch dec exec
-                   d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                   d2ePack d2eOpType d2eDst d2eAddr d2eByteEn d2eVal1 d2eVal2
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wPack e2wDecInst e2wVal
                    init.
@@ -743,6 +760,7 @@ Section Facts.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
@@ -757,6 +775,8 @@ Section Facts.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eByteEn: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Array Bool dataBytes)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -814,7 +834,7 @@ Section Facts.
   
   Lemma wb_ModEquiv:
     ModPhoasWf (wb dec exec
-                   d2eOpType d2eDst d2eAddr d2eVal1
+                   d2eOpType d2eDst d2eAddr d2eByteEn d2eVal1
                    d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                    e2wDecInst e2wVal).
   Proof.
@@ -825,7 +845,7 @@ Section Facts.
   Lemma procThreeStage_ModEquiv:
     forall init,
       ModPhoasWf (p3st fetch dec exec
-                       d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                       d2ePack d2eOpType d2eDst d2eAddr d2eByteEn d2eVal1 d2eVal2
                        d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                        e2wPack e2wDecInst e2wVal init).
   Proof.

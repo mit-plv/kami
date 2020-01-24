@@ -84,6 +84,7 @@ Section FetchICache.
 
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRqOfs" <- #pinitRqOfs + $1;
       Retv
@@ -97,6 +98,7 @@ Section FetchICache.
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
       Write "pinitRqOfs" : Bit iaddrSize <- $0;
@@ -206,6 +208,7 @@ Section Facts.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)

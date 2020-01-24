@@ -9,50 +9,15 @@ Set Asymmetric Patterns.
 
 (* `Vec n` is effectively a map from bit vectors of length
    `n` to elements of `A` *)
-Inductive Vec (A : Type): nat -> Type :=
+Inductive Vec (A: Type): nat -> Type :=
 | Vec0: A -> Vec A 0
 | VecNext n: Vec A n -> Vec A n -> Vec A (S n).
 
-Section Vec.
-  Variable A: Type.
-
-  Fixpoint replicate (v: A) n :=
-    match n with
-      | 0 => Vec0 v
-      | S m => VecNext (replicate v m) (replicate v m)
-    end.
-End Vec.
-
-Section VecFunc.
-  Variable A: Type.
-  Fixpoint evalVec n (vec: Vec A n): word n -> A.
-  Proof.
-    refine match vec in Vec _ n return word n -> A with
-             | Vec0 e => fun _ => e
-             | VecNext n' v1 v2 =>
-               fun w =>
-                 match w in word m0 return m0 = S n' -> A with
-                   | WO => _
-                   | WS b m w' =>
-                     if b
-                     then fun _ => evalVec _ v2 (_ w')
-                     else fun _ => evalVec _ v1 (_ w')
-                 end eq_refl
-           end;
-    clear evalVec.
-    - abstract (intros; discriminate).
-    - injection e; intros; subst; exact x.
-    - injection e; intros; subst; exact x.
-  Defined.
-
-  Variable B: Type.
-  Variable map: A -> B.
-  Fixpoint mapVec n (vec: Vec A n): Vec B n :=
-    match vec in Vec _ n return Vec B n with
-      | Vec0 e => Vec0 (map e)
-      | VecNext n' v1 v2 => VecNext (mapVec v1) (mapVec v2)
-    end.
-End VecFunc.
+Fixpoint replicate (A: Type) (v: A) n :=
+  match n with
+  | 0 => Vec0 v
+  | S m => VecNext (replicate v m) (replicate v m)
+  end.
 
 Inductive Kind :=
 | Bool    : Kind
@@ -63,11 +28,13 @@ Inductive Kind :=
 
 Fixpoint type (t: Kind): Type :=
   match t with
-    | Bool => bool
-    | Bit n => word n
-    | Vector nt n => word n -> type nt
-    | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
-    | Array nt n => Fin.t (S n) -> type nt
+  | Bool => bool
+  | Bit n => word n
+  | Vector nt n => word n -> type nt
+  | Struct n ks =>
+    forall i: Fin.t n,
+      Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
+  | Array nt n => Fin.t n -> type nt
   end.
 
 Inductive FullKind: Type :=
@@ -189,7 +156,7 @@ Inductive ConstT: Kind -> Type :=
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
 | ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls)
-| ConstArray k n: Vector.t (ConstT k) (S n) -> ConstT (Array k n).
+| ConstArray k n: Vector.t (ConstT k) n -> ConstT (Array k n).
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
@@ -215,7 +182,7 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
                         | Vector.nil => inil _
                         | Vector.cons x m xs => icons x (getDefaultConst (attrType x)) (help m xs)
                       end) n ls)
-    | Array k n => ConstArray (vector_repeat (S n) (getDefaultConst k))
+    | Array k n => ConstArray (vector_repeat n (getDefaultConst k))
   end.
 
 Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrType a)) vs) {struct ils}: type (Struct vs) :=
@@ -319,15 +286,6 @@ Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n
 | Slt n: BinBitBoolOp n n.
 
-Fixpoint natToFin n (i: nat): Fin.t (S n) :=
-  match i with
-  | 0 => Fin.F1
-  | S i' => match n with
-            | 0 => Fin.F1
-            | S n' => Fin.FS (natToFin n' i')
-            end
-  end.
-
 Section Phoas.
   Variable ty: Kind -> Type.
   Definition fullType k := match k with
@@ -363,13 +321,15 @@ Section Phoas.
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) ->
                       Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k) ->
                       Expr (SyntaxKind (Vector k i))
-  | ReadArrayIndex i k: Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
-                        Expr (SyntaxKind (Array k i)) -> Expr (SyntaxKind k)
-  | BuildArray n k: Vector.t (Expr (SyntaxKind n)) (S k) -> Expr (SyntaxKind (Array n k))
-  | UpdateArray i k: Expr (SyntaxKind (Array k i)) ->
-                     Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
-                     Expr (SyntaxKind k) ->
-                     Expr (SyntaxKind (Array k i)).
+  | ReadArrayIndex i k sz: Expr (SyntaxKind (Bit i)) ->
+                           Expr (SyntaxKind (Array k (S sz))) ->
+                           Expr (SyntaxKind k)
+  | BuildArray n k:
+      Vector.t (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Array n k))
+  | UpdateArray k sz i: Expr (SyntaxKind (Array k (S sz))) ->
+                        Expr (SyntaxKind (Bit i)) ->
+                        Expr (SyntaxKind k) ->
+                        Expr (SyntaxKind (Array k (S sz))).
 
   Inductive BitFormat :=
   | Binary
@@ -381,8 +341,8 @@ Section Phoas.
   Inductive Disp: Type :=
   | DispBool: FullBitFormat -> Expr (SyntaxKind Bool) -> Disp
   | DispBit: FullBitFormat -> forall n, Expr (SyntaxKind (Bit n)) -> Disp
-  | DispStruct n: (Vector.t FullBitFormat n) -> forall ls, Expr (SyntaxKind (@Struct n ls))
-                                                                -> Disp
+  | DispStruct n: (Vector.t FullBitFormat n) ->
+                  forall ls, Expr (SyntaxKind (@Struct n ls)) -> Disp
   | DispArray: FullBitFormat -> forall n k, Expr (SyntaxKind (Array n k)) -> Disp.
   
   Inductive ActionT (lretT: Kind) : Type :=
@@ -405,7 +365,6 @@ Section Phoas.
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
   | Displ: list Disp -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
-
 
   Section StructUpdate.
     Fixpoint getFinList n: Vector.t (Fin.t n) n :=

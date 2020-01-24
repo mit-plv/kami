@@ -42,7 +42,8 @@ Section PerInstMemSize.
       getBTBIndex getBTBTag
       (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
       (@f2dNextPcI _ _) (@f2dEpochI _ _)
-      (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _) (@d2eAddrI _ _ _ _ _)
+      (@d2ePackI _ _ _ _ _) (@d2eOpTypeI _ _ _ _ _) (@d2eDstI _ _ _ _ _)
+      (@d2eAddrI _ _ _ _ _) (@d2eByteEnI _ _ _ _ _)
       (@d2eVal1I _ _ _ _ _) (@d2eVal2I _ _ _ _ _) (@d2eRawInstI _ _ _ _ _) (@d2eCurPcI _ _ _ _ _)
       (@d2eNextPcI _ _ _ _ _) (@d2eEpochI _ _ _ _ _)
       (@e2wPackI _ _ _ _ _) (@e2wDecInstI _ _ _ _ _) (@e2wValI _ _ _ _ _)

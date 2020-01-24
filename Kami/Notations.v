@@ -65,6 +65,7 @@ Infix "!=" := (fun e1 e2 => UniBool NegB (Eq e1 e2))
                 (at level 30, no associativity) : kami_expr_scope.
 
 Notation "v @[ idx ] " := (ReadIndex idx v) (at level 10) : kami_expr_scope.
+Notation "v #[ idx ] " := (ReadArrayIndex idx v) (at level 10) : kami_expr_scope.
 
 Notation "'_zeroExtend_' x" :=
   (UniBit (ZeroExtendTrunc _ _) x) (at level 10) : kami_expr_scope.

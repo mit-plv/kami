@@ -52,6 +52,7 @@ Section ProcDec.
 
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRqOfs" <- #pinitRqOfs + $1;
       Retv
@@ -65,6 +66,7 @@ Section ProcDec.
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
       Write "pinitRqOfs" : Bit iaddrSize <- $0;
@@ -117,6 +119,7 @@ Section ProcDec.
       LET laddr <- calcLdAddr _ addr srcVal;
       Call memReq(STRUCT { "addr" ::= #laddr;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "stall" <- $$true;
       Retv
@@ -137,8 +140,10 @@ Section ProcDec.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
+      LET byteEn <- calcStByteEn _ rawInst;
       Call memReq(STRUCT { "addr" ::= #saddr;
                            "op" ::= $$true;
+                           "byteEn" ::= #byteEn;
                            "data" ::= #stVal });
       Write "stall" <- $$true;
       Retv
@@ -232,7 +237,8 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
+  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -246,14 +252,15 @@ Section ProcDecM.
             (memInit: MemInit addrSize).
 
   Definition pdecf := (pdec procInit ++ iom addrSize dataBytes)%kami.
-  Definition procDecM := (pdecf ++ mm dataBytes memInit ammio)%kami.
+  Definition procDecM := (pdecf ++ mm Hdb memInit ammio)%kami.
 
 End ProcDecM.
 
 Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
-  Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
+  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -276,7 +283,7 @@ Section Facts.
 
   Lemma procDecM_ModEquiv:
     forall procInit memInit,
-      ModPhoasWf (procDecM fetch dec exec ammio procInit memInit).
+      ModPhoasWf (procDecM Hdb fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
   Qed.

@@ -1,9 +1,20 @@
 Require Import String List.
-Require Import Lib.ilist Lib.Struct Lib.Indexer.
+Require Import Lib.Word Lib.ilist Lib.Struct Lib.Indexer.
 Require Import Kami.Syntax Kami.Synthesize.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+
+Section VecFunc.
+  Variables A B: Type.
+  Variable map: A -> B.
+
+  Fixpoint mapVec n (vec: Vec A n): Vec B n :=
+    match vec in Vec _ n return Vec B n with
+    | Vec0 e => Vec0 (map e)
+    | VecNext n' v1 v2 => VecNext (mapVec v1) (mapVec v2)
+    end.
+End VecFunc.
 
 Section BluespecSubset.
 
@@ -24,7 +35,7 @@ Section BluespecSubset.
   | BUpdateVector: BExpr -> BExpr -> BExpr -> BExpr
   | BReadReg: string -> BExpr
   | BReadArrayIndex: BExpr -> BExpr -> BExpr
-  | BBuildArray n: Vector.t BExpr (S n) -> BExpr
+  | BBuildArray n: Vector.t BExpr n -> BExpr
   | BUpdateArray: BExpr -> BExpr -> BExpr -> BExpr.
 
   (* NOTE: BBCall is not used for translation from Kami to Bluespec,
@@ -136,13 +147,13 @@ Section BluespecSubset.
             | None => None
             end
           end) n attrs st) >>= (fun bl => Some (BBuildStruct attrs bl))
-    | ReadArrayIndex _ _ ie ve =>
+    | ReadArrayIndex _ _ _ ie ve =>
       (@exprSToBExpr _ ie) >>= (fun bie => (@exprSToBExpr _ ve)
                                              >>= (fun bve =>
                                                     Some (BReadIndex bie bve)))
     | BuildArray _ n v =>
       (bindVector (Vector.map (@exprSToBExpr _) v)) >>= (fun bv => Some (BBuildArray bv))
-    | UpdateArray _ _ ve ie ke =>
+    | UpdateArray _ _ _ ve ie ke =>
       (@exprSToBExpr _ ve)
         >>= (fun bve =>
                (@exprSToBExpr _ ie)

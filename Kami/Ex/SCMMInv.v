@@ -11,7 +11,8 @@ Set Implicit Arguments.
 Local Open Scope fmap.
 
 Section Invariants.
-  Variables addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat.
+  Variables (addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -31,7 +32,7 @@ Section Invariants.
              (HpgmInit: PgmInitNotMMIO).
 
   Definition scmmInl :=
-    scmmInl fetch dec exec ammio procInit memInit.
+    scmmInl Hdb fetch dec exec ammio procInit memInit.
 
   Definition scmm_inv_rf_zero
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx))) :=

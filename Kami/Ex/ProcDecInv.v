@@ -84,6 +84,7 @@ Section Invariants.
                                                     else wordToNat pinitRqOfsv)
                                                    - List.length ieltv));
                        "op" ::= $$false;
+                       "byteEn" ::= $$Default;
                        "data" ::= $0 })%kami_expr /\
       pgm_init_rq_inv pinitRqv pinitRqOfsv rqs
     end.
@@ -201,6 +202,7 @@ Section Invariants.
         elt = evalExpr
                 (STRUCT { "addr" ::= alignAddr _ rqOfs;
                           "op" ::= $$false;
+                          "byteEn" ::= $$Default;
                           "data" ::= $0})%kami_expr ->
         pgm_init_rq_inv false (rqOfs ^+ $1) (listEnq elt elts).
   Proof.
@@ -229,6 +231,7 @@ Section Invariants.
         elt = evalExpr
                 (STRUCT { "addr" ::= alignAddr _ rqOfs;
                           "op" ::= $$false;
+                          "byteEn" ::= $$Default;
                           "data" ::= $0})%kami_expr ->
         pgm_init_rq_inv true $0 (listEnq elt elts).
   Proof.
