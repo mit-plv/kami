@@ -283,6 +283,7 @@ Section Invariants.
       evalExpr (d2eAddr _ d2eeltv) =
       evalExpr (calcStAddr _ (evalExpr (getStAddr _ rawInst))
                            (rfv (evalExpr (getStSrc _ rawInst)))) /\
+      evalExpr (d2eByteEn _ d2eeltv) = evalExpr (calcStByteEn _ rawInst) /\
       evalExpr (d2eVal1 _ d2eeltv) = rfv (evalExpr (getStVSrc _ rawInst)))) /\
     (evalExpr (d2eOpType _ d2eeltv) = opNm ->
      (evalExpr (d2eDst _ d2eeltv) = evalExpr (getDst _ rawInst) /\
@@ -511,6 +512,7 @@ Section Invariants.
     try rewrite Hd2eOpType in *;
     try rewrite Hd2eDst in *;
     try rewrite Hd2eAddr in *;
+    try rewrite Hd2eByteEn in *;
     try rewrite Hd2eVal1 in *;
     try rewrite Hd2eVal2 in *;
     try rewrite Hd2eRawInst in *;

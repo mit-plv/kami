@@ -120,7 +120,9 @@ Section Invariants.
                     _ (evalExpr (getLdAddr _ rawInst))
                     (evalExpr (#rf@[getLdSrc _ rawInst])%kami_expr)) /\
                rq (RqFromProc !! "data") =
-               evalConstT (getDefaultConst (Data dataBytes)))))%kami_expr.
+               evalConstT (getDefaultConst (Data dataBytes)) /\
+               rq (RqFromProc !! "byteEn") =
+               evalConstT (getDefaultConst (Array Bool dataBytes)))))%kami_expr.
     - exact ((rq (RqFromProc !! "op") = true ->
               evalExpr (getOptype _ rawInst) = opSt) /\
              (evalExpr (getOptype _ rawInst) = opSt ->
@@ -130,7 +132,9 @@ Section Invariants.
                            _ (evalExpr (getStAddr _ rawInst))
                            (evalExpr (#rf@[getStSrc _ rawInst]))) /\
                rq (RqFromProc !! "data") =
-               evalExpr (#rf@[getStVSrc _ rawInst ]))))%kami_expr.
+               evalExpr (#rf@[getStVSrc _ rawInst ]) /\
+               rq (RqFromProc !! "byteEn") =
+               evalExpr (calcStByteEn _ rawInst))))%kami_expr.
   Defined.
   Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
        mem_request_inv: InvDefs.
