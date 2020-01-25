@@ -150,7 +150,7 @@ Section BluespecSubset.
     | ReadArrayIndex _ _ _ ie ve =>
       (@exprSToBExpr _ ie) >>= (fun bie => (@exprSToBExpr _ ve)
                                              >>= (fun bve =>
-                                                    Some (BReadIndex bie bve)))
+                                                    Some (BReadArrayIndex bie bve)))
     | BuildArray _ n v =>
       (bindVector (Vector.map (@exprSToBExpr _) v)) >>= (fun bv => Some (BBuildArray bv))
     | UpdateArray _ _ _ ve ie ke =>
