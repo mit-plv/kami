@@ -1,7 +1,9 @@
-Require Import Bool String List ZArith.BinInt.
+Require Import Bool String List Vector ZArith.BinInt.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
+
+Include VectorNotations.
 
 Definition rv32InstBytes := 4.
 Definition rv32DataBytes := 4.
@@ -265,7 +267,14 @@ Section RV32IM.
     Definition funct6_SLLI: nat := 0.
 
   End Constants.
-  
+
+  Ltac register_op_funct7 inst op expr :=
+    refine (IF (getFunct7E #inst == $op) then expr else _)%kami_expr.
+  Ltac register_op_funct3 inst op expr :=
+    refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
+  Ltac register_op_funct6_funct3 inst op6 op3 expr :=
+    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3) then expr else _)%kami_expr.
+
   Section Decode.
 
     Definition rv32GetOptype: OptypeT rv32InstBytes.
@@ -314,6 +323,22 @@ Section RV32IM.
       exact ((_zeroExtend_ #base) + (_signExtend_ #ofs))%kami_expr.
     Defined.
 
+    Definition rv32CalcStByteEn: StByteEnCalcT rv32InstBytes rv32DataBytes.
+      unfold StByteEnCalcT; intros ty inst.
+      register_op_funct3 inst funct3_SB (Const ty (ConstArray [ConstBool true;
+                                                               ConstBool false;
+                                                               ConstBool false;
+                                                               ConstBool false])).
+      register_op_funct3 inst funct3_SH (Const ty (ConstArray [ConstBool true;
+                                                               ConstBool true;
+                                                               ConstBool false;
+                                                               ConstBool false])).
+      exact (Const ty (ConstArray [ConstBool true;
+                                   ConstBool true;
+                                   ConstBool true;
+                                   ConstBool true])).
+    Defined.
+
     Definition rv32GetStVSrc: StVSrcT rv32InstBytes rv32RfIdx.
       unfold StVSrcT; intros ty inst.
       exact (getRs2E #inst)%kami_expr.
@@ -338,13 +363,6 @@ Section RV32IM.
 
   End Decode.
     
-  Ltac register_op_funct7 inst op expr :=
-    refine (IF (getFunct7E #inst == $op) then expr else _)%kami_expr.
-  Ltac register_op_funct3 inst op expr :=
-    refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
-  Ltac register_op_funct6_funct3 inst op6 op3 expr :=
-    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3) then expr else _)%kami_expr.
-
   Ltac rv32_undefined :=
     exact ($$Default)%kami_expr.
 
@@ -508,6 +526,7 @@ Section RV32IM.
        getStAddr := rv32GetStAddr;
        getStSrc := rv32GetStSrc;
        calcStAddr := rv32CalcStAddr;
+       calcStByteEn := rv32CalcStByteEn;
        getStVSrc := rv32GetStVSrc;
        getSrc1 := rv32GetSrc1;
        getSrc2 := rv32GetSrc2;

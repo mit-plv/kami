@@ -24,6 +24,7 @@ Section FetchDecode.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)

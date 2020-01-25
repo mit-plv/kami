@@ -8,6 +8,37 @@ Set Implicit Arguments.
 
 Set Asymmetric Patterns.
 
+Section VecFunc.
+  Variable A: Type.
+  Fixpoint evalVec n (vec: Vec A n): word n -> A.
+  Proof.
+    refine match vec in Vec _ n return word n -> A with
+             | Vec0 e => fun _ => e
+             | VecNext n' v1 v2 =>
+               fun w =>
+                 match w in word m0 return m0 = S n' -> A with
+                   | WO => _
+                   | WS b m w' =>
+                     if b
+                     then fun _ => evalVec _ v2 (_ w')
+                     else fun _ => evalVec _ v1 (_ w')
+                 end eq_refl
+           end;
+    clear evalVec.
+    - abstract (intros; discriminate).
+    - injection e; intros; subst; exact x.
+    - injection e; intros; subst; exact x.
+  Defined.
+
+  Variable B: Type.
+  Variable map: A -> B.
+  Fixpoint mapVec n (vec: Vec A n): Vec B n :=
+    match vec in Vec _ n return Vec B n with
+      | Vec0 e => Vec0 (map e)
+      | VecNext n' v1 v2 => VecNext (mapVec v1) (mapVec v2)
+    end.
+End VecFunc.
+
 (* Some definitions in Word.v are just opposite, we rename them to use correctly. *)
 Definition spl1 := split2. (* to return _most_ significant bits *)
 Definition spl2 := split1. (* to return _least_ significant bits *)
@@ -296,6 +327,15 @@ Definition MethsT := M.t (sigT SignT).
 
 Section Semantics.
 
+  Fixpoint natToFin n (i: nat): Fin.t (S n) :=
+    match i with
+    | 0 => Fin.F1
+    | S i' => match n with
+              | 0 => Fin.F1
+              | S n' => Fin.FS (natToFin n' i')
+              end
+    end.
+  
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
     match e in Expr _ exprT return fullType type exprT with
       | Var _ v => v
@@ -319,12 +359,12 @@ Section Semantics.
         ilist_to_fun_m _ _ (fun sk => SyntaxKind (attrType sk)) evalExpr ils
       | UpdateVector _ _ fn i v =>
         fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
-      | ReadArrayIndex i k idx vec =>
-        (@evalExpr _ vec) (natToFin i (wordToNat (@evalExpr _ idx)))
+      | ReadArrayIndex _ k sz idx vec =>
+        (@evalExpr _ vec) (natToFin sz (wordToNat (@evalExpr _ idx)))
       | BuildArray i k vecVal =>
         evalArray (Vector.map (@evalExpr _) vecVal)
-      | UpdateArray i k arr idx val =>
-        fun fini => if Fin.eq_dec fini (natToFin i (wordToNat (@evalExpr _ idx)))
+      | UpdateArray k sz _ arr idx val =>
+        fun fini => if Fin.eq_dec fini (natToFin sz (wordToNat (@evalExpr _ idx)))
                     then @evalExpr _ val
                     else @evalExpr _ arr fini
     end.

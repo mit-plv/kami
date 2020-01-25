@@ -17,6 +17,7 @@ Section Inlined.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
@@ -31,6 +32,8 @@ Section Inlined.
                         Expr ty (SyntaxKind (Bit rfIdx)))
     (d2eAddr: forall ty, fullType ty (SyntaxKind d2eElt) ->
                          Expr ty (SyntaxKind (Bit addrSize)))
+    (d2eByteEn: forall ty, fullType ty (SyntaxKind d2eElt) ->
+                           Expr ty (SyntaxKind (Array Bool dataBytes)))
     (d2eVal1 d2eVal2: forall ty, fullType ty (SyntaxKind d2eElt) ->
                                  Expr ty (SyntaxKind (Data dataBytes)))
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
@@ -57,7 +60,7 @@ Section Inlined.
   Variable (init: ProcInit iaddrSize dataBytes rfIdx).
 
   Definition p3st := p3st fetch dec exec
-                          d2ePack d2eOpType d2eDst d2eAddr d2eVal1 d2eVal2
+                          d2ePack d2eOpType d2eDst d2eAddr d2eByteEn d2eVal1 d2eVal2
                           d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                           e2wPack e2wDecInst e2wVal init.
   Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)

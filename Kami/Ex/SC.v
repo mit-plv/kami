@@ -1,4 +1,4 @@
-Require Import Ascii Bool String List.
+Require Import Ascii Bool String List Omega.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
@@ -81,6 +81,9 @@ Section DecExec.
       fullType ty (SyntaxKind (Bit addrSize)) -> (* base address *)
       fullType ty (SyntaxKind (Data dataBytes)) -> (* offset value *)
       Expr ty (SyntaxKind (Bit addrSize)).
+  Definition StByteEnCalcT :=
+    forall ty, fullType ty (SyntaxKind (Data instBytes)) ->
+               Expr ty (SyntaxKind (Array Bool dataBytes)).
 
   Definition StVSrcK := SyntaxKind (Bit rfIdx).
   Definition StVSrcE (ty: Kind -> Type) := Expr ty StVSrcK.
@@ -134,6 +137,7 @@ Section DecExec.
       getStAddr: StAddrT;
       getStSrc: StSrcT;
       calcStAddr: StAddrCalcT;
+      calcStByteEn: StByteEnCalcT;
       getStVSrc: StVSrcT;
       getSrc1: Src1T;
       getSrc2: Src2T;
@@ -157,14 +161,14 @@ End DecExec.
 Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT LdAddrCalcT
      LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdValCalcT
-     StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StVSrcK StVSrcE StVSrcT
-     Src1K Src1E Src1T Src2K Src2E Src2T
+     StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StByteEnCalcT
+     StVSrcK StVSrcE StVSrcT Src1K Src1E Src1T Src2K Src2E Src2T
      StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
 
 (* The module definition for Minst with n ports *)
 Section MemInst.
-  Variable addrSize : nat.
-  Variable dataBytes : nat.
+  Variables (addrSize dataBytes: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
@@ -187,21 +191,32 @@ Section MemInst.
   (* NOTE: it's little endian as well *)
   Fixpoint memStoreBytes {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
            (val: Expr ty (SyntaxKind (Bit (n * BitsPerByte))))
+           (sz: nat) (byteEn: Expr ty (SyntaxKind (Array Bool (S sz))))
            (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
     Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize)) :=
     (match n as n0 return
-           ((Bit (n0 * BitsPerByte))@ty ->
-            (Vector (Bit BitsPerByte) addrSize)@ty)
+           ((Bit (n0 * BitsPerByte))@ty -> (Vector (Bit BitsPerByte) addrSize)@ty)
      with
      | 0 => fun _ => mem
      | S n' =>
        fun val0 =>
          memStoreBytes
            n' (addr + $1)
-           (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0)
-           (mem@[addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0])
+           (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0) byteEn
+           (IF byteEn#[$$(natToWord (Nat.log2 sz + 1) (sz - n'))]
+            then mem@[addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0]
+            else mem)
      end val)%kami_expr.
 
+  Definition memStoreBytes' {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
+             (val: Expr ty (SyntaxKind (Bit (n * BitsPerByte))))
+             (sz: nat) (Hsz: {sz' & sz = S sz'})
+             (byteEn: Expr ty (SyntaxKind (Array Bool sz)))
+             (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
+    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize)) :=
+    eq_rect_r (fun sz => (Array Bool sz)@ty -> _)
+              (fun byteEn => memStoreBytes n addr val byteEn mem) (projT2 Hsz) byteEn.
+  
   (* For semantic uses *)
   Fixpoint combineBytes (n: nat) (addr: word addrSize)
            (mem: word addrSize -> word BitsPerByte): word (n * BitsPerByte) :=
@@ -211,6 +226,7 @@ Section MemInst.
     end.
 
   Fixpoint updateBytes (n: nat) (addr: word addrSize) (val: word (n * BitsPerByte))
+           (sz: nat) (byteEn: Fin.t (S sz) -> bool)
            (mem: word addrSize -> word BitsPerByte): word addrSize -> word BitsPerByte :=
     (match n as n0 return
            (word (n0 * BitsPerByte) -> (word addrSize -> word BitsPerByte))
@@ -219,11 +235,13 @@ Section MemInst.
      | S n' => fun val0 =>
                  updateBytes
                    n' (addr ^+ $1)
-                   (split2 BitsPerByte (n' * BitsPerByte) val0)
-                   (fun w =>
-                      if weq w addr
-                      then (split1 BitsPerByte (n' * BitsPerByte) val0)
-                      else mem w)
+                   (split2 BitsPerByte (n' * BitsPerByte) val0) byteEn
+                   (if byteEn (natToFin _ (sz - n'))
+                    then (fun w =>
+                            if weq w addr
+                            then (split1 BitsPerByte (n' * BitsPerByte) val0)
+                            else mem w)
+                    else mem)
      end) val.
 
   Definition memInst :=
@@ -240,7 +258,8 @@ Section MemInst.
           Read memv <- "mem";
           LET addr <- #a!RqFromProc@."addr";
           LET val <- #a!RqFromProc@."data";
-          Write "mem" <- memStoreBytes dataBytes #addr #val #memv;
+          LET byteEn <- #a!RqFromProc@."byteEn";
+          Write "mem" <- memStoreBytes' dataBytes #addr #val Hdb #byteEn #memv;
           Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
         as na;
         Ret #na
@@ -278,7 +297,8 @@ Section MemInst.
             Read memv <- "mem";
             LET addr <- #a!RqFromProc@."addr";
             LET val <- #a!RqFromProc@."data";
-            Write "mem" <- memStoreBytes dataBytes #addr #val #memv;
+            LET byteEn <- #a!RqFromProc@."byteEn";
+            Write "mem" <- memStoreBytes' dataBytes #addr #val Hdb #byteEn #memv;
             Ret (STRUCT { "data" ::= $$Default } :: Struct RsToProc)
           as na;
           Ret #na
@@ -332,6 +352,7 @@ Section ProcInst.
 
       Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
                                     "op" ::= $$false;
+                                    "byteEn" ::= $$Default;
                                     "data" ::= $$Default });
       LET ldVal <- #ldData!(RsToProc dataBytes)@."data";
       LET inst <- alignInst _ ldVal;
@@ -347,6 +368,7 @@ Section ProcInst.
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
       Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
                                     "op" ::= $$false;
+                                    "byteEn" ::= $$Default;
                                     "data" ::= $$Default });
       LET ldVal <- #ldData!(RsToProc dataBytes)@."data";
       LET inst <- alignInst _ ldVal;
@@ -373,6 +395,7 @@ Section ProcInst.
       LET laddr <- calcLdAddr _ addr srcVal;
       Call ldRep <- memOp(STRUCT { "addr" ::= #laddr;
                                    "op" ::= $$false;
+                                   "byteEn" ::= $$Default;
                                    "data" ::= $$Default });
       LET ldValWord <- #ldRep!(RsToProc dataBytes)@."data";
       LET ldType <- getLdType _ rawInst;
@@ -398,6 +421,7 @@ Section ProcInst.
       LET laddr <- calcLdAddr _ addr srcVal;
       Call memOp(STRUCT { "addr" ::= #laddr;
                           "op" ::= $$false;
+                          "byteEn" ::= $$Default;
                           "data" ::= $$Default });
       nextPc ppc rf rawInst
 
@@ -415,8 +439,10 @@ Section ProcInst.
       LET vsrcIdx <- getStVSrc _ rawInst;
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
+      LET byteEn <- calcStByteEn _ rawInst;
       Call memOp(STRUCT { "addr" ::= #saddr;
                           "op" ::= $$true;
+                          "byteEn" ::= #byteEn;
                           "data" ::= #stVal });
       nextPc ppc rf rawInst
 
@@ -457,7 +483,8 @@ Hint Unfold nextPc procInitDefault : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
+  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -471,14 +498,15 @@ Section SC.
 
   Definition pinst := procInst fetch dec exec procInit.
 
-  Definition scmm := ConcatMod pinst (mm dataBytes memInit ammio).
+  Definition scmm := ConcatMod pinst (mm Hdb memInit ammio).
 
 End SC.
 
 Hint Unfold pinst scmm : ModuleDefs.
 
 Section Facts.
-  Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
+  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+            (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -500,14 +528,35 @@ Section Facts.
   Lemma memStoreBytes_updateBytes:
     forall n (addr: (Bit addrSize)@type)
            (val: (Bit (n * BitsPerByte))@type)
-           (mem: (Vector (Bit BitsPerByte) addrSize)@type),
-      evalExpr (memStoreBytes n addr val mem) =
-      updateBytes n (evalExpr addr) (evalExpr val) (evalExpr mem).
+           (mem: (Vector (Bit BitsPerByte) addrSize)@type)
+           (sz: nat) (byteEn: (Array Bool (S sz))@type),
+      evalExpr (memStoreBytes n addr val byteEn mem) =
+      updateBytes n (evalExpr addr) (evalExpr val) (evalExpr byteEn) (evalExpr mem).
   Proof.
     induction n.
     - intros; reflexivity.
     - intros; simpl.
-      rewrite IHn; reflexivity.
+      rewrite IHn by assumption; simpl.
+      rewrite wordToNat_natToWord_idempotent'.
+      + reflexivity.
+      + apply PeanoNat.Nat.le_lt_trans with (m:= sz).
+        * omega.
+        * rewrite Nat.add_1_r.
+          destruct sz.
+          { simpl; omega. }
+          { apply Nat.log2_spec; omega. }
+  Qed.
+
+  Lemma memStoreBytes'_updateBytes:
+    forall n (addr: (Bit addrSize)@type)
+           (val: (Bit (n * BitsPerByte))@type)
+           (mem: (Vector (Bit BitsPerByte) addrSize)@type)
+           (sz: nat) (byteEn: (Array Bool (S sz))@type),
+      evalExpr (memStoreBytes' n addr val (existT _ _ eq_refl) byteEn mem) =
+      updateBytes n (evalExpr addr) (evalExpr val) (evalExpr byteEn) (evalExpr mem).
+  Proof.
+    intros; cbn.
+    apply memStoreBytes_updateBytes.
   Qed.
 
   Lemma pinst_ModEquiv:
@@ -520,7 +569,7 @@ Section Facts.
 
   Lemma memInst_ModEquiv:
     forall (init: MemInit addrSize),
-      ModPhoasWf (memInst dataBytes init).
+      ModPhoasWf (memInst Hdb init).
   Proof.
     kequiv.
   Qed.
@@ -528,7 +577,7 @@ Section Facts.
 
   Lemma mm_ModEquiv:
     forall (init: MemInit addrSize),
-      ModPhoasWf (mm dataBytes init ammio).
+      ModPhoasWf (mm Hdb init ammio).
   Proof.
     kequiv.
   Qed.
@@ -536,7 +585,7 @@ Section Facts.
 
   Lemma scmm_ModEquiv:
     forall procInit memInit,
-      ModPhoasWf (scmm fetch dec exec ammio procInit memInit).
+      ModPhoasWf (scmm Hdb fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
   Qed.

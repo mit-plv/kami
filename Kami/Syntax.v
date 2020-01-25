@@ -9,50 +9,15 @@ Set Asymmetric Patterns.
 
 (* `Vec n` is effectively a map from bit vectors of length
    `n` to elements of `A` *)
-Inductive Vec (A : Type): nat -> Type :=
+Inductive Vec (A: Type): nat -> Type :=
 | Vec0: A -> Vec A 0
 | VecNext n: Vec A n -> Vec A n -> Vec A (S n).
 
-Section Vec.
-  Variable A: Type.
-
-  Fixpoint replicate (v: A) n :=
-    match n with
-      | 0 => Vec0 v
-      | S m => VecNext (replicate v m) (replicate v m)
-    end.
-End Vec.
-
-Section VecFunc.
-  Variable A: Type.
-  Fixpoint evalVec n (vec: Vec A n): word n -> A.
-  Proof.
-    refine match vec in Vec _ n return word n -> A with
-             | Vec0 e => fun _ => e
-             | VecNext n' v1 v2 =>
-               fun w =>
-                 match w in word m0 return m0 = S n' -> A with
-                   | WO => _
-                   | WS b m w' =>
-                     if b
-                     then fun _ => evalVec _ v2 (_ w')
-                     else fun _ => evalVec _ v1 (_ w')
-                 end eq_refl
-           end;
-    clear evalVec.
-    - abstract (intros; discriminate).
-    - injection e; intros; subst; exact x.
-    - injection e; intros; subst; exact x.
-  Defined.
-
-  Variable B: Type.
-  Variable map: A -> B.
-  Fixpoint mapVec n (vec: Vec A n): Vec B n :=
-    match vec in Vec _ n return Vec B n with
-      | Vec0 e => Vec0 (map e)
-      | VecNext n' v1 v2 => VecNext (mapVec v1) (mapVec v2)
-    end.
-End VecFunc.
+Fixpoint replicate (A: Type) (v: A) n :=
+  match n with
+  | 0 => Vec0 v
+  | S m => VecNext (replicate v m) (replicate v m)
+  end.
 
 Inductive Kind :=
 | Bool    : Kind
@@ -63,11 +28,13 @@ Inductive Kind :=
 
 Fixpoint type (t: Kind): Type :=
   match t with
-    | Bool => bool
-    | Bit n => word n
-    | Vector nt n => word n -> type nt
-    | Struct n ks => forall i: Fin.t n, Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
-    | Array nt n => Fin.t (S n) -> type nt
+  | Bool => bool
+  | Bit n => word n
+  | Vector nt n => word n -> type nt
+  | Struct n ks =>
+    forall i: Fin.t n,
+      Vector.nth (Vector.map (fun p => type (attrType p)) ks) i
+  | Array nt n => Fin.t n -> type nt
   end.
 
 Inductive FullKind: Type :=
@@ -96,85 +63,127 @@ Proof.
   intros; apply Vector.case0; reflexivity.
 Defined.
 
-Lemma existT_eq_inv:
-  forall n (l1 l2: Vector.t _ n),
-    existT (fun n : nat => t (Attribute Kind) n) n l1 =
-    existT (fun n : nat => t (Attribute Kind) n) n l2 ->
-    l1 = l2.
+Definition structHd (k: Kind): Attribute Kind :=
+  match k with
+  | Struct _ Vector.nil => Build_Attribute "FAIL" (Bit 0)
+  | Struct _ (Vector.cons attr _ _) => attr
+  | _ => Build_Attribute "FAIL" (Bit 0)
+  end.
+
+Definition structTl (k: Kind): Kind :=
+  match k with
+  | Struct _ Vector.nil => Bit 0
+  | Struct _ (Vector.cons _ _ tl) => Struct tl
+  | _ => Bit 0
+  end.
+
+Lemma structHd_ok: forall k1 k2, k1 = k2 -> structHd k1 = structHd k2.
 Proof.
-  induction l1; intros.
-  - rewrite <-vector_0_nil; reflexivity.
-  - rewrite (eta l2) in *.
-    inversion H.
-    apply IHl1 in H2.
-    subst h l1.
+  intros; destruct k1, k2; try (inversion H || simpl; reflexivity).
+Defined.
+
+Lemma struct_eq_hd:
+  forall n (t1 t2: Vector.t _ n),
+    Struct t1 = Struct t2 -> structHd (Struct t1) = structHd (Struct t2).
+Proof. intros; exact (structHd_ok H). Defined.
+
+Lemma structTl_ok: forall k1 k2, k1 = k2 -> structTl k1 = structTl k2.
+Proof.
+  intros; destruct k1, k2; try (inversion H || simpl; reflexivity).
+Defined.
+
+Lemma struct_eq_tl:
+  forall n (t1 t2: Vector.t _ n),
+    Struct t1 = Struct t2 -> structTl (Struct t1) = structTl (Struct t2).
+Proof. intros; exact (structTl_ok H). Defined.
+
+Lemma struct_eq_inv:
+  forall n (t t1: Vector.t _ n), Struct t1 = Struct t -> t1 = t.
+Proof.
+  induction t; intros.
+  - symmetry; apply vector_0_nil.
+  - rewrite (VectorSpec.eta t1) in *.
+    pose proof (struct_eq_hd H).
+    pose proof (struct_eq_tl H).
+    simpl in *.
+    apply IHt in H1; subst.
     reflexivity.
 Defined.
 
-Lemma Struct_eq_inv:
-  forall n (l1 l2: Vector.t _ n), Struct l1 = Struct l2 -> l1 = l2.
-Proof.
-  intros; inversion H.
-  apply existT_eq_inv; assumption.
-Defined.
+Fixpoint decKind (k1 k2: Kind) : {k1 = k2} + {k1 <> k2}.
+  refine match k1, k2 return {k1 = k2} + {k1 <> k2} with
+         | Bool, Bool => left eq_refl
+         | Bit n, Bit m =>
+           match PeanoNat.Nat.eq_dec n m with
+           | left l => left match l in _ = Y return Bit n = Bit Y with
+                            | eq_refl => eq_refl
+                            end
+           | right r => right _
+           end
+         | Vector k1 n1, Vector k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Vector k1 n1 = Vector kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
+         | Struct n1 l1, Struct n2 l2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l =>
+             match l in _ = Y return
+                   forall l2: Vector.t _ Y,
+                     {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+             | eq_refl =>
+               fun l2 =>
+                 (fix help n l1 :=
+                    match l1 in Vector.t _ n'
+                          return forall l2: Vector.t _ n',
+                        {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
+                    | Vector.nil => fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
+                    | Vector.cons h n'' t =>
+                      fun l2 => _
+                    end) n1 l1 l2
+             end l2
+           | right r => right _
+           end
+         | Array k1 n1, Array k2 n2 =>
+           match PeanoNat.Nat.eq_dec n1 n2 with
+           | left l => match decKind k1 k2 with
+                       | left kl => left match l in _ = Y, kl in _ = kY
+                                               return Array k1 n1 = Array kY Y with
+                                         | eq_refl, eq_refl => eq_refl
+                                         end
+                       | right kr => right _
+                       end
+           | right r => right _
+           end
+         | _, _ => right _
+         end;
+    try (clear decKind;
+         abstract (intro; try inversion H; try inversion H0; destruct_existT; congruence)).
 
-Fixpoint decKind (k1 k2: Kind): {k1 = k2} + {k1 <> k2}.
-Proof.
-  refine (match k1, k2 with
-          | Bool, Bool => left eq_refl
-          | Bit n, Bit m => _
-          | Vector k1 n1, Vector k2 n2 => _
-          | Struct n1 l1, Struct n2 l2 => _
-          | Array k1 n1, Array k2 n2 => _
-          | _, _ => right _
-          end); try abstract discriminate.
-
-  - destruct (eq_nat_dec n m).
-    + left; abstract congruence.
-    + right; abstract congruence.
-
-  - destruct (decKind k1 k2).
-    + destruct (eq_nat_dec n1 n2).
-      * left; abstract congruence.
-      * right; abstract congruence.
-    + right; abstract congruence.
-
-  - destruct (eq_nat_dec n1 n2); [|right; abstract congruence].
-    subst n1.
-    refine ((fix help n l1 :=
-               match l1 in Vector.t _ n
-                     return forall l2: Vector.t _ n,
-                   {Struct l1 = Struct l2} + {Struct l1 <> Struct l2} with
-               | Vector.nil =>
-                 fun l2 => left (f_equal (@Struct 0) (vector_0_nil l2))
-               | Vector.cons h n' t => fun l2 => _
-               end) n2 l1 l2).
-
-    generalize t (help _ t); clear help t.
-    apply (Vector.caseS
-             (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
-                forall t1, (forall t2: Vector.t (Attribute Kind) n,
-                               {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
-                           {Struct (Vector.cons _ h n t1) = Struct l2}
-                           + {Struct (Vector.cons _ h n t1) <> Struct l2})).
-    intros.
-    destruct h, h0.
-    destruct (decKind attrType attrType0).
-    + destruct (string_dec attrName attrName0).
-      * destruct (H t).
-        { apply Struct_eq_inv in e1; subst.
-          left; reflexivity.
-        }
-        { right; abstract (intro; inversion H0; destruct_existT; congruence). }
-      * right; abstract (intro; injection H0; intros; destruct_existT; congruence).
-    + right; abstract (intro; injection H0; intros; destruct_existT; congruence).
-
-  - destruct (decKind k1 k2).
-    + destruct (eq_nat_dec n1 n2).
-      * left; abstract congruence.
-      * right; abstract congruence.
-    + right; abstract congruence.
-
+  generalize t (help _ t); clear help t.
+  apply (Vector.caseS
+           (fun n (l2: Vector.t (Attribute Kind) (S n)) =>
+              forall t1, (forall t2: Vector.t (Attribute Kind) n,
+                             {Struct t1 = Struct t2} + {Struct t1 <> Struct t2}) ->
+                         {Struct (Vector.cons _ h n t1) = Struct l2}
+                         + {Struct (Vector.cons _ h n t1) <> Struct l2})).
+  intros.
+  destruct h, h0.
+  destruct (decKind attrType attrType0).
+  - destruct (string_dec attrName attrName0).
+    + destruct (H t).
+      * left; do 2 f_equal.
+        { congruence. }
+        { exact (struct_eq_inv e1). }
+      * clear decKind; right; abstract (intro; inversion H0; destruct_existT; congruence).
+    + clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
+  - clear decKind; right; abstract (intro; injection H0; intros; destruct_existT; congruence).
 Defined.
 
 Lemma kind_eq: forall k, decKind k k = left eq_refl.
@@ -189,7 +198,7 @@ Inductive ConstT: Kind -> Type :=
 | ConstBit n: word n -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
 | ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls)
-| ConstArray k n: Vector.t (ConstT k) (S n) -> ConstT (Array k n).
+| ConstArray k n: Vector.t (ConstT k) n -> ConstT (Array k n).
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
@@ -215,7 +224,7 @@ Fixpoint getDefaultConst (k: Kind): ConstT k :=
                         | Vector.nil => inil _
                         | Vector.cons x m xs => icons x (getDefaultConst (attrType x)) (help m xs)
                       end) n ls)
-    | Array k n => ConstArray (vector_repeat (S n) (getDefaultConst k))
+    | Array k n => ConstArray (vector_repeat n (getDefaultConst k))
   end.
 
 Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrType a)) vs) {struct ils}: type (Struct vs) :=
@@ -319,15 +328,6 @@ Inductive BinBitBoolOp: nat -> nat -> Set :=
 | Lt n: BinBitBoolOp n n
 | Slt n: BinBitBoolOp n n.
 
-Fixpoint natToFin n (i: nat): Fin.t (S n) :=
-  match i with
-  | 0 => Fin.F1
-  | S i' => match n with
-            | 0 => Fin.F1
-            | S n' => Fin.FS (natToFin n' i')
-            end
-  end.
-
 Section Phoas.
   Variable ty: Kind -> Type.
   Definition fullType k := match k with
@@ -363,13 +363,15 @@ Section Phoas.
   | UpdateVector i k: Expr (SyntaxKind (Vector k i)) ->
                       Expr (SyntaxKind (Bit i)) -> Expr (SyntaxKind k) ->
                       Expr (SyntaxKind (Vector k i))
-  | ReadArrayIndex i k: Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
-                        Expr (SyntaxKind (Array k i)) -> Expr (SyntaxKind k)
-  | BuildArray n k: Vector.t (Expr (SyntaxKind n)) (S k) -> Expr (SyntaxKind (Array n k))
-  | UpdateArray i k: Expr (SyntaxKind (Array k i)) ->
-                     Expr (SyntaxKind (Bit (Nat.log2 (2 * i)))) ->
-                     Expr (SyntaxKind k) ->
-                     Expr (SyntaxKind (Array k i)).
+  | ReadArrayIndex i k sz: Expr (SyntaxKind (Bit i)) ->
+                           Expr (SyntaxKind (Array k (S sz))) ->
+                           Expr (SyntaxKind k)
+  | BuildArray n k:
+      Vector.t (Expr (SyntaxKind n)) k -> Expr (SyntaxKind (Array n k))
+  | UpdateArray k sz i: Expr (SyntaxKind (Array k (S sz))) ->
+                        Expr (SyntaxKind (Bit i)) ->
+                        Expr (SyntaxKind k) ->
+                        Expr (SyntaxKind (Array k (S sz))).
 
   Inductive BitFormat :=
   | Binary
@@ -381,8 +383,8 @@ Section Phoas.
   Inductive Disp: Type :=
   | DispBool: FullBitFormat -> Expr (SyntaxKind Bool) -> Disp
   | DispBit: FullBitFormat -> forall n, Expr (SyntaxKind (Bit n)) -> Disp
-  | DispStruct n: (Vector.t FullBitFormat n) -> forall ls, Expr (SyntaxKind (@Struct n ls))
-                                                                -> Disp
+  | DispStruct n: (Vector.t FullBitFormat n) ->
+                  forall ls, Expr (SyntaxKind (@Struct n ls)) -> Disp
   | DispArray: FullBitFormat -> forall n k, Expr (SyntaxKind (Array n k)) -> Disp.
   
   Inductive ActionT (lretT: Kind) : Type :=
@@ -405,7 +407,6 @@ Section Phoas.
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
   | Displ: list Disp -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
-
 
   Section StructUpdate.
     Fixpoint getFinList n: Vector.t (Fin.t n) n :=

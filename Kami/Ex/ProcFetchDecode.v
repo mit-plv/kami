@@ -52,6 +52,7 @@ Section FetchAndDecode.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
@@ -125,6 +126,7 @@ Section FetchAndDecode.
 
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRqOfs" <- #pinitRqOfs + $1;
       Retv
@@ -138,6 +140,7 @@ Section FetchAndDecode.
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
       Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
                            "op" ::= $$false;
+                           "byteEn" ::= $$Default;
                            "data" ::= $$Default });
       Write "pinitRq" <- $$true;
       Write "pinitRqOfs" : Bit iaddrSize <- $0;
@@ -219,7 +222,7 @@ Section FetchAndDecode.
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default
+      Call d2eEnq(d2ePack #opType #dst #laddr $$Default $$Default $$Default
                           #rawInst #curPc #nextPc #epoch);
       Call sbInsert(#dst);
       Retv
@@ -245,10 +248,11 @@ Section FetchAndDecode.
       LET srcVal <- #rf@[#srcIdx];
       LET stVal <- #rf@[#vsrcIdx];
       LET saddr <- calcStAddr _ addr srcVal;
+      LET byteEn <- calcStByteEn _ rawInst;
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType $$Default #saddr #stVal $$Default
+      Call d2eEnq(d2ePack #opType $$Default #saddr #byteEn #stVal $$Default
                           #rawInst #curPc #nextPc #epoch);
       Retv
 
@@ -277,7 +281,7 @@ Section FetchAndDecode.
       LET curPc <- f2dCurPc _ f2d;
       LET nextPc <- f2dNextPc _ f2d;
       LET epoch <- f2dEpoch _ f2d;
-      Call d2eEnq(d2ePack #opType #dst $$Default #val1 #val2
+      Call d2eEnq(d2ePack #opType #dst $$Default $$Default #val1 #val2
                           #rawInst #curPc #nextPc #epoch);
       Call sbInsert(#dst);
       Retv
@@ -308,6 +312,7 @@ Section Facts.
                 Expr ty (SyntaxKind (Bit 2)) -> (* opTy *)
                 Expr ty (SyntaxKind (Bit rfIdx)) -> (* dst *)
                 Expr ty (SyntaxKind (Bit addrSize)) -> (* addr *)
+                Expr ty (SyntaxKind (Array Bool dataBytes)) -> (* byteEn *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
