@@ -3,8 +3,6 @@ Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.Notations.
 Require Import Ex.MemTypes Ex.SC.
 
-Include VectorNotations.
-
 Definition rv32InstBytes := 4.
 Definition rv32DataBytes := 4.
 (* 2^5 = 32 general purpose registers, x0 is hardcoded though *)
@@ -325,18 +323,22 @@ Section RV32IM.
 
     Definition rv32CalcStByteEn: StByteEnCalcT rv32InstBytes rv32DataBytes.
       unfold StByteEnCalcT; intros ty inst.
-      register_op_funct3 inst funct3_SB (Const ty (ConstArray [ConstBool true;
-                                                               ConstBool false;
-                                                               ConstBool false;
-                                                               ConstBool false])).
-      register_op_funct3 inst funct3_SH (Const ty (ConstArray [ConstBool true;
-                                                               ConstBool true;
-                                                               ConstBool false;
-                                                               ConstBool false])).
-      exact (Const ty (ConstArray [ConstBool true;
-                                   ConstBool true;
-                                   ConstBool true;
-                                   ConstBool true])).
+      register_op_funct3
+        inst funct3_SB
+        (Const ty (ConstArray (cons _ (ConstBool true) _
+                                    (cons _ (ConstBool false) _
+                                          (cons _ (ConstBool false) _
+                                                (cons _ (ConstBool false) _ (nil _))))))).
+      register_op_funct3
+        inst funct3_SH
+        (Const ty (ConstArray (cons _ (ConstBool true) _
+                                    (cons _ (ConstBool true) _
+                                          (cons _ (ConstBool false) _
+                                                (cons _ (ConstBool false) _ (nil _))))))).
+      exact (Const ty (ConstArray (cons _ (ConstBool true) _
+                                        (cons _ (ConstBool true) _
+                                              (cons _ (ConstBool true) _
+                                                    (cons _ (ConstBool true) _ (nil _))))))).
     Defined.
 
     Definition rv32GetStVSrc: StVSrcT rv32InstBytes rv32RfIdx.

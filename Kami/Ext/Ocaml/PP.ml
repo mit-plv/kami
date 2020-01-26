@@ -58,7 +58,6 @@ let string_of_de_brujin_index (i: int) =
   "x_" ^ string_of_int i
 
 exception Should_not_happen of string
-exception Not_implemented_yet of string
 
 let ps = print_string
 let pi = print_int
@@ -337,7 +336,9 @@ let rec ppKind (k: kind) =
                       ^ string_of_int (int_of_float (float 2 ** float w))
                       ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
   | Struct (_, sv) -> let sl = vectorToList sv in addGlbStruct sl
-  | Array _ -> raise (Not_implemented_yet "ppKind.Array")
+  | Array (k', sz) -> ppVector ^ ppRBracketL
+                      ^ string_of_int sz
+                      ^ ppComma ^ ppDelim ^ ppKind k' ^ ppRBracketR
 
 let rec ppAttrKinds (ks: kind attribute list) =
   match ks with
@@ -370,7 +371,9 @@ let rec ppConst (c: constT) =
   | ConstStruct (_, kv, st) ->
      let kl = vectorToList kv in
      addGlbStruct kl ^ ppDelim ^ ppCBracketL ^ ppConstStruct st ^ ppCBracketR
-  | ConstArray _ -> raise (Not_implemented_yet "ppConst.ConstArray")
+  | ConstArray (_, _, a) ->
+     let ppa = ppConstVecT a in
+     ppVec ^ ppRBracketL ^ (String.sub ppa 0 (String.length ppa - 2)) ^ ppRBracketR
 and ppConstVec (v: constT vec) =
   match v with
   | Vec0 c -> ppConst c ^ ppComma ^ ppDelim
@@ -383,6 +386,10 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
   | Icons ({ attrName = kn; attrType = _ }, _, _, c, stl') ->
      bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
+and ppConstVecT (v: constT t0) =
+  match v with
+  | Nil -> ""
+  | Cons (c, _, tv) -> ppConst c ^ ppComma ^ ppDelim ^ ppConstVecT tv
 
 let rec ppBExpr (e: bExpr) =
   match e with
@@ -504,9 +511,14 @@ let rec ppBExpr (e: bExpr) =
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
   | BReadReg r -> ps (bstring_of_charlist r)
-  | BReadArrayIndex _ -> raise (Not_implemented_yet "ppBExpr.BReadArrayIndex")
-  | BBuildArray _ -> raise (Not_implemented_yet "ppBExpr.BBuildArray")
-  | BUpdateArray _ -> raise (Not_implemented_yet "ppBExpr.BUpdateArray")
+  | BReadArrayIndex (ie, ve) ->
+     ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
+  | BBuildArray (_, ve) ->
+     ps ppVec; ps ppRBracketL; ppBExprVecT ve; ps ppRBracketR
+  | BUpdateArray (ve, ie, vale) ->
+     ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
+     ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
+     
 and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
@@ -519,6 +531,11 @@ and ppBExprStruct (stl: bExpr attribute list) =
   | { attrName = kn; attrType = e } :: stl' ->
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
+and ppBExprVecT (v: bExpr t0) =
+  match v with
+  | Nil -> ()
+  | Cons (e, _, Nil) -> ppBExpr e
+  | Cons (e, _, tv) -> ppBExpr e; ps ppComma; print_space (); ppBExprVecT tv
 
 let rec ppBExprs (el: bExpr list) =
   match el with
