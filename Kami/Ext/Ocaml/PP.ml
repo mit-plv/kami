@@ -288,7 +288,7 @@ let rec collectStrAL (al: bAction list) =
   | a :: al' -> collectStrA a; collectStrAL al'
 and collectStrA (a: bAction) =
   match a with
-  | BMCall (_, _, msig, _) -> collectStrK (arg msig); collectStrK (ret msig)
+  | BMCall (_, _, msig, _) -> collectStrK msig.arg; collectStrK msig.ret
   | BBCall (_, _, _, el) -> collectStrEL el
   | BLet (_, ok, e) ->
      (match ok with
@@ -309,14 +309,14 @@ let rec collectStrBM (ml: bMethod list) =
   match ml with
   | [] -> ()
   | { attrName = _; attrType = (msig, mb) } :: tl ->
-     collectStrK (arg msig); collectStrK (ret msig);
+     collectStrK msig.arg; collectStrK msig.ret;
      collectStrAL mb; collectStrBM tl
 
 let rec collectStrBIfc (ifc: signatureT attribute list) =
   match ifc with
   | [] -> ()
   | { attrName = _; attrType = msig } :: tl ->
-     collectStrK (arg msig); collectStrK (ret msig);
+     collectStrK msig.arg; collectStrK msig.ret;
      collectStrBIfc tl
      
 let collectStrB (bm: bModule) =
@@ -550,7 +550,7 @@ let rec ppBAction (ife: int option) (a: bAction) =
      ps ppAssign; print_space ();
      ps (bstring_of_charlist meth);
      ps ppRBracketL;
-     (if arg msig = Bit 0 then () else ppBExpr e);
+     (if msig.arg = Bit 0 then () else ppBExpr e);
      ps ppRBracketR; ps ppSep
   | BBCall (bind, meth, isAction, el) ->
      ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
@@ -744,16 +744,16 @@ let ppBModuleInterface (n: string) (m: bModule) =
 let ppCallArg (cn: string) (csig: signatureT) =
   open_hbox ();
   ps ppFunction; print_space ();
-  (if ret csig = Bit 0 then
+  (if csig.ret = Bit 0 then
      ps ppAction
    else
-     (ps ppActionValue; ps ppRBracketL; ps (ppKind (ret csig)); ps ppRBracketR));
+     (ps ppActionValue; ps ppRBracketL; ps (ppKind csig.ret); ps ppRBracketR));
   print_space ();
   ps cn; ps ppRBracketL;
-  (if arg csig = Bit 0 then
+  (if csig.arg = Bit 0 then
      ()
    else
-     (ps (ppKind (arg csig)); print_space (); ps "_"));
+     (ps (ppKind csig.arg); print_space (); ps "_"));
   ps ppRBracketR;
   close_box ()
 
