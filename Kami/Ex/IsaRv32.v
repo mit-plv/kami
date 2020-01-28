@@ -275,7 +275,7 @@ Section RV32IM.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
   Ltac register_op_funct6_funct3 inst op6 op3 expr :=
-    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3 && getHiShamtE #inst == WO~0)
+    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3 && getHiShamtE #inst == $0)
             then expr else _)%kami_expr.
 
   Section Decode.
