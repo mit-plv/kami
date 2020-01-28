@@ -2479,6 +2479,7 @@ End M.
 
 (** FMap Notations *)
 
+Declare Scope fmap_scope.
 Notation "'[]'" := (M.empty _) : fmap_scope.
 Notation " [ k <- v ] " := (M.add k%string v (M.empty _)) : fmap_scope.
 Notation " m +[ k <- v ] " := (M.add k%string v m) (at level 10) : fmap_scope.

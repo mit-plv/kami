@@ -22,6 +22,8 @@ Section ModuleBound.
   Definition appendNameBound (nb1 nb2: NameBound) :=
     Build_NameBound (originals nb1 ++ originals nb2)
                     (prefixes nb1 ++ prefixes nb2).
+
+  Declare Scope namebound_scope.
   Notation "nb1 ++ nb2" := (appendNameBound nb1 nb2) : namebound_scope.
   Delimit Scope namebound_scope with nb.
 
@@ -482,6 +484,7 @@ Section ModuleBound.
 End ModuleBound.
 
 Section Bounds.
+  Declare Scope namebound_scope.
   Notation "nb1 ++ nb2" := (appendNameBound nb1 nb2) : namebound_scope.
   Delimit Scope namebound_scope with nb.
 

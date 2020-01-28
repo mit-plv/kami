@@ -16,6 +16,7 @@ Inductive word : nat -> Set :=
 | WO : word O
 | WS : bool -> forall n, word n -> word (S n).
 
+Declare Scope word_scope.
 Delimit Scope word_scope with word.
 Bind Scope word_scope with word.
 

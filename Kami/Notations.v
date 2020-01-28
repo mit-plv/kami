@@ -24,6 +24,7 @@ Notation "'STRUCT' { s1 ; .. ; sN }" :=
     (at level 80).
 
 (** Notations for expressions *)
+Declare Scope kami_expr_scope.
 
 Notation "nkind #< def" := (@NativeKind nkind def) (at level 0): kami_expr_scope.
 Notation "e :: t" :=  (e : Expr _ (SyntaxKind t)) : kami_expr_scope.
@@ -101,6 +102,7 @@ Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType
   : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (Vector.cons _ (projT1 na) _ attrs) :=
   icons (projT1 na) (projT2 na) tl.
 
+Declare Scope init_scope.
 Notation "name ::= value" :=
   (* (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a))) *)
   (existT (fun a : Attribute Kind => _)
@@ -110,18 +112,13 @@ Delimit Scope init_scope with init.
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
   (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
     (at level 80): kami_expr_scope.
-(* Notation "e :: t" := (e : Expr _ (SyntaxKind t)) : kami_expr_scope. *)
-
-(* Definition isValid := "isValid"%string. *)
-(* Definition value := "value"%string. *)
-(* Definition Maybe (t: Kind) := STRUCT { *)
-(*                                   isValid :: Bool; *)
-(*                                   value :: t *)
-(*                                 }. *)
+Notation "e '!' s '@{' f '<-' val '}' " :=
+  (updStruct e (Lib.VectorFacts.Vector_find (fieldAccessor f%string) s) val) (at level 10) : kami_expr_scope.
 
 Notation "k @ var" := (Expr var (SyntaxKind k)) (at level 0).
 
 (** Notations for action *)
+Declare Scope kami_action_scope.
 
 Notation "'Call' meth ( arg ) ; cont " :=
   (MCall (attrName meth) (attrType meth) arg%kami_expr (fun _ => cont))

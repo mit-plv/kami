@@ -954,6 +954,7 @@ Notation "from '|->' to ; cont" :=
 Notation "||" := (fun _ => None) (at level 12).
 
 (** Notations for register maps *)
+Declare Scope mapping_scope.
 Notation "'mlet' vn : t <- r '|>' kn ; cont" :=
   (match M.find kn%string r with
    | Some (existT k v) =>

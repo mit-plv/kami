@@ -1299,8 +1299,12 @@ Hint Unfold pm_rules pm_regInits pm_methods
 (** Notations *)
 
 Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
+
+Declare Scope kami_struct_scope.
 Notation "name :: ty" := {| attrName := name; attrType := ty |} : kami_struct_scope.
 Delimit Scope kami_struct_scope with struct.
+
+Declare Scope kami_scope.
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
 Delimit Scope kami_scope with kami.
 

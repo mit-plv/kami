@@ -426,6 +426,7 @@ Section Multiplier64.
       | BWS BMinus bw' => (bwordToZ bw' * 2) - 1
       end.
 
+    Declare Scope bword_scope.
     Notation "w ~ 0" := (BWS BZero w) (at level 7, left associativity,
                                        format "w '~' '0'"): bword_scope.
     Notation "w ~ 'P'" := (BWS BPlus w) (at level 7, left associativity,
