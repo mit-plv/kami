@@ -56,6 +56,10 @@ Section Common.
              (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
     (UniBit (ConstExtract 20 5 _) inst)%kami_expr.
 
+  Definition getHiShamtE {ty}
+             (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
+    (UniBit (ConstExtract 25 1 _) inst)%kami_expr.
+
   Definition getOffsetSE {ty}
              (inst : Expr ty (SyntaxKind (Data rv32DataBytes))) :=
     (BinBit (Concat _ _)
@@ -271,7 +275,8 @@ Section RV32IM.
   Ltac register_op_funct3 inst op expr :=
     refine (IF (getFunct3E #inst == $op) then expr else _)%kami_expr.
   Ltac register_op_funct6_funct3 inst op6 op3 expr :=
-    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3) then expr else _)%kami_expr.
+    refine (IF (getFunct6E #inst == $op6 && getFunct3E #inst == $op3 && getHiShamtE #inst == WO~0)
+            then expr else _)%kami_expr.
 
   Section Decode.
 
