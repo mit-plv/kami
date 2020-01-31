@@ -9,7 +9,7 @@ Require Import Ex.MemTypes Ex.SC.
 Set Implicit Arguments.
 
 Section Inlined.
-  Variables (addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -18,7 +18,7 @@ Section Inlined.
             (ammio: AbsMMIO addrSize).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize).
+           (memInit: MemInit maddrSize).
   
   Definition scmm: Modules := scmm Hdb fetch dec exec ammio procInit memInit.
   Hint Unfold scmm: ModuleDefs. (* for kinline_compute *)

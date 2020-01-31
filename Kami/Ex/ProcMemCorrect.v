@@ -12,7 +12,7 @@ Require Import Eqdep.
 Set Implicit Arguments.
 
 Section ProcFour.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
   Variable fifoSize: nat.
 
@@ -28,7 +28,7 @@ Section ProcFour.
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize).
+           (memInit: MemInit maddrSize).
 
   Section AbsPipeline.
 

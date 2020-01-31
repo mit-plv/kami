@@ -72,6 +72,8 @@ Notation "'_zeroExtend_' x" :=
   (UniBit (ZeroExtendTrunc _ _) x) (at level 10) : kami_expr_scope.
 Notation "'_signExtend_' x" :=
   (UniBit (SignExtendTrunc _ _) x) (at level 10) : kami_expr_scope.
+Notation "'_truncate_' x" :=
+  (UniBit (Trunc _ _) x) (at level 10) : kami_expr_scope.
 Notation "'_truncLsb_' x" :=
   (UniBit (TruncLsb _ _) x) (at level 10) : kami_expr_scope.
 

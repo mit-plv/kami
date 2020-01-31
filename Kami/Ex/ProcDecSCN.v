@@ -11,7 +11,7 @@ Require Import Ex.ProcDec Ex.ProcDecInl Ex.ProcDecInv Ex.ProcDecSC.
 Set Implicit Arguments.
 
 Section ProcDecSCN.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -20,7 +20,7 @@ Section ProcDecSCN.
             (ammio: AbsMMIO addrSize).
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize).
+           (memInit: MemInit maddrSize).
 
   Definition scmm := scmm Hdb fetch dec exec ammio procInit memInit.
   Definition pdec := ProcDec.pdec fetch dec exec procInit.

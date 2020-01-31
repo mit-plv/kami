@@ -1201,9 +1201,9 @@ Section Multiplier32.
         kinv_custom boothMultiplierInv_old.
         boothMultiplierInv_new.
         
-        * simpl; unfold eq_rec; eq_rect_simpl.
+        * cbn; unfold eq_rec; eq_rect_simpl.
           reflexivity.
-        * simpl; unfold eq_rec; eq_rect_simpl.
+        * cbn; unfold eq_rec; eq_rect_simpl.
           reflexivity.
         * clear -H4 H12.
           Opaque split2.
@@ -1249,7 +1249,9 @@ Section Multiplier32.
 
           repeat split.
           { subst ww.
-            simpl; rewrite <-H13.
+            cbv [evalSignExtendTrunc].
+            simpl; unfold eq_rec; eq_rect_simpl.
+            rewrite <-H13.
             reflexivity.
           }
           { assumption. }
@@ -1386,7 +1388,9 @@ Section Multiplier32.
         rewrite wtl_combine.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 33 bsiM).
-        cbn; cbn in H1; rewrite H1.
+        cbv [evalSignExtendTrunc]; cbn.
+        unfold eq_rec; eq_rect_simpl.
+        cbn in H1; rewrite H1.
         pose proof (sext_wordToZ 33 bsiR).
         cbn; cbn in H2; rewrite H2.
         cbn in H0; rewrite <-H0.
@@ -1406,7 +1410,9 @@ Section Multiplier32.
         rewrite wtl_combine.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 33 bsiM).
-        cbn; cbn in H1; rewrite H1.
+        cbv [evalSignExtendTrunc]; cbn.
+        unfold eq_rec; eq_rect_simpl.
+        cbn in H1; rewrite H1.
         pose proof (sext_wordToZ 33 bsiR).
         cbn; cbn in H2; rewrite H2.
         cbn in H0; rewrite <-H0.

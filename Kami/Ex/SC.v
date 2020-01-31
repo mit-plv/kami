@@ -165,15 +165,14 @@ Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      StVSrcK StVSrcE StVSrcT Src1K Src1E Src1T Src2K Src2E Src2T
      StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
 
-(* The module definition for Minst with n ports *)
 Section MemInst.
-  Variables (addrSize dataBytes: nat)
+  Variables (addrSize maddrSize dataBytes: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Definition RqFromProc := RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := RsToProc dataBytes.
 
-  Definition MemInit := ConstT (Vector (Bit BitsPerByte) addrSize).
+  Definition MemInit := ConstT (Vector (Bit BitsPerByte) maddrSize).
   
   Variable (memInit: MemInit).
 
@@ -181,21 +180,21 @@ Section MemInst.
 
   (* NOTE: it's little endian *)
   Fixpoint memLoadBytes {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
-           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
+           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) maddrSize))):
     Expr ty (SyntaxKind (Bit (n * BitsPerByte))) :=
     (match n with
      | 0 => $$WO
-     | S n' => {memLoadBytes n' (addr + $1) mem, mem@[addr]}
+     | S n' => {memLoadBytes n' (addr + $1) mem, mem@[_zeroExtend_ addr]}
      end)%kami_expr.
 
   (* NOTE: it's little endian as well *)
   Fixpoint memStoreBytes {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
            (val: Expr ty (SyntaxKind (Bit (n * BitsPerByte))))
            (sz: nat) (byteEn: Expr ty (SyntaxKind (Array Bool (S sz))))
-           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
-    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize)) :=
+           (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) maddrSize))):
+    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) maddrSize)) :=
     (match n as n0 return
-           ((Bit (n0 * BitsPerByte))@ty -> (Vector (Bit BitsPerByte) addrSize)@ty)
+           ((Bit (n0 * BitsPerByte))@ty -> (Vector (Bit BitsPerByte) maddrSize)@ty)
      with
      | 0 => fun _ => mem
      | S n' =>
@@ -204,7 +203,7 @@ Section MemInst.
            n' (addr + $1)
            (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0) byteEn
            (IF byteEn#[$$(natToWord (Nat.log2 sz + 1) (sz - n'))]
-            then mem@[addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0]
+            then mem@[_zeroExtend_ addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0]
             else mem)
      end val)%kami_expr.
 
@@ -212,24 +211,24 @@ Section MemInst.
              (val: Expr ty (SyntaxKind (Bit (n * BitsPerByte))))
              (sz: nat) (Hsz: {sz' & sz = S sz'})
              (byteEn: Expr ty (SyntaxKind (Array Bool sz)))
-             (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize))):
-    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) addrSize)) :=
+             (mem: Expr ty (SyntaxKind (Vector (Bit BitsPerByte) maddrSize))):
+    Expr ty (SyntaxKind (Vector (Bit BitsPerByte) maddrSize)) :=
     eq_rect_r (fun sz => (Array Bool sz)@ty -> _)
               (fun byteEn => memStoreBytes n addr val byteEn mem) (projT2 Hsz) byteEn.
-  
+
   (* For semantic uses *)
   Fixpoint combineBytes (n: nat) (addr: word addrSize)
-           (mem: word addrSize -> word BitsPerByte): word (n * BitsPerByte) :=
+           (mem: word maddrSize -> word BitsPerByte): word (n * BitsPerByte) :=
     match n with
     | 0 => WO
-    | S n' => combine (mem addr) (combineBytes n' (addr ^+ $1) mem)
+    | S n' => combine (mem (evalZeroExtendTrunc _ addr)) (combineBytes n' (addr ^+ $1) mem)
     end.
 
   Fixpoint updateBytes (n: nat) (addr: word addrSize) (val: word (n * BitsPerByte))
            (sz: nat) (byteEn: Fin.t (S sz) -> bool)
-           (mem: word addrSize -> word BitsPerByte): word addrSize -> word BitsPerByte :=
+           (mem: word maddrSize -> word BitsPerByte): word maddrSize -> word BitsPerByte :=
     (match n as n0 return
-           (word (n0 * BitsPerByte) -> (word addrSize -> word BitsPerByte))
+           (word (n0 * BitsPerByte) -> (word maddrSize -> word BitsPerByte))
      with
      | 0 => fun _ => mem
      | S n' => fun val0 =>
@@ -238,7 +237,7 @@ Section MemInst.
                    (split2 BitsPerByte (n' * BitsPerByte) val0) byteEn
                    (if byteEn (natToFin _ (sz - n'))
                     then (fun w =>
-                            if weq w addr
+                            if weq w (evalZeroExtendTrunc _ addr)
                             then (split1 BitsPerByte (n' * BitsPerByte) val0)
                             else mem w)
                     else mem)
@@ -246,7 +245,7 @@ Section MemInst.
 
   Definition memInst :=
     MODULE {
-      Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
+      Register "mem" : Vector (Bit BitsPerByte) maddrSize <- memInit
 
       with Method "memOp" (a : Struct RqFromProc) : Struct RsToProc :=
         If !(#a!RqFromProc@."op") then (* load *)
@@ -279,7 +278,7 @@ Section MemInst.
   
   Definition mm :=
     MODULE {
-      Register "mem" : Vector (Bit BitsPerByte) addrSize <- memInit
+      Register "mem" : Vector (Bit BitsPerByte) maddrSize <- memInit
 
       with Method "memOp" (a : Struct RqFromProc): Struct RsToProc :=
         LET addr <- #a!RqFromProc@."addr";
@@ -313,7 +312,7 @@ Hint Unfold memInst mm: ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
-  Variables addrSize iaddrSize instBytes dataBytes rfIdx : nat.
+  Variables addrSize maddrSize iaddrSize instBytes dataBytes rfIdx : nat.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
@@ -483,7 +482,7 @@ Hint Unfold nextPc procInitDefault : MethDefs.
 Hint Unfold procInst : ModuleDefs.
 
 Section SC.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -494,7 +493,7 @@ Section SC.
   Variable n: nat.
 
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
-            (memInit: MemInit addrSize).
+            (memInit: MemInit maddrSize).
 
   Definition pinst := procInst fetch dec exec procInit.
 
@@ -505,7 +504,7 @@ End SC.
 Hint Unfold pinst scmm : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -515,7 +514,7 @@ Section Facts.
 
   Lemma memLoadBytes_combineBytes:
     forall n (addr: (Bit addrSize)@type)
-           (mem: (Vector (Bit BitsPerByte) addrSize)@type),
+           (mem: (Vector (Bit BitsPerByte) maddrSize)@type),
       evalExpr (memLoadBytes n addr mem) =
       combineBytes n (evalExpr addr) (evalExpr mem).
   Proof.
@@ -568,15 +567,15 @@ Section Facts.
   Hint Resolve pinst_ModEquiv.
 
   Lemma memInst_ModEquiv:
-    forall (init: MemInit addrSize),
-      ModPhoasWf (memInst Hdb init).
+    forall (init: MemInit maddrSize),
+      ModPhoasWf (memInst addrSize Hdb init).
   Proof.
     kequiv.
   Qed.
   Hint Resolve memInst_ModEquiv.
 
   Lemma mm_ModEquiv:
-    forall (init: MemInit addrSize),
+    forall (init: MemInit maddrSize),
       ModPhoasWf (mm Hdb init ammio).
   Proof.
     kequiv.
@@ -584,7 +583,7 @@ Section Facts.
   Hint Resolve mm_ModEquiv.
 
   Lemma scmm_ModEquiv:
-    forall procInit memInit,
+    forall procInit (memInit: MemInit maddrSize),
       ModPhoasWf (scmm Hdb fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.

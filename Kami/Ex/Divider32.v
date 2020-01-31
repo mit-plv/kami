@@ -180,6 +180,7 @@ Section Divider32.
       existT word _ (evalExpr (pn2bin w)) = existT word _ (pn2binE w).
   Proof.
     unfold pn2binE; intros; cbn.
+    cbv [evalZeroExtendTrunc evalSignExtendTrunc].
     destruct (lt_dec _ _); [|omega].
     apply existT_wminus.
     - unfold zext, eq_rec.
@@ -1121,7 +1122,7 @@ Section Divider32.
         Transparent evalExpr.
         kinv_custom nrDividerInv_old.
         nrDividerInv_new;
-          simpl; eq_rect_simpl; [reflexivity|].
+          cbn; eq_rect_simpl; [reflexivity|].
 
         eexists; eexists; exists (zext (x Fin.F1) 64).
         eexists; exists WO.
@@ -1133,6 +1134,7 @@ Section Divider32.
           simpl in H4.
           remember (x (Fin.FS Fin.F1)) as w.
           simpl in w; clear -H4.
+          change DivNumBits with 32 in *.
           destruct (weq _ _).
           { subst; simpl; discriminate. }
           { intro Hx.

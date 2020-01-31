@@ -213,30 +213,36 @@ Definition whd' sz (w: word sz) :=
     | S n => fun w => whd w
   end w.
 
+Definition evalZeroExtendTrunc n1 n2 (w: word n1): word n2.
+  refine (match Compare_dec.lt_dec n1 n2 with
+          | left _ => _
+          | right _ => _
+          end).
+  - replace n2 with (n1 + (n2 - n1)) by abstract omega.
+    exact (zext w _).
+  - replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+    exact (split1 _ _ w).
+Defined.
+
+Definition evalSignExtendTrunc n1 n2 (w: word n1): word n2.
+  refine (match Compare_dec.lt_dec n1 n2 with
+          | left _ => _
+          | right _ => _
+          end).
+  - replace n2 with (n1 + (n2 - n1)) by abstract omega.
+    exact (sext w _).
+  - replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+    exact (split1 _ _ w).
+Defined.
+
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
   - exact (@wnot n).
   - exact (@wneg n).
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - exact (fun w => split1 n1 n2 w).
-  - refine (fun w =>
-              match Compare_dec.lt_dec n1 n2 with
-                | left isLt => _
-                | right isGe => _
-              end).
-    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
-      exact (zext w _).
-    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
-      exact (split1 _ _ w).
-  - refine (fun w =>
-              match Compare_dec.lt_dec n1 n2 with
-                | left isLt => _
-                | right isGe => _
-              end).
-    + replace n2 with (n1 + (n2 - n1)) by abstract omega.
-      exact (sext w _).
-    + replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
-      exact (split1 _ _ w).
+  - exact (fun w => evalZeroExtendTrunc _ w).
+  - exact (fun w => evalSignExtendTrunc _ w).
   - exact (fun w => split2 n1 n2 w).
 Defined.
 

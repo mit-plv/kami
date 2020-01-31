@@ -40,9 +40,9 @@ Hint Unfold mid : ModuleDefs.
 Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
 
 Section MemAsync.
-  Variables (addrSize fifoSize dataBytes: nat)
+  Variables (addrSize maddrSize fifoSize dataBytes: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
-  Variables (memInit: MemInit addrSize)
+  Variables (memInit: MemInit maddrSize)
             (ammio: AbsMMIO addrSize).
 
   Definition mm := mm Hdb memInit ammio.
@@ -66,9 +66,9 @@ End MemAsync.
 Hint Unfold mm inQ outQ ioQ midQ iom memAsyncWoQ memAsync : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize dataBytes: nat)
+  Variables (addrSize maddrSize dataBytes: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
-  Variables (memInit: MemInit addrSize)
+  Variables (memInit: MemInit maddrSize)
             (ammio: AbsMMIO addrSize).
 
   Lemma midQ_ModEquiv:

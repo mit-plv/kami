@@ -11,7 +11,7 @@ Set Implicit Arguments.
 Local Open Scope fmap.
 
 Section Invariants.
-  Variables (addrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize fifoSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -27,7 +27,7 @@ Section Invariants.
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
   Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
-           (memInit: MemInit addrSize).
+           (memInit: MemInit maddrSize).
   Hypotheses (HinitRf: evalConstT procInit.(rfInit) $0 = $0)
              (HpgmInit: PgmInitNotMMIO).
 
@@ -43,7 +43,7 @@ Section Invariants.
              (initv: fullType type (SyntaxKind Bool))
              (ofsv: fullType type (SyntaxKind (Bit iaddrSize)))
              (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
-             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) addrSize))) :=
+             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) maddrSize))) :=
     initv = false ->
     forall iaddr,
       iaddr < ofsv ->
@@ -62,7 +62,7 @@ Section Invariants.
              (HpinitOfsv: o@["pinitOfs"] = Some (existT _ _ pinitOfsv))
              (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
              (Hpgmv: o@["pgm"] = Some (existT _ _ pgmv))
-             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) addrSize)))
+             (memv: fullType type (SyntaxKind (Vector (Bit BitsPerByte) maddrSize)))
              (Hmemv: o@["mem"] = Some (existT _ _ memv)),
         scmm_inv_rf_zero rfv ->
         scmm_inv_pgm_init pinitv pinitOfsv pgmv memv ->

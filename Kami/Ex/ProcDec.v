@@ -237,7 +237,7 @@ Hint Unfold procDec : ModuleDefs.
 Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 
 Section ProcDecM.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -249,7 +249,7 @@ Section ProcDecM.
     procDec fetch dec exec init.
 
   Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
-            (memInit: MemInit addrSize).
+            (memInit: MemInit maddrSize).
 
   Definition pdecf := (pdec procInit ++ iom addrSize dataBytes)%kami.
   Definition procDecM := (pdecf ++ mm Hdb memInit ammio)%kami.
@@ -259,7 +259,7 @@ End ProcDecM.
 Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
-  Variables (addrSize iaddrSize instBytes dataBytes rfIdx: nat)
+  Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
             (Hdb: {pdb & dataBytes = S pdb}).
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
@@ -282,7 +282,7 @@ Section Facts.
   Hint Resolve pdecf_ModEquiv.
 
   Lemma procDecM_ModEquiv:
-    forall procInit memInit,
+    forall procInit (memInit: MemInit maddrSize),
       ModPhoasWf (procDecM Hdb fetch dec exec ammio procInit memInit).
   Proof.
     kequiv.
