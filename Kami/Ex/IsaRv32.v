@@ -92,27 +92,22 @@ Section Common.
 End Common.
 
 (** RV32I instructions (#instructions=40, categorized by opcode_)):
- * - Supported(35)
+ * - Supported(37)
  *   + opcode_LUI(1): lui
  *   + opcode_AUIPC(1): auipc
  *   + opcode_JAL(1): jal
  *   + opcode_JALR(1): jalr
  *   + opcode_BRANCH(6): beq, bne, blt, bge, bltu, bgeu
  *   + opcode_LOAD(5): lb, lh, lw, lbu, lhu
- *   + opcode_STORE(1): sw
+ *   + opcode_STORE(3): sb, sh, sw
  *   + opcode_OP_IMM(9): addi, slti, sltiu, xori, ori, andi, slli, srli, srai
  *   + opcode_OP(10): add, sub, sll, slt, sltu, xor, srl, sra, or, and
- * - Not supported yet(2)
- *   + opcode_STORE(2): sb, sh
- * - No plan to support(3)
+ * - Treat as nop(3)
  *   + opcode_MISC_MEM(1): fence
  *   + opcode_SYSTEM(2): ecall, ebreak
- *
- ** RV32M instructions (#instructions=8):
- * - Supported(1)
- *   + opcode_OP(1): mul
- * - Not supported yet(7)
- *   + opcode_OP(7): mulh, mulhsu, mulhu, div, divu, rem, remu
+ *   + NOTE: these instructions do not appear in [rv32DoExec] but since they
+ *     require [rd = 0] thus [rv32DoExec] is not even called; they are handled
+ *     by a rule when [rd = 0] (e.g., [execNmZ] in SC.v).
  *)
 
 Section RV32IM.
@@ -441,12 +436,6 @@ Section RV32IM.
         rv32_undefined.
       }
       
-      refine (IF (getFunct7E #inst == $funct7_MUL) then _ else _)%kami_expr.
-      1: {
-        register_op_funct3 inst funct3_MUL (#val1 * #val2)%kami_expr.
-        rv32_undefined.
-      }
-
       rv32_undefined.
     }
 
