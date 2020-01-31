@@ -527,7 +527,7 @@ Section Facts.
   Lemma memStoreBytes_updateBytes:
     forall n (addr: (Bit addrSize)@type)
            (val: (Bit (n * BitsPerByte))@type)
-           (mem: (Vector (Bit BitsPerByte) addrSize)@type)
+           (mem: (Vector (Bit BitsPerByte) maddrSize)@type)
            (sz: nat) (byteEn: (Array Bool (S sz))@type),
       evalExpr (memStoreBytes n addr val byteEn mem) =
       updateBytes n (evalExpr addr) (evalExpr val) (evalExpr byteEn) (evalExpr mem).
@@ -549,7 +549,7 @@ Section Facts.
   Lemma memStoreBytes'_updateBytes:
     forall n (addr: (Bit addrSize)@type)
            (val: (Bit (n * BitsPerByte))@type)
-           (mem: (Vector (Bit BitsPerByte) addrSize)@type)
+           (mem: (Vector (Bit BitsPerByte) maddrSize)@type)
            (sz: nat) (byteEn: (Array Bool (S sz))@type),
       evalExpr (memStoreBytes' n addr val (existT _ _ eq_refl) byteEn mem) =
       updateBytes n (evalExpr addr) (evalExpr val) (evalExpr byteEn) (evalExpr mem).
