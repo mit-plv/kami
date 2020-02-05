@@ -1,19 +1,34 @@
 open Format
 open Target
 open PP
+open Arg
 
 let iAddrSize: int = 10
+
+let arg_debug = ref false
+let set_debug () = arg_debug := true
+let arg_header_file_name = ref ""
+let set_header_file_name fn = arg_header_file_name := fn
+let arg_output_file_name = ref ""
+let set_output_file_name fn = arg_output_file_name := fn
+
+let arg_spec =
+  [("-d", Arg.Unit set_debug, "Enables debug mode");
+   ("-header", Arg.String set_header_file_name, "Sets a header")]
+
+let usage_msg =
+  "Usage: ./Main.native [-d] [-header header_file_name] output_file_name\n"
    
 let () =
-  let argnum = Array.length Sys.argv in
-  if argnum < 2 then
-    Printf.printf "Usage: %s [-d] output_file_name\n" Sys.argv.(0)
+  Arg.parse arg_spec set_output_file_name usage_msg;
+  if String.length !arg_output_file_name = 0 then
+    Printf.printf "Usage: %s [-d] [-header header_file_name] output_file_name\n" Sys.argv.(0)
   else
-    (let output_file = Sys.argv.(argnum - 1) in
-     let oc = open_out output_file in
+    (let oc = open_out !arg_output_file_name in
      set_formatter_out_channel oc;
+     let ic = open_in !arg_header_file_name in
      (match targetB iAddrSize with
-      | Some bml -> ppBModulesFullDbg bml (argnum > 2)
+      | Some bml -> ppBModulesFullDbg bml !arg_debug ic
       | _ -> raise (Should_not_happen "Empty bModules"));
      close_out oc)
       

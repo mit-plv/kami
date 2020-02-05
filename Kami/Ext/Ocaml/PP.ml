@@ -705,16 +705,23 @@ let rec ppRegInits (rl: regInitT list) =
   | r :: rl' ->
      ppRegInit r; print_cut (); ppRegInits rl'
 
-let ppImports (_: unit) =
-  ps "import Vector::*;"; print_cut (); force_newline ();
-  ps "import BuildVector::*;"; print_cut (); force_newline ();
-  ps "import RegFile::*;"; print_cut (); force_newline ();
-  ps "import RegFileZero::*;"; print_cut (); force_newline ();
-  ps "import FIFO::*;"; print_cut (); force_newline ();
-  ps "import FIFOF::*;"; print_cut (); force_newline ();
-  ps "import SimpleBRAM::*;"; print_cut (); force_newline ();
-  ps "import MulDiv::*;"; print_cut (); force_newline ();
-  ps "import SpecialFIFOs::*;"; print_cut (); force_newline ()
+let ppImports (hic: in_channel) =
+  try while true do
+        let line = input_line hic in
+        ps line; print_cut (); force_newline ()
+      done
+  with End_of_file ->
+    close_in hic
+  
+(* ps "import Vector::*;"; print_cut (); force_newline ();
+ * ps "import BuildVector::*;"; print_cut (); force_newline ();
+ * ps "import RegFile::*;"; print_cut (); force_newline ();
+ * ps "import RegFileZero::*;"; print_cut (); force_newline ();
+ * ps "import FIFO::*;"; print_cut (); force_newline ();
+ * ps "import FIFOF::*;"; print_cut (); force_newline ();
+ * ps "import SimpleBRAM::*;"; print_cut (); force_newline ();
+ * ps "import MulDiv::*;"; print_cut (); force_newline ();
+ * ps "import SpecialFIFOs::*;"; print_cut (); force_newline () *)
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -1032,7 +1039,7 @@ let rec removeDup (ls: 'a list) =
      else hd :: removeDup tl
               
 (* NOTE: idxInit should be larger than 0 *)
-let ppBModulesFull (bml: bModule list) =
+let ppBModulesFull (bml: bModule list) (hic: in_channel) =
   let idxInit = 1 in
   let bmdcl = toBRegModuleDCL bml in
   let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
@@ -1044,7 +1051,7 @@ let ppBModulesFull (bml: bModule list) =
     makeModuleOrder (makeMids 0 (List.length bmdcl))
                     (makeModuleOrderPairs (makeDefMap bmdcl 0)
                                           (makeCallMap bmdcl 0)) in
-  ppImports ();
+  ppImports hic;
   preAnalyses bml;
   ppGlbStructs ();
   ppBModules (permute bml moduleOrder) idxInit;
@@ -1052,8 +1059,8 @@ let ppBModulesFull (bml: bModule list) =
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullDbg (bml: bModule list) (dbg: bool) =
+let ppBModulesFullDbg (bml: bModule list) (dbg: bool) (hic: in_channel) =
   (if dbg then setDebug () else unsetDebug ());
-  ppBModulesFull bml;
+  ppBModulesFull bml hic;
   unsetDebug ()
 
