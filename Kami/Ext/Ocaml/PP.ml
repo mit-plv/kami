@@ -708,7 +708,7 @@ let rec ppRegInits (rl: regInitT list) =
 let ppImports (hic: in_channel) =
   try while true do
         let line = input_line hic in
-        ps line; print_cut (); force_newline ()
+        ps line; print_newline ()
       done
   with End_of_file ->
     close_in hic

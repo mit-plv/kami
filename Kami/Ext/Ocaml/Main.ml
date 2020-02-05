@@ -22,13 +22,16 @@ let usage_msg =
 let () =
   Arg.parse arg_spec set_output_file_name usage_msg;
   if String.length !arg_output_file_name = 0 then
-    Printf.printf "Usage: %s [-d] [-header header_file_name] output_file_name\n" Sys.argv.(0)
+    Printf.printf "Usage: %s [-d] -header header_file_name output_file_name\n" Sys.argv.(0)
   else
-    (let oc = open_out !arg_output_file_name in
-     set_formatter_out_channel oc;
-     let ic = open_in !arg_header_file_name in
-     (match targetB iAddrSize with
-      | Some bml -> ppBModulesFullDbg bml !arg_debug ic
-      | _ -> raise (Should_not_happen "Empty bModules"));
-     close_out oc)
+    let oc = open_out !arg_output_file_name in
+    set_formatter_out_channel oc;
+    try
+      let ic = open_in !arg_header_file_name in
+      (match targetB iAddrSize with
+       | Some bml -> ppBModulesFullDbg bml !arg_debug ic
+       | _ -> raise (Should_not_happen "Empty bModules"));
+      close_out oc
+    with Sys_error _ ->
+      Printf.printf "Error: Header file not found. Use -header to specify the header file.\n"
       
