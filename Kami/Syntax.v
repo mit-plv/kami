@@ -506,8 +506,7 @@ Section Phoas.
           intros.
           rewrite <- VIn_In in H.
           rewrite <- VIn_In.
-          simpl in H.
-          destruct H; [left | right]; assumption.
+          simpl in H; assumption.
         Defined.
 
         Lemma Vector_In_nil : forall a, ~ Vector.In a (Vector.nil A).
