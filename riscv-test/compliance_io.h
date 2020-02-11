@@ -16,8 +16,8 @@
 // _I: the correct value (immediate)
 #define RVTEST_IO_ASSERT_GPR_EQ(_SP, _R, _I) \
   mv s0, _R; \
-  li t0, _I; \
-  bne s0, t0, looper;
+  li s1, _I; \
+  bne s0, s1, looper;
 
 #define RVTEST_IO_ASSERT_SFPR_EQ(_F, _R, _I)
 #define RVTEST_IO_ASSERT_DFPR_EQ(_D, _R, _I)

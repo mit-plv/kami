@@ -8,7 +8,7 @@ TEST_TARGET ?= I-ADD-01
 RISCV_GCC ?= riscv64-unknown-elf-gcc
 RISCV_GCC_ARGS_BASIS:=\
  -I ./ -I $(RISCV_COMPLIANCE_PATH)/riscv-test-env \
- -O0 \
+ -O0 -Og \
  -nostartfiles -nodefaultlibs -nostdlib -s -static \
  -T config.ld \
  -march=rv32i -mabi=ilp32
