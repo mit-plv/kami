@@ -17,7 +17,7 @@
 #define RVTEST_IO_ASSERT_GPR_EQ(_SP, _R, _I) \
   mv s0, _R; \
   li s1, _I; \
-  bne s0, s1, looper;
+  bne s0, s1, loop_fail;
 
 #define RVTEST_IO_ASSERT_SFPR_EQ(_F, _R, _I)
 #define RVTEST_IO_ASSERT_DFPR_EQ(_D, _R, _I)
