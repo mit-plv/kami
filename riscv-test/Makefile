@@ -1,6 +1,6 @@
-default_target: hexdump
+default_target: test
 
-.PHONY: build objdump hexdump clean
+.PHONY: test clean
 
 RISCV_COMPLIANCE_PATH ?= ./riscv-compliance
 TEST_TARGET ?= I-ADD-01
@@ -31,9 +31,31 @@ build: compliance_io.h compliance_test.h
 objdump: build
 	$(RISCV_OBJDUMP) $(RISCV_OBJDUMP_ARGS) $(RISCV_GCC_OUT) > $(RISCV_OBJDUMP_OUT)
 
-hexdump: build
+$(RISCV_HEXDUMP_OUT): build
 	$(RISCV_OBJCOPY) $(RISCV_OBJCOPY_ARGS) $(RISCV_GCC_OUT) $(RISCV_HEX_BIN_OUT)
 	od -An -t x1 $(RISCV_HEX_BIN_OUT) > $(RISCV_HEXDUMP_OUT)
 
+program0.hex: $(RISCV_HEXDUMP_OUT)
+	< $< tr ' ' '\n' | grep . | awk 'NR % 4 == 1' > $@
+program1.hex: $(RISCV_HEXDUMP_OUT)
+	< $< tr ' ' '\n' | grep . | awk 'NR % 4 == 2' > $@
+program2.hex: $(RISCV_HEXDUMP_OUT)
+	< $< tr ' ' '\n' | grep . | awk 'NR % 4 == 3' > $@
+program3.hex: $(RISCV_HEXDUMP_OUT)
+	< $< tr ' ' '\n' | grep . | awk 'NR % 4 == 0' > $@
+
+$(TEST_TARGET).vvp: system.v mkTop.v 
+	iverilog -y ../Kami/Ext/BluespecFrontEnd/verilog/ -y. -g2005-sv -o $(TEST_TARGET).vvp system.v
+
+$(TEST_TARGET).vcd: $(TEST_TARGET).vvp program0.hex program1.hex program2.hex program3.hex
+	vvp $(TEST_TARGET).vvp >/dev/null
+	mv system.vcd $(TEST_TARGET).vcd
+	rm -rf program0.hex program1.hex program2.hex program3.hex
+
+test: $(TEST_TARGET).vcd
+	./test.sh $<
+
 clean:
 	rm -rf $(RISCV_GCC_OUT) $(RISCV_OBJDUMP_OUT) $(RISCV_HEX_BIN_OUT) $(RISCV_HEXDUMP_OUT)
+	rm -rf $(TEST_TARGET).vvp $(TEST_TARGET).vcd
+	rm -rf program0.hex program1.hex program2.hex program3.hex
