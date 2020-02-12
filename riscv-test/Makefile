@@ -17,11 +17,11 @@ RISCV_GCC_OUT:=$(TEST_TARGET).o
 RISCV_GCC_ARGS_OUT:=-o $(RISCV_GCC_OUT)
 
 RISCV_OBJDUMP ?= riscv64-unknown-elf-objdump
-RISCV_OBJDUMP_ARGS:=-d
+RISCV_OBJDUMP_ARGS:=-D
 RISCV_OBJDUMP_OUT:=$(TEST_TARGET).objdump
 
 RISCV_OBJCOPY ?= riscv64-unknown-elf-objcopy
-RISCV_OBJCOPY_ARGS:=-O binary -j .text
+RISCV_OBJCOPY_ARGS:=-O binary -j .text -j .data
 RISCV_HEX_BIN_OUT:=$(TEST_TARGET).hex.o
 RISCV_HEXDUMP_OUT:=$(TEST_TARGET).hex
 
@@ -33,7 +33,7 @@ objdump: build
 
 $(RISCV_HEXDUMP_OUT): build
 	$(RISCV_OBJCOPY) $(RISCV_OBJCOPY_ARGS) $(RISCV_GCC_OUT) $(RISCV_HEX_BIN_OUT)
-	od -An -t x1 $(RISCV_HEX_BIN_OUT) > $(RISCV_HEXDUMP_OUT)
+	hexdump -v $(RISCV_HEX_BIN_OUT) | cut -c 9- > $(RISCV_HEXDUMP_OUT)
 
 program0.hex: $(RISCV_HEXDUMP_OUT)
 	< $< tr ' ' '\n' | grep . | awk 'NR % 4 == 1' > $@
