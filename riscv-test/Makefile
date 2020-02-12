@@ -17,7 +17,7 @@ RISCV_GCC_OUT:=$(TEST_TARGET).o
 RISCV_GCC_ARGS_OUT:=-o $(RISCV_GCC_OUT)
 
 RISCV_OBJDUMP ?= riscv64-unknown-elf-objdump
-RISCV_OBJDUMP_ARGS:=-D
+RISCV_OBJDUMP_ARGS:=-d
 RISCV_OBJDUMP_OUT:=$(TEST_TARGET).objdump
 
 RISCV_OBJCOPY ?= riscv64-unknown-elf-objcopy
@@ -30,6 +30,8 @@ build: compliance_io.h compliance_test.h
 
 objdump: build
 	$(RISCV_OBJDUMP) $(RISCV_OBJDUMP_ARGS) $(RISCV_GCC_OUT) > $(RISCV_OBJDUMP_OUT)
+
+$(RISCV_OBJDUMP_OUT): objdump
 
 $(RISCV_HEXDUMP_OUT): build
 	$(RISCV_OBJCOPY) $(RISCV_OBJCOPY_ARGS) $(RISCV_GCC_OUT) $(RISCV_HEX_BIN_OUT)
@@ -52,10 +54,8 @@ $(TEST_TARGET).vcd: $(TEST_TARGET).vvp program0.hex program1.hex program2.hex pr
 	mv system.vcd $(TEST_TARGET).vcd
 	rm -rf program0.hex program1.hex program2.hex program3.hex
 
-test: $(TEST_TARGET).vcd
-	./test.sh $<
+test: $(RISCV_OBJDUMP_OUT) $(TEST_TARGET).vcd
+	./test_one.sh $^
 
 clean:
-	rm -rf $(RISCV_GCC_OUT) $(RISCV_OBJDUMP_OUT) $(RISCV_HEX_BIN_OUT) $(RISCV_HEXDUMP_OUT)
-	rm -rf $(TEST_TARGET).vvp $(TEST_TARGET).vcd
-	rm -rf program0.hex program1.hex program2.hex program3.hex
+	rm -rf *.o *.objdump *.hex *.vvp *.vcd
