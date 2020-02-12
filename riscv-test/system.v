@@ -188,7 +188,39 @@ module system(
   always #1 clk = !clk;
   initial begin
     $dumpfile("system.vcd");
-    $dumpvars(1, mkTop.proc_m13_lastPc);
+    $dumpvars(1, 
+ `ifdef DEBUG
+              mkTop.proc_m10_pc,
+              mkTop.proc_m10_pcUpdated,
+              mkTop.proc_m13_stall,
+              mkTop.WILL_FIRE_RL_proc_m10_instFetchRq,
+              mkTop.WILL_FIRE_RL_proc_m10_instFetchRs,
+              mkTop.WILL_FIRE_RL_proc_m10_instFetchRsIgnore,
+              mkTop.WILL_FIRE_RL_proc_m10_modifyPc,
+              mkTop.WILL_FIRE_RL_proc_m10_pgmInitRq,
+              mkTop.WILL_FIRE_RL_proc_m10_pgmInitRqEnd,
+              mkTop.WILL_FIRE_RL_proc_m10_pgmInitRs,
+              mkTop.WILL_FIRE_RL_proc_m10_pgmInitRsEnd,
+              mkTop.WILL_FIRE_RL_proc_m11_decodeLd,
+              mkTop.WILL_FIRE_RL_proc_m11_decodeNm,
+              mkTop.WILL_FIRE_RL_proc_m11_decodeSt,
+              mkTop.WILL_FIRE_RL_proc_m12_execBypass,
+              mkTop.WILL_FIRE_RL_proc_m12_execNm,
+              mkTop.WILL_FIRE_RL_proc_m13_repLd,
+              mkTop.WILL_FIRE_RL_proc_m13_repLdZ,
+              mkTop.WILL_FIRE_RL_proc_m13_repSt,
+              mkTop.WILL_FIRE_RL_proc_m13_reqLd,
+              mkTop.WILL_FIRE_RL_proc_m13_reqSt,
+              mkTop.WILL_FIRE_RL_proc_m13_wbNm,
+              mkTop.WILL_FIRE_RL_proc_m13_wbNmZ,
+              mkTop.WILL_FIRE_RL_proc_m13_wrongEpoch,
+              led, spi_clk, spi_csn, spi_mosi, spi_miso, clk, resetn,
+              rdy_obtain_rq_get, en_obtain_rq_get, rq_addr_is_bram, mem_rq_addr, mem_rq_data,
+              mem_write_byte_enable, mem_rq_iswrite,
+              ram_rs_en, ram_read, instant_rs_en, instant_rs, rdy_send_rs_put,
+              spi_tx_buf, spi_rx_buf, spi_tx_rdy,
+ `endif              
+              mkTop.proc_m13_lastPc);
     #10000 $finish();
   end
 `endif
