@@ -504,15 +504,16 @@ Section Phoas.
             Vector.In a (Vector.cons _ b _ ls) -> a = b \/ Vector.In a ls.
         Proof.
           intros.
-          rewrite <- VIn_In in H.
-          rewrite <- VIn_In.
-          simpl in H; assumption.
+          apply VIn_In in H.
+          destruct H.
+          left; assumption.
+          right; apply VIn_In; assumption.
         Defined.
 
         Lemma Vector_In_nil : forall a, ~ Vector.In a (Vector.nil A).
         Proof.
           unfold not; intros.
-          rewrite <- VIn_In in H.
+          apply VIn_In in H.
           simpl in H.
           assumption.
         Defined.
@@ -591,10 +592,11 @@ Section Phoas.
             destruct H.
             + inversion H; subst.
               exists (Vector.hd lb).
-              rewrite Vector.eta with (v := lb) at 4.
-              simpl.
-              split; auto.
-              apply Vector.In_cons_hd.
+              split.
+              * reflexivity.
+              * rewrite Vector.eta with (v := lb).
+                simpl.
+                apply Vector.In_cons_hd.
             + rewrite Vector.eta with (v := lb).
               specialize (IHla _ _ _ H).
               destruct IHla as [b [ceq vin]].
@@ -652,25 +654,6 @@ Section Phoas.
                        end).
   End StructUpdate.
 
-  (*
-  Compute (let ls: Vector.t (Attribute Kind) _ := Vector.cons
-                       _ (Build_Attribute "a" Bool) _
-                       (Vector.cons
-                          _ (Build_Attribute "aa" Bool) _
-                          (Vector.cons
-                             _ (Build_Attribute "aaa" Bool) _
-                             (Vector.nil _))) in
-           let pfs: ilist (fun a => Expr (SyntaxKind (attrType a))) ls
-               := (icons (Build_Attribute "a" Bool)
-                         (Const (ConstBool true))
-                         (icons  (Build_Attribute "aa" Bool)
-                                 (Const (ConstBool true))
-                                 (icons (Build_Attribute "aaa" Bool)
-                                        (Const (ConstBool true))
-                                        (inil _)))) in
-           let e__str := BuildStruct pfs
-           in @updStruct _ ls e__str Fin.F1 (Const (ConstBool false))).
-   *)
 End Phoas.
 
 Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
