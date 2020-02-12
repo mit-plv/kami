@@ -15,9 +15,8 @@
 // _R: the destination register holding the result value
 // _I: the correct value (immediate)
 #define RVTEST_IO_ASSERT_GPR_EQ(_SP, _R, _I) \
-  mv t5, _R; \
-  li t6, _I; \
-  bne t5, t6, loop_fail;
+  li _SP, _I; \
+  bne _R, _SP, loop_fail;
 
 #define RVTEST_IO_ASSERT_SFPR_EQ(_F, _R, _I)
 #define RVTEST_IO_ASSERT_DFPR_EQ(_D, _R, _I)
