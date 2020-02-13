@@ -392,7 +392,7 @@ Section RV32IM.
                          (IF (#val1 <s (_signExtend_ (getOffsetIE #inst)))
                           then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
       register_op_funct3 inst funct3_SLTIU
-                         (IF (#val1 < (_zeroExtend_ (getOffsetIE #inst)))
+                         (IF (#val1 < (_signExtend_ (getOffsetIE #inst)))
                           then $1 else $$(natToWord (rv32DataBytes * 8) 0))%kami_expr.
       register_op_funct3 inst funct3_XORI
                          (#val1 ~+ (_signExtend_ (getOffsetIE #inst)))%kami_expr.
