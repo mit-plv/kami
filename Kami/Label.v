@@ -2,6 +2,8 @@ Require Import Bool List String.
 Require Import Lib.CommonTactics Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

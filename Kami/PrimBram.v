@@ -3,6 +3,8 @@ Require Import Lib.Word Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.Tactics.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 
 Definition isSomeB {A} (a: option A) :=

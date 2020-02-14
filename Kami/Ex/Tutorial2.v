@@ -6,6 +6,8 @@ Require Import Ext.BSyntax.
 Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
 (* end hide *)
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

@@ -3,6 +3,8 @@ Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Concat Lib.Indexer Lib.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.Specialize Kami.Duplicate Kami.Notations.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

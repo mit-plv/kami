@@ -3,6 +3,8 @@ Require Import Lib.Indexer.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.Tactics.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 
 Definition primNormalFifoName: string := "FIFO".
