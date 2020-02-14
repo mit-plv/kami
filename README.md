@@ -1,7 +1,5 @@
-Kami: A Coq Framework to Support Implementing and Verifying Bluespec-style Hardware Components
+Kami: A Platform for High-Level Parametric Hardware Specification and Its Modular Verification
 ==============================================================================================
-
-This repository (the "master" branch) contains the source code of Kami.
 
 Directory content
 -----------------
@@ -13,16 +11,13 @@ Directory content
   as keys, etc.
 - Ex: Contains basic examples and tutorials.
 - Ext: Files needed to extract designs developed in Kami into Bluespec
-  + BluespecFrontEnd
-    * fpga-connectal: Contains the files to compile Kami modules in FPGAs.
-    * sim: Contains the files to simulate Kami modules on the Bluespec simulator.
   + Ocaml: Contains the files to pretty-print the OCaml code extracted from Coq.
 
 Requirements
 ------------
 
 ### To Verify Kami modules
-- Coq 8.9.0 or 8.8.x (x=[0|1|2]), with $PATH containing the standard Coq binaries)
+- Coq 8.11.x or 8.10.x, with $PATH containing the standard Coq binaries
 
 ### To Generate Bluespec programs
 - OCaml 4.0.4 (with $PATH containing the standard OCaml binaries)
