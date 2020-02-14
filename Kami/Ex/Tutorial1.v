@@ -1,4 +1,4 @@
-Require Import Kami.Kami.
+Require Import Kami.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
