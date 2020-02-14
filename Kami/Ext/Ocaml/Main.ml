@@ -3,8 +3,6 @@ open Target
 open PP
 open Arg
 
-let iAddrSize: int = 10
-
 let arg_debug = ref false
 let set_debug () = arg_debug := true
 let arg_header_file_name = ref ""
@@ -28,7 +26,7 @@ let () =
     set_formatter_out_channel oc;
     try
       let ic = open_in !arg_header_file_name in
-      (match targetB iAddrSize with
+      (match targetB with
        | Some bml -> ppBModulesFullDbg bml !arg_debug ic
        | _ -> raise (Should_not_happen "Empty bModules"));
       close_out oc
