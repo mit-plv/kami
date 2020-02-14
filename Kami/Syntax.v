@@ -409,7 +409,8 @@ Section Phoas.
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
   Section StructUpdate.
-    Local Lemma nth_map__transparent {A B} (f: A -> B) {n} v (p1 p2: Fin.t n) (eq: p1 = p2):
+    
+    Lemma nth_map_transparent {A B} (f: A -> B) {n} v (p1 p2: Fin.t n) (eq: p1 = p2):
       Vector.nth (Vector.map f v) p1 = f (Vector.nth v p2).
     Proof.
       subst p2; induction p1.
@@ -443,17 +444,16 @@ Section Phoas.
                (e: Expr (SyntaxKind (Struct ls))):
       ilist@{Set Type}
            (fun i : Attribute Kind * Fin.t n =>
-           Expr (SyntaxKind (attrType (Vector.nth ls (snd i)))))
-        (zipVector ls (getFinList n))
-      :=
-      imap_list _ (fun i => match @nth_map__transparent _ _ (@attrType _) _
-                                                   ls (snd i) (snd i) eq_refl
-                               in _ = Y
-                               return Expr (SyntaxKind Y)
-                         with
-                         | eq_refl => ReadField (snd i) e
-                         end) (zipVector ls (getFinList n)).
-
+              Expr (SyntaxKind (attrType (Vector.nth ls (snd i)))))
+           (zipVector ls (getFinList n)) :=
+      imap_list _ (fun i => match @nth_map_transparent _ _ (@attrType _) _
+                                                       ls (snd i) (snd i) eq_refl
+                                  in _ = Y
+                                  return Expr (SyntaxKind Y)
+                            with
+                            | eq_refl => ReadField (snd i) e
+                            end) (zipVector ls (getFinList n)).
+    
     Lemma Vector_in_cons (A: Type) (P: A -> Prop) (h: A) n (ls: Vector.t A n):
       (forall a, Vector.In a (Vector.cons A h n ls) -> P a) ->
       forall x, Vector.In x ls -> P x.
@@ -470,7 +470,7 @@ Section Phoas.
         | In_cons_tl : forall a (m : nat) (x : A) (v : Vector.t A m),
             vIn a v -> vIn a (Vector.cons A x m v).
 
-        Local Lemma vIn_In: forall (a: A) n vs, @vIn a n vs <-> @Vector.In _ a n vs.
+        Lemma vIn_In: forall (a: A) n vs, @vIn a n vs <-> @Vector.In _ a n vs.
         Proof.
           intros.
           split; intros.
@@ -488,7 +488,7 @@ Section Phoas.
           | Vector.cons b n' ls' => a = b \/ VIn a ls'
           end.
 
-        Local Lemma VIn_In: forall (a: A) n vs, @VIn a n vs <-> @Vector.In _ a n vs.
+        Lemma VIn_In: forall (a: A) n vs, @VIn a n vs <-> @Vector.In _ a n vs.
         Proof.
           intros.
           split; intros.
@@ -500,7 +500,7 @@ Section Phoas.
           - induction H; simpl; auto.
         Defined.
 
-        Local Lemma in_cons: forall n (ls: Vector.t A n) a b,
+        Lemma in_cons: forall n (ls: Vector.t A n) a b,
             Vector.In a (Vector.cons _ b _ ls) -> a = b \/ Vector.In a ls.
         Proof.
           intros.
@@ -519,8 +519,9 @@ Section Phoas.
         Defined.
       End VIn.
 
-      Variable A B: Type.
-      Local Lemma in_zip2: forall n a b (la: Vector.t A n) (lb: Vector.t B n),
+      Variables A B: Type.
+
+      Lemma in_zip2: forall n a b (la: Vector.t A n) (lb: Vector.t B n),
           Vector.In (a, b) (zipVector la lb) -> Vector.In b lb.
       Proof.
         induction la; intros.
@@ -568,7 +569,7 @@ Section Phoas.
         Variable A B C: Type.
         Variable f: B -> C.
 
-        Local Lemma map_zip n (la: Vector.t A n):
+        Lemma map_zip n (la: Vector.t A n):
           forall (lb: Vector.t B n),
             Vector.map fst (zipVector la lb) = la.
         Proof.
@@ -579,7 +580,7 @@ Section Phoas.
           f_equal; auto.
         Defined.
 
-        Local Lemma in_zip_map n (la: Vector.t A n):
+        Lemma in_zip_map n (la: Vector.t A n):
           forall (lb: Vector.t B n) a c,
             Vector.In (a, c) (zipVector la (Vector.map f lb)) ->
             exists b, c = f b /\ Vector.In (a, b) (zipVector la lb).
@@ -610,7 +611,7 @@ Section Phoas.
       Variable A: Set.
       Variable f: A -> Type.
 
-      Local Lemma in_eq n ls:
+      Lemma in_eq n ls:
         (forall a : A * Fin.t n,
             Vector.In a (zipVector ls (getFinList n)) ->
             (fun i : A * Fin.t n => f (Vector.nth ls (snd i))) a = f (fst a)).
@@ -631,7 +632,7 @@ Section Phoas.
 
       Definition elim_fin n (ls: Vector.t A n)
                  (il: ilist@{Set Type} (fun i: (A * Fin.t n) => f (Vector.nth ls (snd i)))
-                            (zipVector ls (getFinList n))): ilist@{Set Type} f ls :=
+                           (zipVector ls (getFinList n))): ilist@{Set Type} f ls :=
         match map_zip ls (getFinList n) in _ = Y return _ Y with
         | eq_refl => imap_change_vec f (@fst A (Fin.t n)) il (in_eq ls)
         end.
@@ -648,10 +649,10 @@ Section Phoas.
       Expr (SyntaxKind (Struct ls)) :=
       BuildStruct
         (replace_Index (getIlistExpr e) i
-                       match @nth_map__transparent _ _ (@attrType _) _ ls i i eq_refl in _ = Y return
-                             Expr (SyntaxKind Y) with
-                       | eq_refl => v
-                       end).
+                       (match @nth_map_transparent _ _ (@attrType _) _ ls i i eq_refl
+                              in _ = Y return Expr (SyntaxKind Y) with
+                        | eq_refl => v
+                        end)).
   End StructUpdate.
 
 End Phoas.
@@ -662,8 +663,6 @@ Definition MethodT (sig : SignatureT) := forall ty, ty (arg sig) -> ActionT ty (
 Inductive RegInitValue :=
 | RegInitCustom: sigT ConstFullT -> RegInitValue
 | RegInitDefault: FullKind -> RegInitValue.
-
-Require Import Lib.Struct.
 
 Definition RegInitT := Attribute RegInitValue.
 Definition DefMethT := Attribute (sigT MethodT).
@@ -874,7 +873,6 @@ Section GetCalls.
     auto.
   Qed.
 
-
   Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
@@ -912,7 +910,6 @@ Section GetCalls.
     auto.
   Qed.
 
-
   Fixpoint getCallsM (ms: list DefMethT): list string :=
     match ms with
       | nil => nil
@@ -935,9 +932,8 @@ Section GetCalls.
     auto.
   Qed.
 
-
-  Lemma getCallsM_implies_getCallsDm s ms: In s (getCallsM ms) ->
-                                           exists dm, In dm ms /\ In s (getCallsDm dm).
+  Lemma getCallsM_implies_getCallsDm s ms:
+    In s (getCallsM ms) -> exists dm, In dm ms /\ In s (getCallsDm dm).
   Proof.
     induction ms; intros; simpl in *.
     - intuition.
@@ -1310,8 +1306,6 @@ Hint Unfold pm_rules pm_regInits pm_methods
      getIntDefs getIntCalls getIntMeths.
 
 (** Notations *)
-
-Notation "[ x1 ; .. ; xN ]" := (cons x1 .. (cons xN nil) ..) : list_scope.
 
 Declare Scope kami_struct_scope.
 Notation "name :: ty" := {| attrName := name; attrType := ty |} : kami_struct_scope.
