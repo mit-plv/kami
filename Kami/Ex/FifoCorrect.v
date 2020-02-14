@@ -5,6 +5,8 @@ Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementF
 Require Import Kami.Notations Kami.Tactics Kami.Decomposition.
 Require Import Ex.Fifo Ex.NativeFifo Omega.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

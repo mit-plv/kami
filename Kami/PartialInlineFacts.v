@@ -4,6 +4,8 @@ Require Import Lib.ilist Lib.Word Lib.FMap Lib.StringEq Lib.ListSupport.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Wf Kami.Inline Kami.InlineFacts.
 Require Import Program.Equality FunctionalExtensionality.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

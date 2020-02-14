@@ -6,6 +6,8 @@ Require Import Kami.Wf Kami.Notations Kami.Tactics.
 Require Import Kami.Decomposition.
 Require Import Ex.Fifo Ex.NativeFifo Omega.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 
 Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.

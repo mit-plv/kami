@@ -4,6 +4,8 @@ Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq Li
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.ModularFacts Kami.Wf.
 Require Import FunctionalExtensionality.
 
+Import ListNotations.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
