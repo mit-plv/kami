@@ -338,7 +338,7 @@ Section Phoas.
   Definition FieldKind {n} (ls: Vector.t (Attribute Kind) n)
              (i: Fin.t n) :=
     Vector.nth (Vector.map (@attrType _) ls) i.
-    
+
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
   | Const k: ConstT k -> Expr (SyntaxKind k)
@@ -386,14 +386,14 @@ Section Phoas.
   | DispStruct n: (Vector.t FullBitFormat n) ->
                   forall ls, Expr (SyntaxKind (@Struct n ls)) -> Disp
   | DispArray: FullBitFormat -> forall n k, Expr (SyntaxKind (Array n k)) -> Disp.
-  
+
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
       Expr (SyntaxKind (arg s)) ->
       (ty (ret s) -> ActionT lretT) ->
       ActionT lretT
   | Let_ lretT': Expr lretT' -> (fullType lretT' -> ActionT lretT) -> ActionT lretT
-  | ReadNondet: 
+  | ReadNondet:
       forall k, (fullType k -> ActionT lretT) -> ActionT lretT
   | ReadReg (r: string):
       forall k, (fullType k -> ActionT lretT) -> ActionT lretT
@@ -409,6 +409,14 @@ Section Phoas.
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
   Section StructUpdate.
+    Local Lemma nth_map__transparent {A B} (f: A -> B) {n} v (p1 p2: Fin.t n) (eq: p1 = p2):
+      Vector.nth (Vector.map f v) p1 = f (Vector.nth v p2).
+    Proof.
+      subst p2; induction p1.
+      - revert n v; refine (@caseS _ _ _); now simpl.
+      - revert n v p1 IHp1; refine (@caseS _  _ _); now simpl.
+    Defined.
+
     Fixpoint getFinList n: Vector.t (Fin.t n) n :=
       match n with
       | 0 => Vector.nil _
@@ -438,18 +446,21 @@ Section Phoas.
            Expr (SyntaxKind (attrType (Vector.nth ls (snd i)))))
         (zipVector ls (getFinList n))
       :=
-      imap_list _ (fun i => match Vector.nth_map (@attrType _) ls (snd i) (snd i) eq_refl in _ = Y
-                                  return Expr (SyntaxKind Y) with
-                            | eq_refl => ReadField (snd i) e
-                            end) (zipVector ls (getFinList n)).
+      imap_list _ (fun i => match @nth_map__transparent _ _ (@attrType _) _
+                                                   ls (snd i) (snd i) eq_refl
+                               in _ = Y
+                               return Expr (SyntaxKind Y)
+                         with
+                         | eq_refl => ReadField (snd i) e
+                         end) (zipVector ls (getFinList n)).
 
     Lemma Vector_in_cons (A: Type) (P: A -> Prop) (h: A) n (ls: Vector.t A n):
       (forall a, Vector.In a (Vector.cons A h n ls) -> P a) ->
       forall x, Vector.In x ls -> P x.
     Proof.
-      intros pf x in_pf.
-      specialize (pf x ltac:(constructor; auto)); assumption.
-    Qed.
+      intros pf x in_pf; apply pf.
+      apply Vector.In_cons_tl; assumption.
+    Defined.
 
     Section Vec.
       Section VIn.
@@ -469,14 +480,14 @@ Section Phoas.
           - induction H.
             + constructor.
             + constructor; auto.
-        Qed.
+        Defined.
 
         Fixpoint VIn (a: A) n (l: Vector.t A n) : Prop :=
           match l with
           | Vector.nil => False
           | Vector.cons b n' ls' => a = b \/ VIn a ls'
           end.
-        
+
         Local Lemma VIn_In: forall (a: A) n vs, @VIn a n vs <-> @Vector.In _ a n vs.
         Proof.
           intros.
@@ -487,25 +498,25 @@ Section Phoas.
             + simpl in H.
               destruct H; subst; constructor; auto.
           - induction H; simpl; auto.
-        Qed.
+        Defined.
 
         Local Lemma in_cons: forall n (ls: Vector.t A n) a b,
             Vector.In a (Vector.cons _ b _ ls) -> a = b \/ Vector.In a ls.
         Proof.
           intros.
-          rewrite <- VIn_In in H.
-          rewrite <- VIn_In.
-          simpl in H.
-          auto.
-        Qed.
+          apply VIn_In in H.
+          destruct H.
+          left; assumption.
+          right; apply VIn_In; assumption.
+        Defined.
 
         Lemma Vector_In_nil : forall a, ~ Vector.In a (Vector.nil A).
         Proof.
           unfold not; intros.
-          rewrite <- VIn_In in H.
+          apply VIn_In in H.
           simpl in H.
           assumption.
-        Qed.
+        Defined.
       End VIn.
 
       Variable A B: Type.
@@ -528,7 +539,7 @@ Section Phoas.
           + specialize (IHla H).
             rewrite Vector.eta with (v := lb).
             econstructor; eauto.
-      Qed.
+      Defined.
     End Vec.
 
     Section Overall.
@@ -566,8 +577,8 @@ Section Phoas.
           rewrite Vector.eta with (v := lb).
           simpl.
           f_equal; auto.
-        Qed.
-        
+        Defined.
+
         Local Lemma in_zip_map n (la: Vector.t A n):
           forall (lb: Vector.t B n) a c,
             Vector.In (a, c) (zipVector la (Vector.map f lb)) ->
@@ -581,10 +592,11 @@ Section Phoas.
             destruct H.
             + inversion H; subst.
               exists (Vector.hd lb).
-              rewrite Vector.eta with (v := lb) at 4.
-              simpl.
-              split; auto.
-              apply Vector.In_cons_hd.
+              split.
+              * reflexivity.
+              * rewrite Vector.eta with (v := lb).
+                simpl.
+                apply Vector.In_cons_hd.
             + rewrite Vector.eta with (v := lb).
               specialize (IHla _ _ _ H).
               destruct IHla as [b [ceq vin]].
@@ -592,9 +604,9 @@ Section Phoas.
               exists b.
               split; auto.
               apply Vector.In_cons_tl; auto.
-        Qed.
+        Defined.
       End Map.
-      
+
       Variable A: Set.
       Variable f: A -> Type.
 
@@ -615,8 +627,8 @@ Section Phoas.
             dest; subst.
             apply IHls in H0.
             apply H0.
-      Qed.
-      
+      Defined.
+
       Definition elim_fin n (ls: Vector.t A n)
                  (il: ilist@{Set Type} (fun i: (A * Fin.t n) => f (Vector.nth ls (snd i)))
                             (zipVector ls (getFinList n))): ilist@{Set Type} f ls :=
@@ -636,11 +648,12 @@ Section Phoas.
       Expr (SyntaxKind (Struct ls)) :=
       BuildStruct
         (replace_Index (getIlistExpr e) i
-                       match Vector.nth_map (@attrType _) ls i i eq_refl in _ = Y return
+                       match @nth_map__transparent _ _ (@attrType _) _ ls i i eq_refl in _ = Y return
                              Expr (SyntaxKind Y) with
                        | eq_refl => v
                        end).
   End StructUpdate.
+
 End Phoas.
 
 Definition Action (retTy : Kind) := forall ty, ActionT ty retTy.
@@ -676,7 +689,7 @@ Inductive Modules: Type :=
       (dms: list DefMethT): Modules
 | ConcatMod (m1 m2: Modules): Modules.
 
-Fixpoint getRules m := 
+Fixpoint getRules m :=
   match m with
   | PrimMod prim => prim.(pm_rules)
   | Mod _ rules _ => rules
@@ -738,7 +751,7 @@ Qed.
 
 Section AppendAction.
   Variable ty: Kind -> Type.
-  
+
   Fixpoint appendAction {retT1 retT2} (a1: ActionT ty retT1)
            (a2: ty retT1 -> ActionT ty retT2): ActionT ty retT2 :=
     match a1 with
@@ -799,7 +812,7 @@ Section GetCalls.
       | Displ ls c => getCallsA_Sig c
       | Return _ => nil
     end.
-  
+
   Fixpoint getCallsA {k} (a: ActionT typeUT k): list string :=
     match a with
       | MCall m _ _ c => m :: (getCallsA (c tt))
@@ -861,7 +874,7 @@ Section GetCalls.
     auto.
   Qed.
 
-  
+
   Fixpoint getCallsR (rl: list (Attribute (Action (Bit 0))))
   : list string :=
     match rl with
@@ -887,10 +900,10 @@ Section GetCalls.
 
   Definition getCallsDm (dm: DefMethT): list string :=
     getCallsA (projT2 (attrType dm) typeUT tt).
-               
+
   Definition getCallsDm_Sig (dm: DefMethT) :=
     getCallsA_Sig (projT2 (attrType dm) typeUT tt).
-               
+
   Lemma getCallsDm_Sig_getCallsDm r:
     map fst (getCallsDm_Sig r) = getCallsDm r.
   Proof.
@@ -922,7 +935,7 @@ Section GetCalls.
     auto.
   Qed.
 
-  
+
   Lemma getCallsM_implies_getCallsDm s ms: In s (getCallsM ms) ->
                                            exists dm, In dm ms /\ In s (getCallsDm dm).
   Proof.
@@ -962,7 +975,7 @@ Section GetCalls.
     rewrite map_app, getCallsR_Sig_getCallsR, getCallsM_Sig_getCallsM.
     auto.
   Qed.
-    
+
   Lemma getCalls_in:
     forall ma mb k,
       In k (getCalls (ConcatMod ma mb)) ->
@@ -1210,7 +1223,7 @@ Proof.
   apply filter_In in H; apply filter_In in H0; dest.
   rewrite H2 in H1; discriminate.
 Qed.
-  
+
 Lemma getIntDefs_getExtDefs_disj:
   forall m, DisjList (getIntDefs m) (getExtDefs m).
 Proof.
@@ -1307,4 +1320,3 @@ Delimit Scope kami_struct_scope with struct.
 Declare Scope kami_scope.
 Notation "m1 ++ m2" := (ConcatMod m1 m2) : kami_scope.
 Delimit Scope kami_scope with kami.
-
