@@ -18,16 +18,16 @@ Section ProcFour.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
-  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+  Variable (procInit: ProcInit addrSize dataBytes rfIdx)
            (memInit: MemInit maddrSize).
 
   Section AbsPipeline.
@@ -37,17 +37,17 @@ Section ProcFour.
     Variable (f2dPack:
                 forall ty,
                   Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                  Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                  Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                   Expr ty (SyntaxKind Bool) -> (* epoch *)
                   Expr ty (SyntaxKind f2dElt)).
     Variables
       (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                               Expr ty (SyntaxKind (Data instBytes)))
       (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                            Expr ty (SyntaxKind (Pc iaddrSize)))
+                            Expr ty (SyntaxKind (Pc addrSize)))
       (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                             Expr ty (SyntaxKind (Pc iaddrSize)))
+                             Expr ty (SyntaxKind (Pc addrSize)))
       (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind Bool)).
 
@@ -85,8 +85,8 @@ Section ProcFour.
                   Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                   Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                   Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                  Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                  Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                  Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                   Expr ty (SyntaxKind Bool) -> (* epoch *)
                   Expr ty (SyntaxKind d2eElt)).
     Variables
@@ -103,9 +103,9 @@ Section ProcFour.
       (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                               Expr ty (SyntaxKind (Data instBytes)))
       (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                            Expr ty (SyntaxKind (Pc iaddrSize)))
+                            Expr ty (SyntaxKind (Pc addrSize)))
       (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                             Expr ty (SyntaxKind (Pc iaddrSize)))
+                             Expr ty (SyntaxKind (Pc addrSize)))
       (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind Bool)).
 

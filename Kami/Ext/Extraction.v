@@ -17,28 +17,25 @@ Definition rv32AddrSize := 32.
 
 Section PerInstMemSize.
   Variable rv32IAddrSize: nat.
-  Hypothesis (Haddr1: rv32IAddrSize = 3 + (rv32IAddrSize - 3))
-             (Haddr2: rv32AddrSize = 2 + rv32IAddrSize
+  Hypothesis (Haddr2: rv32AddrSize = 2 + rv32IAddrSize
                                      + (rv32AddrSize - (2 + rv32IAddrSize))).
 
   Definition getBTBIndex ty
-             (pc: fullType ty (SyntaxKind (Bit rv32IAddrSize))): (Bit 3) @ ty :=
-    let rpc := eq_rect _ (fun sz => fullType ty (SyntaxKind (Bit sz))) pc _ Haddr1 in
-    (UniBit (Trunc 3 _) #rpc)%kami_expr.
+             (pc: fullType ty (SyntaxKind (Bit rv32AddrSize))): (Bit 3) @ ty :=
+    (UniBit (ConstExtract 2 3 27) #pc)%kami_expr.
 
   Definition getBTBTag ty
-             (pc: fullType ty (SyntaxKind (Bit rv32IAddrSize))): (Bit (rv32IAddrSize - 3)) @ ty :=
-    let rpc := eq_rect _ (fun sz => fullType ty (SyntaxKind (Bit sz))) pc _ Haddr1 in
-    (UniBit (TruncLsb 3 _) #rpc)%kami_expr.
+             (pc: fullType ty (SyntaxKind (Bit rv32AddrSize))): (Bit (rv32AddrSize - 3)) @ ty :=
+    {UniBit (Trunc 2 _) #pc, UniBit (TruncLsb 5 27) #pc}%kami_expr.
   
-  Definition pinit: ProcInit rv32IAddrSize rv32DataBytes rv32RfIdx :=
+  Definition pinit: ProcInit rv32AddrSize rv32DataBytes rv32RfIdx :=
     {| pcInit := Default; rfInit := Default |}.
 
   Definition p4st: Modules :=
     ProcFourStDec.p4st
       (rv32Fetch rv32AddrSize rv32IAddrSize Haddr2)
       (rv32Dec rv32AddrSize)
-      (rv32Exec rv32AddrSize rv32IAddrSize)
+      (rv32Exec rv32AddrSize)
       getBTBIndex getBTBTag
       (@f2dPackI _ _) (@f2dRawInstI _ _) (@f2dCurPcI _ _)
       (@f2dNextPcI _ _) (@f2dEpochI _ _)

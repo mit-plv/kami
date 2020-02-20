@@ -15,12 +15,12 @@ Section ProcDecSC.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fetch dec exec init.
   Definition pinst := pinst fetch dec exec init.
@@ -50,7 +50,7 @@ Section ProcDecSC.
   Definition pdec_pinst_regRel: RegsT -> RegsT -> Prop.
   Proof.
     intros ir sr.
-    kexistv "pc"%string pcv ir (Pc iaddrSize).
+    kexistv "pc"%string pcv ir (Pc addrSize).
     kexistv "rf"%string rfv ir (Vector (Data dataBytes) rfIdx).
     kexistv "pinit"%string pinitv ir Bool.
     kexistv "pgm"%string pgmv ir (Vector (Data instBytes) iaddrSize).
@@ -68,7 +68,7 @@ Section ProcDecSC.
                    +["pinit" <- (existT _ _ pinitv)]
                    +["rf" <- (existT _ _ rfv)]
                    +["pc" <- (existT _ _ pcv)])%fmap).
-    - set (rawInst := pgmv (split2 _ _ pcv)).
+    - set (rawInst := pgmv (evalExpr (toIAddr _ pcv))).
       exact (sr = (["pgm" <- existT _ _ pgmv]
                    +["pinitOfs" <- (existT _ _ pinitRsOfsv)]
                    +["pinit" <- (existT _ _ pinitv)]

@@ -15,7 +15,7 @@ Section ProcThreeStDec.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -27,8 +27,8 @@ Section ProcThreeStDec.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -45,9 +45,9 @@ Section ProcThreeStDec.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -91,7 +91,7 @@ Section ProcThreeStDec.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition p3st := ProcThreeStage.p3st
                        fetch dec exec
@@ -119,7 +119,7 @@ Section ProcThreeStDec.
   Hint Unfold p3st_pdec_ruleMap: MethDefs.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
-    (mlet pcv : (Pc iaddrSize) <- r |> "pc";
+    (mlet pcv : (Pc addrSize) <- r |> "pc";
        mlet pinitv : Bool <- r |> "pinit";
        mlet pinitRqv : Bool <- r |> "pinitRq";
        mlet pinitRqOfsv : (Bit iaddrSize) <- r |> "pinitRqOfs";
@@ -130,7 +130,7 @@ Section ProcThreeStDec.
        mlet d2efv : Bool <- r |> "d2e"--"full";
        mlet e2weltv : e2wElt <- r |> "e2w"--"elt";
        mlet e2wfv : Bool <- r |> "e2w"--"full";
-       mlet w2deltv : w2dElt iaddrSize <- r |> "w2d"--"elt";
+       mlet w2deltv : w2dElt addrSize <- r |> "w2d"--"elt";
        mlet w2dfv : Bool <- r |> "w2d"--"full";
        mlet eev : Bool <- r |> "eEpoch";
        mlet stallv : Bool <- r |> "stall";
@@ -143,7 +143,7 @@ Section ProcThreeStDec.
         +["pinitRq" <- existT _ _ pinitRqv]
         +["pinit" <- existT _ _ pinitv]
         +["rf" <- existT _ _ rfv]
-        +["pc" <- existT _ (SyntaxKind (Pc iaddrSize))
+        +["pc" <- existT _ (SyntaxKind (Pc addrSize))
                (if w2dfv then w2deltv (Fin.FS Fin.F1)
                 else if stallv then evalExpr (d2eCurPc _ stalledv)
                      else if e2wfv then

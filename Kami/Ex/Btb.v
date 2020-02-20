@@ -12,28 +12,28 @@ Set Implicit Arguments.
 Open Scope string.
 
 Section BTB.
-  Variable iaddrSize: nat.
+  Variable addrSize: nat.
 
-  (** Heads up: should satisfy [indexSize + tagSize = iaddrSize] *)
+  (** Heads up: should satisfy [indexSize + tagSize = addrSize] *)
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
   Definition BtbUpdateStr :=
-    STRUCT { "curPc" :: Bit iaddrSize; "nextPc" :: Bit iaddrSize }.
+    STRUCT { "curPc" :: Bit addrSize; "nextPc" :: Bit addrSize }.
 
-  Definition btbPredPc := MethodSig "btbPredPc"(Bit iaddrSize): Bit iaddrSize.
+  Definition btbPredPc := MethodSig "btbPredPc"(Bit addrSize): Bit addrSize.
   Definition btbUpdate := MethodSig "btbUpdate"(Struct BtbUpdateStr): Void.
 
   Definition btb :=
     MODULE {
-      Register "btbTargets" : Vector (Bit iaddrSize) indexSize <- Default
+      Register "btbTargets" : Vector (Bit addrSize) indexSize <- Default
       with Register "btbTags" : Vector (Bit tagSize) indexSize <- Default
       with Register "btbValid" : Vector Bool indexSize <- Default
 
-      with Method "btbPredPc" (pc: Bit iaddrSize): Bit iaddrSize :=
+      with Method "btbPredPc" (pc: Bit addrSize): Bit addrSize :=
         LET index <- getIndex _ pc;
         LET tag <- getTag _ pc;
         Read targets <- "btbTargets";
@@ -41,7 +41,7 @@ Section BTB.
         Read tags <- "btbTags";
         If (#valid@[#index] && (#tag == #tags@[#index]))
         then Ret #targets@[#index]
-        else Ret (#pc + $1)
+        else Ret (#pc + $4)
         as npc;
         Ret #npc
             
@@ -50,7 +50,7 @@ Section BTB.
         LET nextPc <- #upd ! BtbUpdateStr @."nextPc";
         LET index <- getIndex _ curPc;
         LET tag <- getTag _ curPc;
-        Read targets: Vector (Bit iaddrSize) indexSize <- "btbTargets";
+        Read targets: Vector (Bit addrSize) indexSize <- "btbTargets";
         Read valid: Vector Bool indexSize <- "btbValid";
         Read tags: Vector (Bit tagSize) indexSize <- "btbTags";
         If (#nextPc != (#curPc + $1))
@@ -72,11 +72,11 @@ Hint Unfold btb : ModuleDefs.
 Hint Unfold BtbUpdateStr btbPredPc btbUpdate : MethDefs.
 
 Section Wf.
-  Variable iaddrSize: nat.
+  Variable addrSize: nat.
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
   Lemma btb_ModEquiv:

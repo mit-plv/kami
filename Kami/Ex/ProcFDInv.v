@@ -25,8 +25,8 @@ Section Invariants.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
 
@@ -34,17 +34,17 @@ Section Invariants.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -61,7 +61,7 @@ Section Invariants.
                  evalExpr (f2dEpoch _ (evalExpr (f2dPack rawInst curPc nextPc epoch))) =
                  evalExpr epoch).
 
-  Variables (pcInit : ConstT (Pc iaddrSize)).
+  Variables (pcInit : ConstT (Pc addrSize)).
   
   Definition fetchDecodeInl := projT1 (fetchDecodeInl
                                          fetch dec
@@ -69,19 +69,19 @@ Section Invariants.
                                          pcInit).
 
   Definition fetchDecode_inv_body
-             (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
+             (pcv: fullType type (SyntaxKind (Pc addrSize)))
              (pgmv: fullType type (SyntaxKind (Vector (Data instBytes) iaddrSize)))
              (fepochv: fullType type (SyntaxKind Bool))
              (f2dfullv: fullType type (SyntaxKind Bool))
              (f2deltv: fullType type (SyntaxKind f2dElt)) :=
     f2dfullv = true ->
     let rawInst := evalExpr (f2dRawInst _ f2deltv) in
-    (rawInst = pgmv (split2 _ _ (evalExpr (f2dCurPc _ f2deltv))) /\
+    (rawInst = pgmv (evalExpr (toIAddr _ (evalExpr (f2dCurPc _ f2deltv)))) /\
      evalExpr (f2dNextPc _ f2deltv) = pcv /\
      evalExpr (f2dEpoch _ f2deltv) = fepochv).
                                                       
   Record fetchDecode_inv (o: RegsT) : Prop :=
-    { pcv : fullType type (SyntaxKind (Pc iaddrSize));
+    { pcv : fullType type (SyntaxKind (Pc addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       pinitv : fullType type (SyntaxKind Bool);
       Hpinitv : M.find "pinit"%string o = Some (existT _ _ pinitv);

@@ -14,7 +14,7 @@ Section Invariants.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -26,8 +26,8 @@ Section Invariants.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -44,9 +44,9 @@ Section Invariants.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -90,7 +90,7 @@ Section Invariants.
     (He2wVal: forall decInst val,
         evalExpr (e2wVal _ (evalExpr (e2wPack decInst val))) = evalExpr val).
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition p3stInl :=
     projT1 (p3stInl fetch dec exec
@@ -272,7 +272,7 @@ Section Invariants.
              (d2efullv: fullType type (SyntaxKind Bool)) :=
     d2efullv = true ->
     let rawInst := evalExpr (d2eRawInst _ d2eeltv) in
-    (rawInst = pgmv (split2 _ _ (evalExpr (d2eCurPc _ d2eeltv))) /\
+    (rawInst = pgmv (evalExpr (toIAddr _ (evalExpr (d2eCurPc _ d2eeltv)))) /\
      evalExpr (d2eOpType _ d2eeltv) = evalExpr (getOptype _ rawInst) /\
      (evalExpr (d2eOpType _ d2eeltv) = opLd ->
       (evalExpr (d2eDst _ d2eeltv) = evalExpr (getLdDst _ rawInst) /\
@@ -320,7 +320,7 @@ Section Invariants.
     stallv = true ->
     let rawInst := evalExpr (d2eRawInst _ stalledv) in
     evalExpr (d2eOpType _ stalledv) = evalExpr (getOptype _ rawInst) /\
-    rawInst = pgmv (split2 _ _ (evalExpr (d2eCurPc _ stalledv))) /\
+    rawInst = pgmv (evalExpr (toIAddr _ (evalExpr (d2eCurPc _ stalledv)))) /\
     (evalExpr (d2eOpType _ stalledv) = opLd ->
      evalExpr (d2eDst _ stalledv) = evalExpr (getLdDst _ rawInst) /\
      evalExpr (d2eAddr _ stalledv) =
@@ -401,7 +401,7 @@ Section Invariants.
       Hd2efullv5 : M.find "d2e"--"full"%string o = Some (existT _ _ d2efullv5);
 
       (* NOTE: Don't remove w2dElt even if it's not used in the invariant body. *)
-      w2deltv5 : fullType type (SyntaxKind (w2dElt iaddrSize));
+      w2deltv5 : fullType type (SyntaxKind (w2dElt addrSize));
       Hw2deltv5 : M.find "w2d"--"elt"%string o = Some (existT _ _ w2deltv5);
       w2dfullv5 : fullType type (SyntaxKind Bool);
       Hw2dfullv5 : M.find "w2d"--"full"%string o = Some (existT _ _ w2dfullv5);
@@ -424,7 +424,7 @@ Section Invariants.
 
   Definition p3st_pc_inv_body
              (fepochv eepochv d2efullv e2wfullv w2dfullv stallv: fullType type (SyntaxKind Bool))
-             (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
+             (pcv: fullType type (SyntaxKind (Pc addrSize)))
              (d2eeltv: fullType type (SyntaxKind d2eElt))
              (e2weltv: fullType type (SyntaxKind e2wElt))
              (stalledv: fullType type (SyntaxKind d2eElt)) :=
@@ -448,7 +448,7 @@ Section Invariants.
       (e2wfullv = false -> d2efullv = false -> evalExpr (d2eNextPc _ stalledv) = pcv))).
 
   Record p3st_pc_inv (o: RegsT) : Prop :=
-    { pcv6 : fullType type (SyntaxKind (Pc iaddrSize));
+    { pcv6 : fullType type (SyntaxKind (Pc addrSize));
       Hpcv6 : M.find "pc"%string o = Some (existT _ _ pcv6);
       fepochv6 : fullType type (SyntaxKind Bool);
       Hfepochv6 : M.find "fEpoch"%string o = Some (existT _ _ fepochv6);

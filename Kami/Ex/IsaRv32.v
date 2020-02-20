@@ -368,7 +368,7 @@ Section RV32IM.
   Ltac rv32_undefined :=
     exact ($$Default)%kami_expr.
 
-  Definition rv32DoExec: ExecT rv32IAddrSize rv32InstBytes rv32DataBytes.
+  Definition rv32DoExec: ExecT rv32AddrSize rv32InstBytes rv32DataBytes.
     unfold ExecT; intros ty val1 val2 pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_LUI)
@@ -458,8 +458,14 @@ Section RV32IM.
             else #val)%kami_expr.
   Defined.
 
-  Definition rv32AlignAddr: AlignAddrT rv32AddrSize rv32IAddrSize.
-    unfold AlignAddrT; intros ty iaddr.
+  Definition rv32ToIAddr: ToIAddrT rv32AddrSize rv32IAddrSize.
+    unfold ToIAddrT; intros ty addr.
+    rewrite Haddr3 in addr.
+    exact (_truncLsb_ (_truncate_ #addr))%kami_expr.
+  Defined.
+
+  Definition rv32ToAddr: ToAddrT rv32AddrSize rv32IAddrSize.
+    unfold ToAddrT; intros ty iaddr.
     rewrite Haddr3.
     exact {$0, {#iaddr, $0}}%kami_expr.
   Defined.
@@ -469,7 +475,7 @@ Section RV32IM.
     exact (#data)%kami_expr.
   Defined.
 
-  Definition rv32NextPc: NextPcT rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx.
+  Definition rv32NextPc: NextPcT rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx.
     unfold NextPcT; intros ty st pc inst.
 
     refine (IF (getOpcodeE #inst == $opcode_JAL)
@@ -509,7 +515,8 @@ Section RV32IM.
   Defined.
 
   Instance rv32Fetch: AbsFetch rv32AddrSize rv32IAddrSize rv32InstBytes rv32DataBytes :=
-    {| alignAddr := rv32AlignAddr;
+    {| toIAddr := rv32ToIAddr;
+       toAddr := rv32ToAddr;
        alignInst := rv32AlignInst |}.
 
   Instance rv32Dec: AbsDec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
@@ -529,7 +536,7 @@ Section RV32IM.
        getDst := rv32GetDst |}.
 
   Instance rv32Exec:
-    AbsExec rv32AddrSize rv32IAddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
+    AbsExec rv32AddrSize rv32InstBytes rv32DataBytes rv32RfIdx :=
     {| calcLdVal := rv32CalcLdVal;
        doExec := rv32DoExec;
        getNextPc := rv32NextPc |}.

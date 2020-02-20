@@ -61,12 +61,12 @@ Section Invariants.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition pdecInl := projT1 (pdecInl fetch dec exec init).
 
@@ -79,10 +79,10 @@ Section Invariants.
     | rq :: rqs =>
       rq = evalExpr
              (STRUCT { "addr" ::=
-                         alignAddr _ (natToWord _ ((if pinitRqv
-                                                    then NatLib.pow2 iaddrSize
-                                                    else wordToNat pinitRqOfsv)
-                                                   - List.length ieltv));
+                         toAddr _ (natToWord _ ((if pinitRqv
+                                                 then NatLib.pow2 iaddrSize
+                                                 else wordToNat pinitRqOfsv)
+                                                - List.length ieltv));
                        "op" ::= $$false;
                        "byteEn" ::= $$Default;
                        "data" ::= $0 })%kami_expr /\
@@ -140,7 +140,7 @@ Section Invariants.
        mem_request_inv: InvDefs.
 
   Record procDec_inv (o: RegsT) : Prop :=
-    { pcv : fullType type (SyntaxKind (Pc iaddrSize));
+    { pcv : fullType type (SyntaxKind (Pc addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       rfv : fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx));
       Hrfv : M.find "rf"%string o = Some (existT _ _ rfv);
@@ -172,7 +172,7 @@ Section Invariants.
         (pinitv = true ->
          or3 (stallv = false /\ fifo_empty_inv ieltv /\ fifo_empty_inv oeltv)
              ((stallv = true /\ fifo_not_empty_inv ieltv /\ fifo_empty_inv oeltv) /\
-              (mem_request_inv (pgmv (split2 _ _ pcv)) rfv ieltv))
+              (mem_request_inv (pgmv (evalExpr (toIAddr _ pcv))) rfv ieltv))
              (stallv = true /\ fifo_empty_inv ieltv /\ fifo_not_empty_inv oeltv))
         }.
 
@@ -204,7 +204,7 @@ Section Invariants.
       pgm_init_rq_inv false rqOfs elts ->
       forall elt,
         elt = evalExpr
-                (STRUCT { "addr" ::= alignAddr _ rqOfs;
+                (STRUCT { "addr" ::= toAddr _ rqOfs;
                           "op" ::= $$false;
                           "byteEn" ::= $$Default;
                           "data" ::= $0})%kami_expr ->
@@ -233,7 +233,7 @@ Section Invariants.
       pgm_init_rq_inv false rqOfs elts ->
       forall elt,
         elt = evalExpr
-                (STRUCT { "addr" ::= alignAddr _ rqOfs;
+                (STRUCT { "addr" ::= toAddr _ rqOfs;
                           "op" ::= $$false;
                           "byteEn" ::= $$Default;
                           "data" ::= $0})%kami_expr ->

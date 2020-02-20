@@ -16,7 +16,7 @@ Set Implicit Arguments.
 Section DecExec.
   Variables opIdx addrSize iaddrSize instBytes dataBytes rfIdx: nat.
 
-  Definition Pc := Bit (2 + iaddrSize).
+  Definition Pc := Bit addrSize.
   
   (* opcode-related *)
   Definition OpcodeK := SyntaxKind (Bit opIdx).
@@ -117,13 +117,16 @@ Section DecExec.
                                    fullType ty (SyntaxKind Pc) -> (* pc *)
                                    fullType ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
                                    Expr ty (SyntaxKind Pc). (* next pc *)
-  Definition AlignAddrT := forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
-                                      Expr ty (SyntaxKind (Bit addrSize)).
+  Definition ToIAddrT := forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
+                                    Expr ty (SyntaxKind (Bit iaddrSize)).
+  Definition ToAddrT := forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+                                   Expr ty (SyntaxKind (Bit addrSize)).
   Definition AlignInstT := forall ty, fullType ty (SyntaxKind (Data dataBytes)) -> (* loaded word *)
                                       Expr ty (SyntaxKind (Data instBytes)). (* aligned inst. *)
 
   Class AbsFetch :=
-    { alignAddr: AlignAddrT;
+    { toIAddr: ToIAddrT;
+      toAddr: ToAddrT;
       alignInst: AlignInstT
     }.
   
@@ -163,7 +166,7 @@ Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdValCalcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StByteEnCalcT
      StVSrcK StVSrcE StVSrcT Src1K Src1E Src1T Src2K Src2E Src2T
-     StateK StateE StateT ExecT NextPcT AlignAddrT AlignInstT : MethDefs.
+     StateK StateE StateT ExecT NextPcT ToIAddrT ToAddrT AlignInstT : MethDefs.
 
 Section MemInst.
   Variables (addrSize maddrSize dataBytes: nat)
@@ -316,13 +319,13 @@ Section ProcInst.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Definition nextPc {ty} ppc st rawInst :=
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
-  Record ProcInit := { pcInit : ConstT (Pc iaddrSize);
+  Record ProcInit := { pcInit : ConstT (Pc addrSize);
                        rfInit : ConstT (Vector (Data dataBytes) rfIdx)
                      }.
   Definition procInitDefault :=
@@ -333,7 +336,7 @@ Section ProcInst.
   Variables (procInit: ProcInit).
 
   Definition procInst := MODULE {
-    Register "pc" : Pc iaddrSize <- (pcInit procInit)
+    Register "pc" : Pc addrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
 
     with Register "pinit" : Bool <- Default
@@ -349,7 +352,7 @@ Section ProcInst.
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) != $0);
 
-      Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
+      Call ldData <- memOp(STRUCT { "addr" ::= toAddr _ pinitOfs;
                                     "op" ::= $$false;
                                     "byteEn" ::= $$Default;
                                     "data" ::= $$Default });
@@ -365,7 +368,7 @@ Section ProcInst.
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert !#pinit;
       Assert ((UniBit (Inv _) #pinitOfs) == $0);
-      Call ldData <- memOp(STRUCT { "addr" ::= alignAddr _ pinitOfs;
+      Call ldData <- memOp(STRUCT { "addr" ::= toAddr _ pinitOfs;
                                     "op" ::= $$false;
                                     "byteEn" ::= $$Default;
                                     "data" ::= $$Default });
@@ -379,12 +382,12 @@ Section ProcInst.
     (** Phase 2: execute the program [pinit == true] *)
         
     with Rule "execLd" :=
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
@@ -403,12 +406,12 @@ Section ProcInst.
       nextPc ppc rf rawInst
              
     with Rule "execLdZ" :=
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET regIdx <- getLdDst _ rawInst;
       (* NOTE: no register update when the dst register is r0, 
@@ -425,12 +428,12 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execSt" :=
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
       LET srcIdx <- getStSrc _ rawInst;
@@ -446,12 +449,12 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execNm" :=
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
       LET val1 <- #rf@[#src1];
@@ -464,12 +467,12 @@ Section ProcInst.
       nextPc ppc rf rawInst
 
     with Rule "execNmZ" :=
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf : Vector (Data dataBytes) rfIdx <- "rf";
       Read pinit : Bool <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
       Assert (#dst == $0);
@@ -487,12 +490,12 @@ Section SC.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Variable n: nat.
 
-  Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
+  Variables (procInit: ProcInit addrSize dataBytes rfIdx)
             (memInit: MemInit maddrSize).
 
   Definition pinst := procInst fetch dec exec procInit.
@@ -509,7 +512,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Lemma memLoadBytes_combineBytes:

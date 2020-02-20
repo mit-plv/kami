@@ -97,7 +97,7 @@ Section ProcThreeStage.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -116,8 +116,8 @@ Section ProcThreeStage.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -134,9 +134,9 @@ Section ProcThreeStage.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -159,7 +159,7 @@ Section ProcThreeStage.
 
   (** For redirecting a correct pc: a previous pc is sent as well to train
    * the branch predictor. *)
-  Definition W2DStr := STRUCT { "prevPc" :: Pc iaddrSize; "nextPc" :: Pc iaddrSize }.
+  Definition W2DStr := STRUCT { "prevPc" :: Pc addrSize; "nextPc" :: Pc addrSize }.
   Definition w2dElt := Struct W2DStr.
   Definition w2dFifoName := "w2d"%string.
   Definition w2dEnq := MethodSig (w2dFifoName -- "enq")(w2dElt) : Void.
@@ -272,10 +272,10 @@ Section ProcThreeStage.
   End ScoreBoard.
 
   Section FetchDecode.
-    Variable (pcInit : ConstT (Pc iaddrSize)).
+    Variable (pcInit : ConstT (Pc addrSize)).
 
     Definition fetchDecode := MODULE {
-      Register "pc" : Pc iaddrSize <- pcInit
+      Register "pc" : Pc addrSize <- pcInit
       with Register "pinit" : Bool <- Default
       with Register "pinitRq" : Bool <- Default
       with Register "pinitRqOfs" : Bit iaddrSize <- Default
@@ -293,7 +293,7 @@ Section ProcThreeStage.
         Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
         Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-        Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+        Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                              "op" ::= $$false;
                              "byteEn" ::= $$Default;
                              "data" ::= $$Default });
@@ -307,7 +307,7 @@ Section ProcThreeStage.
         Assert !#pinitRq;
         Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
         Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-        Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+        Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                              "op" ::= $$false;
                              "byteEn" ::= $$Default;
                              "data" ::= $$Default });
@@ -359,13 +359,13 @@ Section ProcThreeStage.
         Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
-        Read ppc : Pc iaddrSize <- "pc";
+        Read ppc : Pc addrSize <- "pc";
         Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
         Assert #pinit;
-        LET rawInst <- #pgm@[_truncLsb_ #ppc];
+        LET rawInst <- #pgm@[toIAddr _ ppc];
         Call rf <- getRf1();
 
-        Nondet npc : SyntaxKind (Pc iaddrSize);
+        Nondet npc : SyntaxKind (Pc addrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -389,13 +389,13 @@ Section ProcThreeStage.
         Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
-        Read ppc : Pc iaddrSize <- "pc";
+        Read ppc : Pc addrSize <- "pc";
         Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
         Assert #pinit;
-        LET rawInst <- #pgm@[_truncLsb_ #ppc];
+        LET rawInst <- #pgm@[toIAddr _ ppc];
         Call rf <- getRf1();
 
-        Nondet npc: SyntaxKind (Pc iaddrSize);
+        Nondet npc: SyntaxKind (Pc addrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -421,13 +421,13 @@ Section ProcThreeStage.
         Read pinit <- "pinit";
         Call w2dFull <- w2dFull();
         Assert !#w2dFull;
-        Read ppc : Pc iaddrSize <- "pc";
+        Read ppc : Pc addrSize <- "pc";
         Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
         Assert #pinit;
-        LET rawInst <- #pgm@[_truncLsb_ #ppc];
+        LET rawInst <- #pgm@[toIAddr _ ppc];
         Call rf <- getRf1();
 
-        Nondet npc: SyntaxKind (Pc iaddrSize);
+        Nondet npc: SyntaxKind (Pc addrSize);
         Read epoch <- "fEpoch";
         Write "pc" <- #npc;
 
@@ -498,7 +498,7 @@ Section ProcThreeStage.
     Definition wb := MODULE {
       Register "stall" : Bool <- false
       with Register "stalled" : d2eElt <- Default
-      with Register "lastPc" : Pc iaddrSize <- Default
+      with Register "lastPc" : Pc addrSize <- Default
                                        
       with Rule "wrongEpoch" :=
         Read stall <- "stall";
@@ -658,7 +658,7 @@ Section ProcThreeStage.
     
   End WriteBack.
 
-  Definition procThreeStage (init: ProcInit iaddrSize dataBytes rfIdx) :=
+  Definition procThreeStage (init: ProcInit addrSize dataBytes rfIdx) :=
     ((fetchDecode (pcInit init))
        ++ regFile (rfInit init)
        ++ scoreBoard
@@ -687,7 +687,7 @@ Section ProcThreeStageM.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -699,8 +699,8 @@ Section ProcThreeStageM.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -717,9 +717,9 @@ Section ProcThreeStageM.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -752,7 +752,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Variable (d2eElt: Kind).
   Variable (d2ePack:
@@ -764,8 +764,8 @@ Section Facts.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
   Variables
@@ -782,9 +782,9 @@ Section Facts.
     (d2eRawInst: forall ty, fullType ty (SyntaxKind d2eElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (d2eCurPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (d2eNextPc: forall ty, fullType ty (SyntaxKind d2eElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (d2eEpoch: forall ty, fullType ty (SyntaxKind d2eElt) ->
                           Expr ty (SyntaxKind Bool)).
 

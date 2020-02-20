@@ -9,9 +9,9 @@ Section Inlined.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
-  Variable (init: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fetch dec exec init.
   Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)

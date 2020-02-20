@@ -18,33 +18,33 @@ Section Invariants.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
-  Variables (pcInit : ConstT (Pc iaddrSize)).
+  Variables (pcInit : ConstT (Pc addrSize)).
   
   Definition fetchICacheInl :=
     projT1 (fetchICacheInl fetch f2dPack getIndex getTag pcInit).
 
   Record fetchICache_inv (o: RegsT) : Prop :=
-    { pcv : fullType type (SyntaxKind (Pc iaddrSize));
+    { pcv : fullType type (SyntaxKind (Pc addrSize));
       Hpcv : M.find "pc"%string o = Some (existT _ _ pcv);
       pinitv : fullType type (SyntaxKind Bool);
       Hpinitv : M.find "pinit"%string o = Some (existT _ _ pinitv);
@@ -67,7 +67,7 @@ Section Invariants.
       Hinv0 : pinitv = false -> breadv = None;
       Hinv1 : pinitv = true -> pcuv = false ->
               match breadv with
-              | Some val => val = bramv (split2 _ _ pcv)
+              | Some val => val = bramv (evalExpr (toIAddr _ pcv))
               | None => True
               end
     }.

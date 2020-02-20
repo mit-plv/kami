@@ -16,17 +16,17 @@ Section FetchICache.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
@@ -34,9 +34,9 @@ Section FetchICache.
     bram1 "pgm" iaddrSize (Data instBytes).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
   Definition btb: Modules := btb getIndex getTag.
 
@@ -46,14 +46,14 @@ Section FetchICache.
   Definition instRs :=
     MethodSig ("pgm" -- "getRs")(): Data instBytes.
 
-  Definition predictPc := MethodSig "btbPredPc"(Bit iaddrSize): Bit iaddrSize.
-  Definition trainPc := MethodSig "btbUpdate"(Struct (BtbUpdateStr iaddrSize)): Void.
+  Definition predictPc := MethodSig "btbPredPc"(Bit addrSize): Bit addrSize.
+  Definition trainPc := MethodSig "btbUpdate"(Struct (BtbUpdateStr addrSize)): Void.
 
   Definition f2dEnq := f2dEnq f2dElt.
   Definition f2dDeq := f2dDeq f2dElt.
 
-  Definition W2DStr := ProcThreeStage.W2DStr iaddrSize.
-  Definition w2dDeq := w2dDeq iaddrSize.
+  Definition W2DStr := ProcThreeStage.W2DStr addrSize.
+  Definition w2dDeq := w2dDeq addrSize.
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -61,10 +61,10 @@ Section FetchICache.
   Definition memReq := memReq addrSize dataBytes.
   Definition memRep := memRep dataBytes.
 
-  Variables (pcInit : ConstT (Pc iaddrSize)).
+  Variables (pcInit : ConstT (Pc addrSize)).
 
   Definition fetcher := MODULE {
-    Register "pc" : Pc iaddrSize <- pcInit
+    Register "pc" : Pc addrSize <- pcInit
     with Register "pinit" : Bool <- Default
     with Register "pinitRq" : Bool <- Default
     with Register "pinitRqOfs" : Bit iaddrSize <- Default
@@ -82,7 +82,7 @@ Section FetchICache.
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+      Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "byteEn" ::= $$Default;
                            "data" ::= $$Default });
@@ -96,7 +96,7 @@ Section FetchICache.
       Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+      Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "byteEn" ::= $$Default;
                            "data" ::= $$Default });
@@ -148,17 +148,17 @@ Section FetchICache.
       Write "fEpoch" <- !#pEpoch;
       Call f2dClear();
       Write "pcUpdated" <- $$true;
-      Call trainPc (STRUCT {"curPc" ::= _truncLsb_ #prevPc;
-                            "nextPc" ::= _truncLsb_ #nextPc });
+      Call trainPc (STRUCT {"curPc" ::= #prevPc;
+                            "nextPc" ::= #nextPc });
       Retv
 
     with Rule "instFetchRq" :=
       Read pinit <- "pinit";
       Assert #pinit;
-      Read pc : Pc iaddrSize <- "pc";
+      Read pc : Pc addrSize <- "pc";
       Read epoch : Bool <- "fEpoch";
       Call instRq(STRUCT { "write" ::= $$false;
-                           "addr" ::= _truncLsb_ #pc;
+                           "addr" ::= toIAddr _ pc;
                            "datain" ::= $$Default });
       Write "pcUpdated" <- $$false;
       Retv
@@ -169,13 +169,12 @@ Section FetchICache.
       Read pcUpdated <- "pcUpdated";
       Assert !#pcUpdated;
       Call inst <- instRs();
-      Read pc : Pc iaddrSize <- "pc";
+      Read pc : Pc addrSize <- "pc";
       (* Predict a next pc using BTB *)
-      Call predPc <- predictPc(_truncLsb_ #pc);
-      LET npc <- {#predPc, $0};
+      Call predPc <- predictPc(#pc);
       Read epoch <- "fEpoch";
-      Call f2dEnq(f2dPack #inst #pc #npc #epoch);
-      Write "pc" <- #npc;
+      Call f2dEnq(f2dPack #inst #pc #predPc #epoch);
+      Write "pc" <- #predPc;
       Retv
 
     with Rule "instFetchRsIgnore" :=
@@ -212,8 +211,8 @@ Section Facts.
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val1 *)
                 Expr ty (SyntaxKind (Data dataBytes)) -> (* val2 *)
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind d2eElt)).
 
@@ -221,24 +220,24 @@ Section Facts.
   Variable (f2dPack:
               forall ty,
                 Expr ty (SyntaxKind (Data instBytes)) -> (* rawInst *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* curPc *)
-                Expr ty (SyntaxKind (Pc iaddrSize)) -> (* nextPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* curPc *)
+                Expr ty (SyntaxKind (Pc addrSize)) -> (* nextPc *)
                 Expr ty (SyntaxKind Bool) -> (* epoch *)
                 Expr ty (SyntaxKind f2dElt)).
   Variables
     (f2dRawInst: forall ty, fullType ty (SyntaxKind f2dElt) ->
                             Expr ty (SyntaxKind (Data instBytes)))
     (f2dCurPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                          Expr ty (SyntaxKind (Pc iaddrSize)))
+                          Expr ty (SyntaxKind (Pc addrSize)))
     (f2dNextPc: forall ty, fullType ty (SyntaxKind f2dElt) ->
-                           Expr ty (SyntaxKind (Pc iaddrSize)))
+                           Expr ty (SyntaxKind (Pc addrSize)))
     (f2dEpoch: forall ty, fullType ty (SyntaxKind f2dElt) ->
                           Expr ty (SyntaxKind Bool)).
 
   Context {indexSize tagSize: nat}.
-  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+  Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                   Expr ty (SyntaxKind (Bit indexSize)))
-            (getTag: forall ty, fullType ty (SyntaxKind (Bit iaddrSize)) ->
+            (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSize)) ->
                                 Expr ty (SyntaxKind (Bit tagSize))).
 
   Lemma fetcher_ModEquiv:

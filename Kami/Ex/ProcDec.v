@@ -15,7 +15,7 @@ Section ProcDec.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx).
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx).
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
@@ -28,10 +28,10 @@ Section ProcDec.
     (Write "pc" <- getNextPc ty st ppc rawInst;
      Retv)%kami_action.
 
-  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx).
+  Variable (procInit: ProcInit addrSize dataBytes rfIdx).
 
   Definition procDec := MODULE {
-    Register "pc" : Pc iaddrSize <- (pcInit procInit)
+    Register "pc" : Pc addrSize <- (pcInit procInit)
     with Register "rf" : Vector (Data dataBytes) rfIdx <- (rfInit procInit)
     with Register "pinit" : Bool <- Default
     with Register "pinitRq" : Bool <- Default
@@ -50,7 +50,7 @@ Section ProcDec.
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) != $0);
 
-      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+      Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "byteEn" ::= $$Default;
                            "data" ::= $$Default });
@@ -64,7 +64,7 @@ Section ProcDec.
       Assert !#pinitRq;
       Read pinitRqOfs : Bit iaddrSize <- "pinitRqOfs";
       Assert ((UniBit (Inv _) #pinitRqOfs) == $0);
-      Call memReq(STRUCT { "addr" ::= alignAddr _ pinitRqOfs;
+      Call memReq(STRUCT { "addr" ::= toAddr _ pinitRqOfs;
                            "op" ::= $$false;
                            "byteEn" ::= $$Default;
                            "data" ::= $$Default });
@@ -106,12 +106,12 @@ Section ProcDec.
     with Rule "reqLd" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm@[_truncLsb_ #ppc];
+      LET rawInst <- #pgm@[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET addr <- getLdAddr _ rawInst;
       LET srcIdx <- getLdSrc _ rawInst;
@@ -127,12 +127,12 @@ Section ProcDec.
     with Rule "reqSt" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       LET addr <- getStAddr _ rawInst;
       LET srcIdx <- getStSrc _ rawInst;
@@ -150,12 +150,12 @@ Section ProcDec.
                       
     with Rule "repLd" :=
       Call val <- memRep();
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx != $0);
@@ -172,12 +172,12 @@ Section ProcDec.
 
     with Rule "repLdZ" :=
       Call val <- memRep();
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opLd);
       LET dstIdx <- getLdDst _ rawInst;
       Assert (#dstIdx == $0);
@@ -186,12 +186,12 @@ Section ProcDec.
 
     with Rule "repSt" :=
       Call val <- memRep();
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opSt);
       Write "stall" <- $$false;
       nextPc ppc rf rawInst
@@ -199,12 +199,12 @@ Section ProcDec.
     with Rule "execNm" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET src1 <- getSrc1 _ rawInst;
       LET val1 <- #rf@[#src1];
@@ -219,12 +219,12 @@ Section ProcDec.
     with Rule "execNmZ" :=
       Read stall <- "stall";
       Assert !#stall;
-      Read ppc : Pc iaddrSize <- "pc";
+      Read ppc : Pc addrSize <- "pc";
       Read rf <- "rf";
       Read pinit <- "pinit";
       Read pgm : Vector (Data instBytes) iaddrSize <- "pgm";
       Assert #pinit;
-      LET rawInst <- #pgm @[_truncLsb_ #ppc];
+      LET rawInst <- #pgm @[toIAddr _ ppc];
       Assert (getOptype _ rawInst == $$opNm);
       LET dst <- getDst _ rawInst;
       Assert (#dst == $0);
@@ -242,13 +242,13 @@ Section ProcDecM.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Definition pdec init :=
     procDec fetch dec exec init.
 
-  Variables (procInit: ProcInit iaddrSize dataBytes rfIdx)
+  Variables (procInit: ProcInit addrSize dataBytes rfIdx)
             (memInit: MemInit maddrSize).
 
   Definition pdecf := (pdec procInit ++ iom addrSize dataBytes)%kami.
@@ -264,7 +264,7 @@ Section Facts.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Lemma pdec_ModEquiv:

@@ -14,10 +14,10 @@ Section Inlined.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
-  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+  Variable (procInit: ProcInit addrSize dataBytes rfIdx)
            (memInit: MemInit maddrSize).
   
   Definition scmm: Modules := scmm Hdb fetch dec exec ammio procInit memInit.

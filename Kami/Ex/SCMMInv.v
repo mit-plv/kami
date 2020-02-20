@@ -16,17 +16,17 @@ Section Invariants.
 
   Variables (fetch: AbsFetch addrSize iaddrSize instBytes dataBytes)
             (dec: AbsDec addrSize instBytes dataBytes rfIdx)
-            (exec: AbsExec addrSize iaddrSize instBytes dataBytes rfIdx)
+            (exec: AbsExec addrSize instBytes dataBytes rfIdx)
             (ammio: AbsMMIO addrSize).
 
   Definition PgmInitNotMMIO :=
     forall iaddr: word iaddrSize,
-      evalExpr (isMMIO _ (evalExpr (alignAddr _ iaddr))) = false.
+      evalExpr (isMMIO _ (evalExpr (toAddr _ iaddr))) = false.
 
   Definition RqFromProc := MemTypes.RqFromProc dataBytes (Bit addrSize).
   Definition RsToProc := MemTypes.RsToProc dataBytes.
 
-  Variable (procInit: ProcInit iaddrSize dataBytes rfIdx)
+  Variable (procInit: ProcInit addrSize dataBytes rfIdx)
            (memInit: MemInit maddrSize).
   Hypotheses (HinitRf: evalConstT procInit.(rfInit) $0 = $0)
              (HpgmInit: PgmInitNotMMIO).
@@ -47,12 +47,12 @@ Section Invariants.
     initv = false ->
     forall iaddr,
       iaddr < ofsv ->
-      pgmv iaddr = evalExpr (alignInst _ (combineBytes dataBytes (evalExpr (alignAddr _ iaddr)) memv)).
+      pgmv iaddr = evalExpr (alignInst _ (combineBytes dataBytes (evalExpr (toAddr _ iaddr)) memv)).
   Hint Unfold scmm_inv_pgm_init: InvDefs.
         
   Inductive scmm_inv (o: RegsT) : Prop :=
   | ProcInv:
-      forall (pcv: fullType type (SyntaxKind (Pc iaddrSize)))
+      forall (pcv: fullType type (SyntaxKind (Pc addrSize)))
              (Hpcv: o@["pc"] = Some (existT _ _ pcv))
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx)))
              (Hrfv: o@["rf"] = Some (existT _ _ rfv))
@@ -130,7 +130,6 @@ Section Invariants.
       + kinv_dest_custom scmm_inv_tac.
         * exfalso.
           clear -HpgmInit Heqic.
-          specialize (HpgmInit x0).
           unfold ilist_to_fun_m in Heqic; simpl in Heqic.
           congruence.
         * intros.
