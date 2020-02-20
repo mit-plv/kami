@@ -253,7 +253,7 @@ Section ProcDecSC.
         unfold type, ilist_to_fun_m in *; simpl in *.
         destruct x; [discriminate|].
         destruct x; [|discriminate].
-        destruct (weq (evalExpr (getLdDst _ (pgmv (split2 2 iaddrSize pcv)))) $0).
+        destruct (weq (evalExpr (getLdDst _ (pgmv (evalExpr (toIAddr _ pcv))))) $0).
         * exists (Some "execLdZ"%string); kinv_constr; kinv_eq; kinv_finish.
         * exists (Some "execLd"%string); kinv_constr; kinv_eq; kinv_finish.
         
