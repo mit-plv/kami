@@ -202,12 +202,13 @@ Section MemInst.
      | 0 => fun _ => mem
      | S n' =>
        fun val0 =>
-         memStoreBytes
-           n' (addr + $1)
-           (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0) byteEn
-           (IF byteEn#[$$(natToWord (Nat.log2 sz + 1) (sz - n'))]
-            then mem@[_zeroExtend_ addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0]
-            else mem)
+         let nmem := memStoreBytes
+                       n' (addr + $1)
+                       (UniBit (TruncLsb BitsPerByte (n' * BitsPerByte)) val0) byteEn
+                       mem in
+         (IF byteEn#[$$(natToWord (Nat.log2 sz + 1) (sz - n'))]
+          then nmem@[_zeroExtend_ addr <- UniBit (Trunc BitsPerByte (n' * BitsPerByte)) val0]
+          else nmem)
      end val)%kami_expr.
 
   Definition memStoreBytes' {ty} (n: nat) (addr: Expr ty (SyntaxKind (Bit addrSize)))
@@ -235,15 +236,16 @@ Section MemInst.
      with
      | 0 => fun _ => mem
      | S n' => fun val0 =>
-                 updateBytes
-                   n' (addr ^+ $1)
-                   (split2 BitsPerByte (n' * BitsPerByte) val0) byteEn
-                   (if byteEn (natToFin _ (sz - n'))
-                    then (fun w =>
-                            if weq w (evalZeroExtendTrunc _ addr)
-                            then (split1 BitsPerByte (n' * BitsPerByte) val0)
-                            else mem w)
-                    else mem)
+                 let nmem := updateBytes
+                               n' (addr ^+ $1)
+                               (split2 BitsPerByte (n' * BitsPerByte) val0) byteEn
+                               mem in
+                 if byteEn (natToFin _ (sz - n'))
+                 then (fun w =>
+                         if weq w (evalZeroExtendTrunc _ addr)
+                         then (split1 BitsPerByte (n' * BitsPerByte) val0)
+                         else nmem w)
+                 else nmem
      end) val.
 
   Definition memInst :=
