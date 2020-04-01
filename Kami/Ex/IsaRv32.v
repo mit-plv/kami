@@ -482,8 +482,8 @@ Section RV32IM.
             then #pc + (_signExtend_ {getOffsetUJE #inst, $$(WO~0)})
             else _)%kami_expr.
     refine (IF (getOpcodeE #inst == $opcode_JALR)
-            then (_signExtend_ (getRs1ValueE st #inst))
-                 + (_signExtend_ (getOffsetIE #inst))
+            then ((_signExtend_ (getRs1ValueE st #inst) + _signExtend_ (getOffsetIE #inst))
+                    ~& (UniBit (Inv _) $1))
             else _)%kami_expr.
 
     refine (IF (getOpcodeE #inst == $opcode_BRANCH) then _ else #pc + $4)%kami_expr.
