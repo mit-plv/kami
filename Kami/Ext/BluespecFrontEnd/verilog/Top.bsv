@@ -62,7 +62,7 @@ module mkTopM ();
         let rq <- top.obtain_rq.get();
 	if (rq.op) begin
 	    $display ("Handling a store");
-	    fram.store((rq.addr) >> 2, rq.data);
+	    fram.store((rq.addr) >> 2, rq.byteEn, rq.data);
             top.send_rs.put(MemRs {data: 0});
         end else begin
 	    $display ("Handling a load");

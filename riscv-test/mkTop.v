@@ -1,1 +1,1 @@
-../Kami/Ext/BluespecFrontEnd/verilog/mkTopB10.v
+../Kami/Ext/BluespecFrontEnd/verilog/build/mkTopB10.v
