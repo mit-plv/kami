@@ -49,11 +49,11 @@ program3.hex: $(RISCV_HEXDUMP_OUT)
 IVERILOG ?= iverilog
 
 debug: system.v mkTop.v objdump program0.hex program1.hex program2.hex program3.hex
-	$(IVERILOG) -DDEBUG -y ../Kami/Ext/BluespecFrontEnd/verilog/ -y. -g2005-sv -o debug.vvp system.v
+	$(IVERILOG) -DDEBUG -y ../Kami/Ext/BluespecFrontEnd/verilog/build/ -y. -g2005-sv -o debug.vvp system.v
 	vvp debug.vvp
 
 $(TEST_TARGET).vvp: system.v mkTop.v 
-	$(IVERILOG) -y ../Kami/Ext/BluespecFrontEnd/verilog/ -y. -g2005-sv -o $(TEST_TARGET).vvp system.v
+	$(IVERILOG) -y ../Kami/Ext/BluespecFrontEnd/verilog/build/ -y. -g2005-sv -o $(TEST_TARGET).vvp system.v
 
 $(TEST_TARGET).vcd: $(TEST_TARGET).vvp program0.hex program1.hex program2.hex program3.hex
 	vvp $(TEST_TARGET).vvp >/dev/null
