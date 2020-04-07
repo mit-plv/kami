@@ -9,6 +9,7 @@ Makefile.coq.src.conf
 *.vok
 *.v.d
 *.glob
+*.v.timing
 Makefile.coq
 *.aux
 *~
