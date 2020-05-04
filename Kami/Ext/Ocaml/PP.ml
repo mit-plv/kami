@@ -172,10 +172,14 @@ let addGlbStruct (k: kind attribute list) =
     (glbStructs := StringMap.add newName k !glbStructs; newName)
   else ((); name)
 
-let debug : bool ref = ref false
-let isDebug (_: unit) = !debug
-let setDebug (_: unit) = debug := true
-let unsetDebug (_: unit) = debug := false
+type config =
+  { cfg_debug: bool;
+    cfg_top_module_name: string
+  }
+let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Top" }
+let setConfig (ncfg: config) = cfg := ncfg
+let isDebug (_: unit) = !cfg.cfg_debug
+let getTopModuleName (_: unit) = !cfg.cfg_top_module_name
 
 (* Global references end *)
 
@@ -318,11 +322,24 @@ let rec collectStrBIfc (ifc: signatureT attribute list) =
   | { attrName = _; attrType = msig } :: tl ->
      collectStrK msig.arg; collectStrK msig.ret;
      collectStrBIfc tl
-     
+
+let collectStrRV (rv: regInitValue) =
+  match rv with
+  | RegInitCustom (ExistT (SyntaxKind k, _)) -> collectStrK k
+  | RegInitDefault (SyntaxKind k) -> collectStrK k
+  | _ -> ()
+
+let rec collectStrBRI (rl: regInitT list) =
+  match rl with
+  | [] -> ()
+  | { attrName = _; attrType = rv } :: tl ->
+     collectStrRV rv; collectStrBRI tl
+
 let collectStrB (bm: bModule) =
   match bm with
   | BModulePrim (pm, pifc) -> collectStrBIfc pifc
-  | BModuleB (_, rl, ml) -> collectStrBR rl; collectStrBM ml
+  | BModuleB (ril, rl, ml) ->
+     collectStrBRI ril; collectStrBR rl; collectStrBM ml
 
 (* Simple analyses end *)
 
@@ -418,7 +435,7 @@ let rec ppBExpr (e: bExpr) =
   | BUniBit (fn, tn, SignExtendTrunc _, se) ->
      (if (fn >= tn) then ps ppTruncate else ps ppSignExtend);
      ps ppRBracketL; ppBExpr se; ps ppRBracketR
-  | BUniBit (_, _, TruncLsb (n1, n2), se) -> 
+  | BUniBit (_, _, TruncLsb (n1, n2), se) ->
      ps ppRBracketL; ppBExpr se; ps ppRBracketR;
      ps ppBracketL; ps (string_of_int (n1 + n2 - 1)); ps ppColon;
      ps (string_of_int n1); ps ppBracketR
@@ -497,7 +514,9 @@ let rec ppBExpr (e: bExpr) =
      ps ppColon; print_space ();
      ps ppRBracketL; ppBExpr fe; ps ppRBracketR;
      ps ppRBracketR
-  | BEq (se1, se2) -> ppBExpr se1; print_space (); ps ppEq; print_space (); ppBExpr se2
+  | BEq (se1, se2) ->
+     ps ppRBracketL; ppBExpr se1; ps ppRBracketR; print_space (); ps ppEq; print_space ();
+     ps ppRBracketL; ppBExpr se2; ps ppRBracketR
   | BReadIndex (ie, ve) ->
      ps ppRBracketL; ppBExpr ve; ps ppRBracketR; ps ppBracketL; ppBExpr ie; ps ppBracketR
   | BReadField (fd, se) ->
@@ -507,7 +526,7 @@ let rec ppBExpr (e: bExpr) =
   | BBuildStruct (_, kv, st) ->
      let kl = vectorToList kv in
      ps (addGlbStruct kl); print_space (); ps ppCBracketL; ppBExprStruct st; ps ppCBracketR
-  | BUpdateVector (ve, ie, vale) -> 
+  | BUpdateVector (ve, ie, vale) ->
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
   | BReadReg r -> ps (bstring_of_charlist r)
@@ -518,7 +537,7 @@ let rec ppBExpr (e: bExpr) =
   | BUpdateArray (ve, ie, vale) ->
      ps ppVUpdate; print_space (); ps ppRBracketL; ppBExpr ve; ps ppComma; print_space ();
      ppBExpr ie; ps ppComma; print_space (); ppBExpr vale; ps ppRBracketR
-     
+
 and ppBExprVec (v: bExpr vec) (tail: bool) =
   match v with
   | Vec0 e -> ppBExpr e; if tail then () else (ps ppComma; print_space ())
@@ -620,7 +639,7 @@ let rec ppBRules (rl: bRule list) =
   match rl with
   | [] -> ()
   | r :: rl' -> ppBRule r; print_cut (); force_newline (); ppBRules rl'
-     
+
 let ppBMethod (d: bMethod) =
   match d with
   | { attrName = dn; attrType = ({ arg = asig; ret = rsig}, db) } ->
@@ -673,7 +692,7 @@ let rec ppBInterfaces (ifcs: signatureT attribute list) =
   | [] -> ()
   | ifc :: ifcs' ->
      ppBInterface ifc; force_newline (); ppBInterfaces ifcs'
-     
+
 let ppRegInit (r: regInitT) =
   match r with
   | { attrName = rn; attrType = riv } ->
@@ -712,16 +731,6 @@ let ppImports (hic: in_channel) =
       done
   with End_of_file ->
     close_in hic
-  
-(* ps "import Vector::*;"; print_cut (); force_newline ();
- * ps "import BuildVector::*;"; print_cut (); force_newline ();
- * ps "import RegFile::*;"; print_cut (); force_newline ();
- * ps "import RegFileZero::*;"; print_cut (); force_newline ();
- * ps "import FIFO::*;"; print_cut (); force_newline ();
- * ps "import FIFOF::*;"; print_cut (); force_newline ();
- * ps "import SimpleBRAM::*;"; print_cut (); force_newline ();
- * ps "import MulDiv::*;"; print_cut (); force_newline ();
- * ps "import SpecialFIFOs::*;"; print_cut (); force_newline () *)
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -783,7 +792,7 @@ let ppBram (pifc: signatureT attribute list) =
     | _ -> Bit 0
   in
   let valueK = (List.nth pifc 1).attrType.ret in
-  
+
   (* BRAM declaration *)
   ps "Bram#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
@@ -809,7 +818,7 @@ let ppBram (pifc: signatureT attribute list) =
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ();
   force_newline ();
-  
+
   (* The "getRs" method *)
   ppBInterface (List.nth pifc 1); force_newline ();
   print_break 0 4; open_hovbox 0;
@@ -876,7 +885,7 @@ let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
   ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty; force_newline();
   force_newline ();
   ppFifoMethods pifc
-                                          
+
 let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
   if pname = primBramName then
     ppBram pifc
@@ -888,7 +897,7 @@ let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
     ppFifo BypassFIFO pifc
   else
     raise (Should_not_happen "Unknown primitive module name")
-         
+
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | BModulePrim (pname, pifc) ->
@@ -1013,8 +1022,8 @@ let ppTopModule (bmdcl: bModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
   open_hovbox 2;
   ps ppModule; print_space ();
-  ps "mkProc"; ppBModuleCallArgs extCallsAll; print_space ();
-  ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
+  ps "mk"; ps (getTopModuleName ()); ppBModuleCallArgs extCallsAll; print_space ();
+  ps ppRBracketL; ps (getTopModuleName ()); ps ppRBracketR; ps ppSep;
   close_box ();
   print_break 0 4; open_hovbox 0;
   ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
@@ -1037,7 +1046,7 @@ let rec removeDup (ls: 'a list) =
      if List.mem hd tl
      then removeDup tl
      else hd :: removeDup tl
-              
+
 (* NOTE: idxInit should be larger than 0 *)
 let ppBModulesFull (bml: bModule list) (hic: in_channel) =
   let idxInit = 1 in
@@ -1059,8 +1068,6 @@ let ppBModulesFull (bml: bModule list) (hic: in_channel) =
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullDbg (bml: bModule list) (dbg: bool) (hic: in_channel) =
-  (if dbg then setDebug () else unsetDebug ());
-  ppBModulesFull bml hic;
-  unsetDebug ()
-
+let ppBModulesFullDbg (bml: bModule list) (cfg: config) (hic: in_channel) =
+  setConfig cfg;
+  ppBModulesFull bml hic
