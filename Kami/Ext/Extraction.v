@@ -27,7 +27,7 @@ Section PerInstMemSize.
   Definition getBTBTag ty
              (pc: fullType ty (SyntaxKind (Bit rv32AddrSize))): (Bit (rv32AddrSize - 3)) @ ty :=
     {UniBit (Trunc 2 _) #pc, UniBit (TruncLsb 5 27) #pc}%kami_expr.
-  
+
   Definition pinit: ProcInit rv32AddrSize rv32DataBytes rv32RfIdx :=
     {| pcInit := Default; rfInit := Default |}.
 
@@ -56,7 +56,7 @@ Section PerInstMemSize.
 
 End PerInstMemSize.
 
-(* If you are testing directly on this file with ProofGeneral or CoqIde, 
+(* If you are testing directly on this file with ProofGeneral or CoqIde,
  * then use the below extraction command, instead of the one at the last line.
  *)
 (* Extraction "./Ocaml/Target.ml" targetProcB. *)
@@ -66,4 +66,3 @@ End PerInstMemSize.
  * [./extraction/Ocaml/]. See [./extraction/Ocaml/README.md] for details.
  *)
 Extraction "./Kami/Ext/Ocaml/Target.ml" targetB.
-
