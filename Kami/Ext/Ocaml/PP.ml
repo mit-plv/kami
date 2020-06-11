@@ -174,12 +174,23 @@ let addGlbStruct (k: kind attribute list) =
 
 type config =
   { cfg_debug: bool;
-    cfg_top_module_name: string
+    cfg_header_file_name: string;
+    cfg_top_module_name: string;
+    cfg_top_ifc_file_name: string;
+    cfg_top_impl_file_name: string;
   }
-let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Top" }
+let cfg : config ref =
+  ref { cfg_debug = false;
+        cfg_header_file_name = "";
+        cfg_top_module_name = "Top";
+        cfg_top_ifc_file_name = "";
+        cfg_top_impl_file_name = "" }
 let setConfig (ncfg: config) = cfg := ncfg
 let isDebug (_: unit) = !cfg.cfg_debug
 let getTopModuleName (_: unit) = !cfg.cfg_top_module_name
+let getHeaderFileName (_: unit) = !cfg.cfg_header_file_name
+let getTopIfcFileName (_: unit) = !cfg.cfg_top_ifc_file_name
+let getTopImplFileName (_: unit) = !cfg.cfg_top_impl_file_name
 
 (* Global references end *)
 
@@ -228,9 +239,9 @@ type bModuleDC = bModule * (string * signatureT) list * (string * signatureT) li
 let toBRegModuleDC (bm: bModule) = (bm, getDefsB bm, getCallsB bm)
 let toBRegModuleDCL (bml: bModule list) = List.map (fun bm -> toBRegModuleDC bm) bml
 
-let rec vectorToList (vec: 'a t0) =
+let rec vectorToList (vec: 'a t1) =
   match vec with
-  | Nil -> []
+  | Nil0 -> []
   | Cons (e, _, v) -> e :: (vectorToList v)
 
 let rec collectStrK (k: kind) =
@@ -403,9 +414,9 @@ and ppConstStruct (stl: (kind attribute, constT) ilist) =
   | Icons ({ attrName = kn; attrType = _ }, _, _, c, stl') ->
      bstring_of_charlist kn ^ ppColon ^ ppDelim ^ ppConst c
      ^ ppComma ^ ppDelim ^ ppConstStruct stl'
-and ppConstVecT (v: constT t0) =
+and ppConstVecT (v: constT t1) =
   match v with
-  | Nil -> ""
+  | Nil0 -> ""
   | Cons (c, _, tv) -> ppConst c ^ ppComma ^ ppDelim ^ ppConstVecT tv
 
 let rec ppBExpr (e: bExpr) =
@@ -550,10 +561,10 @@ and ppBExprStruct (stl: bExpr attribute list) =
   | { attrName = kn; attrType = e } :: stl' ->
      ps (bstring_of_charlist kn); print_space (); ps ppColon; print_space (); ppBExpr e;
      ps ppComma; print_space (); ppBExprStruct stl'
-and ppBExprVecT (v: bExpr t0) =
+and ppBExprVecT (v: bExpr t1) =
   match v with
-  | Nil -> ()
-  | Cons (e, _, Nil) -> ppBExpr e
+  | Nil0 -> ()
+  | Cons (e, _, Nil0) -> ppBExpr e
   | Cons (e, _, tv) -> ppBExpr e; ps ppComma; print_space (); ppBExprVecT tv
 
 let rec ppBExprs (el: bExpr list) =
@@ -724,13 +735,17 @@ let rec ppRegInits (rl: regInitT list) =
   | r :: rl' ->
      ppRegInit r; print_cut (); ppRegInits rl'
 
-let ppImports (hic: in_channel) =
-  try while true do
-        let line = input_line hic in
-        ps line; print_newline ()
-      done
-  with End_of_file ->
-    close_in hic
+let ppImports (_: unit) =
+  try
+    let hic = open_in (getHeaderFileName ()) in
+    try while true do
+          let line = input_line hic in
+          ps line; print_newline ()
+        done
+    with End_of_file ->
+      close_in hic
+  with Sys_error _ ->
+    raise (Should_not_happen "Error: failed to read a header file.\n")
 
 (* NOTE: especially for struct declarations, print each with a single line *)
 let ppGlbStructs (_: unit) =
@@ -794,25 +809,22 @@ let ppBram (pifc: signatureT attribute list) =
   let valueK = (List.nth pifc 1).attrType.ret in
 
   (* BRAM declaration *)
-  ps "Bram#"; ps ppRBracketL;
+  ps "RWBramCore#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
   ps ppRBracketR; ps ppDelim;
-  ps "bram <- mkBramInst();"; force_newline ();
-  ps "Reg#(Bool) readRq <- mkReg(False);"; force_newline ();
+  ps "bram <- mkRWBramCore();"; force_newline ();
   force_newline ();
 
   (* The "putRq" method *)
   ppBInterface (List.nth pifc 0); force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "when (!readRq, noAction);"; force_newline ();
   ps "if (x_0.write) begin"; force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "bram.write(x_0.addr, x_0.datain);";
+  ps "bram.wrReq(x_0.addr, x_0.datain);";
   close_box (); print_break 0 (-4); force_newline ();
   ps "end else begin"; force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "bram.readRq(x_0.addr);"; force_newline ();
-  ps "readRq <= True;";
+  ps "bram.rdReq(x_0.addr);"; force_newline ();
   close_box (); print_break 0 (-4); force_newline ();
   ps "end";
   close_box (); print_break 0 (-4); force_newline ();
@@ -822,9 +834,8 @@ let ppBram (pifc: signatureT attribute list) =
   (* The "getRs" method *)
   ppBInterface (List.nth pifc 1); force_newline ();
   print_break 0 4; open_hovbox 0;
-  ps "when (readRq, noAction);"; force_newline ();
-  ps "let data = bram.readRs ();"; force_newline ();
-  ps "readRq <= False;"; force_newline ();
+  ps "bram.deqRdResp ();"; force_newline ();
+  ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ()
@@ -1018,6 +1029,30 @@ let rec makeModuleOrder (mids: int list) (pairs: (int * int) list) =
                                   (List.filter (fun ii -> not (List.mem (fst ii) no_incomings))
                                                pairs))
 
+let ppTopModuleIfc (_: unit) =
+  try
+    let hic = open_in (getTopIfcFileName ()) in
+    try while true do
+          let line = input_line hic in
+          ps line; print_newline ()
+        done
+    with End_of_file ->
+      close_in hic
+  with Sys_error _ ->
+    raise (Should_not_happen "Error: failed to read a top-module interface file.\n")
+
+let ppTopModuleImpl (_: unit) =
+  try
+    let hic = open_in (getTopImplFileName ()) in
+    try while true do
+          let line = input_line hic in
+          ps line; print_newline ()
+        done
+    with End_of_file ->
+      close_in hic
+  with Sys_error _ ->
+    raise (Should_not_happen "Error: failed to read a top-module implementation file.\n")
+
 let ppTopModule (bmdcl: bModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
   open_hovbox 2;
@@ -1027,6 +1062,7 @@ let ppTopModule (bmdcl: bModuleDC list) (idx: int)
   close_box ();
   print_break 0 4; open_hovbox 0;
   ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
+  ppTopModuleImpl ();
   close_box(); print_break 0 (-4);
   ps ppEndModule
 
@@ -1048,7 +1084,7 @@ let rec removeDup (ls: 'a list) =
      else hd :: removeDup tl
 
 (* NOTE: idxInit should be larger than 0 *)
-let ppBModulesFull (bml: bModule list) (hic: in_channel) =
+let ppBModulesFull (bml: bModule list) =
   let idxInit = 1 in
   let bmdcl = toBRegModuleDCL bml in
   let defsAll = List.concat (List.map (fun (_, d, _) -> d) bmdcl) in
@@ -1060,14 +1096,15 @@ let ppBModulesFull (bml: bModule list) (hic: in_channel) =
     makeModuleOrder (makeMids 0 (List.length bmdcl))
                     (makeModuleOrderPairs (makeDefMap bmdcl 0)
                                           (makeCallMap bmdcl 0)) in
-  ppImports hic;
+  ppImports ();
   preAnalyses bml;
   ppGlbStructs ();
   ppBModules (permute bml moduleOrder) idxInit;
+  ppTopModuleIfc (); force_newline ();
   ppTopModule (permute bmdcl moduleOrder) idxInit extCallsNoDup;
   resetGlbStructs ();
   print_newline ()
 
-let ppBModulesFullDbg (bml: bModule list) (cfg: config) (hic: in_channel) =
+let ppBModulesFullDbg (bml: bModule list) (cfg: config) =
   setConfig cfg;
-  ppBModulesFull bml hic
+  ppBModulesFull bml
