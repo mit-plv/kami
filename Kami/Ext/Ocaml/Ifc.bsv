@@ -1,4 +1,4 @@
-interface Mem;
+interface CC;
     method Action mem_enq_rq_0 (Struct2 rq);
     method ActionValue#(Struct2) mem_deq_rs_0 ();
     method Action mem_enq_rq_1 (Struct2 rq);
