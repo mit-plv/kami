@@ -21,7 +21,7 @@ let arg_spec =
    ("-header", Arg.String set_header_file_name, "Sets a header");
    ("-top", Arg.String set_top_module_name, "Sets a top-module name");
    ("-top-ifc", Arg.String set_top_ifc_file_name, "Sets a top-module interface");
-   ("-top-impl", Arg.String set_top_ifc_file_name, "Sets a top-module interface impl.")]
+   ("-top-impl", Arg.String set_top_impl_file_name, "Sets a top-module interface impl.")]
 
 let usage_msg =
   "Usage: ./Main.native [-d] [-header ..] [-top ..] [-ifc ..] output_file_name\n"
