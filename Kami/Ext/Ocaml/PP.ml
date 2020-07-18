@@ -149,7 +149,8 @@ let ppFunction = "function"
 let ppNoRules = "// No rules in this module"
 let ppNoMeths = "// No methods in this module"
 
-let primBramName = ['B'; 'R'; 'A'; 'M']
+let primBramName1 = ['B'; 'R'; 'A'; 'M'; '1']
+let primBramName2 = ['B'; 'R'; 'A'; 'M'; '2']
 let primNormalFifoName = ['F'; 'I'; 'F'; 'O']
 let primPipelineFifoName = ['P'; 'i'; 'p'; 'e'; 'l'; 'i'; 'n'; 'e'; 'F'; 'I'; 'F'; 'O']
 let primBypassFifoName = ['B'; 'y'; 'p'; 'a'; 's'; 's'; 'F'; 'I'; 'F'; 'O']
@@ -800,7 +801,7 @@ let ppBModuleCallArgs (cargs: (string * signatureT) list) =
   | [] -> ()
   | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
 
-let ppBram (pifc: signatureT attribute list) =
+let ppBram1 (pifc: signatureT attribute list) =
   let rqStr = (List.nth pifc 0).attrType.arg in
   let keyK =
     match rqStr with
@@ -832,7 +833,43 @@ let ppBram (pifc: signatureT attribute list) =
   ps ppEndMethod; force_newline ();
   force_newline ();
 
-  (* The "getRs" method *)
+  (* The "readRs" method *)
+  ppBInterface (List.nth pifc 1); force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "bram.deqRdResp ();"; force_newline ();
+  ps "let data = bram.rdResp ();"; force_newline ();
+  ps "return data;";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ()
+
+let ppBram2 (pifc: signatureT attribute list) =
+  let keyK = (List.nth pifc 0).attrType.arg in
+  let valueK = (List.nth pifc 2).attrType.ret in
+
+  (* BRAM declaration *)
+  ps "RWBramCore#"; ps ppRBracketL;
+  ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
+  ps ppRBracketR; ps ppDelim;
+  ps "bram <- mkRWBramCore();"; force_newline ();
+  force_newline ();
+
+  (* The "rdReq" method *)
+  ppBInterface (List.nth pifc 0); force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "bram.rdReq(x_0.addr);"; force_newline ();
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ();
+  force_newline ();
+
+  (* The "wrReq" method *)
+  ppBInterface (List.nth pifc 0); force_newline ();
+  print_break 0 4; open_hovbox 0;
+  ps "bram.wrReq(x_0.addr, x_0.datain);";
+  close_box (); print_break 0 (-4); force_newline ();
+  ps ppEndMethod; force_newline ();
+  force_newline ();
+
+  (* The "readRs" method *)
   ppBInterface (List.nth pifc 1); force_newline ();
   print_break 0 4; open_hovbox 0;
   ps "bram.deqRdResp ();"; force_newline ();
@@ -899,8 +936,10 @@ let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
   ppFifoMethods pifc
 
 let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
-  if pname = primBramName then
-    ppBram pifc
+  if pname = primBramName1 then
+    ppBram1 pifc
+  else if pname = primBramName2 then
+    ppBram2 pifc
   else if pname = primNormalFifoName then
     ppFifo NormalFIFO pifc
   else if pname = primPipelineFifoName then
