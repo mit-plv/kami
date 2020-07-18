@@ -39,7 +39,7 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
     match lret' return (nat * ActionS lret) -> nat * ActionS lret with
     | SyntaxKind k => fun v => (fst v,
                                 LetS_ e n (snd v))
-    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS (getDefaultConst _)))
     end (@getActionS (S n) _ (cn match lret' with
                                  | SyntaxKind k => n
                                  | NativeKind t c => c
@@ -48,7 +48,7 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
     match k return (nat * ActionS lret) -> nat * ActionS lret with
     | SyntaxKind k => fun v => (fst v,
                                 ReadNondetS n (snd v))
-    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS (getDefaultConst _)))
     end (@getActionS (S n) _ (cn match k with
                                  | SyntaxKind _ => n
                                  | NativeKind t c => c
@@ -57,7 +57,7 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
     match k return (nat * ActionS lret) -> nat * ActionS lret with
     | SyntaxKind k => fun v => (fst v,
                                 ReadRegS r n (snd v))
-    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS Default))
+    | NativeKind _ _ => fun _ => (n, ReturnS (Const tyS (getDefaultConst _)))
     end (@getActionS (S n) _ (cn match k with
                                  | SyntaxKind _ => n
                                  | NativeKind t c => c
@@ -76,7 +76,7 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
   | Displ ls c => @getActionS n _ c
   | Return e => (n, ReturnS e)
   end.
-  
+
 Definition MethodTS sig := ActionS (ret sig).
 
 Definition DefMethTS := Attribute (sigT MethodTS).
@@ -99,7 +99,7 @@ Fixpoint getModuleS (m: Modules): ModulesS :=
   match m with
   | PrimMod prim =>
     PrimModS (pm_name prim)
-             (map (fun dm => (attrName dm :: projT1 (attrType dm))%struct) 
+             (map (fun dm => (attrName dm :: projT1 (attrType dm))%struct)
                   (pm_methods prim))
   | Mod regs rules dms =>
     ModS regs
@@ -111,4 +111,3 @@ Fixpoint getModuleS (m: Modules): ModulesS :=
   | ConcatMod m1 m2 =>
     ConcatModsS (getModuleS m1) (getModuleS m2)
   end.
-

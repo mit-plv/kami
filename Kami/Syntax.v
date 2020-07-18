@@ -341,6 +341,7 @@ Section Phoas.
 
   Inductive Expr: FullKind -> Type :=
   | Var k: fullType k -> Expr k
+  | Default k: Expr (SyntaxKind k)
   | Const k: ConstT k -> Expr (SyntaxKind k)
   | UniBool: UniBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
   | BinBool: BinBoolOp -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool) -> Expr (SyntaxKind Bool)
@@ -409,7 +410,7 @@ Section Phoas.
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
   Section StructUpdate.
-    
+
     Lemma nth_map_transparent {A B} (f: A -> B) {n} v (p1 p2: Fin.t n) (eq: p1 = p2):
       Vector.nth (Vector.map f v) p1 = f (Vector.nth v p2).
     Proof.
@@ -453,7 +454,7 @@ Section Phoas.
                             with
                             | eq_refl => ReadField (snd i) e
                             end) (zipVector ls (getFinList n)).
-    
+
     Lemma Vector_in_cons (A: Type) (P: A -> Prop) (h: A) n (ls: Vector.t A n):
       (forall a, Vector.In a (Vector.cons A h n ls) -> P a) ->
       forall x, Vector.In x ls -> P x.

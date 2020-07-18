@@ -20,6 +20,7 @@ Section BluespecSubset.
 
   Inductive BExpr: Type :=
   | BVar: nat -> BExpr
+  | BDefault: BExpr
   | BConst k: ConstT k -> BExpr
   | BUniBool: UniBoolOp -> BExpr -> BExpr
   | BBinBool: BinBoolOp -> BExpr -> BExpr -> BExpr
@@ -103,6 +104,7 @@ Section BluespecSubset.
        | SyntaxKind sk => fun f => Some (BVar f)
        | NativeKind _ _ => fun _ => None
        end) i
+    | Default _ => Some BDefault
     | Const k c => Some (BConst c)
     | UniBool op se => (@exprSToBExpr _ se) >>= (fun be => Some (BUniBool op be))
     | BinBool op e1 e2 =>
@@ -119,7 +121,7 @@ Section BluespecSubset.
       (@exprSToBExpr _ ce)
         >>= (fun bce =>
                (@exprSToBExpr _ te)
-                 >>= (fun bte => 
+                 >>= (fun bte =>
                         (@exprSToBExpr _ fe)
                           >>= (fun bfe => Some (BITE bce bte bfe))))
     | Eq _ e1 e2 =>
@@ -134,7 +136,7 @@ Section BluespecSubset.
       (@exprSToBExpr _ ve)
         >>= (fun bve =>
                (@exprSToBExpr _ ie)
-                 >>= (fun bie => 
+                 >>= (fun bie =>
                         (@exprSToBExpr _ ke)
                           >>= (fun bke => Some (BUpdateVector bve bie bke))))
     | BuildStruct n attrs st =>
@@ -157,10 +159,10 @@ Section BluespecSubset.
       (@exprSToBExpr _ ve)
         >>= (fun bve =>
                (@exprSToBExpr _ ie)
-                 >>= (fun bie => 
+                 >>= (fun bie =>
                         (@exprSToBExpr _ ke)
                           >>= (fun bke => Some (BUpdateArray bve bie bke))))
-      
+
     end.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
@@ -177,7 +179,7 @@ Section BluespecSubset.
                  >>= (fun be => Some (BLet idx (Some k) be :: bc)))
     | LetS_ (NativeKind _ _) _ _ _ => None
     (* Currently nondeterministic reads are not allowed to be synthesized. *)
-    | ReadNondetS _ _ => None 
+    | ReadNondetS _ _ => None
     | ReadRegS reg idx cont =>
       (actionSToBAction cont)
         >>= (fun bc => Some (BLet idx None (BReadReg reg) :: bc))
@@ -237,4 +239,3 @@ Section BluespecSubset.
     end.
 
 End BluespecSubset.
-

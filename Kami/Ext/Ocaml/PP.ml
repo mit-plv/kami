@@ -422,6 +422,7 @@ and ppConstVecT (v: constT t1) =
 let rec ppBExpr (e: bExpr) =
   match e with
   | BVar v -> ps (string_of_de_brujin_index v)
+  | BDefault -> ps "unpack(0)"
   | BConst (k, c) -> ps ppRBracketL; ps (ppKind k); ps ppRBracketR; ps ppTypeCast;
                      ps ppRBracketL; ps (ppConst c); ps ppRBracketR
   | BUniBool (NegB, se) -> ps ppNegB; print_space (); ps ppRBracketL; ppBExpr se; ps ppRBracketR

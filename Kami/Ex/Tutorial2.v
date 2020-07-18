@@ -261,9 +261,9 @@ Abort.
 Check simpleFifo.
 
 Definition nfifo1 :=
-  @nativeSimpleFifo "fifo1" (Bit dataSize) Default.
+  @nativeSimpleFifo "fifo1" (Bit dataSize) (getDefaultConst _).
 Definition nfifo2 :=
-  @nativeSimpleFifo "fifo2" (Bit dataSize) Default.
+  @nativeSimpleFifo "fifo2" (Bit dataSize) (getDefaultConst _).
 
 Definition intSpec1 :=
   ((stage1 ++ nfifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.

@@ -287,33 +287,33 @@ Fixpoint evalArray A n (vs: Vector.t A n): Fin.t n -> A :=
 
 Fixpoint evalConstT k (e: ConstT k): type k :=
   match e in ConstT k return type k with
-    | ConstBool b => b
-    | ConstBit n w => w
-    | ConstVector k' n v => evalVec (mapVec (@evalConstT k') v)
-    | ConstStruct n vs ils =>
-      (fix help n (vs: Vector.t _ n) (ils: ilist (fun a => ConstT (attrType a)) vs): type (Struct vs) :=
-         match vs in Vector.t _ k return ilist (fun a => ConstT (attrType a)) vs -> type (Struct vs) with
-           | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
-           | Vector.cons a1 n1 vs1 =>
-             fun ils1 i1 =>
-               match ils1 in ilist _ (Vector.cons a n2 vs2)
-                     return forall i2: Fin.t (S n2),
-                              Vector.nth
-                                (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
-                 | inil => idProp
-                 | icons t3 n3 vs3 b ils3 =>
-                   fun k =>
-                     match k as k4 in Fin.t (S n4) return
-                           forall (vs4: Vector.t _ n4), type (Struct vs4) ->
-                                                        (Vector.nth (Vector.map (fun p => type (attrType p))
-                                                                                (Vector.cons _ t3 n4 vs4)) k4)
-                     with
-                       | Fin.F1 s5 => fun _ _ => @evalConstT _ b
-                       | Fin.FS s5 f5 => fun vs5 f => f f5
-                     end vs3 (@help _ _ ils3)
-               end i1
-         end ils) n vs ils
-    | ConstArray k' n v => evalArray (Vector.map (@evalConstT k') v)
+  | ConstBool b => b
+  | ConstBit n w => w
+  | ConstVector k' n v => evalVec (mapVec (@evalConstT k') v)
+  | ConstStruct n vs ils =>
+    (fix help n (vs: Vector.t _ n) (ils: ilist (fun a => ConstT (attrType a)) vs): type (Struct vs) :=
+       match vs in Vector.t _ k return ilist (fun a => ConstT (attrType a)) vs -> type (Struct vs) with
+       | Vector.nil => fun ils0 i0 => Fin.case0 _ i0
+       | Vector.cons a1 n1 vs1 =>
+         fun ils1 i1 =>
+           match ils1 in ilist _ (Vector.cons a n2 vs2)
+                 return forall i2: Fin.t (S n2),
+               Vector.nth
+                 (Vector.map (fun p => type (attrType p)) (Vector.cons _ a n2 vs2)) i2 with
+           | inil => idProp
+           | icons t3 n3 vs3 b ils3 =>
+             fun k =>
+               match k as k4 in Fin.t (S n4) return
+                     forall (vs4: Vector.t _ n4), type (Struct vs4) ->
+                                                  (Vector.nth (Vector.map (fun p => type (attrType p))
+                                                                          (Vector.cons _ t3 n4 vs4)) k4)
+               with
+               | Fin.F1 s5 => fun _ _ => @evalConstT _ b
+               | Fin.FS s5 f5 => fun vs5 f => f f5
+               end vs3 (@help _ _ ils3)
+           end i1
+       end ils) n vs ils
+  | ConstArray k' n v => evalArray (Vector.map (@evalConstT k') v)
   end.
 
 Definition evalConstFullT k (e: ConstFullT k) :=
@@ -341,38 +341,39 @@ Section Semantics.
               | S n' => Fin.FS (natToFin n' i')
               end
     end.
-  
+
   Fixpoint evalExpr exprT (e: Expr type exprT): fullType type exprT :=
     match e in Expr _ exprT return fullType type exprT with
-      | Var _ v => v
-      | Const _ v => evalConstT v
-      | UniBool op e1 => (evalUniBool op) (@evalExpr _ e1)
-      | BinBool op e1 e2 => (evalBinBool op) (@evalExpr _ e1) (@evalExpr _ e2)
-      | UniBit n1 n2 op e1 => (evalUniBit op) (@evalExpr _ e1)
-      | BinBit n1 n2 n3 op e1 e2 => (evalBinBit op) (@evalExpr _ e1) (@evalExpr _ e2)
-      | BinBitBool n1 n2 op e1 e2 => (evalBinBitBool op) (@evalExpr _ e1) (@evalExpr _ e2)
-      | ITE _ p e1 e2 => if @evalExpr _ p
-                         then @evalExpr _ e1
-                         else @evalExpr _ e2
-      | Eq _ e1 e2 => if isEq _ (@evalExpr _ e1) (@evalExpr _ e2)
-                      then true
-                      else false
-      | ReadIndex _ _ i f => (@evalExpr _ f) (@evalExpr _ i)
-      | ReadField n ls i e =>
-        Vector_nth_map (@attrType _) type ls (@evalExpr _ e) i
-      | BuildVector _ k vec => evalVec (mapVec (@evalExpr _) vec)
-      | BuildStruct n attrs ils =>
-        ilist_to_fun_m _ _ (fun sk => SyntaxKind (attrType sk)) evalExpr ils
-      | UpdateVector _ _ fn i v =>
-        fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
-      | ReadArrayIndex _ k sz idx vec =>
-        (@evalExpr _ vec) (natToFin sz (wordToNat (@evalExpr _ idx)))
-      | BuildArray i k vecVal =>
-        evalArray (Vector.map (@evalExpr _) vecVal)
-      | UpdateArray k sz _ arr idx val =>
-        fun fini => if Fin.eq_dec fini (natToFin sz (wordToNat (@evalExpr _ idx)))
-                    then @evalExpr _ val
-                    else @evalExpr _ arr fini
+    | Var _ v => v
+    | Default k => evalConstT (getDefaultConst k)
+    | Const _ v => evalConstT v
+    | UniBool op e1 => (evalUniBool op) (@evalExpr _ e1)
+    | BinBool op e1 e2 => (evalBinBool op) (@evalExpr _ e1) (@evalExpr _ e2)
+    | UniBit n1 n2 op e1 => (evalUniBit op) (@evalExpr _ e1)
+    | BinBit n1 n2 n3 op e1 e2 => (evalBinBit op) (@evalExpr _ e1) (@evalExpr _ e2)
+    | BinBitBool n1 n2 op e1 e2 => (evalBinBitBool op) (@evalExpr _ e1) (@evalExpr _ e2)
+    | ITE _ p e1 e2 => if @evalExpr _ p
+                       then @evalExpr _ e1
+                       else @evalExpr _ e2
+    | Eq _ e1 e2 => if isEq _ (@evalExpr _ e1) (@evalExpr _ e2)
+                    then true
+                    else false
+    | ReadIndex _ _ i f => (@evalExpr _ f) (@evalExpr _ i)
+    | ReadField n ls i e =>
+      Vector_nth_map (@attrType _) type ls (@evalExpr _ e) i
+    | BuildVector _ k vec => evalVec (mapVec (@evalExpr _) vec)
+    | BuildStruct n attrs ils =>
+      ilist_to_fun_m _ _ (fun sk => SyntaxKind (attrType sk)) evalExpr ils
+    | UpdateVector _ _ fn i v =>
+      fun w => if weq w (@evalExpr _ i) then @evalExpr _ v else (@evalExpr _ fn) w
+    | ReadArrayIndex _ k sz idx vec =>
+      (@evalExpr _ vec) (natToFin sz (wordToNat (@evalExpr _ idx)))
+    | BuildArray i k vecVal =>
+      evalArray (Vector.map (@evalExpr _) vecVal)
+    | UpdateArray k sz _ arr idx val =>
+      fun fini => if Fin.eq_dec fini (natToFin sz (wordToNat (@evalExpr _ idx)))
+                  then @evalExpr _ val
+                  else @evalExpr _ arr fini
     end.
 
   (* register values just before the current cycle *)
@@ -490,7 +491,7 @@ Section Semantics.
     | IfElse p _ aT aF c =>
       exists news1 calls1 news2 calls2 r1,
       M.Disj news1 news2 /\
-      M.Disj calls1 calls2 /\  
+      M.Disj calls1 calls2 /\
       match evalExpr p with
       | true =>
         SemAction aT news1 calls1 r1 /\
@@ -562,7 +563,7 @@ Section AppendAction.
       apply M.F.P.F.not_find_in_iff in H2.
       unfold not; intros.
       apply M.union_In in H6; intuition.
-    - invertAction H2; econstructor; eauto. 
+    - invertAction H2; econstructor; eauto.
     - invertAction H2; econstructor; eauto.
     - invertAction H2; econstructor; eauto.
     - invertAction H1.
@@ -683,7 +684,7 @@ Section GivenModule.
                         | x, y => x
                       end; defs := M.union d' d; calls := M.union c' c |}
       end.
-    
+
     Definition addLabelLeft lold s := mergeLabel (getSLabel s) lold.
 
     Fixpoint foldSSLabel (ss: Substeps) :=
@@ -692,7 +693,7 @@ Section GivenModule.
         | nil => {| annot := None; defs := M.empty _; calls := M.empty _ |}
       end.
 
-    
+
     Theorem foldSSLabelDist: forall s1 s2,
         foldSSLabel (s1 ++ s2) = mergeLabel (foldSSLabel s1) (foldSSLabel s2).
     Proof.
@@ -828,7 +829,7 @@ Section GivenModule.
               destruct H; intuition.
               eapply conda2; eauto.
             }
-            { destruct o1; intuition; 
+            { destruct o1; intuition;
               destruct conda3 as [x [y | z]]; discriminate.
             }
             { destruct o1; intuition.
@@ -987,7 +988,7 @@ Section GivenModule.
       NoDup (namesOf r1) ->
       NoDup (namesOf r2) ->
       EquivList r1 r2 ->
-      makeMap (fullType type) evalConstFullT r1 = 
+      makeMap (fullType type) evalConstFullT r1 =
       makeMap (fullType type) evalConstFullT r2.
   Proof.
     intros; M.ext y.
@@ -1015,7 +1016,7 @@ Section GivenModule.
       inv H1; apply SubList_map with (f:= @attrName _) in H3; auto.
     - auto.
   Qed.
-  
+
   Lemma initRegs_eq:
     forall r1 r2,
       NoDup (namesOf r1) ->
@@ -1087,4 +1088,3 @@ Notation "ma '<<==' mb" :=
 Notation "ma '<<==>>' mb" :=
   (ma <<== mb /\ mb <<== ma)
     (at level 100, format "ma  <<==>>  mb").
-

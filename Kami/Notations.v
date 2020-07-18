@@ -9,8 +9,6 @@ Set Asymmetric Patterns.
 
 (** Notations for registers and methods declaration *)
 
-Notation Default := (getDefaultConst _).
-
 Notation "'MethodSig' name () : retT" :=
   (Build_Attribute name {| arg := Void; ret := retT |})
   (at level 0, name at level 0, retT at level 200).
@@ -92,6 +90,7 @@ Notation "e ! s @. f" :=
      (Lib.VectorFacts.Vector_find (fieldAccessor f%string) s)
      e%kami_expr) (at level 10): kami_expr_scope.
 
+Notation "'$$Default'" := (Default _ _) (at level 5) : kami_expr_scope.
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10) : kami_expr_scope.
 Notation "$ n" := (Const _ (natToWord _ n)) (at level 5) : kami_expr_scope.
@@ -132,13 +131,13 @@ Notation "'Call' name : t <- meth ( arg ) ; cont " :=
   (MCall (lretT := t) (attrName meth) (attrType meth) arg%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 Notation "'Call' meth () ; cont " :=
-  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun _ => cont))
+  (MCall (attrName meth) (attrType meth) (Const _ (getDefaultConst _)) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_action_scope.
 Notation "'Call' name <- meth () ; cont " :=
-  (MCall (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
+  (MCall (attrName meth) (attrType meth) (Const _ (getDefaultConst _)) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 Notation "'Call' name : t <- meth () ; cont " :=
-  (MCall (lretT := t) (attrName meth) (attrType meth) (Const _ Default) (fun name => cont))
+  (MCall (lretT := t) (attrName meth) (attrType meth) (Const _ (getDefaultConst _)) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 
 Notation "'CallM' meth ( a : argT ) ; cont " :=
@@ -148,10 +147,10 @@ Notation "'CallM' name : retT <- meth ( a : argT ) ; cont " :=
   (MCall meth%string {| arg := argT; ret := retT |} a%kami_expr (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0, a at level 99) : kami_action_scope.
 Notation "'CallM' meth () ; cont " :=
-  (MCall meth%string {| arg := Void; ret := Void |} (Const _ Default) (fun _ => cont))
+  (MCall meth%string {| arg := Void; ret := Void |} (Const _ (getDefaultConst _)) (fun _ => cont))
     (at level 12, right associativity, meth at level 0) : kami_action_scope.
 Notation "'CallM' name : retT <- meth () ; cont " :=
-  (MCall meth%string {| arg := Void; ret := retT |} (Const _ Default) (fun name => cont))
+  (MCall meth%string {| arg := Void; ret := retT |} (Const _ (getDefaultConst _)) (fun name => cont))
     (at level 12, right associativity, name at level 0, meth at level 0) : kami_action_scope.
 
 Notation "'LETN' name : kind <- expr ; cont " :=
@@ -191,14 +190,14 @@ Notation "'If' cexpr 'then' tact 'else' fact ; cont " :=
   (IfElse cexpr%kami_expr tact fact (fun _ => cont))
     (at level 13, right associativity, cexpr at level 0, tact at next level, fact at next level) : kami_action_scope.
 Notation "'If' cexpr 'then' tact ; cont" :=
-  (IfElse cexpr%kami_expr tact (Return (Const _ (k := Void) Default)) (fun _ => cont))
+  (IfElse cexpr%kami_expr tact (Return (Const _ (k := Void) (getDefaultConst _))) (fun _ => cont))
     (at level 13, right associativity, cexpr at level 0, tact at next level) : kami_action_scope.
 Notation "'Assert' expr ; cont " :=
   (Assert_ expr%kami_expr cont)
     (at level 12, right associativity) : kami_action_scope.
 Notation "'Ret' expr" :=
   (Return expr%kami_expr) (at level 12) : kami_action_scope.
-Notation "'Retv'" := (Return (Const _ (k := Void) Default)) : kami_action_scope.
+Notation "'Retv'" := (Return (Const _ (k := Void) (getDefaultConst _))) : kami_action_scope.
 
 Delimit Scope kami_action_scope with kami_action.
 
