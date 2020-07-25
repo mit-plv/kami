@@ -21,7 +21,7 @@ Section Rename.
   Variable rename1To1: forall s1 s2, rename s1 = rename s2 -> s1 = s2.
 
   Definition renameAttr A a := {| attrName := rename (@attrName A a); attrType := attrType a |}.
-  
+
   Definition renameListAttr A (ls: list (Attribute A)) :=
     map (@renameAttr _) ls.
 
@@ -109,6 +109,7 @@ Section Rename.
     match m with
     | PrimMod prim =>
       PrimMod {| pm_name := prim.(pm_name);
+                 pm_args := prim.(pm_args);
                  pm_regInits := renameListAttr prim.(pm_regInits);
                  pm_rules := renameRules prim.(pm_rules);
                  pm_methods := renameMeths prim.(pm_methods)
@@ -171,7 +172,7 @@ Section Rename.
     - f_equal; intuition.
       destruct a; reflexivity.
   Qed.
-  
+
   Lemma renameMapEmpty A: renameMap (M.empty A) = M.empty A.
   Proof.
     apply (M.F.P.fold_Empty); intuition.
@@ -188,7 +189,7 @@ Section Rename.
   Qed.
 
   Hint Immediate renameAdd_transpose_neqkey.
-  
+
   Lemma renameMapAdd:
     forall {A} m k (v: A),
       renameMap (M.add k v m) = M.add (rename k) v (renameMap m).
@@ -273,7 +274,7 @@ Section Rename.
       rewrite <- renameMapFind in H3.
       intuition.
   Qed.
-  
+
   Lemma renameMapIn A (m: M.t A):
     forall i, M.In i m <-> M.In (rename i) (renameMap m).
   Proof.
@@ -283,7 +284,7 @@ Section Rename.
       apply M.F.P.F.in_find_iff in H;
       auto.
   Qed.
-  
+
   Lemma renameMapNotIn A (m: M.t A):
     forall i, ~ M.In i m <-> ~ M.In (rename i) (renameMap m).
   Proof.
@@ -301,7 +302,7 @@ Section Rename.
       solve_disj.
       apply renameMapNotIn in H2; auto.
   Qed.
-  
+
   Lemma renameSemAction o k a u cs r (sa: @SemAction o k a u cs r):
     SemAction (renameMap o) (renameAction a) (renameMap u) (renameMap cs) r.
   Proof.
@@ -448,7 +449,7 @@ Section Rename.
   Lemma renameMapIn1 A (m: M.t A): forall k,
       M.In k m -> M.In (rename k) (renameMap m).
   Proof.
-    intros. 
+    intros.
     apply M.MapsToIn2 in H.
     destruct H.
     apply renameMapsTo in H.
@@ -458,7 +459,7 @@ Section Rename.
   Lemma renameMapIn2 A (m: M.t A): forall k,
       M.In (rename k) (renameMap m) -> M.In k m.
   Proof.
-    intros. 
+    intros.
     apply M.MapsToIn2 in H.
     destruct H.
     apply renameMapsTo in H.
@@ -486,7 +487,7 @@ Section Rename.
     - rewrite renameMapAdd in H1.
       apply eq_sym in H1; apply M.add_empty_neq in H1; intuition.
   Qed.
-  
+
   Lemma renameMapEq A o1: forall (o2: M.t A), renameMap o1 = renameMap o2 -> o1 = o2.
   Proof.
     intros o2 rnEq.
@@ -498,7 +499,7 @@ Section Rename.
       apply renameMapsTo in H;
       assumption.
   Qed.
-                            
+
   Lemma renameSemActionRev o' k a' u cs r:
     SemAction (renameMap o') (renameAction a') u cs r ->
     exists u' cs',
@@ -711,7 +712,7 @@ Section Rename.
           eexists; eauto.
         * apply renameDisj; intuition.
   Qed.
-  
+
   Lemma renameSubstepsComb m o ss: substepsComb (m := m) (o := o) ss ->
                                    substepsComb (renameSubsteps ss).
   Proof.
@@ -751,7 +752,7 @@ Section Rename.
       constructor; intuition.
       apply renameMapsTo in H; intuition.
   Qed.
-  
+
   Lemma renameHide l: renameLabel (hide l) = hide (renameLabel l).
   Proof.
     simpl in *.
@@ -898,7 +899,7 @@ Section Rename.
     apply H.
     apply renameWellHidden; intuition.
   Qed.
-  
+
   Theorem traceRefinesRename m: traceRefines (renameMap (A := _)) m (renameModules m).
   Proof.
     apply (stepRefinement (@renameMap _) (fun _ s => Some (rename s)) (@renameMap _)).
@@ -1040,7 +1041,7 @@ Section Rename.
     pose proof (renameMapIn1 i1) as sth2.
     destruct (H (rename k)); intuition.
   Qed.
-  
+
   Lemma renameCanCombineUUL a b c d e:
     CanCombineUUL (renameMap a) (renameLabel b) (renameMap c) (renameMap d) (renameUnitLabel e) ->
     CanCombineUUL a b c d e.
@@ -1059,7 +1060,7 @@ Section Rename.
     apply renameMapIn1 in H2;
     intuition.
   Qed.
-  
+
   Lemma renameSubstepsIndRev m' o' u l
         (ssi: SubstepsInd (renameModules m') (renameMap o') u l):
     exists u' l',
@@ -1184,7 +1185,7 @@ Section Rename.
     - destruct l2.
       + reflexivity.
       + discriminate.
-    - simpl in *.    
+    - simpl in *.
       destruct l2.
       + discriminate.
       + inversion H; subst.
@@ -1210,7 +1211,7 @@ Section Rename.
           apply renameMapEq in H2.
           subst; reflexivity.
   Qed.
-  
+
   Lemma renameBehavior m n l:
     Behavior m n l ->
     Behavior (renameModules m) (renameMap n) (map renameLabel l).
@@ -1226,7 +1227,7 @@ Section Rename.
       apply renameStep in HStep.
       repeat constructor; intuition.
   Qed.
-  
+
   Lemma renameBehaviorRev m' n l:
     Behavior (renameModules m') n l ->
     exists n' l',
@@ -1336,7 +1337,7 @@ Section RenameInv.
     apply g1To1.
     apply f1To1.
   Qed.
-    
+
   Lemma renameMapFInvG A (m: M.t A): renameMap f (renameMap g m) = m.
   Proof.
     apply M.leibniz; apply M.F.P.F.Equal_mapsto_iff; constructor; intros.
@@ -1361,7 +1362,7 @@ Section RenameInv.
     destruct annot; try destruct o;
       repeat rewrite renameMapGInvF; repeat rewrite gInvF; reflexivity.
   Qed.
-    
+
   Lemma renameLabelFInvG l: renameLabel f (renameLabel g l) = l.
   Proof.
     destruct l.
@@ -1378,7 +1379,7 @@ Section RenameInv.
       rewrite renameLabelGInvF.
       f_equal; intuition.
   Qed.
-    
+
   Lemma renameLabelsFInvG ls: map (renameLabel f) (map (renameLabel g) ls) = ls.
   Proof.
     induction ls.
@@ -1427,7 +1428,7 @@ Section RenameRefinement.
       + apply renameMapGInvF; auto.
       + apply renameMapGInvF; auto.
       + destruct ann as [[|]|]; auto.
-      
+
     - apply traceRefines_trans with (mb := mb).
       + auto.
       + clear H; unfold traceRefines; intros.
@@ -1560,4 +1561,3 @@ Proof.
       }
       bijective_correct_tac.
 Qed.
-

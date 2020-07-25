@@ -678,6 +678,9 @@ Definition Void := Bit 0.
 
 Record PrimitiveModule :=
   { pm_name: string;
+    (* [pm_args] is not used in Kami at all;
+     * it's just to provide information to the pretty-printer. *)
+    pm_args: list (Attribute Kind);
     pm_regInits: list RegInitT;
     pm_rules: list (Attribute (Action Void));
     pm_methods: list DefMethT }.

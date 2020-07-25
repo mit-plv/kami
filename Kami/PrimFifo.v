@@ -13,7 +13,6 @@ Definition primBypassFifoName: string := "BypassFIFO".
 
 Section PrimFifo.
   Variables (primFifoName fifoName: string)
-            (sz: nat)
             (dType: Kind).
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
@@ -54,6 +53,7 @@ Section PrimFifo.
   Definition fifo: Modules :=
     PrimMod
       {| pm_name := primFifoName;
+         pm_args := [("dType" :: dType)]%struct;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
@@ -66,6 +66,7 @@ Section PrimFifo.
   Definition fifoF: Modules :=
     PrimMod
       {| pm_name := primFifoName;
+         pm_args := [("dType" :: dType)]%struct;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
@@ -79,6 +80,7 @@ Section PrimFifo.
   Definition fifoC: Modules :=
     PrimMod
       {| pm_name := primFifoName;
+         pm_args := [("dType" :: dType)]%struct;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;

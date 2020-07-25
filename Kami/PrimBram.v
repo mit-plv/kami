@@ -47,7 +47,7 @@ Section PrimBram.
              "addr" :: Bit addrSize;
              "datain" :: dType }.
 
-  Definition bramPutRq: forall ty (rq: ty (Struct BramRq)), ActionT ty Void :=
+  Definition bramPutReq: forall ty (rq: ty (Struct BramRq)), ActionT ty Void :=
     fun ty rq =>
       (If #rq!BramRq@."write"
        then (LET writev <- #rq!BramRq@."datain";
@@ -61,7 +61,7 @@ Section PrimBram.
             Retv);
       Retv)%kami_action.
 
-  Definition bramReadRs: forall ty (_: ty Void), ActionT ty dType :=
+  Definition bramRdResp: forall ty (_: ty Void), ActionT ty dType :=
     fun ty _ =>
       (ReadN oreadAddr: bramReadAddrK ty <- ^"readAddr";
       Assert $$(isSomeB oreadAddr);
@@ -74,45 +74,47 @@ Section PrimBram.
   Definition bram1: Modules :=
     PrimMod
       {| pm_name := primBramName1;
+         pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
          pm_regInits :=
            [(^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
            (^"readAddr" :: (RegInitCustom (existT ConstFullT (bramReadAddrK type)
                                                   (NativeConst None None))))%struct];
          pm_rules := nil;
          pm_methods :=
-           [(^"putRq" :: (existT _ {| arg:= _; ret:= _ |} bramPutRq))%struct;
-           (^"readRs" :: (existT _ {| arg:= _; ret:= _ |} bramReadRs))%struct]
+           [(^"putReq" :: (existT _ {| arg:= _; ret:= _ |} bramPutReq))%struct;
+           (^"rdResp" :: (existT _ {| arg:= _; ret:= _ |} bramRdResp))%struct]
       |}.
 
-  Definition bramReadRq: forall ty (addr: ty (Bit addrSize)), ActionT ty Void :=
+  Definition bramRdReq: forall ty (addr: ty (Bit addrSize)), ActionT ty Void :=
     fun ty addr =>
       (ReadN readAddr: bramReadAddrK ty <- ^"readAddr";
       Assert $$(isNoneB readAddr);
       Write ^"readAddr" <- Var _ (bramReadAddrK ty) (liftSome addr);
       Retv)%kami_action.
 
-  Definition BramWriteRq :=
+  Definition BramWriteReq :=
     STRUCT { "addr" :: Bit addrSize; "datain" :: dType }.
 
-  Definition bramWriteRq: forall ty (rq: ty (Struct BramWriteRq)), ActionT ty Void :=
+  Definition bramWrReq: forall ty (rq: ty (Struct BramWriteReq)), ActionT ty Void :=
     fun ty rq =>
-      (LET writev <- #rq!BramWriteRq@."datain";
+      (LET writev <- #rq!BramWriteReq@."datain";
       Read bram <- ^"bram";
-      Write ^"bram" <- #bram@[#rq!BramWriteRq@."addr" <- #writev];
+      Write ^"bram" <- #bram@[#rq!BramWriteReq@."addr" <- #writev];
       Retv)%kami_action.
 
   Definition bram2: Modules :=
     PrimMod
       {| pm_name := primBramName1;
+         pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
          pm_regInits :=
            [(^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
            (^"readAddr" :: (RegInitCustom (existT ConstFullT (bramReadAddrK type)
                                                   (NativeConst None None))))%struct];
          pm_rules := nil;
          pm_methods :=
-           [(^"rdReq" :: (existT _ {| arg:= _; ret:= _ |} bramReadRq))%struct;
-           (^"wrReq" :: (existT _ {| arg:= _; ret:= _ |} bramWriteRq))%struct;
-           (^"readRs" :: (existT _ {| arg:= _; ret:= _ |} bramReadRs))%struct]
+           [(^"rdReq" :: (existT _ {| arg:= _; ret:= _ |} bramRdReq))%struct;
+           (^"wrReq" :: (existT _ {| arg:= _; ret:= _ |} bramWrReq))%struct;
+           (^"readRs" :: (existT _ {| arg:= _; ret:= _ |} bramRdResp))%struct]
       |}.
 
 End PrimBram.
@@ -120,7 +122,7 @@ End PrimBram.
 Hint Unfold bram1 bram2: ModuleDefs.
 Hint Unfold primBramName1 primBramName2
      bramReadAddrT bramReadAddrK
-     BramRq bramPutRq bramReadRs bramReadRq BramWriteRq bramWriteRq: MethDefs.
+     BramRq bramPutReq bramRdResp bramRdReq BramWriteReq bramWrReq: MethDefs.
 
 Section Facts.
   Variables (bramName: string)
