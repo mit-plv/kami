@@ -8,8 +8,14 @@ Import ListNotations.
 Set Implicit Arguments.
 
 Definition primNormalFifoName: string := "FIFO".
+Definition primNormalFifoFName: string := "FIFOF".
+Definition primNormalFifoCName: string := "FIFOC".
 Definition primPipelineFifoName: string := "PipelineFIFO".
+Definition primPipelineFifoFName: string := "PipelineFIFOF".
+Definition primPipelineFifoCName: string := "PipelineFIFOC".
 Definition primBypassFifoName: string := "BypassFIFO".
+Definition primBypassFifoFName: string := "BypassFIFOF".
+Definition primBypassFifoCName: string := "BypassFIFOC".
 
 Section PrimFifo.
   Variables (primFifoName fifoName: string)

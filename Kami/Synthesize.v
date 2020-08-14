@@ -81,32 +81,45 @@ Definition MethodTS sig := ActionS (ret sig).
 
 Definition DefMethTS := Attribute (sigT MethodTS).
 
+Record PrimitiveModuleS :=
+  { pms_name: string;
+    (* [pm_args] is not used in Kami at all;
+     * it's just to provide information to the pretty-printer. *)
+    pms_args: list (Attribute Kind);
+    pms_regInits: list RegInitT;
+    pms_rules: list (Attribute (ActionS Void));
+    pms_methods: list DefMethTS }.
+
 Inductive ModulesS: Type :=
-| PrimModS (primModName: string) (ifc: list (Attribute SignatureT))
+| PrimModS (prim: PrimitiveModuleS)
 | ModS (regs: list RegInitT)
        (rules: list (Attribute (ActionS Void)))
-       (dms: list DefMethTS):
-    ModulesS
-| ConcatModsS (m1 m2: ModulesS):
-    ModulesS.
+       (dms: list DefMethTS)
+| ConcatModsS (m1 m2: ModulesS).
 
 Definition getMethS (x: sigT MethodT): sigT MethodTS :=
   match x with
-    | existT arg meth => existT _ arg (snd (getActionS 1 (meth tyS 0)))
+  | existT arg meth => existT _ arg (snd (getActionS 1 (meth tyS 0)))
   end.
 
 Fixpoint getModuleS (m: Modules): ModulesS :=
   match m with
   | PrimMod prim =>
-    PrimModS (pm_name prim)
-             (map (fun dm => (attrName dm :: projT1 (attrType dm))%struct)
-                  (pm_methods prim))
+    PrimModS {| pms_name := pm_name prim;
+                pms_args := pm_args prim;
+                pms_regInits := pm_regInits prim;
+                pms_rules :=
+                  map (fun a: Attribute (Action Void) =>
+                         (attrName a :: snd (getActionS 0 (attrType a tyS)))%struct)
+                      (pm_rules prim);
+                pms_methods :=
+                  map (fun a => (attrName a :: getMethS (attrType a))%struct)
+                      (pm_methods prim) |}
   | Mod regs rules dms =>
     ModS regs
-         (map
-            (fun a: Attribute (Action Void) =>
-               (attrName a :: snd (getActionS 0 (attrType a tyS)))%struct)
-            rules)
+         (map (fun a: Attribute (Action Void) =>
+                 (attrName a :: snd (getActionS 0 (attrType a tyS)))%struct)
+              rules)
          (map (fun a => (attrName a :: getMethS (attrType a))%struct) dms)
   | ConcatMod m1 m2 =>
     ConcatModsS (getModuleS m1) (getModuleS m2)

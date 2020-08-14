@@ -58,10 +58,10 @@ Section BluespecSubset.
   Definition BMethod := Attribute (SignatureT * list BAction).
 
   Inductive BModule :=
-  | BModulePrim (primModName: string) (ifc: list (Attribute SignatureT)): BModule
-  | BModuleB (bregs: list RegInitT)
-             (brules: list BRule)
-             (bdms: list BMethod): BModule.
+  | BModulePrim (primModName: string)
+                (primArgs: list (Attribute Kind))
+                (primIfc: list (Attribute SignatureT))
+  | BModuleB (bregs: list RegInitT) (brules: list BRule) (bdms: list BMethod).
 
   Definition BModules := list BModule.
 
@@ -225,7 +225,12 @@ Section BluespecSubset.
 
   Fixpoint ModulesSToBModules (m: ModulesS): option (list BModule) :=
     match m with
-    | PrimModS pname ifc => Some (BModulePrim pname ifc :: nil)
+    | PrimModS prim =>
+      Some (BModulePrim
+              (pms_name prim)
+              (pms_args prim)
+              (map (fun dm => (attrName dm :: projT1 (attrType dm))%struct)
+                   (pms_methods prim)) :: nil)
     | ModS regs rules dms =>
       (rulesToBRules rules)
         >>= (fun brules =>

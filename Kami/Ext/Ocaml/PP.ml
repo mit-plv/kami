@@ -226,7 +226,7 @@ let getCallsB (bm: bModule) =
 
 let getDefsB (bm: bModule) =
   match bm with
-  | BModulePrim (pname, pifc) ->
+  | BModulePrim (pname, args, pifc) ->
      List.map (fun bm -> match bm with
                          | { attrName = mn; attrType = msig } ->
                             (bstring_of_charlist mn, msig)) pifc
@@ -349,7 +349,7 @@ let rec collectStrBRI (rl: regInitT list) =
 
 let collectStrB (bm: bModule) =
   match bm with
-  | BModulePrim (pm, pifc) -> collectStrBIfc pifc
+  | BModulePrim (pm, args, pifc) -> collectStrBIfc pifc
   | BModuleB (ril, rl, ml) ->
      collectStrBRI ril; collectStrBR rl; collectStrBM ml
 
@@ -764,7 +764,7 @@ let ppBModuleInterface (n: string) (m: bModule) =
   ps ppInterface; print_space (); ps n; ps ppSep;
   print_break 1 4; open_hovbox 0;
   (match m with
-   | BModulePrim (pname, pifc) -> ppBInterfaces pifc
+   | BModulePrim (pname, args, pifc) -> ppBInterfaces pifc
    | BModuleB (_, brl, bd) ->
       ppBInterfaces (List.map
                        (fun bm -> { attrName = bm.attrName;
@@ -801,14 +801,10 @@ let ppBModuleCallArgs (cargs: (string * signatureT) list) =
   | [] -> ()
   | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
 
-let ppBram1 (pifc: signatureT attribute list) =
-  let rqStr = (List.nth pifc 0).attrType.arg in
-  let keyK =
-    match rqStr with
-    | Struct (_, Cons (_, _, Cons (kk, _, _))) -> kk.attrType
-    | _ -> Bit 0
-  in
-  let valueK = (List.nth pifc 1).attrType.ret in
+(* args = ["addrSize" :: Bit addrSize; "dType" :: dType] *)
+let ppBram1 (args: kind attribute list) (pifc: signatureT attribute list) =
+  let keyK = (List.nth args 0).attrType in
+  let valueK = (List.nth args 1).attrType in
 
   (* BRAM declaration *)
   ps "RWBramCore#"; ps ppRBracketL;
@@ -842,9 +838,10 @@ let ppBram1 (pifc: signatureT attribute list) =
   close_box (); print_break 0 (-4); force_newline ();
   ps ppEndMethod; force_newline ()
 
-let ppBram2 (pifc: signatureT attribute list) =
-  let keyK = (List.nth pifc 0).attrType.arg in
-  let valueK = (List.nth pifc 2).attrType.ret in
+(* args = ["addrSize" :: Bit addrSize; "dType" :: dType] *)
+let ppBram2 (args: kind attribute list) (pifc: signatureT attribute list) =
+  let keyK = (List.nth args 0).attrType in
+  let valueK = (List.nth args 1).attrType in
 
   (* BRAM declaration *)
   ps "RWBramCore#"; ps ppRBracketL;
@@ -935,11 +932,11 @@ let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
   force_newline ();
   ppFifoMethods pifc
 
-let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
+let ppBModulePrim (pname: char list) (args: kind attribute list) (pifc: signatureT attribute list) =
   if pname = primBramName1 then
-    ppBram1 pifc
+    ppBram1 args pifc
   else if pname = primBramName2 then
-    ppBram2 pifc
+    ppBram2 args pifc
   else if pname = primNormalFifoName then
     ppFifo NormalFIFO pifc
   else if pname = primPipelineFifoName then
@@ -951,7 +948,7 @@ let ppBModulePrim (pname: char list) (pifc: signatureT attribute list) =
 
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
-  | BModulePrim (pname, pifc) ->
+  | BModulePrim (pname, args, pifc) ->
      open_hovbox 2;
      ps ppModule; print_space ();
      ps ("mk" ^ ifcn); print_space ();
@@ -959,7 +956,7 @@ let ppBModule (ifcn: string) (m: bModule) =
      close_box ();
      print_break 0 4; open_hovbox 0;
 
-     ppBModulePrim pname pifc;
+     ppBModulePrim pname args pifc;
 
      close_box(); print_break 0 (-4); force_newline ();
      ps ppEndModule;
