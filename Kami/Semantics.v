@@ -1,4 +1,4 @@
-Require Import Bool List String Omega.
+Require Import Bool List String Lia.
 Require Import Structures.Equalities Program.Equality Eqdep Eqdep_dec.
 Require Import FunctionalExtensionality.
 Require Import Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap Lib.StringEq Lib.VectorFacts Lib.Struct.
@@ -218,9 +218,9 @@ Definition evalZeroExtendTrunc n1 n2 (w: word n1): word n2.
           | left _ => _
           | right _ => _
           end).
-  - replace n2 with (n1 + (n2 - n1)) by abstract omega.
+  - replace n2 with (n1 + (n2 - n1)) by abstract lia.
     exact (zext w _).
-  - replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+  - replace n1 with (n2 + (n1 - n2)) in w by abstract lia.
     exact (split1 _ _ w).
 Defined.
 
@@ -229,9 +229,9 @@ Definition evalSignExtendTrunc n1 n2 (w: word n1): word n2.
           | left _ => _
           | right _ => _
           end).
-  - replace n2 with (n1 + (n2 - n1)) by abstract omega.
+  - replace n2 with (n1 + (n2 - n1)) by abstract lia.
     exact (sext w _).
-  - replace n1 with (n2 + (n1 - n2)) in w by abstract omega.
+  - replace n1 with (n2 + (n1 - n2)) in w by abstract lia.
     exact (split1 _ _ w).
 Defined.
 

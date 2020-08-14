@@ -1,4 +1,4 @@
-Require Import Coq.Arith.Peano_dec.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Logic.Eqdep Coq.Logic.Eqdep_dec Coq.Program.Equality.
 
 (** * Equalities on dependent types *)
@@ -9,13 +9,13 @@ Proof.
   intros.
   destruct ab.
   destruct bc.
-  rewrite (UIP_dec eq_nat_dec (eq_trans eq_refl eq_refl) eq_refl).
+  rewrite (UIP_dec Nat.eq_dec (eq_trans eq_refl eq_refl) eq_refl).
   simpl.
   auto.
 Qed.
 
 Hint Rewrite eq_rect_nat_double.
-Hint Rewrite <- (eq_rect_eq_dec eq_nat_dec).
+Hint Rewrite <- (eq_rect_eq_dec Nat.eq_dec).
 
 Ltac generalize_proof :=
     match goal with
@@ -25,7 +25,7 @@ Ltac generalize_proof :=
 Ltac eq_rect_simpl :=
   unfold eq_rec_r, eq_rec;
   repeat rewrite eq_rect_nat_double;
-  repeat rewrite <- (eq_rect_eq_dec eq_nat_dec).
+  repeat rewrite <- (eq_rect_eq_dec Nat.eq_dec).
 
 Ltac destruct_existT :=
   repeat match goal with

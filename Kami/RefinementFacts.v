@@ -1,4 +1,4 @@
-Require Import Bool List String Omega.
+Require Import Bool List String Lia.
 Require Import Program.Equality Program.Basics Classes.Morphisms.
 Require Import Lib.CommonTactics Lib.Indexer Lib.FMap Lib.Struct Lib.StringEq Lib.ListSupport.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.ModularFacts Kami.Wf.
@@ -153,7 +153,7 @@ Section LabelDrop.
     forall p x n, x <= n -> In (p __ x) (duplicateElt p n).
   Proof.
     induction n; simpl; intros.
-    - assert (x = 0) by omega; subst; intuition.
+    - assert (x = 0) by lia; subst; intuition.
     - inv H; intuition.
   Qed.
 

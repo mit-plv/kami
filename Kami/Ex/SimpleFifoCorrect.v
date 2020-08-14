@@ -4,7 +4,7 @@ Require Import Lib.FMap Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts.
 Require Import Kami.Wf Kami.Notations Kami.Tactics.
 Require Import Kami.Decomposition.
-Require Import Ex.Fifo Ex.NativeFifo Omega.
+Require Import Ex.Fifo Ex.NativeFifo Lia.
 
 Import ListNotations.
 
@@ -72,7 +72,7 @@ Section Facts.
       reflexivity.
     - unfold sfifo_nsfifo_elt_not_full in *.
       fold sfifo_nsfifo_elt_not_full in *.
-      rewrite <-IHedSub by omega; clear IHedSub.
+      rewrite <-IHedSub by lia; clear IHedSub.
       unfold app; f_equal.
       destruct (weq _ _).
       + exfalso.
@@ -88,7 +88,7 @@ Section Facts.
         apply wneg_zero in e.
         apply natToWord_inj in e.
         * inv e.
-        * pose proof (wordToNat_bound (wones rsz)); omega.
+        * pose proof (wordToNat_bound (wones rsz)); lia.
         * apply pow2_zero.
       + f_equal.
         do 2 rewrite wminus_def.
@@ -367,10 +367,10 @@ Section Facts.
                 }
                 { pose proof (wordToNat_bound (x5 ^- x6)).
                   remember (Lib.NatLib.pow2 (S sz)) as pt; destruct pt.
-                  { pose proof (pow2_zero (S sz)); omega. }
+                  { pose proof (pow2_zero (S sz)); lia. }
                   { apply Lt.lt_n_S.
                     assert (wordToNat (x5 ^- x6) <> pt).
-                    { replace pt with (Lib.NatLib.pow2 (S sz) - 1) by omega.
+                    { replace pt with (Lib.NatLib.pow2 (S sz) - 1) by lia.
                       intro Hx.
                       apply pow2_minus_one_wones in Hx.
                       elim n0.
@@ -385,7 +385,7 @@ Section Facts.
                       rewrite wones_wneg_one.
                       reflexivity.
                     }
-                    omega.
+                    lia.
                   }
                 }
                 { apply wordToNat_bound. }
@@ -393,7 +393,7 @@ Section Facts.
               { rewrite wones_pow2_minus_one.
                 apply Lt.lt_n_Sm_le.
                 pose proof (wordToNat_bound (x5 ^- x6)).
-                unfold rsz in *; omega.
+                unfold rsz in *; lia.
               }
             }
           }

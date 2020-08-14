@@ -1,4 +1,4 @@
-Require Import Bool String List Arith.Peano_dec Omega.
+Require Import Bool String List Arith.Peano_dec Lia.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 
@@ -782,7 +782,7 @@ Section Specializable.
         assert (String.length (spf i s) = String.length s) by (rewrite H0; auto).
         unfold spf in H; rewrite withIndex_eq in H.
         do 2 rewrite append_length in H; simpl in H.
-        omega.
+        lia.
       + clear -Heqidx H0.
         apply in_map_iff in H0; dest; subst.
         unfold spf in Heqidx; rewrite withIndex_eq in Heqidx.
@@ -791,7 +791,7 @@ Section Specializable.
         * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
         * discriminate.
-        * omega.
+        * lia.
     - destruct H1; [subst|].
       + clear -H H0; induction l; simpl; intros; auto.
         simpl in H.
@@ -803,7 +803,7 @@ Section Specializable.
         * rewrite substring_append_1 in Heqidx; simpl in Heqidx.
           rewrite substring_empty in Heqidx; auto.
         * discriminate.
-        * omega.
+        * lia.
       + eauto.
   Qed.
 

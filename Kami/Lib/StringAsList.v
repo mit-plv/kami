@@ -1,4 +1,4 @@
-Require Import String Program.Equality Omega.
+Require Import String Program.Equality Lia.
 
 Set Asymmetric Patterns.
 
@@ -165,11 +165,11 @@ Proof.
     | H: ?p = ?q |- _ => assert (sth: length p = length q) by (f_equal; auto); simpl in sth
   end.
   simpl in sth; rewrite S_app_length in sth.
-  exfalso; omega.
+  exfalso; lia.
   match goal with
     | H: ?p = ?q |- _ => assert (sth: length p = length q) by (f_equal; auto); simpl in sth
   end.
-  rewrite S_app_length in sth; exfalso; omega.
+  rewrite S_app_length in sth; exfalso; lia.
   inversion H; subst; clear H.
   f_equal; eapply IHl1; eauto.
 Qed.
@@ -252,8 +252,8 @@ End RelatingIndex.
 Lemma S_nth_In :
   forall (n:nat) l d, n < length l -> S_In (S_nth n l d) l.
 Proof.
-  induction n, l; simpl in *; intuition auto; try omega.
-  assert (sth: n < length l) by omega.
+  induction n, l; simpl in *; intuition auto; try lia.
+  assert (sth: n < length l) by lia.
   apply IHn with (d := d) in sth; auto.
 Qed.
 
@@ -261,16 +261,16 @@ Lemma S_In_nth l x d : S_In x l ->
                        exists n, n < length l /\ S_nth n l d = x.
 Proof.
   induction l; simpl in *; subst; intuition auto; intros.
-  - exists 0; constructor; try omega; auto.
+  - exists 0; constructor; try lia; auto.
   - destruct H as [n [nlt eq]].
-    exists (S n); constructor; try omega; auto.
+    exists (S n); constructor; try lia; auto.
 Qed.
 
 Lemma S_nth_overflow : forall l n d, length l <= n -> S_nth n l d = d.
 Proof.
   induction l, n; intuition auto; simpl in *.
-  - exfalso; omega.
-  - assert (sth: length l <= n) by omega.
+  - exfalso; lia.
+  - assert (sth: length l <= n) by lia.
     apply IHl; auto.
 Qed.
 
@@ -278,26 +278,26 @@ Lemma S_nth_indep :
   forall l n d d', n < length l -> S_nth n l d = S_nth n l d'.
 Proof.
   induction l, n; intuition auto; simpl in *.
-  - exfalso; omega.
-  - exfalso; omega.
-  - assert (sth: n < length l) by omega; apply IHl; auto.
+  - exfalso; lia.
+  - exfalso; lia.
+  - assert (sth: n < length l) by lia; apply IHl; auto.
 Qed.
 
 Lemma S_app_nth1 :
   forall l l' d n, n < length l -> S_nth n (l++l') d = S_nth n l d.
 Proof.
   induction l, n; intuition auto; simpl in *.
-  - exfalso; omega.
-  - exfalso; omega.
-  - assert (sth: n < length l) by omega; apply IHl; auto.
+  - exfalso; lia.
+  - exfalso; lia.
+  - assert (sth: n < length l) by lia; apply IHl; auto.
 Qed.
     
 Lemma S_app_nth2 :
   forall l l' d n, n >= length l -> S_nth n (l++l') d = S_nth (n-length l) l' d.
 Proof.
   induction l, n; intuition auto; simpl in *.
-  - exfalso; omega.
-  - assert (sth: n >= length l) by omega; apply IHl; auto.
+  - exfalso; lia.
+  - assert (sth: n >= length l) by lia; apply IHl; auto.
 Qed.
 
 Lemma S_nth_split l :
@@ -305,9 +305,9 @@ Lemma S_nth_split l :
     n < length l ->
     exists l1, exists l2, l = l1 ++ String (S_nth n l d) l2 /\ length l1 = n.
 Proof.
-  induction l; destruct n; simpl in *; intuition auto; subst; try discriminate; try omega.
+  induction l; destruct n; simpl in *; intuition auto; subst; try discriminate; try lia.
   - exists "", l; constructor; auto.
-  - assert (sth: n < length l) by omega.
+  - assert (sth: n < length l) by lia.
     specialize (IHl _ d sth).
     destruct IHl as [l1 [l2 [? ?]]].
     exists (String a l1), l2; constructor; f_equal; simpl in *; f_equal; auto.
@@ -331,24 +331,24 @@ Qed.
 
 Lemma S_nth_error_None l : forall n, S_nth_error l n = None <-> length l <= n.
 Proof.
-  induction l; destruct n; simpl in *; intuition auto; subst; try omega; try discriminate.
-  apply IHl in H; omega.
-  apply IHl; omega.
+  induction l; destruct n; simpl in *; intuition auto; subst; try lia; try discriminate.
+  apply IHl in H; lia.
+  apply IHl; lia.
 Qed.
   
 Lemma S_nth_error_Some l : forall n, S_nth_error l n <> None <-> n < length l.
 Proof.
-  induction l; destruct n; simpl in *; intuition auto; subst; try omega; try discriminate.
-  apply IHl in H; omega.
+  induction l; destruct n; simpl in *; intuition auto; subst; try lia; try discriminate.
+  apply IHl in H; lia.
   generalize H0; clear H0.
-  apply IHl; omega.
+  apply IHl; lia.
 Qed.
 
 Lemma S_nth_error_split l : forall n a,
                             S_nth_error l n = Some a ->
                             exists l1, exists l2, l = l1 ++ String a l2 /\ length l1 = n.
 Proof.
-  induction l; destruct n; simpl in *; intuition auto; subst; try discriminate; try omega.
+  induction l; destruct n; simpl in *; intuition auto; subst; try discriminate; try lia.
   - inversion H; clear H; subst.
     exists ""; simpl.
     repeat econstructor; eauto.
@@ -361,16 +361,16 @@ Qed.
 Lemma S_nth_error_app1 l : forall l' n, n < length l ->
                                         S_nth_error (l++l') n = S_nth_error l n.
 Proof.
-  induction l; destruct l', n; simpl in *; intuition auto; subst; try discriminate; try omega;
-  apply IHl; omega.
+  induction l; destruct l', n; simpl in *; intuition auto; subst; try discriminate; try lia;
+  apply IHl; lia.
 Qed.
   
 
 Lemma S_nth_error_app2 l : forall l' n, length l <= n ->
                                         S_nth_error (l++l') n = S_nth_error l' (n-length l).
 Proof.
-  induction l; destruct l', n; simpl in *; intuition auto; subst; try discriminate; try omega;
-  apply IHl; omega.
+  induction l; destruct l', n; simpl in *; intuition auto; subst; try discriminate; try lia;
+  apply IHl; lia.
 Qed.
 
 Close Scope string.

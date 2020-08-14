@@ -1,4 +1,4 @@
-Require Import Bool String List Arith.Peano_dec Omega.
+Require Import Bool String List Arith.Peano_dec Lia.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq Lib.ListSupport.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Specialize.
@@ -69,12 +69,12 @@ Section DuplicateFacts.
                (namesOf (getRegInits (duplicate m n))).
   Proof.
     induction n; simpl; intros.
-    - apply specializeMod_disj_regs_different_indices; auto; omega.
+    - apply specializeMod_disj_regs_different_indices; auto; lia.
     - unfold namesOf in *.
       rewrite map_app.
       apply DisjList_comm, DisjList_app_4.
-      + apply specializeMod_disj_regs_different_indices; auto; omega.
-      + apply DisjList_comm, IHn; omega.
+      + apply specializeMod_disj_regs_different_indices; auto; lia.
+      + apply DisjList_comm, IHn; lia.
   Qed.
 
   Lemma duplicate_specializeMod_disj_defs:
@@ -85,7 +85,7 @@ Section DuplicateFacts.
                (getDefs (duplicate m n)).
   Proof.
     induction n; simpl; intros.
-    - apply specializeMod_disj_defs_different_indices; auto; omega.
+    - apply specializeMod_disj_defs_different_indices; auto; lia.
     - apply DisjList_comm.
       apply DisjList_SubList with
       (l1:= app (getDefs (specializeMod (m (S n)) (S n)))
@@ -94,8 +94,8 @@ Section DuplicateFacts.
         apply getDefs_in in H1; destruct H1;
           apply in_or_app; auto.
       + apply DisjList_app_4.
-        * apply specializeMod_disj_defs_different_indices; auto; omega.
-        * apply DisjList_comm, IHn; omega.
+        * apply specializeMod_disj_defs_different_indices; auto; lia.
+        * apply DisjList_comm, IHn; lia.
   Qed.
 
   Lemma duplicate_specializeMod_disj_calls:
@@ -106,7 +106,7 @@ Section DuplicateFacts.
                (getCalls (duplicate m n)).
   Proof.
     induction n; simpl; intros.
-    - apply specializeMod_disj_calls_different_indices; auto; omega.
+    - apply specializeMod_disj_calls_different_indices; auto; lia.
     - apply DisjList_comm.
       apply DisjList_SubList with
       (l1:= app (getCalls (specializeMod (m (S n)) (S n)))
@@ -115,8 +115,8 @@ Section DuplicateFacts.
         apply getCalls_in in H1; destruct H1;
           apply in_or_app; auto.
       + apply DisjList_app_4.
-        * apply specializeMod_disj_calls_different_indices; auto; omega.
-        * apply DisjList_comm, IHn; omega.
+        * apply specializeMod_disj_calls_different_indices; auto; lia.
+        * apply DisjList_comm, IHn; lia.
   Qed.
   
   Lemma duplicate_disj_regs:
@@ -135,24 +135,24 @@ Section DuplicateFacts.
       + apply DisjList_comm, DisjList_app_4.
         * apply DisjList_comm, specializeMod_disj_regs_2; auto.
         * clear IHn.
-          assert (n < S n) by omega.
+          assert (n < S n) by lia.
           generalize dependent (S n); intros.
           induction n; simpl; intros.
           { apply DisjList_comm, specializeMod_disj_regs_2; auto. }
           { rewrite map_app; apply DisjList_app_4.
             { apply DisjList_comm, specializeMod_disj_regs_2; auto. }
-            { apply IHn; omega. }
+            { apply IHn; lia. }
           }
       + apply DisjList_comm, DisjList_app_4.
         * clear IHn.
-          assert (n < S n) by omega.
+          assert (n < S n) by lia.
           generalize dependent (S n); intros.
           induction n; simpl; intros.
           { apply DisjList_comm, specializeMod_disj_regs_2; auto. }
           { rewrite map_app; apply DisjList_comm, DisjList_app_4.
             { apply specializeMod_disj_regs_2; auto. }
             { apply DisjList_comm; auto.
-              apply IHn; omega.
+              apply IHn; lia.
             }
           }
         * apply DisjList_comm, IHn.
@@ -167,9 +167,9 @@ Section DuplicateFacts.
                        (duplicate m n).
   Proof.
     induction n; simpl; intros.
-    - apply specializable_noninteracting_2; auto; omega.
+    - apply specializable_noninteracting_2; auto; lia.
     - unfold NonInteracting in *.
-      assert (ln > n) by omega; specialize (IHn _ H1); clear H1; dest.
+      assert (ln > n) by lia; specialize (IHn _ H1); clear H1; dest.
       split.
       + apply DisjList_comm.
         apply DisjList_SubList with
@@ -180,7 +180,7 @@ Section DuplicateFacts.
           apply in_or_app; auto.
         * apply DisjList_app_4.
           { pose proof (specializable_noninteracting_2 (H (S n)) (H iv)).
-            apply H1; omega.
+            apply H1; lia.
           }
           { specialize (IHn iv); dest.
             apply DisjList_comm; auto.
@@ -194,7 +194,7 @@ Section DuplicateFacts.
           apply in_or_app; auto.
         * apply DisjList_app_4.
           { pose proof (specializable_noninteracting_2 (H (S n)) (H iv)).
-            apply H1; omega.
+            apply H1; lia.
           }
           { specialize (IHn iv); dest.
             apply DisjList_comm; auto.
@@ -493,8 +493,8 @@ Section TwoModules2.
         exfalso; apply string_eq_dec_eq in Heqsv; subst.
         apply spDom_getExtMeths in H.
         apply specializeMod_dom_indexed in H; auto; dest.
-        apply withIndex_index_eq in H; dest; omega.
-    - simpl; assert (t > n) by omega; specialize (IHn H0); clear H0.
+        apply withIndex_index_eq in H; dest; lia.
+    - simpl; assert (t > n) by lia; specialize (IHn H0); clear H0.
       rewrite IHn; clear IHn.
       unfold dropI, compLabelMaps.
       remember (dropN ds n s v) as nv; destruct nv; auto.
@@ -504,7 +504,7 @@ Section TwoModules2.
         exfalso; apply string_eq_dec_eq in Heqsn; subst.
         apply spDom_getExtMeths in H.
         apply specializeMod_dom_indexed in H; auto; dest.
-        apply withIndex_index_eq in H; dest; omega.
+        apply withIndex_index_eq in H; dest; lia.
   Qed.
 
 End TwoModules2.
@@ -538,8 +538,8 @@ Section DuplicateTwoModules2.
       simpl in H.
       apply spDom_getExtMeths in H.
       apply specializeMod_dom_indexed in H; auto; dest.
-      apply withIndex_index_eq in H; dest; omega.
-    - simpl; assert (u > n) by omega; specialize (IHn _ H0); clear H0.
+      apply withIndex_index_eq in H; dest; lia.
+    - simpl; assert (u > n) by lia; specialize (IHn _ H0); clear H0.
       simpl in H.
       apply getExtMeths_in in H; destruct H.
       + clear IHn.
@@ -550,7 +550,7 @@ Section DuplicateTwoModules2.
         exfalso; apply string_eq_dec_eq in Heqst; subst.
         apply spDom_getExtMeths in H.
         apply specializeMod_dom_indexed in H; auto; dest.
-        apply withIndex_index_eq in H; dest; omega.
+        apply withIndex_index_eq in H; dest; lia.
       + unfold compLabelMaps.
         rewrite IHn; clear IHn; auto.
         unfold compLabelMaps.
@@ -561,7 +561,7 @@ Section DuplicateTwoModules2.
         exfalso; apply string_eq_dec_eq in Heqst; subst.
         apply spDom_getExtMeths in H.
         apply duplicate_dom_indexed in H; auto; dest.
-        apply withIndex_index_eq in H; dest; omega.
+        apply withIndex_index_eq in H; dest; lia.
   Qed.
 
   Lemma duplicate_traceRefines_drop:
@@ -595,8 +595,8 @@ Section DuplicateTwoModules2.
         * apply getIntCalls_getCalls.
         * apply duplicate_specializeMod_disj_calls; auto.
       + split.
-        * apply equivalentLabelMapElem_dropI_dropN; auto; omega.
-        * apply equivalentLabelMapElem_dropN_dropI; auto; omega.
+        * apply equivalentLabelMapElem_dropI_dropN; auto; lia.
+        * apply equivalentLabelMapElem_dropN_dropI; auto; lia.
       + apply duplicate_noninteracting; auto.
       + apply duplicate_noninteracting; auto.
       + apply specializeMod_traceRefines_drop; auto.

@@ -1,5 +1,5 @@
 (* This should be in the Coq library *)
-Require Import Coq.Arith.Arith Coq.NArith.NArith Coq.ZArith.ZArith.
+Require Import Coq.Arith.Arith Coq.NArith.NArith Coq.ZArith.ZArith Lia.
 
 Lemma N_to_Z_to_nat: forall (a: N), Z.to_nat (Z.of_N a) = N.to_nat a.
 Proof.
@@ -25,7 +25,7 @@ Module N2Nat.
         * destruct b; try contradiction. simpl. constructor.
         * exact Q.
     - destruct b; try contradiction. simpl.
-      pose proof (Pos2Nat.is_pos p) as Q. omega.
+      pose proof (Pos2Nat.is_pos p) as Q. lia.
   Qed.
 
 End N2Nat.
