@@ -1,4 +1,4 @@
-Require Import Bool List String Omega.
+Require Import Bool List String Lia.
 Require Import Lib.CommonTactics Lib.Struct Lib.Reflection Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf.
 

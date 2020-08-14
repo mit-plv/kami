@@ -1,4 +1,4 @@
-Require Import Bool Ascii String Eqdep Omega.
+Require Import Bool Ascii String Eqdep PeanoNat Compare_dec Lia.
 Require Import CommonTactics StringAsList StringEq.
 
 (** Some string manipulation lemmas *)
@@ -44,7 +44,7 @@ Proof.
   assert (length (string_rev s ++ String a "") = length "")
     by (rewrite H; reflexivity).
   rewrite append_length in H0; simpl in H0.
-  omega.
+  lia.
 Qed.
 
 Lemma string_append_same_singleton:
@@ -61,7 +61,7 @@ Proof.
       assert (length (String a (s1 ++ String a1 "")) =
               length (String a1 "")) by (rewrite H; reflexivity); clear H.
       simpl in H0; rewrite append_length in H0; simpl in H0.
-      omega.
+      lia.
     + inv H.
       specialize (IHs1 _ _ _ H2); dest; subst; auto.
 Qed.
@@ -76,7 +76,7 @@ Proof.
       assert (length (string_rev s1 ++ String a "") = length "")
         by (rewrite H; reflexivity).
       rewrite append_length in H0; simpl in H0.
-      omega.
+      lia.
     + simpl in H.
       apply string_append_same_singleton in H; dest; subst.
       f_equal; auto.
@@ -148,9 +148,9 @@ Lemma string_of_nat_index_1:
   forall i j, j <= i -> forall s, get j (string_of_nat i ++ s) = Some "a"%char.
 Proof.
   induction i; simpl; intros.
-  - destruct j; try omega; auto.
+  - destruct j; try lia; auto.
   - destruct j; auto.
-    apply IHi; omega.
+    apply IHi; lia.
 Qed.
 
 Lemma string_of_nat_index_2:
@@ -188,14 +188,14 @@ Proof.
     | ?l = ?r => assert (get (S i) l = get (S i) r) by (rewrite H; reflexivity)
     end; clear H.
     rewrite string_of_nat_index_2 in H0; simpl in H0.
-    rewrite string_of_nat_index_1 in H0; inv H0; omega.
+    rewrite string_of_nat_index_1 in H0; inv H0; lia.
   - exfalso; simpl in H.
     do 2 rewrite <-string_append_assoc in H.
     match type of H with
     | ?l = ?r => assert (get (S j) l = get (S j) r) by (rewrite H; reflexivity)
     end; clear H.
     rewrite string_of_nat_index_2 in H0; simpl in H0.
-    rewrite string_of_nat_index_1 in H0; inv H0; omega.
+    rewrite string_of_nat_index_1 in H0; inv H0; lia.
 Qed.
 
 Lemma withIndex_index_eq:
@@ -203,7 +203,7 @@ Lemma withIndex_index_eq:
     withIndex s i = withIndex t j -> s = t /\ i = j.
 Proof.
   unfold withIndex, addIndexToStr; intros.
-  destruct (eq_nat_dec i j).
+  destruct (Nat.eq_dec i j).
   - subst; split; auto.
     assert (string_rev (s ++ indexSymbol ++ string_of_nat j) =
             string_rev (t ++ indexSymbol ++ string_of_nat j))
@@ -257,7 +257,7 @@ Lemma badIndex:
 Proof.
   unfold not; intros.
   unfold addIndexToStr in H.
-  apply index_correct3 with (m := String.length a) in H; try omega; try discriminate; auto.
+  apply index_correct3 with (m := String.length a) in H; try lia; try discriminate; auto.
   rewrite substring_append_1 in H.
   assert (sth: prefix indexSymbol (indexSymbol ++ strA c) = true) by
       apply prefix_append.

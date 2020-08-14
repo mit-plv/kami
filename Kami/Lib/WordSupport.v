@@ -1,4 +1,4 @@
-Require Import Arith Lib.Word Lib.Nomega Omega.
+Require Import Arith Lib.Word Lib.Nlia Lia.
 
 Set Asymmetric Patterns.
 Set Implicit Arguments.
@@ -29,7 +29,7 @@ Qed.
 Lemma wordToNat_lt1: forall sz (a b: word sz), a < b -> (wordToNat a < wordToNat b)%nat.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat in H.
   assumption.
 Qed.
@@ -37,7 +37,7 @@ Qed.
 Lemma wordToNat_lt2: forall sz (a b: word sz), (wordToNat a < wordToNat b)%nat -> a < b.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat.
   assumption.
 Qed.
@@ -45,7 +45,7 @@ Qed.
 Lemma wordToNat_gt1: forall sz (a b: word sz), a > b -> (wordToNat a > wordToNat b)%nat.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat in H.
   assumption.
 Qed.
@@ -53,7 +53,7 @@ Qed.
 Lemma wordToNat_gt2: forall sz (a b: word sz), (wordToNat a > wordToNat b)%nat -> a > b.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat.
   assumption.
 Qed.
@@ -61,7 +61,7 @@ Qed.
 Lemma wordToNat_le1: forall sz (a b: word sz), a <= b -> (wordToNat a <= wordToNat b)%nat.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat in H.
   assumption.
 Qed.
@@ -69,7 +69,7 @@ Qed.
 Lemma wordToNat_le2: forall sz (a b: word sz), (wordToNat a <= wordToNat b)%nat -> a <= b.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat.
   assumption.
 Qed.
@@ -77,7 +77,7 @@ Qed.
 Lemma wordToNat_ge1: forall sz (a b: word sz), a >= b -> (wordToNat a >= wordToNat b)%nat.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat in H.
   assumption.
 Qed.
@@ -85,7 +85,7 @@ Qed.
 Lemma wordToNat_ge2: forall sz (a b: word sz), (wordToNat a >= wordToNat b)%nat -> a >= b.
 Proof.
   intros.
-  pre_nomega.
+  pre_nlia.
   repeat rewrite wordToN_to_nat.
   assumption.
 Qed.
@@ -112,7 +112,7 @@ Proof.
   destruct (weq a b); subst; tauto.
 Qed.
 
-Ltac pre_word_omega :=
+Ltac pre_word_lia :=
   unfold wzero, wone in *;
   repeat match goal with
            | H: @eq ?T ?a ?b |- _ =>
@@ -219,16 +219,16 @@ Ltac pre_word_omega :=
              end
          end.
 
-Ltac word_omega := pre_word_omega; omega.
+Ltac word_lia := pre_word_lia; lia.
 
 Lemma word_le_ge_eq sz (w1 w2: word sz): w1 <= w2 -> w1 >= w2 -> w1 = w2.
 Proof.
-  intros; word_omega.
+  intros; word_lia.
 Qed.
 
 Lemma word_le_zero sz (w: word sz): w <= wzero sz -> w = wzero sz.
 Proof.
   intros;
-  word_omega.
+  word_lia.
 Qed.
 
