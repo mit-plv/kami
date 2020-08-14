@@ -104,7 +104,7 @@ Section PrimBram.
 
   Definition bram2: Modules :=
     PrimMod
-      {| pm_name := primBramName1;
+      {| pm_name := primBramName2;
          pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
          pm_regInits :=
            [(^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
@@ -114,7 +114,7 @@ Section PrimBram.
          pm_methods :=
            [(^"rdReq" :: (existT _ {| arg:= _; ret:= _ |} bramRdReq))%struct;
            (^"wrReq" :: (existT _ {| arg:= _; ret:= _ |} bramWrReq))%struct;
-           (^"readRs" :: (existT _ {| arg:= _; ret:= _ |} bramRdResp))%struct]
+           (^"rdResp" :: (existT _ {| arg:= _; ret:= _ |} bramRdResp))%struct]
       |}.
 
 End PrimBram.
