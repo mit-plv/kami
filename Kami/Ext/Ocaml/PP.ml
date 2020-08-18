@@ -1,6 +1,8 @@
 open Format
 open Target
 
+let force_newline2 (_: unit) = force_newline (); force_newline ()
+
 (* string manipulations *)
 let bsv_keywords =
   [ (* Bluespec keywords *)
@@ -605,17 +607,17 @@ let rec ppBAction (ife: int option) (a: bAction) =
      (* let-bind for the branch return *)
      (if (bk = Bit 0) then ()
       else
-        (ps ppLet; print_space (); ps (string_of_de_brujin_index bind); print_space ();
-         ps ppBind; print_space (); ps ppQ; ps ppSep; print_cut (); force_newline ()));
+        (ps (ppLet ^ " " ^ (string_of_de_brujin_index bind) ^ " " ^ ppBind ^ " " ^ ppQ ^ ppSep);
+         force_newline ()));
+     open_hovbox 4;
      ps ppIf; print_space (); ps ppRBracketL; ppBExpr ce; ps ppRBracketR;
      print_space (); ps ppBegin; force_newline ();
-     print_break 0 4; open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) ta;
-     close_box (); print_break 0 (-4); force_newline ();
+     close_box (); force_newline ();
+     open_hovbox 4;
      ps ppEnd; print_space (); ps ppElse; print_space (); ps ppBegin; force_newline ();
-     print_break 0 4; open_hovbox 0;
      ppBActions (bk = Bit 0) (Some bind) fa;
-     close_box (); print_break 0 (-4); force_newline ();
+     close_box (); force_newline ();
      ps ppEnd
   | BAssert e ->
      ps ppWhen; print_space (); ps ppRBracketL;
@@ -630,28 +632,28 @@ let rec ppBAction (ife: int option) (a: bAction) =
 and ppBActions (noret: bool) (ife: int option) (aa: bAction list) =
   match aa with
   | [] -> ()
-  | a' :: [] -> if noret then () else ppBAction ife a'
-  | a' :: aa' -> ppBAction ife a'; print_cut (); force_newline (); ppBActions noret ife aa'
+  | ra :: [] -> if noret then () else ppBAction ife ra
+  | a' :: ra :: [] -> ppBAction ife a';
+                      (if noret then () else (force_newline (); ppBAction ife ra))
+  | a' :: aa' -> ppBAction ife a'; force_newline (); ppBActions noret ife aa'
 
 let ppBRule (r: bRule) =
   match r with
   | { attrName = rn; attrType = rb } ->
-     open_hovbox 0;
-     ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep;
-     print_break 0 4; open_hovbox 0;
+     open_hovbox 4;
+     ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep; force_newline ();
      (if isDebug () then
         (ps ("$display (\"Rule fired: " ^ (bstring_of_charlist rn) ^ " at %t\", $time);");
          force_newline ())
       else ());
      ppBActions true None rb;
-     close_box (); print_break 0 (-4); force_newline ();
-     ps ppEndRule;
-     close_box ()
+     close_box (); force_newline ();
+     ps ppEndRule
 
 let rec ppBRules (rl: bRule list) =
   match rl with
   | [] -> ()
-  | r :: rl' -> ppBRule r; print_cut (); force_newline (); ppBRules rl'
+  | r :: rl' -> ppBRule r; force_newline2 (); ppBRules rl'
 
 let ppBMethod (d: bMethod) =
   match d with
@@ -679,7 +681,8 @@ let ppBMethod (d: bMethod) =
 let rec ppBMethods (dl: bMethod list) =
   match dl with
   | [] -> ()
-  | d :: dl' -> ppBMethod d; print_cut (); force_newline (); ppBMethods dl'
+  | d :: [] -> ppBMethod d
+  | d :: dl' -> ppBMethod d; force_newline2 (); ppBMethods dl'
 
 let ppBInterface (ifc: signatureT attribute) =
   match ifc with
@@ -703,8 +706,8 @@ let ppBInterface (ifc: signatureT attribute) =
 let rec ppBInterfaces (ifcs: signatureT attribute list) =
   match ifcs with
   | [] -> ()
-  | ifc :: ifcs' ->
-     ppBInterface ifc; force_newline (); ppBInterfaces ifcs'
+  | ifc :: [] -> ppBInterface ifc
+  | ifc :: ifcs' -> ppBInterface ifc; force_newline (); ppBInterfaces ifcs'
 
 let ppRegInit (r: regInitT) =
   match r with
@@ -734,8 +737,7 @@ let ppRegInit (r: regInitT) =
 let rec ppRegInits (rl: regInitT list) =
   match rl with
   | [] -> ()
-  | r :: rl' ->
-     ppRegInit r; print_cut (); ppRegInits rl'
+  | r :: rl' -> ppRegInit r; force_newline (); ppRegInits rl'
 
 let ppImports (_: unit) =
   try
@@ -761,18 +763,17 @@ let ppGlbStructs (_: unit) =
   close_box ()
 
 let ppBModuleInterface (n: string) (m: bModule) =
-  ps ppInterface; print_space (); ps n; ps ppSep;
-  print_break 1 4; open_hovbox 0;
+  open_hovbox 4;
+  ps (ppInterface ^ " " ^ n ^ ppSep); force_newline ();
   (match m with
    | BModulePrim (pname, args, pifc) -> ppBInterfaces pifc
    | BModuleB (_, brl, bd) ->
       ppBInterfaces (List.map
                        (fun bm -> { attrName = bm.attrName;
                                     attrType = fst bm.attrType }) bd));
-  close_box (); print_break 0 (-4); force_newline ();
+  close_box (); force_newline ();
   ps ppEndInterface;
-  print_cut (); force_newline ();
-  force_newline ()
+  force_newline2 ()
 
 let ppCallArg (cn: string) (csig: signatureT) =
   open_hbox ();
@@ -810,32 +811,30 @@ let ppBram1 (args: kind attribute list) (pifc: signatureT attribute list) =
   ps "RWBramCore#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
   ps ppRBracketR; ps ppDelim;
-  ps "bram <- mkRWBramCore();"; force_newline ();
-  force_newline ();
+  ps "bram <- mkRWBramCore();"; force_newline2 ();
 
   (* The "putRq" method *)
+  open_hovbox 4;
   ppBInterface (List.nth pifc 0); force_newline ();
-  print_break 0 4; open_hovbox 0;
+  open_hovbox 4;
   ps "if (x_0.write) begin"; force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "bram.wrReq(x_0.addr, x_0.datain);";
-  close_box (); print_break 0 (-4); force_newline ();
+  close_box (); force_newline ();
+  open_hovbox 4;
   ps "end else begin"; force_newline ();
-  print_break 0 4; open_hovbox 0;
-  ps "bram.rdReq(x_0.addr);"; force_newline ();
-  close_box (); print_break 0 (-4); force_newline ();
+  ps "bram.rdReq(x_0.addr);";
+  close_box (); force_newline ();
   ps "end";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ();
-  force_newline ();
+  close_box (); force_newline ();
+  ps ppEndMethod; force_newline2 ();
 
   (* The "readRs" method *)
+  open_hovbox 4;
   ppBInterface (List.nth pifc 1); force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
-  close_box (); print_break 0 (-4); force_newline ();
+  close_box (); force_newline ();
   ps ppEndMethod; force_newline ()
 
 (* args = ["addrSize" :: Bit addrSize; "dType" :: dType] *)
@@ -851,28 +850,26 @@ let ppBram2 (args: kind attribute list) (pifc: signatureT attribute list) =
   force_newline ();
 
   (* The "rdReq" method *)
+  open_hovbox 4;
   ppBInterface (List.nth pifc 0); force_newline ();
-  print_break 0 4; open_hovbox 0;
-  ps "bram.rdReq(x_0.addr);"; force_newline ();
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ();
-  force_newline ();
+  ps "bram.rdReq(x_0.addr);";
+  close_box (); force_newline ();
+  ps ppEndMethod; force_newline2 ();
 
   (* The "wrReq" method *)
-  ppBInterface (List.nth pifc 0); force_newline ();
-  print_break 0 4; open_hovbox 0;
+  open_hovbox 4;
+  ppBInterface (List.nth pifc 1); force_newline ();
   ps "bram.wrReq(x_0.addr, x_0.datain);";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ();
-  force_newline ();
+  close_box (); force_newline ();
+  ps ppEndMethod; force_newline2 ();
 
   (* The "readRs" method *)
-  ppBInterface (List.nth pifc 1); force_newline ();
-  print_break 0 4; open_hovbox 0;
+  open_hovbox 4;
+  ppBInterface (List.nth pifc 2); force_newline ();
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
-  close_box (); print_break 0 (-4); force_newline ();
+  close_box (); force_newline ();
   ps ppEndMethod; force_newline ()
 
 type fifoType = NormalFIFO | PipelineFIFO | BypassFIFO
@@ -884,53 +881,59 @@ let ppFifoInstance (fty: fifoType) =
   | BypassFIFO -> ps "mkBypassFIFOF();"
 
 let ppFifoEnq (attr: signatureT attribute) =
+  open_hovbox 4;
   ppBInterface attr; force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "pff.enq(x_0);";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ()
+  close_box (); force_newline ();
+  ps ppEndMethod
 
 let ppFifoDeq (attr: signatureT attribute) =
+  open_hovbox 4;
   ppBInterface attr; force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "pff.deq();"; force_newline ();
   ps "return pff.first();";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ()
+  close_box (); force_newline ();
+  ps ppEndMethod
 
 let ppFifoIsFull (attr: signatureT attribute) =
+  open_hovbox 4;
   ppBInterface attr; force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "return !pff.notFull;";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ()
+  close_box (); force_newline ();
+  ps ppEndMethod
 
 let ppFifoClear (attr: signatureT attribute) =
+  open_hovbox 4;
   ppBInterface attr; force_newline ();
-  print_break 0 4; open_hovbox 0;
   ps "pff.clear();";
-  close_box (); print_break 0 (-4); force_newline ();
-  ps ppEndMethod; force_newline ()
+  close_box (); force_newline ();
+  ps ppEndMethod
+
+let ppFifoMethod (attr: signatureT attribute) =
+  if List.hd attr.attrName = 'e' (* enq *)
+  then ppFifoEnq attr
+  else if List.hd attr.attrName = 'd' (* deq *)
+  then ppFifoDeq attr
+  else if List.hd attr.attrName = 'i' (* isFull *)
+  then ppFifoIsFull attr
+  else if List.hd attr.attrName = 'c' (* clear *)
+  then ppFifoClear attr
+  else ()
 
 let rec ppFifoMethods (pifc: signatureT attribute list) =
   match pifc with
   | [] -> ()
-  | attr :: pifc' ->
-     (if List.hd attr.attrName = 'e' (* enq *)
-      then ppFifoEnq attr
-      else if List.hd attr.attrName = 'd' (* deq *)
-      then ppFifoDeq attr
-      else if List.hd attr.attrName = 'i' (* isFull *)
-      then ppFifoIsFull attr
-      else if List.hd attr.attrName = 'c' (* clear *)
-      then ppFifoClear attr
-      else ()); force_newline (); ppFifoMethods pifc'
+  | attr :: [] -> ppFifoMethod attr
+  | attr :: pifc' -> ppFifoMethod attr; force_newline2 (); ppFifoMethods pifc'
 
 let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
   let eltK = (List.nth pifc 0).attrType.arg in
-  ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty; force_newline();
-  force_newline ();
-  ppFifoMethods pifc
+  open_hovbox 0;
+  ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty;
+  close_box (); force_newline2 ();
+  open_hovbox 0;
+  ppFifoMethods pifc;
+  close_box ()
 
 let ppBModulePrim (pname: char list) (args: kind attribute list) (pifc: signatureT attribute list) =
   if pname = primBramName1 then
@@ -949,37 +952,28 @@ let ppBModulePrim (pname: char list) (args: kind attribute list) (pifc: signatur
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
   | BModulePrim (pname, args, pifc) ->
-     open_hovbox 2;
      ps ppModule; print_space ();
      ps ("mk" ^ ifcn); print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
-     close_box ();
      print_break 0 4; open_hovbox 0;
-
      ppBModulePrim pname args pifc;
-
      close_box(); print_break 0 (-4); force_newline ();
-     ps ppEndModule;
-     print_cut (); force_newline ()
+     ps ppEndModule
   | BModuleB (br, brl, bd) ->
-     open_hovbox 2;
+     open_hovbox 4;
      ps ppModule; print_space ();
      ps ("mk" ^ ifcn); ppBModuleCallArgs (getCallsB m); print_space ();
-     ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
-     close_box ();
-     print_break 0 4; open_hovbox 0;
-     ppRegInits br;
-     print_cut (); force_newline ();
-     (if (brl = []) then ps ppNoRules else ppBRules brl);
-     print_cut (); force_newline ();
+     ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep; force_newline ();
+     ppRegInits br; force_newline ();
+     (if (brl = []) then (ps ppNoRules; force_newline2 ()) else ppBRules brl);
      (if (bd = []) then ps ppNoMeths else ppBMethods bd);
-     close_box(); print_break 0 (-4); force_newline ();
-     ps ppEndModule;
-     print_cut (); force_newline ()
+     close_box(); force_newline ();
+     ps ppEndModule
 
 let ppBModuleFull (ifcn: string) (m: bModule) =
   ppBModuleInterface ifcn m;
-  ppBModule ifcn m
+  ppBModule ifcn m;
+  force_newline ()
 
 let rec ppBModules (bml: bModule list) (idx: int) =
   match bml with
@@ -1092,7 +1086,7 @@ let ppTopModuleImpl (_: unit) =
 
 let ppTopModule (bmdcl: bModuleDC list) (idx: int)
                 (extCallsAll: (string * signatureT) list)  =
-  open_hovbox 2;
+  open_hovbox 0;
   ps ppModule; print_space ();
   ps "mk"; ps (getTopModuleName ()); ppBModuleCallArgs extCallsAll; print_space ();
   ps ppRBracketL; ps (getTopModuleName ()); ps ppRBracketR; ps ppSep;
