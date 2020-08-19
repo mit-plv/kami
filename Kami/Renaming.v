@@ -110,6 +110,7 @@ Section Rename.
     | PrimMod prim =>
       PrimMod {| pm_name := prim.(pm_name);
                  pm_args := prim.(pm_args);
+                 pm_consts := prim.(pm_consts);
                  pm_regInits := renameListAttr prim.(pm_regInits);
                  pm_rules := renameRules prim.(pm_rules);
                  pm_methods := renameMeths prim.(pm_methods)

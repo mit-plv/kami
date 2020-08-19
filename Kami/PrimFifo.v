@@ -60,6 +60,7 @@ Section PrimFifo.
     PrimMod
       {| pm_name := primFifoName;
          pm_args := [("dType" :: dType)]%struct;
+         pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
@@ -73,6 +74,7 @@ Section PrimFifo.
     PrimMod
       {| pm_name := primFifoName;
          pm_args := [("dType" :: dType)]%struct;
+         pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;
@@ -87,6 +89,7 @@ Section PrimFifo.
     PrimMod
       {| pm_name := primFifoName;
          pm_args := [("dType" :: dType)]%struct;
+         pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
               ^"full" :: (RegInitDefault (SyntaxKind Bool))]%struct;

@@ -98,22 +98,30 @@ Notation "$ n" := (Const _ (natToWord _ n)) (at level 5) : kami_expr_scope.
 Notation "$$ e" := (Const _ e) (at level 5) : kami_expr_scope.
 Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) : kami_expr_scope.
 
-Definition icons' {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
-           {n} {attrs: Vector.t _ n}
-           (tl : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) attrs)
-  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (Vector.cons _ (projT1 na) _ attrs) :=
-  icons (projT1 na) (projT2 na) tl.
-
 Declare Scope init_scope.
 Notation "name ::= value" :=
-  (* (existT (fun a : Attribute Kind => Expr _ (SyntaxKind (attrType a))) *)
   (existT (fun a : Attribute Kind => _)
           (Build_Attribute name _) value) (at level 80) : init_scope.
 Delimit Scope init_scope with init.
 
+Definition iconsE {ty} (na : {a : Attribute Kind & Expr ty (SyntaxKind (attrType a))})
+           {n} {attrs: Vector.t _ n}
+           (tl : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) attrs)
+  : ilist (fun a : Attribute Kind => Expr ty (SyntaxKind (attrType a))) (Vector.cons _ (projT1 na) _ attrs) :=
+  icons (projT1 na) (projT2 na) tl.
 Notation "'STRUCT' { s1 ; .. ; sN }" :=
-  (BuildStruct (icons' s1%init .. (icons' sN%init (inil _)) ..))
+  (BuildStruct (iconsE s1%init .. (iconsE sN%init (inil _)) ..))
     (at level 80): kami_expr_scope.
+
+Definition iconsC (na: {a : Attribute Kind & ConstT (attrType a)})
+           {n} {attrs: Vector.t _ n}
+           (tl : ilist.ilist (fun a => ConstT (attrType a)) attrs)
+  : ilist.ilist (fun a => ConstT (attrType a)) (Vector.cons _ (projT1 na) _ attrs) :=
+  ilist.icons (projT1 na) (projT2 na) tl.
+Notation "'CSTRUCT' { s1 ; .. ; sN }" :=
+  (ConstStruct (iconsC s1%init .. (iconsC sN%init (ilist.inil _)) ..))
+    (at level 80): init_scope.
+
 Notation "e '!' s '@{' f '<-' val '}' " :=
   (updStruct e (Lib.VectorFacts.Vector_find (fieldAccessor f%string) s) val) (at level 10) : kami_expr_scope.
 

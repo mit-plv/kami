@@ -60,7 +60,8 @@ Section BluespecSubset.
   Inductive BModule :=
   | BModulePrim (primModName: string)
                 (primArgs: list (Attribute Kind))
-                (primIfc: list (Attribute SignatureT))
+                (primConsts: list (Attribute {k: Kind & ConstT k}))
+                (primDefsIfc: list (Attribute SignatureT))
   | BModuleB (bregs: list RegInitT) (brules: list BRule) (bdms: list BMethod).
 
   Definition BModules := list BModule.
@@ -229,6 +230,7 @@ Section BluespecSubset.
       Some (BModulePrim
               (pms_name prim)
               (pms_args prim)
+              (pms_consts prim)
               (map (fun dm => (attrName dm :: projT1 (attrType dm))%struct)
                    (pms_methods prim)) :: nil)
     | ModS regs rules dms =>

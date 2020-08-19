@@ -83,9 +83,8 @@ Definition DefMethTS := Attribute (sigT MethodTS).
 
 Record PrimitiveModuleS :=
   { pms_name: string;
-    (* [pm_args] is not used in Kami at all;
-     * it's just to provide information to the pretty-printer. *)
     pms_args: list (Attribute Kind);
+    pms_consts: list (Attribute {k: Kind & ConstT k});
     pms_regInits: list RegInitT;
     pms_rules: list (Attribute (ActionS Void));
     pms_methods: list DefMethTS }.
@@ -107,6 +106,7 @@ Fixpoint getModuleS (m: Modules): ModulesS :=
   | PrimMod prim =>
     PrimModS {| pms_name := pm_name prim;
                 pms_args := pm_args prim;
+                pms_consts := pm_consts prim;
                 pms_regInits := pm_regInits prim;
                 pms_rules :=
                   map (fun a: Attribute (Action Void) =>

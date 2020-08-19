@@ -228,7 +228,7 @@ let getCallsB (bm: bModule) =
 
 let getDefsB (bm: bModule) =
   match bm with
-  | BModulePrim (pname, args, pifc) ->
+  | BModulePrim (pname, args, consts, pifc) ->
      List.map (fun bm -> match bm with
                          | { attrName = mn; attrType = msig } ->
                             (bstring_of_charlist mn, msig)) pifc
@@ -351,7 +351,7 @@ let rec collectStrBRI (rl: regInitT list) =
 
 let collectStrB (bm: bModule) =
   match bm with
-  | BModulePrim (pm, args, pifc) -> collectStrBIfc pifc
+  | BModulePrim (pm, args, consts, pifc) -> collectStrBIfc pifc
   | BModuleB (ril, rl, ml) ->
      collectStrBRI ril; collectStrBR rl; collectStrBM ml
 
@@ -766,7 +766,7 @@ let ppBModuleInterface (n: string) (m: bModule) =
   open_hovbox 4;
   ps (ppInterface ^ " " ^ n ^ ppSep); force_newline ();
   (match m with
-   | BModulePrim (pname, args, pifc) -> ppBInterfaces pifc
+   | BModulePrim (pname, args, consts, pifc) -> ppBInterfaces pifc
    | BModuleB (_, brl, bd) ->
       ppBInterfaces (List.map
                        (fun bm -> { attrName = bm.attrName;
@@ -803,19 +803,38 @@ let ppBModuleCallArgs (cargs: (string * signatureT) list) =
   | _ -> ps "#"; ps ppRBracketL; ppCallArgs cargs; ps ppRBracketR
 
 (* args = ["addrSize" :: Bit addrSize; "dType" :: dType] *)
-let ppBram1 (args: kind attribute list) (pifc: signatureT attribute list) =
+let ppBram1 (args: kind attribute list)
+      (consts: (kind, constT) sigT attribute list)
+      (pifc: signatureT attribute list) =
   let keyK = (List.nth args 0).attrType in
   let valueK = (List.nth args 1).attrType in
+  let initC = (match (List.nth consts 0).attrType with
+               | ExistT (_, c) -> c) in
 
   (* BRAM declaration *)
   ps "RWBramCore#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
   ps ppRBracketR; ps ppDelim;
-  ps "bram <- mkRWBramCore();"; force_newline2 ();
+  ps "bram <- mkRWBramCore();"; force_newline ();
+  ps "Reg#(Bool) initDone <- mkReg(False);"; force_newline ();
+  ps "Reg#("; ps (ppKind keyK); ps ") initIdx <- mkReg(0);"; force_newline ();
+  force_newline ();
 
-  (* The "putRq" method *)
+  (* "init" rule *)
+  open_hovbox 4;
+  ps "rule init (!initDone)"; ps ppSep; force_newline ();
+  ps "initData = "; ps (ppConst initC); ps ppSep; force_newline ();
+  ps "bram.wrReq(initIdx, initData)"; ps ppSep; force_newline ();
+  ps "initIdx <= initIdx + 1"; ps ppSep; force_newline ();
+  ps "initDone <= (initIdx == maxBound)"; ps ppSep;
+  close_box (); force_newline ();
+  ps ppEndRule;
+  force_newline2 ();
+
+  (* "putRq" method *)
   open_hovbox 4;
   ppBInterface (List.nth pifc 0); force_newline ();
+  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
   open_hovbox 4;
   ps "if (x_0.write) begin"; force_newline ();
   ps "bram.wrReq(x_0.addr, x_0.datain);";
@@ -828,9 +847,10 @@ let ppBram1 (args: kind attribute list) (pifc: signatureT attribute list) =
   close_box (); force_newline ();
   ps ppEndMethod; force_newline2 ();
 
-  (* The "readRs" method *)
+  (* "readRs" method *)
   open_hovbox 4;
   ppBInterface (List.nth pifc 1); force_newline ();
+  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
@@ -838,34 +858,54 @@ let ppBram1 (args: kind attribute list) (pifc: signatureT attribute list) =
   ps ppEndMethod; force_newline ()
 
 (* args = ["addrSize" :: Bit addrSize; "dType" :: dType] *)
-let ppBram2 (args: kind attribute list) (pifc: signatureT attribute list) =
+let ppBram2 (args: kind attribute list)
+      (consts: (kind, constT) sigT attribute list)
+      (pifc: signatureT attribute list) =
   let keyK = (List.nth args 0).attrType in
   let valueK = (List.nth args 1).attrType in
+  let initC = (match (List.nth consts 0).attrType with
+               | ExistT (_, c) -> c) in
 
   (* BRAM declaration *)
   ps "RWBramCore#"; ps ppRBracketL;
   ps (ppKind keyK); ps ppComma; ps ppDelim; ps (ppKind valueK);
   ps ppRBracketR; ps ppDelim;
   ps "bram <- mkRWBramCore();"; force_newline ();
+  ps "Reg#(Bool) initDone <- mkReg(False);"; force_newline ();
+  ps "Reg#("; ps (ppKind keyK); ps ") initIdx <- mkReg(0);"; force_newline ();
   force_newline ();
 
-  (* The "rdReq" method *)
+  (* "init" rule *)
+  open_hovbox 4;
+  ps "rule init (!initDone)"; ps ppSep; force_newline ();
+  ps "initData = "; ps (ppConst initC); ps ppSep; force_newline ();
+  ps "bram.wrReq(initIdx, initData)"; ps ppSep; force_newline ();
+  ps "initIdx <= initIdx + 1"; ps ppSep; force_newline ();
+  ps "initDone <= (initIdx == maxBound)"; ps ppSep;
+  close_box (); force_newline ();
+  ps ppEndRule;
+  force_newline2 ();
+
+  (* "rdReq" method *)
   open_hovbox 4;
   ppBInterface (List.nth pifc 0); force_newline ();
+  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
   ps "bram.rdReq(x_0.addr);";
   close_box (); force_newline ();
   ps ppEndMethod; force_newline2 ();
 
-  (* The "wrReq" method *)
+  (* "wrReq" method *)
   open_hovbox 4;
   ppBInterface (List.nth pifc 1); force_newline ();
+  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
   ps "bram.wrReq(x_0.addr, x_0.datain);";
   close_box (); force_newline ();
   ps ppEndMethod; force_newline2 ();
 
-  (* The "readRs" method *)
+  (* "readRs" method *)
   open_hovbox 4;
   ppBInterface (List.nth pifc 2); force_newline ();
+  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
@@ -935,11 +975,14 @@ let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
   ppFifoMethods pifc;
   close_box ()
 
-let ppBModulePrim (pname: char list) (args: kind attribute list) (pifc: signatureT attribute list) =
+let ppBModulePrim (pname: char list)
+      (args: kind attribute list)
+      (consts: (kind, constT) sigT attribute list)
+      (pifc: signatureT attribute list) =
   if pname = primBramName1 then
-    ppBram1 args pifc
+    ppBram1 args consts pifc
   else if pname = primBramName2 then
-    ppBram2 args pifc
+    ppBram2 args consts pifc
   else if pname = primNormalFifoName then
     ppFifo NormalFIFO pifc
   else if pname = primPipelineFifoName then
@@ -951,12 +994,12 @@ let ppBModulePrim (pname: char list) (args: kind attribute list) (pifc: signatur
 
 let ppBModule (ifcn: string) (m: bModule) =
   match m with
-  | BModulePrim (pname, args, pifc) ->
+  | BModulePrim (pname, args, consts, pifc) ->
      ps ppModule; print_space ();
      ps ("mk" ^ ifcn); print_space ();
      ps ppRBracketL; ps ifcn; ps ppRBracketR; ps ppSep;
      print_break 0 4; open_hovbox 0;
-     ppBModulePrim pname args pifc;
+     ppBModulePrim pname args consts pifc;
      close_box(); print_break 0 (-4); force_newline ();
      ps ppEndModule
   | BModuleB (br, brl, bd) ->

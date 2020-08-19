@@ -33,6 +33,7 @@ Section PrimRegFile.
     PrimMod
       {| pm_name := primRfName1;
          pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
+         pm_consts := nil;
          pm_regInits :=
            [(^"rf" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct];
          pm_rules := nil;

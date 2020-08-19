@@ -35,7 +35,8 @@ Definition primBramName2: string := "BRAM2".
 Section PrimBram.
   Variables (bramName: string)
             (addrSize: nat)
-            (dType: Kind).
+            (dType: Kind)
+            (initVal: ConstT dType).
 
   Local Notation "^ s" := (bramName -- s) (at level 0).
 
@@ -49,7 +50,8 @@ Section PrimBram.
 
   Definition bramPutReq: forall ty (rq: ty (Struct BramRq)), ActionT ty Void :=
     fun ty rq =>
-      (If #rq!BramRq@."write"
+      (Read initDone <- ^"initDone"; Assert #initDone;
+      If #rq!BramRq@."write"
        then (LET writev <- #rq!BramRq@."datain";
             Read bram <- ^"bram";
             Write ^"bram" <- #bram@[#rq!BramRq@."addr" <- #writev];
@@ -63,7 +65,8 @@ Section PrimBram.
 
   Definition bramRdResp: forall ty (_: ty Void), ActionT ty dType :=
     fun ty _ =>
-      (ReadN oreadAddr: bramReadAddrK ty <- ^"readAddr";
+      (Read initDone <- ^"initDone"; Assert #initDone;
+      ReadN oreadAddr: bramReadAddrK ty <- ^"readAddr";
       Assert $$(isSomeB oreadAddr);
       Write ^"readAddr" <- (Var _ (bramReadAddrK ty) None);
       Read bram: Vector dType addrSize <- ^"bram";
@@ -71,15 +74,28 @@ Section PrimBram.
       LET readv: dType <- #bram@[#reada];
       Ret #readv)%kami_action.
 
+  Definition bramInit: Action Void :=
+    fun ty =>
+      (Read initDone <- ^"initDone"; Assert !#initDone;
+      Read initIdx: Bit addrSize <- ^"initIdx";
+      Read bram <- ^"bram";
+      Write ^"bram" <- #bram@[#initIdx <- $$initVal];
+      Write ^"initIdx" <- #initIdx + $1;
+      Write ^"initDone" <- #initIdx == $(Nat.pow 2 addrSize - 1);
+      Retv)%kami_action.
+
   Definition bram1: Modules :=
     PrimMod
       {| pm_name := primBramName1;
          pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
+         pm_consts := ["initVal" :: (existT _ _ initVal)]%struct;
          pm_regInits :=
-           [(^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
+           [(^"initIdx" :: (RegInitDefault (SyntaxKind (Bit addrSize))))%struct;
+           (^"initDone" :: (RegInitDefault (SyntaxKind Bool)))%struct;
+           (^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
            (^"readAddr" :: (RegInitCustom (existT ConstFullT (bramReadAddrK type)
                                                   (NativeConst None None))))%struct];
-         pm_rules := nil;
+         pm_rules := [(^"init" :: bramInit)%struct];
          pm_methods :=
            [(^"putReq" :: (existT _ {| arg:= _; ret:= _ |} bramPutReq))%struct;
            (^"rdResp" :: (existT _ {| arg:= _; ret:= _ |} bramRdResp))%struct]
@@ -87,7 +103,8 @@ Section PrimBram.
 
   Definition bramRdReq: forall ty (addr: ty (Bit addrSize)), ActionT ty Void :=
     fun ty addr =>
-      (ReadN readAddr: bramReadAddrK ty <- ^"readAddr";
+      (Read initDone <- ^"initDone"; Assert #initDone;
+      ReadN readAddr: bramReadAddrK ty <- ^"readAddr";
       Assert $$(isNoneB readAddr);
       Write ^"readAddr" <- Var _ (bramReadAddrK ty) (liftSome addr);
       Retv)%kami_action.
@@ -97,7 +114,8 @@ Section PrimBram.
 
   Definition bramWrReq: forall ty (rq: ty (Struct BramWriteReq)), ActionT ty Void :=
     fun ty rq =>
-      (LET writev <- #rq!BramWriteReq@."datain";
+      (Read initDone <- ^"initDone"; Assert #initDone;
+      LET writev <- #rq!BramWriteReq@."datain";
       Read bram <- ^"bram";
       Write ^"bram" <- #bram@[#rq!BramWriteReq@."addr" <- #writev];
       Retv)%kami_action.
@@ -106,11 +124,14 @@ Section PrimBram.
     PrimMod
       {| pm_name := primBramName2;
          pm_args := ["addrSize" :: Bit addrSize; "dType" :: dType]%struct;
+         pm_consts := ["initVal" :: (existT _ _ initVal)]%struct;
          pm_regInits :=
-           [(^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
+           [(^"initIdx" :: (RegInitDefault (SyntaxKind (Bit addrSize))))%struct;
+           (^"initDone" :: (RegInitDefault (SyntaxKind Bool)))%struct;
+           (^"bram" :: (RegInitDefault (SyntaxKind (Vector dType addrSize))))%struct;
            (^"readAddr" :: (RegInitCustom (existT ConstFullT (bramReadAddrK type)
                                                   (NativeConst None None))))%struct];
-         pm_rules := nil;
+         pm_rules := [(^"init" :: bramInit)%struct];
          pm_methods :=
            [(^"rdReq" :: (existT _ {| arg:= _; ret:= _ |} bramRdReq))%struct;
            (^"wrReq" :: (existT _ {| arg:= _; ret:= _ |} bramWrReq))%struct;
@@ -127,31 +148,32 @@ Hint Unfold primBramName1 primBramName2
 Section Facts.
   Variables (bramName: string)
             (addrSize: nat)
-            (dType: Kind).
+            (dType: Kind)
+            (initVal: ConstT dType).
 
   Lemma bram1_ModEquiv:
-    ModPhoasWf (bram1 bramName addrSize dType).
+    ModPhoasWf (bram1 bramName addrSize initVal).
   Proof.
     kequiv.
   Qed.
   Hint Resolve bram1_ModEquiv.
 
   Lemma bram1_ValidRegs:
-    ModRegsWf (bram1 bramName addrSize dType).
+    ModRegsWf (bram1 bramName addrSize initVal).
   Proof.
     kvr.
   Qed.
   Hint Resolve bram1_ValidRegs.
 
   Lemma bram2_ModEquiv:
-    ModPhoasWf (bram2 bramName addrSize dType).
+    ModPhoasWf (bram2 bramName addrSize initVal).
   Proof.
     kequiv.
   Qed.
   Hint Resolve bram2_ModEquiv.
 
   Lemma bram2_ValidRegs:
-    ModRegsWf (bram2 bramName addrSize dType).
+    ModRegsWf (bram2 bramName addrSize initVal).
   Proof.
     kvr.
   Qed.
