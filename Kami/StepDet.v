@@ -17,7 +17,7 @@ Section NoCalls.
     | IfElse ce _ ta fa cont =>
       (actionNoCalls ta) && (actionNoCalls fa) && (actionNoCalls (cont tt))
     | Assert_ ae cont => actionNoCalls cont
-    | Displ ls cont => actionNoCalls cont
+    | Display ls cont => actionNoCalls cont
     | Return e => true
     end.
 
@@ -88,8 +88,8 @@ Section OneDepth.
   Section GivenOldRegs.
     Variable o : RegsT.
 
-    (* Note that [SubstepMeths] doesn't need to collect labels 
-     * since by an assumption there're no calls in methods! 
+    (* Note that [SubstepMeths] doesn't need to collect labels
+     * since by an assumption there're no calls in methods!
      *)
     Inductive SubstepMeths : list (string * {x : SignatureT & SignT x}) -> UpdatesT -> Prop :=
     | SmsNil: SubstepMeths nil (M.empty _)
@@ -296,7 +296,7 @@ Section OneDepth.
         }
         { destruct sul as [|]; inv H2. }
       }
-        
+
       inv H0.
       - inv H4.
         mred; subst.
@@ -319,7 +319,7 @@ Section OneDepth.
         remember (M.union _ _) as m; clear Heqm.
         inv H4; auto.
     Qed.
-    
+
     Lemma getExtDefs_nil_step_empty:
       forall o u a cs,
         Step m o u {| annot := a; defs := []%fmap; calls := cs |} ->
@@ -353,7 +353,7 @@ Section OneDepth.
       replace (M.union u0 (M.union u pu0)) with (M.union u (M.union u0 pu0)) by meq.
       econstructor; eauto.
     Qed.
-    
+
     Lemma substepsInd_implies_substepMeths:
       forall o u l,
         SubstepsInd m o u l ->
@@ -416,7 +416,7 @@ Section OneDepth.
         eapply M.restrict_DisjList; eauto.
         apply extCalls_defs_disj.
       }
-        
+
       remember {| annot := Some (Some rn); defs := M.empty _; calls := cs |}.
       apply step_consistent in H.
       inv H.
@@ -438,7 +438,7 @@ Section OneDepth.
         destruct (signIsEq s s0); subst; auto.
         inv H1.
       }
-      
+
       dest; subst.
       rewrite H2; clear H2 HWellHidden.
       apply substepsInd_rule_split with (or := Some rn) in HSubSteps; [|subst; reflexivity].
@@ -524,7 +524,7 @@ Proof.
     destruct_existT; reflexivity.
   - apply in_map with (f:= @attrName _) in H; auto.
 Qed.
-  
+
 Lemma substep_meth_inv:
   forall m (Hdefs: NoDup (getDefs m))
          o u mn (mar: {x : SignatureT & SignT x}) cs,
@@ -545,4 +545,3 @@ Proof.
   destruct f' as [fsig' fb']; simpl in *; subst.
   eapply getMeth_default_NoDup_In in HIn; eauto; subst; auto.
 Qed.
-

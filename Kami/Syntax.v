@@ -383,10 +383,7 @@ Section Phoas.
 
   Inductive Disp: Type :=
   | DispBool: FullBitFormat -> Expr (SyntaxKind Bool) -> Disp
-  | DispBit: FullBitFormat -> forall n, Expr (SyntaxKind (Bit n)) -> Disp
-  | DispStruct n: (Vector.t FullBitFormat n) ->
-                  forall ls, Expr (SyntaxKind (@Struct n ls)) -> Disp
-  | DispArray: FullBitFormat -> forall n k, Expr (SyntaxKind (Array n k)) -> Disp.
+  | DispBit: FullBitFormat -> forall n, Expr (SyntaxKind (Bit n)) -> Disp.
 
   Inductive ActionT (lretT: Kind) : Type :=
   | MCall (meth: string) s:
@@ -406,7 +403,7 @@ Section Phoas.
                                         (ty k -> ActionT lretT) ->
                                         ActionT lretT
   | Assert_: Expr (SyntaxKind Bool) -> ActionT lretT -> ActionT lretT
-  | Displ: list Disp -> ActionT lretT -> ActionT lretT
+  | Display: list Disp -> ActionT lretT -> ActionT lretT
   | Return: Expr (SyntaxKind lretT) -> ActionT lretT.
 
   Section StructUpdate.
@@ -766,7 +763,7 @@ Section AppendAction.
       | WriteReg reg _ e cont => WriteReg reg e (appendAction cont a2)
       | IfElse ce _ ta fa cont => IfElse ce ta fa (fun a => appendAction (cont a) a2)
       | Assert_ ae cont => Assert_ ae (appendAction cont a2)
-      | Displ ls cont => Displ ls (appendAction cont a2)
+      | Display ls cont => Display ls (appendAction cont a2)
       | Return e => Let_ e a2
     end.
 
@@ -813,7 +810,7 @@ Section GetCalls.
         (getCallsA_Sig aT) ++ (getCallsA_Sig aF)
                            ++ (getCallsA_Sig (c tt))
       | Assert_ _ c => getCallsA_Sig c
-      | Displ ls c => getCallsA_Sig c
+      | Display ls c => getCallsA_Sig c
       | Return _ => nil
     end.
 
@@ -840,7 +837,7 @@ Section GetCalls.
         (getCallsA aT) ++ (getCallsA aF)
                        ++ (getCallsA (c tt))
       | Assert_ _ c => getCallsA c
-      | Displ ls c => getCallsA c
+      | Display ls c => getCallsA c
       | Return _ => nil
     end.
 
@@ -1119,7 +1116,7 @@ Section NoInternalCalls.
     | WriteReg reg _ e cont => isLeaf cont cs
     | IfElse ce _ ta fa cont => (isLeaf ta cs) && (isLeaf fa cs) && (isLeaf (cont tt) cs)
     | Assert_ ae cont => isLeaf cont cs
-    | Displ ls cont => isLeaf cont cs
+    | Display ls cont => isLeaf cont cs
     | Return e => true
     end.
 

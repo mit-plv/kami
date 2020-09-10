@@ -20,13 +20,15 @@ Inductive ActionS (lretT: Kind) : Type :=
     nat -> ActionS lretT -> ActionS lretT
 | WriteRegS (r: string) k:
     ExprS k -> ActionS lretT -> ActionS lretT
-| IfElseS: ExprS (SyntaxKind Bool) -> forall k,
-      ActionS k ->
-      ActionS k ->
-      nat ->
-      ActionS lretT ->
-      ActionS lretT
+| IfElseS:
+    ExprS (SyntaxKind Bool) ->
+    forall k, ActionS k ->
+              ActionS k ->
+              nat ->
+              ActionS lretT ->
+              ActionS lretT
 | AssertS_: ExprS (SyntaxKind Bool) -> ActionS lretT -> ActionS lretT
+| DisplayS: list (Disp tyS) -> ActionS lretT -> ActionS lretT
 | ReturnS: ExprS (SyntaxKind lretT) -> ActionS lretT.
 
 Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
@@ -73,7 +75,9 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
   | Assert_ e c =>
     let (m, a') := @getActionS n _ c in
     (m, AssertS_ e a')
-  | Displ ls c => @getActionS n _ c
+  | Display ls c =>
+    let (m, a') := @getActionS n _ c in
+    (m, DisplayS ls a')
   | Return e => (n, ReturnS e)
   end.
 

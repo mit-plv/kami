@@ -12,7 +12,7 @@ Section Base.
   Definition inlineArg {argT retT} (a: Expr type (SyntaxKind argT))
              (m: type argT -> ActionT type retT): ActionT type retT :=
     Let_ a m.
-  
+
   Definition getBody (n: string) (dm: DefMethT) (sig: SignatureT):
     option (sigT (fun x: DefMethT => projT1 (attrType x) = sig)) :=
     if string_eq n (attrName dm) then
@@ -39,7 +39,7 @@ Section Base.
       | IfElse ce _ ta fa cont => IfElse ce (inlineDm ta dm) (inlineDm fa dm)
                                          (fun a => inlineDm (cont a) dm)
       | Assert_ ae cont => Assert_ ae (inlineDm cont dm)
-      | Displ ls cont => Displ ls (inlineDm cont dm)
+      | Display ls cont => Display ls (inlineDm cont dm)
       | Return e => Return e
     end.
 
@@ -108,4 +108,3 @@ Section Exts.
     (Mod (getRegInits im) (getRules im)
          (filterDms (getDefsBodies im) (getCalls m)), noInternalCalls im && ib).
 End Exts.
-

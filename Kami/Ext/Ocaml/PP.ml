@@ -315,6 +315,7 @@ and collectStrA (a: bAction) =
   | BWriteReg (_, e) -> collectStrE e
   | BIfElse (ce, _, _, ta, fa) -> collectStrE ce; collectStrAL ta; collectStrAL fa
   | BAssert e -> collectStrE e
+  | BDisplay _ -> ()
   | BReturn e -> collectStrE e
 
 let rec collectStrBR (rl: bRule list) =
@@ -577,6 +578,41 @@ let rec ppBExprs (el: bExpr list) =
   | e :: [] -> ppBExpr e
   | e :: el' -> ppBExpr e; ps ppComma; print_space (); ppBExprs el'
 
+let ppBitFormat (fm: fullBitFormat) =
+  let (sz, bf) = fm in
+  "%" ^ (match bf with
+         | Binary -> "b"
+         | Decimal -> "d"
+         | Hex -> "x")
+
+let rec ppBDispFormats (bds: bDisp list) =
+  match bds with
+  | [] -> ()
+  | bd :: [] ->
+     (match bd with
+      | BDispBool (fm, _) -> ps (ppBitFormat fm)
+      | BDispBit (fm, _) -> ps (ppBitFormat fm))
+  | bd :: bds' ->
+     (match bd with
+      | BDispBool (fm, _) -> ps (ppBitFormat fm ^ " "); ppBDispFormats bds'
+      | BDispBit (fm, _) -> ps (ppBitFormat fm ^ " "); ppBDispFormats bds')
+
+let rec ppBDispExprs (bds: bDisp list) =
+  match bds with
+  | [] -> ()
+  | bd :: [] ->
+     (match bd with
+      | BDispBool (_, e) -> ppBExpr e
+      | BDispBit (_, e) -> ppBExpr e)
+  | bd :: bds' ->
+     (match bd with
+      | BDispBool (_, e) -> ppBExpr e; ps ", "; ppBDispFormats bds'
+      | BDispBit (_, e) -> ppBExpr e; ps ", "; ppBDispFormats bds')
+
+let ppDisplayHeader = "$display (\"-- Values: "
+let ppDisplayMiddle = "\", "
+let ppDisplayFooter = ")"
+
 let rec ppBAction (ife: int option) (a: bAction) =
   match a with
   | BMCall (bind, meth, msig, e) ->
@@ -623,6 +659,10 @@ let rec ppBAction (ife: int option) (a: bAction) =
      ps ppWhen; print_space (); ps ppRBracketL;
      ppBExpr e; ps ppComma; print_space ();
      ps ppNoAction; ps ppRBracketR; ps ppSep
+  | BDisplay bds ->
+     ps ppDisplayHeader; ppBDispFormats bds;
+     ps ppDisplayMiddle; ppBDispExprs bds;
+     ps ppDisplayFooter; ps ppSep
   | BReturn e ->
      (match ife with
       | Some bind ->
@@ -641,7 +681,7 @@ let ppBRule (r: bRule) =
   match r with
   | { attrName = rn; attrType = rb } ->
      open_hovbox 4;
-     ps ppRule; print_space (); ps (bstring_of_charlist rn); ps ppSep; force_newline ();
+     ps ppRule; ps (" " ^ bstring_of_charlist rn); ps ppSep; force_newline ();
      (if isDebug () then
         (ps ("$display (\"Rule fired: " ^ (bstring_of_charlist rn) ^ " at %t\", $time);");
          force_newline ())
@@ -701,6 +741,26 @@ let ppBInterface (ifc: signatureT attribute) =
             ps (string_of_de_brujin_index 0) (* method argument is always x_0 by convention *)
      ));
      ps ppRBracketR; ps ppSep;
+     close_box ()
+
+let ppBInterfaceWithGuard (ifc: signatureT attribute) (guard: string) =
+  match ifc with
+  | { attrName = dn; attrType = { arg = asig; ret = rsig }} ->
+     open_hovbox 0;
+     ps ppMethod; print_space ();
+     (if rsig = Bit 0 then
+        ps ppAction
+      else
+        (ps ppActionValue; ps ppRBracketL; ps (ppKind rsig); ps ppRBracketR));
+     print_space ();
+     ps (bstring_of_charlist dn); print_space ();
+     ps ppRBracketL;
+     (if asig = Bit 0 then ()
+      else (ps (ppKind asig); print_space ();
+            ps (string_of_de_brujin_index 0) (* method argument is always x_0 by convention *)
+     ));
+     ps ppRBracketR; print_space (); ps ppIf;
+     ps ppRBracketL; ps guard; ps ppRBracketR; ps ppSep;
      close_box ()
 
 let rec ppBInterfaces (ifcs: signatureT attribute list) =
@@ -823,7 +883,7 @@ let ppBram1 (args: kind attribute list)
   (* "init" rule *)
   open_hovbox 4;
   ps "rule init (!initDone)"; ps ppSep; force_newline ();
-  ps "initData = "; ps (ppConst initC); ps ppSep; force_newline ();
+  ps "let initData = "; ps (ppConst initC); ps ppSep; force_newline ();
   ps "bram.wrReq(initIdx, initData)"; ps ppSep; force_newline ();
   ps "initIdx <= initIdx + 1"; ps ppSep; force_newline ();
   ps "initDone <= (initIdx == maxBound)"; ps ppSep;
@@ -833,8 +893,8 @@ let ppBram1 (args: kind attribute list)
 
   (* "putRq" method *)
   open_hovbox 4;
-  ppBInterface (List.nth pifc 0); force_newline ();
-  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
+  ppBInterfaceWithGuard (List.nth pifc 0) "initDone"; force_newline ();
+  (* ps "when (initDone, noAction)"; ps ppSep; force_newline (); *)
   open_hovbox 4;
   ps "if (x_0.write) begin"; force_newline ();
   ps "bram.wrReq(x_0.addr, x_0.datain);";
@@ -849,8 +909,8 @@ let ppBram1 (args: kind attribute list)
 
   (* "readRs" method *)
   open_hovbox 4;
-  ppBInterface (List.nth pifc 1); force_newline ();
-  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
+  ppBInterfaceWithGuard (List.nth pifc 1) "initDone"; force_newline ();
+  (* ps "when (initDone, noAction)"; ps ppSep; force_newline (); *)
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";
@@ -878,7 +938,7 @@ let ppBram2 (args: kind attribute list)
   (* "init" rule *)
   open_hovbox 4;
   ps "rule init (!initDone)"; ps ppSep; force_newline ();
-  ps "initData = "; ps (ppConst initC); ps ppSep; force_newline ();
+  ps "let initData = "; ps (ppConst initC); ps ppSep; force_newline ();
   ps "bram.wrReq(initIdx, initData)"; ps ppSep; force_newline ();
   ps "initIdx <= initIdx + 1"; ps ppSep; force_newline ();
   ps "initDone <= (initIdx == maxBound)"; ps ppSep;
@@ -888,24 +948,24 @@ let ppBram2 (args: kind attribute list)
 
   (* "rdReq" method *)
   open_hovbox 4;
-  ppBInterface (List.nth pifc 0); force_newline ();
-  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
-  ps "bram.rdReq(x_0.addr);";
+  ppBInterfaceWithGuard (List.nth pifc 0) "initDone"; force_newline ();
+  (* ps "when (initDone, noAction)"; ps ppSep; force_newline (); *)
+  ps "bram.rdReq(x_0);";
   close_box (); force_newline ();
   ps ppEndMethod; force_newline2 ();
 
   (* "wrReq" method *)
   open_hovbox 4;
-  ppBInterface (List.nth pifc 1); force_newline ();
-  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
+  ppBInterfaceWithGuard (List.nth pifc 1) "initDone"; force_newline ();
+  (* ps "when (initDone, noAction)"; ps ppSep; force_newline (); *)
   ps "bram.wrReq(x_0.addr, x_0.datain);";
   close_box (); force_newline ();
   ps ppEndMethod; force_newline2 ();
 
   (* "readRs" method *)
   open_hovbox 4;
-  ppBInterface (List.nth pifc 2); force_newline ();
-  ps "when (initDone, noAction)"; ps ppSep; force_newline ();
+  ppBInterfaceWithGuard (List.nth pifc 2) "initDone"; force_newline ();
+  (* ps "when (initDone, noAction)"; ps ppSep; force_newline (); *)
   ps "bram.deqRdResp ();"; force_newline ();
   ps "let data = bram.rdResp ();"; force_newline ();
   ps "return data;";

@@ -90,7 +90,7 @@ Proof.
       simpl; constructor.
 
       eapply appendAction_SemAction; eauto.
-      
+
       rewrite M.remove_add.
       rewrite M.remove_find_None by assumption.
 
@@ -133,8 +133,8 @@ Proof.
           - meq; clear - n H3; inv H3; destruct_existT; intuition auto.
           - apply H0; auto.
             rewrite M.find_add_2 in H3; auto.
-        } 
-        
+        }
+
   - inv H4; destruct_existT.
     constructor; auto.
   - inv H4; destruct_existT.
@@ -357,7 +357,7 @@ Section SubstepFacts.
   Hypotheses (Hequiv: ModEquiv type typeUT m)
              (Hdefs: NoDup (namesOf (getDefsBodies m))).
   Variable dm: DefMethT.
-  
+
   Lemma inlineDmToMod_correct_Substep:
     forall or u1 u2 cs1 cs2 argV retV ul2,
       Substep m or u2 ul2 cs2 ->
@@ -377,7 +377,7 @@ Section SubstepFacts.
     - eapply SingleMeth with (f:= inlineDmToDm f dm); eauto.
       + apply in_map with (f:= fun d => inlineDmToDm d dm) in HIn; auto.
       + simpl; eapply inlineDm_correct_SemAction; eauto.
-  Qed.  
+  Qed.
 
   Lemma inlineDmToMod_Substep_intact:
     forall or u ul cs (dmn: string),
@@ -807,7 +807,7 @@ Section SubstepsFacts.
           findeq.
         * auto.
         * simpl; f_equal; auto.
-      
+
     - eapply SubstepsCons.
       + apply IHSubstepsInd; eauto.
       + eapply inlineDmToMod_Substep_intact; eauto; findeq.
@@ -1150,7 +1150,7 @@ Proof.
   - apply noInternalCalls_implies_disj; auto.
   - apply flatten_preserves_step; auto.
 Qed.
-  
+
 Lemma inlineDms'_preserves_regInits:
   forall dms m, getRegInits m = getRegInits (fst (inlineDms' m dms)).
 Proof.
@@ -1239,7 +1239,7 @@ Section NoCallDmSig.
     | IfElse ce _ ta fa cont =>
       (noCallDmSigA ta dmn dsig) && (noCallDmSigA fa dmn dsig) && (noCallDmSigA (cont tt) dmn dsig)
     | Assert_ ae cont => noCallDmSigA cont dmn dsig
-    | Displ ls cont => noCallDmSigA cont dmn dsig
+    | Display ls cont => noCallDmSigA cont dmn dsig
     | Return e => true
     end.
 
@@ -1613,7 +1613,7 @@ Section Partial.
                      if string_dec (attrName r) (attrName newr)
                      then inlineDmToRule newr dm else newr)
                   (getRules m)) (getDefsBodies m)) o (M.union u su)
-          (hideMeth 
+          (hideMeth
              {| annot := Some (Some (attrName r));
                 defs := ds;
                 calls := M.union scs cs |} (attrName dm)).
@@ -1671,7 +1671,7 @@ Section Partial.
           simpl in H6; mcontra.
         * inv H6; inv H3; dest; simpl in *.
           apply eq_sym in H0; meq.
-          
+
     - clear IHSubstepsInd.
       assert (sul = Meth (Some (attrName dm :: s)%struct)); subst.
       { destruct sul as [|]; inv H6.
@@ -1791,7 +1791,7 @@ Section Partial.
           apply wellHidden_find_1 with (a:= attrName dm) in HWellHidden.
           { simpl in *; destruct HWellHidden; mred. }
           { apply in_map; auto. }
-          
+
         * rewrite hideMeth_preserves_hide.
           apply inlineDmToRule_wellHidden; auto.
 
@@ -1928,7 +1928,7 @@ Section Partial.
     apply step_consistent; apply step_consistent in H0.
 
     pose proof (inlineDmToRule_stepInd H0).
-    
+
     apply stepInd_filterDm; auto.
 
     - apply inlineDmToRule_ModEquiv.
@@ -1953,4 +1953,3 @@ Section Partial.
   Qed.
 
 End Partial.
-

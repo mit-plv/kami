@@ -39,6 +39,10 @@ Section BluespecSubset.
   | BBuildArray n: Vector.t BExpr n -> BExpr
   | BUpdateArray: BExpr -> BExpr -> BExpr -> BExpr.
 
+  Inductive BDisp: Type :=
+  | BDispBool : FullBitFormat -> BExpr -> BDisp
+  | BDispBit : FullBitFormat -> BExpr -> BDisp.
+
   (* NOTE: BBCall is not used for translation from Kami to Bluespec,
    * but defined in order to support multi-parameter methods.
    *)
@@ -52,6 +56,7 @@ Section BluespecSubset.
   | BIfElse: BExpr -> nat (* branch return binder *) -> Kind (* return type *) ->
              list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
+  | BDisplay: list BDisp -> BAction
   | BReturn: BExpr -> BAction.
 
   Definition BRule := Attribute (list BAction).
@@ -163,7 +168,22 @@ Section BluespecSubset.
                  >>= (fun bie =>
                         (@exprSToBExpr _ ke)
                           >>= (fun bke => Some (BUpdateArray bve bie bke))))
+    end.
 
+  Definition dispSToBDisp (ds: Disp tyS): option BDisp :=
+    match ds with
+    | DispBool fm e =>
+      (exprSToBExpr e) >>= (fun be => Some (BDispBool fm be))
+    | DispBit fm _ e =>
+      (exprSToBExpr e) >>= (fun be => Some (BDispBit fm be))
+    end.
+
+  Fixpoint dispSToBDispList (ds: list (Disp tyS)): option (list BDisp) :=
+    match ds with
+    | nil => Some nil
+    | d :: ds' =>
+      (dispSToBDispList ds')
+        >>= (fun bds => (dispSToBDisp d) >>= (fun bd => Some (bd :: bds)))
     end.
 
   Fixpoint actionSToBAction {k} (e: ActionS k): option (list BAction) :=
@@ -201,6 +221,9 @@ Section BluespecSubset.
     | AssertS_ e cont =>
       (actionSToBAction cont)
         >>= (fun bc => (exprSToBExpr e) >>= (fun be => Some (BAssert be :: bc)))
+    | DisplayS ds cont =>
+      (actionSToBAction cont)
+        >>= (fun bc => (dispSToBDispList ds) >>= (fun bds => Some (BDisplay bds :: bc)))
     | ReturnS e => (exprSToBExpr e) >>= (fun be => Some (BReturn be :: nil))
     end.
 

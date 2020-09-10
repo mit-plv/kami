@@ -56,7 +56,7 @@ Section Rename.
     | IfElse e k t f cont => IfElse e (renameAction t) (renameAction f)
                                    (fun v => renameAction (cont v))
     | Assert_ e cont => Assert_ e (renameAction cont)
-    | Displ ls cont => Displ ls (renameAction cont)
+    | Display ls cont => Display ls (renameAction cont)
     | Return e => Return e
     end.
 
@@ -345,7 +345,7 @@ Section Rename.
       rewrite <- renameMapUnion.
       f_equal; intuition.
     - eapply SemAssertTrue; eauto.
-    - eapply SemDispl; eauto.
+    - eapply SemDisplay; eauto.
     - eapply SemReturn; eauto.
   Qed.
 
