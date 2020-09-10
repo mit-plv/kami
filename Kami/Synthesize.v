@@ -28,7 +28,7 @@ Inductive ActionS (lretT: Kind) : Type :=
               ActionS lretT ->
               ActionS lretT
 | AssertS_: ExprS (SyntaxKind Bool) -> ActionS lretT -> ActionS lretT
-| DisplayS: list (Disp tyS) -> ActionS lretT -> ActionS lretT
+| DisplayS: string -> list (Disp tyS) -> ActionS lretT -> ActionS lretT
 | ReturnS: ExprS (SyntaxKind lretT) -> ActionS lretT.
 
 Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
@@ -75,9 +75,9 @@ Fixpoint getActionS (n: nat) lret (a: ActionT tyS lret) {struct a}
   | Assert_ e c =>
     let (m, a') := @getActionS n _ c in
     (m, AssertS_ e a')
-  | Display ls c =>
+  | Display msg ls c =>
     let (m, a') := @getActionS n _ c in
-    (m, DisplayS ls a')
+    (m, DisplayS msg ls a')
   | Return e => (n, ReturnS e)
   end.
 

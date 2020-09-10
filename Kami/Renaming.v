@@ -56,7 +56,7 @@ Section Rename.
     | IfElse e k t f cont => IfElse e (renameAction t) (renameAction f)
                                    (fun v => renameAction (cont v))
     | Assert_ e cont => Assert_ e (renameAction cont)
-    | Display ls cont => Display ls (renameAction cont)
+    | Display msg ls cont => Display msg ls (renameAction cont)
     | Return e => Return e
     end.
 

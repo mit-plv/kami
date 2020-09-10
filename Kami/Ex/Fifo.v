@@ -5,7 +5,7 @@ Require Import Kami.Wf Kami.Tactics.
 Require Import FunctionalExtensionality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
-  
+
 Section Fifo.
   Variable fifoName: string.
   Variable sz: nat.
@@ -44,7 +44,7 @@ Section Fifo.
      Read eltT : Vector dType sz <- ^"elt";
      Read deqPT <- ^"deqP";
      Ret #eltT@[#deqPT])%kami_action.
-  
+
   Definition fifo := MODULE {
     Register ^"elt" : Vector dType sz <- Default
     with Register ^"enqP" : Bit sz <- Default
@@ -104,4 +104,3 @@ End Facts.
 
 Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv.
 Hint Resolve fifo_ValidRegs simpleFifo_ValidRegs.
-

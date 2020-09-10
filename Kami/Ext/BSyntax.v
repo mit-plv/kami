@@ -56,7 +56,7 @@ Section BluespecSubset.
   | BIfElse: BExpr -> nat (* branch return binder *) -> Kind (* return type *) ->
              list BAction -> list BAction -> BAction
   | BAssert: BExpr -> BAction
-  | BDisplay: list BDisp -> BAction
+  | BDisplay: string -> list BDisp -> BAction
   | BReturn: BExpr -> BAction.
 
   Definition BRule := Attribute (list BAction).
@@ -221,9 +221,9 @@ Section BluespecSubset.
     | AssertS_ e cont =>
       (actionSToBAction cont)
         >>= (fun bc => (exprSToBExpr e) >>= (fun be => Some (BAssert be :: bc)))
-    | DisplayS ds cont =>
+    | DisplayS msg ds cont =>
       (actionSToBAction cont)
-        >>= (fun bc => (dispSToBDispList ds) >>= (fun bds => Some (BDisplay bds :: bc)))
+        >>= (fun bc => (dispSToBDispList ds) >>= (fun bds => Some (BDisplay msg bds :: bc)))
     | ReturnS e => (exprSToBExpr e) >>= (fun be => Some (BReturn be :: nil))
     end.
 

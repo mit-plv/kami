@@ -17,7 +17,7 @@ Section NoCalls.
     | IfElse ce _ ta fa cont =>
       (actionNoCalls ta) && (actionNoCalls fa) && (actionNoCalls (cont tt))
     | Assert_ ae cont => actionNoCalls cont
-    | Display ls cont => actionNoCalls cont
+    | Display _ _ cont => actionNoCalls cont
     | Return e => true
     end.
 

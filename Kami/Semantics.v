@@ -457,9 +457,9 @@ Section Semantics.
       (HTrue: evalExpr p = true)
       (HSemAction: SemAction cont newRegs2 calls2 r2):
       SemAction (Assert_ p cont) newRegs2 calls2 r2
-  | SemDisplay ls k2 cont newRegs2 calls2 (r2: type k2)
-             (HSemAction: SemAction cont newRegs2 calls2 r2):
-      SemAction (Display ls cont) newRegs2 calls2 r2
+  | SemDisplay msg ls k2 cont newRegs2 calls2 (r2: type k2)
+               (HSemAction: SemAction cont newRegs2 calls2 r2):
+      SemAction (Display msg ls cont) newRegs2 calls2 r2
   | SemReturn
       k (e: Expr type (SyntaxKind k)) evale
       (HEvalE: evale = evalExpr e):
@@ -507,7 +507,7 @@ Section Semantics.
     | Assert_ e c =>
       SemAction c news calls retC /\
       evalExpr e = true
-    | Display ls c =>
+    | Display _ _ c =>
       SemAction c news calls retC
     | Return e =>
       retC = evalExpr e /\

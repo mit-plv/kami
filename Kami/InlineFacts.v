@@ -1239,7 +1239,7 @@ Section NoCallDmSig.
     | IfElse ce _ ta fa cont =>
       (noCallDmSigA ta dmn dsig) && (noCallDmSigA fa dmn dsig) && (noCallDmSigA (cont tt) dmn dsig)
     | Assert_ ae cont => noCallDmSigA cont dmn dsig
-    | Display ls cont => noCallDmSigA cont dmn dsig
+    | Display msg ls cont => noCallDmSigA cont dmn dsig
     | Return e => true
     end.
 
