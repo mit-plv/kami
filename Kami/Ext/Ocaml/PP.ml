@@ -606,10 +606,10 @@ let rec ppBDispExprs (bds: bDisp list) =
       | BDispBit (_, e) -> ppBExpr e)
   | bd :: bds' ->
      (match bd with
-      | BDispBool (_, e) -> ppBExpr e; ps ", "; ppBDispFormats bds'
-      | BDispBit (_, e) -> ppBExpr e; ps ", "; ppBDispFormats bds')
+      | BDispBool (_, e) -> ppBExpr e; ps ", "; ppBDispExprs bds'
+      | BDispBit (_, e) -> ppBExpr e; ps ", "; ppBDispExprs bds')
 
-let ppDisplayHeader = "$display (\"-- Values: "
+let ppDisplayHeader = "$display (\""
 let ppDisplayMiddle = "\", "
 let ppDisplayFooter = ")"
 
@@ -659,8 +659,8 @@ let rec ppBAction (ife: int option) (a: bAction) =
      ps ppWhen; print_space (); ps ppRBracketL;
      ppBExpr e; ps ppComma; print_space ();
      ps ppNoAction; ps ppRBracketR; ps ppSep
-  | BDisplay bds ->
-     ps ppDisplayHeader; ppBDispFormats bds;
+  | BDisplay (msg, bds) ->
+     ps ppDisplayHeader; ps (bstring_of_charlist msg ^ " "); ppBDispFormats bds;
      ps ppDisplayMiddle; ppBDispExprs bds;
      ps ppDisplayFooter; ps ppSep
   | BReturn e ->
