@@ -76,52 +76,45 @@ Hint Unfold enq deq firstElt: MethDefs.
 
 Section DebugFifo.
   Variables (fifoName: string)
-            (sz: nat)
-            (dType: Kind).
+            (dType: Kind)
+            (cntSz: nat).
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
 
-  Variables (enqMsg: string)
-            (enqDisp: forall ty, ty dType -> list (Disp ty))
-            (deqMsg: string)
-            (deqDisp: forall ty, ty dType -> list (Disp ty)).
+  Variables (dmsg: string) (disp: forall ty, ty dType -> list (Disp ty)).
 
-  Definition debugEnq {ty} : forall (d: ty dType), ActionT ty Void :=
+  Definition debugEnq {ty}: forall (d: ty dType), ActionT ty Void :=
     fun d =>
-      (Display
-         enqMsg (enqDisp _ d)
-         (Read isFull <- ^"full";
-         Assert !#isFull;
-         Read eltT <- ^"elt";
-         Read enqPT <- ^"enqP";
-         Read deqPT <- ^"deqP";
-         Write ^"elt" <- #eltT@[#enqPT <- #d];
-         Write ^"empty" <- $$false;
-         LET next_enqP <- (#enqPT + $1) :: Bit sz;
-         Write ^"full" <- (#deqPT == #next_enqP);
-         Write ^"enqP" <- #next_enqP;
-         Retv)%kami_action).
+      (Read isFull <- ^"full";
+      Assert !#isFull;
+      Write ^"elt" <- #d;
+      Write ^"full" <- $$true;
+      Retv)%kami_action.
 
-  Definition debugDeq {ty} : ActionT ty dType :=
-    (Read isEmpty <- ^"empty";
-    Assert !#isEmpty;
-    Read eltT <- ^"elt";
-    Read enqPT <- ^"enqP";
-    Read deqPT <- ^"deqP";
+  Definition debugDeq {ty}: ActionT ty dType :=
+    (Read isFull <- ^"full";
+    Assert #isFull;
+    Read delt <- ^"elt";
     Write ^"full" <- $$false;
-    LET next_deqP <- (#deqPT + $1) :: Bit sz;
-    Write ^"empty" <- (#enqPT == #next_deqP);
-    Write ^"deqP" <- #next_deqP;
-    LET delt <- #eltT@[#deqPT];
-    Display deqMsg (deqDisp _ delt) (Ret #delt))%kami_action.
+    Ret #delt)%kami_action.
+
+  Definition debugCount {ty}: ActionT ty Void :=
+    (Read countDone <- ^"countDone";
+    Assert !#countDone;
+    Read count: Bit cntSz <- ^"counter";
+    Write ^"counter" <- #count + $1;
+    Read isFull <- ^"full";
+    If (#count == $(Nat.pow 2 cntSz - 1) && #isFull)
+     then (Read elt: dType <- ^"elt";
+          Display dmsg (disp _ elt) (Write ^"countDone" <- $$true; Retv));
+     Retv)%kami_action.
 
   Definition debugFifo := MODULE {
-    Register ^"elt" : Vector dType sz <- Default
-    with Register ^"enqP" : Bit sz <- Default
-    with Register ^"deqP" : Bit sz <- Default
-    with Register ^"empty" : Bool <- true
+    Register ^"elt" : dType <- Default
     with Register ^"full" : Bool <- Default
-
+    with Register ^"countDone" : Bool <- Default
+    with Register ^"counter" : Bit cntSz <- Default
+    with Rule ^"count" := debugCount
     with Method ^"enq"(d : dType) : Void := (debugEnq d)
     with Method ^"deq"() : dType := debugDeq
   }.
@@ -156,18 +149,17 @@ Section Facts.
   Proof. kvr. Qed.
   Hint Resolve simpleFifo_ValidRegs.
 
-  Variables (enqMsg: string)
-            (enqDisp: forall ty, ty dType -> list (Disp ty))
-            (deqMsg: string)
-            (deqDisp: forall ty, ty dType -> list (Disp ty)).
+  Variables (cntSz: nat)
+            (dmsg: string)
+            (disp: forall ty, ty dType -> list (Disp ty)).
 
   Lemma debugFifo_ModEquiv:
-    ModPhoasWf (debugFifo fifoName sz enqMsg enqDisp deqMsg deqDisp).
+    ModPhoasWf (debugFifo fifoName cntSz dmsg disp).
   Proof. kequiv. Qed.
   Hint Resolve debugFifo_ModEquiv.
 
   Lemma debugFifo_ValidRegs:
-    ModRegsWf (debugFifo fifoName sz enqMsg enqDisp deqMsg deqDisp).
+    ModRegsWf (debugFifo fifoName cntSz dmsg disp).
   Proof. kvr. Qed.
   Hint Resolve debugFifo_ValidRegs.
 
