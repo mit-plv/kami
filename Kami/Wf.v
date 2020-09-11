@@ -57,13 +57,18 @@ Section Equiv.
                      (cont1: ActionT t1 k) (cont2: ActionT t2 k),
       ActionEquiv cont1 cont2 ->
       ActionEquiv (Assert_ e1 cont1) (Assert_ e2 cont2)
+  | AEDisplay: forall {k} (msg: string)
+                      (ds1: list (Disp t1)) (ds2: list (Disp t2))
+                      (cont1: ActionT t1 k) (cont2: ActionT t2 k),
+      ActionEquiv cont1 cont2 ->
+      ActionEquiv (Display msg ds1 cont1) (Display msg ds2 cont2)
   | AERet: forall {k} (e1: Expr t1 (SyntaxKind k))
                   (e2: Expr t2 (SyntaxKind k)),
       ActionEquiv (Return e1) (Return e2).
 
   Definition RuleEquiv (r: Attribute (Action Void)) : Prop :=
     ActionEquiv (attrType r t1) (attrType r t2).
-  
+
   Inductive RulesEquiv: list (Attribute (Action Void)) -> Prop :=
   | RulesEquivNil: RulesEquiv nil
   | RulesEquivCons:
@@ -160,14 +165,14 @@ Section Equiv.
 
   Definition ModEquiv (m: Modules): Prop :=
     RulesEquiv (getRules m) /\ MethsEquiv (getDefsBodies m).
-  
+
 End Equiv.
 
 (* NOTE: Defining "ModPhoasWf" by Gallina definition affects proof automation by "kequiv". *)
 Notation "'ModPhoasWf' m" := (forall ty1 ty2, ModEquiv ty1 ty2 m) (at level 0).
 
 Section EquivFacts.
-  
+
   Lemma actionEquiv_appendAction:
     forall type1 type2
            {retT1} (a11: ActionT type1 retT1) (a21: ActionT type2 retT1)
@@ -199,7 +204,7 @@ Section EquivFacts.
       + eapply MethsEquiv_sub; eauto.
         apply SubList_app_2, SubList_refl.
   Qed.
-  
+
   Lemma ModEquiv_modular:
     forall t1 t2 m1 m2,
       ModEquiv t1 t2 m1 ->
@@ -217,7 +222,7 @@ Section EquivFacts.
       ModEquiv t1 t2 m ->
       ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)).
   Proof. auto. Qed.
-  
+
   Lemma ModEquiv_deflatten:
     forall t1 t2 m,
       ModEquiv t1 t2 (Mod (getRegInits m) (getRules m) (getDefsBodies m)) ->
@@ -269,6 +274,10 @@ Section ValidRegs.
         forall {retT} e cont,
           ValidRegsAction cont ->
           ValidRegsAction (Assert_ (lretT:= retT) e cont)
+    | VRDisplay:
+        forall {retT} msg ds cont,
+          ValidRegsAction cont ->
+          ValidRegsAction (Display (lretT:= retT) msg ds cont)
     | VRReturn:
         forall {retT} (e: Expr type (SyntaxKind retT)),
           ValidRegsAction (Return e).
@@ -460,7 +469,7 @@ Section ValidRegsFacts.
     - intros; eapply validRegsDms_dm; eauto.
       intuition.
   Qed.
-  
+
   Lemma validRegsAction_old_regs_restrict:
     forall regs {retT} (a: ActionT type retT),
       ValidRegsAction regs a ->
@@ -477,6 +486,7 @@ Section ValidRegsFacts.
     - inv H1; destruct_existT; econstructor; eauto.
     - inv H3; destruct_existT;
         [eapply SemIfElseTrue|eapply SemIfElseFalse]; eauto.
+    - inv H0; destruct_existT; econstructor; eauto.
     - inv H0; destruct_existT; econstructor; eauto.
     - inv H; destruct_existT; econstructor; eauto.
   Qed.
@@ -503,6 +513,7 @@ Section ValidRegsFacts.
       + apply M.KeysSubset_union; auto.
         * eapply IHValidRegsAction2; eauto.
         * eapply H2; eauto.
+    - inv H0; destruct_existT; eapply IHValidRegsAction; eauto.
     - inv H0; destruct_existT; eapply IHValidRegsAction; eauto.
     - inv H; destruct_existT; apply M.KeysSubset_empty.
   Qed.
@@ -600,4 +611,3 @@ Section ValidRegsFacts.
   Qed.
 
 End ValidRegsFacts.
-

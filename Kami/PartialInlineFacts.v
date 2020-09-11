@@ -63,6 +63,7 @@ Section ActionNoCall.
         extensionality v1.
         apply (H0 v1 tt H2).
     - f_equal; auto.
+    - f_equal; auto.
   Qed.
 End ActionNoCall.
 
@@ -92,7 +93,7 @@ Section MethNoCallsInRules.
   Variable dms: list DefMethT.
   Variable r: Attribute (Action Void).
   Variable rEquiv: forall ty,  ActionEquiv (attrType r ty) (attrType r typeUT).
-  
+
   Theorem inlineNoCallsRule_matches:
     (forall dm, In dm dms -> In (attrName dm) (getCallsA (attrType r typeUT)) -> False) ->
     fold_left inlineDmToRule dms r = r.
@@ -120,7 +121,7 @@ Section MethNoCallsInMeths.
            (argV2: fullType typeUT (SyntaxKind (arg (projT1 (attrType r))))),
       ActionEquiv (projT2 (attrType r) ty argV1)
                   (projT2 (attrType r) typeUT argV2).
-  
+
   Theorem inlineNoCallsMeth_matches:
     (forall dm, In dm dms ->
                 In (attrName dm) (getCallsA (projT2 (attrType r) typeUT tt)) -> False) ->
@@ -169,7 +170,7 @@ Section MethNoCall.
       }
       assert (s1: ~ In (attrName dm) (getCallsA (projT2 (attrType a) typeUT tt))) by intuition.
       assert (s2: ~ In (attrName dm) (getCallsM l)) by intuition.
-      specialize (IHl s2 eq').  
+      specialize (IHl s2 eq').
       f_equal; try assumption.
       unfold inlineDmToDm.
       destruct a; simpl in *.
@@ -208,7 +209,7 @@ Section NoCallsInDefs.
   Variable noCallsInDefs: forall i, ~ (In i (getCallsM (getDefsBodies m)) /\ In i (getDefs m)).
   Variable noDups: NoDup (getDefs m).
   Variable equiv: forall ty, ModEquiv ty typeUT m.
-  
+
   Definition simpleInlineDmToMod (dm: DefMethT) :=
     Mod (getRegInits m) (inlineDmToRules (getRules m) dm)
         (getDefsBodies m).
@@ -511,7 +512,7 @@ Section AboutFilter.
     - reflexivity.
     - destruct (f a); simpl; f_equal; auto.
   Qed.
-  
+
   Definition filterA (a dm: Attribute A) :=
     if string_dec (attrName dm) (attrName a) then false else true.
 
@@ -574,7 +575,7 @@ Section InlineDmsCalls.
     apply inlineDmCalls; auto.
   Qed.
 End InlineDmsCalls.
-  
+
 Section AboutList.
   Variable A: Type.
   Variable ls: list (Attribute A).
@@ -662,7 +663,7 @@ Section AboutList.
   Proof.
     apply mapChangeNotIn.
     apply aNotInSuffix.
-  Qed.  
+  Qed.
 
   Lemma map_equiv': map changeA ls = map changeA prefix ++ attrF a :: map changeA suffix.
   Proof.
@@ -699,7 +700,7 @@ Section AboutList.
     tauto.
   Qed.
 End AboutList.
-  
+
 Section Partial.
   Variable m: Modules.
 
@@ -719,7 +720,7 @@ Section Partial.
     apply in_or_app.
     right; intuition.
   Qed.
-  
+
   Lemma inlineDmToRule_traceRefines_NoFilt:
     m <<== (Mod (getRegInits m)
                 (prefix ++ inlineDmToRule r dm :: suffix)
@@ -741,9 +742,9 @@ Section Partial.
   Hypothesis HdmNoMeth: forall d, In d (getDefsBodies m) ->
                                   noCallDmSigA (projT2 (attrType d) typeUT tt)
                                                (attrName dm) (projT1 (attrType dm)) = true.
-  
+
   Hypothesis HDmInR: In (attrName dm) (getCallsA (attrType r typeUT)).
-  
+
   Lemma inlineDmToRule_traceRefines_Filt:
     m <<== (Mod (getRegInits m)
                 (prefix ++ inlineDmToRule r dm :: suffix)
@@ -772,7 +773,7 @@ End Partial.
 
 Section PartialMultiDm.
   Variable m: Modules.
-  
+
   Variable dms: list DefMethT. (* a method to be inlined *)
   Variable preDm sufDm: list DefMethT.
   Variable Hdm: getDefsBodies m = preDm ++ dms ++ sufDm.
@@ -781,7 +782,7 @@ Section PartialMultiDm.
   Variable r: Attribute (Action Void). (* a rule calling dm *)
   Hypothesis Hrule: getRules m = prefix ++ r :: suffix.
   Hypothesis HnoDupRules: NoDup (namesOf (getRules m)).
-  
+
   Lemma inlineDmsToRule_traceRefines_NoFilt:
     m <<== (Mod (getRegInits m)
                 (prefix ++ fold_right (fun dm' r' => inlineDmToRule r' dm') r dms :: suffix)
@@ -889,7 +890,7 @@ Section PartialMultiDm.
         repeat rewrite <- map_app.
         rewrite <- sth2.
         assumption.
-      } 
+      }
       match goal with
         | [|- ?m <<== _] =>
           pose proof (@inlineDmToRule_traceRefines_Filt
@@ -929,7 +930,7 @@ Section PartialMultiDm.
         specialize (IHl H).
         unfold inlineDmToRule at 1; unfold RuleEquiv in *; simpl in *.
         apply inlineDm_ActionEquiv; auto.
-      } 
+      }
       intuition.
       apply MethsEquiv_in; intros.
       repeat (apply in_app_or in H; destruct H);
@@ -972,7 +973,7 @@ Section PartialMultiR.
   Variable rs: list (Attribute (Action Void)). (* a rule calling dm *)
   Variable prefix suffix: list (Attribute (Action Void)).
   Hypothesis Hrule: getRules m = prefix ++ rs ++ suffix.
-  
+
   Lemma inlineDmToRules_traceRefines_NoFilt:
     m <<==
       (Mod (getRegInits m)
@@ -1045,7 +1046,7 @@ Section PartialMultiR2.
   Variable rs: list (Attribute (Action Void)). (* a rule calling dm *)
   Variable prefix suffix: list (Attribute (Action Void)).
   Hypothesis Hrule: getRules m = prefix ++ rs ++ suffix.
-  
+
   Hypothesis HdmNoRule: forall r,
                           In r (prefix ++ suffix) ->
                           noCallDmSigA (attrType r typeUT) (attrName dm)
@@ -1234,7 +1235,7 @@ Section inlineDmToRule_hasInCalls.
   Variable inaR: In (attrName a) (getCallsA (attrType r typeUT)).
   Variable l: list DefMethT.
   Variable notAL: ~ In (attrName a) (namesOf l).
-  
+
   Lemma inlineDmToRule_hasInCalls:
     In (attrName a)
        (getCallsA
@@ -1269,7 +1270,7 @@ Section rEquivAfterInline.
     apply inlineDm_ActionEquiv; auto.
   Qed.
 End rEquivAfterInline.
-  
+
 Section PartialMultiDmMultiR.
   Variable m: Modules.
 
@@ -1281,7 +1282,7 @@ Section PartialMultiDmMultiR.
   Variable rs: list (Attribute (Action Void)). (* a rule calling dm *)
   Variable prefix suffix: list (Attribute (Action Void)).
   Hypothesis Hrule: getRules m = prefix ++ rs ++ suffix.
-  
+
   Lemma inlineDmsToRules_traceRefines_NoFilt:
     m <<==
       (Mod (getRegInits m)
@@ -1513,11 +1514,11 @@ End PartialMultiDmMultiR.
 
 Section rsEquivAfterInline.
   Variable ty: Kind -> Type.
-  
+
   Lemma inlineDmsToRules_Equiv rs ls:
     RulesEquiv ty typeUT rs ->
     MethsEquiv ty typeUT ls ->
-    RulesEquiv ty typeUT 
+    RulesEquiv ty typeUT
                (map (fun r => (fold_right
                                  (fun dm' r' => inlineDmToRule r' dm') r ls)) rs).
   Proof.
@@ -1529,4 +1530,3 @@ Section rsEquivAfterInline.
     apply MethsEquiv_in; auto.
   Qed.
 End rsEquivAfterInline.
-  

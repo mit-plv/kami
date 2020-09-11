@@ -302,7 +302,7 @@ Section SpecializeFacts.
         do 3 (apply in_or_app; right); auto.
         Transparent getCalls.
   Qed.
-  
+
   Lemma spf_neq: forall a b i j, i <> j -> spf i a <> spf j b.
   Proof. intros; apply withIndex_neq; auto. Qed.
 
@@ -314,7 +314,7 @@ Section SpecializeFacts.
   Proof.
     induction 1; simpl; intros; try (constructor; auto).
   Qed.
-  
+
   Lemma renameRules_RulesEquiv:
     forall ty1 ty2 rules,
       RulesEquiv ty1 ty2 rules ->
@@ -342,7 +342,7 @@ Section SpecializeFacts.
   Lemma renameAction_MethEquiv:
     forall ty1 ty2 meth,
       MethEquiv ty1 ty2 meth ->
-      forall f, 
+      forall f,
         MethEquiv ty1 ty2 (renameMeth f meth).
   Proof.
     intros.
@@ -353,7 +353,7 @@ Section SpecializeFacts.
     simpl in *.
     apply renameAction_ActionEquiv; auto.
   Qed.
-  
+
   Lemma renameModules_ModEquiv:
     forall ty1 ty2 m,
       ModEquiv ty1 ty2 m ->
@@ -372,7 +372,7 @@ Section SpecializeFacts.
     - apply ModEquiv_split in H; dest.
       apply ModEquiv_modular; auto.
   Qed.
-  
+
   Lemma specializeMod_ModEquiv:
     forall ty1 ty2 i m,
       ModEquiv ty1 ty2 m ->
@@ -512,6 +512,8 @@ Section SpecializeFacts.
         apply in_app_or in H2; destruct H2.
         * apply in_or_app; auto.
         * do 3 (apply in_or_app; right); eauto.
+    - inv Hvr; destruct_existT.
+      f_equal; auto.
     - inv Hvr; destruct_existT.
       f_equal; auto.
   Qed.
@@ -1067,7 +1069,7 @@ Section Specializable.
         eapply hasNoIndex_SubList; eauto.
         apply spDom_defs.
   Qed.
-  
+
 End Specializable.
 
 Lemma specializeMod_disj_regs_2:
@@ -1304,6 +1306,5 @@ Section SpRefinement.
       rewrite renameMapFInvG by (intros; apply specializer_bijective; auto).
       reflexivity.
   Qed.
-  
-End SpRefinement.
 
+End SpRefinement.

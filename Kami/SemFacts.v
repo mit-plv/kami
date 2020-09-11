@@ -106,7 +106,7 @@ Section LiftToMap.
           try apply M.transpose_neqkey_Equal_add; intuition.
       + intuition.
   Qed.
-        
+
   Theorem liftToMap1_add_one k v:
     liftToMap1 p (M.add k v (M.empty _)) =
     match p k v with
@@ -141,7 +141,7 @@ Section LiftToMap.
       assert (exists v', p k v' = Some a0 /\ M.MapsTo k v' m).
       { eexists; eauto. }
       apply liftToMap1_MapsTo in H2.
-      elim H. 
+      elim H.
       eapply M.MapsToIn1; eauto.
   Qed.
 
@@ -300,7 +300,7 @@ Proof.
 
   assert (M.Disj (defs la) (defs lb))
     by (eapply M.DisjList_KeysSubset_Disj with (d1:= getDefs ma); eauto).
-  
+
   unfold wellHidden in *; dest.
   destruct la as [anna dsa csa], lb as [annb dsb csb].
   simpl in *; split; dest.
@@ -324,7 +324,7 @@ Proof.
       rewrite M.F.P.F.in_find_iff in *.
       intro Hx; elim H8; clear H8.
       findeq.
-        
+
   - split.
     + clear H8; red in H1, H2.
       unfold M.KeysDisj, M.KeysSubset in *; intros.
@@ -464,7 +464,7 @@ Proof.
       exact None.
       exact None.
 Qed.
-   
+
 Lemma CanCombineLabel_hide:
   forall la lb,
     CanCombineLabel la lb ->
@@ -568,7 +568,7 @@ Section EmptyDefs.
   Variable m: Modules.
   Variable o: RegsT.
   Variable defsZero: getDefsBodies m = nil.
-  
+
   Theorem substepsInd_zero u l:
     SubstepsInd m o u l ->
     defs l = M.empty _ /\
@@ -795,6 +795,8 @@ Section Calls.
         destruct H2;
           apply in_or_app; right; apply in_or_app;
             intuition.
+    - dependent destruction H.
+      apply (IHae _ _ _ _ H x H0).
     - dependent destruction H.
       apply (IHae _ _ _ _ H x H0).
     - dependent destruction H.
@@ -1113,7 +1115,7 @@ Proof.
   intros; inv H.
   eapply multistep_calls_in; eauto.
 Qed.
-      
+
 Lemma step_defs_disj:
   forall m or u l,
     Step m or u l -> M.KeysDisj (defs l) (getCalls m).
@@ -1340,7 +1342,7 @@ Proof.
     destruct IHSubstepsInd as [ru [rcs [pu [pl ?]]]]; dest; subst.
 
     exists ru, rcs, (M.union pu su), (mergeLabel (getLabel (Meth o0) scs) pl).
-    
+
     destruct pl as [pann pds pcs]; inv H1; inv H3; dest; simpl in *.
     destruct pann as [|]; [inv H7|]; inv H5.
 
@@ -1353,7 +1355,7 @@ Proof.
       * reflexivity.
     + simpl; auto.
     + f_equal; auto.
-      
+
 Qed.
 
 Lemma substep_filterDm:
@@ -2006,4 +2008,3 @@ Section NoRules.
   Qed.
 
 End NoRules.
-

@@ -41,6 +41,7 @@ Section NoCalls.
       + apply IHActionEquiv2 in HAction; auto; subst.
         eapply H2 in HSemAction; eauto.
     - inv H1; destruct_existT; eauto.
+    - inv H1; destruct_existT; eauto.
     - inv H0; auto.
   Qed.
 

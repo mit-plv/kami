@@ -303,6 +303,9 @@ Proof.
   - inv H1; destruct_existT.
     simpl in H0.
     eapply IHActionEquiv; eauto.
+  - inv H1; destruct_existT.
+    simpl in H0.
+    eapply IHActionEquiv; eauto.
   - inv H0; destruct_existT.
     rewrite M.find_empty; auto.
 Qed.
@@ -1293,6 +1296,7 @@ Proof.
       remember (M.find (attrName dm) calls1) as odc1; destruct odc1.
       * inv H3; eapply IHHequiv2; eauto.
       * eapply H0; eauto.
+  - inv H0; destruct_existT; eapply IHHequiv; eauto.
   - inv H0; destruct_existT; eapply IHHequiv; eauto.
   - inv H0; destruct_existT; mred.
 Qed.
