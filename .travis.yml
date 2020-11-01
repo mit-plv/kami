@@ -17,8 +17,7 @@ before_script:
 
 env:
   - COQ_VERSION="master" COQ_PACKAGE="coq"        PPA="ppa:jgross-h/coq-master-daily"
-  - COQ_VERSION="v8.11"  COQ_PACKAGE="coq"        PPA="ppa:jgross-h/coq-8.11-daily"
-  - COQ_VERSION="v8.10"  COQ_PACKAGE="coq"        PPA="ppa:jgross-h/coq-8.10-daily"
+  - COQ_VERSION="v8.12"  COQ_PACKAGE="coq"        PPA="ppa:jgross-h/coq-8.12-daily"
 
 script:
   - (cd .. && git clone https://github.com/mit-plv/coqutil.git && make -C coqutil)
