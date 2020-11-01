@@ -20,6 +20,4 @@ env:
   - COQ_VERSION="v8.12"  COQ_PACKAGE="coq"        PPA="ppa:jgross-h/coq-8.12-daily"
 
 script:
-  - (cd .. && git clone https://github.com/mit-plv/coqutil.git && make -C coqutil)
-  - (cd .. && git clone https://github.com/mit-plv/riscv-coq.git && make -C riscv-coq)
   - make
