@@ -174,7 +174,7 @@ Section ProcDecSC.
       + destruct x1; [discriminate|reflexivity].
       + rewrite wnot_not_zero_wplusone by assumption.
         destruct x1; [discriminate|].
-        simpl; rewrite <-Nat.add_assoc; reflexivity.
+        simpl; rewrite <-PeanoNat.Nat.add_assoc; reflexivity.
       + destruct x1; [discriminate|].
         simpl; rewrite <-wplus_assoc, <-natToWord_S.
         reflexivity.
@@ -259,11 +259,11 @@ Section ProcDecSC.
         
       + specialize (H8 eq_refl); clear H9; kinv_red.
         unfold type, ilist_to_fun_m in *; simpl in *.
-        destruct (eq_nat_dec (#pinitRsOfsv + Datatypes.length x3)
-                             (NatLib.pow2 iaddrSize - 1)).
+        destruct (Peano_dec.eq_nat_dec (#pinitRsOfsv + Datatypes.length x3)
+                                       (NatLib.pow2 iaddrSize - 1)).
         * exists (Some "pgmInitEnd"%string); kinv_constr; kinv_eq.
           { simpl; rewrite e.
-            destruct (Nat.eq_dec _ _); [|reflexivity].
+            destruct (PeanoNat.Nat.eq_dec _ _); [|reflexivity].
             pose proof (NatLib.pow2_zero iaddrSize); lia.
           }
           { cbn; find_if_inside; [reflexivity|].
@@ -302,8 +302,8 @@ Section ProcDecSC.
           }
         * assert (#pinitRsOfsv + Datatypes.length x3 < NatLib.pow2 iaddrSize - 1)%nat.
           { assert (#pinitRsOfsv + Datatypes.length x3 < NatLib.pow2 iaddrSize)%nat.
-            { rewrite <-Nat.add_assoc, Nat.add_comm with (n:= Datatypes.length x) in H0.
-              simpl in H0; rewrite Nat.add_assoc in H0.
+            { rewrite <-PeanoNat.Nat.add_assoc, PeanoNat.Nat.add_comm with (n:= Datatypes.length x) in H0.
+              simpl in H0; rewrite PeanoNat.Nat.add_assoc in H0.
               destruct x; [discriminate|simpl in H0].
               destruct pinitRqv; simpl in H0;
                 pose proof (wordToNat_bound pinitRqOfsv); lia.
@@ -311,7 +311,7 @@ Section ProcDecSC.
             lia.
           }
           exists (Some "pgmInit"%string); kinv_constr; kinv_eq.
-          { simpl; destruct (Nat.eq_dec _ _); [lia|reflexivity]. }
+          { simpl; destruct (PeanoNat.Nat.eq_dec _ _); [lia|reflexivity]. }
           { cbn; find_if_inside; [|reflexivity].
             apply wnot_zero_wones in e.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) in e.
