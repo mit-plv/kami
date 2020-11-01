@@ -9,4 +9,4 @@ To build
 --------
 
 - `make` generates an executable named `Main.native`
-- `./Main.native -header Header.bsv [bluespec_filename.bsv]` generates the Bluespec program.
+- `./Main.native [-d] [-header ..] [-top ..] [-ifc ..] [filename.bsv]` generates the Bluespec program. Try `./Main.native --help` to see the usage.
