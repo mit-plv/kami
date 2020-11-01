@@ -1,4 +1,4 @@
-Require Import Ascii Bool String List Omega.
+Require Import Ascii Bool String List Lia.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
@@ -544,11 +544,11 @@ Section Facts.
       rewrite wordToNat_natToWord_idempotent'.
       + reflexivity.
       + apply PeanoNat.Nat.le_lt_trans with (m:= sz).
-        * omega.
-        * rewrite Nat.add_1_r.
+        * lia.
+        * rewrite PeanoNat.Nat.add_1_r.
           destruct sz.
-          { simpl; omega. }
-          { apply Nat.log2_spec; omega. }
+          { simpl; lia. }
+          { apply PeanoNat.Nat.log2_spec; lia. }
   Qed.
 
   Lemma memStoreBytes'_updateBytes:

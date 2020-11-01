@@ -1,9 +1,8 @@
 Require Import Coq.Arith.Div2.
-Require Import Coq.micromega.Lia.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import N_Z_nat_conversions.
-Require Export Nlia.
+Require Export Lia Nlia.
 
 Set Implicit Arguments.
 

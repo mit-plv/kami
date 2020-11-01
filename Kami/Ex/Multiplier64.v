@@ -1,4 +1,4 @@
-Require Import Bool String List.
+Require Import Bool String List Lia.
 Require Import Lib.CommonTactics Lib.NatLib Lib.Indexer
         Lib.Struct Lib.DepEq Lib.Word Lib.FMap Lib.Reflection.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tactics.
@@ -50,7 +50,7 @@ Section WordEx.
     intros.
     pose proof (eq_sigT_fst H); subst.
     destruct_existT.
-    apply wordToNat_existT; [omega|].
+    apply wordToNat_existT; [lia|].
 
     rewrite wordToNat_wrshifta.
     change (pow2 1) with 2.
@@ -74,19 +74,19 @@ Section WordEx.
     unfold rtrunc2, wordToNat; fold wordToNat.
     destruct b, b0.
     - replace (S (S (wordToNat w * 2) * 2))
-        with (3 + wordToNat w * 4) by omega.
+        with (3 + wordToNat w * 4) by lia.
       rewrite Nat.div_add by discriminate.
       reflexivity.
     - replace (S (wordToNat w * 2 * 2))
-        with (1 + wordToNat w * 4) by omega.
+        with (1 + wordToNat w * 4) by lia.
       rewrite Nat.div_add by discriminate.
       reflexivity.
     - replace (S (wordToNat w * 2) * 2)
-        with (2 + wordToNat w * 4) by omega.
+        with (2 + wordToNat w * 4) by lia.
       rewrite Nat.div_add by discriminate.
       reflexivity.
     - replace (wordToNat w * 2 * 2)
-        with (wordToNat w * 4) by omega.
+        with (wordToNat w * 4) by lia.
       apply eq_sym, Nat.div_mul; discriminate.
   Qed.
 
@@ -100,7 +100,7 @@ Section WordEx.
     intros.
     pose proof (eq_sigT_fst H); subst.
     destruct_existT.
-    apply wordToNat_existT; [omega|].
+    apply wordToNat_existT; [lia|].
 
     rewrite wordToNat_wrshifta.
     change (pow2 2) with 4.
@@ -108,7 +108,7 @@ Section WordEx.
     pose proof (combine_sext wl wu 2).
     apply existT_wordToNat in H; rewrite <-H.
     rewrite wordToNat_combine.
-    replace (pow2 (S (S (S sl)))) with (4 * pow2 (S sl)) by (simpl; omega).
+    replace (pow2 (S (S (S sl)))) with (4 * pow2 (S sl)) by (simpl; lia).
     rewrite <-Nat.mul_assoc.
     rewrite Nat.mul_comm with (n:= 4).
     rewrite Nat.div_add by discriminate.
@@ -486,7 +486,7 @@ Section Multiplier64.
       - specialize (IHw _ _ eq_refl JMeq_refl).
         unfold wordToB2 in IHw; rewrite IHw; clear IHw.
         destruct b, b1, b0; cbn;
-          repeat (rewrite wordToZ_WS_0 || rewrite wordToZ_WS_1); omega.
+          repeat (rewrite wordToZ_WS_0 || rewrite wordToZ_WS_1); lia.
     Qed.
 
     Lemma wordToB2_bwordToZ:
@@ -494,7 +494,7 @@ Section Multiplier64.
         bwordToZ (wordToB2 w~0) = wordToZ w.
     Proof.
       dependent destruction w; [reflexivity|].
-      rewrite wordToB2_bwordToZ'; omega.
+      rewrite wordToB2_bwordToZ'; lia.
     Qed.
 
     Lemma wordToB2_bwordToZ_step:
@@ -509,10 +509,10 @@ Section Multiplier64.
       - destruct b, b0; cbn; reflexivity.
       - rewrite Pos2Z.inj_xO with (p:= p).
         rewrite Z.mul_comm; remember (2 * Z.pos p)%Z as tp; clear Heqtp.
-        destruct b, b0; cbn; omega.
+        destruct b, b0; cbn; lia.
       - rewrite Pos2Z.neg_xO with (p:= p).
         rewrite Z.mul_comm; remember (2 * Z.neg p)%Z as tp; clear Heqtp.
-        destruct b, b0; cbn; omega.
+        destruct b, b0; cbn; lia.
     Qed.
 
     Definition encodeB4 (b1 b2 b3: bool) :=
@@ -567,7 +567,7 @@ Section Multiplier64.
         dependent destruction w.
         + destruct b, b0, b1; cbn; reflexivity.
         + cbn; remember (bwordToZ (wordToB4' w b0 b)) as ww; clear Heqww.
-          destruct b, b0, b1, b2; cbn; omega.
+          destruct b, b0, b1, b2; cbn; lia.
     Qed.
 
     Lemma wordToB4_bwordToZ_step:
@@ -586,13 +586,13 @@ Section Multiplier64.
           rewrite Pos2Z.inj_xO with (p:= p).
           rewrite Z.mul_comm with (n:= Z.pos p); remember (2 * Z.pos p)%Z as tp; clear Heqtp.
           Opaque Z.mul.
-          destruct b, b0, b1; cbn; omega.
+          destruct b, b0, b1; cbn; lia.
           Transparent Z.mul.
         + rewrite Pos2Z.neg_xO with (p:= (p~0)%positive).
           rewrite Pos2Z.neg_xO with (p:= p).
           rewrite Z.mul_comm with (n:= Z.neg p); remember (2 * Z.neg p)%Z as tp; clear Heqtp.
           Opaque Z.mul.
-          destruct b, b0, b1; cbn; omega.
+          destruct b, b0, b1; cbn; lia.
           Transparent Z.mul.
     Qed.
 
@@ -650,7 +650,7 @@ Section Multiplier64.
       rewrite wordToZ_wzero'.
       reflexivity.
     - rewrite Z.add_0_l.
-      replace (S sz - sz - 1) with 0 by omega.
+      replace (S sz - sz - 1) with 0 by lia.
       simpl; rewrite <-wordToB2_bwordToZ.
       rewrite Z.mul_1_r.
       reflexivity.
@@ -675,7 +675,7 @@ Section Multiplier64.
     : word (S sus + MultNumBitsExt).
   Proof.
     assert (Hsu: sus + MultNumBitsExt + 1 = S sus + MultNumBitsExt)
-      by (abstract omega).
+      by (abstract lia).
     refine (if weq wl WO~0~1 then _
             else if weq wl WO~1~0 then _
                  else _).
@@ -688,7 +688,7 @@ Section Multiplier64.
     : word (S sus + MultNumBitsExt).
   Proof.
     assert (Hsu: sus + (MultNumBitsExt + 1) = S sus + MultNumBitsExt)
-      by (abstract omega).
+      by (abstract lia).
     refine (if weq wl WO~0~0~1 then _
             else if weq wl WO~0~1~0 then _
                  else if weq wl WO~0~1~1 then _
@@ -767,24 +767,24 @@ Section Multiplier64.
     - change (1 + S MultNumBitsExt + MultNumBitsExt)
         with (1 + MultNumBitsExt + S MultNumBitsExt).
       rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace MultNumBitsExt with (sus + S sl) at 2 by (cbn; cbn in H; omega).
+      replace MultNumBitsExt with (sus + S sl) at 2 by (cbn; cbn in H; lia).
       reflexivity.
     - change (1 + S MultNumBitsExt + MultNumBitsExt)
         with (1 + MultNumBitsExt + S MultNumBitsExt).
       rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace MultNumBitsExt with (sus + S sl) at 3 by (cbn; cbn in H; omega).
+      replace MultNumBitsExt with (sus + S sl) at 3 by (cbn; cbn in H; lia).
       reflexivity.
 
     - rewrite wrshifta_wzero, sext_wzero, extz_zero.
-      replace (S sl + (S sus + MultNumBitsExt + 1)) with MultBits by omega.
+      replace (S sl + (S sus + MultNumBitsExt + 1)) with MultBits by lia.
       reflexivity.
   Qed.
 
@@ -801,18 +801,18 @@ Section Multiplier64.
     repeat destruct (weq _ _).
 
     - rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; omega).
+      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; lia).
       reflexivity.
     - rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; omega).
+      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; lia).
       reflexivity.
 
     - erewrite existT_wrshifta
@@ -826,7 +826,7 @@ Section Multiplier64.
       rewrite extz_sext.
       apply existT_sext.
       rewrite extz_extz.
-      replace (S sl + S sus) with MultNumBitsExt by (cbn; cbn in H; omega).
+      replace (S sl + S sus) with MultNumBitsExt by (cbn; cbn in H; lia).
       reflexivity.
     - erewrite existT_wrshifta
         by (erewrite existT_wlshift
@@ -839,26 +839,26 @@ Section Multiplier64.
       rewrite extz_sext.
       apply existT_sext.
       rewrite extz_extz.
-      replace (S sl + S sus) with MultNumBitsExt by (cbn; cbn in H; omega).
+      replace (S sl + S sus) with MultNumBitsExt by (cbn; cbn in H; lia).
       reflexivity.
       
     - rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; omega).
+      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; lia).
       reflexivity.
     - rewrite wrshifta_extz_sext.
-      apply wordToZ_existT; [cbn; cbn in H; omega|].
+      apply wordToZ_existT; [cbn; cbn in H; lia|].
       wordToZ_red.
       rewrite <-Z.mul_assoc, <-Nat2Z.inj_mul.
       rewrite <-pow2_add_mul.
-      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; omega).
+      replace (MultNumBitsExt - 1) with (sus + S sl) by (cbn; cbn in H; lia).
       reflexivity.
 
     - rewrite wrshifta_wzero, sext_wzero, extz_zero.
-      replace (S sl + (S sus + MultNumBitsExt + 2)) with MultBits by omega.
+      replace (S sl + (S sus + MultNumBitsExt + 2)) with MultBits by lia.
       reflexivity.
   Qed.
 
@@ -887,7 +887,7 @@ Section Multiplier64.
     - rewrite sext_wzero, wplus_wzero_1.
       rewrite Z.mul_0_r.
       rewrite sext_wordToZ.
-      omega.
+      lia.
   Qed.
   
   Lemma booth4AddM_booth4AddU:
@@ -996,14 +996,14 @@ Section Multiplier64.
         apply Nat2Z.inj_le.
         rewrite pow2_add_mul.
         pose proof (zero_lt_pow2 n).
-        replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by omega.
-        apply mult_le_compat_l; omega.
+        replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by lia.
+        apply mult_le_compat_l; lia.
       + eapply Z.lt_le_trans; [eassumption|].
         apply Nat2Z.inj_le.
         rewrite pow2_add_mul.
         pose proof (zero_lt_pow2 n).
-        replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by omega.
-        apply mult_le_compat_l; omega.
+        replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by lia.
+        apply mult_le_compat_l; lia.
   Qed.
 
   Lemma boothStepInv_booth4Step:
@@ -1046,16 +1046,16 @@ Section Multiplier64.
       + rewrite wordToB2_wordToB4.
         rewrite <-H0, <-Z.add_assoc.
         replace (S sus + MultNumBitsExt + 2 - MultNumBitsExt - 1)
-          with (S (S sus)) by omega.
+          with (S (S sus)) by lia.
         apply Z.add_cancel_l.
-        replace (S sus + MultNumBitsExt - MultNumBitsExt - 1) with sus by omega.
+        replace (S sus + MultNumBitsExt - MultNumBitsExt - 1) with sus by lia.
         rewrite wordToB4_bwordToZ_step.
         rewrite Z.mul_add_distr_r.
         rewrite Z.add_comm.
         f_equal.
         * replace (Z.of_nat (pow2 (S (S sus)))) with (4 * Z.of_nat (pow2 sus))%Z
             by (do 2 rewrite pow2_S_z; ring).
-          rewrite Z.mul_assoc; f_equal; omega.
+          rewrite Z.mul_assoc; f_equal; lia.
         * replace (split1 3 (MultBits - 3) (evalExpr we)) with (split1 3 sl wl)
             by (apply eq_sym; eauto using split1_combine_existT).
           apply booth4AddU_bbToZ.
@@ -1098,16 +1098,16 @@ Section Multiplier64.
       + rewrite Z.mul_add_distr_l, <-H.
         apply booth2AddM_booth2AddU; assumption.
       + rewrite <-H0, <-Z.add_assoc.
-        replace (S sus + MultNumBitsExt + 1 - MultNumBitsExt - 1) with (S sus) by omega.
+        replace (S sus + MultNumBitsExt + 1 - MultNumBitsExt - 1) with (S sus) by lia.
         apply Z.add_cancel_l.
-        replace (S sus + MultNumBitsExt - MultNumBitsExt - 1) with sus by omega.
+        replace (S sus + MultNumBitsExt - MultNumBitsExt - 1) with sus by lia.
         rewrite wordToB2_bwordToZ_step.
         rewrite Z.mul_add_distr_r.
         rewrite Z.add_comm.
         f_equal.
         * replace (Z.of_nat (pow2 (S sus))) with (2 * Z.of_nat (pow2 sus))%Z
             by (rewrite pow2_S_z; ring).
-          rewrite Z.mul_assoc; f_equal; omega.
+          rewrite Z.mul_assoc; f_equal; lia.
         * replace (split1 2 (MultBits - 2) (evalExpr we)) with (split1 2 sl wl)
             by (apply eq_sym; eauto using split1_combine_existT).
           apply booth2AddU_boothToZ.
@@ -1237,7 +1237,7 @@ Section Multiplier64.
           set (extz (combine (x (Fin.FS Fin.F1)) (natToWord (MultNumBitsExt + 1) 0)) 1) as ww.
           pose proof (boothStepInv_init (x Fin.F1) (x (Fin.FS Fin.F1))) as Hinv0.
 
-          assert (pred MultNumBitsExt <> 0) by (cbn; omega).
+          assert (pred MultNumBitsExt <> 0) by (cbn; lia).
           eapply (boothStepInv_boothStep
                     (we:= Var type (SyntaxKind (Bit MultBits)) ww) (sus:= O)
                     Hx1 eq_refl eq_refl eq_refl H12 eq_refl) in Hinv0; [|reflexivity].
@@ -1272,35 +1272,35 @@ Section Multiplier64.
         { subst; clear -n1.
           unfold type in x.
           do 5 (dependent destruction x).
-          destruct b, b0, b1, b2; cbn; try omega.
+          destruct b, b0, b1, b2; cbn; try lia.
           elim n1; reflexivity.
         }
-        do 9 (destruct psl as [|psl]; [omega|]); clear H.
+        do 9 (destruct psl as [|psl]; [lia|]); clear H.
 
         rename H12 into Hinv0.
         eapply (boothStepInv_booth4Step
                   (we:= Var type (SyntaxKind (Bit MultBits)) x2)
                   HmInv eq_refl eq_refl eq_refl eq_refl) in Hinv0; [|eassumption].
         replace (S x5 + MultNumBitsExt + 2)
-          with ((S (S (S x5))) + MultNumBitsExt) in Hinv0 by omega.
+          with ((S (S (S x5))) + MultNumBitsExt) in Hinv0 by lia.
         destruct Hinv0 as [nwl1 [nwu1 [Heq1 Hinv1]]].
         
         eapply (boothStepInv_booth4Step
                   HmInv eq_refl eq_refl eq_refl eq_refl) in Hinv1; [|eassumption].
         replace (S (S (S x5)) + MultNumBitsExt + 2)
-          with (S (S (S (S (S x5)))) + MultNumBitsExt) in Hinv1 by omega.
+          with (S (S (S (S (S x5)))) + MultNumBitsExt) in Hinv1 by lia.
         destruct Hinv1 as [nwl2 [nwu2 [Heq2 Hinv2]]].
 
         eapply (boothStepInv_booth4Step
                   HmInv eq_refl eq_refl eq_refl eq_refl) in Hinv2; [|eassumption].
         replace (S (S (S (S (S x5)))) + MultNumBitsExt + 2)
-          with (S (S (S (S (S (S (S x5)))))) + MultNumBitsExt) in Hinv2 by omega.
+          with (S (S (S (S (S (S (S x5)))))) + MultNumBitsExt) in Hinv2 by lia.
         destruct Hinv2 as [nwl3 [nwu3 [Heq3 Hinv3]]].
 
         eapply (boothStepInv_booth4Step
                   HmInv eq_refl eq_refl eq_refl eq_refl) in Hinv3; [|eassumption].
         replace (S (S (S (S (S (S (S x5)))))) + MultNumBitsExt + 2)
-          with (S (S (S (S (S (S (S (S (S x5)))))))) + MultNumBitsExt) in Hinv3 by omega.
+          with (S (S (S (S (S (S (S (S (S x5)))))))) + MultNumBitsExt) in Hinv3 by lia.
         destruct Hinv3 as [nwl4 [nwu4 [Heq4 Hinv4]]].
 
         eexists; exists nwl4.
@@ -1313,7 +1313,7 @@ Section Multiplier64.
             replace w with (natToWord (S MultLogNumPhases) 1) by reflexivity
           end.
           rewrite <-wordToNat_natToWord_pred by assumption.
-          omega.
+          lia.
         * rewrite booth4Step_evalExpr_var with (e:= booth4Step _ _ (#x2)%kami_expr).
           rewrite booth4Step_evalExpr_var with (e:= booth4Step _ _ (booth4Step _ _ _)).
           rewrite booth4Step_evalExpr_var.
@@ -1374,7 +1374,7 @@ Section Multiplier64.
 
       eexists; split; kinv_constr.
       apply boothStepInv_finish in H7; dest.
-      assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H6; cbn; cbn in H6; omega).
+      assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H6; cbn; cbn in H6; lia).
       subst; destruct_existT.
       rewrite idElementwiseId; unfold id.
       do 3 f_equal.
@@ -1394,7 +1394,7 @@ Section Multiplier64.
         pose proof (sext_wordToZ 65 bsiR).
         cbn; cbn in H2; rewrite H2.
         cbn in H0; rewrite <-H0.
-        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; omega); subst.
+        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; lia); subst.
         destruct_existT.
         pose proof (sext_wordToZ 1 x4); cbn; cbn in H; rewrite H.
         rewrite sext_split1.
@@ -1416,7 +1416,7 @@ Section Multiplier64.
         pose proof (sext_wordToZ 65 bsiR).
         cbn; cbn in H2; rewrite H2.
         cbn in H0; rewrite <-H0.
-        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; omega); subst.
+        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; lia); subst.
         destruct_existT.
         pose proof (sext_wordToZ 1 x4); cbn; cbn in H; rewrite H.
         rewrite sext_split1.

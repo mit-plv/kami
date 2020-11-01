@@ -1,4 +1,4 @@
-Require Import Bool String List.
+Require Import Bool String List Lia.
 Require Import Lib.CommonTactics Lib.NatLib Lib.Indexer
         Lib.Struct Lib.DepEq Lib.Word Lib.FMap Lib.Reflection.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tactics.
@@ -102,7 +102,7 @@ Section Divider32.
     - rewrite extz_pow2_wordToZ.
       change (2 * DivNumBits) with (DivNumBits + DivNumBits).
       rewrite zext_wordToNat_equal_Z by discriminate.
-      omega.
+      lia.
   Qed.
 
   Lemma nrDivNextAdder_bound:
@@ -115,23 +115,22 @@ Section Divider32.
     intros; subst.
     remember (wmsb pq false) as pqb; destruct pqb.
     - apply eq_sym, wmsb_true_neg in Heqpqb.
-      rewrite Z.abs_neq in H0 by omega.
+      rewrite Z.abs_neq in H0 by lia.
       destruct (wordToZ pq).
-      + cbn; omega.
-      + replace (1 * d)%Z with d by omega.
-        apply Z.abs_le; split; omega.
-      + replace (1 * d)%Z with d by omega.
-        apply Z.abs_le; split; omega.
+      + cbn; lia.
+      + replace (1 * d)%Z with d by lia.
+        apply Z.abs_le; split; lia.
+      + replace (1 * d)%Z with d by lia.
+        apply Z.abs_le; split; lia.
     - apply eq_sym, wmsb_false_pos in Heqpqb.
-      rewrite Z.abs_eq in H0 by omega.
+      rewrite Z.abs_eq in H0 by lia.
       destruct (wordToZ pq).
-      + replace (0 + -1 * d)%Z with (-d)%Z by omega.
-        destruct d; cbn; try omega.
-        pose proof (Zlt_neg_0 p); omega.
-      + replace (-1 * d)%Z with (-d)%Z by omega.
-        apply Z.abs_le; split; omega.
-      + replace (-1 * d)%Z with (-d)%Z by omega.
-        apply Z.abs_le; split; omega.
+      + replace (0 + -1 * d)%Z with (-d)%Z by lia.
+        destruct d; cbn; lia.
+      + replace (-1 * d)%Z with (-d)%Z by lia.
+        apply Z.abs_le; split; lia.
+      + replace (-1 * d)%Z with (-d)%Z by lia.
+        apply Z.abs_le; split; lia.
   Qed.
 
   Lemma nrDivStep_eval:
@@ -181,7 +180,7 @@ Section Divider32.
   Proof.
     unfold pn2binE; intros; cbn.
     cbv [evalZeroExtendTrunc evalSignExtendTrunc].
-    destruct (lt_dec _ _); [|omega].
+    destruct (lt_dec _ _); [|lia].
     apply existT_wminus.
     - unfold zext, eq_rec.
       change (fun n2 => word n2) with word.
@@ -235,14 +234,14 @@ Section Divider32.
               rewrite <-wplus_WS_0 in Hx.
               rewrite wordToZ_WS_0 in Hx.
               rewrite wordToZ_WS_1' in Hx.
-              omega.
+              lia.
             }
             { rewrite wneg_WS_1 in Hx.
               rewrite wplus_comm in Hx.
               rewrite <-wplus_WS_0 in Hx.
               rewrite wordToZ_WS_0 in Hx.
               rewrite wordToZ_WS_1' in Hx.
-              omega.
+              lia.
             }
           }
       + unfold wminus.
@@ -460,7 +459,7 @@ Section Divider32.
     - rewrite zext_wordToNat_equal_Z by discriminate.
       replace (wordToZ (pn2binE WO)) with 0%Z by reflexivity.
       rewrite Z.mul_0_r, Z.mul_0_l.
-      omega.
+      lia.
     - apply Z.le_trans with (m:= (1 * Z.of_nat (pow2 DivNumBits))%Z).
       + rewrite zext_wordToNat_equal_Z by discriminate.
         rewrite Z.mul_1_l.
@@ -470,8 +469,8 @@ Section Divider32.
         apply wordToNat_bound.
       + rewrite Nat.sub_0_r.
         apply Z.mul_le_mono_pos_r.
-        * pose proof (pow2_zero DivNumBits); omega.
-        * omega.
+        * pose proof (pow2_zero DivNumBits); lia.
+        * lia.
   Qed.
 
   Lemma nrDivInv_finish:
@@ -485,7 +484,7 @@ Section Divider32.
     replace (Z.of_nat (pow2 (DivNumBits - DivNumBits))) with 1%Z in * by reflexivity.
     rewrite Z.mul_1_r in *.
     split; [|assumption].
-    omega.
+    lia.
   Qed.
 
   Lemma nat_div_modulo_unique:
@@ -521,7 +520,7 @@ Section Divider32.
       destruct (weq _ _).
       + destruct (weq _ _); [rewrite e in e0; discriminate|clear e n].
         destruct (weq _ _); subst.
-        * cbn; cbn in d, Hd; omega.
+        * cbn; cbn in d, Hd; lia.
         * change (pred (2 * DivNumBits) + 1) with (DivNumBits + DivNumBits) in *.
           apply zext_size in H1; dest; subst.
           { unfold zext; rewrite split1_combine.
@@ -553,7 +552,7 @@ Section Divider32.
           rewrite zext_wordToNat_equal_Z by discriminate.
           apply wmsb_true_neg in H1.
           apply Z.abs_le in H0; dest.
-          apply Z.abs_lt; split; omega.
+          apply Z.abs_lt; split; lia.
         }
 
         assert (Z.abs (wordToZ (prem ^+ zext d DivNumBits)) < Z.of_nat (pow2 DivNumBits))%Z.
@@ -570,7 +569,7 @@ Section Divider32.
                 rewrite wmsb_zext by discriminate; reflexivity).
           apply Z.abs_le in H0; dest.
           rewrite zext_wordToNat_equal_Z by discriminate.
-          omega.
+          lia.
         }
 
         apply wmsb_false_pos in H4.
@@ -591,24 +590,24 @@ Section Divider32.
           rewrite zext_wordToNat_equal_Z in H by discriminate.
           assert (wordToZ pq + 1 = Z.of_nat (wordToNat (split1 DivNumBits 1 (pq ^+ $1))))%Z.
           { rewrite <-Z.mul_succ_r, <-Z.add_1_r in H.
-            assert (Z.of_nat (wordToNat d) > 0)%Z by omega.
+            assert (Z.of_nat (wordToNat d) > 0)%Z by lia.
             assert (wordToZ pq + 1 >= 0)%Z.
             { pose proof (Zle_0_nat (wordToNat x)).
               rewrite H in H1.
-              apply Z.mul_nonneg_cancel_l in H1; [|omega].
-              omega.
+              apply Z.mul_nonneg_cancel_l in H1; [|lia].
+              lia.
             }
             assert (wordToZ pq + 1 < Z.of_nat (pow2 DivNumBits))%Z.
             { destruct (Z_lt_ge_dec (wordToZ pq + 1) (Z.of_nat (pow2 DivNumBits))); auto.
-              apply Zmult_ge_compat_l with (p:= Z.of_nat (wordToNat d)) in g; [|omega].
+              apply Zmult_ge_compat_l with (p:= Z.of_nat (wordToNat d)) in g; [|lia].
               rewrite <-H in g.
               assert (Z.of_nat (pow2 DivNumBits) <=
                       Z.of_nat (wordToNat d) * Z.of_nat (pow2 DivNumBits))%Z.
               { rewrite Z.mul_comm.
-                apply (Z.le_mul_diag_r _ (Z.of_nat (wordToNat d))); [|omega].
+                apply (Z.le_mul_diag_r _ (Z.of_nat (wordToNat d))); [|lia].
                 change 0%Z with (Z.of_nat 0).
                 apply Nat2Z.inj_lt.
-                pose proof (pow2_zero DivNumBits); omega.
+                pose proof (pow2_zero DivNumBits); lia.
               }
               apply Z.ge_le_iff in g.
               pose proof (Z.le_trans _ _ _ H2 g).
@@ -617,7 +616,7 @@ Section Divider32.
                 apply Nat2Z.inj_lt.
                 apply wordToNat_bound.
               }
-              omega.
+              lia.
             }
 
             assert (wordToZ pq + 1 = wordToZ (pq ^+ $1))%Z.
@@ -625,7 +624,7 @@ Section Divider32.
                       wordToZ pq + wordToZ (natToWord (DivNumBits + 1) 1) <
                       Z.of_nat (pow2 DivNumBits))%Z.
               { change (wordToZ (natToWord _ _)) with 1%Z.
-                split; omega.
+                split; lia.
               }
               apply wordToZ_wplus_bound in H3.
               assumption.
@@ -645,24 +644,24 @@ Section Divider32.
           rewrite <-Nat2Z.inj_mul in H.
           apply Nat2Z.inj in H.
           rewrite <-H.
-          cbn; omega.
+          cbn; lia.
         * assert (wmsb pq false = false).
           { apply wmsb_false_pos.
             destruct (Z_ge_lt_dec (wordToZ pq) 0%Z); auto.
             exfalso.
-            assert (wordToZ pq <= -1)%Z by omega.
+            assert (wordToZ pq <= -1)%Z by lia.
             assert (Z.of_nat (wordToNat d) * wordToZ pq <= Z.abs (wordToZ prem) * (-1))%Z.
             { etransitivity.
-              { eapply Z.mul_le_mono_nonpos_r; [omega|eassumption]. }
-              { eapply Z.mul_le_mono_nonneg_l; [apply Z.abs_nonneg|omega]. }
+              { eapply Z.mul_le_mono_nonpos_r; [lia|eassumption]. }
+              { eapply Z.mul_le_mono_nonneg_l; [apply Z.abs_nonneg|lia]. }
             }
             assert (Z.of_nat (wordToNat x) <= 0)%Z.
             { rewrite H.
               rewrite wmsb_Zabs_pos in H3 by assumption.
-              omega.
+              lia.
             }
             pose proof (Nat2Z.is_nonneg (wordToNat x)).
-            assert (x = $0) by (apply wordToNat_inj; simpl; omega); subst.
+            assert (x = $0) by (apply wordToNat_inj; simpl; lia); subst.
             elim n; clear n.
             simpl in H.
 
@@ -671,11 +670,11 @@ Section Divider32.
             rewrite Z.abs_opp, Z.abs_mul, Zabs_of_nat in H0.
 
             replace (Z.of_nat (wordToNat d)) with (Z.of_nat (wordToNat d) * 1)%Z
-              in H0 at 2 by omega.
+              in H0 at 2 by lia.
             apply Z.mul_le_mono_pos_l in H0;
-              [|change 0%Z with (Z.of_nat 0); apply Nat2Z.inj_lt; omega].
+              [|change 0%Z with (Z.of_nat 0); apply Nat2Z.inj_lt; lia].
             apply Z.abs_le in H0; dest.
-            assert (wordToZ pq = -1)%Z by (cbn; cbn in H0, H2; omega).
+            assert (wordToZ pq = -1)%Z by (cbn; cbn in H0, H2; lia).
             cbn in H7; rewrite H7 in H.
             change (-1)%Z with (- (1))%Z in H.
             rewrite Z.mul_opp_r, Z.opp_involutive, Z.mul_1_r in H.
@@ -714,32 +713,32 @@ Section Divider32.
             destruct b; intuition idtac].
         clear e n0.
 
-        assert (Z.of_nat (wordToNat d) > 0)%Z by omega.
+        assert (Z.of_nat (wordToNat d) > 0)%Z by lia.
         assert (wordToZ pq - 1 = Z.of_nat (wordToNat (split1 DivNumBits 1 (pq ^- $ (1)))))%Z.
         { assert (wordToZ pq - 1 >= 0)%Z.
           { apply wmsb_true_neg in H1.
             assert (Z.of_nat (wordToNat d) * wordToZ pq + wordToZ prem >= 0)%Z.
             { rewrite <-H.
-              pose proof (Nat2Z.is_nonneg (wordToNat x)); omega.
+              pose proof (Nat2Z.is_nonneg (wordToNat x)); lia.
             }
-            assert (Z.of_nat (wordToNat d) * wordToZ pq >= -(wordToZ prem))%Z by omega.
-            assert (Z.of_nat (wordToNat d) * wordToZ pq > 0)%Z by omega.
+            assert (Z.of_nat (wordToNat d) * wordToZ pq >= -(wordToZ prem))%Z by lia.
+            assert (Z.of_nat (wordToNat d) * wordToZ pq > 0)%Z by lia.
             assert (wordToZ pq > 0)%Z.
             { apply Z.gt_lt_iff in H5.
               rewrite Z.mul_comm in H5.
-              apply Zmult_gt_0_lt_0_reg_r in H5; omega.
+              apply Zmult_gt_0_lt_0_reg_r in H5; lia.
             }
-            omega.
+            lia.
           }
 
           assert (wordToZ pq - 1 < Z.of_nat (pow2 DivNumBits))%Z.
           { remember (wmsb pq false) as pqmsb; destruct pqmsb.
-            { apply eq_sym, wmsb_true_neg in Heqpqmsb; omega. }
+            { apply eq_sym, wmsb_true_neg in Heqpqmsb; lia. }
             { apply eq_sym, zext_size_1 in Heqpqmsb; dest; subst.
               rewrite zext_wordToNat_equal_Z by discriminate.
               assert (Z.of_nat (wordToNat x0) < Z.of_nat (pow2 DivNumBits))%Z
                 by (apply Nat2Z.inj_lt, wordToNat_bound).
-              omega.
+              lia.
             }
           }
 
@@ -751,7 +750,7 @@ Section Divider32.
               rewrite wneg_wordToZ by discriminate.
               change (S DivNumBits) with (DivNumBits + 1).
               change (wordToZ (natToWord _ _)) with 1%Z.
-              split; omega.
+              split; lia.
             }
             apply wordToZ_wplus_bound in H5.
             assumption.
@@ -778,19 +777,19 @@ Section Divider32.
 
           assert (exists sr, prem ^+ zext d DivNumBits = zext sr DivNumBits); dest.
           { apply Z.abs_le in H0; dest.
-            assert (wordToZ prem + Z.of_nat (wordToNat d) >= 0)%Z by omega.
+            assert (wordToZ prem + Z.of_nat (wordToNat d) >= 0)%Z by lia.
             assert (wordToZ prem + Z.of_nat (wordToNat d) < Z.of_nat (pow2 DivNumBits))%Z.
             { apply wmsb_true_neg in H1.
               assert (Z.of_nat (wordToNat d) < Z.of_nat (pow2 DivNumBits))%Z.
               { apply Nat2Z.inj_lt.
                 apply wordToNat_bound.
               }
-              omega.
+              lia.
             }
             rewrite <-H4 in *.
             apply zext_size.
             { apply wordToZ_bound_weakened.
-              apply Z.abs_lt; split; omega.
+              apply Z.abs_lt; split; lia.
             }
             { apply wmsb_false_pos; assumption. }
           }
@@ -805,7 +804,7 @@ Section Divider32.
         apply Nat2Z.inj.
         rewrite Nat2Z.inj_add, Nat2Z.inj_mul.
         rewrite <-H3, <-H4.
-        rewrite Z.mul_sub_distr_l; omega.
+        rewrite Z.mul_sub_distr_l; lia.
         
   Qed.
 
@@ -832,7 +831,7 @@ Section Divider32.
         remember (wordToNat d) as dn; destruct dn; [elim Hd; reflexivity|].
         destruct dn; [rewrite Nat.div_1_r, Heqxn; apply wordToNat_bound|].
         etransitivity.
-        * apply Nat.div_lt; omega.
+        * apply Nat.div_lt; lia.
         * rewrite Heqxn; apply wordToNat_bound.
     - apply wordToNat_inj.
       rewrite wordToNat_natToWord_2.
@@ -882,7 +881,7 @@ Section Divider32.
           replace (combine (combine $1 $0) $0) with (natToWord (1 + sq + srr) 1).
           { replace (1 + sq + srr) with DivNumBits; [reflexivity|].
             apply EqdepFacts.eq_sigT_fst in H3.
-            cbn; cbn in H3; omega.
+            cbn; cbn in H3; lia.
           }
           { rewrite combine_one; reflexivity. }
         }
@@ -890,19 +889,19 @@ Section Divider32.
           repeat rewrite extz_extz.
           replace (1 + sq + srr) with DivNumBits; [reflexivity|].
           apply EqdepFacts.eq_sigT_fst in H3.
-          cbn; cbn in H3; omega.
+          cbn; cbn in H3; lia.
         }
 
     - assert (Hxq: wmsb xq false = wmsb (wlshift xq 1) false).
       { assert (exists sprem, prem = sext sprem 1).
-        { apply sext_size; [omega|].
+        { apply sext_size; [lia|].
           apply Z.abs_le in H1; destruct H1.
           assert (Z.of_nat (wordToNat d) * Z.of_nat (pow2 (DivNumBits - sq)) <
                   Z.of_nat (pow2 (srr + 2 * DivNumBits - 1)))%Z.
           { replace (DivNumBits - sq) with (S srr)
               by (apply EqdepFacts.eq_sigT_fst in H3;
-                  assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; omega);
-                  omega).
+                  assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; lia);
+                  lia).
             eapply Z.le_lt_trans.
             { apply Z.mul_le_mono_pos_r.
               { change 0%Z with (Z.of_nat 0).
@@ -917,20 +916,20 @@ Section Divider32.
             { rewrite <-Nat2Z.inj_mul.
               rewrite <-pow2_add_mul.
               apply Nat2Z.inj_lt.
-              apply pow2_inc; [omega|].
-              replace (srr + 2 * DivNumBits - 1) with (srr + (2 * DivNumBits - 1)) by omega.
-              replace (DivNumBits + S srr) with (srr + S DivNumBits) by omega.
+              apply pow2_inc; [lia|].
+              replace (srr + 2 * DivNumBits - 1) with (srr + (2 * DivNumBits - 1)) by lia.
+              replace (DivNumBits + S srr) with (srr + S DivNumBits) by lia.
               apply Nat.add_lt_mono_l.
-              cbn; omega.
+              cbn; lia.
             }
           }
           split.
           { etransitivity; [|exact H1].
             rewrite <-Z.opp_le_mono.
-            omega.
+            lia.
           }
           { eapply Z.le_lt_trans; [exact H2|].
-            omega.
+            lia.
           }
         }
         dest; subst.
@@ -951,7 +950,7 @@ Section Divider32.
         rewrite wmsb_extz in H.
         rewrite wmsb_combine with (b2:= false) in H by (rewrite Nat.add_comm; discriminate).
         rewrite <-H, <-Hxq.
-        apply eq_sym, wmsb_combine; omega.
+        apply eq_sym, wmsb_combine; lia.
       }
       assert (Hprem2: wordToZ prem = wordToZ (split1 _ 1 prem)).
       { apply wmsb_split1_sext in Hprem1; dest; subst.
@@ -964,7 +963,7 @@ Section Divider32.
                                                      (^~ (zext d DivNumBits))) srr) false)).
       { rewrite <-Hprem1.
         rewrite wmsb_extz.
-        apply wmsb_combine_existT with (b1:= false) (b2:= false) in H3; [|omega].
+        apply wmsb_combine_existT with (b1:= false) (b2:= false) in H3; [|lia].
         rewrite <-H3.
         rewrite nrDivNextAdder_wmsb.
         change (2 * DivNumBits) with (DivNumBits + DivNumBits).
@@ -985,10 +984,10 @@ Section Divider32.
         
         assert (Hsq1: DivNumBits - sq = S srr).
         { apply EqdepFacts.eq_sigT_fst in H3.
-          assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; omega).
-          omega.
+          assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; lia).
+          lia.
         }
-        assert (Hsq2: DivNumBits - S sq = srr) by omega.
+        assert (Hsq2: DivNumBits - S sq = srr) by lia.
         rewrite Hsq1, Hsq2.
         destruct (weq _ _).
         * rewrite extz_pow2_wordToZ.
@@ -1030,29 +1029,29 @@ Section Divider32.
         rewrite <-Hprem2.
         replace (Z.of_nat (pow2 (DivNumBits - sq)))
           with (2 * Z.of_nat (pow2 (DivNumBits - S sq)))%Z in H1
-          by (replace (DivNumBits - sq) with (S (DivNumBits - S sq)) by omega;
+          by (replace (DivNumBits - sq) with (S (DivNumBits - S sq)) by lia;
               apply eq_sym, pow2_S_z).
 
         apply nrDivNextAdder_bound.
         * apply Zmult_gt_0_compat.
-          { omega. }
+          { lia. }
           { clear.
             induction (DivNumBits - S sq).
-            { cbn; omega. }
-            { cbn; do 2 rewrite Nat2Z.inj_add; omega. }
+            { cbn; lia. }
+            { cbn; do 2 rewrite Nat2Z.inj_add; lia. }
           }
         * rewrite Z.mul_assoc, Z.mul_comm with (n:= 2%Z).
           rewrite <-Z.mul_assoc.
           assumption.
         * assert (Hsq1: DivNumBits - sq = S srr).
           { apply EqdepFacts.eq_sigT_fst in H3.
-            assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; omega).
-            omega.
+            assert (DivNumBits = S srr + sq) by (cbn; cbn in H3; lia).
+            lia.
           }
-          assert (Hsq2: DivNumBits - S sq = srr) by omega.
+          assert (Hsq2: DivNumBits - S sq = srr) by lia.
           rewrite Hsq2.
           replace (wmsb prem false) with (wmsb (wlshift xq 1) false)
-            by (rewrite <-Hxq; eapply wmsb_combine_existT; eauto; omega).
+            by (rewrite <-Hxq; eapply wmsb_combine_existT; eauto; lia).
           apply nrDivNextAdder_Z_value.
   Qed.
 
@@ -1169,7 +1168,7 @@ Section Divider32.
         { apply eq_sigT_fst in H6.
           clear -Hxz H6.
           unfold DivNumBitsPerPhase in *.
-          cbn in *; omega.
+          cbn in *; lia.
         }
 
         rewrite evalExprRewrite.
@@ -1179,63 +1178,63 @@ Section Divider32.
         generalize dependent nprem0.
         replace (2 * DivNumBits + wordToNat x * DivNumBitsPerPhase)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 7 + 2 * DivNumBits + 1)
-          by (unfold DivNumBitsPerPhase; cbn; omega); intros.
-        eapply nrDivInv_nrDivStep in Hinv0; try reflexivity; try eassumption; try omega.
+          by (unfold DivNumBitsPerPhase; cbn; lia); intros.
+        eapply nrDivInv_nrDivStep in Hinv0; try reflexivity; try eassumption; try lia.
         destruct Hinv0 as [nprem1 [npq1 [Heq1 Hinv1]]].
 
         generalize dependent nprem1.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 7 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 6 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv1; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv1; try reflexivity; try eassumption; try lia.
         clear Heq1 nprem1 npq1; destruct Hinv1 as [nprem2 [npq2 [Heq2 Hinv2]]].
 
         generalize dependent nprem2.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 6 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 5 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv2; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv2; try reflexivity; try eassumption; try lia.
         clear Heq2 nprem2 npq2; destruct Hinv2 as [nprem3 [npq3 [Heq3 Hinv3]]].
 
         generalize dependent nprem3.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 5 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 4 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv3; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv3; try reflexivity; try eassumption; try lia.
         clear Heq3 nprem3 npq3; destruct Hinv3 as [nprem4 [npq4 [Heq4 Hinv4]]].
 
         generalize dependent nprem4.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 4 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 3 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv4; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv4; try reflexivity; try eassumption; try lia.
         clear Heq4 nprem4 npq4; destruct Hinv4 as [nprem5 [npq5 [Heq5 Hinv5]]].
 
         generalize dependent nprem5.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 3 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 2 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv5; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv5; try reflexivity; try eassumption; try lia.
         clear Heq5 nprem5 npq5; destruct Hinv5 as [nprem6 [npq6 [Heq6 Hinv6]]].
 
         generalize dependent nprem6.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 2 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 1 + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv6; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv6; try reflexivity; try eassumption; try lia.
         clear Heq6 nprem6 npq6; destruct Hinv6 as [nprem7 [npq7 [Heq7 Hinv7]]].
 
         generalize dependent nprem7.
         replace ((pred (wordToNat x) * DivNumBitsPerPhase) + 1 + 2 * DivNumBits)
           with ((pred (wordToNat x) * DivNumBitsPerPhase) + 2 * DivNumBits + 1)
-          by omega; intros.
-        eapply nrDivInv_nrDivStep in Hinv7; try reflexivity; try eassumption; try omega.
+          by lia; intros.
+        eapply nrDivInv_nrDivStep in Hinv7; try reflexivity; try eassumption; try lia.
         clear Heq7 nprem7 npq7; destruct Hinv7 as [nprem8 [npq8 [Heq8 Hinv8]]].
 
         generalize dependent nprem8.
         replace (pred (wordToNat x) * DivNumBitsPerPhase + 2 * DivNumBits)
           with (2 * DivNumBits + pred (wordToNat x) * DivNumBitsPerPhase)
-          by omega; intros.
+          by lia; intros.
 
         replace (wordToNat (evalExpr (_ - _)%kami_expr)) with (pred (wordToNat x))
           by (clear -Hxz; simpl;
@@ -1313,8 +1312,8 @@ Section Divider32.
           intro Hx; subst; elim n0; reflexivity.
         }
         specialize (HndiInv HndiDz); clear H5; dest; subst.
-        assert (x1 = 0) by (cbn in H0; omega); subst; clear H0.
-        assert (x3 = 32) by (apply eq_sigT_fst in H1; cbn in H1; omega); subst.
+        assert (x1 = 0) by (cbn in H0; lia); subst; clear H0.
+        assert (x3 = 32) by (apply eq_sigT_fst in H1; cbn in H1; lia); subst.
         cbn in x2, H1; destruct_existT.
 
         apply nrDivInv_finish in H2;

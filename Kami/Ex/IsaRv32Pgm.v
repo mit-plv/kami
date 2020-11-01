@@ -91,7 +91,7 @@ Section RV32Struct.
   Definition UJtypeToRaw (op: nat) (rd: Gpr) (ofs: word 20) :=
     (natToWord 7 op)~~(gprToRaw rd)~~(offsetUJToRaw ofs).
 
-  Fixpoint rv32ToRaw (inst: Rv32): word 32 :=
+  Definition rv32ToRaw (inst: Rv32): word 32 :=
     match inst with
     | JAL rd ofs => UJtypeToRaw opcode_JAL rd ofs
     | JALR rd rs1 ofs => ItypeToRaw opcode_JALR rs1 rd 0 ofs

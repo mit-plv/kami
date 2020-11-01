@@ -1,4 +1,4 @@
-Require Import Bool String List BinNums Omega.
+Require Import Bool String List BinNums Lia.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
@@ -22,7 +22,7 @@ Proof.
     rewrite wones_pow2_minus_one.
     pose proof (wordToNat_bound w2).
     pose proof (NatLib.pow2_zero sz).
-    assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by omega.
+    assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by lia.
     destruct H2; [|assumption].
     assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
     rewrite natToWord_wordToNat, <-wones_natToWord in H3; subst.
@@ -30,7 +30,7 @@ Proof.
     exfalso; auto.
   }
   erewrite wordToNat_plusone; [|eassumption].
-  omega.
+  lia.
 Qed.
 
 Lemma wminus_wplus_transpose:
@@ -214,7 +214,7 @@ Section Invariants.
     - simpl; split; auto.
       rewrite H1; simpl; kinv_eq.
       rewrite wnot_not_zero_wplusone by assumption.
-      rewrite Nat.add_sub.
+      rewrite PeanoNat.Nat.add_sub.
       rewrite natToWord_wordToNat.
       reflexivity.
     - simpl in H0; dest; subst.
@@ -223,7 +223,7 @@ Section Invariants.
         rewrite app_length; simpl.
         rewrite wnot_not_zero_wplusone by assumption.
         unfold type, ilist_to_fun_m; simpl.
-        do 3 f_equal; omega.
+        do 3 f_equal; lia.
       + apply IHelts; auto.
   Qed.
 
@@ -253,7 +253,7 @@ Section Invariants.
         unfold type, ilist_to_fun_m; simpl.
         do 3 f_equal.
         pose proof (NatLib.pow2_zero iaddrSize).
-        rewrite wordToNat_natToWord_2; omega.
+        rewrite wordToNat_natToWord_2; lia.
       + apply IHelts; auto.
   Qed.
 
@@ -279,13 +279,13 @@ Section Invariants.
     intros.
     find_if_inside.
     - destruct oeltv; [exfalso; auto|].
-      destruct ieltv; simpl in H0; [|omega].
-      destruct oeltv; simpl in H0; [|omega].
+      destruct ieltv; simpl in H0; [|lia].
+      destruct oeltv; simpl in H0; [|lia].
       auto.
     - destruct oeltv; [exfalso; auto|].
       simpl in H0.
       exfalso.
-      pose proof (wordToNat_bound pinitRqOfsv); omega.
+      pose proof (wordToNat_bound pinitRqOfsv); lia.
   Qed.
 
   Lemma procDec_inv_ok':
@@ -310,7 +310,7 @@ Section Invariants.
           rewrite app_length; simpl in *.
           rewrite wnot_not_zero_wplusone by assumption.
           unfold type in *; simpl in *.
-          omega.
+          lia.
 
       + kinv_dest_custom procDec_inv_tac; kinv_constr.
         * eapply pgm_init_rq_inv_enq_last; eauto.
@@ -318,7 +318,7 @@ Section Invariants.
           rewrite app_length; simpl in *.
           replace #x1 with (NatLib.pow2 iaddrSize - 1) in H2.
           { pose proof (NatLib.pow2_zero iaddrSize).
-            unfold type in *; simpl in *; omega.
+            unfold type in *; simpl in *; lia.
           }
           { replace x1 with (wones iaddrSize).
             { apply eq_sym, wones_pow2_minus_one. }
@@ -330,7 +330,7 @@ Section Invariants.
         * kinv_regmap_red.
           rewrite wnot_not_zero_wplusone by assumption.
           destruct x1; [discriminate|].
-          simpl in *; omega.
+          simpl in *; lia.
 
       + kinv_dest_custom procDec_inv_tac; kinv_constr.
         apply wnot_zero_wones in e; subst.
@@ -370,7 +370,7 @@ Section Invariants.
           destruct x; [discriminate|].
           kinv_regmap_red.
           unfold type in *; simpl in *.
-          rewrite app_length; simpl; omega.
+          rewrite app_length; simpl; lia.
         * procDec_inv_old; procDec_inv_next 2.
           destruct x; [discriminate|].
           destruct x; [reflexivity|discriminate].
@@ -380,7 +380,7 @@ Section Invariants.
           destruct x; [discriminate|].
           kinv_regmap_red.
           unfold type in *; simpl in *.
-          rewrite app_length; simpl; omega.
+          rewrite app_length; simpl; lia.
         * procDec_inv_old; procDec_inv_next 2.
           destruct x; [discriminate|].
           destruct x; [reflexivity|discriminate].

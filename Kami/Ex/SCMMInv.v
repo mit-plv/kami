@@ -1,4 +1,4 @@
-Require Import Ascii Bool String List Omega.
+Require Import Ascii Bool String List Lia.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.
@@ -94,7 +94,7 @@ Section Invariants.
       rewrite wones_pow2_minus_one.
       pose proof (wordToNat_bound w2).
       pose proof (NatLib.pow2_zero sz).
-      assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by omega.
+      assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by lia.
       destruct H4; [|assumption].
       assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
       rewrite natToWord_wordToNat, <-wones_natToWord in H5; subst.
@@ -106,7 +106,7 @@ Section Invariants.
     apply lt_wlt.
     assert (#w1 <> #w2)
       by (intro Hx; elim H1; apply wordToNat_inj; assumption).
-    omega.
+    lia.
   Qed.
 
   Lemma scmm_inv_ok':
@@ -122,7 +122,7 @@ Section Invariants.
       cbn; intros _ iaddr ?.
       exfalso.
       apply wlt_lt in H; rewrite wordToNat_wzero in H.
-      omega.
+      lia.
 
     - kinvert.
       + mred.

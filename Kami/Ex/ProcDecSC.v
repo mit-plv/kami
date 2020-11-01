@@ -1,4 +1,4 @@
-Require Import Bool String List Omega.
+Require Import Bool String List Lia.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word.
 Require Import Lib.Struct Lib.FMap Lib.StringEq Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
@@ -98,7 +98,7 @@ Section ProcDecSC.
                    +["pinitOfs" <- (existT _ (SyntaxKind (Bit iaddrSize))
                                            (pinitRsOfsv ^+ $(List.length oeltv)))]
                    +["pinit" <- (existT _ (SyntaxKind Bool)
-                                        (if eq_nat_dec
+                                        (if Peano_dec.eq_nat_dec
                                               (#pinitRsOfsv + List.length oeltv)
                                               (NatLib.pow2 iaddrSize)
                                          then true else false))]
@@ -149,7 +149,7 @@ Section ProcDecSC.
       cbn; rewrite wplus_wzero_1.
       meq.
       exfalso; rewrite wordToNat_wzero in e.
-      pose proof (NatLib.pow2_zero iaddrSize); omega.
+      pose proof (NatLib.pow2_zero iaddrSize); lia.
     }
 
     intros.
@@ -189,12 +189,12 @@ Section ProcDecSC.
       assert (x1 = nil); subst.
       { destruct x1; [reflexivity|].
         destruct pinitRqv; simpl in H1;
-          pose proof (wordToNat_bound pinitRqOfsv); omega.
+          pose proof (wordToNat_bound pinitRqOfsv); lia.
       }
       simpl; kinv_eq.
       + rewrite wones_pow2_minus_one.
         find_if_inside; [reflexivity|].
-        elim n; pose proof (NatLib.pow2_zero iaddrSize); omega.
+        elim n; pose proof (NatLib.pow2_zero iaddrSize); lia.
       + rewrite wones_wneg_one, wplus_comm, wminus_inv; reflexivity.
         
     - kinv_action_dest.
@@ -264,7 +264,7 @@ Section ProcDecSC.
         * exists (Some "pgmInitEnd"%string); kinv_constr; kinv_eq.
           { simpl; rewrite e.
             destruct (Nat.eq_dec _ _); [|reflexivity].
-            pose proof (NatLib.pow2_zero iaddrSize); omega.
+            pose proof (NatLib.pow2_zero iaddrSize); lia.
           }
           { cbn; find_if_inside; [reflexivity|].
             elim n.
@@ -284,20 +284,20 @@ Section ProcDecSC.
             rewrite H0; simpl.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) at 2.
             rewrite <-natToWord_plus.
-            f_equal; omega.
+            f_equal; lia.
           }
           { apply eq_sym, drainInsts_enq. }
           { rewrite e.
-            find_if_inside; [pose proof (NatLib.pow2_zero iaddrSize); omega|].
+            find_if_inside; [pose proof (NatLib.pow2_zero iaddrSize); lia|].
             find_if_inside; [reflexivity|].
-            elim n0; unfold listEnq; rewrite app_length; simpl; omega.
+            elim n0; unfold listEnq; rewrite app_length; simpl; lia.
           }
           { pose proof (NatLib.pow2_zero iaddrSize).
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv).
             rewrite <-natToWord_plus.
             unfold listEnq; rewrite app_length; simpl.
             replace (#pinitRsOfsv + (Datatypes.length x3 + 1))
-              with (NatLib.pow2 iaddrSize) by omega.
+              with (NatLib.pow2 iaddrSize) by lia.
             apply eq_sym, natToWord_pow2.
           }
         * assert (#pinitRsOfsv + Datatypes.length x3 < NatLib.pow2 iaddrSize - 1)%nat.
@@ -306,17 +306,17 @@ Section ProcDecSC.
               simpl in H0; rewrite Nat.add_assoc in H0.
               destruct x; [discriminate|simpl in H0].
               destruct pinitRqv; simpl in H0;
-                pose proof (wordToNat_bound pinitRqOfsv); omega.
+                pose proof (wordToNat_bound pinitRqOfsv); lia.
             }
-            omega.
+            lia.
           }
           exists (Some "pgmInit"%string); kinv_constr; kinv_eq.
-          { simpl; destruct (Nat.eq_dec _ _); [omega|reflexivity]. }
+          { simpl; destruct (Nat.eq_dec _ _); [lia|reflexivity]. }
           { cbn; find_if_inside; [|reflexivity].
             apply wnot_zero_wones in e.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) in e.
             rewrite <-natToWord_plus, wones_natToWord in e.
-            apply natToWord_inj in e; omega.
+            apply natToWord_inj in e; lia.
           }
           { destruct x; [discriminate|].
             simpl; simpl in H; dest; subst.
@@ -326,12 +326,12 @@ Section ProcDecSC.
             rewrite H0; simpl.
             rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv) at 2.
             rewrite <-natToWord_plus.
-            f_equal; omega.
+            f_equal; lia.
           }
           { apply eq_sym, drainInsts_enq. }
-          { find_if_inside; [omega|].
+          { find_if_inside; [lia|].
             unfold listEnq; rewrite app_length; simpl.
-            find_if_inside; [omega|].
+            find_if_inside; [lia|].
             reflexivity.
           }
           { unfold listEnq; rewrite app_length; simpl.
