@@ -974,9 +974,12 @@ let ppBram2 (args: kind attribute list)
 
 type fifoType = NormalFIFO | PipelineFIFO | BypassFIFO
 
-let ppFifoInstance (fty: fifoType) =
+let ppFifoInstance (fty: fifoType) (sz: int) =
   match fty with
-  | NormalFIFO -> ps "mkFIFOF();"
+  | NormalFIFO ->
+     ps (if sz = 0
+         then "mkFIFOF();"
+         else ("mkSizedFIFOF(" ^ (string_of_int (int_of_float (float 2 ** float sz))) ^ ");"))
   | PipelineFIFO -> ps "mkPipelineFIFOF();"
   | BypassFIFO -> ps "mkBypassFIFOF();"
 
@@ -1026,10 +1029,18 @@ let rec ppFifoMethods (pifc: signatureT attribute list) =
   | attr :: [] -> ppFifoMethod attr
   | attr :: pifc' -> ppFifoMethod attr; force_newline2 (); ppFifoMethods pifc'
 
-let ppFifo (fty: fifoType) (pifc: signatureT attribute list) =
-  let eltK = (List.nth pifc 0).attrType.arg in
+(* args = ["dType" :: dType; "sz" :: Bit n] *)
+let ppFifo (fty: fifoType) (args: kind attribute list)
+      (pifc: signatureT attribute list) =
+  (* let eltK = (List.nth pifc 0).attrType.arg in *)
+  let eltK = (List.nth args 0).attrType in
+  let szKind = (List.nth args 1).attrType in
+  let sz = (match szKind with
+            | Bit n -> n
+            | _ -> raise (Should_not_happen
+                            ("Incorrect primitive FIFO size: " ^ (ppKind szKind)))) in
   open_hovbox 0;
-  ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty;
+  ps "FIFOF#("; ps (ppKind eltK); ps ") pff <- "; ppFifoInstance fty sz;
   close_box (); force_newline2 ();
   open_hovbox 0;
   ppFifoMethods pifc;
@@ -1044,11 +1055,11 @@ let ppBModulePrim (pname: char list)
   else if pname = primBramName2 then
     ppBram2 args consts pifc
   else if pname = primNormalFifoName then
-    ppFifo NormalFIFO pifc
+    ppFifo NormalFIFO args pifc
   else if pname = primPipelineFifoName then
-    ppFifo PipelineFIFO pifc
+    ppFifo PipelineFIFO args pifc
   else if pname = primBypassFifoName then
-    ppFifo BypassFIFO pifc
+    ppFifo BypassFIFO args pifc
   else
     raise (Should_not_happen "Unknown primitive module name")
 

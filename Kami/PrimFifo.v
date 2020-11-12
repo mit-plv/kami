@@ -8,18 +8,12 @@ Import ListNotations.
 Set Implicit Arguments.
 
 Definition primNormalFifoName: string := "FIFO".
-Definition primNormalFifoFName: string := "FIFOF".
-Definition primNormalFifoCName: string := "FIFOC".
 Definition primPipelineFifoName: string := "PipelineFIFO".
-Definition primPipelineFifoFName: string := "PipelineFIFOF".
-Definition primPipelineFifoCName: string := "PipelineFIFOC".
 Definition primBypassFifoName: string := "BypassFIFO".
-Definition primBypassFifoFName: string := "BypassFIFOF".
-Definition primBypassFifoCName: string := "BypassFIFOC".
 
 Section PrimFifo.
   Variables (primFifoName fifoName: string)
-            (dType: Kind).
+            (dType: Kind) (sz: nat).
 
   Local Notation "^ s" := (fifoName -- s) (at level 0).
 
@@ -59,7 +53,7 @@ Section PrimFifo.
   Definition fifo: Modules :=
     PrimMod
       {| pm_name := primFifoName;
-         pm_args := [("dType" :: dType)]%struct;
+         pm_args := [("dType" :: dType); ("sz" :: Bit sz)]%struct;
          pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
@@ -73,7 +67,7 @@ Section PrimFifo.
   Definition fifoF: Modules :=
     PrimMod
       {| pm_name := primFifoName;
-         pm_args := [("dType" :: dType)]%struct;
+         pm_args := [("dType" :: dType); ("sz" :: Bit sz)]%struct;
          pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
@@ -88,7 +82,7 @@ Section PrimFifo.
   Definition fifoC: Modules :=
     PrimMod
       {| pm_name := primFifoName;
-         pm_args := [("dType" :: dType)]%struct;
+         pm_args := [("dType" :: dType); ("sz" :: Bit sz)]%struct;
          pm_consts := nil;
          pm_regInits :=
            [^"elt" :: (RegInitDefault (SyntaxKind dType));
@@ -108,45 +102,45 @@ Hint Unfold primPipelineFifoName primBypassFifoName
 
 Section Facts.
   Variables (primFifoName fifoName: string)
-            (dType: Kind).
+            (dType: Kind) (sz: nat).
 
   Lemma fifo_ModEquiv:
-    ModPhoasWf (fifo primFifoName fifoName dType).
+    ModPhoasWf (fifo primFifoName fifoName dType sz).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifo_ModEquiv.
 
   Lemma fifoF_ModEquiv:
-    ModPhoasWf (fifoF primFifoName fifoName dType).
+    ModPhoasWf (fifoF primFifoName fifoName dType sz).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifoF_ModEquiv.
 
   Lemma fifoC_ModEquiv:
-    ModPhoasWf (fifoC primFifoName fifoName dType).
+    ModPhoasWf (fifoC primFifoName fifoName dType sz).
   Proof.
     kequiv.
   Qed.
   Hint Resolve fifoC_ModEquiv.
 
   Lemma fifo_ValidRegs:
-    ModRegsWf (fifo primFifoName fifoName dType).
+    ModRegsWf (fifo primFifoName fifoName dType sz).
   Proof.
     kvr.
   Qed.
   Hint Resolve fifo_ValidRegs.
 
   Lemma fifoF_ValidRegs:
-    ModRegsWf (fifoF primFifoName fifoName dType).
+    ModRegsWf (fifoF primFifoName fifoName dType sz).
   Proof.
     kvr.
   Qed.
   Hint Resolve fifoF_ValidRegs.
 
   Lemma fifoC_ValidRegs:
-    ModRegsWf (fifoC primFifoName fifoName dType).
+    ModRegsWf (fifoC primFifoName fifoName dType sz).
   Proof.
     kvr.
   Qed.
