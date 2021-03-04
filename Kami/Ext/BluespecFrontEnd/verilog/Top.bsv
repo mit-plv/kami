@@ -36,7 +36,7 @@ module mkTop (ForDRAM);
 	        endactionvalue);
     endfunction
 
-    Empty proc <- mkProc (procRs, procRq);
+    Proc proc <- mkProc (procRs, procRq);
 
     interface obtain_rq = (interface Get;
         method ActionValue#(MemRq) get;

@@ -8,4 +8,6 @@ import SimpleBRAM::*;
 import MulDiv::*;
 import SpecialFIFOs::*;
 
+interface Proc;
+endinterface
 
