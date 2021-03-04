@@ -228,7 +228,7 @@ Section ProcThreeStDec.
 
   Theorem p3st_refines_pdec:
     p3st <<== pdec.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
 
     (** inlining *)
     ketrans; [exact (projT2 p3stInl)|].
@@ -258,7 +258,7 @@ Section ProcThreeStDec.
     - kinv_magic_with p3st_dest_tac p3st_inv_tac.
     
       (* kami_ok p3stConfig p3st_dest_tac p3st_inv_tac. *)
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
 End ProcThreeStDec.

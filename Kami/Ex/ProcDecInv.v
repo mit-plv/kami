@@ -293,7 +293,7 @@ Section Invariants.
       init = initRegs (getRegInits pdecInl) ->
       Multistep pdecInl init n ll ->
       procDec_inv n.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     induction 2.
 
     - kinv_dest_custom procDec_inv_tac.
@@ -384,7 +384,7 @@ Section Invariants.
         * procDec_inv_old; procDec_inv_next 2.
           destruct x; [discriminate|].
           destruct x; [reflexivity|discriminate].
-          END_SKIP_PROOF_ON *) apply cheat.
+          (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma procDec_inv_ok:
