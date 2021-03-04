@@ -39,12 +39,15 @@ Makefiles
 Requirements
 ------------
 
-### To Verify Kami modules
+### To machine-check the Coq proofs in Kami
 - Coq 8.12.x with `$PATH` containing the standard Coq binaries
 
-### To Generate Bluespec programs
+### To extract the Kami processor into Bluespec
 - OCaml 4.0.4 (with `$PATH` containing the standard OCaml binaries)
 - Batteries Library for OCaml (2.5.2)
 
-### To Run Bluespec code (i.e. simulation)
-- Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc (with `$PATH` containing the Bluespec binaries)
+### To compile Bluespec code to Verilog
+- Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc
+  + With `$PATH` containing the Bluespec binaries including `bsc`
+  + A directory containing `bsc` and the one containing the Bluespec Verilog
+    library should be in the same parent directory.
