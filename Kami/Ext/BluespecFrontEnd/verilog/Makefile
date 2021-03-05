@@ -24,7 +24,7 @@ verilog_comp: $(TARGET).bsv $(PROC) SimpleBRAM.bsv MulDiv.bsv
 
 verilog_lib_copy:
 	cp $(BSC_LIB_PATH)/FIFO2.v $(BUILD_DIR)/
-	cp $(BSC_LIB_PATH)/RegFileLoad.v $(BUILD_DIR)/
+	cp $(BSC_LIB_PATH)/RegFile.v $(BUILD_DIR)/
 	cp $(BSC_LIB_PATH)/SizedFIFO.v $(BUILD_DIR)/
 
 verilog: verilog_comp verilog_lib_copy

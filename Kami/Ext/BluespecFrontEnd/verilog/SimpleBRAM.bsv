@@ -7,7 +7,7 @@ interface Bram#(type sz, type t);
 endinterface
 
 module mkBram(Bram#(sz, t)) provisos (Bounded#(sz), Bits#(sz, szb), Bits#(t, tb));
-  RegFile#(sz, t) rf <- mkRegFileFullLoad("file.hex");
+  RegFile#(sz, t) rf <- mkRegFileFull();
   Reg#(t) data <- mkRegU;
 
   method Action readRq(sz idx);

@@ -1,8 +1,9 @@
 
 `ifdef  BSV_WARN_REGFILE_ADDR_RANGE
 `else
-`define BSV_WARN_REGFILE_ADDR_RANGE 0
+`define BSV_WARN_REGFILE_ADDR_RANGE 0 
 `endif
+
 
 `ifdef BSV_ASSIGNMENT_DELAY
 `else
@@ -10,21 +11,19 @@
 `endif
 
 
-// Multi-ported Register File -- initializable from a file.
-module RegFileLoad(CLK,
-                   ADDR_IN, D_IN, WE,
-                   ADDR_1, D_OUT_1,
-                   ADDR_2, D_OUT_2,
-                   ADDR_3, D_OUT_3,
-                   ADDR_4, D_OUT_4,
-                   ADDR_5, D_OUT_5
-                   );
-   parameter                   file = "";
+// Multi-ported Register File
+module RegFile(CLK,
+               ADDR_IN, D_IN, WE,
+               ADDR_1, D_OUT_1,
+               ADDR_2, D_OUT_2,
+               ADDR_3, D_OUT_3,
+               ADDR_4, D_OUT_4,
+               ADDR_5, D_OUT_5
+               );
    parameter                   addr_width = 1;
    parameter                   data_width = 1;
    parameter                   lo = 0;
    parameter                   hi = 1;
-   parameter                   binary = 0;
 
    input                       CLK;
    input [addr_width - 1 : 0]  ADDR_IN;
@@ -49,13 +48,18 @@ module RegFileLoad(CLK,
    reg [data_width - 1 : 0]    arr[lo:hi];
 
 
+`ifdef BSV_NO_INITIAL_BLOCKS
+`else // not BSV_NO_INITIAL_BLOCKS
+   // synopsys translate_off
    initial
-     begin : init_rom_block
-	if (binary)
-           $readmemb(file, arr, lo, hi);
-        else
-           $readmemh(file, arr, lo, hi);
+     begin : init_block
+        integer                     i; 		// temporary for generate reset value
+        for (i = lo; i <= hi; i = i + 1) begin
+           arr[i] = {((data_width + 1)/2){2'b10}} ;
+        end
      end // initial begin
+   // synopsys translate_on
+`endif // BSV_NO_INITIAL_BLOCKS
 
 
    always@(posedge CLK)
