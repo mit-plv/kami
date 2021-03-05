@@ -33,7 +33,7 @@ Makefiles
   + Check only the library code: `make src`
 - (Only in this branch) To extract/compile the Kami processor
   + `make proc_ext`
-  + If a build succeeds, the Verilog code will be located in
+  + If the build succeeds, the Verilog code will be located in
     `Ext/BluespecFrontEnd/verilog/build`.
 
 Requirements
