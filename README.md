@@ -29,10 +29,10 @@ Makefiles
 ---------
 
 - To machine-check the Coq proofs in Kami
+  + Check all the Coq files, including all the examples: `make coq` (or just `make`)
   + Check only the library code: `make src`
-  + Check all the Coq files, including all the examples: `make coq`
 - (Only in this branch) To extract/compile the Kami processor
-  + `make proc_ext` (or just `make`)
+  + `make proc_ext`
   + If a build succeeds, the Verilog code will be located in
     `Ext/BluespecFrontEnd/verilog/build`.
 
