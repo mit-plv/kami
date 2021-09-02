@@ -75,7 +75,7 @@ Module StringString_as_OT <: OrderedType.
     unfold String_as_OT.lt in *.
     rewrite H3 in H4.
     discriminate.
-    Grab Existential Variables.
+    Unshelve.
     apply ""%string.
     apply ""%string.
     apply ""%string.
