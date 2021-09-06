@@ -458,7 +458,7 @@ Proof.
     + intros; destruct ul1 as [[r1|]|[[dmn1 dmb1]|]], ul2 as [[r2|]|[[dmn2 dmb2]|]];
         eexists; intuition idtac.
 
-      Grab Existential Variables.
+      Unshelve.
       exact None.
       exact None.
       exact None.
