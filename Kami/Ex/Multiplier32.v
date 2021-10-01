@@ -1038,8 +1038,8 @@ Section Multiplier32.
 
     - pose proof (sext_wplus_exist wu (booth4AddM m (split1 3 (MultBits - 3) (evalExpr we))) 1).
       destruct H1 as [twu ?].
-      eapply BSInv
-        with (u0:= (u + booth4AddU (split1 3 (MultBits - 3) (evalExpr we)) sus)%Z).
+      eapply @BSInv
+        with (u:= (u + booth4AddU (split1 3 (MultBits - 3) (evalExpr we)) sus)%Z).
       + intros; rewrite H1; do 2 eexists; reflexivity.
       + rewrite Z.mul_add_distr_l, <-H.
         apply booth4AddM_booth4AddU; assumption.
@@ -1091,8 +1091,8 @@ Section Multiplier32.
       + apply boothStepEvalM_booth2AddM.
         apply eq_sigT_fst in H4; assumption.
 
-    - eapply BSInv
-        with (u0:= (u + booth2AddU (split1 2 (MultBits - 2) (evalExpr we)) sus)%Z).
+    - eapply @BSInv
+        with (u:= (u + booth2AddU (split1 2 (MultBits - 2) (evalExpr we)) sus)%Z).
       + intros; subst.
         elim H2; reflexivity.
       + rewrite Z.mul_add_distr_l, <-H.

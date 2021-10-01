@@ -2633,7 +2633,7 @@ Ltac mcontra :=
   repeat
     match goal with
     | [H: M.Disj ?m1' ?m2', Hl: Some _ = M.find ?k ?m1', Hr: Some _ = M.find ?k ?m2' |- _] =>
-      try (exfalso; eapply M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
+      try (exfalso; eapply @M.Disj_find_union_3 with (m1:= m1') (m2:= m2'); eauto; fail)
     | [H: Some _ = None |- _] => inv H
     | [H: None = Some _ |- _] => inv H
     | [H1: None = ?f, H2: Some _ = ?f |- _] => rewrite <-H1 in H2; discriminate

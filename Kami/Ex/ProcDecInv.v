@@ -52,7 +52,7 @@ Proof.
   rewrite wneg_wnot in H.
   apply wminus_wplus_transpose in H.
   rewrite wplus_unit in H.
-  rewrite <-wneg_idempotent with (w0:= w), H.
+  rewrite <- @wneg_idempotent with (w:= w), H.
   apply eq_sym, wones_wneg_one.
 Qed.
 
