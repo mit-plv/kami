@@ -162,8 +162,7 @@ Section LiftToMap.
     intros; M.ext y.
     findeq.
     findeq_custom liftToMap1_find_tac.
-    - exfalso; eapply M.Disj_find_union_3; eauto.
-    - destruct (p y a); auto.
+    destruct (p y a); auto.
   Qed.
 
   Lemma liftToMap1_subtractKV_1:
@@ -175,8 +174,7 @@ Section LiftToMap.
     intros; M.ext y.
     findeq.
     findeq_custom liftToMap1_find_tac.
-    - exfalso; eapply M.Disj_find_union_3; eauto.
-    - destruct (p y a); auto.
+    destruct (p y a); auto.
   Qed.
 
   Lemma liftToMap1_subtractKV_2:
