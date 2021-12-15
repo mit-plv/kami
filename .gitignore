@@ -19,3 +19,4 @@ Kami/Ext/*
 *.DS_Store
 .lia.cache
 .nia.cache
+.coq-native
