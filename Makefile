@@ -43,8 +43,8 @@ Makefile.coq.src: Makefile _CoqProject $(LIBVS) $(VS)
 clean:: Makefile.coq.all Makefile.coq.src
 	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean
 	rm -f */*.v.d */*.glob */*.vo */*~ *~
-	rm -f Makefile.coq.all
-	rm -f Makefile.coq.src
+	rm -f Makefile.coq.all*
+	rm -f Makefile.coq.src*
 	rm -f _CoqProject
 
 install:: Makefile.coq.all
