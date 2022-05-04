@@ -285,15 +285,21 @@ let rec collectStrE (e: bExpr) =
   | BReadIndex (ie, ve) -> collectStrE ie; collectStrE ve
   | BReadField (fd, se) -> collectStrE se
   | BBuildVector (_, v) -> collectStrV v
-  | BBuildStruct (_, kv, _) ->
-     let kl = vectorToList kv in
-     let _ = addGlbStruct kl in collectStrKL kl
+  | BBuildStruct (_, kv, stl) ->
+     collectStrEAL stl;
+     (let kl = vectorToList kv in
+      let _ = addGlbStruct kl in collectStrKL kl)
   | BUpdateVector (ve, ie, vale) -> collectStrE ve; collectStrE ie; collectStrE vale
   | _ -> ()
 and collectStrV (v: bExpr vec) =
   match v with
   | Vec0 e -> collectStrE e
   | VecNext (_, v1, v2) -> collectStrV v1; collectStrV v2
+and collectStrEAL (stl: bExpr attribute list) =
+  match stl with
+  | [] -> ()
+  | { attrName = _; attrType = e } :: [] -> collectStrE e
+  | { attrName = kn; attrType = e } :: stl' -> collectStrE e; collectStrEAL stl'
 
 let rec collectStrEL (el: bExpr list) =
   match el with

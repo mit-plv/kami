@@ -1,4 +1,4 @@
-OCB = ocamlbuild -use-ocamlfind
+OCB = ocamlbuild
 
 all: native
 
