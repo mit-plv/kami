@@ -17,11 +17,10 @@ Requirements
 ------------
 
 ### To Verify Kami modules
-- Coq 8.12.x with `$PATH` containing the standard Coq binaries
+- Coq 8.14.1 with `$PATH` containing the standard Coq binaries
 
 ### To Generate Bluespec programs
-- OCaml 4.0.4 (with `$PATH` containing the standard OCaml binaries)
-- Batteries Library for OCaml (2.5.2)
+- OCaml 4.14.0 (with `$PATH` containing the standard OCaml binaries)
 
 ### To Run Bluespec code (i.e. simulation)
 - Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc (with `$PATH` containing the Bluespec binaries)
