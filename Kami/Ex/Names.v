@@ -71,7 +71,7 @@ Definition read9 := "read9".
 
 Close Scope string.
 
-Hint Unfold
+#[global] Hint Unfold
      procRqValidReg procRqReplaceReg procRqWaitReg procRqReg
      l1MissByState l1MissByLine l1Hit writeback
      upgRq upgRs ld st drop pProcess

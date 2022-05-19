@@ -671,8 +671,8 @@ Section ProcThreeStage.
 
 End ProcThreeStage.
 
-Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep
+#[global] Hint Unfold regFile scoreBoard fetchDecode executer epoch wb procThreeStage : ModuleDefs.
+#[global] Hint Unfold RqFromProc RsToProc memReq memRep
      d2eFifoName d2eEnq d2eDeq
      W2DStr w2dElt w2dFifoName w2dEnq w2dDeq w2dFull
      getRf1 getRf2 setRf getEpoch toggleEpoch
@@ -744,7 +744,7 @@ Section ProcThreeStageM.
 
 End ProcThreeStageM.
 
-Hint Unfold p3st : ModuleDefs.
+#[global] Hint Unfold p3st : ModuleDefs.
 
 Section Facts.
   Variable inName outName: string.
@@ -805,12 +805,12 @@ Section Facts.
   Lemma regFile_ModEquiv:
     forall init, ModPhoasWf (@regFile dataBytes rfIdx init).
   Proof. kequiv. Qed.
-  Hint Resolve regFile_ModEquiv.
+  #[local] Hint Resolve regFile_ModEquiv.
 
   Lemma scoreBoard_ModEquiv:
     ModPhoasWf (scoreBoard rfIdx).
   Proof. kequiv. Qed.
-  Hint Resolve scoreBoard_ModEquiv.
+  #[local] Hint Resolve scoreBoard_ModEquiv.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
@@ -818,19 +818,19 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve fetchDecode_ModEquiv.
+  #[local] Hint Resolve fetchDecode_ModEquiv.
 
   Lemma executer_ModEquiv:
     ModPhoasWf (executer exec d2eOpType d2eVal1 d2eVal2 d2eRawInst d2eCurPc e2wPack).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve executer_ModEquiv.
+  #[local] Hint Resolve executer_ModEquiv.
 
   Lemma epoch_ModEquiv:
     ModPhoasWf epoch.
   Proof. kequiv. Qed.
-  Hint Resolve epoch_ModEquiv.
+  #[local] Hint Resolve epoch_ModEquiv.
   
   Lemma wb_ModEquiv:
     ModPhoasWf (wb dec exec
@@ -840,7 +840,7 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve wb_ModEquiv.
+  #[local] Hint Resolve wb_ModEquiv.
   
   Lemma procThreeStage_ModEquiv:
     forall init,
@@ -854,7 +854,7 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve regFile_ModEquiv
+#[global] Hint Resolve regFile_ModEquiv
      scoreBoard_ModEquiv
      fetchDecode_ModEquiv
      executer_ModEquiv

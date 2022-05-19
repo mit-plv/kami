@@ -161,7 +161,7 @@ Section DecExec.
   
 End DecExec.
 
-Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
+#[global] Hint Unfold Pc OpcodeK OpcodeE OpcodeT OptypeK OptypeE OptypeT opLd opSt opNm
      LdDstK LdDstE LdDstT LdAddrK LdAddrE LdAddrT LdSrcK LdSrcE LdSrcT LdAddrCalcT
      LdTypeK LdTypeE LdTypeT f3Lb f3Lh f3Lw f3Lbu f3Lhu LdValCalcT
      StAddrK StAddrE StAddrT StSrcK StSrcE StSrcT StAddrCalcT StByteEnCalcT
@@ -312,8 +312,8 @@ Section MemInst.
   
 End MemInst.
 
-Hint Unfold RqFromProc RsToProc memOp IsMMIOE IsMMIOT mmioExec: MethDefs.
-Hint Unfold memInst mm: ModuleDefs.
+#[global] Hint Unfold RqFromProc RsToProc memOp IsMMIOE IsMMIOT mmioExec: MethDefs.
+#[global] Hint Unfold memInst mm: ModuleDefs.
 
 (* The module definition for Pinst *)
 Section ProcInst.
@@ -483,8 +483,8 @@ Section ProcInst.
 
 End ProcInst.
 
-Hint Unfold nextPc procInitDefault : MethDefs.
-Hint Unfold procInst : ModuleDefs.
+#[global] Hint Unfold nextPc procInitDefault : MethDefs.
+#[global] Hint Unfold procInst : ModuleDefs.
 
 Section SC.
   Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
@@ -506,7 +506,7 @@ Section SC.
 
 End SC.
 
-Hint Unfold pinst scmm : ModuleDefs.
+#[global] Hint Unfold pinst scmm : ModuleDefs.
 
 Section Facts.
   Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
@@ -569,7 +569,7 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve pinst_ModEquiv.
+  #[local] Hint Resolve pinst_ModEquiv.
 
   Lemma memInst_ModEquiv:
     forall (init: MemInit maddrSize),
@@ -577,7 +577,7 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve memInst_ModEquiv.
+  #[local] Hint Resolve memInst_ModEquiv.
 
   Lemma mm_ModEquiv:
     forall (init: MemInit maddrSize),
@@ -585,7 +585,7 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve mm_ModEquiv.
+  #[local] Hint Resolve mm_ModEquiv.
 
   Lemma scmm_ModEquiv:
     forall procInit (memInit: MemInit maddrSize),
@@ -596,5 +596,5 @@ Section Facts.
   
 End Facts.
 
-Hint Resolve pinst_ModEquiv memInst_ModEquiv mm_ModEquiv scmm_ModEquiv.
+#[global] Hint Resolve pinst_ModEquiv memInst_ModEquiv mm_ModEquiv scmm_ModEquiv.
 

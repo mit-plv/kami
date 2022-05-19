@@ -36,8 +36,8 @@ Section Middleman.
 
 End Middleman.
 
-Hint Unfold mid : ModuleDefs.
-Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
+#[global] Hint Unfold mid : ModuleDefs.
+#[global] Hint Unfold RqFromProc RsToProc getReq setRep memOp : MethDefs.
 
 Section MemAsync.
   Variables (addrSize maddrSize fifoSize dataBytes: nat)
@@ -63,7 +63,7 @@ Section MemAsync.
 
 End MemAsync.
 
-Hint Unfold mm inQ outQ ioQ midQ iom memAsyncWoQ memAsync : ModuleDefs.
+#[global] Hint Unfold mm inQ outQ ioQ midQ iom memAsyncWoQ memAsync : ModuleDefs.
 
 Section Facts.
   Variables (addrSize maddrSize dataBytes: nat)
@@ -76,14 +76,14 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve midQ_ModEquiv.
+  #[local] Hint Resolve midQ_ModEquiv.
 
   Lemma iom_ModEquiv:
     ModPhoasWf (iom addrSize dataBytes).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve iom_ModEquiv.
+  #[local] Hint Resolve iom_ModEquiv.
 
   Lemma memAsyncWoQ_ModEquiv:
     ModPhoasWf (memAsyncWoQ Hdb memInit ammio).
@@ -99,6 +99,6 @@ Section Facts.
 
 End Facts.
 
-Hint Immediate midQ_ModEquiv iom_ModEquiv
+#[global] Hint Immediate midQ_ModEquiv iom_ModEquiv
      memAsyncWoQ_ModEquiv memAsync_ModEquiv.
 

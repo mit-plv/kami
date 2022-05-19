@@ -151,4 +151,4 @@ Section MapAttr.
   Definition mapAttr (ls: list (Attribute A)) := map changeAttr ls.
 End MapAttr.
 
-Hint Unfold attrName attrType namesOf changeAttr mapAttr.
+#[global] Hint Unfold attrName attrType namesOf changeAttr mapAttr.

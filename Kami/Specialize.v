@@ -873,7 +873,7 @@ Section Specializable.
     eapply hasNoIndex_disj_dom_img; eauto.
   Qed.
 
-  Hint Immediate specializable_disj_dom_img.
+  #[local] Hint Immediate specializable_disj_dom_img.
 
   Lemma specializeMod_regs:
     forall i,
@@ -1209,7 +1209,7 @@ Proof.
     + apply spDom_concatMod_2; auto.
 Qed.
 
-Hint Immediate specializable_disj_dom_img
+#[global] Hint Immediate specializable_disj_dom_img
      specializable_disj_regs
      specializable_disj_defs
      specializable_disj_calls.

@@ -91,9 +91,9 @@ Section FetchDecode.
   Definition fetchNDecode :=
     ProcThreeStage.fetchDecode fetch dec d2ePack pcInit.
 
-  Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
-  Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
-  Hint Extern 1 (ModEquiv type typeUT fetchNDecode) => unfold fetchNDecode. (* for kequiv *)
+  #[local] Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT fetchDecode) => unfold fetchDecode. (* for kequiv *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT fetchNDecode) => unfold fetchNDecode. (* for kequiv *)
 
   Definition fetchDecode_ruleMap (o: RegsT): string -> option string :=
     "pgmInitRq" |-> "pgmInitRq";
@@ -105,7 +105,7 @@ Section FetchDecode.
       "decodeSt" |-> "instFetchSt";
       "decodeTh" |-> "instFetchTh";
       "decodeNm" |-> "instFetchNm"; ||.
-  Hint Unfold fetchDecode_ruleMap: MethDefs.
+  #[local] Hint Unfold fetchDecode_ruleMap: MethDefs.
 
   Definition fetchDecode_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Pc addrSize) <- r |> "pc";
@@ -126,7 +126,7 @@ Section FetchDecode.
         +["pc" <- existT _ (SyntaxKind (Pc addrSize))
                (if f2dfullv then evalExpr (f2dCurPc _ f2deltv)
                 else pcv)])%fmap)%mapping.
-  Hint Unfold fetchDecode_regMap: MapDefs.
+  #[local] Hint Unfold fetchDecode_regMap: MapDefs.
 
   Definition fetchDecodeInl := ProcFDInl.fetchDecodeInl
                                  fetch dec

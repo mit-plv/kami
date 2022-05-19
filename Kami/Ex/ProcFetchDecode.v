@@ -293,8 +293,8 @@ Section FetchAndDecode.
 
 End FetchAndDecode.
 
-Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
-Hint Unfold f2dFifoName f2dEnq f2dDeq f2dClear
+#[global] Hint Unfold fetcher decoder fetchDecode : ModuleDefs.
+#[global] Hint Unfold f2dFifoName f2dEnq f2dDeq f2dClear
      getRf1 d2eEnq W2DStr w2dDeq sbSearch1_Ld sbSearch2_Ld
      sbSearch1_St sbSearch2_St sbSearch1_Nm
      sbSearch2_Nm sbSearch3_Nm sbInsert
@@ -342,14 +342,14 @@ Section Facts.
   Lemma fetcher_ModEquiv:
     forall pcInit, ModPhoasWf (fetcher fetch f2dPack pcInit).
   Proof. kequiv. Qed.
-  Hint Resolve fetcher_ModEquiv.
+  #[local] Hint Resolve fetcher_ModEquiv.
 
   Lemma decoder_ModEquiv:
     ModPhoasWf (decoder dec d2ePack f2dRawInst f2dCurPc f2dNextPc f2dEpoch).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve decoder_ModEquiv.
+  #[local] Hint Resolve decoder_ModEquiv.
 
   Lemma fetchDecode_ModEquiv:
     forall pcInit,
@@ -362,5 +362,5 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve fetcher_ModEquiv decoder_ModEquiv fetchDecode_ModEquiv.
+#[global] Hint Resolve fetcher_ModEquiv decoder_ModEquiv fetchDecode_ModEquiv.
 

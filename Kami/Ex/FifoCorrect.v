@@ -19,11 +19,11 @@ Section ToNative.
   Variable default: ConstT dType.
 
   Definition rsz := S sz.
-  Hint Unfold rsz: MethDefs.
+  #[local] Hint Unfold rsz: MethDefs.
 
   Definition fifo := fifo fifoName rsz dType.
   Definition nfifo := @nativeFifo fifoName dType default.
-  Hint Unfold fifo nfifo: ModuleDefs.
+  #[local] Hint Unfold fifo nfifo: ModuleDefs.
 
   Notation "^ s" := (fifoName -- s) (at level 0).
 
@@ -129,17 +129,17 @@ Section ToNative.
       + exact nil.
     - exact (fifo_nfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
   Defined.
-  Hint Unfold fifo_nfifo_eta: MethDefs.
+  #[local] Hint Unfold fifo_nfifo_eta: MethDefs.
 
   Definition fifo_nfifo_theta (r: RegsT): RegsT :=
     match fifo_nfifo_eta r with
     | Some er => M.add ^"elt" er (M.empty _)
     | None => M.empty _
     end.
-  Hint Unfold fifo_nfifo_theta: MethDefs.
+  #[local] Hint Unfold fifo_nfifo_theta: MethDefs.
   
   Definition fifo_nfifo_ruleMap (_: RegsT) (r: string): option string := Some r.
-  Hint Unfold fifo_nfifo_ruleMap: MethDefs.
+  #[local] Hint Unfold fifo_nfifo_ruleMap: MethDefs.
 
   Lemma fifo_substeps_updates:
     forall (o : RegsT) (u1 u2 : UpdatesT) (ul1 ul2 : UnitLabel)
@@ -181,7 +181,7 @@ Section ToNative.
     kexistv ^"deqP" deqPv o (Bit rsz).
     exact True.
   Defined.
-  Hint Unfold fifo_inv_0: InvDefs.
+  #[local] Hint Unfold fifo_inv_0: InvDefs.
 
   Lemma fifo_inv_0_ok:
     forall o, reachable o fifo -> fifo_inv_0 o.
@@ -209,7 +209,7 @@ Section ToNative.
     - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
     - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
-  Hint Unfold fifo_inv_1: InvDefs.
+  #[local] Hint Unfold fifo_inv_1: InvDefs.
 
   Lemma fifo_inv_1_ok:
     forall o,

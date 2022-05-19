@@ -1265,12 +1265,12 @@ Section Divider64.
     exact (sr = ["d" <- existT _ _ d]
                 +["x" <- existT _ _ x])%fmap.
   Defined.
-  Hint Unfold thetaR: MapDefs.
+  #[local] Hint Unfold thetaR: MapDefs.
 
   Local Definition ruleMap (o: RegsT): string -> option string :=
     "nrDivRegister" |-> "divRegister";
       "nrDivGetResult" |-> "divGetResult"; ||.
-  Hint Unfold ruleMap: MethDefs.
+  #[local] Hint Unfold ruleMap: MethDefs.
 
   Theorem divider_ok: nrDividerImpl <<== dividerSpec.
   Proof.

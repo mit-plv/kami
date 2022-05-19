@@ -59,8 +59,8 @@ Set Asymmetric Patterns.
              tactics described above.
 
 - Kami Hints
-  + Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
-  + Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
+  + #[global] Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
+  + #[global] Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
  *)
 
 Ltac krefl :=
@@ -893,8 +893,8 @@ Ltac kexistnv k vn m t :=
              M.find k m = Some (existT _ _ v) /\ _);
   rename v into vn.
 
-Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
-Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
+#[global] Hint Extern 1 (Specializable _) => vm_compute; reflexivity.
+#[global] Hint Extern 1 (SubList (getExtMeths _) (getExtMeths _)) => vm_compute; tauto.
 
 (** Kami proof configuration for [kami_ok] *)
 

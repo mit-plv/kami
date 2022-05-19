@@ -24,9 +24,9 @@ Section ProcDecSC.
 
   Definition pdec := pdecf fetch dec exec init.
   Definition pinst := pinst fetch dec exec init.
-  Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
-  Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
-  Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
+  #[local] Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT pinst) => unfold pinst. (* for kequiv *)
 
   Definition drainInst (elt: type (Struct RsToProc))
              (ofs: type (Bit iaddrSize))
@@ -105,7 +105,7 @@ Section ProcDecSC.
                    +["rf" <- (existT _ _ rfv)]
                    +["pc" <- (existT _ _ pcv)])%fmap).
   Defined.
-  Hint Unfold pdec_pinst_regRel: MapDefs.
+  #[local] Hint Unfold pdec_pinst_regRel: MapDefs.
 
   Ltac procDec_inv_old :=
     try match goal with

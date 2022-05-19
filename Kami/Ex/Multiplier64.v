@@ -1343,12 +1343,12 @@ Section Multiplier64.
     exact (sr = ["r" <- existT _ _ r]
                 +["m" <- existT _ _ m])%fmap.
   Defined.
-  Hint Unfold thetaR: MapDefs.
+  #[local] Hint Unfold thetaR: MapDefs.
 
   Local Definition ruleMap (o: RegsT): string -> option string :=
     "boothMultRegister" |-> "multRegister";
       "boothMultGetResult" |-> "multGetResult"; ||.
-  Hint Unfold ruleMap: MethDefs.
+  #[local] Hint Unfold ruleMap: MethDefs.
   
   Theorem multiplier_ok: boothMultiplierImpl <<== multiplierSpec.
   Proof.

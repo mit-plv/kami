@@ -4,7 +4,7 @@ Require Import Arith Lia NArith.
 
 Local Open Scope N_scope.
 
-Hint Rewrite Nplus_0_r nat_of_Nsucc nat_of_Nplus nat_of_Nminus
+#[global] Hint Rewrite Nplus_0_r nat_of_Nsucc nat_of_Nplus nat_of_Nminus
   N_of_nat_of_N nat_of_N_of_nat: N.
 
 Theorem nat_of_N_eq : forall n m,

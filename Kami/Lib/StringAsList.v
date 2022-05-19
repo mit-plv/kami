@@ -174,11 +174,11 @@ Proof.
   f_equal; eapply IHl1; eauto.
 Qed.
 
-Hint Resolve S_app_assoc: datatypes v62.
-Hint Resolve S_app_comm_cons S_app_cons_not_nil: datatypes v62.
-Hint Immediate S_app_eq_nil: datatypes v62.
-Hint Resolve S_app_eq_unit S_app_inj_tail: datatypes v62.
-Hint Resolve S_in_eq S_in_cons S_in_inv S_in_nil S_in_app_or S_in_or_app: datatypes v62.
+#[global] Hint Resolve S_app_assoc: datatypes v62.
+#[global] Hint Resolve S_app_comm_cons S_app_cons_not_nil: datatypes v62.
+#[global] Hint Immediate S_app_eq_nil: datatypes v62.
+#[global] Hint Resolve S_app_eq_unit S_app_inj_tail: datatypes v62.
+#[global] Hint Resolve S_in_eq S_in_cons S_in_inv S_in_nil S_in_app_or S_in_or_app: datatypes v62.
 
 Fixpoint S_nth (n:nat) (l:string) default {struct l} :=
   match n, l with

@@ -106,7 +106,7 @@ Section Invariants.
       Hinv1 : fetchDecode_inv_body pcv pgmv fepochv f2dfullv f2deltv
     }.
 
-  Hint Unfold fetchDecode_inv_body : InvDefs.
+  #[local] Hint Unfold fetchDecode_inv_body : InvDefs.
 
   Ltac fetchDecode_inv_old :=
     repeat match goal with
@@ -172,5 +172,5 @@ Section Invariants.
 
 End Invariants.
 
-Hint Unfold fetchDecode_inv_body : InvDefs.
+#[global] Hint Unfold fetchDecode_inv_body : InvDefs.
 

@@ -23,6 +23,6 @@ Section MsgTypes.
 
 End MsgTypes.
 
-Hint Unfold MemOp Child Data Line : MethDefs.
-Hint Unfold RqFromProc RsToProc : MethDefs.
+#[global] Hint Unfold MemOp Child Data Line : MethDefs.
+#[global] Hint Unfold RqFromProc RsToProc : MethDefs.
 

@@ -135,8 +135,8 @@ Definition stage1 :=
   }.
 
 (** For proof automation *)
-Hint Unfold enq1 : MethDefs.
-Hint Unfold stage1 : ModuleDefs.
+#[local] Hint Unfold enq1 : MethDefs.
+#[local] Hint Unfold stage1 : ModuleDefs.
 
 (******************************************************************************)
 
@@ -156,8 +156,8 @@ Definition stage2 :=
       Retv
   }.
 
-Hint Unfold deq1 enq2 : MethDefs.
-Hint Unfold stage2 : ModuleDefs.
+#[local] Hint Unfold deq1 enq2 : MethDefs.
+#[local] Hint Unfold stage2 : ModuleDefs.
 
 (******************************************************************************)
 
@@ -181,8 +181,8 @@ Definition stage3 :=
       Retv
   }.
 
-Hint Unfold deq2 sendAcc : MethDefs.
-Hint Unfold stage3 : ModuleDefs.
+#[local] Hint Unfold deq2 sendAcc : MethDefs.
+#[local] Hint Unfold stage3 : ModuleDefs.
 
 (******************************************************************************)
 
@@ -190,11 +190,11 @@ Hint Unfold stage3 : ModuleDefs.
 
 Definition fifo1 := simpleFifo "fifo1" 8 (Bit dataSize).
 Definition fifo2 := simpleFifo "fifo2" 8 (Bit dataSize).
-Hint Unfold fifo1 fifo2 : ModuleDefs.
+#[local] Hint Unfold fifo1 fifo2 : ModuleDefs.
 
 Definition impl :=
   (stage1 ++ fifo1 ++ stage2 ++ fifo2 ++ stage3)%kami.
-Hint Unfold impl : ModuleDefs.
+  #[local] Hint Unfold impl : ModuleDefs.
 
 (******************************************************************************)
 
@@ -215,7 +215,7 @@ Definition spec :=
       Write "data" <- #data + $1;
       Retv
   }.
-Hint Unfold spec : ModuleDefs.
+#[local] Hint Unfold spec : ModuleDefs.
 
 (******************************************************************************)
 
@@ -228,10 +228,10 @@ Lemma stage2_PhoasWf: ModPhoasWf stage2.
 Proof. kequiv. Qed.
 Lemma stage3_PhoasWf: ModPhoasWf stage3.
 Proof. kequiv. Qed.
-Hint Resolve stage1_PhoasWf stage2_PhoasWf stage3_PhoasWf.
+#[local] Hint Resolve stage1_PhoasWf stage2_PhoasWf stage3_PhoasWf.
 Lemma impl_PhoasWf: ModPhoasWf impl.
 Proof. kequiv. Qed.
-Hint Resolve impl_PhoasWf.
+#[local] Hint Resolve impl_PhoasWf.
 
 (** Well-formedness for valid register uses *)
 Lemma stage1_RegsWf: ModRegsWf stage1.
@@ -240,11 +240,11 @@ Lemma stage2_RegsWf: ModRegsWf stage2.
 Proof. kvr. Qed.
 Lemma stage3_RegsWf: ModRegsWf stage3.
 Proof. kvr. Qed.
-Hint Resolve stage1_RegsWf stage2_RegsWf stage3_RegsWf.
+#[local] Hint Resolve stage1_RegsWf stage2_RegsWf stage3_RegsWf.
 
 Lemma impl_RegsWf: ModRegsWf impl.
 Proof. kvr. Qed.
-Hint Resolve impl_RegsWf.
+#[local] Hint Resolve impl_RegsWf.
 
 (******************************************************************************)
 
@@ -267,16 +267,16 @@ Definition nfifo2 :=
 
 Definition intSpec1 :=
   ((stage1 ++ nfifo1 ++ stage2) ++ fifo2 ++ stage3)%kami.
-Hint Unfold intSpec1 : ModuleDefs.
+#[local] Hint Unfold intSpec1 : ModuleDefs.
 
 (* begin hide *)
-Hint Unfold nfifo1 nfifo2 : ModuleDefs.
+#[local] Hint Unfold nfifo1 nfifo2 : ModuleDefs.
 Lemma intSpec1_PhoasWf: ModPhoasWf intSpec1.
 Proof. kequiv. Qed.
-Hint Resolve intSpec1_PhoasWf.
+#[local] Hint Resolve intSpec1_PhoasWf.
 Lemma intSpec1_RegsWf: ModRegsWf intSpec1.
 Proof. kvr. Qed.
-Hint Resolve intSpec1_RegsWf.
+#[local] Hint Resolve intSpec1_RegsWf.
 (* end hide *)
 
 Theorem impl_intSpec1: impl <<== intSpec1.
@@ -353,13 +353,13 @@ End PipelineInv.
 Definition impl12 := (stage1 ++ nfifo1 ++ stage2)%kami.
 
 (* begin hide *)
-Hint Unfold impl12 : ModuleDefs.
+#[local] Hint Unfold impl12 : ModuleDefs.
 Lemma impl12_PhoasWf: ModPhoasWf impl12.
 Proof. kequiv. Qed.
-Hint Resolve impl12_PhoasWf.
+#[local] Hint Resolve impl12_PhoasWf.
 Lemma impl12_RegsWf: ModRegsWf impl12.
 Proof. kvr. Qed.
-Hint Resolve impl12_RegsWf.
+#[local] Hint Resolve impl12_RegsWf.
 (* end hide *)
 
 Definition spec12 :=
@@ -375,13 +375,13 @@ Definition spec12 :=
   }.
 
 (* begin hide *)
-Hint Unfold spec12 : ModuleDefs.
+#[local] Hint Unfold spec12 : ModuleDefs.
 Lemma spec12_PhoasWf: ModPhoasWf spec12.
 Proof. kequiv. Qed.
-Hint Resolve spec12_PhoasWf.
+#[local] Hint Resolve spec12_PhoasWf.
 Lemma spec12_RegsWf: ModRegsWf spec12.
 Proof. kvr. Qed.
-Hint Resolve spec12_RegsWf.
+#[local] Hint Resolve spec12_RegsWf.
 (* end hide *)
 
 Lemma impl12_ok: impl12 <<== spec12.
@@ -415,7 +415,7 @@ Record impl12_inv (o: RegsT) : Prop :=
 
     Hinv : pipeline_inv next12 f12 (eltv ++ [datav])
   }.
-Hint Unfold pipeline_inv: InvDefs.
+#[local] Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
 Ltac impl12_inv_dest_tac :=
@@ -477,11 +477,11 @@ Definition impl12_regMap (ir sr: RegsT): Prop.
   kexistnv "fifo1"--"elt" eltv ir (listEltK (Bit dataSize) type).
   refine (sr = (["data" <- existT _ _ (hd datav eltv)]%fmap)).
 Defined.
-Hint Unfold impl12_regMap: MethDefs.
+#[local] Hint Unfold impl12_regMap: MethDefs.
 
 Definition impl12_ruleMap (o: RegsT): string -> option string :=
   "doDouble" |-> "produceDouble"; ||.
-Hint Unfold impl12_ruleMap: MethDefs.
+#[local] Hint Unfold impl12_ruleMap: MethDefs.
 
 Lemma impl12_ok: impl12 <<== spec12.
 Proof.
@@ -523,13 +523,13 @@ Abort.
 Definition impl123 := (spec12 ++ nfifo2 ++ stage3)%kami.
 
 (* begin hide *)
-Hint Unfold impl123 : ModuleDefs.
+#[local] Hint Unfold impl123 : ModuleDefs.
 Lemma impl123_PhoasWf: ModPhoasWf impl123.
 Proof. kequiv. Qed.
-Hint Resolve impl123_PhoasWf.
+#[local] Hint Resolve impl123_PhoasWf.
 Lemma impl123_RegsWf: ModRegsWf impl123.
 Proof. kvr. Qed.
-Hint Resolve impl123_RegsWf.
+#[local] Hint Resolve impl123_RegsWf.
 (* end hide *)
 
 Definition impl123Inl: {m: Modules & impl123 <<== m}.
@@ -553,7 +553,7 @@ Proof.
   rewrite 2! wmult_comm with (y:= $2).
   auto.
 Qed.
-Hint Immediate next_f_consistent.
+#[local] Hint Immediate next_f_consistent.
 Opaque next123 f123.
 
 Record impl123_inv (o: RegsT) : Prop :=
@@ -564,7 +564,7 @@ Record impl123_inv (o: RegsT) : Prop :=
 
     Hinv : pipeline_inv next123 f123 (eltv ++ [$2 ^* datav])
   }.
-Hint Unfold pipeline_inv: InvDefs.
+#[local] Hint Unfold pipeline_inv: InvDefs.
 
 (* begin hide *)
 Ltac impl123_inv_dest_tac :=
@@ -629,11 +629,11 @@ Definition impl123_regMap (ir sr: RegsT): Prop.
              )%fmap /\
         $2 ^* sdatav = hd ($2 ^* datav) eltv).
 Defined.
-Hint Unfold impl123_regMap: MethDefs.
+#[local] Hint Unfold impl123_regMap: MethDefs.
 
 Definition impl123_ruleMap (o: RegsT): string -> option string :=
   "consume" |-> "accDoubles"; ||.
-Hint Unfold impl123_ruleMap: MethDefs.
+#[local] Hint Unfold impl123_ruleMap: MethDefs.
 
 Lemma impl123_ok: impl123 <<== spec.
 Proof.

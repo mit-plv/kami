@@ -68,8 +68,8 @@ Section BTB.
 
 End BTB.
 
-Hint Unfold btb : ModuleDefs.
-Hint Unfold BtbUpdateStr btbPredPc btbUpdate : MethDefs.
+#[global] Hint Unfold btb : ModuleDefs.
+#[global] Hint Unfold BtbUpdateStr btbPredPc btbUpdate : MethDefs.
 
 Section Wf.
   Variable addrSize: nat.
@@ -89,6 +89,6 @@ Section Wf.
 
 End Wf.
 
-Hint Resolve btb_ModEquiv.
-Hint Resolve btb_ModRegsWf.
+#[global] Hint Resolve btb_ModEquiv.
+#[global] Hint Resolve btb_ModRegsWf.
 

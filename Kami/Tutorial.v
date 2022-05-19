@@ -24,7 +24,7 @@ Definition producer :=
   }.
 
 (** For proof automation, it is recommended to register module definitions to "ModuleDefs". *)
-Hint Unfold producer : ModuleDefs.
+#[global] Hint Unfold producer : ModuleDefs.
 
 (** Consumer only has one method, which takes the data sent by Producer and calls an external function with the data. *)
 Definition consumer :=
@@ -33,11 +33,11 @@ Definition consumer :=
       Call (MethodSig "extCall" (Bit 32): Void) (#data);
       Retv
   }.
-Hint Unfold consumer : ModuleDefs.
+#[global] Hint Unfold consumer : ModuleDefs.
 
 (** Now we compose Producer and Consumer to make the complete implementation. *)
 Definition producerConsumerImpl := (producer ++ consumer)%kami.
-Hint Unfold producerConsumerImpl : ModuleDefs.
+#[global] Hint Unfold producerConsumerImpl : ModuleDefs.
 
 (** What is a specification of the Producer-Consumer module?  We define specifications also as modules in Kami.  A specification is usually defined as a single module.  In this case, we define the specification simply by calling the external call with the current data and update it as Producer does. *)
 Definition producerConsumerSpec :=
@@ -63,13 +63,13 @@ Definition producer_consumer_regMap (r: RegsT): RegsT.
   exact (M.add "data"%string (existT _ _ datav) (M.empty _)).
   (* Then, give the corresponding values of all registers for [spec]. *)
 Defined.
-Hint Unfold producer_consumer_regMap: MethDefs. (* for kdecompose_regMap_init *)
+#[global] Hint Unfold producer_consumer_regMap: MethDefs. (* for kdecompose_regMap_init *)
 
 (** The Kami syntax is built by PHOAS, so sometimes we need to prove a PHOAS equivalence for any two variable mappings.  Adding the equivalence lemma to the Coq hint database will allow related features to use it automatically. *)
 Lemma impl_ModEquiv:
   ModPhoasWf producerConsumerImpl.
 Proof. kequiv. Qed.
-Hint Resolve impl_ModEquiv.
+#[global] Hint Resolve impl_ModEquiv.
 
 (** Now we are ready to prove the refinement! *)
 Theorem producer_consumer_refinement:

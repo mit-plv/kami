@@ -136,7 +136,7 @@ Section Invariants.
                rq (RqFromProc !! "byteEn") =
                evalExpr (calcStByteEn _ rawInst))))%kami_expr.
   Defined.
-  Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
+  #[local] Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
        mem_request_inv: InvDefs.
 
   Record procDec_inv (o: RegsT) : Prop :=
@@ -398,7 +398,7 @@ Section Invariants.
 
 End Invariants.
 
-Hint Unfold RqFromProc RsToProc: MethDefs.
-Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
+#[global] Hint Unfold RqFromProc RsToProc: MethDefs.
+#[global] Hint Unfold pgm_init_rq_rs_inv fifo_empty_inv fifo_not_empty_inv
        mem_request_inv: InvDefs.
 

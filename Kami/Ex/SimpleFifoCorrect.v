@@ -19,11 +19,11 @@ Section Facts.
   Variable default: ConstT dType.
 
   Definition rsz := S sz.
-  Hint Unfold rsz: MethDefs.
+  #[local] Hint Unfold rsz: MethDefs.
 
   Definition sfifo := simpleFifo fifoName rsz dType.
   Definition nsfifo := @nativeSimpleFifo fifoName dType default.
-  Hint Unfold sfifo nsfifo: ModuleDefs.
+  #[local] Hint Unfold sfifo nsfifo: ModuleDefs.
 
   Notation "^ s" := (fifoName -- s) (at level 0).
 
@@ -129,17 +129,17 @@ Section Facts.
       + exact nil.
     - exact (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
   Defined.
-  Hint Unfold sfifo_nsfifo_eta: MethDefs.
+  #[local] Hint Unfold sfifo_nsfifo_eta: MethDefs.
 
   Definition sfifo_nsfifo_theta (r: RegsT): RegsT :=
     match sfifo_nsfifo_eta r with
     | Some er => M.add ^"elt" er (M.empty _)
     | None => M.empty _
     end.
-  Hint Unfold sfifo_nsfifo_theta: MethDefs.
+  #[local] Hint Unfold sfifo_nsfifo_theta: MethDefs.
   
   Definition sfifo_nsfifo_ruleMap (_: RegsT) (r: string): option string := Some r.
-  Hint Unfold sfifo_nsfifo_ruleMap: MethDefs.
+  #[local] Hint Unfold sfifo_nsfifo_ruleMap: MethDefs.
 
   Lemma sfifo_substeps_updates:
     forall (o : RegsT) (u1 u2 : UpdatesT) (ul1 ul2 : UnitLabel)
@@ -176,7 +176,7 @@ Section Facts.
     kexistv ^"deqP" deqPv o (Bit rsz).
     exact True.
   Defined.
-  Hint Unfold sfifo_inv_0: InvDefs.
+  #[local] Hint Unfold sfifo_inv_0: InvDefs.
 
   Lemma sfifo_inv_0_ok:
     forall o, reachable o sfifo -> sfifo_inv_0 o.
@@ -203,7 +203,7 @@ Section Facts.
     - exact (emptyv = false /\ fullv = true /\ (if weq enqPv deqPv then true else false) = true).
     - exact (emptyv = false /\ fullv = false /\ (if weq enqPv deqPv then true else false) = false).
   Defined.
-  Hint Unfold sfifo_inv_1: InvDefs.
+  #[local] Hint Unfold sfifo_inv_1: InvDefs.
 
   Lemma sfifo_inv_1_ok:
     forall o,

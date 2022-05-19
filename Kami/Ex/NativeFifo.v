@@ -71,8 +71,8 @@ Section NativeFifo.
 
 End NativeFifo.
 
-Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
-Hint Unfold listEltT listEltK listElt
+#[global] Hint Unfold nativeFifo nativeSimpleFifo : ModuleDefs.
+#[global] Hint Unfold listEltT listEltK listElt
      (* listIsEmpty listEnq listDeq listFirstElt *)
      nativeEnq nativeDeq nativeFirstElt: MethDefs.
 
@@ -88,31 +88,31 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve nativeFifo_ModEquiv.
+  #[local] Hint Resolve nativeFifo_ModEquiv.
 
   Lemma nativeSimpleFifo_ModEquiv:
     ModPhoasWf (nativeSimpleFifo fifoName default).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve nativeSimpleFifo_ModEquiv.
+  #[local] Hint Resolve nativeSimpleFifo_ModEquiv.
 
   Lemma nativeFifo_ValidRegs:
     ModRegsWf (nativeFifo fifoName default).
   Proof.
     kvr.
   Qed.
-  Hint Resolve nativeFifo_ValidRegs.
+  #[local] Hint Resolve nativeFifo_ValidRegs.
 
   Lemma nativeSimpleFifo_ValidRegs:
     ModRegsWf (nativeSimpleFifo fifoName default).
   Proof.
     kvr.
   Qed.
-  Hint Resolve nativeSimpleFifo_ValidRegs.
+  #[local] Hint Resolve nativeSimpleFifo_ValidRegs.
 
 End Facts.
 
-Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
-Hint Resolve nativeFifo_ValidRegs nativeSimpleFifo_ValidRegs.
+#[global] Hint Resolve nativeFifo_ModEquiv nativeSimpleFifo_ModEquiv.
+#[global] Hint Resolve nativeFifo_ValidRegs nativeSimpleFifo_ValidRegs.
 
