@@ -217,3 +217,5 @@ Section ProcFour.
 
 End ProcFour.
 
+Goal True. idtac "Print Assumptions p4mm_correct:". Abort.
+Print Assumptions p4mm_correct.
