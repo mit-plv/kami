@@ -70,8 +70,8 @@ Section Fifo.
 
 End Fifo.
 
-Hint Unfold fifo simpleFifo : ModuleDefs.
-Hint Unfold enq deq firstElt : MethDefs.
+#[global] Hint Unfold fifo simpleFifo : ModuleDefs.
+#[global] Hint Unfold enq deq firstElt : MethDefs.
 
 Section Facts.
   Variable fifoName: string.
@@ -83,25 +83,25 @@ Section Facts.
   Lemma fifo_ModEquiv:
     ModPhoasWf (fifo fifoName sz dType).
   Proof. kequiv. Qed.
-  Hint Resolve fifo_ModEquiv.
+  #[local] Hint Resolve fifo_ModEquiv.
 
   Lemma simpleFifo_ModEquiv:
     ModPhoasWf (simpleFifo fifoName sz dType).
   Proof. kequiv. Qed.
-  Hint Resolve simpleFifo_ModEquiv.
+  #[local] Hint Resolve simpleFifo_ModEquiv.
 
   Lemma fifo_ValidRegs:
     ModRegsWf (fifo fifoName sz dType).
   Proof. kvr. Qed.
-  Hint Resolve fifo_ValidRegs.
+  #[local] Hint Resolve fifo_ValidRegs.
 
   Lemma simpleFifo_ValidRegs:
     ModRegsWf (simpleFifo fifoName sz dType).
   Proof. kvr. Qed.
-  Hint Resolve simpleFifo_ValidRegs.
+  #[local] Hint Resolve simpleFifo_ValidRegs.
 
 End Facts.
 
-Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv.
-Hint Resolve fifo_ValidRegs simpleFifo_ValidRegs.
+#[global] Hint Resolve fifo_ModEquiv simpleFifo_ModEquiv.
+#[global] Hint Resolve fifo_ValidRegs simpleFifo_ValidRegs.
 

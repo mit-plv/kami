@@ -1677,7 +1677,7 @@ Qed.
 
 Definition IsChild (c p: Modules) :=
   (exists c', p = ConcatMod c c' \/ p = ConcatMod c' c).
-Hint Unfold IsChild.
+#[global] Hint Unfold IsChild.
 
 Lemma substep_modules_weakening:
   forall mc o u ul cs,

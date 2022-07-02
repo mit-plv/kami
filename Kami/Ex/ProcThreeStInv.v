@@ -477,7 +477,7 @@ Section Invariants.
       Hinv6 : p3st_pc_inv_body fepochv6 eepochv6 d2efullv6 e2wfullv6 w2dfullv6 stallv6
                                pcv6 d2eeltv6 e2weltv6 stalledv6 }.
 
-  Hint Unfold p3st_pinit_inv_body
+  #[local] Hint Unfold p3st_pinit_inv_body
        p3st_scoreboard_waw_inv_body p3st_raw_inv_body
        p3st_decode_inv_body p3st_stalled_inv_body
        p3st_exec_inv_body p3st_epochs_inv_body
@@ -891,7 +891,7 @@ Section Invariants.
 
 End Invariants.
 
-Hint Unfold p3st_scoreboard_waw_inv_body p3st_raw_inv_body
+#[global] Hint Unfold p3st_scoreboard_waw_inv_body p3st_raw_inv_body
      p3st_decode_inv_body p3st_stalled_inv_body
      p3st_exec_inv_body p3st_epochs_inv_body p3st_pc_inv_body : InvDefs.
 

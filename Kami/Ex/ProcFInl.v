@@ -38,7 +38,7 @@ Section Inlined.
 
   Definition fetchICache :=
     fetchICache fetch f2dPack getIndex getTag pcInit.
-  Hint Unfold fetchICache: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Unfold fetchICache: ModuleDefs. (* for kinline_compute *)
 
   Definition fetchICacheInl: sigT (fun m: Modules => fetchICache <<== m).
   Proof.

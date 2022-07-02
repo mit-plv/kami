@@ -1083,7 +1083,7 @@ Section GetCalls.
   Proof.
     intros; split; apply SubList_refl.
   Qed.
-  Hint Immediate DefCallSub_refl.
+  #[local] Hint Immediate DefCallSub_refl.
 
   Lemma DefCallSub_modular:
     forall m1 m2 m3 m4,
@@ -1300,7 +1300,7 @@ Proof.
     + right; apply in_or_app; auto.
 Qed.
 
-Hint Unfold pm_rules pm_regInits pm_methods
+#[global] Hint Unfold pm_rules pm_regInits pm_methods
      getRules getRegInits getDefs getCalls getDefsBodies
      getExtDefsBodies getExtDefs getExtCalls getExtMeths
      getIntDefs getIntCalls getIntMeths.

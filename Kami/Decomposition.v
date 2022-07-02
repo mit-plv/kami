@@ -1353,7 +1353,7 @@ Section GivenLabelMap.
 
 End GivenLabelMap.
 
-Hint Unfold theta etaRState thetaR: MethDefs.
+#[global] Hint Unfold theta etaRState thetaR: MethDefs.
 
 Section DecompositionInv.
   Variable m: Modules.

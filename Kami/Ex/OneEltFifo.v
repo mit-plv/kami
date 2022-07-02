@@ -82,10 +82,10 @@ Section OneEltFifo.
   
 End OneEltFifo.
 
-Hint Resolve oneEltFifo_PhoasWf oneEltFifo_RegsWf.
-Hint Resolve oneEltFifoEx1_PhoasWf oneEltFifoEx1_RegsWf.
-Hint Resolve oneEltFifoEx2_PhoasWf oneEltFifoEx2_RegsWf.
+#[global] Hint Resolve oneEltFifo_PhoasWf oneEltFifo_RegsWf.
+#[global] Hint Resolve oneEltFifoEx1_PhoasWf oneEltFifoEx1_RegsWf.
+#[global] Hint Resolve oneEltFifoEx2_PhoasWf oneEltFifoEx2_RegsWf.
 
-Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
-Hint Unfold enq deq firstElt isFull flush : MethDefs.
+#[global] Hint Unfold oneEltFifo oneEltFifoEx1 oneEltFifoEx2 : ModuleDefs.
+#[global] Hint Unfold enq deq firstElt isFull flush : MethDefs.
 

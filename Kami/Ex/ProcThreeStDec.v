@@ -100,9 +100,9 @@ Section ProcThreeStDec.
                        e2wPack e2wDecInst e2wVal init.
   Definition pdec := ProcDec.pdec fetch dec exec init.
   
-  Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
-  Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
-  Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
+  #[local] Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT p3st) => unfold p3st. (* for kequiv *)
+  #[local] Hint Extern 1 (ModEquiv type typeUT pdec) => unfold pdec. (* for kequiv *)
 
   Definition p3st_pdec_ruleMap (o: RegsT): string -> option string :=
     "pgmInitRq" |-> "pgmInitRq";
@@ -116,7 +116,7 @@ Section ProcThreeStDec.
       "repSt" |-> "repSt";
       "wbNm" |-> "execNm";
       "wbNmZ" |-> "execNmZ"; ||.
-  Hint Unfold p3st_pdec_ruleMap: MethDefs.
+  #[local] Hint Unfold p3st_pdec_ruleMap: MethDefs.
 
   Definition p3st_pdec_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Pc addrSize) <- r |> "pc";
@@ -161,7 +161,7 @@ Section ProcThreeStDec.
                                   then evalExpr (d2eCurPc _ d2eeltv)
                                   else pcv)
                                else pcv)])%fmap)%mapping.
-  Hint Unfold p3st_pdec_regMap: MapDefs.
+  #[local] Hint Unfold p3st_pdec_regMap: MapDefs.
 
   Ltac is_not_ife t :=
     match t with

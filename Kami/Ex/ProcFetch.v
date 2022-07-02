@@ -191,8 +191,8 @@ Section FetchICache.
 
 End FetchICache.
 
-Hint Unfold fetcher icache btb fetchICache : ModuleDefs.
-Hint Unfold instRq instRs predictPc trainPc
+#[global] Hint Unfold fetcher icache btb fetchICache : ModuleDefs.
+#[global] Hint Unfold instRq instRs predictPc trainPc
      f2dEnq f2dDeq W2DStr w2dDeq RqFromProc RsToProc
      memReq memRep: MethDefs.
 
@@ -243,7 +243,7 @@ Section Facts.
   Lemma fetcher_ModEquiv:
     forall pcInit, ModPhoasWf (fetcher fetch f2dPack pcInit).
   Proof. kequiv. Qed.
-  Hint Resolve fetcher_ModEquiv.
+  #[local] Hint Resolve fetcher_ModEquiv.
 
   Lemma fetchICache_ModEquiv:
     forall pcInit,
@@ -254,5 +254,5 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve fetcher_ModEquiv fetchICache_ModEquiv.
+#[global] Hint Resolve fetcher_ModEquiv fetchICache_ModEquiv.
 

@@ -14,8 +14,8 @@ Proof.
   auto.
 Qed.
 
-Hint Rewrite eq_rect_nat_double.
-Hint Rewrite <- (eq_rect_eq_dec Nat.eq_dec).
+#[global] Hint Rewrite eq_rect_nat_double.
+#[global] Hint Rewrite <- (eq_rect_eq_dec Nat.eq_dec).
 
 Ltac generalize_proof :=
     match goal with

@@ -882,5 +882,5 @@ Section DuplicateTwoModules4.
 
 End DuplicateTwoModules4.
 
-Hint Unfold specializeMod duplicate: ModuleDefs.
+#[global] Hint Unfold specializeMod duplicate: ModuleDefs.
 

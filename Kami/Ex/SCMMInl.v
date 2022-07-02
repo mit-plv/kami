@@ -21,7 +21,7 @@ Section Inlined.
            (memInit: MemInit maddrSize).
   
   Definition scmm: Modules := scmm Hdb fetch dec exec ammio procInit memInit.
-  Hint Unfold scmm: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Unfold scmm: ModuleDefs. (* for kinline_compute *)
 
   Definition scmmInl: sigT (fun m: Modules => scmm <<== m).
   Proof.

@@ -559,12 +559,12 @@ Module LeibnizFacts (M : MapLeibniz).
             if in_dec E.eq_dec k d then m' else add k v m') m (empty _).
 
   (* NOTE: do not add [subtractKV], [restrict], and [complement] to below *)
-  Hint Unfold update Sub subtract : MapDefs.
-  Hint Unfold E.eq.
+  #[global] Hint Unfold update Sub subtract : MapDefs.
+  #[global] Hint Unfold E.eq.
 
   Ltac mintros := repeat autounfold with MapDefs; intros.
 
-  Hint Extern 1 (Empty (empty _)) => apply empty_1.
+  #[global] Hint Extern 1 (Empty (empty _)) => apply empty_1.
 
   Lemma find_empty : forall {A} k, (find k (@empty A)) = None.
   Proof. intros; apply P.F.empty_o. Qed.
@@ -592,7 +592,7 @@ Module LeibnizFacts (M : MapLeibniz).
     repeat ((rewrite find_add_1 ||rewrite find_add_2 by auto); try reflexivity).
 
   Ltac proper_tac := unfold Morphisms.Proper, Morphisms.respectful; intros; subst; auto.
-  Hint Extern 1 (Proper _ _) => proper_tac.
+  #[global] Hint Extern 1 (Proper _ _) => proper_tac.
 
   Lemma add_idempotent:
     forall {A} k (e1 e2 : A) m, add k e1 (add k e2 m) = add k e1 m.
@@ -615,7 +615,7 @@ Module LeibnizFacts (M : MapLeibniz).
     unfold Equal. intros y. do 4 rewrite P.F.add_o.
     cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
   Qed.
-  Hint Immediate transpose_neqkey_Equal_add.
+  #[global] Hint Immediate transpose_neqkey_Equal_add.
 
   Lemma transpose_neqkey_eq_add {A : Type} :
     P.transpose_neqkey eq (add (elt:=A)).
@@ -623,7 +623,7 @@ Module LeibnizFacts (M : MapLeibniz).
     unfold P.transpose_neqkey; intros.
     apply add_comm; auto.
   Qed.
-  Hint Immediate transpose_neqkey_eq_add.
+  #[global] Hint Immediate transpose_neqkey_eq_add.
 
   Lemma union_add {A}:
     forall {m m' : t A} k v,
@@ -873,7 +873,7 @@ Module LeibnizFacts (M : MapLeibniz).
        end; try discriminate; try reflexivity; try (intuition idtac; fail)).
     apply remove_comm.
   Qed.
-  Hint Immediate transpose_neqkey_subtractKV.
+  #[global] Hint Immediate transpose_neqkey_subtractKV.
 
   Lemma transpose_neqkey_subtractKVD:
     forall {A} (deceqA : forall x y, sumbool (x = y) (x <> y)) d,
@@ -910,7 +910,7 @@ Module LeibnizFacts (M : MapLeibniz).
        end; try discriminate; try reflexivity; try (intuition idtac; fail)).
     apply remove_comm.
   Qed.
-  Hint Immediate transpose_neqkey_subtractKVD.
+  #[global] Hint Immediate transpose_neqkey_subtractKVD.
         
   Lemma subtractKV_find:
     forall {A} deceqA (m1 m2: t A) k,
@@ -1325,7 +1325,7 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (in_dec E.eq_dec k d), (in_dec E.eq_dec k' d); auto.
     apply add_comm; auto.
   Qed.
-  Hint Immediate transpose_neqkey_restrict.
+  #[global] Hint Immediate transpose_neqkey_restrict.
 
   Lemma restrict_find:
     forall {A} d (m: t A) k,
@@ -1472,7 +1472,7 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (in_dec E.eq_dec k d), (in_dec E.eq_dec k' d); auto.
     apply add_comm; auto.
   Qed.
-  Hint Immediate transpose_neqkey_complement.
+  #[global] Hint Immediate transpose_neqkey_complement.
 
   Lemma complement_find:
     forall {A} d (m: t A) k,
@@ -1685,7 +1685,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition KeysDisj {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
   Definition KeysEq {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
 
-  Hint Unfold Equal Disj Sub DomainSubset KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
+  #[global] Hint Unfold Equal Disj Sub DomainSubset KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
 
   Lemma Sub_union_2:
     forall {A} (m1 m2: t A), Disj m1 m2 -> Sub m2 (union m1 m2).
@@ -2674,8 +2674,8 @@ Ltac findeq_more := findeq_custom idtac.
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
 
-Hint Extern 1 (_ = _) => try (meq; fail).
-Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
+#[global] Hint Extern 1 (_ = _) => try (meq; fail).
+#[global] Hint Extern 1 (M.Disj _ _) => try (mdisj; fail).
 
 Lemma elements_cons:
   forall {A} m (k: string) (v: A) l,

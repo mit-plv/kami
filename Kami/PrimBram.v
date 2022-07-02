@@ -87,8 +87,8 @@ Section PrimBram.
 
 End PrimBram.
 
-Hint Unfold bram1 : ModuleDefs.
-Hint Unfold primBramName
+#[global] Hint Unfold bram1 : ModuleDefs.
+#[global] Hint Unfold primBramName
      bramReadValT bramReadValK bramReadVal
      BramRq bramPutRq bramGetRs: MethDefs.
 
@@ -102,17 +102,17 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve bram1_ModEquiv.
+  #[local] Hint Resolve bram1_ModEquiv.
 
   Lemma bram1_ValidRegs:
     ModRegsWf (bram1 bramName addrSize dType).
   Proof.
     kvr.
   Qed.
-  Hint Resolve bram1_ValidRegs.
+  #[local] Hint Resolve bram1_ValidRegs.
 
 End Facts.
 
-Hint Resolve bram1_ModEquiv.
-Hint Resolve bram1_ValidRegs.
+#[global] Hint Resolve bram1_ModEquiv.
+#[global] Hint Resolve bram1_ValidRegs.
 

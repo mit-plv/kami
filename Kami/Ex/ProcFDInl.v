@@ -49,7 +49,7 @@ Section Inlined.
   Definition fetchDecode := fetchDecode fetch dec
                                         d2ePack f2dPack f2dRawInst f2dCurPc f2dNextPc f2dEpoch
                                         pcInit.
-  Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Unfold fetchDecode: ModuleDefs. (* for kinline_compute *)
 
   Definition fetchDecodeInl: sigT (fun m: Modules => fetchDecode <<== m).
   Proof.

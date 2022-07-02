@@ -13,7 +13,7 @@ Proof.
   - injection H; intros H'.
     intuition.
 Qed.
-Hint Resolve prepend1To1.
+#[global] Hint Resolve prepend1To1.
 
 Section Rename.
   Variable i: string.
@@ -187,7 +187,7 @@ Section Rename.
     elim H; eauto.
   Qed.
 
-  Hint Immediate renameAdd_transpose_neqkey.
+  #[local] Hint Immediate renameAdd_transpose_neqkey.
   
   Lemma renameMapAdd:
     forall {A} m k (v: A),
@@ -205,7 +205,7 @@ Section Rename.
       apply M.F.P.F.not_find_in_iff; auto.
   Qed.
 
-  Hint Extern 1 (_ = renameMap _) => rewrite renameMapAdd.
+  #[local] Hint Extern 1 (_ = renameMap _) => rewrite renameMapAdd.
 
   Lemma renameMapFind A (m: M.t A):
     forall k, M.find k m = M.find (rename k) (renameMap m).

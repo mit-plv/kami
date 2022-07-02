@@ -37,8 +37,8 @@ Section RegFile.
 
 End RegFile.
 
-Hint Unfold DataArray Addr WritePort : MethDefs.
-Hint Unfold regFile : ModuleDefs.
+#[global] Hint Unfold DataArray Addr WritePort : MethDefs.
+#[global] Hint Unfold regFile : ModuleDefs.
 
 Section Facts.
   Variable name: string.
@@ -60,6 +60,6 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve regFile_ModEquiv.
-Hint Resolve regFile_ValidRegs.
+#[global] Hint Resolve regFile_ModEquiv.
+#[global] Hint Resolve regFile_ValidRegs.
 

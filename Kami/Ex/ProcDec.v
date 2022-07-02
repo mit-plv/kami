@@ -233,8 +233,8 @@ Section ProcDec.
 
 End ProcDec.
 
-Hint Unfold procDec : ModuleDefs.
-Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
+#[global] Hint Unfold procDec : ModuleDefs.
+#[global] Hint Unfold RqFromProc RsToProc memReq memRep nextPc : MethDefs.
 
 Section ProcDecM.
   Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
@@ -256,7 +256,7 @@ Section ProcDecM.
 
 End ProcDecM.
 
-Hint Unfold pdec pdecf procDecM : ModuleDefs.
+#[global] Hint Unfold pdec pdecf procDecM : ModuleDefs.
 
 Section Facts.
   Variables (addrSize maddrSize iaddrSize instBytes dataBytes rfIdx: nat)
@@ -272,14 +272,14 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve pdec_ModEquiv.
+  #[local] Hint Resolve pdec_ModEquiv.
 
   Lemma pdecf_ModEquiv:
     forall init, ModPhoasWf (pdecf fetch dec exec init).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve pdecf_ModEquiv.
+  #[local] Hint Resolve pdecf_ModEquiv.
 
   Lemma procDecM_ModEquiv:
     forall procInit (memInit: MemInit maddrSize),
@@ -290,5 +290,5 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve pdec_ModEquiv pdecf_ModEquiv procDecM_ModEquiv.
+#[global] Hint Resolve pdec_ModEquiv pdecf_ModEquiv procDecM_ModEquiv.
 

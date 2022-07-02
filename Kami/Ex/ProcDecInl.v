@@ -14,7 +14,7 @@ Section Inlined.
   Variable (init: ProcInit addrSize dataBytes rfIdx).
 
   Definition pdec := pdecf fetch dec exec init.
-  Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Unfold pdec: ModuleDefs. (* for kinline_compute *)
 
   Definition pdecInl: sigT (fun m: Modules => pdec <<== m).
   Proof.

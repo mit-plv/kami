@@ -143,7 +143,7 @@ Proof.
   intros a; apply (shatter_word a).
 Qed.
 
-Hint Resolve shatter_word_0.
+#[global] Hint Resolve shatter_word_0.
 
 Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
   refine (fix weq sz (x : word sz) : forall y : word sz, {x = y} + {x <> y} :=
@@ -398,7 +398,7 @@ Definition wbit sz sz' (n : word sz') := natToWord sz (pow2 (wordToNat n)).
 
 (*! Facts *)
 
-Hint Rewrite div2_double div2_S_double: div2.
+#[global] Hint Rewrite div2_double div2_S_double: div2.
 Local Hint Resolve mod2_S_double mod2_double.
 
 Theorem eq_rect_word_offset : forall n n' offset w Heq,
@@ -487,7 +487,7 @@ Theorem roundTrip_0 : forall sz, wordToNat (natToWord sz 0) = 0.
   induction sz; simpl; intuition.
 Qed.
 
-Hint Rewrite roundTrip_0 : wordToNat.
+#[global] Hint Rewrite roundTrip_0 : wordToNat.
 
 Lemma wordToNat_natToWord' : forall sz w, exists k, wordToNat (natToWord sz w) + k * pow2 sz = w.
   induction sz as [|sz IHsz]; simpl; intro w; intuition; repeat rewrite untimes2.
@@ -591,9 +591,9 @@ Theorem split2_combine : forall sz1 sz2 (w : word sz1) (z : word sz2),
   induction sz1; shatterer.
 Qed.
 
-Hint Rewrite combine_split.
-Hint Rewrite split1_combine.
-Hint Rewrite split2_combine.
+#[global] Hint Rewrite combine_split.
+#[global] Hint Rewrite split1_combine.
+#[global] Hint Rewrite split2_combine.
 
 Theorem combine_assoc : forall n1 (w1 : word n1) n2 n3 (w2 : word n2) (w3 : word n3) Heq,
   combine (combine w1 w2) w3
@@ -1877,7 +1877,7 @@ Proof.
 Qed.
 
 
-Hint Resolve word_neq lt_le eq_le sub_0_eq le_neq_lt : worder.
+#[global] Hint Resolve word_neq lt_le eq_le sub_0_eq le_neq_lt : worder.
 
 Ltac shatter_word x :=
   match type of x with
@@ -2202,7 +2202,7 @@ Proof.
   assumption.
 Qed.
 
-Hint Resolve lt_word_le_nat.
+#[global] Hint Resolve lt_word_le_nat.
 
 Lemma wordToNat_natToWord_idempotent' : forall sz n,
   (n < pow2 sz)%nat

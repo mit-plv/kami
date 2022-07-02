@@ -969,7 +969,7 @@ Section GivenModule.
 
   Definition initRegs (init: list RegInitT): RegsT :=
     makeMap (fullType type) evalConstFullT (rawInitRegs init).
-  Hint Unfold rawInitRegs initRegs.
+  #[local] Hint Unfold rawInitRegs initRegs.
 
   Lemma rawInitRegs_namesOf:
     forall r, namesOf r = namesOf (rawInitRegs r).

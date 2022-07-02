@@ -91,8 +91,8 @@ Section PrimFifo.
 
 End PrimFifo.
 
-Hint Unfold fifo fifoF fifoC: ModuleDefs.
-Hint Unfold primPipelineFifoName primBypassFifoName
+#[global] Hint Unfold fifo fifoF fifoC: ModuleDefs.
+#[global] Hint Unfold primPipelineFifoName primBypassFifoName
      fifoEnq fifoDeq fifoFirstElt fifoIsFull fifoClear: MethDefs.
 
 Section Facts.
@@ -104,45 +104,45 @@ Section Facts.
   Proof.
     kequiv.
   Qed.
-  Hint Resolve fifo_ModEquiv.
+  #[local] Hint Resolve fifo_ModEquiv.
 
   Lemma fifoF_ModEquiv:
     ModPhoasWf (fifoF primFifoName fifoName dType).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve fifoF_ModEquiv.
+  #[local] Hint Resolve fifoF_ModEquiv.
 
   Lemma fifoC_ModEquiv:
     ModPhoasWf (fifoC primFifoName fifoName dType).
   Proof.
     kequiv.
   Qed.
-  Hint Resolve fifoC_ModEquiv.
+  #[local] Hint Resolve fifoC_ModEquiv.
 
   Lemma fifo_ValidRegs:
     ModRegsWf (fifo primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.
-  Hint Resolve fifo_ValidRegs.
+  #[local] Hint Resolve fifo_ValidRegs.
 
   Lemma fifoF_ValidRegs:
     ModRegsWf (fifoF primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.
-  Hint Resolve fifoF_ValidRegs.
+  #[local] Hint Resolve fifoF_ValidRegs.
 
   Lemma fifoC_ValidRegs:
     ModRegsWf (fifoC primFifoName fifoName dType).
   Proof.
     kvr.
   Qed.
-  Hint Resolve fifoC_ValidRegs.
+  #[local] Hint Resolve fifoC_ValidRegs.
 
 End Facts.
 
-Hint Resolve fifo_ModEquiv fifoF_ModEquiv fifoC_ModEquiv.
-Hint Resolve fifo_ValidRegs fifoF_ValidRegs fifoC_ValidRegs.
+#[global] Hint Resolve fifo_ModEquiv fifoF_ModEquiv fifoC_ModEquiv.
+#[global] Hint Resolve fifo_ValidRegs fifoF_ValidRegs fifoC_ValidRegs.
 

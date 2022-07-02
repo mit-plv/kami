@@ -40,7 +40,7 @@ Section TwoModules.
 
   Definition OneMustMethNone (ul1 ul2: UnitLabel) :=
     ul1 = Meth None \/ ul2 = Meth None.
-  Hint Unfold OneMustMethNone.
+  #[local] Hint Unfold OneMustMethNone.
 
   Lemma substep_split:
     forall o u ul cs,

@@ -273,8 +273,8 @@ Notation "e1 ;; e2" := (if e1 then e2 else right _) (right associativity, at lev
 
 Axiom cheat: forall t, t.
 
-Hint Extern 1 (_ /\ _) => repeat split.
-Hint Extern 1 (NoDup _) => (repeat constructor; simpl; intro; intuition auto; discriminate).
+#[global] Hint Extern 1 (_ /\ _) => repeat split.
+#[global] Hint Extern 1 (NoDup _) => (repeat constructor; simpl; intro; intuition auto; discriminate).
 
 (** Invariant-related definitions *)
 Definition or3 (b1 b2 b3: Prop) := b1 \/ b2 \/ b3.

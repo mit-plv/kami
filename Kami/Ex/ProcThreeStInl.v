@@ -63,7 +63,7 @@ Section Inlined.
                           d2ePack d2eOpType d2eDst d2eAddr d2eByteEn d2eVal1 d2eVal2
                           d2eRawInst d2eCurPc d2eNextPc d2eEpoch
                           e2wPack e2wDecInst e2wVal init.
-  Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
+  #[local] Hint Unfold p3st: ModuleDefs. (* for kinline_compute *)
 
   Definition p3stInl: sigT (fun m: Modules => p3st <<== m).
   Proof. (* SKIP_PROOF_ON

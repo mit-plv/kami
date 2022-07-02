@@ -37,7 +37,7 @@ Section Invariants.
   Definition scmm_inv_rf_zero
              (rfv: fullType type (SyntaxKind (Vector (Data dataBytes) rfIdx))) :=
     rfv $0 = $0.
-  Hint Unfold scmm_inv_rf_zero: InvDefs.
+  #[local] Hint Unfold scmm_inv_rf_zero: InvDefs.
 
   Definition scmm_inv_pgm_init
              (initv: fullType type (SyntaxKind Bool))
@@ -48,7 +48,7 @@ Section Invariants.
     forall iaddr,
       iaddr < ofsv ->
       pgmv iaddr = evalExpr (alignInst _ (combineBytes dataBytes (evalExpr (toAddr _ iaddr)) memv)).
-  Hint Unfold scmm_inv_pgm_init: InvDefs.
+  #[local] Hint Unfold scmm_inv_pgm_init: InvDefs.
         
   Inductive scmm_inv (o: RegsT) : Prop :=
   | ProcInv:

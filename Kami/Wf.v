@@ -13,7 +13,7 @@ Section Equiv.
 
   Definition ft1 := fullType t1.
   Definition ft2 := fullType t2.
-  Hint Unfold ft1 ft2.
+  #[local] Hint Unfold ft1 ft2.
 
   Inductive ActionEquiv: forall {k}, ActionT t1 k -> ActionT t2 k -> Prop :=
   | AEMCall: forall {k} n s (e1: Expr t1 (SyntaxKind (arg s)))

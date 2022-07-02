@@ -66,7 +66,7 @@ Section Fetch.
       "pgmInitRsEnd" |-> "pgmInitRsEnd";
       "modifyPc" |-> "modifyPc";
       "instFetchRs" |-> "instFetch"; ||.
-  Hint Unfold fetchICache_ruleMap: MethDefs.
+  #[local] Hint Unfold fetchICache_ruleMap: MethDefs.
 
   Definition fetchICache_regMap (r: RegsT): RegsT :=
     (mlet pcv : (Pc addrSize) <- r |> "pc";
@@ -84,7 +84,7 @@ Section Fetch.
         +["pinit" <- existT _ _ pinitv]
         +["pc" <- existT _ _ pcv]
        )%fmap)%mapping.
-  Hint Unfold fetchICache_regMap: MapDefs.
+  #[local] Hint Unfold fetchICache_regMap: MapDefs.
 
   Ltac fetchICache_dest_tac :=
     repeat match goal with
