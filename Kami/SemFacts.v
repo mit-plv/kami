@@ -216,8 +216,8 @@ Proof.
     destruct Heqokm as [sm [? ?]]; subst.
     rewrite M.add_idempotent.
     unfold liftToMap1.
-    rewrite M.F.P.fold_add; auto.
-    rewrite M.F.P.fold_add; auto.
+    rewrite M.F.P.fold_add; [|auto|auto| |auto].
+    rewrite M.F.P.fold_add; [|auto|auto| |auto].
     unfold rmModify; simpl in *.
     rewrite M.add_idempotent; reflexivity.
     + apply M.transpose_neqkey_eq_add; intuition.

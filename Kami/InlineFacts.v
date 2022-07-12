@@ -415,7 +415,7 @@ Proof.
   remember (M.find a ds) as odv; destruct odv.
   - remember (M.find a cs) as ocv; destruct ocv; [|apply IHdmsAll].
     destruct (signIsEq s s0); [|destruct (signIsEq _ _); intuition; apply IHdmsAll].
-    subst; destruct (signIsEq s0 s0); intuition auto.
+    subst; destruct (signIsEq s0 s0); intuition idtac.
     rewrite IHdmsAll; simpl in *.
     clear; f_equal.
   - destruct (M.find a cs); apply IHdmsAll.
