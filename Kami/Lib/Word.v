@@ -1090,7 +1090,7 @@ Theorem mod2_S : forall n k,
   -> mod2 n = true.
   induction n as [n] using strong; intros.
   destruct n; simpl in *.
-  elimtype False; lia.
+  exfalso; lia.
   destruct n; simpl in *; auto.
   destruct k as [|k]; simpl in *.
   discriminate.
@@ -1861,7 +1861,7 @@ Proof.
   rewrite e. rewrite wplus_assoc. rewrite wminus_inv. rewrite wplus_unit. auto.
   unfold wminus in H.
   generalize (unique_inverse a (wneg a) (^~ b)).
-  intro H0. elimtype False. apply n. symmetry; apply H0.
+  intro H0. exfalso. apply n. symmetry; apply H0.
   apply wminus_inv.
   auto.
 Qed.
@@ -1870,7 +1870,7 @@ Lemma le_neq_lt : forall sz (a b : word sz),
   b <= a -> a <> b -> b < a.
 Proof.
   intros sz a b H H0; destruct (wlt_dec b a) as [?|n]; auto.
-  elimtype False. apply H0. unfold wlt, N.lt in *.
+  exfalso. apply H0. unfold wlt, N.lt in *.
   eapply wordToN_inj. eapply Ncompare_eq_correct.
   case_eq ((wordToN a ?= wordToN b)%N); auto; try congruence.
   intros H1. rewrite N.compare_antisym in n. rewrite H1 in n. simpl in *. congruence.
@@ -1895,7 +1895,7 @@ Lemma rewrite_weq : forall sz (a b : word sz)
   (pf : a = b),
   weq a b = left _ pf.
 Proof.
-  intros sz a b *; destruct (weq a b); try solve [ elimtype False; auto ].
+  intros sz a b *; destruct (weq a b); try solve [ exfalso; auto ].
   f_equal.
   eapply UIP_dec. eapply weq.
 Qed.
