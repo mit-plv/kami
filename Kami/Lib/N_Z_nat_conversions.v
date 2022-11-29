@@ -17,15 +17,13 @@ Module N2Nat.
     rewrite <-? N_to_Z_to_nat.
     rewrite N2Z.inj_mod by assumption.
     apply Nat2Z.inj.
-    rewrite Zdiv.mod_Zmod.
-    - rewrite? Z2Nat.id; try apply N2Z.is_nonneg.
-      + reflexivity.
-      + pose proof (Z.mod_pos_bound (Z.of_N a) (Z.of_N b)) as Q.
-        destruct Q as [Q _].
-        * destruct b; try contradiction. simpl. constructor.
-        * exact Q.
-    - destruct b; try contradiction. simpl.
-      pose proof (Pos2Nat.is_pos p) as Q. lia.
+    rewrite Nat2Z.inj_mod.
+    rewrite? Z2Nat.id; try apply N2Z.is_nonneg.
+    - reflexivity.
+    - pose proof (Z.mod_pos_bound (Z.of_N a) (Z.of_N b)) as Q.
+      destruct Q as [Q _].
+      + destruct b; try contradiction. simpl. constructor.
+      + exact Q.
   Qed.
 
 End N2Nat.

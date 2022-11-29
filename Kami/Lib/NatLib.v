@@ -543,10 +543,10 @@ Proof.
   - assert (a - b = 0 \/ b < a) as D by lia. destruct D as [D | D].
     + rewrite D. apply Nat.mod_0_l. assumption.
     + apply Nat2Z.inj. simpl.
-      rewrite Zdiv.mod_Zmod by assumption.
+      rewrite Nat2Z.inj_mod.
       rewrite Nat2Z.inj_sub by lia.
       rewrite Zdiv.Zminus_mod.
-      rewrite <-! Zdiv.mod_Zmod by assumption.
+      rewrite <-! Nat2Z.inj_mod.
       rewrite H. rewrite H0.
       apply Z.mod_0_l.
       lia.
