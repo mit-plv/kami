@@ -94,7 +94,7 @@ Fixpoint wmsb sz (w : word sz) (a : bool) : bool :=
 
 Definition wlsb sz (w: word (S sz)) :=
   match w with
-  | WO => idProp
+  | WO => tt
   | WS b _ => b
   end.
 
