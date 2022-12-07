@@ -13,16 +13,16 @@ Section WordEx.
 
   Definition rtrunc1 sz (w: word (S sz)): word sz:=
     match w with
-    | WO => idProp
+    | WO => tt
     | WS _ w' => w'
     end.
 
   Definition rtrunc2 sz (w: word (S (S sz))): word sz :=
     match w with
-    | WO => idProp
+    | WO => tt
     | WS _ w' =>
       match w' with
-      | WO => idProp
+      | WO => tt
       | WS _ w'' => w''
       end
     end.
@@ -464,7 +464,7 @@ Section Multiplier32.
 
     Definition wordToB2 sz (w: word (S sz)): bword sz :=
       match w with
-      | WO => idProp
+      | WO => tt
       | WS b w' => wordToB2' w' b
       end.
 
