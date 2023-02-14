@@ -7,6 +7,8 @@ Require Import Kami.RefinementFacts.
 
 Require Import FunctionalExtensionality.
 
+Require Btauto.
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
@@ -1327,8 +1329,7 @@ Proof.
     + auto.
   - apply andb_true_iff in H; dest.
     apply andb_true_iff in H; dest.
-    apply andb_true_iff; split; auto.
-    apply andb_true_iff; split; auto.
+    auto 9 using andb_true_iff.
 Qed.
 
 Lemma noCalls_noCallDmSigATrue:
@@ -1362,7 +1363,7 @@ Lemma inlineDm_noCallDmSigA:
     noCallDmSigA (inlineDm a dm) (attrName dm) (projT1 (attrType dm)) = true.
 Proof.
   induction a; simpl; intros; auto;
-    [|do 2 (apply andb_true_iff; split; auto)].
+    (try solve [do 2 (apply andb_true_iff; split; auto)]); [ ].
 
   unfold getBody.
   remember (string_eq meth (attrName dm)) as md; destruct md;
