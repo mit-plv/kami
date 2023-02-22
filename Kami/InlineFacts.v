@@ -7,7 +7,7 @@ Require Import Kami.RefinementFacts.
 
 Require Import FunctionalExtensionality.
 
-Require Btauto.
+Require Import (hints) btauto.Algebra.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
