@@ -9,6 +9,8 @@ Import ListNotations.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with exfalso zarith.
+
 Section LabelMapComposition.
   Definition compLabelMaps (p q: M.key -> sigT SignT -> option (sigT SignT)) :=
     fun s v =>

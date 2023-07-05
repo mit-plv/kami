@@ -6,6 +6,9 @@ Require Import Program.Equality FunctionalExtensionality.
 
 Import ListNotations.
 
+Local Ltac Tauto.intuition_solver ::= auto with datatypes exfalso bool zarith.
+
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 

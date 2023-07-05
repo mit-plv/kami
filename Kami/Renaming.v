@@ -6,6 +6,8 @@ Require Import Lib.CommonTactics.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with datatypes.
+
 Lemma prepend1To1: forall c s1 s2: string, (c ++ s1)%string = (c ++ s2)%string -> s1 = s2.
 Proof.
   induction c; simpl in *; intros.
@@ -218,7 +220,7 @@ Section Rename.
       rewrite M.find_add_1; intuition.
       unfold Morphisms.Proper, Morphisms.respectful; intros.
       rewrite H, H1, H2.
-      intuition.
+      intuition auto with MapDefs.
       unfold M.F.P.transpose_neqkey, M.Map.Equal; intros.
       f_equal.
       M.cmp (rename k0) (rename k').
