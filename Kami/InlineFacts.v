@@ -12,6 +12,8 @@ Require Import (hints) btauto.Algebra.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with datatypes exfalso.
+
 Lemma inlineDm_SemAction_intact:
   forall {retK} or a nr calls (retV: type retK),
     SemAction or a nr calls retV ->

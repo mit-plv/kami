@@ -7,6 +7,9 @@ Require Import Equalities Eqdep_dec FMapInterface.
 
 Require Import Lib.CommonTactics Lib.StringAsOT Lib.StringEq Lib.Struct.
 
+Local Ltac Tauto.intuition_solver ::= auto with datatypes.
+
+
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
@@ -2754,7 +2757,7 @@ Section MakeMap.
   Proof.
     induction m; simpl; intros; [apply M.KeysSubset_empty|].
     destruct a as [an [atype av]]; simpl.
-    apply M.KeysSubset_add; intuition.
+    apply M.KeysSubset_add; intuition auto with MapDefs datatypes.
   Qed.
 
   Lemma makeMap_union:

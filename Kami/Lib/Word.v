@@ -484,7 +484,7 @@ Theorem natToWord_wordToNat : forall sz w, natToWord sz (wordToNat w) = w.
 Qed.
 
 Theorem roundTrip_0 : forall sz, wordToNat (natToWord sz 0) = 0.
-  induction sz; simpl; intuition.
+  induction sz; simpl; intuition lia.
 Qed.
 
 #[global] Hint Rewrite roundTrip_0 : wordToNat.
@@ -492,7 +492,7 @@ Qed.
 Lemma wordToNat_natToWord' : forall sz w, exists k, wordToNat (natToWord sz w) + k * pow2 sz = w.
   induction sz as [|sz IHsz]; simpl; intro w; intuition; repeat rewrite untimes2.
 
-  exists w; intuition.
+  exists w; intuition lia.
 
   case_eq (mod2 w); intro Hmw.
 
@@ -526,7 +526,7 @@ Qed.
 Theorem wordToNat_natToWord:
   forall sz w, exists k, wordToNat (natToWord sz w) = w - k * pow2 sz /\ (k * pow2 sz <= w)%nat.
 Proof.
-  intros sz w; destruct (wordToNat_natToWord' sz w) as [k]; exists k; intuition.
+  intros sz w; destruct (wordToNat_natToWord' sz w) as [k]; exists k; intuition lia.
 Qed.
 
 Lemma wordToNat_natToWord_2: forall sz w : nat,
@@ -5087,7 +5087,7 @@ Qed.
 
 Lemma ZToWord_plus: forall sz a b, ZToWord sz (a + b) = ZToWord sz a ^+ ZToWord sz b.
 Proof.
-  destruct sz as [|sz]; intros n m; intuition.
+  destruct sz as [|sz]; intros n m; intuition auto with worder.
   rewrite wplus_wplusZ.
   unfold wplusZ, wordBinZ.
   destruct (wordToZ_ZToWord' (S sz) n) as [k1 D1].

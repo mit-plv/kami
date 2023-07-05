@@ -7,6 +7,8 @@ Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with datatypes.
+
 (* PHOAS equivalence *)
 Section Equiv.
   Variable t1 t2: Kind -> Type.

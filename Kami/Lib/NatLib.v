@@ -52,7 +52,7 @@ Section strong.
   Hypothesis PH : forall n, (forall m, m < n -> P m) -> P n.
 
   Lemma strong' : forall n m, m <= n -> P m.
-    induction n; simpl; intuition; apply PH; intuition.
+    induction n; simpl; intuition auto with zarith; apply PH; intuition.
     exfalso; lia.
   Qed.
 
@@ -92,7 +92,7 @@ Theorem drop_mod2 : forall n k,
 
   do 2 (destruct n; simpl in *; repeat rewrite untimes2 in *; intuition).
 
-  destruct k; simpl in *; intuition.
+  destruct k; simpl in *; intuition lia.
 
   destruct k; simpl; intuition.
   rewrite <- plus_n_Sm.
@@ -380,7 +380,7 @@ Qed.
 Theorem Npow2_nat : forall n, nat_of_N (Npow2 n) = pow2 n.
   induction n as [|n IHn]; simpl; intuition.
   rewrite <- IHn; clear IHn.
-  case_eq (Npow2 n); intuition.
+  case_eq (Npow2 n); intuition lia.
 Qed.
 
 Theorem pow2_N : forall n, Npow2 n = N.of_nat (pow2 n).

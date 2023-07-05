@@ -6,6 +6,8 @@ Require Import Kami.Syntax Kami.Semantics Kami.Wf.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with exfalso datatypes.
+
 Ltac specializeAll k :=
   repeat
     match goal with
@@ -99,11 +101,11 @@ Section LiftToMap.
       + intuition.
       + clear; unfold Morphisms.Proper, Morphisms.respectful; intros; subst.
         apply M.leibniz in H1; subst.
-        intuition.
+        intuition auto with MapDefs.
       + clear; unfold M.F.P.transpose_neqkey; intros.
         unfold rmModify.
         destruct (p k e), (p k' e');
-          try apply M.transpose_neqkey_Equal_add; intuition.
+          try apply M.transpose_neqkey_Equal_add; intuition auto with MapDefs.
       + intuition.
   Qed.
         

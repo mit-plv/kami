@@ -8,6 +8,8 @@ Require Import Compare_dec.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Local Ltac Tauto.intuition_solver ::= auto with exfalso bool zarith.
+
 Section SpecializeModule.
   Variable m: Modules.
   Variable i: nat.
