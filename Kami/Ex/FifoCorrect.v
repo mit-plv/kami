@@ -1,4 +1,4 @@
-Require Import Arith.Peano_dec Bool String List.
+Require Import Arith.Peano_dec Bool String List PeanoNat.
 Require Import Lib.CommonTactics Lib.ilist Lib.NatLib Lib.Word Lib.Struct Lib.StringEq.
 Require Import Lib.FMap Lib.Indexer.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
@@ -354,7 +354,7 @@ Section ToNative.
                 }
               }
               { replace (x5 ^- (x5 ^+ $0~1)) with (wones rsz).
-                { apply Le.le_refl. }
+                { apply Nat.le_refl. }
                 { rewrite wones_wneg_one.
                   apply wplus_cancel with (c:= x5 ^+ $0~1).
                   rewrite wplus_comm, <-wplus_assoc, wminus_inv.
@@ -378,7 +378,7 @@ Section ToNative.
                 { pose proof (wordToNat_bound (x5 ^- x6)).
                   remember (Lib.NatLib.pow2 (S sz)) as pt; destruct pt.
                   { pose proof (pow2_zero (S sz)); lia. }
-                  { apply Lt.lt_n_S.
+                  { apply ->Nat.succ_lt_mono.
                     assert (wordToNat (x5 ^- x6) <> pt).
                     { replace pt with (Lib.NatLib.pow2 (S sz) - 1) by lia.
                       intro Hx.
@@ -401,7 +401,6 @@ Section ToNative.
                 { apply wordToNat_bound. }
               }
               { rewrite wones_pow2_minus_one.
-                apply Lt.lt_n_Sm_le.
                 pose proof (wordToNat_bound (x5 ^- x6)).
                 unfold rsz in *; lia.
               }
@@ -880,4 +879,3 @@ Section ToSimpleN.
   Qed.
 
 End ToSimpleN.
-    

@@ -997,13 +997,13 @@ Section Multiplier32.
         rewrite pow2_add_mul.
         pose proof (zero_lt_pow2 n).
         replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by lia.
-        apply mult_le_compat_l; lia.
+        apply Nat.mul_le_mono_l; lia.
       + eapply Z.lt_le_trans; [eassumption|].
         apply Nat2Z.inj_le.
         rewrite pow2_add_mul.
         pose proof (zero_lt_pow2 n).
         replace (pow2 sz) with (pow2 sz * 1)%nat at 1 by lia.
-        apply mult_le_compat_l; lia.
+        apply Nat.mul_le_mono_l; lia.
   Qed.
 
   Lemma boothStepInv_booth4Step:
@@ -1433,4 +1433,3 @@ Section Multiplier32.
   Qed.
 
 End Multiplier32.
-

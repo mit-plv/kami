@@ -1,4 +1,3 @@
-Require Import Coq.Arith.Div2.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import N_Z_nat_conversions.
@@ -26,11 +25,11 @@ Theorem mod2_double : forall n, mod2 (2 * n) = false.
   induction n; simpl; intuition; rewrite <- plus_n_Sm; rethink.
 Qed.
 
-Theorem div2_double : forall n, div2 (2 * n) = n.
+Theorem div2_double : forall n, Nat.div2 (2 * n) = n.
   induction n; simpl; intuition; rewrite <- plus_n_Sm; f_equal; rethink.
 Qed.
 
-Theorem div2_S_double : forall n, div2 (S (2 * n)) = n.
+Theorem div2_S_double : forall n, Nat.div2 (S (2 * n)) = n.
   induction n; simpl; intuition; f_equal; rethink.
 Qed.
 
@@ -63,26 +62,26 @@ End strong.
 
 Theorem div2_odd : forall n,
   mod2 n = true
-  -> n = S (2 * div2 n).
+  -> n = S (2 * Nat.div2 n).
   induction n as [n] using strong; simpl; intuition.
 
   destruct n as [|n]; simpl in *.
     discriminate.
   destruct n as [|n]; simpl in *; intuition.
   do 2 f_equal.
-  replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
+  replace (Nat.div2 n + S (Nat.div2 n + 0)) with (S (Nat.div2 n + (Nat.div2 n + 0))); auto.
 Qed.
 
 Theorem div2_even : forall n,
   mod2 n = false
-  -> n = 2 * div2 n.
+  -> n = 2 * Nat.div2 n.
   induction n as [n] using strong; simpl; intuition.
 
   destruct n as [|n]; simpl in *; intuition.
   destruct n as [|n]; simpl in *.
     discriminate.
   f_equal.
-  replace (div2 n + S (div2 n + 0)) with (S (div2 n + (div2 n + 0))); auto.
+  replace (Nat.div2 n + S (Nat.div2 n + 0)) with (S (Nat.div2 n + (Nat.div2 n + 0))); auto.
 Qed.
 
 Theorem drop_mod2 : forall n k,
@@ -103,7 +102,7 @@ Qed.
 
 Theorem div2_minus_2 : forall n k,
   2 * k <= n
-  -> div2 (n - 2 * k) = div2 n - k.
+  -> Nat.div2 (n - 2 * k) = Nat.div2 n - k.
   induction n as [n] using strong; intros.
 
   do 2 (destruct n; simpl in *; intuition; repeat rewrite untimes2 in * ).
@@ -116,7 +115,7 @@ Qed.
 
 Theorem div2_bound : forall k n,
   2 * k <= n
-  -> k <= div2 n.
+  -> k <= Nat.div2 n.
   intros ? n H; case_eq (mod2 n); intro Heq.
 
   rewrite (div2_odd _ Heq) in H.
@@ -145,7 +144,7 @@ Proof.
     + simpl. lia.
     + destruct b.
       * simpl. lia.
-      * simpl. apply lt_n_S. apply IHa. lia.
+      * simpl. apply ->Nat.succ_le_mono. apply IHa. lia.
 Qed.
 
 (* otherwise b is made implicit, while a isn't, which is weird *)
@@ -183,11 +182,10 @@ Qed.
 Lemma lt_mul_mono' : forall c a b,
   a < b -> a < b * (S c).
 Proof.
-  induction c; intros.
-  rewrite Nat.mul_1_r; auto.
+  intros c a b H.
   rewrite Nat.mul_succ_r.
-  apply lt_plus_trans.
-  apply IHc; auto.
+  apply Nat.lt_le_trans with (1 := H).
+  now apply Nat.le_add_l.
 Qed.
 
 Lemma lt_mul_mono : forall a b c,
@@ -343,33 +341,20 @@ Proof.
 Qed.
 
 Theorem div2_plus_2 : forall n k,
-  div2 (n + 2 * k) = div2 n + k.
+  Nat.div2 (n + 2 * k) = Nat.div2 n + k.
 Proof.
-  induction n; intros.
-  simpl.
-  rewrite Nat.add_0_r.
-  replace (k + k) with (2 * k) by lia.
-  apply div2_double.
-  replace (S n + 2 * k) with (S (n + 2 * k)) by lia.
-  destruct (Even.even_or_odd n).
-  - rewrite <- even_div2.
-    rewrite <- even_div2 by auto.
-    apply IHn.
-    apply Even.even_even_plus; auto.
-    apply Even.even_mult_l; repeat constructor.
-
-  - rewrite <- odd_div2.
-    rewrite <- odd_div2 by auto.
-    rewrite IHn.
-    lia.
-    apply Even.odd_plus_l; auto.
-    apply Even.even_mult_l; repeat constructor.
+  intros n k.
+  destruct (Nat.Even_or_Odd n) as [[q ->] | [q ->]].
+  - now rewrite <-(Nat.mul_add_distr_l 2), 2div2_double.
+  - rewrite (Nat.add_comm _ 1), <-Nat.add_assoc, <-Nat.mul_add_distr_l.
+    rewrite Nat.add_1_l, (Nat.add_1_l (2 * q)).
+    now rewrite 2!Nat.div2_succ_double.
 Qed.
 
 Lemma pred_add:
   forall n, n <> 0 -> pred n + 1 = n.
 Proof.
-  intros; rewrite pred_of_minus; lia.
+  now intros n Hn; rewrite Nat.add_1_r, Nat.succ_pred.
 Qed.
 
 Lemma pow2_zero: forall sz, (pow2 sz > 0)%nat.
@@ -418,7 +403,7 @@ Proof.
   rewrite pow2_add_mul.
   pose proof (pow2_zero x).
   replace (pow2 n) with (pow2 n * 1) at 1 by lia.
-  apply mult_le_compat_l.
+  apply Nat.mul_le_mono_l.
   lia.
 Qed.
 
@@ -509,7 +494,7 @@ Proof.
   pose proof Nat.div_mul_cancel_l as A. specialize (A a 1 b).
   replace (b * 1) with b in A by lia.
   rewrite Nat.div_1_r in A.
-  rewrite mult_comm.
+  rewrite Nat.mul_comm.
   rewrite <- Nat.divide_div_mul_exact; try assumption.
   - apply A; congruence.
   - apply Nat.mod_divide; assumption.
