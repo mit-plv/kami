@@ -1,5 +1,5 @@
 Require Import Lib.FMap Lib.Struct Kami.Semantics Kami.Syntax String List Kami.RefinementFacts.
-Require Import Program.Equality.
+From Coq Require Import Equality.
 
 Require Import Lib.CommonTactics.
 

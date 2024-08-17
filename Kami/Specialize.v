@@ -1,9 +1,9 @@
-Require Import Bool String List Arith.Peano_dec Lia.
+From Coq Require Import Bool String List Peano_dec Lia.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringAsList Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 
-Require Import FunctionalExtensionality.
-Require Import Compare_dec.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import Compare_dec.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

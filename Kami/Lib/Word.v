@@ -2,7 +2,7 @@
 
 Require Import Arith NArith ZArith Bool Lia.
 Require Import Eqdep_dec EqdepFacts.
-Require Import Program.Tactics Program.Equality.
+From Coq.Program Require Import Tactics Equality.
 Require Import Ring Ring_polynom.
 Require Import Lia Nlia NatLib DepEq N_Z_nat_conversions.
 

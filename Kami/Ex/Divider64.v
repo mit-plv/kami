@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.NatLib Lib.Indexer
         Lib.Struct Lib.DepEq Lib.Word Lib.FMap Lib.Reflection.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tactics.
 
-Require Import ZArith Eqdep Program.Equality.
+Require Import ZArith Eqdep Equality.
 
 Set Implicit Arguments.
 

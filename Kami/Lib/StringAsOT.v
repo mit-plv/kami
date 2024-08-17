@@ -1,5 +1,5 @@
-Require Import PeanoNat Compare_dec Lia Coq.Strings.String Coq.Strings.Ascii.
-Require Import Coq.Structures.OrderedType.
+From Coq Require Import PeanoNat Compare_dec Lia String Ascii.
+From Coq Require Import OrderedType.
 
 Set Asymmetric Patterns.
 

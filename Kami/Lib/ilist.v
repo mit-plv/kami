@@ -3,11 +3,11 @@ Set Implicit Arguments.
 
 Set Asymmetric Patterns.
 
-Require Import Coq.Lists.List
-        Coq.Strings.String
-        Coq.Arith.Arith Program.Equality.
+From Coq Require Import List
+        String
+        Arith Equality.
 Require Export Lib.VectorFacts.
-Require Coq.Vectors.Vector.
+From Coq Require Vector.
 
 Set Universe Polymorphism.
 Section ilist.

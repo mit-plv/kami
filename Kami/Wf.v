@@ -1,8 +1,8 @@
-Require Import Bool List String Structures.Equalities.
+From Coq Require Import Bool List String Equalities.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics.
 Require Import Lib.ilist Lib.FMap Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics.
-Require Import FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
+From Coq Require Import FunctionalExtensionality Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

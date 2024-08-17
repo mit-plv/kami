@@ -1,4 +1,4 @@
-Require Import String Program.Equality Lia.
+From Coq Require Import String Equality Lia.
 
 Set Asymmetric Patterns.
 

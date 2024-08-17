@@ -1,5 +1,5 @@
-Require Import Bool List String.
-Require Import Structures.Equalities FunctionalExtensionality Program.Equality Eqdep Eqdep_dec.
+From Coq Require Import Bool List String.
+From Coq Require Import Equalities FunctionalExtensionality Equality Eqdep Eqdep_dec.
 Require Import Lib.Struct Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementFacts.
 
