@@ -1,5 +1,6 @@
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Logic.Eqdep Coq.Logic.Eqdep_dec Coq.Program.Equality.
+From Coq Require Import PeanoNat.
+From Coq Require Import Eqdep Eqdep_dec.
+From Coq.Program Require Import Equality.
 
 (** * Equalities on dependent types *)
 

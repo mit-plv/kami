@@ -1,4 +1,4 @@
-Require Import Bool String List Arith.Peano_dec Lia.
+From Coq Require Import Bool String List Peano_dec Lia.
 Require Import Lib.FMap Lib.Struct Lib.CommonTactics Lib.Indexer Lib.StringEq Lib.ListSupport.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Specialize.

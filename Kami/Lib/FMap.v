@@ -1,9 +1,9 @@
-Require Import String.
-Require FSets.FMapList FSets.FMapFacts.
-Require Import Lists.SetoidList.
-Require Import Structures.OrderedType.
-Require Import Structures.OrderedTypeEx.
-Require Import Equalities Eqdep_dec FMapInterface.
+From Coq Require Import String.
+From Coq Require FMapList FMapFacts.
+From Coq Require Import SetoidList.
+From Coq Require Import OrderedType.
+From Coq Require Import OrderedTypeEx.
+From Coq Require Import Equalities Eqdep_dec FMapInterface.
 
 Require Import Lib.CommonTactics Lib.StringAsOT Lib.StringEq Lib.Struct.
 

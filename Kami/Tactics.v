@@ -6,7 +6,7 @@ Require Import Kami.RefinementFacts Kami.Notations.
 Require Import Kami.Inline Kami.InlineFacts Kami.Specialize Kami.Duplicate Kami.Substitute.
 Require Import Kami.Decomposition Kami.ModuleBound Kami.ModuleBoundEx.
 
-Require Import FunctionalExtensionality Program.Equality.
+From Coq Require Import FunctionalExtensionality Equality.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

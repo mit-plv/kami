@@ -1,4 +1,5 @@
-Require Import Coq.Structures.OrderedType String Lib.StringAsOT.
+From Coq Require Import OrderedType String.
+Require Import Lib.StringAsOT.
 
 Module StringString_as_OT <: OrderedType.
   Definition t := (string * string)%type.

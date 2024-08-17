@@ -1,5 +1,5 @@
-Require Import Bool String List Program.Equality Program.Basics.
-Require Import FunctionalExtensionality Classes.Morphisms.
+From Coq Require Import Bool String List Equality Basics.
+From Coq Require Import FunctionalExtensionality Morphisms.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct Lib.StringEq.
 Require Import Kami.Syntax Kami.Semantics Kami.Wf.
 

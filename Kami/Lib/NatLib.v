@@ -1,5 +1,5 @@
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
 Require Import N_Z_nat_conversions.
 Require Export Lia Nlia.
 

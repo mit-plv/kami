@@ -1,6 +1,6 @@
-Require Import Bool List String Lia.
-Require Import Structures.Equalities Program.Equality Eqdep Eqdep_dec.
-Require Import FunctionalExtensionality.
+From Coq Require Import Bool List String Lia.
+From Coq Require Import Equalities Equality Eqdep Eqdep_dec.
+From Coq Require Import FunctionalExtensionality.
 Require Import Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap Lib.StringEq Lib.VectorFacts Lib.Struct.
 Require Import Kami.Syntax.
 

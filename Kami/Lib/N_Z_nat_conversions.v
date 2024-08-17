@@ -1,5 +1,5 @@
 (* This should be in the Coq library *)
-Require Import Coq.Arith.Arith Coq.NArith.NArith Coq.ZArith.ZArith Lia.
+From Coq Require Import Arith NArith ZArith Lia.
 
 Lemma N_to_Z_to_nat: forall (a: N), Z.to_nat (Z.of_N a) = N.to_nat a.
 Proof.

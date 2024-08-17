@@ -1,5 +1,5 @@
-Require Import Bool Ascii String List Eqdep Lia.
-Require Import Logic.FunctionalExtensionality.
+From Coq Require Import Bool Ascii String List Eqdep Lia.
+From Coq Require Import FunctionalExtensionality.
 
 Ltac isNew P :=
   match goal with
