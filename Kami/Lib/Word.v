@@ -235,10 +235,8 @@ Definition wremN := wordBinN Nat.modulo.
 
 Definition wminusN sz (x y : word sz) : word sz := wplusN x (wnegN y).
 
-Notation "w ~ 1" := (WS true w)
- (at level 7, left associativity, format "w '~' '1'") : word_scope.
-Notation "w ~ 0" := (WS false w)
- (at level 7, left associativity, format "w '~' '0'") : word_scope.
+Notation "w ~ 1" := (WS true w) : word_scope.
+Notation "w ~ 0" := (WS false w) : word_scope.
 
 Notation "^~" := wneg.
 Notation "l ^+ r" := (@wplus _ l%word r%word) (at level 50, left associativity).
