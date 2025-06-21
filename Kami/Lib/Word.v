@@ -345,7 +345,7 @@ Definition wslt_dec : forall sz (l r : word sz), {l <s r} + {l >s= r}.
   abstract congruence.
 Defined.
 
-Notation "$ n" := (natToWord _ n) (at level 5, format "$ n").
+Notation "$ n" := (natToWord _ n) (at level 1, format "$ n").
 Notation "# n" := (wordToNat n) (at level 5, format "# n").
 
 (** * Bit shifting *)
