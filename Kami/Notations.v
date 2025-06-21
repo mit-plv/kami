@@ -95,7 +95,7 @@ Notation "e ! s @. f" :=
 Notation "'VEC' v" := (BuildVector v) (at level 10) : kami_expr_scope.
 Notation "v '@[' idx <- val ] " := (UpdateVector v idx val) (at level 10) : kami_expr_scope.
 Notation "v '#[' idx <- val ] " := (UpdateArray v idx val) (at level 10) : kami_expr_scope.
-Notation "$ n" := (Const _ (natToWord _ n)) (at level 5) : kami_expr_scope.
+Notation "$ n" := (Const _ (natToWord _ n)) (at level 1) : kami_expr_scope.
 Notation "$$ e" := (Const _ e) (at level 5) : kami_expr_scope.
 Notation "'IF' e1 'then' e2 'else' e3" := (ITE e1 e2 e3) (at level 200, right associativity) : kami_expr_scope.
 

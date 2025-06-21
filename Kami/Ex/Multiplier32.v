@@ -427,12 +427,9 @@ Section Multiplier32.
       end.
 
     Declare Scope bword_scope.
-    Notation "w ~ 0" := (BWS BZero w) (at level 7, left associativity,
-                                       format "w '~' '0'"): bword_scope.
-    Notation "w ~ 'P'" := (BWS BPlus w) (at level 7, left associativity,
-                                         format "w '~' 'P'"): bword_scope.
-    Notation "w ~ 'N'" := (BWS BMinus w) (at level 7, left associativity,
-                                          format "w '~' 'N'"): bword_scope.
+    Notation "w ~ 0" := (BWS BZero w): bword_scope.
+    Notation "w ~ 'P'" := (BWS BPlus w): bword_scope.
+    Notation "w ~ 'N'" := (BWS BMinus w): bword_scope.
     Delimit Scope bword_scope with bword.
 
     Definition encodeB2 (mst lst: bool) :=
