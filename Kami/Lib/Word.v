@@ -1,10 +1,10 @@
 (** Fixed precision machine words *)
 
-Require Import Arith NArith ZArith Bool Lia.
-Require Import Eqdep_dec EqdepFacts.
+From Coq Require Import Arith NArith ZArith Bool Lia.
+From Coq Require Import Eqdep_dec EqdepFacts.
 From Coq.Program Require Import Tactics Equality.
-Require Import Ring Ring_polynom.
-Require Import Lia Nlia NatLib DepEq N_Z_nat_conversions.
+From Coq Require Import Ring Ring_polynom Lia.
+From Kami Require Import Nlia NatLib DepEq N_Z_nat_conversions.
 
 Set Implicit Arguments.
 

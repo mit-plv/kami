@@ -1,4 +1,4 @@
-Require Import Bool Ascii String Eqdep PeanoNat Compare_dec Lia.
+From Coq Require Import Bool Ascii String Eqdep PeanoNat Compare_dec Lia.
 Require Import CommonTactics StringAsList StringEq.
 
 (** Some string manipulation lemmas *)

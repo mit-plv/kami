@@ -1,6 +1,6 @@
 (* Make [lia] work for [N] *)
 
-Require Import Arith Lia NArith.
+From Coq Require Import Arith Lia NArith.
 
 Local Open Scope N_scope.
 

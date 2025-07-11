@@ -1,4 +1,5 @@
-Require Import String StringAsList.
+From Coq Require Import String.
+Require Import StringAsList.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

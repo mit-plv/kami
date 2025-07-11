@@ -1,4 +1,4 @@
-Require Import Bool String List.
+From Coq Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.Word Lib.Struct.
 Require Import Kami.Syntax.
 Require Import Ex.IsaRv32 Ex.IsaRv32Pgm.

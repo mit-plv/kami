@@ -1,4 +1,4 @@
-Require Import Bool String List.
+From Coq Require Import Bool String List.
 Require Import Kami.Syntax Kami.Semantics Kami.RefinementFacts Kami.Renaming Kami.Wf.
 Require Import Kami.Inline Kami.InlineFacts Kami.Tactics.
 Require Import Ex.SC Ex.MemTypes Ex.ProcFetchDecode.

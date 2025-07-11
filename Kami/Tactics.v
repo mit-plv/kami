@@ -1,4 +1,4 @@
-Require Import Bool String List Eqdep.
+From Coq Require Import Bool String List Eqdep.
 Require Import Lib.CommonTactics Lib.Reflection Lib.Word Lib.ilist Lib.Struct.
 Require Import Lib.Indexer Lib.StringEq Lib.FMap.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.StepDet Kami.Wf.

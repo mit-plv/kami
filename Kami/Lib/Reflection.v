@@ -1,4 +1,4 @@
-Require Import Bool String List.
+From Coq Require Import Bool String List.
 Require Import Lib.CommonTactics.
 
 Set Implicit Arguments.

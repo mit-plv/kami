@@ -1,4 +1,4 @@
-Require Import String.
+From Coq Require Import String.
 
 Local Open Scope string.
 Definition procRqValidReg := "procRqValid".

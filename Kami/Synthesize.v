@@ -1,4 +1,5 @@
-Require Import Kami.Syntax Lib.Struct List String Kami.Notations.
+From Coq Require Import List String.
+Require Import Kami.Syntax Lib.Struct Kami.Notations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

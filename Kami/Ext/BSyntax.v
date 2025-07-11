@@ -1,4 +1,4 @@
-Require Import String List.
+From Coq Require Import String List.
 Require Import Lib.Word Lib.ilist Lib.Struct Lib.Indexer.
 Require Import Kami.Syntax Kami.Synthesize.
 

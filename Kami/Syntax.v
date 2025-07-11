@@ -1,4 +1,4 @@
-Require Import Bool Peano_dec Vector List String.
+From Coq Require Import Bool Peano_dec Vector List String.
 Require Import Lib.CommonTactics Lib.StringEq Lib.Word Lib.FMap Lib.StringEq Lib.ilist Lib.Struct Lib.Indexer.
 
 Require Import FunctionalExtensionality. (* for appendAction_assoc *)

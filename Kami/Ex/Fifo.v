@@ -1,4 +1,4 @@
-Require Import Bool String List.
+From Coq Require Import Bool String List.
 Require Import Lib.CommonTactics Lib.ilist Lib.Word Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.Tactics.

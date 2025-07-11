@@ -1,4 +1,5 @@
-Require Import String Lib.CommonTactics Lib.Indexer Lib.StringAsList.
+From Coq Require Import String.
+Require Import Lib.CommonTactics Lib.Indexer Lib.StringAsList.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics.
 Require Import Kami.Wf Kami.Tactics.
 

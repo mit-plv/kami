@@ -1,4 +1,4 @@
-Require Export Bool String List.
+From Coq Require Export Bool String List.
 
 Require Export Lib.CommonTactics Lib.Indexer.
 Require Export Lib.FMap Lib.Word Lib.Struct.

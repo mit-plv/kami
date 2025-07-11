@@ -1,4 +1,4 @@
-Require Import List String.
+From Coq Require Import List String.
 Require Import Lib.CommonTactics Lib.FMap Lib.Struct.
 Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kami.Wf.
 

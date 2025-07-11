@@ -1,5 +1,6 @@
-Require Import String Lib.Word List Arith.
-Require Import Equality Eqdep_dec FunctionalExtensionality.
+From Coq Require Import String List Arith.
+Require Import Lib.Word.
+From Coq Require Import Equality Eqdep_dec FunctionalExtensionality.
 Require Import Lib.CommonTactics Lib.StringEq.
 
 Set Implicit Arguments.

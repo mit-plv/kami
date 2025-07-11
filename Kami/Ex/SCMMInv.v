@@ -1,4 +1,4 @@
-Require Import Ascii Bool String List Lia.
+From Coq Require Import Ascii Bool String List Lia.
 Require Import Lib.CommonTactics Lib.Indexer Lib.ilist Lib.Word Lib.Struct Lib.FMap.
 Require Import Kami.Syntax Kami.Notations.
 Require Import Kami.Semantics Kami.Specialize Kami.Duplicate.

@@ -1,4 +1,4 @@
-Require Import Bool Ascii String List.
+From Coq Require Import Bool Ascii String List.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

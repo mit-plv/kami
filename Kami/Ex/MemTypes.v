@@ -1,4 +1,5 @@
-Require Import Kami.Syntax Kami.Notations String.
+From Coq Require Import String.
+Require Import Kami.Syntax Kami.Notations.
 Require Import Names.
 
 Definition MemOp := Bool.
