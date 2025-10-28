@@ -3934,7 +3934,7 @@ Lemma wrshifta_0:
   forall sz (w: word sz), wrshifta w 0 = w.
 Proof.
   unfold wrshifta; intros; simpl.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   unfold sext.
   destruct (wmsb w false).
   - cbn; rewrite combine_n_0.
@@ -3947,7 +3947,7 @@ Lemma wrshifta_WO:
   forall n, wrshifta WO n = WO.
 Proof.
   unfold wrshifta; cbn; intros.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   rewrite wzero_eq_rect.
   rewrite <-combine_wzero.
   rewrite split2_combine.
@@ -3974,7 +3974,7 @@ Proof.
   intros.
   unfold wrshifta; cbn.
   rewrite sext_wzero.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   rewrite wzero_eq_rect.
   rewrite <-combine_wzero.
   rewrite split2_combine.
@@ -4250,7 +4250,7 @@ Lemma wordToNat_wrshifta:
 Proof.
   unfold wrshifta; intros.
   rewrite wordToNat_split2.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   rewrite wordToNat_eq_rect.
   reflexivity.
 Qed.
@@ -4287,7 +4287,7 @@ Proof.
   
   - unfold wlshift; intros.
     rewrite wordToNat_split1.
-    unfold eq_rec_r, eq_rec.
+    eq_rect_simpl.
     rewrite wordToNat_eq_rect.
     rewrite wordToNat_combine.
     rewrite wordToNat_wzero; simpl.
@@ -6743,7 +6743,7 @@ Proof.
   apply wordToNat_inj.
   unfold wlshift.
   rewrite? wordToNat_split1.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   rewrite? wordToNat_eq_rect.
   rewrite? wordToNat_combine.
   rewrite? wordToNat_wzero.
@@ -6792,7 +6792,7 @@ Proof.
   apply wordToNat_inj.
   unfold wlshift.
   rewrite? wordToNat_split1.
-  unfold eq_rec_r, eq_rec.
+  eq_rect_simpl.
   rewrite? wordToNat_eq_rect.
   rewrite? wordToNat_combine.
   rewrite? wordToNat_wzero.
