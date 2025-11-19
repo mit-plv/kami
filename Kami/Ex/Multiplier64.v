@@ -1198,9 +1198,9 @@ Section Multiplier64.
         kinv_custom boothMultiplierInv_old.
         boothMultiplierInv_new.
         
-        * cbn; unfold eq_rec; eq_rect_simpl.
+        * cbn; eq_rect_simpl.
           reflexivity.
-        * cbn; unfold eq_rec; eq_rect_simpl.
+        * cbn; eq_rect_simpl.
           reflexivity.
         * clear -H4 H12.
           Opaque split2.
@@ -1247,7 +1247,7 @@ Section Multiplier64.
           repeat split.
           { subst ww.
             cbv [evalSignExtendTrunc].
-            simpl; unfold eq_rec; eq_rect_simpl.
+            simpl; eq_rect_simpl.
             rewrite <-H13.
             reflexivity.
           }
@@ -1386,7 +1386,7 @@ Section Multiplier64.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 65 bsiM).
         cbv [evalSignExtendTrunc]; cbn.
-        unfold eq_rec; eq_rect_simpl.
+        eq_rect_simpl.
         cbn in H1; rewrite H1.
         pose proof (sext_wordToZ 65 bsiR).
         cbn; cbn in H2; rewrite H2.
@@ -1408,7 +1408,7 @@ Section Multiplier64.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 65 bsiM).
         cbv [evalSignExtendTrunc]; cbn.
-        unfold eq_rec; eq_rect_simpl.
+        eq_rect_simpl.
         cbn in H1; rewrite H1.
         pose proof (sext_wordToZ 65 bsiR).
         cbn; cbn in H2; rewrite H2.

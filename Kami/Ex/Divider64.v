@@ -182,7 +182,7 @@ Section Divider64.
     cbv [evalZeroExtendTrunc].
     destruct (lt_dec _ _); [|lia].
     apply existT_wminus.
-    - unfold zext, eq_rec.
+    - unfold zext. eq_rect_simpl.
       change (fun n2 => word n2) with word.
       rewrite existT_eq_rect.
       match goal with
@@ -190,7 +190,7 @@ Section Divider64.
         replace mn with 1 by (clear; induction n; auto)
       end.
       reflexivity.
-    - unfold zext, eq_rec.
+    - unfold zext. eq_rect_simpl.
       change (fun n2 => word n2) with word.
       rewrite existT_eq_rect.
       match goal with
