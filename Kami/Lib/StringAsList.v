@@ -1,6 +1,7 @@
 From Coq Require Import String Equality Lia.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Open Scope string.
 

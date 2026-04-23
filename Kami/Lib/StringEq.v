@@ -2,6 +2,7 @@ From Coq Require Import Bool Ascii String List.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Definition ascii_eq (a1 a2: Ascii.ascii): bool :=
   match a1, a2 with

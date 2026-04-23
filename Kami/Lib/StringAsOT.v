@@ -2,6 +2,7 @@ From Coq Require Import PeanoNat Compare_dec Lia String Ascii.
 From Coq Require Import OrderedType.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Lemma nat_compare_eq_refl : forall x, Nat.compare x x = Eq.
   intros; apply Nat.compare_eq_iff; trivial.

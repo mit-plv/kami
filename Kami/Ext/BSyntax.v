@@ -4,6 +4,7 @@ Require Import Kami.Syntax Kami.Synthesize.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section VecFunc.
   Variables A B: Type.

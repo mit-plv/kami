@@ -2,6 +2,7 @@ Generalizable All Variables.
 Set Implicit Arguments.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 From Coq Require Import List
         String

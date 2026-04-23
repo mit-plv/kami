@@ -8,6 +8,7 @@ Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Local Ltac Tauto.intuition_solver ::= auto with exfalso zarith.
 

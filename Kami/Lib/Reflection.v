@@ -3,6 +3,7 @@ Require Import Lib.CommonTactics.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Fixpoint noDupStr (l: list string) :=
   match l with

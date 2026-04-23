@@ -3,6 +3,7 @@ Require Import StringAsList.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Theorem true_False_false: forall v, (v = true -> False) -> v = false.
 Proof.

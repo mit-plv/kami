@@ -3,6 +3,7 @@ Require Import Kami.Syntax Lib.Struct Kami.Notations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Definition tyS: Kind -> Type := fun _ => nat.
 

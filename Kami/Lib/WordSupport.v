@@ -1,6 +1,7 @@
 Require Import Arith Lib.Word Lib.Nlia Lia.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 Set Implicit Arguments.
 Local Open Scope word_scope.
 

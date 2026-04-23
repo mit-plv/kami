@@ -5,6 +5,7 @@ Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf Kami.RefinementF
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section GivenLabelMap.
   Variable p: string -> (sigT SignT) -> option (sigT SignT).

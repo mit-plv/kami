@@ -4,6 +4,7 @@ Require Import Kami.Syntax.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 (** * Common notations for normal modules and meta-modules *)
 

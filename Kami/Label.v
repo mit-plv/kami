@@ -6,6 +6,7 @@ Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 (** This file contains following definitions/facts about label manipulation.
  * - Lifting M.restrict and M.complement to the level of labels

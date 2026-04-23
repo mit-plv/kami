@@ -10,6 +10,7 @@ Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Open Scope string.
 

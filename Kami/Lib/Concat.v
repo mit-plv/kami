@@ -2,6 +2,7 @@ From Coq Require Import List String.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Fixpoint concat A (ls: list (list A)): list A :=
   match ls with
