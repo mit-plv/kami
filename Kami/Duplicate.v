@@ -8,6 +8,7 @@ Require Import Compare_dec.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section Duplicate.
   Variable m: nat -> Modules.

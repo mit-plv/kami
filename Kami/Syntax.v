@@ -6,6 +6,7 @@ Require Import Eqdep. (* for signature_eq *)
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 (* `Vec n` is effectively a map from bit vectors of length
    `n` to elements of `A` *)

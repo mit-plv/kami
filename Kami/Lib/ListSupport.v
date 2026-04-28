@@ -4,6 +4,7 @@ Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Lemma Forall_app:
   forall {A} (l1 l2: list A) P, Forall P l1 -> Forall P l2 -> Forall P (l1 ++ l2).

@@ -3,6 +3,7 @@ Import Vector.VectorNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Definition Vector_caseS'
            {A'} (Q : nat -> Type)

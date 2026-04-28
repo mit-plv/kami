@@ -9,6 +9,7 @@ Import ListNotations.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.
 

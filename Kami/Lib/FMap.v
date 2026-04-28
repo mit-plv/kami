@@ -12,6 +12,7 @@ Local Ltac Tauto.intuition_solver ::= auto with datatypes.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section Lists. (* For dealing with domains *)
   Context {A: Type}.

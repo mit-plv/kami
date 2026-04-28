@@ -6,6 +6,7 @@ From Coq Require Import FunctionalExtensionality Equality Eqdep Eqdep_dec.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Local Ltac Tauto.intuition_solver ::= auto with datatypes.
 

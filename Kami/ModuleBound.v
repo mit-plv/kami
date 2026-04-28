@@ -5,6 +5,7 @@ Require Import Kami.Specialize Kami.Duplicate.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section ModuleBound.
   Variable m: Modules.

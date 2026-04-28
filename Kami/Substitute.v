@@ -4,6 +4,7 @@ Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.RefinementFacts Kam
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section Interacting.
   Variables (regs regs' sregs oregs: list RegInitT).

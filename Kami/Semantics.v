@@ -7,6 +7,7 @@ Require Import Kami.Syntax.
 Set Implicit Arguments.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section VecFunc.
   Variable A: Type.

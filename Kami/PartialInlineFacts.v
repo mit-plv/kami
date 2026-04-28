@@ -11,6 +11,7 @@ Local Ltac Tauto.intuition_solver ::= auto with datatypes exfalso bool zarith.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Lemma notNamesNotIn: forall A l (x: Attribute A), ~ In (attrName x) (namesOf l) -> In x l -> False.
 Proof.

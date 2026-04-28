@@ -5,6 +5,7 @@ Require Import Kami.Syntax.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section Base.
   Variable type: Kind -> Type.

@@ -5,6 +5,7 @@ Require Import Kami.Syntax Kami.Semantics Kami.SemFacts Kami.Wf.
 Set Implicit Arguments.
 
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 Section NoCalls.
   Fixpoint actionNoCalls {retT} (a: ActionT typeUT retT) :=
