@@ -152,9 +152,9 @@ Section GivenLabelMap.
       Proof.
         intros.
         dependent induction H.
-        dependent induction HMultistepBeh; subst.
+        dependent induction HMultistepBeh generalizing thetaInit; subst.
         - exists nil; rewrite thetaInit; repeat constructor.
-        - specialize (IHHMultistepBeh thetaInit defsSpecZero substepRuleMap eq_refl).
+        - specialize (IHHMultistepBeh thetaInit eq_refl).
           assert(reachO: reachable n imp) by (eexists; econstructor; eauto).
           pose proof (stepMapZero reachO HStep) as [uSpec [stepSpec upd]].
           destruct IHHMultistepBeh as [sigSpec [behSpec eqv]].

@@ -513,28 +513,33 @@ Section Rename.
     dependent induction sa; simpl in *; intros; destruct a'; simpl in *; try discriminate.
     - generalize dependent mret;
         inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' (a mret) JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' (a mret) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       apply M.F.P.F.not_find_in_iff in HDisjCalls.
       apply renameMapNotIn in HDisjCalls.
       repeat (econstructor; eauto).
       apply M.F.P.F.not_find_in_iff; eauto.
     - inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' (a (evalExpr e0)) JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' (a (evalExpr e0)) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       repeat (econstructor; eauto).
     - generalize dependent sa; generalize dependent IHsa; inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' (a valueV) JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' (a valueV) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       repeat (econstructor; eauto).
     - generalize dependent regV; inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' (a regV) JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' (a regV) JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       repeat (econstructor; eauto).
       rewrite <- HRegVal; auto.
       rewrite renameMapFind; reflexivity.
     - inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' a' JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst.
       apply M.F.P.F.not_find_in_iff in HDisjRegs.
       apply renameMapNotIn in HDisjRegs.
@@ -542,10 +547,12 @@ Section Rename.
       apply M.F.P.F.not_find_in_iff; auto.
     - generalize dependent r1.
       inv x; destruct_existT; intros.
-      destruct (IHsa1 rename1To1 o' a'1 JMeq_refl eq_refl) as
+      try specialize (IHsa1 rename1To1).
+      destruct (IHsa1 o' a'1 JMeq_refl eq_refl) as
           [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
         clear IHsa1.
-      destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
+      try specialize (IHsa2 rename1To1).
+      destruct (IHsa2 o' (a0 r1) JMeq_refl eq_refl) as
           [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
       clear IHsa2.
       apply renameMapDisjInv in HDisjCalls.
@@ -556,10 +563,12 @@ Section Rename.
       econstructor; eauto.
     - generalize dependent r1.
       inv x; destruct_existT; intros.
-      destruct (IHsa1 rename1To1 o' a'2 JMeq_refl eq_refl) as
+      try specialize (IHsa1 rename1To1).
+      destruct (IHsa1 o' a'2 JMeq_refl eq_refl) as
           [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
         clear IHsa1.
-      destruct (IHsa2 rename1To1 o' (a0 r1) JMeq_refl eq_refl) as
+      try specialize (IHsa2 rename1To1).
+      destruct (IHsa2 o' (a0 r1) JMeq_refl eq_refl) as
           [u2' [cs2' [uEq2 [csEq2 sa2']]]]; subst;
       clear IHsa2.
       apply renameMapDisjInv in HDisjCalls.
@@ -569,12 +578,14 @@ Section Rename.
       constructor; auto.
       econstructor 7; eauto.
     - inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' a' JMeq_refl eq_refl) as
           [u1' [cs1' [uEq1 [csEq1 sa1']]]]; subst;
         clear IHsa.
       repeat (econstructor; eauto).
     - inv x; destruct_existT; intros.
-      destruct (IHsa rename1To1 o' a' JMeq_refl eq_refl) as
+      try specialize (IHsa rename1To1).
+      destruct (IHsa o' a' JMeq_refl eq_refl) as
           [u' [cs' [uEq [csEq sa']]]]; subst; clear IHsa.
       exists u', cs'; repeat (split; auto).
       constructor; auto.
@@ -1167,7 +1178,8 @@ Section Rename.
     dependent induction m.
     - repeat (econstructor; eauto).
       reflexivity.
-    - specialize (IHm rename1To1 _ eq_refl JMeq_refl).
+    - try specialize (IHm rename1To1).
+      specialize (IHm _ eq_refl JMeq_refl).
       dest; subst.
       apply renameStepRev in HStep.
       dest; subst.
@@ -1225,7 +1237,7 @@ Section Rename.
     - rewrite <- renameInitRegs.
       repeat constructor; intuition.
     - rewrite renameMapUnion.
-      specialize (IHHMultistepBeh rename1To1).
+      try specialize (IHHMultistepBeh rename1To1).
       apply renameStep in HStep.
       repeat constructor; intuition.
   Qed.
@@ -1243,7 +1255,8 @@ Section Rename.
     repeat (econstructor; eauto).
     - apply renameInitRegs.
     - reflexivity.
-    - specialize (IHHMultistepBeh rename1To1 _ eq_refl eq_refl).
+    - try specialize (IHHMultistepBeh rename1To1).
+      specialize (IHHMultistepBeh _ eq_refl eq_refl).
       dest; subst.
       apply renameStepRev in HStep.
       dest; subst.
