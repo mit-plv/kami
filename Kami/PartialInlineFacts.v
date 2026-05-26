@@ -163,7 +163,7 @@ Section MethNoCall.
   Proof.
     generalize dependent dms; clear.
     intros dms.
-    induction dms; intros; simpl in *.
+    induction (dms); intros; simpl in *.
     - intuition.
     - assert (eq': forall ty, MethsEquiv ty typeUT l).
       { intros.
@@ -793,7 +793,7 @@ Section PartialMultiDm.
   Proof.
     generalize dms preDm Hdm.
     clear dms preDm Hdm.
-    induction dms; simpl in *; intros.
+    induction (dms); simpl in *; intros.
     - rewrite <- Hrule.
       apply flatten_traceRefines.
     - assert (sth: (preDm ++ [a]) ++ l ++ sufDm = preDm ++ a :: l ++ sufDm) by
@@ -856,7 +856,7 @@ Section PartialMultiDm.
   Proof.
     generalize dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR.
     clear dms preDm Hdm HdmNoRule HdmNoMeth HDmsInR.
-    induction dms; simpl in *; intros.
+    induction (dms); simpl in *; intros.
     - rewrite <- Hrule.
       rewrite <- Hdm.
       apply flatten_traceRefines.
@@ -985,7 +985,7 @@ Section PartialMultiR.
   Proof.
     generalize rs prefix suffix Hrule.
     clear rs prefix suffix Hrule.
-    induction rs; simpl in *; intros.
+    induction (rs); simpl in *; intros.
     - rewrite <- Hrule.
       apply flatten_traceRefines.
     - assert (sth: (prefix ++ [a]) ++ l ++ suffix = prefix ++ a :: l ++ suffix) by
@@ -1073,7 +1073,7 @@ Section PartialMultiR2.
     destruct HDmsInRs as [r [InRRs InDmCallsR]]; clear HDmsInRs.
     generalize rs prefix Hrule r InRRs InDmCallsR HdmNoRule.
     clear rs prefix Hrule HdmNoRule r InRRs InDmCallsR.
-    induction rs; simpl in *; intros; [intuition auto | ].
+    induction (rs); simpl in *; intros; [intuition auto | ].
     destruct (in_dec string_dec (attrName dm) (getCallsA (attrType a typeUT))) as [isIn| notIn].
     - match goal with
         | |- _ <<== Mod ?regs (?pre ++ inlineDmToRule ?r dm :: ?rest) _ =>
@@ -1294,7 +1294,7 @@ Section PartialMultiDmMultiR.
   Proof.
     generalize rs prefix suffix Hrule.
     clear rs prefix suffix Hrule.
-    induction rs; simpl in *; intros.
+    induction (rs); simpl in *; intros.
     - rewrite <- Hrule.
       apply flatten_traceRefines.
     - assert (sth: (prefix ++ [a]) ++ l ++ suffix = prefix ++ a :: l ++ suffix) by
@@ -1366,7 +1366,7 @@ Section PartialMultiDmMultiR.
   Proof.
     generalize dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs.
     clear dms preDm Hdm HdmNoMeth HdmNoRule HDmsInRs.
-    induction dms; simpl in *; intros.
+    induction (dms); simpl in *; intros.
     - assert (sth: (fun r: Attribute (Action Void) => r) = id) by
           (extensionality r; reflexivity).
       rewrite sth.
