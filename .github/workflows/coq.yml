@@ -43,14 +43,14 @@ jobs:
         echo "::group::ocamlc -config"
         ocamlc -config
         echo "::endgroup::"
-        echo "::group::coqc --config"
-        coqc --config
+        echo "::group::rocq --config"
+        rocq --config
         echo "::endgroup::"
-        echo "::group::coqc --version"
-        coqc --version
+        echo "::group::rocq --version"
+        rocq --version
         echo "::endgroup::"
-        echo "::group::echo | coqtop"
-        echo | coqtop
+        echo "::group::echo | rocq top"
+        echo | rocq top
         echo "::endgroup::"
     - uses: actions/checkout@v3
     - name: re-enable skipped proofs so that they are checked
