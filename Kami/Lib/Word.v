@@ -2810,6 +2810,11 @@ Proof.
   word_lia_Z.
 Qed.
 
+Lemma WO_combine : forall sz (w : word sz), combine WO w = w.
+Proof.
+  word_lia_Z.
+Qed.
+
 Lemma shatter_word_1 : forall (w : word 1), w = WS (whd w) WO.
 Proof.
   intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_0.
