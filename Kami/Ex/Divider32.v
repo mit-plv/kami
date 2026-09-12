@@ -23,7 +23,7 @@ Section Divider32.
   Definition DivLogNumPhases := 2.
   Definition DivNumBitsPerPhase := 8.
 
-  Local Definition DivNumPhases := wordToNat (wones DivLogNumPhases) + 1.
+  Local Definition DivNumPhases := pow2 DivLogNumPhases.
   Local Definition DivNumBits := DivNumPhases * DivNumBitsPerPhase.
   Local Definition DivBits := DivNumBits + (2 * DivNumBits).
 
