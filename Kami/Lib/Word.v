@@ -272,73 +272,73 @@ Definition wbit sz sz' (n : word sz') := natToWord sz (pow2 (wordToNat n)).
     facts instead (reducing through [Zmod.of_Z] duplicates subterms at
     every nesting level). *)
 Arguments WO : simpl never.
-Arguments WS _ {_} _ : simpl never.
-Arguments wordToNat {_} _ : simpl never.
-Arguments wordToNat' {_} _ : simpl never.
+Arguments WS _ [_] _ : simpl never.
+Arguments wordToNat [_] _ : simpl never.
+Arguments wordToNat' [_] _ : simpl never.
 Arguments natToWord _ _ : simpl never.
-Arguments wordToN {_} _ : simpl never.
+Arguments wordToN [_] _ : simpl never.
 Arguments wzero _ : simpl never.
 Arguments wzero' _ : simpl never.
 Arguments posToWord _ _ : simpl never.
 Arguments NToWord _ _ : simpl never.
 Arguments wone _ : simpl never.
 Arguments wones _ : simpl never.
-Arguments wmsb {_} _ _ : simpl never.
-Arguments whd {_} _ : simpl never.
-Arguments wlsb {_} _ : simpl never.
-Arguments wtl {_} _ : simpl never.
+Arguments wmsb [_] _ _ : simpl never.
+Arguments whd [_] _ : simpl never.
+Arguments wlsb [_] _ : simpl never.
+Arguments wtl [_] _ : simpl never.
 Arguments rep_bit _ _ : simpl never.
-Arguments weqb {_} _ _ : simpl never.
-Arguments weq {_} _ _ : simpl never.
-Arguments combine {_} _ {_} _ : simpl never.
+Arguments weqb [_] _ _ : simpl never.
+Arguments weq [_] _ _ : simpl never.
+Arguments combine [_] _ [_] _ : simpl never.
 Arguments split1 _ _ _ : simpl never.
 Arguments split2 _ _ _ : simpl never.
-Arguments sext {_} _ _ : simpl never.
-Arguments zext {_} _ _ : simpl never.
-Arguments wneg {_} _ : simpl never.
-Arguments wordBin _ {_} _ _ : simpl never.
-Arguments wplus {_} _ _ : simpl never.
-Arguments wmult {_} _ _ : simpl never.
-Arguments wdiv {_} _ _ : simpl never.
-Arguments wmod {_} _ _ : simpl never.
-Arguments wmult' {_} _ _ : simpl never.
-Arguments wminus {_} _ _ : simpl never.
-Arguments wnegN {_} _ : simpl never.
-Arguments wordBinN _ {_} _ _ : simpl never.
-Arguments wplusN {_} _ _ : simpl never.
-Arguments wmultN {_} _ _ : simpl never.
-Arguments wmultN' {_} _ _ : simpl never.
-Arguments wdivN {_} _ _ : simpl never.
-Arguments wremN {_} _ _ : simpl never.
-Arguments wminusN {_} _ _ : simpl never.
-Arguments wnot {_} _ : simpl never.
-Arguments bitwp _ {_} _ _ : simpl never.
-Arguments wnot' {_} _ : simpl never.
-Arguments wor {_} _ _ : simpl never.
-Arguments wand {_} _ _ : simpl never.
-Arguments wxor {_} _ _ : simpl never.
-Arguments wordToZ {_} _ : simpl never.
-Arguments uwordToZ {_} _ : simpl never.
+Arguments sext [_] _ _ : simpl never.
+Arguments zext [_] _ _ : simpl never.
+Arguments wneg [_] _ : simpl never.
+Arguments wordBin _ [_] _ _ : simpl never.
+Arguments wplus [_] _ _ : simpl never.
+Arguments wmult [_] _ _ : simpl never.
+Arguments wdiv [_] _ _ : simpl never.
+Arguments wmod [_] _ _ : simpl never.
+Arguments wmult' [_] _ _ : simpl never.
+Arguments wminus [_] _ _ : simpl never.
+Arguments wnegN [_] _ : simpl never.
+Arguments wordBinN _ [_] _ _ : simpl never.
+Arguments wplusN [_] _ _ : simpl never.
+Arguments wmultN [_] _ _ : simpl never.
+Arguments wmultN' [_] _ _ : simpl never.
+Arguments wdivN [_] _ _ : simpl never.
+Arguments wremN [_] _ _ : simpl never.
+Arguments wminusN [_] _ _ : simpl never.
+Arguments wnot [_] _ : simpl never.
+Arguments bitwp _ [_] _ _ : simpl never.
+Arguments wnot' [_] _ : simpl never.
+Arguments wor [_] _ _ : simpl never.
+Arguments wand [_] _ _ : simpl never.
+Arguments wxor [_] _ _ : simpl never.
+Arguments wordToZ [_] _ : simpl never.
+Arguments uwordToZ [_] _ : simpl never.
 Arguments ZToWord _ _ : simpl never.
-Arguments wordBinZ _ {_} _ _ : simpl never.
-Arguments wplusZ {_} _ _ : simpl never.
-Arguments wminusZ {_} _ _ : simpl never.
-Arguments wmultZ {_} _ _ : simpl never.
-Arguments wmultZsu {_} _ _ : simpl never.
-Arguments wdivZ {_} _ _ : simpl never.
-Arguments wdivZsu {_} _ _ : simpl never.
-Arguments wremZ {_} _ _ : simpl never.
-Arguments wremZsu {_} _ _ : simpl never.
-Arguments wlt {_} _ _ : simpl never.
-Arguments wslt {_} _ _ : simpl never.
-Arguments wlt_dec {_} _ _ : simpl never.
-Arguments wslt_dec {_} _ _ : simpl never.
-Arguments wlshift {_} _ _ : simpl never.
-Arguments wrshift {_} _ _ : simpl never.
-Arguments wrshifta {_} _ _ : simpl never.
-Arguments extz {_} _ _ : simpl never.
+Arguments wordBinZ _ [_] _ _ : simpl never.
+Arguments wplusZ [_] _ _ : simpl never.
+Arguments wminusZ [_] _ _ : simpl never.
+Arguments wmultZ [_] _ _ : simpl never.
+Arguments wmultZsu [_] _ _ : simpl never.
+Arguments wdivZ [_] _ _ : simpl never.
+Arguments wdivZsu [_] _ _ : simpl never.
+Arguments wremZ [_] _ _ : simpl never.
+Arguments wremZsu [_] _ _ : simpl never.
+Arguments wlt [_] _ _ : simpl never.
+Arguments wslt [_] _ _ : simpl never.
+Arguments wlt_dec [_] _ _ : simpl never.
+Arguments wslt_dec [_] _ _ : simpl never.
+Arguments wlshift [_] _ _ : simpl never.
+Arguments wrshift [_] _ _ : simpl never.
+Arguments wrshifta [_] _ _ : simpl never.
+Arguments extz [_] _ _ : simpl never.
 Arguments wpow2 _ : simpl never.
-Arguments wbit _ {_} _ : simpl never.
+Arguments wbit _ [_] _ : simpl never.
 Arguments Zmod.unsigned {_} _ : simpl never.
 Arguments Zmod.signed {_} _ : simpl never.
 Arguments Zmod.of_Z _ _ : simpl never.
