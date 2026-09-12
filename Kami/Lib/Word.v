@@ -746,6 +746,14 @@ Proof.
   intros. replace (a + (p - b)) with (a - b + 1 * p) by lia. rewrite Z.mod_add; lia.
 Qed.
 
+(** [z] just below a multiple [2*p*t] of [2*p] reduces to [z - 2*p*t + 2*p]. *)
+Lemma Zmod_upper : forall z p t, 0 < p -> 0 < t ->
+    2 * p * t - p <= z < 2 * p * t -> z mod (2 * p) = z - 2 * p * t + 2 * p.
+Proof.
+  intros; rewrite <- (Z.mod_add z (1 - t) (2 * p)) by lia.
+  rewrite Z.mod_small by nia. lia.
+Qed.
+
 Lemma Zopp_mod_idemp : forall a p, p <> 0 -> (- (a mod p)) mod p = (- a) mod p.
 Proof.
   intros. rewrite <- (Z.sub_0_l (a mod p)), Zminus_mod_idemp_r, Z.sub_0_l. reflexivity.
@@ -893,6 +901,20 @@ Ltac pow2_facts :=
          | H : context [(2 ^ Z.of_nat ?x)%Z] |- _ => pow2_fact x
          end.
 
+(** [pow2] is the [nat]-valued power of two; [lia] sees [Z.of_nat (pow2 x)] as
+    an opaque atom, so relate it to [2 ^ Z.of_nat x] for every [pow2] around. *)
+Ltac pow2_nat_fact x :=
+  lazymatch goal with
+  | _ : Z.of_nat (pow2 x) = (2 ^ Z.of_nat x)%Z |- _ => fail
+  | _ => pose proof (pow2_Z x)
+  end.
+
+Ltac pow2_nat_facts :=
+  repeat match goal with
+         | |- context [pow2 ?x] => pow2_nat_fact x
+         | H : context [pow2 ?x] |- _ => pow2_nat_fact x
+         end.
+
 (** The implicit modulus of [@Zmod.unsigned m t] must be spelled exactly as
     the width in the type of [t] for the rewrite rules to match (e.g.
     [S sz] vs [1 + sz]); make it so. *)
@@ -933,7 +955,7 @@ Ltac word_to_Z :=
   cbn [Z.b2z] in *;
   rewrite ?Z.add_0_l, ?Z.add_0_r, ?Z.mul_1_l, ?Z.mul_1_r, ?Z.mul_0_l, ?Z.mul_0_r in *;
   rewrite <- ?Z.mul_opp_r in *;
-  pow2_facts.
+  pow2_facts; pow2_nat_facts.
 
 (** Simplify [mod]/[div] by a power of two whose argument is known to be
     in range, then finish with [lia]/[nia]. *)
@@ -3207,7 +3229,7 @@ Lemma combine_wplus_2:
   forall sl (w1: word sl) su (w2 w3: word su),
     combine w1 (w2 ^+ w3) = extz w2 sl ^+ combine w1 w3.
 Proof.
-  word_lia_Z.
+  intros; rewrite (wplus_comm w2 w3), combine_wplus_1, wplus_comm; reflexivity.
 Qed.
 
 Lemma existT_wplus:
@@ -3369,8 +3391,15 @@ Lemma sext_wneg_natToWord': forall sz1 sz2 n,
   (2 * n < pow2 sz1)%nat ->
   sext (wneg (natToWord sz1 n)) sz2 = wneg (natToWord (sz1 + sz2) n).
 Proof.
-  word_to_Z; word_mod_simpl; try lia; try (exfalso; nia).
-  all: try (rewrite !Zmod_small_neg by nia); nia.
+  word_to_Z; pose proof (pow2_Z sz1); pose proof (pow2_pos_Z sz1); pose proof (pow2_pos_Z sz2);
+    rewrite (Z.mod_small (Z.of_nat n) (2 ^ Z.of_nat sz1)%Z) in * by lia;
+    (destruct (Z.eq_dec (Z.of_nat n) 0) as [E|E];
+     [ rewrite E in *; rewrite ?Z.opp_0, ?Z.mod_0_l in * by lia
+     | rewrite (@Zmod_small_neg (- Z.of_nat n)%Z (2 ^ Z.of_nat sz1)%Z) in * by lia ]);
+    try lia.
+  replace (- Z.of_nat n + 2 ^ Z.of_nat sz1 - 2 ^ Z.of_nat sz1)%Z with (- Z.of_nat n)%Z by ring.
+  rewrite (Z.mod_small (Z.of_nat n) (2 ^ Z.of_nat sz1 * 2 ^ Z.of_nat sz2)%Z) by nia.
+  reflexivity.
 Qed.
 
 Lemma sext_wneg_natToWord: forall sz2 sz1 sz n (e: sz1 + sz2 = sz),
@@ -3385,7 +3414,9 @@ Lemma wordToNat_split1:
     wordToNat (split1 _ _ w) =
     Nat.modulo (wordToNat w) (pow2 sz1).
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz1); pose proof (pow2_pos_Z sz2).
+  assert (0 <= z mod 2 ^ Z.of_nat sz1)%Z by (apply Z.mod_pos_bound; lia).
+  apply Nat2Z.inj; rewrite Nat2Z.inj_mod, pow2_Z, !Z2Nat.id by lia; reflexivity.
 Qed.
 
 Lemma wordToNat_split2:
@@ -3401,9 +3432,24 @@ Lemma wordToNat_wrshifta:
     wordToNat (wrshifta w n) =
     Nat.div (wordToNat (sext w n)) (pow2 n).
 Proof.
-  word_to_Z; rewrite Zmod_mul_div' by lia; word_mod_simpl; try lia; try (exfalso; nia).
-  all: try (rewrite !Zmod_small_neg by nia); try lia.
-  all: rewrite <- Z.div_add by lia; f_equal; nia.
+  word_to_Z; pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z n); pose proof (pow2_Z n).
+  - rewrite (Z.mod_small z) by nia.
+    assert (0 <= z / 2 ^ Z.of_nat n < 2 ^ Z.of_nat sz)%Z
+      by (split; [apply Z.div_pos; lia
+                 | apply Z.le_lt_trans with z; [apply Z.div_le_upper_bound; nia | lia]]).
+    rewrite (Z.mod_small (z / 2 ^ Z.of_nat n)%Z) by lia.
+    replace (pow2 n) with (Z.to_nat (2 ^ Z.of_nat n)) by lia.
+    rewrite Z2Nat.inj_div by lia; reflexivity.
+  - rewrite (@Zmod_small_neg (z - 2 ^ Z.of_nat sz)%Z
+                             (2 ^ Z.of_nat sz * 2 ^ Z.of_nat n)%Z) by nia.
+    replace (pow2 n) with (Z.to_nat (2 ^ Z.of_nat n)) by lia.
+    rewrite <- Z2Nat.inj_div by nia.
+    f_equal.
+    rewrite Z.div_add by lia.
+    apply (@Zmod_small_neg); [lia|].
+    split.
+    + apply Z.div_le_lower_bound; nia.
+    + apply Z.div_lt_upper_bound; lia.
 Qed.
 
 Lemma wordToNat_combine:
@@ -3420,8 +3466,14 @@ Lemma wordToNat_wlshift:
     Nat.mul (Nat.modulo (wordToNat w) (pow2 (sz - n))) (pow2 n).
 Proof.
   intros; destruct (le_lt_dec n sz).
-  - word_to_Z. replace sz with ((sz - n) + n) at 1 by lia. rewrite pow2_add_Z.
-    rewrite Z.mul_mod_distr_r by lia. rewrite Nat2Z.inj_sub by lia. reflexivity.
+  - word_to_Z; pose proof (pow2_pos_Z n); pose proof (pow2_pos_Z (sz - n)).
+    replace sz with ((sz - n) + n) at 1 by lia. rewrite pow2_add_Z.
+    rewrite Z.mul_mod_distr_r by lia.
+    assert (0 <= z mod 2 ^ Z.of_nat (sz - n))%Z by (apply Z.mod_pos_bound; lia).
+    rewrite Z2Nat.inj_mul, Z2Nat.inj_mod by lia.
+    replace (Z.to_nat (2 ^ Z.of_nat (sz - n))) with (pow2 (sz - n)) by lia.
+    replace (Z.to_nat (2 ^ Z.of_nat n)) with (pow2 n) by lia.
+    reflexivity.
   - rewrite wlshift_gt by lia. replace (sz - n) with 0 by lia. word_lia_Z.
 Qed.
 
@@ -3441,7 +3493,10 @@ Qed.
 Lemma extz_is_mult_pow2_neg: forall sz n d,
   extz (wneg (natToWord sz n)) d = wneg (natToWord (d + sz) (pow2 d * n)).
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  rewrite !Zopp_mod_idemp by lia.
+  rewrite <- Z.mul_opp_r, Z.mul_mod_distr_l by lia.
+  reflexivity.
 Qed.
 
 Lemma wordToNat_sext_bypass:
@@ -3482,8 +3537,13 @@ Lemma wordToNat_sext_modulo:
   forall sz (w: word sz) n,
     Nat.modulo (wordToNat (sext w n)) (pow2 sz) = wordToNat w.
 Proof.
-  word_to_Z; word_mod_simpl; try lia; try (exfalso; nia).
-  all: try (rewrite !Zmod_small_neg by nia); try lia.
+  word_to_Z; pose proof (pow2_Z sz); pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z n).
+  - rewrite (Z.mod_small z) by nia; apply Nat.mod_small; lia.
+  - rewrite (@Zmod_small_neg (z - 2 ^ Z.of_nat sz)%Z) by nia.
+    apply Nat2Z.inj; rewrite Nat2Z.inj_mod, pow2_Z, !Z2Nat.id by nia.
+    replace (z - 2 ^ Z.of_nat sz + 2 ^ Z.of_nat sz * 2 ^ Z.of_nat n)%Z
+       with (z + (2 ^ Z.of_nat n - 1) * 2 ^ Z.of_nat sz)%Z by ring.
+    rewrite Z.mod_add by lia; apply Z.mod_small; lia.
 Qed.
 
 Lemma wlshift_sext_extz:
@@ -3500,7 +3560,23 @@ Lemma wlshift_combine_extz:
     existT word (sl + (ssu + sn)) (wlshift (combine wl wu) sn) =
     existT word (sn + (sl + ssu)) (extz (combine wl (split1 ssu _ wu)) sn).
 Proof.
-  word_to_Z; word_mod_simpl; try lia; try nia.
+  word_to_Z; pose proof (pow2_pos_Z sl); pose proof (pow2_pos_Z sn);
+    pose proof (pow2_pos_Z ssu).
+  replace (2 ^ Z.of_nat sl * (2 ^ Z.of_nat ssu * 2 ^ Z.of_nat sn))%Z
+     with ((2 ^ Z.of_nat sl * 2 ^ Z.of_nat ssu) * 2 ^ Z.of_nat sn)%Z by ring.
+  rewrite Z.mul_mod_distr_r by nia.
+  rewrite (Z.mul_comm _ (2 ^ Z.of_nat sn)%Z); f_equal.
+  assert (Hq : z = (2 ^ Z.of_nat ssu * (z / 2 ^ Z.of_nat ssu) + z mod 2 ^ Z.of_nat ssu)%Z)
+    by (apply Z.div_mod; lia).
+  assert (Hm : (0 <= z mod 2 ^ Z.of_nat ssu < 2 ^ Z.of_nat ssu)%Z)
+    by (apply Z.mod_pos_bound; lia).
+  rewrite Hq at 1.
+  replace (z0 + 2 ^ Z.of_nat sl *
+             (2 ^ Z.of_nat ssu * (z / 2 ^ Z.of_nat ssu) + z mod 2 ^ Z.of_nat ssu))%Z
+     with ((z0 + 2 ^ Z.of_nat sl * (z mod 2 ^ Z.of_nat ssu))
+           + (z / 2 ^ Z.of_nat ssu) * (2 ^ Z.of_nat sl * 2 ^ Z.of_nat ssu))%Z by ring.
+  rewrite Z.mod_add by nia.
+  apply Z.mod_small; nia.
 Qed.
 
 Lemma extz_sext_eq_rect:
@@ -3511,7 +3587,7 @@ Lemma extz_sext_eq_rect:
 Proof.
   intros; assert (Hnsz2 : n2 + sz + n1 = nsz) by lia; exists Hnsz2.
   pose proof (extz_sext w n1 n2) as E; apply existT_word_inv in E; destruct E.
-  word_to_Z. assumption.
+  word_to_Z; assumption.
 Qed.
 
 Lemma sext_zero:
@@ -3577,7 +3653,11 @@ Lemma wordToZ_ZToWord:
     (- Z.of_nat (pow2 sz) <= z < Z.of_nat (pow2 sz))%Z ->
     wordToZ (ZToWord (S sz) z) = z.
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz);
+    (destruct (Z_lt_le_dec z 0) as [Hs|Hs];
+     [ rewrite (@Zmod_small_neg z (2 * 2 ^ Z.of_nat sz)%Z) in * by lia
+     | rewrite (Z.mod_small z (2 * 2 ^ Z.of_nat sz)%Z) in * by lia ]);
+    lia.
 Qed.
 
 Lemma wordToZ_ZToWord'': forall (sz: nat),
@@ -3588,7 +3668,7 @@ Lemma wordToZ_ZToWord'': forall (sz: nat),
 Proof.
   intros; destruct sz; [lia|].
   replace (Z.of_nat (S sz) - 1)%Z with (Z.of_nat sz) in H0 by lia.
-  word_lia_Z.
+  apply wordToZ_ZToWord; rewrite pow2_Z; assumption.
 Qed.
 
 Lemma wordToZ_wordToN:
@@ -3636,7 +3716,9 @@ Lemma natToWord_pow2_add:
   forall sz n,
     natToWord sz (n + pow2 sz) = natToWord sz n.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  replace (Z.of_nat n + 2 ^ Z.of_nat sz)%Z with (Z.of_nat n + 1 * 2 ^ Z.of_nat sz)%Z by lia.
+  apply Z_mod_plus_full.
 Qed.
 
 Lemma nat_add_pow2_wzero:
@@ -3659,20 +3741,33 @@ Lemma ZToWord_Npow2_sub:
   forall sz z,
     ZToWord sz (z - Z.of_N (Npow2 sz)) = ZToWord sz z.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  replace (z - 2 ^ Z.of_nat sz)%Z with (z + (-1) * 2 ^ Z.of_nat sz)%Z by ring.
+  apply Z_mod_plus_full.
 Qed.
 
 Lemma wplus_wplusZ:
   forall sz (w1 w2: word sz),
     w1 ^+ w2 = wplusZ w1 w2.
 Proof.
-  intros; cbv [wplusZ wordBinZ]; word_lia_Z.
+  intros; cbv [wplusZ wordBinZ]; word_to_Z;
+    [ reflexivity
+    | replace (z0 + (z - 2 ^ Z.of_nat sz))%Z
+         with (z0 + z + (-1) * 2 ^ Z.of_nat sz)%Z by ring
+    | replace (z0 - 2 ^ Z.of_nat sz + z)%Z
+         with (z0 + z + (-1) * 2 ^ Z.of_nat sz)%Z by ring
+    | replace (z0 - 2 ^ Z.of_nat sz + (z - 2 ^ Z.of_nat sz))%Z
+         with (z0 + z + (-2) * 2 ^ Z.of_nat sz)%Z by ring ];
+    symmetry; apply Z_mod_plus_full.
 Qed.
 
 Lemma ZToWord_Npow2_sub_k : forall (sz : nat) (z : Z) (k: nat),
     ZToWord sz (z - Z.of_nat k * Z.of_N (Npow2 sz)) = ZToWord sz z.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  replace (z - Z.of_nat k * 2 ^ Z.of_nat sz)%Z
+     with (z + (- Z.of_nat k) * 2 ^ Z.of_nat sz)%Z by ring.
+  apply Z_mod_plus_full.
 Qed.
 
 Lemma ZToWord_Npow2_add_k : forall (sz : nat) (z : Z) (k: nat),
@@ -3684,7 +3779,9 @@ Qed.
 Lemma ZToWord_Npow2_sub_z : forall (sz : nat) (z : Z) (k: Z),
     ZToWord sz (z - k * Z.of_N (Npow2 sz)) = ZToWord sz z.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  replace (z - k * 2 ^ Z.of_nat sz)%Z with (z + (- k) * 2 ^ Z.of_nat sz)%Z by ring.
+  apply Z_mod_plus_full.
 Qed.
 
 Lemma ZToWord_Npow2_add_k':  forall sz z k,
@@ -3698,9 +3795,16 @@ Lemma wordToZ_ZToWord': forall sz w,
 Proof.
   intros; destruct sz.
   - exists w; word_lia_Z.
-  - pose proof (wordToZ_size' (ZToWord (S sz) w)) as B.
-    exists ((w - wordToZ (ZToWord (S sz) w)) / Z.of_N (Npow2 (S sz))).
-    word_to_Z. word_mod_simpl. all: zify; Z.div_mod_to_equations; nia.
+  - pose proof (pow2_pos_Z (S sz)).
+    assert (E : wordToZ (ZToWord (S sz) w) =
+                (if 2 * (w mod 2 ^ Z.of_nat (S sz)) <? 2 ^ Z.of_nat (S sz)
+                 then w mod 2 ^ Z.of_nat (S sz)
+                 else w mod 2 ^ Z.of_nat (S sz) - 2 ^ Z.of_nat (S sz))%Z)
+      by (cbv [wordToZ ZToWord]; rewrite signed_eqn, unsigned_ofZ; reflexivity).
+    rewrite Npow2_Z, E.
+    destruct (Z.ltb_spec (2 * (w mod 2 ^ Z.of_nat (S sz)))%Z (2 ^ Z.of_nat (S sz))%Z).
+    + exists (w / 2 ^ Z.of_nat (S sz))%Z; rewrite (Z.mod_eq w) by lia; lia.
+    + exists (w / 2 ^ Z.of_nat (S sz) + 1)%Z; rewrite (Z.mod_eq w) by lia; lia.
 Qed.
 
 Lemma ZToWord_plus: forall sz a b, ZToWord sz (a + b) = ZToWord sz a ^+ ZToWord sz b.
@@ -3854,8 +3958,10 @@ Lemma split1_combine_existT:
     split1 n _ w = split1 n _ wl.
 Proof.
   intros; apply existT_word_inv in H; destruct H.
-  assert (sz = sl + su) by lia; subst; apply unsigned_inj in H0; subst.
-  word_to_Z. rewrite Zmod_mul_mod by lia. word_mod_simpl. rewrite Z.mul_comm, Z.mod_add by lia. reflexivity.
+  apply unsigned_inj; rewrite !unsigned_split1, H0, unsigned_combine.
+  rewrite <- (Z.mod_add (unsigned wl) (2 ^ Z.of_nat sl * unsigned wu) (2 ^ Z.of_nat n))
+    by (pose proof (pow2_pos_Z n); lia).
+  f_equal; f_equal; rewrite (pow2_add_Z n sl); ring.
 Qed.
 
 Lemma extz_pow2_wordToZ:
@@ -3877,7 +3983,11 @@ Lemma wneg_wordToZ:
     w <> wpow2 sz ->
     wordToZ (wneg w) = (- wordToZ w)%Z.
 Proof.
-  word_to_Z; word_mod_simpl; lia.
+  word_to_Z; pose proof (pow2_pos_Z sz);
+    (destruct (Z.eq_dec z 0) as [->|];
+     [ rewrite Z.opp_0, Z.mod_0_l in * by lia
+     | rewrite (@Zmod_small_neg (- z)%Z) in * by lia ]);
+    lia.
 Qed.
 
 Lemma wneg_wordToZ':
@@ -3892,14 +4002,18 @@ Lemma wneg_wplus_distr:
   forall sz (w1 w2: word sz),
     wneg (w1 ^+ w2) = wneg w1 ^+ wneg w2.
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz).
+  rewrite Zopp_mod_idemp by lia.
+  rewrite Zplus_mod_idemp_l, Zplus_mod_idemp_r.
+  f_equal; ring.
 Qed.
 
 Lemma wminus_wneg:
   forall sz (w1 w2: word sz),
     wneg (w1 ^- w2) = w2 ^- w1.
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz).
+  rewrite Zopp_mod_idemp by lia; f_equal; ring.
 Qed.
 
 Lemma wminus_wordToZ:
@@ -3919,7 +4033,14 @@ Proof.
   assert (w2 ^- w1 <> eq_rect _ word (wpow2 sz) _ (Nat.add_comm 1 sz)).
   { intro E; apply H; rewrite E; clear.
     apply existT_word_eq; [lia | rewrite unsigned_eq_rect; reflexivity]. }
-  clear H. word_to_Z; word_mod_simpl; lia.
+  clear H. word_to_Z; pose proof (pow2_pos_Z sz);
+    assert (Hd : (0 <= (z0 - z) mod (2 ^ Z.of_nat sz * 2) < 2 ^ Z.of_nat sz * 2)%Z)
+      by (apply Z.mod_pos_bound; lia);
+    (destruct (Z.eq_dec ((z0 - z) mod (2 ^ Z.of_nat sz * 2))%Z 0) as [E|E];
+     [ rewrite E in *; rewrite ?Z.opp_0, ?Z.mod_0_l in * by lia
+     | rewrite (@Zmod_small_neg (- ((z0 - z) mod (2 ^ Z.of_nat sz * 2)))%Z
+                                (2 ^ Z.of_nat sz * 2)%Z) in * by lia ]);
+    lia.
 Qed.
 
 Lemma wminus_wminusZ: forall (sz : nat) (w1 w2 : word sz), w1 ^- w2 = wminusZ w1 w2.
@@ -3991,7 +4112,8 @@ Lemma sext_eq_rect:
     eq_rect (sz + n) word (sext w n) (nsz + n) Hsz1 =
     sext (eq_rect sz word w nsz Hsz2) n.
 Proof.
-  intros; assert (Hsz2 : sz = nsz) by lia; exists Hsz2; subst; reflexivity.
+  intros; assert (Hsz2 : sz = nsz) by lia; exists Hsz2; subst.
+  rewrite (Eqdep_dec.UIP_dec Nat.eq_dec Hsz1 eq_refl); reflexivity.
 Qed.
 
 Lemma wmsb_sext:
@@ -4068,8 +4190,15 @@ Proof.
   intros; destruct sz; [lia|].
   replace (S sz - 1) with sz in H0 by lia.
   exists (split1 (S sz) n w).
-  word_to_Z; word_mod_simpl; try lia; try (exfalso; nia).
-  all: try (rewrite !Zmod_small_neg in * by nia); try lia.
+  word_to_Z.
+  - rewrite (Z.mod_small z) by lia; rewrite Z.mod_small by lia; reflexivity.
+  - rewrite (Z.mod_small z) in H1 by lia; lia.
+  - rewrite (@Zmod_upper z (2 ^ Z.of_nat sz) (2 ^ Z.of_nat n)) in H1 by lia; lia.
+  - rewrite (@Zmod_upper z (2 ^ Z.of_nat sz) (2 ^ Z.of_nat n)) by lia.
+    replace (z - 2 * 2 ^ Z.of_nat sz * 2 ^ Z.of_nat n + 2 * 2 ^ Z.of_nat sz -
+             2 * 2 ^ Z.of_nat sz)%Z
+       with (z + (-1) * (2 * 2 ^ Z.of_nat sz * 2 ^ Z.of_nat n))%Z by ring.
+    rewrite Z.mod_add by lia; rewrite Z.mod_small by lia; reflexivity.
 Qed.
 
 Lemma wordToZ_combine_WO:
@@ -4133,8 +4262,17 @@ Lemma sext_wplus_exist:
     existT word _ (sext w n).
 Proof.
   intros; exists (ZToWord (S sz) (wordToZ w1 + wordToZ w2)).
-  word_to_Z; word_mod_simpl; try lia; try (exfalso; nia).
-  all: try (rewrite !Zmod_small_neg in * by nia); try lia; try nia.
+  word_to_Z; pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z n);
+    replace (2 ^ Z.of_nat sz * (2 * 2 ^ Z.of_nat n))%Z
+       with (2 * 2 ^ Z.of_nat sz * 2 ^ Z.of_nat n)%Z by ring;
+    rewrite <- Zplus_mod;
+    (match goal with
+     | |- (?s mod _)%Z = _ =>
+       destruct (Z_lt_le_dec s 0) as [Hs|Hs];
+       [ rewrite (@Zmod_small_neg s (2 * 2 ^ Z.of_nat sz)%Z) in * by lia
+       | rewrite (Z.mod_small s (2 * 2 ^ Z.of_nat sz)%Z) in * by lia ]
+     end);
+    try lia; f_equal; lia.
 Qed.
 
 (* Making wlt_dec opaque is necessary to prevent the [exact H] in the
@@ -4216,7 +4354,7 @@ Lemma wordToNat_wplus': forall sz (a b: word sz),
     (#a + #b < pow2 sz)%nat ->
     #(a ^+ b) = #a + #b.
 Proof.
-  word_lia_Z.
+  word_to_Z; rewrite Z.mod_small by lia; lia.
 Qed.
 
 Lemma wordToNat_wplus'': forall sz (a: word sz) (b: nat),
@@ -4359,6 +4497,11 @@ Proof.
   word_lia_Z.
 Qed.
 
+Close Scope word_scope.
+
+Open Scope word_scope.
+Local Open Scope nat.
+
 Lemma wzero_wones: forall sz, sz >= 1 ->
                               natToWord sz 0 <> wones sz.
 Proof.
@@ -4415,7 +4558,11 @@ Qed.
 Lemma split1_combine_wplus sz1 sz2 (w11 w21: word sz1) (w12 w22: word sz2):
   split1 _ _ (combine w11 w12 ^+ combine w21 w22) = w11 ^+ w21.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  rewrite Zmod_mul_mod by (apply pow2_pos_Z).
+  replace (z2 + 2 ^ Z.of_nat sz1 * z1 + (z0 + 2 ^ Z.of_nat sz1 * z))%Z
+     with ((z2 + z0) + (z1 + z) * 2 ^ Z.of_nat sz1)%Z by ring.
+  rewrite Z.mod_add by (pose proof (pow2_pos_Z sz1); lia); reflexivity.
 Qed.
 
 Lemma div_2 a b:
@@ -4433,7 +4580,8 @@ Lemma mod_sub a b:
   a >= b ->
   a mod b = a - b.
 Proof.
-  intros. zify. Z.div_mod_to_equations. nia.
+  intros; apply Nat2Z.inj; rewrite Nat2Z.inj_mod, Nat2Z.inj_sub by lia.
+  apply (@Zmod_small_2); lia.
 Qed.
 
 Lemma wordToNat_wneg_non_0 sz: forall (a: word sz),
@@ -4462,13 +4610,19 @@ Qed.
 Lemma wordToNat_wplus sz (w1 w2: word sz):
   #(w1 ^+ w2) = (#w1 + #w2) mod (pow2 sz).
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz).
+  rewrite Z2Nat.inj_mod, Z2Nat.inj_add by lia.
+  replace (Z.to_nat (2 ^ Z.of_nat sz)) with (pow2 sz) by lia.
+  reflexivity.
 Qed.
 
 Lemma wordToNat_wmult : forall (sz : nat) (w1 w2 : word sz),
   #(w1 ^* w2) = (#w1 * #w2) mod pow2 sz.
 Proof.
-  word_lia_Z.
+  word_to_Z; pose proof (pow2_pos_Z sz).
+  rewrite Z2Nat.inj_mod, Z2Nat.inj_mul by nia.
+  replace (Z.to_nat (2 ^ Z.of_nat sz)) with (pow2 sz) by lia.
+  reflexivity.
 Qed.
 
 Local Arguments natToWord : simpl never.
@@ -4591,7 +4745,13 @@ Lemma wplus_wplus_pow2 sz (x1 x2 y1 y2: word (sz + 1)):
   x2 = y2 ^+ $(pow2 sz) ->
   x1 ^+ x2 = y1 ^+ y2.
 Proof.
-  word_lia_Z.
+  intros; word_to_Z.
+  rewrite (Z.mod_small (2 ^ Z.of_nat sz)) in * by (pose proof (pow2_pos_Z sz); lia).
+  subst.
+  rewrite Zplus_mod_idemp_l, Zplus_mod_idemp_r.
+  replace (z1 + 2 ^ Z.of_nat sz + (z + 2 ^ Z.of_nat sz))%Z
+     with ((z1 + z) + 1 * (2 ^ Z.of_nat sz * 2))%Z by ring.
+  rewrite Z.mod_add by (pose proof (pow2_pos_Z sz); lia); reflexivity.
 Qed.
 
 Lemma wlt_meaning sz (w1 w2: word sz):
@@ -4627,14 +4787,14 @@ Qed.
 Lemma wordToN_mod: forall sz (a b: word sz),
     wordToN (a ^% b) = (wordToN a mod wordToN b)%N.
 Proof.
-  word_lia_Z.
+  word_to_Z; apply Z2N.inj_mod; lia.
 Qed.
 
 Lemma wordToNat_mod: forall sz (a b: word sz),
     b <> $0 ->
     #(a ^% b) = #a mod #b.
 Proof.
-  word_lia_Z.
+  word_to_Z; apply Z2Nat.inj_mod; lia.
 Qed.
 
 Lemma wlshift_mul_pow2: forall sz n (a: word sz),
@@ -4747,9 +4907,12 @@ Lemma wordToZ_ZToWord_full sz (H: (0 < sz)%nat) (z:Z) :
 Proof.
   destruct sz; [lia|].
   replace (Z.of_nat (S sz) - 1)%Z with (Z.of_nat sz) by lia.
-  word_to_Z; word_mod_simpl; try lia.
-  all: rewrite Zmod_2mul_split in * by lia.
-  all: zify; Z.div_mod_to_equations; nia.
+  word_to_Z; pose proof (pow2_pos_Z sz);
+    assert (Hb : (0 <= z mod (2 * 2 ^ Z.of_nat sz) < 2 * 2 ^ Z.of_nat sz)%Z)
+      by (apply Z.mod_pos_bound; lia);
+    rewrite <- (Zplus_mod_idemp_l z (2 ^ Z.of_nat sz)%Z (2 * 2 ^ Z.of_nat sz)%Z).
+  - rewrite (Z.mod_small (z mod (2 * 2 ^ Z.of_nat sz) + 2 ^ Z.of_nat sz)%Z) by lia; lia.
+  - rewrite (@Zmod_small_2 (z mod (2 * 2 ^ Z.of_nat sz) + 2 ^ Z.of_nat sz)%Z) by lia; lia.
 Qed.
 
 Lemma wordToZ_ZToWord_full_post sz (H: (0 < sz)%nat) (z:Z) :

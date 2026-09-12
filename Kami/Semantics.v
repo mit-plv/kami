@@ -11,25 +11,14 @@ Set Asymmetric Patterns.
 
 Section VecFunc.
   Variable A: Type.
-  Fixpoint evalVec n (vec: Vec A n): word n -> A.
-  Proof.
-    refine match vec in Vec _ n return word n -> A with
-             | Vec0 e => fun _ => e
-             | VecNext n' v1 v2 =>
-               fun w =>
-                 match w in word m0 return m0 = S n' -> A with
-                   | WO => _
-                   | WS b m w' =>
-                     if b
-                     then fun _ => evalVec _ v2 (_ w')
-                     else fun _ => evalVec _ v1 (_ w')
-                 end eq_refl
-           end;
-    clear evalVec.
-    - abstract (intros; discriminate).
-    - injection e; intros; subst; exact x.
-    - injection e; intros; subst; exact x.
-  Defined.
+  (* [word] is no longer an inductive type, so the head bit and the tail are
+     taken with [whd]/[wtl] instead of by matching on a [WS] constructor. *)
+  Fixpoint evalVec n (vec: Vec A n): word n -> A :=
+    match vec in Vec _ n return word n -> A with
+      | Vec0 e => fun _ => e
+      | VecNext n' v1 v2 =>
+        fun w => if whd w then evalVec n' v2 (wtl w) else evalVec n' v1 (wtl w)
+    end.
 
   Variable B: Type.
   Variable map: A -> B.
