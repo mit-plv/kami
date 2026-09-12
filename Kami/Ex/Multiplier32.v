@@ -1192,19 +1192,17 @@ Section Multiplier32.
             elim n; assumption.
           }
 
-          set (extz (combine (x (Fin.FS Fin.F1)) (natToWord (MultNumBitsExt + 1) 0)) 1) as ww.
+          (* [extz (combine a $0) 1]; spelled as the associated combine so that
+             it matches the shape [boothStepInv_init] produces. *)
+          set (combine (combine (natToWord 1 0) (x (Fin.FS Fin.F1)))
+                       (natToWord (S MultNumBitsExt) 0)) as ww.
           pose proof (boothStepInv_init (x Fin.F1) (x (Fin.FS Fin.F1))) as Hinv0.
 
           assert (pred MultNumBitsExt <> 0) by (cbn; lia).
           eapply (boothStepInv_boothStep
                     (we:= Var type (SyntaxKind (Bit MultBits)) ww) (sus:= O)
                     Hx1 eq_refl eq_refl eq_refl H12 eq_refl) in Hinv0;
-            [| subst ww; cbn [evalExpr]; cbv [extz wzero];
-               change (MultBits - 2 + 2)
-                 with (1 + (MultNumBitsExt + (MultNumBitsExt + 1)));
-               change (S (S (Init.Nat.pred MultNumBitsExt)) + (1 + MultNumBitsExt))
-                 with (1 + MultNumBitsExt + (MultNumBitsExt + 1));
-               apply combine_assoc_existT ].
+            [|subst ww; reflexivity].
           simpl in Hinv0.
           destruct Hinv0 as [nwl [nwu [? ?]]].
 
@@ -1336,7 +1334,9 @@ Section Multiplier32.
 
       eexists; split; kinv_constr.
       apply boothStepInv_finish in H7; dest.
-      assert (x3 = MultNumBitsExt) by (apply eq_sigT_fst in H6; cbn; cbn in H6; lia).
+      assert (x3 = MultNumBitsExt)
+        by (apply eq_sigT_fst in H6; cbn in H6;
+            rewrite ?roundTrip_0 in H6; cbn; cbn in H6; lia).
       subst; destruct_existT.
       rewrite idElementwiseId; unfold id.
       do 3 f_equal.
@@ -1347,7 +1347,7 @@ Section Multiplier32.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
         unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
-        rewrite wtl_combine.
+        rewrite split2_split1_combine1.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 33 bsiM).
         cbv [evalSignExtendTrunc]; cbn.
@@ -1369,7 +1369,7 @@ Section Multiplier32.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
         unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
-        rewrite wtl_combine.
+        rewrite split2_split1_combine1.
         unfold wmultZ, wordBinZ.
         pose proof (sext_wordToZ 33 bsiM).
         cbv [evalSignExtendTrunc]; cbn.
