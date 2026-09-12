@@ -5,7 +5,15 @@
     [simpl never], around a [Zmod.of_Z] of its integer specification, and
     every fact is proved by moving to [Zmod.unsigned] and reasoning in [Z]
     (see [word_to_Z] below).  Do not compute with words in proofs: rewrite
-    with the [unsigned_*] lemmas instead. *)
+    with the [unsigned_*] lemmas instead.
+
+    Side effect on importers: this file requires [ZifyNat] and [ZifyN], so
+    importing it registers those [Zify] instances globally and [lia]/[nia]
+    will understand [Nat.pow]/[Nat.div]/[Nat.mod] and their [N] counterparts
+    everywhere downstream.  Note also that the [simpl never] declarations
+    below cover only Kami's own operations: stdlib's [Zmod.unsigned],
+    [Zmod.signed] and [Zmod.of_Z] keep reducing under [cbn]/[simpl] as they
+    do without this file. *)
 
 From Stdlib Require Import Arith NArith ZArith Bool Lia ZifyNat ZifyN.
 From Stdlib Require Import Eqdep_dec EqdepFacts.
@@ -339,9 +347,6 @@ Arguments wrshifta [_] _ _ : simpl never.
 Arguments extz [_] _ _ : simpl never.
 Arguments wpow2 _ : simpl never.
 Arguments wbit _ [_] _ : simpl never.
-Arguments Zmod.unsigned {_} _ : simpl never.
-Arguments Zmod.signed {_} _ : simpl never.
-Arguments Zmod.of_Z _ _ : simpl never.
 
 (*! Facts *)
 
