@@ -17,7 +17,7 @@ Section VecFunc.
     match vec in Vec _ n return word n -> A with
       | Vec0 e => fun _ => e
       | VecNext n' v1 v2 =>
-        fun w => if whd w then evalVec n' v2 (wtl w) else evalVec n' v1 (wtl w)
+        fun w => if whd w then evalVec v2 (wtl w) else evalVec v1 (wtl w)
     end.
 
   Variable B: Type.

@@ -2207,6 +2207,18 @@ Proof.
   word_lia_Z.
 Qed.
 
+(** With the inductive [word], [$0~1] and [$1] were definitionally equal;
+    they are only propositionally equal now. *)
+Lemma WS_true_natToWord_0 : forall sz, WS true (natToWord sz 0) = natToWord (S sz) 1.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma WS_false_natToWord_0 : forall sz, WS false (natToWord sz 0) = natToWord (S sz) 0.
+Proof.
+  word_lia_Z.
+Qed.
+
 Lemma natToWord_S : forall sz n, natToWord sz (S n) = natToWord _ 1 ^+ natToWord _ n.
 Proof.
   intros; rewrite <- natToWord_plus; f_equal; lia.
