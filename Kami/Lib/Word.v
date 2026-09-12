@@ -2799,6 +2799,12 @@ Proof.
     rewrite <- (shatter_word (wtl w)); apply IHn.
 Qed.
 
+Lemma split2_split1_combine1 : forall n m (x : word 1) (y : word (n + m)),
+    split2 1 n (split1 (S n) m (combine x y)) = split1 n m y.
+Proof.
+  word_lia_Z.
+Qed.
+
 Lemma shatter_word_1 : forall (w : word 1), w = WS (whd w) WO.
 Proof.
   intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_0.
