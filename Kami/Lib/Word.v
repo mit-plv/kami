@@ -104,11 +104,13 @@ Definition split2 (sz1 sz2 : nat) (w : word (sz1 + sz2)) : word sz2 :=
 
 (** * Extension operators *)
 
+(** Kept literally as in the inductive-[word] version: several Kami example
+    proofs rely on [sext]/[zext]/[extz] being [combine]s definitionally. *)
 Definition sext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
-  ofZ _ (Zmod.signed w).
+  if wmsb w false then combine w (wones sz') else combine w (wzero sz').
 
 Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
-  ofZ _ (unsigned w).
+  combine w (wzero sz').
 
 (** * Arithmetic *)
 
@@ -255,8 +257,7 @@ Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz :=
 Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz :=
   ofZ _ (Zmod.signed w / 2 ^ Z.of_nat n).
 
-Definition extz {sz} (w: word sz) (n: nat) : word (n + sz) :=
-  ofZ _ (2 ^ Z.of_nat n * unsigned w).
+Definition extz {sz} (w: word sz) (n: nat) : word (n + sz) := combine (wzero n) w.
 
 Definition wpow2 sz : word (S sz) := ofZ _ (2 ^ Z.of_nat sz).
 
@@ -523,24 +524,16 @@ Proof.
   split; [apply Z.div_pos | apply Z.div_lt_upper_bound]; lia.
 Qed.
 
-Lemma unsigned_sext : forall sz (w : word sz) sz',
-    unsigned (sext w sz') = Zmod.signed w mod 2 ^ Z.of_nat (sz + sz').
-Proof. intros; apply unsigned_ofZ. Qed.
-
 Lemma unsigned_zext : forall sz (w : word sz) sz',
     unsigned (zext w sz') = unsigned w.
 Proof.
-  intros; cbv [zext]; apply unsigned_ofZ_small.
-  pose proof (unsigned_range w). rewrite pow2_add_Z.
-  pose proof (pow2_pos_Z sz'). nia.
+  intros; cbv [zext]; rewrite unsigned_combine, unsigned_wzero; ring.
 Qed.
 
 Lemma unsigned_extz : forall sz (w : word sz) n,
     unsigned (extz w n) = 2 ^ Z.of_nat n * unsigned w.
 Proof.
-  intros; cbv [extz]; apply unsigned_ofZ_small.
-  pose proof (unsigned_range w). rewrite pow2_add_Z.
-  pose proof (pow2_pos_Z n). nia.
+  intros; cbv [extz]; rewrite unsigned_combine, unsigned_wzero; ring.
 Qed.
 
 Lemma unsigned_wneg : forall sz (x : word sz), unsigned (wneg x) = (- unsigned x) mod 2 ^ Z.of_nat sz.
@@ -687,6 +680,33 @@ Proof.
   set (x := unsigned w) in *; clearbody x. rewrite pow2_S_Z.
   destruct (Z.leb_spec (2 ^ Z.of_nat sz) x);
     destruct (Z.leb_spec (2 * 2 ^ Z.of_nat sz) (2 * x)); lia.
+Qed.
+
+Lemma unsigned_sext : forall sz (w : word sz) sz',
+    unsigned (sext w sz') = Zmod.signed w mod 2 ^ Z.of_nat (sz + sz').
+Proof.
+  intros; cbv [sext]; pose proof (unsigned_range w);
+    pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z sz');
+    pose proof (pow2_pos_Z (sz + sz')).
+  assert (Hm : (2 ^ Z.of_nat (sz + sz') = 2 ^ Z.of_nat sz * 2 ^ Z.of_nat sz')%Z)
+    by (apply pow2_add_Z).
+  rewrite wmsb_eqn_gen, signed_eqn.
+  destruct (Z.eqb_spec (Z.of_nat sz) 0) as [E|E].
+  - assert (Es : sz = 0%nat) by lia; subst sz.
+    assert (P0 : (2 ^ Z.of_nat 0 = 1)%Z) by reflexivity.
+    assert (Eu : unsigned w = 0%Z) by lia.
+    rewrite unsigned_combine, unsigned_wzero, Eu.
+    destruct (Z.ltb_spec (2 * 0) (2 ^ Z.of_nat 0)); [|lia].
+    rewrite Z.mod_0_l by lia; ring.
+  - destruct (Z.leb_spec (2 ^ Z.of_nat sz) (2 * unsigned w)).
+    + rewrite unsigned_combine, unsigned_wones.
+      destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat sz)); [lia|].
+      rewrite (@Zmod_small_neg (unsigned w - 2 ^ Z.of_nat sz)
+                               (2 ^ Z.of_nat (sz + sz'))) by nia.
+      rewrite Hm; ring.
+    + rewrite unsigned_combine, unsigned_wzero.
+      destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat sz)); [|lia].
+      rewrite (Z.mod_small (unsigned w)) by nia; ring.
 Qed.
 
 
@@ -2781,6 +2801,90 @@ Proof.
   - rewrite (shatter_word w); rewrite (shatter_word (wtl w)); apply H0.
     rewrite <- (shatter_word (wtl w)); apply IHn.
 Qed.
+
+Lemma shatter_word_1 : forall (w : word 1), w = WS (whd w) WO.
+Proof.
+  intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_0.
+Qed.
+
+Lemma shatter_word_2 : forall (w : word 2),
+    w = WS (whd w) (WS (whd (wtl w)) WO).
+Proof.
+  intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_1.
+Qed.
+
+Lemma shatter_word_3 : forall (w : word 3),
+    w = WS (whd w) (WS (whd (wtl w)) (WS (whd (wtl (wtl w))) WO)).
+Proof.
+  intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_2.
+Qed.
+
+Lemma whd_split1 : forall n m (w : word (S n + m)), whd (split1 (S n) m w) = whd w.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma wtl_split1 : forall n m (w : word (S n + m)),
+    wtl (split1 (S n) m w) = split1 n m (wtl w).
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma wordToZ_one : forall (w : word 1), wordToZ w = (if whd w then -1 else 0)%Z.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma wordToZ_succ : forall sz (w : word (S (S sz))),
+    wordToZ w = (2 * wordToZ (wtl w) + (if whd w then 1 else 0))%Z.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma whd_WS : forall b sz (w : word sz), whd (WS b w) = b.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma wtl_WS : forall b sz (w : word sz), wtl (WS b w) = w.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma wordToNat_wtl : forall sz (w : word (S sz)), wordToNat (wtl w) = wordToNat w / 2.
+Proof.
+  intros; cbv [wordToNat]; rewrite unsigned_wtl.
+  apply Z2Nat.inj_div; [apply unsigned_range | lia].
+Qed.
+
+(** * Structural recursion over words *)
+
+(** [word] is no longer an inductive type, but it still has the eliminator
+    of the old two-constructor definition; [induction w using word_rect]
+    replaces [dependent induction w]. *)
+Fixpoint word_rect (P : forall n, word n -> Type)
+  (HO : P 0 WO)
+  (HS : forall (b : bool) (n : nat) (w : word n), P n w -> P (S n) (WS b w))
+  (n : nat) {struct n} : forall w : word n, P n w :=
+  match n return forall w : word n, P n w with
+  | O => fun w => eq_rect_r (P 0) HO (word0 w)
+  | S n' => fun w =>
+      eq_rect_r (P (S n'))
+                (HS (whd w) n' (wtl w) (word_rect P HO HS (wtl w)))
+                (shatter_word w)
+  end.
+
+Definition word_ind (P : forall n, word n -> Prop) := word_rect P.
+Definition word_rec (P : forall n, word n -> Set) := word_rect P.
+
+(** [word_destruct w] replaces [dependent destruction w] on a [word (S _)]:
+    it names the head bit [b] and reuses the name [w] for the tail. *)
+Tactic Notation "word_destruct" ident(w) :=
+  (try (intros until w));
+  let b := fresh "b" in
+  let v := fresh "v" in
+  let Hv := fresh "Hv" in
+  destruct (destruct_word_S w) as [v [b Hv]]; subst w; rename v into w.
 
 Lemma wmsb_eq_rect:
   forall sz1 (w: word sz1) sz2 (Hsz: sz1 = sz2) b,

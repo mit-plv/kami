@@ -23,7 +23,9 @@ Section Divider64.
   Definition DivLogNumPhases := 3.
   Definition DivNumBitsPerPhase := 8.
 
-  Local Definition DivNumPhases := wordToNat (wones DivLogNumPhases) + 1.
+  (* [wordToNat (wones _) + 1]; spelled with [pow2] so that it still reduces
+     now that [wordToNat] is a [simpl never] wrapper over [Zmod.unsigned]. *)
+  Local Definition DivNumPhases := pow2 DivLogNumPhases.
   Local Definition DivNumBits := DivNumPhases * DivNumBitsPerPhase.
   Local Definition DivBits := DivNumBits + (2 * DivNumBits).
 
