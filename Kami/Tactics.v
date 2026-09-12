@@ -670,6 +670,7 @@ Ltac is_not_const_bool t :=
 Ltac is_not_const_word t :=
   match t with
   | WO => fail 1
+  | @WS _ _ _ => fail 1
   | WS _ => fail 1
   | _ => idtac
   end.

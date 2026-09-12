@@ -225,7 +225,7 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
-        * destruct (weq x6 (x5 ^+ $0~1)).
+        * destruct (weq x6 (x5 ^+ $1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
           }
@@ -241,7 +241,7 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
-        * destruct (weq x5 (x6 ^+ $0~1)).
+        * destruct (weq x5 (x6 ^+ $1)).
           { or3_fst; auto. }
           { or3_thd; auto. }
     - apply sfifo_substeps_updates.
@@ -288,9 +288,9 @@ Section Facts.
                 destruct (weq x6 x6); intuition idtac.
               }
               { rewrite wminus_def, <-wplus_assoc.
-                rewrite wplus_comm with (x:= $0~1), wplus_assoc.
+                rewrite wplus_comm with (x:= $1), wplus_assoc.
                 rewrite wminus_inv, wplus_unit.
-                simpl; rewrite roundTrip_0; reflexivity.
+                rewrite ?roundTrip_0, ?roundTrip_1; reflexivity.
               }
             }
             { exfalso; eapply wplus_one_neq; eauto. }
@@ -316,7 +316,10 @@ Section Facts.
                     apply wneg_zero in e.
                     rewrite natToWord_wordToNat in e.
                     apply wneg_zero in e.
-                    inv e.
+                    (* [word] is no longer inductive, so [inv] cannot separate
+                       [$1] from [$0]; compare their [wordToNat] instead. *)
+                    apply (f_equal (@wordToNat _)) in e;
+                      rewrite roundTrip_0, roundTrip_1 in e; discriminate.
                   }
                   { f_equal.
                     rewrite wminus_plus_distr.
@@ -334,22 +337,22 @@ Section Facts.
                   }
                 }
                 { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
+                  apply wplus_cancel with (c:= x5 ^+ $1).
                   rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
+                  rewrite wplus_comm with (y:= x5 ^+ $1).
                   rewrite wminus_inv.
                   rewrite wplus_comm with (x:= ^~ $1), <-wplus_assoc.
                   rewrite wminus_inv.
                   reflexivity.
                 }
               }
-              { replace (x5 ^- (x5 ^+ $0~1)) with (wones rsz).
+              { replace (x5 ^- (x5 ^+ $1)) with (wones rsz).
                 { apply Nat.le_refl. }
                 { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
+                  apply wplus_cancel with (c:= x5 ^+ $1).
                   rewrite wplus_comm, <-wplus_assoc, wminus_inv.
                   rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
+                  rewrite wplus_comm with (y:= x5 ^+ $1).
                   rewrite wminus_inv.
                   reflexivity.
                 }
@@ -374,7 +377,7 @@ Section Facts.
                       intro Hx.
                       apply pow2_minus_one_wones in Hx.
                       elim n0.
-                      apply wplus_cancel with (c:= ^~ $0~1).
+                      apply wplus_cancel with (c:= ^~ $1).
                       rewrite <-wplus_assoc, wminus_inv.
                       rewrite wplus_comm, wplus_unit.
                       rewrite wplus_comm.
@@ -421,13 +424,14 @@ Section Facts.
             { intros; inv H1. }
             { kregmap_red; kregmap_clear; meq.
               { exfalso; eapply wplus_one_neq; eauto. }
-              { replace (x6 ^- (x6 ^+ $0~1)) with (wones (S sz)); auto.
-                apply wplus_cancel with (c:= x6 ^+ $0~1).
+              { replace (x6 ^- (x6 ^+ $1)) with (wones (S sz)); auto.
+                apply wplus_cancel with (c:= x6 ^+ $1).
                 rewrite wminus_def, <-wplus_assoc.
                 rewrite wplus_comm with (x:= ^~ (x6 ^+ _)).
-                rewrite wminus_inv, wplus_comm with (y:= $0~1).
+                rewrite wminus_inv, wplus_comm with (y:= $1).
                 rewrite wplus_assoc.
-                replace ((natToWord sz 0)~1) with (natToWord rsz 1) by reflexivity.
+                replace ((natToWord sz 0)~1) with (natToWord rsz 1)
+                  by (rewrite WS_true_natToWord_0; reflexivity).
                 rewrite wones_wneg_one.
                 rewrite wplus_comm with (y:= $1), wminus_inv.
                 apply wplus_comm.
