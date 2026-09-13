@@ -1,4 +1,4 @@
-From Coq Require Import Bool List String Lia.
+From Coq Require Import Bool List String Lia ZArith.
 From Coq Require Import Equalities Equality Eqdep Eqdep_dec.
 From Coq Require Import FunctionalExtensionality.
 Require Import Lib.Word Lib.CommonTactics Lib.ilist Lib.FMap Lib.StringEq Lib.VectorFacts Lib.Struct.
@@ -239,9 +239,7 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   match op with
     | Add n => @wplus n
     | Sub n => @wminus n
-    | Mul n SignSS => @wmultZ n
-    | Mul n SignSU => @wmultZsu n
-    | Mul n SignUU => @wmult n
+    | Mul n _ => @wmult n
     | Div n true => @wdivZ n
     (* | Div n SignSU => @wdivZsu n *)
     | Div n false => @wdivN n
@@ -260,8 +258,8 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
   : word n1 -> word n2 -> bool :=
   match op with
-    | Lt n => fun a b => if @wlt_dec n a b then true else false
-    | Slt n => fun a b => if @wslt_dec n a b then true else false
+    | Lt n => fun a b => Z.ltb (uwordToZ a) (uwordToZ b)
+    | Slt n => fun a b => Z.ltb (wordToZ a) (wordToZ b)
   end.
 
 Fixpoint evalArray A n (vs: Vector.t A n): Fin.t n -> A :=

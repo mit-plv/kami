@@ -3,7 +3,7 @@ Require Import Lib.CommonTactics Lib.NatLib Lib.Indexer
         Lib.Struct Lib.DepEq Lib.Word Lib.FMap Lib.Reflection.
 Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tactics.
 
-From Coq Require Import ZArith Eqdep Equality.
+From Coq Require Import ZArith Eqdep Equality Zmod.
 
 Set Implicit Arguments.
 Open Scope string.
@@ -1343,19 +1343,12 @@ Section Multiplier64.
         unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
         rewrite split2_split1_combine1.
-        unfold wmultZ, wordBinZ.
-        pose proof (sext_wordToZ 65 bsiM).
-        cbv [evalSignExtendTrunc]; cbn.
-        eq_rect_simpl.
-        cbn in H1; rewrite H1.
-        pose proof (sext_wordToZ 65 bsiR).
-        cbn; cbn in H2; rewrite H2.
-        cbn in H0; rewrite <-H0.
-        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; lia); subst.
-        destruct_existT.
-        pose proof (sext_wordToZ 1 x4); cbn; cbn in H; rewrite H.
-        rewrite sext_split1.
-        rewrite ZToWord_wordToZ.
+        cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
+        apply unsigned_inj.
+        rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
+        replace (2 ^ Z.of_nat (65 + 65))%Z with (2 ^ Z.of_nat 130)%Z by reflexivity.
+        cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
+        rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
         reflexivity.
         Transparent split1 split2 wordToZ.
 
@@ -1365,19 +1358,12 @@ Section Multiplier64.
         unfold ilist.ilist_to_fun_m; simpl.
         repeat f_equal.
         rewrite split2_split1_combine1.
-        unfold wmultZ, wordBinZ.
-        pose proof (sext_wordToZ 65 bsiM).
-        cbv [evalSignExtendTrunc]; cbn.
-        eq_rect_simpl.
-        cbn in H1; rewrite H1.
-        pose proof (sext_wordToZ 65 bsiR).
-        cbn; cbn in H2; rewrite H2.
-        cbn in H0; rewrite <-H0.
-        assert (x = 2 * MultNumBitsExt) by (apply eq_sigT_fst in H; lia); subst.
-        destruct_existT.
-        pose proof (sext_wordToZ 1 x4); cbn; cbn in H; rewrite H.
-        rewrite sext_split1.
-        rewrite ZToWord_wordToZ.
+        cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
+        apply unsigned_inj.
+        rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
+        replace (2 ^ Z.of_nat (65 + 65))%Z with (2 ^ Z.of_nat 130)%Z by reflexivity.
+        cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
+        rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
         reflexivity.
         Transparent split1 split2 wordToZ.
 
