@@ -15,46 +15,11 @@ Lemma wnot_not_zero_wplusone:
   forall {sz} (w2: word sz),
     wnot w2 <> $0 ->
     #(w2 ^+ $1) = #w2 + 1.
-Proof.
-  intros.
-  assert (w2 < wones _).
-  { apply lt_wlt.
-    rewrite wones_pow2_minus_one.
-    pose proof (wordToNat_bound w2).
-    pose proof (NatLib.pow2_zero sz).
-    assert (#w2 = NatLib.pow2 sz - 1 \/ (#w2 < NatLib.pow2 sz - 1)%nat) by lia.
-    destruct H2; [|assumption].
-    assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
-    rewrite natToWord_wordToNat, <-wones_natToWord in H3; subst.
-    rewrite wnot_ones in H.
-    exfalso; auto.
-  }
-  erewrite wordToNat_plusone; [|eassumption].
-  lia.
-Qed.
-
-Lemma wminus_wplus_transpose:
-  forall {sz} (w1 w2 w3: word sz),
-    w1 ^- w2 = w3 -> w1 = w3 ^+ w2.
-Proof.
-  intros.
-  replace (w3 ^+ w2) with (w1 ^- w2 ^+ w2).
-  - rewrite wminus_def, <-wplus_assoc.
-    rewrite wplus_comm with (x:= ^~ w2), wminus_inv.
-    rewrite wplus_wzero_1; reflexivity.
-  - congruence.
-Qed.
+Proof. word_lia_Z. Qed.
 
 Lemma wnot_zero_wones:
   forall {sz} (w: word sz), wnot w = $0 -> w = wones _.
-Proof.
-  intros.
-  rewrite wneg_wnot in H.
-  apply wminus_wplus_transpose in H.
-  rewrite wplus_unit in H.
-  rewrite <- @wneg_idempotent with (w:= w), H.
-  apply eq_sym, wones_wneg_one.
-Qed.
+Proof. word_lia_Z. Qed.
 
 Section Invariants.
   Variables addrSize iaddrSize instBytes dataBytes rfIdx: nat.
@@ -253,7 +218,7 @@ Section Invariants.
         unfold type, ilist_to_fun_m; simpl.
         do 3 f_equal.
         pose proof (NatLib.pow2_zero iaddrSize).
-        rewrite wordToNat_natToWord_2; lia.
+        rewrite wordToNat_natToWord_idempotent' by lia; lia.
       + apply IHelts; auto.
   Qed.
 
@@ -299,7 +264,7 @@ Section Invariants.
     - kinv_dest_custom procDec_inv_tac.
       kinv_constr.
       + simpl; auto.
-      + cbn; repeat rewrite wordToNat_wzero; split; intros; reflexivity.
+      + cbn; repeat rewrite roundTrip_0; split; intros; reflexivity.
       + procDec_inv_next 0.
 
     - kinvert; [mred|mred|..].

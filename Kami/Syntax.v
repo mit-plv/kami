@@ -196,17 +196,18 @@ Qed.
 
 Inductive ConstT: Kind -> Type :=
 | ConstBool: bool -> ConstT Bool
-| ConstBit n: word n -> ConstT (Bit n)
+| ConstBit n: Zmod (Zpow2 n) -> ConstT (Bit n)
 | ConstVector k n: Vec (ConstT k) n -> ConstT (Vector k n)
 | ConstStruct n (ls: Vector.t _ n): ilist (fun a => ConstT (attrType a)) ls -> ConstT (Struct ls)
 | ConstArray k n: Vector.t (ConstT k) n -> ConstT (Array k n).
+Arguments ConstBit [n] _.
 
 Inductive ConstFullT: FullKind -> Type :=
 | SyntaxConst k: ConstT k -> ConstFullT (SyntaxKind k)
 | NativeConst t (c c': t): ConstFullT (NativeKind c).
 
 Coercion ConstBool : bool >-> ConstT.
-Coercion ConstBit : word >-> ConstT.
+Coercion ConstBit : Zmod >-> ConstT.
 
 Fixpoint vector_repeat A n (a: A) :=
   match n return Vector.t A n with

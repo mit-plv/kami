@@ -43,8 +43,7 @@ Section ToNative.
     forall eltv x, fifo_nfifo_elt_not_full eltv (x ^+ $1) 1 = [eltv x].
   Proof.
     intros; simpl; repeat f_equal.
-    rewrite wminus_def, <-wplus_assoc, wminus_inv, wplus_comm.
-    apply wplus_unit.
+    unfold rsz in *; word_lia_Z.
   Qed.
 
   Lemma fifo_nfifo_elt_not_full_prop_2:
@@ -68,40 +67,14 @@ Section ToNative.
     - simpl; f_equal.
       destruct (weq _ _); auto.
       elim n; clear n.
-      rewrite wminus_def, <-wplus_assoc, wminus_inv.
-      rewrite wplus_comm, wplus_unit.
-      reflexivity.
+      unfold rsz in *; word_lia_Z.
     - unfold fifo_nfifo_elt_not_full in *.
       fold fifo_nfifo_elt_not_full in *.
       rewrite <-IHedSub by lia; clear IHedSub.
       unfold app; f_equal.
       destruct (weq _ _).
-      + exfalso.
-        rewrite natToWord_S with (n:= S edSub) in e.
-        rewrite wminus_plus_distr in e.
-        rewrite !wminus_def in e.
-        rewrite <-wplus_assoc with (x:= enqPv) in e.
-        rewrite wminus_inv in e.
-        rewrite wplus_comm with (x:= enqPv), wplus_unit in e.
-        rewrite wplus_comm in e.
-        rewrite <-wplus_unit with (x:= enqPv) in e at 2.
-        apply wplus_cancel in e.
-        apply wneg_zero in e.
-        apply natToWord_inj in e.
-        * inv e.
-        * pose proof (wordToNat_bound (wones rsz)); lia.
-        * apply pow2_zero.
-      + f_equal.
-        do 2 rewrite wminus_def.
-        rewrite <-wplus_assoc.
-        f_equal.
-        rewrite natToWord_S with (n:= S edSub).
-        apply wplus_cancel with (c:= $1 ^+ $ (S edSub)).
-        rewrite <-wplus_assoc, wplus_comm with (x:= ^~ ($1 ^+ $ (S edSub))).
-        rewrite wminus_inv.
-        rewrite wplus_comm with (x:= ^~ $ (S edSub)).
-        rewrite <-wplus_assoc, wminus_inv.
-        reflexivity.
+      + exfalso; unfold rsz in *; word_lia_Z.
+      + f_equal; unfold rsz in *; word_lia_Z.
   Qed.
 
   Lemma fifo_nfifo_elt_not_full_deq:
@@ -221,18 +194,18 @@ Section ToNative.
     - simpl; kinv_action_dest.
       unfold initRegs, rawInitRegs, getRegInits; simpl.
       kinv_regmap_red; kinv_constr; kinv_eq.
-      or3_fst; auto.
+      or3_fst; repeat split; destruct (weq _ _); congruence.
     - intros; inv H0; inv HInRules.
     - intros; inv H0; CommonTactics.dest_in.
       + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
-            exfalso; eapply wplus_one_neq; eauto.
+            wplus_one_contra.
           }
           { destruct (weq _ _); auto.
-            exfalso; eapply wplus_one_neq; eauto.
+            wplus_one_contra.
           }
-        * destruct (weq x6 (x5 ^+ $0~1)).
+        * destruct (weq x6 (x5 ^+ $1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
           }
@@ -243,12 +216,12 @@ Section ToNative.
       + simpl in *; kinv_magic_light_with kinv_or3.
         * or3_thd; repeat split.
           { destruct (weq _ _); auto.
-            exfalso; eapply wplus_one_neq; eauto.
+            wplus_one_contra.
           }
           { destruct (weq _ _); auto.
-            exfalso; eapply wplus_one_neq; eauto.
+            wplus_one_contra.
           }
-        * destruct (weq x5 (x6 ^+ $0~1)).
+        * destruct (weq x5 (x6 ^+ $1)).
           { or3_fst; auto. }
           { or3_thd; auto. }
       + simpl in *; kinv_magic_light_with kinv_or3.
@@ -291,20 +264,16 @@ Section ToNative.
           { intros; inv H0. }
           { intros; inv H0. }
           { kregmap_red; kregmap_clear; meq.
-            { exfalso; generalize e; apply wplus_one_neq. }
-            { exfalso; generalize e; apply wplus_one_neq. }
+            { wplus_one_contra. }
+            { wplus_one_contra. }
             { repeat f_equal.
               simpl; replace (wordToNat _) with 1.
               { rewrite fifo_nfifo_elt_not_full_prop_1.
                 destruct (weq x6 x6); intuition idtac.
               }
-              { rewrite wminus_def, <-wplus_assoc.
-                rewrite wplus_comm with (x:= $0~1), wplus_assoc.
-                rewrite wminus_inv, wplus_unit.
-                simpl; rewrite roundTrip_0; reflexivity.
-              }
+              { unfold rsz in *; word_lia_Z. }
             }
-            { exfalso; generalize e0; apply wplus_one_neq. }
+            { wplus_one_contra. }
             { repeat f_equal.
               unfold evalExpr.
               rewrite fifo_nfifo_elt_not_full_enq.
@@ -313,98 +282,19 @@ Section ToNative.
                 repeat f_equal.
                 { unfold rsz in *; clear n e n0.
                   destruct (weq _ _); [|clear n].
-                  { exfalso.
-                    rewrite natToWord_S with (n:= wordToNat _) in e.
-                    rewrite !wminus_plus_distr in e.
-                    rewrite !wminus_def in e.
-                    rewrite <-wplus_assoc with (x:= x5) in e.
-                    rewrite !wminus_inv in e.
-                    rewrite wplus_comm with (x:= x5) in e.
-                    rewrite !wplus_unit in e.
-                    rewrite wplus_comm in e.
-                    rewrite <-wplus_unit in e.
-                    apply wplus_cancel in e.
-                    apply wneg_zero in e.
-                    rewrite natToWord_wordToNat in e.
-                    apply wneg_zero in e.
-                    inv e.
-                  }
-                  { f_equal.
-                    rewrite wminus_plus_distr.
-                    rewrite !wminus_def.
-                    rewrite wminus_inv, wplus_unit.
-                    rewrite <-wplus_assoc; f_equal.
-                    rewrite natToWord_S with (n:= wordToNat _).
-                    rewrite <-wminus_def.
-                    rewrite wminus_plus_distr.
-                    rewrite !wminus_def.
-                    rewrite wminus_inv, wplus_unit.
-                    rewrite natToWord_wordToNat.
-                    rewrite wneg_idempotent.
-                    reflexivity.
-                  }
+                  { exfalso; unfold rsz in *; word_lia_Z. }
+                  { f_equal; unfold rsz in *; word_lia_Z. }
                 }
-                { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
-                  rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
-                  rewrite wminus_inv.
-                  rewrite wplus_comm with (x:= ^~ $1), <-wplus_assoc.
-                  rewrite wminus_inv.
-                  reflexivity.
-                }
+                { unfold rsz in *; word_lia_Z. }
               }
-              { replace (x5 ^- (x5 ^+ $0~1)) with (wones rsz).
-                { apply Nat.le_refl. }
-                { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
-                  rewrite wplus_comm, <-wplus_assoc, wminus_inv.
-                  rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
-                  rewrite wminus_inv.
-                  reflexivity.
-                }
-              }
+              { unfold rsz in *; word_lia_Z. }
             }
             { repeat f_equal; simpl.
               rewrite fifo_nfifo_elt_not_full_enq.
               { repeat f_equal.
-                apply natToWord_inj with (sz:= S sz).
-                { rewrite natToWord_S.
-                  rewrite !natToWord_wordToNat.
-                  rewrite !wminus_def.
-                  rewrite wplus_assoc, wplus_comm with (x:= $1).
-                  reflexivity.
-                }
-                { pose proof (wordToNat_bound (x5 ^- x6)).
-                  remember (Lib.NatLib.pow2 (S sz)) as pt; destruct pt.
-                  { pose proof (pow2_zero (S sz)); lia. }
-                  { apply ->Nat.succ_lt_mono.
-                    assert (wordToNat (x5 ^- x6) <> pt).
-                    { replace pt with (Lib.NatLib.pow2 (S sz) - 1) by lia.
-                      intro Hx.
-                      apply pow2_minus_one_wones in Hx.
-                      elim n0.
-                      apply wplus_cancel with (c:= ^~ $0~1).
-                      rewrite <-wplus_assoc, wminus_inv.
-                      rewrite wplus_comm, wplus_unit.
-                      rewrite wplus_comm.
-                      apply wplus_cancel with (c:= ^~ x6).
-                      rewrite <-wplus_assoc, wminus_inv.
-                      rewrite wplus_comm with (y:= wzero _), wplus_unit.
-                      rewrite <-wminus_def; rewrite Hx.
-                      rewrite wones_wneg_one.
-                      reflexivity.
-                    }
-                    lia.
-                  }
-                }
-                { apply wordToNat_bound. }
+                unfold rsz in *; word_lia_Z.
               }
-              { rewrite wones_pow2_minus_one.
-                pose proof (wordToNat_bound (x5 ^- x6)).
-                unfold rsz in *; lia.
-              }
+              { unfold rsz in *; word_lia_Z. }
             }
           }
 
@@ -431,17 +321,9 @@ Section ToNative.
             { intros; inv H1. }
             { intros; inv H1. }
             { kregmap_red; kregmap_clear; meq.
-              { exfalso; eapply wplus_one_neq; eauto. }
-              { replace (x6 ^- (x6 ^+ $0~1)) with (wones (S sz)); auto.
-                apply wplus_cancel with (c:= x6 ^+ $0~1).
-                rewrite wminus_def, <-wplus_assoc.
-                rewrite wplus_comm with (x:= ^~ (x6 ^+ _)).
-                rewrite wminus_inv, wplus_comm with (y:= $0~1).
-                rewrite wplus_assoc.
-                replace ((natToWord sz 0)~1) with (natToWord rsz 1) by reflexivity.
-                rewrite wones_wneg_one.
-                rewrite wplus_comm with (y:= $1), wminus_inv.
-                apply wplus_comm.
+              { wplus_one_contra. }
+              { replace (x6 ^- (x6 ^+ $1)) with (wones (S sz)); auto.
+                unfold rsz in *; word_lia_Z.
               }
             }
           }
@@ -456,14 +338,7 @@ Section ToNative.
               { kregmap_red; kregmap_clear; reflexivity. }
               { destruct (weq x5 x6); [elim n; auto|].
                 pose proof (@fifo_nfifo_elt_not_full_prop_2 x7 x5 (wordToNat (x5 ^- x6))).
-                assert (wordToNat (x5 ^- x6) <> 0).
-                { intro Hx.
-                  assert ($ (wordToNat (x5 ^- x6)) = natToWord rsz 0)
-                    by (rewrite Hx; reflexivity).
-                  rewrite natToWord_wordToNat in H10.
-                  apply sub_0_eq in H10.
-                  elim n; auto.
-                }
+                assert (wordToNat (x5 ^- x6) <> 0) by (unfold rsz in *; word_lia_Z).
                 specialize (H1 H10); clear H10; dest.
                 rewrite H1; reflexivity.
               }
@@ -472,24 +347,12 @@ Section ToNative.
             { destruct (weq x5 x6); [elim n; auto|].
               simpl; repeat f_equal.
               pose proof (@fifo_nfifo_elt_not_full_prop_2 x7 x5 (wordToNat (x5 ^- x6))).
-              assert (wordToNat (x5 ^- x6) <> 0).
-              { intro Hx.
-                assert ($ (wordToNat (x5 ^- x6)) = natToWord rsz 0)
-                  by (rewrite Hx; reflexivity).
-                rewrite natToWord_wordToNat in H10.
-                apply sub_0_eq in H10.
-                elim n; auto.
-              }
+              assert (wordToNat (x5 ^- x6) <> 0) by (unfold rsz in *; word_lia_Z).
               specialize (H1 H10); clear H10; dest.
               rewrite H1; unfold listFirstElt, evalExpr; f_equal.
 
               rewrite natToWord_wordToNat.
-              apply wplus_cancel with (c:= x5 ^- x6).
-              rewrite wminus_def with (y:= x5 ^- x6), <-wplus_assoc.
-              rewrite wplus_comm with (x:= ^~ (x5 ^- x6)).
-              rewrite wminus_inv, wminus_def, wplus_comm with (y:= ^~ x6).
-              rewrite wplus_assoc, wminus_inv.
-              apply wplus_comm.
+              unfold rsz in *; word_lia_Z.
             }
           }
           { repeat split.
@@ -499,19 +362,11 @@ Section ToNative.
               { simpl; repeat f_equal.
                 replace (wordToNat _) with 1.
                 { rewrite fifo_nfifo_elt_not_full_prop_1; reflexivity. }
-                { rewrite wminus_def, <-wplus_assoc, wplus_comm.
-                  rewrite <-wplus_assoc, wplus_comm with (y:= x6), wminus_inv.
-                  rewrite wplus_comm, wplus_unit.
-                  rewrite roundTrip_1; auto.
-                }
+                { unfold rsz in *; word_lia_Z. }
               }
               { simpl; repeat f_equal.
                 rewrite fifo_nfifo_elt_not_full_deq.
-                f_equal; rewrite wordToNat_natToWord_pred.
-                { f_equal.
-                  rewrite wminus_plus_distr; reflexivity.
-                }
-                { intro Hx; apply sub_0_eq in Hx; auto. }
+                f_equal; unfold rsz in *; word_lia_Z.
               }
             }
           }
@@ -530,14 +385,7 @@ Section ToNative.
                 destruct (weq x4 x5); [discriminate|].
                 simpl; apply negb_true_iff.
                 pose proof (@fifo_nfifo_elt_not_full_prop_2 x6 x4 (wordToNat (x4 ^- x5))).
-                assert (wordToNat (x4 ^- x5) <> 0).
-                { intro Hx.
-                  assert ($ (wordToNat (x4 ^- x5)) = natToWord rsz 0)
-                    by (rewrite Hx; reflexivity).
-                  rewrite natToWord_wordToNat in H6.
-                  apply sub_0_eq in H6.
-                  elim n; auto.
-                }
+                assert (wordToNat (x4 ^- x5) <> 0) by (unfold rsz in *; word_lia_Z).
                 specialize (H1 H6); clear H6; dest.
                 rewrite H1; reflexivity.
               }
@@ -552,24 +400,12 @@ Section ToNative.
             { unfold rsz in *.
               destruct (weq x4 x5); [discriminate|].
               pose proof (@fifo_nfifo_elt_not_full_prop_2 x6 x4 (wordToNat (x4 ^- x5))).
-              assert (wordToNat (x4 ^- x5) <> 0).
-              { intro Hx.
-                assert ($ (wordToNat (x4 ^- x5)) = natToWord rsz 0)
-                  by (rewrite Hx; reflexivity).
-                rewrite natToWord_wordToNat in H6.
-                apply sub_0_eq in H6.
-                elim n; auto.
-              }
+              assert (wordToNat (x4 ^- x5) <> 0) by (unfold rsz in *; word_lia_Z).
               specialize (H1 H6); clear H6; dest.
               rewrite H1; unfold listFirstElt.
               rewrite natToWord_wordToNat.
               simpl; f_equal.
-              apply wplus_cancel with (c:= x4 ^- x5).
-              rewrite wminus_def with (y:= x4 ^- x5), <-wplus_assoc.
-              rewrite wplus_comm with (x:= ^~ (x4 ^- x5)).
-              rewrite wminus_inv, wminus_def, wplus_comm with (y:= ^~ x5).
-              rewrite wplus_assoc, wminus_inv.
-              apply wplus_comm.
+              unfold rsz in *; word_lia_Z.
             }
           }
         * repeat split; auto.

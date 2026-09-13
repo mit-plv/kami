@@ -11,25 +11,12 @@ Set Asymmetric Patterns.
 
 Section VecFunc.
   Variable A: Type.
-  Fixpoint evalVec n (vec: Vec A n): word n -> A.
-  Proof.
-    refine match vec in Vec _ n return word n -> A with
-             | Vec0 e => fun _ => e
-             | VecNext n' v1 v2 =>
-               fun w =>
-                 match w in word m0 return m0 = S n' -> A with
-                   | WO => _
-                   | WS b m w' =>
-                     if b
-                     then fun _ => evalVec _ v2 (_ w')
-                     else fun _ => evalVec _ v1 (_ w')
-                 end eq_refl
-           end;
-    clear evalVec.
-    - abstract (intros; discriminate).
-    - injection e; intros; subst; exact x.
-    - injection e; intros; subst; exact x.
-  Defined.
+  Fixpoint evalVec n (vec: Vec A n): word n -> A :=
+    match vec in Vec _ n return word n -> A with
+      | Vec0 e => fun _ => e
+      | VecNext n' v1 v2 =>
+        fun w => if whd w then evalVec v2 (wtl w) else evalVec v1 (wtl w)
+    end.
 
   Variable B: Type.
   Variable map: A -> B.
@@ -47,7 +34,7 @@ Definition cmb := fun sz1 (w1: word sz1) sz2 (w2: word sz2) => combine w2 w1.
 
 Section WordFunc.
   Definition wordZero (w: word 0): w = WO :=
-    shatter_word w.
+    word0 w.
 
   Variable A: Type.
 
@@ -238,8 +225,8 @@ Defined.
 
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
-  - exact (@wnot n).
-  - exact (@wneg n).
+  - exact wnot.
+  - exact wneg.
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - exact (fun w => split1 n1 n2 w).
   - exact (fun w => evalZeroExtendTrunc _ w).
@@ -250,20 +237,16 @@ Defined.
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   : word n1 -> word n2 -> word n3 :=
   match op with
-    | Add n => @wplus n
-    | Sub n => @wminus n
-    | Mul n SignSS => @wmultZ n
-    | Mul n SignSU => @wmultZsu n
-    | Mul n SignUU => @wmult n
+    | Add n => wplus
+    | Sub n => wminus
+    | Mul n _ => wmult
     | Div n true => @wdivZ n
-    (* | Div n SignSU => @wdivZsu n *)
     | Div n false => @wdivN n
     | Rem n true => @wremZ n
-    (* | Rem n SignSU => @wremZsu n *)
     | Rem n false => @wremN n
-    | Band n => @wand n
-    | Bor n => @wor n
-    | Bxor n => @wxor n
+    | Band n => wand
+    | Bor n => wor
+    | Bxor n => wxor
     | Sll n m => (fun x y => wlshift x (wordToNat y))
     | Srl n m => (fun x y => wrshift x (wordToNat y))
     | Sra n m => (fun x y => wrshifta x (wordToNat y))
@@ -273,8 +256,8 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
   : word n1 -> word n2 -> bool :=
   match op with
-    | Lt n => fun a b => if @wlt_dec n a b then true else false
-    | Slt n => fun a b => if @wslt_dec n a b then true else false
+    | Lt n => fun a b => (uwordToZ a <? uwordToZ b)%Z
+    | Slt n => fun a b => (wordToZ a <? wordToZ b)%Z
   end.
 
 Fixpoint evalArray A n (vs: Vector.t A n): Fin.t n -> A :=

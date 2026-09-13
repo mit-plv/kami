@@ -130,9 +130,8 @@ Section ProcDecSC.
                 else drainInsts rss rsOfs pgmv w).
   Proof.
     unfold listEnq; induction rss; simpl; intros;
-      [rewrite wplus_wzero_1; reflexivity|].
-    rewrite IHrss.
-    rewrite <-wplus_assoc, <-natToWord_plus; reflexivity.
+      [replace (rsOfs ^+ $0) with rsOfs by word_lia_Z; reflexivity|].
+    rewrite IHrss, (natToWord_S _ (Datatypes.length rss)), Zmod.add_assoc; reflexivity.
   Qed.
   
   Lemma pdec_refines_pinst: pdec <<== pinst.
@@ -195,7 +194,7 @@ Section ProcDecSC.
       + rewrite wones_pow2_minus_one.
         find_if_inside; [reflexivity|].
         elim n; pose proof (NatLib.pow2_zero iaddrSize); lia.
-      + rewrite wones_wneg_one, wplus_comm, wminus_inv; reflexivity.
+      + word_lia_Z.
         
     - kinv_action_dest.
       kinv_custom procDec_inv_old.
