@@ -1344,7 +1344,7 @@ Section Multiplier64.
         repeat f_equal.
         rewrite split2_split1_combine1.
         cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
-        apply unsigned_inj.
+        apply Zmod.unsigned_inj.
         rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (65 + 65))%Z with (2 ^ Z.of_nat 130)%Z by reflexivity.
         cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
@@ -1359,7 +1359,7 @@ Section Multiplier64.
         repeat f_equal.
         rewrite split2_split1_combine1.
         cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
-        apply unsigned_inj.
+        apply Zmod.unsigned_inj.
         rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (65 + 65))%Z with (2 ^ Z.of_nat 130)%Z by reflexivity.
         cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
