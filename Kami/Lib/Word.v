@@ -111,13 +111,11 @@ Definition split2 (sz1 sz2 : nat) (w : word (sz1 + sz2)) : word sz2 :=
 
 (** * Extension operators *)
 
-(** [sext]/[zext]/[extz] are spelled as [combine]s rather than as one [ofZ]:
-    several Kami example proofs rely on those definitional equalities. *)
 Definition sext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
-  if wmsb w false then combine w (wones sz') else combine w (wzero sz').
+  ofZ _ (Zmod.signed w).
 
 Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
-  combine w (wzero sz').
+  ofZ _ (unsigned w).
 
 (** * Arithmetic *)
 
@@ -264,7 +262,8 @@ Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz :=
 Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz :=
   ofZ _ (Zmod.signed w / 2 ^ Z.of_nat n).
 
-Definition extz {sz} (w: word sz) (n: nat) : word (n + sz) := combine (wzero n) w.
+Definition extz {sz} (w: word sz) (n: nat) : word (n + sz) :=
+  ofZ _ (2 ^ Z.of_nat n * unsigned w).
 
 Definition wpow2 sz : word (S sz) := ofZ _ (2 ^ Z.of_nat sz).
 
@@ -531,13 +530,15 @@ Qed.
 Lemma unsigned_zext : forall sz (w : word sz) sz',
     unsigned (zext w sz') = unsigned w.
 Proof.
-  intros; cbv [zext]; rewrite unsigned_combine, unsigned_wzero; ring.
+  intros; cbv [zext]; apply unsigned_ofZ_small.
+  pose proof (unsigned_range w); pose proof (pow2_pos_Z sz'); rewrite pow2_add_Z; nia.
 Qed.
 
 Lemma unsigned_extz : forall sz (w : word sz) n,
     unsigned (extz w n) = 2 ^ Z.of_nat n * unsigned w.
 Proof.
-  intros; cbv [extz]; rewrite unsigned_combine, unsigned_wzero; ring.
+  intros; cbv [extz]; apply unsigned_ofZ_small.
+  pose proof (unsigned_range w); pose proof (pow2_pos_Z n); rewrite pow2_add_Z; nia.
 Qed.
 
 Lemma unsigned_wneg : forall sz (x : word sz), unsigned (wneg x) = (- unsigned x) mod 2 ^ Z.of_nat sz.
@@ -688,30 +689,7 @@ Qed.
 
 Lemma unsigned_sext : forall sz (w : word sz) sz',
     unsigned (sext w sz') = Zmod.signed w mod 2 ^ Z.of_nat (sz + sz').
-Proof.
-  intros; cbv [sext]; pose proof (unsigned_range w);
-    pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z sz');
-    pose proof (pow2_pos_Z (sz + sz')).
-  assert (Hm : (2 ^ Z.of_nat (sz + sz') = 2 ^ Z.of_nat sz * 2 ^ Z.of_nat sz')%Z)
-    by (apply pow2_add_Z).
-  rewrite wmsb_eqn_gen, signed_eqn.
-  destruct (Z.eqb_spec (Z.of_nat sz) 0) as [E|E].
-  - assert (Es : sz = 0%nat) by lia; subst sz.
-    assert (P0 : (2 ^ Z.of_nat 0 = 1)%Z) by reflexivity.
-    assert (Eu : unsigned w = 0%Z) by lia.
-    rewrite unsigned_combine, unsigned_wzero, Eu.
-    destruct (Z.ltb_spec (2 * 0) (2 ^ Z.of_nat 0)); [|lia].
-    rewrite Z.mod_0_l by lia; ring.
-  - destruct (Z.leb_spec (2 ^ Z.of_nat sz) (2 * unsigned w)).
-    + rewrite unsigned_combine, unsigned_wones.
-      destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat sz)); [lia|].
-      rewrite (@Zmod_small_neg (unsigned w - 2 ^ Z.of_nat sz)
-                               (2 ^ Z.of_nat (sz + sz'))) by nia.
-      rewrite Hm; ring.
-    + rewrite unsigned_combine, unsigned_wzero.
-      destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat sz)); [|lia].
-      rewrite (Z.mod_small (unsigned w)) by nia; ring.
-Qed.
+Proof. intros; apply unsigned_ofZ. Qed.
 
 
 (** * A few facts about [mod] and [div] by products (for split/combine) *)
@@ -3735,6 +3713,13 @@ Qed.
 
 Lemma sext_zero:
   forall n m, sext (natToWord n 0) m = natToWord _ 0.
+Proof.
+  word_lia_Z.
+Qed.
+
+Lemma split1_zext:
+  forall sz (w: word sz) n,
+    split1 sz n (zext w n) = w.
 Proof.
   word_lia_Z.
 Qed.

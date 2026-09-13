@@ -505,7 +505,7 @@ Section Divider64.
         * change (#(split1 DivNumBits DivNumBits $0)) with 0; Lia.lia.
         * change (pred (2 * DivNumBits) + 1) with (DivNumBits + DivNumBits) in *.
           apply zext_size in H1; dest; subst.
-          { unfold zext; rewrite split1_combine.
+          { rewrite split1_zext.
             apply Nat.le_neq; split.
             { rewrite zext_wordToNat_equal_Z in H0 by discriminate.
               rewrite Zabs_of_nat in H0.
@@ -559,7 +559,7 @@ Section Divider64.
         dest; rewrite H4 in *.
         do 2 rewrite zext_wordToNat_equal_Z in H2 by discriminate.
         rewrite Zabs_of_nat in H2.
-        unfold zext; rewrite split1_combine.
+        rewrite split1_zext.
         apply Nat2Z.inj_lt; assumption.
 
     - subst.
@@ -617,7 +617,7 @@ Section Divider64.
             apply zext_size_1 in H1; dest.
             rewrite H1 in *.
             rewrite zext_wordToNat_equal_Z by discriminate.
-            unfold zext; rewrite split1_combine.
+            rewrite split1_zext.
             reflexivity.
           }
           rewrite Zred_factor3 in H.
@@ -685,7 +685,7 @@ Section Divider64.
             apply wordToNat_bound.
           }
           dest; subst.
-          unfold zext; do 2 rewrite split1_combine.
+          rewrite !split1_zext.
           do 2 rewrite wordToNat_zext in H.
           auto using Nat2Z.inj.
           
@@ -748,7 +748,7 @@ Section Divider64.
           apply zext_size_1 in H3; dest.
           rewrite H3 in *.
           rewrite zext_wordToNat_equal_Z by discriminate.
-          unfold zext; rewrite split1_combine.
+          rewrite split1_zext.
           reflexivity.
         }
 
@@ -782,7 +782,7 @@ Section Divider64.
           }
           
           rewrite H5.
-          unfold zext; rewrite split1_combine.
+          rewrite split1_zext.
           rewrite <-H4, H5.
           rewrite zext_wordToNat_equal_Z by discriminate.
           reflexivity.
