@@ -1842,6 +1842,17 @@ Proof.
     lia.
 Qed.
 
+Lemma wordToZ_ZToWord'': forall (sz: nat),
+    (0 < sz)%nat ->
+    forall n: Z,
+      (- 2 ^ (Z.of_nat sz - 1) <= n < 2 ^ (Z.of_nat sz - 1))%Z ->
+      wordToZ (ZToWord sz n) = n.
+Proof.
+  intros; destruct sz; [lia|].
+  replace (Z.of_nat (S sz) - 1)%Z with (Z.of_nat sz) in H0 by lia.
+  apply wordToZ_ZToWord; rewrite pow2_Z; assumption.
+Qed.
+
 Lemma ZToWord_Z_of_N:
   forall sz n,
     ZToWord sz (Z.of_N n) = NToWord sz n.
