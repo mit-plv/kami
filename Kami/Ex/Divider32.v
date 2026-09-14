@@ -741,7 +741,7 @@ Section Divider32.
             assert (E : wordToZ (wneg (natToWord (S DivNumBits) 1)) = (-1)%Z)
               by reflexivity.
             rewrite E in H5.
-            rewrite wminus_def; lia.
+            rewrite <-Zmod.add_opp_r; lia.
           }
 
           remember (wordToZ pq - 1)%Z as pqa; clear Heqpqa; subst.

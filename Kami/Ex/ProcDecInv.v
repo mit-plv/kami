@@ -39,9 +39,9 @@ Lemma wminus_wplus_transpose:
 Proof.
   intros.
   replace (w3 ^+ w2) with (w1 ^- w2 ^+ w2).
-  - rewrite wminus_def, <-wplus_assoc.
-    rewrite wplus_comm with (x:= ^~ w2), wminus_inv.
-    rewrite wplus_wzero_1; reflexivity.
+  - rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
+    rewrite Zmod.add_comm with (a:= ^~ w2), Zmod.add_opp_same_r.
+    rewrite Zmod.add_0_r; reflexivity.
   - congruence.
 Qed.
 
@@ -52,7 +52,7 @@ Proof.
   rewrite wneg_wnot in H.
   apply wminus_wplus_transpose in H.
   rewrite wplus_unit in H.
-  rewrite <- (wneg_idempotent w), H.
+  rewrite <- (Zmod.opp_opp w), H.
   apply eq_sym, wones_wneg_one.
 Qed.
 

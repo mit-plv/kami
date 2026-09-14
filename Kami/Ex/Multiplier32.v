@@ -163,7 +163,7 @@ Section Multiplier32.
     intros; unfold boothStep, boothStepEvalM.
     rewrite boothStep'_eval.
     repeat destruct (weq _ _); try reflexivity.
-    rewrite wrshifta_wzero, wplus_comm, wplus_unit; reflexivity.
+    rewrite wrshifta_wzero, Zmod.add_comm, wplus_unit; reflexivity.
   Qed.
 
   Opaque boothStep.
@@ -234,7 +234,7 @@ Section Multiplier32.
     rewrite booth4Step'_eval.
 
     repeat destruct (weq _ _); try reflexivity.
-    rewrite wrshifta_wzero, wplus_comm, wplus_unit; reflexivity.
+    rewrite wrshifta_wzero, Zmod.add_comm, wplus_unit; reflexivity.
   Qed.
 
   Opaque booth4Step.
@@ -841,7 +841,7 @@ Section Multiplier32.
       change MultNumBitsExt with (S MultNumBits).
       rewrite wneg_wordToZ by assumption.
       ring.
-    - rewrite sext_wzero, wplus_wzero_1.
+    - rewrite sext_wzero, Zmod.add_0_r.
       rewrite Z.mul_0_r.
       rewrite sext_wordToZ.
       lia.
@@ -897,7 +897,7 @@ Section Multiplier32.
       rewrite wneg_wordToZ by assumption.
       ring.
     - rewrite sext_wzero.
-      rewrite wplus_comm, wplus_unit.
+      rewrite Zmod.add_comm, wplus_unit.
       rewrite sext_wordToZ.
       rewrite Z.mul_0_r.
       ring.
@@ -1347,7 +1347,7 @@ Section Multiplier32.
         rewrite split2_split1_combine1.
         cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
         apply Zmod.unsigned_inj.
-        rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
+        rewrite unsigned_split1, Zmod.unsigned_mul; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (33 + 33))%Z with (2 ^ Z.of_nat 66)%Z by reflexivity.
         cbn in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
         rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
@@ -1362,7 +1362,7 @@ Section Multiplier32.
         rewrite split2_split1_combine1.
         cbv [evalSignExtendTrunc]; cbn; eq_rect_simpl.
         apply Zmod.unsigned_inj.
-        rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
+        rewrite unsigned_split1, Zmod.unsigned_mul; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (33 + 33))%Z with (2 ^ Z.of_nat 66)%Z by reflexivity.
         cbn in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
         rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
