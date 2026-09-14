@@ -668,26 +668,21 @@ Ltac gen_unsigned :=
          end;
   intros.
 
-(** Push [Z.of_nat]/[Z.of_N] through arithmetic so that the [Z] lemmas apply. *)
-Ltac push_inj :=
-  repeat match goal with
-         | |- context [Z.of_nat (?a - ?b)] => rewrite (Nat2Z.inj_sub a b) by lia
-         | H : context [Z.of_nat (?a - ?b)] |- _ => rewrite (Nat2Z.inj_sub a b) in H by lia
-         end;
-  repeat first [ rewrite Nat2Z.inj_mul in * | rewrite Nat2Z.inj_add in * | rewrite Nat2Z.inj_pow in *
-               | rewrite Nat2Z.inj_div in * | rewrite Nat2Z.inj_mod in * | rewrite NatLib.Z_of_N_Npow2 in *
-               | rewrite N2Z.inj_mul in * | rewrite N2Z.inj_add in * | rewrite N2Z.inj_div in *
-               | rewrite N2Z.inj_mod in * | rewrite N2Z.inj_pow in * | rewrite nat_N_Z in * ];
+(** Powers of two and [Z.of_nat]/[Z.of_N] pushed through arithmetic, so that
+    the [Z] lemmas apply. *)
+#[global] Hint Rewrite pow2_S pow2_add_mul Npow2_S pow2_S_Z pow2_add_Z pow2_mul_Z : word_pow2.
+#[global] Hint Rewrite Nat2Z.inj_mul Nat2Z.inj_add Nat2Z.inj_pow Nat2Z.inj_div Nat2Z.inj_mod
+  NatLib.Z_of_N_Npow2 N2Z.inj_mul N2Z.inj_add N2Z.inj_div N2Z.inj_mod N2Z.inj_pow nat_N_Z
+  : word_inj.
+#[global] Hint Rewrite Nat2Z.inj_sub using lia : word_inj.
+
+Ltac pow2_normalize :=
+  autorewrite with word_pow2 in *; autorewrite with word_inj in *;
+  rewrite ?Z.pow_0_r, ?Z.pow_1_r in *;
   change (Z.of_nat 0) with 0%Z in *; change (Z.of_nat 1) with 1%Z in *;
   change (Z.of_nat 2) with 2%Z in *;
   change (Z.of_N 0) with 0%Z in *; change (Z.of_N 1) with 1%Z in *;
   change (Z.of_N 2) with 2%Z in *.
-
-Ltac pow2_normalize :=
-  repeat first [ rewrite pow2_S in * | rewrite pow2_add_mul in * | rewrite Npow2_S in *
-               | rewrite pow2_S_Z in * | rewrite pow2_add_Z in * | rewrite pow2_mul_Z in * ];
-  push_inj;
-  rewrite ?Z.pow_0_r, ?Z.pow_1_r in *.
 
 (** Tell [lia] how [2 ^ Z.of_nat x] relates to [x = 0]. *)
 Ltac pow2_fact x :=
@@ -774,7 +769,10 @@ Ltac word_mod_small_all :=
          | H : context [(?a / ?p)%Z] |- _ => rewrite (Z.div_small a p) in * by word_side
          end.
 
-(** Shape-conditioned rules (side conditions are positivity of moduli). *)
+(** Shape-conditioned rules (side conditions are positivity of moduli), in
+    priority order: one step of the first rule that applies, then again from
+    the top.  As an [autorewrite] database (each rule exhaustively, in list
+    order) the normal forms differ and proofs below stop closing. *)
 Ltac word_mod_rules :=
   (rewrite Z.mod_0_l in * by word_side) || (rewrite Z.div_0_l in * by word_side)
   || (rewrite Z.mod_mod in * by word_side)
@@ -820,13 +818,17 @@ Ltac mod_args_unify :=
            end
          end.
 
-(** A big hammer: [lia], then [nia], then [nia] with division facts. *)
+(** The hammers: to [Z], simplify [mod]/[div], then [lia] (or [nia]). *)
 Ltac word_lia_Z :=
   word_to_Z; try subst; rewrite ?Z.sub_diag in *;
   first [ lia
+        | (word_mod_simpl; mod_args_unify; first [ lia | (f_equal; lia) | congruence ]) ].
+
+Ltac word_nia_Z :=
+  word_to_Z; try subst; rewrite ?Z.sub_diag in *;
+  first [ lia
         | (word_mod_simpl; mod_args_unify; first [ lia | (f_equal; lia) | congruence | nia ])
-        | nia
-        | (zify; Z.div_mod_to_equations; nia) ].
+        | nia ].
 
 Local Close Scope Z_scope.
 
@@ -1381,7 +1383,7 @@ Qed.
 Lemma split2_split1_combine1 : forall n m (x : word 1) (y : word (n + m)),
     split2 1 n (split1 (S n) m (combine x y)) = split1 n m y.
 Proof.
-  word_lia_Z.
+  word_nia_Z.
 Qed.
 
 Lemma WO_combine : forall sz (w : word sz), combine WO w = w.
