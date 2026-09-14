@@ -225,8 +225,8 @@ Defined.
 
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
-  - exact (@wnot n).
-  - exact (@wneg n).
+  - exact wnot.
+  - exact wneg.
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - exact (fun w => split1 n1 n2 w).
   - exact (fun w => evalZeroExtendTrunc _ w).
@@ -237,18 +237,18 @@ Defined.
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   : word n1 -> word n2 -> word n3 :=
   match op with
-    | Add n => @wplus n
-    | Sub n => @wminus n
-    | Mul n _ => @wmult n
+    | Add n => wplus
+    | Sub n => wminus
+    | Mul n _ => wmult
     | Div n true => @wdivZ n
     (* | Div n SignSU => @wdivZsu n *)
     | Div n false => @wdivN n
     | Rem n true => @wremZ n
     (* | Rem n SignSU => @wremZsu n *)
     | Rem n false => @wremN n
-    | Band n => @wand n
-    | Bor n => @wor n
-    | Bxor n => @wxor n
+    | Band n => wand
+    | Bor n => wor
+    | Bxor n => wxor
     | Sll n m => (fun x y => wlshift x (wordToNat y))
     | Srl n m => (fun x y => wrshift x (wordToNat y))
     | Sra n m => (fun x y => wrshifta x (wordToNat y))

@@ -114,22 +114,18 @@ Proof.
 Qed.
 
 Ltac pre_word_lia :=
-  unfold wzero, wone in *;
+  rewrite ?wzero_natToWord, ?wone_natToWord in *;
   repeat match goal with
            | H: @eq ?T ?a ?b |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_eq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- @eq ?T ?a ?b =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_eq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: ?a < ?b |- _ =>
              apply wordToNat_lt1 in H;
                rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
@@ -171,53 +167,37 @@ Ltac pre_word_lia :=
                rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                simpl
            | H: not (@eq ?T ?a ?b) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- not (@eq ?T ?a ?b) =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: @eq ?T ?a ?b -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- @eq ?T ?a ?b -> False =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: (@eq ?T ?a ?b -> False) -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: (not (@eq ?T ?a ?b)) -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: not (@eq ?T ?a ?b -> False) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: not (not (@eq ?T ?a ?b)) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
          end.
 
 Ltac word_lia := pre_word_lia; lia.

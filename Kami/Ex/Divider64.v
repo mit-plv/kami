@@ -5,6 +5,8 @@ Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tact
 
 From Coq Require Import ZArith Eqdep Equality.
 
+#[local] Arguments Z.pow : simpl never.
+#[local] Arguments Z.of_nat : simpl never.
 Set Implicit Arguments.
 
 Open Scope string.
@@ -222,7 +224,7 @@ Section Divider64.
     forall sz (w: word sz),
       wordToZ (pn2binE w) = (2 * uwordToZ w - 2 ^ Z.of_nat sz + 1)%Z.
   Proof.
-    intros; cbv [pn2binE uwordToZ]; word_to_Z; pose proof (pow2_pos_Z sz);
+    intros; cbv [pn2binE]; word_to_Z; pose proof (pow2_pos_Z sz);
       (destruct (Z_lt_le_dec (z - (2 ^ Z.of_nat sz - 1 - z))%Z 0) as [Hs|Hs];
        [ rewrite (@Zmod_small_neg (z - (2 ^ Z.of_nat sz - 1 - z))%Z
                                   (2 ^ Z.of_nat sz * 2)%Z) in * by lia

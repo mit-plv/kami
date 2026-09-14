@@ -5,6 +5,8 @@ Require Import Kami.Syntax Kami.Notations Kami.Semantics Kami.SemFacts Kami.Tact
 
 From Coq Require Import ZArith Eqdep Equality Zmod.
 
+#[local] Arguments Z.pow : simpl never.
+#[local] Arguments Z.of_nat : simpl never.
 Set Implicit Arguments.
 Open Scope string.
 
@@ -1337,7 +1339,7 @@ Section Multiplier32.
       do 3 f_equal.
       fin_func_eq.
 
-      + Opaque split1 split2 wordToZ.
+      + Opaque split1 split2 Zmod.signed.
         simpl.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
         unfold ilist.ilist_to_fun_m; simpl.
@@ -1347,12 +1349,12 @@ Section Multiplier32.
         apply Zmod.unsigned_inj.
         rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (33 + 33))%Z with (2 ^ Z.of_nat 66)%Z by reflexivity.
-        cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
+        cbn in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
         rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
         reflexivity.
-        Transparent split1 split2 wordToZ.
+        Transparent split1 split2 Zmod.signed.
 
-      + Opaque split1 split2 wordToZ.
+      + Opaque split1 split2 Zmod.signed.
         simpl.
         unfold eq_rec_r, eq_rec; repeat rewrite <-eq_rect_eq.
         unfold ilist.ilist_to_fun_m; simpl.
@@ -1362,10 +1364,10 @@ Section Multiplier32.
         apply Zmod.unsigned_inj.
         rewrite unsigned_split1, unsigned_wmult; canon_unsigned; rewrite !unsigned_sext.
         replace (2 ^ Z.of_nat (33 + 33))%Z with (2 ^ Z.of_nat 66)%Z by reflexivity.
-        cbn in H0; cbv [wordToZ] in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
+        cbn in H0; rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, <-H0.
         rewrite <-(Zmod.mod_signed x5), Z.mod_mod_divide by (exists 2%Z; reflexivity).
         reflexivity.
-        Transparent split1 split2 wordToZ.
+        Transparent split1 split2 Zmod.signed.
 
     - (* "boothStep" |-> . *)
       kinv_action_dest.

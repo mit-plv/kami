@@ -55,7 +55,7 @@ Definition natToWord (sz n : nat) : word sz := ofZ _ (Z.of_nat n).
 
 Definition wordToN sz (w : word sz) : N := Z.to_N (unsigned w).
 
-Definition wzero sz := natToWord sz 0.
+Notation wzero sz := (@Zmod.zero (2 ^ Z.of_nat sz)).
 
 Definition wzero' (sz : nat) : word sz := ofZ _ 0.
 
@@ -63,7 +63,13 @@ Definition posToWord (sz : nat) (p : positive) : word sz := ofZ _ (Zpos p).
 
 Definition NToWord (sz : nat) (n : N) : word sz := ofZ _ (Z.of_N n).
 
-Definition wone sz := natToWord sz 1.
+Notation wone sz := (@Zmod.one (2 ^ Z.of_nat sz)).
+
+Lemma wzero_natToWord : forall sz, wzero sz = natToWord sz 0.
+Proof. reflexivity. Qed.
+
+Lemma wone_natToWord : forall sz, wone sz = natToWord sz 1.
+Proof. reflexivity. Qed.
 
 Definition wones (sz : nat) : word sz := ofZ _ (2 ^ Z.of_nat sz - 1).
 
@@ -86,7 +92,7 @@ Definition rep_bit (n : nat) (b : word 1) : word n :=
 
 (** * Decidable equality *)
 
-Definition weqb sz (x : word sz) (y : word sz) : bool := Zmod.eqb x y.
+Notation weqb := Zmod.eqb.
 
 Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
   refine (fun sz x y =>
@@ -94,7 +100,7 @@ Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
             | true => fun H => left _
             | false => fun H => right _
             end eq_refl);
-    abstract (unfold weqb in H; destruct (Zmod.eqb_spec x y); congruence).
+    abstract (destruct (Zmod.eqb_spec x y); congruence).
 Defined.
 
 (** * Combining and splitting *)
@@ -119,18 +125,18 @@ Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
 
 (** * Arithmetic *)
 
-Definition wneg sz (x : word sz) : word sz := Zmod.opp x.
+Notation wneg := Zmod.opp.
 
 Definition wordBin (f : N -> N -> N) sz (x y : word sz) : word sz :=
   NToWord sz (f (wordToN x) (wordToN y)).
 
-Definition wplus sz (x y : word sz) : word sz := Zmod.add x y.
-Definition wmult sz (x y : word sz) : word sz := Zmod.mul x y.
+Notation wplus := Zmod.add.
+Notation wmult := Zmod.mul.
 Definition wdiv sz (x y : word sz) : word sz := ofZ _ (unsigned x / unsigned y).
 Definition wmod sz (x y : word sz) : word sz := ofZ _ (unsigned x mod unsigned y).
 Definition wmult' sz (x y : word sz) : word sz :=
   split2 sz sz (NToWord (sz + sz) (Nmult (wordToN x) (wordToN y))).
-Definition wminus sz (x y : word sz) : word sz := Zmod.sub x y.
+Notation wminus := Zmod.sub.
 Definition wnegN sz (x : word sz) : word sz :=
   natToWord sz (pow2 sz - wordToNat x).
 
@@ -151,16 +157,16 @@ Definition wminusN sz (x y : word sz) : word sz := wplusN x (wnegN y).
 Notation "w ~ 1" := (WS true w) : word_scope.
 Notation "w ~ 0" := (WS false w) : word_scope.
 
-Notation "^~" := wneg.
-Notation "l ^+ r" := (@wplus _ l%word r%word) (at level 50, left associativity).
-Notation "l ^* r" := (@wmult _ l%word r%word) (at level 40, left associativity).
-Notation "l ^- r" := (@wminus _ l%word r%word) (at level 50, left associativity).
+Notation "^~" := Zmod.opp.
+Notation "l ^+ r" := (Zmod.add l%word r%word) (at level 50, left associativity).
+Notation "l ^* r" := (Zmod.mul l%word r%word) (at level 40, left associativity).
+Notation "l ^- r" := (Zmod.sub l%word r%word) (at level 50, left associativity).
 Notation "l ^/ r" := (@wdiv _ l%word r%word) (at level 50, left associativity).
 Notation "l ^% r" := (@wmod _ l%word r%word) (at level 50, left associativity).
 
 (** * Bitwise operators *)
 
-Definition wnot sz (w : word sz) : word sz := Zmod.not w.
+Notation wnot := Zmod.not.
 
 (** [bitwp f] applies [f] bit by bit; it is only used to state facts about
     the bitwise operators below, which are the [Zmod] ones. *)
@@ -171,20 +177,18 @@ Fixpoint bitwp (f : bool -> bool -> bool) (sz : nat) : word sz -> word sz -> wor
   end.
 
 Definition wnot' sz := bitwp xorb (wones sz).
-Definition wor sz (x y : word sz) : word sz := Zmod.or x y.
-Definition wand sz (x y : word sz) : word sz := Zmod.and x y.
-Definition wxor sz (x y : word sz) : word sz := Zmod.xor x y.
+Notation wor := Zmod.or.
+Notation wand := Zmod.and.
+Notation wxor := Zmod.xor.
 
-Notation "l ^| r" := (@wor _ l%word r%word) (at level 50, left associativity).
-Notation "l ^& r" := (@wand _ l%word r%word) (at level 40, left associativity).
+Notation "l ^| r" := (Zmod.or l%word r%word) (at level 50, left associativity).
+Notation "l ^& r" := (Zmod.and l%word r%word) (at level 40, left associativity).
 
 (** * Conversion to and from [Z] *)
 
-Definition wordToZ sz (w : word sz) : Z := Zmod.signed w.
-
-Definition uwordToZ sz (w : word sz) : Z := unsigned w.
-
-Definition ZToWord (sz : nat) (z : Z) : word sz := ofZ _ z.
+Notation wordToZ := Zmod.signed.
+Notation uwordToZ := Zmod.unsigned.
+Notation ZToWord sz z := (Zmod.of_Z (2 ^ Z.of_nat sz) z).
 
 (** * Arithmetic by [Z] *)
 
@@ -283,32 +287,25 @@ Arguments wordToNat [_] _ : simpl never.
 Arguments wordToNat' [_] _ : simpl never.
 Arguments natToWord _ _ : simpl never.
 Arguments wordToN [_] _ : simpl never.
-Arguments wzero _ : simpl never.
 Arguments wzero' _ : simpl never.
 Arguments posToWord _ _ : simpl never.
 Arguments NToWord _ _ : simpl never.
-Arguments wone _ : simpl never.
 Arguments wones _ : simpl never.
 Arguments wmsb [_] _ _ : simpl never.
 Arguments whd [_] _ : simpl never.
 Arguments wlsb [_] _ : simpl never.
 Arguments wtl [_] _ : simpl never.
 Arguments rep_bit _ _ : simpl never.
-Arguments weqb [_] _ _ : simpl never.
 Arguments weq [_] _ _ : simpl never.
 Arguments combine [_] _ [_] _ : simpl never.
 Arguments split1 _ _ _ : simpl never.
 Arguments split2 _ _ _ : simpl never.
 Arguments sext [_] _ _ : simpl never.
 Arguments zext [_] _ _ : simpl never.
-Arguments wneg [_] _ : simpl never.
 Arguments wordBin _ [_] _ _ : simpl never.
-Arguments wplus [_] _ _ : simpl never.
-Arguments wmult [_] _ _ : simpl never.
 Arguments wdiv [_] _ _ : simpl never.
 Arguments wmod [_] _ _ : simpl never.
 Arguments wmult' [_] _ _ : simpl never.
-Arguments wminus [_] _ _ : simpl never.
 Arguments wnegN [_] _ : simpl never.
 Arguments wordBinN _ [_] _ _ : simpl never.
 Arguments wplusN [_] _ _ : simpl never.
@@ -317,15 +314,8 @@ Arguments wmultN' [_] _ _ : simpl never.
 Arguments wdivN [_] _ _ : simpl never.
 Arguments wremN [_] _ _ : simpl never.
 Arguments wminusN [_] _ _ : simpl never.
-Arguments wnot [_] _ : simpl never.
 Arguments bitwp _ [_] _ _ : simpl never.
 Arguments wnot' [_] _ : simpl never.
-Arguments wor [_] _ _ : simpl never.
-Arguments wand [_] _ _ : simpl never.
-Arguments wxor [_] _ _ : simpl never.
-Arguments wordToZ [_] _ : simpl never.
-Arguments uwordToZ [_] _ : simpl never.
-Arguments ZToWord _ _ : simpl never.
 Arguments wordBinZ _ [_] _ _ : simpl never.
 Arguments wplusZ [_] _ _ : simpl never.
 Arguments wminusZ [_] _ _ : simpl never.
@@ -473,13 +463,13 @@ Lemma unsigned_posToWord : forall sz p, unsigned (posToWord sz p) = Zpos p mod 2
 Proof. intros; apply Zmod.unsigned_of_Z. Qed.
 
 Lemma unsigned_wzero : forall sz, unsigned (wzero sz) = 0.
-Proof. intros; cbv [wzero]; rewrite unsigned_natToWord; apply Z.mod_0_l; lia. Qed.
+Proof. intros; apply Zmod.unsigned_0. Qed.
 
 Lemma unsigned_wzero' : forall sz, unsigned (wzero' sz) = 0.
 Proof. intros; cbv [wzero']; rewrite Zmod.unsigned_of_Z; apply Z.mod_0_l; lia. Qed.
 
 Lemma unsigned_wone : forall sz, unsigned (wone sz) = 1 mod 2 ^ Z.of_nat sz.
-Proof. intros; apply unsigned_natToWord. Qed.
+Proof. intros; apply Zmod.unsigned_1. Qed.
 
 Lemma unsigned_wones : forall sz, unsigned (wones sz) = 2 ^ Z.of_nat sz - 1.
 Proof. intros; cbv [wones]; apply Zmod.unsigned_of_Z_small; lia. Qed.
@@ -559,7 +549,7 @@ Qed.
 
 Lemma unsigned_wnot : forall sz (w : word sz), unsigned (wnot w) = 2 ^ Z.of_nat sz - 1 - unsigned w.
 Proof.
-  intros; cbv [wnot Zmod.not]; rewrite Zmod.unsigned_of_Z.
+  intros; cbv [Zmod.not]; rewrite Zmod.unsigned_of_Z.
   pose proof (unsigned_range w).
   replace (Z.lnot (unsigned w)) with (2 ^ Z.of_nat sz - 1 - unsigned w + (-1) * 2 ^ Z.of_nat sz) by (unfold Z.lnot; lia).
   rewrite Z.mod_add by lia; apply Z.mod_small; lia.
@@ -788,20 +778,33 @@ Qed.
   : unsigned_word.
 
 (** Turn equalities and disequalities of words into ones of [unsigned]. *)
+(** The width of a word type, however it is spelled. *)
+Ltac word_width T :=
+  lazymatch T with
+  | word ?n => n
+  | bits (Z.of_nat ?n) => n
+  | Zmod (2 ^ Z.of_nat ?n) => n
+  end.
+
 Ltac word_eq_to_unsigned :=
   repeat match goal with
-         | |- @eq (word _) _ _ => apply Zmod.unsigned_inj
-         | |- not (@eq (word _) _ _) =>
+         | |- @eq ?T _ _ => let n := word_width T in apply Zmod.unsigned_inj
+         | |- not (@eq ?T _ _) =>
+           let n := word_width T in
            let H := fresh "Hw" in intro H; apply (f_equal (@Zmod.unsigned _)) in H
-         | |- (@eq (word _) _ _) -> False =>
+         | |- (@eq ?T _ _) -> False =>
+           let n := word_width T in
            let H := fresh "Hw" in intro H; apply (f_equal (@Zmod.unsigned _)) in H
-         | H : @eq (word _) _ _ |- _ => apply (f_equal (@Zmod.unsigned _)) in H
-         | H : not (@eq (word ?sz) ?a ?b) |- _ =>
+         | H : @eq ?T _ _ |- _ =>
+           let n := word_width T in apply (f_equal (@Zmod.unsigned _)) in H
+         | H : not (@eq ?T ?a ?b) |- _ =>
+           let n := word_width T in
            let H' := fresh "Hw" in
            assert (H' : unsigned a <> unsigned b)
              by (let E := fresh in intro E; apply H; apply Zmod.unsigned_inj; exact E);
            clear H
-         | H : (@eq (word ?sz) ?a ?b) -> False |- _ =>
+         | H : (@eq ?T ?a ?b) -> False |- _ =>
+           let n := word_width T in
            let H' := fresh "Hw" in
            assert (H' : unsigned a <> unsigned b)
              by (let E := fresh in intro E; apply H; apply Zmod.unsigned_inj; exact E);
@@ -910,15 +913,12 @@ Ltac pow2_nat_facts :=
     [S sz] vs [1 + sz]); make it so. *)
 Ltac canon_unsigned_one m t :=
   let T := type of t in
-  lazymatch T with
-  | word ?n =>
-    let m0 := constr:((2 ^ Z.of_nat n)%Z) in
-    tryif constr_eq m m0 then fail
-    else (let E := fresh in
-          assert (E : @Zmod.unsigned m t = @Zmod.unsigned m0 t) by reflexivity;
-          rewrite E in *; clear E)
-  | _ => fail
-  end.
+  let n := word_width T in
+  let m0 := constr:((2 ^ Z.of_nat n)%Z) in
+  tryif constr_eq m m0 then fail
+  else (let E := fresh in
+        assert (E : @Zmod.unsigned m t = @Zmod.unsigned m0 t) by reflexivity;
+        rewrite E in *; clear E).
 
 Ltac canon_unsigned :=
   repeat match goal with
@@ -930,7 +930,7 @@ Ltac word_to_Z :=
   intros;
   repeat match goal with x := _ |- _ => subst x end;
   word_eq_to_unsigned;
-  cbv [wordToNat wordToNat' wordToN uwordToZ wordToZ wlt wslt] in *;
+  cbv [wordToNat wordToNat' wordToN wlt wslt] in *;
   repeat progress (canon_unsigned; autorewrite with unsigned_word in *);
   word_split_bools;
   gen_unsigned;
@@ -1160,7 +1160,7 @@ Qed.
 Theorem weqb_true_iff : forall sz x y,
   @weqb sz x y = true <-> x = y.
 Proof.
-  intros; cbv [weqb]; destruct (Zmod.eqb_spec x y); intuition congruence.
+  intros; destruct (Zmod.eqb_spec x y); intuition congruence.
 Qed.
 
 Ltac shatterer := simpl; intuition;
@@ -1655,11 +1655,6 @@ Proof.
   word_lia_Z.
 Qed.
 
-Definition wring (sz : nat) : ring_theory (wzero sz) (wone sz) (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz) (@eq _) :=
-  mk_rt _ _ _ _ _ _ _
-  (@wplus_unit _) (@wplus_comm _) (@wplus_assoc _)
-  (@wmult_unit _) (@wmult_comm _) (@wmult_assoc _)
-  (@wmult_plus_distr _) (@wminus_def _) (@wminus_inv _).
 
 Theorem weqb_sound : forall sz (x y : word sz), weqb x y = true -> x = y.
 Proof.
@@ -1711,15 +1706,13 @@ Ltac wcst w :=
       | _ => constr:(NotConstant)
     end.
 
-Definition wring8 := wring 8.
-Add Ring wring8 : wring8 (decidable (weqb_sound 8), constants [wcst]).
+Add Ring wring8 : (@Zmod.ring_theory (2 ^ Z.of_nat 8)) (decidable (weqb_sound 8), constants [wcst]).
 
 (* Here's how you can add a ring for a specific bit-width.
    There doesn't seem to be a polymorphic method, so this code really does need to be copied. *)
 
 (*
-Definition wring8 := wring 8.
-Add Ring wring8 : wring8 (decidable (weqb_sound 8), constants [wcst]).
+Add Ring wring8 : (@Zmod.ring_theory (2 ^ Z.of_nat 8)) (decidable (weqb_sound 8), constants [wcst]).
 *)
 
 Ltac noptac x := idtac.
@@ -1728,18 +1721,19 @@ Ltac PackWring sz F :=
   let RNG := (fun proj => proj
     inv_morph_nothing inv_morph_nothing noptac noptac
     (word sz) (@eq (word sz)) (wzero sz) (wone sz)
-    (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz)
+    (@Zmod.add (2 ^ Z.of_nat sz)) (@Zmod.mul (2 ^ Z.of_nat sz))
+    (@Zmod.sub (2 ^ Z.of_nat sz)) (@Zmod.opp (2 ^ Z.of_nat sz))
     (BinNums.Z) (BinNums.N) (id_phi_N)
-    (pow_N (wone sz) (@wmult sz))
+    (pow_N (wone sz) (@Zmod.mul (2 ^ Z.of_nat sz)))
     (ring_correct (@Eqsth (word sz))
                   (Eq_ext _ _ _)
-                  (Rth_ARth (@Eqsth (word sz)) (Eq_ext _ _ _) (wring sz))
-                  (gen_phiZ_morph (@Eqsth (word sz)) (Eq_ext _ _ _) (wring sz))
+                  (Rth_ARth (@Eqsth (word sz)) (Eq_ext _ _ _) (@Zmod.ring_theory (2 ^ Z.of_nat sz)))
+                  (gen_phiZ_morph (@Eqsth (word sz)) (Eq_ext _ _ _) (@Zmod.ring_theory (2 ^ Z.of_nat sz)))
                   (pow_N_th _ _ (@Eqsth (word sz)))
                   (triv_div_th (@Eqsth (word sz))
                                (Eq_ext _ _ _)
-                               (Rth_ARth (@Eqsth (word sz)) (Eq_ext _ _ _) (wring sz))
-                               (gen_phiZ_morph (@Eqsth (word sz)) (Eq_ext _ _ _) (wring sz)))
+                               (Rth_ARth (@Eqsth (word sz)) (Eq_ext _ _ _) (@Zmod.ring_theory (2 ^ Z.of_nat sz)))
+                               (gen_phiZ_morph (@Eqsth (word sz)) (Eq_ext _ _ _) (@Zmod.ring_theory (2 ^ Z.of_nat sz))))
     )
     tt) in
   F RNG (@nil (word sz)) (@nil (word sz)).
@@ -1819,7 +1813,7 @@ Qed.
 Lemma unsigned_wnot_ldiff : forall sz (w : word sz),
     unsigned (wnot w) = Z.ldiff (2 ^ Z.of_nat sz - 1) (unsigned w).
 Proof.
-  intros; cbv [wnot]; rewrite bits.unsigned_not, Z.ones_equiv; f_equal; lia.
+  intros; rewrite bits.unsigned_not, Z.ones_equiv; f_equal; lia.
 Qed.
 
 Lemma unsigned_wone_S : forall sz, unsigned (wone (S sz)) = 1.
@@ -2068,7 +2062,7 @@ Qed.
 
 Local Close Scope Z_scope.
 
-Definition wbring (sz : nat) : semi_ring_theory (wzero sz) (wones sz) (@wor sz) (@wand sz) (@eq _) :=
+Definition wbring (sz : nat) : semi_ring_theory (wzero sz) (wones sz) (@Zmod.or (2 ^ Z.of_nat sz)) (@Zmod.and (2 ^ Z.of_nat sz)) (@eq _) :=
   mk_srt _ _ _ _ _
   (@wor_unit _) (@wor_comm _) (@wor_assoc _)
   (@wand_unit _) (@wand_kill _) (@wand_comm _) (@wand_assoc _)
@@ -2076,7 +2070,7 @@ Definition wbring (sz : nat) : semi_ring_theory (wzero sz) (wones sz) (@wor sz) 
 
 (** * Inequality proofs *)
 
-Ltac word_simpl := unfold sext, zext, wzero in *; simpl in *.
+Ltac word_simpl := unfold sext, zext in *; simpl in *.
 
 Ltac word_eq := ring.
 
@@ -3916,7 +3910,7 @@ Proof.
                 (if 2 * (w mod 2 ^ Z.of_nat (S sz)) <? 2 ^ Z.of_nat (S sz)
                  then w mod 2 ^ Z.of_nat (S sz)
                  else w mod 2 ^ Z.of_nat (S sz) - 2 ^ Z.of_nat (S sz))%Z)
-      by (cbv [wordToZ ZToWord]; rewrite signed_eqn, Zmod.unsigned_of_Z; reflexivity).
+      by (rewrite signed_eqn, Zmod.unsigned_of_Z; reflexivity).
     rewrite Npow2_Z, E.
     destruct (Z.ltb_spec (2 * (w mod 2 ^ Z.of_nat (S sz)))%Z (2 ^ Z.of_nat (S sz))%Z).
     + exists (w / 2 ^ Z.of_nat (S sz))%Z; rewrite (Z.mod_eq w) by lia; lia.
@@ -4237,17 +4231,12 @@ Proof.
   intros; apply Z.eqb_eq in H; subst; reflexivity.
 Qed.
 
-Lemma word_ring_theory_Z: forall (sz: nat),
-    ring_theory (ZToWord sz 0) (ZToWord sz 1)
-                (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz) eq.
-Proof.
-  intros; rewrite ZToWord_0, ZToWord_1; apply wring.
-Qed.
-
 Lemma word_ring_morph_Z: forall (sz: nat),
-    ring_morph (ZToWord sz 0) (ZToWord sz 1) (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz)
+    ring_morph (ZToWord sz 0) (ZToWord sz 1)
+               (@Zmod.add (2 ^ Z.of_nat sz)) (@Zmod.mul (2 ^ Z.of_nat sz))
+               (@Zmod.sub (2 ^ Z.of_nat sz)) (@Zmod.opp (2 ^ Z.of_nat sz))
                eq 0%Z 1%Z Z.add Z.mul Z.sub Z.opp Z.eqb
-               (ZToWord sz).
+               (Zmod.of_Z (2 ^ Z.of_nat sz)).
 Proof.
   intros; constructor; intros.
   - reflexivity.
@@ -4562,22 +4551,18 @@ Proof.
 Qed.
 
 Ltac pre_word_lia :=
-  unfold wzero, wone in *;
+  rewrite ?wzero_natToWord, ?wone_natToWord in *;
   repeat match goal with
            | H: @eq ?T ?a ?b |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_eq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- @eq ?T ?a ?b =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_eq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: ?a < ?b |- _ =>
              apply wordToNat_lt1 in H;
                rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
@@ -4619,53 +4604,37 @@ Ltac pre_word_lia :=
                rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                simpl
            | H: not (@eq ?T ?a ?b) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- not (@eq ?T ?a ?b) =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: @eq ?T ?a ?b -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq1 sz a b) in H;
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one in H;
                    simpl in H
-             end
            | |- @eq ?T ?a ?b -> False =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordToNat_neq2 sz a b);
                    rewrite ?roundTrip_0, ?roundTrip_1, ?wones_pow2_minus_one;
                    simpl
-             end
            | H: (@eq ?T ?a ?b -> False) -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: (not (@eq ?T ?a ?b)) -> False |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: not (@eq ?T ?a ?b -> False) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
            | H: not (not (@eq ?T ?a ?b)) |- _ =>
-             match T with
-               | word ?sz =>
+             let sz := word_width T in
                  apply (@wordNotNot sz a b) in H
-             end
          end.
 
 
@@ -5112,7 +5081,7 @@ Proof.
   replace (Z.of_nat (S sz) - 1)%Z with (Z.of_nat sz) by lia.
   pose proof (wordToZ_size' (ZToWord (S sz) z)).
   rewrite pow2_Z in H0.
-  rewrite Z.mod_small by (rewrite pow2_S_Z; lia). lia.
+  rewrite Z.mod_small by (pose proof (pow2_S_Z sz); lia). lia.
 Qed.
 
 End ZScope.

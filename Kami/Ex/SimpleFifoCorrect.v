@@ -8,6 +8,8 @@ Require Import Ex.Fifo Ex.NativeFifo Lia.
 
 Import ListNotations.
 
+#[local] Arguments Stdlib.ZArith.BinInt.Z.pow : simpl never.
+#[local] Arguments Stdlib.ZArith.BinInt.Z.of_nat : simpl never.
 Set Implicit Arguments.
 
 Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.
