@@ -69,11 +69,12 @@ Definition wones (sz : nat) : word sz := ofZ _ (2 ^ Z.of_nat sz - 1).
 
 (** * MSB, LSB, head, and tail *)
 
+(** The sign bit; [a] is the answer for the empty word. *)
 Definition wmsb sz (w : word sz) (a : bool) : bool :=
-  match sz as s return word s -> bool with
-  | O => fun _ => a
-  | S sz' => fun w => Z.testbit (unsigned w) (Z.of_nat sz')
-  end w.
+  match sz with
+  | O => a
+  | S _ => (Zmod.signed w <? 0)%Z
+  end.
 
 Definition whd sz (w : word (S sz)) : bool := Z.odd (unsigned w).
 
@@ -101,7 +102,7 @@ Definition combine (sz1 : nat) (w : word sz1) (sz2 : nat) (w' : word sz2)
   ofZ _ (unsigned w + 2 ^ Z.of_nat sz1 * unsigned w').
 
 Definition split1 (sz1 sz2 : nat) (w : word (sz1 + sz2)) : word sz1 :=
-  ofZ _ (unsigned w).
+  Zmod.firstn (Z.of_nat sz1) w.
 
 Definition split2 (sz1 sz2 : nat) (w : word (sz1 + sz2)) : word sz2 :=
   ofZ _ (unsigned w / 2 ^ Z.of_nat sz1).
@@ -120,8 +121,10 @@ Notation wneg := Zmod.opp.
 
 Notation wplus := Zmod.add.
 Notation wmult := Zmod.mul.
-Definition wdiv sz (x y : word sz) : word sz := ofZ _ (unsigned x / unsigned y).
-Definition wmod sz (x y : word sz) : word sz := ofZ _ (unsigned x mod unsigned y).
+(** Division by zero yields zero (the standard library's [udiv] yields [-1]). *)
+Definition wdiv sz (x y : word sz) : word sz :=
+  if weqb y (wzero sz) then wzero sz else Zmod.udiv x y.
+Notation wmod := Zmod.umod.
 Notation wminus := Zmod.sub.
 Definition wordBinN (f : nat -> nat -> nat) sz (x y : word sz) : word sz :=
   natToWord sz (f (wordToNat x) (wordToNat y)).
@@ -137,7 +140,7 @@ Notation "l ^+ r" := (Zmod.add l%word r%word) (at level 50, left associativity).
 Notation "l ^* r" := (Zmod.mul l%word r%word) (at level 40, left associativity).
 Notation "l ^- r" := (Zmod.sub l%word r%word) (at level 50, left associativity).
 Notation "l ^/ r" := (@wdiv _ l%word r%word) (at level 50, left associativity).
-Notation "l ^% r" := (@wmod _ l%word r%word) (at level 50, left associativity).
+Notation "l ^% r" := (Zmod.umod l%word r%word) (at level 50, left associativity).
 
 (** * Bitwise operators *)
 
@@ -162,19 +165,15 @@ Notation "l ^& r" := (Zmod.and l%word r%word) (at level 40, left associativity).
 
 Notation wordToZ := Zmod.signed.
 Notation uwordToZ := Zmod.unsigned.
-Notation ZToWord sz z := (Zmod.of_Z (2 ^ Z.of_nat sz) z).
+Notation ZToWord sz z := (bits.of_Z (Z.of_nat sz) z).
 
 (** * Arithmetic by [Z] *)
 
-Definition wordBinZ (f : Z -> Z -> Z) sz (x y : word sz) : word sz :=
-  ZToWord sz (f (wordToZ x) (wordToZ y)).
-
-Definition wdivZ := wordBinZ Z.quot.
-Definition wdivZsu sz (x y : word sz) :=
-  ZToWord sz (Z.div (wordToZ x) (Z.of_N (wordToN y))).
-Definition wremZ := wordBinZ Z.rem.
-Definition wremZsu sz (x y : word sz) :=
-  ZToWord sz (Z.modulo (wordToZ x) (Z.of_N (wordToN y))).
+(** Signed division by zero yields zero (the standard library's [squot]
+    yields [-1]); the remainder agrees with [srem] everywhere. *)
+Definition wdivZ sz (x y : word sz) : word sz :=
+  if weqb y (wzero sz) then wzero sz else Zmod.squot x y.
+Notation wremZ := Zmod.srem.
 
 (** * Comparison predicates and deciders *)
 
@@ -207,22 +206,17 @@ Notation "# n" := (wordToNat n) (at level 5, format "# n").
 
 (** * Bit shifting *)
 
-Definition wlshift (sz : nat) (w : word sz) (n : nat) : word sz :=
-  ofZ _ (unsigned w * 2 ^ Z.of_nat n).
-
-Definition wrshift (sz : nat) (w : word sz) (n : nat) : word sz :=
-  ofZ _ (unsigned w / 2 ^ Z.of_nat n).
-
-Definition wrshifta (sz : nat) (w : word sz) (n : nat) : word sz :=
-  ofZ _ (Zmod.signed w / 2 ^ Z.of_nat n).
+Notation wlshift w n := (Zmod.slu w (Z.of_nat n)).
+Notation wrshift w n := (Zmod.sru w (Z.of_nat n)).
+Notation wrshifta w n := (Zmod.srs w (Z.of_nat n)).
 
 Definition extz {sz} (w: word sz) (n: nat) : word (n + sz) :=
   ofZ _ (2 ^ Z.of_nat n * unsigned w).
 
 Definition wpow2 sz : word (S sz) := ofZ _ (2 ^ Z.of_nat sz).
 
-Notation "l ^<< r" := (@wlshift _ _ l%word r%word) (at level 35).
-Notation "l ^>> r" := (@wrshift _ _ l%word r%word) (at level 35).
+Notation "l ^<< r" := (Zmod.slu l%word (Z.of_nat r)) (at level 35).
+Notation "l ^>> r" := (Zmod.sru l%word (Z.of_nat r)) (at level 35).
 
 (** * Setting an individual bit *)
 
@@ -250,22 +244,14 @@ Arguments split2 _ _ _ : simpl never.
 Arguments sext [_] _ _ : simpl never.
 Arguments zext [_] _ _ : simpl never.
 Arguments wdiv [_] _ _ : simpl never.
-Arguments wmod [_] _ _ : simpl never.
 Arguments wordBinN _ [_] _ _ : simpl never.
 Arguments wdivN [_] _ _ : simpl never.
 Arguments wremN [_] _ _ : simpl never.
 Arguments bitwp _ [_] _ _ : simpl never.
-Arguments wordBinZ _ [_] _ _ : simpl never.
 Arguments wdivZ [_] _ _ : simpl never.
-Arguments wdivZsu [_] _ _ : simpl never.
-Arguments wremZ [_] _ _ : simpl never.
-Arguments wremZsu [_] _ _ : simpl never.
 Arguments wlt [_] _ _ : simpl never.
 Arguments wslt [_] _ _ : simpl never.
 Arguments wlt_dec [_] _ _ : simpl never.
-Arguments wlshift [_] _ _ : simpl never.
-Arguments wrshift [_] _ _ : simpl never.
-Arguments wrshifta [_] _ _ : simpl never.
 Arguments extz [_] _ _ : simpl never.
 Arguments wpow2 _ : simpl never.
 
@@ -278,12 +264,9 @@ Local Open Scope Z_scope.
 Lemma pow2_Z : forall n, Z.of_nat (pow2 n) = 2 ^ Z.of_nat n.
 Proof. intros; apply Nat2Z.inj_pow. Qed.
 
-Lemma Npow2_Z : forall n, Z.of_N (Npow2 n) = 2 ^ Z.of_nat n.
-Proof. apply NatLib.Z_of_N_Npow2. Qed.
-
 (** [lia] sees [Npow2] as [2 ^ _] ([pow2] is [Nat.pow 2], already known). *)
 #[global] Instance Op_Npow2 : ZifyClasses.UnOp Npow2 :=
-  { ZifyClasses.TUOp := fun x => 2 ^ x; ZifyClasses.TUOpInj := Npow2_Z }.
+  { ZifyClasses.TUOp := fun x => 2 ^ x; ZifyClasses.TUOpInj := NatLib.Z_of_N_Npow2 }.
 Add Zify UnOp Op_Npow2.
 
 Lemma unsigned_range : forall sz (w : word sz), 0 <= unsigned w < 2 ^ Z.of_nat sz.
@@ -408,7 +391,7 @@ Qed.
 
 Lemma unsigned_split1 : forall sz1 sz2 (w : word (sz1 + sz2)),
     unsigned (split1 sz1 sz2 w) = unsigned w mod 2 ^ Z.of_nat sz1.
-Proof. intros; apply Zmod.unsigned_of_Z. Qed.
+Proof. intros; apply bits.unsigned_firstn. Qed.
 
 Lemma unsigned_split2 : forall sz1 sz2 (w : word (sz1 + sz2)),
     unsigned (split2 sz1 sz2 w) = unsigned w / 2 ^ Z.of_nat sz1.
@@ -435,18 +418,10 @@ Qed.
 
 Lemma unsigned_wdiv : forall sz (x y : word sz), unsigned (wdiv x y) = unsigned x / unsigned y.
 Proof.
-  intros; cbv [wdiv]; apply Zmod.unsigned_of_Z_small.
-  pose proof (unsigned_range x); pose proof (unsigned_range y).
-  destruct (Z.eq_dec (unsigned y) 0) as [E|E]; [rewrite E, Z.div_0_r; lia|].
-  split; [apply Z.div_pos | apply Z.div_lt_upper_bound]; nia.
-Qed.
-
-Lemma unsigned_wmod : forall sz (x y : word sz), unsigned (wmod x y) = unsigned x mod unsigned y.
-Proof.
-  intros; cbv [wmod]; apply Zmod.unsigned_of_Z_small.
-  pose proof (unsigned_range x); pose proof (unsigned_range y).
-  destruct (Z.eq_dec (unsigned y) 0) as [E|E]; [rewrite E, Z.mod_0_r; lia|].
-  pose proof (Z.mod_pos_bound (unsigned x) (unsigned y) ltac:(lia)). lia.
+  intros; cbv [wdiv]; destruct (Zmod.eqb_spec y (wzero sz)) as [->|E].
+  - rewrite Zmod.unsigned_0, Z.div_0_r; reflexivity.
+  - apply Zmod.unsigned_udiv_nonneg; [pose proof (pow2_pos_Z sz); lia|].
+    intro Hy; apply E, Zmod.unsigned_inj; rewrite Zmod.unsigned_0; exact Hy.
 Qed.
 
 Lemma unsigned_wnot : forall sz (w : word sz), unsigned (wnot w) = 2 ^ Z.of_nat sz - 1 - unsigned w.
@@ -459,19 +434,15 @@ Qed.
 
 Lemma unsigned_wlshift : forall sz (w : word sz) n,
     unsigned (wlshift w n) = (unsigned w * 2 ^ Z.of_nat n) mod 2 ^ Z.of_nat sz.
-Proof. intros; apply Zmod.unsigned_of_Z. Qed.
+Proof. intros; rewrite Zmod.unsigned_slu, Z.shiftl_mul_pow2 by lia; reflexivity. Qed.
 
 Lemma unsigned_wrshift : forall sz (w : word sz) n,
     unsigned (wrshift w n) = unsigned w / 2 ^ Z.of_nat n.
-Proof.
-  intros; cbv [wrshift]; apply Zmod.unsigned_of_Z_small.
-  pose proof (unsigned_range w). pose proof (pow2_pos_Z n).
-  split; [apply Z.div_pos | apply Z.div_lt_upper_bound]; nia.
-Qed.
+Proof. intros; rewrite Zmod.unsigned_sru, Z.shiftr_div_pow2 by lia; reflexivity. Qed.
 
 Lemma unsigned_wrshifta : forall sz (w : word sz) n,
     unsigned (wrshifta w n) = (Zmod.signed w / 2 ^ Z.of_nat n) mod 2 ^ Z.of_nat sz.
-Proof. intros; apply Zmod.unsigned_of_Z. Qed.
+Proof. intros; rewrite Zmod.unsigned_srs, Z.shiftr_div_pow2 by lia; reflexivity. Qed.
 
 Lemma unsigned_wpow2 : forall sz, unsigned (wpow2 sz) = 2 ^ Z.of_nat sz.
 Proof.
@@ -479,15 +450,18 @@ Proof.
   rewrite pow2_S_Z; pose proof (pow2_pos_Z sz); lia.
 Qed.
 
+Lemma wmsb_S : forall sz (w : word sz) a, sz <> 0%nat -> wmsb w a = (Zmod.signed w <? 0).
+Proof. intros; destruct sz; [lia | reflexivity]. Qed.
+
 Lemma wmsb_eqn : forall sz (w : word (S sz)) a, wmsb w a = (2 ^ Z.of_nat sz <=? unsigned w).
 Proof.
-  intros; cbv [wmsb].
-  pose proof (unsigned_range_S w).
-  rewrite Z.testbit_eqb by lia.
-  pose proof (Z.pow_pos_nonneg 2 (Z.of_nat sz) ltac:(lia) ltac:(lia)).
-  assert (Hq : unsigned w / 2 ^ Z.of_nat sz = if 2 ^ Z.of_nat sz <=? unsigned w then 1 else 0).
-  { destruct (Z.leb_spec (2 ^ Z.of_nat sz) (unsigned w)); Z.div_mod_to_equations; nia. }
-  rewrite Hq; destruct (Z.leb_spec (2 ^ Z.of_nat sz) (unsigned w)); reflexivity.
+  intros; cbv [wmsb]; rewrite signed_eqn; pose proof (unsigned_range_S w); pose proof (pow2_S_Z sz).
+  destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat (S sz))); cbv iota;
+    destruct (Z.leb_spec (2 ^ Z.of_nat sz) (unsigned w));
+    [ destruct (Z.ltb_spec (unsigned w) 0) | destruct (Z.ltb_spec (unsigned w) 0)
+    | destruct (Z.ltb_spec (unsigned w - 2 ^ Z.of_nat (S sz)) 0)
+    | destruct (Z.ltb_spec (unsigned w - 2 ^ Z.of_nat (S sz)) 0) ];
+    first [ reflexivity | lia ].
 Qed.
 
 Lemma Zmod_small_neg : forall a m, 0 < m -> - m <= a < 0 -> a mod m = a + m.
@@ -606,7 +580,7 @@ Qed.
   Zmod.unsigned_of_Z unsigned_posToWord Zmod.unsigned_0 unsigned_wzero' Zmod.unsigned_1
   unsigned_wones unsigned_wtl whd_eqn unsigned_combine unsigned_split1 unsigned_split2
   unsigned_sext unsigned_zext unsigned_extz Zmod.unsigned_opp Zmod.unsigned_add Zmod.unsigned_sub
-  Zmod.unsigned_mul unsigned_wdiv unsigned_wmod unsigned_wnot bits.unsigned_or bits.unsigned_and
+  Zmod.unsigned_mul unsigned_wdiv Zmod.unsigned_umod unsigned_wnot bits.unsigned_or bits.unsigned_and
   bits.unsigned_xor unsigned_wlshift unsigned_wrshift unsigned_wrshifta unsigned_wpow2
   wmsb_eqn_gen signed_eqn unsigned_eq_rect unsigned_eq_rec unsigned_match_eq
   : unsigned_word.
@@ -701,7 +675,7 @@ Ltac push_inj :=
          | H : context [Z.of_nat (?a - ?b)] |- _ => rewrite (Nat2Z.inj_sub a b) in H by lia
          end;
   repeat first [ rewrite Nat2Z.inj_mul in * | rewrite Nat2Z.inj_add in * | rewrite Nat2Z.inj_pow in *
-               | rewrite Nat2Z.inj_div in * | rewrite Nat2Z.inj_mod in * | rewrite Npow2_Z in *
+               | rewrite Nat2Z.inj_div in * | rewrite Nat2Z.inj_mod in * | rewrite NatLib.Z_of_N_Npow2 in *
                | rewrite N2Z.inj_mul in * | rewrite N2Z.inj_add in * | rewrite N2Z.inj_div in *
                | rewrite N2Z.inj_mod in * | rewrite N2Z.inj_pow in * | rewrite nat_N_Z in * ];
   change (Z.of_nat 0) with 0%Z in *; change (Z.of_nat 1) with 1%Z in *;
@@ -882,13 +856,7 @@ Lemma shatter_word_S : forall n (a : word (S n)),
 Proof.
   intros; repeat eexists; apply (shatter_word a).
 Qed.
-Lemma shatter_word_0 : forall a : word 0,
-  a = WO.
-Proof.
-  intros a; apply (shatter_word a).
-Qed.
-
-#[global] Hint Resolve shatter_word_0.
+#[global] Hint Resolve word0.
 
 Theorem natToWord_wordToNat : forall sz w, natToWord sz (wordToNat w) = w.
 Proof.
@@ -1230,7 +1198,7 @@ Qed.
 
 Ltac shatter_word x :=
   match type of x with
-    | word 0 => try rewrite (shatter_word_0 x) in *
+    | word 0 => try rewrite (word0 x) in *
     | word (S ?N) =>
       let x' := fresh in
       let H := fresh in
@@ -1352,13 +1320,6 @@ Qed.
 
 #[global] Hint Resolve lt_word_le_nat.
 
-Lemma wordToNat_natToWord_idempotent' : forall sz n,
-  (n < pow2 sz)%nat
-  -> wordToNat (natToWord sz n) = n.
-Proof.
-  word_lia_Z.
-Qed.
-
 Lemma wordToNat_natToWord_le : forall sz n,
   (wordToNat (natToWord sz n) <= n)%nat.
 Proof.
@@ -1430,7 +1391,7 @@ Qed.
 
 Lemma shatter_word_1 : forall (w : word 1), w = WS (whd w) WO.
 Proof.
-  intros; rewrite (shatter_word w) at 1; f_equal; apply shatter_word_0.
+  intros; rewrite (shatter_word w) at 1; f_equal; apply word0.
 Qed.
 
 Lemma shatter_word_2 : forall (w : word 2),
@@ -1572,13 +1533,6 @@ Proof.
   word_lia_Z.
 Qed.
 
-Lemma wordToZ_inj:
-  forall sz (w1 w2: word sz),
-    wordToZ w1 = wordToZ w2 -> w1 = w2.
-Proof.
-  word_lia_Z.
-Qed.
-
 Lemma wordToNat_eq_rect:
   forall sz (w: word sz) nsz Hsz,
     wordToNat (eq_rect _ word w nsz Hsz) = wordToNat w.
@@ -1614,7 +1568,7 @@ Lemma wordToZ_existT:
     wordToZ w1 = wordToZ w2 ->
     existT word _ w1 = existT word _ w2.
 Proof.
-  intros; subst; f_equal; apply wordToZ_inj; assumption.
+  intros; subst; f_equal; apply Zmod.signed_inj; assumption.
 Qed.
 
 Lemma wpow2_wmsb:
@@ -2000,55 +1954,38 @@ Lemma wmsb_sext:
   forall sz (w: word sz) n,
     wmsb (sext w n) false = wmsb w false.
 Proof.
-  intros.
-  pose proof (pow2_pos_Z sz); pose proof (pow2_pos_Z n); pose proof (unsigned_range w).
-  rewrite !wmsb_eqn_gen, unsigned_sext, signed_eqn, pow2_add_Z.
-  destruct (Z.eqb_spec (Z.of_nat sz) 0) as [E|E].
-  - assert (Es : sz = 0) by lia; subst sz.
-    assert (Eu : unsigned w = 0%Z) by (cbn in *; lia).
-    rewrite Eu; cbn [Z.mul Z.ltb Z.compare].
-    rewrite Z.mul_1_l, Z.mod_0_l by lia.
-    destruct (Z.eqb_spec (Z.of_nat (0 + n)) 0); [reflexivity|].
-    destruct (Z.leb_spec (2 ^ Z.of_nat n) 0); [lia|reflexivity].
-  - destruct (Z.eqb_spec (Z.of_nat (sz + n)) 0); [rewrite Nat2Z.inj_add in *; lia|].
-    destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat sz)).
-    + rewrite Z.mod_small by nia.
-      destruct (Z.leb_spec (2 ^ Z.of_nat sz * 2 ^ Z.of_nat n) (2 * unsigned w));
-        destruct (Z.leb_spec (2 ^ Z.of_nat sz) (2 * unsigned w));
-        try reflexivity; nia.
-    + rewrite (@Zmod_small_neg (unsigned w - 2 ^ Z.of_nat sz)%Z) by nia.
-      destruct (Z.leb_spec (2 ^ Z.of_nat sz * 2 ^ Z.of_nat n)
-                  (2 * (unsigned w - 2 ^ Z.of_nat sz +
-                        2 ^ Z.of_nat sz * 2 ^ Z.of_nat n))%Z);
-        destruct (Z.leb_spec (2 ^ Z.of_nat sz) (2 * unsigned w));
-        try reflexivity; nia.
+  intros; destruct sz; [destruct n|]; [reflexivity| |].
+  2: rewrite !wmsb_S, sext_wordToZ by lia; reflexivity.
+  rewrite wmsb_S, sext_wordToZ by lia.
+  pose proof (Zmod.signed_pos_bound w (pow2_pos_Z 0)) as H.
+  replace (2 ^ Z.of_nat 0)%Z with 1%Z in H by reflexivity.
+  apply Z.ltb_ge; lia.
 Qed.
 
 Lemma wmsb_testbit : forall sz (w : word sz) b,
     sz <> 0 -> wmsb w b = Z.testbit (unsigned w) (Z.of_nat sz - 1).
 Proof.
-  intros; destruct sz; [lia|]; cbv [wmsb]; f_equal; lia.
+  intros; destruct sz; [lia|]; cbv [wmsb]; symmetry; apply bits.testbit_sign; lia.
 Qed.
 
 Lemma wmsb_wlshift_sext:
   forall sz (w: word sz) n,
     wmsb (sext w n) false = wmsb (wlshift (sext w n) n) false.
 Proof.
-  intros; destruct sz.
-  { assert (Eu : unsigned w = 0%Z) by (pose proof (unsigned_range w); cbn in *; lia).
-    pose proof (pow2_pos_Z (0 + n)).
-    rewrite !wmsb_eqn_gen, unsigned_wlshift, !unsigned_sext, signed_eqn, Eu.
-    replace (2 ^ Z.of_nat 0)%Z with 1%Z by reflexivity.
-    cbn [Z.mul Z.ltb Z.compare].
-    rewrite ?Z.mod_0_l, ?Z.mul_0_l, ?Z.mod_0_l by lia.
-    reflexivity. }
-  rewrite wmsb_sext, !wmsb_testbit by lia.
-  rewrite unsigned_wlshift, Z.testbit_mod_pow2, Z.mul_pow2_bits by lia.
-  replace (Z.of_nat (S sz + n) - 1 - Z.of_nat n)%Z with (Z.of_nat (S sz) - 1)%Z by lia.
-  destruct (Z.ltb_spec (Z.of_nat (S sz + n) - 1) (Z.of_nat (S sz + n))); [|lia].
-  rewrite Bool.andb_true_l.
-  rewrite <- (Z.mod_pow2_bits_low (unsigned (sext w n)) (Z.of_nat (S sz)) (Z.of_nat (S sz) - 1)) by lia.
-  rewrite <- unsigned_split1, sext_split1. reflexivity.
+  intros; pose proof (pow2_pos_Z n).
+  destruct sz; [destruct n|]; [reflexivity| |];
+    rewrite !wmsb_S by lia;
+    rewrite <- (bits.smod_unsigned (Zmod.slu _ _)), Zmod.unsigned_slu, Z.smod_mod,
+      unsigned_sext, Z.shiftl_mul_pow2, sext_wordToZ by lia;
+    rewrite (Z.smod_inj_mod _ (Zmod.signed w * 2 ^ Z.of_nat _)) by apply Zmult_mod_idemp_l.
+  - pose proof (Zmod.signed_pos_bound w (pow2_pos_Z 0)) as H0.
+    replace (2 ^ Z.of_nat 0)%Z with 1%Z in H0 by reflexivity.
+    replace (Zmod.signed w) with 0%Z by lia.
+    rewrite Z.mul_0_l, Z.smod_0_l; reflexivity.
+  - pose proof (Zmod.signed_pos_bound w (pow2_pos_Z (S sz))) as H0.
+    rewrite Z.smod_pow2_small by first [ lia | (rewrite pow2_add_Z; nia) ].
+    destruct (Z.ltb_spec (Zmod.signed w) 0), (Z.ltb_spec (Zmod.signed w * 2 ^ Z.of_nat n) 0);
+      first [ reflexivity | nia ].
 Qed.
 
 Lemma wordToZ_wordToNat_pos:

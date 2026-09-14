@@ -441,7 +441,7 @@ Section Multiplier64.
         bwordToZ (wordToB2' w b) = (wordToZ w + (if b then 1 else 0))%Z.
     Proof.
       induction sz; intros w b; rewrite wordToB2'_S.
-      - rewrite (shatter_word_0 (wtl w)), wordToZ_one.
+      - rewrite (word0 (wtl w)), wordToZ_one.
         destruct (whd w), b; reflexivity.
       - destruct (whd w) eqn:E, b; cbn [encodeB2 bwordToZ];
           rewrite IHsz, wordToZ_succ, E; lia.
@@ -459,7 +459,7 @@ Section Multiplier64.
         bwordToZ (wordToB2 w~0) = wordToZ w.
     Proof.
       intros sz w; destruct sz.
-      - rewrite (shatter_word_0 w); reflexivity.
+      - rewrite (word0 w); reflexivity.
       - rewrite wordToB2_bwordToZ'; lia.
     Qed.
 
@@ -522,7 +522,7 @@ Section Multiplier64.
     Proof.
       intro sz; induction sz as [sz IH] using (well_founded_induction Wf_nat.lt_wf).
       intros v p1 p2; destruct sz as [|[|m]].
-      - rewrite (shatter_word_0 v), wordToZ_one, whd_WS.
+      - rewrite (word0 v), wordToZ_one, whd_WS.
         destruct p1, p2; reflexivity.
       - rewrite wordToB4'_1.
         rewrite (wordToZ_succ (WS p1 v)), whd_WS, wtl_WS, wordToZ_one.
@@ -540,7 +540,7 @@ Section Multiplier64.
         bwordToZ (wordToB2 w) = bwordToZ (wordToB4 w).
     Proof.
       intros sz w; destruct sz.
-      - cbv [wordToB2 wordToB4]; rewrite (shatter_word_0 (wtl w)); reflexivity.
+      - cbv [wordToB2 wordToB4]; rewrite (word0 (wtl w)); reflexivity.
       - cbv [wordToB2 wordToB4].
         rewrite wordToB4'_bwordToZ, wordToB2'_bwordToZ.
         rewrite <- (shatter_word (wtl w)).

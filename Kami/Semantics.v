@@ -241,10 +241,8 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Sub n => wminus
     | Mul n _ => wmult
     | Div n true => @wdivZ n
-    (* | Div n SignSU => @wdivZsu n *)
     | Div n false => @wdivN n
-    | Rem n true => @wremZ n
-    (* | Rem n SignSU => @wremZsu n *)
+    | Rem n true => wremZ
     | Rem n false => @wremN n
     | Band n => wand
     | Bor n => wor

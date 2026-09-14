@@ -541,7 +541,7 @@ Section Facts.
     - intros; reflexivity.
     - intros; simpl.
       rewrite IHn by assumption; simpl.
-      rewrite wordToNat_natToWord_idempotent'.
+      rewrite wordToNat_natToWord_2.
       + reflexivity.
       + apply PeanoNat.Nat.le_lt_trans with (m:= sz).
         * lia.
