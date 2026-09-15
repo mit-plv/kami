@@ -10,3 +10,5 @@ To build
 
 - `make` generates an executable named `Main.native`
 - `./Main.native -header Header.bsv [bluespec_filename.bsv]` generates the Bluespec program.
+- `make Proc.bsv` does the above; from the repository root, `make bluespec` runs the
+  extraction first.
