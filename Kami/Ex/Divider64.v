@@ -805,29 +805,24 @@ Section Divider64.
            (pq: word (DivNumBits + 1)) (* as a normal binary number *),
       Z.of_nat (wordToNat x) = (Z.of_nat (wordToNat d) * Zmod.signed pq + Zmod.signed prem)%Z ->
       (Z.abs (Zmod.signed prem) <= Z.of_nat (wordToNat d))%Z ->
-      split1 DivNumBits 1 (evalExpr (finalRestoringQ prem pq d_pos)) = wdivN x d /\
-      evalExpr (finalRestoringR prem d_pos) = wremN x d.
+      split1 DivNumBits 1 (evalExpr (finalRestoringQ prem pq d_pos)) = Zmod.udiv x d /\
+      evalExpr (finalRestoringR prem d_pos) = Zmod.umod x d.
   Proof.
-    unfold wdivN, wremN; intros.
+    intros.
     eapply nrDivInv_final_restoring' in H; eauto; dest.
-    split.
-    - apply wordToNat_inj.
-      rewrite wordToNat_natToWord_2.
-      + assumption.
-      + clear -Hd.
-        remember (wordToNat x) as xn; destruct xn;
-          [rewrite Nat.div_0_l by assumption; apply zero_lt_pow2|].
-        remember (wordToNat d) as dn; destruct dn; [elim Hd; reflexivity|].
-        destruct dn; [rewrite Nat.div_1_r, Heqxn; apply wordToNat_bound|].
-        etransitivity.
-        * apply Nat.div_lt; lia.
-        * rewrite Heqxn; apply wordToNat_bound.
-    - apply wordToNat_inj.
-      rewrite wordToNat_natToWord_2.
-      + assumption.
-      + etransitivity.
-        * auto using Nat.mod_upper_bound.
-        * apply wordToNat_bound.
+    split; apply Zmod.unsigned_inj.
+    - match goal with
+      | Hq : wordToNat _ = Nat.div _ _ |- _ =>
+        apply (f_equal Z.of_nat) in Hq; rewrite Nat2Z.inj_div, !Z_of_nat_wordToNat in Hq;
+        rewrite Zmod.unsigned_udiv_nonneg;
+          [exact Hq | pose proof (pow2_pos_Z DivNumBits); lia
+          | intro E; apply Hd; cbv [wordToNat]; rewrite E; reflexivity]
+      end.
+    - match goal with
+      | Hr : wordToNat _ = Nat.modulo _ _ |- _ =>
+        apply (f_equal Z.of_nat) in Hr; rewrite Nat2Z.inj_mod, !Z_of_nat_wordToNat in Hr;
+        rewrite Zmod.unsigned_umod; exact Hr
+      end.
   Qed.
   
   Lemma nrDivInv_nrDivStep:

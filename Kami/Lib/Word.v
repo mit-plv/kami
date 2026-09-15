@@ -99,11 +99,6 @@ Definition sext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
 Definition zext (sz : nat) (w : word sz) (sz' : nat) : word (sz + sz') :=
   ofZ _ (unsigned w).
 
-(** * Arithmetic *)
-
-Definition wdivN sz (x y : word sz) : word sz := natToWord sz (wordToNat x / wordToNat y).
-Definition wremN sz (x y : word sz) : word sz := natToWord sz (wordToNat x mod wordToNat y).
-
 Notation "w ~ 1" := (WS true w) : word_scope.
 Notation "w ~ 0" := (WS false w) : word_scope.
 
@@ -117,11 +112,6 @@ Notation "l ^- r" := (Zmod.sub l%word r%word) (at level 50, left associativity).
 (** * Conversion to and from [Z] *)
 
 (** * Arithmetic by [Z] *)
-
-(** Signed division by zero yields zero (the standard library's [squot]
-    yields [-1]); the remainder agrees with [srem] everywhere. *)
-Definition wdivZ sz (x y : word sz) : word sz :=
-  if Zmod.eqb y ((@Zmod.zero (2 ^ Z.of_nat sz))) then (@Zmod.zero (2 ^ Z.of_nat sz)) else Zmod.squot x y.
 
 (** * Comparison predicates and deciders *)
 
@@ -162,9 +152,6 @@ Arguments split1 _ _ _ : simpl never.
 Arguments split2 _ _ _ : simpl never.
 Arguments sext [_] _ _ : simpl never.
 Arguments zext [_] _ _ : simpl never.
-Arguments wdivN [_] _ _ : simpl never.
-Arguments wremN [_] _ _ : simpl never.
-Arguments wdivZ [_] _ _ : simpl never.
 Arguments wlt [_] _ _ : simpl never.
 Arguments extz [_] _ _ : simpl never.
 Arguments wpow2 _ : simpl never.
@@ -185,6 +172,9 @@ Add Zify UnOp Op_Npow2.
 
 Lemma unsigned_range : forall sz (w : word sz), 0 <= unsigned w < 2 ^ Z.of_nat sz.
 Proof. intros; apply bits.unsigned_range, Nat2Z.is_nonneg. Qed.
+
+Lemma Z_of_nat_wordToNat : forall sz (w : word sz), Z.of_nat (wordToNat w) = unsigned w.
+Proof. intros; cbv [wordToNat]; pose proof (unsigned_range w); lia. Qed.
 
 Lemma unsigned_eq_rect : forall n n' (w : word n) (H : n = n'),
     unsigned (eq_rect n word w n' H) = unsigned w.

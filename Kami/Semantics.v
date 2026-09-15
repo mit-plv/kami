@@ -240,10 +240,10 @@ Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
     | Add n => Zmod.add
     | Sub n => Zmod.sub
     | Mul n _ => Zmod.mul
-    | Div n true => @wdivZ n
-    | Div n false => @wdivN n
+    | Div n true => Zmod.squot
+    | Div n false => Zmod.udiv
     | Rem n true => Zmod.srem
-    | Rem n false => @wremN n
+    | Rem n false => Zmod.umod
     | Band n => Zmod.and
     | Bor n => Zmod.or
     | Bxor n => Zmod.xor
