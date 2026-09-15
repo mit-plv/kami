@@ -808,7 +808,7 @@ Section Divider64.
       split1 DivNumBits 1 (evalExpr (finalRestoringQ prem pq d_pos)) = wdivN x d /\
       evalExpr (finalRestoringR prem d_pos) = wremN x d.
   Proof.
-    unfold wdivN, wremN, wordBinN; intros.
+    unfold wdivN, wremN; intros.
     eapply nrDivInv_final_restoring' in H; eauto; dest.
     split.
     - apply wordToNat_inj.

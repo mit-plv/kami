@@ -60,7 +60,7 @@ Section Facts.
 
   Lemma sfifo_nsfifo_elt_not_full_enq:
     forall eltv enqPv elt edSub,
-      (edSub <= wordToNat (wones rsz))%nat -> 
+      (edSub <= wordToNat ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one)))%nat -> 
       sfifo_nsfifo_elt_not_full eltv enqPv edSub ++ [elt] =
       sfifo_nsfifo_elt_not_full (fun w => if weq w enqPv then elt else eltv w)
                               (enqPv ^+ $1) (S edSub).
@@ -90,7 +90,7 @@ Section Facts.
         apply wneg_zero in e.
         apply natToWord_inj in e.
         * inv e.
-        * pose proof (wordToNat_bound (wones rsz)); lia.
+        * pose proof (wordToNat_bound ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one))); lia.
         * apply pow2_zero.
       + f_equal.
         do 2 rewrite <-Zmod.add_opp_r.
@@ -127,7 +127,7 @@ Section Facts.
     refine (Some (existT _ (listEltK dType type) _)).
     destruct (weq enqPv deqPv).
     - refine (if fullv then _ else _).
-      + exact ((eltv deqPv) :: (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat (wones rsz)))).
+      + exact ((eltv deqPv) :: (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one))))).
       + exact nil.
     - exact (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
   Defined.
@@ -346,7 +346,7 @@ Section Facts.
                   reflexivity.
                 }
               }
-              { replace (x5 ^- (x5 ^+ $1)) with (wones rsz).
+              { replace (x5 ^- (x5 ^+ $1)) with ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one)).
                 { apply Nat.le_refl. }
                 { rewrite wones_wneg_one.
                   apply wplus_cancel with (c:= x5 ^+ $1).
@@ -424,7 +424,7 @@ Section Facts.
             { intros; inv H1. }
             { kregmap_red; kregmap_clear; meq.
               { exfalso; eapply wplus_one_neq; eauto. }
-              { replace (x6 ^- (x6 ^+ $1)) with (wones (S sz)); auto.
+              { replace (x6 ^- (x6 ^+ $1)) with ((@Zmod.opp (Z.pow 2 (Z.of_nat (S sz))) Zmod.one)); auto.
                 apply wplus_cancel with (c:= x6 ^+ $1).
                 rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
                 rewrite Zmod.add_comm with (a:= ^~ (x6 ^+ _)).

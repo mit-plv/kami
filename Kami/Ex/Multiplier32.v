@@ -416,7 +416,7 @@ Section Multiplier32.
 
     Lemma wordToB2'_rtrunc1_wlsb:
       forall sz (w: word (S sz)) p,
-        wordToB2' w p = BWS (encodeB2 (wlsb w) p) (wordToB2' (rtrunc1 w) (wlsb w)).
+        wordToB2' w p = BWS (encodeB2 (whd w) p) (wordToB2' (rtrunc1 w) (whd w)).
     Proof.
       intros; reflexivity.
     Qed.
@@ -1228,7 +1228,7 @@ Section Multiplier32.
         assert (psl >= 9)%nat.
         { subst; clear -n1.
           unfold type in x.
-          word_to_Z; lia.
+          word_lia_Z.
         }
         do 9 (destruct psl as [|psl]; [lia|]); clear H.
 
@@ -1328,10 +1328,10 @@ Section Multiplier32.
       Transparent MultNumBits.
 
       eexists; split; kinv_constr.
-      apply boothStepInv_finish in H7; dest.
+      apply boothStepInv_finish in H6; dest.
       assert (x3 = MultNumBitsExt)
-        by (apply eq_sigT_fst in H6; cbn in H6;
-            rewrite ?roundTrip_0 in H6; cbn; cbn in H6; lia).
+        by (apply eq_sigT_fst in H5; cbn in H5;
+            rewrite ?roundTrip_0 in H5; cbn; cbn in H5; lia).
       subst; destruct_existT.
       rewrite idElementwiseId; unfold id.
       do 3 f_equal.

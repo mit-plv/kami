@@ -268,8 +268,8 @@ Section ProcDecSC.
           }
           { cbn; find_if_inside; [reflexivity|].
             elim n.
-            replace (pinitRsOfsv ^+ $(Datatypes.length x3)) with (wones iaddrSize).
-            { apply wnot_ones. }
+            replace (pinitRsOfsv ^+ $(Datatypes.length x3)) with ((@Zmod.opp (2 ^ Z.of_nat iaddrSize) Zmod.one)).
+            { apply bits.not_m1. }
             { rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv).
               rewrite <-natToWord_plus.
               rewrite e.

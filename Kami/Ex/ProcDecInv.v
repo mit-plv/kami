@@ -17,7 +17,7 @@ Lemma wnot_not_zero_wplusone:
     #(w2 ^+ $1) = #w2 + 1.
 Proof.
   intros.
-  assert (w2 < wones _).
+  assert (w2 < (Zmod.opp Zmod.one)).
   { apply lt_wlt.
     rewrite wones_pow2_minus_one.
     pose proof (wordToNat_bound w2).
@@ -26,7 +26,7 @@ Proof.
     destruct H2; [|assumption].
     assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
     rewrite natToWord_wordToNat, <-wones_natToWord in H3; subst.
-    rewrite wnot_ones in H.
+    rewrite bits.not_m1 in H.
     exfalso; auto.
   }
   erewrite wordToNat_plusone; [|eassumption].
@@ -46,7 +46,7 @@ Proof.
 Qed.
 
 Lemma wnot_zero_wones:
-  forall {sz} (w: word sz), Zmod.not w = $0 -> w = wones _.
+  forall {sz} (w: word sz), Zmod.not w = $0 -> w = (Zmod.opp Zmod.one).
 Proof.
   intros.
   rewrite wneg_wnot in H.
@@ -320,7 +320,7 @@ Section Invariants.
           { pose proof (NatLib.pow2_zero iaddrSize).
             unfold type in *; simpl in *; lia.
           }
-          { replace x1 with (wones iaddrSize).
+          { replace x1 with ((@Zmod.opp (2 ^ Z.of_nat iaddrSize) Zmod.one)).
             { apply eq_sym, wones_pow2_minus_one. }
             { apply wnot_zero_wones in e; auto. }
           }

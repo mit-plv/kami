@@ -89,7 +89,7 @@ Section Invariants.
       w1 < w2.
   Proof.
     intros.
-    assert (w2 < wones _).
+    assert (w2 < (Zmod.opp Zmod.one)).
     { apply lt_wlt.
       rewrite wones_pow2_minus_one.
       pose proof (wordToNat_bound w2).
@@ -98,7 +98,7 @@ Section Invariants.
       destruct H4; [|assumption].
       assert (natToWord sz (#w2) = natToWord sz (NatLib.pow2 sz - 1)) by congruence.
       rewrite natToWord_wordToNat, <-wones_natToWord in H5; subst.
-      rewrite wnot_ones in H.
+      rewrite bits.not_m1 in H.
       exfalso; auto.
     }
     apply wlt_lt in H0.
