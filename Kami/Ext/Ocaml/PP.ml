@@ -364,23 +364,11 @@ let rec ppAttrKinds (ks: kind attribute list) =
      ppKind k ^ ppDelim ^ (bstring_of_charlist kn) ^ ppSep ^ ppDelim
      ^ ppAttrKinds ks'
 
-let rec ppWord (w: word) =
-  match w with
-  | WO -> ""
-  | WS (false, _, w') -> ppWord w' ^ "0"
-  | WS (true, _, w') -> ppWord w' ^ "1"
-
-let rec wordToInt (w: word) =
-  match w with
-  | WO -> 0
-  | WS (false, _, w') -> 2 * (wordToInt w')
-  | WS (true, _, w') -> 2 * (wordToInt w') + 1
-
 let rec ppConst (c: constT) =
   match c with
   | ConstBool true -> "True"
   | ConstBool false -> "False"
-  | ConstBit (sz, w) -> string_of_int sz ^ ppHexa ^ Printf.sprintf "%x" (wordToInt w)
+  | ConstBit (sz, w) -> string_of_int sz ^ ppHexa ^ Printf.sprintf "%x" (wordToNat sz w)
   | ConstVector (_, _, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in

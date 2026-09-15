@@ -7,6 +7,14 @@ Require Import Ex.ProcFetchDecode Ex.ProcThreeStage Ex.ProcFourStDec Ex.SC Ex.Is
 Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
 Extraction Language OCaml.
 
+(* [word] is [Zmod], whose operations compare integers through
+ * [comparison]. Extracting that type as an OCaml int keeps its
+ * constructors [Eq] and [Lt] from clashing with the identically-named
+ * Kami expression constructors, which [PP.ml] matches on by name.
+ *)
+Extract Inductive comparison => int [ "0" "(-1)" "1" ]
+  "(fun fEq fLt fGt c -> if c = 0 then fEq () else if c < 0 then fLt () else fGt ())".
+
 Set Extraction Optimize.
 Set Extraction KeepSingleton.
 Unset Extraction AutoInline.
@@ -65,4 +73,4 @@ End PerInstMemSize.
  * To generate the corresponding Bluespec program, do [make] in the directory
  * [./extraction/Ocaml/]. See [./extraction/Ocaml/README.md] for details.
  *)
-Extraction "./Kami/Ext/Ocaml/Target.ml" targetB.
+Extraction "./Kami/Ext/Ocaml/Target.ml" targetB wordToNat.
