@@ -20,8 +20,8 @@ Requirements
 - Coq 8.12.x with `$PATH` containing the standard Coq binaries
 
 ### To Generate Bluespec programs
-- OCaml 4.0.4 (with `$PATH` containing the standard OCaml binaries)
-- Batteries Library for OCaml (2.5.2)
+- OCaml (the compiler Rocq itself is built with suffices): `make bluespec`
+  writes `Kami/Ext/Ocaml/Proc.bsv`, see `Kami/Ext/Ocaml/README.md`
 
 ### To Run Bluespec code (i.e. simulation)
 - Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc (with `$PATH` containing the Bluespec binaries)

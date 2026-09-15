@@ -13,7 +13,15 @@ Makefile.coq.src.conf
 Makefile.coq
 *.aux
 *~
-Kami/Ext/*
+Kami/Ext/Ocaml/Target.ml
+Kami/Ext/Ocaml/Target.mli
+Kami/Ext/Ocaml/Main.native
+Kami/Ext/Ocaml/Main.byte
+Kami/Ext/Ocaml/Proc.bsv
+Kami/Ext/Ocaml/*.cmi
+Kami/Ext/Ocaml/*.cmo
+Kami/Ext/Ocaml/*.cmx
+Kami/Ext/Ocaml/*.o
 .coq-native
 .coqdeps.d
 *.DS_Store
