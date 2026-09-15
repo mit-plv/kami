@@ -10,5 +10,7 @@ To build
 
 - `make` generates an executable named `Main.native`
 - `./Main.native -header Header.bsv [bluespec_filename.bsv]` generates the Bluespec program.
+  The top module is `mkProc` (interface `Empty`); `-top` renames it.
 - `make Proc.bsv` does the above; from the repository root, `make bluespec` runs the
-  extraction first.
+  extraction first and `make verilog` also compiles the result with bsc into
+  `Kami/Ext/BluespecFrontEnd/verilog/gen/mkTop.v`.

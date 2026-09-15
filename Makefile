@@ -18,7 +18,7 @@ VS:=$(filter-out $(LIBVS) $(EXSVS) $(EXVS) $(EXTVS) $(IGNORE:%=%.v),$(VS))
 PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
 
 default_target: coq
-.PHONY: coq clean install bluespec
+.PHONY: coq clean install bluespec verilog
 
 SUPPRESS_WARN=-arg "-w" -arg "-cannot-define-projection,-implicit-core-hint-db,-notation-overridden"
 ALLARGS_NL=-R Kami Kami\n$(SUPPRESS_WARN)\n
@@ -45,9 +45,14 @@ Makefile.coq.src: Makefile _CoqProject $(LIBVS) $(VS)
 bluespec: coq
 	$(MAKE) -C Kami/Ext/Ocaml Proc.bsv
 
+# Compiles that Bluespec to Verilog with bsc (https://github.com/B-Lang-org/bsc).
+verilog: bluespec
+	$(MAKE) -C Kami/Ext/BluespecFrontEnd/verilog verilog
+
 clean:: Makefile.coq.all Makefile.coq.src
 	$(MAKE) -f Makefile.coq.all clean || $(MAKE) -f Makefile.coq.src clean
 	$(MAKE) -C Kami/Ext/Ocaml clean
+	$(MAKE) -C Kami/Ext/BluespecFrontEnd/verilog clean
 	rm -f */*.v.d */*.glob */*.vo */*~ *~
 	rm -f Makefile.coq.all
 	rm -f Makefile.coq.src
