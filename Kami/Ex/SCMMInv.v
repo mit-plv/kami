@@ -83,7 +83,7 @@ Section Invariants.
 
   Lemma wlt_plus_1_back:
     forall {sz} (w1 w2: word sz),
-      wnot w2 <> $0 ->
+      Zmod.not w2 <> $0 ->
       w1 < w2 ^+ $1 ->
       w1 <> w2 ->
       w1 < w2.

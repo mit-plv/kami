@@ -383,7 +383,7 @@ Section Facts.
                       rewrite Zmod.add_comm.
                       apply wplus_cancel with (c:= ^~ x6).
                       rewrite <-Zmod.add_assoc, Zmod.add_opp_same_r.
-                      rewrite Zmod.add_comm with (b:= wzero _), wplus_unit.
+                      rewrite Zmod.add_comm with (b:= Zmod.zero), wplus_unit.
                       rewrite Zmod.add_opp_r; rewrite Hx.
                       rewrite wones_wneg_one.
                       reflexivity.

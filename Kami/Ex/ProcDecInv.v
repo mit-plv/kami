@@ -13,7 +13,7 @@ Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.
 
 Lemma wnot_not_zero_wplusone:
   forall {sz} (w2: word sz),
-    wnot w2 <> $0 ->
+    Zmod.not w2 <> $0 ->
     #(w2 ^+ $1) = #w2 + 1.
 Proof.
   intros.
@@ -46,7 +46,7 @@ Proof.
 Qed.
 
 Lemma wnot_zero_wones:
-  forall {sz} (w: word sz), wnot w = $0 -> w = wones _.
+  forall {sz} (w: word sz), Zmod.not w = $0 -> w = wones _.
 Proof.
   intros.
   rewrite wneg_wnot in H.
@@ -200,7 +200,7 @@ Section Invariants.
 
   Lemma pgm_init_rq_inv_enq_not_last:
     forall elts rqOfs,
-      wnot rqOfs <> $0 ->
+      Zmod.not rqOfs <> $0 ->
       pgm_init_rq_inv false rqOfs elts ->
       forall elt,
         elt = evalExpr
@@ -229,7 +229,7 @@ Section Invariants.
 
   Lemma pgm_init_rq_inv_enq_last:
     forall elts rqOfs,
-      wnot rqOfs = $0 ->
+      Zmod.not rqOfs = $0 ->
       pgm_init_rq_inv false rqOfs elts ->
       forall elt,
         elt = evalExpr

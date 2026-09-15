@@ -122,7 +122,7 @@ Section RV32Struct.
     | BLTZ rs1 ofs => SBtypeToRaw opcode_BRANCH rs1 x0 funct3_BLT ofs
     | BGTZ rs1 ofs => SBtypeToRaw opcode_BRANCH x0 rs1 funct3_BLT ofs
     | J ofs => UJtypeToRaw opcode_JAL x0 ofs
-    | NOP => ItypeToRaw opcode_OP_IMM x0 x0 funct3_ADDI (wzero _)
+    | NOP => ItypeToRaw opcode_OP_IMM x0 x0 funct3_ADDI (Zmod.zero)
     end.
 
 End RV32Struct.

@@ -217,7 +217,7 @@ Fixpoint vector_repeat A n (a: A) :=
 Fixpoint getDefaultConst (k: Kind): ConstT k :=
   match k with
     | Bool => ConstBool false
-    | Bit n => ConstBit (wzero _)
+    | Bit n => ConstBit (Zmod.zero)
     | Vector k n => ConstVector (replicate (getDefaultConst k) n)
     | Struct n ls =>
       ConstStruct ((fix help n (ls: Vector.t _ n) :=
@@ -255,7 +255,7 @@ Fixpoint evalConstStruct n (vs: Vector.t _ n) (ils: ilist (fun a => type (attrTy
 Fixpoint getDefaultConstNative (k: Kind): type k :=
   match k return type k with
   | Bool => false
-  | Bit n => wzero _
+  | Bit n => Zmod.zero
   | Vector k n => fun _ => getDefaultConstNative k
   | Struct n attrs =>
     fun i =>

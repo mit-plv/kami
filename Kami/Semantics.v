@@ -225,8 +225,8 @@ Defined.
 
 Definition evalUniBit n1 n2 (op: UniBitOp n1 n2): word n1 -> word n2.
   destruct op.
-  - exact wnot.
-  - exact wneg.
+  - exact Zmod.not.
+  - exact Zmod.opp.
   - exact (fun w => split2 n1 n2 (split1 (n1 + n2) n3 w)).
   - exact (fun w => split1 n1 n2 w).
   - exact (fun w => evalZeroExtendTrunc _ w).
@@ -237,27 +237,27 @@ Defined.
 Definition evalBinBit n1 n2 n3 (op: BinBitOp n1 n2 n3)
   : word n1 -> word n2 -> word n3 :=
   match op with
-    | Add n => wplus
-    | Sub n => wminus
-    | Mul n _ => wmult
+    | Add n => Zmod.add
+    | Sub n => Zmod.sub
+    | Mul n _ => Zmod.mul
     | Div n true => @wdivZ n
     | Div n false => @wdivN n
-    | Rem n true => wremZ
+    | Rem n true => Zmod.srem
     | Rem n false => @wremN n
-    | Band n => wand
-    | Bor n => wor
-    | Bxor n => wxor
-    | Sll n m => (fun x y => wlshift x (wordToNat y))
-    | Srl n m => (fun x y => wrshift x (wordToNat y))
-    | Sra n m => (fun x y => wrshifta x (wordToNat y))
+    | Band n => Zmod.and
+    | Bor n => Zmod.or
+    | Bxor n => Zmod.xor
+    | Sll n m => (fun x y => Zmod.slu x (Z.of_nat (wordToNat y)))
+    | Srl n m => (fun x y => Zmod.sru x (Z.of_nat (wordToNat y)))
+    | Sra n m => (fun x y => Zmod.srs x (Z.of_nat (wordToNat y)))
     | Concat n1 n2 => fun x y => (combine y x)
   end.
 
 Definition evalBinBitBool n1 n2 (op: BinBitBoolOp n1 n2)
   : word n1 -> word n2 -> bool :=
   match op with
-    | Lt n => fun a b => Z.ltb (uwordToZ a) (uwordToZ b)
-    | Slt n => fun a b => Z.ltb (wordToZ a) (wordToZ b)
+    | Lt n => fun a b => Z.ltb (Zmod.unsigned a) (Zmod.unsigned b)
+    | Slt n => fun a b => Z.ltb (Zmod.signed a) (Zmod.signed b)
   end.
 
 Fixpoint evalArray A n (vs: Vector.t A n): Fin.t n -> A :=

@@ -28,7 +28,7 @@ Section WordEx.
     forall s (w: word s) sl (wl: word (S (S sl))) su (wu: word (S su)),
       existT word s w =
       existT word ((S (S sl)) + S su) (combine wl wu) ->
-      existT word s (wrshifta w 1) =
+      existT word s (Zmod.srs w (Z.of_nat 1)) =
       existT word ((S sl) + (S su + 1)) (combine (rtrunc1 wl) (sext wu 1)).
   Proof.
     intros.
@@ -62,7 +62,7 @@ Section WordEx.
     forall s (w: word s) sl (wl: word (S (S (S sl)))) su (wu: word (S su)),
       existT word s w =
       existT word ((S (S (S sl))) + S su) (combine wl wu) ->
-      existT word s (wrshifta w 2) =
+      existT word s (Zmod.srs w (Z.of_nat 2)) =
       existT word ((S sl) + (S su + 2)) (combine (rtrunc2 wl) (sext wu 2)).
   Proof.
     intros.
@@ -136,9 +136,9 @@ Section Multiplier64.
   Lemma boothStep'_eval:
     forall m_pos m_neg p pr,
       evalExpr (boothStep' m_pos m_neg p pr) =
-      if weq (evalExpr pr) WO~0~1 then (wrshifta (evalExpr p) 1) ^+ (wrshifta m_pos 1)
-      else if weq (evalExpr pr) WO~1~0 then (wrshifta (evalExpr p) 1) ^+ (wrshifta m_neg 1)
-           else wrshifta (evalExpr p) 1.
+      if weq (evalExpr pr) WO~0~1 then (Zmod.srs (evalExpr p) (Z.of_nat 1)) ^+ (Zmod.srs m_pos (Z.of_nat 1))
+      else if weq (evalExpr pr) WO~1~0 then (Zmod.srs (evalExpr p) (Z.of_nat 1)) ^+ (Zmod.srs m_neg (Z.of_nat 1))
+           else Zmod.srs (evalExpr p) (Z.of_nat 1).
   Proof.
     intros; simpl.
     destruct (weq _ _); try reflexivity.
@@ -147,18 +147,17 @@ Section Multiplier64.
 
   Definition boothStepEvalM (m_pos m_neg: word MultBits)
              (p: Expr type (SyntaxKind (Bit (MultBits - 2 + 2)))) :=
-    wrshifta
-      (if weq (split1 2 (MultBits - 2) (evalExpr p)) WO~0~1
+    Zmod.srs (if weq (split1 2 (MultBits - 2) (evalExpr p)) WO~0~1
        then m_pos
        else
          if weq (split1 2 (MultBits - 2) (evalExpr p)) WO~1~0
          then m_neg
-         else $0) 1.
+         else $0) (Z.of_nat 1).
 
   Lemma boothStep_eval:
     forall m_pos m_neg p,
       evalExpr (boothStep m_pos m_neg p) =
-      wrshifta (evalExpr p) 1 ^+ boothStepEvalM m_pos m_neg p.
+      Zmod.srs (evalExpr p) (Z.of_nat 1) ^+ boothStepEvalM m_pos m_neg p.
   Proof.
     intros; unfold boothStep, boothStepEvalM.
     rewrite boothStep'_eval.
@@ -191,13 +190,13 @@ Section Multiplier64.
   Lemma booth4Step'_eval:
     forall m_pos m_neg p pr,
       evalExpr (booth4Step' m_pos m_neg p pr) =
-      if weq (evalExpr pr) WO~0~0~1 then wrshifta (evalExpr p) 2 ^+ wrshifta m_pos 2
-      else if weq (evalExpr pr) WO~0~1~0 then wrshifta (evalExpr p) 2 ^+ wrshifta m_pos 2
-      else if weq (evalExpr pr) WO~0~1~1 then wrshifta (evalExpr p) 2 ^+ wrshifta (wlshift m_pos 1) 2
-      else if weq (evalExpr pr) WO~1~0~0 then wrshifta (evalExpr p) 2 ^+ wrshifta (wlshift m_neg 1) 2
-      else if weq (evalExpr pr) WO~1~0~1 then wrshifta (evalExpr p) 2 ^+ wrshifta m_neg 2
-      else if weq (evalExpr pr) WO~1~1~0 then wrshifta (evalExpr p) 2 ^+ wrshifta m_neg 2
-      else wrshifta (evalExpr p) 2.
+      if weq (evalExpr pr) WO~0~0~1 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs m_pos (Z.of_nat 2)
+      else if weq (evalExpr pr) WO~0~1~0 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs m_pos (Z.of_nat 2)
+      else if weq (evalExpr pr) WO~0~1~1 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs (Zmod.slu m_pos (Z.of_nat 1)) (Z.of_nat 2)
+      else if weq (evalExpr pr) WO~1~0~0 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs (Zmod.slu m_neg (Z.of_nat 1)) (Z.of_nat 2)
+      else if weq (evalExpr pr) WO~1~0~1 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs m_neg (Z.of_nat 2)
+      else if weq (evalExpr pr) WO~1~1~0 then Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ Zmod.srs m_neg (Z.of_nat 2)
+      else Zmod.srs (evalExpr p) (Z.of_nat 2).
   Proof.
     intros; simpl.
     repeat destruct (weq _ _); reflexivity.
@@ -205,30 +204,29 @@ Section Multiplier64.
 
   Definition booth4StepEvalM (m_pos m_neg: word MultBits)
              (p: Expr type (SyntaxKind (Bit (MultBits - 3 + 3)))) :=
-    wrshifta
-      (if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~0~0~1
+    Zmod.srs (if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~0~0~1
        then m_pos
        else
          if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~0~1~0
          then m_pos
          else
            if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~0~1~1
-           then (wlshift m_pos 1)
+           then (Zmod.slu m_pos (Z.of_nat 1))
            else
              if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~1~0~0
-             then (wlshift m_neg 1)
+             then (Zmod.slu m_neg (Z.of_nat 1))
              else
                if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~1~0~1
                then m_neg
                else
                  if weq (split1 3 (MultBits - 3) (evalExpr p)) WO~1~1~0
                  then m_neg
-                 else $0) 2.
+                 else $0) (Z.of_nat 2).
 
   Lemma booth4Step_eval:
     forall m_pos m_neg p,
       evalExpr (booth4Step m_pos m_neg p) =
-      wrshifta (evalExpr p) 2 ^+ (booth4StepEvalM m_pos m_neg p).
+      Zmod.srs (evalExpr p) (Z.of_nat 2) ^+ (booth4StepEvalM m_pos m_neg p).
   Proof.
     intros; unfold booth4Step, booth4StepEvalM.
     rewrite booth4Step'_eval.
@@ -438,7 +436,7 @@ Section Multiplier64.
 
     Lemma wordToB2'_bwordToZ:
       forall sz (w: word (S sz)) b,
-        bwordToZ (wordToB2' w b) = (wordToZ w + (if b then 1 else 0))%Z.
+        bwordToZ (wordToB2' w b) = (Zmod.signed w + (if b then 1 else 0))%Z.
     Proof.
       induction sz; intros w b; rewrite wordToB2'_S.
       - rewrite (word0 (wtl w)), wordToZ_one.
@@ -449,14 +447,14 @@ Section Multiplier64.
 
     Lemma wordToB2_bwordToZ':
       forall sz (w: word (S sz)) b,
-        bwordToZ (wordToB2 (WS b w)) = (wordToZ w + (if b then 1 else 0))%Z.
+        bwordToZ (wordToB2 (WS b w)) = (Zmod.signed w + (if b then 1 else 0))%Z.
     Proof.
       intros; cbv [wordToB2]; rewrite wtl_WS, whd_WS; apply wordToB2'_bwordToZ.
     Qed.
 
     Lemma wordToB2_bwordToZ:
       forall sz (w: word sz),
-        bwordToZ (wordToB2 w~0) = wordToZ w.
+        bwordToZ (wordToB2 w~0) = Zmod.signed w.
     Proof.
       intros sz w; destruct sz.
       - rewrite (word0 w); reflexivity.
@@ -518,7 +516,7 @@ Section Multiplier64.
 
     Lemma wordToB4'_bwordToZ :
       forall sz (v: word sz) p1 p2,
-        bwordToZ (wordToB4' v p1 p2) = (wordToZ (WS p1 v) + (if p2 then 1 else 0))%Z.
+        bwordToZ (wordToB4' v p1 p2) = (Zmod.signed (WS p1 v) + (if p2 then 1 else 0))%Z.
     Proof.
       intro sz; induction sz as [sz IH] using (well_founded_induction Wf_nat.lt_wf).
       intros v p1 p2; destruct sz as [|[|m]].
@@ -569,8 +567,8 @@ Section Multiplier64.
     : forall sl, word sl -> forall su, word su -> Prop :=
   | BSInv: forall sl su (wl: word (S sl)) (wu: word su) u,
       (sl = 0 -> exists tsu (twu: word tsu), existT word _ wu = existT word _ (sext twu 1)) ->
-      wordToZ wu = (wordToZ m * u)%Z ->
-      (u + bwordToZ (wordToB2 wl) * Z.of_nat (pow2 (su - sz - 1)))%Z = wordToZ p ->
+      Zmod.signed wu = (Zmod.signed m * u)%Z ->
+      (u + bwordToZ (wordToB2 wl) * Z.of_nat (pow2 (su - sz - 1)))%Z = Zmod.signed p ->
       BoothStepInv m p wl wu.
 
   Lemma boothStepInv_inv:
@@ -578,8 +576,8 @@ Section Multiplier64.
       BoothStepInv m p wl wu ->
       (sl = 0 -> exists tsu (twu: word tsu), existT word _ wu = existT word _ (sext twu 1)) /\
       exists u,
-        wordToZ wu = (wordToZ m * u)%Z /\
-        (u + bwordToZ (wordToB2 wl) * Z.of_nat (pow2 (su - sz - 1)))%Z = wordToZ p.
+        Zmod.signed wu = (Zmod.signed m * u)%Z /\
+        (u + bwordToZ (wordToB2 wl) * Z.of_nat (pow2 (su - sz - 1)))%Z = Zmod.signed p.
   Proof.
     intros.
     inv H; destruct_existT.
@@ -588,7 +586,7 @@ Section Multiplier64.
   Qed.
 
   Lemma natToWord_ZToWord_zero:
-    forall sz, natToWord sz 0 = ZToWord sz 0%Z.
+    forall sz, natToWord sz 0 = bits.of_Z (Z.of_nat sz) 0%Z.
   Proof. reflexivity. Qed.
 
   Lemma wmsb_wzero'_false:
@@ -622,7 +620,7 @@ Section Multiplier64.
       BoothStepInv m p wl wu ->
       exists tsu (twu: word tsu),
         existT word _ wu = existT word _ (sext twu 1) /\
-        wordToZ wu = (wordToZ m * wordToZ p)%Z.
+        Zmod.signed wu = (Zmod.signed m * Zmod.signed p)%Z.
   Proof.
     intros.
     apply boothStepInv_inv in H; dest.
@@ -641,7 +639,7 @@ Section Multiplier64.
             else if weq wl WO~1~0 then _
                  else _).
     - exact (eq_rect _ word (sext (extz m sus) 1) _ Hsu).
-    - exact (eq_rect _ word (sext (extz (wneg m) sus) 1) _ Hsu).
+    - exact (eq_rect _ word (sext (extz (Zmod.opp m) sus) 1) _ Hsu).
     - exact $0.
   Defined.
 
@@ -660,9 +658,9 @@ Section Multiplier64.
     - exact (eq_rect _ word (extz (sext m 1) sus) _ Hsu).
     - exact (eq_rect _ word (extz (sext m 1) sus) _ Hsu).
     - exact (extz m (S sus)).
-    - exact (extz (wneg m) (S sus)).
-    - exact (eq_rect _ word (extz (sext (wneg m) 1) sus) _ Hsu).
-    - exact (eq_rect _ word (extz (sext (wneg m) 1) sus) _ Hsu).
+    - exact (extz (Zmod.opp m) (S sus)).
+    - exact (eq_rect _ word (extz (sext (Zmod.opp m) 1) sus) _ Hsu).
+    - exact (eq_rect _ word (extz (sext (Zmod.opp m) 1) sus) _ Hsu).
     - exact $0.
   Defined.
 
@@ -822,8 +820,8 @@ Section Multiplier64.
   Lemma booth2AddM_booth2AddU:
     forall sus (m: word MultNumBitsExt) (Hm: m <> wpow2 MultNumBits)
            wu w,
-      wordToZ (sext wu 1 ^+ sext (booth2AddM (sus:= sus) m (split1 2 (MultBits - 2) w)) 1) =
-      (wordToZ wu + wordToZ m * booth2AddU (split1 2 (MultBits - 2) w) sus)%Z.
+      Zmod.signed (sext wu 1 ^+ sext (booth2AddM (sus:= sus) m (split1 2 (MultBits - 2) w)) 1) =
+      (Zmod.signed wu + Zmod.signed m * booth2AddU (split1 2 (MultBits - 2) w) sus)%Z.
   Proof.
     unfold booth2AddM, booth2AddU; intros.
     repeat destruct (weq _ _).
@@ -850,8 +848,8 @@ Section Multiplier64.
   Lemma booth4AddM_booth4AddU:
     forall sus (m: word MultNumBitsExt) (Hm: m <> wpow2 MultNumBits)
            wu w,
-      wordToZ (sext wu 2 ^+ sext (booth4AddM (sus:= sus) m (split1 3 (MultBits - 3) w)) 2) =
-      (wordToZ wu + wordToZ m * booth4AddU (split1 3 (MultBits - 3) w) sus)%Z.
+      Zmod.signed (sext wu 2 ^+ sext (booth4AddM (sus:= sus) m (split1 3 (MultBits - 3) w)) 2) =
+      (Zmod.signed wu + Zmod.signed m * booth4AddU (split1 3 (MultBits - 3) w) sus)%Z.
   Proof.
     unfold booth4AddM, booth4AddU; intros.
     repeat destruct (weq _ _).
@@ -936,8 +934,8 @@ Section Multiplier64.
 
   Lemma wordToZ_sext_wplus_distr:
     forall (sz: nat) (w1 w2: word (S sz)) n,
-      (- Z.of_nat (pow2 sz) <= wordToZ w1 + wordToZ w2 < Z.of_nat (pow2 sz))%Z ->
-      wordToZ (sext (w1 ^+ w2) n) = wordToZ (sext w1 n ^+ sext w2 n).
+      (- Z.of_nat (pow2 sz) <= Zmod.signed w1 + Zmod.signed w2 < Z.of_nat (pow2 sz))%Z ->
+      Zmod.signed (sext (w1 ^+ w2) n) = Zmod.signed (sext w1 n ^+ sext w2 n).
   Proof.
     intros.
     rewrite sext_wordToZ.
@@ -967,7 +965,7 @@ Section Multiplier64.
     forall (m: word MultNumBitsExt) (Hm: m <> wpow2 MultNumBits)
            mp mn p we nwe,
       mp = extz (sext m 1) (S MultNumBitsExt) ->
-      mn = extz (sext (wneg m) 1) (S MultNumBitsExt) ->
+      mn = extz (sext (Zmod.opp m) 1) (S MultNumBitsExt) ->
       booth4Step mp mn we = nwe ->
       forall sl su (wl: word (S (S (S sl)))) (wu: word su) sus,
         (S sus) + MultNumBitsExt = su ->
@@ -1022,7 +1020,7 @@ Section Multiplier64.
     forall (m: word MultNumBitsExt) (Hm: m <> wpow2 MultNumBits)
            mp mn p we nwe,
       mp = extz (sext m 1) (S MultNumBitsExt) ->
-      mn = extz (sext (wneg m) 1) (S MultNumBitsExt) ->
+      mn = extz (sext (Zmod.opp m) 1) (S MultNumBitsExt) ->
       boothStep mp mn we = nwe ->
       forall sl su (wl: word (S (S sl))) (wu: word su) sus,
         sl <> 0 ->
@@ -1096,7 +1094,7 @@ Section Multiplier64.
       HbsiCnt : M.find "cnt" o = Some (existT _ _ bsiCnt);
 
       HbsiMmp : bsiMp = extz (sext bsiM 1) (S MultNumBitsExt);
-      HbsiMmn : bsiMn = extz (sext (wneg bsiM) 1) (S MultNumBitsExt);
+      HbsiMmn : bsiMn = extz (sext (Zmod.opp bsiM) 1) (S MultNumBitsExt);
 
       HmInv : bsiM <> wpow2 MultNumBits;
       HbsiInv :
@@ -1145,7 +1143,7 @@ Section Multiplier64.
       + reflexivity.
       + econstructor.
         * intros.
-          eexists; exists (wzero (2 * MultNumBitsExt)).
+          eexists; exists ((@Zmod.zero (2 ^ Z.of_nat (2 * MultNumBitsExt)))).
           reflexivity.
         * instantiate (1:= 0%Z); reflexivity.
         * reflexivity.
