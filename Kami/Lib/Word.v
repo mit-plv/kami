@@ -57,12 +57,8 @@ Definition NToWord (sz : nat) (n : N) : word sz := ofZ _ (Z.of_N n).
 
 (** * MSB, LSB, head, and tail *)
 
-(** The sign bit; [a] is the answer for the empty word. *)
-Definition wmsb sz (w : word sz) (a : bool) : bool :=
-  match sz with
-  | O => a
-  | S _ => (Zmod.signed w <? 0)%Z
-  end.
+(** The sign bit ([false] for the empty word). *)
+Definition wmsb sz (w : word sz) : bool := (Zmod.signed w <? 0)%Z.
 
 Definition whd sz (w : word (S sz)) : bool := Z.odd (unsigned w).
 
@@ -107,12 +103,6 @@ Notation "l ^+ r" := (Zmod.add l%word r%word) (at level 50, left associativity).
 Notation "l ^* r" := (Zmod.mul l%word r%word) (at level 40, left associativity).
 Notation "l ^- r" := (Zmod.sub l%word r%word) (at level 50, left associativity).
 
-(** * Bitwise operators *)
-
-(** * Conversion to and from [Z] *)
-
-(** * Arithmetic by [Z] *)
-
 (** * Comparison predicates and deciders *)
 
 Definition wlt sz (l r : word sz) : Prop :=
@@ -143,7 +133,7 @@ Arguments wordToNat [_] _ : simpl never.
 Arguments natToWord _ _ : simpl never.
 Arguments wordToN [_] _ : simpl never.
 Arguments NToWord _ _ : simpl never.
-Arguments wmsb [_] _ _ : simpl never.
+Arguments wmsb [_] _ : simpl never.
 Arguments whd [_] _ : simpl never.
 Arguments wtl [_] _ : simpl never.
 Arguments weq [_] _ _ : simpl never.
@@ -334,10 +324,7 @@ Proof.
   rewrite pow2_S_Z; pose proof (pow2_pos_Z sz); lia.
 Qed.
 
-Lemma wmsb_S : forall sz (w : word sz) a, sz <> 0%nat -> wmsb w a = (Zmod.signed w <? 0).
-Proof. intros; destruct sz; [lia | reflexivity]. Qed.
-
-Lemma wmsb_eqn : forall sz (w : word (S sz)) a, wmsb w a = (2 ^ Z.of_nat sz <=? unsigned w).
+Lemma wmsb_eqn : forall sz (w : word (S sz)), wmsb w = (2 ^ Z.of_nat sz <=? unsigned w).
 Proof.
   intros; cbv [wmsb]; rewrite signed_eqn; pose proof (unsigned_range_S w); pose proof (pow2_S_Z sz).
   destruct (Z.ltb_spec (2 * unsigned w) (2 ^ Z.of_nat (S sz))); cbv iota;
@@ -409,16 +396,6 @@ Proof.
   apply inj_pair2_eq_dec in H; [subst; auto | apply Nat.eq_dec].
 Qed.
 
-Lemma wmsb_eqn_gen : forall sz (w : word sz) b,
-    wmsb w b = if Z.of_nat sz =? 0 then b else (2 ^ Z.of_nat sz <=? 2 * unsigned w).
-Proof.
-  intros; destruct sz; [reflexivity|].
-  rewrite wmsb_eqn. destruct (Z.eqb_spec (Z.of_nat (S sz)) 0); [lia|].
-  set (x := unsigned w) in *; clearbody x. rewrite pow2_S_Z.
-  destruct (Z.leb_spec (2 ^ Z.of_nat sz) x);
-    destruct (Z.leb_spec (2 * 2 ^ Z.of_nat sz) (2 * x)); lia.
-Qed.
-
 Lemma unsigned_sext : forall sz (w : word sz) sz',
     unsigned (sext w sz') = Zmod.signed w mod 2 ^ Z.of_nat (sz + sz').
 Proof. intros; apply Zmod.unsigned_of_Z. Qed.
@@ -472,7 +449,7 @@ Qed.
   unsigned_sext unsigned_zext unsigned_extz Zmod.unsigned_opp Zmod.unsigned_add Zmod.unsigned_sub
   Zmod.unsigned_mul Zmod.unsigned_umod unsigned_wnot bits.unsigned_or bits.unsigned_and
   bits.unsigned_xor unsigned_wlshift unsigned_wrshift unsigned_wrshifta unsigned_wpow2
-  wmsb_eqn_gen signed_eqn unsigned_eq_rect unsigned_eq_rec unsigned_match_eq
+  signed_eqn unsigned_eq_rect unsigned_eq_rec unsigned_match_eq
   : unsigned_word.
 
 (** Turn equalities and disequalities of words into ones of [unsigned]. *)
@@ -514,22 +491,24 @@ Ltac word_eq_to_unsigned :=
 
 (** Case-split the boolean tests produced by [wmsb_eqn], [signed_eqn], [whd_eqn]. *)
 Ltac word_split_bools :=
-  repeat match goal with
-         | H : context [Z.leb _ _] |- _ => revert H
-         | H : context [Z.ltb _ _] |- _ => revert H
-         | H : context [Z.eqb _ _] |- _ => revert H
-         | H : context [Z.odd _] |- _ => revert H
-         end;
-  repeat match goal with
-         | |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b)
-         | |- context [Z.ltb ?a ?b] => destruct (Z.ltb_spec a b)
-         | |- context [Z.eqb ?a ?b] => destruct (Z.eqb_spec a b)
-         | |- context [Z.odd ?u] =>
-           let E := fresh "Hodd" in
-           pose proof (Z.div2_odd u) as E; rewrite Z.div2_div in E; revert E;
-           destruct (Z.odd u); intro E
-         end;
-  intros; cbn [Z.b2z] in *.
+  repeat progress
+    (repeat match goal with
+            | H : context [Z.leb _ _] |- _ => revert H
+            | H : context [Z.ltb _ _] |- _ => revert H
+            | H : context [Z.eqb _ _] |- _ => revert H
+            | H : context [Z.odd _] |- _ => revert H
+            end;
+     repeat match goal with
+            | |- context [Z.leb ?a ?b] => destruct (Z.leb_spec a b)
+            | |- context [Z.ltb ?a ?b] => destruct (Z.ltb_spec a b)
+            | |- context [Z.eqb ?a ?b] => destruct (Z.eqb_spec a b)
+            | |- context [Z.odd ?u] =>
+              let E := fresh "Hodd" in
+              pose proof (Z.div2_odd u) as E; rewrite Z.div2_div in E; revert E;
+              destruct (Z.odd u); intro E
+            end;
+     intros);
+  cbn [Z.b2z] in *.
 
 (** Replace every [unsigned w] by a fresh integer in range, so that the
     width arithmetic can be rewritten afterwards. *)
@@ -623,7 +602,7 @@ Ltac word_to_Z :=
   intros;
   repeat match goal with x := _ |- _ => subst x end;
   word_eq_to_unsigned;
-  cbv [wordToNat wordToN wlt] in *;
+  cbv [wordToNat wordToN wlt wmsb] in *;
   repeat progress (canon_unsigned; autorewrite with unsigned_word in *);
   word_split_bools;
   gen_unsigned;
@@ -883,12 +862,6 @@ Add Ring wring8 : (@Zmod.ring_theory (2 ^ Z.of_nat 8)) (decidable (fun x y : wor
 Add Ring wring8 : (@Zmod.ring_theory (2 ^ Z.of_nat 8)) (decidable (fun x y : word 8 => proj1 (Zmod.eqb_eq x y)), constants [wcst]).
 *)
 
-(** * Bitwise operators: reasoning bit by bit *)
-
-Local Open Scope Z_scope.
-
-Local Close Scope Z_scope.
-
 (** * Inequality proofs *)
 
 Theorem word_neq : forall sz (w1 w2 : word sz),
@@ -1083,10 +1056,6 @@ Qed.
 
 (** * Shifts, single bits, msb, extensions, [N] and [Z] round trips *)
 
-Local Open Scope Z_scope.
-
-Local Close Scope Z_scope.
-
 Lemma wordToNat_wzero:
   forall sz, wordToNat ((@Zmod.zero (2 ^ Z.of_nat sz))) = 0.
 Proof.
@@ -1108,7 +1077,7 @@ Qed.
 Lemma wmsb_existT: (* Note: not axiom free *)
   forall sz1 (w1: word sz1) sz2 (w2: word sz2),
     existT word _ w1 = existT word _ w2 ->
-    forall b, wmsb w1 b = wmsb w2 b.
+    wmsb w1 = wmsb w2.
 Proof.
   intros; apply existT_word_inv in H; destruct H; subst.
   apply Zmod.unsigned_inj in H0; subst; reflexivity.
@@ -1180,27 +1149,23 @@ Proof.
   apply Z2Nat.inj_div; [apply unsigned_range | lia].
 Qed.
 
-(** * Structural recursion over words *)
-
 Lemma wmsb_extz:
   forall sz (w: word sz) n,
-    wmsb (extz w n) false = wmsb w false.
+    wmsb (extz w n) = wmsb w.
 Proof.
-  word_to_Z; try lia.
-  all: try (exfalso; nia).
-  all: try reflexivity.
+  word_nia_Z.
 Qed.
 
 Lemma wmsb_split2:
-  forall sz (w: word (sz + 1)) b,
-    wmsb w b = if weq (split2 _ 1 w) (natToWord _ 0) then false else true.
+  forall sz (w: word (sz + 1)),
+    wmsb w = if weq (split2 _ 1 w) (natToWord _ 0) then false else true.
 Proof.
   intros; destruct (weq (split2 sz 1 w) (natToWord 1 0)); word_lia_Z.
 Qed.
 
 Lemma wmsb_split1_sext:
   forall sz (w: word (sz + 1)),
-    wmsb w false = wmsb (split1 _ 1 w) false ->
+    wmsb w = wmsb (split1 _ 1 w) ->
     exists sw, sext sw 1 = w.
 Proof.
   intros; exists (split1 sz 1 w).
@@ -1209,9 +1174,9 @@ Proof.
 Qed.
 
 Lemma wmsb_combine:
-  forall sz1 sz2 (w1: word sz1) (w2: word sz2) b1 b2,
+  forall sz1 sz2 (w1: word sz1) (w2: word sz2),
     sz2 <> 0 ->
-    wmsb (combine w1 w2) b1 = wmsb w2 b2.
+    wmsb (combine w1 w2) = wmsb w2.
 Proof.
   word_to_Z; try reflexivity; try lia; exfalso; pose proof (pow2_even_Z sz2 ltac:(lia));
     first [ nia
@@ -1222,17 +1187,17 @@ Proof.
 Qed.
 
 Lemma wmsb_combine_existT:
-  forall sz (w: word sz) sz1 (w1: word sz1) sz2 (w2: word sz2) b1 b2,
+  forall sz (w: word sz) sz1 (w1: word sz1) sz2 (w2: word sz2),
     sz2 <> 0 ->
     existT word _ w = existT word _ (combine w1 w2) ->
-    wmsb w b1 = wmsb w2 b2.
+    wmsb w = wmsb w2.
 Proof.
   intros; apply existT_word_inv in H0; destruct H0; subst.
   apply Zmod.unsigned_inj in H1; subst; apply wmsb_combine; assumption.
 Qed.
 
 Lemma wmsb_zext:
-  forall sz (w: word sz) b n, n <> 0 -> wmsb (zext w n) b = false.
+  forall sz (w: word sz) n, n <> 0 -> wmsb (zext w n) = false.
 Proof.
   word_to_Z; try reflexivity; try lia; exfalso; nia.
 Qed.
@@ -1308,15 +1273,15 @@ Proof.
 Qed.
 
 Lemma wpow2_wmsb:
-  forall sz, wmsb (wpow2 sz) false = true.
+  forall sz, wmsb (wpow2 sz) = true.
 Proof.
   word_lia_Z.
 Qed.
 
 Lemma wmsb_wneg_zext:
-  forall sz (w: word sz) b n,
+  forall sz (w: word sz) n,
     n <> 0 -> wordToNat w <> 0 ->
-    wmsb (Zmod.opp (zext w n)) b = true.
+    wmsb (Zmod.opp (zext w n)) = true.
 Proof.
   word_to_Z; word_mod_simpl; try reflexivity; try lia; exfalso; nia.
 Qed.
@@ -1615,21 +1580,21 @@ Qed.
 
 Lemma wmsb_false_pos:
   forall sz (w: word sz),
-    wmsb w false = false <-> (Zmod.signed w >= 0)%Z.
+    wmsb w = false <-> (Zmod.signed w >= 0)%Z.
 Proof.
   split; word_lia_Z.
 Qed.
 
 Lemma wmsb_true_neg:
   forall sz (w: word sz),
-    wmsb w false = true <-> (Zmod.signed w < 0)%Z.
+    wmsb w = true <-> (Zmod.signed w < 0)%Z.
 Proof.
   split; word_lia_Z.
 Qed.
 
 Lemma wordToZ_distr_diff_wmsb:
   forall sz (w1 w2: word sz),
-    wmsb w1 false = negb (wmsb w2 false) ->
+    wmsb w1 = negb (wmsb w2) ->
     Zmod.signed (w1 ^+ w2) = (Zmod.signed w1 + Zmod.signed w2)%Z.
 Proof.
   word_to_Z; pose proof (pow2_pos_Z sz);
@@ -1699,14 +1664,13 @@ Qed.
 
 Lemma wmsb_wlshift_sext:
   forall sz (w: word sz) n,
-    wmsb (sext w n) false = wmsb (Zmod.slu (sext w n) (Z.of_nat n)) false.
+    wmsb (sext w n) = wmsb (Zmod.slu (sext w n) (Z.of_nat n)).
 Proof.
-  intros; pose proof (pow2_pos_Z n).
-  destruct sz; [destruct n|]; [reflexivity| |];
-    rewrite !wmsb_S by lia;
+  intros; pose proof (pow2_pos_Z n); cbv [wmsb];
     rewrite <- (bits.smod_unsigned (Zmod.slu _ _)), Zmod.unsigned_slu, Z.smod_mod,
       unsigned_sext, Z.shiftl_mul_pow2, sext_wordToZ by lia;
     rewrite (Z.smod_inj_mod _ (Zmod.signed w * 2 ^ Z.of_nat _)) by apply Zmult_mod_idemp_l.
+  destruct sz.
   - pose proof (Zmod.signed_pos_bound w (pow2_pos_Z 0)) as H0.
     replace (2 ^ Z.of_nat 0)%Z with 1%Z in H0 by reflexivity.
     replace (Zmod.signed w) with 0%Z by lia.
@@ -1719,7 +1683,7 @@ Qed.
 
 Lemma wordToZ_wordToNat_pos:
   forall sz (w: word sz),
-    wmsb w false = false ->
+    wmsb w = false ->
     Z.of_nat (wordToNat w) = Zmod.signed w.
 Proof.
   word_lia_Z.
@@ -1727,7 +1691,7 @@ Qed.
 
 Corollary wmsb_Zabs_pos:
   forall sz (w: word sz),
-    wmsb w false = false -> Z.abs (Zmod.signed w) = Zmod.signed w.
+    wmsb w = false -> Z.abs (Zmod.signed w) = Zmod.signed w.
 Proof.
   intros; rewrite <- wordToZ_wordToNat_pos by assumption; lia.
 Qed.
@@ -1775,7 +1739,7 @@ Qed.
 Lemma zext_size:
   forall sz n (w: word (sz + n)),
     (- Z.of_nat (pow2 sz) <= Zmod.signed w < Z.of_nat (pow2 sz))%Z ->
-    wmsb w false = false ->
+    wmsb w = false ->
     exists sw, w = zext sw n.
 Proof.
   intros; exists (split1 sz n w).
@@ -1784,7 +1748,7 @@ Qed.
 
 Lemma zext_size_1:
   forall sz (w: word (sz + 1)),
-    wmsb w false = false ->
+    wmsb w = false ->
     exists sw, w = zext sw 1.
 Proof.
   intros; exists (split1 sz 1 w).
@@ -1813,9 +1777,6 @@ Qed.
 
 (** * [wordToNat] transfer lemmas *)
 
-Close Scope word_scope.
-
-Open Scope word_scope.
 Local Open Scope nat.
 
 Lemma wordToNat_natToWord_eqn sz:

@@ -590,7 +590,7 @@ Section Multiplier64.
   Proof. reflexivity. Qed.
 
   Lemma wmsb_zero_false:
-    forall sz, wmsb ((@Zmod.zero (2 ^ Z.of_nat sz))) false = false.
+    forall sz, wmsb ((@Zmod.zero (2 ^ Z.of_nat sz))) = false.
   Proof. word_lia_Z. Qed.
 
   Lemma boothStepInv_init:
@@ -1165,7 +1165,7 @@ Section Multiplier64.
           simpl in *.
           Transparent split2.
           find_if_inside; [|discriminate].
-          assert (wmsb (x Fin.F1) false = true) by (rewrite H12; reflexivity).
+          assert (wmsb (x Fin.F1) = true) by (rewrite H12; reflexivity).
           remember (x Fin.F1) as x1; simpl in x1; clear Heqx1 x.
           change MultNumBitsExt with (MultNumBits + 1) in *.
           rewrite wmsb_split2 in H.
@@ -1181,7 +1181,7 @@ Section Multiplier64.
             simpl in H4.
             Transparent split2.
             find_if_inside; [|discriminate].
-            assert (wmsb (x Fin.F1) false = true) by (rewrite Hx; reflexivity).
+            assert (wmsb (x Fin.F1) = true) by (rewrite Hx; reflexivity).
             remember (x Fin.F1) as x1; simpl in x1; clear Heqx1 x.
             change MultNumBitsExt with (MultNumBits + 1) in *.
             rewrite wmsb_split2 in H.

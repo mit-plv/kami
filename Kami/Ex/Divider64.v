@@ -66,12 +66,12 @@ Section Divider64.
 
   Lemma nrDivNextAdder_wmsb:
     forall xq d_pos d_neg,
-      wmsb (nrDivNextAdder xq d_pos d_neg) false =
-      if wmsb (Zmod.slu xq (Z.of_nat 1)) false then wmsb d_pos false else wmsb d_neg false.
+      wmsb (nrDivNextAdder xq d_pos d_neg) =
+      if wmsb (Zmod.slu xq (Z.of_nat 1)) then wmsb d_pos else wmsb d_neg.
   Proof.
     unfold nrDivNextAdder; intros.
     change DivBits with (pred DivBits + 1) in xq.
-    pose proof (wmsb_split2 _ (Zmod.slu xq (Z.of_nat 1)) false).
+    pose proof (wmsb_split2 _ (Zmod.slu xq (Z.of_nat 1))).
     destruct (weq _ _);
       try (change (pred DivBits + 1) with DivBits in H;
            rewrite H; reflexivity).
@@ -80,7 +80,7 @@ Section Divider64.
   Lemma nrDivNextAdder_Z_value:
     forall xq (d: word DivNumBits) n,
       Zmod.signed (extz (nrDivNextAdder xq (zext d DivNumBits) (^~ (zext d DivNumBits))) n) =
-      ((if wmsb (Zmod.slu xq (Z.of_nat 1)) false then 1 else -1)
+      ((if wmsb (Zmod.slu xq (Z.of_nat 1)) then 1 else -1)
        * (Z.of_nat (wordToNat d) * Z.of_nat (pow2 n)))%Z.
   Proof.
     change DivBits with (pred DivBits + 1).
@@ -96,8 +96,8 @@ Section Divider64.
         rewrite <-Z.mul_opp_l.
         reflexivity.
       + intro Hx.
-        assert (wmsb (zext d DivNumBits) false =
-                wmsb (wpow2 (Init.Nat.pred DivNumBits + DivNumBits)) false)
+        assert (wmsb (zext d DivNumBits) =
+                wmsb (wpow2 (Init.Nat.pred DivNumBits + DivNumBits)))
           by (rewrite Hx; reflexivity).
         rewrite wmsb_zext in H by discriminate.
         rewrite wpow2_wmsb in H; discriminate.
@@ -111,11 +111,11 @@ Section Divider64.
     forall sz (pq: word sz) (na d: Z),
       (d > 0)%Z ->
       (Z.abs (Zmod.signed pq) <= 2 * d)%Z ->
-      (na = (if wmsb pq false then 1 else -1) * d)%Z ->
+      (na = (if wmsb pq then 1 else -1) * d)%Z ->
       (Z.abs (Zmod.signed pq + na) <= d)%Z.
   Proof.
     intros; subst.
-    remember (wmsb pq false) as pqb; destruct pqb.
+    remember (wmsb pq) as pqb; destruct pqb.
     - apply eq_sym, wmsb_true_neg in Heqpqb.
       rewrite Z.abs_neq in H0 by lia.
       destruct (Zmod.signed pq).
@@ -500,7 +500,7 @@ Section Divider64.
     apply nat_div_modulo_unique.
 
     - subst.
-      pose proof (wmsb_split2 _ prem false).
+      pose proof (wmsb_split2 _ prem).
       destruct (weq _ _).
       + destruct (weq _ _); [rewrite e in e0; discriminate|clear e n].
         destruct (weq _ _); subst.
@@ -565,7 +565,7 @@ Section Divider64.
         apply Nat2Z.inj_lt; assumption.
 
     - subst.
-      pose proof (wmsb_split2 _ prem false).
+      pose proof (wmsb_split2 _ prem).
       destruct (weq _ _).
       + change (pred (2 * DivNumBits) + 1) with (DivNumBits + DivNumBits) in *.
         destruct (weq _ _); [rewrite e in e0; discriminate|clear e n].
@@ -630,7 +630,7 @@ Section Divider64.
           rewrite <-H.
           change #(split1 DivNumBits DivNumBits $0) with 0.
           lia.
-        * assert (wmsb pq false = false).
+        * assert (wmsb pq = false).
           { apply wmsb_false_pos.
             destruct (Z_ge_lt_dec (Zmod.signed pq) 0%Z); auto.
             exfalso.
@@ -717,7 +717,7 @@ Section Divider64.
           }
 
           assert (Zmod.signed pq - 1 < Z.of_nat (pow2 DivNumBits))%Z.
-          { remember (wmsb pq false) as pqmsb; destruct pqmsb.
+          { remember (wmsb pq) as pqmsb; destruct pqmsb.
             { apply eq_sym, wmsb_true_neg in Heqpqmsb; lia. }
             { apply eq_sym, zext_size_1 in Heqpqmsb; dest; subst.
               rewrite zext_wordToNat_equal_Z by discriminate.
@@ -876,7 +876,7 @@ Section Divider64.
           cbn; cbn in H3; lia.
         }
 
-    - assert (Hxq: wmsb xq false = wmsb (Zmod.slu xq (Z.of_nat 1)) false).
+    - assert (Hxq: wmsb xq = wmsb (Zmod.slu xq (Z.of_nat 1))).
       { assert (exists sprem, prem = sext sprem 1).
         { apply sext_size; [lia|].
           apply Z.abs_le in H1; destruct H1.
@@ -923,16 +923,16 @@ Section Divider64.
         apply wmsb_wlshift_sext.
       }
       
-      assert (Hprem1: wmsb prem false = wmsb (split1 _ 1 prem) false).
+      assert (Hprem1: wmsb prem = wmsb (split1 _ 1 prem)).
       { clear -H3 Hxq.
         pose proof (eq_sigT_fst H3).
         generalize dependent xq.
         rewrite H; clear H; intros.
         destruct_existT.
         pose proof (wlshift_combine_extz 1 pq _ prem).
-        apply wmsb_existT with (b:= false) in H.
+        apply wmsb_existT in H.
         rewrite wmsb_extz in H.
-        rewrite wmsb_combine with (b2:= false) in H by (rewrite Nat.add_comm; discriminate).
+        rewrite wmsb_combine in H by (rewrite Nat.add_comm; discriminate).
         rewrite <-H, <-Hxq.
         apply eq_sym, wmsb_combine; lia.
       }
@@ -942,19 +942,19 @@ Section Divider64.
         apply sext_wordToZ.
       }
 
-      assert (Hmsb: wmsb (split1 (srr + 2 * DivNumBits) 1 prem) false =
+      assert (Hmsb: wmsb (split1 (srr + 2 * DivNumBits) 1 prem) =
                     negb (wmsb (extz (nrDivNextAdder xq (zext d DivNumBits)
-                                                     (^~ (zext d DivNumBits))) srr) false)).
+                                                     (^~ (zext d DivNumBits))) srr))).
       { rewrite <-Hprem1.
         rewrite wmsb_extz.
-        apply wmsb_combine_existT with (b1:= false) (b2:= false) in H3; [|lia].
+        apply wmsb_combine_existT in H3; [|lia].
         rewrite <-H3.
         rewrite nrDivNextAdder_wmsb.
         change (2 * DivNumBits) with (DivNumBits + DivNumBits).
         rewrite wmsb_wneg_zext; [|discriminate|assumption].
         rewrite wmsb_zext by discriminate.
         rewrite <-Hxq.
-        destruct (wmsb xq false); reflexivity.
+        destruct (wmsb xq); reflexivity.
       }
 
       econstructor.
@@ -991,8 +991,8 @@ Section Divider64.
             ring.
           }
           { intro Hx.
-            assert (wmsb (zext d DivNumBits) false =
-                    wmsb (wpow2 (Init.Nat.pred DivNumBits + DivNumBits)) false)
+            assert (wmsb (zext d DivNumBits) =
+                    wmsb (wpow2 (Init.Nat.pred DivNumBits + DivNumBits)))
               by (rewrite Hx; reflexivity).
             rewrite wmsb_zext in H by discriminate.
             rewrite wpow2_wmsb in H; discriminate.
@@ -1034,7 +1034,7 @@ Section Divider64.
           }
           assert (Hsq2: DivNumBits - S sq = srr) by lia.
           rewrite Hsq2.
-          replace (wmsb prem false) with (wmsb (Zmod.slu xq (Z.of_nat 1)) false)
+          replace (wmsb prem) with (wmsb (Zmod.slu xq (Z.of_nat 1)))
             by (rewrite <-Hxq; eapply wmsb_combine_existT; eauto; lia).
           apply nrDivNextAdder_Z_value.
   Qed.
