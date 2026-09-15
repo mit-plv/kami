@@ -24,7 +24,8 @@ Requirements
   writes `Kami/Ext/Ocaml/Proc.bsv`, see `Kami/Ext/Ocaml/README.md`
 
 ### To Run Bluespec code (i.e. simulation)
-- Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc (with `$PATH` containing the Bluespec binaries)
+- Bluespec 2014.07.A or the open-source version from https://github.com/B-Lang-org/bsc (with `$PATH` containing the Bluespec binaries):
+  `make verilog` compiles the extracted processor to `Kami/Ext/BluespecFrontEnd/verilog/gen/mkTop.v`
 
 ### To Run Bluespec code on FPGAs
 - Vivado 2015.4 (with `$PATH` containing the Bluespec binaries)

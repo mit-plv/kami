@@ -176,7 +176,7 @@ type config =
   { cfg_debug: bool;
     cfg_top_module_name: string
   }
-let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Top" }
+let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Proc" }
 let setConfig (ncfg: config) = cfg := ncfg
 let isDebug (_: unit) = !cfg.cfg_debug
 let getTopModuleName (_: unit) = !cfg.cfg_top_module_name
@@ -1011,7 +1011,7 @@ let ppTopModule (bmdcl: bModuleDC list) (idx: int)
   open_hovbox 2;
   ps ppModule; print_space ();
   ps "mk"; ps (getTopModuleName ()); ppBModuleCallArgs extCallsAll; print_space ();
-  ps ppRBracketL; ps (getTopModuleName ()); ps ppRBracketR; ps ppSep;
+  ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
   close_box ();
   print_break 0 4; open_hovbox 0;
   ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
