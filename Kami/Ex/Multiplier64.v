@@ -589,8 +589,8 @@ Section Multiplier64.
     forall sz, natToWord sz 0 = bits.of_Z (Z.of_nat sz) 0%Z.
   Proof. reflexivity. Qed.
 
-  Lemma wmsb_wzero'_false:
-    forall sz, wmsb (wzero' sz) false = false.
+  Lemma wmsb_zero_false:
+    forall sz, wmsb ((@Zmod.zero (2 ^ Z.of_nat sz))) false = false.
   Proof. word_lia_Z. Qed.
 
   Lemma boothStepInv_init:
@@ -606,7 +606,7 @@ Section Multiplier64.
     - instantiate (1:= 0%Z).
       rewrite <-Zmult_0_r_reverse.
       rewrite natToWord_ZToWord_zero.
-      rewrite wordToZ_wzero'.
+      rewrite Zmod.signed_0.
       reflexivity.
     - rewrite Z.add_0_l.
       replace (S sz - sz - 1) with 0 by lia.

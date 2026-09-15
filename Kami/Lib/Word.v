@@ -49,19 +49,15 @@ Definition WS (b : bool) (n : nat) (w : word n) : word (S n) :=
 
 Definition wordToNat sz (w : word sz) : nat := Z.to_nat (unsigned w).
 
-Definition wordToNat' sz (w : word sz) : nat := wordToNat w.
-
 Definition natToWord (sz n : nat) : word sz := ofZ _ (Z.of_nat n).
 
 Definition wordToN sz (w : word sz) : N := Z.to_N (unsigned w).
-
-Definition wzero' (sz : nat) : word sz := ofZ _ 0.
 
 Definition posToWord (sz : nat) (p : positive) : word sz := ofZ _ (Zpos p).
 
 Definition NToWord (sz : nat) (n : N) : word sz := ofZ _ (Z.of_N n).
 
-Definition wones (sz : nat) : word sz := ofZ _ (2 ^ Z.of_nat sz - 1).
+Definition wones (sz : nat) : word sz := Zmod.opp Zmod.one.
 
 (** * MSB, LSB, head, and tail *)
 
@@ -155,7 +151,7 @@ Definition wdivZ sz (x y : word sz) : word sz :=
 (** * Comparison predicates and deciders *)
 
 Definition wlt sz (l r : word sz) : Prop :=
-  N.lt (wordToN l) (wordToN r).
+  Z.lt (Zmod.unsigned l) (Zmod.unsigned r).
 Definition wslt sz (l r : word sz) : Prop :=
   Z.lt (Zmod.signed l) (Zmod.signed r).
 
@@ -169,14 +165,8 @@ Notation "w1 '>s=' w2" := (~(@wslt _ w1%word w2%word)) (at level 70, w2 at next 
 Notation "w1 '<s' w2" := (@wslt _ w1%word w2%word) (at level 70, w2 at next level) : word_scope.
 Notation "w1 '<s=' w2" := (~(@wslt _ w2%word w1%word)) (at level 70, w2 at next level) : word_scope.
 
-Definition wlt_dec : forall sz (l r : word sz), {l < r} + {l >= r}.
-  refine (fun sz l r =>
-    match N.compare (wordToN l) (wordToN r) as k return N.compare (wordToN l) (wordToN r) = k -> _ with
-      | Lt => fun pf => left _ _
-      | _ => fun pf => right _ _
-    end (refl_equal _));
-  abstract congruence.
-Defined.
+Definition wlt_dec sz (l r : word sz) : {l < r} + {l >= r} :=
+  Z_lt_dec (Zmod.unsigned l) (Zmod.unsigned r).
 
 Notation "$ n" := (natToWord _ n) (at level 1, format "$ n").
 Notation "# n" := (wordToNat n) (at level 5, format "# n").
@@ -199,10 +189,8 @@ Notation "l ^>> r" := (Zmod.sru l%word (Z.of_nat r)) (at level 35).
 Arguments WO : simpl never.
 Arguments WS _ [_] _ : simpl never.
 Arguments wordToNat [_] _ : simpl never.
-Arguments wordToNat' [_] _ : simpl never.
 Arguments natToWord _ _ : simpl never.
 Arguments wordToN [_] _ : simpl never.
-Arguments wzero' _ : simpl never.
 Arguments posToWord _ _ : simpl never.
 Arguments NToWord _ _ : simpl never.
 Arguments wones _ : simpl never.
@@ -338,12 +326,6 @@ Proof. intros; apply Zmod.unsigned_of_Z. Qed.
 Lemma unsigned_posToWord : forall sz p, unsigned (posToWord sz p) = Zpos p mod 2 ^ Z.of_nat sz.
 Proof. intros; apply Zmod.unsigned_of_Z. Qed.
 
-Lemma unsigned_wzero' : forall sz, unsigned (wzero' sz) = 0.
-Proof. intros; cbv [wzero']; rewrite Zmod.unsigned_of_Z; apply Z.mod_0_l; lia. Qed.
-
-Lemma unsigned_wones : forall sz, unsigned (wones sz) = 2 ^ Z.of_nat sz - 1.
-Proof. intros; cbv [wones]; apply Zmod.unsigned_of_Z_small; lia. Qed.
-
 Lemma unsigned_wtl : forall sz (w : word (S sz)), unsigned (wtl w) = unsigned w / 2.
 Proof.
   intros; cbv [wtl]; apply Zmod.unsigned_of_Z_small.
@@ -440,6 +422,12 @@ Qed.
 Lemma Zmod_small_neg : forall a m, 0 < m -> - m <= a < 0 -> a mod m = a + m.
 Proof.
   intros. rewrite <- (Z.mod_add a 1 m), Z.mod_small by lia. lia.
+Qed.
+
+Lemma unsigned_wones : forall sz, unsigned (wones sz) = 2 ^ Z.of_nat sz - 1.
+Proof.
+  intros; cbv [wones]; rewrite Zmod.unsigned_m1, (@Zmod_small_neg (-1)) by (pose proof (pow2_pos_Z sz); lia).
+  lia.
 Qed.
 
 Lemma Zmod_small_2 : forall a m, 0 < m -> m <= a < 2 * m -> a mod m = a - m.
@@ -550,7 +538,7 @@ Qed.
 (** * Moving word goals to [Z] *)
 
 #[global] Hint Rewrite unsigned_WO unsigned_WS unsigned_natToWord unsigned_NToWord
-  Zmod.unsigned_of_Z unsigned_posToWord Zmod.unsigned_0 unsigned_wzero' Zmod.unsigned_1
+  Zmod.unsigned_of_Z unsigned_posToWord Zmod.unsigned_0 Zmod.unsigned_1
   unsigned_wones unsigned_wtl whd_eqn unsigned_combine unsigned_split1 unsigned_split2
   unsigned_sext unsigned_zext unsigned_extz Zmod.unsigned_opp Zmod.unsigned_add Zmod.unsigned_sub
   Zmod.unsigned_mul unsigned_wdiv Zmod.unsigned_umod unsigned_wnot bits.unsigned_or bits.unsigned_and
@@ -706,7 +694,7 @@ Ltac word_to_Z :=
   intros;
   repeat match goal with x := _ |- _ => subst x end;
   word_eq_to_unsigned;
-  cbv [wordToNat wordToNat' wordToN wlt wslt] in *;
+  cbv [wordToNat wordToN wlt wslt] in *;
   repeat progress (canon_unsigned; autorewrite with unsigned_word in *);
   word_split_bools;
   gen_unsigned;
@@ -1073,7 +1061,7 @@ Ltac word_bits_rewrites :=
                | rewrite unsigned_eq_rec | rewrite unsigned_match_eq | rewrite unsigned_natToWord
                | rewrite testbit_bitwp by lia
                | rewrite unsigned_wones | rewrite Zmod.unsigned_0
-               | rewrite unsigned_wzero' | rewrite unsigned_wone_S
+               | rewrite unsigned_wone_S
                | rewrite Z.testbit_mod_pow2 by lia | rewrite Z.div_pow2_bits by lia
                | rewrite Z.mul_pow2_bits by lia | rewrite Z.testbit_neg_r by lia
                | rewrite Z.bits_0
@@ -1334,12 +1322,6 @@ Qed.
 
 Lemma combine_one:
   forall n m, combine (natToWord (S n) 1) (natToWord m 0) = natToWord _ 1.
-Proof.
-  word_lia_Z.
-Qed.
-
-Lemma wordToZ_wzero':
-  forall sz, Zmod.signed (wzero' sz) = 0%Z.
 Proof.
   word_lia_Z.
 Qed.
@@ -2067,11 +2049,6 @@ Proof.
      end);
     try lia; f_equal; lia.
 Qed.
-
-(* Making wlt_dec opaque is necessary to prevent the [exact H] in the
- * example below from blowing up..
- *)
-Global Opaque wlt_dec.
 
 (** * [wordToNat] transfer lemmas *)
 
