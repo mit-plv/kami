@@ -130,9 +130,9 @@ Section ProcDecSC.
                 else drainInsts rss rsOfs pgmv w).
   Proof.
     unfold listEnq; induction rss; simpl; intros;
-      [rewrite wplus_wzero_1; reflexivity|].
+      [rewrite Zmod.add_0_r; reflexivity|].
     rewrite IHrss.
-    rewrite <-wplus_assoc, <-natToWord_plus; reflexivity.
+    rewrite <-Zmod.add_assoc, <-natToWord_plus; reflexivity.
   Qed.
   
   Lemma pdec_refines_pinst: pdec <<== pinst.
@@ -146,7 +146,7 @@ Section ProcDecSC.
       try reflexivity.
     1: {
       kdecompose_regrel_init.
-      cbn; rewrite wplus_wzero_1.
+      cbn; rewrite Zmod.add_0_r.
       meq.
       exfalso; rewrite wordToNat_wzero in e.
       pose proof (NatLib.pow2_zero iaddrSize); lia.
@@ -176,7 +176,7 @@ Section ProcDecSC.
         destruct x1; [discriminate|].
         simpl; rewrite <-PeanoNat.Nat.add_assoc; reflexivity.
       + destruct x1; [discriminate|].
-        simpl; rewrite <-wplus_assoc, <-natToWord_S.
+        simpl; rewrite <-Zmod.add_assoc, <-natToWord_S.
         reflexivity.
 
     - kinv_action_dest.
@@ -195,7 +195,7 @@ Section ProcDecSC.
       + rewrite wones_pow2_minus_one.
         find_if_inside; [reflexivity|].
         elim n; pose proof (NatLib.pow2_zero iaddrSize); lia.
-      + rewrite wones_wneg_one, wplus_comm, wminus_inv; reflexivity.
+      + rewrite wones_wneg_one, Zmod.add_comm, Zmod.add_opp_same_r; reflexivity.
         
     - kinv_action_dest.
       kinv_custom procDec_inv_old.
@@ -268,8 +268,8 @@ Section ProcDecSC.
           }
           { cbn; find_if_inside; [reflexivity|].
             elim n.
-            replace (pinitRsOfsv ^+ $(Datatypes.length x3)) with (wones iaddrSize).
-            { apply wnot_ones. }
+            replace (pinitRsOfsv ^+ $(Datatypes.length x3)) with ((@Zmod.opp (2 ^ Z.of_nat iaddrSize) Zmod.one)).
+            { apply bits.not_m1. }
             { rewrite <-natToWord_wordToNat with (w:= pinitRsOfsv).
               rewrite <-natToWord_plus.
               rewrite e.
@@ -335,7 +335,7 @@ Section ProcDecSC.
             reflexivity.
           }
           { unfold listEnq; rewrite app_length; simpl.
-            rewrite <-wplus_assoc.
+            rewrite <-Zmod.add_assoc.
             rewrite <-natToWord_plus.
             reflexivity.
           }

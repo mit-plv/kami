@@ -548,10 +548,10 @@ Lemma next_f_consistent:
     f123 (next123 w1) = f123 (next123 w2).
 Proof.
   unfold f123, next123; intros.
-  rewrite 2! wmult_comm with (x:= $2).
-  repeat rewrite wmult_plus_distr.
+  rewrite 2! Zmod.mul_comm with (a:= $2).
+  repeat rewrite Zmod.mul_add_l.
   f_equal.
-  rewrite 2! wmult_comm with (y:= $2).
+  rewrite 2! Zmod.mul_comm with (b:= $2).
   auto.
 Qed.
 #[local] Hint Immediate next_f_consistent.

@@ -8,6 +8,8 @@ Require Import Ex.Fifo Ex.NativeFifo Lia.
 
 Import ListNotations.
 
+#[local] Arguments Stdlib.ZArith.BinInt.Z.pow : simpl never.
+#[local] Arguments Stdlib.ZArith.BinInt.Z.of_nat : simpl never.
 Set Implicit Arguments.
 
 Local Hint Unfold listIsEmpty listEnq listDeq listFirstElt: MethDefs.
@@ -42,7 +44,7 @@ Section Facts.
     forall eltv x, sfifo_nsfifo_elt_not_full eltv (x ^+ $1) 1 = [eltv x].
   Proof.
     intros; simpl; repeat f_equal.
-    rewrite wminus_def, <-wplus_assoc, wminus_inv, wplus_comm.
+    rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc, Zmod.add_opp_same_r, Zmod.add_comm.
     apply wplus_unit.
   Qed.
 
@@ -58,7 +60,7 @@ Section Facts.
 
   Lemma sfifo_nsfifo_elt_not_full_enq:
     forall eltv enqPv elt edSub,
-      (edSub <= wordToNat (wones rsz))%nat -> 
+      (edSub <= wordToNat ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one)))%nat -> 
       sfifo_nsfifo_elt_not_full eltv enqPv edSub ++ [elt] =
       sfifo_nsfifo_elt_not_full (fun w => if weq w enqPv then elt else eltv w)
                               (enqPv ^+ $1) (S edSub).
@@ -67,8 +69,8 @@ Section Facts.
     - simpl; f_equal.
       destruct (weq _ _); auto.
       elim n; clear n.
-      rewrite wminus_def, <-wplus_assoc, wminus_inv.
-      rewrite wplus_comm, wplus_unit.
+      rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc, Zmod.add_opp_same_r.
+      rewrite Zmod.add_comm, wplus_unit.
       reflexivity.
     - unfold sfifo_nsfifo_elt_not_full in *.
       fold sfifo_nsfifo_elt_not_full in *.
@@ -78,28 +80,28 @@ Section Facts.
       + exfalso.
         rewrite natToWord_S with (n:= S edSub) in e.
         rewrite wminus_plus_distr in e.
-        rewrite !wminus_def in e.
-        rewrite <-wplus_assoc with (x:= enqPv) in e.
-        rewrite wminus_inv in e.
-        rewrite wplus_comm with (x:= enqPv), wplus_unit in e.
-        rewrite wplus_comm in e.
+        rewrite <-!Zmod.add_opp_r in e.
+        rewrite <-Zmod.add_assoc with (a:= enqPv) in e.
+        rewrite Zmod.add_opp_same_r in e.
+        rewrite Zmod.add_comm with (a:= enqPv), wplus_unit in e.
+        rewrite Zmod.add_comm in e.
         rewrite <-wplus_unit with (x:= enqPv) in e at 2.
         apply wplus_cancel in e.
         apply wneg_zero in e.
         apply natToWord_inj in e.
         * inv e.
-        * pose proof (wordToNat_bound (wones rsz)); lia.
+        * pose proof (wordToNat_bound ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one))); lia.
         * apply pow2_zero.
       + f_equal.
-        do 2 rewrite wminus_def.
-        rewrite <-wplus_assoc.
+        do 2 rewrite <-Zmod.add_opp_r.
+        rewrite <-Zmod.add_assoc.
         f_equal.
         rewrite natToWord_S with (n:= S edSub).
         apply wplus_cancel with (c:= $1 ^+ $ (S edSub)).
-        rewrite <-wplus_assoc, wplus_comm with (x:= ^~ ($1 ^+ $ (S edSub))).
-        rewrite wminus_inv.
-        rewrite wplus_comm with (x:= ^~ $ (S edSub)).
-        rewrite <-wplus_assoc, wminus_inv.
+        rewrite <-Zmod.add_assoc, Zmod.add_comm with (a:= ^~ ($1 ^+ $ (S edSub))).
+        rewrite Zmod.add_opp_same_r.
+        rewrite Zmod.add_comm with (a:= ^~ $ (S edSub)).
+        rewrite <-Zmod.add_assoc, Zmod.add_opp_same_r.
         reflexivity.
   Qed.
 
@@ -125,7 +127,7 @@ Section Facts.
     refine (Some (existT _ (listEltK dType type) _)).
     destruct (weq enqPv deqPv).
     - refine (if fullv then _ else _).
-      + exact ((eltv deqPv) :: (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat (wones rsz)))).
+      + exact ((eltv deqPv) :: (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one))))).
       + exact nil.
     - exact (sfifo_nsfifo_elt_not_full eltv enqPv (wordToNat (enqPv ^- deqPv))).
   Defined.
@@ -225,7 +227,7 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
-        * destruct (weq x6 (x5 ^+ $0~1)).
+        * destruct (weq x6 (x5 ^+ $1)).
           { or3_snd; repeat split.
             destruct (weq _ _); auto.
           }
@@ -241,7 +243,7 @@ Section Facts.
           { destruct (weq _ _); auto.
             exfalso; eapply wplus_one_neq; eauto.
           }
-        * destruct (weq x5 (x6 ^+ $0~1)).
+        * destruct (weq x5 (x6 ^+ $1)).
           { or3_fst; auto. }
           { or3_thd; auto. }
     - apply sfifo_substeps_updates.
@@ -287,10 +289,10 @@ Section Facts.
               { rewrite sfifo_nsfifo_elt_not_full_prop_1.
                 destruct (weq x6 x6); intuition idtac.
               }
-              { rewrite wminus_def, <-wplus_assoc.
-                rewrite wplus_comm with (x:= $0~1), wplus_assoc.
-                rewrite wminus_inv, wplus_unit.
-                simpl; rewrite roundTrip_0; reflexivity.
+              { rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
+                rewrite Zmod.add_comm with (a:= $1), Zmod.add_assoc.
+                rewrite Zmod.add_opp_same_r, wplus_unit.
+                rewrite ?roundTrip_0, ?roundTrip_1; reflexivity.
               }
             }
             { exfalso; eapply wplus_one_neq; eauto. }
@@ -305,52 +307,53 @@ Section Facts.
                   { exfalso.
                     rewrite natToWord_S with (n:= wordToNat _) in e.
                     rewrite !wminus_plus_distr in e.
-                    rewrite !wminus_def in e.
-                    rewrite <-wplus_assoc with (x:= x5) in e.
-                    rewrite !wminus_inv in e.
-                    rewrite wplus_comm with (x:= x5) in e.
+                    rewrite <-!Zmod.add_opp_r in e.
+                    rewrite <-Zmod.add_assoc with (a:= x5) in e.
+                    rewrite !Zmod.add_opp_same_r in e.
+                    rewrite Zmod.add_comm with (a:= x5) in e.
                     rewrite !wplus_unit in e.
-                    rewrite wplus_comm in e.
+                    rewrite Zmod.add_comm in e.
                     rewrite <-wplus_unit in e.
                     apply wplus_cancel in e.
                     apply wneg_zero in e.
                     rewrite natToWord_wordToNat in e.
                     apply wneg_zero in e.
-                    inv e.
+                    apply (f_equal (@wordToNat _)) in e;
+                      rewrite roundTrip_0, roundTrip_1 in e; discriminate.
                   }
                   { f_equal.
                     rewrite wminus_plus_distr.
-                    rewrite !wminus_def.
-                    rewrite wminus_inv, wplus_unit.
-                    rewrite <-wplus_assoc; f_equal.
+                    rewrite <-!Zmod.add_opp_r.
+                    rewrite Zmod.add_opp_same_r, wplus_unit.
+                    rewrite <-Zmod.add_assoc; f_equal.
                     rewrite natToWord_S with (n:= wordToNat _).
-                    rewrite <-wminus_def.
+                    rewrite Zmod.add_opp_r.
                     rewrite wminus_plus_distr.
-                    rewrite !wminus_def.
-                    rewrite wminus_inv, wplus_unit.
+                    rewrite <-!Zmod.add_opp_r.
+                    rewrite Zmod.add_opp_same_r, wplus_unit.
                     rewrite natToWord_wordToNat.
-                    rewrite wneg_idempotent.
+                    rewrite Zmod.opp_opp.
                     reflexivity.
                   }
                 }
                 { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
-                  rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
-                  rewrite wminus_inv.
-                  rewrite wplus_comm with (x:= ^~ $1), <-wplus_assoc.
-                  rewrite wminus_inv.
+                  apply wplus_cancel with (c:= x5 ^+ $1).
+                  rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
+                  rewrite Zmod.add_comm with (b:= x5 ^+ $1).
+                  rewrite Zmod.add_opp_same_r.
+                  rewrite Zmod.add_comm with (a:= ^~ $1), <-Zmod.add_assoc.
+                  rewrite Zmod.add_opp_same_r.
                   reflexivity.
                 }
               }
-              { replace (x5 ^- (x5 ^+ $0~1)) with (wones rsz).
+              { replace (x5 ^- (x5 ^+ $1)) with ((@Zmod.opp (Z.pow 2 (Z.of_nat rsz)) Zmod.one)).
                 { apply Nat.le_refl. }
                 { rewrite wones_wneg_one.
-                  apply wplus_cancel with (c:= x5 ^+ $0~1).
-                  rewrite wplus_comm, <-wplus_assoc, wminus_inv.
-                  rewrite wminus_def, <-wplus_assoc.
-                  rewrite wplus_comm with (y:= x5 ^+ $0~1).
-                  rewrite wminus_inv.
+                  apply wplus_cancel with (c:= x5 ^+ $1).
+                  rewrite Zmod.add_comm, <-Zmod.add_assoc, Zmod.add_opp_same_r.
+                  rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
+                  rewrite Zmod.add_comm with (b:= x5 ^+ $1).
+                  rewrite Zmod.add_opp_same_r.
                   reflexivity.
                 }
               }
@@ -361,8 +364,8 @@ Section Facts.
                 apply natToWord_inj with (sz:= S sz).
                 { rewrite natToWord_S.
                   rewrite !natToWord_wordToNat.
-                  rewrite !wminus_def.
-                  rewrite wplus_assoc, wplus_comm with (x:= $1).
+                  rewrite <-!Zmod.add_opp_r.
+                  rewrite Zmod.add_assoc, Zmod.add_comm with (a:= $1).
                   reflexivity.
                 }
                 { pose proof (wordToNat_bound (x5 ^- x6)).
@@ -374,14 +377,14 @@ Section Facts.
                       intro Hx.
                       apply pow2_minus_one_wones in Hx.
                       elim n0.
-                      apply wplus_cancel with (c:= ^~ $0~1).
-                      rewrite <-wplus_assoc, wminus_inv.
-                      rewrite wplus_comm, wplus_unit.
-                      rewrite wplus_comm.
+                      apply wplus_cancel with (c:= ^~ $1).
+                      rewrite <-Zmod.add_assoc, Zmod.add_opp_same_r.
+                      rewrite Zmod.add_comm, wplus_unit.
+                      rewrite Zmod.add_comm.
                       apply wplus_cancel with (c:= ^~ x6).
-                      rewrite <-wplus_assoc, wminus_inv.
-                      rewrite wplus_comm with (y:= wzero _), wplus_unit.
-                      rewrite <-wminus_def; rewrite Hx.
+                      rewrite <-Zmod.add_assoc, Zmod.add_opp_same_r.
+                      rewrite Zmod.add_comm with (b:= Zmod.zero), wplus_unit.
+                      rewrite Zmod.add_opp_r; rewrite Hx.
                       rewrite wones_wneg_one.
                       reflexivity.
                     }
@@ -421,16 +424,17 @@ Section Facts.
             { intros; inv H1. }
             { kregmap_red; kregmap_clear; meq.
               { exfalso; eapply wplus_one_neq; eauto. }
-              { replace (x6 ^- (x6 ^+ $0~1)) with (wones (S sz)); auto.
-                apply wplus_cancel with (c:= x6 ^+ $0~1).
-                rewrite wminus_def, <-wplus_assoc.
-                rewrite wplus_comm with (x:= ^~ (x6 ^+ _)).
-                rewrite wminus_inv, wplus_comm with (y:= $0~1).
-                rewrite wplus_assoc.
-                replace ((natToWord sz 0)~1) with (natToWord rsz 1) by reflexivity.
+              { replace (x6 ^- (x6 ^+ $1)) with ((@Zmod.opp (Z.pow 2 (Z.of_nat (S sz))) Zmod.one)); auto.
+                apply wplus_cancel with (c:= x6 ^+ $1).
+                rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc.
+                rewrite Zmod.add_comm with (a:= ^~ (x6 ^+ _)).
+                rewrite Zmod.add_opp_same_r, Zmod.add_comm with (b:= $1).
+                rewrite Zmod.add_assoc.
+                replace ((natToWord sz 0)~1) with (natToWord rsz 1)
+                  by (rewrite WS_true_natToWord_0; reflexivity).
                 rewrite wones_wneg_one.
-                rewrite wplus_comm with (y:= $1), wminus_inv.
-                apply wplus_comm.
+                rewrite Zmod.add_comm with (b:= $1), Zmod.add_opp_same_r.
+                apply Zmod.add_comm.
               }
             }
           }
@@ -474,11 +478,11 @@ Section Facts.
 
               rewrite natToWord_wordToNat.
               apply wplus_cancel with (c:= x5 ^- x6).
-              rewrite wminus_def with (y:= x5 ^- x6), <-wplus_assoc.
-              rewrite wplus_comm with (x:= ^~ (x5 ^- x6)).
-              rewrite wminus_inv, wminus_def, wplus_comm with (y:= ^~ x6).
-              rewrite wplus_assoc, wminus_inv.
-              apply wplus_comm.
+              rewrite <-Zmod.add_opp_r with (b:= x5 ^- x6), <-Zmod.add_assoc.
+              rewrite Zmod.add_comm with (a:= ^~ (x5 ^- x6)).
+              rewrite Zmod.add_opp_same_r, <-Zmod.add_opp_r, Zmod.add_comm with (b:= ^~ x6).
+              rewrite Zmod.add_assoc, Zmod.add_opp_same_r.
+              apply Zmod.add_comm.
             }
           }
           { repeat split.
@@ -488,9 +492,9 @@ Section Facts.
               { simpl; repeat f_equal.
                 replace (wordToNat _) with 1.
                 { rewrite sfifo_nsfifo_elt_not_full_prop_1; reflexivity. }
-                { rewrite wminus_def, <-wplus_assoc, wplus_comm.
-                  rewrite <-wplus_assoc, wplus_comm with (y:= x6), wminus_inv.
-                  rewrite wplus_comm, wplus_unit.
+                { rewrite <-Zmod.add_opp_r, <-Zmod.add_assoc, Zmod.add_comm.
+                  rewrite <-Zmod.add_assoc, Zmod.add_comm with (b:= x6), Zmod.add_opp_same_r.
+                  rewrite Zmod.add_comm, wplus_unit.
                   rewrite roundTrip_1; auto.
                 }
               }
