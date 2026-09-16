@@ -166,6 +166,9 @@ Proof. intros; apply bits.unsigned_range, Nat2Z.is_nonneg. Qed.
 Lemma Z_of_nat_wordToNat : forall sz (w : word sz), Z.of_nat (wordToNat w) = unsigned w.
 Proof. intros; cbv [wordToNat]; pose proof (unsigned_range w); lia. Qed.
 
+Lemma Z_of_N_wordToN : forall sz (w : word sz), Z.of_N (wordToN w) = unsigned w.
+Proof. intros; cbv [wordToN]; pose proof (unsigned_range w); lia. Qed.
+
 Lemma unsigned_eq_rect : forall n n' (w : word n) (H : n = n'),
     unsigned (eq_rect n word w n' H) = unsigned w.
 Proof. intros; destruct H; reflexivity. Qed.
@@ -784,6 +787,16 @@ Proof.
   word_to_Z. apply Z.mod_small; lia.
 Qed.
 
+Lemma split1_wplus_silent : forall sz1 sz2 (w1 w2 : word (sz1 + sz2)),
+  split1 sz1 sz2 w2 = Zmod.zero -> split1 sz1 sz2 (w1 ^+ w2) = split1 sz1 sz2 w1.
+Proof.
+  intros sz1 sz2 w1 w2 H; apply (f_equal unsigned) in H.
+  rewrite unsigned_split1, Zmod.unsigned_0 in H.
+  apply Zmod.unsigned_inj; rewrite !unsigned_split1, Zmod.unsigned_add.
+  rewrite Z.mod_mod_divide by (exists (2 ^ Z.of_nat sz2)%Z; rewrite pow2_add_Z; ring).
+  rewrite Zplus_mod, H, Z.add_0_r, Zmod_mod; reflexivity.
+Qed.
+
 Theorem wordToN_nat : forall sz (w : word sz), wordToN w = N_of_nat (wordToNat w).
 Proof.
   word_lia_Z.
@@ -928,6 +941,12 @@ Lemma rewrite_weq : forall sz (a b : word sz)
   weq a b = left _ pf.
 Proof.
   intros; destruct (weq a b) as [e|n]; [f_equal; apply UIP_dec; apply weq | exfalso; exact (n pf)].
+Qed.
+
+Lemma if_weq_eqb : forall {T} n (x y : word n) (a b : T),
+  (if weq x y then a else b) = (if Zmod.eqb x y then a else b).
+Proof.
+  intros; destruct (weq x y), (Zmod.eqb_spec x y); congruence.
 Qed.
 
 (** * Some more useful derived facts *)
@@ -1237,6 +1256,12 @@ Qed.
 Lemma wordToNat_eq_rect:
   forall sz (w: word sz) nsz Hsz,
     wordToNat (eq_rect _ word w nsz Hsz) = wordToNat w.
+Proof.
+  intros; subst; reflexivity.
+Qed.
+
+Lemma wordToN_eq_rect : forall n n' (w : word n) (H : n = n'),
+    wordToN (eq_rect n word w n' H) = wordToN w.
 Proof.
   intros; subst; reflexivity.
 Qed.
@@ -1696,11 +1721,38 @@ Proof.
   intros; rewrite <- wordToZ_wordToNat_pos by assumption; lia.
 Qed.
 
+Lemma wordToN_split1 : forall a b (w : word (a + b)),
+    wordToN (split1 a b w) = (wordToN w mod Npow2 a)%N.
+Proof.
+  intros; apply N2Z.inj; rewrite N2Z.inj_mod, !Z_of_N_wordToN, Z_of_N_Npow2; apply unsigned_split1.
+Qed.
+
+Lemma wordToN_split2 : forall a b (w : word (a + b)),
+    wordToN (split2 a b w) = (wordToN w / Npow2 a)%N.
+Proof.
+  intros; apply N2Z.inj; rewrite N2Z.inj_div, !Z_of_N_wordToN, Z_of_N_Npow2; apply unsigned_split2.
+Qed.
+
 Lemma wordToN_combine:
   forall sz1 (w1: word sz1) sz2 (w2: word sz2),
     wordToN (combine w1 w2) = (wordToN w1 + Npow2 sz1 * wordToN w2)%N.
 Proof.
   word_lia_Z.
+Qed.
+
+Lemma Z_of_N_wordToN_combine : forall sz1 (w1 : word sz1) sz2 (w2 : word sz2),
+    Z.of_N (wordToN (combine w1 w2)) =
+    Z.lor (Z.of_N (wordToN w1)) (Z.shiftl (Z.of_N (wordToN w2)) (Z.of_nat sz1)).
+Proof.
+  intros; rewrite !Z_of_N_wordToN, unsigned_combine.
+  pose proof (unsigned_range w1); pose proof (pow2_pos_Z sz1).
+  assert (Hl : (Z.land (unsigned w1) (Z.shiftl (unsigned w2) (Z.of_nat sz1)) = 0)%Z).
+  { apply Z.bits_inj'; intros i Hi; rewrite Z.land_spec, Z.bits_0.
+    destruct (Z.lt_ge_cases i (Z.of_nat sz1)).
+    - rewrite Z.shiftl_spec_low by lia; apply Bool.andb_false_r.
+    - rewrite <- (Z.mod_small (unsigned w1) (2 ^ Z.of_nat sz1)) by lia.
+      rewrite Z.mod_pow2_bits_high by lia; reflexivity. }
+  rewrite <- Z.lxor_lor, <- Z.add_nocarry_lxor, Z.shiftl_mul_pow2 by (assumption || lia); lia.
 Qed.
 
 Lemma sext_size:
