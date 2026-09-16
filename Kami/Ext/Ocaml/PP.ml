@@ -176,7 +176,7 @@ type config =
   { cfg_debug: bool;
     cfg_top_module_name: string
   }
-let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Top" }
+let cfg : config ref = ref { cfg_debug = false; cfg_top_module_name = "Proc" }
 let setConfig (ncfg: config) = cfg := ncfg
 let isDebug (_: unit) = !cfg.cfg_debug
 let getTopModuleName (_: unit) = !cfg.cfg_top_module_name
@@ -364,23 +364,11 @@ let rec ppAttrKinds (ks: kind attribute list) =
      ppKind k ^ ppDelim ^ (bstring_of_charlist kn) ^ ppSep ^ ppDelim
      ^ ppAttrKinds ks'
 
-let rec ppWord (w: word) =
-  match w with
-  | WO -> ""
-  | WS (false, _, w') -> ppWord w' ^ "0"
-  | WS (true, _, w') -> ppWord w' ^ "1"
-
-let rec wordToInt (w: word) =
-  match w with
-  | WO -> 0
-  | WS (false, _, w') -> 2 * (wordToInt w')
-  | WS (true, _, w') -> 2 * (wordToInt w') + 1
-
 let rec ppConst (c: constT) =
   match c with
   | ConstBool true -> "True"
   | ConstBool false -> "False"
-  | ConstBit (sz, w) -> string_of_int sz ^ ppHexa ^ Printf.sprintf "%x" (wordToInt w)
+  | ConstBit (sz, w) -> string_of_int sz ^ ppHexa ^ Printf.sprintf "%x" (wordToNat sz w)
   | ConstVector (_, _, v) ->
      (* To remove the last comma + delim (", ") *)
      let ppv = ppConstVec v in
@@ -1023,7 +1011,7 @@ let ppTopModule (bmdcl: bModuleDC list) (idx: int)
   open_hovbox 2;
   ps ppModule; print_space ();
   ps "mk"; ps (getTopModuleName ()); ppBModuleCallArgs extCallsAll; print_space ();
-  ps ppRBracketL; ps (getTopModuleName ()); ps ppRBracketR; ps ppSep;
+  ps ppRBracketL; ps "Empty"; ps ppRBracketR; ps ppSep;
   close_box ();
   print_break 0 4; open_hovbox 0;
   ppModulesInst (makeDefMap bmdcl idx) bmdcl idx;
