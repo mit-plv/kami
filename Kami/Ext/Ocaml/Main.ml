@@ -11,7 +11,7 @@ let arg_header_file_name = ref "Header.bsv"
 let set_header_file_name fn = arg_header_file_name := fn
 let arg_output_file_name = ref ""
 let set_output_file_name fn = arg_output_file_name := fn
-let arg_top_module_name = ref "Top"
+let arg_top_module_name = ref "Proc"
 let set_top_module_name mn = arg_top_module_name := mn
 
 let arg_spec =
