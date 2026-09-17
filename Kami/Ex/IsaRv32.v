@@ -467,7 +467,7 @@ Section RV32IM.
   Definition rv32ToAddr: ToAddrT rv32AddrSize rv32IAddrSize.
     unfold ToAddrT; intros ty iaddr.
     rewrite Haddr3.
-    exact {$0, {#iaddr, $0}}%kami_expr.
+    exact ({$0, {#iaddr, $0}}%kami_expr).
   Defined.
 
   Definition rv32AlignInst: AlignInstT rv32InstBytes rv32DataBytes.
