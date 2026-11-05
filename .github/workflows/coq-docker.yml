@@ -1,11 +1,12 @@
 # Adapted from https://github.com/mit-plv/bedrock2/blob/master/.github/workflows/coq-docker.yml
 
-name: CI (Coq, docker, dev)
+name: CI (Coq, docker)
 
 on:
   push:
     branches:
       - master
+      - rv32i
   pull_request:
   workflow_dispatch:
 
@@ -16,6 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+        - env: { COQ_VERSION: "9.2", DOCKER_COQ_VERSION: "9.2" }
+          os: 'ubuntu-latest'
+        - env: { COQ_VERSION: "9.3", DOCKER_COQ_VERSION: "9.3" }
+          os: 'ubuntu-latest'
         - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev" }
           os: 'ubuntu-latest'
 
@@ -40,4 +45,4 @@ jobs:
       uses: coq-community/docker-coq-action@v1
       with:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
-        custom_script: sudo make install COQBIN="$(dirname "$(which coqc)")/"
+        custom_script: sudo make install COQBIN="$(dirname "$(which rocq)")/"
